@@ -411,9 +411,20 @@ function CcbWorldApi.schedule_location_revert(position, delay, key) end
 ---@param destination TripointCoord Explicit absolute overmap-terrain copy destination.
 ---@param delay TimeDuration Any native signed-int turn delay, including zero, negative, and `INDEFINITELY_LONG_DURATION`.
 --- Due time includes the native one-second offset and saturates only beyond the `time_point` range.
----@param key? string Optional event key of at most 256 UTF-8 bytes.
+---@param key? string Optional native event key; arbitrary length and byte contents are preserved.
 ---@return CcbResult result `value` is a CcbWorldLocationCopyResult.
 function CcbWorldApi.schedule_location_copy(source, destination, delay, key) end
+
+---@class CcbWorldRescheduleEventsResult
+---@field key string Native event key that was matched.
+---@field matched integer Number of queued timed events with this exact key.
+---@field when TimePoint Due time assigned to matching events, also returned when none matched.
+
+---@param key string Exact native timed-event key; empty and arbitrary-length keys are valid.
+---@param delay TimeDuration Any native signed-int turn delay, including zero, negative, and `INDEFINITELY_LONG_DURATION`.
+--- Due time uses the native unoffset retime formula and saturates only beyond the `time_point` range.
+---@return CcbResult result `value` is a CcbWorldRescheduleEventsResult.
+function CcbWorldApi.reschedule_events(key, delay) end
 
 ---@class CcbOvermapTileSnapshot
 ---@field position TripointCoord Explicit absolute overmap-terrain (`abs_omt`) position.

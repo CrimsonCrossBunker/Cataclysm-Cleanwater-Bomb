@@ -25947,7 +25947,9 @@ assert(not pcall(function() return U_EXPRESSION end))
             )
             self.assertIn("preserves native destination-first generation", main)
             self.assertIn("does not prove the actor scope or coordinate types/projection", main)
-            self.assertIn("typed service also limits keys to", main)
+            self.assertIn("preserves arbitrary native event-key bytes", main)
+            self.assertIn("accepts the full native signed-int delay range", main)
+            self.assertNotIn("256 bytes", main)
             self.assertNotIn("services.world.schedule_location_copy(", main)
             self.assertEqual(main.count("services.world.transform_radius("), 1)
             self.assertIn(
@@ -25964,6 +25966,66 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertNotIn("services.inventory.drop_wielded", main)
             self.assertNotIn("services.items.transfer", main)
             self.assertIn("services.item_categories.set_spawn_rates(", main)
+
+    def test_static_timed_event_retime_accepts_native_keys_and_delay_range(self) -> None:
+        key = "键" * 300 + '"\\\0'
+        quoted_key = migrate_lua_first.lua_quote(key)
+        self.assertIn("\\000", quoted_key)
+        self.assertIn("\\\\", quoted_key)
+        self.assertIn("\\\"", quoted_key)
+        self.assertEqual(
+            migrate_lua_first.render_static_timed_event_reschedule(
+                {
+                    "alter_timed_events": key,
+                    "time_in_future": "-2147483648 turns",
+                }
+            ),
+            [
+                "    services.world.reschedule_events(",
+                f'        {quoted_key}, services.time.duration(-2147483648, "turn"))',
+            ],
+        )
+        self.assertEqual(
+            migrate_lua_first.render_static_timed_event_reschedule(
+                {"alter_timed_events": "", "time_in_future": "infinite"}
+            ),
+            [
+                "    services.world.reschedule_events(",
+                '        "", services.time.duration(2147483647, "turn"))',
+            ],
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_timed_event_reschedule(
+                {"alter_timed_events": {"context_val": "key"}}
+            )
+        )
+        dynamic_source = migrate_lua_first.SourceObject(
+            Path("dynamic_retime.json"), 0, {
+                "type": "effect_on_condition",
+                "id": "dynamic_retime",
+                "required_event": "game_start",
+                "effect": {
+                    "alter_timed_events": {"context_val": "key"},
+                },
+                "eoc_type": "EVENT",
+            }
+        )
+        dynamic_result = migrate_lua_first.MigrationResult()
+        dynamic_main = migrate_lua_first.render_eoc(dynamic_source, dynamic_result)
+        self.assertIn("TODO: manually resolve the variable-backed key", dynamic_main)
+        self.assertNotIn("services.world.reschedule_events(", dynamic_main)
+        self.assertEqual(len(dynamic_result.todos), 1)
+        self.assertEqual(dynamic_result.todos[0].category, "manual_rewrite")
+        self.assertIsNone(
+            migrate_lua_first.render_static_timed_event_reschedule(
+                {"alter_timed_events": "key", "time_in_future": "2147483648 turns"}
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_timed_event_reschedule(
+                {"alter_timed_events": "\ud800"}
+            )
+        )
 
     def test_reveal_map_lowers_proven_typed_location_and_truncated_literal_radius(self) -> None:
         for index, (radius, expected_radius) in enumerate((
@@ -29501,7 +29563,7 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertNotIn("services.state.", main)
             self.assertNotIn('services.characters.adjust(actor, "debt")', main)
             self.assertIn(
-                'services.time.reschedule(\n'
+                'services.world.reschedule_events(\n'
                 '        "event", services.time.duration(0, "turn"))',
                 main,
             )
@@ -29512,7 +29574,7 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertIn(
                 "set_string_var only for bounded literal strings with native RNG", main
             )
-            self.assertNotIn("alter_timed_events into a persistent-task operation", main)
+            self.assertNotIn("services.time.reschedule(", main)
             self.assertIn("typed city query and writable location variable", main)
             self.assertIn(
                 "service_value(services.weather.activate_lightning())", main
@@ -29780,7 +29842,25 @@ assert(not pcall(function() return U_EXPRESSION end))
         )
         self.assertIn("copy_location reads source and destination var_info values", copy_main)
         self.assertIn("does not prove the actor scope or coordinate types/projection", copy_main)
+        self.assertIn("preserves arbitrary native event-key bytes", copy_main)
+        self.assertIn("full native signed-int delay range", copy_main)
         self.assertNotIn("services.world.schedule_location_copy(", copy_main)
+
+        alter_effect = next(
+            node for node in walk(ship_source.value)
+            if "alter_timed_events" in node
+        )
+        alter_result = migrate_lua_first.MigrationResult()
+        alter_main = migrate_lua_first.render_eoc(
+            direct_eoc_probe(ship_source, alter_effect, "real_ship_retime_probe"),
+            alter_result,
+        )
+        self.assertIn(
+            'services.world.reschedule_events(\n'
+            '        "tp_key", services.time.duration(0, "turn"))',
+            alter_main,
+        )
+        self.assertNotIn("services.time.reschedule(", alter_main)
 
         telekinesis_path = (
             REPOSITORY_ROOT / "data/mods/aftershock_exoplanet/spells/psionics/"

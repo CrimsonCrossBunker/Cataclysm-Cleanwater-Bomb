@@ -27485,17 +27485,28 @@ def render_static_sample_range(
 def render_static_timed_event_reschedule(
     effect: dict[str, Any],
 ) -> list[str] | None:
-    """Render a literal keyed timed-event reschedule through Platform time."""
+    """Render a literal keyed timed-event retime through the world service."""
     if set(effect) - {"alter_timed_events", "time_in_future"}:
         return None
     key = effect.get("alter_timed_events")
-    if not bounded_utf8_string(key, PLATFORM_ID_MAX_BYTES, allow_empty=True):
+    if not isinstance(key, str):
         return None
-    duration = parse_turns(effect.get("time_in_future", 0))
-    if duration is None or not -31536000 <= duration <= 31536000:
+    try:
+        key.encode("utf-8")
+    except UnicodeEncodeError:
+        return None
+    raw_delay = effect.get("time_in_future", 0)
+    minimum_delay = -(1 << 31)
+    maximum_delay = (1 << 31) - 1
+    duration = (
+        maximum_delay
+        if raw_delay == "infinite"
+        else parse_turns(raw_delay)
+    )
+    if duration is None or not minimum_delay <= duration <= maximum_delay:
         return None
     return [
-        "    services.time.reschedule(",
+        "    services.world.reschedule_events(",
         f"        {lua_quote(key)}, services.time.duration({duration}, \"turn\"))",
     ]
 
@@ -34351,8 +34362,9 @@ def render_eoc(
                     "source submaps, but fails closed where the native lookup has "
                     "no defined missing-source result. The current EOC source does "
                     "not prove the actor scope or coordinate types/projection for "
-                    "either var_info value; the typed service also limits keys to "
-                    "256 bytes. Manually trace both values before migration"
+                    "either var_info value; the typed service preserves arbitrary "
+                    "native event-key bytes and accepts the full native signed-int "
+                    "delay range. Manually trace both values before migration"
                 )
                 lines.append(f"    -- TODO: {copy_gap}.")
                 result.add_todo(
@@ -36022,13 +36034,13 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate alter_timed_events through a "
-                        "bounded timed-event service."
+                        "    -- TODO: manually resolve the variable-backed key "
+                        "or unsupported delay before retiming native events."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        "needs manual key-scope or delay-shape resolution"
                     )
                     all_effects_converted = False
             elif (

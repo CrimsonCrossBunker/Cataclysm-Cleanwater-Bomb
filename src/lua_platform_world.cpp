@@ -2890,7 +2890,6 @@ sol::table schedule_world_location_copy(
             api_name );
     const time_duration delay = requested_delay.to_native();
     const std::string key = requested_key.value_or( "" );
-    require_world_event_key( key, api_name );
     // Match native f_copy_location's ordering: prepare the destination first,
     // then read existing source submaps without generating a missing source.
     ensure_omt_submaps( destination );
@@ -2902,7 +2901,7 @@ sol::table schedule_world_location_copy(
     for( submap &snapshot : snapshots ) {
         translate_submap_linked_items( snapshot, offset );
     }
-    const time_point when = location_copy_due_time( delay );
+    const time_point when = timed_event_due_time( delay, 1_seconds );
     schedule_omt_snapshots(
         destination, std::move( snapshots ), when, key );
     get_avatar().translocators.copy_translocator(
@@ -2964,16 +2963,7 @@ sol::table reschedule_world_events(
     sol::this_state lua, const std::string &key,
     const script_time_duration &requested_delay )
 {
-    constexpr std::string_view api_name =
-        "services.world.reschedule_events";
-    if( key.empty() ) {
-        throw std::invalid_argument(
-            std::string( api_name ) +
-            " key cannot be empty" );
-    }
-    require_world_event_key( key, api_name );
-    const time_duration delay = require_world_change_delay(
-                                    requested_delay, api_name, true );
+    const time_duration delay = requested_delay.to_native();
     std::size_t matched = 0;
     for( const timed_event &event :
          get_timed_events().get_all() ) {
@@ -2987,7 +2977,7 @@ sol::table reschedule_world_events(
     value["key"] = key;
     value["matched"] = matched;
     value["when"] = script_time_point::from_native(
-                        calendar::turn + delay );
+                        timed_event_due_time( delay, 0_seconds ) );
     return make_game_value_result(
                state, sol::make_object(
                    state, std::move( value ) ) );

@@ -109,37 +109,87 @@ std::string serialized_translocator_name( const tripoint_abs_omt &position )
     }
     return {};
 }
+
+std::string native_location_copy_effect_json( const std::string &delay,
+        const std::string &key )
+{
+    std::ostringstream stream;
+    {
+        JsonOut json( stream );
+        json.start_object();
+        json.member( "copy_location" );
+        json.start_object();
+        json.member( "global_val", "lua_platform_copy_source" );
+        json.end_object();
+        json.member( "new_loc" );
+        json.start_object();
+        json.member( "global_val", "lua_platform_copy_destination" );
+        json.end_object();
+        json.member( "time_in_future", delay );
+        json.member( "key", key );
+        json.end_object();
+    }
+    return stream.str();
+}
+
+std::string native_alter_timed_events_effect_json( const std::string &delay,
+        const std::string &key )
+{
+    std::ostringstream stream;
+    {
+        JsonOut json( stream );
+        json.start_object();
+        json.member( "alter_timed_events", key );
+        json.member( "time_in_future", delay );
+        json.end_object();
+    }
+    return stream.str();
+}
 } // namespace
 
-TEST_CASE( "location_copy_due_time_matches_native_range_and_offset",
+TEST_CASE( "timed_event_due_time_matches_native_range_and_offset",
            "[lua][platform][world][semantic]" )
 {
     platform_calendar_turn_scope calendar_scope;
     calendar::turn = time_point::from_turn( 1000 );
 
-    CHECK( location_copy_due_time( 1_minutes ) ==
+    CHECK( timed_event_due_time( 1_minutes, 1_seconds ) ==
            calendar::turn + 1_minutes + 1_seconds );
-    CHECK( location_copy_due_time( 0_turns ) ==
+    CHECK( timed_event_due_time( 0_turns, 1_seconds ) ==
            calendar::turn + 1_seconds );
-    CHECK( location_copy_due_time( -3_turns ) ==
+    CHECK( timed_event_due_time( -3_turns, 1_seconds ) ==
            calendar::turn + ( -3_turns ) + 1_seconds );
+    CHECK( timed_event_due_time( 0_turns, 0_seconds ) == calendar::turn );
+    CHECK( timed_event_due_time( -3_turns, 0_seconds ) ==
+           calendar::turn - 3_turns );
 
     const int phase_offset = to_turns<int>( 1_seconds );
     calendar::turn = time_point::from_turn( 0 );
     const int exact_upper_delay = std::numeric_limits<int>::max() - phase_offset;
-    CHECK( location_copy_due_time( time_duration::from_turns( exact_upper_delay ) ) ==
+    CHECK( timed_event_due_time( time_duration::from_turns( exact_upper_delay ),
+                                 1_seconds ) ==
            time_point::from_turn( std::numeric_limits<int>::max() ) );
-    CHECK( location_copy_due_time( calendar::INDEFINITELY_LONG_DURATION ) ==
+    CHECK( timed_event_due_time( calendar::INDEFINITELY_LONG_DURATION,
+                                 1_seconds ) ==
+           time_point::from_turn( std::numeric_limits<int>::max() ) );
+    CHECK( timed_event_due_time( time_duration::from_turns(
+                                     std::numeric_limits<int>::max() ), 0_seconds ) ==
            time_point::from_turn( std::numeric_limits<int>::max() ) );
 
     calendar::turn = time_point::from_turn( 0 );
-    CHECK( location_copy_due_time( time_duration::from_turns(
-                                       std::numeric_limits<int>::min() ) ) ==
+    CHECK( timed_event_due_time( time_duration::from_turns(
+                                     std::numeric_limits<int>::min() ), 1_seconds ) ==
            time_point::from_turn( std::numeric_limits<int>::min() + phase_offset ) );
-    calendar::turn = time_point::from_turn( std::numeric_limits<int>::min() );
-    CHECK( location_copy_due_time( time_duration::from_turns(
-                                       std::numeric_limits<int>::min() ) ) ==
+    CHECK( timed_event_due_time( time_duration::from_turns(
+                                     std::numeric_limits<int>::min() ), 0_seconds ) ==
            time_point::from_turn( std::numeric_limits<int>::min() ) );
+    calendar::turn = time_point::from_turn( std::numeric_limits<int>::min() );
+    CHECK( timed_event_due_time( time_duration::from_turns(
+                                     std::numeric_limits<int>::min() ), 1_seconds ) ==
+           time_point::from_turn( std::numeric_limits<int>::min() ) );
+    calendar::turn = time_point::from_turn( std::numeric_limits<int>::max() );
+    CHECK( timed_event_due_time( 1_turns, 0_seconds ) ==
+           time_point::from_turn( std::numeric_limits<int>::max() ) );
 }
 
 TEST_CASE( "lua_platform_location_copy_matches_native_timed_submap_copy",
@@ -213,32 +263,45 @@ TEST_CASE( "lua_platform_location_copy_matches_native_timed_submap_copy",
     get_globals().set_global_value( "lua_platform_copy_source", source_position );
     get_globals().set_global_value( "lua_platform_copy_destination", destination_position );
     dialogue conversation( get_talker_for( get_avatar() ), get_talker_for( get_avatar() ) );
-    const std::array<std::pair<std::string, time_duration>, 5> delays = {{
-            { "1 turn", 1_turns },
-            { "0 turns", 0_turns },
-            { "-3 turns", -3_turns },
-            { "infinite", calendar::INDEFINITELY_LONG_DURATION },
-            {
-                std::to_string( std::numeric_limits<int>::min() ) + " turns",
-                time_duration::from_turns( std::numeric_limits<int>::min() )
-            },
+    struct parity_case {
+        std::string key;
+        std::string copy_delay_text;
+        time_duration copy_delay;
+        std::string retime_delay_text;
+        time_duration retime_delay;
+    };
+    const std::array<parity_case, 6> cases = {{
+            { "", "1 turn", 1_turns, "0 turns", 0_turns },
+            { std::string( 300, 'k' ), "0 turns", 0_turns, "-3 turns", -3_turns },
+            { "任务\"quoted", "-3 turns", -3_turns, "infinite",
+              calendar::INDEFINITELY_LONG_DURATION },
+            { std::string( "nul\0key", 7 ), "infinite",
+              calendar::INDEFINITELY_LONG_DURATION,
+              std::to_string( std::numeric_limits<int>::max() ) + " turns",
+              time_duration::from_turns( std::numeric_limits<int>::max() ) },
+            { "tp_key", "infinite", calendar::INDEFINITELY_LONG_DURATION,
+              "0 turns", 0_turns },
+            { "copy-int-min",
+              std::to_string( std::numeric_limits<int>::min() ) + " turns",
+              time_duration::from_turns( std::numeric_limits<int>::min() ),
+              std::to_string( std::numeric_limits<int>::min() ) + " turns",
+              time_duration::from_turns( std::numeric_limits<int>::min() ) },
         }
     };
     const sol::protected_function copy =
         fixture.services["world"]["schedule_location_copy"];
     REQUIRE( copy.valid() );
 
-    for( std::size_t delay_index = 0; delay_index < delays.size(); ++delay_index ) {
-        const std::pair<std::string, time_duration> &delay = delays[delay_index];
-        const std::string key = "lua_platform_location_copy_parity_" +
-                                std::to_string( delay_index );
+    const std::string sentinel_key = "lua-platform-unmatched-sentinel";
+    const time_point sentinel_when = time_point::from_turn( 8777 );
+    const tripoint_abs_ms sentinel_position( 17, 19, 0 );
+    for( const parity_case &test_case : cases ) {
+        const std::string &key = test_case.key;
         events = timed_event_manager();
         REQUIRE_FALSE( get_avatar().translocators.knows_translocator( destination ) );
-        const std::string effect_source =
-            std::string( R"({"copy_location":{"global_val":"lua_platform_copy_source"},)" ) +
-            R"("new_loc":{"global_val":"lua_platform_copy_destination"},)" +
-            R"("time_in_future":")" + delay.first + R"(","key":")" + key + "}";
-        const JsonValue native_json = json_loader::from_string( effect_source );
+        const JsonValue native_json = json_loader::from_string(
+                                          native_location_copy_effect_json(
+                                              test_case.copy_delay_text, key ) );
         talk_effect_t native_effect( native_json.get_object(), "effect",
                                      "lua_platform_location_copy_native_parity" );
         native_effect.apply( conversation );
@@ -248,10 +311,14 @@ TEST_CASE( "lua_platform_location_copy_matches_native_timed_submap_copy",
 
         const std::list<timed_event> &native_queue = events.get_all();
         auto native = native_queue.begin();
-        CHECK( native->when == location_copy_due_time( delay.second ) );
-        CHECK( native->when == ( delay.second == calendar::INDEFINITELY_LONG_DURATION ?
+        const time_point native_copy_when = timed_event_due_time(
+                                                test_case.copy_delay, 1_seconds );
+        CHECK( native->when == native_copy_when );
+        CHECK( native->when == ( test_case.copy_delay == calendar::INDEFINITELY_LONG_DURATION ||
+                                 test_case.copy_delay == time_duration::from_turns(
+                                     std::numeric_limits<int>::max() ) ?
                                  time_point::from_turn( std::numeric_limits<int>::max() ) :
-                                 calendar::turn + delay.second + 1_seconds ) );
+                                 calendar::turn + test_case.copy_delay + 1_seconds ) );
         CHECK( native->key == key );
         CHECK( native->type == timed_event_type::REVERT_SUBMAP );
         CHECK( native->faction_id == -1 );
@@ -270,20 +337,41 @@ TEST_CASE( "lua_platform_location_copy_matches_native_timed_submap_copy",
         CHECK( native_link_source == tripoint_bub_ms::invalid );
         CHECK( native_relocation_turn == "-1" );
 
-        if( delay.first == std::string( "infinite" ) ) {
-            const JsonValue alter_json = json_loader::from_string(
-                                             "{\"alter_timed_events\":\"" + key + "\"}" );
-            talk_effect_t native_alter( alter_json.get_object(), "effect",
-                                        "lua_platform_location_copy_native_retime" );
-            native_alter.apply( conversation );
-            for( const timed_event &event : events.get_all() ) {
-                CHECK( event.key == key );
-                CHECK( event.when == calendar::turn );
+        events.add( timed_event_type::CUSTOM_LIGHT_LEVEL, sentinel_when, -1,
+                    sentinel_position, 72, "sentinel-id", sentinel_key );
+        const JsonValue alter_json = json_loader::from_string(
+                                         native_alter_timed_events_effect_json(
+                                             test_case.retime_delay_text, key ) );
+        talk_effect_t native_alter( alter_json.get_object(), "effect",
+                                    "lua_platform_location_copy_native_retime" );
+        native_alter.apply( conversation );
+        const time_point native_retime_when = timed_event_due_time(
+                test_case.retime_delay, 0_seconds );
+        REQUIRE( events.get_all().size() == 5 );
+        native = events.get_all().begin();
+        for( int x = 0; x < 2; ++x ) {
+            for( int y = 0; y < 2; ++y, ++native ) {
+                CHECK( native->key == key );
+                CHECK( native->type == timed_event_type::REVERT_SUBMAP );
+                CHECK( native->when == native_retime_when );
+                CHECK( native->map_square == project_to<coords::ms>(
+                           project_to<coords::sm>( destination ) + point( x, y ) ) );
             }
         }
+        REQUIRE( native != events.get_all().end() );
+        CHECK( native->type == timed_event_type::CUSTOM_LIGHT_LEVEL );
+        CHECK( native->when == sentinel_when );
+        CHECK( native->key == sentinel_key );
+        CHECK( native->faction_id == -1 );
+        CHECK( native->map_square == sentinel_position );
+        CHECK( native->strength == 72 );
+        CHECK( native->string_id == "sentinel-id" );
+        ++native;
+        CHECK( native == events.get_all().end() );
 
         std::array<location_copy_event_record, 4> native_records;
         std::size_t record_index = 0;
+        native = native_queue.begin();
         for( int x = 0; x < 2; ++x ) {
             for( int y = 0; y < 2; ++y, ++native, ++record_index ) {
                 const tripoint_abs_ms expected_position = project_to<coords::ms>(
@@ -309,35 +397,40 @@ TEST_CASE( "lua_platform_location_copy_matches_native_timed_submap_copy",
         const sol::protected_function_result platform_result = copy(
                 fixture.abs_omt_position( source ),
                 fixture.abs_omt_position( destination ),
-                cata::lua_platform::script_time_duration::from_native( delay.second ), key );
+                cata::lua_platform::script_time_duration::from_native(
+                    test_case.copy_delay ), key );
         REQUIRE( platform_result.valid() );
         const sol::table envelope = platform_result.get<sol::table>();
         REQUIRE( envelope["ok"].get<bool>() );
         const sol::table value = envelope["value"].get<sol::table>();
         CHECK( value["when"].get<cata::lua_platform::script_time_point>().to_native() ==
-               location_copy_due_time( delay.second ) );
+               native_copy_when );
+        CHECK( value["key"].get<std::string>() == key );
+        CHECK( value["events"].get<int>() == 4 );
         REQUIRE( get_avatar().translocators.knows_translocator( destination ) );
         CHECK( serialized_translocator_name( destination ) == "location-copy-source" );
 
-        if( delay.first == std::string( "infinite" ) ) {
-            const sol::protected_function reschedule =
-                fixture.services["world"]["reschedule_events"];
-            REQUIRE( reschedule.valid() );
-            const sol::protected_function_result retime_result = reschedule(
-                    key,
-                    cata::lua_platform::script_time_duration::from_native( 0_turns ) );
-            REQUIRE( retime_result.valid() );
-            const sol::table retime_envelope = retime_result.get<sol::table>();
-            REQUIRE( retime_envelope["ok"].get<bool>() );
-            const sol::table retime_value = retime_envelope["value"].get<sol::table>();
-            CHECK( retime_value["matched"].get<std::size_t>() == 4 );
-            CHECK( retime_value["when"].get<cata::lua_platform::script_time_point>().to_native() ==
-                   calendar::turn );
-        }
+        events.add( timed_event_type::CUSTOM_LIGHT_LEVEL, sentinel_when, -1,
+                    sentinel_position, 72, "sentinel-id", sentinel_key );
+        const sol::protected_function reschedule =
+            fixture.services["world"]["reschedule_events"];
+        REQUIRE( reschedule.valid() );
+        const sol::protected_function_result retime_result = reschedule(
+                key,
+                cata::lua_platform::script_time_duration::from_native(
+                    test_case.retime_delay ) );
+        REQUIRE( retime_result.valid() );
+        const sol::table retime_envelope = retime_result.get<sol::table>();
+        REQUIRE( retime_envelope["ok"].get<bool>() );
+        const sol::table retime_value = retime_envelope["value"].get<sol::table>();
+        CHECK( retime_value["matched"].get<std::size_t>() == 4 );
+        CHECK( retime_value["key"].get<std::string>() == key );
+        CHECK( retime_value["when"].get<cata::lua_platform::script_time_point>().to_native() ==
+               native_retime_when );
 
         const std::list<timed_event> &queued = events.get_all();
         native = queued.begin();
-        REQUIRE( queued.size() == 4 );
+        REQUIRE( queued.size() == 5 );
         std::size_t platform_index = 0;
         for( int x = 0; x < 2; ++x ) {
             for( int y = 0; y < 2; ++y, ++native, ++platform_index ) {
@@ -367,6 +460,16 @@ TEST_CASE( "lua_platform_location_copy_matches_native_timed_submap_copy",
                 }
             }
         }
+        REQUIRE( native != queued.end() );
+        CHECK( native->type == timed_event_type::CUSTOM_LIGHT_LEVEL );
+        CHECK( native->when == sentinel_when );
+        CHECK( native->key == sentinel_key );
+        CHECK( native->faction_id == -1 );
+        CHECK( native->map_square == sentinel_position );
+        CHECK( native->strength == 72 );
+        CHECK( native->string_id == "sentinel-id" );
+        ++native;
+        CHECK( native == queued.end() );
         REQUIRE( get_avatar().translocators.remove_translocator( destination ) );
     }
 

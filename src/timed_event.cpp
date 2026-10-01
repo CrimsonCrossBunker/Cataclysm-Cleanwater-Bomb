@@ -71,16 +71,16 @@ static const ter_str_id ter_t_underbrush( "t_underbrush" );
 static const ter_str_id ter_t_water_dp( "t_water_dp" );
 static const ter_str_id ter_t_water_sh( "t_water_sh" );
 
-time_point location_copy_due_time( const time_duration &delay )
+time_point timed_event_due_time( const time_duration &delay,
+                                 const time_duration &phase_offset )
 {
-    // time_point and time_duration both store native turns in signed ints.
-    // Widen before adding so the native one-second EOC synchronization offset
-    // remains exact for every representable result; saturate only when the
-    // mathematical due time cannot be represented by time_point.
+    // Keep the native turn formula exact where representable.  Widen before
+    // adding the calendar turn, delay, and phase offset so signed overflow is
+    // defined at this scheduling boundary without changing other calendar math.
     const std::int64_t due_turn =
         static_cast<std::int64_t>( to_turn<int>( calendar::turn ) ) +
         static_cast<std::int64_t>( to_turns<int>( delay ) ) +
-        static_cast<std::int64_t>( to_turns<int>( 1_seconds ) );
+        static_cast<std::int64_t>( to_turns<int>( phase_offset ) );
     if( due_turn > std::numeric_limits<int>::max() ) {
         return time_point::from_turn( std::numeric_limits<int>::max() );
     }
@@ -539,7 +539,8 @@ void timed_event_manager::set_all( const std::string &key, time_duration time_in
 {
     for( timed_event &e : events ) {
         if( e.key == key ) {
-            e.when = calendar::turn + time_in_future;
+            // This retimes matching events; zero and negative delays remain valid.
+            e.when = timed_event_due_time( time_in_future, 0_seconds );
         }
     }
 }
