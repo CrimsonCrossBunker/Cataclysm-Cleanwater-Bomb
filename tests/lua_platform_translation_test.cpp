@@ -180,6 +180,33 @@ TEST_CASE( "lua_platform_text_expansion_matches_native_dialogue_tags",
     }
     REQUIRE( result.valid() );
     CHECK( result.get<std::string>() == native_text );
+
+    const std::string raw_item_id = std::string( 300, 'i' ) + std::string( "\0tail", 5 );
+    const std::vector<std::string> raw_texts = {
+        "", "<u_name> / <npc_name>", std::string( 40000, 'x' ) + "<u_name>",
+        std::string( "\0prefix", 7 ) + "<u_name> / <npc_name>" + std::string( "\0tail", 5 ),
+        "原生文本：<u_name> / <npc_name>"
+    };
+    for( const std::string &text : raw_texts ) {
+        INFO( text.size() );
+        std::string expected = text;
+        parse_tags( expected, *native_dialogue.const_actor( false ),
+                    *native_dialogue.const_actor( true ), native_dialogue, itype_id( raw_item_id ) );
+        lua["raw_text"] = text;
+        lua["raw_item_id"] = raw_item_id;
+        const sol::protected_function_result expanded = lua.safe_script( R"(
+            local avatar = ccb.services.creatures.avatar()
+            local result = ccb.services.text.expand_for(raw_text, avatar, avatar, raw_item_id)
+            assert(result.ok)
+            return result.value
+        )", sol::script_pass_on_error );
+        if( !expanded.valid() ) {
+            const sol::error error = expanded;
+            INFO( error.what() );
+        }
+        REQUIRE( expanded.valid() );
+        CHECK( expanded.get<std::string>() == expected );
+    }
 }
 TEST_CASE( "lua_platform_interaction_menu_preserves_native_rows_and_text",
            "[lua][platform][interaction]" )

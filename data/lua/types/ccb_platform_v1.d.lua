@@ -5289,10 +5289,10 @@ function CcbPlatformSnippetsApi.random(category) end
 function CcbPlatformSnippetsApi.random_named(category) end
 ---@class CcbPlatformTextApi
 local CcbPlatformTextApi = {}
----@param text string Text to expand through native snippet and dialogue-tag handling.
+---@param text string Raw native text to expand through snippet and dialogue tags; empty, long and embedded-NUL strings are preserved without an extra byte limit.
 ---@param speaker_handle GameHandle Exact native dialogue alpha/speaker.
 ---@param interlocutor_handle? GameHandle Exact native dialogue beta/interlocutor; nil means no beta.
----@param item_id? string
+---@param item_id? string Raw native item ID for item tags; omitted or empty means the native null ID. Registration and diagnostics remain with the native parser.
 ---@return CcbResult result `value` is expanded text; snippets and dialogue tags use the native text parser once.
 function CcbPlatformTextApi.expand_for(text, speaker_handle, interlocutor_handle, item_id) end
 ---@class CcbPlatformTilesetApi

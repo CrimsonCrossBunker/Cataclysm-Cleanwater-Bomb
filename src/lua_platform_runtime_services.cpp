@@ -3331,13 +3331,6 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                                     const sol::optional<cata::lua_platform::game_handle> &interlocutor_handle,
     const sol::optional<std::string> &item_id ) {
         require_read();
-        if( text.size() > maximum_presentation_text_bytes ||
-            text.find( '\0' ) != std::string::npos ||
-            ( item_id && ( item_id->size() > 256 ||
-                           item_id->find( '\0' ) != std::string::npos ) ) ) {
-            throw std::invalid_argument(
-                "services.text.expand_for input exceeds its native string limit" );
-        }
         sol::state_view lua_state( state );
         const cata::lua_platform::native_handle_result<Creature> speaker =
             speaker_handle.resolve_creature(
