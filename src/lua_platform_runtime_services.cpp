@@ -697,6 +697,9 @@ int set_platform_furniture( const tripoint_abs_ms &absolute,
     const int radius = static_cast<int>( truncated_radius );
 
     map &here = get_map();
+    if( !here.inbounds_z( absolute.z() ) ) {
+        return 0;
+    }
     const tripoint_abs_ms bubble_origin = here.get_abs( tripoint_bub_ms::zero );
     const std::int64_t local_x = static_cast<std::int64_t>( absolute.x() ) - bubble_origin.x();
     const std::int64_t local_y = static_cast<std::int64_t>( absolute.y() ) - bubble_origin.y();
@@ -769,6 +772,9 @@ int set_platform_terrain( const tripoint_abs_ms &absolute,
     const int radius = static_cast<int>( truncated_radius );
 
     map &here = get_map();
+    if( !here.inbounds_z( absolute.z() ) ) {
+        return 0;
+    }
     const tripoint_abs_ms bubble_origin = here.get_abs( tripoint_bub_ms::zero );
     const std::int64_t local_x = static_cast<std::int64_t>( absolute.x() ) - bubble_origin.x();
     const std::int64_t local_y = static_cast<std::int64_t>( absolute.y() ) - bubble_origin.y();
