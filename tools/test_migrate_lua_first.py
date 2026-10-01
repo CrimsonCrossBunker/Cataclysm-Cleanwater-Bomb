@@ -2270,6 +2270,7 @@ assert(calls==1)
                 script = r"""
 local actor={excluded='alpha_excluded'}
 local partner={excluded='beta_excluded'}
+local context={data={}}
 local calls=0
 local function service_value(result) assert(result.ok);return result.value end
 local services={
@@ -4813,6 +4814,99 @@ assert(EOC and reads==1)
         self.assertIn("dialogue_context:speaker()", rendered or "")
         self.assertIn("dialogue_context:interlocutor()", rendered or "")
         self.assertNotIn("context.data", rendered or "")
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_proficiency_technique_selection_keeps_raw_blacklist_order_and_receivers(self) -> None:
+        raw = ["", "raw\0id", "无此招式", "x" * 10000, "tec_duplicate", "tec_duplicate"]
+        for prefix in ("u_", "npc_"):
+            for flags in range(8):
+                value = {
+                    "mutator": "valid_technique", "crit": bool(flags & 1),
+                    "dodge_counter": bool(flags & 2), "block_counter": bool(flags & 4),
+                    "blacklist": raw + [{"u_val": "alpha"}, {"npc_val": "beta"},
+                                        {"context_val": "context"}, {"global_val": "global"},
+                                        {"mutator": "topic_item"},
+                                        {"mutator": "valid_technique", "blacklist": [""]}],
+                }
+                expression = migrate_lua_first.render_eoc_condition_expression(
+                    {prefix + "has_proficiency": value},
+                    proficiency_character_alpha_actor_proven=True,
+                    npc_melee_beta_actor_proven=True,
+                )
+                self.assertIsNotNone(expression)
+                script = r"""
+local actor={kind='creature',subtype='avatar',is_valid=function() return true end}
+local partner={kind='creature',subtype='npc',is_valid=function() return true end}
+local context={data={},actors={interlocutor=partner}}
+local trace,choices={},0
+local function service_value(result) assert(result.ok);return result.value end
+local function variable(key)
+ table.insert(trace,key)
+ return {ok=true,value={exists=true,value=key}}
+end
+local expected=BLACKLIST
+local services={variables={
+ get_string=function(owner,key)
+  assert(owner==(key=='alpha' and actor or partner));return variable(key)
+ end,
+ get_context_string=function(data,key) assert(data==context.data);return variable(key) end,
+ get_global_string=function(key) return variable(key) end},
+ characters={choose_technique=function(alpha,beta,options)
+  assert(alpha==actor and beta==partner)
+  choices=choices+1;table.insert(trace,'choice'..choices)
+  if choices==1 then
+   assert(#options.blacklist==1 and options.blacklist[1]=='')
+   return {ok=true,value={technique={value='inner'}}}
+  end
+  assert(choices==2 and #options.blacklist==#expected)
+  for i,id in ipairs(expected) do assert(options.blacklist[i]==id) end
+  assert((options.critical or false)==CRITICAL)
+  assert((options.dodge_counter or false)==DODGE)
+  assert((options.block_counter or false)==BLOCK)
+  return {ok=true,value={technique={value='selected'}}}
+ end},proficiencies={has_id_text=function(owner,id)
+  assert(owner==EXPECTED_TARGET and id=='selected')
+  table.insert(trace,'query');return {ok=true,value=true}
+ end}}
+assert(EXPRESSION)
+assert(table.concat(trace,',')=='alpha,beta,context,global,choice1,choice2,query')
+""".replace("BLACKLIST", migrate_lua_first.lua_string_table(
+                    raw + ["alpha", "beta", "context", "global", "", "inner"],
+                )).replace("CRITICAL", migrate_lua_first.lua_boolean(bool(flags & 1))).replace(
+                    "DODGE", migrate_lua_first.lua_boolean(bool(flags & 2)),
+                ).replace("BLOCK", migrate_lua_first.lua_boolean(bool(flags & 4))).replace(
+                    "EXPECTED_TARGET", "actor" if prefix == "u_" else "partner",
+                ).replace("EXPRESSION", expression or "nil")
+                run = subprocess.run(["lua", "-"], input=script, text=True,
+                                     capture_output=True, timeout=10)
+                self.assertEqual(run.returncode, 0, run.stderr)
+
+    def test_proficiency_technique_selection_requires_pair_and_native_option_types(self) -> None:
+        for ignored in (None, False, 42, "ignored", {"ignored": {"npc_val": "not_read"}}):
+            expression = migrate_lua_first.render_proficiency_id_expression(
+                {"mutator": "valid_technique", "blacklist": ignored},
+                alpha_owner="actor", beta_owner="partner",
+            )
+            self.assertEqual(expression,
+                             'service_value(services.characters.choose_technique(actor, partner, {  })).technique.value')
+        for value in (
+            {"mutator": "valid_technique", "blacklist": [42]},
+            {"mutator": "valid_technique", "crit": 1},
+            {"mutator": "valid_technique", "dodge_counter": "false"},
+            {"mutator": "valid_technique", "block_counter": None},
+            {"mutator": "valid_technique", "extra": True},
+        ):
+            self.assertIsNone(migrate_lua_first.render_proficiency_id_expression(
+                value, alpha_owner="actor", beta_owner="partner",
+            ))
+        for alpha, beta in ((None, "partner"), ("actor", None), (None, None)):
+            self.assertIsNone(migrate_lua_first.render_proficiency_id_expression(
+                {"mutator": "valid_technique"}, alpha_owner=alpha, beta_owner=beta,
+            ))
+        # Direct TALK's current read-only service phase is not silently bypassed.
+        self.assertIsNone(migrate_lua_first.render_talk_topic_response_condition({
+            "u_has_proficiency": {"mutator": "valid_technique"},
+        }))
 
     def test_npc_proficiency_is_limited_to_event_exclusive_melee_beta(self) -> None:
         def render(

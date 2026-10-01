@@ -853,6 +853,102 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
         const sol::protected_function_result stale_topic = read_topic_item( topic_context );
         CHECK_FALSE( stale_topic.valid() );
 
+        {
+            const auto saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
+            const on_out_of_scope restore_rng( [saved_rng]() {
+                rng_get_engine() = saved_rng;
+            } );
+            player.set_skill_level( skill_id( "unarmed" ), 10 );
+            player.martial_arts_data->add_martialart( matype_style_karate );
+            player.martial_arts_data->style_selected = matype_style_karate;
+            const std::string nul_blacklist_id( "tec_karate_rapid\0missing",
+                                               sizeof( "tec_karate_rapid\0missing" ) - 1 );
+            const std::vector<std::vector<std::string>> blacklists = {
+                {}, { "", "tec_unknown_raw", nul_blacklist_id, "无此招式", std::string( 10000, 'x' ) },
+                { "tec_karate_rapid", "tec_karate_precise", "tec_karate_roundhouse",
+                  "tec_karate_staff", "tec_karate_staff_crit" },
+                std::vector<std::string>( 300, nul_blacklist_id )
+            };
+            bool saw_selected_technique = false;
+            for( const auto &blacklist : blacklists ) {
+                std::vector<matec_id> native_blacklist;
+                sol::table raw_blacklist = lua.create_table();
+                for( std::size_t index = 0; index < blacklist.size(); ++index ) {
+                    native_blacklist.emplace_back( blacklist[index] );
+                    raw_blacklist[index + 1] = blacklist[index];
+                }
+                for( int flags = 0; flags < 8; ++flags ) {
+                    const bool critical = flags & 1;
+                    const bool dodge_counter = flags & 2;
+                    const bool block_counter = flags & 4;
+                    sol::table options = lua.create_table();
+                    options["critical"] = critical;
+                    options["dodge_counter"] = dodge_counter;
+                    options["block_counter"] = block_counter;
+                    options["blacklist"] = raw_blacklist;
+                    for( const unsigned int seed : { 4911U, 4912U } ) {
+                        rng_set_engine_seed( seed );
+                        const std::string native_id = conversation.const_actor( false )->get_random_technique(
+                                                          partner, critical, dodge_counter, block_counter, native_blacklist ).str();
+                        const auto native_rng_after = rng_get_engine(); // NOLINT(cata-determinism)
+                        rng_set_engine_seed( seed );
+                        const sol::table selected = value_of( services["characters"]["choose_technique"],
+                                                    alpha_handle, beta_handle, options ).as<sol::table>();
+                        const std::string platform_id = selected["technique"].get<cata::lua_platform::script_game_id>().value();
+                        CAPTURE( flags, seed, blacklist.size(), native_id, platform_id );
+                        CHECK( platform_id == native_id );
+                        CHECK( selected["found"].get<bool>() == ( native_id != tec_none.str() ) );
+                        CHECK( selected["accepted"].get<bool>() == ( native_id != tec_none.str() ) );
+                        CHECK( rng_get_engine() == native_rng_after );
+                        saw_selected_technique = saw_selected_technique || native_id != tec_none.str();
+                        for( const std::string &selector : selectors ) {
+                            std::ostringstream source;
+                            {
+                                JsonOut json( source );
+                                json.start_object();
+                                json.member( selector + "_has_proficiency" );
+                                json.start_object();
+                                json.member( "mutator", "valid_technique" );
+                                json.member( "crit", critical );
+                                json.member( "dodge_counter", dodge_counter );
+                                json.member( "block_counter", block_counter );
+                                json.member( "blacklist", blacklist );
+                                json.end_object();
+                                json.end_object();
+                            }
+                            const conditional_t condition( json_loader::from_string( source.str() ).get_object() );
+                            rng_set_engine_seed( seed );
+                            CHECK( compare_id( selector, condition, platform_id ) ==
+                                   ( selector == "npc" ? partner.has_proficiency( proficiency_id( native_id ) ) :
+                                     player.has_proficiency( proficiency_id( native_id ) ) ) );
+                            CHECK( rng_get_engine() == native_rng_after );
+                        }
+                    }
+                }
+            }
+            CHECK( saw_selected_technique );
+            // Native has_array does not evaluate non-array blacklist values.
+            // They have the same result and RNG state as no blacklist.
+            for( const std::string &ignored : std::vector<std::string> {
+                     "null", "false", "42", "\"ignored\"", "{\"npc_val\":\"not_read\"}"
+                 } ) {
+                rng_set_engine_seed( 4911 );
+                const sol::table selected = value_of( services["characters"]["choose_technique"],
+                                                    alpha_handle, beta_handle ).as<sol::table>();
+                const std::string platform_id = selected["technique"].get<cata::lua_platform::script_game_id>().value();
+                const auto platform_rng_after = rng_get_engine(); // NOLINT(cata-determinism)
+                for( const std::string &selector : selectors ) {
+                    CAPTURE( ignored, selector );
+                    const conditional_t condition( json_loader::from_string(
+                                                       "{\"" + selector + "_has_proficiency\":{\"mutator\":\"valid_technique\",\"blacklist\":" +
+                                                       ignored + "}}" ).get_object() );
+                    rng_set_engine_seed( 4911 );
+                    compare_id( selector, condition, platform_id );
+                    CHECK( rng_get_engine() == platform_rng_after );
+                }
+            }
+        }
+
         // The native selectors query dialogue alpha for u_* and beta for
         // npc_*; prove the two participants have distinct learned sets.
         partner.lose_proficiency( carving );

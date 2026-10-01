@@ -7864,10 +7864,10 @@ function CcbCampsApi.recall_worker(camp, manager, worker) end
 ---@field critical? boolean Defaults to false.
 ---@field dodge_counter? boolean Defaults to false.
 ---@field block_counter? boolean Defaults to false.
----@field blacklist? (string|GameId)[] Technique IDs; typed entries use martial_art_technique kind.
+---@field blacklist? (string|GameId)[] Raw technique IDs, including empty, unknown, NUL-containing and long text; typed entries use martial_art_technique kind. Order and duplicates are preserved.
 
 ---@class CcbTechniqueChoice
----@field found boolean Whether native selection produced a technique.
+---@field found boolean Whether native selection produced a technique other than its tec_none fallback.
 ---@field accepted boolean Same selection outcome as found.
 ---@field technique GameId GameId<martial_art_technique>; inspect found before applying it.
 ---@field attack_vector GameId GameId<attack_vector>.

@@ -881,6 +881,36 @@ def render_proficiency_id_expression(
         return None
     if value.get("mutator") == "topic_item":
         return topic_item_expression if set(value) == {"mutator"} else None
+    if value.get("mutator") == "valid_technique":
+        if (set(value) - {"mutator", "blacklist", "crit", "dodge_counter", "block_counter"} or
+                alpha_owner is None or beta_owner is None):
+            return None
+        options = []
+        for source, name in (("crit", "critical"), ("dodge_counter", "dodge_counter"),
+                             ("block_counter", "block_counter")):
+            flag = value.get(source, False)
+            if not isinstance(flag, bool):
+                return None
+            if flag:
+                options.append(f"{name} = true")
+        # Native has_array ignores an authored non-array blacklist entirely.
+        authored_blacklist = value.get("blacklist", [])
+        blacklist = authored_blacklist if isinstance(authored_blacklist, list) else []
+        entries = [render_proficiency_id_expression(
+            entry, alpha_owner=alpha_owner, beta_owner=beta_owner,
+            topic_item_expression=topic_item_expression,
+            context_values_expression=context_values_expression,
+        ) for entry in blacklist]
+        if any(entry is None for entry in entries):
+            return None
+        # Lua list-field expressions are evaluated in native blacklist order
+        # before the shared native selection, including nested selections.
+        if entries:
+            options.append("blacklist = { " + ", ".join(entries) + " }")
+        return (
+            'service_value(services.characters.choose_technique('
+            f'{alpha_owner}, {beta_owner}, {{ ' + ", ".join(options) + ' })).technique.value'
+        )
     if value.get("mutator") in {"ma_technique_name", "ma_technique_description"}:
         if set(value) != {"mutator", "matec_id"}:
             return None

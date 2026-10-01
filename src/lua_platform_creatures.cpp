@@ -59,6 +59,7 @@ extern "C" {
 #include "lua_platform_items.h"
 #include "magic.h"
 #include "magic_enchantment.h"
+#include "martialarts.h"
 #include "map.h"
 #include "mongroup.h"
 #include "monster.h"
@@ -2303,11 +2304,8 @@ std::vector<matec_id> read_technique_blacklist( const sol::object &value )
                 "services.characters.choose_technique option 'blacklist' must be a "
                 "dense array of technique ids" );
         }
-        if( id.empty() || id.size() > maximum_combat_string_bytes ||
-            id.find( '\0' ) != std::string::npos ) {
-            throw std::invalid_argument(
-                "services.characters.choose_technique blacklist contains an invalid id" );
-        }
+        // Native selection only compares these raw IDs to its candidates.
+        // Empty, unknown, NUL-containing and long strings need no lookup.
         result.emplace_back( id );
     }
     return result;
@@ -2434,8 +2432,9 @@ sol::table choose_character_technique(
             options.dodge_counter, options.block_counter, options.blacklist );
 
     sol::table value = state.create_table();
-    value["found"] = !technique.is_empty();
-    value["accepted"] = !technique.is_empty();
+    const bool found = !technique.is_empty() && technique != tec_none;
+    value["found"] = found;
+    value["accepted"] = found;
     value["technique"] = script_game_id(
                              "martial_art_technique", technique.str() );
     value["attack_vector"] = script_game_id(
