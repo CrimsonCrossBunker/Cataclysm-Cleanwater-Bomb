@@ -41438,8 +41438,77 @@ assert(context.data.step==0 and context.actors.character==actor and context.acto
         todo_category, todo_message = migrate_lua_first.set_trap_migration_todo(
             omitted_radius
         )
-        self.assertEqual(todo_category, "platform_gap")
-        self.assertIn("radius neighborhoods", todo_message)
+        self.assertEqual(todo_category, "manual_rewrite")
+        self.assertIn("native var_info", todo_message)
+
+        location_writer = {
+            "u_location_variable": {"context_val": "trap_location"},
+        }
+        trap_location = {"context_val": "trap_location"}
+        for effect, expected in (
+            (
+                {
+                    "set_trap": "tr_beartrap",
+                    "location": trap_location,
+                    "radius": 1.9,
+                },
+                'context.data["trap_location"], "tr_beartrap", 1, false',
+            ),
+            (
+                {
+                    "set_trap": "tr_beartrap",
+                    "location": trap_location,
+                    "radius": -1.9,
+                    "square": True,
+                },
+                'context.data["trap_location"], "tr_beartrap", -1, true',
+            ),
+        ):
+            rendered_trap = migrate_lua_first.render_static_set_trap(
+                effect, location_writer, True
+            )
+            self.assertIsNotNone(rendered_trap)
+            self.assertIn(expected, "\n".join(rendered_trap or []))
+
+        self.assertIsNone(migrate_lua_first.render_static_set_trap(
+            {
+                "set_trap": "tr_beartrap",
+                "location": trap_location,
+                "radius": 46341,
+            },
+            location_writer,
+            True,
+        ))
+        large_square = {
+            "set_trap": "tr_beartrap",
+            "location": trap_location,
+            "radius": 46341,
+            "square": True,
+        }
+        large_category, large_message = migrate_lua_first.set_trap_migration_todo(
+            large_square
+        )
+        self.assertEqual(large_category, "manual_rewrite")
+        self.assertIn("direct typed call", large_message)
+
+        direct_trap_source = migrate_lua_first.SourceObject(Path("trap_area.json"), 0, {
+            "type": "effect_on_condition",
+            "id": "trap_area",
+            "required_event": "avatar_moves",
+            "effect": [
+                location_writer,
+                {
+                    "set_trap": "tr_beartrap",
+                    "location": trap_location,
+                    "radius": 1.9,
+                },
+            ],
+            "eoc_type": "EVENT",
+        })
+        direct_result = migrate_lua_first.MigrationResult()
+        direct_main = migrate_lua_first.render_eoc(direct_trap_source, direct_result)
+        self.assertIn("services.gameplay.environment.set_trap_area(", direct_main)
+        self.assertEqual(direct_result.todos, [])
 
         trap_result = migrate_lua_first.MigrationResult()
         trap_source = migrate_lua_first.SourceObject(Path("trap.json"), 0, {
@@ -41458,7 +41527,7 @@ assert(context.data.step==0 and context.actors.character==actor and context.acto
         # f_set_trap parses `location` with read_var_info, which accepts only
         # u/npc/global/var/context variables.  This tagged abs_ms descriptor
         # is not a loadable native EOC, so it must not count as a migration.
-        self.assertNotIn("services.map.trap_set(", trap_main)
+        self.assertNotIn("services.gameplay.environment.set_trap_area(", trap_main)
         self.assertEqual(len(trap_result.todos), 1)
         self.assertIn("native var_info", trap_result.todos[0].message)
 
@@ -41593,9 +41662,10 @@ assert(context.data.step==0 and context.actors.character==actor and context.acto
         self.assertEqual(last_trap["radius"], 0)
         self.assertEqual(first_trap["set_trap"], last_trap["set_trap"])
 
-        # Both radius-zero writes use dynamic context coordinates.  The
-        # preceding random OMT/trap search does not prove an absolute
-        # map-square value for either native var_info read.
+        # The first writer is direct but belongs to a referenced trap EOC with
+        # no live-avatar map proof.  The later search/teleport path has no
+        # immediately preceding direct avatar position writer.  Neither can
+        # be lowered by the narrow native-position proof.
         self.assertIsNone(
             migrate_lua_first.render_static_location_variable(
                 search_variable, "u_location_variable", True, False
@@ -41603,8 +41673,13 @@ assert(context.data.step==0 and context.actors.character==actor and context.acto
         )
         result = migrate_lua_first.MigrationResult()
         main = migrate_lua_first.render_eoc(source, result)
-        trap_gap = "set_trap location needs a proven absolute map-square value"
+        trap_gap = (
+            "set_trap location needs an immediately preceding proven "
+            "u_location_variable"
+        )
         self.assertEqual(main.count(trap_gap), 2)
+        self.assertNotIn("radius neighborhoods", main)
+        self.assertNotIn("services.gameplay.environment.set_trap_area(", main)
         self.assertNotIn("services.map.edit(", main)
         trap_todos = [todo for todo in result.todos if trap_gap in todo.message]
         self.assertEqual(len(trap_todos), 2)

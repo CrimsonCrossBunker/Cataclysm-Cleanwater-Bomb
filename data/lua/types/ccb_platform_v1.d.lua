@@ -11662,6 +11662,14 @@ function CcbPlatformEnvironmentQueries.set_terrain(position, terrain_id, radius,
 --- Only squares on the requested z-level are considered. Without z-level support, native map setters resolve legal non-current z writes against the active map storage. The call does not load maps or generate map data.
 function CcbPlatformEnvironmentQueries.set_furniture(position, furniture_id, radius, square, avoid_creatures) end
 
+---@param position TripointCoord Absolute map-square center; out-of-bounds z returns 0.
+---@param trap_id string Native trap-id string. tr_null clears a placed trap; unknown byte strings retain native invalid-ID diagnostics and null-id fallback.
+---@param radius? number Defaults to 1 and truncates toward zero like the native double-to-int conversion. The truncated value must fit a native int and center +/- radius must remain within native iterator arithmetic. Circle mode supports -46340..46340 because native trig_dist squares int coordinate differences; square mode may use larger native-safe radii.
+---@param square? boolean Defaults to false; false uses native trig_dist < radius + 0.5, true uses a square. A negative square radius visits only center - radius; a negative circle radius visits no squares.
+---@return integer attempted_squares Number of in-map map::trap_set calls, including same-id resets and attempts refused by built-in terrain traps.
+--- The call uses only active-map coordinates and never loads maps or submaps. It preserves the requested z-level and native setter behavior; out-of-map XY candidates are skipped because map::trap_set silently ignores them. The string is not length-limited or NUL-filtered.
+function CcbPlatformEnvironmentQueries.set_trap_area(position, trap_id, radius, square) end
+
 ---@class CcbPlatformFieldAreaOptions
 ---@field radius? number Defaults to 1; finite input truncated toward zero to 0..32767 map squares.
 ---@field intensity? number Defaults to 1; finite input truncated toward zero to a native int and clamped by the field type.

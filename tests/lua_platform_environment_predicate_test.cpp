@@ -1347,6 +1347,349 @@ TEST_CASE( "lua_platform_environment_add_field_area_matches_native_f_field",
     CHECK( platform_default_intensity < platform_no_hit_intensity );
 }
 
+TEST_CASE( "lua_platform_environment_set_trap_area_matches_native_f_set_trap",
+           "[lua][platform][environment_mutation][semantic]" )
+{
+    using namespace cata::lua_platform;
+    clear_active_runtimes();
+    clear_map_without_vision();
+    clear_avatar();
+    sol::state lua;
+    lua.open_libraries( sol::lib::base );
+    sol::table ccb = lua.create_table();
+    const std::shared_ptr<runtime> owner = make_runtime( "environment_set_trap_area", 4906, lua );
+    on_out_of_scope cleanup( []() {
+        clear_active_runtimes();
+        runtime_world_ready( false );
+    } );
+    install_runtime_api( owner, lua, ccb );
+    set_active_runtimes( { owner } );
+    runtime_world_ready( true );
+    lua["services"] = ccb["services"];
+
+    map &here = get_map();
+    const int map_width = here.getmapsize() * SEEX;
+    const int map_height = here.getmapsize() * SEEY;
+    const trap_str_id beartrap( "tr_beartrap" );
+    const ter_str_id floor( "t_floor" );
+    const ter_str_id pit( "t_pit" );
+    const trap_str_id pit_trap( "tr_pit" );
+    REQUIRE( beartrap.is_valid() );
+    REQUIRE( floor.is_valid() );
+    REQUIRE( pit.is_valid() );
+    REQUIRE( pit_trap.is_valid() );
+
+    const tripoint_bub_ms avatar_position = here.get_bub( get_avatar().pos_abs() );
+    tripoint_bub_ms center( map_width / 2, map_height / 2, here.get_abs_sub().z() );
+    if( trig_dist( center, avatar_position ) < 5.0f ) {
+        const int offset_x = avatar_position.x() + 8 < map_width ? 8 : -8;
+        const int offset_y = avatar_position.y() + 8 < map_height ? 8 : -8;
+        center = avatar_position + tripoint_rel_ms( offset_x, offset_y, 0 );
+    }
+    REQUIRE( here.inbounds( center ) );
+    REQUIRE( center.x() > 2 );
+    REQUIRE( center.x() + 2 < map_width );
+    REQUIRE( center.y() > 2 );
+    REQUIRE( center.y() + 2 < map_height );
+
+    auto prepare_area = [&]( const tripoint_bub_ms &area_center ) {
+        for( int dx = -2; dx <= 2; ++dx ) {
+            for( int dy = -2; dy <= 2; ++dy ) {
+                const tripoint_bub_ms position = area_center + tripoint_rel_ms( dx, dy, 0 );
+                if( here.inbounds( position ) ) {
+                    here.ter_set( position, floor );
+                    REQUIRE( here.ter( position ) == floor.id() );
+                    here.trap_set( position, tr_null );
+                }
+            }
+        }
+    };
+    auto trap_coverage = [&]( const tripoint_bub_ms &area_center ) {
+        std::array<bool, 25> coverage{};
+        std::size_t index = 0;
+        for( int dx = -2; dx <= 2; ++dx ) {
+            for( int dy = -2; dy <= 2; ++dy ) {
+                const tripoint_bub_ms position = area_center + tripoint_rel_ms( dx, dy, 0 );
+                coverage[index++] = here.inbounds( position ) &&
+                                    here.tr_at( position ).id == beartrap.id();
+            }
+        }
+        return coverage;
+    };
+    auto run_native = [&]( const tripoint_bub_ms &area_center,
+                           const std::string &radius_json, const bool has_radius,
+                           const bool square ) {
+        const tripoint_abs_ms absolute = here.get_abs( area_center );
+        std::string effect_json =
+            R"({"set_trap":"tr_beartrap", "location":{"context_val":"trap_center"})";
+        if( has_radius ) {
+            effect_json += ", \"radius\":" + radius_json;
+        }
+        if( square ) {
+            effect_json += ", \"square\":true";
+        }
+        effect_json += "}";
+        dialogue context( get_talker_for( get_avatar() ) );
+        context.set_value( "trap_center", absolute );
+        talk_effect_t native_effect;
+        native_effect.parse_sub_effect(
+            json_loader::from_string( effect_json ).get_object(), "trap_area_parity" );
+        finalize_conditions();
+        for( const talk_effect_fun_t &operation : native_effect.effects ) {
+            operation( context );
+        }
+    };
+    auto run_platform = [&]( const tripoint_bub_ms &area_center,
+                             const bool has_radius, const double radius,
+                             const bool square ) {
+        const tripoint_abs_ms absolute = here.get_abs( area_center );
+        lua["trap_position"] = script_tripoint_coord::from_native(
+                                   coords::origin::abs, coords::scale::map_square,
+                                   absolute.raw() );
+        lua["trap_radius"] = radius;
+        lua["trap_square"] = square;
+        const std::string radius_argument = has_radius ? "trap_radius" : "nil";
+        const std::string script = "return services.gameplay.environment.set_trap_area("
+                                   "trap_position, \"tr_beartrap\", " + radius_argument +
+                                   ", trap_square)";
+        detail::callback_scope active_callback( *owner );
+        const sol::protected_function_result result = lua.safe_script(
+                    script, sol::script_pass_on_error );
+        if( !result.valid() ) {
+            const sol::error error = result;
+            INFO( error.what() );
+        }
+        REQUIRE( result.valid() );
+        return result.get<int>();
+    };
+    auto compare_case = [&]( const tripoint_bub_ms &area_center,
+                             const std::string &radius_json, const bool has_radius,
+                             const double radius, const bool square ) {
+        prepare_area( area_center );
+        run_native( area_center, radius_json, has_radius, square );
+        const std::array<bool, 25> native_coverage = trap_coverage( area_center );
+        prepare_area( area_center );
+        const int attempted_squares = run_platform( area_center, has_radius, radius, square );
+        const std::array<bool, 25> platform_coverage = trap_coverage( area_center );
+        CHECK( platform_coverage == native_coverage );
+        CHECK( attempted_squares == std::count( native_coverage.begin(),
+                                                native_coverage.end(), true ) );
+        prepare_area( area_center );
+        return attempted_squares;
+    };
+
+    CHECK( compare_case( center, "", false, 0.0, false ) == 5 ); // omitted radius defaults to one
+    CHECK( compare_case( center, "1.9", true, 1.9, false ) == 5 ); // native double -> int truncation
+    CHECK( compare_case( center, "1", true, 1.0, true ) == 9 );
+    CHECK( compare_case( center, "-1.9", true, -1.9, true ) == 1 );
+    prepare_area( center );
+    run_native( center, "-1", true, true );
+    CHECK( here.tr_at( center + tripoint_rel_ms( 1, 1, 0 ) ).id == beartrap.id() );
+    prepare_area( center );
+    CHECK( compare_case( center, "-1", true, -1.0, false ) == 0 );
+    CHECK( compare_case( center, "-0.9", true, -0.9, false ) == 1 ); // truncates to zero
+
+    tripoint_bub_ms edge_center( 0, map_height / 2, center.z() );
+    REQUIRE( here.inbounds( edge_center ) );
+    CHECK( compare_case( edge_center, "2", true, 2.0, false ) > 0 );
+    CHECK( compare_case( tripoint_bub_ms( center.x(), center.y(), OVERMAP_HEIGHT + 1 ),
+                         "0", true, 0.0, false ) == 0 );
+
+    const int target_z = here.supports_zlevels() ?
+                         loaded_adjacent_map_zlevel( here, center ) :
+                         ( center.z() < OVERMAP_HEIGHT ? center.z() + 1 : center.z() - 1 );
+    REQUIRE( target_z != center.z() );
+    const tripoint_bub_ms upper_center( center.x(), center.y(), target_z );
+    REQUIRE( here.inbounds( upper_center ) );
+    submap *const upper_submap = here.get_submap_at_grid( {
+        upper_center.x() / SEEX, upper_center.y() / SEEY, target_z
+    } );
+    if( here.supports_zlevels() ) {
+        REQUIRE( upper_submap != nullptr );
+    }
+    const submap *const current_submap = here.get_submap_at_grid( {
+        center.x() / SEEX, center.y() / SEEY, center.z()
+    } );
+    REQUIRE( current_submap != nullptr );
+    const ter_id original_upper_terrain = here.ter( upper_center );
+    const trap_id original_upper_trap = here.tr_at( upper_center ).id;
+    on_out_of_scope restore_upper_tile( [&]() {
+        here.ter_set( upper_center, floor );
+        here.trap_set( upper_center, tr_null );
+        here.ter_set( upper_center, original_upper_terrain );
+        if( original_upper_terrain->trap == tr_null && original_upper_trap != tr_null ) {
+            here.trap_set( upper_center, original_upper_trap );
+        }
+    } );
+    here.ter_set( upper_center, floor );
+    REQUIRE( here.ter( upper_center ) == floor.id() );
+    here.trap_set( upper_center, tr_null );
+    const tripoint_abs_ms upper_absolute = here.get_abs( upper_center );
+    lua["trap_position"] = script_tripoint_coord::from_native(
+                               coords::origin::abs, coords::scale::map_square,
+                               upper_absolute.raw() );
+    dialogue upper_native_context( get_talker_for( get_avatar() ) );
+    upper_native_context.set_value( "trap_center", upper_absolute );
+    talk_effect_t upper_native_effect;
+    upper_native_effect.parse_sub_effect(
+        json_loader::from_string(
+            R"({"set_trap":"tr_beartrap", "location":{"context_val":"trap_center"}, "radius":0})"
+        ).get_object(), "trap_area_z_parity" );
+    finalize_conditions();
+    for( const talk_effect_fun_t &operation : upper_native_effect.effects ) {
+        operation( upper_native_context );
+    }
+    CHECK( here.tr_at( upper_center ).id == beartrap.id() );
+    here.trap_set( upper_center, tr_null );
+    {
+        detail::callback_scope active_callback( *owner );
+        const sol::protected_function_result result = lua.safe_script(
+                    "return services.gameplay.environment.set_trap_area("
+                    "trap_position, \"tr_beartrap\", 0, false)",
+                    sol::script_pass_on_error );
+        REQUIRE( result.valid() );
+        CHECK( result.get<int>() == 1 );
+    }
+    CHECK( here.tr_at( upper_center ).id == beartrap.id() );
+    if( here.supports_zlevels() ) {
+        CHECK( here.get_submap_at_grid( { upper_center.x() / SEEX,
+                                          upper_center.y() / SEEY, target_z } ) == upper_submap );
+    } else {
+        CHECK( here.get_submap_at_grid( { center.x() / SEEX,
+                                          center.y() / SEEY, center.z() } ) == current_submap );
+    }
+
+    // Same-id writes still pass through map::trap_set and repair its trap index.
+    prepare_area( center );
+    here.memory_cache_dec_set_dirty( center, false );
+    run_native( center, "0", true, false );
+    CHECK( here.memory_cache_dec_is_dirty( center ) );
+    const auto &native_locations = here.trap_locations( beartrap.id() );
+    CHECK( std::count( native_locations.begin(), native_locations.end(), center ) == 1 );
+    prepare_area( center );
+    here.memory_cache_dec_set_dirty( center, false );
+    CHECK( run_platform( center, true, 0.0, false ) == 1 );
+    CHECK( here.memory_cache_dec_is_dirty( center ) );
+    CHECK( run_platform( center, true, 0.0, false ) == 1 );
+    const auto &platform_locations = here.trap_locations( beartrap.id() );
+    CHECK( std::count( platform_locations.begin(), platform_locations.end(), center ) == 1 );
+    CHECK( here.tr_at( center ).id == beartrap.id() );
+    prepare_area( center );
+
+    // A square radius above 32767 remains usable when native endpoints are
+    // representable, even when its clipped region is wholly outside this map.
+    const tripoint_bub_ms distant_center( -40000, -40000, center.z() );
+    lua["trap_position"] = script_tripoint_coord::from_native(
+                               coords::origin::abs, coords::scale::map_square,
+                               here.get_abs( distant_center ).raw() );
+    lua["trap_radius"] = 32768.0;
+    lua["trap_square"] = true;
+    {
+        detail::callback_scope active_callback( *owner );
+        const sol::protected_function_result result = lua.safe_script(
+                    "return services.gameplay.environment.set_trap_area("
+                    "trap_position, \"tr_beartrap\", trap_radius, trap_square)",
+                    sol::script_pass_on_error );
+        REQUIRE( result.valid() );
+        CHECK( result.get<int>() == 0 );
+    }
+    lua["trap_position"] = script_tripoint_coord::from_native(
+                               coords::origin::abs, coords::scale::map_square,
+                               here.get_abs( center ).raw() );
+    lua["trap_radius"] = 46341.0;
+    lua["trap_square"] = false;
+    {
+        detail::callback_scope active_callback( *owner );
+        const sol::protected_function_result result = lua.safe_script(
+                    "return pcall(services.gameplay.environment.set_trap_area, "
+                    "trap_position, \"tr_beartrap\", trap_radius, trap_square)",
+                    sol::script_pass_on_error );
+        REQUIRE( result.valid() );
+        CHECK_FALSE( result.get<bool>() );
+    }
+
+    // The built-in terrain trap is refused by the native setter. The platform
+    // call must issue the same setter exactly once and preserve that refusal.
+    const tripoint_bub_ms builtin_center = center + tripoint_rel_ms( 5, 0, 0 );
+    REQUIRE( here.inbounds( builtin_center ) );
+    here.ter_set( builtin_center, pit );
+    REQUIRE( here.ter( builtin_center ) == pit.id() );
+    dialogue builtin_context( get_talker_for( get_avatar() ) );
+    const tripoint_abs_ms builtin_absolute = here.get_abs( builtin_center );
+    builtin_context.set_value( "trap_center", builtin_absolute );
+    talk_effect_t builtin_native_effect;
+    builtin_native_effect.parse_sub_effect(
+        json_loader::from_string(
+            R"({"set_trap":"tr_beartrap", "location":{"context_val":"trap_center"}, "radius":0})"
+        ).get_object(), "trap_area_builtin_parity" );
+    finalize_conditions();
+    const std::string native_builtin_diagnostic = capture_debugmsg_during( [&]() {
+        for( const talk_effect_fun_t &operation : builtin_native_effect.effects ) {
+            operation( builtin_context );
+        }
+    } );
+    lua["trap_position"] = script_tripoint_coord::from_native(
+                               coords::origin::abs, coords::scale::map_square,
+                               builtin_absolute.raw() );
+    lua["trap_radius"] = 0.0;
+    lua["trap_square"] = false;
+    int platform_builtin_attempts = 0;
+    const std::string platform_builtin_diagnostic = capture_debugmsg_during( [&]() {
+        detail::callback_scope active_callback( *owner );
+        const sol::protected_function_result result = lua.safe_script(
+                    "return services.gameplay.environment.set_trap_area("
+                    "trap_position, \"tr_beartrap\", trap_radius, trap_square)",
+                    sol::script_pass_on_error );
+        REQUIRE( result.valid() );
+        platform_builtin_attempts = result.get<int>();
+    } );
+    CHECK( native_builtin_diagnostic.find( "built-in trap" ) != std::string::npos );
+    CHECK( platform_builtin_diagnostic == native_builtin_diagnostic );
+    CHECK( platform_builtin_attempts == 1 );
+    CHECK( here.tr_at( builtin_center ).id == pit_trap.id() );
+    CHECK( std::count( here.trap_locations( beartrap.id() ).begin(),
+                       here.trap_locations( beartrap.id() ).end(), builtin_center ) == 0 );
+    here.ter_set( builtin_center, floor );
+
+    // Native trap IDs are std::string values, not 256-byte ASCII tokens. A
+    // long Lua byte string with an embedded NUL must reach the same native
+    // factory fallback and diagnostic as f_set_trap.
+    prepare_area( center );
+    std::string native_trap_json = R"({"set_trap":")";
+    native_trap_json.append( 320, 'x' );
+    native_trap_json +=
+        R"(\u0000tail", "location":{"context_val":"trap_center"}, "radius":0})";
+    const std::string long_trap_bytes = std::string( 320, 'x' ) + std::string( "\0tail", 5 );
+    dialogue long_id_context( get_talker_for( get_avatar() ) );
+    long_id_context.set_value( "trap_center", here.get_abs( center ) );
+    talk_effect_t long_id_native_effect;
+    long_id_native_effect.parse_sub_effect( json_loader::from_string( native_trap_json ).get_object(),
+                                            "trap_area_long_id_parity" );
+    finalize_conditions();
+    const std::string native_invalid_id_diagnostic = capture_debugmsg_during( [&]() {
+        for( const talk_effect_fun_t &operation : long_id_native_effect.effects ) {
+            operation( long_id_context );
+        }
+    } );
+    lua["trap_position"] = script_tripoint_coord::from_native(
+                               coords::origin::abs, coords::scale::map_square,
+                               here.get_abs( center ).raw() );
+    lua["trap_text"] = long_trap_bytes;
+    int long_id_attempts = 0;
+    const std::string platform_invalid_id_diagnostic = capture_debugmsg_during( [&]() {
+        detail::callback_scope active_callback( *owner );
+        const sol::protected_function_result result = lua.safe_script(
+                    "return services.gameplay.environment.set_trap_area("
+                    "trap_position, trap_text, 0, false)", sol::script_pass_on_error );
+        REQUIRE( result.valid() );
+        long_id_attempts = result.get<int>();
+    } );
+    CHECK( native_invalid_id_diagnostic.find( "invalid trap id" ) != std::string::npos );
+    CHECK( platform_invalid_id_diagnostic == native_invalid_id_diagnostic );
+    CHECK( long_id_attempts == 1 );
+    CHECK( here.tr_at( center ).id == tr_null );
+}
+
 TEST_CASE( "lua_platform_environment_line_of_sight_matches_map_semantics",
            "[lua][platform][environment_predicate][semantic]" )
 {

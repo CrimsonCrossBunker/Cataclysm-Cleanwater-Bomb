@@ -827,6 +827,106 @@ int set_platform_terrain( const tripoint_abs_ms &absolute,
     return changed_tiles;
 }
 
+int set_platform_trap_area( const tripoint_abs_ms &absolute,
+                            const std::string &trap_text,
+                            const double requested_radius, const bool square )
+{
+    constexpr std::string_view api_name = "services.gameplay.environment.set_trap_area";
+    if( g == nullptr ) {
+        throw std::runtime_error( std::string( api_name ) + " requires an active game" );
+    }
+    map &here = get_map();
+    const tripoint_abs_ms bubble_origin = here.get_abs( tripoint_bub_ms::zero );
+    const std::int64_t local_x = static_cast<std::int64_t>( absolute.x() ) - bubble_origin.x();
+    const std::int64_t local_y = static_cast<std::int64_t>( absolute.y() ) - bubble_origin.y();
+    if( local_x < std::numeric_limits<int>::lowest() ||
+        local_x > std::numeric_limits<int>::max() ||
+        local_y < std::numeric_limits<int>::lowest() ||
+        local_y > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument( std::string( api_name ) +
+                                     " position is outside native map coordinates" );
+    }
+    const tripoint_bub_ms center( static_cast<int>( local_x ),
+                                  static_cast<int>( local_y ), absolute.z() );
+    if( !std::isfinite( requested_radius ) ) {
+        throw std::invalid_argument( std::string( api_name ) + " radius must be finite" );
+    }
+    const double truncated_radius = std::trunc( requested_radius );
+    if( truncated_radius < std::numeric_limits<int>::lowest() ||
+        truncated_radius > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument( std::string( api_name ) +
+                                     " radius must truncate to a native int" );
+    }
+    const int radius = static_cast<int>( truncated_radius );
+
+    // f_set_trap converts the string to trap_id before map::trap_set.  Keep
+    // the native unknown-ID diagnostic/null-ID fallback and accept the full
+    // std::string byte sequence, including long strings and embedded NULs.
+    const trap_id target_trap = trap_str_id( trap_text ).id();
+    if( !here.inbounds_z( absolute.z() ) ) {
+        return 0;
+    }
+
+    // points_in_radius forms center +/- radius in native ints, and its range
+    // iterator increments x/y after visiting the last point.  Every endpoint
+    // must be representable and each maximum must leave room for that step.
+    const std::int64_t min_x = static_cast<std::int64_t>( center.x() ) - radius;
+    const std::int64_t max_x = static_cast<std::int64_t>( center.x() ) + radius;
+    const std::int64_t min_y = static_cast<std::int64_t>( center.y() ) - radius;
+    const std::int64_t max_y = static_cast<std::int64_t>( center.y() ) + radius;
+    constexpr std::int64_t iterator_min = std::numeric_limits<int>::lowest();
+    constexpr std::int64_t iterator_max = std::numeric_limits<int>::max() - 1;
+    if( min_x < iterator_min || min_x > iterator_max ||
+        max_x < iterator_min || max_x > iterator_max ||
+        min_y < iterator_min || min_y > iterator_max ||
+        max_y < iterator_min || max_y > iterator_max ) {
+        throw std::invalid_argument( std::string( api_name ) +
+                                     " radius would overflow native range coordinates" );
+    }
+    // trig_dist squares each int coordinate difference before converting to
+    // double.  46340^2 fits in int; 46341^2 does not.  Square ranges do not
+    // call trig_dist and keep their larger native-safe radius support.
+    if( !square && ( radius < -46340 || radius > 46340 ) ) {
+        throw std::invalid_argument( std::string( api_name ) +
+                                     " circle radius would overflow native trig_dist" );
+    }
+
+    if( radius < 0 ) {
+        // A negative square's native tripoint_range starts at center-radius,
+        // sees that one point, then advances directly to its end sentinel.
+        // The circle predicate rejects its first point for every negative
+        // radius, so it has no setter calls.
+        if( !square ) {
+            return 0;
+        }
+        const tripoint_bub_ms destination( static_cast<int>( min_x ),
+                                           static_cast<int>( min_y ), center.z() );
+        if( !here.inbounds( destination ) ) {
+            return 0;
+        }
+        here.trap_set( destination, target_trap );
+        return 1;
+    }
+
+    const float circle_radius = static_cast<float>( radius ) + 0.5f;
+    int attempted_squares = 0;
+    const std::optional<tripoint_range<tripoint_bub_ms>> area =
+        clipped_area_range( here, center, radius );
+    if( !area ) {
+        return 0;
+    }
+    for( const tripoint_bub_ms &destination : *area ) {
+        if( !square && trig_dist( center, destination ) >= circle_radius ) {
+            continue;
+        }
+        // map::trap_set is void: count each in-bounds setter call, including
+        // same-id resets and attempts refused by built-in terrain traps.
+        here.trap_set( destination, target_trap );
+        ++attempted_squares;
+    }
+    return attempted_squares;
+}
+
 int add_platform_field_area( const tripoint_abs_ms &absolute,
                              const std::string &field_id,
                              const sol::optional<sol::table> &requested_options )
@@ -4054,6 +4154,19 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                                      requested_radius.value_or( 1.0 ),
                                      requested_square.value_or( false ),
                                      requested_avoid_creatures.value_or( false ) );
+    } );
+    environment.set_function( "set_trap_area", [require_write,
+    require_environment_absolute_position](
+    const cata::lua_platform::script_tripoint_coord & position,
+    const std::string & trap_id,
+    const sol::optional<double> & requested_radius,
+    const sol::optional<bool> & requested_square ) {
+        require_write();
+        const tripoint_abs_ms absolute = require_environment_absolute_position(
+                                             position, "services.gameplay.environment.set_trap_area" );
+        return set_platform_trap_area( absolute, trap_id,
+                                       requested_radius.value_or( 1.0 ),
+                                       requested_square.value_or( false ) );
     } );
     environment.set_function( "add_field_area", [require_write,
     require_environment_absolute_position](

@@ -25667,26 +25667,117 @@ def _render_explicit_map_edit(
 
 
 def set_trap_migration_todo(effect: dict[str, Any]) -> tuple[str, str]:
-    """Classify a native set_trap shape without inventing a coordinate."""
-    radius = _literal_nonnegative_integer(
-        effect.get("radius", 1), NATIVE_INT_MAX
-    )
-    if radius != 0:
+    """Classify only set_trap shapes that lack a proven direct translation."""
+    comment_keys = {
+        name for name in effect
+        if isinstance(name, str) and name.startswith("//")
+    }
+    if set(effect) - comment_keys - {"set_trap", "location", "radius", "square"}:
         return (
-            "platform_gap",
-            "set_trap radius neighborhoods need native circle/square map mutation; "
-            "the typed trap_set service currently covers only radius zero",
+            "manual_rewrite",
+            "set_trap has options outside the typed native area operation",
         )
     if not bounded_platform_id(effect.get("set_trap")):
         return (
             "manual_rewrite",
             "set_trap needs a literal trap id or an explicit typed Lua lookup",
         )
+    if _coordinate_variable_descriptor(effect.get("location")) is None:
+        return (
+            "manual_rewrite",
+            "set_trap location must use a native var_info variable; literal abs_ms "
+            "is not valid native EOC location syntax",
+        )
+    square = effect.get("square", False)
+    if not isinstance(square, bool):
+        return (
+            "manual_rewrite",
+            "set_trap square must be a literal boolean",
+        )
+    radius_literal = finite_number_literal(effect.get("radius", 1))
+    if radius_literal is None:
+        return (
+            "manual_rewrite",
+            "set_trap radius needs a finite numeric literal whose truncation fits a native int",
+        )
+    radius = math.trunc(float(radius_literal))
+    if radius < NATIVE_INT_MIN or radius > NATIVE_INT_MAX:
+        return (
+            "manual_rewrite",
+            "set_trap radius truncates outside the native int range",
+        )
+    if not square and abs(radius) > 46340:
+        return (
+            "manual_rewrite",
+            "set_trap circle radius exceeds the defined int-square range of native trig_dist",
+        )
+    if abs(radius) > 46340:
+        return (
+            "manual_rewrite",
+            "set_trap large square radius needs a direct typed call so native endpoint "
+            "overflow can be checked against the runtime position",
+        )
     return (
         "manual_rewrite",
-        "set_trap location needs a proven absolute map-square value from native "
-        "var_info; literal abs_ms is not valid native EOC location syntax",
+        "set_trap location needs an immediately preceding proven u_location_variable "
+        "and a live loaded avatar map position",
     )
+
+
+def render_static_set_trap(
+    effect: dict[str, Any],
+    previous_effect: Any,
+    live_loaded_avatar_actor_proven: bool,
+) -> list[str] | None:
+    """Lower a literal trap write only after its direct avatar position writer."""
+    comment_keys = {
+        name for name in effect
+        if isinstance(name, str) and name.startswith("//")
+    }
+    if set(effect) - comment_keys - {"set_trap", "location", "radius", "square"}:
+        return None
+    trap_id = effect.get("set_trap")
+    if not bounded_platform_id(trap_id):
+        return None
+    location = effect.get("location")
+    location_descriptor = _coordinate_variable_descriptor(location)
+    if location_descriptor is None:
+        return None
+    square = effect.get("square", False)
+    if not isinstance(square, bool):
+        return None
+    radius_literal = finite_number_literal(effect.get("radius", 1))
+    if radius_literal is None:
+        return None
+    radius = math.trunc(float(radius_literal))
+    if (
+        radius < NATIVE_INT_MIN or radius > NATIVE_INT_MAX or
+        abs(radius) > 46340
+    ):
+        # Circle predicates square native int coordinate deltas.  Keeping the
+        # static rewrite within this bound is also a position-independent
+        # proof for square endpoints; the typed runtime API supports larger
+        # square radii when their actual center endpoints remain representable.
+        return None
+    if (
+        not live_loaded_avatar_actor_proven or
+        not isinstance(previous_effect, dict) or
+        set(previous_effect) != {"u_location_variable"} or
+        _coordinate_variable_descriptor(
+            previous_effect["u_location_variable"]
+        ) != location_descriptor or
+        render_static_location_variable(
+            previous_effect, "u_location_variable", True, False
+        ) is None
+    ):
+        return None
+    position = _coordinate_source_expression(location, True, False)
+    if position is None:
+        return None
+    return [
+        "    services.gameplay.environment.set_trap_area(",
+        f"        {position}, {lua_quote(trap_id)}, {radius}, {str(square).lower()})",
+    ]
 
 
 def _map_mutation_todo() -> str:
@@ -33802,13 +33893,22 @@ def render_eoc(
             elif (
                 isinstance(effect, dict) and "set_trap" in effect
             ):
-                todo_category, trap_gap = set_trap_migration_todo( effect )
-                lines.append(f"    -- TODO: {trap_gap}.")
-                result.add_todo(
-                    todo_category,
-                    f"{source.location}: EOC {eoc_id} effect #{effect_index} {trap_gap}"
+                rendered_trap = render_static_set_trap(
+                    effect,
+                    effects[effect_index - 1] if effect_index else None,
+                    teleport_avatar_actor_proven,
                 )
-                all_effects_converted = False
+                if rendered_trap is not None:
+                    lines.extend(rendered_trap)
+                    converted_effect = True
+                else:
+                    todo_category, trap_gap = set_trap_migration_todo( effect )
+                    lines.append(f"    -- TODO: {trap_gap}.")
+                    result.add_todo(
+                        todo_category,
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} {trap_gap}"
+                    )
+                    all_effects_converted = False
             elif isinstance(effect, dict) and "signal_hordes" in effect:
                 rendered_signal = render_static_horde_signal_broadcast(
                     effect,
