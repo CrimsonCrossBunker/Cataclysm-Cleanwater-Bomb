@@ -5,6 +5,7 @@
 #include "lua_platform_runtime_internal.h"
 #include "lua_platform_bindings_coords.h"
 #include "lua_platform_interaction.h"
+#include "input_popup.h"
 #include "lua_platform_dialogue.h"
 #include "npc.h"
 #include "npctalk.h"
@@ -13,6 +14,7 @@
 #include "translation.h"
 #include "uilist.h"
 #include <memory>
+#include <limits>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -606,6 +608,71 @@ TEST_CASE( "lua_platform_text_missing_participants_match_native_avatar_fallback"
     const sol::table error = rejected.get<sol::table>();
     CHECK_FALSE( error["ok"].get<bool>() );
     CHECK( rng_get_engine() == before_stale );
+}
+
+TEST_CASE( "lua_platform_text_input_preparation_preserves_native_limits_and_provider_order",
+           "[lua][platform][interaction][semantic]" )
+{
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::table );
+    const std::string raw_text = std::string( 10000, 'x' ) + '\0' + "tail";
+    lua["raw_text"] = raw_text;
+    const sol::protected_function_result loaded = lua.safe_script( R"(
+        calls={}
+        local function text(name)
+            return function() calls[#calls+1]=name;return raw_text end
+        end
+        return text('label'), {default=raw_text, width_text=raw_text,
+            description=text('description'), identifier=text('identifier')}
+    )", sol::script_pass_on_error );
+    REQUIRE( loaded.valid() );
+    const sol::object label = loaded.get<sol::object>( 0 );
+    sol::table options = loaded.get<sol::table>( 1 );
+    auto popup = cata::lua_platform::prepare_game_text_input_popup( label, options );
+    REQUIRE( popup != nullptr );
+    string_input_popup_imgui native_popup( static_cast<int>( 40 + raw_text.size() ), raw_text );
+    CHECK( popup->get_max_input_length() == native_popup.get_max_input_length() );
+    CHECK( popup->get_max_input_length() == 0 );
+    const sol::table calls = lua["calls"];
+    REQUIRE( calls.size() == 3 );
+    CHECK( calls[1].get<std::string>() == "label" );
+    CHECK( calls[2].get<std::string>() == "description" );
+    CHECK( calls[3].get<std::string>() == "identifier" );
+    for( const int width : { std::numeric_limits<int>::min(), 0, 9, 241, 10000,
+                            std::numeric_limits<int>::max() } ) {
+        CAPTURE( width );
+        options["width"] = width;
+        auto wide = cata::lua_platform::prepare_game_text_input_popup(
+                        sol::make_object( lua, "" ), options );
+        CHECK( wide->get_max_input_length() == 0 );
+    }
+    for( const std::string_view malformed : {
+             "return {default=1}", "return {width_text=false}", "return {width=0.5}",
+             "return {width=2147483648}", "return {description={}}", "return {identifier=false}",
+             "return {unknown=true}", "return {description=function()return 1 end}",
+             "return {identifier=function()error('provider failed')end}"
+         } ) {
+        INFO( malformed );
+        const sol::protected_function_result result = lua.safe_script( malformed, sol::script_pass_on_error );
+        REQUIRE( result.valid() );
+        CHECK_THROWS( cata::lua_platform::prepare_game_text_input_popup(
+                          sol::make_object( lua, "" ), result.get<sol::table>() ) );
+    }
+    sol::table services = lua.create_table();
+    bool actions_requested = false;
+    cata::lua_platform::install_game_interaction_api(
+        services, [&]() { actions_requested = true; }, []() { return false; } );
+    lua["services"] = services;
+    const sol::protected_function_result rejected = lua.safe_script( R"(
+        local ok,err=pcall(services.interaction.input_text,function()
+            error('provider must not run outside callback')
+        end)
+        assert(not ok and string.find(err,'only available from an active callback',1,true))
+    )", sol::script_pass_on_error );
+    REQUIRE( rejected.valid() );
+    CHECK( actions_requested );
+    // Preparation intentionally does not query input. Confirm/cancel still
+    // require the native UI acceptance gate; this is not interactive proof.
 }
 
 TEST_CASE( "lua_platform_interaction_menu_preserves_native_rows_and_text",

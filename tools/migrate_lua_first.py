@@ -27819,7 +27819,7 @@ def render_static_character_string_var(
     if (
         not isinstance(effect, dict) or
         not {"set_string_var", "target_var"}.issubset(effect) or
-        set(effect) - {"set_string_var", "target_var", "parse_tags", "i18n"}
+        set(effect) - {"set_string_var", "target_var", "parse_tags", "i18n", "string_input"}
     ):
         return None
     target_descriptor = effect["target_var"]
@@ -27877,6 +27877,20 @@ def render_static_character_string_var(
                        for value in values]
     if any(value is None for value in rendered_values):
         return None
+    input_values: dict[str, str] | None = None
+    if "string_input" in effect:
+        requested_input = effect["string_input"]
+        if not isinstance(requested_input, dict) or set(requested_input) - {
+                "title", "default_text", "description", "identifier"}:
+            return None
+        input_values = {}
+        for field in ("title", "default_text", "description", "identifier"):
+            rendered_input = _render_assignment_string_value(
+                requested_input.get(field, ""), field != "identifier", effect_actor_targets
+            )
+            if rendered_input is None:
+                return None
+            input_values[field] = rendered_input
     lines = [
         "    local string_values = { " + ", ".join(
             f"function() return {value} end" for value in rendered_values
@@ -27884,6 +27898,18 @@ def render_static_character_string_var(
         "    local assigned_value = string_values[",
         "        services.random.native_int(0, #string_values - 1) + 1]()",
     ]
+    if input_values is not None:
+        lines.extend([
+            f"    local input_width_label = {input_values['title']}",
+            f"    local input_default = {input_values['default_text']}",
+            "    local input_result = services.interaction.input_text(",
+            f"        function() return {input_values['title']} end, {{",
+            "            width = 40, width_text = input_width_label, default = input_default,",
+            f"            description = function() return {input_values['description']} end,",
+            f"            identifier = function() return {input_values['identifier']} end,",
+            "        })",
+            "    if input_result.accepted then assigned_value = input_result.value end",
+        ])
     if parse_tags:
         lines.extend([
             "    assigned_value = service_value(services.text.expand_for(",
@@ -32463,7 +32489,7 @@ def render_eoc(
                         false_todo = (
                             "translate set_string_var only for native string providers "
                             "with native RNG and exact participant handles; "
-                            "string_input, unsupported translation shapes, unproven "
+                            "unsupported input/translation shapes, unproven "
                             "source/target owners remain TODO"
                         )
                     if (
@@ -36640,7 +36666,7 @@ def render_eoc(
                     lines.append(
                         "    -- TODO: translate set_string_var only for native string "
                         "providers with native RNG and exact participant handles; "
-                        "string_input, unsupported translation shapes, "
+                        "unsupported input/translation shapes, "
                         "unproven source/target owners remain TODO."
                     )
                     result.add_todo(

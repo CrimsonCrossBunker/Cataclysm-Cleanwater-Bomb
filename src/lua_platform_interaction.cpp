@@ -52,8 +52,6 @@ constexpr int maximum_sound_loops = 100;
 constexpr std::size_t maximum_adjacent_candidates = 27;
 constexpr std::size_t maximum_sound_description_bytes = 4096;
 constexpr int maximum_targeting_range = 1000;
-constexpr std::size_t maximum_interaction_text_bytes = 4096;
-constexpr std::size_t maximum_interaction_identifier_bytes = 128;
 
 void require_active_callback(
     const std::function<bool()> &has_active_callback,
@@ -849,29 +847,48 @@ sol::object choose_adjacent_where_at(
 }
 
 struct text_input_options {
-    std::string description;
+    sol::object description;
     std::string default_text;
-    std::string identifier;
+    sol::object identifier;
+    std::string width_text;
     int width = 40;
 };
 
-std::string bounded_interaction_text(
-    const sol::object &value, const std::string &field,
-    const std::size_t maximum )
+std::string raw_interaction_text( const sol::object &value, const std::string &field )
 {
     if( value.get_type() != sol::type::string ) {
         throw std::invalid_argument(
             "services.interaction.input_text option '" + field +
             "' must be a string" );
     }
-    const std::string result = value.as<std::string>();
-    if( result.size() > maximum ||
-        result.find( '\0' ) != std::string::npos ) {
+    return value.as<std::string>();
+}
+
+sol::object read_interaction_text_provider( const sol::object &value, const std::string &field )
+{
+    if( value.get_type() != sol::type::string && value.get_type() != sol::type::function ) {
         throw std::invalid_argument(
             "services.interaction.input_text option '" + field +
-            "' exceeds its native text bound" );
+            "' must be a string or function" );
     }
-    return result;
+    return value;
+}
+
+std::string evaluate_interaction_text( const sol::object &value, const std::string &field )
+{
+    if( !value.valid() || value.get_type() == sol::type::nil ) {
+        return {};
+    }
+    if( value.get_type() == sol::type::string ) {
+        return value.as<std::string>();
+    }
+    const sol::protected_function function = value.as<sol::protected_function>();
+    const sol::protected_function_result result = function();
+    if( !result.valid() ) {
+        const sol::error error = result;
+        throw std::runtime_error( error.what() );
+    }
+    return raw_interaction_text( result.get<sol::object>(), field );
 }
 
 text_input_options read_text_input_options(
@@ -888,25 +905,17 @@ text_input_options read_text_input_options(
         }
         const std::string key = entry.first.as<std::string>();
         if( key == "description" ) {
-            result.description = bounded_interaction_text(
-                                     entry.second, key,
-                                     maximum_interaction_text_bytes );
+            result.description = read_interaction_text_provider( entry.second, key );
         } else if( key == "default" ) {
-            result.default_text = bounded_interaction_text(
-                                      entry.second, key,
-                                      maximum_interaction_text_bytes );
+            result.default_text = raw_interaction_text( entry.second, key );
         } else if( key == "identifier" ) {
-            result.identifier = bounded_interaction_text(
-                                    entry.second, key,
-                                    maximum_interaction_identifier_bytes );
+            result.identifier = read_interaction_text_provider( entry.second, key );
+        } else if( key == "width_text" ) {
+            result.width_text = raw_interaction_text( entry.second, key );
         } else if( key == "width" ) {
             result.width = integer_option(
                                entry.second,
                                "services.interaction.input_text", key );
-            if( result.width < 10 || result.width > 240 ) {
-                throw std::invalid_argument(
-                    "services.interaction.input_text width must be within 10..240" );
-            }
         } else {
             throw std::invalid_argument(
                 "services.interaction.input_text received unknown option '" +
@@ -924,27 +933,19 @@ bool confirm_interaction( const std::string &message )
 }
 
 sol::table input_interaction_text(
-    sol::this_state lua, const std::string &title,
+    sol::this_state lua, const sol::object &title,
     const sol::optional<sol::table> &requested_options )
 {
-    require_target_prompt(
-        title, "title", "services.interaction.input_text" );
-    const text_input_options options =
-        read_text_input_options( requested_options );
-    string_input_popup_imgui popup(
-        options.width, options.default_text );
-    popup.set_label( title );
-    popup.set_description( options.description );
-    popup.set_identifier( options.identifier );
-    popup.set_max_input_length(
-        static_cast<int>( maximum_interaction_text_bytes ) );
-    const std::string entered = popup.query();
-    const bool accepted = !popup.cancelled();
+    const std::unique_ptr<string_input_popup_imgui> popup = prepare_game_text_input_popup(
+                title, requested_options );
+    const std::string entered = popup->query();
+    const bool accepted = !popup->cancelled();
     sol::state_view state( lua );
     sol::table value = state.create_table();
     value["accepted"] = accepted;
     value["cancelled"] = !accepted;
-    value["value"] = accepted ? entered : options.default_text;
+    // Native query returns the initial value on cancellation.
+    value["value"] = entered;
     return value;
 }
 
@@ -1120,6 +1121,22 @@ sol::table choose_interaction_entry(
 
 } // namespace
 
+std::unique_ptr<string_input_popup_imgui> prepare_game_text_input_popup(
+    const sol::object &title, const sol::optional<sol::table> &requested_options )
+{
+    const sol::object label = read_interaction_text_provider( title, "title" );
+    const text_input_options options = read_text_input_options( requested_options );
+    // Match the native popup's integer conversion after adding a label's
+    // byte length, including widths outside the former 10..240 range.
+    const int width = static_cast<int>( static_cast<std::size_t>( options.width ) +
+                                       options.width_text.size() );
+    auto popup = std::make_unique<string_input_popup_imgui>( width, options.default_text );
+    popup->set_label( evaluate_interaction_text( label, "title" ) );
+    popup->set_description( evaluate_interaction_text( options.description, "description" ) );
+    popup->set_identifier( evaluate_interaction_text( options.identifier, "identifier" ) );
+    return popup;
+}
+
 std::vector<std::string> prepare_game_interaction_menu(
     uilist &menu, const sol::table &entries, const sol::optional<sol::table> &requested_options )
 {
@@ -1163,7 +1180,7 @@ void install_game_interaction_api(
     interaction.set_function(
         "input_text",
         [require_actions, has_active_callback](
-            sol::this_state lua, const std::string & title,
+            sol::this_state lua, const sol::object &title,
     const sol::optional<sol::table> &options ) {
         require_actions();
         require_active_callback(

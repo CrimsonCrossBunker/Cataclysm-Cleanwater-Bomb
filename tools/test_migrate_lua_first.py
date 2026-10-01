@@ -2018,7 +2018,7 @@ assert(target_store.output==VALUE or (VALUE==nil and target_store.output==null))
             {"set_string_var": "<name>", "target_var": {"global_val": "output"},
              "parse_tags": True},
             {"set_string_var": "value", "target_var": {"global_val": "output"},
-             "string_input": {"title": "Input"}},
+             "string_input": {"title": {"npc_val": "unproven_title"}}},
         ):
             self.assertIsNone(migrate_lua_first.render_static_character_string_var(
                 unsupported, {}
@@ -2435,6 +2435,125 @@ assert(table.concat(trace,",")=="rng,expand,write")
                 "target_var": {"global_val": "output"},
             }, {**proof, "text_npc": missing_proof}))
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_set_string_input_preserves_native_order_cancel_and_raw_values(self) -> None:
+        effect = {
+            "set_string_var": ["unused", {"context_val": "chosen"}],
+            "string_input": {
+                "title": {"context_val": "title"},
+                "default_text": {"global_val": "default"},
+                "description": {"npc_val": "description"},
+                "identifier": {"u_val": "identifier"},
+            },
+            "parse_tags": True, "target_var": {"var_val": "pointer"},
+        }
+        proof = {"u": ("alpha", "character"), "npc": ("beta", "character")}
+        lines = migrate_lua_first.render_static_character_string_var(effect, proof)
+        self.assertIsNotNone(lines)
+        script = r'''
+local alpha,beta={},{}
+local trace,title_calls={},0
+local context={data={chosen="candidate\0raw",pointer="old_output"}}
+local width_label=string.rep('w',10000)..'\0tail'
+local entered=string.rep('e',10000)..'\0entered'
+local actual
+local function value(text) return {ok=true,value={exists=true,value=text}} end
+local services={
+ random={native_int=function(lo,hi) assert(lo==0 and hi==1);trace[#trace+1]='rng';return 1 end},
+ translate=function() error('stored variables must remain raw') end,
+ variables={
+  get_context_string=function(data,key)
+   assert(data==context.data)
+   if key=='title' then
+    title_calls=title_calls+1;trace[#trace+1]='title'..title_calls
+    return value(title_calls==1 and width_label or 'displayed\0label')
+   end
+   trace[#trace+1]=key;return value(data[key])
+  end,
+  get_global_string=function(key) assert(key=='default');trace[#trace+1]='default';return value('default\0raw') end,
+  get_string=function(owner,key)
+   assert((owner==alpha and key=='identifier') or (owner==beta and key=='description'))
+   trace[#trace+1]=key;return value(key..'\0raw')
+  end,
+  set_global=function(key,text)
+   assert(key=='final_output');trace[#trace+1]='write';actual=text;return {ok=true}
+  end,
+ },
+ interaction={input_text=function(label,options)
+  trace[#trace+1]='open'
+  assert(options.width==40 and options.width_text==width_label and options.default=='default\0raw')
+  assert(label()=='displayed\0label')
+  assert(options.description()=='description\0raw')
+  assert(options.identifier()=='identifier\0raw')
+  trace[#trace+1]='query'
+  return {accepted=ACCEPTED,cancelled=not ACCEPTED,value=ACCEPTED and entered or options.default}
+ end},
+ text={expand_for=function(text,a,b,item,data,fallback)
+  assert(a==alpha and b==beta and item==nil and data==context.data and fallback==true)
+  trace[#trace+1]='expand';data.pointer='final_output'
+  return {ok=true,value='['..text..']'}
+ end},
+}
+local function service_value(result) assert(result.ok);return result.value end
+'''+"\n".join(lines or [])+r'''
+assert(actual=='['..(ACCEPTED and entered or context.data.chosen)..']')
+assert(table.concat(trace,',')=='rng,chosen,title1,default,open,title2,description,identifier,query,expand,pointer,write')
+'''
+        for accepted in (False, True):
+            run = subprocess.run([shutil.which("lua"), "-"],
+                                 input=script.replace("ACCEPTED", "true" if accepted else "false"),
+                                 text=True, capture_output=True, timeout=10)
+            self.assertEqual(run.returncode, 0, run.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_set_string_input_translates_title_twice_and_accepts_empty_value(self) -> None:
+        lines = migrate_lua_first.render_static_character_string_var({
+            "set_string_var": "original", "string_input": {"title": "Prompt"},
+            "target_var": {"context_val": "output"},
+        }, {})
+        self.assertIsNotNone(lines)
+        script = '''
+local context={data={}}
+local calls=0
+local services={
+ random={native_int=function()return 0 end},
+ translate=function(text) assert(text=='Prompt');calls=calls+1;return 'label'..calls end,
+ interaction={input_text=function(label,options)
+  assert(calls==1 and options.width_text=='label1' and options.default=='')
+  assert(label()=='label2' and options.description()=='' and options.identifier()=='')
+  return {accepted=true,cancelled=false,value=''}
+ end},
+}
+local function service_value(result)assert(result.ok);return result.value end
+'''+"\n".join(lines or [])+'''
+assert(context.data.output=='' and calls==2)
+'''
+        run = subprocess.run([shutil.which("lua"), "-"], input=script, text=True,
+                             capture_output=True, timeout=10)
+        self.assertEqual(run.returncode, 0, run.stderr)
+        for invalid in (None, [], "input", {"width": 40}, {"description": 42},
+                        {"title": {"npc_val": "missing_owner"}}):
+            self.assertIsNone(migrate_lua_first.render_static_character_string_var({
+                "set_string_var": "original", "string_input": invalid,
+                "target_var": {"context_val": "output"},
+            }, {}))
+
+    def test_set_string_input_normal_and_false_branch_use_plain_callback_api(self) -> None:
+        effect = {"set_string_var": "value", "string_input": {},
+                  "target_var": {"global_val": "output"}}
+        for false_branch in (False, True):
+            source = migrate_lua_first.SourceObject(Path("input.json"), 0, {
+                "type": "effect_on_condition", "id": "input_assignment",
+                "eoc_type": "EVENT", "required_event": "game_start", "condition": "is_day",
+                "effect": [], **({"false_effect": effect} if false_branch else {"effect": effect}),
+            })
+            result = migrate_lua_first.MigrationResult()
+            rendered = migrate_lua_first.render_eoc(source, result)
+            self.assertEqual(result.todos, [])
+            self.assertIn("services.interaction.input_text(", rendered or "")
+            self.assertIn("if input_result.accepted then assigned_value = input_result.value end", rendered or "")
+            self.assertNotIn("string_input =", rendered or "")
+
     def test_set_string_migration_keeps_unproven_shapes_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "set_string_shapes.json"
@@ -2499,8 +2618,9 @@ assert(table.concat(trace,",")=="rng,expand,write")
                 migrate_lua_first.load_objects([source]), "set_string_shapes_mod"
             )
             main = result.files[Path("main.lua")]
-            self.assertEqual(len(result.converted), 3)
-            self.assertEqual(len(result.partial), 3)
+            self.assertEqual(len(result.converted), 4)
+            self.assertEqual(len(result.partial), 2)
+            self.assertIn("services.interaction.input_text(", main)
             self.assertIn("assigned_value, actor, nil, nil, context and context.data, true", main)
             self.assertIn("services.random.native_int(0, #string_values - 1) + 1", main)
             self.assertIn("unproven source/target owners remain TODO", main)
@@ -2630,7 +2750,7 @@ assert(calls==1)
             {"set_string_var": {"u_val": "source"}, "target_var": target},
             {"set_string_var": "<name>", "target_var": target, "parse_tags": True},
             {"set_string_var": "initial", "target_var": target,
-             "string_input": {"title": "Input"}},
+             "string_input": {"title": {"npc_val": "unproven_title"}}},
             {"set_string_var": "value", "target_var": {"var_val": "target"}},
             {"set_string_var": "value"},
             {"set_string_var": "value", "target_var": target, "unknown": True},

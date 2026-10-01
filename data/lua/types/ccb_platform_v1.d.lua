@@ -6920,18 +6920,20 @@ local CcbPlatformInteractionApi = {}
 function CcbPlatformInteractionApi.confirm(message) end
 
 ---@class PlatformInteractionTextInputOptions
----@field default? string Initial editable value, at most 4096 bytes.
----@field description? string Help text, at most 4096 bytes.
----@field identifier? string Input history identifier, at most 128 bytes.
----@field width? integer Input width, 10..240; defaults to 40.
+---@field default? string Raw initial editable value; defaults to empty. No extra byte or NUL restriction is imposed.
+---@field description? string|fun():string Raw help text or a provider evaluated after the popup label.
+---@field identifier? string|fun():string Raw history identifier or a provider evaluated after help text.
+---@field width? integer Native signed-int width; defaults to 40. The native popup handles layout.
+---@field width_text? string Add this raw text's byte length to width using the native popup's integer conversion; defaults to empty. It need not equal the displayed label.
 
 ---@class PlatformInteractionTextInputResult
 ---@field accepted boolean
 ---@field cancelled boolean
 ---@field value string Entered text when accepted; default text when cancelled.
 
----@param title string
+---@param title string|fun():string Raw label or a provider evaluated once after popup construction. Empty, long and embedded-NUL strings pass through to native UI without an extra limit.
 ---@param options? PlatformInteractionTextInputOptions
+---Requires an active writable callback. Providers run synchronously in label/help/identifier order and are not retained. Input length uses the native popup default, without an additional Platform quota.
 ---@return PlatformInteractionTextInputResult result
 function CcbPlatformInteractionApi.input_text(title, options) end
 
