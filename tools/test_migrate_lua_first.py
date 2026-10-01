@@ -2909,6 +2909,111 @@ assert(table.concat(trace,',')==TRACE)
             self.assertIsNone(migrate_lua_first.render_participant_translation_expression(
                 {scope: "key"}, "actor", None, None))
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_translated_indirect_assignment_keeps_single_parse_and_lazy_default(self) -> None:
+        pointer_key, target_key = "pointer\0" + "p" * 10000, "target\0suffix"
+        pointers = (
+            (None, None, None), ("", "global", ""), ("u_", "u", ""),
+            ("n_", "npc", ""), ("_", "context", ""),
+            ("u_" + target_key, "u", target_key), ("n_" + target_key, "npc", target_key),
+            ("_" + target_key, "context", target_key), (target_key, "global", target_key),
+            ("npc_" + target_key, "global", "npc_" + target_key),
+            ("u_u_" + target_key, "u", "u_" + target_key),
+            ("_" + pointer_key, "context", pointer_key),
+            (42, "global", ""), (False, "global", ""), (["u_target"], "global", ""),
+        )
+        def literal(value: Any) -> str:
+            if value is None:
+                return "nil"
+            if isinstance(value, str):
+                return migrate_lua_first.lua_quote(value)
+            if isinstance(value, bool):
+                return "false"
+            return "42" if isinstance(value, int) else "{'array'}"
+
+        for with_default in (False, True):
+            provider: dict[str, Any] = {"var_val": pointer_key}
+            if with_default:
+                provider["default"] = {"str": "fallback\0raw", "ctxt": "scope\0suffix"}
+            lines = migrate_lua_first.render_static_character_string_var({
+                "set_string_var": ["unselected constant", provider], "i18n": True,
+                "target_var": {"global_val": "output"},
+            }, {"u": ("actor", "character"), "npc": ("partner", "monster")})
+            self.assertIsNotNone(lines)
+            for pointer, scope, key in pointers:
+                for stored in (None, "", "raw\0u_not_followed", 42, False, ["array"]):
+                    alias = key == pointer_key
+                    missing = pointer is None or not alias and stored is None
+                    raw = pointer if alias else stored if isinstance(stored, str) else ""
+                    expected = "translated fallback" if missing and with_default else "" if missing else raw
+                    script = r"""
+local actor,partner={},{}
+local context={data={}}
+local trace={}
+local reads=0
+local pointer,stored=POINTER,STORED
+local function service_value(r)assert(r.ok);return r.value end
+local function read(scope,key)
+ reads=reads+1;table.insert(trace,'read')
+ local value
+ if reads==1 then assert(scope=='context' and key==POINTER_KEY);value=pointer
+ else assert(scope==SCOPE and key==KEY);value=ALIAS and pointer or stored end
+ return {ok=true,value={exists=value~=nil,value=type(value)=='string' and value or value~=nil and '' or nil}}
+end
+local services={random={native_int=function(lo,hi)
+ assert(lo==0 and hi==1);table.insert(trace,'rng');return 1
+end},variables={get_context_string=function(data,key)
+ assert(data==context.data);return read('context',key)
+end,get_global_string=function(key)return read('global',key)end,
+get_string=function(owner,key)
+ assert(owner==actor or owner==partner);return read(owner==actor and 'u' or 'npc',key)
+end,set_global=function(key,value)
+ assert(key=='output' and value==EXPECTED);table.insert(trace,'write');return {ok=true,value={}}
+end},translate=function(text,ctxt)
+ assert(MISSING and text=='fallback\0raw' and ctxt=='scope\0suffix')
+ table.insert(trace,'translate');return 'translated fallback'
+end}
+BODY
+assert(reads==READS and trace[1]=='rng' and trace[#trace]=='write')
+assert(#trace==READS+2+TRANSLATES)
+""".replace("POINTER_KEY", migrate_lua_first.lua_quote(pointer_key)).replace(
+                        "POINTER", literal(pointer),
+                    ).replace("STORED", literal(stored)).replace("SCOPE", literal(scope)).replace(
+                        "KEY", literal(key),
+                    ).replace("ALIAS", "true" if alias else "false").replace(
+                        "EXPECTED", migrate_lua_first.lua_quote(expected),
+                    ).replace("MISSING", "true" if missing else "false").replace(
+                        "READS", "1" if pointer is None else "2",
+                    ).replace("TRANSLATES", "1" if missing and with_default else "0").replace(
+                        "BODY", "\n".join(lines or []),
+                    )
+                    run = subprocess.run(["lua", "-"], input=script, text=True,
+                                         capture_output=True, timeout=10)
+                    self.assertEqual(run.returncode, 0, run.stderr)
+        for alpha, beta in ((None, None), ("actor", None), (None, "partner")):
+            self.assertIsNone(migrate_lua_first.render_participant_translation_expression(
+                {"var_val": pointer_key}, "actor", alpha, beta))
+
+    def test_translated_indirect_assignment_normal_and_false_branch_keep_owner_proofs(self) -> None:
+        effect = {"set_string_var": {"var_val": "pointer", "default": {
+            "str": "Fallback", "ctxt": "scope\0suffix"}},
+            "i18n": True, "target_var": {"global_val": "output"}}
+        for event, supported in (("character_melee_attacks_monster", True), ("game_start", False)):
+            for false_branch in (False, True):
+                source = migrate_lua_first.SourceObject(Path("indirect_translation.json"), 0, {
+                    "type": "effect_on_condition", "id": "indirect_translation",
+                    "eoc_type": "EVENT", "required_event": event,
+                    "condition": "is_day", "effect": [],
+                    **({"false_effect": effect} if false_branch else {"effect": effect}),
+                })
+                result = migrate_lua_first.MigrationResult()
+                rendered = migrate_lua_first.render_eoc(source, result)
+                self.assertEqual(not result.todos, supported, [todo.message for todo in result.todos])
+                if supported:
+                    self.assertIn("services.variables.get_context_string", rendered)
+                    self.assertIn("services.variables.get_global_string(pointer)", rendered)
+                    self.assertNotIn("services.variables.resolve", rendered)
+
     def test_set_string_renderer_rejects_shapes_outside_its_literal_contract(self) -> None:
         target = {"global_val": "output"}
         unsupported = (

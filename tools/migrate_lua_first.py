@@ -27714,7 +27714,7 @@ def render_participant_translation_expression(
         # TODO rather than being silently treated as str.
         return _render_assignment_translation_literal(value)
     if isinstance(value, dict) and set(value).intersection({
-            "u_val", "npc_val", "context_val", "global_val"}):
+            "u_val", "npc_val", "context_val", "global_val", "var_val"}):
         # Native translation_or_var wraps diag_value::str as no_translation.
         # A general snapshot plus tostring would translate numeric/array
         # mismatches into strings and impose unrelated snapshot/key limits.
@@ -27727,9 +27727,25 @@ def render_participant_translation_expression(
         fallback = lua_quote("")
         if "default" in value:
             fallback = _render_assignment_translation_literal(value["default"])
+        if fallback is None:
+            return None
+        if scope == "var_val":
+            # Reuse the audited one-pass Native pointer parser. Every possible
+            # participant owner must be proven; absent pointer and absent
+            # target select the translated default independently.
+            def read(source: str, key: str) -> str | None:
+                snapshot = _render_native_variable_string_snapshot(
+                    source, key, avatar_expression, npc_expression)
+                if snapshot is None:
+                    return None
+                return ('(function(result) if result.exists == false then return nil end; '
+                        f'return result.value end)({snapshot})')
+
+            return render_proficiency_id_expression(
+                value, variable_string_reader=read, variable_default_expression=fallback)
         raw = _render_native_variable_string_snapshot(
             scope, lua_quote(value[scope]), avatar_expression, npc_expression)
-        if fallback is None or raw is None:
+        if raw is None:
             return None
         return ('(function(result) if result.exists ~= false then return result.value end; '
                 f'return {fallback} end)({raw})')
@@ -27801,6 +27817,17 @@ def _render_assignment_string_value(
         # Stored variable strings and string-valued mutators remain raw.
         if isinstance(value, str) or isinstance(value, dict) and "str" in value:
             return _render_assignment_translation_literal(value)
+        if isinstance(value, dict):
+            variable_keys = set(value).intersection({
+                "u_val", "npc_val", "global_val", "context_val", "var_val"})
+            if (len(variable_keys) == 1 and set(value) <= variable_keys | {"default"} and
+                    ("default" not in value or
+                     _render_assignment_translation_literal(value["default"]) is not None)):
+                # Shared lowering is used by real assignment/input providers,
+                # not just standalone helper expressions. More complex loader
+                # priority/invalid-default shapes keep their existing path.
+                return render_participant_translation_expression(
+                    value, "actor", alpha, beta)
         if isinstance(value, dict) and "default" in value:
             default = value["default"]
             fallback = _render_assignment_translation_literal(default)

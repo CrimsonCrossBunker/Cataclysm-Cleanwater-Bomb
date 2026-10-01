@@ -32,6 +32,7 @@
 #include "math_parser_diag_value.h"
 #include "npc.h"
 #include "rng.h"
+#include "translation.h"
 #include "weather.h"
 
 TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
@@ -780,7 +781,8 @@ TEST_CASE( "lua_migration_indirect_string_native_pointer_baseline",
            "[lua][platform][strings][semantic]" )
 {
     restore_on_out_of_scope restore_globals( get_globals().get_global_values() );
-    get_globals().set_global_value( "", "empty-global" );
+    const std::string empty_global = std::string( "empty-global" ) + '\0' + "raw suffix";
+    get_globals().set_global_value( "", empty_global );
     for( const std::string &key : std::vector<std::string> {
     "", std::string( "pointer\0key", 11 ), "pointer\nkey", std::string( 9000, 'p' )
     } ) {
@@ -796,18 +798,24 @@ TEST_CASE( "lua_migration_indirect_string_native_pointer_baseline",
         writer.end_object();
         const JsonObject object = json_loader::from_string( input.str() ).get_object();
         const str_or_var native = get_str_or_var( object.get_member( "value" ), "value" );
+        const translation_or_var translated = get_translation_or_var(
+                object.get_member( "value" ), "value" );
         dialogue context;
         CHECK( native.evaluate( context ) == "fallback" );
+        CHECK( translated.evaluate( context ).translated() == to_translation( "fallback" ).translated() );
         context.set_value( key, diag_value{} );
-        CHECK( native.evaluate( context ) == "empty-global" );
+        CHECK( native.evaluate( context ) == empty_global );
+        CHECK( translated.evaluate( context ).translated() == empty_global );
         context.set_value( key, "" );
-        CHECK( native.evaluate( context ) == "empty-global" );
+        CHECK( native.evaluate( context ) == empty_global );
+        CHECK( translated.evaluate( context ).translated() == empty_global );
         for( const diag_value &pointer : {
                  diag_value( 42.0 ), diag_value( diag_array{ diag_value( "u_key" ) } )
              } ) {
             context.set_value( key, pointer );
             const std::string diagnostic = capture_debugmsg_during( [&]() {
-                CHECK( native.evaluate( context ) == "empty-global" );
+                CHECK( native.evaluate( context ) == empty_global );
+                CHECK( translated.evaluate( context ).translated() == empty_global );
             } );
             CHECK( diagnostic.find( "Type mismatch in diag_value" ) != std::string::npos );
         }
@@ -817,16 +825,23 @@ TEST_CASE( "lua_migration_indirect_string_native_pointer_baseline",
              } ) {
             context.set_value( key, pointer );
             CHECK( native.evaluate( context ) == "fallback" );
+            CHECK( translated.evaluate( context ).translated() == to_translation( "fallback" ).translated() );
         }
         // A referenced string that itself looks like a pointer is not followed.
         const std::string target = "native_indirect_target";
         context.set_value( target, "u_not_followed" );
         context.set_value( key, "_" + target );
         CHECK( native.evaluate( context ) == "u_not_followed" );
+        CHECK( translated.evaluate( context ).translated() == "u_not_followed" );
+        const std::string stored_raw = std::string( 10000, 'v' ) + '\0' + "u_not_followed";
+        context.set_value( target, stored_raw );
+        CHECK( translated.evaluate( context ).translated() == stored_raw );
         context.set_value( target, diag_value{} );
         CHECK( native.evaluate( context ).empty() );
+        CHECK( translated.evaluate( context ).translated().empty() );
         context.remove_value( target );
         CHECK( native.evaluate( context ) == "fallback" );
+        CHECK( translated.evaluate( context ).translated() == to_translation( "fallback" ).translated() );
         avatar alpha;
         npc beta;
         alpha.set_value( key, "alpha-value" );
@@ -834,11 +849,14 @@ TEST_CASE( "lua_migration_indirect_string_native_pointer_baseline",
         dialogue participants( get_talker_for( alpha ), get_talker_for( beta ) );
         participants.set_value( key, "u_" + key );
         CHECK( native.evaluate( participants ) == "alpha-value" );
+        CHECK( translated.evaluate( participants ).translated() == "alpha-value" );
         participants.set_value( key, "n_" + key );
         CHECK( native.evaluate( participants ) == "beta-value" );
+        CHECK( translated.evaluate( participants ).translated() == "beta-value" );
         get_globals().set_global_value( target, "global-value" );
         participants.set_value( key, target );
         CHECK( native.evaluate( participants ) == "global-value" );
+        CHECK( translated.evaluate( participants ).translated() == "global-value" );
     }
 }
 
