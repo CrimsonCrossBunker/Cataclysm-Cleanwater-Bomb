@@ -9,7 +9,6 @@ extern "C" {
 #include <stdlib.h>
 #include <algorithm>
 #include <array>
-#include <cctype>
 #include <cmath>
 #include <cstddef>
 #include <limits>
@@ -18,6 +17,7 @@ extern "C" {
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -54,7 +54,6 @@ constexpr std::size_t maximum_sound_description_bytes = 4096;
 constexpr int maximum_targeting_range = 1000;
 constexpr std::size_t maximum_interaction_text_bytes = 4096;
 constexpr std::size_t maximum_interaction_identifier_bytes = 128;
-constexpr std::size_t maximum_interaction_choices = 256;
 
 void require_active_callback(
     const std::function<bool()> &has_active_callback,
@@ -981,11 +980,11 @@ struct interaction_choice_options {
     std::string title = "Select an option.";
     bool allow_cancel = true;
     bool highlight_disabled = false;
+    std::optional<bool> show_descriptions;
 };
 
 std::string required_choice_text(
-    const sol::table &entry, const std::string &field,
-    const std::size_t maximum )
+    const sol::table &entry, const std::string &field )
 {
     const sol::object value = entry[field];
     if( value.get_type() != sol::type::string ) {
@@ -993,28 +992,24 @@ std::string required_choice_text(
             "services.interaction.choose entries require string '" +
             field + "' fields" );
     }
-    const std::string result = value.as<std::string>();
-    if( result.empty() || result.size() > maximum ||
-        result.find( '\0' ) != std::string::npos ) {
-        throw std::invalid_argument(
-            "services.interaction.choose entry '" + field +
-            "' is outside its native text bound" );
-    }
-    return result;
+    return value.as<std::string>();
 }
 
 std::vector<interaction_choice> read_interaction_choices(
     const sol::table &requested )
 {
-    if( requested.size() == 0 ||
-        requested.size() > maximum_interaction_choices ) {
+    const std::size_t entry_count = requested.size();
+    if( entry_count == 0 ||
+        entry_count > static_cast<std::size_t>( std::numeric_limits<int>::max() ) ) {
         throw std::invalid_argument(
-            "services.interaction.choose requires 1..256 entries" );
+            "services.interaction.choose requires a nonempty native-int-indexed entry array" );
     }
     std::vector<interaction_choice> result;
-    result.reserve( requested.size() );
+    std::unordered_set<std::string> ids;
+    result.reserve( entry_count );
+    ids.reserve( entry_count );
     for( std::size_t index = 1;
-         index <= requested.size(); ++index ) {
+         index <= entry_count; ++index ) {
         const sol::object raw_entry = requested.raw_get<sol::object>( index );
         if( !raw_entry.is<sol::table>() ) {
             throw std::invalid_argument(
@@ -1022,24 +1017,16 @@ std::vector<interaction_choice> read_interaction_choices(
         }
         const sol::table entry = raw_entry.as<sol::table>();
         interaction_choice choice;
-        choice.id = required_choice_text(
-                        entry, "id", maximum_interaction_identifier_bytes );
-        if( std::any_of(
-                result.begin(), result.end(),
-        [&choice]( const interaction_choice & existing ) {
-        return existing.id == choice.id;
-    } ) ) {
+        choice.id = required_choice_text( entry, "id" );
+        if( !ids.insert( choice.id ).second ) {
             throw std::invalid_argument(
                 "services.interaction.choose entry ids must be unique" );
         }
-        choice.label = required_choice_text(
-                           entry, "label", maximum_target_prompt_bytes );
+        choice.label = required_choice_text( entry, "label" );
         const sol::object description = entry["description"];
         if( description.valid() &&
             description.get_type() != sol::type::nil ) {
-            choice.description = bounded_interaction_text(
-                                     description, "description",
-                                     maximum_interaction_text_bytes );
+            choice.description = required_choice_text( entry, "description" );
         }
         const sol::object enabled = entry["enabled"];
         if( enabled.valid() && enabled.get_type() != sol::type::nil ) {
@@ -1051,15 +1038,12 @@ std::vector<interaction_choice> read_interaction_choices(
         }
         const sol::object hotkey = entry["hotkey"];
         if( hotkey.valid() && hotkey.get_type() != sol::type::nil ) {
-            const std::string text = bounded_interaction_text(
-                                         hotkey, "hotkey", 1 );
-            if( text.size() != 1 ||
-                std::isalnum(
-                    static_cast<unsigned char>( text.front() ) ) == 0 ) {
+            const std::string text = required_choice_text( entry, "hotkey" );
+            if( text.size() != 1 ) {
                 throw std::invalid_argument(
-                    "services.interaction.choose entry hotkey must be one ASCII letter or digit" );
+                    "services.interaction.choose entry hotkey must contain exactly one byte" );
             }
-            choice.hotkey = static_cast<unsigned char>( text.front() );
+            choice.hotkey = static_cast<int>( text.front() );
         }
         result.push_back( std::move( choice ) );
     }
@@ -1080,15 +1064,13 @@ interaction_choice_options read_interaction_choice_options(
         }
         const std::string key = entry.first.as<std::string>();
         if( key == "title" ) {
-            result.title = bounded_interaction_text(
-                               entry.second, key,
-                               maximum_target_prompt_bytes );
-            if( result.title.empty() ) {
+            if( entry.second.get_type() != sol::type::string ) {
                 throw std::invalid_argument(
-                    "services.interaction.choose title cannot be empty" );
+                    "services.interaction.choose title must be a string" );
             }
+            result.title = entry.second.as<std::string>();
         } else if( key == "allow_cancel" ||
-                   key == "highlight_disabled" ) {
+                   key == "highlight_disabled" || key == "show_descriptions" ) {
             if( !entry.second.is<bool>() ) {
                 throw std::invalid_argument(
                     "services.interaction.choose boolean option '" +
@@ -1096,8 +1078,10 @@ interaction_choice_options read_interaction_choice_options(
             }
             if( key == "allow_cancel" ) {
                 result.allow_cancel = entry.second.as<bool>();
-            } else {
+            } else if( key == "highlight_disabled" ) {
                 result.highlight_disabled = entry.second.as<bool>();
+            } else {
+                result.show_descriptions = entry.second.as<bool>();
             }
         } else {
             throw std::invalid_argument(
@@ -1112,30 +1096,12 @@ sol::table choose_interaction_entry(
     sol::this_state lua, const sol::table &requested_entries,
     const sol::optional<sol::table> &requested_options )
 {
-    const std::vector<interaction_choice> choices =
-        read_interaction_choices( requested_entries );
-    const interaction_choice_options options =
-        read_interaction_choice_options( requested_options );
     uilist menu;
-    menu.text = options.title;
-    menu.allow_cancel = options.allow_cancel;
-    menu.hilight_disabled = options.highlight_disabled;
-    menu.desc_enabled = std::any_of(
-                            choices.begin(), choices.end(),
-    []( const interaction_choice & choice ) {
-        return !choice.description.empty();
-    } );
-    for( std::size_t index = 0;
-         index < choices.size(); ++index ) {
-        const interaction_choice &choice = choices[index];
-        menu.entries.emplace_back(
-            static_cast<int>( index ), choice.enabled,
-            choice.hotkey, choice.label,
-            choice.description );
-    }
+    const std::vector<std::string> ids = prepare_game_interaction_menu(
+                                            menu, requested_entries, requested_options );
     menu.query();
     const bool accepted = menu.ret >= 0 &&
-                          menu.ret < static_cast<int>( choices.size() );
+                          menu.ret < static_cast<int>( ids.size() );
     sol::state_view state( lua );
     sol::table value = state.create_table();
     value["accepted"] = accepted;
@@ -1144,7 +1110,7 @@ sol::table choose_interaction_entry(
         const std::size_t index =
             static_cast<std::size_t>( menu.ret );
         value["index"] = index + 1;
-        value["id"] = choices[index].id;
+        value["id"] = ids[index];
     } else {
         value["index"] = sol::nil;
         value["id"] = sol::nil;
@@ -1153,6 +1119,29 @@ sol::table choose_interaction_entry(
 }
 
 } // namespace
+
+std::vector<std::string> prepare_game_interaction_menu(
+    uilist &menu, const sol::table &entries, const sol::optional<sol::table> &requested_options )
+{
+    std::vector<interaction_choice> choices = read_interaction_choices( entries );
+    const interaction_choice_options options = read_interaction_choice_options( requested_options );
+    menu.text = options.title;
+    menu.allow_cancel = options.allow_cancel;
+    menu.hilight_disabled = options.highlight_disabled;
+    menu.desc_enabled = options.show_descriptions ? *options.show_descriptions : std::any_of(
+                            choices.begin(), choices.end(), []( const interaction_choice & choice ) {
+        return !choice.description.empty();
+    } );
+    std::vector<std::string> ids;
+    ids.reserve( choices.size() );
+    for( std::size_t index = 0; index < choices.size(); ++index ) {
+        interaction_choice &choice = choices[index];
+        menu.entries.emplace_back( static_cast<int>( index ), choice.enabled,
+                                   choice.hotkey, choice.label, choice.description );
+        ids.push_back( std::move( choice.id ) );
+    }
+    return ids;
+}
 
 void install_game_interaction_api(
     sol::table &services,

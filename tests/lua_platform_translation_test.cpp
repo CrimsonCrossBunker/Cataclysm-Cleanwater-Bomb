@@ -4,11 +4,16 @@
 #include "lua_platform_test_support.h"
 #include "lua_platform_runtime_internal.h"
 #include "lua_platform_bindings_coords.h"
+#include "lua_platform_interaction.h"
 #include "npc.h"
 #include "npctalk.h"
+#include "uilist.h"
 #include <memory>
+#include <optional>
+#include <stdexcept>
 #include <string>
 #include <string_view>
+#include <vector>
 
 TEST_CASE( "lua_platform_translation_fallback_and_lifetime",
            "[lua][platform][runtime][translations]" )
@@ -175,5 +180,140 @@ TEST_CASE( "lua_platform_text_expansion_matches_native_dialogue_tags",
     }
     REQUIRE( result.valid() );
     CHECK( result.get<std::string>() == native_text );
+}
+TEST_CASE( "lua_platform_interaction_menu_preserves_native_rows_and_text",
+           "[lua][platform][interaction]" )
+{
+    sol::state lua;
+    lua.open_libraries( sol::lib::base );
+    const std::string long_text = std::string( 5000, 'x' ) + std::string( "\0tail", 5 );
+    const std::vector<std::string> keys = {
+        "a", "!", " ", std::string( 1, '\0' ), std::string( 1, static_cast<char>( 255 ) )
+    };
+    sol::table entries = lua.create_table();
+    std::vector<std::string> expected_ids;
+    uilist native_menu;
+    for( int index = 0; index < 300; ++index ) {
+        const std::string id = index == 0 ? "" : long_text + std::to_string( index );
+        const std::string label = index % 2 == 0 ? "" : long_text;
+        const std::string description = index % 3 == 0 ? long_text : "";
+        const bool enabled = index % 4 != 0;
+        sol::table row = lua.create_table();
+        row["id"] = id;
+        row["label"] = label;
+        row["description"] = description;
+        row["enabled"] = enabled;
+        int native_key = MENU_AUTOASSIGN;
+        if( index < static_cast<int>( keys.size() ) ) {
+            row["hotkey"] = keys[index];
+            native_key = static_cast<int>( keys[index].front() );
+        }
+        entries[index + 1] = row;
+        expected_ids.push_back( id );
+        native_menu.entries.emplace_back( index, enabled, native_key, label, description );
+    }
+    sol::table options = lua.create_table();
+    options["title"] = long_text;
+    options["allow_cancel"] = false;
+    options["highlight_disabled"] = true;
+    options["show_descriptions"] = true;
+    native_menu.text = long_text;
+    native_menu.allow_cancel = false;
+    native_menu.hilight_disabled = true;
+    native_menu.desc_enabled = true;
+
+    uilist platform_menu;
+    const std::vector<std::string> ids = cata::lua_platform::prepare_game_interaction_menu(
+                                           platform_menu, entries, options );
+    CHECK( ids == expected_ids );
+    REQUIRE( platform_menu.entries.size() == native_menu.entries.size() );
+    CHECK( platform_menu.text == native_menu.text );
+    CHECK( platform_menu.allow_cancel == native_menu.allow_cancel );
+    CHECK( platform_menu.hilight_disabled == native_menu.hilight_disabled );
+    CHECK( platform_menu.desc_enabled == native_menu.desc_enabled );
+    for( std::size_t index = 0; index < native_menu.entries.size(); ++index ) {
+        INFO( index );
+        const uilist_entry &actual = platform_menu.entries[index];
+        const uilist_entry &expected = native_menu.entries[index];
+        CHECK( actual.retval == expected.retval );
+        CHECK( actual.enabled == expected.enabled );
+        CHECK( actual.hotkey == expected.hotkey );
+        CHECK( actual.txt == expected.txt );
+        CHECK( actual.desc == expected.desc );
+    }
+
+    sol::table empty_descriptions = lua.create_table();
+    sol::table empty_row = lua.create_table();
+    empty_row["id"] = "";
+    empty_row["label"] = "";
+    empty_row["description"] = "";
+    empty_descriptions[1] = empty_row;
+    options["title"] = "";
+    for( const bool show : { false, true } ) {
+        options["show_descriptions"] = show;
+        uilist menu;
+        cata::lua_platform::prepare_game_interaction_menu( menu, empty_descriptions, options );
+        CHECK( menu.text.empty() );
+        CHECK( menu.desc_enabled == show );
+    }
+    uilist default_menu;
+    cata::lua_platform::prepare_game_interaction_menu(
+        default_menu, empty_descriptions, sol::nullopt );
+    CHECK_FALSE( default_menu.desc_enabled );
+    CHECK( default_menu.entries.front().hotkey == uilist_entry( "" ).hotkey );
+}
+
+TEST_CASE( "lua_platform_interaction_menu_rejects_invalid_shapes_before_query",
+           "[lua][platform][interaction]" )
+{
+    sol::state lua;
+    lua.open_libraries( sol::lib::base );
+    const std::vector<std::string_view> invalid_entries = {
+        "return {}", "return {{id = 'x'}}", "return {{id = 1, label = 'x'}}",
+        "return {{id = 'x', label = 'x', hotkey = ''}}",
+        "return {{id = 'x', label = 'x', hotkey = 'ab'}}",
+        "return {{id = 'x', label = 'x', description = 1}}",
+        "return {{id = 'x', label = 'x', enabled = 1}}",
+        "return {{id = 'x', label = 'x'}, {id = 'x', label = 'y'}}"
+    };
+    for( const std::string_view invalid : invalid_entries ) {
+        INFO( invalid );
+        const sol::protected_function_result result = lua.safe_script(
+                    invalid, sol::script_pass_on_error );
+        REQUIRE( result.valid() );
+        const sol::table entries = result.get<sol::table>();
+        uilist menu;
+        CHECK_THROWS_AS( cata::lua_platform::prepare_game_interaction_menu(
+                            menu, entries, sol::nullopt ), std::invalid_argument );
+    }
+    sol::table entries = lua.create_table();
+    sol::table row = lua.create_table();
+    row["id"] = "x";
+    row["label"] = "x";
+    entries[1] = row;
+    const std::vector<std::string_view> invalid_options = {
+        "return {title = 1}", "return {show_descriptions = 1}", "return {unknown = true}"
+    };
+    for( const std::string_view invalid : invalid_options ) {
+        INFO( invalid );
+        const sol::protected_function_result result = lua.safe_script(
+                    invalid, sol::script_pass_on_error );
+        REQUIRE( result.valid() );
+        const sol::table options = result.get<sol::table>();
+        uilist menu;
+        CHECK_THROWS_AS( cata::lua_platform::prepare_game_interaction_menu(
+                            menu, entries, options ), std::invalid_argument );
+    }
+    sol::table services = lua.create_table();
+    bool actions_requested = false;
+    cata::lua_platform::install_game_interaction_api(
+        services, [&actions_requested]() { actions_requested = true; }, []() { return false; } );
+    lua["services"] = services;
+    const sol::protected_function_result outside_callback = lua.safe_script( R"(
+        local ok, err = pcall(services.interaction.choose, {{id = 'x', label = 'x'}})
+        assert(not ok and string.find(err, 'only available from an active callback'))
+    )", sol::script_pass_on_error );
+    REQUIRE( outside_callback.valid() );
+    CHECK( actions_requested );
 }
 #endif

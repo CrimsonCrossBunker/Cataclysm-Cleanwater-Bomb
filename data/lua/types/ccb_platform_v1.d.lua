@@ -6861,16 +6861,17 @@ function CcbTargetingApi.choose_adjacent_where_at(center, message, failure_messa
 local CcbPlatformInteractionApi = {}
 
 ---@class CcbPlatformInteractionChoice
----@field id string
----@field label string
----@field description? string
+---@field id string Unique Lua result ID; empty, long and embedded-NUL strings are allowed.
+---@field label string Native menu text; empty, long and embedded-NUL strings are preserved.
+---@field description? string Native menu description; no additional byte-length limit.
 ---@field enabled? boolean
----@field hotkey? string One ASCII letter or digit.
+---@field hotkey? string Exactly one native char byte. Omission uses native automatic assignment; space and NUL disable the hotkey. Other bytes retain native key-mode behavior.
 
 ---@class CcbPlatformInteractionChoiceOptions
----@field title? string
+---@field title? string Defaults to 'Select an option.'; supplied empty, long and embedded-NUL text is preserved.
 ---@field allow_cancel? boolean
 ---@field highlight_disabled? boolean
+---@field show_descriptions? boolean Explicitly show or hide the native description pane, even when every description is empty. Defaults to whether any description is nonempty.
 
 ---@class CcbPlatformInteractionChoiceResult
 ---@field accepted boolean
@@ -6903,7 +6904,7 @@ function CcbPlatformInteractionApi.input_text(title, options) end
 ---@return integer|nil value
 function CcbPlatformInteractionApi.input_number(description, default_value) end
 
----@param entries CcbPlatformInteractionChoice[]
+---@param entries CcbPlatformInteractionChoice[] Nonempty dense array, limited only by native int row indices.
 ---@param options? CcbPlatformInteractionChoiceOptions
 ---@return CcbPlatformInteractionChoiceResult
 function CcbPlatformInteractionApi.choose(entries, options) end
