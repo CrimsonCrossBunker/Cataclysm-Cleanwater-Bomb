@@ -868,11 +868,28 @@ def safe_native_proficiency_id_literal(value: Any) -> bool:
     return lua_quotable_native_variable_string(value)
 
 
+def render_dialogue_variable_string_read(scope: str, key: str) -> str | None:
+    """Read a native callback frame without requiring converted actor handles."""
+    method = {
+        "context_val": "get_string", "u_val": "speaker_variable_string",
+        "npc_val": "interlocutor_variable_string",
+    }.get(scope)
+    if method is not None:
+        return f"dialogue_context:{method}({key})"
+    if scope == "global_val":
+        return (
+            '(function(result) if result.exists == false then return nil end; '
+            'return result.value end)(service_value(services.variables.get_global_string('
+            f'{key})))'
+        )
+    return None
+
+
 def render_proficiency_id_expression(
     value: Any, *, alpha_owner: str | None = None,
     beta_owner: str | None = None,
     topic_item_expression: str | None = None,
-    context_values_expression: str | None = "context and context.data",
+    variable_string_reader: Callable[[str, str], str | None] | None = None,
 ) -> str | None:
     """Keep native ID text and resolve each variable from its proven talker."""
     if safe_native_proficiency_id_literal(value):
@@ -899,7 +916,7 @@ def render_proficiency_id_expression(
         entries = [render_proficiency_id_expression(
             entry, alpha_owner=alpha_owner, beta_owner=beta_owner,
             topic_item_expression=topic_item_expression,
-            context_values_expression=context_values_expression,
+            variable_string_reader=variable_string_reader,
         ) for entry in blacklist]
         if any(entry is None for entry in entries):
             return None
@@ -917,7 +934,7 @@ def render_proficiency_id_expression(
         identifier = render_proficiency_id_expression(
             value["matec_id"], alpha_owner=alpha_owner, beta_owner=beta_owner,
             topic_item_expression=topic_item_expression,
-            context_values_expression=context_values_expression,
+            variable_string_reader=variable_string_reader,
         )
         if identifier is None:
             return None
@@ -929,7 +946,7 @@ def render_proficiency_id_expression(
         identifier = render_proficiency_id_expression(
             value["mtype_id"], alpha_owner=alpha_owner, beta_owner=beta_owner,
             topic_item_expression=topic_item_expression,
-            context_values_expression=context_values_expression,
+            variable_string_reader=variable_string_reader,
         )
         if identifier is None:
             return None
@@ -940,7 +957,7 @@ def render_proficiency_id_expression(
         option = render_proficiency_id_expression(
             value["option"], alpha_owner=alpha_owner, beta_owner=beta_owner,
             topic_item_expression=topic_item_expression,
-            context_values_expression=context_values_expression,
+            variable_string_reader=variable_string_reader,
         )
         if option is None:
             return None
@@ -963,13 +980,38 @@ def render_proficiency_id_expression(
     if len(scopes) != 1 or set(value) - scopes - {"default"}:
         return None
     scope = next(iter(scopes))
-    if scope in {"context_val", "var_val"} and context_values_expression is None:
-        return None
     name = value[scope]
     fallback = value.get("default", "")
     if not (lua_quotable_native_variable_string(name) and
             lua_quotable_native_variable_string(fallback)):
         return None
+    if variable_string_reader is not None:
+        if scope == "var_val":
+            pointer = variable_string_reader("context_val", lua_quote(name))
+            targets = [variable_string_reader(source, key) for source, key in (
+                ("u_val", "string.sub(pointer, 3)"),
+                ("npc_val", "string.sub(pointer, 3)"),
+                ("context_val", "string.sub(pointer, 2)"),
+                ("global_val", "pointer"),
+            )]
+            if pointer is None or any(target is None for target in targets):
+                return None
+            return (
+                '(function(pointer) if pointer == nil then return ' + lua_quote(fallback) +
+                ' end; local value; if string.sub(pointer, 1, 2) == "u_" then '
+                f'value = {targets[0]}; elseif string.sub(pointer, 1, 2) == "n_" then '
+                f'value = {targets[1]}; elseif string.sub(pointer, 1, 1) == "_" then '
+                f'value = {targets[2]}; else value = {targets[3]}; end; '
+                'if value == nil then return ' + lua_quote(fallback) +
+                ' end; return value end)(' + pointer + ')'
+            )
+        read = variable_string_reader(scope, lua_quote(name))
+        if read is None:
+            return None
+        return (
+            '(function(value) if value == nil then return ' + lua_quote(fallback) +
+            ' end; return value end)(' + read + ')'
+        )
     if scope == "var_val":
         # Native process_variable resolves one context-held pointer to either
         # alpha, beta, context or global storage.  A dynamic pointer must not
@@ -987,17 +1029,17 @@ def render_proficiency_id_expression(
             ', string.sub(key, 3))); '
             'elseif string.sub(key, 1, 1) == "_" then '
             'result = service_value(services.variables.get_context_string('
-            f'{context_values_expression}, string.sub(key, 2))); '
+            'context and context.data, string.sub(key, 2))); '
             'else result = service_value(services.variables.get_global_string(key)); end; '
             'if result.exists == false then return ' + lua_quote(fallback) +
             ' end; return result.value end)'
             '(service_value(services.variables.get_context_string('
-            f'{context_values_expression}, ' + lua_quote(name) + ')))'
+            'context and context.data, ' + lua_quote(name) + ')))'
         )
     if scope == "context_val":
         read = (
             'service_value(services.variables.get_context_string('
-            f'{context_values_expression}, ' + lua_quote(name) + '))'
+            'context and context.data, ' + lua_quote(name) + '))'
         )
     elif scope == "global_val":
         read = (
@@ -7232,7 +7274,7 @@ def render_talk_topic_response_condition(
         # context.data table for this callback-scoped dialogue object.
         identifier = render_proficiency_id_expression(
             condition[selector], topic_item_expression="dialogue_context:topic_item()",
-            context_values_expression=None,
+            variable_string_reader=render_dialogue_variable_string_read,
         )
         if identifier is None:
             return None

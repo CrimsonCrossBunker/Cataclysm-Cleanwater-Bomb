@@ -961,6 +961,38 @@ sol::object context::interlocutor() const
     return current.convert_actor( current.interlocutor_snapshot );
 }
 
+namespace
+{
+sol::object native_variable_string( lua_State *lua_state, const diag_value *value )
+{
+    sol::state_view lua( lua_state );
+    // Presence is independent of the native string slot. Do not serialize
+    // arrays or turn a present Null/type mismatch into a missing variable.
+    return value == nullptr ? sol::make_object( lua, sol::lua_nil ) :
+           sol::make_object( lua, value->str() );
+}
+} // namespace
+
+sol::object context::get_string( const std::string &key ) const
+{
+    state &current = require_state();
+    return native_variable_string( current.lua_state, current.dialogue_ref().maybe_get_value( key ) );
+}
+
+sol::object context::speaker_variable_string( const std::string &key ) const
+{
+    state &current = require_state();
+    const const_talker *actor = current.dialogue_ref().const_actor( false );
+    return native_variable_string( current.lua_state, actor ? actor->maybe_get_value( key ) : nullptr );
+}
+
+sol::object context::interlocutor_variable_string( const std::string &key ) const
+{
+    state &current = require_state();
+    const const_talker *actor = current.dialogue_ref().const_actor( true );
+    return native_variable_string( current.lua_state, actor ? actor->maybe_get_value( key ) : nullptr );
+}
+
 sol::object context::get( const std::string &key ) const
 {
     const ::dialogue &d = require_state().dialogue_ref();

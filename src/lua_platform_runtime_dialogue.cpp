@@ -835,6 +835,9 @@ void detail::install_runtime_dialogue_presentation_api(
     "speaker", &platform_dialogue_context::speaker,
     "interlocutor", &platform_dialogue_context::interlocutor,
     "get", &platform_dialogue_context::get,
+    "get_string", &platform_dialogue_context::get_string,
+    "speaker_variable_string", &platform_dialogue_context::speaker_variable_string,
+    "interlocutor_variable_string", &platform_dialogue_context::interlocutor_variable_string,
     "set", &platform_dialogue_context::set,
     "remove", &platform_dialogue_context::remove );
     ccb["PlatformDialogueContext"] = sol::lua_nil;

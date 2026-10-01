@@ -6538,6 +6538,24 @@ function PlatformDialogueContext:interlocutor() end
 ---@return boolean|number|string|NullValue|nil value
 function PlatformDialogueContext:get(key) end
 
+---Read this live frame's native string slot; missing is nil, present Null/type mismatch is empty.
+---Preserves native type diagnostics without serializing arrays; usable only while this context is valid.
+---@param key string Raw native variable key, including empty, NUL-containing and long text.
+---@return string|nil value
+function PlatformDialogueContext:get_string(key) end
+
+---Read the live native speaker's variable string slot, independently of its converted handle kind.
+---Missing is nil; present Null is empty, and other type mismatches preserve native diagnostics.
+---@param key string Raw native variable key, including empty, NUL-containing and long text.
+---@return string|nil value
+function PlatformDialogueContext:speaker_variable_string(key) end
+
+---Read the live native interlocutor's variable string slot, independently of its converted handle kind.
+---Missing is nil; present Null is empty, and other type mismatches preserve native diagnostics.
+---@param key string Raw native variable key, including empty, NUL-containing and long text.
+---@return string|nil value
+function PlatformDialogueContext:interlocutor_variable_string(key) end
+
 ---@param key string
 ---@param value boolean|number|string|NullValue|nil
 function PlatformDialogueContext:set(key, value) end

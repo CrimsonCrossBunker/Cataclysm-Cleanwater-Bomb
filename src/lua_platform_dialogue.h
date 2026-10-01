@@ -150,6 +150,9 @@ class context
         sol::object speaker() const;
         sol::object interlocutor() const;
         sol::object get( const std::string &key ) const;
+        sol::object get_string( const std::string &key ) const;
+        sol::object speaker_variable_string( const std::string &key ) const;
+        sol::object interlocutor_variable_string( const std::string &key ) const;
         void set( const std::string &key, const sol::object &value ) const;
         void remove( const std::string &key ) const;
 

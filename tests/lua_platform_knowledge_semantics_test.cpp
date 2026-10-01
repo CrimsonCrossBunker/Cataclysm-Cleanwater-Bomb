@@ -848,10 +848,71 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
         }
         partner.add_proficiency( carving, true );
         conversation.cur_item = itype_id();
+        loaded = lua.safe_script(
+                     "return function(context, method, key) return context[method](context, key) end",
+                     sol::script_pass_on_error );
+        REQUIRE( loaded.valid() );
+        const sol::protected_function read_dialogue_string = loaded.get<sol::protected_function>();
+        const std::vector<std::string> dialogue_string_methods = {
+            "get_string", "speaker_variable_string", "interlocutor_variable_string"
+        };
+        const std::string nul_key( "dialogue\0string", sizeof( "dialogue\0string" ) - 1 );
+        const std::vector<std::string> dialogue_keys = { "", "live_string", nul_key, std::string( 10000, 'k' ) };
+        const std::vector<diag_value> dialogue_values = {
+            diag_value(), diag_value( std::string() ), diag_value( carving.str() ), diag_value( nul_id ),
+            diag_value( std::string( 10000, 'v' ) ), diag_value( 73 ), diag_value( diag_array( 5000, diag_value( 1 ) ) )
+        };
+        for( const std::string &method : dialogue_string_methods ) {
+            talker *const variable_actor = method == "get_string" ? nullptr :
+                                          conversation.actor( method == "interlocutor_variable_string" );
+            for( const std::string &key : dialogue_keys ) {
+                CAPTURE( method, key );
+                if( variable_actor ) {
+                    variable_actor->remove_value( key );
+                } else {
+                    conversation.remove_value( key );
+                }
+                const sol::protected_function_result missing = read_dialogue_string( topic_context, method, key );
+                REQUIRE( missing.valid() );
+                CHECK( missing.get<sol::object>().get_type() == sol::type::nil );
+                for( const diag_value &value : dialogue_values ) {
+                    if( variable_actor ) {
+                        variable_actor->set_value( key, value );
+                    } else {
+                        conversation.set_value( key, value );
+                    }
+                    std::string native_text;
+                    const std::string native_diagnostic = capture_debugmsg_during( [&]() {
+                        const diag_value *stored = variable_actor ? variable_actor->maybe_get_value( key ) :
+                                                   conversation.maybe_get_value( key );
+                        REQUIRE( stored != nullptr );
+                        native_text = stored->str();
+                    } );
+                    std::string platform_text;
+                    const std::string platform_diagnostic = capture_debugmsg_during( [&]() {
+                        const sol::protected_function_result result = read_dialogue_string( topic_context, method, key );
+                        REQUIRE( result.valid() );
+                        REQUIRE( result.get<sol::object>().get_type() == sol::type::string );
+                        platform_text = result.get<std::string>();
+                    } );
+                    CHECK( platform_text == native_text );
+                    CHECK( platform_diagnostic == native_diagnostic );
+                }
+                if( variable_actor ) {
+                    variable_actor->remove_value( key );
+                } else {
+                    conversation.remove_value( key );
+                }
+            }
+        }
         cata::lua_platform::dialogue::end_session( conversation );
         CHECK_FALSE( topic_context.valid() );
         const sol::protected_function_result stale_topic = read_topic_item( topic_context );
         CHECK_FALSE( stale_topic.valid() );
+        for( const std::string &method : dialogue_string_methods ) {
+            const sol::protected_function_result stale_string = read_dialogue_string( topic_context, method, "" );
+            CHECK_FALSE( stale_string.valid() );
+        }
 
         {
             const auto saved_rng = rng_get_engine(); // NOLINT(cata-determinism)

@@ -4789,8 +4789,9 @@ assert(EOC and reads==1)
                                  capture_output=True, timeout=10)
             self.assertEqual(run.returncode, 0, run.stderr)
         for source in ("u_val", "npc_val", "context_val", "var_val"):
-            # TALK has no event context.data or statically proved variable owner.
-            self.assertIsNone(migrate_lua_first.render_talk_topic_response_condition({
+            # The live native frame now provides each exact variable owner;
+            # event context.data and converted handle kinds are not substituted.
+            self.assertIsNotNone(migrate_lua_first.render_talk_topic_response_condition({
                 "u_has_proficiency": {"mutator": "game_option", "option": {source: "unproven"}},
             }))
         self.assertIsNone(migrate_lua_first.render_talk_topic_response_condition({
@@ -4907,6 +4908,153 @@ assert(table.concat(trace,',')=='alpha,beta,context,global,choice1,choice2,query
         self.assertIsNone(migrate_lua_first.render_talk_topic_response_condition({
             "u_has_proficiency": {"mutator": "valid_technique"},
         }))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_talk_proficiency_variables_keep_live_owners_and_missing_defaults(self) -> None:
+        for prefix in ("u_", "npc_"):
+            for scope, method in (("u_val", "speaker_variable_string"),
+                                  ("npc_val", "interlocutor_variable_string"),
+                                  ("context_val", "get_string"), ("global_val", "global")):
+                for key in ("", "live\0key", "变量", "k" * 10000):
+                    rendered = migrate_lua_first.render_talk_topic_response_condition({
+                        prefix + "has_proficiency": {scope: key, "default": "prof_carving"},
+                    })
+                    self.assertIsNotNone(rendered)
+                    script = r"""
+local actor={kind='creature',subtype='avatar',is_valid=function() return true end}
+local partner={kind='creature',subtype='npc',is_valid=function() return true end}
+local context={data={hijacked='prof_carving'}}
+local current,reads,queries=nil,0,0
+local function read(key)
+ assert(key==KEY)
+ reads=reads+1;return current
+end
+local function service_value(result) assert(result.ok);return result.value end
+local services={variables={get_global_string=function(key)
+ return {ok=true,value={exists=current~=nil,value=read(key)}}
+end},proficiencies={has_id_text=function(owner,id)
+ assert(owner==EXPECTED_TARGET)
+ queries=queries+1;return {ok=true,value=id=='prof_carving'}
+end}}
+local dialogue={valid=function() return true end,speaker=function() return actor end,
+ interlocutor=function() return partner end,get=function() error('serialized value used') end}
+dialogue[METHOD]=function(self,key) assert(self==dialogue);return read(key) end
+local predicate=PREDICATE
+assert(predicate(dialogue)) -- missing uses authored default
+for _,value in ipairs({'','prof_carving','raw\0id',string.rep('x',10000)}) do
+ current=value
+ assert(predicate(dialogue)==(value=='prof_carving'))
+end
+assert(reads==5 and queries==5)
+actor.kind='item';partner.kind='computer'
+current='prof_carving'
+assert(not predicate(dialogue) and reads==6 and queries==5)
+dialogue.valid=function() return false end
+assert(not predicate(dialogue) and reads==6)
+""".replace("KEY", migrate_lua_first.lua_quote(key)).replace(
+                        "METHOD", migrate_lua_first.lua_quote(method),
+                    ).replace("EXPECTED_TARGET", "actor" if prefix == "u_" else "partner").replace(
+                        "PREDICATE", rendered.source if rendered else "nil",
+                    )
+                    run = subprocess.run(["lua", "-"], input=script, text=True,
+                                         capture_output=True, timeout=10)
+                    self.assertEqual(run.returncode, 0, run.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_talk_proficiency_indirect_variables_dereference_exactly_once(self) -> None:
+        key = "raw\0目标"
+        for pointer, scope, target_key in (
+            (None, None, None), ("", "global", ""), ("u_" + key, "speaker", key),
+            ("n_" + key, "interlocutor", key), ("_" + key, "context", key),
+            ("var_" + key, "global", "var_" + key), ("u_", "speaker", ""),
+            ("n_", "interlocutor", ""), ("_", "context", ""),
+        ):
+            rendered = migrate_lua_first.render_talk_topic_response_condition({
+                "npc_has_proficiency": {"var_val": "reference", "default": "fallback"},
+            })
+            self.assertIsNotNone(rendered)
+            script = r"""
+local actor={kind='creature',subtype='avatar',is_valid=function() return true end}
+local partner={kind='creature',subtype='npc',is_valid=function() return true end}
+local pointer=POINTER
+local target='prof_carving'
+local trace={}
+local function read(scope,key)
+ if scope=='context' and key=='reference' then
+  table.insert(trace,'pointer');return pointer
+ end
+ assert(scope==SCOPE and key==TARGET_KEY)
+ table.insert(trace,'target');return target
+end
+local function service_value(result) assert(result.ok);return result.value end
+local services={variables={get_global_string=function(key)
+ local value=read('global',key);return {ok=true,value={exists=value~=nil,value=value}}
+end},proficiencies={has_id_text=function(owner,id)
+ assert(owner==partner)
+ local expected=(pointer==nil or target==nil) and 'fallback' or target
+ assert(id==expected)
+ table.insert(trace,'query');return {ok=true,value=id=='prof_carving'}
+end}}
+local dialogue={valid=function() return true end,speaker=function() return actor end,
+ interlocutor=function() return partner end,
+ get_string=function(self,key) return read('context',key) end,
+ speaker_variable_string=function(self,key) return read('speaker',key) end,
+ interlocutor_variable_string=function(self,key) return read('interlocutor',key) end}
+local predicate=PREDICATE
+for _,value in ipairs({'prof_carving','','u_nested'}) do
+ target=value;trace={}
+ assert(predicate(dialogue)==(pointer~=nil and value=='prof_carving'))
+ assert(table.concat(trace,',')==(pointer==nil and 'pointer,query' or 'pointer,target,query'))
+end
+target=nil;trace={}
+assert(not predicate(dialogue))
+assert(table.concat(trace,',')==(pointer==nil and 'pointer,query' or 'pointer,target,query'))
+""".replace("POINTER", "nil" if pointer is None else migrate_lua_first.lua_quote(pointer)).replace(
+                "SCOPE", "nil" if scope is None else migrate_lua_first.lua_quote(scope),
+            ).replace("TARGET_KEY", "nil" if target_key is None else migrate_lua_first.lua_quote(target_key)).replace(
+                "PREDICATE", rendered.source if rendered else "nil",
+            )
+            run = subprocess.run(["lua", "-"], input=script, text=True,
+                                 capture_output=True, timeout=10)
+            self.assertEqual(run.returncode, 0, run.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_talk_proficiency_nested_mutators_use_live_variable_reader(self) -> None:
+        for mutator, key, service in (
+            ("game_option", "option", "services.gameplay.options.get_string"),
+            ("mon_faction", "mtype_id", "services.registry.monster_default_faction"),
+            ("ma_technique_name", "matec_id", "services.martial_arts.technique_name"),
+            ("ma_technique_description", "matec_id", "services.martial_arts.technique_description"),
+        ):
+            rendered = migrate_lua_first.render_talk_topic_response_condition({
+                "npc_has_proficiency": {"mutator": mutator, key: {"var_val": "reference"}},
+            })
+            self.assertIsNotNone(rendered)
+            script = r"""
+local actor={kind='creature',subtype='avatar',is_valid=function() return true end}
+local partner={kind='creature',subtype='npc',is_valid=function() return true end}
+local trace={}
+local services={gameplay={options={}},registry={},martial_arts={},proficiencies={
+ has_id_text=function(owner,id)
+  assert(owner==partner and id=='prof_carving')
+  table.insert(trace,'query');return {ok=true,value=true}
+ end}}
+SERVICE=function(id)
+ assert(id=='RAW_DEFINITION');table.insert(trace,'lookup');return 'prof_carving'
+end
+local dialogue={valid=function() return true end,interlocutor=function() return partner end,
+ get_string=function(self,key)
+  assert(key=='reference');table.insert(trace,'pointer');return 'u_source'
+ end,speaker_variable_string=function(self,key)
+  assert(key=='source');table.insert(trace,'source');return 'RAW_DEFINITION'
+ end}
+local predicate=PREDICATE
+assert(predicate(dialogue))
+assert(table.concat(trace,',')=='pointer,source,lookup,query')
+""".replace("SERVICE", service).replace("PREDICATE", rendered.source if rendered else "nil")
+            run = subprocess.run(["lua", "-"], input=script, text=True,
+                                 capture_output=True, timeout=10)
+            self.assertEqual(run.returncode, 0, run.stderr)
 
     def test_npc_proficiency_is_limited_to_event_exclusive_melee_beta(self) -> None:
         def render(
