@@ -2320,6 +2320,7 @@ assert(EXPRESSION==SELECTED and calls==1)
                     script = r"""
 local actor={selected='alpha_id'}
 local partner={selected='beta_id'}
+local context={data={}}
 local function service_value(result) assert(result.ok);return result.value end
 local services={
  variables={resolve=function(data,character,scope,key)
@@ -2332,9 +2333,9 @@ local services={
  martial_arts={technique_definition=function(id)
   assert(id==OWNER.selected);return {name='name',flavor_description='short_description',description='full rules'}
  end},
- registry={get=function(kind,id)
-  assert(kind=='monster' and id==OWNER.selected)
-  return {default_faction={value='faction'}}
+ registry={monster_default_faction=function(id)
+  assert(id==OWNER.selected)
+  return 'faction'
  end}
 }
 assert(EXPRESSION==EXPECTED)
@@ -4502,6 +4503,96 @@ assert(table.concat(calls,',')=='variable,FIRST_OPTION,SECOND_OPTION,query')
             {"mutator": "game_option"}, {"mutator": "game_option", "option": 73},
             {"mutator": "game_option", "option": "USE_LANG", "default": "prof_carving"},
             {"mutator": "game_option", "option": {"npc_val": "unproven"}},
+        ):
+            self.assertIsNone(migrate_lua_first.render_proficiency_id_expression(
+                value, alpha_owner="actor",
+            ))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_proficiency_monster_faction_ids_preserve_raw_lookup_and_owner(self) -> None:
+        for prefix in ("u_", "npc_"):
+            for name in ("mon_zombie", "mon_null", "unknown", "", "mon_zombie\0missing",
+                         "无此怪物", "x" * 10000):
+                expression = migrate_lua_first.render_eoc_condition_expression(
+                    {prefix + "has_proficiency": {"mutator": "mon_faction", "mtype_id": name}},
+                    proficiency_character_alpha_actor_proven=True,
+                    npc_melee_beta_actor_proven=True,
+                )
+                self.assertIsNotNone(expression)
+                script = r"""
+local actor={kind='creature',subtype='npc',is_valid=function() return true end}
+local partner={kind='creature',subtype='npc',is_valid=function() return true end}
+local context={actors={interlocutor=partner}}
+local reads,queries=0,0
+local expected=EXPECTED_NAME
+local function service_value(value) return value end
+local services={registry={monster_default_faction=function(id)
+ assert(id==expected)
+ reads=reads+1
+ -- A fallback must reach the predicate too, without a typed-ID or snapshot rejection.
+ return id=='mon_zombie' and 'prof_carving' or 'fallback_faction'
+end},proficiencies={has_id_text=function(owner,id)
+ assert(owner==EXPECTED_TARGET)
+ assert(id==(expected=='mon_zombie' and 'prof_carving' or 'fallback_faction'))
+ queries=queries+1
+ return id=='prof_carving'
+end}}
+assert((EXPRESSION)==(expected=='mon_zombie'))
+assert(reads==1 and queries==1)
+""".replace("EXPECTED_NAME", migrate_lua_first.lua_quote(name)).replace(
+                    "EXPECTED_TARGET", "actor" if prefix == "u_" else "partner",
+                ).replace("EXPRESSION", expression or "nil")
+                run = subprocess.run(["lua", "-"], input=script, text=True,
+                                     capture_output=True, timeout=10)
+                self.assertEqual(run.returncode, 0, run.stderr)
+            nested = migrate_lua_first.render_eoc_condition_expression(
+                {prefix + "has_proficiency": {
+                    "mutator": "mon_faction", "mtype_id": {
+                        "mutator": "game_option", "option": {"u_val": "source"},
+                    },
+                }}, proficiency_character_alpha_actor_proven=True,
+                npc_melee_beta_actor_proven=True,
+            )
+            self.assertIsNotNone(nested)
+            script = r"""
+local actor={kind='creature',subtype='npc',is_valid=function() return true end}
+local partner={kind='creature',subtype='npc',is_valid=function() return true end}
+local context={actors={interlocutor=partner}}
+local calls={}
+local function service_value(value) return value end
+local services={variables={get_string=function(owner,key)
+ assert(owner==actor and key=='source')
+ table.insert(calls,'variable');return {exists=true,value='MONSTER_OPTION'}
+end},gameplay={options={get_string=function(name)
+ assert(name=='MONSTER_OPTION')
+ table.insert(calls,'option');return 'mon_zombie'
+end}},registry={monster_default_faction=function(id)
+ assert(id=='mon_zombie')
+ table.insert(calls,'faction');return 'prof_carving'
+end},proficiencies={has_id_text=function(owner,id)
+ assert(owner==EXPECTED_TARGET and id=='prof_carving')
+ table.insert(calls,'query');return true
+end}}
+assert(EXPRESSION)
+assert(table.concat(calls,',')=='variable,option,faction,query')
+calls={}
+services.registry.monster_default_faction=function(id)
+ assert(id=='mon_zombie')
+ error('native lookup failed')
+end
+local ok,err=pcall(function() return EXPRESSION end)
+assert(not ok and string.find(err,'native lookup failed',1,true))
+assert(table.concat(calls,',')=='variable,option')
+""".replace("EXPECTED_TARGET", "actor" if prefix == "u_" else "partner").replace(
+                "EXPRESSION", nested or "nil",
+            )
+            run = subprocess.run(["lua", "-"], input=script, text=True,
+                                 capture_output=True, timeout=10)
+            self.assertEqual(run.returncode, 0, run.stderr)
+        for value in (
+            {"mutator": "mon_faction"}, {"mutator": "mon_faction", "mtype_id": 73},
+            {"mutator": "mon_faction", "mtype_id": "mon_zombie", "default": "prof_carving"},
+            {"mutator": "mon_faction", "mtype_id": {"npc_val": "unproven"}},
         ):
             self.assertIsNone(migrate_lua_first.render_proficiency_id_expression(
                 value, alpha_owner="actor",
@@ -36056,7 +36147,7 @@ assert(table.concat(visits, ',') == 'first:1,second:2')
             self.assertEqual(len(result.todos), 1)
             self.assertIn('services.types.id("item", tostring((context.data["item_id"])', main)
             self.assertIn('services.types.id("effect", tostring(', main)
-            self.assertIn('services.registry.get("monster",', main)
+            self.assertIn('services.registry.monster_default_faction(', main)
             self.assertNotIn("services.overmap.search", main)
             self.assertNotIn("services.overmap.matches_location", main)
             self.assertIn(
@@ -39336,9 +39427,9 @@ local services={
   return 'tec'
  end}},
  types={id=function(kind,id) assert(kind=='martial_art_technique' and id=='tec');return id end},
- registry={get=function(kind,id)
-  assert(kind=='monster' and id=='mon' and calls==0)
-  lookups=lookups+1;return {default_faction={value='faction'}}
+ registry={monster_default_faction=function(id)
+  assert(id=='mon' and calls==0)
+  lookups=lookups+1;return 'faction'
  end},
  martial_arts={technique_definition=function(id)
   assert(id=='tec' and calls==0)

@@ -877,6 +877,15 @@ def render_proficiency_id_expression(
         return lua_quote(value)
     if not isinstance(value, dict):
         return None
+    if value.get("mutator") == "mon_faction":
+        if set(value) != {"mutator", "mtype_id"}:
+            return None
+        identifier = render_proficiency_id_expression(
+            value["mtype_id"], alpha_owner=alpha_owner, beta_owner=beta_owner,
+        )
+        if identifier is None:
+            return None
+        return f"services.registry.monster_default_faction({identifier})"
     if value.get("mutator") == "game_option":
         if set(value) != {"mutator", "option"}:
             return None
@@ -5043,11 +5052,7 @@ def render_participant_string(value: Any, target: str, alpha: str | None, beta: 
         if identifier is None:
             return None
         if monster:
-            return (
-                '(function(definition) if definition == nil then '
-                'error("unknown monster definition") end; return definition.default_faction.value end)'
-                f'(services.registry.get("monster", {identifier}))'
-            )
+            return f"services.registry.monster_default_faction({identifier})"
         field = "name" if value["mutator"] == "ma_technique_name" else "flavor_description"
         return ('services.martial_arts.technique_definition('
                 f'services.types.id("martial_art_technique", {identifier})).{field}')
@@ -27157,10 +27162,7 @@ def render_participant_string_expression(
         if identifier is None:
             return None
         if monster:
-            return (
-                '(function(definition) if definition == nil then error("unknown monster definition") end; '
-                f'return definition.default_faction.value end)(services.registry.get("monster", {identifier}))'
-            )
+            return f"services.registry.monster_default_faction({identifier})"
         field = "name" if value["mutator"].endswith("name") else "flavor_description"
         return (
             'services.martial_arts.technique_definition(services.types.id("martial_art_technique", '

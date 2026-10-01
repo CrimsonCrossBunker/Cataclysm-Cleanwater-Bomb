@@ -12052,6 +12052,12 @@ local CcbRegistryApi = {}
 ---@return table page
 function CcbRegistryApi.list(kind, options) end
 
+---Read the native monster definition's default faction as raw text.
+---Unknown IDs retain the native factory diagnostic and fallback definition.
+---@param id string Raw monster ID, including empty, NUL-containing and long names; no snapshot ID validation.
+---@return string faction Native default faction ID text.
+function CcbRegistryApi.monster_default_faction(id) end
+
 ---@class CcbSpawnsApi
 local CcbSpawnsApi = {}
 ---@param monster_type GameId Monster definition ID.

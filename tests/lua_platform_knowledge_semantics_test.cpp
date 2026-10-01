@@ -30,6 +30,7 @@
 #include "lua_platform_sol.h"
 #include "magic.h"
 #include "martialarts.h"
+#include "mtype.h"
 #include "npc.h"
 #include "options.h"
 #include "rng.h"
@@ -678,6 +679,61 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
             CHECK_FALSE( get_options().has_option( option_id ) );
             for( const std::string &selector : selectors ) {
                 compare_game_option( selector, option_id );
+            }
+        }
+
+        // Compare the raw faction text and diagnostic, not just the final
+        // proficiency predicate: most faction IDs are not proficiencies.
+        const sol::protected_function monster_faction = services["registry"]["monster_default_faction"];
+        REQUIRE( monster_faction.valid() );
+        const auto make_monster_condition = [&]( const std::string &selector,
+        const std::string &id_text ) {
+            std::ostringstream source;
+            {
+                JsonOut json( source );
+                json.start_object();
+                json.member( selector + "_has_proficiency" );
+                json.start_object();
+                json.member( "mutator", "mon_faction" );
+                json.member( "mtype_id", id_text );
+                json.end_object();
+                json.end_object();
+            }
+            return conditional_t( json_loader::from_string( source.str() ).get_object() );
+        };
+        const std::string nul_monster_id( "mon_zombie\0missing",
+                                          sizeof( "mon_zombie\0missing" ) - 1 );
+        const std::vector<std::string> monster_ids = {
+            "mon_zombie", "mon_null", std::string(), "mon_lua_unregistered_faction_test",
+            nul_monster_id, "无此怪物", std::string( 10000, 'x' )
+        };
+        REQUIRE( mtype_id( "mon_zombie" ).is_valid() );
+        REQUIRE( mtype_id( "mon_null" ).is_valid() );
+        for( const std::string &id_text : monster_ids ) {
+            std::string native_faction;
+            const std::string native_diagnostic = capture_debugmsg_during( [&]() {
+                native_faction = mtype_id( id_text )->default_faction.str();
+            } );
+            std::string platform_faction;
+            const std::string platform_diagnostic = capture_debugmsg_during( [&]() {
+                const sol::protected_function_result result = monster_faction( id_text );
+                REQUIRE( result.valid() );
+                platform_faction = result.get<std::string>();
+            } );
+            CAPTURE( id_text, native_faction, platform_faction );
+            CHECK( native_faction == platform_faction );
+            CHECK( native_diagnostic == platform_diagnostic );
+            CHECK( native_diagnostic.empty() == mtype_id( id_text ).is_valid() );
+            for( const std::string &selector : selectors ) {
+                CAPTURE( selector );
+                const conditional_t condition = make_monster_condition( selector, id_text );
+                bool native_match = false;
+                const std::string condition_diagnostic = capture_debugmsg_during( [&]() {
+                    native_match = condition( conversation );
+                } );
+                CHECK( condition_diagnostic == native_diagnostic );
+                CHECK( native_match == value_of( services["proficiencies"]["has_id_text"],
+                                                handle_for_selector( selector ), platform_faction ).as<bool>() );
             }
         }
 
