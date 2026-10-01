@@ -3454,6 +3454,183 @@ end
                                          capture_output=True, timeout=10)
                     self.assertEqual(run.returncode, 0, run.stderr)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_event_eoc_context_matches_native_diag_value_types(self) -> None:
+        event_values = (
+            ("character_id", "character_id", "1510"),
+            ("duration", "chrono_seconds", "60"),
+            ("string_value", "string", "prof_string"),
+            ("integer_value", "int", ""),
+            ("boolean_value", "bool", ""),
+            ("point_value", "tripoint", ""),
+        )
+        condition = {
+            "and": [
+                {"not": {"u_has_proficiency": {"context_val": key}}}
+                for key, _, _ in event_values
+            ],
+        }
+        source = migrate_lua_first.SourceObject(
+            Path("event_context_types.json"), 0, {
+                "type": "effect_on_condition",
+                "id": "native_event_context_types",
+                "eoc_type": "EVENT",
+                "required_event": "game_start",
+                "condition": condition,
+                "effect": "nothing",
+            },
+        )
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_eoc(source, result)
+        self.assertFalse(result.todos)
+        self.assertIn(
+            'runtime.handler("migrated.native_event_context_types", function(context)',
+            rendered,
+        )
+        self.assertIn('data_type == "character_id"', rendered)
+        self.assertIn('data_type == "chrono_seconds"', rendered)
+        self.assertIn('data_type == "tripoint"', rendered)
+        handler = rendered.split(
+            'runtime.handler("migrated.native_event_context_types", function(context)',
+            1,
+        )[1].split(
+            'runtime.handler("migrated-task.native_event_context_types",', 1
+        )[0]
+        self.assertLess(
+            handler.index("normalized_context.data_types = nil"),
+            handler.index("return migrated_eoc_native_event_context_types(context, nil)"),
+        )
+        self.assertNotIn("data_types", rendered.split(
+            'runtime.handler("migrated-task.native_event_context_types",', 1
+        )[1].split("end)", 1)[0])
+
+        proficiency_expression = migrate_lua_first.render_eoc_condition_expression(
+            {"u_has_proficiency": {"context_val": "character_id"}},
+            proficiency_character_alpha_actor_proven=True,
+        )
+        self.assertIsNotNone(proficiency_expression)
+        normalization_lines = migrate_lua_first._render_native_eoc_event_context_normalization()
+        script = r"""
+local actor = {}
+local observed = {}
+local handlers, subscriptions = {}, {}
+local coordinate_calls = 0
+migrated_eoc_functions = {}
+services = {
+    characters = {avatar = function() return actor end},
+    coords = {tripoint_abs_ms = function(x, y, z)
+        coordinate_calls = coordinate_calls + 1
+        return {kind = 'tripoint_abs_ms', x = x, y = y, z = z}
+    end},
+    proficiencies = {has_id_text = function(target, id)
+        assert(target == actor and type(id) == 'string')
+        observed[#observed + 1] = id
+        return false
+    end},
+}
+function service_value(value) return value end
+runtime = {
+    handler = function(id, callback) handlers[id] = callback end,
+    on = function(name, handler_id) subscriptions[name] = handler_id end,
+}
+local function normalize_native_event_context(context)
+NORMALIZATION
+    return context
+end
+local actors = {alpha = {identity = 'alpha'}, interlocutor = {identity = 'beta'}}
+local original = {
+    type = 'game_start', turn = 123, actors = actors, custom = 'preserved',
+    data = {
+        character_id = 1510, duration = 60, string_value = 'prof_string',
+        integer_value = 42, boolean_value = true, point_value = '(1,-2,3)',
+    },
+    data_types = {
+        character_id = 'character_id', duration = 'chrono_seconds',
+        string_value = 'string', integer_value = 'int',
+        boolean_value = 'bool', point_value = 'tripoint',
+    },
+}
+local normalized = normalize_native_event_context(original)
+assert(normalized ~= original and normalized.data ~= original.data)
+assert(normalized.data_types == nil)
+assert(normalized.type == original.type and normalized.turn == original.turn)
+assert(normalized.actors == actors and normalized.custom == 'preserved')
+assert(normalized.data.character_id == '1510' and normalized.data.duration == '60')
+assert(normalized.data.string_value == 'prof_string')
+assert(normalized.data.integer_value == 42 and normalized.data.boolean_value == true)
+assert(normalized.data.point_value.kind == 'tripoint_abs_ms')
+assert(normalized.data.point_value.x == 1 and normalized.data.point_value.y == -2)
+assert(normalized.data.point_value.z == 3 and coordinate_calls == 1)
+assert(original.data.character_id == 1510 and original.data.point_value == '(1,-2,3)')
+assert(original.data_types.character_id == 'character_id')
+
+context = normalized
+local context_proficiency = function() return PROFICIENCY_EXPRESSION end
+assert(not context_proficiency() and observed[#observed] == '1510')
+context.data.character_id = 73
+assert(not context_proficiency() and observed[#observed] == '')
+context.data.character_id = 'updated_id'
+assert(not context_proficiency() and observed[#observed] == 'updated_id')
+
+local ordinary_context = {data = {character_id = 73}, actors = actors}
+assert(normalize_native_event_context(ordinary_context) == ordinary_context)
+assert(ordinary_context.data.character_id == 73)
+
+MAIN
+local event = {
+    type = 'game_start', turn = 456,
+    actors = actors,
+    data = {
+        character_id = 1510, duration = 60, string_value = 'prof_string',
+        integer_value = 42, boolean_value = true, point_value = '(1,-2,3)',
+    },
+    data_types = {
+        character_id = 'character_id', duration = 'chrono_seconds',
+        string_value = 'string', integer_value = 'int',
+        boolean_value = 'bool', point_value = 'tripoint',
+    },
+}
+assert(subscriptions['game:game_start'] == 'migrated.native_event_context_types')
+handlers['migrated.native_event_context_types'](event)
+assert(#observed == 9)
+assert(observed[4] == '1510' and observed[5] == '60')
+assert(observed[6] == 'prof_string')
+assert(observed[7] == '' and observed[8] == '' and observed[9] == '')
+assert(event.data.character_id == 1510 and event.data.point_value == '(1,-2,3)')
+assert(event.data_types.point_value == 'tripoint' and event.actors == actors)
+""".replace(
+            "NORMALIZATION", "\n".join(normalization_lines)
+        ).replace(
+            "PROFICIENCY_EXPRESSION", proficiency_expression or "nil"
+        ).replace("MAIN", rendered)
+        run = subprocess.run(["lua", "-"], input=script, text=True,
+                             capture_output=True, timeout=10)
+        self.assertEqual(run.returncode, 0, run.stderr)
+
+        ordinary_source = migrate_lua_first.SourceObject(
+            Path("ordinary_context.json"), 0, {
+                "type": "effect_on_condition", "id": "ordinary_context",
+                "effect": "nothing",
+            },
+        )
+        ordinary = migrate_lua_first.render_eoc(
+            ordinary_source, migrate_lua_first.MigrationResult()
+        )
+        self.assertNotIn("data_types", ordinary)
+        global_source = migrate_lua_first.SourceObject(
+            Path("global_context.json"), 0, {
+                "type": "effect_on_condition", "id": "global_context",
+                "eoc_type": "RECURRING", "global": True, "recurrence": 1,
+                "effect": "nothing",
+            },
+        )
+        global_recurrence = migrate_lua_first.render_eoc(
+            global_source, migrate_lua_first.MigrationResult()
+        )
+        self.assertIn('runtime.handler("migrated.global_context.recurring"',
+                      global_recurrence)
+        self.assertNotIn("data_types", global_recurrence)
+
     def test_proficiency_variable_ids_keep_unproven_frames_and_owners_as_todo(self) -> None:
         for prefix in ("u_", "npc_"):
             for descriptor in ({"global_val": "id"}, {"context_val": "id"}):

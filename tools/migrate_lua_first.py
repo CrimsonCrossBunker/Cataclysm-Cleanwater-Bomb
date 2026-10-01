@@ -30731,6 +30731,42 @@ def render_static_wrapped_beta_npc_call(
     ]
 
 
+def _render_native_eoc_event_context_normalization() -> list[str]:
+    """Copy a native event into the value shapes used by EOC diag_value."""
+    return [
+        "    context = context or {}",
+        '    if type(context) == "table" and type(context.data_types) == "table" then',
+        "        local normalized_context = {}",
+        "        for key, value in pairs(context) do",
+        "            normalized_context[key] = value",
+        "        end",
+        "        local normalized_data = {}",
+        '        local event_data = type(context.data) == "table" and context.data or {}',
+        "        for key, value in pairs(event_data) do",
+        "            local data_type = context.data_types[key]",
+        '            if data_type == "character_id" or data_type == "chrono_seconds" then',
+        "                normalized_data[key] = tostring(value)",
+        '            elseif data_type == "tripoint" then',
+        '                if type(value) ~= "string" then',
+        '                    error("native EOC tripoint payload is not a string", 0)',
+        "                end",
+        '                local x, y, z = value:match("^%((%-?%d+),(%-?%d+),(%-?%d+)%)$")',
+        '                if x == nil then',
+        '                    error("native EOC tripoint payload is malformed", 0)',
+        "                end",
+        "                normalized_data[key] = services.coords.tripoint_abs_ms(",
+        "                    tonumber(x), tonumber(y), tonumber(z))",
+        "            else",
+        "                normalized_data[key] = value",
+        "            end",
+        "        end",
+        "        normalized_context.data = normalized_data",
+        "        normalized_context.data_types = nil",
+        "        context = normalized_context",
+        "    end",
+    ]
+
+
 def render_eoc(
     source: SourceObject,
     result: MigrationResult,
@@ -36826,11 +36862,16 @@ def render_eoc(
             "",
             f"runtime.handler({lua_quote(handler_id)}, function(context)",
         ]
+        if has_event_trigger:
+            handler_lines.extend(
+                _render_native_eoc_event_context_normalization()
+            )
+        elif event_beta_presence_proven:
+            handler_lines.append("    context = context or {}")
         if event_beta_presence_proven:
-            handler_lines.extend([
-                "    context = context or {}",
-                "    context.__ccb_event_beta_presence_proven = true",
-            ])
+            handler_lines.append(
+                "    context.__ccb_event_beta_presence_proven = true"
+            )
         handler_lines.extend([
             f"    return {function_name}(context, nil)",
             "end)",
