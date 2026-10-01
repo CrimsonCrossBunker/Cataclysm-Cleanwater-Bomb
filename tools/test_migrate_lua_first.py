@@ -1133,8 +1133,8 @@ assert(reads==READS)
         script = r"""
 local services={time_snapshot=function() return {season_id='spring'} end,
  translate=function(text) assert(text=='original');return 'translated' end,
- registry={get=function(kind,id)
- assert(kind=='monster' and id=='translated');return {default_faction={value='spring'}}
+ registry={monster_default_faction=function(id)
+ assert(id=='translated');return 'spring'
 end}}
 assert(EXPRESSION)
 """.replace("EXPRESSION", expression)
@@ -2772,11 +2772,12 @@ assert(#translated==2 and draws==3)
         for present in (True, False):
             script = r"""
 local partner={}
+local context={data={}}
 local calls=0
 local function service_value(result) assert(result.ok);return result.value end
 local services={
  variables={resolve=function(data,owner,scope,key)
-  assert(owner==partner and scope=='npc' and key=='input')
+  assert(data==context.data and owner==partner and scope=='npc' and key=='input')
   return {ok=true,value={exists=PRESENT,value=PRESENT and '' or nil}}
  end},
  translate=function(text,ctxt)
@@ -2800,6 +2801,7 @@ assert(calls==(PRESENT and 0 or 1))
         self.assertIsNotNone(stored)
         script = r"""
 local partner={input='stored translation'}
+local context={data={}}
 local calls=0
 local function service_value(result) assert(result.ok);return result.value end
 local services={
@@ -2807,7 +2809,7 @@ local services={
   assert(text=='Hello' and ctxt=='greeting');calls=calls+1;return 'translated'
  end,
  variables={resolve=function(data,owner,scope,key)
-  assert(owner==partner and scope=='npc' and key=='input')
+  assert(data==context.data and owner==partner and scope=='npc' and key=='input')
   return {ok=true,value={value=owner[key]}}
  end}
 }
@@ -2817,6 +2819,44 @@ assert(calls==1)
 """.replace("AUTHORED", authored).replace("STORED", stored)
         result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_participant_translation_literals_share_native_raw_and_empty_contract(self) -> None:
+        for text in ("", "\0", "source\0suffix", "s" * 10000):
+            for translation_context in (None, "", "scope\0suffix", "c" * 10000):
+                value = text if translation_context is None else {"str": text, "ctxt": translation_context}
+                expression = migrate_lua_first.render_participant_translation_expression(
+                    value, "actor", "actor", "partner")
+                self.assertIsNotNone(expression)
+                script = r"""
+local calls=0
+local services={translate=function(text,ctxt)
+ assert(text==RAW and ctxt==CONTEXT);calls=calls+1;return 'native\0translation'
+end}
+assert(EXPRESSION==EXPECTED)
+assert(calls==CALLS)
+""".replace("RAW", migrate_lua_first.lua_quote(text)).replace(
+                    "CONTEXT", "nil" if translation_context is None else migrate_lua_first.lua_quote(translation_context),
+                ).replace("EXPRESSION", expression or "nil").replace(
+                    "EXPECTED", migrate_lua_first.lua_quote("native\0translation" if text else ""),
+                ).replace("CALLS", "1" if text else "0")
+                result = subprocess.run(["lua", "-"], input=script, text=True,
+                                        capture_output=True, timeout=10)
+                self.assertEqual(result.returncode, 0, result.stderr)
+            for renderer in (migrate_lua_first.render_participant_string,
+                             migrate_lua_first.render_participant_string_expression):
+                self.assertEqual(renderer({"str": text, "i18n": True}, "actor", "actor", "partner"),
+                                 migrate_lua_first._render_assignment_translation_literal(text))
+
+    def test_participant_translation_keeps_singular_loader_diagnostics_explicit(self) -> None:
+        for value in ({"str_sp": "diagnostic"}, {"str": "text", "str_pl": "texts"},
+                      {"str": "text", "ctxt": None}, {"str": "text", "//~": 42},
+                      {"str": "text", "unknown": True},
+                      {"str": "text", "i18n": True, "ctxt": "not read by mutator"}):
+            self.assertIsNone(migrate_lua_first.render_participant_translation_expression(
+                value, "actor", "actor", "partner"))
+            self.assertIsNone(migrate_lua_first.render_participant_translation_expression(
+                {"u_val": "input", "default": value}, "actor", "actor", "partner"))
 
     def test_set_string_renderer_rejects_shapes_outside_its_literal_contract(self) -> None:
         target = {"global_val": "output"}

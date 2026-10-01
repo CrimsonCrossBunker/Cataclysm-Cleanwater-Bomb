@@ -27702,17 +27702,17 @@ def render_participant_translation_expression(
     """Translate authored literals; stored dialogue values are already translated."""
     if isinstance(value, str) or (
             isinstance(value, dict) and ("str" in value or "str_sp" in value)):
-        literal = value if isinstance(value, str) else value.get("str_sp", value.get("str"))
-        translation_context = value.get("ctxt") if isinstance(value, dict) else None
-        if not bounded_utf8_string(literal, 8192, allow_empty=True):
-            return None
-        if translation_context is not None and not bounded_utf8_string(
-                translation_context, 8192, allow_empty=True):
-            return None
-        arguments = lua_quote(literal)
-        if translation_context is not None:
-            arguments += ", " + lua_quote(translation_context)
-        return f"services.translate({arguments})"
+        if isinstance(value, dict) and value.get("i18n") is True:
+            # Native str_or_var's translation mutator deserializes only its
+            # str member. The caller has already proved this mutator shape;
+            # don't interpret sibling context as a translation-object context.
+            if set(value) - {"str", "i18n", "//~"}:
+                return None
+            value = {key: member for key, member in value.items() if key != "i18n"}
+        # Share the native singular contract and empty-source fast path with
+        # assignments. str_sp produces a singular-loader diagnostic and stays
+        # TODO rather than being silently treated as str.
+        return _render_assignment_translation_literal(value)
     if isinstance(value, dict) and "default" in value:
         # A translated fallback must run only when the variable is absent.
         # Keep unsupported indirect fallback shapes explicit for now.
