@@ -3,6 +3,7 @@
 #include <functional>
 #include <initializer_list>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -18,7 +19,9 @@
 #include "dialogue.h"
 #include "flag.h"
 #include "flexbuffer_json.h"
+#include "global_vars.h"
 #include "item.h"
+#include "json.h"
 #include "json_loader.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
@@ -311,6 +314,75 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
                 CHECK( value_of(
                            services["proficiencies"]["has_id_text"],
                            teacher_handle, unknown_id ).as<bool>() == native_known );
+            }
+            const std::string variable_name = "lua_proficiency_variable_" + prefix;
+            REQUIRE( get_globals().maybe_get_global_value( variable_name ) == nullptr );
+            on_out_of_scope restore_proficiency_variables( [&]() {
+                conversation.remove_value( variable_name );
+                get_globals().remove_global_value( variable_name );
+            } );
+            for( const std::string &scope : {
+                     std::string( "global" ), std::string( "context" )
+                 } ) {
+                std::ostringstream condition_source;
+                {
+                    JsonOut json( condition_source );
+                    json.start_object();
+                    json.member( prefix + "has_proficiency" );
+                    json.start_object();
+                    json.member( scope + "_val", variable_name );
+                    json.member( "default", carving.str() );
+                    json.end_object();
+                    json.end_object();
+                }
+                const conditional_t native_variable_condition(
+                    json_loader::from_string( condition_source.str() ).get_object() );
+                sol::table context_values = lua.create_table();
+                const auto compare_variable_query = [&]() {
+                    const sol::table resolved = value_of(
+                                                    services["variables"]["resolve"],
+                                                    context_values, sol::nil, scope, variable_name ).as<sol::table>();
+                    const sol::object stored = resolved["value"];
+                    const std::string raw_id = !resolved["exists"].get<bool>() ? carving.str() :
+                                               stored.is<std::string>() ? stored.as<std::string>() : std::string();
+                    CHECK( value_of( services["proficiencies"]["has_id_text"],
+                                     teacher_handle, raw_id ).as<bool>() == native_variable_condition( conversation ) );
+                };
+                // Keep a different value in the other scope to detect accidental
+                // owner/scope substitution in the native and Platform readers.
+                conversation.set_value( variable_name, "prof_unregistered_condition_test" );
+                context_values[variable_name] = "prof_unregistered_condition_test";
+                get_globals().set_global_value( variable_name, "prof_unregistered_condition_test" );
+                if( scope == "global" ) {
+                    get_globals().remove_global_value( variable_name );
+                } else {
+                    conversation.remove_value( variable_name );
+                    context_values[variable_name] = sol::nil;
+                }
+                CHECK( native_variable_condition( conversation ) );
+                compare_variable_query();
+                for( const std::string &stored_id : {
+                         std::string(), carving.str(), std::string( 10000, 'x' ),
+                         std::string( "无此熟练度" ), std::string( "\0" "12", 3 )
+                     } ) {
+                    if( scope == "global" ) {
+                        get_globals().set_global_value( variable_name, stored_id );
+                    } else {
+                        conversation.set_value( variable_name, stored_id );
+                        context_values[variable_name] = stored_id;
+                    }
+                    CAPTURE( scope, stored_id );
+                    CHECK( native_variable_condition( conversation ) == ( stored_id == carving.str() ) );
+                    compare_variable_query();
+                }
+                if( scope == "global" ) {
+                    get_globals().set_global_value( variable_name, 73 );
+                } else {
+                    conversation.set_value( variable_name, 73 );
+                    context_values[variable_name] = 73;
+                }
+                CHECK_FALSE( native_variable_condition( conversation ) );
+                compare_variable_query();
             }
             teacher.remove_weapon();
             for( const bool wielded : {

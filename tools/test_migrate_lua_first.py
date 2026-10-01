@@ -3296,7 +3296,7 @@ assert(observed[#observed] == 'KNOWN')
                 self.assertIn(expected, expression)
                 self.assertTrue(expression.endswith(".total > 0"))
 
-    def test_proficiency_conditions_require_exact_actor_and_static_id_text(self) -> None:
+    def test_proficiency_conditions_require_exact_actor_and_proven_id_text(self) -> None:
         unknown_literal = {"u_has_proficiency": "prof_unregistered_condition_test"}
         self.assertIsNone(
             migrate_lua_first.render_eoc_condition_expression(
@@ -3320,7 +3320,7 @@ assert(observed[#observed] == 'KNOWN')
             f"not ({expression})",
         )
         for raw_id in (
-            {"context_val": "proficiency_id"},
+            {"u_val": "proficiency_id"},
             {"str": "prof_knapping", "i18n": True},
         ):
             self.assertIsNone(
@@ -3358,7 +3358,7 @@ assert(observed[#observed] == 'KNOWN')
             beta_expression,
         )
         for unsupported in (
-            {"npc_has_proficiency": {"context_val": "prof_id"}},
+            {"npc_has_proficiency": {"var_val": "prof_id"}},
             {"npc_has_proficiency": "prof_knapping", "extra": True},
         ):
             self.assertIsNone(
@@ -3380,6 +3380,93 @@ assert(observed[#observed] == 'KNOWN')
                     bare_string, npc_melee_beta_actor_proven=True,
                 )
             )
+
+    def test_proficiency_variable_ids_preserve_presence_and_native_string_values(self) -> None:
+        key = "\0" + "变量" + "x" * 257
+        fallback = "prof_carving"
+        for scope in ("global_val", "context_val"):
+            for prefix in ("u_", "npc_"):
+                with self.subTest(scope=scope, prefix=prefix):
+                    expression = migrate_lua_first.render_eoc_condition_expression(
+                        {prefix + "has_proficiency": {scope: key, "default": fallback}},
+                        proficiency_character_alpha_actor_proven=True,
+                        npc_melee_beta_actor_proven=True,
+                    )
+                    self.assertIsNotNone(expression)
+                    script = r"""
+local key = KEY
+local actor = {kind='creature', subtype='avatar', is_valid=function() return true end}
+local beta = {kind='creature', subtype='npc', is_valid=function() return true end}
+local context = {actors={interlocutor=beta}, data={}}
+local snapshot = {exists=false}
+local observed, reads, queries = nil, 0, 0
+local function service_value(result) assert(result.ok); return result.value end
+local services = {
+ variables={resolve=function(data, owner, scope, name)
+  assert(data==context.data and owner==nil and scope=='global' and name==key)
+  reads=reads+1
+  return {ok=true, value=snapshot}
+ end},
+ proficiencies={has_id_text=function(target, text)
+  assert(target==(PREFIX=='u_' and actor or beta) and type(text)=='string')
+  queries=queries+1
+  observed=text
+  return {ok=true, value=text=='prof_carving'}
+ end}
+}
+local function check(exists, stored, expected)
+ snapshot={exists=exists, value=stored}
+ if exists then context.data[key]=stored else context.data[key]=nil end
+ local actual=EXPRESSION
+ assert(observed==expected and actual==(expected=='prof_carving'))
+end
+check(false, nil, 'prof_carving')
+check(true, '', '')
+check(true, 73, '')
+check(true, false, '')
+check(true, {native_null=true}, '')
+check(true, {x=1,y=2,z=3}, '')
+check(true, string.char(0)..'12', string.char(0)..'12')
+check(true, string.rep('x',10000), string.rep('x',10000))
+check(true, '未知熟练度', '未知熟练度')
+check(true, 'prof_carving', 'prof_carving')
+if SCOPE=='global_val' then
+ assert(reads==10)
+ -- A present native null must not use the missing-value fallback.
+ snapshot={exists=true, value=nil}
+ assert(not (EXPRESSION) and observed=='')
+ if PREFIX=='npc_' then
+  beta.subtype='monster'
+  snapshot.value='prof_carving'
+  local before, previous_queries=reads, queries
+  assert(not (EXPRESSION) and reads==before+1 and queries==previous_queries)
+ end
+else
+ assert(reads==0)
+end
+""".replace("KEY", migrate_lua_first.lua_quote(key)).replace(
+                        "SCOPE", migrate_lua_first.lua_quote(scope)).replace(
+                        "PREFIX", migrate_lua_first.lua_quote(prefix)).replace(
+                        "EXPRESSION", expression or "nil")
+                    run = subprocess.run(["lua", "-"], input=script, text=True,
+                                         capture_output=True, timeout=10)
+                    self.assertEqual(run.returncode, 0, run.stderr)
+
+    def test_proficiency_variable_ids_keep_unproven_frames_and_owners_as_todo(self) -> None:
+        for prefix in ("u_", "npc_"):
+            for descriptor in ({"global_val": "id"}, {"context_val": "id"}):
+                self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+                    {prefix + "has_proficiency": descriptor}))
+            for descriptor in (
+                {"u_val": "id"}, {"npc_val": "id"}, {"var_val": "id"},
+                {"global_val": "id", "context_val": "id"},
+                {"global_val": "id", "default": 3},
+                {"global_val": "id", "type": "legacy_prefix"},
+            ):
+                self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+                    {prefix + "has_proficiency": descriptor},
+                    proficiency_character_alpha_actor_proven=True,
+                    npc_melee_beta_actor_proven=True))
 
     def test_live_character_proficiency_proof_keeps_avatar_only_queries_separate(self) -> None:
         expected = 'services.proficiencies.has_id_text(actor, "prof_knapping")'
@@ -3514,7 +3601,7 @@ assert(calls == 1)
             ),
             (
                 "dynamic_proficiency_id", "character_melee_attacks_character",
-                {"npc_has_proficiency": {"context_val": "prof_id"}}, {},
+                {"npc_has_proficiency": {"var_val": "prof_id"}}, {},
             ),
             (
                 "referenced_melee_proficiency", "character_melee_attacks_character",

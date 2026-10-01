@@ -868,6 +868,39 @@ def safe_native_proficiency_id_literal(value: Any) -> bool:
     return lua_quotable_native_variable_string(value)
 
 
+def render_proficiency_id_expression(value: Any) -> str | None:
+    """Keep native raw text and owner-independent variable lookup semantics."""
+    if safe_native_proficiency_id_literal(value):
+        return lua_quote(value)
+    if not isinstance(value, dict):
+        return None
+    scopes = {"global_val", "context_val"} & set(value)
+    if len(scopes) != 1 or set(value) - scopes - {"default"}:
+        return None
+    scope = next(iter(scopes))
+    name = value[scope]
+    fallback = value.get("default", "")
+    if not (lua_quotable_native_variable_string(name) and
+            lua_quotable_native_variable_string(fallback)):
+        return None
+    if scope == "context_val":
+        # Use the copied dialogue table directly: native context keys are not
+        # restricted to the Platform variables service's printable key subset.
+        return (
+            '(function(stored) if stored == nil then return ' + lua_quote(fallback) +
+            ' end; return type(stored) == "string" and stored or "" end)'
+            '(context and context.data and context.data[' + lua_quote(name) + '])'
+        )
+    snapshot = render_direct_variable_snapshot({scope: name}, "nil")
+    if snapshot is None:
+        return None
+    return (
+        '(function(result) if result.exists == false then return ' + lua_quote(fallback) +
+        ' end; return type(result.value) == "string" and result.value or "" end)'
+        '(' + snapshot + ')'
+    )
+
+
 def bounded_utf8_string(
     value: Any, maximum: int, *, allow_empty: bool = False
 ) -> bool:
@@ -30307,39 +30340,47 @@ def render_eoc_condition_expression(
         )
     if set(condition) == {"u_has_proficiency"}:
         raw_id = condition.get("u_has_proficiency")
+        proficiency_id = render_proficiency_id_expression(raw_id)
         if (
             (proficiency_alpha_actor_proven or proficiency_character_alpha_actor_proven) and
-            safe_native_proficiency_id_literal(raw_id)
+            proficiency_id is not None
         ):
             # Native checks raw proficiency_id text against the learned set;
-            # it does not require a registered definition. Dynamic
-            # str_or_var/mutator shapes remain TODO until their exact scope
-            # and evaluation semantics are proven at this call site.
+            # it does not require a registered definition. Character/indirect
+            # variable owners and mutators still need their own source proof.
             return (
                 "service_value(services.proficiencies.has_id_text("
-                f"actor, {lua_quote(raw_id)}))"
+                f"actor, {proficiency_id}))"
             )
     if isinstance(condition, dict) and "npc_has_proficiency" in condition:
         raw_id = condition.get("npc_has_proficiency")
+        proficiency_id = render_proficiency_id_expression(raw_id)
         if (
             npc_melee_beta_actor_proven and
             set(condition) == {"npc_has_proficiency"} and
-            safe_native_proficiency_id_literal(raw_id)
+            proficiency_id is not None
         ):
             # Native calls knows_proficiency on const_actor(true). The narrow
             # melee event bridge exposes that same live Creature as
             # interlocutor; non-Character talkers (including monsters) use
             # the native base false result and must not reach the Character
-            # only service. Dynamic str_or_var IDs remain TODO.
+            # only service. Native evaluates the ID even when the receiver's
+            # base knows_proficiency implementation will return false.
+            evaluate_id = (
+                f"local proficiency_id = {proficiency_id}; "
+                if isinstance(raw_id, dict) else ""
+            )
+            query_id = "proficiency_id" if isinstance(raw_id, dict) else proficiency_id
             return (
                 "(function() "
+                f"{evaluate_id}"
                 "local beta = context and context.actors and context.actors.interlocutor; "
                 "if beta == nil or beta.kind ~= \"creature\" or "
                 "(beta.subtype ~= \"avatar\" and beta.subtype ~= \"character\" "
                 "and beta.subtype ~= \"npc\") then return false end; "
                 "if not beta:is_valid() then return false end; "
                 "return service_value(services.proficiencies.has_id_text(beta, "
-                f"{lua_quote(raw_id)})) "
+                f"{query_id})) "
                 "end)()"
             )
         return None
@@ -31524,9 +31565,9 @@ def render_eoc(
         elif contains_npc_proficiency_condition(raw_condition):
             condition_todo = (
                 "translate npc_has_proficiency only for an event-exclusive "
-                "pre-damage melee EOC with its live interlocutor and a bounded "
-                "literal proficiency ID; preserve the native false result for "
-                "monster/base talkers, and leave dynamic str_or_var IDs, other "
+                "pre-damage melee EOC with its live interlocutor and raw literal "
+                "or global/context variable ID; preserve the native false result for "
+                "monster/base talkers, and leave other variable owners/mutators, other "
                 "beta sources, and re-entered EOCs as TODO"
             )
         elif isinstance(raw_condition, str) and raw_condition in {
