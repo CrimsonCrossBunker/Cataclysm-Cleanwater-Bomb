@@ -1305,6 +1305,8 @@ class Character : public Creature, public visitable
         /** This handles giving xp for a skill. Returns true on level-up. */
         bool practice( const skill_id &id, int amount, int cap = 99, bool suppress_warning = false,
                        bool allow_multilevel = false );
+        /** Combat practice decays above the opponent's difficulty instead of stopping. */
+        bool practice_combat( const skill_id &id, int amount, double training_level );
         /** This handles warning the player that there current activity will not give them xp */
         void handle_skill_warning( const skill_id &id, bool force_warning = false );
 

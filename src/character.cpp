@@ -55,6 +55,7 @@
 #include "city.h"
 #include "clone_ptr.h"
 #include "color.h"
+#include "combat_training.h"
 #include "coordinates.h"
 #include "creature_tracker.h"
 #include "current_map.h"
@@ -1949,7 +1950,7 @@ void Character::on_dodge( Creature *source, float difficulty, float training_lev
 
     if( source && source->times_combatted_player <= 100 ) {
         source->times_combatted_player++;
-        practice( skill_dodge, difficulty * 2, difficulty );
+        practice_combat( skill_dodge, difficulty * 2, difficulty );
     }
     martial_arts_data->ma_ondodge_effects( *this );
 
@@ -2605,6 +2606,12 @@ float Character::get_vision_threshold( float light_level ) const
 
     return std::min( LIGHT_AMBIENT_LOW,
                      threshold_for_range( range ) * dimming_from_light );
+}
+
+bool Character::practice_combat( const skill_id &id, int amount, double training_level )
+{
+    const double multiplier = combat_training_multiplier( get_skill_level( id ), training_level );
+    return practice( id, roll_remainder( amount * multiplier ), MAX_SKILL );
 }
 
 bool Character::practice( const skill_id &id, int amount, int cap, bool suppress_warning,
