@@ -26020,7 +26020,6 @@ assert(not pcall(function() return U_EXPRESSION end))
 
         result = migrate_lua_first.MigrationResult()
         rendered = migrate_lua_first.render_eoc(source, result)
-        todo_text = "\n".join(todo.message for todo in result.todos)
         self.assertIn("local actor = actor_override", rendered)
         self.assertIn("if actor == nil then", rendered)
         self.assertIn(

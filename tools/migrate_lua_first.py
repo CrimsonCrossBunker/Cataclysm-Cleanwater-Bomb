@@ -1780,10 +1780,10 @@ def _has_dynamic_eoc_dispatch(objects: Iterable[SourceObject]) -> bool:
             return any(walk(entry) for entry in value)
         if not isinstance(value, dict):
             return False
-        for field in ("run_eocs", "run_eoc_selector"):
-            if field not in value:
+        for effect_key in ("run_eocs", "run_eoc_selector"):
+            if effect_key not in value:
                 continue
-            raw = value[field]
+            raw = value[effect_key]
             references = [raw] if isinstance(raw, (str, dict)) else raw
             if not isinstance(references, list) or any(
                 not fixed_reference(entry) for entry in references
@@ -28546,12 +28546,6 @@ def render_eoc_condition_expression(
         npc_actor_proven or generic_character_actor_proven
     npc_query_actor = (
         (npc_actor_expression or "actor") if npc_actor_proven else None
-    )
-    npc_query_actor_ref = (
-        f"({npc_query_actor})"
-        if npc_query_actor is not None and
-        (" or " in npc_query_actor or " and " in npc_query_actor) else
-        npc_query_actor
     )
     if condition == "u_has_camp":
         # Native f_u_has_camp ignores dialogue alpha and reads the global
