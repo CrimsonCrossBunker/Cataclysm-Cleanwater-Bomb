@@ -52,7 +52,7 @@ bool script_array_value::operator!=( const script_array_value &other ) const
 void script_array_value::serialize( JsonOut &json ) const
 {
     json.start_array();
-    for( const script_persistent_value &value : get().values ) {
+    for( const script_persistent_value &value : value_->values ) {
         json.start_object();
         detail::write_persistent_value( json, value );
         json.end_object();

@@ -23,6 +23,7 @@ TEST_CASE( "lua_migration_native_named_predicate_accepts_empty_name",
         effect.parse_sub_effect( json_loader::from_string(
                                      R"({"set_condition":"","condition":{"math":[")" +
                                      comparison + R"("]}})" ).get_object(), "named_predicate_acceptance" );
+        finalize_conditions();
         for( const talk_effect_fun_t &operation : effect.effects ) {
             operation( context );
         }

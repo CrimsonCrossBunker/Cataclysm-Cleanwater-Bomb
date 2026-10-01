@@ -47,7 +47,7 @@ TEST_CASE( "lua_platform_persistent_coordinates_preserve_integer_bounds",
 {
     const cata::lua_platform::script_persistent_value value =
         cata::lua_platform::detail::read_persistent_value( json_loader::from_string(
-                R"({"type":"tripoint_abs_ms","value":[2147483647,-2147483648,0]})" ).get_object() );
+                    R"({"type":"tripoint_abs_ms","value":[2147483647,-2147483648,0]})" ).get_object() );
     const cata::lua_platform::script_persistent_tripoint &coordinate =
         std::get<cata::lua_platform::script_persistent_tripoint>( value );
     CHECK( coordinate.x == std::numeric_limits<int>::max() );
