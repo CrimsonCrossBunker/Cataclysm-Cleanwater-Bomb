@@ -25822,12 +25822,62 @@ def render_static_set_field(
     key: str,
     avatar_actor_proven: bool,
     npc_event_character_actor_proven: bool,
+    event_exclusive_live_avatar_center_proven: bool = False,
 ) -> list[str] | None:
-    if key not in effect:
+    """Render only bounded static u_set_field with a source-proven avatar center.
+
+    Native f_field evaluates radius, intensity, and age at call time; intensity
+    and age are evaluated per eligible destination. Dynamic expressions would
+    therefore change both evaluation count and RNG behavior when moved into a
+    single Platform call. NPC beta and var_info target_var shapes also remain
+    TODO until their invocation/frame can be proved.
+    """
+    del npc_event_character_actor_proven
+    if (
+        key != "u_set_field" or key not in effect or
+        not avatar_actor_proven or not event_exclusive_live_avatar_center_proven
+    ):
         return None
-    return _render_static_map_state_edit(
-        effect, avatar_actor_proven, npc_event_character_actor_proven
-    )
+    comment_keys = {
+        name for name in effect
+        if isinstance(name, str) and name.startswith("//")
+    }
+    if set(effect) - comment_keys - {
+        key, "radius", "intensity", "age", "square", "outdoor_only",
+        "indoor_only", "hit_player",
+    }:
+        return None
+    field_id = effect.get(key)
+    if not bounded_platform_id(field_id):
+        return None
+    radius = native_int_literal(effect.get("radius", 1))
+    if radius is None or not 0 <= radius <= 32767:
+        return None
+    intensity = native_int_literal(effect.get("intensity", 1))
+    if intensity is None:
+        return None
+    age = parse_native_duration_turns(effect.get("age", 1))
+    if age is None or not 0 <= age <= MAX_EFFECT_DURATION_TURNS:
+        return None
+    options = {
+        name: effect.get(name, default)
+        for name, default in (
+            ("square", False), ("outdoor_only", False),
+            ("indoor_only", False), ("hit_player", True),
+        )
+    }
+    if any(not isinstance(value, bool) for value in options.values()):
+        return None
+    return [
+        "    services.gameplay.environment.add_field_area(",
+        "        service_value(services.characters.snapshot(actor)).creature.position,",
+        f"        {lua_quote(field_id)}, {{ radius = {radius}, intensity = {intensity},",
+        f"            age = services.time.duration({age}, \"turn\"),",
+        "            square = " + lua_boolean(options["square"]) + ", " +
+        "outdoor_only = " + lua_boolean(options["outdoor_only"]) + ",",
+        "            indoor_only = " + lua_boolean(options["indoor_only"]) + ", " +
+        "hit_player = " + lua_boolean(options["hit_player"]) + " })",
+    ]
 
 
 def _render_static_map_state_edit(
@@ -25852,6 +25902,14 @@ def render_static_set_terrain_or_furniture(
     effect: dict[str, Any], key: str,
 ) -> list[str] | None:
     if key not in effect:
+        return None
+    # The native legacy effects parse location as var_info.  A tagged abs_ms
+    # literal belongs to the typed Platform API and is not a valid var_info
+    # value, so it cannot prove a native EOC target for an atomic map edit.
+    if any(
+        _explicit_abs_ms_expression(effect.get(name)) is not None
+        for name in ("location", "target_var")
+    ):
         return None
     return _render_static_map_state_edit(effect, False, False)
 
@@ -31585,7 +31643,11 @@ def render_eoc(
                             "u_set_field", "npc_set_field",
                         )
                     ):
-                        false_todo = "translate " + _map_mutation_todo()
+                        false_todo = (
+                            "field effect in false_effect branch lacks a source-proven "
+                            "live Avatar center; top-level static field lowering does "
+                            "not infer the branch actor"
+                        )
                     elif isinstance(false_value, dict) and "copy_var" in false_value:
                         false_todo = (
                             "translate copy_var only for bounded literal u/npc/global "
@@ -33800,21 +33862,39 @@ def render_eoc(
                 ("u_set_field" in effect or "npc_set_field" in effect)
             ):
                 key = "u_set_field" if "u_set_field" in effect else "npc_set_field"
+                field_avatar_center_proven = (
+                    stable_handler and not inline_eoc and
+                    eoc_id not in eoc_referenced_ids and
+                    not dynamic_eoc_dispatch_present and avatar_actor_proven and
+                    (
+                        global_recurrence or
+                        (
+                            event_exclusive_source_proven and
+                            required_event == "game_start" and
+                            game_start_avatar_source_proven
+                        )
+                    )
+                )
                 rendered = render_static_set_field(
                     effect, key, avatar_actor_proven,
                     npc_event_character_actor_proven,
+                    event_exclusive_live_avatar_center_proven=field_avatar_center_proven,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: " + _map_mutation_todo() + "."
+                        "    -- TODO: field placement only migrates for a proven live "
+                        "Avatar center with bounded static parameters; target_var, "
+                        "npc_set_field, and dynamic radius/intensity/age remain TODO."
                     )
                     result.add_todo(
                         "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} " +
-                        _map_mutation_todo()
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        "field placement needs a source-proven live Avatar center and "
+                        "bounded static parameters; target_var, npc_set_field, and "
+                        "dynamic radius/intensity/age remain TODO"
                     )
                     all_effects_converted = False
             elif (

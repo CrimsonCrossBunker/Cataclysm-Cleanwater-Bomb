@@ -7641,6 +7641,13 @@ assert(#events == 9)
             },
             {
                 "type": "effect_on_condition",
+                "id": "game_start_field",
+                "required_event": "game_start",
+                "effect": {"u_set_field": "fd_fire", "radius": 0},
+                "eoc_type": "EVENT",
+            },
+            {
+                "type": "effect_on_condition",
                 "id": "game_start_proficiency_condition",
                 "required_event": "game_start",
                 "condition": {"u_has_proficiency": "prof_knapping"},
@@ -7666,6 +7673,7 @@ assert(#events == 9)
             self.assertIn("services.recipes.learn(", normal_main)
             self.assertIn("services.wounds.add_unbounded(", normal_main)
             self.assertIn("services.morale.add(", normal_main)
+            self.assertIn("services.gameplay.environment.add_field_area(", normal_main)
             self.assertIn("services.proficiencies.has_id_text(", normal_main)
 
             source.write_text(
@@ -7687,11 +7695,13 @@ assert(#events == 9)
             "services.recipes.learn(",
             "services.wounds.add_unbounded(",
             "services.morale.add(",
+            "services.gameplay.environment.add_field_area(",
             "services.proficiencies.has_id_text(",
         ):
             self.assertNotIn(lowering, reemitted_main)
         for eoc_id in (
             "game_start_recipe", "game_start_wound", "game_start_morale",
+            "game_start_field",
         ):
             self.assertIn(f"EOC {eoc_id}", todo_text)
             self.assertNotIn(eoc_id, reemitted.converted)
@@ -26449,7 +26459,7 @@ assert(not pcall(function() return U_EXPRESSION end))
                     self.assertTrue(result.partial)
                     self.assertTrue(result.todos)
 
-    def test_set_field_preserves_native_hit_player_default(self) -> None:
+    def test_set_field_migration_preserves_native_hit_player_default(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -26471,11 +26481,15 @@ assert(not pcall(function() return U_EXPRESSION end))
                 migrate_lua_first.load_objects([source]), "set_field_default_mod"
             )
             main = result.files[Path("main.lua")]
-            self.assertEqual(result.converted, [])
-            self.assertTrue(result.partial)
-            self.assertTrue(result.todos)
+            self.assertFalse(result.partial)
+            self.assertFalse(result.todos)
+            self.assertIn("services.gameplay.environment.add_field_area(", main)
+            self.assertIn(
+                "service_value(services.characters.snapshot(actor)).creature.position,",
+                main,
+            )
+            self.assertIn("hit_player = true", main)
             self.assertNotIn("services.world.put_field(", main)
-            self.assertIn("explicitly typed abs_ms coordinate", main)
 
     def test_transform_radius_rejects_dynamic_or_out_of_range_arguments(self) -> None:
         base = {"ter_furn_transform": "transform_demo"}
@@ -34147,7 +34161,7 @@ assert(context.data.picked==selected)
             self.assertNotIn("services.sound.emit(", main)
             self.assertIn("TODO: translate the character sound through", main)
 
-    def test_global_u_set_field_false_effect_uses_avatar_talker(self) -> None:
+    def test_field_false_effect_remains_todo_without_branch_actor_proof(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -34175,7 +34189,7 @@ assert(context.data.picked==selected)
             self.assertTrue(result.partial)
             self.assertTrue(result.todos)
             self.assertNotIn("services.world.put_field(", main)
-            self.assertIn("explicitly typed abs_ms coordinate", main)
+            self.assertIn("field effect in false_effect branch lacks", main)
             self.assertNotIn("typed Lua services", report)
 
     def test_lowers_dynamic_character_predicates_and_effects(self) -> None:
@@ -40626,6 +40640,99 @@ assert(context.data.step==0 and context.actors.character==actor and context.acto
             migrate_lua_first._coordinate_variable_handle("u", False, True)
         )
 
+    def test_set_field_migration_requires_static_parameters_and_avatar_center_proof(self) -> None:
+        accepted = migrate_lua_first.render_static_set_field(
+            {
+                "u_set_field": "fd_dust_storm",
+                "radius": 150.9,
+                "intensity": 3.9,
+                "age": "2 minutes",
+                "outdoor_only": True,
+            },
+            "u_set_field",
+            True,
+            False,
+            event_exclusive_live_avatar_center_proven=True,
+        )
+        self.assertIsNotNone(accepted)
+        rendered = "\n".join(accepted or [])
+        self.assertIn("services.gameplay.environment.add_field_area(", rendered)
+        self.assertIn("services.characters.snapshot(actor)).creature.position", rendered)
+        self.assertIn('"fd_dust_storm", { radius = 150, intensity = 3,', rendered)
+        self.assertIn('services.time.duration(120, "turn")', rendered)
+        self.assertIn("outdoor_only = true", rendered)
+        self.assertIn("hit_player = true", rendered)
+        self.assertNotIn("services.map.edit(", rendered)
+
+        self.assertIsNone(
+            migrate_lua_first.render_static_set_field(
+                {"u_set_field": "fd_fire", "radius": 0},
+                "u_set_field", True, False,
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_set_field(
+                {"u_set_field": "fd_fire", "target_var": {"context_val": "loc"}},
+                "u_set_field", True, False,
+                event_exclusive_live_avatar_center_proven=True,
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_set_field(
+                {"u_set_field": "fd_fire", "target_var": {"abs_ms": [1, 2, 3]}},
+                "u_set_field", True, False,
+                event_exclusive_live_avatar_center_proven=True,
+            )
+        )
+        for dynamic_member in (
+            {"radius": {"math": ["rand(2)"]}},
+            {"intensity": {"math": ["rand(3)"]}},
+            {"age": {"math": ["time('1 s')"]}},
+        ):
+            with self.subTest(dynamic_member=dynamic_member):
+                self.assertIsNone(
+                    migrate_lua_first.render_static_set_field(
+                        {"u_set_field": "fd_fire", **dynamic_member},
+                        "u_set_field", True, False,
+                        event_exclusive_live_avatar_center_proven=True,
+                    )
+                )
+        self.assertIsNone(
+            migrate_lua_first.render_static_set_field(
+                {"npc_set_field": "fd_smoke", "radius": 1},
+                "npc_set_field", True, True,
+                event_exclusive_live_avatar_center_proven=True,
+            )
+        )
+        self.assertIsNone(
+            migrate_lua_first.render_static_set_field(
+                {"u_set_field": "fd_fire", "radius": 32768},
+                "u_set_field", True, False,
+                event_exclusive_live_avatar_center_proven=True,
+            )
+        )
+
+    def test_real_desert_dust_field_eoc_uses_bounded_avatar_center_migration(self) -> None:
+        source_paths = sorted((REPOSITORY_ROOT / "data/mods/desert_region").rglob("*.json"))
+        objects = migrate_lua_first.load_objects(source_paths)
+        result = migrate_lua_first.migrate(objects, "desert_region")
+        main = result.files[Path("main.lua")]
+        self.assertIn("migrated_eoc_EOC_DUST_SMOKE", main)
+        self.assertIn("services.gameplay.environment.add_field_area(", main)
+        self.assertIn('"fd_dust_storm", { radius = 150, intensity = 3,', main)
+        self.assertIn(
+            'runtime.handler("migrated.EOC_DUST_SMOKE.recurring", function(task)',
+            main,
+        )
+        self.assertIn("local actor = services.characters.avatar()", main)
+        self.assertIn("migrated_eoc_EOC_DUST_SMOKE(context, actor)", main)
+        self.assertIn(
+            "service_value(services.characters.snapshot(actor)).creature.position,",
+            main,
+        )
+        self.assertIn("outdoor_only = true", main)
+        self.assertNotIn("services.world.put_field(", main)
+
     def test_eoc_map_writes_reject_abs_ms_objects_for_native_var_info(self) -> None:
         coordinate = {"abs_ms": [12, -7, 0]}
         self.assertIsNone(
@@ -40696,8 +40803,9 @@ assert(context.data.step==0 and context.actors.character==actor and context.acto
         main = migrate_lua_first.render_eoc(eoc_source, result)
         self.assertNotIn("services.map.edit(", main)
         self.assertEqual(
-            main.count("TODO: map mutation requires one explicitly typed"), 2
+            main.count("TODO: map mutation requires one explicitly typed"), 1
         )
+        self.assertIn("field placement only migrates for a proven live", main)
         self.assertEqual(len(result.todos), 2)
 
         for furniture_effect in (

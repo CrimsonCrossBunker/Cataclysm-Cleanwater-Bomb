@@ -1,5 +1,9 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include "map_iterator.h"
+#include "field.h"
+#include "dialogue_helpers.h"
+#include <algorithm>
 #include <array>
 #include <functional>
 #include <initializer_list>
@@ -622,6 +626,238 @@ TEST_CASE( "lua_platform_environment_set_terrain_matches_native_eoc_area_semanti
             CHECK( lua_result.get<int>() == native_changed );
             CHECK( here.ter( center ) == native_result );
         }
+    }
+}
+
+TEST_CASE( "lua_platform_environment_add_field_area_matches_native_f_field",
+           "[lua][platform][environment_mutation][semantic]" )
+{
+    using namespace cata::lua_platform;
+    clear_active_runtimes();
+    clear_map_without_vision();
+    clear_avatar();
+    sol::state lua;
+    lua.open_libraries( sol::lib::base );
+    sol::table ccb = lua.create_table();
+    const std::shared_ptr<runtime> owner = make_runtime( "environment_add_field_area", 4905, lua );
+    on_out_of_scope cleanup( []() {
+        clear_active_runtimes();
+        runtime_world_ready( false );
+    } );
+    install_runtime_api( owner, lua, ccb );
+    set_active_runtimes( { owner } );
+    runtime_world_ready( true );
+    lua["services"] = ccb["services"];
+
+    map &here = get_map();
+    const int map_width = here.getmapsize() * SEEX;
+    const int map_height = here.getmapsize() * SEEY;
+    const tripoint_bub_ms avatar_position = here.get_bub( get_avatar().pos_abs() );
+    tripoint_bub_ms center( map_width / 2, map_height / 2, here.get_abs_sub().z() );
+    if( trig_dist( center, avatar_position ) < 4.0f ) {
+        const int offset_x = avatar_position.x() + 7 < map_width ? 7 : -7;
+        const int offset_y = avatar_position.y() + 7 < map_height ? 7 : -7;
+        center = avatar_position + tripoint_rel_ms( offset_x, offset_y, 0 );
+    }
+    REQUIRE( here.inbounds( center ) );
+    REQUIRE( trig_dist( center, avatar_position ) >= 4.0f );
+    const tripoint_bub_ms edge = center + tripoint_rel_ms( 2, 1, 0 );
+    const tripoint_bub_ms corner = center + tripoint_rel_ms( 2, 2, 0 );
+    REQUIRE( here.inbounds( edge ) );
+    REQUIRE( here.inbounds( corner ) );
+    const tripoint_abs_ms center_abs = here.get_abs( center );
+    const tripoint_abs_ms out_of_world_z_abs( center_abs.x(), center_abs.y(),
+            OVERMAP_HEIGHT + 1 );
+    lua["center_position"] = script_tripoint_coord::from_native(
+                                 coords::origin::abs, coords::scale::map_square, center_abs.raw() );
+    lua["out_of_world_z_position"] = script_tripoint_coord::from_native(
+                                      coords::origin::abs, coords::scale::map_square,
+                                      out_of_world_z_abs.raw() );
+
+    REQUIRE( field_fd_web.is_valid() );
+    REQUIRE( field_fd_blood.is_valid() );
+    REQUIRE( field_fd_smoke.is_valid() );
+    REQUIRE( field_fd_fire.is_valid() );
+    REQUIRE( here.ter_set( center, ter_t_floor ) );
+    here.set_outside_cache_dirty( center.z() );
+    here.build_outside_cache( center.z() );
+    CHECK_FALSE( here.is_outside( center ) );
+    CHECK( here.is_outside( edge ) );
+
+    auto clear_test_field = [&]( const field_type_id &field_id ) {
+        for( int dx = -2; dx <= 2; ++dx ) {
+            for( int dy = -2; dy <= 2; ++dy ) {
+                const tripoint_bub_ms point = center + tripoint_rel_ms( dx, dy, 0 );
+                if( here.inbounds( point ) ) {
+                    here.remove_field( point, field_id );
+                }
+            }
+        }
+    };
+    auto field_coverage = [&]( const field_type_id &field_id ) {
+        std::array<bool, 25> coverage{};
+        std::size_t index = 0;
+        for( int dx = -2; dx <= 2; ++dx ) {
+            for( int dy = -2; dy <= 2; ++dy ) {
+                const tripoint_bub_ms point = center + tripoint_rel_ms( dx, dy, 0 );
+                coverage[index++] = here.inbounds( point ) &&
+                                    here.get_field( point, field_id ) != nullptr;
+            }
+        }
+        return coverage;
+    };
+    tripoint_abs_ms native_target_position = center_abs;
+    auto run_native_field_effect = [&]( const std::string &effect_json ) {
+        dialogue context( get_talker_for( get_avatar() ) );
+        context.set_value( "field_center", native_target_position );
+        talk_effect_t native_effect;
+        native_effect.parse_sub_effect(
+            json_loader::from_string( effect_json ).get_object(), "field_area_parity" );
+        finalize_conditions();
+        for( const talk_effect_fun_t &operation : native_effect.effects ) {
+            operation( context );
+        }
+    };
+
+    run_native_field_effect( R"({"u_set_field":"fd_web", "target_var":{"context_val":"field_center"}, "radius":2, "intensity":3, "age":"17 turns", "hit_player":false})" );
+    const std::array<bool, 25> native_circle_coverage = field_coverage( field_fd_web.id() );
+    CHECK( std::count( native_circle_coverage.begin(), native_circle_coverage.end(), true ) == 21 );
+    clear_test_field( field_fd_web.id() );
+    {
+        detail::callback_scope active_callback( *owner );
+        const sol::protected_function_result result = lua.safe_script( R"(
+            local environment = services.gameplay.environment
+            assert(environment.add_field_area(center_position, "fd_web", {
+                radius = 2, intensity = 3,
+                age = services.time.duration(17, "turn"), hit_player = false
+            }) == 21)
+            assert(environment.add_field_area(out_of_world_z_position, "fd_web", {radius=0}) == 0)
+            assert(environment.add_field_area(center_position, "unknown_field_for_test") == 0)
+            assert(not pcall(environment.add_field_area,
+                center_position, "fd_web", {radius=32768}))
+            assert(not pcall(environment.add_field_area,
+                center_position, "fd_web", {unknown_option=true}))
+        )", sol::script_pass_on_error );
+        if( !result.valid() ) {
+            const sol::error error = result;
+            INFO( error.what() );
+        }
+        REQUIRE( result.valid() );
+    }
+    const field_entry *web_edge = here.get_field( edge, field_fd_web.id() );
+    REQUIRE( web_edge != nullptr );
+    CHECK( web_edge->get_field_intensity() == 3 );
+    CHECK( web_edge->get_field_age() == 17_turns );
+    CHECK( here.get_field( corner, field_fd_web.id() ) == nullptr );
+    CHECK( field_coverage( field_fd_web.id() ) == native_circle_coverage );
+
+    run_native_field_effect( R"({"u_set_field":"fd_blood", "target_var":{"context_val":"field_center"}, "radius":2, "square":true, "hit_player":false})" );
+    const std::array<bool, 25> native_square_coverage = field_coverage( field_fd_blood.id() );
+    CHECK( std::count( native_square_coverage.begin(), native_square_coverage.end(), true ) == 25 );
+    clear_test_field( field_fd_blood.id() );
+    {
+        detail::callback_scope active_callback( *owner );
+        const sol::protected_function_result result = lua.safe_script(
+                    "assert(services.gameplay.environment.add_field_area("
+                    "center_position, \"fd_blood\", {radius=2, square=true, hit_player=false}) == 25)",
+                    sol::script_pass_on_error );
+        if( !result.valid() ) {
+            const sol::error error = result;
+            INFO( error.what() );
+        }
+        REQUIRE( result.valid() );
+    }
+    CHECK( here.get_field( corner, field_fd_blood.id() ) != nullptr );
+    CHECK( field_coverage( field_fd_blood.id() ) == native_square_coverage );
+
+    run_native_field_effect( R"({"u_set_field":"fd_smoke", "target_var":{"context_val":"field_center"}, "radius":2, "outdoor_only":true, "hit_player":false})" );
+    const std::array<bool, 25> native_outdoor_coverage = field_coverage( field_fd_smoke.id() );
+    const int expected_outdoor = static_cast<int>( std::count(
+                                     native_outdoor_coverage.begin(), native_outdoor_coverage.end(), true ) );
+    REQUIRE( expected_outdoor > 0 );
+    REQUIRE( expected_outdoor == 12 );
+    clear_test_field( field_fd_smoke.id() );
+    lua["expected_outdoor"] = expected_outdoor;
+    {
+        detail::callback_scope active_callback( *owner );
+        const sol::protected_function_result result = lua.safe_script(
+                    "assert(services.gameplay.environment.add_field_area("
+                    "center_position, \"fd_smoke\", {radius=2, outdoor_only=true, hit_player=false}) == "
+                    "expected_outdoor)",
+                    sol::script_pass_on_error );
+        if( !result.valid() ) {
+            const sol::error error = result;
+            INFO( error.what() );
+        }
+        REQUIRE( result.valid() );
+    }
+    CHECK( here.get_field( center, field_fd_smoke.id() ) == nullptr );
+    CHECK( here.get_field( edge, field_fd_smoke.id() ) != nullptr );
+    CHECK( field_coverage( field_fd_smoke.id() ) == native_outdoor_coverage );
+
+    run_native_field_effect( R"({"u_set_field":"fd_fire", "target_var":{"context_val":"field_center"}, "radius":2, "indoor_only":true, "hit_player":false})" );
+    const std::array<bool, 25> native_indoor_coverage = field_coverage( field_fd_fire.id() );
+    const int expected_indoor = static_cast<int>( std::count(
+                                    native_indoor_coverage.begin(), native_indoor_coverage.end(), true ) );
+    REQUIRE( expected_indoor > 0 );
+    REQUIRE( expected_indoor == 9 );
+    clear_test_field( field_fd_fire.id() );
+    lua["expected_indoor"] = expected_indoor;
+    {
+        detail::callback_scope active_callback( *owner );
+        const sol::protected_function_result result = lua.safe_script(
+                    "assert(services.gameplay.environment.add_field_area("
+                    "center_position, \"fd_fire\", {radius=2, indoor_only=true, hit_player=false}) == "
+                    "expected_indoor)",
+                    sol::script_pass_on_error );
+        if( !result.valid() ) {
+            const sol::error error = result;
+            INFO( error.what() );
+        }
+        REQUIRE( result.valid() );
+    }
+    CHECK( here.get_field( center, field_fd_fire.id() ) != nullptr );
+    CHECK( here.get_field( edge, field_fd_fire.id() ) == nullptr );
+    CHECK( field_coverage( field_fd_fire.id() ) == native_indoor_coverage );
+
+    if( here.supports_zlevels() && center.z() < OVERMAP_HEIGHT ) {
+        const tripoint_bub_ms upper_center( center.x(), center.y(), center.z() + 1 );
+        REQUIRE( here.inbounds( upper_center ) );
+        submap *const upper_submap = here.unsafe_get_submap_at( upper_center );
+        REQUIRE( upper_submap != nullptr );
+        const ter_id original_upper_terrain = here.ter( upper_center );
+        REQUIRE( here.ter_set( upper_center, ter_t_floor ) );
+        on_out_of_scope restore_upper_tile( [&]() {
+            here.remove_field( upper_center, field_fd_smoke.id() );
+            here.ter_set( upper_center, original_upper_terrain );
+        } );
+        const tripoint_abs_ms upper_center_abs = here.get_abs( upper_center );
+        lua["upper_center_position"] = script_tripoint_coord::from_native(
+                                           coords::origin::abs, coords::scale::map_square,
+                                           upper_center_abs.raw() );
+        native_target_position = upper_center_abs;
+        here.remove_field( upper_center, field_fd_smoke.id() );
+        run_native_field_effect(
+            R"({"u_set_field":"fd_smoke", "target_var":{"context_val":"field_center"}, "radius":0, "hit_player":false})" );
+        REQUIRE( here.get_field( upper_center, field_fd_smoke.id() ) != nullptr );
+        CHECK( here.get_field( center, field_fd_smoke.id() ) == nullptr );
+        here.remove_field( upper_center, field_fd_smoke.id() );
+        {
+            detail::callback_scope active_callback( *owner );
+            const sol::protected_function_result result = lua.safe_script(
+                        "assert(services.gameplay.environment.add_field_area("
+                        "upper_center_position, \"fd_smoke\", {radius=0, hit_player=false}) == 1)",
+                        sol::script_pass_on_error );
+            if( !result.valid() ) {
+                const sol::error error = result;
+                INFO( error.what() );
+            }
+            REQUIRE( result.valid() );
+        }
+        CHECK( here.get_field( upper_center, field_fd_smoke.id() ) != nullptr );
+        CHECK( here.get_field( center, field_fd_smoke.id() ) == nullptr );
+        CHECK( here.unsafe_get_submap_at( upper_center ) == upper_submap );
+        here.remove_field( upper_center, field_fd_smoke.id() );
     }
 }
 

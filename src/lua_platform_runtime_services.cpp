@@ -804,6 +804,142 @@ int set_platform_terrain( const tripoint_abs_ms &absolute,
     return changed_tiles;
 }
 
+int add_platform_field_area( const tripoint_abs_ms &absolute,
+                             const std::string &field_id,
+                             const sol::optional<sol::table> &requested_options )
+{
+    constexpr std::string_view api_name = "services.gameplay.environment.add_field_area";
+    if( g == nullptr ) {
+        throw std::runtime_error( std::string( api_name ) + " requires an active game" );
+    }
+    if( field_id.empty() || field_id.size() > 256 || field_id.find( '\0' ) != std::string::npos ) {
+        throw std::invalid_argument( std::string( api_name ) +
+                                     " requires a 1 to 256 byte field id" );
+    }
+
+    double requested_radius = 1.0;
+    double requested_intensity = 1.0;
+    time_duration age = 1_turns;
+    bool square = false;
+    bool outdoor_only = false;
+    bool indoor_only = false;
+    bool hit_player = true;
+    if( requested_options ) {
+        for( const auto &entry : *requested_options ) {
+            if( entry.first.get_type() != sol::type::string ) {
+                throw std::invalid_argument( std::string( api_name ) +
+                                             " option keys must be strings" );
+            }
+            const std::string key = entry.first.as<std::string>();
+            const sol::object value = entry.second;
+            if( key == "radius" || key == "intensity" ) {
+                if( !value.is<double>() ) {
+                    throw std::invalid_argument( std::string( api_name ) + " " + key +
+                                                 " must be numeric" );
+                }
+                if( key == "radius" ) {
+                    requested_radius = value.as<double>();
+                } else {
+                    requested_intensity = value.as<double>();
+                }
+            } else if( key == "age" ) {
+                if( !value.is<cata::lua_platform::script_time_duration>() ) {
+                    throw std::invalid_argument( std::string( api_name ) +
+                                                 " age must be a TimeDuration" );
+                }
+                age = value.as<cata::lua_platform::script_time_duration>().to_native();
+            } else if( key == "square" || key == "outdoor_only" ||
+                       key == "indoor_only" || key == "hit_player" ) {
+                if( !value.is<bool>() ) {
+                    throw std::invalid_argument( std::string( api_name ) + " " + key +
+                                                 " must be boolean" );
+                }
+                const bool enabled = value.as<bool>();
+                if( key == "square" ) {
+                    square = enabled;
+                } else if( key == "outdoor_only" ) {
+                    outdoor_only = enabled;
+                } else if( key == "indoor_only" ) {
+                    indoor_only = enabled;
+                } else {
+                    hit_player = enabled;
+                }
+            } else {
+                throw std::invalid_argument( std::string( api_name ) +
+                                             " received unknown option '" + key + "'" );
+            }
+        }
+    }
+
+    if( !std::isfinite( requested_radius ) ) {
+        throw std::invalid_argument( std::string( api_name ) + " radius must be finite" );
+    }
+    constexpr int maximum_safe_radius = 32767;
+    const double truncated_radius = std::trunc( requested_radius );
+    if( truncated_radius < 0 || truncated_radius > maximum_safe_radius ) {
+        throw std::invalid_argument( std::string( api_name ) +
+                                     " radius must truncate to 0..32767 map squares" );
+    }
+    const int radius = static_cast<int>( truncated_radius );
+
+    if( !std::isfinite( requested_intensity ) ) {
+        throw std::invalid_argument( std::string( api_name ) + " intensity must be finite" );
+    }
+    const double truncated_intensity = std::trunc( requested_intensity );
+    if( truncated_intensity < std::numeric_limits<int>::lowest() ||
+        truncated_intensity > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument( std::string( api_name ) +
+                                     " intensity must truncate to a native int" );
+    }
+    const int intensity = static_cast<int>( truncated_intensity );
+
+    const field_type_str_id source_field( field_id );
+    if( !source_field.is_valid() ) {
+        return 0;
+    }
+    map &here = get_map();
+    if( !here.inbounds_z( absolute.z() ) ) {
+        return 0;
+    }
+    const tripoint_abs_ms bubble_origin = here.get_abs( tripoint_bub_ms::zero );
+    const std::int64_t local_x = static_cast<std::int64_t>( absolute.x() ) - bubble_origin.x();
+    const std::int64_t local_y = static_cast<std::int64_t>( absolute.y() ) - bubble_origin.y();
+    if( local_x < std::numeric_limits<int>::lowest() ||
+        local_x > std::numeric_limits<int>::max() ||
+        local_y < std::numeric_limits<int>::lowest() ||
+        local_y > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument( std::string( api_name ) +
+                                     " position is outside native map coordinates" );
+    }
+    const tripoint_bub_ms center( static_cast<int>( local_x ),
+                                  static_cast<int>( local_y ), absolute.z() );
+    const float circle_radius = static_cast<float>( radius ) + 0.5f;
+    int accepted_tiles = 0;
+    // Native f_field visits exactly the target z-level and delegates bounds,
+    // loaded-submap, terrain, and player-hit behavior to map::add_field. This
+    // map-bounded iteration avoids radius-squared work and never loads a map.
+    for( const tripoint_bub_ms &destination : here.points_on_zlevel( center.z() ) ) {
+        const std::int64_t dx = static_cast<std::int64_t>( destination.x() ) - center.x();
+        const std::int64_t dy = static_cast<std::int64_t>( destination.y() ) - center.y();
+        if( dx < -radius || dx > radius || dy < -radius || dy > radius ) {
+            continue;
+        }
+        if( !square && trig_dist( destination, center ) >= circle_radius ) {
+            continue;
+        }
+        if( outdoor_only && !here.is_outside( destination ) ) {
+            continue;
+        }
+        if( indoor_only && here.is_outside( destination ) ) {
+            continue;
+        }
+        if( here.add_field( destination, source_field.id(), intensity, age, hit_player ) ) {
+            ++accepted_tiles;
+        }
+    }
+    return accepted_tiles;
+}
+
 } // namespace
 
 std::optional<int> invoke_use_handler( std::string_view mod_id,
@@ -3898,6 +4034,15 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                                      requested_radius.value_or( 1.0 ),
                                      requested_square.value_or( false ),
                                      requested_avoid_creatures.value_or( false ) );
+    } );
+    environment.set_function( "add_field_area", [require_write,
+    require_environment_absolute_position](
+    const cata::lua_platform::script_tripoint_coord & position,
+    const std::string & field_id, const sol::optional<sol::table> &options ) {
+        require_write();
+        const tripoint_abs_ms absolute = require_environment_absolute_position(
+                                             position, "services.gameplay.environment.add_field_area" );
+        return add_platform_field_area( absolute, field_id, options );
     } );
     environment.set_function( "field_exists", [require_read](
     const cata::lua_platform::script_tripoint_coord & position, const std::string & field_id ) {

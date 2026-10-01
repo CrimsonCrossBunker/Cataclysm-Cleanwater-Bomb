@@ -11636,6 +11636,22 @@ function CcbPlatformEnvironmentQueries.set_terrain(position, terrain_id, radius,
 --- Only squares on the requested z-level are considered. Without z-level support, native map setters resolve legal non-current z writes against the active map storage. The call does not load maps or generate map data.
 function CcbPlatformEnvironmentQueries.set_furniture(position, furniture_id, radius, square, avoid_creatures) end
 
+---@class CcbPlatformFieldAreaOptions
+---@field radius? number Defaults to 1; finite input truncated toward zero to 0..32767 map squares.
+---@field intensity? number Defaults to 1; finite input truncated toward zero to a native int and clamped by the field type.
+---@field age? TimeDuration Defaults to one turn; native field lifetime passed to map::add_field.
+---@field square? boolean Defaults to false; false uses native trig_dist < radius + 0.5 circle, true uses a square.
+---@field outdoor_only? boolean Defaults to false; only tiles map::is_outside reports outdoors are visited.
+---@field indoor_only? boolean Defaults to false; only tiles map::is_outside reports indoors are visited.
+---@field hit_player? boolean Defaults to true; preserves map::add_field's player contact behavior.
+
+---@param position TripointCoord Absolute map-square center; native field placement considers exactly this z-level.
+---@param field_id string Field type id; unknown ids return 0 without placement.
+---@param options? CcbPlatformFieldAreaOptions
+---@return integer accepted_squares Number of current-map squares whose native map::add_field call succeeded.
+--- Placement uses only the active map's existing submaps and does not load maps or z-levels. Radius is capped at 32767 for bounded integer distance; larger legacy radii remain TODO.
+function CcbPlatformEnvironmentQueries.add_field_area(position, field_id, options) end
+
 ---@param position TripointCoord Absolute map-square coordinate.
 ---@param field_id string Bounded non-empty field type id.
 ---@return boolean
