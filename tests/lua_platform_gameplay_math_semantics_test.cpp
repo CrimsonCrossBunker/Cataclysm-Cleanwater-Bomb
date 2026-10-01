@@ -1,12 +1,14 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
 #include <cstddef>
+#include <limits>
 #include <memory>
 #include <string>
 
 #include "avatar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
+#include "cata_variant.h"
 #include "character_id.h"
 #include "condition.h"
 #include "dialogue.h"
@@ -15,6 +17,7 @@
 #include "lua_platform_runtime.h"
 #include "lua_platform_runtime_internal.h"
 #include "lua_platform_sol.h"
+#include "math_parser.h"
 #include "math_parser_diag_value.h"
 #include "npc.h"
 #include "npctalk.h"
@@ -199,6 +202,55 @@ TEST_CASE( "lua_platform_gameplay_math_keeps_native_scope_and_operation_modes",
                 "v_indirect_target = 43", alpha_owner, context, beta_owner)
             assert(direct.ok and indirect.ok)
             assert(context.math_context_value == 5)
+        )" );
+    }
+
+    SECTION( "integer context math uses native double semantics" ) {
+        const int event_int_min = std::numeric_limits<int>::min();
+        const int event_int_max = std::numeric_limits<int>::max();
+        const double double_min = static_cast<double>( event_int_min );
+        const double double_max = static_cast<double>( event_int_max );
+        const double expected_min_cube = double_min * double_min * double_min;
+        const double expected_max_cube = double_max * double_max * double_max;
+        const std::string expression =
+            "_event_int * _event_int * _event_int";
+
+        dialogue native_context( get_talker_for( alpha ), nullptr );
+        native_context.set_value( "event_int", cata_variant::make<cata_variant_type::int_>(
+                                      event_int_max ) );
+        CHECK( native_context.get_value( "event_int" ).is_dbl() );
+        CHECK( native_context.get_value( "event_int" ).dbl() == double_max );
+        math_exp native_expression;
+        REQUIRE( native_expression.parse( expression ) );
+        CHECK( native_expression.eval( native_context ) == expected_max_cube );
+
+        native_context.set_value( "event_int", cata_variant::make<cata_variant_type::int_>(
+                                      event_int_min ) );
+        CHECK( native_context.get_value( "event_int" ).is_dbl() );
+        CHECK( native_context.get_value( "event_int" ).dbl() == double_min );
+        CHECK( native_expression.eval( native_context ) == expected_min_cube );
+
+        lua["event_int_min"] = event_int_min;
+        lua["event_int_max"] = event_int_max;
+        lua["expected_event_int_min_cube"] = expected_min_cube;
+        lua["expected_event_int_max_cube"] = expected_max_cube;
+        lua.open_libraries( sol::lib::math );
+        run_platform_call( R"(
+            local expression = "_event_int * _event_int * _event_int"
+            if math.type ~= nil and math.type(event_int_max) == "integer" then
+                -- Ordinary Lua integer arithmetic can overflow; the generated
+                -- EOC math expression is delegated to the native double parser.
+                assert(event_int_max * event_int_max * event_int_max ~=
+                    expected_event_int_max_cube)
+            end
+            for _, input in ipairs({
+                { value = event_int_min, expected = expected_event_int_min_cube },
+                { value = event_int_max, expected = expected_event_int_max_cube },
+            }) do
+                local result = ccb.services.gameplay.math.evaluate(
+                    expression, alpha_owner, { event_int = input.value })
+                assert(result.ok and result.value == input.expected)
+            end
         )" );
     }
 }

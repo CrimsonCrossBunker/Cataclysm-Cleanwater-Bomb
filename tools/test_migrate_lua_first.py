@@ -4063,6 +4063,95 @@ assert(observed_effects[3].id == 'effect:bite' and observed_effects[3].intensity
                              capture_output=True, timeout=10)
         self.assertEqual(run.returncode, 0, run.stderr)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_event_eoc_integer_context_math_handoff_preserves_raw_values(self) -> None:
+        expression = "_event_int * _event_int * _event_int"
+        source = migrate_lua_first.SourceObject(
+            Path("event_integer_math.json"), 0, {
+                "type": "effect_on_condition",
+                "id": "native_event_integer_math",
+                "eoc_type": "EVENT",
+                "required_event": "game_start",
+                "condition": {"math": ["1 == 1"]},
+                "effect": {
+                    "u_add_effect": "bleed",
+                    "duration": "1 turn",
+                    "intensity": {"math": [expression]},
+                },
+            },
+        )
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_eoc(source, result)
+        self.assertFalse(result.todos)
+        self.assertIn(
+            'services.gameplay.math.evaluate("_event_int * _event_int * '
+            '_event_int", actor, context.data)',
+            rendered,
+        )
+
+        script = r"""
+local actor = {}
+local handlers, subscriptions = {}, {}
+local observed_math_calls, observed_effects = {}, {}
+migrated_eoc_functions = {}
+services = {
+    characters = {avatar = function() return actor end},
+    gameplay = {math = {evaluate = function(source, target, context)
+        assert(source == '_event_int * _event_int * _event_int')
+        assert(target == actor)
+        assert(type(context.event_int) == 'number')
+        if math.type ~= nil then
+            assert(math.type(context.event_int) == 'integer')
+        end
+        local call_index = #observed_math_calls + 1
+        local expected = call_index == 1 and 2147483647 or -2147483648
+        assert(context.event_int == expected)
+        observed_math_calls[call_index] = {
+            source = source,
+            event_int = context.event_int,
+        }
+        -- This test stub checks the generated handoff only; it does not
+        -- evaluate the expression or stand in for the native math oracle.
+        return {ok = true, value = call_index == 1 and 11 or 22}
+    end}},
+    types = {id = function(kind, id) return kind .. ':' .. id end},
+    time = {duration = function(value, unit)
+        assert(value == 1 and unit == 'turn')
+        return value
+    end},
+    effects = {add = function(target, id, duration, options)
+        assert(target == actor and id == 'effect:bleed' and duration == 1)
+        observed_effects[#observed_effects + 1] = options.intensity
+        return {ok = true, value = true}
+    end},
+}
+function service_value(result) assert(result.ok); return result.value end
+runtime = {
+    handler = function(id, callback) handlers[id] = callback end,
+    on = function(name, handler_id) subscriptions[name] = handler_id end,
+}
+GENERATED
+local function event(value)
+    return {
+        type = 'game_start', turn = 1,
+        data = {event_int = value},
+        data_types = {event_int = 'int'},
+    }
+end
+assert(subscriptions['game:game_start'] == 'migrated.native_event_integer_math')
+handlers['migrated.native_event_integer_math'](event(2147483647))
+handlers['migrated.native_event_integer_math'](event(-2147483648))
+assert(#observed_math_calls == 2 and #observed_effects == 2)
+assert(observed_math_calls[1].event_int == 2147483647)
+assert(observed_math_calls[2].event_int == -2147483648)
+assert(observed_math_calls[1].source == '_event_int * _event_int * _event_int')
+assert(observed_math_calls[2].source == '_event_int * _event_int * _event_int')
+assert(observed_effects[1] == 11 and observed_effects[2] == 22)
+""".replace("GENERATED", rendered)
+        run = subprocess.run(["lua", "-"], input=script, text=True,
+                             capture_output=True, timeout=10)
+        self.assertEqual(run.returncode, 0, run.stderr)
+
     def test_proficiency_variable_ids_keep_unproven_frames_and_owners_as_todo(self) -> None:
         for prefix in ("u_", "npc_"):
             for descriptor in ({"global_val": "id"}, {"context_val": "id"}):
