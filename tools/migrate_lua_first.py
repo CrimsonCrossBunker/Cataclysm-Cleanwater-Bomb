@@ -2502,9 +2502,12 @@ def core_mutation_catalog_ids() -> tuple[frozenset[str], frozenset[str]]:
 @functools.lru_cache(maxsize=1)
 def core_body_part_catalog_ids() -> frozenset[str]:
     """Read concrete core body-part IDs used by native wound effects."""
-    source_root = REPOSITORY_ROOT / "data" / "json" / "mutations"
+    source_paths = [
+        REPOSITORY_ROOT / "data" / "json" / "body_parts.json",
+        REPOSITORY_ROOT / "data" / "json" / "mutations",
+    ]
     try:
-        objects = load_objects([source_root])
+        objects = load_objects(source_paths)
     except ValueError:
         return frozenset()
     identifiers = {
@@ -5129,6 +5132,9 @@ def render_static_false_effect(
     effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
     character_effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
     sell_item_pair_proven: bool = False,
+    wound_actor_targets: dict[str, str | None] | None = None,
+    known_body_part_ids: frozenset[str] = frozenset(),
+    known_wound_ids: frozenset[str] = frozenset(),
 ) -> list[str] | None:
     """Render the small, branch-free false-effect subset inline.
 
@@ -5142,6 +5148,9 @@ def render_static_false_effect(
             eoc_function_names, eoc_actor_requirements,
             actor_expression, eoc_conditions, npc_actor_expression,
             effect_actor_targets, character_effect_actor_targets,
+            wound_actor_targets=wound_actor_targets,
+            known_body_part_ids=known_body_part_ids,
+            known_wound_ids=known_wound_ids,
         )
     activation = render_mutation_action(
         effect, (actor_expression or "actor") if avatar_actor_proven else None,
@@ -5695,13 +5704,17 @@ def render_static_false_effect(
                         target_kind=target_kind,
                     )
             elif "wound" in key:
-                rendered = render_static_character_wound(
-                    effect, key, target, key.endswith("remove_wound")
+                # The generic Character proof is weaker than the native wound
+                # target proof. Use the same actor and registered-ID evidence
+                # as the main effect, including inside ordinary Lua branches.
+                wound_target = (
+                    wound_actor_targets.get("npc" if key.startswith("npc_") else "u")
+                    if wound_actor_targets is not None else None
                 )
-                if rendered is None:
-                    rendered = render_dynamic_character_wound(
-                        effect, key, target, key.endswith("remove_wound")
-                    )
+                rendered = render_static_character_wound(
+                    effect, key, wound_target, key.endswith("remove_wound"),
+                    known_body_part_ids, known_wound_ids,
+                )
             if rendered is not None:
                 return [line.replace("    ", "        ", 1) for line in rendered]
         key = next(
@@ -5785,6 +5798,9 @@ def render_static_false_effect(
                 npc_actor_expression=npc_actor_expression,
                 effect_actor_targets=effect_actor_targets,
                 character_effect_actor_targets=character_effect_actor_targets,
+                wound_actor_targets=wound_actor_targets,
+                known_body_part_ids=known_body_part_ids,
+                known_wound_ids=known_wound_ids,
             )
             if rendered is not None:
                 return [line.replace("    ", "        ", 1) for line in rendered]
@@ -5795,6 +5811,9 @@ def render_static_false_effect(
                 eoc_conditions, npc_actor_expression=npc_actor_expression,
                 effect_actor_targets=effect_actor_targets,
                 character_effect_actor_targets=character_effect_actor_targets,
+                wound_actor_targets=wound_actor_targets,
+                known_body_part_ids=known_body_part_ids,
+                known_wound_ids=known_wound_ids,
             )
             if rendered is not None:
                 return [line.replace("    ", "        ", 1) for line in rendered]
@@ -6061,6 +6080,9 @@ def render_static_foreach(
     npc_actor_expression: str | None = None,
     effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
     character_effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
+    wound_actor_targets: dict[str, str | None] | None = None,
+    known_body_part_ids: frozenset[str] = frozenset(),
+    known_wound_ids: frozenset[str] = frozenset(),
 ) -> list[str] | None:
     """Lower the bounded registry/array ``foreach`` effect.
 
@@ -6111,6 +6133,9 @@ def render_static_foreach(
                 npc_actor_expression=npc_actor_expression,
                 effect_actor_targets=effect_actor_targets,
                 character_effect_actor_targets=character_effect_actor_targets,
+                wound_actor_targets=wound_actor_targets,
+                known_body_part_ids=known_body_part_ids,
+                known_wound_ids=known_wound_ids,
             )
             if rendered is None:
                 return False
@@ -6260,6 +6285,9 @@ def render_static_if_effect(
     npc_actor_expression: str | None = None,
     effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
     character_effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
+    wound_actor_targets: dict[str, str | None] | None = None,
+    known_body_part_ids: frozenset[str] = frozenset(),
+    known_wound_ids: frozenset[str] = frozenset(),
 ) -> list[str] | None:
     """Lower an ``if/then/else`` made solely of simple Lua-native effects."""
     if (
@@ -6287,6 +6315,9 @@ def render_static_if_effect(
             actor_expression, eoc_conditions, creature_actor_proven,
             effect_actor_targets=effect_actor_targets,
             character_effect_actor_targets=character_effect_actor_targets,
+            wound_actor_targets=wound_actor_targets,
+            known_body_part_ids=known_body_part_ids,
+            known_wound_ids=known_wound_ids,
         )
         if chunk is None:
             return None
@@ -6299,6 +6330,9 @@ def render_static_if_effect(
             actor_expression, eoc_conditions, creature_actor_proven,
             effect_actor_targets=effect_actor_targets,
             character_effect_actor_targets=character_effect_actor_targets,
+            wound_actor_targets=wound_actor_targets,
+            known_body_part_ids=known_body_part_ids,
+            known_wound_ids=known_wound_ids,
         )
         if chunk is None:
             return None
@@ -6322,6 +6356,9 @@ def render_static_switch_effect(
     npc_actor_expression: str | None = None,
     effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
     character_effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
+    wound_actor_targets: dict[str, str | None] | None = None,
+    known_body_part_ids: frozenset[str] = frozenset(),
+    known_wound_ids: frozenset[str] = frozenset(),
 ) -> list[str] | None:
     """Lower a legacy ``switch`` into ordinary Lua comparisons.
 
@@ -6415,6 +6452,9 @@ def render_static_switch_effect(
                 actor_expression, eoc_conditions, creature_actor_proven,
                 effect_actor_targets=effect_actor_targets,
                 character_effect_actor_targets=character_effect_actor_targets,
+                wound_actor_targets=wound_actor_targets,
+                known_body_part_ids=known_body_part_ids,
+                known_wound_ids=known_wound_ids,
             )
             if chunk is None:
                 return None
@@ -31243,6 +31283,10 @@ def render_eoc(
             required_event in PROVEN_ITEM_ACTOR_EVENTS
         )
     )
+    wound_actor_targets = {
+        "u": "actor" if wound_alpha_actor_proven else None,
+        "npc": "actor" if mutation_npc_alpha_fallback_proven else None,
+    }
     # Native u_has_proficiency reads dialogue alpha. Restrict the current
     # lowerer to game_start, where the avatar is live and source-proven; other
     # avatar hooks can run after death or lack an equivalent live handle.
@@ -31498,6 +31542,9 @@ def render_eoc(
                     effect_actor_targets,
                     character_effect_actor_targets,
                     sell_item_pair_proven=sell_item_pair_proven,
+                    wound_actor_targets=wound_actor_targets,
+                    known_body_part_ids=known_body_part_ids,
+                    known_wound_ids=known_wound_ids,
                 )
                 if rendered_false is None:
                     false_todo = "translate the false_effect branch through typed Lua services"
@@ -31645,6 +31692,9 @@ def render_eoc(
                     eoc_conditions, npc_actor_expression,
                     effect_actor_targets,
                     character_effect_actor_targets,
+                    wound_actor_targets=wound_actor_targets,
+                    known_body_part_ids=known_body_part_ids,
+                    known_wound_ids=known_wound_ids,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -31671,6 +31721,9 @@ def render_eoc(
                     eoc_conditions, npc_actor_expression,
                     effect_actor_targets,
                     character_effect_actor_targets,
+                    wound_actor_targets=wound_actor_targets,
+                    known_body_part_ids=known_body_part_ids,
+                    known_wound_ids=known_wound_ids,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -31842,6 +31895,9 @@ def render_eoc(
                     eoc_conditions, npc_actor_expression,
                     effect_actor_targets,
                     character_effect_actor_targets,
+                    wound_actor_targets=wound_actor_targets,
+                    known_body_part_ids=known_body_part_ids,
+                    known_wound_ids=known_wound_ids,
                 )
                 if rendered is not None:
                     lines.extend(rendered)

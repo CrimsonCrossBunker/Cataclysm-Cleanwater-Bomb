@@ -36459,19 +36459,29 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             source = Path(temporary) / "source.json"
             source.write_text(
                 json.dumps(
-                    {
+                    [{
+                        "type": "wound",
+                        "id": "scratch",
+                        "name": "scratch",
+                        "description": "A test wound.",
+                        "damage_types": ["bash"],
+                        "damage_required": [1, 2],
+                        "pain": [1, 1],
+                        "healing_time": ["10 minutes", "10 minutes"],
+                        "limit": 1,
+                    }, {
                         "type": "effect_on_condition",
                         "id": "false_branch_services",
                         "required_event": "game_start",
                         "condition": {"u_has_cash": 1000000},
                         "false_effect": [
                             {"u_add_effect": {"context_val": "effect_id"}, "duration": "1 turn"},
-                            {"u_add_wound": {"context_val": "body_part"}, "wound_id": {"context_val": "wound_id"}},
+                            {"u_add_wound": "arm_l", "wound_id": "scratch"},
                             {"u_lose_var": "fallback"},
                         ],
                         "effect": "nothing",
                         "eoc_type": "EVENT",
-                    }
+                    }]
                 ),
                 encoding="utf-8",
             )
@@ -36483,8 +36493,59 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             self.assertEqual(result.partial, [])
             self.assertEqual(result.todos, [])
             self.assertIn("services.effects.add", main)
-            self.assertIn("services.wounds.add", main)
+            self.assertIn("services.wounds.add_unbounded(", main)
             self.assertIn('services.variables.remove(actor, "fallback", { include_before = false })', main)
+
+    def test_false_effect_wounds_require_native_actor_and_catalog_proofs(self) -> None:
+        wound = {
+            "type": "wound", "id": "scratch", "name": "scratch",
+            "description": "A test wound.", "damage_types": ["bash"],
+            "damage_required": [1, 2], "pain": [1, 1],
+            "healing_time": ["10 minutes", "10 minutes"], "limit": 1,
+        }
+        cases = [
+            ("remove", "game_start", {
+                "u_remove_wound": "arm_l", "wound_id": ["scratch"],
+            }, True),
+            ("missing_beta", "game_start", {
+                "npc_add_wound": "arm_l", "wound_id": "scratch",
+            }, False),
+            ("unproven_alpha", "character_kills_monster", {
+                "u_add_wound": "arm_l", "wound_id": "scratch",
+            }, False),
+            ("dynamic_part", "game_start", {
+                "u_add_wound": {"context_val": "body_part"},
+                "wound_id": "scratch",
+            }, False),
+            ("unknown_wound", "game_start", {
+                "u_add_wound": "arm_l", "wound_id": "unknown_wound",
+            }, False),
+            ("unknown_part", "game_start", {
+                "u_add_wound": "unknown_part", "wound_id": "scratch",
+            }, False),
+        ]
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(json.dumps([wound] + [{
+                "type": "effect_on_condition", "id": f"false_wound_{label}",
+                "eoc_type": "EVENT", "required_event": event,
+                "condition": {"u_has_cash": 1000000},
+                "false_effect": effect, "effect": "nothing",
+            } for label, event, effect, _ in cases]), encoding="utf-8")
+            result = migrate_lua_first.migrate(
+                migrate_lua_first.load_objects([source]), "false_wound_mod",
+            )
+            main = result.files[Path("main.lua")]
+            self.assertIn("services.wounds.remove_all_direct(", main)
+            self.assertNotIn("services.wounds.add_unbounded(", main)
+            self.assertEqual(len(result.partial), 5)
+            for label, _, _, accepted in cases:
+                with self.subTest(label=label):
+                    self.assertEqual(
+                        any(f"false_wound_{label}" in value
+                            for value in result.partial),
+                        not accepted,
+                    )
 
     def test_false_effect_keeps_spawn_item_as_a_native_semantics_todo(
         self,
@@ -36923,9 +36984,10 @@ assert(#queue==2 and queue[2].payload.data=="user field")
 
             self.assertTrue(result.partial)
             self.assertTrue(result.todos)
-            self.assertNotIn("local switch_case = 0", main)
+            self.assertIn("local switch_case = 0", main)
             self.assertNotIn('services.message("zero")', main)
-            self.assertIn("false_effect #0", report)
+            self.assertNotIn("false_effect #0", report)
+            self.assertIn("false_switch__switch__0", report)
 
     def test_explicit_invalid_eoc_conditions_are_not_reported_converted(self) -> None:
         for key in ("condition", "deactivate_condition"):
@@ -37295,14 +37357,18 @@ assert(context.data.entry=='previous')
             "foreach": "array", "target": ["outer1", "outer2"],
             "var": {"context_val": "entry"},
             "effect": [
-                {"u_message": "before"},
+                {"u_add_wound": "arm_l", "wound_id": "before"},
                 {"foreach": "array",
                  "target": [{"context_val": "entry"}, "inner"],
                  "var": {"context_val": "entry"},
-                 "effect": {"u_message": "inside"}},
-                {"u_message": "after"},
+                 "effect": {"u_add_wound": "arm_l", "wound_id": "inside"}},
+                {"u_add_wound": "arm_l", "wound_id": "after"},
             ],
-        }, True, False, {}, actor_expression="actor")
+        }, True, False, {}, actor_expression="actor",
+            wound_actor_targets={"u": "actor", "npc": None},
+            known_body_part_ids=frozenset({"arm_l"}),
+            known_wound_ids=frozenset({"before", "inside", "after"}),
+        )
         self.assertIsNotNone(lines)
         script = r"""
 local actor={}
@@ -37314,9 +37380,11 @@ local services={
   assert(scope=='context' and name=='entry')
   return {exists=data[name]~=nil,value=data[name]}
  end},
- message=function(message)
-  visits[#visits+1]=message..':'..context.data.entry
- end
+ types={id=function(kind, value) return value end},
+ wounds={add_unbounded=function(target, part, wound)
+  assert(target==actor and part=='arm_l')
+  visits[#visits+1]=wound..':'..context.data.entry
+ end}
 }
 BODY
 assert(table.concat(visits,',') ==
