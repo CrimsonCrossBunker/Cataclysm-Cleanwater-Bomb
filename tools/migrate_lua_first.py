@@ -27859,9 +27859,18 @@ def render_static_character_string_var(
         # Runtime pointer text may name either participant. Do not invent a
         # live actor or silently skip native invalid-participant diagnostics.
         return None
-    if parse_tags and (indirect_alpha is None or indirect_beta is None):
-        # Native missing participants fall back to the player. These source
-        # proofs describe actual alpha/beta handles, not fabricated fallbacks.
+    tag_targets = {
+        scope: (effect_actor_targets or {}).get(
+            "text_" + scope, (effect_actor_targets or {}).get(scope)
+        ) for scope in ("u", "npc")
+    }
+    tag_alpha = ("nil" if tag_targets["u"] == ("nil", "absent") else
+                 _proven_copy_variable_target(tag_targets, "u"))
+    tag_beta = ("nil" if tag_targets["npc"] == ("nil", "absent") else
+                _proven_copy_variable_target(tag_targets, "npc"))
+    if parse_tags and (tag_alpha is None or tag_beta is None):
+        # Unknown is not absent. Only explicit source proof can request the
+        # native Avatar tag fallback without changing dialogue presence.
         return None
 
     rendered_values = [_render_assignment_string_value(value, i18n, effect_actor_targets)
@@ -27878,7 +27887,7 @@ def render_static_character_string_var(
     if parse_tags:
         lines.extend([
             "    assigned_value = service_value(services.text.expand_for(",
-            f"        assigned_value, {indirect_alpha}, {indirect_beta}, nil, context and context.data))",
+            f"        assigned_value, {tag_alpha}, {tag_beta}, nil, context and context.data, true))",
         ])
     if target[0] == "var":
         lines.extend([
@@ -31775,8 +31784,9 @@ def render_eoc(
     # dialogue participants are both alive at event dispatch.  Fatal/death and
     # kill hooks run after the affected Character or monster is already dead;
     # ranged attacks dispatch after projectile damage.  Native no-beta EOCs
-    # also pass a default avatar to parse_tags while retaining has_beta=false,
-    # which expand_for cannot currently represent.
+    # also pass a default avatar to parse_tags while retaining has_beta=false;
+    # the text service needs explicit absence proof and its avatar fallback
+    # option for that shape, rather than a fabricated alpha/beta pair.
     message_dialogue_pair: tuple[str, str] | None = None
     if (
         required_event == "character_melee_attacks_character" and
@@ -31807,6 +31817,25 @@ def render_eoc(
         "u": alpha_effect_target,
         "npc": beta_effect_target,
     }
+    # Variable actor(true) may fall back to alpha when beta is absent, but
+    # parse_tags uses the Avatar for the missing beta instead. Keep those
+    # two source proofs separate, especially for an NPC alpha.
+    if (
+        required_event == "character_kills_character" or
+        exact_npc_actor_proven and required_event not in VICTIM_CHARACTER_EVENTS and
+        required_event not in MONSTER_BETA_EVENTS and not training_pair_proven
+    ):
+        effect_actor_targets["text_npc"] = None
+    native_beta_absent_proven = (
+        has_event_trigger and not talker_pair_override and
+        eoc_id not in eoc_referenced_ids and not dynamic_eoc_dispatch_present and
+        (
+            required_event == "game_start" and game_start_avatar_source_proven or
+            npc_alpha_fallback_event_actor_proven
+        )
+    )
+    if native_beta_absent_proven:
+        effect_actor_targets["text_npc"] = ("nil", "absent")
     # Keep the general EOC participant map intact for unrelated npc_* APIs.
     # The native effect callbacks use dialogue::actor(true), which in NPC_DEATH
     # selects the killer when present and alpha-falls back to the dead NPC.

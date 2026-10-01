@@ -2365,7 +2365,14 @@ assert(table.concat(trace,",")=="rng,text,expand,pointer")
     def test_set_string_tags_migration_and_false_branch_keep_context_and_proofs(self) -> None:
         effect = {"set_string_var": "<context_val:label>", "parse_tags": True,
                   "target_var": {"global_val": "output"}}
-        for event, supported in (("character_melee_attacks_monster", True), ("game_start", False)):
+        for event, extra, supported in (
+            ("character_melee_attacks_monster", {}, True),
+            ("game_start", {}, True),
+            ("npc_becomes_hostile", {}, True),
+            ("game_start", {"game_start_event_emitted_by_eoc": True}, False),
+            ("npc_becomes_hostile", {"npc_becomes_hostile_event_emitted_by_eoc": True}, False),
+            ("npc_becomes_hostile", {"eoc_referenced_ids": {"text_tags_assignment"}}, False),
+        ):
             for in_false_branch in (False, True):
                 source = migrate_lua_first.SourceObject(Path("text_tags.json"), 0, {
                     "type": "effect_on_condition", "id": "text_tags_assignment",
@@ -2374,14 +2381,59 @@ assert(table.concat(trace,",")=="rng,text,expand,pointer")
                     **({"false_effect": effect} if in_false_branch else {"effect": effect}),
                 })
                 result = migrate_lua_first.MigrationResult()
-                rendered = migrate_lua_first.render_eoc(source, result)
+                rendered = migrate_lua_first.render_eoc(source, result, **extra)
                 self.assertIsNotNone(rendered)
                 self.assertEqual("services.text.expand_for" in (rendered or ""), supported)
                 if supported:
                     self.assertEqual(result.todos, [])
                     self.assertIn("nil, context and context.data", rendered or "")
+                    if event in {"game_start", "npc_becomes_hostile"}:
+                        self.assertIn("assigned_value, actor, nil, nil, context and context.data, true", rendered or "")
                 else:
                     self.assertTrue(result.todos)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_set_string_absent_beta_uses_avatar_for_tags_without_changing_variable_owner(self) -> None:
+        proof = {"u": ("actor", "character"), "npc": ("actor", "character"),
+                 "text_npc": ("nil", "absent")}
+        lines = migrate_lua_first.render_static_character_string_var({
+            "set_string_var": "<npc_name>", "parse_tags": True,
+            "target_var": {"global_val": "output"},
+        }, proof)
+        self.assertIsNotNone(lines)
+        script = '''
+local actor={name="NPC alpha"}
+local context={data={label="context label"}}
+local trace={}
+local services={
+ random={native_int=function() trace[#trace+1]="rng";return 0 end},
+ text={expand_for=function(text,alpha,beta,item,data,fallback)
+  assert(text=="<npc_name>" and alpha==actor and beta==nil)
+  assert(item==nil and data==context.data and fallback==true)
+  trace[#trace+1]="expand";return {ok=true,value="avatar fallback"}
+ end},
+ variables={set_global=function(key,value)
+  assert(key=="output" and value=="avatar fallback")
+  trace[#trace+1]="write";return {ok=true}
+ end},
+}
+local function service_value(result) assert(result.ok);return result.value end
+'''+"\n".join(lines or [])+'''
+assert(table.concat(trace,",")=="rng,expand,write")
+'''
+        run = subprocess.run([shutil.which("lua"), "-"], input=script, text=True,
+                             capture_output=True, timeout=10)
+        self.assertEqual(run.returncode, 0, run.stderr)
+        variable_only = migrate_lua_first.render_static_character_string_var({
+            "set_string_var": "text", "target_var": {"npc_val": "output"},
+        }, proof)
+        self.assertIsNotNone(variable_only)
+        self.assertIn('actor, "output", assigned_value', "\n".join(variable_only or []))
+        for missing_proof in (None, ("actor", "absent"), ("nil", "unproven")):
+            self.assertIsNone(migrate_lua_first.render_static_character_string_var({
+                "set_string_var": "<npc_name>", "parse_tags": True,
+                "target_var": {"global_val": "output"},
+            }, {**proof, "text_npc": missing_proof}))
 
     def test_set_string_migration_keeps_unproven_shapes_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -2409,7 +2461,7 @@ assert(table.concat(trace,",")=="rng,text,expand,pointer")
                     "type": "effect_on_condition", "id": "parsed_tags",
                     "required_event": "game_start",
                     "effect": {
-                        "set_string_var": "<name>", "parse_tags": True,
+                        "set_string_var": "<npc_name>", "parse_tags": True,
                         "target_var": {"global_val": "parsed"},
                     },
                     "eoc_type": "EVENT",
@@ -2447,8 +2499,9 @@ assert(table.concat(trace,",")=="rng,text,expand,pointer")
                 migrate_lua_first.load_objects([source]), "set_string_shapes_mod"
             )
             main = result.files[Path("main.lua")]
-            self.assertEqual(len(result.converted), 2)
-            self.assertEqual(len(result.partial), 4)
+            self.assertEqual(len(result.converted), 3)
+            self.assertEqual(len(result.partial), 3)
+            self.assertIn("assigned_value, actor, nil, nil, context and context.data, true", main)
             self.assertIn("services.random.native_int(0, #string_values - 1) + 1", main)
             self.assertIn("unproven source/target owners remain TODO", main)
 
@@ -42919,8 +42972,9 @@ assert(calls==3 and context.data.entry=='zombie')
             self.assertIn('services.gameplay.options.get_string("USE_LANG")', main)
             self.assertIn("services.martial_arts.technique_name(", main)
             self.assertNotIn("services.characters.choose_technique(", main)
-            self.assertNotIn("services.text.expand_for(", main)
-            self.assertEqual(sum("needs domain-service conversion" in reason for reason in reasons), 2)
+            self.assertIn("services.text.expand_for(", main)
+            self.assertIn("assigned_value, actor, nil, nil, context and context.data, true", main)
+            self.assertEqual(sum("needs domain-service conversion" in reason for reason in reasons), 1)
 
     def test_dialogue_item_popup_with_ordered_give_notice_stays_todo(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

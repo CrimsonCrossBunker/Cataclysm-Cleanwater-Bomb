@@ -5293,12 +5293,13 @@ function CcbPlatformSnippetsApi.random_named(category) end
 ---@class CcbPlatformTextApi
 local CcbPlatformTextApi = {}
 ---@param text string Raw native text to expand through snippet and dialogue tags; empty, long and embedded-NUL strings are preserved without an extra byte limit.
----@param speaker_handle GameHandle Exact native dialogue alpha/speaker.
+---@param speaker_handle? GameHandle Exact native dialogue alpha/speaker; nil requires fallback_to_avatar=true.
 ---@param interlocutor_handle? GameHandle Exact native dialogue beta/interlocutor; nil means no beta.
 ---@param item_id? string Raw native item ID for item tags; omitted or empty means the native null ID. Registration and diagnostics remain with the native parser.
 ---@param context? table<string,any> Copied dialogue variables: raw string keys; strings, numbers, booleans as native 1/0, NullValue, absolute map-square TripointCoord, and dense arrays. Arrays may share children but cannot contain cycles. No extra text/tree byte, node or depth quota is imposed; input is not mutated.
+---@param fallback_to_avatar? boolean Default false; true expands tags for missing participants through the current avatar while keeping them absent in the copied dialogue. Present invalid handles still fail and are never replaced by the avatar.
 ---@return CcbResult result `value` is expanded text; snippets and dialogue tags use the native text parser once with the shared native RNG.
-function CcbPlatformTextApi.expand_for(text, speaker_handle, interlocutor_handle, item_id, context) end
+function CcbPlatformTextApi.expand_for(text, speaker_handle, interlocutor_handle, item_id, context, fallback_to_avatar) end
 ---@class CcbPlatformTilesetApi
 local CcbPlatformTilesetApi = {}
 ---@return any

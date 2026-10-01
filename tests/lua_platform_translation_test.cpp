@@ -481,6 +481,133 @@ TEST_CASE( "lua_platform_dialogue_text_preserves_raw_bytes_context_and_native_rn
     CHECK( rng_get_engine() == before_stale );
 }
 
+TEST_CASE( "lua_platform_text_missing_participants_match_native_avatar_fallback",
+           "[lua][platform][dialogue][messages][semantic]" )
+{
+    namespace platform = cata::lua_platform;
+    platform::clear_active_runtimes();
+    const auto saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
+    const on_out_of_scope restore_rng( [saved_rng]() {
+        rng_get_engine() = saved_rng;
+    } );
+    avatar &player = get_avatar();
+    const std::string key = "ccb_text_fallback_4861";
+    const diag_value *previous = player.maybe_get_value( key );
+    const std::optional<diag_value> saved_label = previous ? std::make_optional( *previous ) : std::nullopt;
+    player.set_value( key, "avatar fallback" );
+    const on_out_of_scope restore_label( [&]() {
+        if( saved_label ) {
+            player.set_value( key, *saved_label );
+        } else {
+            player.remove_value( key );
+        }
+    } );
+    avatar local_alpha;
+    npc local_beta;
+    local_alpha.normalize();
+    local_beta.normalize();
+    local_alpha.setID( character_id( 4861 ), true );
+    local_beta.setID( character_id( 4862 ), true );
+    local_alpha.set_value( key, "local alpha" );
+    local_beta.set_value( key, "local NPC" );
+    platform::register_npc_handle_identity( local_beta );
+    const on_out_of_scope retire_beta( [&]() {
+        platform::retire_npc_handle_identity( local_beta );
+    } );
+    sol::state lua;
+    lua.open_libraries( sol::lib::base );
+    sol::table ccb = lua.create_table();
+    const auto runtime = platform::make_runtime( "text_missing_participants", 4863, lua );
+    const on_out_of_scope cleanup_runtime( []() {
+        platform::clear_active_runtimes();
+    } );
+    platform::install_runtime_api( runtime, lua, ccb );
+    platform::set_active_runtimes( { runtime } );
+    platform::runtime_world_ready( true );
+    lua["ccb"] = ccb;
+    const auto handle_for = [&]( Character *actor ) -> sol::object {
+        if( actor == nullptr ) {
+            return sol::make_object( lua, sol::nil );
+        }
+        return sol::make_object( lua, platform::game_handle::from_creature(
+                                    *actor, { actor == &local_beta ? "npc" : "avatar", actor->getID().get_value(), 0, 0, 0, {} },
+                                    platform::detail::runtime_handle_identity( runtime ), platform::runtime_world_generation() ) );
+    };
+    const std::string text = "<u_val:" + key + "> / <npc_val:" + key + "> / <context_val:number>";
+    lua["text"] = text;
+    const sol::protected_function_result loaded = lua.safe_script( R"(
+        return function(alpha,beta,data)
+            ccb.services.random.native_int(0,0)
+            local result=ccb.services.text.expand_for(text,alpha,beta,nil,data,true)
+            assert(result.ok)
+            data.output=result.value
+            return data.output
+        end
+    )", sol::script_pass_on_error );
+    REQUIRE( loaded.valid() );
+    const sol::protected_function assign = loaded.get<sol::protected_function>();
+    std::ostringstream source;
+    {
+        JsonOut json( source );
+        json.start_object();
+        json.member( "set_string_var", text );
+        json.member( "parse_tags", true );
+        json.member( "target_var" );
+        json.start_object();
+        json.member( "context_val", "output" );
+        json.end_object();
+        json.end_object();
+    }
+    talk_effect_t native_assignment;
+    native_assignment.parse_sub_effect( json_loader::from_string( source.str() ).get_object(),
+                                       "lua_text_missing_participants" );
+    struct participants {
+        Character *alpha;
+        Character *beta;
+    };
+    for( const participants pair : {
+             participants{ &local_alpha, nullptr }, participants{ &local_beta, nullptr },
+             participants{ nullptr, &local_beta }, participants{ nullptr, nullptr },
+             participants{ &local_beta, &local_alpha }
+         } ) {
+        dialogue native( pair.alpha ? get_talker_for( *pair.alpha ) : nullptr,
+                         pair.beta ? get_talker_for( *pair.beta ) : nullptr );
+        native.set_value( "number", 41.0 );
+        for( const unsigned int seed : { 4864U, 4865U } ) {
+            CAPTURE( pair.alpha == nullptr, pair.beta == nullptr, seed );
+            native.remove_value( "output" );
+            rng_set_engine_seed( seed );
+            for( const talk_effect_fun_t &effect : native_assignment.effects ) {
+                effect( native );
+            }
+            const std::string expected = native.get_value( "output" ).str();
+            CHECK( native.has_alpha == ( pair.alpha != nullptr ) );
+            CHECK( native.has_beta == ( pair.beta != nullptr ) );
+            const auto native_rng_after = rng_get_engine(); // NOLINT(cata-determinism)
+            sol::table data = lua.create_table();
+            data["number"] = 41.0;
+            rng_set_engine_seed( seed );
+            platform::detail::callback_scope callback( *runtime );
+            const sol::protected_function_result result = assign(
+                        handle_for( pair.alpha ), handle_for( pair.beta ), data );
+            REQUIRE( result.valid() );
+            CHECK( result.get<std::string>() == expected );
+            CHECK( data["output"].get<std::string>() == expected );
+            CHECK( rng_get_engine() == native_rng_after );
+        }
+    }
+    const sol::protected_function expand_for = ccb["services"]["text"]["expand_for"];
+    const auto before_stale = rng_get_engine(); // NOLINT(cata-determinism)
+    const sol::object stale_beta = handle_for( &local_beta );
+    platform::retire_npc_handle_identity( local_beta );
+    const sol::protected_function_result rejected = expand_for(
+                text, handle_for( &local_alpha ), stale_beta, sol::nil, sol::nil, true );
+    REQUIRE( rejected.valid() );
+    const sol::table error = rejected.get<sol::table>();
+    CHECK_FALSE( error["ok"].get<bool>() );
+    CHECK( rng_get_engine() == before_stale );
+}
+
 TEST_CASE( "lua_platform_interaction_menu_preserves_native_rows_and_text",
            "[lua][platform][interaction]" )
 {

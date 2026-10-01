@@ -3334,9 +3334,10 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     text_services.set_function( "expand_for", [require_read, runtime_generation,
                                               world_generation](
                                     sol::this_state state, const std::string & text,
-                                    const cata::lua_platform::game_handle & speaker_handle,
+                                    const sol::object &speaker_argument,
                                     const sol::object &interlocutor_argument,
-    const sol::object &item_argument, const sol::object &context_argument ) {
+                                    const sol::object &item_argument, const sol::object &context_argument,
+    const sol::optional<bool> &fallback_to_avatar ) {
         require_read();
         sol::state_view lua_state( state );
         sol::optional<cata::lua_platform::game_handle> interlocutor_handle;
@@ -3355,12 +3356,20 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         }
         const sol::optional<sol::table> context = cata::lua_platform::read_optional_table(
                     context_argument, "services.text.expand_for context" );
-        const cata::lua_platform::native_handle_result<Creature> speaker =
-            speaker_handle.resolve_creature(
-                runtime_generation(), world_generation() );
-        if( !speaker ) {
-            return cata::lua_platform::make_game_error_result(
-                       lua_state, *speaker.error );
+        const bool use_avatar_fallback = fallback_to_avatar.value_or( false );
+        const Creature *speaker = nullptr;
+        if( speaker_argument.valid() && speaker_argument.get_type() != sol::type::nil ) {
+            if( !speaker_argument.is<cata::lua_platform::game_handle>() ) {
+                throw std::invalid_argument( "services.text.expand_for speaker must be a GameHandle or nil" );
+            }
+            const auto resolved = speaker_argument.as<cata::lua_platform::game_handle>().resolve_creature(
+                                      runtime_generation(), world_generation() );
+            if( !resolved ) {
+                return cata::lua_platform::make_game_error_result( lua_state, *resolved.error );
+            }
+            speaker = resolved.value;
+        } else if( !use_avatar_fallback ) {
+            throw std::invalid_argument( "services.text.expand_for nil speaker requires avatar fallback" );
         }
         const Creature *interlocutor = nullptr;
         if( interlocutor_handle ) {
@@ -3387,14 +3396,16 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
             }
         }
         const_dialogue dialogue_context(
-            get_const_talker_for( *speaker.value ),
+            speaker == nullptr ? nullptr : get_const_talker_for( *speaker ),
             interlocutor == nullptr ? nullptr : get_const_talker_for( *interlocutor ), {}, context_values );
-        const_talker empty_interlocutor;
+        const std::unique_ptr<const_talker> default_participant = use_avatar_fallback ?
+                get_const_talker_for( get_avatar() ) : std::make_unique<const_talker>();
         std::string expanded = text;
         parse_tags(
-            expanded, *dialogue_context.const_actor( false ),
+            expanded, dialogue_context.has_alpha ?
+            *dialogue_context.const_actor( false ) : *default_participant,
             dialogue_context.has_beta ?
-            *dialogue_context.const_actor( true ) : empty_interlocutor,
+            *dialogue_context.const_actor( true ) : *default_participant,
             dialogue_context,
             item_id && !item_id->empty() ?
             itype_id( *item_id ) : itype_id::NULL_ID() );
