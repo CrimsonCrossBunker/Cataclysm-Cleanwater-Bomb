@@ -11493,6 +11493,18 @@ local CcbPlatformMartialArtsApi = {}
 ---@return CcbTechniqueDefinitionSnapshot
 function CcbPlatformMartialArtsApi.technique_definition(id) end
 
+---Read the native technique name, translated at each call.
+---Unknown IDs retain the native factory diagnostic and fallback definition.
+---@param id string Raw technique ID; empty, NUL-containing and long IDs are not prevalidated.
+---@return string name Localized authored name.
+function CcbPlatformMartialArtsApi.technique_name(id) end
+
+---Read the native authored short description, translated at each call.
+---Unknown IDs retain the native factory diagnostic and fallback definition.
+---@param id string Raw technique ID; empty, NUL-containing and long IDs are not prevalidated.
+---@return string description Localized authored short text, without generated rule text.
+function CcbPlatformMartialArtsApi.technique_description(id) end
+
 
 ---Learn one martial-art style without coupling the mutation to presentation.
 ---Uses the native effect's typed-id storage semantics; registry presence is not checked.

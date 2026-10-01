@@ -737,6 +737,67 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
             }
         }
 
+        // A technique's localized authored text is not its formatted rule
+        // description, nor a typed-ID snapshot that rejects unknown IDs.
+        const auto make_technique_condition = [&]( const std::string &selector,
+            const std::string &mutator, const std::string &id_text ) {
+            std::ostringstream source;
+            {
+                JsonOut json( source );
+                json.start_object();
+                json.member( selector + "_has_proficiency" );
+                json.start_object();
+                json.member( "mutator", mutator );
+                json.member( "matec_id", id_text );
+                json.end_object();
+                json.end_object();
+            }
+            return conditional_t( json_loader::from_string( source.str() ).get_object() );
+        };
+        const std::string nul_technique_id( "tec_none\0missing", sizeof( "tec_none\0missing" ) - 1 );
+        const std::vector<std::string> technique_ids = {
+            "tec_none", "tech_base_headbutt", std::string(), "tec_lua_unregistered_text_test",
+            nul_technique_id, "无此招式", std::string( 10000, 'x' )
+        };
+        REQUIRE( matec_id( "tec_none" ).is_valid() );
+        REQUIRE( matec_id( "tech_base_headbutt" ).is_valid() );
+        CHECK( matec_id( "tec_none" )->description.translated().empty() );
+        CHECK_FALSE( matec_id( "tech_base_headbutt" )->description.translated().empty() );
+        for( const bool use_name : { true, false } ) {
+            const std::string mutator = use_name ? "ma_technique_name" : "ma_technique_description";
+            const std::string method = use_name ? "technique_name" : "technique_description";
+            const sol::protected_function read_text = services["martial_arts"][method];
+            REQUIRE( read_text.valid() );
+            for( const std::string &id_text : technique_ids ) {
+                std::string native_text;
+                const std::string native_diagnostic = capture_debugmsg_during( [&]() {
+                    const ma_technique &definition = matec_id( id_text ).obj();
+                    native_text = ( use_name ? definition.name : definition.description ).translated();
+                } );
+                std::string platform_text;
+                const std::string platform_diagnostic = capture_debugmsg_during( [&]() {
+                    const sol::protected_function_result result = read_text( id_text );
+                    REQUIRE( result.valid() );
+                    platform_text = result.get<std::string>();
+                } );
+                CAPTURE( id_text, mutator, native_text, platform_text );
+                CHECK( platform_text == native_text );
+                CHECK( platform_diagnostic == native_diagnostic );
+                CHECK( native_diagnostic.empty() == matec_id( id_text ).is_valid() );
+                for( const std::string &selector : selectors ) {
+                    CAPTURE( selector );
+                    const conditional_t condition = make_technique_condition( selector, mutator, id_text );
+                    bool native_match = false;
+                    const std::string condition_diagnostic = capture_debugmsg_during( [&]() {
+                        native_match = condition( conversation );
+                    } );
+                    CHECK( condition_diagnostic == native_diagnostic );
+                    CHECK( native_match == value_of( services["proficiencies"]["has_id_text"],
+                                                    handle_for_selector( selector ), platform_text ).as<bool>() );
+                }
+            }
+        }
+
         // The native selectors query dialogue alpha for u_* and beta for
         // npc_*; prove the two participants have distinct learned sets.
         partner.lose_proficiency( carving );

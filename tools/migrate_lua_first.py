@@ -877,6 +877,16 @@ def render_proficiency_id_expression(
         return lua_quote(value)
     if not isinstance(value, dict):
         return None
+    if value.get("mutator") in {"ma_technique_name", "ma_technique_description"}:
+        if set(value) != {"mutator", "matec_id"}:
+            return None
+        identifier = render_proficiency_id_expression(
+            value["matec_id"], alpha_owner=alpha_owner, beta_owner=beta_owner,
+        )
+        if identifier is None:
+            return None
+        method = "technique_name" if value["mutator"].endswith("name") else "technique_description"
+        return f"services.martial_arts.{method}({identifier})"
     if value.get("mutator") == "mon_faction":
         if set(value) != {"mutator", "mtype_id"}:
             return None
@@ -5053,9 +5063,8 @@ def render_participant_string(value: Any, target: str, alpha: str | None, beta: 
             return None
         if monster:
             return f"services.registry.monster_default_faction({identifier})"
-        field = "name" if value["mutator"] == "ma_technique_name" else "flavor_description"
-        return ('services.martial_arts.technique_definition('
-                f'services.types.id("martial_art_technique", {identifier})).{field}')
+        method = "technique_name" if value["mutator"].endswith("name") else "technique_description"
+        return f"services.martial_arts.{method}({identifier})"
     if isinstance(value, dict) and value.get("mutator") == "valid_technique":
         if (set(value) - {"mutator", "blacklist", "crit", "dodge_counter", "block_counter"} or
                 alpha is None or beta is None):
@@ -27163,11 +27172,8 @@ def render_participant_string_expression(
             return None
         if monster:
             return f"services.registry.monster_default_faction({identifier})"
-        field = "name" if value["mutator"].endswith("name") else "flavor_description"
-        return (
-            'services.martial_arts.technique_definition(services.types.id("martial_art_technique", '
-            f'{identifier})).{field}'
-        )
+        method = "technique_name" if value["mutator"].endswith("name") else "technique_description"
+        return f"services.martial_arts.{method}({identifier})"
     if isinstance(value, dict) and value.get("mutator") == "valid_technique":
         if (set(value) - {"mutator", "blacklist", "crit", "dodge_counter", "block_counter"} or
                 avatar_expression is None or npc_expression is None):

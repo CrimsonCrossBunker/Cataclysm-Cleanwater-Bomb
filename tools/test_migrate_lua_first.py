@@ -2330,8 +2330,10 @@ local services={
  types={id=function(kind,id)
   assert(kind=='martial_art_technique' and id==OWNER.selected);return id
  end},
- martial_arts={technique_definition=function(id)
-  assert(id==OWNER.selected);return {name='name',flavor_description='short_description',description='full rules'}
+ martial_arts={technique_name=function(id)
+  assert(id==OWNER.selected);return 'name'
+ end,technique_description=function(id)
+  assert(id==OWNER.selected);return 'short_description'
  end},
  registry={monster_default_faction=function(id)
   assert(id==OWNER.selected)
@@ -4597,6 +4599,97 @@ assert(table.concat(calls,',')=='variable,option')
             self.assertIsNone(migrate_lua_first.render_proficiency_id_expression(
                 value, alpha_owner="actor",
             ))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_proficiency_technique_text_uses_raw_ids_and_evaluation_time_translation(self) -> None:
+        for mutator, method in (("ma_technique_name", "technique_name"),
+                                ("ma_technique_description", "technique_description")):
+            for prefix in ("u_", "npc_"):
+                for name in ("tec_none", "tech_base_headbutt", "unknown", "",
+                             "tec_none\0missing", "无此招式", "x" * 10000):
+                    expression = migrate_lua_first.render_eoc_condition_expression(
+                        {prefix + "has_proficiency": {"mutator": mutator, "matec_id": name}},
+                        proficiency_character_alpha_actor_proven=True,
+                        npc_melee_beta_actor_proven=True,
+                    )
+                    self.assertIsNotNone(expression)
+                    script = r"""
+local actor={kind='creature',subtype='npc',is_valid=function() return true end}
+local partner={kind='creature',subtype='npc',is_valid=function() return true end}
+local context={actors={interlocutor=partner}}
+local reads,queries=0,0
+local function service_value(value) return value end
+local services={martial_arts={[EXPECTED_METHOD]=function(id)
+ assert(id==EXPECTED_NAME)
+ reads=reads+1
+ -- Model a language change between evaluations, including an empty fallback.
+ return reads==1 and 'prof_carving' or ''
+end},proficiencies={has_id_text=function(owner,id)
+ assert(owner==EXPECTED_TARGET)
+ queries=queries+1
+ assert(id==(queries==1 and 'prof_carving' or ''))
+ return id=='prof_carving'
+end}}
+assert(EXPRESSION)
+assert(not (EXPRESSION))
+assert(reads==2 and queries==2)
+""".replace("EXPECTED_METHOD", migrate_lua_first.lua_quote(method)).replace(
+                        "EXPECTED_NAME", migrate_lua_first.lua_quote(name),
+                    ).replace("EXPECTED_TARGET", "actor" if prefix == "u_" else "partner").replace(
+                        "EXPRESSION", expression or "nil",
+                    )
+                    run = subprocess.run(["lua", "-"], input=script, text=True,
+                                         capture_output=True, timeout=10)
+                    self.assertEqual(run.returncode, 0, run.stderr)
+                nested = migrate_lua_first.render_eoc_condition_expression(
+                    {prefix + "has_proficiency": {
+                        "mutator": mutator, "matec_id": {
+                            "mutator": "game_option", "option": {"npc_val": "source"},
+                        },
+                    }}, proficiency_character_alpha_actor_proven=True,
+                    npc_melee_beta_actor_proven=True,
+                )
+                self.assertIsNotNone(nested)
+                script = r"""
+local actor={kind='creature',subtype='npc',is_valid=function() return true end}
+local partner={kind='creature',subtype='npc',is_valid=function() return true end}
+local context={actors={interlocutor=partner}}
+local calls={}
+local function service_value(value) return value end
+local services={variables={get_string=function(owner,key)
+ assert(owner==partner and key=='source')
+ table.insert(calls,'variable');return {exists=true,value='TECHNIQUE_OPTION'}
+end},gameplay={options={get_string=function(name)
+ assert(name=='TECHNIQUE_OPTION')
+ table.insert(calls,'option');return 'tech_base_headbutt'
+end}},martial_arts={[EXPECTED_METHOD]=function(id)
+ assert(id=='tech_base_headbutt')
+ table.insert(calls,'text');return 'prof_carving'
+end},proficiencies={has_id_text=function(owner,id)
+ assert(owner==EXPECTED_TARGET and id=='prof_carving')
+ table.insert(calls,'query');return true
+end}}
+assert(EXPRESSION)
+assert(table.concat(calls,',')=='variable,option,text,query')
+calls={}
+services.martial_arts[EXPECTED_METHOD]=function() error('text lookup failed') end
+local ok,err=pcall(function() return EXPRESSION end)
+assert(not ok and string.find(err,'text lookup failed',1,true))
+assert(table.concat(calls,',')=='variable,option')
+""".replace("EXPECTED_METHOD", migrate_lua_first.lua_quote(method)).replace(
+                    "EXPECTED_TARGET", "actor" if prefix == "u_" else "partner",
+                ).replace("EXPRESSION", nested or "nil")
+                run = subprocess.run(["lua", "-"], input=script, text=True,
+                                     capture_output=True, timeout=10)
+                self.assertEqual(run.returncode, 0, run.stderr)
+            for value in (
+                {"mutator": mutator}, {"mutator": mutator, "matec_id": 73},
+                {"mutator": mutator, "matec_id": "tec_none", "default": "prof_carving"},
+                {"mutator": mutator, "matec_id": {"npc_val": "unproven"}},
+            ):
+                self.assertIsNone(migrate_lua_first.render_proficiency_id_expression(
+                    value, alpha_owner="actor",
+                ))
 
     def test_npc_proficiency_is_limited_to_event_exclusive_melee_beta(self) -> None:
         def render(
@@ -39431,10 +39524,14 @@ local services={
   assert(id=='mon' and calls==0)
   lookups=lookups+1;return 'faction'
  end},
- martial_arts={technique_definition=function(id)
+ martial_arts={technique_name=function(id)
   assert(id=='tec' and calls==0)
   lookups=lookups+1
-  return {name='translated name',flavor_description='translated flavor',description='full rules'}
+  return 'translated name'
+ end,technique_description=function(id)
+  assert(id=='tec' and calls==0)
+  lookups=lookups+1
+  return 'translated flavor'
  end}
 }
 BODY
@@ -41851,7 +41948,7 @@ assert(calls==3 and context.data.entry=='zombie')
             )
             self.assertIn('services.gameplay.options.get_string("USE_LANG")', main)
             self.assertIn(
-                "services.martial_arts.technique_definition(", main
+                "services.martial_arts.technique_name(", main
             )
             self.assertNotIn("services.characters.choose_technique(", main)
             self.assertIn("services.text.expand_for(", main)
