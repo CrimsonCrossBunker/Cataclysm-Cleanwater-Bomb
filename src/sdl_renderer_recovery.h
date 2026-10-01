@@ -484,6 +484,11 @@ struct renderer_recovery_test_support {
     // on the stack, then close it. Reports whether the display buffer was bound
     // inside the scope and whether the target returned to NULL after it.
     static void pause_during_draw_scope( bool &bound_during, bool &null_after );
+    // Test fixture tile contexts exercise the real overmap animation state.
+    static std::unique_ptr<cata_tiles> make_test_tiles( const std::shared_ptr<const tileset> &ts );
+    static void draw_test_map( cata_tiles &tiles, const tripoint_bub_ms &center, int w, int h );
+    static void draw_test_overmap( cata_tiles &tiles, const tripoint_abs_omt &center );
+    static void set_has_animated_tiles( cata_tiles &tiles, bool animated );
 };
 
 // RAII wrapper around setup/teardown for use as a Catch2 fixture local.
