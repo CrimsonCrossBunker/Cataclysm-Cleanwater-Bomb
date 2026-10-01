@@ -14,6 +14,14 @@
 class JsonArray;
 class JsonOut;
 
+/**
+ * Calculate the due time used by native and Lua Platform location-copy events.
+ * The one-second offset keeps timed events in sync with EOCs.  Results within
+ * the native time_point range match `calendar::turn + delay + 1_seconds`; values
+ * outside that range saturate instead of overflowing signed turn arithmetic.
+ */
+time_point location_copy_due_time( const time_duration &delay );
+
 enum class timed_event_type : int {
     NONE,
     HELP,

@@ -1,15 +1,21 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+#include <array>
 #include <cstddef>
 #include <cstdint>
+#include <iterator>
 #include <limits>
 #include <memory>
 #include <list>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "calendar.h"
 #include "flag.h"
+#include "global_vars.h"
+#include "lua_platform_test_map_support.h"
+#include "magic_teleporter_list.h"
 #include "lua_platform_test_support.h"
 #include "timed_event.h"
 
@@ -53,7 +59,342 @@ struct platform_world_spawn_contract_fixture {
     std::size_t active_world_generation;
     int write_gate_calls = 0;
 };
+
+struct platform_world_copy_globals_restore {
+    global_variables::impl_t previous = get_globals().get_global_values();
+
+    ~platform_world_copy_globals_restore() {
+        get_globals().set_global_values( std::move( previous ) );
+    }
+};
+
+const item *find_world_copy_cable( const submap &source,
+                                   const point_sm_ms &position )
+{
+    for( const item &entry : source.get_items( position ) ) {
+        if( entry.typeId() == itype_id( "power_cord" ) ) {
+            return &entry;
+        }
+    }
+    return nullptr;
+}
+
+struct location_copy_event_record {
+    timed_event_type type = timed_event_type::NONE;
+    time_point when = calendar::turn_zero;
+    int faction_id = -1;
+    tripoint_abs_ms map_square = tripoint_abs_ms::invalid;
+    tripoint_abs_sm map_point = tripoint_abs_sm::invalid;
+    int strength = -1;
+    std::string string_id;
+    std::string key;
+    ter_id terrain;
+    furn_id furniture;
+};
+
+std::string serialized_translocator_name( const tripoint_abs_omt &position )
+{
+    std::ostringstream stream;
+    {
+        JsonOut json( stream );
+        get_avatar().translocators.serialize( json );
+    }
+    const JsonObject root = json_loader::from_string( stream.str() ).get_object();
+    for( JsonObject entry : root.get_array( "known_teleporters" ) ) {
+        tripoint_abs_omt candidate;
+        entry.read( "position", candidate );
+        if( candidate == position ) {
+            return entry.get_string( "name" );
+        }
+    }
+    return {};
+}
 } // namespace
+
+TEST_CASE( "location_copy_due_time_matches_native_range_and_offset",
+           "[lua][platform][world][semantic]" )
+{
+    platform_calendar_turn_scope calendar_scope;
+    calendar::turn = time_point::from_turn( 1000 );
+
+    CHECK( location_copy_due_time( 1_minutes ) ==
+           calendar::turn + 1_minutes + 1_seconds );
+    CHECK( location_copy_due_time( 0_turns ) ==
+           calendar::turn + 1_seconds );
+    CHECK( location_copy_due_time( -3_turns ) ==
+           calendar::turn + ( -3_turns ) + 1_seconds );
+
+    const int phase_offset = to_turns<int>( 1_seconds );
+    calendar::turn = time_point::from_turn( 0 );
+    const int exact_upper_delay = std::numeric_limits<int>::max() - phase_offset;
+    CHECK( location_copy_due_time( time_duration::from_turns( exact_upper_delay ) ) ==
+           time_point::from_turn( std::numeric_limits<int>::max() ) );
+    CHECK( location_copy_due_time( calendar::INDEFINITELY_LONG_DURATION ) ==
+           time_point::from_turn( std::numeric_limits<int>::max() ) );
+
+    calendar::turn = time_point::from_turn( 0 );
+    CHECK( location_copy_due_time( time_duration::from_turns(
+                                       std::numeric_limits<int>::min() ) ) ==
+           time_point::from_turn( std::numeric_limits<int>::min() + phase_offset ) );
+    calendar::turn = time_point::from_turn( std::numeric_limits<int>::min() );
+    CHECK( location_copy_due_time( time_duration::from_turns(
+                                       std::numeric_limits<int>::min() ) ) ==
+           time_point::from_turn( std::numeric_limits<int>::min() ) );
+}
+
+TEST_CASE( "lua_platform_location_copy_matches_native_timed_submap_copy",
+           "[lua][platform][world][semantic]" )
+{
+    platform_overmap_travel_fixture fixture( 851, 81 );
+    platform_calendar_turn_scope calendar_scope;
+    platform_world_copy_globals_restore restore_globals;
+    calendar::turn = time_point::from_turn( 1000 );
+
+    const tripoint_abs_omt source = fixture.source_omt + tripoint( 2000, 1700, 0 );
+    const tripoint_abs_omt destination = source + tripoint( 19, -7, 0 );
+    const tripoint_abs_omt missing_source = source + tripoint( 4000, 4100, 0 );
+    const tripoint_abs_omt missing_destination = missing_source + tripoint( 13, 17, 0 );
+    const tripoint_abs_sm source_base = project_to<coords::sm>( source );
+    const tripoint_abs_ms source_position = project_to<coords::ms>( source );
+    const tripoint_abs_ms destination_position = project_to<coords::ms>( destination );
+
+    REQUIRE_FALSE( get_avatar().translocators.knows_translocator( source ) );
+    REQUIRE_FALSE( get_avatar().translocators.knows_translocator( destination ) );
+    REQUIRE_FALSE( get_avatar().translocators.knows_translocator( missing_source ) );
+    REQUIRE_FALSE( get_avatar().translocators.knows_translocator( missing_destination ) );
+    on_out_of_scope clear_copy_test_state( [&]() {
+        get_avatar().translocators.remove_translocator( source );
+        get_avatar().translocators.remove_translocator( destination );
+        get_avatar().translocators.remove_translocator( missing_source );
+        get_avatar().translocators.remove_translocator( missing_destination );
+        MAPBUFFER.clear_outside_reality_bubble();
+    } );
+
+    timed_event_manager &events = get_timed_events();
+    restore_on_out_of_scope<timed_event_manager> restore_events( std::move( events ) );
+    events = timed_event_manager();
+
+    tinymap source_map;
+    source_map.load( source, true );
+    submap *source_submap = MAPBUFFER.lookup_submap( source_base );
+    REQUIRE( source_submap != nullptr );
+    submap original_source = source_submap->get_revert_submap();
+    on_out_of_scope restore_source( [&]() {
+        source_submap->revert_submap( original_source );
+    } );
+    source_submap->ensure_nonuniform();
+    const point_sm_ms cable_position( 0, 0 );
+    source_submap->get_items( cable_position ).clear();
+    item cable( itype_id( "power_cord" ), calendar::turn );
+    REQUIRE( cable.can_link_up() );
+    const tripoint_abs_ms linked_target = source_position + tripoint( 71, 29, 0 );
+    cable.link().target = link_state::vehicle_port;
+    cable.link().t_abs_pos = linked_target;
+    cable.link().s_bub_pos = tripoint_bub_ms( 3, 5, 0 );
+    source_submap->get_items( cable_position ).insert( std::move( cable ) );
+
+    std::ostringstream teleporter_json;
+    {
+        JsonOut json( teleporter_json );
+        json.start_object();
+        json.member( "known_teleporters" );
+        json.start_array();
+        json.start_object();
+        json.member( "position", source );
+        json.member( "name", "location-copy-source" );
+        json.end_object();
+        json.end_array();
+        json.end_object();
+    }
+    get_avatar().translocators.deserialize(
+        json_loader::from_string( teleporter_json.str() ).get_object() );
+    REQUIRE( get_avatar().translocators.knows_translocator( source ) );
+
+    get_globals().set_global_value( "lua_platform_copy_source", source_position );
+    get_globals().set_global_value( "lua_platform_copy_destination", destination_position );
+    dialogue conversation( get_talker_for( get_avatar() ), get_talker_for( get_avatar() ) );
+    const std::array<std::pair<std::string, time_duration>, 5> delays = {{
+            { "1 turn", 1_turns },
+            { "0 turns", 0_turns },
+            { "-3 turns", -3_turns },
+            { "infinite", calendar::INDEFINITELY_LONG_DURATION },
+            {
+                std::to_string( std::numeric_limits<int>::min() ) + " turns",
+                time_duration::from_turns( std::numeric_limits<int>::min() )
+            },
+        }
+    };
+    const sol::protected_function copy =
+        fixture.services["world"]["schedule_location_copy"];
+    REQUIRE( copy.valid() );
+
+    for( std::size_t delay_index = 0; delay_index < delays.size(); ++delay_index ) {
+        const std::pair<std::string, time_duration> &delay = delays[delay_index];
+        const std::string key = "lua_platform_location_copy_parity_" +
+                                std::to_string( delay_index );
+        events = timed_event_manager();
+        REQUIRE_FALSE( get_avatar().translocators.knows_translocator( destination ) );
+        const std::string effect_source =
+            std::string( R"({"copy_location":{"global_val":"lua_platform_copy_source"},)" ) +
+            R"("new_loc":{"global_val":"lua_platform_copy_destination"},)" +
+            R"("time_in_future":")" + delay.first + R"(","key":")" + key + "}";
+        const JsonValue native_json = json_loader::from_string( effect_source );
+        talk_effect_t native_effect( native_json.get_object(), "effect",
+                                     "lua_platform_location_copy_native_parity" );
+        native_effect.apply( conversation );
+        REQUIRE( events.get_all().size() == 4 );
+        REQUIRE( get_avatar().translocators.knows_translocator( destination ) );
+        CHECK( serialized_translocator_name( destination ) == "location-copy-source" );
+
+        const std::list<timed_event> &native_queue = events.get_all();
+        auto native = native_queue.begin();
+        CHECK( native->when == location_copy_due_time( delay.second ) );
+        CHECK( native->when == ( delay.second == calendar::INDEFINITELY_LONG_DURATION ?
+                                 time_point::from_turn( std::numeric_limits<int>::max() ) :
+                                 calendar::turn + delay.second + 1_seconds ) );
+        CHECK( native->key == key );
+        CHECK( native->type == timed_event_type::REVERT_SUBMAP );
+        CHECK( native->faction_id == -1 );
+        CHECK( native->strength == 0 );
+        CHECK( native->string_id.empty() );
+        CHECK( native->map_square == project_to<coords::ms>(
+                   project_to<coords::sm>( destination ) ) );
+        const item *native_cable = find_world_copy_cable(
+                                       native->revert, cable_position );
+        REQUIRE( native_cable != nullptr );
+        const tripoint_abs_ms native_link_target = native_cable->link().t_abs_pos;
+        const tripoint_bub_ms native_link_source = native_cable->link().s_bub_pos;
+        const std::string native_relocation_turn =
+            native_cable->get_var( "eoc_cable_relocation_turn" );
+        CHECK( native_link_target == linked_target + ( destination_position - source_position ) );
+        CHECK( native_link_source == tripoint_bub_ms::invalid );
+        CHECK( native_relocation_turn == "-1" );
+
+        if( delay.first == std::string( "infinite" ) ) {
+            const JsonValue alter_json = json_loader::from_string(
+                                             "{\"alter_timed_events\":\"" + key + "\"}" );
+            talk_effect_t native_alter( alter_json.get_object(), "effect",
+                                        "lua_platform_location_copy_native_retime" );
+            native_alter.apply( conversation );
+            for( const timed_event &event : events.get_all() ) {
+                CHECK( event.key == key );
+                CHECK( event.when == calendar::turn );
+            }
+        }
+
+        std::array<location_copy_event_record, 4> native_records;
+        std::size_t record_index = 0;
+        for( int x = 0; x < 2; ++x ) {
+            for( int y = 0; y < 2; ++y, ++native, ++record_index ) {
+                const tripoint_abs_ms expected_position = project_to<coords::ms>(
+                        project_to<coords::sm>( destination ) + point( x, y ) );
+                CHECK( native->map_square == expected_position );
+                native_records[record_index] = {
+                    native->type,
+                    native->when,
+                    native->faction_id,
+                    native->map_square,
+                    native->map_point,
+                    native->strength,
+                    native->string_id,
+                    native->key,
+                    native->revert.get_ter( cable_position ),
+                    native->revert.get_furn( cable_position ),
+                };
+            }
+        }
+        REQUIRE( get_avatar().translocators.remove_translocator( destination ) );
+        events = timed_event_manager();
+
+        const sol::protected_function_result platform_result = copy(
+                fixture.abs_omt_position( source ),
+                fixture.abs_omt_position( destination ),
+                cata::lua_platform::script_time_duration::from_native( delay.second ), key );
+        REQUIRE( platform_result.valid() );
+        const sol::table envelope = platform_result.get<sol::table>();
+        REQUIRE( envelope["ok"].get<bool>() );
+        const sol::table value = envelope["value"].get<sol::table>();
+        CHECK( value["when"].get<cata::lua_platform::script_time_point>().to_native() ==
+               location_copy_due_time( delay.second ) );
+        REQUIRE( get_avatar().translocators.knows_translocator( destination ) );
+        CHECK( serialized_translocator_name( destination ) == "location-copy-source" );
+
+        if( delay.first == std::string( "infinite" ) ) {
+            const sol::protected_function reschedule =
+                fixture.services["world"]["reschedule_events"];
+            REQUIRE( reschedule.valid() );
+            const sol::protected_function_result retime_result = reschedule(
+                    key,
+                    cata::lua_platform::script_time_duration::from_native( 0_turns ) );
+            REQUIRE( retime_result.valid() );
+            const sol::table retime_envelope = retime_result.get<sol::table>();
+            REQUIRE( retime_envelope["ok"].get<bool>() );
+            const sol::table retime_value = retime_envelope["value"].get<sol::table>();
+            CHECK( retime_value["matched"].get<std::size_t>() == 4 );
+            CHECK( retime_value["when"].get<cata::lua_platform::script_time_point>().to_native() ==
+                   calendar::turn );
+        }
+
+        const std::list<timed_event> &queued = events.get_all();
+        native = queued.begin();
+        REQUIRE( queued.size() == 4 );
+        std::size_t platform_index = 0;
+        for( int x = 0; x < 2; ++x ) {
+            for( int y = 0; y < 2; ++y, ++native, ++platform_index ) {
+                const tripoint_abs_ms expected_position = project_to<coords::ms>(
+                        project_to<coords::sm>( destination ) + point( x, y ) );
+                CHECK( native->map_square == expected_position );
+                const location_copy_event_record &expected =
+                    native_records[platform_index];
+                CHECK( native->type == expected.type );
+                CHECK( native->when == expected.when );
+                CHECK( native->faction_id == expected.faction_id );
+                CHECK( native->map_square == expected.map_square );
+                CHECK( native->map_point == expected.map_point );
+                CHECK( native->strength == expected.strength );
+                CHECK( native->string_id == expected.string_id );
+                CHECK( native->key == expected.key );
+                CHECK( native->revert.get_ter( cable_position ) == expected.terrain );
+                CHECK( native->revert.get_furn( cable_position ) == expected.furniture );
+                if( x == 0 && y == 0 ) {
+                    const item *platform_cable = find_world_copy_cable(
+                                                     native->revert, cable_position );
+                    REQUIRE( platform_cable != nullptr );
+                    CHECK( platform_cable->link().t_abs_pos == native_link_target );
+                    CHECK( platform_cable->link().s_bub_pos == native_link_source );
+                    CHECK( platform_cable->get_var( "eoc_cable_relocation_turn" ) ==
+                           native_relocation_turn );
+                }
+            }
+        }
+        REQUIRE( get_avatar().translocators.remove_translocator( destination ) );
+    }
+
+    const std::size_t before_missing_source = events.get_all().size();
+    const std::string missing_key = "lua_platform_location_copy_missing_source";
+    const tripoint_abs_sm missing_source_base = project_to<coords::sm>( missing_source );
+    const tripoint_abs_sm missing_destination_base = project_to<coords::sm>(
+            missing_destination );
+    for( int x = 0; x < 2; ++x ) {
+        for( int y = 0; y < 2; ++y ) {
+            REQUIRE_FALSE( MAPBUFFER.submap_exists( missing_source_base + point( x, y ) ) );
+            REQUIRE_FALSE( MAPBUFFER.submap_exists( missing_destination_base + point( x, y ) ) );
+        }
+    }
+    const sol::protected_function_result missing_result = copy(
+            fixture.abs_omt_position( missing_source ),
+            fixture.abs_omt_position( missing_destination ),
+            cata::lua_platform::script_time_duration::from_native( 1_turns ), missing_key );
+    CHECK_FALSE( missing_result.valid() );
+    CHECK( events.get_all().size() == before_missing_source );
+    CHECK_FALSE( get_avatar().translocators.knows_translocator( missing_destination ) );
+    for( int x = 0; x < 2; ++x ) {
+        for( int y = 0; y < 2; ++y ) {
+            CHECK_FALSE( MAPBUFFER.submap_exists( missing_source_base + point( x, y ) ) );
+            CHECK( MAPBUFFER.submap_exists( missing_destination_base + point( x, y ) ) );
+        }
+    }
+}
 
 TEST_CASE( "lua_platform_weather_write_contract_exposes_controls_and_limits",
            "[lua][platform][weather]" )

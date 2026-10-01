@@ -34345,13 +34345,14 @@ def render_eoc(
                     "copy_location reads source and destination var_info values as "
                     "absolute map squares and schedules four timed submap copies "
                     "with linked-item offsets and translocator state, then "
-                    "invalidates the destination map cache immediately; "
-                    "services.world.schedule_location_copy models "
-                    "those mutations but may generate a missing source OMT, unlike "
-                    "the native loaded-submap lookup. The current EOC source does not "
-                    "prove typed coordinates or Platform bounds: its delay must be "
-                    "1 turn..10000 days and its key at most 256 bytes, while native "
-                    "accepts zero/negative delays and maps 'infinite' to INT_MAX turns"
+                    "invalidates the destination map cache immediately. "
+                    "services.world.schedule_location_copy preserves native "
+                    "destination-first generation and does not generate missing "
+                    "source submaps, but fails closed where the native lookup has "
+                    "no defined missing-source result. The current EOC source does "
+                    "not prove the actor scope or coordinate types/projection for "
+                    "either var_info value; the typed service also limits keys to "
+                    "256 bytes. Manually trace both values before migration"
                 )
                 lines.append(f"    -- TODO: {copy_gap}.")
                 result.add_todo(

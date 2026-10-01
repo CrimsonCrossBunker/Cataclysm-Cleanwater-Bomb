@@ -407,8 +407,10 @@ function CcbWorldApi.transform_radius(position, radius, transform, options) end
 function CcbWorldApi.schedule_location_revert(position, delay, key) end
 
 ---@param source TripointCoord Explicit absolute overmap-terrain snapshot source.
+--- Its four submaps must already exist or be loadable; missing source submaps are not generated.
 ---@param destination TripointCoord Explicit absolute overmap-terrain copy destination.
----@param delay TimeDuration Delay before the scheduled copy.
+---@param delay TimeDuration Any native signed-int turn delay, including zero, negative, and `INDEFINITELY_LONG_DURATION`.
+--- Due time includes the native one-second offset and saturates only beyond the `time_point` range.
 ---@param key? string Optional event key of at most 256 UTF-8 bytes.
 ---@return CcbResult result `value` is a CcbWorldLocationCopyResult.
 function CcbWorldApi.schedule_location_copy(source, destination, delay, key) end

@@ -25945,9 +25945,9 @@ assert(not pcall(function() return U_EXPRESSION end))
                 "copy_location reads source and destination var_info values",
                 main,
             )
-            self.assertIn("unlike the native loaded-submap lookup", main)
-            self.assertIn("delay must be 1 turn..10000 days", main)
-            self.assertIn("maps 'infinite' to INT_MAX turns", main)
+            self.assertIn("preserves native destination-first generation", main)
+            self.assertIn("does not prove the actor scope or coordinate types/projection", main)
+            self.assertIn("typed service also limits keys to", main)
             self.assertNotIn("services.world.schedule_location_copy(", main)
             self.assertEqual(main.count("services.world.transform_radius("), 1)
             self.assertIn(
@@ -29779,7 +29779,7 @@ assert(not pcall(function() return U_EXPRESSION end))
             copy_result,
         )
         self.assertIn("copy_location reads source and destination var_info values", copy_main)
-        self.assertIn("delay must be 1 turn..10000 days", copy_main)
+        self.assertIn("does not prove the actor scope or coordinate types/projection", copy_main)
         self.assertNotIn("services.world.schedule_location_copy(", copy_main)
 
         telekinesis_path = (

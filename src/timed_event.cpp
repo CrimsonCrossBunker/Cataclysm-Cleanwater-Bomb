@@ -1,6 +1,8 @@
 #include "timed_event.h"
 
 #include <array>
+#include <cstdint>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <string>
@@ -68,6 +70,25 @@ static const ter_str_id ter_t_stairs_down( "t_stairs_down" );
 static const ter_str_id ter_t_underbrush( "t_underbrush" );
 static const ter_str_id ter_t_water_dp( "t_water_dp" );
 static const ter_str_id ter_t_water_sh( "t_water_sh" );
+
+time_point location_copy_due_time( const time_duration &delay )
+{
+    // time_point and time_duration both store native turns in signed ints.
+    // Widen before adding so the native one-second EOC synchronization offset
+    // remains exact for every representable result; saturate only when the
+    // mathematical due time cannot be represented by time_point.
+    const std::int64_t due_turn =
+        static_cast<std::int64_t>( to_turn<int>( calendar::turn ) ) +
+        static_cast<std::int64_t>( to_turns<int>( delay ) ) +
+        static_cast<std::int64_t>( to_turns<int>( 1_seconds ) );
+    if( due_turn > std::numeric_limits<int>::max() ) {
+        return time_point::from_turn( std::numeric_limits<int>::max() );
+    }
+    if( due_turn < std::numeric_limits<int>::min() ) {
+        return time_point::from_turn( std::numeric_limits<int>::min() );
+    }
+    return time_point::from_turn( static_cast<int>( due_turn ) );
+}
 
 timed_event::timed_event( timed_event_type e_t, const time_point &w, int f_id, tripoint_abs_ms p,
                           int s, std::string key )

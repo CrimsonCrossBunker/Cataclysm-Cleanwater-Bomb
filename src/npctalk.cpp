@@ -5462,7 +5462,8 @@ talk_effect_fun_t::func f_copy_location( const JsonObject &jo, std::string_view 
         tripoint_abs_omt omt_pos = project_to<coords::omt>( abs_ms );
         tripoint_abs_omt omt_pos_new = project_to<coords::omt>( abs_ms_new );
 
-        time_point tif = calendar::turn + dov_time_in_future.evaluate( d ) + 1_seconds;
+        const time_point tif = location_copy_due_time(
+                                   dov_time_in_future.evaluate( d ) );
         // Timed events happen before the player turn and eocs are during so we add a second here to sync them up using the same variable
         // maptile is 4 submaps so queue up 4 submap reverts
         const tripoint_abs_sm revert_sm_base = project_to<coords::sm>( omt_pos );

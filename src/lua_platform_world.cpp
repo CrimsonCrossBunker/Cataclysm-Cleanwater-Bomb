@@ -2800,6 +2800,27 @@ std::array<submap, 4> snapshot_omt_submaps(
     return snapshots;
 }
 
+std::array<submap, 4> snapshot_existing_omt_submaps(
+    const tripoint_abs_omt &position )
+{
+    const tripoint_abs_sm base = project_to<coords::sm>( position );
+    std::array<submap, 4> snapshots;
+    std::size_t index = 0;
+    for( int x = 0; x < 2; ++x ) {
+        for( int y = 0; y < 2; ++y ) {
+            submap *source = MAPBUFFER.lookup_submap(
+                                 base + point( x, y ) );
+            if( source == nullptr ) {
+                throw std::invalid_argument(
+                    "services.world.schedule_location_copy source OMT "
+                    "must already exist; source submaps are not generated" );
+            }
+            snapshots[index++] = source->get_revert_submap();
+        }
+    }
+    return snapshots;
+}
+
 void schedule_omt_snapshots(
     const tripoint_abs_omt &destination,
     std::array<submap, 4> snapshots,
@@ -2867,19 +2888,21 @@ sol::table schedule_world_location_copy(
     const tripoint_abs_omt destination = require_absolute_omt(
             destination_position,
             api_name );
-    const time_duration delay = require_world_change_delay(
-                                    requested_delay, api_name, false );
+    const time_duration delay = requested_delay.to_native();
     const std::string key = requested_key.value_or( "" );
     require_world_event_key( key, api_name );
+    // Match native f_copy_location's ordering: prepare the destination first,
+    // then read existing source submaps without generating a missing source.
+    ensure_omt_submaps( destination );
     std::array<submap, 4> snapshots =
-        snapshot_omt_submaps( source );
+        snapshot_existing_omt_submaps( source );
     const tripoint_rel_ms offset =
         project_to<coords::ms>( destination ) -
         project_to<coords::ms>( source );
     for( submap &snapshot : snapshots ) {
         translate_submap_linked_items( snapshot, offset );
     }
-    const time_point when = calendar::turn + delay + 1_seconds;
+    const time_point when = location_copy_due_time( delay );
     schedule_omt_snapshots(
         destination, std::move( snapshots ), when, key );
     get_avatar().translocators.copy_translocator(
