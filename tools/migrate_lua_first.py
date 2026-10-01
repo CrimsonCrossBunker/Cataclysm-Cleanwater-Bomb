@@ -884,16 +884,14 @@ def render_proficiency_id_expression(value: Any) -> str | None:
             lua_quotable_native_variable_string(fallback)):
         return None
     if scope == "context_val":
-        # Use the copied dialogue table directly: native context keys are not
-        # restricted to the Platform variables service's printable key subset.
-        return (
-            '(function(stored) if stored == nil then return ' + lua_quote(fallback) +
-            ' end; return type(stored) == "string" and stored or "" end)'
-            '(context and context.data and context.data[' + lua_quote(name) + '])'
+        snapshot = (
+            'service_value(services.variables.get_context_string('
+            'context and context.data, ' + lua_quote(name) + '))'
         )
-    snapshot = (
-        'service_value(services.variables.get_global_string(' + lua_quote(name) + '))'
-    )
+    else:
+        snapshot = (
+            'service_value(services.variables.get_global_string(' + lua_quote(name) + '))'
+        )
     return (
         '(function(result) if result.exists == false then return ' + lua_quote(fallback) +
         ' end; return type(result.value) == "string" and result.value or "" end)'

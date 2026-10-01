@@ -10993,7 +10993,7 @@ function CcbVariablesApi.remove(character, key, options) end
 function CcbVariablesApi.get_global(key) end
 
 ---@class CcbVariableStringReadValue
----@field exists boolean Whether the global key is present.
+---@field exists boolean Whether the selected storage key is present.
 ---@field value? string Native string value; stored empty or incompatible values return the native empty string, while missing keys return nil.
 
 ---@class CcbVariableStringReadResult: CcbResult
@@ -11004,6 +11004,15 @@ function CcbVariablesApi.get_global(key) end
 ---@param key string Native global storage key; full byte sequences are preserved.
 ---@return CcbVariableStringReadResult
 function CcbVariablesApi.get_global_string(key) end
+
+---Read the string type of a callback data slot, preserving missing versus explicit NullValue.
+---Strings retain all bytes. Numbers/booleans, arrays and absolute map-square coordinates emit the
+---same native diag_value string-type diagnostic and return an empty string; NullValue is empty without a diagnostic.
+---Only the outer storage type is queried: Lua tables are array-typed here, and their contents are not copied or validated.
+---@param context table<string, any>|nil Callback data; nil means all keys are missing.
+---@param key string Raw storage key; empty, long, control and embedded-NUL bytes are allowed.
+---@return CcbVariableStringReadResult
+function CcbVariablesApi.get_context_string(context, key) end
 
 ---@param key string Native global storage key; callback-context key limits do not apply.
 ---@param value boolean|number|string|TripointCoord|NullValue|any[]|nil

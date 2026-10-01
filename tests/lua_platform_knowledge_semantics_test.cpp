@@ -345,11 +345,11 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
                         resolved = scope == "global" ?
                                    value_of( services["variables"]["get_global_string"],
                                              variable_name ).as<sol::table>() :
-                                   value_of( services["variables"]["resolve"],
-                                             context_values, sol::nil, scope,
+                                   value_of( services["variables"]["get_context_string"],
+                                             context_values,
                                              variable_name ).as<sol::table>();
                     };
-                    if( type_mismatch && scope == "global" ) {
+                    if( type_mismatch ) {
                         const std::string diagnostic = capture_debugmsg_during( read_query );
                         CHECK( diagnostic.find( "Type mismatch in diag_value" ) !=
                                std::string::npos );

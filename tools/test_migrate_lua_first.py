@@ -3448,6 +3448,12 @@ local services = {
   return {ok=true, value={exists=snapshot.exists,
     value=type(snapshot.value)=='string' and snapshot.value or
           (snapshot.exists and '' or nil)}}
+ end, get_context_string=function(data, name)
+  assert(data==context.data and name==key)
+  reads=reads+1
+  local stored=rawget(data, name)
+  return {ok=true, value={exists=stored~=nil,
+    value=type(stored)=='string' and stored or (stored~=nil and '' or nil)}}
  end},
  proficiencies={has_id_text=function(target, text)
   assert(target==(PREFIX=='u_' and actor or beta) and type(text)=='string')
@@ -3472,19 +3478,18 @@ check(true, string.char(0)..'12', string.char(0)..'12')
 check(true, string.rep('x',10000), string.rep('x',10000))
 check(true, '未知熟练度', '未知熟练度')
 check(true, 'prof_carving', 'prof_carving')
+assert(reads==10)
 if SCOPE=='global_val' then
- assert(reads==10)
  -- A present native null must not use the missing-value fallback.
  snapshot={exists=true, value=nil}
  assert(not (EXPRESSION) and observed=='')
- if PREFIX=='npc_' then
-  beta.subtype='monster'
-  snapshot.value='prof_carving'
-  local before, previous_queries=reads, queries
-  assert(not (EXPRESSION) and reads==before+1 and queries==previous_queries)
- end
-else
- assert(reads==0)
+end
+if PREFIX=='npc_' then
+ beta.subtype='monster'
+ snapshot.value='prof_carving'
+ context.data[key]='prof_carving'
+ local before, previous_queries=reads, queries
+ assert(not (EXPRESSION) and reads==before+1 and queries==previous_queries)
 end
 """.replace("KEY", migrate_lua_first.lua_quote(key)).replace(
                         "SCOPE", migrate_lua_first.lua_quote(scope)).replace(
@@ -3562,6 +3567,11 @@ local coordinate_calls = 0
 migrated_eoc_functions = {}
 services = {
     characters = {avatar = function() return actor end},
+    variables = {get_context_string = function(data, key)
+        local stored = rawget(data, key)
+        return {exists = stored ~= nil,
+                value = type(stored) == 'string' and stored or (stored ~= nil and '' or nil)}
+    end},
     coords = {tripoint_abs_ms = function(x, y, z)
         coordinate_calls = coordinate_calls + 1
         return {kind = 'tripoint_abs_ms', x = x, y = y, z = z}

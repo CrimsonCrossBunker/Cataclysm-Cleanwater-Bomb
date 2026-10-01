@@ -12,6 +12,7 @@
 #include "dialogue.h"
 #include "dialogue_helpers.h"
 #include "global_vars.h"
+#include "lua_platform_bindings_coords.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_sol.h"
@@ -154,6 +155,75 @@ TEST_CASE( "lua_platform_context_keys_match_native_variable_storage",
         CHECK_FALSE( removed["exists"].get<bool>() );
         CHECK( maybe_read_var_value( direct, native ) == nullptr );
     }
+}
+
+TEST_CASE( "lua_platform_context_string_query_matches_native_type_diagnostics",
+           "[lua][platform][semantic][variables]" )
+{
+    variable_snapshot_fixture fixture;
+    avatar player;
+    dialogue native( get_talker_for( player ), nullptr );
+    sol::table context = fixture.lua.create_table();
+    const std::string key = std::string( "\0context", 8 ) + "变量" + std::string( 300, 'k' );
+    const sol::protected_function query = fixture.variables["get_context_string"];
+    const sol::table missing = require_result_value( query( context, key ) );
+    CHECK_FALSE( missing["exists"].get<bool>() );
+    CHECK( missing["value"].get<sol::object>().get_type() == sol::type::nil );
+    CHECK( native.maybe_get_value( key ) == nullptr );
+    CHECK_FALSE( require_result_value( query( sol::nil, key ) )["exists"].get<bool>() );
+
+    const sol::object empty = fixture.services["types"]["null"];
+    const std::string raw_text = std::string( 10000, 's' ) + std::string( "\0尾", 4 );
+    const tripoint_abs_ms point( 1, -2, 3 );
+    const auto position = cata::lua_platform::script_tripoint_coord::from_native(
+                              coords::origin::abs, coords::scale::map_square, point.raw() );
+    sol::table large = fixture.lua.create_table();
+    for( int index = 1; index <= 512; ++index ) {
+        large[index] = index;
+    }
+    sol::object nested = sol::make_object( fixture.lua, "leaf" );
+    diag_value nested_native( "leaf" );
+    for( int depth = 0; depth < 12; ++depth ) {
+        sol::table parent = fixture.lua.create_table();
+        parent[1] = nested;
+        nested = sol::make_object( fixture.lua, parent );
+        diag_array values;
+        values.push_back( std::move( nested_native ) );
+        nested_native = diag_value( std::move( values ) );
+    }
+    const std::vector<std::pair<diag_value, sol::object>> cases = {
+        { diag_value( "" ), sol::make_object( fixture.lua, "" ) },
+        { diag_value( raw_text ), sol::make_object( fixture.lua, raw_text ) },
+        { diag_value{}, empty },
+        { diag_value( 73.0 ), sol::make_object( fixture.lua, 73.0 ) },
+        { diag_value( true ), sol::make_object( fixture.lua, true ) },
+        { diag_value( point ), sol::make_object( fixture.lua, position ) },
+        { oversized_native_array(), sol::make_object( fixture.lua, large ) },
+        { nested_native, nested }
+    };
+    for( const auto &test_case : cases ) {
+        native.set_value( key, test_case.first );
+        context.raw_set( key, test_case.second );
+        REQUIRE( native.maybe_get_value( key ) != nullptr );
+        std::string expected;
+        const std::string native_diagnostic = capture_debugmsg_during( [&]() {
+            expected = native.get_value( key ).str();
+        } );
+        sol::table result;
+        const std::string actual_diagnostic = capture_debugmsg_during( [&]() {
+            result = require_result_value( query( context, key ) );
+        } );
+        CHECK( result["exists"].get<bool>() );
+        CHECK( result["value"].get<std::string>() == expected );
+        CHECK( actual_diagnostic == native_diagnostic );
+    }
+    const auto relative = cata::lua_platform::script_tripoint_coord::from_native(
+                              coords::origin::relative, coords::scale::map_square, tripoint::zero );
+    context.raw_set( key, relative );
+    CHECK_FALSE( query( context, key ).valid() );
+    const game_handle unsupported = fixture.owner( player );
+    context.raw_set( key, unsupported );
+    CHECK_FALSE( query( context, key ).valid() );
 }
 
 TEST_CASE( "lua_platform_global_string_query_preserves_native_type_semantics",
