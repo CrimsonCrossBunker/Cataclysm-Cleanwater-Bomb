@@ -13,6 +13,7 @@
 #include "avatar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
+#include "cata_variant.h"
 #include "coordinates.h"
 #include "debug.h"
 #include "dialogue.h"
@@ -24,6 +25,17 @@
 #include "npc.h"
 #include "point.h"
 #include "talker.h"
+
+TEST_CASE( "diag_value_cata_variant_boolean_is_numeric", "[math_parser][nogame]" )
+{
+    const diag_value true_value( cata_variant( true ) );
+    const diag_value false_value( cata_variant( false ) );
+
+    CHECK( true_value.is_dbl() );
+    CHECK( true_value.dbl() == 1.0 );
+    CHECK( false_value.is_dbl() );
+    CHECK( false_value.dbl() == 0.0 );
+}
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity): false positive
 TEST_CASE( "math_parser_parsing", "[math_parser]" )

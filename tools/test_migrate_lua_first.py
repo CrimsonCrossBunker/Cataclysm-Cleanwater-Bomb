@@ -3458,10 +3458,14 @@ end
     def test_event_eoc_context_matches_native_diag_value_types(self) -> None:
         event_values = (
             ("character_id", "character_id", "1510"),
-            ("duration", "chrono_seconds", "60"),
+            ("character_id_min", "character_id", "-2147483648"),
+            ("character_id_max", "character_id", "2147483647"),
+            ("duration_negative", "chrono_seconds", "-120"),
+            ("duration_int64_max", "chrono_seconds", "9223372036854775807"),
             ("string_value", "string", "prof_string"),
             ("integer_value", "int", ""),
-            ("boolean_value", "bool", ""),
+            ("boolean_true", "bool", ""),
+            ("boolean_false", "bool", ""),
             ("point_value", "tripoint", ""),
         )
         condition = {
@@ -3541,13 +3545,18 @@ local actors = {alpha = {identity = 'alpha'}, interlocutor = {identity = 'beta'}
 local original = {
     type = 'game_start', turn = 123, actors = actors, custom = 'preserved',
     data = {
-        character_id = 1510, duration = 60, string_value = 'prof_string',
-        integer_value = 42, boolean_value = true, point_value = '(1,-2,3)',
+        character_id = 1510, character_id_min = -2147483648,
+        character_id_max = 2147483647, duration_negative = -120,
+        duration_int64_max = 9223372036854775807,
+        string_value = 'prof_string', integer_value = 42,
+        boolean_true = true, boolean_false = false, point_value = '(1,-2,3)',
     },
     data_types = {
-        character_id = 'character_id', duration = 'chrono_seconds',
+        character_id = 'character_id', character_id_min = 'character_id',
+        character_id_max = 'character_id', duration_negative = 'chrono_seconds',
+        duration_int64_max = 'chrono_seconds',
         string_value = 'string', integer_value = 'int',
-        boolean_value = 'bool', point_value = 'tripoint',
+        boolean_true = 'bool', boolean_false = 'bool', point_value = 'tripoint',
     },
 }
 local normalized = normalize_native_event_context(original)
@@ -3555,9 +3564,16 @@ assert(normalized ~= original and normalized.data ~= original.data)
 assert(normalized.data_types == nil)
 assert(normalized.type == original.type and normalized.turn == original.turn)
 assert(normalized.actors == actors and normalized.custom == 'preserved')
-assert(normalized.data.character_id == '1510' and normalized.data.duration == '60')
+assert(normalized.data.character_id == '1510')
+assert(normalized.data.character_id_min == '-2147483648')
+assert(normalized.data.character_id_max == '2147483647')
+assert(normalized.data.duration_negative == '-120')
+assert(normalized.data.duration_int64_max == '9223372036854775807')
+assert(tostring(9223372036854775807) == '9223372036854775807')
 assert(normalized.data.string_value == 'prof_string')
-assert(normalized.data.integer_value == 42 and normalized.data.boolean_value == true)
+assert(normalized.data.integer_value == 42)
+assert(normalized.data.boolean_true == 1 and type(normalized.data.boolean_true) == 'number')
+assert(normalized.data.boolean_false == 0 and type(normalized.data.boolean_false) == 'number')
 assert(normalized.data.point_value.kind == 'tripoint_abs_ms')
 assert(normalized.data.point_value.x == 1 and normalized.data.point_value.y == -2)
 assert(normalized.data.point_value.z == 3 and coordinate_calls == 1)
@@ -3571,31 +3587,53 @@ context.data.character_id = 73
 assert(not context_proficiency() and observed[#observed] == '')
 context.data.character_id = 'updated_id'
 assert(not context_proficiency() and observed[#observed] == 'updated_id')
+context.data.boolean_true = false
+assert(normalize_native_event_context(context) == context)
+assert(context.data.boolean_true == false and type(context.data.boolean_true) == 'boolean')
 
 local ordinary_context = {data = {character_id = 73}, actors = actors}
 assert(normalize_native_event_context(ordinary_context) == ordinary_context)
 assert(ordinary_context.data.character_id == 73)
+local valid_bool, bool_error = pcall(normalize_native_event_context, {
+    data = {boolean_value = 1}, data_types = {boolean_value = 'bool'},
+})
+assert(not valid_bool and string.find(bool_error, 'payload is not a boolean'))
 
 MAIN
 local event = {
     type = 'game_start', turn = 456,
     actors = actors,
     data = {
-        character_id = 1510, duration = 60, string_value = 'prof_string',
-        integer_value = 42, boolean_value = true, point_value = '(1,-2,3)',
+        character_id = 1510, character_id_min = -2147483648,
+        character_id_max = 2147483647, duration_negative = -120,
+        duration_int64_max = 9223372036854775807,
+        string_value = 'prof_string', integer_value = 42,
+        boolean_true = true, boolean_false = false, point_value = '(1,-2,3)',
     },
     data_types = {
-        character_id = 'character_id', duration = 'chrono_seconds',
+        character_id = 'character_id', character_id_min = 'character_id',
+        character_id_max = 'character_id', duration_negative = 'chrono_seconds',
+        duration_int64_max = 'chrono_seconds',
         string_value = 'string', integer_value = 'int',
-        boolean_value = 'bool', point_value = 'tripoint',
+        boolean_true = 'bool', boolean_false = 'bool', point_value = 'tripoint',
     },
 }
 assert(subscriptions['game:game_start'] == 'migrated.native_event_context_types')
+observed = {}
 handlers['migrated.native_event_context_types'](event)
-assert(#observed == 9)
-assert(observed[4] == '1510' and observed[5] == '60')
-assert(observed[6] == 'prof_string')
-assert(observed[7] == '' and observed[8] == '' and observed[9] == '')
+assert(#observed == 10)
+local observed_counts = {}
+for _, value in ipairs(observed) do
+    observed_counts[value] = (observed_counts[value] or 0) + 1
+end
+for _, value in ipairs({
+    '1510', '-2147483648', '2147483647', '-120',
+    '9223372036854775807', 'prof_string', '', '', '', '',
+}) do
+    assert(observed_counts[value] > 0)
+    observed_counts[value] = observed_counts[value] - 1
+end
+for _, count in pairs(observed_counts) do assert(count == 0) end
 assert(event.data.character_id == 1510 and event.data.point_value == '(1,-2,3)')
 assert(event.data_types.point_value == 'tripoint' and event.actors == actors)
 """.replace(
@@ -3630,6 +3668,69 @@ assert(event.data_types.point_value == 'tripoint' and event.actors == actors)
         self.assertIn('runtime.handler("migrated.global_context.recurring"',
                       global_recurrence)
         self.assertNotIn("data_types", global_recurrence)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_event_eoc_boolean_context_drives_generated_numeric_effect(self) -> None:
+        source = migrate_lua_first.SourceObject(
+            Path("event_boolean_numeric.json"), 0, {
+                "type": "effect_on_condition",
+                "id": "native_event_boolean_numeric",
+                "eoc_type": "EVENT",
+                "required_event": "game_start",
+                "condition": {"math": ["1 == 1"]},
+                "effect": {
+                    "u_add_effect": "bleed",
+                    "duration": "1 turn",
+                    "intensity": {"context_val": "boolean_value"},
+                },
+            },
+        )
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_eoc(source, result)
+        self.assertFalse(result.todos)
+        self.assertIn("if not (1 == 1) then", rendered)
+        self.assertIn('context.data["boolean_value"]', rendered)
+
+        script = r"""
+local actor = {}
+local handlers, subscriptions = {}, {}
+local observed_intensities = {}
+migrated_eoc_functions = {}
+services = {
+    characters = {avatar = function() return actor end},
+    types = {id = function(kind, id) return kind .. ':' .. id end},
+    time = {duration = function(value, unit)
+        assert(value == 1 and unit == 'turn')
+        return value
+    end},
+    effects = {add = function(target, id, duration, options)
+        assert(target == actor and id == 'effect:bleed' and duration == 1)
+        observed_intensities[#observed_intensities + 1] = options.intensity
+        return {ok = true, value = true}
+    end},
+}
+function service_value(result) assert(result.ok); return result.value end
+runtime = {
+    handler = function(id, callback) handlers[id] = callback end,
+    on = function(name, handler_id) subscriptions[name] = handler_id end,
+}
+GENERATED
+local function event(value)
+    return {
+        type = 'game_start', turn = 1,
+        data = {boolean_value = value},
+        data_types = {boolean_value = 'bool'},
+    }
+end
+assert(subscriptions['game:game_start'] == 'migrated.native_event_boolean_numeric')
+handlers['migrated.native_event_boolean_numeric'](event(true))
+handlers['migrated.native_event_boolean_numeric'](event(false))
+assert(#observed_intensities == 2)
+assert(observed_intensities[1] == 1 and observed_intensities[2] == 0)
+""".replace("GENERATED", rendered)
+        run = subprocess.run(["lua", "-"], input=script, text=True,
+                             capture_output=True, timeout=10)
+        self.assertEqual(run.returncode, 0, run.stderr)
 
     def test_proficiency_variable_ids_keep_unproven_frames_and_owners_as_todo(self) -> None:
         for prefix in ("u_", "npc_"):
