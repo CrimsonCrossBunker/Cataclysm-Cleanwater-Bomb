@@ -19,6 +19,7 @@
 #include "cata_scope_helpers.h"
 #include "condition.h"
 #include "coordinates.h"
+#include "debug.h"
 #include "dialogue.h"
 #include "field_type.h"
 #include "flexbuffer_json.h"
@@ -353,9 +354,13 @@ TEST_CASE( "lua_platform_environment_set_furniture_matches_bounded_map_semantics
     edge_native_effect.parse_sub_effect( json_loader::from_string( edge_effect_json ).get_object(),
                                          "lua_platform_set_furniture_edge_semantics" );
     dialogue edge_native_context;
-    for( const talk_effect_fun_t &operation : edge_native_effect.effects ) {
-        operation( edge_native_context );
-    }
+    const std::string native_edge_diagnostic = capture_debugmsg_during( [&]() {
+        for( const talk_effect_fun_t &operation : edge_native_effect.effects ) {
+            operation( edge_native_context );
+        }
+    } );
+    CHECK( native_edge_diagnostic.find( "map::furn_set" ) != std::string::npos );
+    CHECK( native_edge_diagnostic.find( "out of bounds" ) != std::string::npos );
     get_globals().remove_global_value( edge_location_key );
     std::array<bool, 25> native_edge_furniture_cleared{};
     int native_edge_furniture_count = 0;
