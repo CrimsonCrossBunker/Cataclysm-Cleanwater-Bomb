@@ -31,6 +31,7 @@
 #include "magic.h"
 #include "martialarts.h"
 #include "npc.h"
+#include "options.h"
 #include "rng.h"
 #include "skill.h"
 #include "type_id.h"
@@ -518,6 +519,21 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
             }
             return conditional_t( json_loader::from_string( source.str() ).get_object() );
         };
+        const auto make_game_option_condition = [&]( const std::string & selector,
+        const std::string & option_id ) {
+            std::ostringstream source;
+            {
+                JsonOut json( source );
+                json.start_object();
+                json.member( selector + "_has_proficiency" );
+                json.start_object();
+                json.member( "mutator", "game_option" );
+                json.member( "option", option_id );
+                json.end_object();
+                json.end_object();
+            }
+            return conditional_t( json_loader::from_string( source.str() ).get_object() );
+        };
         const auto make_variable_condition = [&]( const std::string & selector,
             const std::string & scope, const std::string & key, const std::string & default_id,
         const bool with_default ) {
@@ -551,6 +567,9 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
             REQUIRE( result.valid() );
             return result.get<std::string>();
         };
+        sol::table gameplay_options = services["gameplay"]["options"];
+        const sol::protected_function get_option_string = gameplay_options["get_string"];
+        REQUIRE( get_option_string.valid() );
         const std::vector<std::string> selectors = { "u", "npc" };
         const std::string nul_id( "unknown\0proficiency", sizeof( "unknown\0proficiency" ) - 1 );
         const std::vector<std::string> literal_ids = {
@@ -581,6 +600,84 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
                 CAPTURE( selector, text, translated_id );
                 CHECK( compare_id( selector, condition, translated_id ) ==
                        ( translated_id == carving.str() ) );
+            }
+        }
+
+        const auto compare_game_option = [&]( const std::string &selector,
+                                              const std::string &option_id ) {
+            std::string native_value;
+            const std::string native_diagnostic = capture_debugmsg_during( [&]() {
+                native_value = ::get_option<std::string>( option_id );
+            } );
+            std::string platform_value;
+            const std::string platform_diagnostic = capture_debugmsg_during( [&]() {
+                const sol::protected_function_result result = get_option_string( option_id );
+                REQUIRE( result.valid() );
+                platform_value = result.get<std::string>();
+            } );
+            CHECK( platform_value == native_value );
+            CHECK( platform_diagnostic == native_diagnostic );
+            bool expects_diagnostic = true;
+            if( get_options().has_option( option_id ) ) {
+                const std::string type = get_options().get_option( option_id ).getType();
+                expects_diagnostic = type != "string_select" && type != "string_input";
+            }
+            if( expects_diagnostic ) {
+                CHECK_FALSE( native_diagnostic.empty() );
+            } else {
+                CHECK( native_diagnostic.empty() );
+            }
+
+            const conditional_t condition = make_game_option_condition( selector, option_id );
+            bool native_match = false;
+            const std::string condition_diagnostic = capture_debugmsg_during( [&]() {
+                native_match = condition( conversation );
+            } );
+            const bool platform_match = value_of( services["proficiencies"]["has_id_text"],
+                                                  handle_for_selector( selector ),
+                                                  platform_value ).as<bool>();
+            CAPTURE( selector, option_id, native_value, platform_value, native_diagnostic,
+                     platform_diagnostic, condition_diagnostic );
+            CHECK( condition_diagnostic == native_diagnostic );
+            CHECK( native_match == platform_match );
+        };
+
+        const auto raw_options = get_options().get_raw_options();
+        const std::vector<std::string> required_option_types = {
+            "string_select", "string_input", "bool", "int", "float"
+        };
+        std::vector<std::pair<std::string, std::string>> typed_option_ids;
+        for( const std::string &type : required_option_types ) {
+            std::string option_id;
+            for( const auto &entry : raw_options ) {
+                if( entry.second.getType() == type &&
+                    ( option_id.empty() || entry.first < option_id ) ) {
+                    option_id = entry.first;
+                }
+            }
+            CAPTURE( type, option_id );
+            REQUIRE_FALSE( option_id.empty() );
+            CHECK( get_options().has_option( option_id ) );
+            CHECK( raw_options.at( option_id ).getType() == type );
+            typed_option_ids.emplace_back( type, option_id );
+        }
+        for( const std::pair<std::string, std::string> &typed_option : typed_option_ids ) {
+            for( const std::string &selector : selectors ) {
+                compare_game_option( selector, typed_option.second );
+            }
+        }
+
+        const std::string nul_option_id( "CCB_LUA_OPTION\0missing",
+                                         sizeof( "CCB_LUA_OPTION\0missing" ) - 1 );
+        const std::vector<std::string> unknown_option_ids = {
+            std::string(), "CCB_LUA_PLATFORM_UNKNOWN_OPTION_83D2A1", nul_option_id,
+            std::string( 300, 'x' )
+        };
+        for( const std::string &option_id : unknown_option_ids ) {
+            CAPTURE( option_id );
+            CHECK_FALSE( get_options().has_option( option_id ) );
+            for( const std::string &selector : selectors ) {
+                compare_game_option( selector, option_id );
             }
         }
 

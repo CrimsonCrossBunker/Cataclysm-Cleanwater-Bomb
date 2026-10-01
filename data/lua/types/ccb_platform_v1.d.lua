@@ -5187,6 +5187,9 @@ local CcbPlatformGameplayOptionsApi = {}
 ---@param id string Existing or unknown bounded native option name.
 ---@return CcbGameplayOptionSnapshot? Nil when the option is unknown.
 function CcbPlatformGameplayOptionsApi.get(id) end
+---@param id string Raw native option name passed through without validation.
+---@return string Native string slot; unknown names and non-string types retain native diagnostics.
+function CcbPlatformGameplayOptionsApi.get_string(id) end
 ---@param id string
 ---@return boolean
 function CcbPlatformGameplayOptionsApi.has(id) end

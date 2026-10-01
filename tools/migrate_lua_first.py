@@ -877,6 +877,18 @@ def render_proficiency_id_expression(
         return lua_quote(value)
     if not isinstance(value, dict):
         return None
+    if value.get("mutator") == "game_option":
+        if set(value) != {"mutator", "option"}:
+            return None
+        option = render_proficiency_id_expression(
+            value["option"], alpha_owner=alpha_owner, beta_owner=beta_owner,
+        )
+        if option is None:
+            return None
+        # Preserve value_as<string>(convert=false), including wrong-type and
+        # missing-option diagnostics. Snapshot.value formats other types and
+        # cannot replace this native string read.
+        return f"services.gameplay.options.get_string({option})"
     if value.get("i18n") is True and "str" in value:
         text = value["str"]
         # Native string_mutator translates this authored string at evaluation
@@ -5020,12 +5032,7 @@ def render_participant_string(value: Any, target: str, alpha: str | None, beta: 
         option = render_participant_string(value["option"], target, alpha, beta)
         if option is None:
             return None
-        return (
-            '(function(option) if option == nil then error("unknown game option") end; '
-            'if option.type ~= "string_select" and option.type ~= "string_input" then '
-            'error("string game option required") end; return option.value end)'
-            f'(services.gameplay.options.get({option}))'
-        )
+        return f"services.gameplay.options.get_string({option})"
     if isinstance(value, dict) and value.get("mutator") in {
             "mon_faction", "ma_technique_name", "ma_technique_description"}:
         monster = value["mutator"] == "mon_faction"
@@ -27134,14 +27141,9 @@ def render_participant_string_expression(
             native_string_values)
         if option is None:
             return None
-        # Native get_option<string> reads the stored string, not the formatted
-        # value of a numeric/bool option. Keep invalid types explicit.
-        return (
-            '(function(option) if option == nil then error("unknown game option") end; '
-            'if option.type ~= "string_select" and '
-            'option.type ~= "string_input" then error("string game option required") end; '
-            f'return option.value end)(services.gameplay.options.get({option}))'
-        )
+        # Delegate the raw string slot and native diagnostics rather than
+        # formatting the value or replacing native diagnostics with exceptions.
+        return f"services.gameplay.options.get_string({option})"
     if isinstance(value, dict) and value.get("mutator") in {
         "ma_technique_name", "ma_technique_description", "mon_faction",
     }:

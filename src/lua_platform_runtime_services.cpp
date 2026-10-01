@@ -3938,6 +3938,11 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         return get_options().has_option( id );
     } );
     gameplay_options.set_function(
+        "get_string", [require_read]( const std::string & id ) {
+        require_read();
+        return ::get_option<std::string>( id );
+    } );
+    gameplay_options.set_function(
         "get", [require_read, require_option_id, option_snapshot](
     sol::this_state lua_state, const std::string & id ) {
         require_read();

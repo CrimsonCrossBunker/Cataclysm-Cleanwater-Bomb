@@ -1782,7 +1782,7 @@ local function service_value(r) assert(r.ok);return r.value end
 local services={variables={resolve=function(data,owner,scope,key)
  calls=calls+1;assert((calls==1 and owner==actor) or (calls==2 and owner==partner))
  return {ok=true,value={value=owner[key]}}
-end},gameplay={options={get=function() error('must short circuit') end}}}
+end},gameplay={options={get_string=function() error('must short circuit') end}}}
 assert(EXPRESSION==EXPECTED and calls==2)
 """.replace("BETA", migrate_lua_first.lua_quote(beta)).replace("EXPRESSION", expression)
             script = script.replace("EXPECTED", "true" if expected else "false")
@@ -2344,18 +2344,21 @@ assert(EXPRESSION==EXPECTED)
                     self.assertEqual(result.returncode, 0, result.stderr)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
-    def test_game_option_string_expression_rejects_numeric_values(self) -> None:
+    def test_game_option_string_expression_preserves_native_empty_values(self) -> None:
         expression = migrate_lua_first.render_participant_string_expression(
             {"mutator": "game_option", "option": "TEST_OPTION"},
             "actor", "actor", None)
         self.assertIsNotNone(expression)
         script = r"""
-local services={gameplay={options={get=function()
- return {type='int',value='42'}
+local services={gameplay={options={get_string=function()
+ return ''
 end}}}
-assert(not pcall(function() return EXPRESSION end))
-services.gameplay.options.get=function() return nil end
-assert(not pcall(function() return EXPRESSION end))
+assert(EXPRESSION=='')
+services.gameplay.options.get_string=function() return 'stored string' end
+assert(EXPRESSION=='stored string')
+services.gameplay.options.get_string=function() error('native read failure') end
+local ok,message=pcall(function() return EXPRESSION end)
+assert(not ok and tostring(message):find('native read failure',1,true))
 """.replace("EXPRESSION", expression)
         result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -2376,6 +2379,7 @@ assert(not pcall(function() return EXPRESSION end))
                     script = r"""
 local actor={option_name='ALPHA_OPTION'}
 local partner={option_name='BETA_OPTION'}
+local context={data={}}
 local calls=0
 local function service_value(result) assert(result.ok);return result.value end
 local services={
@@ -2383,9 +2387,9 @@ local services={
   assert(character==OWNER and key=='option_name')
   return {ok=true,value={value=character[key]}}
  end},
- gameplay={options={get=function(id)
+ gameplay={options={get_string=function(id)
   assert(id==OWNER.option_name)
-  return {type='string_select',value='bio_power_storage'}
+  return 'bio_power_storage'
  end}},
  types={id=function(kind,id) assert(kind=='bionic');return id end},
  bionics={grant=function(character,id)
@@ -4420,6 +4424,87 @@ end
         for selector in ("u_has_proficiency", "npc_has_proficiency"):
             self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
                 {selector: translated_id},
+            ))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_proficiency_game_option_ids_use_native_string_lookup(self) -> None:
+        for prefix in ("u_", "npc_"):
+            for name in ("STRING_OPTION", "BOOL_OPTION", "UNKNOWN_OPTION", "",
+                         "raw\0option", "选项", "x" * 10000):
+                expression = migrate_lua_first.render_eoc_condition_expression(
+                    {prefix + "has_proficiency": {"mutator": "game_option", "option": name}},
+                    proficiency_character_alpha_actor_proven=True,
+                    npc_melee_beta_actor_proven=True,
+                )
+                self.assertIsNotNone(expression)
+                script = r"""
+local actor={kind='creature',subtype='npc',is_valid=function() return true end}
+local partner={kind='creature',subtype='npc',is_valid=function() return true end}
+local context={actors={interlocutor=partner}}
+local expected=EXPECTED_NAME
+local target=EXPECTED_TARGET
+local reads,queries=0,0
+local function service_value(value) return value end
+local services={gameplay={options={get_string=function(name)
+ assert(name==expected)
+ reads=reads+1
+ return name=='STRING_OPTION' and 'prof_carving' or ''
+end}},proficiencies={has_id_text=function(receiver,id)
+ assert(receiver==target)
+ assert(id==(expected=='STRING_OPTION' and 'prof_carving' or ''))
+ queries=queries+1
+ return id=='prof_carving'
+end}}
+assert((EXPRESSION)==(expected=='STRING_OPTION'))
+assert(reads==1 and queries==1)
+""".replace("EXPECTED_NAME", migrate_lua_first.lua_quote(name)).replace(
+                    "EXPECTED_TARGET", "actor" if prefix == "u_" else "partner",
+                ).replace("EXPRESSION", expression or "nil")
+                run = subprocess.run(["lua", "-"], input=script, text=True,
+                                     capture_output=True, timeout=10)
+                self.assertEqual(run.returncode, 0, run.stderr)
+            nested = migrate_lua_first.render_eoc_condition_expression(
+                {prefix + "has_proficiency": {
+                    "mutator": "game_option", "option": {
+                        "mutator": "game_option", "option": {"u_val": "option_source"},
+                    },
+                }}, proficiency_character_alpha_actor_proven=True,
+                npc_melee_beta_actor_proven=True,
+            )
+            self.assertIsNotNone(nested)
+            script = r"""
+local actor={kind='creature',subtype='npc',is_valid=function() return true end}
+local partner={kind='creature',subtype='npc',is_valid=function() return true end}
+local context={actors={interlocutor=partner}}
+local calls={}
+local function service_value(value) return value end
+local services={variables={get_string=function(owner,key)
+ assert(owner==actor and key=='option_source')
+ table.insert(calls,'variable')
+ return {exists=true,value='FIRST_OPTION'}
+end},gameplay={options={get_string=function(name)
+ table.insert(calls,name)
+ return name=='FIRST_OPTION' and 'SECOND_OPTION' or 'prof_carving'
+end}},proficiencies={has_id_text=function(owner,id)
+ assert(owner==EXPECTED_TARGET and id=='prof_carving')
+ table.insert(calls,'query')
+ return true
+end}}
+assert(EXPRESSION)
+assert(table.concat(calls,',')=='variable,FIRST_OPTION,SECOND_OPTION,query')
+""".replace("EXPECTED_TARGET", "actor" if prefix == "u_" else "partner").replace(
+                "EXPRESSION", nested or "nil",
+            )
+            run = subprocess.run(["lua", "-"], input=script, text=True,
+                                 capture_output=True, timeout=10)
+            self.assertEqual(run.returncode, 0, run.stderr)
+        for value in (
+            {"mutator": "game_option"}, {"mutator": "game_option", "option": 73},
+            {"mutator": "game_option", "option": "USE_LANG", "default": "prof_carving"},
+            {"mutator": "game_option", "option": {"npc_val": "unproven"}},
+        ):
+            self.assertIsNone(migrate_lua_first.render_proficiency_id_expression(
+                value, alpha_owner="actor",
             ))
 
     def test_npc_proficiency_is_limited_to_event_exclusive_melee_beta(self) -> None:
@@ -39129,30 +39214,32 @@ assert(context.data.entry=='inner')
             "foreach": "array",
             "target": [{"mutator": "game_option", "option": {scope: "setting"}}
                        for scope in ("u_val", "npc_val")],
-            "var": {"context_val": "entry"}, "effect": {"u_message": "visit"},
+            "var": {"context_val": "entry"}, "effect": "nothing",
         }, True, True, {}, actor_expression="actor", npc_actor_expression="partner")
         self.assertIsNotNone(lines)
         script = r"""
 local actor,partner={},{}
-local context={data={}}
 local settings={left='first',right='second'}
 local reads,calls=0,0
+local stored={}
+local context={data=setmetatable({}, {__index=stored,__newindex=function(_,key,value)
+ assert(key=='entry')
+ calls=calls+1
+ assert(reads==2 and value==({'first','second'})[calls])
+ stored[key]=value
+ settings.right='changed'
+end})}
 local function service_value(value) return value end
 local services={
  variables={resolve=function(data,owner,scope,name,participants)
   assert(name=='setting' and participants.alpha==actor and participants.beta==partner)
   return {exists=true,value=scope=='u' and 'left' or 'right'}
  end},
- gameplay={options={get=function(name)
+ gameplay={options={get_string=function(name)
   reads=reads+1
   assert(calls==0)
-  return {type='string_input',value=settings[name]}
- end}},
- message=function()
-  calls=calls+1
-  assert(reads==2 and context.data.entry==({'first','second'})[calls])
-  settings.right='changed'
- end
+  return settings[name]
+ end}}
 }
 BODY
 assert(calls==2 and context.data.entry=='second')
@@ -39162,30 +39249,58 @@ assert(calls==2 and context.data.entry=='second')
         self.assertEqual(result.returncode, 0, result.stderr)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
-    def test_foreach_option_lookup_failure_precedes_iterator_write(self) -> None:
+    def test_foreach_option_service_error_precedes_iterator_write(self) -> None:
         lines = migrate_lua_first.render_static_foreach({
             "foreach": "array",
             "target": ["first", {"mutator": "game_option", "option": "TEST_OPTION"}],
-            "var": {"context_val": "entry"}, "effect": {"u_message": "unreachable"},
+            "var": {"context_val": "entry"}, "effect": "nothing",
         }, True, False, {}, actor_expression="actor")
         self.assertIsNotNone(lines)
-        for option in ("nil", "{type='int',value='42'}", "{type='bool',value='true'}"):
-            script = r"""
+        script = r"""
 local actor={}
 local context={data={entry='previous'}}
 local services={
- gameplay={options={get=function() return OPTION end}},
- message=function() error('body must not run') end
+ gameplay={options={get_string=function() error('native option read failure') end}}
 }
 local ok,err=pcall(function()
 BODY
 end)
 assert(not ok and context.data.entry=='previous')
-assert(tostring(err):find('game option',1,true))
-""".replace("OPTION", option).replace("BODY", "\n".join(lines))
-            result = subprocess.run(["lua", "-"], input=script, text=True,
-                                    capture_output=True, timeout=10)
-            self.assertEqual(result.returncode, 0, result.stderr)
+assert(tostring(err):find('native option read failure',1,true))
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_foreach_option_empty_string_is_a_present_entry(self) -> None:
+        lines = migrate_lua_first.render_static_foreach({
+            "foreach": "array",
+            "target": ["first", {"mutator": "game_option", "option": "TEST_OPTION"}],
+            "var": {"context_val": "entry"}, "effect": "nothing",
+        }, True, False, {}, actor_expression="actor")
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor={}
+local reads,calls=0,0
+local stored={entry='previous'}
+local context={data=setmetatable({}, {__index=stored,__newindex=function(_,key,value)
+ assert(key=='entry')
+ calls=calls+1
+ assert(reads==1 and value==({'first',''})[calls])
+ stored[key]=value
+end})}
+local services={gameplay={options={get_string=function()
+ assert(calls==0)
+ reads=reads+1
+ return ''
+end}}}
+BODY
+assert(calls==2 and context.data.entry=='')
+""".replace("BODY", "\n".join(lines))
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_foreach_definition_strings_keep_nested_participant_resolution(self) -> None:
@@ -39197,22 +39312,28 @@ assert(tostring(err):find('game option',1,true))
                     "mutator": "game_option", "option": {"u_val": "selected"}}},
                 {"mutator": "ma_technique_description", "matec_id": {"context_val": "technique"}},
             ],
-            "var": {"context_val": "entry"}, "effect": {"u_message": "visit"},
+            "var": {"context_val": "entry"}, "effect": "nothing",
         }, True, True, {}, actor_expression="actor", npc_actor_expression="partner")
         self.assertIsNotNone(lines)
         script = r"""
 local actor,partner={},{}
-local context={data={technique='tec'}}
 local calls,lookups=0,0
+local stored={technique='tec'}
+local context={data=setmetatable({}, {__index=stored,__newindex=function(_,key,value)
+ assert(key=='entry')
+ calls=calls+1
+ assert(lookups==3 and value==({'faction','translated name','translated flavor'})[calls])
+ stored[key]=value
+end})}
 local function service_value(value) return value end
 local services={
  variables={resolve=function(data,owner,scope,name,participants)
   assert(participants.alpha==actor and participants.beta==partner and calls==0)
   return {exists=true,value=scope=='npc' and 'mon' or scope=='u' and 'SETTING' or data[name]}
  end},
- gameplay={options={get=function(name)
+ gameplay={options={get_string=function(name)
   assert(name=='SETTING' and calls==0)
-  return {type='string_select',value='tec'}
+  return 'tec'
  end}},
  types={id=function(kind,id) assert(kind=='martial_art_technique' and id=='tec');return id end},
  registry={get=function(kind,id)
@@ -39223,12 +39344,7 @@ local services={
   assert(id=='tec' and calls==0)
   lookups=lookups+1
   return {name='translated name',flavor_description='translated flavor',description='full rules'}
- end},
- message=function()
-  calls=calls+1
-  assert(lookups==3)
-  assert(context.data.entry==({'faction','translated name','translated flavor'})[calls])
- end
+ end}
 }
 BODY
 assert(calls==3)
@@ -39336,28 +39452,30 @@ assert(EXPR=='tec_none' and called)
             "foreach": "array",
             "target": ["literal", {"str": "message", "i18n": True},
                        {"mutator": "game_option", "option": {"str": "setting", "i18n": True}}],
-            "var": {"context_val": "entry"}, "effect": {"u_message": "visit"},
+            "var": {"context_val": "entry"}, "effect": "nothing",
         }, True, False, {}, actor_expression="actor")
         self.assertIsNotNone(lines)
         script = r"""
 local actor={}
-local context={data={}}
 local translated,calls={},0
+local stored={}
+local context={data=setmetatable({}, {__index=stored,__newindex=function(_,key,value)
+ assert(key=='entry')
+ calls=calls+1
+ assert(value==({'literal','localized:message','option value'})[calls])
+ assert(table.concat(translated,',')=='message,setting')
+ stored[key]=value
+end})}
 local services={
  translate=function(text)
   assert(calls==0)
   translated[#translated+1]=text
   return 'localized:'..text
  end,
- gameplay={options={get=function(name)
+ gameplay={options={get_string=function(name)
   assert(name=='localized:setting' and calls==0)
-  return {type='string_input',value='option value'}
- end}},
- message=function()
-  calls=calls+1
-  assert(context.data.entry==({'literal','localized:message','option value'})[calls])
-  assert(table.concat(translated,',')=='message,setting')
- end
+  return 'option value'
+ end}}
 }
 BODY
 assert(calls==3)
@@ -41640,7 +41758,7 @@ assert(calls==3 and context.data.entry=='zombie')
             self.assertIn(
                 'context.data["raised_position"] = location', main
             )
-            self.assertIn('services.gameplay.options.get("USE_LANG")', main)
+            self.assertIn('services.gameplay.options.get_string("USE_LANG")', main)
             self.assertIn(
                 "services.martial_arts.technique_definition(", main
             )
