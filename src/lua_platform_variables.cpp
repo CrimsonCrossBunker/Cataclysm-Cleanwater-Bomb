@@ -4,7 +4,6 @@
 
 #include "lua_platform_values.h"
 #include <talker.h>
-#include <algorithm>
 #include <cstddef>
 #include <functional>
 #include <memory>
@@ -30,8 +29,6 @@ struct script_null_value;
 namespace
 {
 
-constexpr std::size_t maximum_context_key_bytes = 128;
-
 void require_active_callback(
     const std::function<bool()> &has_active_callback,
     const std::string_view api_name )
@@ -40,24 +37,6 @@ void require_active_callback(
         throw std::runtime_error(
             std::string( api_name ) +
             " is only available from an active callback" );
-    }
-}
-
-void validate_context_key( const std::string_view key )
-{
-    if( key.empty() || key.size() > maximum_context_key_bytes ||
-    std::any_of( key.begin(), key.end(), []( const unsigned char ch ) {
-    return ch < 0x20U || ch == 0x7fU;
-} ) ) {
-        throw std::invalid_argument(
-            "services.variables context keys must contain 1..128 printable bytes" );
-    }
-}
-
-void validate_scope_key( const std::string_view scope, const std::string_view key )
-{
-    if( scope == "context" || scope == "var" ) {
-        validate_context_key( key );
     }
 }
 
@@ -363,7 +342,6 @@ sol::table resolve_variable(
     const std::size_t world_generation,
     const sol::optional<sol::table> &participants )
 {
-    validate_scope_key( scope, key );
     if( scope != "u" && scope != "npc" && scope != "global" &&
         scope != "context" && scope != "var" ) {
         throw std::invalid_argument( "services.variables.resolve received an unknown scope" );
@@ -420,7 +398,6 @@ sol::table resolve_variable(
                     break;
             }
             current_key = nested.name;
-            validate_scope_key( current_scope, current_key );
             continue;
         }
         if( current_scope == "global" ) {
@@ -475,7 +452,6 @@ sol::table set_resolved_variable(
     const sol::optional<sol::table> &participants,
     const bool include_before )
 {
-    validate_scope_key( scope, key );
     if( scope != "u" && scope != "npc" && scope != "global" &&
         scope != "context" && scope != "var" ) {
         throw std::invalid_argument( "services.variables.set_resolved received an unknown scope" );

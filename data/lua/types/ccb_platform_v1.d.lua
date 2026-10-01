@@ -11020,13 +11020,12 @@ function CcbVariablesApi.remove_global(key, options) end
 ---For u/npc scope the supplied actor is the owner; scope does not select a dialogue participant.
 ---Optional participants select alpha for u and beta for npc, including indirect references.
 ---When supplied, an absent participant means missing; otherwise actor remains the explicit owner.
----Context and var lookup keys must be 1..128 bytes without ASCII controls or NUL. Native GameHandle/global keys,
----including targets reached through var indirection, use native storage key semantics. A var target that
----resolves to callback context remains subject to the context-key limit.
+---All lookup keys, including callback context and var references, use raw native string semantics.
+---Empty, long, ASCII-control and embedded-NUL keys are allowed, including indirect targets.
 ---@param context table<string, any>|nil Callback data for context/var references.
 ---@param actor GameHandle|nil Explicit owner for actor references.
 ---@param scope 'u'|'npc'|'global'|'context'|'var'
----@param key string Native GameHandle/global key, or a bounded callback-context lookup key by scope.
+---@param key string Raw native storage key for the selected scope.
 ---@return CcbVariableReadResult
 ---@param participants {alpha: GameHandle?, beta: GameHandle?}?
 function CcbVariablesApi.resolve(context, actor, scope, key, participants) end
@@ -11035,14 +11034,13 @@ function CcbVariablesApi.resolve(context, actor, scope, key, participants) end
 ---resolve returns exists=true,value=nil for that explicit empty value.
 ---Native u/npc/global targets, including var-indirection targets ending there, preserve top-level string bytes.
 ---Context writes and nested array strings retain the existing bounded diag-value conversion.
----Context and var lookup keys must be 1..128 bytes without ASCII controls or NUL. Native GameHandle/global keys,
----including targets reached through var indirection, use native storage key semantics. A var target that
----resolves to callback context remains subject to the context-key limit.
+---All lookup keys, including callback context and var references, use raw native string semantics.
+---Empty, long, ASCII-control and embedded-NUL keys are allowed, including indirect targets.
 ---When include_before is false, the prior snapshot is omitted for every scope, including context.
 ---@param context table<string, any>|nil
 ---@param actor GameHandle|nil Explicit owner, including indirect actor references.
 ---@param scope 'u'|'npc'|'global'|'context'|'var'
----@param key string Native GameHandle/global key, or a bounded callback-context lookup key by scope.
+---@param key string Raw native storage key for the selected scope.
 ---@param value boolean|number|string|TripointCoord|NullValue|any[]|nil
 ---@return CcbResult result `value` contains existed and after; before is present by default and omitted when include_before=false.
 ---@param participants {alpha: GameHandle?, beta: GameHandle?}? Same participant selection as resolve.

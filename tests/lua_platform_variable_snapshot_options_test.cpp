@@ -3,17 +3,21 @@
 #include <cstddef>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "avatar.h"
 #include "cata_catch.h"
 #include "character_id.h"
 #include "debug.h"
+#include "dialogue.h"
+#include "dialogue_helpers.h"
 #include "global_vars.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_sol.h"
 #include "lua_platform_variables.h"
 #include "math_parser_diag_value.h"
+#include "talker.h"
 #include "type_id.h"
 
 namespace
@@ -86,6 +90,71 @@ diag_value oversized_native_array()
 }
 
 } // namespace
+
+TEST_CASE( "lua_platform_context_keys_match_native_variable_storage",
+           "[lua][platform][semantic][variables]" )
+{
+    variable_snapshot_fixture fixture;
+    avatar player;
+    const sol::protected_function resolve = fixture.variables["resolve"];
+    const sol::protected_function set_resolved = fixture.variables["set_resolved"];
+    const sol::object null_value = fixture.services["types"]["null"];
+    const std::vector<std::string> keys = {
+        "", std::string( 300, 'k' ), std::string( "raw\0key", 7 ), "\n\t\x7f原生键"
+    };
+    for( const std::string &key : keys ) {
+        INFO( key.size() );
+        dialogue native( get_talker_for( player ), nullptr );
+        sol::table context = fixture.lua.create_table();
+        const var_info direct{ var_type::context, key };
+        const sol::table missing = require_result_value(
+                                      resolve( context, sol::nil, "context", key ) );
+        CHECK_FALSE( missing["exists"].get<bool>() );
+        CHECK( maybe_read_var_value( direct, native ) == nullptr );
+
+        native.set_value( key, "before" );
+        context.raw_set( key, "before" );
+        const sol::table direct_result = require_result_value(
+                                            resolve( context, sol::nil, "context", key ) );
+        REQUIRE( maybe_read_var_value( direct, native ) != nullptr );
+        CHECK( direct_result["exists"].get<bool>() );
+        CHECK( direct_result["value"].get<std::string>() ==
+               read_var_value( direct, native ).str() );
+
+        const std::string pointer = std::string( "pointer\0", 8 ) + key;
+        native.set_value( pointer, "_" + key );
+        context.raw_set( pointer, "_" + key );
+        const var_info indirect{ var_type::var, pointer };
+        const sol::table indirect_result = require_result_value(
+                                              resolve( context, sol::nil, "var", pointer ) );
+        CHECK( indirect_result["exists"].get<bool>() );
+        CHECK( indirect_result["value"].get<std::string>() ==
+               read_var_value( indirect, native ).str() );
+
+        native.set_value( key, "after" );
+        const sol::table updated = require_result_value(
+                                      set_resolved( context, sol::nil, "var", pointer, "after" ) );
+        CHECK( updated["existed"].get<bool>() );
+        CHECK( updated["before"].get<std::string>() == "before" );
+        CHECK( context.raw_get<std::string>( key ) == read_var_value( direct, native ).str() );
+
+        native.set_value( key, diag_value{} );
+        require_result_value( set_resolved( context, sol::nil, "context", key, null_value ) );
+        const sol::table empty = require_result_value(
+                                    resolve( context, sol::nil, "context", key ) );
+        REQUIRE( maybe_read_var_value( direct, native ) != nullptr );
+        CHECK( read_var_value( direct, native ).is_empty() );
+        CHECK( empty["exists"].get<bool>() );
+        CHECK( empty["value"].get<sol::object>().get_type() == sol::type::nil );
+
+        native.remove_value( key );
+        require_result_value( set_resolved( context, sol::nil, "context", key, sol::nil ) );
+        const sol::table removed = require_result_value(
+                                      resolve( context, sol::nil, "context", key ) );
+        CHECK_FALSE( removed["exists"].get<bool>() );
+        CHECK( maybe_read_var_value( direct, native ) == nullptr );
+    }
+}
 
 TEST_CASE( "lua_platform_global_string_query_preserves_native_type_semantics",
            "[lua][platform][semantic][variables]" )
