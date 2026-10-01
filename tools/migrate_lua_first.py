@@ -877,7 +877,7 @@ def render_proficiency_id_expression(
         return lua_quote(value)
     if not isinstance(value, dict):
         return None
-    scopes = {"global_val", "context_val", "u_val", "npc_val"} & set(value)
+    scopes = {"global_val", "context_val", "u_val", "npc_val", "var_val"} & set(value)
     if len(scopes) != 1 or set(value) - scopes - {"default"}:
         return None
     scope = next(iter(scopes))
@@ -886,6 +886,30 @@ def render_proficiency_id_expression(
     if not (lua_quotable_native_variable_string(name) and
             lua_quotable_native_variable_string(fallback)):
         return None
+    if scope == "var_val":
+        # Native process_variable resolves one context-held pointer to either
+        # alpha, beta, context or global storage.  A dynamic pointer must not
+        # invent an owner proof for either dialogue participant.
+        if alpha_owner is None or beta_owner is None:
+            return None
+        return (
+            '(function(pointer) if pointer.exists == false then return ' + lua_quote(fallback) +
+            ' end; local key = pointer.value; local result; '
+            'if string.sub(key, 1, 2) == "u_" then '
+            'result = service_value(services.variables.get_string(' + alpha_owner +
+            ', string.sub(key, 3))); '
+            'elseif string.sub(key, 1, 2) == "n_" then '
+            'result = service_value(services.variables.get_string(' + beta_owner +
+            ', string.sub(key, 3))); '
+            'elseif string.sub(key, 1, 1) == "_" then '
+            'result = service_value(services.variables.get_context_string('
+            'context and context.data, string.sub(key, 2))); '
+            'else result = service_value(services.variables.get_global_string(key)); end; '
+            'if result.exists == false then return ' + lua_quote(fallback) +
+            ' end; return result.value end)'
+            '(service_value(services.variables.get_context_string('
+            'context and context.data, ' + lua_quote(name) + ')))'
+        )
     if scope == "context_val":
         read = (
             'service_value(services.variables.get_context_string('

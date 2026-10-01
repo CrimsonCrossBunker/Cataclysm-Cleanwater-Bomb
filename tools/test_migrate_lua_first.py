@@ -3428,7 +3428,7 @@ assert(observed[#observed] == 'KNOWN')
             beta_expression,
         )
         for unsupported in (
-            {"npc_has_proficiency": {"var_val": "prof_id"}},
+            {"npc_has_proficiency": {"var_val": "prof_id", "default": False}},
             {"npc_has_proficiency": "prof_knapping", "extra": True},
         ):
             self.assertIsNone(
@@ -4152,6 +4152,108 @@ assert(observed_effects[1] == 11 and observed_effects[2] == 22)
                              capture_output=True, timeout=10)
         self.assertEqual(run.returncode, 0, run.stderr)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_proficiency_indirect_ids_preserve_native_pointer_resolution(self) -> None:
+        pointer_key = "\0指针" + "x" * 300
+        target_key = "\0目标" + "y" * 300
+        for prefix in ("u_", "npc_"):
+            with self.subTest(receiver=prefix):
+                expression = migrate_lua_first.render_eoc_condition_expression(
+                    {prefix + "has_proficiency": {
+                        "var_val": pointer_key, "default": "fallback-prof",
+                    }}, npc_melee_beta_actor_proven=True,
+                )
+                self.assertIsNotNone(expression)
+                source = migrate_lua_first.SourceObject(Path("indirect_proficiency.json"), 0, {
+                    "type": "effect_on_condition", "id": "indirect_proficiency",
+                    "eoc_type": "EVENT", "required_event": "character_melee_attacks_character",
+                    "condition": {prefix + "has_proficiency": {
+                        "var_val": pointer_key, "default": "fallback-prof",
+                    }}, "effect": "nothing",
+                })
+                result = migrate_lua_first.MigrationResult()
+                rendered = migrate_lua_first.render_eoc(source, result)
+                self.assertFalse(result.todos, [todo.message for todo in result.todos])
+                self.assertIn("services.variables.get_context_string", rendered)
+                self.assertIn("services.variables.get_global_string(key)", rendered)
+                script = r"""
+local pointer_key, target_key = POINTER_KEY, TARGET_KEY
+local alpha, beta = {kind='creature', subtype='avatar'}, {kind='creature', subtype='npc'}
+alpha.is_valid=function() return true end
+beta.is_valid=function() return true end
+local actor = alpha
+local context = {data={}, actors={interlocutor=beta}}
+local alpha_values, beta_values, globals = {}, {}, {}
+local null = {}
+local last_id, last_owner, read_count = nil, nil, 0
+local fail_owner = false
+local function string_read(data, key, owner)
+    read_count = read_count + 1
+    last_owner = owner
+    local value = data and rawget(data, key)
+    return {ok=true, value={exists=value~=nil,
+        value=type(value)=='string' and value or (value~=nil and '' or nil)}}
+end
+local services = {
+    variables = {
+        get_context_string=function(data, key) return string_read(data, key, 'context') end,
+        get_global_string=function(key) return string_read(globals, key, 'global') end,
+        get_string=function(owner, key)
+            if fail_owner then return {ok=false, error='stale_runtime'} end
+            assert(owner==alpha or owner==beta)
+            return string_read(owner==alpha and alpha_values or beta_values, key, owner)
+        end,
+    },
+    proficiencies = {has_id_text=function(owner, id)
+        assert(owner==(PREFIX=='u_' and alpha or beta))
+        last_id=id
+        return {ok=true, value=id=='known-prof' or id=='global-empty-prof'}
+    end},
+}
+local function service_value(result) assert(result.ok, result.error); return result.value end
+local function condition() return EXPRESSION end
+local function check(pointer, storage, expected_owner, key, value, expected_id, expected_result)
+    context.data[pointer_key]=pointer
+    storage[key]=value
+    local before=read_count
+    assert(condition()==expected_result)
+    assert(last_id==expected_id and last_owner==expected_owner)
+    assert(read_count==before+2)
+end
+for _, entry in ipairs({
+    {'u_'..target_key, alpha_values, alpha},
+    {'n_'..target_key, beta_values, beta},
+    {'_'..target_key, context.data, 'context'},
+    {target_key, globals, 'global'},
+    {'var_'..target_key, globals, 'global'},
+}) do
+    local pointer, storage, owner = entry[1], entry[2], entry[3]
+    local key=pointer:sub(1,4)=='var_' and pointer or target_key
+    check(pointer, storage, owner, key, 'known-prof', 'known-prof', true)
+    check(pointer, storage, owner, key, nil, 'fallback-prof', false)
+    check(pointer, storage, owner, key, '', '', false)
+    check(pointer, storage, owner, key, null, '', false)
+    check(pointer, storage, owner, key, 31, '', false)
+    check(pointer, storage, owner, key, string.char(0)..'raw-prof', string.char(0)..'raw-prof', false)
+    check(pointer, storage, owner, key, string.rep('x',10000), string.rep('x',10000), false)
+end
+local before=read_count
+context.data[pointer_key]=nil
+assert(not condition() and last_id=='fallback-prof' and read_count==before+1)
+-- An empty or incompatible pointer resolves global's empty key; it is present.
+for _, pointer in ipairs({'', null, 42, false}) do
+    check(pointer, globals, 'global', '', 'global-empty-prof', 'global-empty-prof', true)
+end
+context.data[pointer_key]='u_'..target_key
+fail_owner=true
+assert(not pcall(condition)) -- A handle error must not become a missing-value default.
+""".replace("POINTER_KEY", migrate_lua_first.lua_quote(pointer_key)).replace(
+                    "TARGET_KEY", migrate_lua_first.lua_quote(target_key)).replace(
+                    "PREFIX", migrate_lua_first.lua_quote(prefix)).replace("EXPRESSION", expression or "")
+                run = subprocess.run(["lua", "-"], input=script, text=True,
+                                     capture_output=True, timeout=10)
+                self.assertEqual(run.returncode, 0, run.stderr)
+
     def test_proficiency_variable_ids_keep_unproven_frames_and_owners_as_todo(self) -> None:
         for prefix in ("u_", "npc_"):
             for descriptor in ({"global_val": "id"}, {"context_val": "id"}):
@@ -4308,8 +4410,8 @@ assert(calls == 1)
                 {"npc_has_proficiency": "prof_knapping"}, {},
             ),
             (
-                "dynamic_proficiency_id", "character_melee_attacks_character",
-                {"npc_has_proficiency": {"var_val": "prof_id"}}, {},
+                "referenced_indirect_proficiency_id", "character_melee_attacks_character",
+                {"npc_has_proficiency": {"var_val": "prof_id"}}, {"referenced": True},
             ),
             (
                 "referenced_melee_proficiency", "character_melee_attacks_character",
