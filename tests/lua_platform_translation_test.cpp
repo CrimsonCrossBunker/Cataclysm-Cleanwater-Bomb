@@ -62,16 +62,16 @@ TEST_CASE( "lua_platform_translation_fallback_and_lifetime",
         assert(ccb.services.translate_plural(one, many, 0) == many)
         assert(ccb.services.translate_plural(one, many, 2, "ccb regression context") == many)
         assert(not pcall(ccb.services.translate_plural, one, many, -1))
-        assert(not pcall(ccb.services.translate, "a\0b", "ccb regression context"))
-        assert(not pcall(ccb.services.translate, one, "a\0b"))
+        assert(ccb.services.translate("a\0b", "ccb regression context") == "a")
+        assert(ccb.services.translate(one, "a\0b") == one)
         assert(not pcall(ccb.services.translate_plural, one, "a\0b", 2))
         assert(not pcall(ccb.services.translate_plural, one, many, 2, "a\0b"))
     )" );
     const sol::protected_function translate = ccb["services"]["translate"];
     for( const std::string &text : std::vector<std::string> {
-             "", std::string( 1, '\0' ),
+             "", "ccb translation raw regression 1901", std::string( 1, '\0' ),
              std::string( "ccb translation NUL regression 1901" ) + '\0' + "suffix" + '\0' + "tail",
-             std::string( 10000, 'x' ) + '\0' + "tail"
+             std::string( 10000, 'x' ), std::string( 10000, 'x' ) + '\0' + "tail"
          } ) {
         const sol::protected_function_result result = translate( text );
         REQUIRE( result.valid() );
@@ -81,6 +81,20 @@ TEST_CASE( "lua_platform_translation_fallback_and_lifetime",
 #else
         CHECK( result.get<std::string>() == text );
 #endif
+        for( const std::string &context : std::vector<std::string> {
+                 "", std::string( 1, '\0' ), "ccb regression context 1901",
+                 std::string( "ccb regression context 1901" ) + '\0' + "ignored suffix",
+                 std::string( 10000, 'y' ), "CCB 翻译上下文 1901"
+             } ) {
+            CAPTURE( text.size(), context.size() );
+            const sol::protected_function_result contextual_result = translate( text, context );
+            REQUIRE( contextual_result.valid() );
+            CHECK( contextual_result.get<std::string>() ==
+                   translation::to_translation( context, text ).translated() );
+            // pgettext accepts const char*, including in LOCALIZE-off builds;
+            // contextual source bytes after NUL never reach that function.
+            CHECK( contextual_result.get<std::string>() == text.substr( 0, text.find( '\0' ) ) );
+        }
     }
     run( R"(
         local format = ccb.services.format
@@ -110,6 +124,7 @@ TEST_CASE( "lua_platform_translation_fallback_and_lifetime",
     run( R"(
         assert(not pcall(ccb.services.format, "%s", {"after world unload"}))
         assert(not pcall(ccb.services.translate, "after world unload"))
+        assert(not pcall(ccb.services.translate, "", "context\0suffix"))
         assert(not pcall(ccb.services.translate_plural, "one", "many", 2))
     )" );
 }

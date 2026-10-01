@@ -2109,7 +2109,10 @@ assert(#trace==(selected==4 and 4 or 3))
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_set_string_translated_variable_defaults_are_lazy_and_stored_bytes_are_raw(self) -> None:
         for present_value in (None, "", "stored\0raw"):
-            for default in ("fallback", {"str": "fallback", "ctxt": "scope"}, None, 42):
+            for default in ("fallback", {"str": "fallback", "ctxt": "scope"}, None, 42,
+                            {"str": "", "ctxt": "scope\0suffix"},
+                            {"str": "fallback\0raw", "ctxt": "scope\0suffix"},
+                            {"str": "f" * 10000, "ctxt": "c" * 10000}):
                 lines = migrate_lua_first.render_static_character_string_var({
                     "set_string_var": {"u_val": "source", "default": default},
                     "target_var": {"u_val": "source"}, "i18n": True,
@@ -2123,7 +2126,7 @@ local trace={}
 local function service_value(r) assert(r.ok);return r.value end
 local services={random={native_int=function(lo,hi) assert(lo==0 and hi==0);table.insert(trace,'rng');return 0 end},
  translate=function(text,ctxt)
-  assert(value==nil and text=='fallback' and ctxt==CONTEXT)
+  assert(value==nil and text==RAW and ctxt==CONTEXT)
   table.insert(trace,'translate');return 'translated'
  end,variables={get_string=function(owner,key)
   assert(owner==actor and key=='source');table.insert(trace,'read')
@@ -2135,8 +2138,9 @@ local services={random={native_int=function(lo,hi) assert(lo==0 and hi==0);table
 BODY
 assert(table.concat(trace,',')==TRACE)
 """.replace("VALUE", "nil" if present_value is None else migrate_lua_first.lua_quote(present_value)).replace(
-                    "CONTEXT", migrate_lua_first.lua_quote("scope") if isinstance(default, dict) else "nil",
-                ).replace("EXPECTED", migrate_lua_first.lua_quote(
+                    "CONTEXT", migrate_lua_first.lua_quote(default["ctxt"]) if isinstance(default, dict) else "nil",
+                ).replace("RAW", migrate_lua_first.lua_quote(translated_default)).replace(
+                    "EXPECTED", migrate_lua_first.lua_quote(
                     present_value if present_value is not None else "translated" if translated_default else "",
                 )).replace("TRACE", migrate_lua_first.lua_quote(
                     "rng,read,translate,write" if present_value is None and translated_default else "rng,read,write",
@@ -2144,6 +2148,76 @@ assert(table.concat(trace,',')==TRACE)
                 run = subprocess.run(["lua", "-"], input=script, text=True,
                                      capture_output=True, timeout=10)
                 self.assertEqual(run.returncode, 0, run.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_set_string_contextual_literals_preserve_raw_arguments_and_selected_lookup(self) -> None:
+        for text in ("", "\0", "source\0suffix", "source", "s" * 10000):
+            for translation_context in ("", "\0", "scope\0suffix", "CCB 翻译", "c" * 10000):
+                lines = migrate_lua_first.render_static_character_string_var({
+                    "set_string_var": ["must not translate", {
+                        "str": text, "ctxt": translation_context, "//~": "translator note",
+                    }], "target_var": {"global_val": "output"}, "i18n": True,
+                }, {})
+                self.assertIsNotNone(lines)
+                script = r"""
+local trace={}
+local function service_value(r) assert(r.ok);return r.value end
+local services={random={native_int=function(lo,hi)
+ assert(lo==0 and hi==1);table.insert(trace,'rng');return 1
+end},translate=function(text,ctxt)
+ assert(text==RAW and ctxt==CONTEXT and trace[1]=='rng')
+ table.insert(trace,'translate');return 'native result\0raw'
+end,variables={set_global=function(key,value)
+ assert(key=='output' and value==EXPECTED);table.insert(trace,'write')
+ return {ok=true,value={}}
+end}}
+BODY
+assert(table.concat(trace,',')==TRACE)
+""".replace("RAW", migrate_lua_first.lua_quote(text)).replace(
+                    "CONTEXT", migrate_lua_first.lua_quote(translation_context),
+                ).replace("EXPECTED", migrate_lua_first.lua_quote("native result\0raw" if text else "")).replace(
+                    "TRACE", migrate_lua_first.lua_quote("rng,translate,write" if text else "rng,write"),
+                ).replace("BODY", "\n".join(lines or []))
+                run = subprocess.run(["lua", "-"], input=script, text=True,
+                                     capture_output=True, timeout=10)
+                self.assertEqual(run.returncode, 0, run.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_set_string_contextual_input_translates_at_native_caption_stages(self) -> None:
+        text, translation_context = "caption\0raw", "scope\0suffix"
+        lines = migrate_lua_first.render_static_character_string_var({
+            "set_string_var": "selected", "target_var": {"global_val": "output"},
+            "string_input": {
+                "title": {"str": text, "ctxt": translation_context},
+                "default_text": {"str": "", "ctxt": translation_context},
+                "description": {"str": "d" * 10000, "ctxt": translation_context},
+            },
+        }, {})
+        self.assertIsNotNone(lines)
+        script = r"""
+local trace={}
+local calls=0
+local function service_value(r) assert(r.ok);return r.value end
+local services={random={native_int=function()table.insert(trace,'rng');return 0 end},
+ translate=function(text,ctxt)
+  assert(ctxt==CONTEXT);calls=calls+1;table.insert(trace,'translate')
+  assert(text==(calls<=2 and RAW or string.rep('d',10000)))
+  return calls<=2 and 'caption'..calls or 'description'
+ end,interaction={input_text=function(title,options)
+  table.insert(trace,'open');assert(calls==1 and options.default=='' and options.width_text=='caption1')
+  assert(title()=='caption2' and options.description()=='description' and options.identifier()=='')
+  table.insert(trace,'cancel');return {accepted=false,cancelled=true,value=''}
+ end},variables={set_global=function(key,value)
+  assert(key=='output' and value=='selected');table.insert(trace,'write');return {ok=true,value={}}
+ end}}
+BODY
+assert(table.concat(trace,',')=='rng,translate,open,translate,translate,cancel,write')
+""".replace("RAW", migrate_lua_first.lua_quote(text)).replace(
+            "CONTEXT", migrate_lua_first.lua_quote(translation_context),
+        ).replace("BODY", "\n".join(lines or []))
+        run = subprocess.run(["lua", "-"], input=script, text=True,
+                             capture_output=True, timeout=10)
+        self.assertEqual(run.returncode, 0, run.stderr)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_set_string_raw_values_and_keys_do_not_use_old_literal_limits(self) -> None:

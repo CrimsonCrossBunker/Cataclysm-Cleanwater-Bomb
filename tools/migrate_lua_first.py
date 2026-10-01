@@ -27753,9 +27753,8 @@ def _render_assignment_translation_literal(value: Any) -> str | None:
         return None
     if not lua_quotable_native_variable_string(text):
         return None
-    if translation_context is not None and (
-            not lua_quotable_native_variable_string(translation_context) or
-            "\0" in translation_context or "\0" in text):
+    if translation_context is not None and not lua_quotable_native_variable_string(
+            translation_context):
         return None
     # Native translation::translated never consults the catalog for empty raw.
     if not text:
@@ -27797,8 +27796,8 @@ def _render_assignment_string_value(
             fallback = _render_assignment_translation_literal(default)
             if fallback is None:
                 # Native invalid translation defaults clear the optional;
-                # supported translation objects with unsupported context/NUL
-                # or loader diagnostics must remain an explicit gap.
+                # Translation objects with unsupported loader shapes or
+                # diagnostics must remain an explicit gap.
                 if isinstance(default, str) or isinstance(default, dict) and (
                         "str" in default or "str_sp" in default):
                     return None

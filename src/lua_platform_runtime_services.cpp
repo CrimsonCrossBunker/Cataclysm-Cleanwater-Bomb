@@ -2175,14 +2175,9 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
             // disabled localization preserves the complete source bytes.
             return to_translation( text ).translated();
         }
-        require_translation_text( text );
-        require_translation_text( *context );
-#if defined(LOCALIZE)
-        TranslationManager &manager = TranslationManager::GetInstance();
-        return manager.TranslateWithContext( context->c_str(), text.c_str() );
-#else
-        return text;
-#endif
+        // Native contextual translation skips empty raw text and passes
+        // C-string prefixes to pgettext even with localization disabled.
+        return translation::to_translation( *context, text ).translated();
     } );
     services.set_function( "translate_plural", [weak]( const std::string & singular,
                            const std::string & plural, const std::int64_t count,
