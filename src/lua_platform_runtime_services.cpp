@@ -697,9 +697,6 @@ int set_platform_furniture( const tripoint_abs_ms &absolute,
     const int radius = static_cast<int>( truncated_radius );
 
     map &here = get_map();
-    if( absolute.z() != here.get_abs_sub().z() ) {
-        return 0;
-    }
     const tripoint_abs_ms bubble_origin = here.get_abs( tripoint_bub_ms::zero );
     const std::int64_t local_x = static_cast<std::int64_t>( absolute.x() ) - bubble_origin.x();
     const std::int64_t local_y = static_cast<std::int64_t>( absolute.y() ) - bubble_origin.y();
@@ -714,10 +711,10 @@ int set_platform_furniture( const tripoint_abs_ms &absolute,
                                   static_cast<int>( local_y ), absolute.z() );
     const float circle_radius = static_cast<float>( radius ) + 0.5f;
     int accepted_tiles = 0;
-    // The legacy effect enumerates its whole requested range, then lets the map
-    // reject off-map squares. Iterate only the active map to avoid radius-squared
-    // work and never load a different map or z-level as a side effect.
-    for( const tripoint_bub_ms &destination : here.points_on_zlevel() ) {
+    // The legacy effect enumerates the requested XY range on the target z-level,
+    // then lets the map reject out-of-bounds squares. Iterate only that map plane
+    // to avoid radius-squared work and never load another map or z-level.
+    for( const tripoint_bub_ms &destination : here.points_on_zlevel( absolute.z() ) ) {
         const std::int64_t dx = static_cast<std::int64_t>( destination.x() ) - center.x();
         const std::int64_t dy = static_cast<std::int64_t>( destination.y() ) - center.y();
         if( dx < -radius || dx > radius || dy < -radius || dy > radius ) {
@@ -772,9 +769,6 @@ int set_platform_terrain( const tripoint_abs_ms &absolute,
     const int radius = static_cast<int>( truncated_radius );
 
     map &here = get_map();
-    if( absolute.z() != here.get_abs_sub().z() ) {
-        return 0;
-    }
     const tripoint_abs_ms bubble_origin = here.get_abs( tripoint_bub_ms::zero );
     const std::int64_t local_x = static_cast<std::int64_t>( absolute.x() ) - bubble_origin.x();
     const std::int64_t local_y = static_cast<std::int64_t>( absolute.y() ) - bubble_origin.y();
@@ -789,9 +783,9 @@ int set_platform_terrain( const tripoint_abs_ms &absolute,
                                   static_cast<int>( local_y ), absolute.z() );
     const float circle_radius = static_cast<float>( radius ) + 0.5f;
     int changed_tiles = 0;
-    // Match the native neighborhood on the active map z-level, without loading
+    // Match the native neighborhood on the target map z-level, without loading
     // another map. ter_set handles bounds and the avoid_creatures option.
-    for( const tripoint_bub_ms &destination : here.points_on_zlevel() ) {
+    for( const tripoint_bub_ms &destination : here.points_on_zlevel( absolute.z() ) ) {
         const std::int64_t dx = static_cast<std::int64_t>( destination.x() ) - center.x();
         const std::int64_t dy = static_cast<std::int64_t>( destination.y() ) - center.y();
         if( dx < -radius || dx > radius || dy < -radius || dy > radius ) {

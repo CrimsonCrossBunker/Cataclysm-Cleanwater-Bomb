@@ -227,6 +227,7 @@ TEST_CASE( "lua_platform_environment_set_furniture_matches_bounded_map_semantics
     clear_map_without_vision();
     clear_avatar();
     sol::state lua;
+    lua.open_libraries( sol::lib::base );
     sol::table ccb = lua.create_table();
     const std::shared_ptr<runtime> owner = make_runtime( "environment_set_furniture", 4904, lua );
     on_out_of_scope cleanup( []() {
@@ -259,9 +260,6 @@ TEST_CASE( "lua_platform_environment_set_furniture_matches_bounded_map_semantics
     const tripoint_abs_ms far_abs = here.get_abs( far_center );
     const tripoint_abs_ms unloaded_z_abs(
         center_abs.x(), center_abs.y(), std::numeric_limits<int>::max() );
-    const int active_z = here.get_abs_sub().z();
-    const int inactive_z = active_z == -OVERMAP_DEPTH ? active_z + 1 : active_z - 1;
-    const tripoint_abs_ms inactive_z_abs( center_abs.x(), center_abs.y(), inactive_z );
     lua["center_position"] = script_tripoint_coord::from_native(
                                  coords::origin::abs, coords::scale::map_square, center_abs.raw() );
     lua["actor_position"] = script_tripoint_coord::from_native(
@@ -271,29 +269,64 @@ TEST_CASE( "lua_platform_environment_set_furniture_matches_bounded_map_semantics
     lua["unloaded_z_position"] = script_tripoint_coord::from_native(
                                      coords::origin::abs, coords::scale::map_square,
                                      unloaded_z_abs.raw() );
-    lua["inactive_z_position"] = script_tripoint_coord::from_native(
-                                     coords::origin::abs, coords::scale::map_square,
-                                     inactive_z_abs.raw() );
-    lua["clear_furniture_id"] = furn_str_id::NULL_ID().str();
+    const std::string clear_furniture_id = furn_str_id::NULL_ID().str();
+    lua["clear_furniture_id"] = clear_furniture_id;
 
     REQUIRE( furn_test_f_eoc.is_valid() );
     REQUIRE( here.furn_set( actor_bubble, furn_test_f_eoc.id() ) );
     REQUIRE( here.furn_set( center, furn_test_f_eoc.id() ) );
     REQUIRE( here.furn_set( edge, furn_test_f_eoc.id() ) );
     REQUIRE( here.furn_set( corner, furn_test_f_eoc.id() ) );
-    {
-        detail::callback_scope active_callback( *owner );
-        const sol::protected_function_result result = lua.safe_script(
-                    "assert(services.gameplay.environment.set_furniture("
-                    "inactive_z_position, clear_furniture_id, 0, false, false) == 0)",
-                    sol::script_pass_on_error );
-        if( !result.valid() ) {
-            const sol::error error = result;
-            INFO( error.what() );
+    if( !here.supports_zlevels() ) {
+        const std::string location_key = "lua_platform_set_furniture_z_semantics_center";
+        REQUIRE( get_globals().maybe_get_global_value( location_key ) == nullptr );
+        on_out_of_scope clear_location( [&]() {
+            get_globals().remove_global_value( location_key );
+        } );
+        const std::string effect_json =
+            R"({"set_furniture":")" + clear_furniture_id +
+            R"(","location":{"global_val":"lua_platform_set_furniture_z_semantics_center"},"radius":0})";
+        const auto run_native_effect_at_z = [&]( const int z ) {
+            get_globals().set_global_value( location_key,
+                                            here.get_abs( tripoint_bub_ms( center.x(), center.y(), z ) ) );
+            talk_effect_t native_effect;
+            native_effect.parse_sub_effect( json_loader::from_string( effect_json ).get_object(),
+                                            "lua_platform_set_furniture_z_semantics" );
+            dialogue native_context;
+            for( const talk_effect_fun_t &operation : native_effect.effects ) {
+                operation( native_context );
+            }
+            get_globals().remove_global_value( location_key );
+        };
+        for( const int z : { -OVERMAP_DEPTH, OVERMAP_HEIGHT, -OVERMAP_DEPTH - 1,
+                             OVERMAP_HEIGHT + 1 } ) {
+            const tripoint_bub_ms target( center.x(), center.y(), z );
+            lua["boundary_position"] = script_tripoint_coord::from_native(
+                                           coords::origin::abs, coords::scale::map_square,
+                                           here.get_abs( target ).raw() );
+            REQUIRE( here.furn_set( center, furn_test_f_eoc.id() ) );
+            run_native_effect_at_z( z );
+            const furn_id native_result = here.furn( center );
+            const int native_accepted = native_result == furn_str_id::NULL_ID().id() ? 1 : 0;
+
+            REQUIRE( here.furn_set( center, furn_test_f_eoc.id() ) );
+            sol::protected_function_result lua_result;
+            {
+                detail::callback_scope active_callback( *owner );
+                lua_result = lua.safe_script(
+                                 "return services.gameplay.environment.set_furniture("
+                                 "boundary_position, clear_furniture_id, 0, false, false)",
+                                 sol::script_pass_on_error );
+            }
+            if( !lua_result.valid() ) {
+                const sol::error error = lua_result;
+                INFO( error.what() );
+            }
+            REQUIRE( lua_result.valid() );
+            CHECK( lua_result.get<int>() == native_accepted );
+            CHECK( here.furn( center ) == native_result );
         }
-        REQUIRE( result.valid() );
     }
-    CHECK( here.furn( center ) == furn_test_f_eoc.id() );
     {
         detail::callback_scope active_callback( *owner );
         const sol::protected_function_result result = lua.safe_script( R"(
@@ -403,6 +436,7 @@ TEST_CASE( "lua_platform_environment_set_terrain_matches_native_eoc_area_semanti
     clear_map_without_vision();
     clear_avatar();
     sol::state lua;
+    lua.open_libraries( sol::lib::base );
     sol::table ccb = lua.create_table();
     const std::shared_ptr<runtime> owner = make_runtime( "environment_set_terrain", 4905, lua );
     on_out_of_scope cleanup( []() {
@@ -541,6 +575,52 @@ TEST_CASE( "lua_platform_environment_set_terrain_matches_native_eoc_area_semanti
                 const std::size_t index = static_cast<std::size_t>( ( dy + 2 ) * 5 + dx + 2 );
                 CHECK( here.ter( position ) == native_result[index] );
             }
+        }
+    }
+
+    if( !here.supports_zlevels() ) {
+        const ter_id original_terrain = here.ter( center );
+        on_out_of_scope restore_center_terrain( [&]() {
+            here.ter_set( center, original_terrain );
+        } );
+        const std::string z_effect_json =
+            R"({"set_terrain":"t_wall","location":{"global_val":"lua_platform_set_terrain_semantics_center"},"radius":0})";
+        for( const int z : { -OVERMAP_DEPTH, OVERMAP_HEIGHT, -OVERMAP_DEPTH - 1,
+                             OVERMAP_HEIGHT + 1 } ) {
+            const tripoint_bub_ms target( center.x(), center.y(), z );
+            lua["boundary_position"] = script_tripoint_coord::from_native(
+                                           coords::origin::abs, coords::scale::map_square,
+                                           here.get_abs( target ).raw() );
+
+            here.ter_set( center, ter_t_floor );
+            get_globals().set_global_value( location_key, here.get_abs( target ) );
+            talk_effect_t native_effect;
+            native_effect.parse_sub_effect( json_loader::from_string( z_effect_json ).get_object(),
+                                            "lua_platform_set_terrain_z_semantics" );
+            dialogue native_context;
+            for( const talk_effect_fun_t &operation : native_effect.effects ) {
+                operation( native_context );
+            }
+            get_globals().remove_global_value( location_key );
+            const ter_id native_result = here.ter( center );
+            const int native_changed = native_result == ter_t_wall.id() ? 1 : 0;
+
+            here.ter_set( center, ter_t_floor );
+            sol::protected_function_result lua_result;
+            {
+                detail::callback_scope active_callback( *owner );
+                lua_result = lua.safe_script(
+                                 "return services.gameplay.environment.set_terrain("
+                                 "boundary_position, terrain_id, 0, false, false)",
+                                 sol::script_pass_on_error );
+            }
+            if( !lua_result.valid() ) {
+                const sol::error error = lua_result;
+                INFO( error.what() );
+            }
+            REQUIRE( lua_result.valid() );
+            CHECK( lua_result.get<int>() == native_changed );
+            CHECK( here.ter( center ) == native_result );
         }
     }
 }
