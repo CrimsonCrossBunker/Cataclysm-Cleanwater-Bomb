@@ -933,11 +933,6 @@ bool context::roll_trial( const std::string &kind, const int difficulty,
 std::string context::expand_text( const std::string &text,
                                   const std::string &item_id ) const
 {
-    if( text.size() > 32768 || text.find( '\0' ) != std::string::npos ||
-        item_id.size() > 256 || item_id.find( '\0' ) != std::string::npos ) {
-        throw std::invalid_argument(
-            "dialogue text expansion exceeds its native string limit" );
-    }
     ::dialogue &d = require_state().dialogue_ref();
     const_talker empty_participant;
     const const_talker &speaker = d.has_alpha ? *d.const_actor( false ) :

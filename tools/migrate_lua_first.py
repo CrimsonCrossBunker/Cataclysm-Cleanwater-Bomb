@@ -27833,8 +27833,9 @@ def render_static_character_string_var(
     if target is None:
         return None
     if effect.get("parse_tags", False) is not False:
-        # Platform snippet/tag expansion draws from the runtime-local stream;
-        # native parse_tags expands snippets through the shared game RNG.
+        # expand_for uses native RNG but creates a fresh dialogue without the
+        # caller's context variables. Do not drop those variables or invent a
+        # live dialogue frame just to expand arbitrary source tags.
         return None
     i18n = effect.get("i18n", False)
     if not isinstance(i18n, bool):

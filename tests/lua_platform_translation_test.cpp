@@ -5,8 +5,11 @@
 #include "lua_platform_runtime_internal.h"
 #include "lua_platform_bindings_coords.h"
 #include "lua_platform_interaction.h"
+#include "lua_platform_dialogue.h"
 #include "npc.h"
 #include "npctalk.h"
+#include "rng.h"
+#include "text_snippets.h"
 #include "translation.h"
 #include "uilist.h"
 #include <memory>
@@ -224,6 +227,128 @@ TEST_CASE( "lua_platform_text_expansion_matches_native_dialogue_tags",
         CHECK( expanded.get<std::string>() == expected );
     }
 }
+TEST_CASE( "lua_platform_dialogue_text_preserves_raw_bytes_context_and_native_rng",
+           "[lua][platform][dialogue][messages][semantic]" )
+{
+    namespace platform = cata::lua_platform;
+    platform::clear_active_runtimes();
+    restore_on_out_of_scope restore_snippets( SNIPPET );
+    SNIPPET = snippet_library{};
+    SNIPPET.load_snippet( json_loader::from_string( R"({
+        "category":"<ccb_text_raw_4851>",
+        "text":["<context_val:ctx>","<u_val:label>","<npc_val:label>"]
+    })" ).get_object(), "lua_dialogue_text_test" );
+    const auto saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
+    const on_out_of_scope restore_rng( [saved_rng]() {
+        rng_get_engine() = saved_rng;
+    } );
+    avatar alpha;
+    npc beta;
+    alpha.normalize();
+    beta.normalize();
+    alpha.setID( character_id( 4851 ), true );
+    beta.setID( character_id( 4852 ), true );
+    platform::register_npc_handle_identity( beta );
+    const on_out_of_scope retire_beta( [&]() {
+        platform::retire_npc_handle_identity( beta );
+    } );
+    alpha.set_value( "label", "alpha label" );
+    beta.set_value( "label", "beta label" );
+    alpha.set_value( "tag_key", "ctx" );
+    ::dialogue conversation( get_talker_for( alpha ), get_talker_for( beta ) );
+    const std::string raw_key = std::string( 1000, 'k' ) + '\0' + "tail";
+    const std::string raw_value = std::string( 40000, 'v' ) + '\0' + "tail";
+    conversation.set_value( "ctx", "context label" );
+    conversation.set_value( "number", 42.0 );
+    conversation.set_value( "null", diag_value{} );
+    conversation.set_value( raw_key, raw_value );
+    sol::state lua;
+    lua.open_libraries( sol::lib::base );
+    sol::table ccb = lua.create_table();
+    const auto runtime = platform::make_runtime( "dialogue_text_raw", 4853, lua );
+    const on_out_of_scope cleanup_runtime( []() {
+        platform::clear_active_runtimes();
+    } );
+    platform::install_runtime_api( runtime, lua, ccb );
+    platform::set_active_runtimes( { runtime } );
+    platform::runtime_world_ready( true );
+    const auto runtime_identity = platform::detail::runtime_handle_identity( runtime );
+    const std::size_t world_generation = platform::runtime_world_generation();
+    platform::dialogue::begin_session( conversation, runtime_identity, world_generation );
+    const on_out_of_scope retire_session( [&]() {
+        platform::dialogue::end_session( conversation );
+    } );
+    const std::string topic = "TALK_CCB_TEXT_RAW";
+    const auto session = platform::dialogue::session_for(
+                             conversation, topic, runtime_identity, world_generation );
+    platform::dialogue::context context(
+        lua.lua_state(), conversation, topic, false,
+        "dialogue text context is stale", {}, session, runtime_identity, world_generation );
+    REQUIRE( context.valid() );
+    const sol::protected_function_result loaded = lua.safe_script(
+                "return function(ctx,text,item) return ctx:expand_text(text,item) end",
+                sol::script_pass_on_error );
+    REQUIRE( loaded.valid() );
+    const sol::protected_function expand = loaded.get<sol::protected_function>();
+    const std::vector<std::string> texts = {
+        "", std::string( 40000, 'x' ),
+        std::string( "before\0", 7 ) + "<context_val:ctx>" + '\0' + "after",
+        "<u_name> / <npc_name> / <u_val:label> / <npc_val:label>",
+        "<context_val:ctx> / <context_val:number> / <context_val:null> / <context_val:missing>",
+        "<context_val:<u_val:tag_key>>", "<context_val:" + raw_key + ">",
+        "<ccb_text_raw_4851> / <ccb_text_raw_4851>",
+        "<color_red><context_val:ctx></color> / <missing_ccb_text_raw_4851>"
+    };
+    for( const std::string &text : texts ) {
+        for( const std::string &item_id : std::vector<std::string> {
+                 "", "water", std::string( 300, 'i' ) + '\0' + "tail"
+             } ) {
+            for( const unsigned int seed : { 4854U, 4855U, 4856U } ) {
+                CAPTURE( text.size(), item_id.size(), seed );
+                std::string expected = text;
+                rng_set_engine_seed( seed );
+                const std::string native_diagnostic = capture_debugmsg_during( [&]() {
+                    parse_tags( expected, *conversation.const_actor( false ),
+                                *conversation.const_actor( true ), conversation,
+                                item_id.empty() ? itype_id::NULL_ID() : itype_id( item_id ) );
+                } );
+                const auto native_rng_after = rng_get_engine(); // NOLINT(cata-determinism)
+                rng_set_engine_seed( seed );
+                std::string actual;
+                const std::string platform_diagnostic = capture_debugmsg_during( [&]() {
+                    const sol::protected_function_result result = expand( context, text, item_id );
+                    REQUIRE( result.valid() );
+                    actual = result.get<std::string>();
+                } );
+                CHECK( actual == expected );
+                CHECK( platform_diagnostic == native_diagnostic );
+                CHECK( rng_get_engine() == native_rng_after );
+            }
+        }
+    }
+    const sol::protected_function_result context_value = expand( context, "<context_val:ctx>", "" );
+    REQUIRE( context_value.valid() );
+    CHECK( context_value.get<std::string>() == "context label" );
+    CHECK( conversation.get_value( raw_key ).str() == raw_value );
+    std::string item_text = "<topic_item>";
+    rng_set_engine_seed( 4857 );
+    parse_tags( item_text, *conversation.const_actor( false ),
+                *conversation.const_actor( true ), conversation, itype_id( "water" ) );
+    const auto item_rng_after = rng_get_engine(); // NOLINT(cata-determinism)
+    rng_set_engine_seed( 4857 );
+    const sol::protected_function_result item_expanded = expand( context, "<topic_item>", "water" );
+    REQUIRE( item_expanded.valid() );
+    CHECK( item_expanded.get<std::string>() == item_text );
+    CHECK( rng_get_engine() == item_rng_after );
+    const sol::protected_function_result omitted_item = expand( context, "<context_val:ctx>" );
+    REQUIRE( omitted_item.valid() );
+    CHECK( omitted_item.get<std::string>() == "context label" );
+    context.invalidate();
+    const auto before_stale = rng_get_engine(); // NOLINT(cata-determinism)
+    CHECK_FALSE( expand( context, "<ccb_text_raw_4851>", "" ).valid() );
+    CHECK( rng_get_engine() == before_stale );
+}
+
 TEST_CASE( "lua_platform_interaction_menu_preserves_native_rows_and_text",
            "[lua][platform][interaction]" )
 {

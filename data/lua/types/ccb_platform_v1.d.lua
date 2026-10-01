@@ -6533,8 +6533,9 @@ function PlatformDialogueContext:trial_chance(kind, difficulty, skill) end
 ---@return boolean
 function PlatformDialogueContext:roll_trial(kind, difficulty, skill) end
 
----@param text string
----@param item_id? string
+---@param text string Raw native text; empty, long and embedded-NUL bytes are passed to the native parser without an extra byte limit.
+---@param item_id? string Raw native item ID; omitted or empty means the native null ID. Native registration and diagnostic behavior is retained.
+---Expands snippets and tags once against this live dialogue, including its context variables, using the shared native RNG. Requires a valid context; does not write dialogue variables.
 ---@return string
 function PlatformDialogueContext:expand_text(text, item_id) end
 
