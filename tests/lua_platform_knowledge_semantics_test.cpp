@@ -444,6 +444,436 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
     REQUIRE( completed );
 }
 
+TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
+           "[lua][platform][proficiencies][semantic]" )
+{
+    cata::lua_platform::clear_active_runtimes();
+    avatar player;
+    npc partner;
+    player.normalize();
+    partner.normalize();
+    player.setID( character_id( 4321 ), true );
+    partner.setID( character_id( 4322 ), true );
+    cata::lua_platform::register_npc_handle_identity( partner );
+    const on_out_of_scope retire( [&]() {
+        cata::lua_platform::retire_npc_handle_identity( partner );
+    } );
+    dialogue conversation( get_talker_for( player ), get_talker_for( partner ) );
+    sol::state lua;
+    sol::table ccb = lua.create_table();
+    const auto runtime = cata::lua_platform::make_runtime( "proficiency_id_sources", 4323, lua );
+    const on_out_of_scope cleanup( []() {
+        cata::lua_platform::clear_active_runtimes();
+    } );
+    cata::lua_platform::install_runtime_api( runtime, lua, ccb );
+    cata::lua_platform::set_active_runtimes( { runtime } );
+    const proficiency_id &carving = proficiency_prof_carving;
+    player.add_proficiency( carving, true );
+    partner.add_proficiency( carving, true );
+    bool completed = false;
+    lua.set_function( "accept", [&]( const sol::table & ) {
+        const auto handle_for = [&]( Character & actor, bool is_npc ) {
+            return cata::lua_platform::game_handle::from_creature(
+                       actor, { is_npc ? "npc" : "avatar", actor.getID().get_value(), 0, 0, 0, {} },
+                       cata::lua_platform::detail::runtime_handle_identity( runtime ),
+                       cata::lua_platform::runtime_world_generation() );
+        };
+        const cata::lua_platform::game_handle alpha_handle = handle_for( player, false );
+        const cata::lua_platform::game_handle beta_handle = handle_for( partner, true );
+        sol::table services = ccb["services"];
+        const auto value_of = [&]( const sol::protected_function & function, const auto & ...args ) {
+            sol::protected_function_result result = function( args... );
+            REQUIRE( result.valid() );
+            sol::table wrapper = result;
+            REQUIRE( wrapper["ok"].get<bool>() );
+            return wrapper["value"].get<sol::object>();
+        };
+        const auto handle_for_selector = [&]( const std::string & selector )
+        -> const cata::lua_platform::game_handle & {
+            return selector == "npc" ? beta_handle : alpha_handle;
+        };
+        const auto make_literal_condition = [&]( const std::string & selector,
+        const std::string & id_text ) {
+            std::ostringstream source;
+            {
+                JsonOut json( source );
+                json.start_object();
+                json.member( selector + "_has_proficiency", id_text );
+                json.end_object();
+            }
+            return conditional_t( json_loader::from_string( source.str() ).get_object() );
+        };
+        const auto make_variable_condition = [&]( const std::string & selector,
+            const std::string & scope, const std::string & key, const std::string & default_id,
+        const bool with_default ) {
+            std::ostringstream source;
+            {
+                JsonOut json( source );
+                json.start_object();
+                json.member( selector + "_has_proficiency" );
+                json.start_object();
+                json.member( scope, key );
+                if( with_default ) {
+                    json.member( "default", default_id );
+                }
+                json.end_object();
+                json.end_object();
+            }
+            return conditional_t( json_loader::from_string( source.str() ).get_object() );
+        };
+        const auto compare_id = [&]( const std::string & selector, const conditional_t &condition,
+        const std::string & id_text ) {
+            const bool native = condition( conversation );
+            const bool platform = value_of( services["proficiencies"]["has_id_text"],
+                                            handle_for_selector( selector ), id_text ).as<bool>();
+            CAPTURE( selector, id_text );
+            CHECK( native == platform );
+            return native;
+        };
+        const std::vector<std::string> selectors = { "u", "npc" };
+        const std::string nul_id( "unknown\0proficiency", sizeof( "unknown\0proficiency" ) - 1 );
+        const std::vector<std::string> literal_ids = {
+            carving.str(), std::string(), std::string( "prof_unregistered_raw_test" ),
+            std::string( 10000, 'x' ), std::string( "无此熟练度" ), nul_id
+        };
+        for( const std::string &selector : selectors ) {
+            for( const std::string &id_text : literal_ids ) {
+                CAPTURE( selector, id_text );
+                const conditional_t condition = make_literal_condition( selector, id_text );
+                CHECK( compare_id( selector, condition, id_text ) == ( id_text == carving.str() ) );
+            }
+        }
+
+        // The native selectors query dialogue alpha for u_* and beta for
+        // npc_*; prove the two participants have distinct learned sets.
+        partner.lose_proficiency( carving );
+        CHECK( compare_id( "u", make_literal_condition( "u", carving.str() ), carving.str() ) );
+        CHECK_FALSE( compare_id( "npc", make_literal_condition( "npc", carving.str() ),
+                                 carving.str() ) );
+        player.lose_proficiency( carving );
+        partner.add_proficiency( carving, true );
+        CHECK_FALSE( compare_id( "u", make_literal_condition( "u", carving.str() ), carving.str() ) );
+        CHECK( compare_id( "npc", make_literal_condition( "npc", carving.str() ), carving.str() ) );
+        player.add_proficiency( carving, true );
+        partner.add_proficiency( carving, true );
+
+        sol::table context_values = lua.create_table();
+        const sol::object null_value = services["types"]["null"].get<sol::object>();
+        const std::vector<std::string> scopes = { "u_val", "npc_val", "global_val", "context_val" };
+        const auto set_scope_value = [&]( const std::string & scope, const std::string & key,
+        const diag_value & value, const sol::object & lua_value ) {
+            if( scope == "u_val" ) {
+                conversation.actor( false )->set_value( key, value );
+            } else if( scope == "npc_val" ) {
+                conversation.actor( true )->set_value( key, value );
+            } else if( scope == "global_val" ) {
+                get_globals().set_global_value( key, value );
+            } else {
+                conversation.set_value( key, value );
+                context_values.raw_set( key, lua_value );
+            }
+        };
+        const auto remove_scope_value = [&]( const std::string & scope, const std::string & key ) {
+            if( scope == "u_val" ) {
+                conversation.actor( false )->remove_value( key );
+            } else if( scope == "npc_val" ) {
+                conversation.actor( true )->remove_value( key );
+            } else if( scope == "global_val" ) {
+                get_globals().remove_global_value( key );
+            } else {
+                conversation.remove_value( key );
+                context_values[key] = sol::nil;
+            }
+        };
+        const auto read_scope = [&]( const std::string & scope, const std::string & key ) {
+            if( scope == "u_val" ) {
+                return value_of( services["variables"]["get_string"], alpha_handle, key ).as<sol::table>();
+            }
+            if( scope == "npc_val" ) {
+                return value_of( services["variables"]["get_string"], beta_handle, key ).as<sol::table>();
+            }
+            if( scope == "global_val" ) {
+                return value_of( services["variables"]["get_global_string"], key ).as<sol::table>();
+            }
+            return value_of( services["variables"]["get_context_string"], context_values,
+                             key ).as<sol::table>();
+        };
+        const auto compare_scope = [&]( const std::string & selector, const std::string & scope,
+                                        const std::string & key, const std::string & default_id, const bool with_default,
+        const bool expect_type_diagnostic = false ) {
+            const conditional_t condition = make_variable_condition( selector, scope, key,
+                default_id, with_default );
+            bool native = false;
+            std::string native_diagnostic;
+            if( expect_type_diagnostic ) {
+                native_diagnostic = capture_debugmsg_during( [&]() {
+                    native = condition( conversation );
+                } );
+                CHECK( native_diagnostic.find( "Type mismatch in diag_value" ) != std::string::npos );
+            } else {
+                native = condition( conversation );
+            }
+            sol::table stored;
+            std::string platform_diagnostic;
+            const auto read = [&]() {
+                stored = read_scope( scope, key );
+            };
+            if( expect_type_diagnostic ) {
+                platform_diagnostic = capture_debugmsg_during( read );
+                CHECK( platform_diagnostic.find( "Type mismatch in diag_value" ) != std::string::npos );
+            } else {
+                read();
+            }
+            const std::string id_text = stored["exists"].get<bool>() ?
+                                        stored["value"].get<std::string>() :
+                                        ( with_default ? default_id : std::string() );
+            const bool platform = value_of( services["proficiencies"]["has_id_text"],
+                                            handle_for_selector( selector ), id_text ).as<bool>();
+            CAPTURE( selector, scope, key, id_text );
+            CHECK( native == platform );
+            return native;
+        };
+
+        const auto direct_source_key = []( const std::string & selector,
+        const std::string & scope ) {
+            std::string key = "lua_prof_" + selector + "_" + scope;
+            key.push_back( '\0' );
+            key += "raw_key";
+            return key;
+        };
+        std::vector<std::pair<std::string, std::string>> direct_source_keys;
+        for( const std::string &selector : selectors ) {
+            for( const std::string &scope : scopes ) {
+                direct_source_keys.emplace_back( scope, direct_source_key( selector, scope ) );
+            }
+        }
+        const on_out_of_scope restore_direct_sources( [&]() {
+            for( const std::pair<std::string, std::string> &source : direct_source_keys ) {
+                remove_scope_value( source.first, source.second );
+            }
+        } );
+
+        // Direct native var_info sources are alpha/u, beta/npc, global and
+        // dialogue context. Missing reads use default; stored empty/null and
+        // wrong-type values remain present and therefore suppress default.
+        for( const std::string &selector : selectors ) {
+            for( const std::string &scope : scopes ) {
+                const std::string key = direct_source_key( selector, scope );
+                remove_scope_value( scope, key );
+                CHECK( compare_scope( selector, scope, key, carving.str(), true ) );
+                CHECK_FALSE( compare_scope( selector, scope, key, carving.str(), false ) );
+                set_scope_value( scope, key, diag_value( carving.str() ),
+                                 sol::make_object( lua, carving.str() ) );
+                CHECK( compare_scope( selector, scope, key, carving.str(), true ) );
+                for( const std::string &raw_id : {
+                         std::string(), std::string( "raw\0id", sizeof( "raw\0id" ) - 1 ),
+                         std::string( 10000, 'x' ), std::string( "无此熟练度" )
+                     } ) {
+                    set_scope_value( scope, key, diag_value( raw_id ), sol::make_object( lua, raw_id ) );
+                    CHECK_FALSE( compare_scope( selector, scope, key, carving.str(), true ) );
+                }
+                set_scope_value( scope, key, diag_value( 73 ), sol::make_object( lua, 73 ) );
+                CHECK_FALSE( compare_scope( selector, scope, key, carving.str(), true, true ) );
+                set_scope_value( scope, key, diag_value{}, null_value );
+                CHECK_FALSE( compare_scope( selector, scope, key, carving.str(), true, true ) );
+                remove_scope_value( scope, key );
+            }
+        }
+
+        const std::string pointer_key( "lua_prof_pointer\0raw", sizeof( "lua_prof_pointer\0raw" ) - 1 );
+        const std::string alpha_target_key( "lua_prof_alpha\0target",
+                                            sizeof( "lua_prof_alpha\0target" ) - 1 );
+        const std::string beta_target_key( "lua_prof_beta\0target", sizeof( "lua_prof_beta\0target" ) - 1 );
+        const std::string context_target_key( "lua_prof_context\0target",
+                                              sizeof( "lua_prof_context\0target" ) - 1 );
+        const std::string global_target_key( "lua_prof_global\0target",
+                                             sizeof( "lua_prof_global\0target" ) - 1 );
+        const std::string missing_target_key( "lua_prof_missing\0target",
+                                              sizeof( "lua_prof_missing\0target" ) - 1 );
+        const std::string var_prefixed_key = std::string( "var_" ) + global_target_key;
+        const diag_value *previous_empty_global = get_globals().maybe_get_global_value( "" );
+        const bool had_empty_global = previous_empty_global != nullptr;
+        const diag_value saved_empty_global = had_empty_global ? *previous_empty_global : diag_value{};
+        const on_out_of_scope restore_variables( [&]() {
+            remove_scope_value( "u_val", alpha_target_key );
+            remove_scope_value( "npc_val", beta_target_key );
+            remove_scope_value( "context_val", context_target_key );
+            remove_scope_value( "global_val", global_target_key );
+            get_globals().remove_global_value( var_prefixed_key );
+            conversation.remove_value( pointer_key );
+            context_values[pointer_key] = sol::nil;
+            if( had_empty_global ) {
+                get_globals().set_global_value( "", saved_empty_global );
+            } else {
+                get_globals().remove_global_value( "" );
+            }
+            get_globals().remove_global_value( missing_target_key );
+        } );
+        const auto set_pointer = [&]( const diag_value & value, const sol::object & lua_value ) {
+            conversation.set_value( pointer_key, value );
+            context_values.raw_set( pointer_key, lua_value );
+        };
+        const auto remove_pointer = [&]() {
+            conversation.remove_value( pointer_key );
+            context_values[pointer_key] = sol::nil;
+        };
+        const auto compare_var_val = [&]( const std::string & selector,
+                                          const std::string & default_id, const bool expect_pointer_type_diagnostic,
+        const bool expect_target_type_diagnostic ) {
+            const conditional_t condition = make_variable_condition( selector, "var_val",
+                pointer_key, default_id, true );
+            bool native = false;
+            if( expect_pointer_type_diagnostic || expect_target_type_diagnostic ) {
+                const std::string diagnostic = capture_debugmsg_during( [&]() {
+                    native = condition( conversation );
+                } );
+                CHECK( diagnostic.find( "Type mismatch in diag_value" ) != std::string::npos );
+            } else {
+                native = condition( conversation );
+            }
+            sol::table pointer;
+            const auto read_pointer = [&]() {
+                pointer = value_of( services["variables"]["get_context_string"], context_values,
+                                    pointer_key ).as<sol::table>();
+            };
+            if( expect_pointer_type_diagnostic ) {
+                const std::string diagnostic = capture_debugmsg_during( read_pointer );
+                CHECK( diagnostic.find( "Type mismatch in diag_value" ) != std::string::npos );
+            } else {
+                read_pointer();
+            }
+            std::string id_text;
+            if( !pointer["exists"].get<bool>() ) {
+                id_text = default_id;
+            } else {
+                const std::string pointer_text = pointer["value"].get<std::string>();
+                std::string target_scope = "global_val";
+                std::string target_key = pointer_text;
+                if( pointer_text.compare( 0, 2, "u_" ) == 0 ) {
+                    target_scope = "u_val";
+                    target_key = pointer_text.substr( 2 );
+                } else if( pointer_text.compare( 0, 2, "n_" ) == 0 ) {
+                    target_scope = "npc_val";
+                    target_key = pointer_text.substr( 2 );
+                } else if( pointer_text.compare( 0, 1, "_" ) == 0 ) {
+                    target_scope = "context_val";
+                    target_key = pointer_text.substr( 1 );
+                }
+                sol::table target;
+                const auto read_target = [&]() {
+                    target = read_scope( target_scope, target_key );
+                };
+                if( expect_target_type_diagnostic ) {
+                    const std::string diagnostic = capture_debugmsg_during( read_target );
+                    CHECK( diagnostic.find( "Type mismatch in diag_value" ) != std::string::npos );
+                } else {
+                    read_target();
+                }
+                id_text = target["exists"].get<bool>() ?
+                          target["value"].get<std::string>() : default_id;
+            }
+            const bool platform = value_of( services["proficiencies"]["has_id_text"],
+                                            handle_for_selector( selector ), id_text ).as<bool>();
+            CAPTURE( selector, id_text );
+            CHECK( native == platform );
+            return native;
+        };
+
+        remove_pointer();
+        for( const std::string &selector : selectors ) {
+            CHECK( compare_var_val( selector, carving.str(), false, false ) ); // missing pointer uses default
+        }
+        set_pointer( diag_value( std::string( "u_" ) + missing_target_key ),
+                     sol::make_object( lua, std::string( "u_" ) + missing_target_key ) );
+        for( const std::string &selector : selectors ) {
+            CHECK( compare_var_val( selector, carving.str(), false, false ) ); // missing target uses default
+        }
+        get_globals().set_global_value( "", diag_value( std::string( "prof_unregistered_empty_global" ) ) );
+        set_pointer( diag_value( std::string() ), sol::make_object( lua, std::string() ) );
+        for( const std::string &selector : selectors ) {
+            CHECK_FALSE( compare_var_val( selector, carving.str(), false,
+                                          false ) ); // present empty pointer reads global[""]
+        }
+        set_pointer( diag_value{}, null_value );
+        for( const std::string &selector : selectors ) {
+            CHECK_FALSE( compare_var_val( selector, carving.str(), true,
+                                          false ) ); // null pointer stringifies to empty key
+        }
+        set_pointer( diag_value( 73 ), sol::make_object( lua, 73 ) );
+        for( const std::string &selector : selectors ) {
+            CHECK_FALSE( compare_var_val( selector, carving.str(), true,
+                                          false ) ); // wrong-type pointer also reads global[""]
+        }
+        // Each indirection target gets a different value and all other targets
+        // are absent. With a known default, a wrong scope/key would incorrectly
+        // succeed instead of returning the source-specific false result.
+        const auto clear_indirect_targets = [&]() {
+            remove_scope_value( "u_val", alpha_target_key );
+            remove_scope_value( "npc_val", beta_target_key );
+            remove_scope_value( "context_val", context_target_key );
+            remove_scope_value( "global_val", global_target_key );
+            get_globals().remove_global_value( var_prefixed_key );
+        };
+        const auto compare_indirect_source = [&]( const std::string & pointer_text,
+            const std::string & scope, const std::string & key, const std::string & stored_id,
+        const std::string & default_id, const bool expected ) {
+            clear_indirect_targets();
+            set_scope_value( scope, key, diag_value( stored_id ), sol::make_object( lua, stored_id ) );
+            set_pointer( diag_value( pointer_text ), sol::make_object( lua, pointer_text ) );
+            for( const std::string &selector : selectors ) {
+                CHECK( compare_var_val( selector, default_id, false, false ) == expected );
+            }
+        };
+        compare_indirect_source( std::string( "u_" ) + alpha_target_key, "u_val",
+                                 alpha_target_key, "prof_unregistered_alpha_target",
+                                 carving.str(), false );
+        compare_indirect_source( std::string( "n_" ) + beta_target_key, "npc_val",
+                                 beta_target_key, "prof_unregistered_beta_target",
+                                 carving.str(), false );
+        compare_indirect_source( std::string( "_" ) + context_target_key, "context_val",
+                                 context_target_key, std::string(), carving.str(), false );
+        compare_indirect_source( global_target_key, "global_val", global_target_key,
+                                 "prof_unregistered_global_target", carving.str(), false );
+        compare_indirect_source( std::string( "u_" ) + alpha_target_key, "u_val",
+                                 alpha_target_key, carving.str(), "prof_unregistered_default", true );
+
+        // Native process_variable recognizes u_, n_ and _ prefixes exactly
+        // once; every other string, including var_, remains a global key.
+        clear_indirect_targets();
+        get_globals().set_global_value( global_target_key, diag_value( carving.str() ) );
+        get_globals().set_global_value( var_prefixed_key,
+                                        diag_value( std::string( "prof_unregistered_var_prefix" ) ) );
+        const std::string var_pointer = var_prefixed_key;
+        set_pointer( diag_value( var_pointer ), sol::make_object( lua, var_pointer ) );
+        for( const std::string &selector : selectors ) {
+            CHECK_FALSE( compare_var_val( selector, carving.str(), false, false ) );
+        }
+
+        clear_indirect_targets();
+        const std::string numeric_target_pointer = std::string( "u_" ) + alpha_target_key;
+        set_pointer( diag_value( numeric_target_pointer ), sol::make_object( lua,
+                numeric_target_pointer ) );
+        set_scope_value( "u_val", alpha_target_key, diag_value( 73 ), sol::make_object( lua, 73 ) );
+        for( const std::string &selector : selectors ) {
+            CHECK_FALSE( compare_var_val( selector, carving.str(), false, true ) );
+        }
+        clear_indirect_targets();
+        set_pointer( diag_value( numeric_target_pointer ), sol::make_object( lua,
+                numeric_target_pointer ) );
+        set_scope_value( "u_val", alpha_target_key, diag_value{}, null_value );
+        for( const std::string &selector : selectors ) {
+            CHECK_FALSE( compare_var_val( selector, carving.str(), false, true ) );
+        }
+        completed = true;
+    } );
+    sol::protected_function_result registered = ccb["runtime"]["handler"]( "accept", lua["accept"] );
+    REQUIRE( registered.valid() );
+    registered = ccb["runtime"]["on"]( "world_ready", "accept" );
+    REQUIRE( registered.valid() );
+    cata::lua_platform::runtime_world_ready( true );
+    REQUIRE( completed );
+}
+
 TEST_CASE( "lua_platform_roll_contested_matches_native_rng_semantics",
            "[lua][platform][random][semantic]" )
 {
