@@ -29557,9 +29557,16 @@ assert(not pcall(function() return U_EXPRESSION end))
 
             self.assertEqual(len(result.converted), 0)
             self.assertEqual(len(result.partial), 1)
-            self.assertEqual(len(result.todos), 14)
+            self.assertEqual(len(result.todos), 15)
+            self.assertIn(
+                "only a condition-free terminal menu action avoids later work",
+                report,
+            )
             self.assertNotIn("services.activities.assign(actor)", main)
-            self.assertIn("plain typed activity service", main)
+            self.assertIn(
+                "native activity actor, handlers, EOC policy, and duration semantics",
+                main,
+            )
             self.assertNotIn("services.state.", main)
             self.assertNotIn('services.characters.adjust(actor, "debt")', main)
             self.assertIn(
