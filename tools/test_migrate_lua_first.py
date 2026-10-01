@@ -41489,7 +41489,12 @@ assert(context.data.step==0 and context.actors.character==actor and context.acto
             large_square
         )
         self.assertEqual(large_category, "manual_rewrite")
-        self.assertIn("direct typed call", large_message)
+        self.assertIn("immediately preceding", large_message)
+        self.assertIsNotNone(
+            migrate_lua_first.render_static_set_trap(
+                large_square, location_writer, True
+            )
+        )
 
         direct_trap_source = migrate_lua_first.SourceObject(Path("trap_area.json"), 0, {
             "type": "effect_on_condition",
@@ -41615,6 +41620,153 @@ assert(context.data.step==0 and context.actors.character==actor and context.acto
             "services.world.remove_field(",
         ):
             self.assertNotIn(legacy_map_write, main + holder_main)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_set_trap_generated_lua_preserves_native_literal_arguments(self) -> None:
+        location_writer = {
+            "u_location_variable": {"context_val": "trap_location"},
+        }
+        location = {"context_val": "trap_location"}
+
+        def run_generated_call(effect: dict[str, Any], assertions: list[str]) -> None:
+            rendered = migrate_lua_first.render_static_set_trap(
+                effect, location_writer, True
+            )
+            self.assertIsNotNone(rendered)
+            script = "\n".join([
+                "local calls, captured = 0, nil",
+                "local environment = {set_trap_area = function(position, trap_id, radius, square)",
+                "  calls = calls + 1",
+                "  captured = {",
+                "    position = position, trap_id = trap_id,",
+                "    radius = radius, square = square",
+                "  }",
+                "end}",
+                "local services = {gameplay = {environment = environment}}",
+                'local context = {data = {trap_location = {x = 7, y = 8, z = 2}}}',
+                "local function migrated_effect()",
+                *(rendered or []),
+                "end",
+                "migrated_effect()",
+                "assert(calls == 1)",
+                "assert(captured.position.x == 7 and captured.position.y == 8)",
+                *assertions,
+            ])
+            result = subprocess.run(
+                [shutil.which("lua") or "lua", "-"], input=script,
+                text=True, capture_output=True, timeout=10
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+        run_generated_call(
+            {
+                "set_trap": "tr_beartrap",
+                "location": location,
+                "radius": 50000,
+                "square": True,
+            },
+            [
+                'assert(captured.trap_id == "tr_beartrap")',
+                "assert(captured.radius == 50000 and captured.square == true)",
+            ],
+        )
+        for radius in (
+            migrate_lua_first.NATIVE_INT_MIN,
+            migrate_lua_first.NATIVE_INT_MAX,
+        ):
+            run_generated_call(
+                {
+                    "set_trap": "tr_beartrap",
+                    "location": location,
+                    "radius": radius,
+                    "square": True,
+                },
+                [
+                    f"assert(captured.radius == {radius} and captured.square == true)",
+                ],
+            )
+        run_generated_call(
+            {"set_trap": "tr_beartrap", "location": location, "radius": 1.9},
+            [
+                'assert(captured.trap_id == "tr_beartrap")',
+                "assert(captured.radius == 1 and captured.square == false)",
+            ],
+        )
+
+        long_nul_id = "x" * 320 + "\0tail"
+        run_generated_call(
+            {"set_trap": long_nul_id, "location": location, "radius": 0},
+            [
+                "assert(#captured.trap_id == 325)",
+                'assert(captured.trap_id:sub(1, 320) == string.rep("x", 320))',
+                "assert(captured.trap_id:byte(321) == 0)",
+                'assert(captured.trap_id:sub(322) == "tail")',
+            ],
+        )
+        run_generated_call(
+            {"set_trap": "", "location": location},
+            [
+                "assert(#captured.trap_id == 0)",
+                "assert(captured.radius == 1 and captured.square == false)",
+            ],
+        )
+        for trap_id in (long_nul_id, ""):
+            eoc_source = migrate_lua_first.SourceObject(
+                Path("trap_id_bytes.json"), 0, {
+                    "type": "effect_on_condition",
+                    "id": "trap_id_bytes",
+                    "required_event": "avatar_moves",
+                    "effect": [
+                        location_writer,
+                        {"set_trap": trap_id, "location": location, "radius": 0},
+                    ],
+                    "eoc_type": "EVENT",
+                }
+            )
+            eoc_result = migrate_lua_first.MigrationResult()
+            eoc_lua = migrate_lua_first.render_eoc(eoc_source, eoc_result)
+            self.assertIn(
+                "services.gameplay.environment.set_trap_area(", eoc_lua
+            )
+            self.assertEqual(eoc_result.todos, [])
+
+        unsupported_circle = {
+            "set_trap": "tr_beartrap",
+            "location": location,
+            "radius": 46341,
+        }
+        self.assertIsNone(
+            migrate_lua_first.render_static_set_trap(
+                unsupported_circle, location_writer, True
+            )
+        )
+        category, message = migrate_lua_first.set_trap_migration_todo(
+            unsupported_circle
+        )
+        self.assertEqual(category, "manual_rewrite")
+        self.assertIn("circle radius exceeds", message)
+        self.assertIsNone(
+            migrate_lua_first.render_static_set_trap(
+                {
+                "set_trap": "tr_beartrap",
+                "location": location,
+                "radius": 50000,
+                "square": True,
+                },
+                None,
+                True,
+            )
+        )
+        no_proof_category, no_proof_message = (
+            migrate_lua_first.set_trap_migration_todo({
+                "set_trap": "tr_beartrap",
+                "location": location,
+                "radius": 50000,
+                "square": True,
+            })
+        )
+        self.assertEqual(no_proof_category, "manual_rewrite")
+        self.assertIn("immediately preceding", no_proof_message)
 
     def test_real_portal_storm_traps_keep_native_map_semantics(self) -> None:
         source_path = (

@@ -25677,10 +25677,10 @@ def set_trap_migration_todo(effect: dict[str, Any]) -> tuple[str, str]:
             "manual_rewrite",
             "set_trap has options outside the typed native area operation",
         )
-    if not bounded_platform_id(effect.get("set_trap")):
+    if not lua_quotable_native_variable_string(effect.get("set_trap")):
         return (
             "manual_rewrite",
-            "set_trap needs a literal trap id or an explicit typed Lua lookup",
+            "set_trap needs a literal Lua-quotable trap id or an explicit typed Lua lookup",
         )
     if _coordinate_variable_descriptor(effect.get("location")) is None:
         return (
@@ -25711,12 +25711,6 @@ def set_trap_migration_todo(effect: dict[str, Any]) -> tuple[str, str]:
             "manual_rewrite",
             "set_trap circle radius exceeds the defined int-square range of native trig_dist",
         )
-    if abs(radius) > 46340:
-        return (
-            "manual_rewrite",
-            "set_trap large square radius needs a direct typed call so native endpoint "
-            "overflow can be checked against the runtime position",
-        )
     return (
         "manual_rewrite",
         "set_trap location needs an immediately preceding proven u_location_variable "
@@ -25737,7 +25731,7 @@ def render_static_set_trap(
     if set(effect) - comment_keys - {"set_trap", "location", "radius", "square"}:
         return None
     trap_id = effect.get("set_trap")
-    if not bounded_platform_id(trap_id):
+    if not lua_quotable_native_variable_string(trap_id):
         return None
     location = effect.get("location")
     location_descriptor = _coordinate_variable_descriptor(location)
@@ -25750,14 +25744,12 @@ def render_static_set_trap(
     if radius_literal is None:
         return None
     radius = math.trunc(float(radius_literal))
-    if (
-        radius < NATIVE_INT_MIN or radius > NATIVE_INT_MAX or
-        abs(radius) > 46340
-    ):
-        # Circle predicates square native int coordinate deltas.  Keeping the
-        # static rewrite within this bound is also a position-independent
-        # proof for square endpoints; the typed runtime API supports larger
-        # square radii when their actual center endpoints remain representable.
+    if radius < NATIVE_INT_MIN or radius > NATIVE_INT_MAX:
+        return None
+    if not square and abs(radius) > 46340:
+        # Circle predicates square native int coordinate deltas.  Square
+        # endpoint safety depends on the runtime position and is checked by
+        # set_trap_area itself.
         return None
     if (
         not live_loaded_avatar_actor_proven or
