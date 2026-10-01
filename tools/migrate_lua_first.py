@@ -891,9 +891,9 @@ def render_proficiency_id_expression(value: Any) -> str | None:
             ' end; return type(stored) == "string" and stored or "" end)'
             '(context and context.data and context.data[' + lua_quote(name) + '])'
         )
-    snapshot = render_direct_variable_snapshot({scope: name}, "nil")
-    if snapshot is None:
-        return None
+    snapshot = (
+        'service_value(services.variables.get_global_string(' + lua_quote(name) + '))'
+    )
     return (
         '(function(result) if result.exists == false then return ' + lua_quote(fallback) +
         ' end; return type(result.value) == "string" and result.value or "" end)'

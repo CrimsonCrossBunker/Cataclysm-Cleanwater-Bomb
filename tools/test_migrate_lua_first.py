@@ -3402,10 +3402,12 @@ local snapshot = {exists=false}
 local observed, reads, queries = nil, 0, 0
 local function service_value(result) assert(result.ok); return result.value end
 local services = {
- variables={resolve=function(data, owner, scope, name)
-  assert(data==context.data and owner==nil and scope=='global' and name==key)
+ variables={get_global_string=function(name)
+  assert(name==key)
   reads=reads+1
-  return {ok=true, value=snapshot}
+  return {ok=true, value={exists=snapshot.exists,
+    value=type(snapshot.value)=='string' and snapshot.value or
+          (snapshot.exists and '' or nil)}}
  end},
  proficiencies={has_id_text=function(target, text)
   assert(target==(PREFIX=='u_' and actor or beta) and type(text)=='string')

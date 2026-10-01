@@ -10991,6 +10991,19 @@ function CcbVariablesApi.remove(character, key, options) end
 ---@return CcbVariableReadResult
 function CcbVariablesApi.get_global(key) end
 
+---@class CcbVariableStringReadValue
+---@field exists boolean Whether the global key is present.
+---@field value? string Native string value; stored empty or incompatible values return the native empty string, while missing keys return nil.
+
+---@class CcbVariableStringReadResult: CcbResult
+---@field value? CcbVariableStringReadValue
+
+---Read the native string type directly without converting the full stored value through Lua.
+---Preserves native legacy-string conversion and type-mismatch diagnostics; array snapshot limits do not apply.
+---@param key string Native global storage key; full byte sequences are preserved.
+---@return CcbVariableStringReadResult
+function CcbVariablesApi.get_global_string(key) end
+
 ---@param key string Native global storage key; callback-context key limits do not apply.
 ---@param value boolean|number|string|TripointCoord|NullValue|any[]|nil
 ---Top-level native strings preserve all bytes; strings in arrays remain bounded.

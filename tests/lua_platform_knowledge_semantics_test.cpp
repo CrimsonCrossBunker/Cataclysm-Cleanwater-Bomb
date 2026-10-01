@@ -340,9 +340,22 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
                     json_loader::from_string( condition_source.str() ).get_object() );
                 sol::table context_values = lua.create_table();
                 const auto compare_variable_query = [&]( const bool type_mismatch = false ) {
-                    const sol::table resolved = value_of(
-                                                    services["variables"]["resolve"],
-                                                    context_values, sol::nil, scope, variable_name ).as<sol::table>();
+                    sol::table resolved;
+                    const auto read_query = [&]() {
+                        resolved = scope == "global" ?
+                                   value_of( services["variables"]["get_global_string"],
+                                             variable_name ).as<sol::table>() :
+                                   value_of( services["variables"]["resolve"],
+                                             context_values, sol::nil, scope,
+                                             variable_name ).as<sol::table>();
+                    };
+                    if( type_mismatch && scope == "global" ) {
+                        const std::string diagnostic = capture_debugmsg_during( read_query );
+                        CHECK( diagnostic.find( "Type mismatch in diag_value" ) !=
+                               std::string::npos );
+                    } else {
+                        read_query();
+                    }
                     const sol::object stored = resolved["value"];
                     const std::string raw_id = !resolved["exists"].get<bool>() ? carving.str() :
                                                stored.is<std::string>() ? stored.as<std::string>() : std::string();

@@ -7,6 +7,7 @@
 #include "avatar.h"
 #include "cata_catch.h"
 #include "character_id.h"
+#include "debug.h"
 #include "global_vars.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
@@ -85,6 +86,65 @@ diag_value oversized_native_array()
 }
 
 } // namespace
+
+TEST_CASE( "lua_platform_global_string_query_preserves_native_type_semantics",
+           "[lua][platform][semantic][variables]" )
+{
+    global_values_restore restore_globals;
+    variable_snapshot_fixture fixture;
+    const sol::protected_function get_string = fixture.variables["get_global_string"];
+    const sol::protected_function get_snapshot = fixture.variables["get_global"];
+    REQUIRE( get_string.valid() );
+    REQUIRE( get_snapshot.valid() );
+    const std::string key = std::string( 1, '\0' ) + "变量" + std::string( 300, 'k' );
+    get_globals().remove_global_value( key );
+    const sol::table missing = require_result_value( get_string( key ) );
+    CHECK_FALSE( missing["exists"].get<bool>() );
+    CHECK( missing["value"].get<sol::object>().get_type() == sol::type::nil );
+
+    const auto compare = [&]( const diag_value &stored, const bool type_mismatch ) {
+        get_globals().set_global_value( key, stored );
+        const diag_value *native = get_globals().maybe_get_global_value( key );
+        REQUIRE( native != nullptr );
+        std::string native_string;
+        std::string native_diagnostic;
+        sol::table value;
+        std::string platform_diagnostic;
+        if( type_mismatch ) {
+            native_diagnostic = capture_debugmsg_during( [&]() {
+                native_string = native->str();
+            } );
+            get_globals().set_global_value( key, stored );
+            platform_diagnostic = capture_debugmsg_during( [&]() {
+                value = require_result_value( get_string( key ) );
+            } );
+            CHECK( native_diagnostic.find( "Type mismatch in diag_value" ) != std::string::npos );
+            CHECK( platform_diagnostic == native_diagnostic );
+        } else {
+            native_string = native->str();
+            get_globals().set_global_value( key, stored );
+            value = require_result_value( get_string( key ) );
+        }
+        CHECK( value["exists"].get<bool>() );
+        CHECK( value["value"].get<std::string>() == native_string );
+    };
+    compare( diag_value( "" ), false );
+    compare( diag_value( std::string( 10000, 'x' ) + std::string( 1, '\0' ) + "熟练度" ), false );
+    compare( diag_value( diag_value::legacy_value( "native legacy string" ) ), false );
+    compare( diag_value(), false );
+    compare( diag_value( 73 ), true );
+    compare( diag_value( tripoint_abs_ms( 1, 2, 3 ) ), true );
+    compare( oversized_native_array(), true );
+    // A full-value snapshot still rejects this native array; the string query
+    // has already matched native behavior without traversing its elements.
+    CHECK_FALSE( get_snapshot( key ).valid() );
+    diag_value nested( "leaf" );
+    for( int depth = 0; depth < 12; ++depth ) {
+        nested = diag_value( diag_array{ nested } );
+    }
+    compare( nested, true );
+    CHECK_FALSE( get_snapshot( key ).valid() );
+}
 
 TEST_CASE( "lua_platform_variable_mutations_can_skip_before_snapshots",
            "[lua][platform][semantic][variables]" )

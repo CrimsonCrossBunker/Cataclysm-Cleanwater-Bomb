@@ -297,6 +297,22 @@ sol::table get_global_variable(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table get_global_variable_string(
+    sol::this_state lua, const std::string &key )
+{
+    sol::state_view state( lua );
+    sol::table value = state.create_table();
+    const diag_value *stored = get_globals().maybe_get_global_value( key );
+    value["exists"] = stored != nullptr;
+    // Read the requested native type directly.  Snapshot limits for unrelated
+    // arrays must not change the native string query or its type diagnostics.
+    value["value"] = stored != nullptr ?
+                     sol::make_object( state, stored->str() ) :
+                     sol::make_object( state, sol::nil );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
 sol::table set_global_variable(
     sol::this_state lua, const std::string &key, const sol::object &requested,
     const bool include_before )
@@ -660,6 +676,12 @@ void install_variable_api(
     [require_read]( sol::this_state lua_state, const std::string & key ) {
         require_read();
         return get_global_variable( lua_state, key );
+    } );
+    variables.set_function(
+        "get_global_string",
+    [require_read]( sol::this_state lua_state, const std::string & key ) {
+        require_read();
+        return get_global_variable_string( lua_state, key );
     } );
     variables.set_function(
         "set_global",
