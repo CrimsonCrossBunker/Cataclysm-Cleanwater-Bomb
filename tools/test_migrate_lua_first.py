@@ -34161,7 +34161,7 @@ assert(context.data.picked==selected)
             self.assertNotIn("services.sound.emit(", main)
             self.assertIn("TODO: translate the character sound through", main)
 
-    def test_field_false_effect_remains_todo_without_branch_actor_proof(self) -> None:
+    def test_field_false_effect_uses_source_proven_live_avatar_center(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -34184,13 +34184,115 @@ assert(context.data.picked==selected)
                 migrate_lua_first.load_objects([source]), "global_u_field_mod"
             )
             main = result.files[Path("main.lua")]
-            report = result.files[Path("MIGRATION_REPORT.md")]
-
-            self.assertTrue(result.partial)
-            self.assertTrue(result.todos)
+            self.assertFalse(result.partial)
+            self.assertFalse(result.todos)
             self.assertNotIn("services.world.put_field(", main)
-            self.assertIn("field effect in false_effect branch lacks", main)
-            self.assertNotIn("typed Lua services", report)
+            self.assertIn("services.gameplay.environment.add_field_area(", main)
+            self.assertIn(
+                "service_value(services.characters.snapshot(actor)).creature.position,",
+                main,
+            )
+            self.assertIn("outdoor_only = true", main)
+
+    def test_field_false_effect_rejects_unproven_or_dynamic_shapes(self) -> None:
+        field = {"u_set_field": "fd_smoke", "radius": 0}
+        base = {
+            "type": "effect_on_condition",
+            "id": "field_branch",
+            "eoc_type": "EVENT",
+            "required_event": "game_start",
+            "condition": {"or": []},
+            "false_effect": field,
+            "effect": "nothing",
+        }
+        cases = {
+            "referenced": [base, {
+                "type": "effect_on_condition", "id": "field_caller",
+                "eoc_type": "ACTIVATION", "effect": {"run_eocs": ["field_branch"]},
+            }],
+            "dynamic_dispatch": [base, {
+                "type": "effect_on_condition", "id": "dynamic_caller",
+                "eoc_type": "ACTIVATION",
+                "effect": {"run_eocs": {"global_val": "chosen_eoc"}},
+            }],
+            "non_live_event": {**base, "required_event": "character_dies"},
+            "target_variable": {**base, "false_effect": {
+                **field, "target_var": {"context_val": "field_position"},
+            }},
+            "npc_slot": {**base, "false_effect": {"npc_set_field": "fd_smoke"}},
+            "dynamic_radius": {**base, "false_effect": {
+                **field, "radius": {"math": ["rand(2)"]},
+            }},
+        }
+        for name, payload in cases.items():
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as temporary:
+                source = Path(temporary) / "source.json"
+                source.write_text(json.dumps(payload), encoding="utf-8")
+                result = migrate_lua_first.migrate(
+                    migrate_lua_first.load_objects([source]), "field_negative_mod"
+                )
+                main = result.files[Path("main.lua")]
+                self.assertTrue(result.partial)
+                self.assertNotIn("services.gameplay.environment.add_field_area(", main)
+                self.assertIn("field branch requires a source-proven live", main)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_field_control_flow_propagates_live_center_proof_at_execution(self) -> None:
+        nested = {
+            "foreach": "array", "target": ["first", "second"],
+            "var": {"context_val": "entry"},
+            "effect": {
+                "if": {"or": []}, "then": "nothing",
+                "else": {
+                    "switch": {"math": ["0"]},
+                    "cases": [{"case": 0, "effect": {
+                        "u_set_field": "fd_smoke", "radius": 0,
+                    }}],
+                },
+            },
+        }
+        self.assertIsNone(migrate_lua_first.render_static_false_effect(
+            nested, True, False, {}, actor_expression="actor",
+        ))
+        lines = migrate_lua_first.render_static_false_effect(
+            nested, True, False, {}, actor_expression="actor",
+            field_avatar_center_proven=True,
+        )
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor = {}
+local context = {data = {}}
+local snapshots, visits = 0, {}
+local function service_value(value) return value end
+local services = {
+ characters = {snapshot = function(target)
+  assert(target == actor)
+  snapshots = snapshots + 1
+  return {creature = {position = snapshots}}
+ end},
+ time = {duration = function(turns, unit)
+  assert(unit == 'turn')
+  return {turns = turns}
+ end},
+ gameplay = {
+  math = {evaluate = function(expression, target, data)
+   assert(expression == '0' and target == actor and data == context.data)
+   return 0
+  end},
+  environment = {add_field_area = function(position, id, options)
+  assert(id == 'fd_smoke' and options.radius == 0)
+  assert(options.intensity == 1 and options.age.turns == 1)
+  assert(options.hit_player == true)
+  visits[#visits + 1] = context.data.entry .. ':' .. position
+  end}}
+}
+BODY
+assert(snapshots == 2)
+assert(table.concat(visits, ',') == 'first:1,second:2')
+""".replace("BODY", "\n".join(lines or []))
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_lowers_dynamic_character_predicates_and_effects(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
