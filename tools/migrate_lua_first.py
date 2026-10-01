@@ -897,6 +897,23 @@ def render_proficiency_id_expression(
         return lua_quote(value)
     if not isinstance(value, dict):
         return None
+    # value_or_var tries var_info before string_mutator. Native var_info uses
+    # this fixed priority, irrespective of authored member order, and ignores
+    # shadowed sources/extra fields after a valid name has been read.
+    variable_scope = next((scope for scope in (
+        "u_val", "npc_val", "global_val", "var_val", "context_val",
+    ) if scope in value), None)
+    if variable_scope is not None and lua_quotable_native_variable_string(value[variable_scope]):
+        # Factory modifiers can emit diagnostics while loading default; keep
+        # them explicit until those load-time effects have a proven lowering.
+        if set(value) & {"relative", "proportional", "extend", "delete"}:
+            return None
+        default = value.get("default", "")
+        # optional<string> accepts null, and a failed non-string read resets
+        # the optional through optional(..., was_loaded=false). Neither is a
+        # stringified fallback. A valid string (including empty/NUL) stays raw.
+        value = {variable_scope: value[variable_scope],
+                 "default": default if isinstance(default, str) else ""}
     if value.get("mutator") == "topic_item":
         return topic_item_expression if set(value) == {"mutator"} else None
     if value.get("mutator") == "valid_technique":

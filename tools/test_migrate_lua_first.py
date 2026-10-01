@@ -3436,7 +3436,7 @@ assert(observed[#observed] == 'KNOWN')
             beta_expression,
         )
         for unsupported in (
-            {"npc_has_proficiency": {"var_val": "prof_id", "default": False}},
+            {"npc_has_proficiency": {"var_val": False, "default": "prof_knapping"}},
             {"npc_has_proficiency": "prof_knapping", "extra": True},
         ):
             self.assertIsNone(
@@ -3444,6 +3444,10 @@ assert(observed[#observed] == 'KNOWN')
                     unsupported, npc_melee_beta_actor_proven=True,
                 )
             )
+        self.assertIsNotNone(migrate_lua_first.render_eoc_condition_expression(
+            {"npc_has_proficiency": {"var_val": "prof_id", "default": False}},
+            npc_melee_beta_actor_proven=True,
+        ))
         self.assertIsNone(
             migrate_lua_first.render_eoc_condition_expression(
                 {"npc_has_proficiency": "prof_knapping"},
@@ -4269,13 +4273,21 @@ assert(not pcall(condition)) -- A handle error must not become a missing-value d
                     {prefix + "has_proficiency": descriptor}))
             for descriptor in (
                 {"var_val": "id"},
-                {"global_val": "id", "context_val": "id"},
-                {"global_val": "id", "default": 3},
-                {"global_val": "id", "type": "legacy_prefix"},
+                {"global_val": "id", "relative": {"default": 3}},
+                {"global_val": "id", "proportional": {"default": 3}},
             ):
                 self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
                     {prefix + "has_proficiency": descriptor},
                     proficiency_character_alpha_actor_proven=True))
+            for descriptor in (
+                {"global_val": "id", "context_val": "id"},
+                {"global_val": "id", "default": 3},
+                {"global_val": "id", "type": "legacy_prefix"},
+            ):
+                self.assertIsNotNone(migrate_lua_first.render_eoc_condition_expression(
+                    {prefix + "has_proficiency": descriptor},
+                    proficiency_character_alpha_actor_proven=True,
+                    npc_melee_beta_actor_proven=True))
             for scope in ("u_val", "npc_val"):
                 self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
                     {prefix + "has_proficiency": {scope: "id"}}))
@@ -4285,6 +4297,98 @@ assert(not pcall(condition)) -- A handle error must not become a missing-value d
         ):
             self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
                 {"npc_has_proficiency": {"npc_val": "id"}}, **proof))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_proficiency_variable_provider_priority_defaults_and_ignored_fields(self) -> None:
+        scopes = ("u_val", "npc_val", "global_val", "var_val", "context_val")
+        defaults = (None, False, 42, [], {}, "", "fallback\0raw")
+        for index, scope in enumerate(scopes):
+            for prefix in ("u_", "npc_"):
+                for reverse_order in (False, True):
+                    predicates, expressions = [], []
+                    for default in defaults:
+                        descriptor = {name: {"not": "a name"} for name in scopes[index + 1:]}
+                        descriptor.update({
+                            scope: "key\0raw", "default": default, "type": "ignored_old_prefix",
+                            "i18n": True, "str": "must_not_translate",
+                            "mutator": "valid_technique", "blacklist": [42],
+                        })
+                        if reverse_order:
+                            descriptor = dict(reversed(tuple(descriptor.items())))
+                        rendered = migrate_lua_first.render_talk_topic_response_condition({
+                            prefix + "has_proficiency": descriptor,
+                        })
+                        expression = migrate_lua_first.render_eoc_condition_expression(
+                            {prefix + "has_proficiency": descriptor},
+                            proficiency_character_alpha_actor_proven=True,
+                            npc_melee_beta_actor_proven=True,
+                        )
+                        self.assertIsNotNone(rendered)
+                        self.assertIsNotNone(expression)
+                        predicates.append(rendered.source if rendered else "nil")
+                        expressions.append("function() return " + (expression or "nil") + " end")
+                    script = r"""
+local actor={kind='creature',subtype='avatar',is_valid=function() return true end}
+local partner={kind='creature',subtype='npc',is_valid=function() return true end}
+local context={actors={interlocutor=partner},data={}}
+local expected_target=TARGET
+local scope=SCOPE
+local present,current,wanted,reads,queries=false,'','',0,0
+local function service_value(result) assert(result.ok);return result.value end
+local function read(method,key)
+ reads=reads+1
+ if scope=='var_val' then
+  if method=='context_val' then assert(key=='key\0raw');return 'n_source' end
+  assert(method=='npc_val' and key=='source')
+ else assert(method==scope and key=='key\0raw') end
+ if present then return current end
+ return nil
+end
+local function snapshot(method,key)
+ local value=read(method,key)
+ return {ok=true,value={exists=value~=nil,value=value or ''}}
+end
+local services={variables={
+ get_global_string=function(key) return snapshot('global_val',key) end,
+ get_context_string=function(data,key) assert(data==context.data);return snapshot('context_val',key) end,
+ get_string=function(owner,key) return snapshot(owner==actor and 'u_val' or 'npc_val',key) end},
+ characters={choose_technique=function() error('shadowed mutator evaluated') end},
+ translate=function() error('shadowed translation evaluated') end,
+ proficiencies={has_id_text=function(owner,id)
+  assert(owner==expected_target and id==wanted);queries=queries+1
+  return {ok=true,value=true}
+ end}}
+local dialogue={valid=function() return true end,
+ get_string=function(self,key) return read('context_val',key) end,
+ speaker_variable_string=function(self,key) return read('u_val',key) end,
+ interlocutor_variable_string=function(self,key) return read('npc_val',key) end,
+ sample_technique=function() error('shadowed mutator evaluated') end,
+ speaker=function() return actor end,interlocutor=function() return partner end}
+local predicates={PREDICATES}
+local expressions={EXPRESSIONS}
+local defaults=DEFAULTS
+for i,predicate in ipairs(predicates) do
+ for _,state in ipairs({{false,''},{true,''},{true,'value\0raw'}}) do
+  present,current=state[1],state[2]
+  wanted=present and current or defaults[i]
+  reads,queries=0,0
+  assert(predicate(dialogue))
+  assert(reads==(scope=='var_val' and 2 or 1) and queries==1)
+  reads,queries=0,0
+  assert(expressions[i]())
+  assert(reads==(scope=='var_val' and 2 or 1) and queries==1)
+ end
+end
+""".replace("TARGET", "actor" if prefix == "u_" else "partner").replace(
+                        "SCOPE", migrate_lua_first.lua_quote(scope),
+                    ).replace("PREDICATES", ",".join(predicates)).replace(
+                        "EXPRESSIONS", ",".join(expressions),
+                    ).replace("DEFAULTS", migrate_lua_first.lua_string_table([
+                        default if isinstance(default, str) else "" for default in defaults
+                    ]))
+                    run = subprocess.run(["lua", "-"], input=script, text=True,
+                                         capture_output=True, timeout=10)
+                    self.assertEqual(run.returncode, 0, run.stderr)
 
     def test_live_character_proficiency_proof_keeps_avatar_only_queries_separate(self) -> None:
         expected = 'services.proficiencies.has_id_text(actor, "prof_knapping")'

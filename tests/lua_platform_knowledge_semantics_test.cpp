@@ -18,6 +18,7 @@
 #include "condition.h"
 #include "debug.h"
 #include "dialogue.h"
+#include "dialogue_helpers.h"
 #include "effect_on_condition.h"
 #include "flag.h"
 #include "flexbuffer_json.h"
@@ -1217,8 +1218,72 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
                 set_scope_value( scope, key, diag_value( 73 ), sol::make_object( lua, 73 ) );
                 CHECK_FALSE( compare_scope( selector, scope, key, carving.str(), true, true ) );
                 set_scope_value( scope, key, diag_value{}, null_value );
-                CHECK_FALSE( compare_scope( selector, scope, key, carving.str(), true, true ) );
+                // monostate returns empty text without a type diagnostic.
+                CHECK_FALSE( compare_scope( selector, scope, key, carving.str(), true ) );
                 remove_scope_value( scope, key );
+            }
+        }
+
+        // var_info is attempted before string_mutator and chooses the first
+        // present source in fixed native order. Shadowed malformed sources,
+        // translation and technique selection must never be evaluated.
+        const std::vector<std::string> provider_scopes = {
+            "u_val", "npc_val", "global_val", "var_val", "context_val"
+        };
+        const std::vector<std::string> default_fragments = {
+            "null", "false", "42", "[]", "{}", "\"\"", "\"prof_carving\""
+        };
+        for( std::size_t index = 0; index < provider_scopes.size(); ++index ) {
+            const std::string &scope = provider_scopes[index];
+            const std::string key = "lua_prof_provider_priority_" + scope;
+            const bool indirect = scope == "var_val";
+            const std::string source_scope = indirect ? "u_val" : scope;
+            const std::string source_key = indirect ? key + "_target" : key;
+            const on_out_of_scope retire_provider_sources( [&]() {
+                remove_scope_value( source_scope, source_key );
+                if( indirect ) {
+                    conversation.remove_value( key );
+                }
+            } );
+            if( indirect ) {
+                conversation.set_value( key, diag_value( "u_" + source_key ) );
+            }
+            for( const std::string &default_fragment : default_fragments ) {
+                std::string descriptor = "{\"" + scope + "\":\"" + key + "\"";
+                for( std::size_t lower = index + 1; lower < provider_scopes.size(); ++lower ) {
+                    descriptor += ",\"" + provider_scopes[lower] + "\":false";
+                }
+                descriptor += ",\"default\":" + default_fragment +
+                              ",\"mutator\":\"valid_technique\",\"blacklist\":[42],"
+                              "\"i18n\":true,\"str\":\"not_translated\",\"type\":\"ignored_prefix\"}";
+                str_or_var provider;
+                const std::string parse_diagnostic = capture_debugmsg_during( [&]() {
+                    provider.deserialize( json_loader::from_string(
+                                              "{\"source\":" + descriptor + "}" ).get_object().get_member( "source" ) );
+                } );
+                CHECK( parse_diagnostic.empty() );
+                for( const std::string &selector : selectors ) {
+                    const conditional_t condition( json_loader::from_string(
+                                                       "{\"" + selector + "_has_proficiency\":" + descriptor + "}" ).get_object() );
+                    for( int state = 0; state < 3; ++state ) {
+                        if( state == 0 ) {
+                            remove_scope_value( source_scope, source_key );
+                        } else {
+                            const std::string text = state == 1 ? std::string() : carving.str();
+                            set_scope_value( source_scope, source_key, diag_value( text ),
+                                             sol::make_object( lua, text ) );
+                        }
+                        const sol::table stored = read_scope( source_scope, source_key );
+                        const std::string expected = stored["exists"].get<bool>() ?
+                                                     stored["value"].get<std::string>() :
+                                                     ( default_fragment == "\"prof_carving\"" ? carving.str() : std::string() );
+                        const auto rng_before = rng_get_engine(); // NOLINT(cata-determinism)
+                        CAPTURE( scope, default_fragment, selector, state );
+                        CHECK( provider.evaluate( conversation ) == expected );
+                        compare_id( selector, condition, expected );
+                        CHECK( rng_get_engine() == rng_before );
+                    }
+                }
             }
         }
 
@@ -1338,8 +1403,8 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
         }
         set_pointer( diag_value{}, null_value );
         for( const std::string &selector : selectors ) {
-            CHECK_FALSE( compare_var_val( selector, carving.str(), true,
-                                          false ) ); // null pointer stringifies to empty key
+            CHECK_FALSE( compare_var_val( selector, carving.str(), false,
+                                          false ) ); // null pointer reads empty key without diagnostics
         }
         set_pointer( diag_value( 73 ), sol::make_object( lua, 73 ) );
         for( const std::string &selector : selectors ) {
@@ -1404,7 +1469,7 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
                 numeric_target_pointer ) );
         set_scope_value( "u_val", alpha_target_key, diag_value{}, null_value );
         for( const std::string &selector : selectors ) {
-            CHECK_FALSE( compare_var_val( selector, carving.str(), false, true ) );
+            CHECK_FALSE( compare_var_val( selector, carving.str(), false, false ) );
         }
         completed = true;
     } );
