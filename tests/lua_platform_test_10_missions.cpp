@@ -229,6 +229,200 @@ TEST_CASE( "lua_platform_active_mission_pages_preserve_native_order_and_tokens",
            ["code"].get<std::string>() == "stale_world" );
 }
 
+TEST_CASE( "lua_platform_mission_abandon_matches_native_remove_first_match",
+           "[lua][platform][missions]" )
+{
+    avatar platform_owner;
+    avatar native_owner;
+    platform_owner.normalize();
+    platform_owner.setID( character_id( 7310 ), true );
+    native_owner.normalize();
+    native_owner.setID( character_id( 7311 ), true );
+    platform_owner.reset_all_missions();
+    native_owner.reset_all_missions();
+    mission::clear_all();
+    struct mission_test_cleanup {
+        avatar &platform_owner;
+        avatar &native_owner;
+        ~mission_test_cleanup() {
+            platform_owner.reset_all_missions();
+            native_owner.reset_all_missions();
+            mission::clear_all();
+        }
+    } cleanup{ platform_owner, native_owner };
+
+    const mission_type_id duplicate_type(
+        "TEST_MISSION_GOAL_CONDITION1" );
+    mission *platform_first = mission::reserve_new(
+                                  duplicate_type, character_id() );
+    mission *platform_second = mission::reserve_new(
+                                   duplicate_type, character_id() );
+    mission *native_first = mission::reserve_new(
+                                duplicate_type, character_id() );
+    mission *native_second = mission::reserve_new(
+                                 duplicate_type, character_id() );
+    REQUIRE( platform_first != nullptr );
+    REQUIRE( platform_second != nullptr );
+    REQUIRE( native_first != nullptr );
+    REQUIRE( native_second != nullptr );
+    // Both active vectors begin with the later UID, matching the ordering
+    // used by the native remove_active_mission effect's first-match loop.
+    platform_second->assign( platform_owner );
+    platform_first->assign( platform_owner );
+    native_second->assign( native_owner );
+    native_first->assign( native_owner );
+
+    const std::vector<mission *> native_before =
+        native_owner.get_active_missions();
+    REQUIRE( native_before.size() == 2 );
+    CHECK( native_before.front() == native_second );
+    for( mission *entry : native_before ) {
+        if( entry->mission_id() == duplicate_type ) {
+            native_owner.remove_active_mission( *entry );
+            break;
+        }
+    }
+
+    const auto runtime_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime runtime(
+        runtime_owner, 67 );
+    std::size_t active_world = 26;
+    sol::state lua;
+    sol::table services = lua.create_table();
+    const auto current_runtime = [runtime]() {
+        return runtime;
+    };
+    const auto current_world = [&active_world]() {
+        return active_world;
+    };
+    cata::lua_platform::install_value_type_api(
+        lua, services, []() {} );
+    cata::lua_platform::install_game_handle_api(
+        lua, services, current_runtime, current_world, []() {} );
+    cata::lua_platform::install_mission_api(
+        services, current_runtime, current_world, []() {}, []() {} );
+    const cata::lua_platform::game_handle owner_handle =
+        cata::lua_platform::game_handle::from_creature(
+            platform_owner,
+            { "avatar", platform_owner.getID().get_value(), 0, 0, 0, {} },
+            runtime, active_world );
+
+    const sol::table missions = services["missions"];
+    const sol::protected_function active = missions["active"];
+    const sol::protected_function abandon = missions["abandon"];
+    const sol::protected_function finish = missions["finish"];
+    const sol::protected_function fail = missions["fail"];
+    REQUIRE( active.valid() );
+    REQUIRE( abandon.valid() );
+    REQUIRE( finish.valid() );
+    REQUIRE( fail.valid() );
+
+    const sol::protected_function_result first_page_result =
+        active( owner_handle );
+    REQUIRE( first_page_result.valid() );
+    const sol::table first_page = first_page_result.get<sol::table>();
+    REQUIRE( first_page["total"].get<std::size_t>() == 2 );
+    const sol::table first_item = first_page["items"].get<sol::table>()[1];
+    const cata::lua_platform::mission_token first_token =
+        first_item["token"].get<cata::lua_platform::mission_token>();
+    CHECK( first_token.uid() == platform_second->get_id() );
+
+    const sol::protected_function_result abandon_result =
+        abandon( owner_handle, first_token );
+    REQUIRE( abandon_result.valid() );
+    const sol::table abandon_envelope = abandon_result.get<sol::table>();
+    REQUIRE( abandon_envelope["ok"].get<bool>() );
+    const sol::table abandoned =
+        abandon_envelope["value"].get<sol::table>();
+    CHECK( abandoned["abandoned"].get<sol::table>()
+           ["uid"].get<int>() == first_token.uid() );
+    CHECK( abandoned["removed"].get<bool>() );
+    const std::vector<mission *> native_after_abandon =
+        native_owner.get_active_missions();
+    const std::vector<mission *> platform_after_abandon =
+        platform_owner.get_active_missions();
+    REQUIRE( native_after_abandon.size() == 1 );
+    REQUIRE( platform_after_abandon.size() == 1 );
+    CHECK( native_after_abandon.front() == native_first );
+    CHECK( platform_after_abandon.front() == platform_first );
+    CHECK( native_after_abandon.front()->mission_id() ==
+           platform_after_abandon.front()->mission_id() );
+
+    const sol::protected_function_result repeat_abandon_result =
+        abandon( owner_handle, first_token );
+    REQUIRE( repeat_abandon_result.valid() );
+    const sol::table repeat_abandon =
+        repeat_abandon_result.get<sol::table>();
+    CHECK_FALSE( repeat_abandon["ok"].get<bool>() );
+    CHECK( repeat_abandon["error"].get<sol::table>()
+           ["code"].get<std::string>() == "missing_mission" );
+
+    const sol::protected_function_result remaining_page_result =
+        active( owner_handle );
+    REQUIRE( remaining_page_result.valid() );
+    const sol::table remaining_page =
+        remaining_page_result.get<sol::table>();
+    const cata::lua_platform::mission_token remaining_token =
+        remaining_page["items"].get<sol::table>()[1].get<sol::table>()
+        ["token"].get<cata::lua_platform::mission_token>();
+    CHECK( remaining_token.uid() == platform_first->get_id() );
+
+    const sol::protected_function_result finish_result =
+        finish( owner_handle, remaining_token );
+    REQUIRE( finish_result.valid() );
+    CHECK( finish_result.get<sol::table>()["ok"].get<bool>() );
+    native_first->wrap_up( native_owner );
+    CHECK( platform_owner.get_active_missions().empty() );
+    CHECK( native_owner.get_active_missions().empty() );
+    CHECK( platform_first->is_complete( character_id(), platform_owner ) );
+    CHECK( native_first->is_complete( character_id(), native_owner ) );
+
+    const sol::protected_function_result abandon_completed_result =
+        abandon( owner_handle, remaining_token );
+    REQUIRE( abandon_completed_result.valid() );
+    const sol::table abandon_completed =
+        abandon_completed_result.get<sol::table>();
+    CHECK_FALSE( abandon_completed["ok"].get<bool>() );
+    CHECK( abandon_completed["error"].get<sol::table>()
+           ["code"].get<std::string>() == "not_active" );
+
+    mission *platform_failed = mission::reserve_new(
+                                   duplicate_type, character_id() );
+    mission *native_failed = mission::reserve_new(
+                                 duplicate_type, character_id() );
+    REQUIRE( platform_failed != nullptr );
+    REQUIRE( native_failed != nullptr );
+    platform_failed->assign( platform_owner );
+    native_failed->assign( native_owner );
+    const sol::protected_function_result failed_page_result =
+        active( owner_handle );
+    REQUIRE( failed_page_result.valid() );
+    const sol::table failed_page = failed_page_result.get<sol::table>();
+    const cata::lua_platform::mission_token failed_token =
+        failed_page["items"].get<sol::table>()[1].get<sol::table>()
+        ["token"].get<cata::lua_platform::mission_token>();
+    CHECK( failed_token.uid() == platform_failed->get_id() );
+
+    const sol::protected_function_result fail_result =
+        fail( owner_handle, failed_token );
+    REQUIRE( fail_result.valid() );
+    CHECK( fail_result.get<sol::table>()["ok"].get<bool>() );
+    native_failed->fail( native_owner );
+    CHECK( platform_owner.get_active_missions().empty() );
+    CHECK( native_owner.get_active_missions().empty() );
+    CHECK( platform_failed->has_failed() );
+    CHECK( native_failed->has_failed() );
+    const sol::protected_function_result abandon_failed_result =
+        abandon( owner_handle, failed_token );
+    REQUIRE( abandon_failed_result.valid() );
+    const sol::table abandon_failed =
+        abandon_failed_result.get<sol::table>();
+    CHECK_FALSE( abandon_failed["ok"].get<bool>() );
+    CHECK( abandon_failed["error"].get<sol::table>()
+           ["code"].get<std::string>() == "not_active" );
+}
+
 TEST_CASE( "lua_platform_npc_mission_provider_preflights_exact_owner_and_rollback",
            "[lua][platform][missions][npc]" )
 {
@@ -977,6 +1171,34 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
         CHECK( npc_mission_goal( selected_mission_dialogue ) == api_goal );
     };
     check_selected_conditions();
+
+    // Compare the native status selectors after lifecycle transitions as
+    // well as while the beta's selected mission is still reserved.
+    const auto make_selected_for_owner = [&]( const mission_type_id &type ) {
+        mission *selected = mission::reserve_new( type, provider->getID() );
+        REQUIRE( selected != nullptr );
+        selected->set_assigned_player_id( character_id() );
+        if( selected->get_assigned_player_id() == current_avatar.getID() ) {
+            selected->set_assigned_player_id( character_id( -2 ) );
+        }
+        provider->chatbin.missions_assigned.push_back( selected );
+        provider->chatbin.mission_selected = selected;
+        selected->assign( wrong_owner );
+        return selected;
+    };
+    mission *successful_for_dialogue = make_selected_for_owner(
+                                           mission_type_id( "TEST_MISSION_GOAL_CONDITION1" ) );
+    successful_for_dialogue->wrap_up( wrong_owner );
+    check_selected_conditions();
+    CHECK( mission_complete( selected_mission_dialogue ) );
+    CHECK_FALSE( mission_failed( selected_mission_dialogue ) );
+    CHECK( mission_goal( selected_mission_dialogue ) );
+    mission *failed_for_dialogue = make_selected_for_owner(
+                                       mission_type_id( "TEST_MISSION_GOAL_CONDITION1" ) );
+    failed_for_dialogue->fail( wrong_owner );
+    check_selected_conditions();
+    CHECK( mission_failed( selected_mission_dialogue ) );
+    CHECK( mission_goal( selected_mission_dialogue ) );
 
     const conditional_t alpha_no_available_mission(
         "u_has_no_available_mission" );
