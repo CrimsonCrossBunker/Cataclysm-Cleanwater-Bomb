@@ -3381,6 +3381,83 @@ assert(observed[#observed] == 'KNOWN')
                 )
             )
 
+    def test_live_character_proficiency_proof_keeps_avatar_only_queries_separate(self) -> None:
+        expected = 'services.proficiencies.has_id_text(actor, "prof_knapping")'
+        for event in sorted(migrate_lua_first.PROVEN_ITEM_ACTOR_EVENTS):
+            with self.subTest(event=event):
+                source = migrate_lua_first.SourceObject(Path("proficiency.json"), 0, {
+                    "type": "effect_on_condition", "id": "live_proficiency",
+                    "eoc_type": "EVENT", "required_event": event,
+                    "condition": {"and": [
+                        {"u_has_proficiency": "prof_knapping"},
+                        {"not": {"u_has_proficiency": "prof_unregistered"}},
+                    ]},
+                    "effect": "nothing",
+                })
+                result = migrate_lua_first.MigrationResult()
+                rendered = migrate_lua_first.render_eoc(source, result)
+                self.assertIn(expected, rendered)
+                self.assertFalse(result.todos)
+                for flags in (
+                    {"eoc_referenced_ids": frozenset({"live_proficiency"})},
+                    {"dynamic_eoc_dispatch_present": True},
+                ):
+                    result = migrate_lua_first.MigrationResult()
+                    rendered = migrate_lua_first.render_eoc(source, result, **flags)
+                    self.assertNotIn(expected, rendered)
+                    self.assertTrue(result.todos)
+                inline = migrate_lua_first.SourceObject(Path("proficiency.json"), 0, {
+                    **source.value, "__inline_eoc": True,
+                })
+                result = migrate_lua_first.MigrationResult()
+                self.assertNotIn(expected, migrate_lua_first.render_eoc(inline, result))
+                self.assertTrue(result.todos)
+        recurring = migrate_lua_first.SourceObject(Path("proficiency.json"), 0, {
+            "type": "effect_on_condition", "id": "recurring_proficiency",
+            "eoc_type": "RECURRING", "global": True, "recurrence": 1,
+            "condition": {"u_has_proficiency": "prof_knapping"},
+            "effect": "nothing",
+        })
+        self.assertIn(expected, migrate_lua_first.render_eoc(
+            recurring, migrate_lua_first.MigrationResult(),
+        ))
+        for condition in ("u_at_safe_space", {"npc_role_nearby": "NC_NONE"}):
+            self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+                condition, proficiency_character_alpha_actor_proven=True,
+            ))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_proficiency_raw_literal_lookup_preserves_native_string_bytes(self) -> None:
+        for identifier in ("", "\0" + "12", "x" * 513, 'prof_"\\name',
+                           "无此熟练度", "\nprof", "prof_unregistered"):
+            for prefix in ("u_", "npc_"):
+                with self.subTest(prefix=prefix, identifier=repr(identifier)):
+                    expression = migrate_lua_first.render_eoc_condition_expression(
+                        {prefix + "has_proficiency": identifier},
+                        proficiency_character_alpha_actor_proven=True,
+                        npc_melee_beta_actor_proven=True,
+                    )
+                    self.assertIsNotNone(expression)
+                    expected_bytes = ",".join(str(byte) for byte in identifier.encode("utf-8"))
+                    script = r"""
+local actor = {kind = 'creature', subtype = 'npc', is_valid = function() return true end}
+local context = {actors = {interlocutor = actor}}
+local expected = {EXPECTED_BYTES}
+local calls = 0
+local function service_value(value) return value end
+local services = {proficiencies = {has_id_text = function(target, id)
+ assert(target == actor and #id == #expected)
+ for index, byte in ipairs(expected) do assert(string.byte(id, index) == byte) end
+ calls = calls + 1
+ return false
+end}}
+assert(not (EXPRESSION))
+assert(calls == 1)
+""".replace("EXPECTED_BYTES", expected_bytes).replace("EXPRESSION", expression or "nil")
+                    run = subprocess.run(["lua", "-"], input=script, text=True,
+                                         capture_output=True, timeout=10)
+                    self.assertEqual(run.returncode, 0, run.stderr)
+
     def test_npc_proficiency_is_limited_to_event_exclusive_melee_beta(self) -> None:
         def render(
             eoc_id: str, required_event: str, condition: object,
@@ -3498,7 +3575,7 @@ assert(observed[#observed] == 'KNOWN')
                 result.files[Path("MIGRATION_REPORT.md")],
             )
 
-    def test_eoc_child_does_not_inherit_proficiency_event_proof(self) -> None:
+    def test_test_eoc_uses_caller_proficiency_frame_without_proving_child_handler(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -3528,11 +3605,17 @@ assert(observed[#observed] == 'KNOWN')
             )
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
-            self.assertNotIn("services.proficiencies.has_id_text", main)
+            child_start = main.index("migrated_eoc_proficiency_child_condition = function")
+            child_end = main.index('migrated_eoc_functions["proficiency_child_condition"]')
+            self.assertNotIn("services.proficiencies.has_id_text", main[child_start:child_end])
             self.assertIn(
-                "EOC test_eoc_proficiency_parent condition TODO",
+                'services.proficiencies.has_id_text(actor, "prof_knapping")', main,
+            )
+            self.assertIn(
+                "EOC proficiency_child_condition condition TODO",
                 report,
             )
+            self.assertNotIn("EOC test_eoc_proficiency_parent condition TODO", report)
 
     def test_proficiency_event_actor_proof_does_not_survive_eoc_dispatch(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

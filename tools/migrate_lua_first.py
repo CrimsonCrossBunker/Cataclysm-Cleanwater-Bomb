@@ -864,11 +864,8 @@ def safe_native_recipe_id(value: Any) -> bool:
 
 
 def safe_native_proficiency_id_literal(value: Any) -> bool:
-    """Bound literal proficiency text without requiring a registered ID."""
-    return (
-        bounded_utf8_string(value, 256) and
-        not any(ord(character) < 0x20 or ord(character) == 0x7f for character in value)
-    )
+    """Preserve raw native proficiency text without requiring a registered ID."""
+    return lua_quotable_native_variable_string(value)
 
 
 def bounded_utf8_string(
@@ -28607,6 +28604,7 @@ def render_eoc_condition_expression(
     npc_melee_beta_actor_proven: bool = False,
     safe_space_character_beta_actor_proven: bool = False,
     named_condition_alpha_actor_proven: bool = False,
+    proficiency_character_alpha_actor_proven: bool = False,
 ) -> str | None:
     """Translate bounded legacy predicates into ordinary Lua composition."""
     # The proof bit certifies an exact Character handle.  The expression only
@@ -29283,6 +29281,9 @@ def render_eoc_condition_expression(
                     proficiency_alpha_actor_proven=proficiency_alpha_actor_proven,
                     npc_melee_beta_actor_proven=npc_melee_beta_actor_proven,
                     named_condition_alpha_actor_proven=named_condition_alpha_actor_proven,
+                    proficiency_character_alpha_actor_proven=(
+                        proficiency_character_alpha_actor_proven
+                    ),
                 )
 
     if set(condition) == {"get_condition"}:
@@ -29403,6 +29404,9 @@ def render_eoc_condition_expression(
                 proficiency_alpha_actor_proven,
                 npc_melee_beta_actor_proven=npc_melee_beta_actor_proven,
                 named_condition_alpha_actor_proven=named_condition_alpha_actor_proven,
+                proficiency_character_alpha_actor_proven=(
+                    proficiency_character_alpha_actor_proven
+                ),
             )
             for entry in entries
         ]
@@ -29424,6 +29428,9 @@ def render_eoc_condition_expression(
             proficiency_alpha_actor_proven,
             npc_melee_beta_actor_proven=npc_melee_beta_actor_proven,
             named_condition_alpha_actor_proven=named_condition_alpha_actor_proven,
+            proficiency_character_alpha_actor_proven=(
+                proficiency_character_alpha_actor_proven
+            ),
         )
         return None if rendered is None else f"not ({rendered})"
 
@@ -30300,7 +30307,10 @@ def render_eoc_condition_expression(
         )
     if set(condition) == {"u_has_proficiency"}:
         raw_id = condition.get("u_has_proficiency")
-        if proficiency_alpha_actor_proven and safe_platform_id(raw_id):
+        if (
+            (proficiency_alpha_actor_proven or proficiency_character_alpha_actor_proven) and
+            safe_native_proficiency_id_literal(raw_id)
+        ):
             # Native checks raw proficiency_id text against the learned set;
             # it does not require a registered definition. Dynamic
             # str_or_var/mutator shapes remain TODO until their exact scope
@@ -31364,17 +31374,21 @@ def render_eoc(
             )
         )
     )
-    # Native u_has_proficiency reads dialogue alpha. Restrict the current
-    # lowerer to game_start, where the avatar is live and source-proven; other
-    # avatar hooks can run after death or lack an equivalent live handle.
-    # Also require an event-exclusive EOC so dispatch cannot supply another
-    # actor. This proof is not passed to stored conditions or conditional
-    # effect closures, which may run with a child context.
+    # Retain the existing game_start Avatar proof for its other consumers.
+    # Those predicates and mutations do not gain an arbitrary Character
+    # proof merely because the proficiency query accepts one. Stored effect
+    # closures and re-entered EOCs cannot inherit this event-exclusive proof.
     proficiency_alpha_actor_proven = (
         required_event == "game_start" and
         game_start_avatar_source_proven and not inline_eoc and
         eoc_id not in eoc_referenced_ids and
         not dynamic_eoc_dispatch_present
+    )
+    # The read-only proficiency query accepts any exact live Character, not
+    # only an Avatar. Keep this proof separate from the older game_start bit,
+    # which also authorizes Avatar-only predicates and sample_range mutation.
+    proficiency_character_alpha_actor_proven = (
+        wound_alpha_actor_proven or field_avatar_center_proven
     )
     # sample_range writes Character variables and consumes the native global
     # RNG. Its bounded conversion requires the same event-exclusive live alpha
@@ -31407,6 +31421,9 @@ def render_eoc(
             npc_melee_beta_actor_proven=npc_melee_beta_actor_proven,
             safe_space_character_beta_actor_proven=safe_space_character_beta_actor_proven,
             named_condition_alpha_actor_proven=named_condition_alpha_actor_proven,
+            proficiency_character_alpha_actor_proven=(
+                proficiency_character_alpha_actor_proven
+            ),
         )
         if deactivate_expression is not None:
             lines.extend([
@@ -31464,6 +31481,9 @@ def render_eoc(
             npc_melee_beta_actor_proven=npc_melee_beta_actor_proven,
             safe_space_character_beta_actor_proven=safe_space_character_beta_actor_proven,
             named_condition_alpha_actor_proven=named_condition_alpha_actor_proven,
+            proficiency_character_alpha_actor_proven=(
+                proficiency_character_alpha_actor_proven
+            ),
         )
         condition_converted = condition_expression is not None
     false_effect_converted = True

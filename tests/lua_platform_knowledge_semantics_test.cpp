@@ -298,8 +298,11 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
                 CHECK( proficiency["known"].get<bool>() == known );
             }
             for( const std::string &unknown_id : {
+                     std::string(),
                      std::string( "prof_unregistered_condition_test" ),
-                     std::string( 257, 'x' )
+                     std::string( 257, 'x' ),
+                     std::string( 1024, 'x' ),
+                     std::string( "无此熟练度" )
                  } ) {
                 CAPTURE( prefix, unknown_id );
                 REQUIRE_FALSE( proficiency_id( unknown_id ).is_valid() );
