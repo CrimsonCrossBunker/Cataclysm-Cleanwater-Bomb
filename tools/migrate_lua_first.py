@@ -27830,7 +27830,7 @@ def render_static_character_string_var(
                     "context_val": "context", "var_val": "var"}.get(target_key)
     target = ((target_scope, target_name) if target_scope is not None and
               lua_quotable_native_variable_string(target_name) else None)
-    if target is None or target[0] == "var":
+    if target is None:
         return None
     if effect.get("parse_tags", False) is not False:
         # Platform snippet/tag expansion draws from the runtime-local stream;
@@ -27854,6 +27854,12 @@ def render_static_character_string_var(
         owner = _proven_copy_variable_target(effect_actor_targets, "npc")
     if target[0] in {"u", "npc"} and owner is None:
         return None
+    indirect_alpha = _proven_copy_variable_target(effect_actor_targets, "u")
+    indirect_beta = _proven_copy_variable_target(effect_actor_targets, "npc")
+    if target[0] == "var" and (indirect_alpha is None or indirect_beta is None):
+        # Runtime pointer text may name either participant. Do not invent a
+        # live actor or silently skip native invalid-participant diagnostics.
+        return None
 
     rendered_values = [_render_assignment_string_value(value, i18n, effect_actor_targets)
                        for value in values]
@@ -27866,7 +27872,24 @@ def render_static_character_string_var(
         "    local assigned_value = string_values[",
         "        services.random.native_int(0, #string_values - 1) + 1]()",
     ]
-    if target[0] == "context":
+    if target[0] == "var":
+        lines.extend([
+            "    local target_pointer = service_value(services.variables.get_context_string(",
+            f"        context and context.data, {lua_quote(target[1])}))",
+            '    local target_name = target_pointer.exists == false and "" or target_pointer.value',
+            '    if string.sub(target_name, 1, 2) == "u_" then',
+            "        service_value(services.variables.set(",
+            f"            {indirect_alpha}, string.sub(target_name, 3), assigned_value))",
+            '    elseif string.sub(target_name, 1, 2) == "n_" then',
+            "        service_value(services.variables.set(",
+            f"            {indirect_beta}, string.sub(target_name, 3), assigned_value))",
+            '    elseif string.sub(target_name, 1, 1) == "_" then',
+            "        context.data[string.sub(target_name, 2)] = assigned_value",
+            "    else",
+            "        service_value(services.variables.set_global(target_name, assigned_value))",
+            "    end",
+        ])
+    elif target[0] == "context":
         lines.append(
             f"    context.data[{lua_quote(target[1])}] = assigned_value"
         )
@@ -32404,7 +32427,7 @@ def render_eoc(
                             "translate set_string_var only for native string providers "
                             "with native RNG and exact participant handles; parse_tags, "
                             "string_input, unsupported translation shapes, unproven "
-                            "source owners and var_val targets remain TODO"
+                            "source/target owners remain TODO"
                         )
                     if (
                         isinstance(false_value, dict) and
@@ -36581,7 +36604,7 @@ def render_eoc(
                         "    -- TODO: translate set_string_var only for native string "
                         "providers with native RNG and exact participant handles; "
                         "parse_tags, string_input, unsupported translation shapes, "
-                        "unproven source owners and var_val targets remain TODO."
+                        "unproven source/target owners remain TODO."
                     )
                     result.add_todo(
                         "manual_rewrite",

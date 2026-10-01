@@ -2007,7 +2007,7 @@ assert(target_store.output==VALUE or (VALUE==nil and target_store.output==null))
         self.assertIsNone(missing_target)
         for unsupported, target, target_proof in (
             ({"u_val": "source"}, {"global_val": "output"}, {}),
-            ("value", {"var_val": "target"}, targets),
+            ("value", {"var_val": "target"}, {"u": targets["u"]}),
             ("value", {"npc_val": "output"}, {}),
         ):
             self.assertIsNone(migrate_lua_first.render_static_character_string_var(
@@ -2214,6 +2214,106 @@ assert(table.concat(trace,',')=='rng,read,select,lookup,write')
             "set_string_var": selection, "target_var": {"global_val": "output"},
         }, {"u": ("actor", "monster"), "npc": ("partner", "character")}))
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_set_string_indirect_targets_keep_native_prefixes_empty_keys_and_single_parse(self) -> None:
+        targets = {"u": ("actor", "character"), "npc": ("partner", "monster")}
+        for pointer_key in ("", "pointer\0key", "p" * 10000):
+            for pointer in (None, "", "u_", "n_", "_", "u_key\0raw", "n_key\0raw", "_key\0raw",
+                            "unknown", "var_u_not_followed", "u_" + "k" * 10000):
+                if pointer is not None and pointer.startswith("u_"):
+                    scope, key = "u", pointer[2:]
+                elif pointer is not None and pointer.startswith("n_"):
+                    scope, key = "npc", pointer[2:]
+                elif pointer is not None and pointer.startswith("_"):
+                    scope, key = "context", pointer[1:]
+                else:
+                    scope, key = "global", pointer or ""
+                lines = migrate_lua_first.render_static_character_string_var({
+                    "set_string_var": "u_not_followed\0value", "target_var": {"var_val": pointer_key},
+                }, targets)
+                self.assertIsNotNone(lines)
+                script = r"""
+local actor,partner={},{}
+local trace={}
+local function service_value(r) assert(r.ok);return r.value end
+local function write(scope,key,value,owner)
+ assert(scope==SCOPE and key==KEY and value=='u_not_followed\0value')
+ if scope=='u' then assert(owner==actor) elseif scope=='npc' then assert(owner==partner) end
+ table.insert(trace,'write');return {ok=true,value={}}
+end
+local context={data=setmetatable({}, {__newindex=function(self,key,value) write('context',key,value) end})}
+local pointer=POINTER
+local services={random={native_int=function(lo,hi) assert(lo==0 and hi==0);table.insert(trace,'rng');return 0 end},
+ variables={get_context_string=function(data,key)
+  assert(data==context.data and key==POINTER_KEY);table.insert(trace,'pointer')
+  return {ok=true,value={exists=pointer~=nil,value=pointer}}
+ end,set=function(owner,key,value) return write(owner==actor and 'u' or 'npc',key,value,owner) end,
+ set_global=function(key,value) return write('global',key,value) end}}
+BODY
+assert(table.concat(trace,',')=='rng,pointer,write')
+""".replace("POINTER_KEY", migrate_lua_first.lua_quote(pointer_key)).replace(
+                    "POINTER", "nil" if pointer is None else migrate_lua_first.lua_quote(pointer),
+                ).replace("SCOPE", migrate_lua_first.lua_quote(scope)).replace(
+                    "KEY", migrate_lua_first.lua_quote(key),
+                ).replace("BODY", "\n".join(lines or []))
+                run = subprocess.run(["lua", "-"], input=script, text=True,
+                                     capture_output=True, timeout=10)
+                self.assertEqual(run.returncode, 0, run.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_set_string_indirect_pointer_is_read_after_value_and_can_alias_itself(self) -> None:
+        targets = {"u": ("actor", "character"), "npc": ("partner", "character")}
+        lines = migrate_lua_first.render_static_character_string_var({
+            "set_string_var": {"global_val": "value"}, "target_var": {"var_val": "pointer"},
+        }, targets)
+        self.assertIsNotNone(lines)
+        script = r"""
+local actor,partner={},{}
+local context={data={pointer='u_old'}}
+local trace={}
+local function service_value(r) assert(r.ok);return r.value end
+local services={random={native_int=function(lo,hi) assert(lo==0 and hi==0);table.insert(trace,'rng');return 0 end},
+ variables={get_global_string=function(key)
+  assert(key=='value');table.insert(trace,'value')
+  context.data.pointer='_pointer'
+  return {ok=true,value={exists=true,value='n_not_followed\0raw'}}
+ end,get_context_string=function(data,key)
+  assert(data==context.data and key=='pointer');table.insert(trace,'pointer')
+  return {ok=true,value={exists=true,value=data[key]}}
+ end,set=function() error('pointer was read too soon or recursively followed') end,
+ set_global=function() error('wrong scope') end}}
+BODY
+assert(context.data.pointer=='n_not_followed\0raw')
+assert(table.concat(trace,',')=='rng,value,pointer')
+""".replace("BODY", "\n".join(lines or []))
+        run = subprocess.run(["lua", "-"], input=script, text=True,
+                             capture_output=True, timeout=10)
+        self.assertEqual(run.returncode, 0, run.stderr)
+        for proof in (None, {}, {"u": targets["u"]}, {"npc": targets["npc"]}):
+            self.assertIsNone(migrate_lua_first.render_static_character_string_var({
+                "set_string_var": "value", "target_var": {"var_val": "pointer"},
+            }, proof))
+
+    def test_set_string_indirect_target_migration_and_false_branch_keep_participant_proofs(self) -> None:
+        effect = {"set_string_var": "value", "target_var": {"var_val": "target"}}
+        for event, expected_supported in (("character_melee_attacks_monster", True), ("game_start", False)):
+            for in_false_branch in (False, True):
+                source = migrate_lua_first.SourceObject(Path("indirect.json"), 0, {
+                    "type": "effect_on_condition", "id": "indirect_assignment",
+                    "eoc_type": "EVENT", "required_event": event,
+                    "effect": [], "condition": "is_day",
+                    **({"false_effect": effect} if in_false_branch else {"effect": effect}),
+                })
+                result = migrate_lua_first.MigrationResult()
+                rendered = migrate_lua_first.render_eoc(source, result)
+                self.assertIsNotNone(rendered)
+                self.assertEqual("local target_pointer" in (rendered or ""), expected_supported)
+                if expected_supported:
+                    self.assertEqual(result.todos, [])
+                    self.assertNotIn("services.variables.resolve", rendered or "")
+                else:
+                    self.assertTrue(result.todos)
+
     def test_set_string_migration_keeps_unproven_shapes_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "set_string_shapes.json"
@@ -2281,7 +2381,7 @@ assert(table.concat(trace,',')=='rng,read,select,lookup,write')
             self.assertEqual(len(result.converted), 2)
             self.assertEqual(len(result.partial), 4)
             self.assertIn("services.random.native_int(0, #string_values - 1) + 1", main)
-            self.assertIn("unproven source owners and var_val targets remain TODO", main)
+            self.assertIn("unproven source/target owners remain TODO", main)
 
     def test_false_branch_string_literal_requires_proven_targets(self) -> None:
         effect = {
