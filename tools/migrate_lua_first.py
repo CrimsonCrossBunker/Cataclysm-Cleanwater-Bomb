@@ -27501,7 +27501,7 @@ def render_static_timed_event_reschedule(
     duration = (
         maximum_delay
         if raw_delay == "infinite"
-        else parse_turns(raw_delay)
+        else parse_native_duration_turns(raw_delay)
     )
     if duration is None or not minimum_delay <= duration <= maximum_delay:
         return None

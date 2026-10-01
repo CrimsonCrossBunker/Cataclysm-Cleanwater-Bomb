@@ -25968,6 +25968,31 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertIn("services.item_categories.set_spawn_rates(", main)
 
     def test_static_timed_event_retime_accepts_native_keys_and_delay_range(self) -> None:
+        for raw_delay, expected in (
+            ("1t", 1),
+            ("1 minute 2 seconds", 62),
+            ("-1 minute 30 seconds", -30),
+        ):
+            with self.subTest(raw_delay=raw_delay):
+                self.assertEqual(
+                    migrate_lua_first.render_static_timed_event_reschedule(
+                        {"alter_timed_events": "key", "time_in_future": raw_delay}
+                    ),
+                    [
+                        "    services.world.reschedule_events(",
+                        f'        "key", services.time.duration({expected}, "turn"))',
+                    ],
+                )
+        for raw_delay in (
+            "1 sec", "1 min", "1 turn 2147483647 turns",
+            "2147483648 turns -1 turn",
+        ):
+            with self.subTest(raw_delay=raw_delay):
+                self.assertIsNone(
+                    migrate_lua_first.render_static_timed_event_reschedule(
+                        {"alter_timed_events": "key", "time_in_future": raw_delay}
+                    )
+                )
         key = "键" * 300 + '"\\\0'
         quoted_key = migrate_lua_first.lua_quote(key)
         self.assertIn("\\000", quoted_key)

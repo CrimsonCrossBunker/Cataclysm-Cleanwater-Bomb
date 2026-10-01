@@ -270,7 +270,9 @@ TEST_CASE( "lua_platform_location_copy_matches_native_timed_submap_copy",
         std::string retime_delay_text;
         time_duration retime_delay;
     };
-    const std::array<parity_case, 6> cases = {{
+    const std::array<parity_case, 7> cases = {{
+            { "native-duration-spellings", "1t", 1_turns,
+              "1 minute 2 seconds", 1_minutes + 2_seconds },
             { "", "1 turn", 1_turns, "0 turns", 0_turns },
             { std::string( 300, 'k' ), "0 turns", 0_turns, "-3 turns", -3_turns },
             { "任务\"quoted", "-3 turns", -3_turns, "infinite",
