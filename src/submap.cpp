@@ -369,6 +369,7 @@ void submap::revert_submap( submap &sr )
         m.reset();
         terrain_growth.clear();
         finite_liquids.clear();
+        cosmetics.clear();
         set_all_ter( sr.get_ter( point_sm_ms::zero ), true );
         return;
     }

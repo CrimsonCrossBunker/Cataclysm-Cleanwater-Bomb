@@ -492,6 +492,183 @@ TEST_CASE( "lua_platform_location_revert_provider_owns_snapshots_and_runs_synchr
     }
 }
 
+TEST_CASE( "lua_platform_location_revert_survives_native_save_and_actualizes",
+           "[lua][platform][world][semantic][save]" )
+{
+    platform_overmap_travel_fixture fixture( 855, 85 );
+    platform_calendar_turn_scope calendar_scope;
+    platform_world_copy_globals_restore restore_globals;
+    timed_event_manager &events = get_timed_events();
+    restore_on_out_of_scope<timed_event_manager> restore_events( std::move( events ) );
+    const tripoint_abs_omt source = fixture.source_omt + tripoint( 2500, 2000, 0 );
+    const tripoint_abs_sm base = project_to<coords::sm>( source );
+    on_out_of_scope clear_revert_maps( []() {
+        MAPBUFFER.clear_outside_reality_bubble();
+    } );
+    tinymap loaded;
+    loaded.load( source, true );
+    const point_sm_ms sample( 2, 3 );
+    const std::string text = std::string( "saved graffiti" ) + '\0' + "尾部";
+    const std::string key = std::string( 300, 'k' ) + '\0' + "tail";
+    get_globals().set_global_value( "lua_platform_revert_source",
+                                  project_to<coords::ms>( source ) );
+    const sol::protected_function revert = fixture.services["world"]["schedule_location_revert"];
+    dialogue conversation( get_talker_for( get_avatar() ), get_talker_for( get_avatar() ) );
+    for( const bool native_authoring : { true, false } ) {
+        CAPTURE( native_authoring );
+        calendar::turn = time_point::from_turn( 1000 );
+        events = timed_event_manager();
+        for( int x = 0; x < 2; ++x ) {
+            for( int y = 0; y < 2; ++y ) {
+                submap *sm = MAPBUFFER.lookup_submap( base + point( x, y ) );
+                REQUIRE( sm != nullptr );
+                const int index = x * 2 + y;
+                sm->set_ter( sample, ter_str_id( "t_dirt" ).id() );
+                sm->set_furn( sample, furn_str_id::NULL_ID() );
+                sm->set_trap( sample, trap_str_id::NULL_ID() );
+                sm->set_terrain_growth( sample, { time_point::from_turn( 200 + index ) } );
+                sm->set_finite_liquid( sample, 17 + index );
+                sm->cosmetics.clear();
+                sm->set_graffiti( sample, text );
+                sm->insert_cosmetic( sample, "ccb-test-decoration", "custom" );
+                sm->get_items( sample ).clear();
+                sm->get_items( sample ).insert( item( itype_id( "apple" ), calendar::turn ) );
+            }
+        }
+        if( native_authoring ) {
+            std::ostringstream input;
+            JsonOut writer( input );
+            writer.start_object();
+            writer.member( "revert_location" );
+            writer.start_object();
+            writer.member( "global_val", "lua_platform_revert_source" );
+            writer.end_object();
+            writer.member( "time_in_future", "0 turns" );
+            writer.member( "key", key );
+            writer.end_object();
+            talk_effect_t native;
+            native.parse_sub_effect( json_loader::from_string( input.str() ).get_object(),
+                                     "lua_platform_revert_save_native" );
+            native.apply( conversation );
+        } else {
+            const sol::protected_function_result call = revert(
+                        fixture.abs_omt_position( source ),
+                        cata::lua_platform::script_time_duration::from_native( 0_turns ), key );
+            REQUIRE( call.valid() );
+            REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
+        }
+        REQUIRE( events.get_all().size() == 4 );
+        const time_point due = events.get_all().front().when;
+        std::ostringstream saved;
+        JsonOut output( saved );
+        timed_event_manager::serialize_all( output );
+        events = timed_event_manager();
+        timed_event_manager::unserialize_all( json_loader::from_string( saved.str() ).get_array() );
+        REQUIRE( events.get_all().size() == 4 );
+        std::size_t index = 0;
+        for( const timed_event &event : events.get_all() ) {
+            CHECK( event.key == key );
+            CHECK( event.when == due );
+            REQUIRE( event.revert.get_terrain_growth( sample ) != nullptr );
+            CHECK( event.revert.get_terrain_growth( sample )->fertilized_at ==
+                   time_point::from_turn( 200 + static_cast<int>( index ) ) );
+            CHECK( event.revert.get_finite_liquid( sample ) == 17 + static_cast<int>( index ) );
+            CHECK( event.revert.get_graffiti( sample ) == text );
+            REQUIRE( event.revert.cosmetics.size() == 2 );
+            CHECK( event.revert.cosmetics.back().type == "ccb-test-decoration" );
+            CHECK( event.revert.cosmetics.back().str == "custom" );
+            ++index;
+        }
+        for( int x = 0; x < 2; ++x ) {
+            for( int y = 0; y < 2; ++y ) {
+                submap *sm = MAPBUFFER.lookup_submap( base + point( x, y ) );
+                sm->set_ter( sample, ter_str_id( "t_floor" ).id() );
+                sm->clear_terrain_growth( sample );
+                sm->set_finite_liquid( sample, 99 );
+                sm->cosmetics.clear();
+                sm->set_graffiti( sample, "changed after snapshot" );
+                sm->get_items( sample ).clear();
+            }
+        }
+        events.process();
+        CHECK( events.get_all().size() == 4 );
+        calendar::turn = due;
+        events.process();
+        CHECK( events.get_all().empty() );
+        for( int x = 0; x < 2; ++x ) {
+            for( int y = 0; y < 2; ++y ) {
+                submap *sm = MAPBUFFER.lookup_submap( base + point( x, y ) );
+                REQUIRE( sm != nullptr );
+                REQUIRE( sm->get_terrain_growth( sample ) != nullptr );
+                CHECK( sm->get_ter( sample ) == ter_str_id( "t_dirt" ).id() );
+                CHECK( sm->get_terrain_growth( sample )->fertilized_at ==
+                       time_point::from_turn( 200 + x * 2 + y ) );
+                CHECK( sm->get_finite_liquid( sample ) == 17 + x * 2 + y );
+                CHECK( sm->get_graffiti( sample ) == text );
+                REQUIRE( sm->cosmetics.size() == 2 );
+                CHECK( sm->cosmetics.back().str == "custom" );
+                REQUIRE( sm->get_items( sample ).size() == 1 );
+                CHECK( sm->get_items( sample ).begin()->typeId() == itype_id( "apple" ) );
+            }
+        }
+    }
+}
+
+TEST_CASE( "lua_platform_location_revert_loads_legacy_snapshots_without_metadata",
+           "[lua][platform][world][semantic][save]" )
+{
+    timed_event_manager &events = get_timed_events();
+    restore_on_out_of_scope<timed_event_manager> restore_events( std::move( events ) );
+    const point_sm_ms sample( 2, 3 );
+    const tripoint_abs_ms absolute( 12000, 14400, 0 );
+    for( const bool uniform : { true, false } ) {
+        CAPTURE( uniform );
+        events = timed_event_manager();
+        std::ostringstream legacy;
+        JsonOut writer( legacy );
+        writer.start_array();
+        writer.start_object();
+        writer.member( "type", timed_event_type::REVERT_SUBMAP );
+        writer.member( "when", time_point::from_turn( 1001 ) );
+        writer.member( "faction", -1 );
+        writer.member( "map_point", project_to<coords::sm>( absolute ) );
+        writer.member( "map_square", absolute );
+        writer.member( "strength", 0 );
+        writer.member( "string_id", "" );
+        writer.member( "key", "legacy-key" );
+        writer.member( "revert" );
+        if( uniform ) {
+            writer.write( ter_str_id( "t_dirt" ).id() );
+        } else {
+            writer.start_array();
+            writer.start_object();
+            writer.member( "point", sample );
+            writer.member( "ter", ter_str_id( "t_dirt" ).id() );
+            writer.member( "furn", furn_str_id::NULL_ID() );
+            writer.member( "trap", trap_str_id::NULL_ID() );
+            writer.member( "items" );
+            writer.start_array();
+            writer.end_array();
+            writer.end_object();
+            writer.end_array();
+        }
+        writer.end_object();
+        writer.end_array();
+        timed_event_manager::unserialize_all( json_loader::from_string( legacy.str() ).get_array() );
+        REQUIRE( events.get_all().size() == 1 );
+        const timed_event &event = events.get_all().front();
+        CHECK( event.map_square == absolute );
+        CHECK( event.map_point == project_to<coords::sm>( absolute ) );
+        CHECK( event.when == time_point::from_turn( 1001 ) );
+        CHECK( event.key == "legacy-key" );
+        CHECK( event.revert.is_uniform() == uniform );
+        CHECK( event.revert.get_ter( sample ) == ter_str_id( "t_dirt" ).id() );
+        CHECK( event.revert.get_terrain_growth( sample ) == nullptr );
+        CHECK_FALSE( event.revert.has_finite_liquid( sample ) );
+        CHECK( event.revert.cosmetics.empty() );
+    }
+}
+
 TEST_CASE( "lua_platform_location_copy_matches_native_timed_submap_copy",
            "[lua][platform][world][semantic]" )
 {

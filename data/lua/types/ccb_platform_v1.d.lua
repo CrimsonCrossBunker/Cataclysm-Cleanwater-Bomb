@@ -406,6 +406,7 @@ function CcbWorldApi.transform_radius(position, radius, transform, options) end
 ---@param key? string|fun():string Raw event key (nil means empty), or synchronous provider called once for each of four submaps.
 --- Fixes the due time before loading/generating the OMT: current time plus delay plus one second, saturated at native time-point limits.
 --- Takes each submap snapshot before calling its provider in x-then-y order; providers are never retained.
+--- Native recovery restores terrain, furniture, traps, ground items, growth timestamps, finite liquid charges and cosmetics; pending snapshots persist in world data.
 --- A failing or non-string provider can leave events already queued by earlier calls; this operation is not transactional.
 ---@return CcbResult result `value` is a CcbWorldLocationRevertResult.
 function CcbWorldApi.schedule_location_revert(position, delay, key) end
