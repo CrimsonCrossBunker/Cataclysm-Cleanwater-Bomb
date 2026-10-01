@@ -30828,7 +30828,7 @@ def _render_native_eoc_event_context_normalization() -> list[str]:
         '                if type(value) ~= "boolean" then',
         '                    error("native EOC boolean payload is not a boolean", 0)',
         "                end",
-        "                normalized_data[key] = value and 1 or 0",
+        "                normalized_data[key] = value and 1.0 or 0.0",
         '            elseif data_type == "character_id" or data_type == "chrono_seconds" then',
         "                normalized_data[key] = tostring(value)",
         '            elseif data_type == "tripoint" then',

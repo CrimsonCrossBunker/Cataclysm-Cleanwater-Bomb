@@ -3614,6 +3614,10 @@ assert(normalized.data.string_value == 'prof_string')
 assert(normalized.data.integer_value == 42)
 assert(normalized.data.boolean_true == 1 and type(normalized.data.boolean_true) == 'number')
 assert(normalized.data.boolean_false == 0 and type(normalized.data.boolean_false) == 'number')
+if math.type then
+    assert(math.type(normalized.data.boolean_true) == 'float')
+    assert(math.type(normalized.data.boolean_false) == 'float')
+end
 assert(normalized.data.point_value.kind == 'tripoint_abs_ms')
 assert(normalized.data.point_value.x == 1 and normalized.data.point_value.y == -2)
 assert(normalized.data.point_value.z == 3 and coordinate_calls == 1)
@@ -3768,6 +3772,130 @@ handlers['migrated.native_event_boolean_numeric'](event(false))
 assert(#observed_intensities == 2)
 assert(observed_intensities[1] == 1 and observed_intensities[2] == 0)
 """.replace("GENERATED", rendered)
+        run = subprocess.run(["lua", "-"], input=script, text=True,
+                             capture_output=True, timeout=10)
+        self.assertEqual(run.returncode, 0, run.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_event_eoc_boolean_context_drives_generated_numeric_condition(self) -> None:
+        rendered_handlers = []
+        for suffix, condition, effect_id in (
+            (
+                "pass",
+                {"u_has_cash": {"context_val": "boolean_value"}},
+                "bleed",
+            ),
+            (
+                "fail",
+                {"not": {"u_has_cash": {"context_val": "boolean_value"}}},
+                "bite",
+            ),
+        ):
+            eoc_id = "native_event_boolean_numeric_" + suffix
+            source = migrate_lua_first.SourceObject(
+                Path(eoc_id + ".json"), 0, {
+                    "type": "effect_on_condition",
+                    "id": eoc_id,
+                    "eoc_type": "EVENT",
+                    "required_event": "game_start",
+                    "condition": condition,
+                    "effect": {
+                        "u_add_effect": effect_id,
+                        "duration": "1 turn",
+                        "intensity": {"context_val": "boolean_value"},
+                    },
+                },
+            )
+            result = migrate_lua_first.MigrationResult()
+            rendered = migrate_lua_first.render_eoc(source, result)
+            self.assertFalse(result.todos)
+            self.assertIn(
+                'cash >= (tonumber((context.data["boolean_value"]) or 0))',
+                rendered,
+            )
+            self.assertIn(
+                'context.data["boolean_value"]',
+                rendered,
+            )
+            rendered_handlers.append(rendered)
+
+        normalization_lines = (
+            migrate_lua_first._render_native_eoc_event_context_normalization()
+        )
+        script = r"""
+local actor = {cash = 0}
+local handlers, subscriptions = {}, {}
+local observed_effects = {}
+migrated_eoc_functions = {}
+services = {
+    characters = {
+        avatar = function() return actor end,
+        snapshot = function(target)
+            assert(target == actor)
+            return {ok = true, value = {cash = target.cash}}
+        end,
+    },
+    types = {id = function(kind, id) return kind .. ':' .. id end},
+    time = {duration = function(value, unit)
+        assert(value == 1 and unit == 'turn')
+        return value
+    end},
+    effects = {add = function(target, id, duration, options)
+        assert(target == actor and duration == 1)
+        observed_effects[#observed_effects + 1] = {
+            id = id, intensity = options.intensity,
+        }
+        return {ok = true, value = true}
+    end},
+}
+function service_value(result) assert(result.ok); return result.value end
+runtime = {
+    handler = function(id, callback) handlers[id] = callback end,
+    on = function(name, handler_id)
+        subscriptions[name] = subscriptions[name] or {}
+        subscriptions[name][#subscriptions[name] + 1] = handler_id
+    end,
+}
+HANDLERS
+local function event(value)
+    return {
+        type = 'game_start', turn = 1,
+        data = {boolean_value = value},
+        data_types = {boolean_value = 'bool'},
+    }
+end
+local function normalize_native_event_context(context)
+NORMALIZATION
+    return context
+end
+assert(#subscriptions['game:game_start'] == 2)
+
+handlers['migrated.native_event_boolean_numeric_pass'](event(true))
+handlers['migrated.native_event_boolean_numeric_fail'](event(true))
+assert(#observed_effects == 1)
+assert(observed_effects[1].id == 'effect:bite' and observed_effects[1].intensity == 1)
+
+handlers['migrated.native_event_boolean_numeric_pass'](event(false))
+handlers['migrated.native_event_boolean_numeric_fail'](event(false))
+assert(#observed_effects == 2)
+assert(observed_effects[2].id == 'effect:bleed' and observed_effects[2].intensity == 0)
+
+local rewritten = normalize_native_event_context(event(true))
+assert(rewritten.data_types == nil and rewritten.data.boolean_value == 1)
+rewritten.data.boolean_value = 2
+assert(normalize_native_event_context(rewritten) == rewritten)
+assert(rewritten.data_types == nil and rewritten.data.boolean_value == 2)
+actor.cash = 1
+migrated_eoc_functions['native_event_boolean_numeric_pass'](rewritten, nil)
+assert(#observed_effects == 2)
+migrated_eoc_functions['native_event_boolean_numeric_fail'](rewritten, nil)
+assert(#observed_effects == 3)
+assert(observed_effects[3].id == 'effect:bite' and observed_effects[3].intensity == 2)
+""".replace(
+            "HANDLERS", "\n".join(rendered_handlers)
+        ).replace(
+            "NORMALIZATION", "\n".join(normalization_lines)
+        )
         run = subprocess.run(["lua", "-"], input=script, text=True,
                              capture_output=True, timeout=10)
         self.assertEqual(run.returncode, 0, run.stderr)
