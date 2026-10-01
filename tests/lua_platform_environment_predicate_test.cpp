@@ -979,33 +979,35 @@ TEST_CASE( "lua_platform_environment_add_field_area_matches_native_f_field",
     CHECK( here.get_field( edge, field_fd_fire.id() ) == nullptr );
     CHECK( field_coverage( field_fd_fire.id() ) == native_indoor_coverage );
 
-    if( here.supports_zlevels() && center.z() < OVERMAP_HEIGHT ) {
-        const tripoint_bub_ms upper_center( center.x(), center.y(), center.z() + 1 );
-        REQUIRE( here.inbounds( upper_center ) );
-        submap *const upper_submap = here.unsafe_get_submap_at( upper_center );
-        REQUIRE( upper_submap != nullptr );
-        const ter_id original_upper_terrain = here.ter( upper_center );
-        REQUIRE( here.ter_set( upper_center, ter_t_floor ) );
-        on_out_of_scope restore_upper_tile( [&]() {
-            here.remove_field( upper_center, field_fd_smoke.id() );
-            here.ter_set( upper_center, original_upper_terrain );
+    if( here.supports_zlevels() ) {
+        const int target_z = loaded_adjacent_map_zlevel( here, center );
+        REQUIRE( target_z != center.z() );
+        const tripoint_bub_ms target_center( center.x(), center.y(), target_z );
+        REQUIRE( here.inbounds( target_center ) );
+        submap *const target_submap = here.unsafe_get_submap_at( target_center );
+        REQUIRE( target_submap != nullptr );
+        const ter_id original_target_terrain = here.ter( target_center );
+        REQUIRE( here.ter_set( target_center, ter_t_floor ) );
+        on_out_of_scope restore_target_tile( [&]() {
+            here.remove_field( target_center, field_fd_smoke.id() );
+            here.ter_set( target_center, original_target_terrain );
         } );
-        const tripoint_abs_ms upper_center_abs = here.get_abs( upper_center );
-        lua["upper_center_position"] = script_tripoint_coord::from_native(
+        const tripoint_abs_ms target_center_abs = here.get_abs( target_center );
+        lua["target_center_position"] = script_tripoint_coord::from_native(
                                            coords::origin::abs, coords::scale::map_square,
-                                           upper_center_abs.raw() );
-        native_target_position = upper_center_abs;
-        here.remove_field( upper_center, field_fd_smoke.id() );
+                                           target_center_abs.raw() );
+        native_target_position = target_center_abs;
+        here.remove_field( target_center, field_fd_smoke.id() );
         run_native_field_effect(
             R"({"u_set_field":"fd_smoke", "target_var":{"context_val":"field_center"}, "radius":0, "hit_player":false})" );
-        REQUIRE( here.get_field( upper_center, field_fd_smoke.id() ) != nullptr );
+        REQUIRE( here.get_field( target_center, field_fd_smoke.id() ) != nullptr );
         CHECK( here.get_field( center, field_fd_smoke.id() ) == nullptr );
-        here.remove_field( upper_center, field_fd_smoke.id() );
+        here.remove_field( target_center, field_fd_smoke.id() );
         {
             detail::callback_scope active_callback( *owner );
             const sol::protected_function_result result = lua.safe_script(
                         "assert(services.gameplay.environment.add_field_area("
-                        "upper_center_position, \"fd_smoke\", {radius=0, hit_player=false}) == 1)",
+                        "target_center_position, \"fd_smoke\", {radius=0, hit_player=false}) == 1)",
                         sol::script_pass_on_error );
             if( !result.valid() ) {
                 const sol::error error = result;
@@ -1013,10 +1015,10 @@ TEST_CASE( "lua_platform_environment_add_field_area_matches_native_f_field",
             }
             REQUIRE( result.valid() );
         }
-        CHECK( here.get_field( upper_center, field_fd_smoke.id() ) != nullptr );
+        CHECK( here.get_field( target_center, field_fd_smoke.id() ) != nullptr );
         CHECK( here.get_field( center, field_fd_smoke.id() ) == nullptr );
-        CHECK( here.unsafe_get_submap_at( upper_center ) == upper_submap );
-        here.remove_field( upper_center, field_fd_smoke.id() );
+        CHECK( here.unsafe_get_submap_at( target_center ) == target_submap );
+        here.remove_field( target_center, field_fd_smoke.id() );
     }
 }
 
