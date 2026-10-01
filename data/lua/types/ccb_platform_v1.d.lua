@@ -311,7 +311,8 @@ function CcbMapApi.trap_set(tile, expected_revision, trap) end
 ---@class CcbWorldLocationRevertResult
 ---@field position TripointCoord Absolute overmap-terrain position whose four submaps were snapshotted.
 ---@field when TimePoint Scheduled event time.
----@field key string Event key.
+---@field key? string Constant event key; omitted when a provider is supplied.
+---@field keys string[] Four event keys in submap x-then-y order.
 ---@field events integer Number of scheduled submap events; currently four.
 
 ---@class CcbWorldLocationCopyResult
@@ -401,8 +402,11 @@ function CcbWorldApi.find_location(origin, selector, options) end
 function CcbWorldApi.transform_radius(position, radius, transform, options) end
 
 ---@param position TripointCoord Explicit absolute overmap-terrain coordinate.
----@param delay TimeDuration Delay before the scheduled revert.
----@param key? string Optional event key of at most 256 UTF-8 bytes.
+---@param delay TimeDuration Full native signed-int turn range, including zero and negative delays.
+---@param key? string|fun():string Raw event key (nil means empty), or synchronous provider called once for each of four submaps.
+--- Fixes the due time before loading/generating the OMT: current time plus delay plus one second, saturated at native time-point limits.
+--- Takes each submap snapshot before calling its provider in x-then-y order; providers are never retained.
+--- A failing or non-string provider can leave events already queued by earlier calls; this operation is not transactional.
 ---@return CcbResult result `value` is a CcbWorldLocationRevertResult.
 function CcbWorldApi.schedule_location_revert(position, delay, key) end
 

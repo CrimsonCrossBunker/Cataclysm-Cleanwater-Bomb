@@ -28517,6 +28517,80 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertNotIn("services.items.transfer", main)
             self.assertIn("services.item_categories.set_spawn_rates(", main)
 
+    def test_location_revert_preserves_native_literal_range_and_raw_keys(self) -> None:
+        key = "键" * 500 + '\0raw'
+        for raw_delay, expected in ((0, 0), (-3, -3), (-2147483648, -2147483648),
+                                    (2147483647, 2147483647), ("infinite", 21474836),
+                                    ("-1 minute 30 seconds", -30)):
+            effect = {"revert_location": {"context_val": "loc"},
+                      "time_in_future": raw_delay, "key": key}
+            lines = migrate_lua_first.render_static_location_revert(effect, "revert_location")
+            self.assertIsNotNone(lines)
+            body = "\n".join(lines or [])
+            self.assertIn(f'services.time.duration({expected}, "turn")', body)
+            self.assertIn(migrate_lua_first.lua_quote(key), body)
+        for extra in ({}, {"time_in_future": True}, {"time_in_future": 2147483648},
+                      {"time_in_future": {"math": ["1"]}},
+                      {"time_in_future": 1, "key": {"u_val": "key"}},
+                      {"time_in_future": 1, "key": {"var_val": "pointer"}}):
+            self.assertIsNone(migrate_lua_first.render_static_location_revert(
+                {"revert_location": {"context_val": "loc"}, **extra}, "revert_location"))
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(json.dumps([{
+                "type": "effect_on_condition", "id": "revert_key_reads",
+                "eoc_type": "EVENT", "required_event": "game_start", "effect": [
+                    {"revert_location": {"context_val": "loc"}, "time_in_future": 0,
+                     "key": {"global_val": "event_key", "default": "fallback"}},
+                ],
+            }]), encoding="utf-8")
+            result = migrate_lua_first.migrate(migrate_lua_first.load_objects([source]), "revert_mod")
+            body = result.files[Path("main.lua")]
+            self.assertIn("services.world.schedule_location_revert(", body)
+            self.assertIn("function() return", body)
+            self.assertIn("get_global_string", body)
+            self.assertNotIn("scheduled location", body)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_location_revert_key_provider_reads_after_generation_four_times(self) -> None:
+        for scope in ("global_val", "context_val"):
+            lines = migrate_lua_first.render_static_location_revert({
+                "revert_location": {"context_val": "loc"}, "time_in_future": 0,
+                "key": {scope: "key", "default": "fallback"},
+            }, "revert_location")
+            self.assertIsNotNone(lines)
+            script = r"""
+local reads=0
+local generated=false
+local context={data={loc={project_to=function(self,scale) assert(scale=='omt');return self end}}}
+local function read(key)
+ assert(generated and key=='key')
+ reads=reads+1
+ if reads==1 then return {ok=true,value={exists=false}} end
+ if reads==2 then return {ok=true,value={exists=true,value=''}} end
+ if reads==3 then return {ok=true,value={exists=true,value='raw\0tail'}} end
+ return {ok=true,value={exists=true,value=string.rep('k',10000)}}
+end
+local services={time={duration=function(turns,unit)
+ assert(turns==0 and unit=='turn');return turns
+end},variables={get_global_string=read,get_context_string=function(data,key)
+ assert(data==context.data);return read(key)
+end},world={schedule_location_revert=function(position,delay,key)
+ assert(reads==0 and position==context.data.loc and delay==0 and type(key)=='function')
+ generated=true
+ assert(key()=='fallback')
+ assert(key()=='')
+ assert(key()=='raw\0tail')
+ assert(key()==string.rep('k',10000))
+end}}
+local function service_value(result) assert(result.ok);return result.value end
+BODY
+assert(reads==4)
+""".replace("BODY", "\n".join(lines or []))
+            result = subprocess.run(["lua", "-"], input=script, text=True,
+                                    capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_native_duration_infinite_uses_json_sentinel_without_changing_explicit_maximum(self) -> None:
         self.assertEqual(migrate_lua_first.parse_native_duration_turns("infinite"), 21474836)
         for value in (2147483647, "2147483647 turns"):

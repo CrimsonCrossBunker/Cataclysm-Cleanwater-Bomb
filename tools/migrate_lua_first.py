@@ -26495,30 +26495,34 @@ def render_static_location_revert(
     target = _coordinate_source_expression(
         effect[key], avatar_actor_proven, npc_actor_proven
     )
-    actor_expression = (
-        "actor" if (avatar_actor_proven or npc_actor_proven)
-        else "services.characters.avatar()"
-    )
-    raw_delay = effect.get("time_in_future")
-    if raw_delay == "infinite":
-        delay = (
-            "services.time.duration("
-            f"{NATIVE_JSON_INFINITE_DURATION_TURNS}, \"turn\")"
-        )
-    else:
-        delay = _duration_expression(
-            raw_delay, minimum=1,
-            actor_expression=actor_expression,
-        )
+    duration = parse_native_duration_turns(effect.get("time_in_future"))
+    delay = (f'services.time.duration({duration}, "turn")'
+             if duration is not None else None)
     event_key = effect.get("key", "")
-    if isinstance(event_key, str):
-        if not bounded_utf8_string(event_key, PLATFORM_ID_MAX_BYTES, allow_empty=True):
-            return None
+    event_key_expression = None
+    if lua_quotable_native_variable_string(event_key):
         event_key_expression = lua_quote(event_key)
-    else:
-        event_key_expression = render_eoc_string_expression(
-            event_key, actor_expression
-        )
+    elif isinstance(event_key, dict):
+        # Native chooses the first var_info scope in this order. Without an
+        # exact dialogue-participant proof, only context/global reads are safe.
+        scope = next((candidate for candidate in (
+            "u_val", "npc_val", "global_val", "var_val", "context_val",
+        ) if candidate in event_key), None)
+        if scope in {"global_val", "context_val"}:
+            def read(variable_scope: str, quoted_key: str) -> str | None:
+                snapshot = _render_native_variable_string_snapshot(
+                    variable_scope, quoted_key, None, None)
+                if snapshot is None:
+                    return None
+                return ('(function(result) if result.exists == false then return nil end; '
+                        f'return result.value end)({snapshot})')
+
+            expression = render_proficiency_id_expression(
+                event_key, variable_string_reader=read)
+            if expression is not None:
+                # Native evaluates the key after map generation, once for
+                # each submap. An eager string argument loses those reads.
+                event_key_expression = f"function() return {expression} end"
     if target is None or delay is None or event_key_expression is None:
         return None
     target_omt = f"({target}):project_to(\"omt\")"
@@ -35074,8 +35078,10 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate the scheduled location "
-                        "change through the typed world service."
+                        "    -- TODO: location revert requires a proven typed coordinate, "
+                        "a native literal duration, and a raw literal or context/global "
+                        "string key. Dynamic duration and participant/indirect keys "
+                        "need exact dialogue-source proofs."
                     )
                     result.add_todo(
                         "manual_rewrite",

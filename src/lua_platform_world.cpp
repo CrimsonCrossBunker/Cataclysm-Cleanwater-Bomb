@@ -2777,28 +2777,6 @@ void ensure_omt_submaps( const tripoint_abs_omt &position )
     }
 }
 
-std::array<submap, 4> snapshot_omt_submaps(
-    const tripoint_abs_omt &position )
-{
-    ensure_omt_submaps( position );
-    const tripoint_abs_sm base =
-        project_to<coords::sm>( position );
-    std::array<submap, 4> snapshots;
-    std::size_t index = 0;
-    for( int x = 0; x < 2; ++x ) {
-        for( int y = 0; y < 2; ++y ) {
-            submap *source = MAPBUFFER.lookup_submap(
-                                 base + point( x, y ) );
-            if( source == nullptr ) {
-                throw std::runtime_error(
-                    "world OMT snapshot could not load a source submap" );
-            }
-            snapshots[index++] = source->get_revert_submap();
-        }
-    }
-    return snapshots;
-}
-
 std::array<submap, 4> snapshot_existing_omt_submaps(
     const tripoint_abs_omt &position )
 {
@@ -2844,30 +2822,71 @@ void schedule_omt_snapshots(
 sol::table schedule_world_location_revert(
     sol::this_state lua, const script_tripoint_coord &position,
     const script_time_duration &requested_delay,
-    const sol::optional<std::string> &requested_key )
+    const sol::object &requested_key )
 {
     constexpr std::string_view api_name =
         "services.world.schedule_location_revert";
     const tripoint_abs_omt omt = require_absolute_omt(
                                      position, api_name );
-    const time_duration delay = require_world_change_delay(
-                                    requested_delay, api_name, false );
-    const std::string key = requested_key.value_or( "" );
-    require_world_event_key( key, api_name );
-    std::array<submap, 4> snapshots =
-        snapshot_omt_submaps( omt );
-    const time_point when = calendar::turn + delay + 1_seconds;
-    schedule_omt_snapshots(
-        omt, std::move( snapshots ), when, key );
-    reality_bubble().invalidate_map_cache( omt.z() );
+    const time_duration delay = requested_delay.to_native();
+    std::string fixed_key;
+    sol::protected_function key_provider;
+    if( requested_key.valid() && requested_key.get_type() != sol::type::nil ) {
+        if( requested_key.get_type() == sol::type::string ) {
+            fixed_key = requested_key.as<std::string>();
+        } else if( requested_key.get_type() == sol::type::function ) {
+            key_provider = requested_key.as<sol::protected_function>();
+        } else {
+            throw std::invalid_argument( std::string( api_name ) +
+                                         " key must be a string or synchronous string provider" );
+        }
+    }
+    // Native fixes due time before generation and evaluates one key per submap.
+    // Own each snapshot before calling a Lua provider; never retain providers.
+    const time_point when = timed_event_due_time( delay, 1_seconds );
+    ensure_omt_submaps( omt );
+    const tripoint_abs_sm base = project_to<coords::sm>( omt );
     sol::state_view state( lua );
+    sol::table keys = state.create_table();
+    for( int x = 0; x < 2; ++x ) {
+        for( int y = 0; y < 2; ++y ) {
+            const tripoint_abs_sm source_position = base + point( x, y );
+            submap *source = MAPBUFFER.lookup_submap( source_position );
+            if( source == nullptr ) {
+                throw std::runtime_error( "world OMT snapshot could not load a source submap" );
+            }
+            submap snapshot = source->get_revert_submap();
+            std::string key = fixed_key;
+            if( key_provider.valid() ) {
+                const sol::protected_function_result result = key_provider();
+                if( !result.valid() ) {
+                    const sol::error error = result;
+                    throw std::runtime_error( std::string( api_name ) +
+                                              " key provider failed: " + error.what() );
+                }
+                if( result.return_count() == 0 || result.get<sol::object>().get_type() != sol::type::string ) {
+                    throw std::invalid_argument( std::string( api_name ) +
+                                                 " key provider must return a string" );
+                }
+                key = result.get<std::string>();
+            }
+            get_timed_events().add( timed_event_type::REVERT_SUBMAP, when, -1,
+                                    project_to<coords::ms>( source_position ),
+                                    0, "", std::move( snapshot ), key );
+            keys[x * 2 + y + 1] = key;
+        }
+    }
+    reality_bubble().invalidate_map_cache( omt.z() );
     sol::table value = state.create_table();
     value["position"] = script_tripoint_coord::from_native(
                             coords::origin::abs,
                             coords::scale::overmap_terrain,
                             omt.raw() );
     value["when"] = script_time_point::from_native( when );
-    value["key"] = key;
+    if( !key_provider.valid() ) {
+        value["key"] = fixed_key;
+    }
+    value["keys"] = keys;
     value["events"] = 4;
     return make_game_value_result(
                state, sol::make_object(
@@ -3892,7 +3911,7 @@ void install_world_api(
             sol::this_state lua_state,
             const script_tripoint_coord & position,
             const script_time_duration & delay,
-    const sol::optional<std::string> &key ) {
+    const sol::object &key ) {
         require_write();
         return schedule_world_location_revert(
                    lua_state, position, delay, key );

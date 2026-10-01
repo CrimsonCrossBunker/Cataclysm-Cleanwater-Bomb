@@ -2864,7 +2864,7 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "quote_npc_trade_item"): "services.items",
     ("eoc-effects", "remove_active_mission"): "services.missions",
     ("eoc-effects", "reveal_map"): "services.map",
-    ("eoc-effects", "revert_location"): "services.map",
+    ("eoc-effects", "revert_location"): "services.world",
     ("eoc-effects", "set_furniture"): "services.map",
     ("eoc-effects", "set_item_category_spawn_rates"): (
         "services.item_categories"

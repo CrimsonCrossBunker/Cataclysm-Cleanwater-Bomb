@@ -286,6 +286,212 @@ TEST_CASE( "lua_platform_place_override_matches_native_event_queue_and_range",
     CHECK( static_cast<std::size_t>( fixture.write_gate_calls ) == 3 * 6 * names.size() * keys.size() );
 }
 
+TEST_CASE( "lua_platform_location_revert_matches_native_queue_and_range",
+           "[lua][platform][world][semantic]" )
+{
+    platform_overmap_travel_fixture fixture( 853, 83 );
+    platform_calendar_turn_scope calendar_scope;
+    platform_world_copy_globals_restore restore_globals;
+    timed_event_manager &events = get_timed_events();
+    restore_on_out_of_scope<timed_event_manager> restore_events( std::move( events ) );
+    const tripoint_abs_omt source = fixture.source_omt + tripoint( 2300, 1900, 0 );
+    const tripoint_abs_sm base = project_to<coords::sm>( source );
+    REQUIRE_FALSE( MAPBUFFER.submap_exists( base ) );
+    on_out_of_scope clear_revert_maps( []() {
+        MAPBUFFER.clear_outside_reality_bubble();
+    } );
+    get_globals().set_global_value( "lua_platform_revert_source",
+                                  project_to<coords::ms>( source ) );
+    dialogue conversation( get_talker_for( get_avatar() ), get_talker_for( get_avatar() ) );
+    const sol::protected_function revert = fixture.services["world"]["schedule_location_revert"];
+    REQUIRE( revert.valid() );
+    const point_sm_ms sample( 0, 0 );
+    const std::vector<std::string> keys = {
+        "", "revert-key", std::string( "key" ) + '\0' + "tail", std::string( 10000, 'k' )
+    };
+    for( const int now : { 1000, std::numeric_limits<int>::min(), std::numeric_limits<int>::max() } ) {
+        for( const int duration : { -3, 0, 1, calendar::INDEFINITELY_LONG,
+                                   std::numeric_limits<int>::min(), std::numeric_limits<int>::max() } ) {
+            for( const std::string &key : keys ) {
+                for( const bool variable_key : { false, true } ) {
+                    CAPTURE( now, duration, key.size(), variable_key );
+                    calendar::turn = time_point::from_turn( now );
+                    events = timed_event_manager();
+                    get_globals().set_global_value( "lua_platform_revert_key", key );
+                    std::ostringstream input;
+                    JsonOut writer( input );
+                    writer.start_object();
+                    writer.member( "revert_location" );
+                    writer.start_object();
+                    writer.member( "global_val", "lua_platform_revert_source" );
+                    writer.end_object();
+                    writer.member( "time_in_future", duration );
+                    writer.member( "key" );
+                    if( variable_key ) {
+                        writer.start_object();
+                        writer.member( "global_val", "lua_platform_revert_key" );
+                        writer.end_object();
+                    } else {
+                        writer.write( key );
+                    }
+                    writer.end_object();
+                    talk_effect_t native;
+                    native.parse_sub_effect( json_loader::from_string( input.str() ).get_object(),
+                                             "lua_platform_revert_native" );
+                    native.apply( conversation );
+                    REQUIRE( events.get_all().size() == 4 );
+                    std::array<location_copy_event_record, 4> expected;
+                    auto queued = events.get_all().begin();
+                    std::size_t index = 0;
+                    for( int x = 0; x < 2; ++x ) {
+                        for( int y = 0; y < 2; ++y, ++queued, ++index ) {
+                            REQUIRE( MAPBUFFER.submap_exists( base + point( x, y ) ) );
+                            CHECK( queued->map_square == project_to<coords::ms>( base + point( x, y ) ) );
+                            expected[index] = {
+                                queued->type, queued->when, queued->faction_id, queued->map_square,
+                                queued->map_point, queued->strength, queued->string_id, queued->key,
+                                queued->revert.get_ter( sample ), queued->revert.get_furn( sample ),
+                            };
+                        }
+                    }
+                    events = timed_event_manager();
+                    int key_reads = 0;
+                    fixture.lua.set_function( "revert_key_provider", [&]() {
+                        ++key_reads;
+                        return get_globals().get_global_value( "lua_platform_revert_key" ).str();
+                    } );
+                    const sol::object key_argument = variable_key ?
+                                                     fixture.lua["revert_key_provider"].get<sol::object>() :
+                                                     sol::make_object( fixture.lua, key );
+                    const sol::protected_function_result call = revert(
+                                fixture.abs_omt_position( source ),
+                                cata::lua_platform::script_time_duration::from_native(
+                                    time_duration::from_turns( duration ) ), key_argument );
+                    REQUIRE( call.valid() );
+                    const sol::table envelope = call;
+                    REQUIRE( envelope["ok"].get<bool>() );
+                    const sol::table value = envelope["value"];
+                    const sol::table result_keys = value["keys"];
+                    CHECK( value["events"].get<int>() == 4 );
+                    CHECK( value["when"].get<cata::lua_platform::script_time_point>().to_native() ==
+                           expected.front().when );
+                    CHECK( key_reads == ( variable_key ? 4 : 0 ) );
+                    CHECK( value["key"].get<sol::object>().get_type() ==
+                           ( variable_key ? sol::type::nil : sol::type::string ) );
+                    REQUIRE( events.get_all().size() == 4 );
+                    queued = events.get_all().begin();
+                    for( std::size_t i = 0; i < expected.size(); ++i, ++queued ) {
+                        CHECK( queued->type == expected[i].type );
+                        CHECK( queued->when == expected[i].when );
+                        CHECK( queued->faction_id == expected[i].faction_id );
+                        CHECK( queued->map_square == expected[i].map_square );
+                        CHECK( queued->map_point == expected[i].map_point );
+                        CHECK( queued->strength == expected[i].strength );
+                        CHECK( queued->string_id == expected[i].string_id );
+                        CHECK( queued->key == expected[i].key );
+                        CHECK( queued->revert.get_ter( sample ) == expected[i].terrain );
+                        CHECK( queued->revert.get_furn( sample ) == expected[i].furniture );
+                        CHECK( result_keys[i + 1].get<std::string>() == expected[i].key );
+                    }
+                }
+            }
+        }
+    }
+}
+
+TEST_CASE( "lua_platform_location_revert_provider_owns_snapshots_and_runs_synchronously",
+           "[lua][platform][world][semantic]" )
+{
+    platform_overmap_travel_fixture fixture( 854, 84 );
+    platform_calendar_turn_scope calendar_scope;
+    timed_event_manager &events = get_timed_events();
+    restore_on_out_of_scope<timed_event_manager> restore_events( std::move( events ) );
+    events = timed_event_manager();
+    const tripoint_abs_omt source = fixture.source_omt + tripoint( 2400, 1950, 0 );
+    const tripoint_abs_sm base = project_to<coords::sm>( source );
+    REQUIRE_FALSE( MAPBUFFER.submap_exists( base ) );
+    on_out_of_scope clear_revert_maps( []() {
+        MAPBUFFER.clear_outside_reality_bubble();
+    } );
+    const sol::protected_function revert = fixture.services["world"]["schedule_location_revert"];
+    calendar::turn = time_point::from_turn( 1000 );
+    const time_point expected_when = timed_event_due_time( 0_turns, 1_seconds );
+    int calls = 0;
+    std::array<ter_id, 4> before;
+    const point_sm_ms sample( 0, 0 );
+    ter_id changed = ter_str_id( "t_floor" ).id();
+    const sol::protected_function_result invalid_key = revert(
+                fixture.abs_omt_position( source ),
+                cata::lua_platform::script_time_duration::from_native( 0_turns ), 42 );
+    CHECK_FALSE( invalid_key.valid() );
+    CHECK( events.get_all().empty() );
+    CHECK_FALSE( MAPBUFFER.submap_exists( base ) );
+    fixture.lua.set_function( "revert_key_provider", [&]() {
+        // The first callback must see all four generated submaps. Deliberate
+        // native test mutations verify the public provider's snapshot order;
+        // legacy string mutators do not mutate these maps or the clock.
+        for( int x = 0; x < 2; ++x ) {
+            for( int y = 0; y < 2; ++y ) {
+                submap *sm = MAPBUFFER.lookup_submap( base + point( x, y ) );
+                REQUIRE( sm != nullptr );
+                if( calls == 0 ) {
+                    before[x * 2 + y] = sm->get_ter( sample );
+                    if( x == 0 && y == 0 && before[0] == changed ) {
+                        changed = ter_str_id( "t_dirt" ).id();
+                    }
+                }
+                sm->set_ter( sample, changed );
+            }
+        }
+        ++calls;
+        calendar::turn += 1_hours;
+        return "provider-key-" + std::to_string( calls );
+    } );
+    const sol::protected_function_result call = revert(
+                fixture.abs_omt_position( source ),
+                cata::lua_platform::script_time_duration::from_native( 0_turns ),
+                fixture.lua["revert_key_provider"].get<sol::object>() );
+    REQUIRE( call.valid() );
+    REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
+    CHECK( calls == 4 );
+    REQUIRE( events.get_all().size() == 4 );
+    std::size_t index = 0;
+    for( const timed_event &event : events.get_all() ) {
+        CHECK( event.when == expected_when );
+        CHECK( event.key == "provider-key-" + std::to_string( index + 1 ) );
+        CHECK( event.revert.get_ter( sample ) == ( index == 0 ? before[0] : changed ) );
+        ++index;
+    }
+    fixture.lua["revert_key_provider"] = sol::nil;
+    fixture.lua.collect_garbage();
+    CHECK( calls == 4 );
+    CHECK( events.get_all().size() == 4 );
+
+    events = timed_event_manager();
+    int bad_calls = 0;
+    fixture.lua.set_function( "bad_revert_key", [&]() -> sol::object {
+        ++bad_calls;
+        return bad_calls == 3 ? sol::make_object( fixture.lua, 42 ) :
+               sol::make_object( fixture.lua, std::string( "already-queued" ) );
+    } );
+    const sol::protected_function bad_key = fixture.lua["bad_revert_key"];
+    const sol::protected_function_result failed = revert(
+                fixture.abs_omt_position( source ),
+                cata::lua_platform::script_time_duration::from_native( 0_turns ), bad_key );
+    CHECK_FALSE( failed.valid() );
+    CHECK( bad_calls == 3 );
+    CHECK( events.get_all().size() == 2 );
+    events = timed_event_manager();
+    const sol::protected_function_result omitted = revert(
+                fixture.abs_omt_position( source ),
+                cata::lua_platform::script_time_duration::from_native( 0_turns ) );
+    REQUIRE( omitted.valid() );
+    REQUIRE( events.get_all().size() == 4 );
+    for( const timed_event &event : events.get_all() ) {
+        CHECK( event.key.empty() );
+    }
+}
+
 TEST_CASE( "lua_platform_location_copy_matches_native_timed_submap_copy",
            "[lua][platform][world][semantic]" )
 {
