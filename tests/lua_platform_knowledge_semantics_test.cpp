@@ -16,6 +16,7 @@
 #include "character_id.h"
 #include "character_martial_arts.h"
 #include "condition.h"
+#include "debug.h"
 #include "dialogue.h"
 #include "flag.h"
 #include "flexbuffer_json.h"
@@ -338,15 +339,25 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
                 const conditional_t native_variable_condition(
                     json_loader::from_string( condition_source.str() ).get_object() );
                 sol::table context_values = lua.create_table();
-                const auto compare_variable_query = [&]() {
+                const auto compare_variable_query = [&]( const bool type_mismatch = false ) {
                     const sol::table resolved = value_of(
                                                     services["variables"]["resolve"],
                                                     context_values, sol::nil, scope, variable_name ).as<sol::table>();
                     const sol::object stored = resolved["value"];
                     const std::string raw_id = !resolved["exists"].get<bool>() ? carving.str() :
                                                stored.is<std::string>() ? stored.as<std::string>() : std::string();
+                    bool native_known = false;
+                    if( type_mismatch ) {
+                        const std::string diagnostic = capture_debugmsg_during( [&]() {
+                            native_known = native_variable_condition( conversation );
+                        } );
+                        CHECK( diagnostic.find( "Type mismatch in diag_value" ) != std::string::npos );
+                    } else {
+                        native_known = native_variable_condition( conversation );
+                    }
                     CHECK( value_of( services["proficiencies"]["has_id_text"],
-                                     teacher_handle, raw_id ).as<bool>() == native_variable_condition( conversation ) );
+                                     teacher_handle, raw_id ).as<bool>() == native_known );
+                    return native_known;
                 };
                 // Keep a different value in the other scope to detect accidental
                 // owner/scope substitution in the native and Platform readers.
@@ -359,8 +370,7 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
                     conversation.remove_value( variable_name );
                     context_values[variable_name] = sol::nil;
                 }
-                CHECK( native_variable_condition( conversation ) );
-                compare_variable_query();
+                CHECK( compare_variable_query() );
                 for( const std::string &stored_id : {
                          std::string(), carving.str(), std::string( 10000, 'x' ),
                          std::string( "无此熟练度" ), std::string( "\0" "12", 3 )
@@ -372,8 +382,7 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
                         context_values[variable_name] = stored_id;
                     }
                     CAPTURE( scope, stored_id );
-                    CHECK( native_variable_condition( conversation ) == ( stored_id == carving.str() ) );
-                    compare_variable_query();
+                    CHECK( compare_variable_query() == ( stored_id == carving.str() ) );
                 }
                 if( scope == "global" ) {
                     get_globals().set_global_value( variable_name, 73 );
@@ -381,8 +390,7 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
                     conversation.set_value( variable_name, 73 );
                     context_values[variable_name] = 73;
                 }
-                CHECK_FALSE( native_variable_condition( conversation ) );
-                compare_variable_query();
+                CHECK_FALSE( compare_variable_query( true ) );
             }
             teacher.remove_weapon();
             for( const bool wielded : {
