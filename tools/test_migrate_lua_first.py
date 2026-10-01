@@ -4691,6 +4691,129 @@ assert(table.concat(calls,',')=='variable,option')
                     value, alpha_owner="actor",
                 ))
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_proficiency_topic_item_distinguishes_live_talk_and_copied_eoc(self) -> None:
+        value = {"mutator": "topic_item"}
+        self.assertIsNone(migrate_lua_first.render_proficiency_id_expression(value))
+        for prefix in ("u_", "npc_"):
+            condition = {prefix + "has_proficiency": value}
+            eoc = migrate_lua_first.render_eoc_condition_expression(
+                condition, proficiency_character_alpha_actor_proven=True,
+                npc_melee_beta_actor_proven=True,
+            )
+            talk = migrate_lua_first.render_talk_topic_response_condition(condition)
+            self.assertIsNotNone(eoc)
+            self.assertIsNotNone(talk)
+            self.assertNotIn("topic_item()", eoc or "")
+            script = r"""
+local actor={kind='creature',subtype='avatar',is_valid=function() return true end}
+local partner={kind='creature',subtype='npc',is_valid=function() return true end}
+local context={actors={interlocutor=partner}}
+local expected_target=EXPECTED_TARGET
+local reads,queries=0,0
+local function service_value(result) assert(result.ok);return result.value end
+local services={proficiencies={has_id_text=function(owner,id)
+ assert(owner==expected_target)
+ queries=queries+1
+ return {ok=true,value=owner==actor and id=='prof_carving' or owner==partner and id=='prof_npc'}
+end}}
+local current='prof_carving'
+local dialogue={valid=function() return true end,
+ topic_item=function() reads=reads+1;return current end,
+ speaker=function() return actor end,interlocutor=function() return partner end}
+local predicate=TALK
+for _,id in ipairs(IDS) do
+ current=id
+ assert(predicate(dialogue)==(expected_target==actor and id=='prof_carving' or
+                             expected_target==partner and id=='prof_npc'))
+end
+assert(reads==#IDS and queries==#IDS)
+-- A copied EOC must not read a live topic or an unrelated event data field.
+context.data={topic_item='prof_carving'}
+current='prof_carving'
+local previous_reads=reads
+assert(not (EOC))
+assert(reads==previous_reads and queries==#IDS+1)
+-- A non-Character inherits native false after evaluating the ID.
+actor.kind='item';partner.kind='item'
+local previous_queries=queries
+assert(not predicate(dialogue))
+assert(reads==previous_reads+1 and queries==previous_queries)
+-- Retired callbacks cannot read the old frame at all.
+dialogue.valid=function() return false end
+dialogue.topic_item=function() error('stale frame read') end
+assert(not predicate(dialogue))
+""".replace("EXPECTED_TARGET", "actor" if prefix == "u_" else "partner").replace(
+                "TALK", talk.source if talk else "nil",
+            ).replace("EOC", eoc or "nil").replace("IDS", migrate_lua_first.lua_string_table([
+                "prof_carving", "prof_npc", "", "unknown", "raw\0id", "无此熟练度", "x" * 10000,
+            ]))
+            run = subprocess.run(["lua", "-"], input=script, text=True,
+                                 capture_output=True, timeout=10)
+            self.assertEqual(run.returncode, 0, run.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_proficiency_topic_item_frame_is_kept_inside_nested_mutators(self) -> None:
+        for mutator, key, service in (
+            ("game_option", "option", "services.gameplay.options.get_string"),
+            ("mon_faction", "mtype_id", "services.registry.monster_default_faction"),
+            ("ma_technique_name", "matec_id", "services.martial_arts.technique_name"),
+            ("ma_technique_description", "matec_id", "services.martial_arts.technique_description"),
+        ):
+            condition = {"u_has_proficiency": {"mutator": mutator, key: {"mutator": "topic_item"}}}
+            talk = migrate_lua_first.render_talk_topic_response_condition(condition)
+            eoc = migrate_lua_first.render_eoc_condition_expression(
+                condition, proficiency_character_alpha_actor_proven=True,
+            )
+            self.assertIsNotNone(talk)
+            self.assertIsNotNone(eoc)
+            script = r"""
+local actor={kind='creature',subtype='avatar',is_valid=function() return true end}
+local context={data={topic_item='wrong'}}
+local expected,reads='LIVE_SOURCE',0
+local function service_value(result) return result.value end
+local services={gameplay={options={}},registry={},martial_arts={},proficiencies={
+ has_id_text=function(owner,id) assert(owner==actor and id=='prof_carving');return {ok=true,value=true} end}}
+SERVICE=function(id) assert(id==expected);return 'prof_carving' end
+local dialogue={valid=function() return true end,speaker=function() return actor end,
+ topic_item=function() reads=reads+1;return 'LIVE_SOURCE' end}
+local predicate=TALK
+assert(predicate(dialogue) and reads==1)
+expected=''
+assert(EOC and reads==1)
+""".replace("SERVICE", service).replace("TALK", talk.source if talk else "nil").replace(
+                "EOC", eoc or "nil",
+            )
+            run = subprocess.run(["lua", "-"], input=script, text=True,
+                                 capture_output=True, timeout=10)
+            self.assertEqual(run.returncode, 0, run.stderr)
+        for source in ("u_val", "npc_val", "context_val", "var_val"):
+            # TALK has no event context.data or statically proved variable owner.
+            self.assertIsNone(migrate_lua_first.render_talk_topic_response_condition({
+                "u_has_proficiency": {"mutator": "game_option", "option": {source: "unproven"}},
+            }))
+        self.assertIsNone(migrate_lua_first.render_talk_topic_response_condition({
+            "u_has_proficiency": {"mutator": "topic_item", "extra": True},
+        }))
+
+    def test_talk_proficiency_topic_item_migration_uses_existing_live_context(self) -> None:
+        result = migrate_lua_first.MigrationResult()
+        rendered = migrate_lua_first.render_talk_topic(migrate_lua_first.SourceObject(
+            Path("topic.json"), 0, {
+                "type": "talk_topic", "id": "TALK_PROFICIENCY_ITEM", "dynamic_line": "A topic",
+                "responses": [{"text": "Use it", "topic": "TALK_DONE", "condition": {
+                    "and": [{"u_has_proficiency": {"mutator": "topic_item"}},
+                            {"not": {"npc_has_proficiency": {"mutator": "topic_item"}}}],
+                }}],
+            },
+        ), result)
+        self.assertIsNotNone(rendered)
+        self.assertEqual(result.todos, [])
+        self.assertIn("dialogue_context:topic_item()", rendered or "")
+        self.assertIn("dialogue_context:speaker()", rendered or "")
+        self.assertIn("dialogue_context:interlocutor()", rendered or "")
+        self.assertNotIn("context.data", rendered or "")
+
     def test_npc_proficiency_is_limited_to_event_exclusive_melee_beta(self) -> None:
         def render(
             eoc_id: str, required_event: str, condition: object,

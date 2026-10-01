@@ -6416,6 +6416,8 @@ function PlatformDialogueContext:generation() end
 ---@return string Native dialogue topic currently being rendered or selected.
 function PlatformDialogueContext:topic() end
 
+---Read raw current-item ID text from this live dialogue frame, without ID validation.
+---An activated EOC uses its own copied frame and does not inherit the source frame's current item.
 ---@return string
 function PlatformDialogueContext:topic_item() end
 

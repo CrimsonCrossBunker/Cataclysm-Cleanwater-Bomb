@@ -871,17 +871,23 @@ def safe_native_proficiency_id_literal(value: Any) -> bool:
 def render_proficiency_id_expression(
     value: Any, *, alpha_owner: str | None = None,
     beta_owner: str | None = None,
+    topic_item_expression: str | None = None,
+    context_values_expression: str | None = "context and context.data",
 ) -> str | None:
     """Keep native ID text and resolve each variable from its proven talker."""
     if safe_native_proficiency_id_literal(value):
         return lua_quote(value)
     if not isinstance(value, dict):
         return None
+    if value.get("mutator") == "topic_item":
+        return topic_item_expression if set(value) == {"mutator"} else None
     if value.get("mutator") in {"ma_technique_name", "ma_technique_description"}:
         if set(value) != {"mutator", "matec_id"}:
             return None
         identifier = render_proficiency_id_expression(
             value["matec_id"], alpha_owner=alpha_owner, beta_owner=beta_owner,
+            topic_item_expression=topic_item_expression,
+            context_values_expression=context_values_expression,
         )
         if identifier is None:
             return None
@@ -892,6 +898,8 @@ def render_proficiency_id_expression(
             return None
         identifier = render_proficiency_id_expression(
             value["mtype_id"], alpha_owner=alpha_owner, beta_owner=beta_owner,
+            topic_item_expression=topic_item_expression,
+            context_values_expression=context_values_expression,
         )
         if identifier is None:
             return None
@@ -901,6 +909,8 @@ def render_proficiency_id_expression(
             return None
         option = render_proficiency_id_expression(
             value["option"], alpha_owner=alpha_owner, beta_owner=beta_owner,
+            topic_item_expression=topic_item_expression,
+            context_values_expression=context_values_expression,
         )
         if option is None:
             return None
@@ -923,6 +933,8 @@ def render_proficiency_id_expression(
     if len(scopes) != 1 or set(value) - scopes - {"default"}:
         return None
     scope = next(iter(scopes))
+    if scope in {"context_val", "var_val"} and context_values_expression is None:
+        return None
     name = value[scope]
     fallback = value.get("default", "")
     if not (lua_quotable_native_variable_string(name) and
@@ -945,17 +957,17 @@ def render_proficiency_id_expression(
             ', string.sub(key, 3))); '
             'elseif string.sub(key, 1, 1) == "_" then '
             'result = service_value(services.variables.get_context_string('
-            'context and context.data, string.sub(key, 2))); '
+            f'{context_values_expression}, string.sub(key, 2))); '
             'else result = service_value(services.variables.get_global_string(key)); end; '
             'if result.exists == false then return ' + lua_quote(fallback) +
             ' end; return result.value end)'
             '(service_value(services.variables.get_context_string('
-            'context and context.data, ' + lua_quote(name) + ')))'
+            f'{context_values_expression}, ' + lua_quote(name) + ')))'
         )
     if scope == "context_val":
         read = (
             'service_value(services.variables.get_context_string('
-            'context and context.data, ' + lua_quote(name) + '))'
+            f'{context_values_expression}, ' + lua_quote(name) + '))'
         )
     elif scope == "global_val":
         read = (
@@ -7182,6 +7194,32 @@ def render_talk_topic_response_condition(
     """
     if _depth > 16:
         return None
+    if isinstance(condition, dict) and set(condition) in (
+            {"u_has_proficiency"}, {"npc_has_proficiency"}):
+        selector = next(iter(condition))
+        # Direct TALK uses the live frame. EOC activation's copied frame has
+        # different topic-item semantics. Do not invent variable owners or a
+        # context.data table for this callback-scoped dialogue object.
+        identifier = render_proficiency_id_expression(
+            condition[selector], topic_item_expression="dialogue_context:topic_item()",
+            context_values_expression=None,
+        )
+        if identifier is None:
+            return None
+        participant = "speaker" if selector == "u_has_proficiency" else "interlocutor"
+        return LuaRaw(
+            "function(dialogue_context)\n"
+            "            if not dialogue_context:valid() then return false end\n"
+            f"            local proficiency_id = {identifier}\n"
+            f"            local receiver = dialogue_context:{participant}()\n"
+            '            if receiver == nil or receiver.kind ~= "creature" or '
+            '(receiver.subtype ~= "avatar" and receiver.subtype ~= "character" '
+            'and receiver.subtype ~= "npc") then return false end\n'
+            "            if not receiver:is_valid() then return false end\n"
+            "            local result = services.proficiencies.has_id_text(receiver, proficiency_id)\n"
+            "            return result.ok and result.value\n"
+            "        end"
+        )
     identity_condition = _render_talk_topic_participant_identity_condition(
         condition
     )
@@ -30718,6 +30756,8 @@ def render_eoc_condition_expression(
         proficiency_id = render_proficiency_id_expression(
             raw_id, alpha_owner=proficiency_alpha_variable_owner,
             beta_owner=proficiency_beta_variable_owner,
+            # This renderer executes inside activate's copied EOC frame.
+            topic_item_expression=lua_quote(""),
         )
         if (
             (proficiency_alpha_actor_proven or
@@ -30738,6 +30778,7 @@ def render_eoc_condition_expression(
         proficiency_id = render_proficiency_id_expression(
             raw_id, alpha_owner=proficiency_alpha_variable_owner,
             beta_owner=proficiency_beta_variable_owner,
+            topic_item_expression=lua_quote(""),
         )
         if (
             npc_melee_beta_actor_proven and

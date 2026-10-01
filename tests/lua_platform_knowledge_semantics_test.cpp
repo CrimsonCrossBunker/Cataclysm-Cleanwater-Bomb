@@ -18,6 +18,7 @@
 #include "condition.h"
 #include "debug.h"
 #include "dialogue.h"
+#include "effect_on_condition.h"
 #include "flag.h"
 #include "flexbuffer_json.h"
 #include "global_vars.h"
@@ -25,6 +26,7 @@
 #include "json.h"
 #include "json_loader.h"
 #include "lua_platform_bindings_values.h"
+#include "lua_platform_dialogue.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_runtime.h"
 #include "lua_platform_sol.h"
@@ -797,6 +799,59 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
                 }
             }
         }
+
+        const auto runtime_identity = cata::lua_platform::detail::runtime_handle_identity( runtime );
+        const std::size_t world_generation = cata::lua_platform::runtime_world_generation();
+        cata::lua_platform::dialogue::begin_session( conversation, runtime_identity, world_generation );
+        const auto topic_session = cata::lua_platform::dialogue::session_for(
+                                       conversation, "TALK_PROFICIENCY_TOPIC", runtime_identity, world_generation );
+        cata::lua_platform::dialogue::context topic_context(
+            lua.lua_state(), conversation, "TALK_PROFICIENCY_TOPIC", false,
+            "proficiency topic context is stale", {}, topic_session, runtime_identity, world_generation );
+        REQUIRE( topic_context.valid() );
+        sol::protected_function_result loaded = lua.safe_script(
+                "return function(context) return context:topic_item() end", sol::script_pass_on_error );
+        REQUIRE( loaded.valid() );
+        const sol::protected_function read_topic_item = loaded.get<sol::protected_function>();
+        const auto make_topic_condition = [&]( const std::string &selector ) {
+            return conditional_t( json_loader::from_string(
+                                      "{\"" + selector + "_has_proficiency\":{\"mutator\":\"topic_item\"}}" ).get_object() );
+        };
+        // The topic-item text need not be a registered item. The direct
+        // callback reads live changes; activated EOCs observe a fresh copy.
+        partner.lose_proficiency( carving );
+        for( const std::string &id_text : literal_ids ) {
+            conversation.cur_item = itype_id( id_text );
+            const sol::protected_function_result topic_result = read_topic_item( topic_context );
+            REQUIRE( topic_result.valid() );
+            const std::string platform_item = topic_result.get<std::string>();
+            CAPTURE( id_text, platform_item );
+            CHECK( platform_item == id_text );
+            for( const std::string &selector : selectors ) {
+                CAPTURE( selector );
+                const conditional_t condition = make_topic_condition( selector );
+                CHECK( compare_id( selector, condition, platform_item ) ==
+                       ( selector == "u" && id_text == carving.str() ) );
+                effect_on_condition activated;
+                activated.has_condition = true;
+                std::string observed_item = "not_evaluated";
+                activated.condition = [&]( const const_dialogue &frame ) {
+                    observed_item = frame.cur_item.str();
+                    return condition( frame );
+                };
+                const bool empty_match = value_of( services["proficiencies"]["has_id_text"],
+                                                  handle_for_selector( selector ), std::string() ).as<bool>();
+                CHECK( activated.activate( conversation, false ) == empty_match );
+                CHECK( observed_item.empty() );
+                CHECK( conversation.cur_item.str() == id_text );
+            }
+        }
+        partner.add_proficiency( carving, true );
+        conversation.cur_item = itype_id();
+        cata::lua_platform::dialogue::end_session( conversation );
+        CHECK_FALSE( topic_context.valid() );
+        const sol::protected_function_result stale_topic = read_topic_item( topic_context );
+        CHECK_FALSE( stale_topic.valid() );
 
         // The native selectors query dialogue alpha for u_* and beta for
         // npc_*; prove the two participants have distinct learned sets.
