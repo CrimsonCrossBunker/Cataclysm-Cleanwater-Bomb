@@ -5296,8 +5296,9 @@ local CcbPlatformTextApi = {}
 ---@param speaker_handle GameHandle Exact native dialogue alpha/speaker.
 ---@param interlocutor_handle? GameHandle Exact native dialogue beta/interlocutor; nil means no beta.
 ---@param item_id? string Raw native item ID for item tags; omitted or empty means the native null ID. Registration and diagnostics remain with the native parser.
----@return CcbResult result `value` is expanded text; snippets and dialogue tags use the native text parser once.
-function CcbPlatformTextApi.expand_for(text, speaker_handle, interlocutor_handle, item_id) end
+---@param context? table<string,any> Copied dialogue variables: raw string keys; strings, numbers, booleans as native 1/0, NullValue, absolute map-square TripointCoord, and dense arrays. Arrays may share children but cannot contain cycles. No extra text/tree byte, node or depth quota is imposed; input is not mutated.
+---@return CcbResult result `value` is expanded text; snippets and dialogue tags use the native text parser once with the shared native RNG.
+function CcbPlatformTextApi.expand_for(text, speaker_handle, interlocutor_handle, item_id, context) end
 ---@class CcbPlatformTilesetApi
 local CcbPlatformTilesetApi = {}
 ---@return any

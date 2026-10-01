@@ -290,12 +290,65 @@ TEST_CASE( "lua_platform_dialogue_text_preserves_raw_bytes_context_and_native_rn
                 sol::script_pass_on_error );
     REQUIRE( loaded.valid() );
     const sol::protected_function expand = loaded.get<sol::protected_function>();
+    const sol::protected_function expand_for = ccb["services"]["text"]["expand_for"];
+    const auto handle_for = [&]( Character &actor, const bool is_npc ) {
+        return platform::game_handle::from_creature(
+                   actor, { is_npc ? "npc" : "avatar", actor.getID().get_value(), 0, 0, 0, {} },
+                   runtime_identity, world_generation );
+    };
+    const auto alpha_handle = handle_for( alpha, false );
+    const auto beta_handle = handle_for( beta, true );
+    sol::table data = lua.create_table();
+    data["ctx"] = "context label";
+    data["number"] = 42.0;
+    data["true"] = true;
+    data["false"] = false;
+    data["null"] = ccb["services"]["types"]["null"].get<sol::object>();
+    data.raw_set( raw_key, raw_value );
+    data.raw_set( "", "empty key value" );
+    conversation.set_value( "true", 1.0 );
+    conversation.set_value( "false", 0.0 );
+    conversation.set_value( "", "empty key value" );
+    diag_array wide;
+    sol::table wide_table = lua.create_table();
+    for( int index = 1; index <= 600; ++index ) {
+        wide.emplace_back( static_cast<double>( index ) );
+        wide_table[index] = index;
+    }
+    conversation.set_value( "wide", diag_value( wide ) );
+    data["wide"] = wide_table;
+    diag_value deep( raw_value );
+    sol::object deep_object = sol::make_object( lua, raw_value );
+    for( int depth = 0; depth < 16; ++depth ) {
+        deep = diag_value( diag_array{ deep } );
+        sol::table layer = lua.create_table();
+        layer[1] = deep_object;
+        deep_object = sol::make_object( lua, layer );
+    }
+    conversation.set_value( "deep", deep );
+    data["deep"] = deep_object;
+    sol::table leaf = lua.create_table();
+    leaf[1] = "shared leaf";
+    sol::table shared = lua.create_table();
+    shared[1] = leaf;
+    shared[2] = leaf;
+    data["shared"] = shared;
+    conversation.set_value( "shared", diag_value( diag_array{
+        diag_value( diag_array{ diag_value( std::string( "shared leaf" ) ) } ),
+        diag_value( diag_array{ diag_value( std::string( "shared leaf" ) ) } )
+    } ) );
+    const tripoint_abs_ms coordinate( 2, 3, 4 );
+    conversation.set_value( "position", diag_value( coordinate ) );
+    data["position"] = platform::script_tripoint_coord::from_native(
+                           coords::origin::abs, coords::scale::map_square, coordinate.raw() );
     const std::vector<std::string> texts = {
         "", std::string( 40000, 'x' ),
         std::string( "before\0", 7 ) + "<context_val:ctx>" + '\0' + "after",
         "<u_name> / <npc_name> / <u_val:label> / <npc_val:label>",
         "<context_val:ctx> / <context_val:number> / <context_val:null> / <context_val:missing>",
         "<context_val:<u_val:tag_key>>", "<context_val:" + raw_key + ">",
+        "<context_val:> / <context_val:true> / <context_val:false> / <context_val:position>",
+        "<context_val:wide> / <context_val:deep> / <context_val:shared>",
         "<ccb_text_raw_4851> / <ccb_text_raw_4851>",
         "<color_red><context_val:ctx></color> / <missing_ccb_text_raw_4851>"
     };
@@ -323,6 +376,19 @@ TEST_CASE( "lua_platform_dialogue_text_preserves_raw_bytes_context_and_native_rn
                 CHECK( actual == expected );
                 CHECK( platform_diagnostic == native_diagnostic );
                 CHECK( rng_get_engine() == native_rng_after );
+                rng_set_engine_seed( seed );
+                std::string copied_actual;
+                const std::string copied_diagnostic = capture_debugmsg_during( [&]() {
+                    const sol::protected_function_result copied = expand_for(
+                                text, alpha_handle, beta_handle, item_id, data );
+                    REQUIRE( copied.valid() );
+                    const sol::table result = copied.get<sol::table>();
+                    REQUIRE( result["ok"].get<bool>() );
+                    copied_actual = result["value"].get<std::string>();
+                } );
+                CHECK( copied_actual == expected );
+                CHECK( copied_diagnostic == native_diagnostic );
+                CHECK( rng_get_engine() == native_rng_after );
             }
         }
     }
@@ -343,6 +409,72 @@ TEST_CASE( "lua_platform_dialogue_text_preserves_raw_bytes_context_and_native_rn
     const sol::protected_function_result omitted_item = expand( context, "<context_val:ctx>" );
     REQUIRE( omitted_item.valid() );
     CHECK( omitted_item.get<std::string>() == "context label" );
+    const sol::protected_function_result nil_slots = expand_for(
+                "<context_val:ctx>", alpha_handle, sol::nil, sol::nil, data );
+    REQUIRE( nil_slots.valid() );
+    const sol::table nil_result = nil_slots.get<sol::table>();
+    REQUIRE( nil_result["ok"].get<bool>() );
+    CHECK( nil_result["value"].get<std::string>() == "context label" );
+    CHECK( data.raw_get<std::string>( raw_key ) == raw_value );
+    CHECK( leaf[1].get<std::string>() == "shared leaf" );
+    sol::table cycle = lua.create_table();
+    cycle[1] = cycle;
+    sol::table cyclic_context = lua.create_table();
+    cyclic_context["cycle"] = cycle;
+    const auto before_cycle = rng_get_engine(); // NOLINT(cata-determinism)
+    const sol::protected_function_result rejected_cycle = expand_for(
+                "<ccb_text_raw_4851>", alpha_handle, beta_handle, sol::nil, cyclic_context );
+    CHECK_FALSE( rejected_cycle.valid() );
+    CHECK( rng_get_engine() == before_cycle );
+    cycle[1] = sol::nil;
+    sol::table sparse = lua.create_table();
+    sparse[2] = "hole before this value";
+    sol::table sparse_context = lua.create_table();
+    sparse_context["sparse"] = sparse;
+    sol::table invalid_key_context = lua.create_table();
+    invalid_key_context[1] = "native dialogue keys are strings";
+    for( const sol::table &invalid_context : { sparse_context, invalid_key_context } ) {
+        const auto before_invalid = rng_get_engine(); // NOLINT(cata-determinism)
+        CHECK_FALSE( expand_for( "<ccb_text_raw_4851>", alpha_handle, beta_handle,
+                                sol::nil, invalid_context ).valid() );
+        CHECK( rng_get_engine() == before_invalid );
+    }
+    talk_effect_t native_assignment;
+    native_assignment.parse_sub_effect( json_loader::from_string( R"({
+        "set_string_var":["<ccb_text_raw_4851> / <context_val:ctx>","<npc_val:label>"],
+        "parse_tags":true,"target_var":{"context_val":"assigned"}
+    })" ).get_object(), "lua_dialogue_text_assignment" );
+    lua["ccb"] = ccb;
+    const sol::protected_function_result assignment_loaded = lua.safe_script( R"(
+        local services = ccb.services
+        return function(alpha,beta,data)
+            local choices = {"<ccb_text_raw_4851> / <context_val:ctx>","<npc_val:label>"}
+            local selected = choices[services.random.native_int(0,1)+1]
+            local result = services.text.expand_for(selected,alpha,beta,nil,data)
+            assert(result.ok)
+            data.assigned = result.value
+            return data.assigned
+        end
+    )", sol::script_pass_on_error );
+    REQUIRE( assignment_loaded.valid() );
+    const sol::protected_function assign = assignment_loaded.get<sol::protected_function>();
+    for( const unsigned int seed : { 4858U, 4859U, 4860U } ) {
+        CAPTURE( seed );
+        conversation.remove_value( "assigned" );
+        data["assigned"] = sol::nil;
+        rng_set_engine_seed( seed );
+        for( const talk_effect_fun_t &effect : native_assignment.effects ) {
+            effect( conversation );
+        }
+        const std::string expected = conversation.get_value( "assigned" ).str();
+        const auto assignment_rng_after = rng_get_engine(); // NOLINT(cata-determinism)
+        rng_set_engine_seed( seed );
+        platform::detail::callback_scope callback( *runtime );
+        const sol::protected_function_result assigned = assign( alpha_handle, beta_handle, data );
+        REQUIRE( assigned.valid() );
+        CHECK( assigned.get<std::string>() == expected );
+        CHECK( rng_get_engine() == assignment_rng_after );
+    }
     context.invalidate();
     const auto before_stale = rng_get_engine(); // NOLINT(cata-determinism)
     CHECK_FALSE( expand( context, "<ccb_text_raw_4851>", "" ).valid() );

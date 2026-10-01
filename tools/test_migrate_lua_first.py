@@ -2314,6 +2314,75 @@ assert(table.concat(trace,',')=='rng,value,pointer')
                 else:
                     self.assertTrue(result.todos)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_set_string_tags_expand_context_after_choice_before_indirect_target(self) -> None:
+        targets = {"u": ("alpha", "character"), "npc": ("beta", "monster")}
+        lines = migrate_lua_first.render_static_character_string_var({
+            "set_string_var": {"context_val": "text"}, "parse_tags": True,
+            "target_var": {"var_val": "pointer"},
+        }, targets)
+        self.assertIsNotNone(lines)
+        body = "\n".join(lines or [])
+        script = '''
+local alpha, beta = {}, {}
+local trace = {}
+local context = {data={text="<context_val:label>",label="raw\\0label",pointer="u_old"}}
+local services = {
+ random={native_int=function(lo,hi) assert(lo==0 and hi==0);trace[#trace+1]="rng";return 0 end},
+ variables={
+  get_context_string=function(data,key)
+   trace[#trace+1]=key; return {ok=true,value={exists=data[key]~=nil,value=data[key]}}
+  end,
+  set=function() error("pointer should be read after expansion") end,
+  set_global=function() error("unexpected global write") end,
+ },
+ text={expand_for=function(text,a,b,item,data)
+  trace[#trace+1]="expand";assert(text=="<context_val:label>" and a==alpha and b==beta)
+  assert(item==nil and data==context.data)
+  data.pointer="_output" -- ordering witness; production expansion is read-only
+  return {ok=true,value=data.label}
+ end},
+}
+local function service_value(result) assert(result.ok);return result.value end
+'''+body+'''
+assert(context.data.output=="raw\\0label")
+assert(table.concat(trace,",")=="rng,text,expand,pointer")
+'''
+        run = subprocess.run([shutil.which("lua"), "-"], input=script, text=True,
+                             capture_output=True, timeout=10)
+        self.assertEqual(run.returncode, 0, run.stderr)
+        for proof in (None, {}, {"u": targets["u"]}, {"npc": targets["npc"]}):
+            self.assertIsNone(migrate_lua_first.render_static_character_string_var({
+                "set_string_var": "<context_val:label>", "parse_tags": True,
+                "target_var": {"global_val": "output"},
+            }, proof))
+        for invalid in (None, 1, "true", [], {}):
+            self.assertIsNone(migrate_lua_first.render_static_character_string_var({
+                "set_string_var": "text", "parse_tags": invalid,
+                "target_var": {"global_val": "output"},
+            }, targets))
+
+    def test_set_string_tags_migration_and_false_branch_keep_context_and_proofs(self) -> None:
+        effect = {"set_string_var": "<context_val:label>", "parse_tags": True,
+                  "target_var": {"global_val": "output"}}
+        for event, supported in (("character_melee_attacks_monster", True), ("game_start", False)):
+            for in_false_branch in (False, True):
+                source = migrate_lua_first.SourceObject(Path("text_tags.json"), 0, {
+                    "type": "effect_on_condition", "id": "text_tags_assignment",
+                    "eoc_type": "EVENT", "required_event": event,
+                    "condition": "is_day", "effect": [],
+                    **({"false_effect": effect} if in_false_branch else {"effect": effect}),
+                })
+                result = migrate_lua_first.MigrationResult()
+                rendered = migrate_lua_first.render_eoc(source, result)
+                self.assertIsNotNone(rendered)
+                self.assertEqual("services.text.expand_for" in (rendered or ""), supported)
+                if supported:
+                    self.assertEqual(result.todos, [])
+                    self.assertIn("nil, context and context.data", rendered or "")
+                else:
+                    self.assertTrue(result.todos)
+
     def test_set_string_migration_keeps_unproven_shapes_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "set_string_shapes.json"

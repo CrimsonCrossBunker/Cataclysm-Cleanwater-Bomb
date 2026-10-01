@@ -27832,10 +27832,8 @@ def render_static_character_string_var(
               lua_quotable_native_variable_string(target_name) else None)
     if target is None:
         return None
-    if effect.get("parse_tags", False) is not False:
-        # expand_for uses native RNG but creates a fresh dialogue without the
-        # caller's context variables. Do not drop those variables or invent a
-        # live dialogue frame just to expand arbitrary source tags.
+    parse_tags = effect.get("parse_tags", False)
+    if not isinstance(parse_tags, bool):
         return None
     i18n = effect.get("i18n", False)
     if not isinstance(i18n, bool):
@@ -27861,6 +27859,10 @@ def render_static_character_string_var(
         # Runtime pointer text may name either participant. Do not invent a
         # live actor or silently skip native invalid-participant diagnostics.
         return None
+    if parse_tags and (indirect_alpha is None or indirect_beta is None):
+        # Native missing participants fall back to the player. These source
+        # proofs describe actual alpha/beta handles, not fabricated fallbacks.
+        return None
 
     rendered_values = [_render_assignment_string_value(value, i18n, effect_actor_targets)
                        for value in values]
@@ -27873,6 +27875,11 @@ def render_static_character_string_var(
         "    local assigned_value = string_values[",
         "        services.random.native_int(0, #string_values - 1) + 1]()",
     ]
+    if parse_tags:
+        lines.extend([
+            "    assigned_value = service_value(services.text.expand_for(",
+            f"        assigned_value, {indirect_alpha}, {indirect_beta}, nil, context and context.data))",
+        ])
     if target[0] == "var":
         lines.extend([
             "    local target_pointer = service_value(services.variables.get_context_string(",
@@ -32426,7 +32433,7 @@ def render_eoc(
                     elif isinstance(false_value, dict) and "set_string_var" in false_value:
                         false_todo = (
                             "translate set_string_var only for native string providers "
-                            "with native RNG and exact participant handles; parse_tags, "
+                            "with native RNG and exact participant handles; "
                             "string_input, unsupported translation shapes, unproven "
                             "source/target owners remain TODO"
                         )
@@ -36604,7 +36611,7 @@ def render_eoc(
                     lines.append(
                         "    -- TODO: translate set_string_var only for native string "
                         "providers with native RNG and exact participant handles; "
-                        "parse_tags, string_input, unsupported translation shapes, "
+                        "string_input, unsupported translation shapes, "
                         "unproven source/target owners remain TODO."
                     )
                     result.add_todo(

@@ -52,6 +52,7 @@ extern "C" {
 #include "event_bus.h"
 #include "field.h"
 #include "game.h"
+#include "global_vars.h"
 #include "item.h"
 #include "item_location.h"
 #include "line.h"
@@ -3334,10 +3335,26 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                                               world_generation](
                                     sol::this_state state, const std::string & text,
                                     const cata::lua_platform::game_handle & speaker_handle,
-                                    const sol::optional<cata::lua_platform::game_handle> &interlocutor_handle,
-    const sol::optional<std::string> &item_id ) {
+                                    const sol::object &interlocutor_argument,
+    const sol::object &item_argument, const sol::object &context_argument ) {
         require_read();
         sol::state_view lua_state( state );
+        sol::optional<cata::lua_platform::game_handle> interlocutor_handle;
+        if( interlocutor_argument.valid() && interlocutor_argument.get_type() != sol::type::nil ) {
+            if( !interlocutor_argument.is<cata::lua_platform::game_handle>() ) {
+                throw std::invalid_argument( "services.text.expand_for interlocutor must be a GameHandle or nil" );
+            }
+            interlocutor_handle = interlocutor_argument.as<cata::lua_platform::game_handle>();
+        }
+        sol::optional<std::string> item_id;
+        if( item_argument.valid() && item_argument.get_type() != sol::type::nil ) {
+            if( item_argument.get_type() != sol::type::string ) {
+                throw std::invalid_argument( "services.text.expand_for item ID must be a string or nil" );
+            }
+            item_id = item_argument.as<std::string>();
+        }
+        const sol::optional<sol::table> context = cata::lua_platform::read_optional_table(
+                    context_argument, "services.text.expand_for context" );
         const cata::lua_platform::native_handle_result<Creature> speaker =
             speaker_handle.resolve_creature(
                 runtime_generation(), world_generation() );
@@ -3356,9 +3373,22 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
             }
             interlocutor = resolved.value;
         }
+        global_variables::impl_t context_values;
+        if( context ) {
+            for( const auto &entry : *context ) {
+                if( entry.first.get_type() != sol::type::string ) {
+                    throw std::invalid_argument( "services.text.expand_for context keys must be strings" );
+                }
+                const std::string key = entry.first.as<std::string>();
+                context_values.emplace( key, cata::lua_platform::script_diag_value_from_lua(
+                                            entry.second, "services.text.expand_for context value",
+                                            std::numeric_limits<std::size_t>::max(),
+                                            cata::lua_platform::script_diag_value_read_policy::native_range ) );
+            }
+        }
         const_dialogue dialogue_context(
             get_const_talker_for( *speaker.value ),
-            interlocutor == nullptr ? nullptr : get_const_talker_for( *interlocutor ) );
+            interlocutor == nullptr ? nullptr : get_const_talker_for( *interlocutor ), {}, context_values );
         const_talker empty_interlocutor;
         std::string expanded = text;
         parse_tags(
