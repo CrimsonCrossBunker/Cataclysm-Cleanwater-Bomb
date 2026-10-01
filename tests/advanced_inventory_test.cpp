@@ -15,6 +15,7 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "character_attire.h"
 #include "coordinates.h"
 #include "item.h"
@@ -29,6 +30,7 @@
 #include "rng.h"
 #include "type_id.h"
 #include "units.h"
+#include "uistate.h"
 
 
 static const itype_id itype_9mm( "9mm" );
@@ -169,6 +171,34 @@ static void do_activity( advanced_inventory &advinv, const std::string &activity
     process_activity( u );
     REQUIRE_FALSE( u.activity );
     recalc_panes( advinv );
+}
+
+TEST_CASE( "advanced_inventory_keeps_source_pane_after_moving_one_item",
+           "[items][advanced_inv][activity]" )
+{
+    clear_avatar();
+    clear_map();
+    restore_on_out_of_scope<advanced_inv_save_state> restore( uistate.transfer_save );
+    on_out_of_scope reset_menu( []() {
+        uistate.open_menu = nullptr;
+        cancel_aim_processing();
+    } );
+    avatar &you = get_avatar();
+    REQUIRE( you.wear_item( item( itype_backpack ) ) );
+    get_map().add_item_or_charges( you.pos_bub(), item( itype_knife_combat ) );
+    const bool source_left = GENERATE( false, true );
+    uistate.transfer_save.active_left = !source_left;
+
+    advanced_inventory advinv;
+    advinv.init();
+    init_panes( advinv, AIM_CENTER, AIM_INVENTORY );
+    REQUIRE( advinv.get_pane( advinv.get_src() ).get_area() == AIM_CENTER );
+    do_activity( advinv, "MOVE_SINGLE_ITEM" );
+    REQUIRE( you.has_amount( itype_knife_combat, 1 ) );
+
+    advinv.init();
+    CHECK( advinv.get_src() == ( source_left ? advanced_inventory::left :
+                                 advanced_inventory::right ) );
 }
 
 /* this should mirror what query_charges returns as max items when transferring to inventory */

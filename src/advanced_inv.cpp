@@ -2479,8 +2479,8 @@ void advanced_inventory::swap_panes()
 
 void advanced_inventory::do_return_entry()
 {
-    // only save pane settings
-    save_settings( true );
+    // Reinitializing after an activity must retain the selected source pane.
+    save_settings( false );
     uistate.open_menu = create_advanced_inv;
     save_state->exit_code = aim_exit::re_entry;
 }
