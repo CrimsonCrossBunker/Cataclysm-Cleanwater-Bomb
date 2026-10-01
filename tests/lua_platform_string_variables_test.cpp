@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <functional>
 #include <initializer_list>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -24,10 +25,12 @@
 #include "json_loader.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
+#include "lua_platform_runtime.h"
 #include "lua_platform_sol.h"
 #include "lua_platform_variables.h"
 #include "math_parser_diag_value.h"
 #include "npc.h"
+#include "rng.h"
 #include "weather.h"
 
 TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
@@ -300,6 +303,164 @@ TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
     CHECK_FALSE( error_result["ok"].get<bool>() );
     CHECK( target.get_value( "nested_target" ) == nested );
 
+}
+
+TEST_CASE( "lua_platform_string_assignment_lazy_choices_match_native_rng_and_values",
+           "[lua][platform][strings][semantic]" )
+{
+    namespace platform = cata::lua_platform;
+    platform::clear_active_runtimes();
+    const auto saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
+    const on_out_of_scope restore_rng( [saved_rng]() {
+        rng_get_engine() = saved_rng;
+    } );
+    avatar player;
+    npc partner;
+    player.normalize();
+    partner.normalize();
+    player.setID( character_id( 4821 ), true );
+    partner.setID( character_id( 4822 ), true );
+    platform::register_npc_handle_identity( partner );
+    const on_out_of_scope retire_partner( [&]() {
+        platform::retire_npc_handle_identity( partner );
+    } );
+    dialogue conversation( get_talker_for( player ), get_talker_for( partner ) );
+    sol::state lua;
+    lua.open_libraries( sol::lib::base );
+    sol::table ccb = lua.create_table();
+    const auto runtime = platform::make_runtime( "string_assignment_values", 4823, lua );
+    const on_out_of_scope cleanup_runtime( []() {
+        platform::clear_active_runtimes();
+    } );
+    platform::install_runtime_api( runtime, lua, ccb );
+    platform::set_active_runtimes( { runtime } );
+    lua["ccb"] = ccb;
+    const bool translated = GENERATE( false, true );
+    const std::size_t choice_count = GENERATE( std::size_t( 1 ), std::size_t( 3 ), std::size_t( 65 ) );
+    const std::string target_scope = GENERATE( "u_val", "npc_val", "context_val" );
+    const std::string source_key( "assignment\0source", sizeof( "assignment\0source" ) - 1 );
+    const std::vector<std::string> target_keys = {
+        "", source_key, std::string( 10000, 'k' )
+    };
+    const sol::protected_function_result loaded = lua.safe_script( R"(
+local services=ccb.services
+local function value(result) assert(result.ok);return result.value end
+return function(actor,partner,data,key,target_scope,target_key,count,translated)
+ local function read(owner,fallback)
+  local result=value(services.variables.get_string(owner,key))
+  if result.exists==false then
+   if translated then return services.translate(fallback) end
+   return fallback
+  end
+  return result.value
+ end
+ local providers={}
+ for i=1,count do
+  local kind=(i-1)%3
+  if kind==0 then providers[i]=function() return read(actor,'Alpha fallback.') end
+  elseif kind==1 then providers[i]=function() return read(partner,'Beta fallback.') end
+  else providers[i]=function()
+   if translated then return services.translate('Literal candidate.') end
+   return 'Literal candidate.'
+  end end
+ end
+ local selected=providers[services.random.native_int(0,#providers-1)+1]()
+ if target_scope=='context_val' then data[target_key]=selected
+ else value(services.variables.set(target_scope=='u_val' and actor or partner,target_key,selected)) end
+ return selected
+end
+)", sol::script_pass_on_error );
+    REQUIRE( loaded.valid() );
+    const sol::protected_function assign = loaded.get<sol::protected_function>();
+    bool completed = false;
+    lua.set_function( "accept", [&]( const sol::table & ) {
+        const auto handle_for = [&]( Character &actor, const bool is_npc ) {
+            return platform::game_handle::from_creature(
+                       actor, { is_npc ? "npc" : "avatar", actor.getID().get_value(), 0, 0, 0, {} },
+                       platform::detail::runtime_handle_identity( runtime ), platform::runtime_world_generation() );
+        };
+        const platform::game_handle alpha_handle = handle_for( player, false );
+        const platform::game_handle beta_handle = handle_for( partner, true );
+        for( const std::string &target_key : target_keys ) {
+            std::ostringstream source;
+            {
+                JsonOut json( source );
+                json.start_object();
+                json.member( "set_string_var" );
+                json.start_array();
+                for( std::size_t index = 0; index < choice_count; ++index ) {
+                    if( index % 3 == 2 ) {
+                        json.write( "Literal candidate." );
+                    } else {
+                        json.start_object();
+                        json.member( index % 3 == 0 ? "u_val" : "npc_val", source_key );
+                        json.member( "default", index % 3 == 0 ? "Alpha fallback." : "Beta fallback." );
+                        json.end_object();
+                    }
+                }
+                json.end_array();
+                json.member( "i18n", translated );
+                json.member( "target_var" );
+                json.start_object();
+                json.member( target_scope, target_key );
+                json.end_object();
+                json.end_object();
+            }
+            talk_effect_t native_assignment;
+            native_assignment.parse_sub_effect( json_loader::from_string( source.str() ).get_object(),
+                                                "string_assignment_values" );
+            for( int state = 0; state < 4; ++state ) {
+                const auto reset_sources = [&]() {
+                    player.remove_value( source_key );
+                    partner.remove_value( source_key );
+                    if( state == 1 ) {
+                        player.set_value( source_key, std::string() );
+                        partner.set_value( source_key, std::string() );
+                    } else if( state == 2 ) {
+                        player.set_value( source_key, std::string( 10000, 'a' ) + '\0' + "alpha" );
+                        partner.set_value( source_key, std::string( 10000, 'b' ) + '\0' + "beta" );
+                    } else if( state == 3 ) {
+                        player.set_value( source_key, diag_value{} );
+                        partner.set_value( source_key, diag_value{} );
+                    }
+                };
+                for( const unsigned int seed : { 4824U, 4825U } ) {
+                    reset_sources();
+                    rng_set_engine_seed( seed );
+                    for( const talk_effect_fun_t &effect : native_assignment.effects ) {
+                        effect( conversation );
+                    }
+                    const std::string expected = target_scope == "context_val" ?
+                                                 conversation.get_value( target_key ).str() :
+                                                 ( target_scope == "u_val" ? player : static_cast<Character &>( partner ) ).get_value( target_key ).str();
+                    const auto native_rng_after = rng_get_engine(); // NOLINT(cata-determinism)
+                    reset_sources();
+                    sol::table data = lua.create_table();
+                    rng_set_engine_seed( seed );
+                    const sol::protected_function_result result = assign(
+                                alpha_handle, beta_handle, data, source_key, target_scope, target_key,
+                                choice_count, translated );
+                    CAPTURE( target_scope, target_key.size(), choice_count, translated, state, seed );
+                    REQUIRE( result.valid() );
+                    CHECK( result.get<std::string>() == expected );
+                    CHECK( rng_get_engine() == native_rng_after );
+                    if( target_scope == "context_val" ) {
+                        CHECK( data.raw_get<std::string>( target_key ) == expected );
+                    } else {
+                        const Character &target = target_scope == "u_val" ? player : static_cast<Character &>( partner );
+                        CHECK( target.get_value( target_key ).str() == expected );
+                    }
+                }
+            }
+        }
+        completed = true;
+    } );
+    sol::protected_function_result registered = ccb["runtime"]["handler"]( "accept", lua["accept"] );
+    REQUIRE( registered.valid() );
+    registered = ccb["runtime"]["on"]( "world_ready", "accept" );
+    REQUIRE( registered.valid() );
+    platform::runtime_world_ready( true );
+    REQUIRE( completed );
 }
 
 TEST_CASE( "lua_platform_global_null_is_distinct_from_removal",

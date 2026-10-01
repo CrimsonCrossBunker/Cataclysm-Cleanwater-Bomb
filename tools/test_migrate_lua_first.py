@@ -2006,7 +2006,7 @@ assert(target_store.output==VALUE or (VALUE==nil and target_store.output==null))
         )
         self.assertIsNone(missing_target)
         for unsupported, target, target_proof in (
-            ({"u_val": "source"}, {"global_val": "output"}, targets),
+            ({"u_val": "source"}, {"global_val": "output"}, {}),
             ("value", {"var_val": "target"}, targets),
             ("value", {"npc_val": "output"}, {}),
         ):
@@ -2057,6 +2057,162 @@ assert(table.concat(calls,',')=='rng,translate,write')
             ["lua", "-"], input=script, text=True, capture_output=True, timeout=10
         )
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_set_string_dynamic_choices_evaluate_only_selected_source_before_write(self) -> None:
+        targets = {"u": ("actor", "character"), "npc": ("partner", "character")}
+        for selected in range(5):
+            for target_scope in ("u_val", "npc_val", "global_val", "context_val"):
+                choices = [{scope: "source\0raw", "default": "fallback"} for scope in
+                           ("u_val", "npc_val", "global_val", "context_val", "var_val")]
+                # All unselected providers must remain lazy, even with errors.
+                lines = migrate_lua_first.render_static_character_string_var({
+                    "set_string_var": choices, "target_var": {target_scope: "output\0raw"},
+                }, targets)
+                self.assertIsNotNone(lines)
+                script = r"""
+local actor,partner={},{}
+local trace={}
+local function service_value(r) assert(r.ok);return r.value end
+local selected=SELECTED
+local output='value\0raw'
+local function read(source,key)
+ table.insert(trace,source)
+ if selected==4 then
+  if source=='context_val' then assert(key=='source\0raw');return {ok=true,value={exists=true,value='n_target'}} end
+  assert(source=='npc_val' and key=='target')
+ else assert(source==({'u_val','npc_val','global_val','context_val'})[selected+1] and key=='source\0raw') end
+ return {ok=true,value={exists=true,value=output}}
+end
+local function write(scope,key,value,owner)
+ assert(scope==TARGET_SCOPE and key=='output\0raw' and value==output)
+ if scope=='u_val' then assert(owner==actor) elseif scope=='npc_val' then assert(owner==partner) end
+ table.insert(trace,'write');return {ok=true,value={}}
+end
+local context={data=setmetatable({}, {__newindex=function(self,key,value) write('context_val',key,value) end})}
+local services={random={native_int=function(lo,hi) assert(lo==0 and hi==4);table.insert(trace,'rng');return selected end},
+ variables={get_string=function(owner,key) return read(owner==actor and 'u_val' or 'npc_val',key) end,
+ get_context_string=function(data,key) assert(data==context.data);return read('context_val',key) end,
+ get_global_string=function(key) return read('global_val',key) end,
+ set=function(owner,key,value) return write(owner==actor and 'u_val' or 'npc_val',key,value,owner) end,
+ set_global=function(key,value) return write('global_val',key,value) end}}
+BODY
+assert(trace[1]=='rng' and trace[#trace]=='write')
+assert(#trace==(selected==4 and 4 or 3))
+""".replace("SELECTED", str(selected)).replace("TARGET_SCOPE", migrate_lua_first.lua_quote(target_scope)).replace(
+                    "BODY", "\n".join(lines or []),
+                )
+                run = subprocess.run(["lua", "-"], input=script, text=True,
+                                     capture_output=True, timeout=10)
+                self.assertEqual(run.returncode, 0, run.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_set_string_translated_variable_defaults_are_lazy_and_stored_bytes_are_raw(self) -> None:
+        for present_value in (None, "", "stored\0raw"):
+            for default in ("fallback", {"str": "fallback", "ctxt": "scope"}, None, 42):
+                lines = migrate_lua_first.render_static_character_string_var({
+                    "set_string_var": {"u_val": "source", "default": default},
+                    "target_var": {"u_val": "source"}, "i18n": True,
+                }, {"u": ("actor", "character")})
+                self.assertIsNotNone(lines)
+                translated_default = default if isinstance(default, str) else default.get("str") if isinstance(default, dict) else ""
+                script = r"""
+local actor={}
+local value=VALUE
+local trace={}
+local function service_value(r) assert(r.ok);return r.value end
+local services={random={native_int=function(lo,hi) assert(lo==0 and hi==0);table.insert(trace,'rng');return 0 end},
+ translate=function(text,ctxt)
+  assert(value==nil and text=='fallback' and ctxt==CONTEXT)
+  table.insert(trace,'translate');return 'translated'
+ end,variables={get_string=function(owner,key)
+  assert(owner==actor and key=='source');table.insert(trace,'read')
+  return {ok=true,value={exists=value~=nil,value=value}}
+ end,set=function(owner,key,new_value)
+  assert(owner==actor and key=='source' and new_value==EXPECTED)
+  table.insert(trace,'write');return {ok=true,value={}}
+ end}}
+BODY
+assert(table.concat(trace,',')==TRACE)
+""".replace("VALUE", "nil" if present_value is None else migrate_lua_first.lua_quote(present_value)).replace(
+                    "CONTEXT", migrate_lua_first.lua_quote("scope") if isinstance(default, dict) else "nil",
+                ).replace("EXPECTED", migrate_lua_first.lua_quote(
+                    present_value if present_value is not None else "translated" if translated_default else "",
+                )).replace("TRACE", migrate_lua_first.lua_quote(
+                    "rng,read,translate,write" if present_value is None and translated_default else "rng,read,write",
+                )).replace("BODY", "\n".join(lines or []))
+                run = subprocess.run(["lua", "-"], input=script, text=True,
+                                     capture_output=True, timeout=10)
+                self.assertEqual(run.returncode, 0, run.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_set_string_raw_values_and_keys_do_not_use_old_literal_limits(self) -> None:
+        for text in ("", "raw\0value", "x" * 10000):
+            for key in ("", "key\0raw", "k" * 10000):
+                lines = migrate_lua_first.render_static_character_string_var({
+                    "set_string_var": [text] * 65, "target_var": {"global_val": key},
+                }, {})
+                self.assertIsNotNone(lines)
+                script = r"""
+local calls=0
+local function service_value(r) assert(r.ok);return r.value end
+local services={random={native_int=function(lo,hi) assert(lo==0 and hi==64);calls=calls+1;return 64 end},
+ variables={set_global=function(key,value) assert(key==KEY and value==VALUE);return {ok=true,value={}} end}}
+BODY
+assert(calls==1)
+""".replace("KEY", migrate_lua_first.lua_quote(key)).replace("VALUE", migrate_lua_first.lua_quote(text)).replace(
+                    "BODY", "\n".join(lines or []),
+                )
+                run = subprocess.run(["lua", "-"], input=script, text=True,
+                                     capture_output=True, timeout=10)
+                self.assertEqual(run.returncode, 0, run.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_set_string_nested_mutators_follow_choice_rng_and_exact_participants(self) -> None:
+        targets = {"u": ("actor", "character"), "npc": ("partner", "monster")}
+        selection = {"mutator": "valid_technique", "crit": True,
+                     "blacklist": [{"context_val": "blacklist"}]}
+        for translated in (False, True):
+            for mutator, key, service in (
+                ("game_option", "option", "services.gameplay.options.get_string"),
+                ("mon_faction", "mtype_id", "services.registry.monster_default_faction"),
+                ("ma_technique_name", "matec_id", "services.martial_arts.technique_name"),
+                ("ma_technique_description", "matec_id", "services.martial_arts.technique_description"),
+            ):
+                lines = migrate_lua_first.render_static_character_string_var({
+                    "set_string_var": {"mutator": mutator, key: selection},
+                    "target_var": {"global_val": "output"}, "i18n": translated,
+                }, targets)
+                self.assertIsNotNone(lines)
+                script = r"""
+local actor,partner={},{}
+local context={data={}}
+local trace={}
+local function service_value(r) assert(r.ok);return r.value end
+local services={random={native_int=function(lo,hi) assert(lo==0 and hi==0);table.insert(trace,'rng');return 0 end},
+ gameplay={options={}},registry={},martial_arts={},
+ translate=function() error('already-native mutator text must not translate again') end,
+ variables={get_context_string=function(data,key)
+  assert(data==context.data and key=='blacklist');table.insert(trace,'read')
+  return {ok=true,value={exists=true,value='excluded\0raw'}}
+ end,set_global=function(key,value)
+  assert(key=='output' and value=='native\0result');table.insert(trace,'write')
+  return {ok=true,value={}}
+ end},characters={choose_technique=function(alpha,beta,options)
+  assert(alpha==actor and beta==partner and options.critical==true)
+  assert(#options.blacklist==1 and options.blacklist[1]=='excluded\0raw')
+  table.insert(trace,'select');return {ok=true,value={technique={value='SELECTED_ID'}}}
+ end}}
+SERVICE=function(id) assert(id=='SELECTED_ID');table.insert(trace,'lookup');return 'native\0result' end
+BODY
+assert(table.concat(trace,',')=='rng,read,select,lookup,write')
+""".replace("SERVICE", service).replace("BODY", "\n".join(lines or []))
+                run = subprocess.run(["lua", "-"], input=script, text=True,
+                                     capture_output=True, timeout=10)
+                self.assertEqual(run.returncode, 0, run.stderr)
+        self.assertIsNone(migrate_lua_first.render_static_character_string_var({
+            "set_string_var": selection, "target_var": {"global_val": "output"},
+        }, {"u": ("actor", "monster"), "npc": ("partner", "character")}))
 
     def test_set_string_migration_keeps_unproven_shapes_partial(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -2122,10 +2278,10 @@ assert(table.concat(calls,',')=='rng,translate,write')
                 migrate_lua_first.load_objects([source]), "set_string_shapes_mod"
             )
             main = result.files[Path("main.lua")]
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(len(result.partial), 5)
+            self.assertEqual(len(result.converted), 2)
+            self.assertEqual(len(result.partial), 4)
             self.assertIn("services.random.native_int(0, #string_values - 1) + 1", main)
-            self.assertIn("parse_tags, string_input, variable values, and var_val targets remain TODO", main)
+            self.assertIn("unproven source owners and var_val targets remain TODO", main)
 
     def test_false_branch_string_literal_requires_proven_targets(self) -> None:
         effect = {
@@ -2146,14 +2302,19 @@ assert(table.concat(calls,',')=='rng,translate,write')
             effect, True, False, {}, effect_actor_targets={"u": ("actor", "character")}
         ))
 
-    def test_false_branch_string_assignment_keeps_dynamic_values_partial(self) -> None:
+    def test_false_branch_string_assignment_requires_proven_dynamic_owners(self) -> None:
         lines = migrate_lua_first.render_static_false_effect(
             {"set_string_var": {"npc_val": "input"}, "target_var": {"npc_val": "output"}},
             True, True, {}, effect_actor_targets={
                 "u": ("actor", "character"),
                 "npc": ("partner", "character"),
             })
-        self.assertIsNone(lines)
+        self.assertIsNotNone(lines)
+        self.assertIn('services.variables.get_string(partner, "input")', "\n".join(lines or []))
+        self.assertIsNone(migrate_lua_first.render_static_false_effect(
+            {"set_string_var": {"npc_val": "input"}, "target_var": {"global_val": "output"}},
+            True, False, {}, effect_actor_targets={"u": ("actor", "character")},
+        ))
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_real_selector_example_string_setup_preserves_translation(self) -> None:
@@ -31381,7 +31542,7 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertIn("copy_var into typed variable services", main)
             self.assertIn("add_debt through a bounded NPC opinion/debt service", main)
             self.assertIn(
-                "set_string_var only for bounded literal strings with native RNG", main
+                "set_string_var only for native string providers with native RNG", main
             )
             self.assertNotIn("services.time.reschedule(", main)
             self.assertIn("typed city query and writable location variable", main)
@@ -42586,11 +42747,11 @@ assert(calls==3 and context.data.entry=='zombie')
             self.assertIn(
                 'context.data["raised_position"] = location', main
             )
-            self.assertNotIn('services.gameplay.options.get_string("USE_LANG")', main)
-            self.assertNotIn("services.martial_arts.technique_name(", main)
+            self.assertIn('services.gameplay.options.get_string("USE_LANG")', main)
+            self.assertIn("services.martial_arts.technique_name(", main)
             self.assertNotIn("services.characters.choose_technique(", main)
             self.assertNotIn("services.text.expand_for(", main)
-            self.assertEqual(sum("needs domain-service conversion" in reason for reason in reasons), 4)
+            self.assertEqual(sum("needs domain-service conversion" in reason for reason in reasons), 2)
 
     def test_dialogue_item_popup_with_ordered_give_notice_stays_todo(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

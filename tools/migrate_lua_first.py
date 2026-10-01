@@ -891,6 +891,7 @@ def render_proficiency_id_expression(
     topic_item_expression: str | None = None,
     variable_string_reader: Callable[[str, str], str | None] | None = None,
     technique_sampler: str | None = None,
+    variable_default_expression: str | None = None,
 ) -> str | None:
     """Keep native ID text and resolve each variable from its proven talker."""
     if safe_native_proficiency_id_literal(value):
@@ -1012,6 +1013,8 @@ def render_proficiency_id_expression(
     if not (lua_quotable_native_variable_string(name) and
             lua_quotable_native_variable_string(fallback)):
         return None
+    fallback_expression = (variable_default_expression if variable_default_expression is not None
+                           else lua_quote(fallback))
     if variable_string_reader is not None:
         if scope == "var_val":
             pointer = variable_string_reader("context_val", lua_quote(name))
@@ -1024,19 +1027,19 @@ def render_proficiency_id_expression(
             if pointer is None or any(target is None for target in targets):
                 return None
             return (
-                '(function(pointer) if pointer == nil then return ' + lua_quote(fallback) +
+                '(function(pointer) if pointer == nil then return ' + fallback_expression +
                 ' end; local value; if string.sub(pointer, 1, 2) == "u_" then '
                 f'value = {targets[0]}; elseif string.sub(pointer, 1, 2) == "n_" then '
                 f'value = {targets[1]}; elseif string.sub(pointer, 1, 1) == "_" then '
                 f'value = {targets[2]}; else value = {targets[3]}; end; '
-                'if value == nil then return ' + lua_quote(fallback) +
+                'if value == nil then return ' + fallback_expression +
                 ' end; return value end)(' + pointer + ')'
             )
         read = variable_string_reader(scope, lua_quote(name))
         if read is None:
             return None
         return (
-            '(function(value) if value == nil then return ' + lua_quote(fallback) +
+            '(function(value) if value == nil then return ' + fallback_expression +
             ' end; return value end)(' + read + ')'
         )
     if scope == "var_val":
@@ -1046,7 +1049,7 @@ def render_proficiency_id_expression(
         if alpha_owner is None or beta_owner is None:
             return None
         return (
-            '(function(pointer) if pointer.exists == false then return ' + lua_quote(fallback) +
+            '(function(pointer) if pointer.exists == false then return ' + fallback_expression +
             ' end; local key = pointer.value; local result; '
             'if string.sub(key, 1, 2) == "u_" then '
             'result = service_value(services.variables.get_string(' + alpha_owner +
@@ -1058,7 +1061,7 @@ def render_proficiency_id_expression(
             'result = service_value(services.variables.get_context_string('
             'context and context.data, string.sub(key, 2))); '
             'else result = service_value(services.variables.get_global_string(key)); end; '
-            'if result.exists == false then return ' + lua_quote(fallback) +
+            'if result.exists == false then return ' + fallback_expression +
             ' end; return result.value end)'
             '(service_value(services.variables.get_context_string('
             'context and context.data, ' + lua_quote(name) + ')))'
@@ -1082,7 +1085,7 @@ def render_proficiency_id_expression(
             lua_quote(name) + '))'
         )
     return (
-        '(function(result) if result.exists == false then return ' + lua_quote(fallback) +
+        '(function(result) if result.exists == false then return ' + fallback_expression +
         ' end; return type(result.value) == "string" and result.value or "" end)'
         '(' + read + ')'
     )
@@ -27736,18 +27739,97 @@ def render_participant_translation_expression(
         value, target_expression, avatar_expression, npc_expression)
 
 
+def _render_assignment_translation_literal(value: Any) -> str | None:
+    """A singular translation constant, evaluated only after choice/missing read."""
+    if isinstance(value, str):
+        text, translation_context = value, None
+    elif isinstance(value, dict) and set(value) <= {"str", "ctxt", "//~"}:
+        text, translation_context = value.get("str"), value.get("ctxt")
+        if "ctxt" in value and not isinstance(translation_context, str):
+            return None
+        if "//~" in value and not isinstance(value["//~"], str):
+            return None
+    else:
+        return None
+    if not lua_quotable_native_variable_string(text):
+        return None
+    if translation_context is not None and (
+            not lua_quotable_native_variable_string(translation_context) or
+            "\0" in translation_context or "\0" in text):
+        return None
+    # Native translation::translated never consults the catalog for empty raw.
+    if not text:
+        return lua_quote("")
+    arguments = lua_quote(text)
+    if translation_context is not None:
+        arguments += ", " + lua_quote(translation_context)
+    return f"services.translate({arguments})"
+
+
+def _render_assignment_string_value(
+    value: Any, i18n: bool,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None,
+) -> str | None:
+    alpha = _proven_copy_variable_target(effect_actor_targets, "u")
+    beta = _proven_copy_variable_target(effect_actor_targets, "npc")
+
+    def read(scope: str, key: str) -> str | None:
+        if scope == "global_val":
+            call = f"services.variables.get_global_string({key})"
+        elif scope == "context_val":
+            call = f"services.variables.get_context_string(context and context.data, {key})"
+        else:
+            owner = alpha if scope == "u_val" else beta if scope == "npc_val" else None
+            if owner is None:
+                return None
+            call = f"services.variables.get_string({owner}, {key})"
+        return ('(function(result) if result.exists == false then return nil end; '
+                f'return result.value end)(service_value({call}))')
+
+    fallback = None
+    if i18n:
+        # translation_or_var attempts a translation constant BEFORE var_info.
+        # Stored variable strings and string-valued mutators remain raw.
+        if isinstance(value, str) or isinstance(value, dict) and "str" in value:
+            return _render_assignment_translation_literal(value)
+        if isinstance(value, dict) and "default" in value:
+            default = value["default"]
+            fallback = _render_assignment_translation_literal(default)
+            if fallback is None:
+                # Native invalid translation defaults clear the optional;
+                # supported translation objects with unsupported context/NUL
+                # or loader diagnostics must remain an explicit gap.
+                if isinstance(default, str) or isinstance(default, dict) and (
+                        "str" in default or "str_sp" in default):
+                    return None
+                fallback = lua_quote("")
+    alpha_info = (effect_actor_targets or {}).get("u")
+    technique_alpha = alpha if alpha is not None and alpha_info[1] == "character" else None
+    return render_proficiency_id_expression(
+        value, alpha_owner=technique_alpha, beta_owner=beta,
+        variable_string_reader=read, variable_default_expression=fallback,
+    )
+
+
 def render_static_character_string_var(
     effect: dict[str, Any],
     effect_actor_targets: dict[str, tuple[str, str] | None] | None,
 ) -> list[str] | None:
-    """Render bounded literal string choices with native RNG and exact owners."""
+    """Render lazy native string providers with native RNG and exact owners."""
     if (
         not isinstance(effect, dict) or
         not {"set_string_var", "target_var"}.issubset(effect) or
         set(effect) - {"set_string_var", "target_var", "parse_tags", "i18n"}
     ):
         return None
-    target = _static_string_variable_descriptor(effect["target_var"])
+    target_descriptor = effect["target_var"]
+    if not isinstance(target_descriptor, dict) or len(target_descriptor) != 1:
+        return None
+    target_key, target_name = next(iter(target_descriptor.items()))
+    target_scope = {"u_val": "u", "npc_val": "npc", "global_val": "global",
+                    "context_val": "context", "var_val": "var"}.get(target_key)
+    target = ((target_scope, target_name) if target_scope is not None and
+              lua_quotable_native_variable_string(target_name) else None)
     if target is None or target[0] == "var":
         return None
     if effect.get("parse_tags", False) is not False:
@@ -27758,11 +27840,10 @@ def render_static_character_string_var(
     if not isinstance(i18n, bool):
         return None
     values = effect["set_string_var"]
-    if isinstance(values, str):
+    if not isinstance(values, list):
         values = [values]
     if (
-        not isinstance(values, list) or not values or len(values) > 64 or
-        any(not bounded_utf8_string(value, 8192, allow_empty=True) for value in values)
+        not values or len(values) > NATIVE_INT_MAX + 1
     ):
         return None
 
@@ -27774,10 +27855,10 @@ def render_static_character_string_var(
     if target[0] in {"u", "npc"} and owner is None:
         return None
 
-    rendered_values = [
-        f"services.translate({lua_quote(value)})" if i18n else lua_quote(value)
-        for value in values
-    ]
+    rendered_values = [_render_assignment_string_value(value, i18n, effect_actor_targets)
+                       for value in values]
+    if any(value is None for value in rendered_values):
+        return None
     lines = [
         "    local string_values = { " + ", ".join(
             f"function() return {value} end" for value in rendered_values
@@ -32320,9 +32401,10 @@ def render_eoc(
                         )
                     elif isinstance(false_value, dict) and "set_string_var" in false_value:
                         false_todo = (
-                            "translate set_string_var only for bounded literal strings "
-                            "with native RNG and exact target handles; parse_tags, "
-                            "string_input, variable values, and var_val targets remain TODO"
+                            "translate set_string_var only for native string providers "
+                            "with native RNG and exact participant handles; parse_tags, "
+                            "string_input, unsupported translation shapes, unproven "
+                            "source owners and var_val targets remain TODO"
                         )
                     if (
                         isinstance(false_value, dict) and
@@ -36496,10 +36578,10 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate set_string_var only for bounded "
-                        "literal strings with native RNG and exact target handles; "
-                        "parse_tags, string_input, variable values, and var_val "
-                        "targets remain TODO."
+                        "    -- TODO: translate set_string_var only for native string "
+                        "providers with native RNG and exact participant handles; "
+                        "parse_tags, string_input, unsupported translation shapes, "
+                        "unproven source owners and var_val targets remain TODO."
                     )
                     result.add_todo(
                         "manual_rewrite",
