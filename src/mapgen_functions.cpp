@@ -1,5 +1,6 @@
 #include "mapgen_functions.h"
 
+#include <type_id.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -22,9 +23,9 @@
 #include "cuboid_rectangle.h"
 #include "flood_fill.h"
 #include "map.h"
-#include "mapdata.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
+#include "mapdata.h"
 #include "mapgen.h"
 #include "mapgendata.h"
 #include "mapgenformat.h"
