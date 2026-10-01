@@ -877,6 +877,17 @@ def render_proficiency_id_expression(
         return lua_quote(value)
     if not isinstance(value, dict):
         return None
+    if value.get("i18n") is True and "str" in value:
+        text = value["str"]
+        # Native string_mutator translates this authored string at evaluation
+        # time. Ordinary ID literals and stored/default values stay raw. The
+        # public translation service rejects NUL, so keep that range explicit.
+        if (set(value) - {"str", "i18n", "//~"} or
+                not lua_quotable_native_variable_string(text) or "\0" in text or
+                ("//~" in value and not isinstance(value["//~"], str))):
+            return None
+        # translation::translated returns empty raw text without a lookup.
+        return f"services.translate({lua_quote(text)})" if text else lua_quote(text)
     scopes = {"global_val", "context_val", "u_val", "npc_val", "var_val"} & set(value)
     if len(scopes) != 1 or set(value) - scopes - {"default"}:
         return None

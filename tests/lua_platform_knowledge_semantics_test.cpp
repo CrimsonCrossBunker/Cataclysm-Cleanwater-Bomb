@@ -503,6 +503,21 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
             }
             return conditional_t( json_loader::from_string( source.str() ).get_object() );
         };
+        const auto make_i18n_condition = [&]( const std::string & selector,
+        const std::string & text ) {
+            std::ostringstream source;
+            {
+                JsonOut json( source );
+                json.start_object();
+                json.member( selector + "_has_proficiency" );
+                json.start_object();
+                json.member( "i18n", true );
+                json.member( "str", text );
+                json.end_object();
+                json.end_object();
+            }
+            return conditional_t( json_loader::from_string( source.str() ).get_object() );
+        };
         const auto make_variable_condition = [&]( const std::string & selector,
             const std::string & scope, const std::string & key, const std::string & default_id,
         const bool with_default ) {
@@ -530,6 +545,12 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
             CHECK( native == platform );
             return native;
         };
+        const sol::protected_function translate = services["translate"];
+        const auto translated_text = [&]( const std::string & text ) {
+            const sol::protected_function_result result = translate( text );
+            REQUIRE( result.valid() );
+            return result.get<std::string>();
+        };
         const std::vector<std::string> selectors = { "u", "npc" };
         const std::string nul_id( "unknown\0proficiency", sizeof( "unknown\0proficiency" ) - 1 );
         const std::vector<std::string> literal_ids = {
@@ -541,6 +562,25 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
                 CAPTURE( selector, id_text );
                 const conditional_t condition = make_literal_condition( selector, id_text );
                 CHECK( compare_id( selector, condition, id_text ) == ( id_text == carving.str() ) );
+            }
+        }
+
+        // Native str_or_var accepts translation objects. Compare with the
+        // actual service output; services.translate returns a bare string,
+        // and intentionally rejects NUL-containing text. Native translation
+        // also returns an empty source unchanged without consulting catalogs.
+        const std::vector<std::string> i18n_texts = {
+            std::string(), carving.str(), "prof_unregistered_i18n_test", "无此熟练度",
+            std::string( 9000, 'x' )
+        };
+        for( const std::string &selector : selectors ) {
+            for( const std::string &text : i18n_texts ) {
+                const std::string translated_id = text.empty() ? std::string() :
+                                                  translated_text( text );
+                const conditional_t condition = make_i18n_condition( selector, text );
+                CAPTURE( selector, text, translated_id );
+                CHECK( compare_id( selector, condition, translated_id ) ==
+                       ( translated_id == carving.str() ) );
             }
         }
 

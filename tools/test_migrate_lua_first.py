@@ -3360,7 +3360,7 @@ assert(observed[#observed] == 'KNOWN')
             f"not ({expression})",
         )
         for raw_id in (
-            {"str": "prof_knapping", "i18n": True},
+            {"str": "prof_knapping", "i18n": False},
         ):
             self.assertIsNone(
                 migrate_lua_first.render_eoc_condition_expression(
@@ -4354,6 +4354,73 @@ assert(calls == 1)
                     run = subprocess.run(["lua", "-"], input=script, text=True,
                                          capture_output=True, timeout=10)
                     self.assertEqual(run.returncode, 0, run.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_proficiency_i18n_ids_translate_at_each_query(self) -> None:
+        for text in ("", "prof_carving", "无此熟练度", 'raw_"\\id', "x" * 10000):
+            for prefix in ("u_", "npc_"):
+                expression = migrate_lua_first.render_eoc_condition_expression(
+                    {prefix + "has_proficiency": {
+                        "str": text, "i18n": True, "//~": "Authored ID text",
+                    }},
+                    proficiency_character_alpha_actor_proven=True,
+                    npc_melee_beta_actor_proven=True,
+                )
+                self.assertIsNotNone(expression)
+                script = r"""
+local actor={kind='creature',subtype='npc',is_valid=function() return true end}
+local partner={kind='creature',subtype='npc',is_valid=function() return true end}
+local context={actors={interlocutor=partner}}
+local expected=EXPECTED_TEXT
+local target=EXPECTED_TARGET
+local translated='prof_carving'
+local translations,queries=0,0
+local function service_value(value) return value end
+local services={translate=function(text)
+ assert(text==expected and text~='')
+ translations=translations+1
+ if translated=='raise' then error('translation failure') end
+ return translated
+end,proficiencies={has_id_text=function(receiver,id)
+ assert(receiver==target)
+ assert(id==(expected=='' and '' or translated))
+ queries=queries+1
+ return id=='prof_carving'
+end}}
+if expected=='' then
+ assert(not (EXPRESSION))
+ assert(not (EXPRESSION))
+ assert(translations==0 and queries==2)
+else
+ assert(EXPRESSION)
+ translated='prof_unregistered'
+ assert(not (EXPRESSION))
+ assert(translations==2 and queries==2)
+ translated='raise'
+ local ok,message=pcall(function() return EXPRESSION end)
+ assert(not ok and tostring(message):find('translation failure',1,true))
+ assert(translations==3 and queries==2)
+end
+""".replace("EXPECTED_TEXT", migrate_lua_first.lua_quote(text)).replace(
+                    "EXPECTED_TARGET", "actor" if prefix == "u_" else "partner",
+                ).replace("EXPRESSION", expression or "nil")
+                run = subprocess.run(["lua", "-"], input=script, text=True,
+                                     capture_output=True, timeout=10)
+                self.assertEqual(run.returncode, 0, run.stderr)
+        for value in (
+            {"str": "prof_carving"}, {"str": "prof_carving", "i18n": False},
+            {"str": "prof_carving", "i18n": 1}, {"i18n": True},
+            {"str": 73, "i18n": True}, {"str": "a\0b", "i18n": True},
+            {"str": "\ud800", "i18n": True},
+            {"str": "prof_carving", "i18n": True, "ctxt": "not native here"},
+            {"str": "prof_carving", "i18n": True, "//~": False},
+        ):
+            self.assertIsNone(migrate_lua_first.render_proficiency_id_expression(value))
+        translated_id = {"str": "prof_carving", "i18n": True}
+        for selector in ("u_has_proficiency", "npc_has_proficiency"):
+            self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+                {selector: translated_id},
+            ))
 
     def test_npc_proficiency_is_limited_to_event_exclusive_melee_beta(self) -> None:
         def render(
