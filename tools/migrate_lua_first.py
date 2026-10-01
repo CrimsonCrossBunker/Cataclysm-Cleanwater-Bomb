@@ -979,9 +979,9 @@ def render_proficiency_id_expression(
         text = value["str"]
         # Native string_mutator translates this authored string at evaluation
         # time. Ordinary ID literals and stored/default values stay raw. The
-        # public translation service rejects NUL, so keep that range explicit.
+        # no-context service preserves native LOCALIZE-on/off NUL semantics.
         if (set(value) - {"str", "i18n", "//~"} or
-                not lua_quotable_native_variable_string(text) or "\0" in text or
+                not lua_quotable_native_variable_string(text) or
                 ("//~" in value and not isinstance(value["//~"], str))):
             return None
         # translation::translated returns empty raw text without a lookup.

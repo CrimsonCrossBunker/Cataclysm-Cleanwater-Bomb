@@ -2167,15 +2167,18 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     services.set_function( "translate", [weak]( const std::string & text,
     const sol::optional<std::string> &context ) -> std::string {
         require_live_runtime( weak, "services.translate" );
-        require_translation_text( text );
-        if( context )
+        if( !context )
         {
-            require_translation_text( *context );
+            // Match native translation objects, including empty text and
+            // embedded NUL. LOCALIZE's catalog lookup uses the C-string prefix;
+            // disabled localization preserves the complete source bytes.
+            return to_translation( text ).translated();
         }
+        require_translation_text( text );
+        require_translation_text( *context );
 #if defined(LOCALIZE)
         TranslationManager &manager = TranslationManager::GetInstance();
-        return context ? manager.TranslateWithContext( context->c_str(), text.c_str() ) :
-        manager.Translate( text );
+        return manager.TranslateWithContext( context->c_str(), text.c_str() );
 #else
         return text;
 #endif

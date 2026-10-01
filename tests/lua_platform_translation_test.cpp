@@ -7,6 +7,7 @@
 #include "lua_platform_interaction.h"
 #include "npc.h"
 #include "npctalk.h"
+#include "translation.h"
 #include "uilist.h"
 #include <memory>
 #include <optional>
@@ -56,11 +57,26 @@ TEST_CASE( "lua_platform_translation_fallback_and_lifetime",
         assert(ccb.services.translate_plural(one, many, 0) == many)
         assert(ccb.services.translate_plural(one, many, 2, "ccb regression context") == many)
         assert(not pcall(ccb.services.translate_plural, one, many, -1))
-        assert(not pcall(ccb.services.translate, "a\0b"))
+        assert(not pcall(ccb.services.translate, "a\0b", "ccb regression context"))
         assert(not pcall(ccb.services.translate, one, "a\0b"))
         assert(not pcall(ccb.services.translate_plural, one, "a\0b", 2))
         assert(not pcall(ccb.services.translate_plural, one, many, 2, "a\0b"))
     )" );
+    const sol::protected_function translate = ccb["services"]["translate"];
+    for( const std::string &text : std::vector<std::string> {
+             "", std::string( 1, '\0' ),
+             std::string( "ccb translation NUL regression 1901" ) + '\0' + "suffix" + '\0' + "tail",
+             std::string( 10000, 'x' ) + '\0' + "tail"
+         } ) {
+        const sol::protected_function_result result = translate( text );
+        REQUIRE( result.valid() );
+        CHECK( result.get<std::string>() == to_translation( text ).translated() );
+#if defined(LOCALIZE)
+        CHECK( result.get<std::string>() == text.substr( 0, text.find( '\0' ) ) );
+#else
+        CHECK( result.get<std::string>() == text );
+#endif
+    }
     run( R"(
         local format = ccb.services.format
         assert(format("%2$s -> %1$s", {"NPC", "book"}) == "book -> NPC")

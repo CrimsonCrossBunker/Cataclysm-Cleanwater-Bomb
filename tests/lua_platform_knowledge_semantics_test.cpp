@@ -38,6 +38,7 @@
 #include "rng.h"
 #include "skill.h"
 #include "talker_topic.h"
+#include "translation.h"
 #include "type_id.h"
 
 namespace cata::lua_platform
@@ -590,16 +591,18 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
 
         // Native str_or_var accepts translation objects. Compare with the
         // actual service output; services.translate returns a bare string,
-        // and intentionally rejects NUL-containing text. Native translation
-        // also returns an empty source unchanged without consulting catalogs.
+        // including NUL's native LOCALIZE-on/off behaviour. Native translation
+        // returns an empty source unchanged without consulting catalogs.
         const std::vector<std::string> i18n_texts = {
             std::string(), carving.str(), "prof_unregistered_i18n_test", "无此熟练度",
-            std::string( 9000, 'x' )
+            std::string( 9000, 'x' ), std::string( 1, '\0' ),
+            carving.str() + '\0' + "suffix", nul_id
         };
         for( const std::string &selector : selectors ) {
             for( const std::string &text : i18n_texts ) {
                 const std::string translated_id = text.empty() ? std::string() :
                                                   translated_text( text );
+                CHECK( translated_id == to_translation( text ).translated() );
                 const conditional_t condition = make_i18n_condition( selector, text );
                 CAPTURE( selector, text, translated_id );
                 CHECK( compare_id( selector, condition, translated_id ) ==

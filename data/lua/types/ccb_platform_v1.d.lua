@@ -11947,7 +11947,9 @@ function CcbPlatformServices.message(text) end
 function CcbPlatformServices.format(text, arguments) end
 
 ---Translate runtime text using the current game language. Available after world_ready.
----Missing translations return the source text. Text/context must not contain NUL.
+---Without context, uses native translation-object semantics: empty text stays empty;
+---embedded NUL uses the C-string prefix with localization enabled, or stays intact when disabled.
+---With context, text/context must not contain NUL. Missing translations return native source text.
 ---The lookup runs when called, so dialogue callbacks can compose separately translated fragments.
 ---@param text string Literal source text for extraction.
 ---@param context? string Literal disambiguation context.

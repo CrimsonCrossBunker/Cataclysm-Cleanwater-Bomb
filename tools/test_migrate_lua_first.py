@@ -4365,7 +4365,8 @@ assert(calls == 1)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_proficiency_i18n_ids_translate_at_each_query(self) -> None:
-        for text in ("", "prof_carving", "无此熟练度", 'raw_"\\id', "x" * 10000):
+        for text in ("", "prof_carving", "无此熟练度", 'raw_"\\id', "x" * 10000,
+                     "\0", "prof_carving\0suffix", "unknown\0id\0suffix"):
             for prefix in ("u_", "npc_"):
                 expression = migrate_lua_first.render_eoc_condition_expression(
                     {prefix + "has_proficiency": {
@@ -4418,7 +4419,7 @@ end
         for value in (
             {"str": "prof_carving"}, {"str": "prof_carving", "i18n": False},
             {"str": "prof_carving", "i18n": 1}, {"i18n": True},
-            {"str": 73, "i18n": True}, {"str": "a\0b", "i18n": True},
+            {"str": 73, "i18n": True},
             {"str": "\ud800", "i18n": True},
             {"str": "prof_carving", "i18n": True, "ctxt": "not native here"},
             {"str": "prof_carving", "i18n": True, "//~": False},
@@ -4429,6 +4430,46 @@ end
             self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
                 {selector: translated_id},
             ))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_talk_proficiency_i18n_nul_keeps_native_localization_result(self) -> None:
+        for prefix in ("u_", "npc_"):
+            for text in ("\0", "prof_carving\0tail", "unknown\0tail\0suffix"):
+                rendered = migrate_lua_first.render_talk_topic_response_condition({
+                    prefix + "has_proficiency": {"str": text, "i18n": True},
+                })
+                self.assertIsNotNone(rendered)
+                script = r"""
+local actor={kind='creature',subtype='avatar',is_valid=function() return true end}
+local partner={kind='creature',subtype='npc',is_valid=function() return true end}
+local wanted,calls=SOURCE,0
+local expected_target=TARGET
+local services={translate=function(text,context)
+ assert(text==SOURCE and context==nil)
+ calls=calls+1
+ return wanted
+end,proficiencies={has_id_text=function(owner,id)
+ assert(owner==expected_target and id==wanted)
+ return {ok=true,value=id=='prof_carving'}
+end}}
+local dialogue={valid=function() return true end,
+ speaker=function() return actor end,interlocutor=function() return partner end}
+local predicate=PREDICATE
+assert(predicate(dialogue)==(wanted=='prof_carving') and calls==1)
+-- The current native language/build supplies the result; migration must
+-- neither pre-truncate the input nor restore untranslated suffix bytes.
+wanted=(SOURCE):match('^[^%z]*')
+assert(predicate(dialogue)==(wanted=='prof_carving') and calls==2)
+wanted='prof_carving'
+assert(predicate(dialogue) and calls==3)
+dialogue.valid=function() return false end
+assert(not predicate(dialogue) and calls==3)
+""".replace("SOURCE", migrate_lua_first.lua_quote(text)).replace(
+                    "TARGET", "actor" if prefix == "u_" else "partner",
+                ).replace("PREDICATE", rendered.source if rendered else "nil")
+                run = subprocess.run(["lua", "-"], input=script, text=True,
+                                     capture_output=True, timeout=10)
+                self.assertEqual(run.returncode, 0, run.stderr)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_proficiency_game_option_ids_use_native_string_lookup(self) -> None:
