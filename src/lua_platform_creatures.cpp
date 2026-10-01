@@ -2274,14 +2274,15 @@ struct character_technique_options {
     std::vector<matec_id> blacklist;
 };
 
-std::vector<matec_id> read_technique_blacklist( const sol::object &value )
+std::vector<matec_id> read_technique_blacklist_impl( const sol::object &value,
+        const std::string_view api_name )
 {
     if( !combat_option_present( value ) ) {
         return {};
     }
     if( !value.is<sol::table>() ) {
         throw std::invalid_argument(
-            "services.characters.choose_technique option 'blacklist' must be an array" );
+            std::string( api_name ) + " blacklist must be an array" );
     }
     const sol::table entries = value.as<sol::table>();
     std::vector<matec_id> result;
@@ -2295,13 +2296,13 @@ std::vector<matec_id> read_technique_blacklist( const sol::object &value )
             const script_game_id &typed_id = entry.as<script_game_id>();
             if( typed_id.kind() != "martial_art_technique" ) {
                 throw std::invalid_argument(
-                    "services.characters.choose_technique blacklist GameIds must have "
+                    std::string( api_name ) + " blacklist GameIds must have "
                     "kind 'martial_art_technique'" );
             }
             id = typed_id.value();
         } else {
             throw std::invalid_argument(
-                "services.characters.choose_technique option 'blacklist' must be a "
+                std::string( api_name ) + " blacklist must be a "
                 "dense array of technique ids" );
         }
         // Native selection only compares these raw IDs to its candidates.
@@ -2331,8 +2332,8 @@ character_technique_options read_character_technique_options(
     result.block_counter = combat_boolean_option(
                                combat_option( *requested, "block_counter" ),
                                api_name, "block_counter", result.block_counter );
-    result.blacklist = read_technique_blacklist(
-                           combat_option( *requested, "blacklist" ) );
+    result.blacklist = read_technique_blacklist_impl(
+                           combat_option( *requested, "blacklist" ), api_name );
     return result;
 }
 
@@ -4126,6 +4127,12 @@ sol::table nearby_characters(
 }
 
 } // namespace
+
+std::vector<matec_id> detail::read_technique_blacklist( const sol::object &value,
+        const std::string_view api_name )
+{
+    return read_technique_blacklist_impl( value, api_name );
+}
 
 void install_creature_api(
     sol::table &services,

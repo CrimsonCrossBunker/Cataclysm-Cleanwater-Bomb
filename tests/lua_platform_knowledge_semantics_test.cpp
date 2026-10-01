@@ -37,6 +37,7 @@
 #include "options.h"
 #include "rng.h"
 #include "skill.h"
+#include "talker_topic.h"
 #include "type_id.h"
 
 namespace cata::lua_platform
@@ -919,6 +920,22 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
             const on_out_of_scope restore_rng( [saved_rng]() {
                 rng_get_engine() = saved_rng;
             } );
+            cata::lua_platform::dialogue::begin_session( conversation, runtime_identity, world_generation );
+            const on_out_of_scope retire_selection( [&]() {
+                cata::lua_platform::dialogue::end_session( conversation );
+            } );
+            const auto selection_session = cata::lua_platform::dialogue::session_for(
+                                               conversation, "TALK_PROFICIENCY_SELECTION", runtime_identity, world_generation );
+            cata::lua_platform::dialogue::context selection_context(
+                lua.lua_state(), conversation, "TALK_PROFICIENCY_SELECTION", false,
+                "proficiency selection context is stale", {}, selection_session,
+                runtime_identity, world_generation );
+            REQUIRE( selection_context.valid() );
+            const sol::protected_function_result sampler_loaded = lua.safe_script(
+                        "return function(ctx, c, d, b, blacklist) "
+                        "return ctx:sample_technique(c, d, b, blacklist) end", sol::script_pass_on_error );
+            REQUIRE( sampler_loaded.valid() );
+            const sol::protected_function sample_technique = sampler_loaded.get<sol::protected_function>();
             player.set_skill_level( skill_id( "unarmed" ), 10 );
             player.martial_arts_data->add_martialart( matype_style_karate );
             player.martial_arts_data->style_selected = matype_style_karate;
@@ -960,6 +977,14 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
                         CHECK( platform_id == native_id );
                         CHECK( selected["found"].get<bool>() == ( native_id != tec_none.str() ) );
                         CHECK( selected["accepted"].get<bool>() == ( native_id != tec_none.str() ) );
+                        CHECK( rng_get_engine() == native_rng_after );
+                        // Actual read-phase Lua binding uses the live native
+                        // pair and consumes exactly the same shared RNG state.
+                        rng_set_engine_seed( seed );
+                        const sol::protected_function_result sampled = sample_technique(
+                                    selection_context, critical, dodge_counter, block_counter, raw_blacklist );
+                        REQUIRE( sampled.valid() );
+                        CHECK( sampled.get<std::string>() == native_id );
                         CHECK( rng_get_engine() == native_rng_after );
                         saw_selected_technique = saw_selected_technique || native_id != tec_none.str();
                         for( const std::string &selector : selectors ) {
@@ -1008,6 +1033,54 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
                     CHECK( rng_get_engine() == platform_rng_after );
                 }
             }
+            cata::lua_platform::dialogue::end_session( conversation );
+            CHECK_FALSE( selection_context.valid() );
+            const auto rng_before_stale = rng_get_engine(); // NOLINT(cata-determinism)
+            const sol::protected_function_result stale_sample = sample_technique(
+                        selection_context, false, false, false, sol::nil );
+            CHECK_FALSE( stale_sample.valid() );
+            CHECK( rng_get_engine() == rng_before_stale );
+
+            // A non-Character speaker inherits the native empty-ID fallback,
+            // rather than being converted into a fictitious Character handle.
+            dialogue topic_speaker( std::make_unique<talker_topic>(), get_talker_for( partner ) );
+            cata::lua_platform::dialogue::begin_session( topic_speaker, runtime_identity, world_generation );
+            const on_out_of_scope retire_topic_speaker( [&]() {
+                cata::lua_platform::dialogue::end_session( topic_speaker );
+            } );
+            const auto fallback_session = cata::lua_platform::dialogue::session_for(
+                                              topic_speaker, "TALK_PROFICIENCY_FALLBACK", runtime_identity, world_generation );
+            cata::lua_platform::dialogue::context fallback_context(
+                lua.lua_state(), topic_speaker, "TALK_PROFICIENCY_FALLBACK", false,
+                "proficiency fallback context is stale", {}, fallback_session,
+                runtime_identity, world_generation );
+            const auto rng_before_fallback = rng_get_engine(); // NOLINT(cata-determinism)
+            const std::string native_fallback = topic_speaker.const_actor( false )->get_random_technique(
+                                                    partner, false, false, false ).str();
+            REQUIRE( native_fallback.empty() );
+            const sol::protected_function_result sampled_fallback = sample_technique(
+                        fallback_context, false, false, false, sol::nil );
+            REQUIRE( sampled_fallback.valid() );
+            CHECK( sampled_fallback.get<std::string>() == native_fallback );
+            CHECK( rng_get_engine() == rng_before_fallback );
+
+            // Native callers must supply a Creature target. An invalid pair
+            // fails before selection instead of dereferencing a null target.
+            dialogue topic_target( get_talker_for( player ), std::make_unique<talker_topic>() );
+            cata::lua_platform::dialogue::begin_session( topic_target, runtime_identity, world_generation );
+            const on_out_of_scope retire_topic_target( [&]() {
+                cata::lua_platform::dialogue::end_session( topic_target );
+            } );
+            const auto invalid_session = cata::lua_platform::dialogue::session_for(
+                                             topic_target, "TALK_PROFICIENCY_INVALID_TARGET", runtime_identity, world_generation );
+            cata::lua_platform::dialogue::context invalid_context(
+                lua.lua_state(), topic_target, "TALK_PROFICIENCY_INVALID_TARGET", false,
+                "proficiency invalid target context is stale", {}, invalid_session,
+                runtime_identity, world_generation );
+            const sol::protected_function_result invalid_target = sample_technique(
+                        invalid_context, false, false, false, sol::nil );
+            CHECK_FALSE( invalid_target.valid() );
+            CHECK( rng_get_engine() == rng_before_fallback );
         }
 
         // The native selectors query dialogue alpha for u_* and beta for

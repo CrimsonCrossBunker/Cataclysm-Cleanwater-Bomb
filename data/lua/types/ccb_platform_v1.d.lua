@@ -6421,6 +6421,16 @@ function PlatformDialogueContext:topic() end
 ---@return string
 function PlatformDialogueContext:topic_item() end
 
+---Sample a native technique for the live speaker against its Creature interlocutor.
+---Available in read callbacks. Advances the shared native RNG without executing an attack;
+---retains native tec_none/empty fallback text and requires this context to remain valid.
+---@param critical boolean
+---@param dodge_counter boolean
+---@param block_counter boolean
+---@param blacklist? (string|GameId)[] Raw technique IDs; duplicates/order preserved, typed entries use martial_art_technique kind.
+---@return string technique Native ID text, including the no-selection fallback.
+function PlatformDialogueContext:sample_technique(critical, dodge_counter, block_counter, blacklist) end
+
 ---@return boolean
 function PlatformDialogueContext:has_speaker() end
 

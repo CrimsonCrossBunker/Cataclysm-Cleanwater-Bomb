@@ -785,6 +785,7 @@ void detail::install_runtime_dialogue_presentation_api(
         "generation", &platform_dialogue_context::generation,
         "topic", &platform_dialogue_context::topic,
         "topic_item", &platform_dialogue_context::topic_item,
+        "sample_technique", &platform_dialogue_context::sample_technique,
         "has_speaker", &platform_dialogue_context::has_speaker,
         "has_interlocutor", &platform_dialogue_context::has_interlocutor,
         "interlocutor_at_safe_space",

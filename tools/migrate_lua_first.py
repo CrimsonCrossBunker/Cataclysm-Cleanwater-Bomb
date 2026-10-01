@@ -890,6 +890,7 @@ def render_proficiency_id_expression(
     beta_owner: str | None = None,
     topic_item_expression: str | None = None,
     variable_string_reader: Callable[[str, str], str | None] | None = None,
+    technique_sampler: str | None = None,
 ) -> str | None:
     """Keep native ID text and resolve each variable from its proven talker."""
     if safe_native_proficiency_id_literal(value):
@@ -900,14 +901,16 @@ def render_proficiency_id_expression(
         return topic_item_expression if set(value) == {"mutator"} else None
     if value.get("mutator") == "valid_technique":
         if (set(value) - {"mutator", "blacklist", "crit", "dodge_counter", "block_counter"} or
-                alpha_owner is None or beta_owner is None):
+                (technique_sampler is None and (alpha_owner is None or beta_owner is None))):
             return None
         options = []
+        flags = []
         for source, name in (("crit", "critical"), ("dodge_counter", "dodge_counter"),
                              ("block_counter", "block_counter")):
             flag = value.get(source, False)
             if not isinstance(flag, bool):
                 return None
+            flags.append("true" if flag else "false")
             if flag:
                 options.append(f"{name} = true")
         # Native has_array ignores an authored non-array blacklist entirely.
@@ -917,6 +920,7 @@ def render_proficiency_id_expression(
             entry, alpha_owner=alpha_owner, beta_owner=beta_owner,
             topic_item_expression=topic_item_expression,
             variable_string_reader=variable_string_reader,
+            technique_sampler=technique_sampler,
         ) for entry in blacklist]
         if any(entry is None for entry in entries):
             return None
@@ -924,6 +928,9 @@ def render_proficiency_id_expression(
         # before the shared native selection, including nested selections.
         if entries:
             options.append("blacklist = { " + ", ".join(entries) + " }")
+        if technique_sampler is not None:
+            return (technique_sampler + "(" + ", ".join(flags) +
+                    ", { " + ", ".join(entries) + " })")
         return (
             'service_value(services.characters.choose_technique('
             f'{alpha_owner}, {beta_owner}, {{ ' + ", ".join(options) + ' })).technique.value'
@@ -935,6 +942,7 @@ def render_proficiency_id_expression(
             value["matec_id"], alpha_owner=alpha_owner, beta_owner=beta_owner,
             topic_item_expression=topic_item_expression,
             variable_string_reader=variable_string_reader,
+            technique_sampler=technique_sampler,
         )
         if identifier is None:
             return None
@@ -947,6 +955,7 @@ def render_proficiency_id_expression(
             value["mtype_id"], alpha_owner=alpha_owner, beta_owner=beta_owner,
             topic_item_expression=topic_item_expression,
             variable_string_reader=variable_string_reader,
+            technique_sampler=technique_sampler,
         )
         if identifier is None:
             return None
@@ -958,6 +967,7 @@ def render_proficiency_id_expression(
             value["option"], alpha_owner=alpha_owner, beta_owner=beta_owner,
             topic_item_expression=topic_item_expression,
             variable_string_reader=variable_string_reader,
+            technique_sampler=technique_sampler,
         )
         if option is None:
             return None
@@ -7275,6 +7285,7 @@ def render_talk_topic_response_condition(
         identifier = render_proficiency_id_expression(
             condition[selector], topic_item_expression="dialogue_context:topic_item()",
             variable_string_reader=render_dialogue_variable_string_read,
+            technique_sampler="dialogue_context:sample_technique",
         )
         if identifier is None:
             return None

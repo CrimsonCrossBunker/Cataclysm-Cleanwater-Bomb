@@ -4904,10 +4904,15 @@ assert(table.concat(trace,',')=='alpha,beta,context,global,choice1,choice2,query
             self.assertIsNone(migrate_lua_first.render_proficiency_id_expression(
                 {"mutator": "valid_technique"}, alpha_owner=alpha, beta_owner=beta,
             ))
-        # Direct TALK's current read-only service phase is not silently bypassed.
-        self.assertIsNone(migrate_lua_first.render_talk_topic_response_condition({
+        # The live frame provides a native read-phase sampler; general service
+        # selection still needs both proven Character handles and a write phase.
+        rendered = migrate_lua_first.render_talk_topic_response_condition({
             "u_has_proficiency": {"mutator": "valid_technique"},
-        }))
+        })
+        self.assertIsNotNone(rendered)
+        self.assertIn("dialogue_context:sample_technique(false, false, false, {  })",
+                      rendered.source if rendered else "")
+        self.assertNotIn("choose_technique", rendered.source if rendered else "")
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_talk_proficiency_variables_keep_live_owners_and_missing_defaults(self) -> None:
@@ -5055,6 +5060,122 @@ assert(table.concat(trace,',')=='pointer,source,lookup,query')
             run = subprocess.run(["lua", "-"], input=script, text=True,
                                  capture_output=True, timeout=10)
             self.assertEqual(run.returncode, 0, run.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_talk_proficiency_technique_sampling_keeps_flags_raw_ids_and_receiver_order(self) -> None:
+        raw = ["", "raw\0id", "无此招式", "x" * 10000, "duplicate", "duplicate"]
+        for prefix in ("u_", "npc_"):
+            for flags in range(8):
+                rendered = migrate_lua_first.render_talk_topic_response_condition({
+                    prefix + "has_proficiency": {
+                        "mutator": "valid_technique", "crit": bool(flags & 1),
+                        "dodge_counter": bool(flags & 2), "block_counter": bool(flags & 4),
+                        "blacklist": raw,
+                    },
+                })
+                self.assertIsNotNone(rendered)
+                script = r"""
+local actor={kind='creature',subtype='avatar',is_valid=function() return true end}
+local partner={kind='creature',subtype='npc',is_valid=function() return true end}
+local expected=EXPECTED
+local trace,selected={},''
+local services={characters={choose_technique=function() error('write service in predicate') end},
+ proficiencies={has_id_text=function(owner,id)
+  assert(owner==expected and id==selected)
+  table.insert(trace,'query');return {ok=true,value=id=='prof_carving'}
+ end}}
+local dialogue;dialogue={valid=function() return true end,
+ sample_technique=function(self,c,d,b,blacklist)
+  assert(self==dialogue)
+  assert(c==CRITICAL and d==DODGE and b==BLOCK)
+  local raw=RAW
+  assert(#blacklist==#raw)
+  for i,v in ipairs(raw) do assert(blacklist[i]==v) end
+  table.insert(trace,'sample');return selected
+ end,
+ speaker=function() table.insert(trace,'receiver');return actor end,
+ interlocutor=function() table.insert(trace,'receiver');return partner end}
+local predicate=PREDICATE
+for _,id in ipairs({'prof_carving','tec_none','','raw\0id'}) do
+ selected=id;trace={}
+ assert(predicate(dialogue)==(id=='prof_carving'))
+ assert(table.concat(trace,',')=='sample,receiver,query')
+end
+expected.kind='item';trace={}
+assert(not predicate(dialogue))
+assert(table.concat(trace,',')=='sample,receiver')
+dialogue.valid=function() return false end
+dialogue.sample_technique=function() error('stale frame sampling') end
+trace={};assert(not predicate(dialogue) and #trace==0)
+"""
+                script = script.replace("EXPECTED", "actor" if prefix == "u_" else "partner").replace(
+                    "CRITICAL", str(bool(flags & 1)).lower(),
+                ).replace("DODGE", str(bool(flags & 2)).lower()).replace(
+                    "BLOCK", str(bool(flags & 4)).lower(),
+                ).replace("RAW", migrate_lua_first.lua_string_table(raw)).replace(
+                    "PREDICATE", rendered.source if rendered else "nil",
+                )
+                run = subprocess.run(["lua", "-"], input=script, text=True,
+                                     capture_output=True, timeout=10)
+                self.assertEqual(run.returncode, 0, run.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_talk_proficiency_nested_sampling_keeps_live_blacklist_evaluation_order(self) -> None:
+        nested = {"mutator": "valid_technique", "crit": True, "blacklist": [
+            {"var_val": "reference"},
+            {"mutator": "valid_technique", "dodge_counter": True,
+             "blacklist": [{"mutator": "topic_item"}]},
+        ]}
+        for mutator, key, service in (
+            ("game_option", "option", "services.gameplay.options.get_string"),
+            ("mon_faction", "mtype_id", "services.registry.monster_default_faction"),
+            ("ma_technique_name", "matec_id", "services.martial_arts.technique_name"),
+            ("ma_technique_description", "matec_id", "services.martial_arts.technique_description"),
+        ):
+            rendered = migrate_lua_first.render_talk_topic_response_condition({
+                "npc_has_proficiency": {"mutator": mutator, key: nested},
+            })
+            self.assertIsNotNone(rendered)
+            script = r"""
+local partner={kind='creature',subtype='npc',is_valid=function() return true end}
+local trace={}
+local services={gameplay={options={}},registry={},martial_arts={},proficiencies={
+ has_id_text=function(owner,id)
+  assert(owner==partner and id=='prof_carving');table.insert(trace,'query')
+  return {ok=true,value=true}
+ end}}
+SERVICE=function(id) assert(id=='OUTER');table.insert(trace,'lookup');return 'prof_carving' end
+local dialogue={valid=function() return true end,
+ get_string=function(self,key) assert(key=='reference');table.insert(trace,'pointer');return 'n_source' end,
+ interlocutor_variable_string=function(self,key)
+  assert(key=='source');table.insert(trace,'variable');return 'RAW\0ID'
+ end,topic_item=function() table.insert(trace,'topic');return 'LIVE_TOPIC' end,
+ sample_technique=function(self,c,d,b,bl)
+  assert(not b)
+  if d then assert(not c and #bl==1 and bl[1]=='LIVE_TOPIC')
+   table.insert(trace,'inner');return 'INNER'
+  end
+  assert(c and #bl==2 and bl[1]=='RAW\0ID' and bl[2]=='INNER')
+  table.insert(trace,'outer');return 'OUTER'
+ end,interlocutor=function() table.insert(trace,'receiver');return partner end}
+local predicate=PREDICATE
+assert(predicate(dialogue))
+assert(table.concat(trace,',')=='pointer,variable,topic,inner,outer,lookup,receiver,query')
+""".replace("SERVICE", service).replace("PREDICATE", rendered.source if rendered else "nil")
+            run = subprocess.run(["lua", "-"], input=script, text=True,
+                                 capture_output=True, timeout=10)
+            self.assertEqual(run.returncode, 0, run.stderr)
+        # Native has_array ignores non-array values without evaluating them.
+        for ignored in (None, False, 42, "ignored", {"npc_val": "not_read"}):
+            expression = migrate_lua_first.render_proficiency_id_expression(
+                {"mutator": "valid_technique", "blacklist": ignored},
+                technique_sampler="frame:sample_technique",
+            )
+            self.assertEqual(expression, "frame:sample_technique(false, false, false, {  })")
+        for flag in ("crit", "dodge_counter", "block_counter"):
+            self.assertIsNone(migrate_lua_first.render_proficiency_id_expression(
+                {"mutator": "valid_technique", flag: 1}, technique_sampler="frame:sample_technique",
+            ))
 
     def test_npc_proficiency_is_limited_to_event_exclusive_melee_beta(self) -> None:
         def render(
