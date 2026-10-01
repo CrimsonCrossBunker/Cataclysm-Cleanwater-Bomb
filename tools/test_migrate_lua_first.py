@@ -41988,7 +41988,7 @@ assert(#calls==0)
                 self.assertEqual(len(result.partial), 1)
                 self.assertIn(reason, result.files[Path("main.lua")])
 
-    def test_native_dimension_clear_and_place_override_do_not_use_typed_shortcuts(self) -> None:
+    def test_native_dimension_clear_remains_todo_and_literal_place_override_is_lowered(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -42019,14 +42019,67 @@ assert(#calls==0)
             )
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
-            self.assertEqual(len(result.converted), 0)
-            self.assertEqual(len(result.partial), 2)
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(len(result.partial), 1)
             self.assertNotIn("services.relocation.clear_dimension(", main)
-            self.assertNotIn("services.world.override_place_name(", main)
+            self.assertIn("services.world.override_place_name(", main)
+            self.assertIn('services.translate("Translated place name")', main)
             self.assertIn("queries saved directories by filename match", main)
-            self.assertIn("translates its text", main)
             self.assertIn("native directory-query/deletion semantics", report)
-            self.assertIn("translated-text and duration-range parity", report)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_place_override_literals_keep_native_translation_duration_and_key(self) -> None:
+        for text in ("", "CCB place\0raw", "x" * 10000):
+            for duration, expected in ((-2147483648, -2147483648), (0, 0),
+                                       ("infinite", 21474836), (2147483647, 2147483647)):
+                key = "key\0" + "k" * 10000
+                lines = migrate_lua_first.render_static_place_override({
+                    "place_override": {"str": text, "ctxt": "scope\0suffix"},
+                    "length": duration, "key": key,
+                })
+                self.assertIsNotNone(lines)
+                script = r"""
+local trace={}
+local function service_value(r)assert(r.ok);return r.value end
+local services={translate=function(text,ctxt)
+ assert(text==TEXT and ctxt=='scope\0suffix');table.insert(trace,'translate');return 'translated\0place'
+end,time={duration=function(turns,unit)
+ assert(turns==TURNS and unit=='turn');return {turns=turns}
+end},world={override_place_name=function(name,duration,key)
+ assert(name==NAME and duration.turns==TURNS and key==KEY)
+ table.insert(trace,'queue');return {ok=true,value={}}
+end}}
+BODY
+assert(table.concat(trace,',')==TRACE)
+""".replace("TEXT", migrate_lua_first.lua_quote(text)).replace("TURNS", str(expected)).replace(
+                    "NAME", migrate_lua_first.lua_quote("translated\0place" if text else ""),
+                ).replace("KEY", migrate_lua_first.lua_quote(key)).replace(
+                    "TRACE", migrate_lua_first.lua_quote("translate,queue" if text else "queue"),
+                ).replace("BODY", "\n".join(lines or []))
+                result = subprocess.run(["lua", "-"], input=script, text=True,
+                                        capture_output=True, timeout=10)
+                self.assertEqual(result.returncode, 0, result.stderr)
+        for effect in ({"place_override": "name"}, {"place_override": {"str_sp": "name"}, "length": 1},
+                       {"place_override": {"u_val": "name"}, "length": 1},
+                       {"place_override": "name", "length": {"context_val": "length"}},
+                       {"place_override": "name", "length": 2147483648},
+                       {"place_override": "name", "length": 1, "key": {"global_val": "key"}}):
+            self.assertIsNone(migrate_lua_first.render_static_place_override(effect))
+
+    def test_place_override_normal_and_false_branch_use_native_world_service(self) -> None:
+        effect = {"place_override": "", "length": -1, "key": "raw\0key"}
+        for false_branch in (False, True):
+            source = migrate_lua_first.SourceObject(Path("place.json"), 0, {
+                "type": "effect_on_condition", "id": "place",
+                "eoc_type": "EVENT", "required_event": "game_start",
+                "condition": "is_day", "effect": [],
+                **({"false_effect": effect} if false_branch else {"effect": effect}),
+            })
+            result = migrate_lua_first.MigrationResult()
+            rendered = migrate_lua_first.render_eoc(source, result)
+            self.assertEqual(result.todos, [])
+            self.assertIn("services.world.override_place_name(", rendered)
+            self.assertNotIn("services.translate(", rendered)
 
     def test_take_control_menu_lowers_only_terminal_live_game_start(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

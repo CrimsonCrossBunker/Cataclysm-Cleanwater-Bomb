@@ -18,6 +18,7 @@
 #include "magic_teleporter_list.h"
 #include "lua_platform_test_support.h"
 #include "timed_event.h"
+#include "translation.h"
 
 namespace
 {
@@ -205,6 +206,84 @@ TEST_CASE( "native_json_infinite_duration_is_distinct_from_int_max_duration",
     explicit_maximum.deserialize( json_loader::from_string(
                                      std::to_string( std::numeric_limits<int>::max() ) ) );
     CHECK( explicit_maximum == calendar::INDEFINITELY_LONG_DURATION );
+}
+
+TEST_CASE( "lua_platform_place_override_matches_native_event_queue_and_range",
+           "[lua][platform][world][semantic]" )
+{
+    platform_world_spawn_contract_fixture fixture;
+    platform_calendar_turn_scope calendar_scope;
+    timed_event_manager &events = get_timed_events();
+    restore_on_out_of_scope<timed_event_manager> restore_events( std::move( events ) );
+    const sol::protected_function override_name = fixture.services["world"]["override_place_name"];
+    REQUIRE( override_name.valid() );
+    const std::vector<std::string> names = {
+        "", "CCB place regression.", std::string( "CCB place" ) + '\0' + "suffix",
+        std::string( 10000, 'x' ), "CCB 地点名称。"
+    };
+    const std::vector<std::string> keys = {
+        "", "place-key", std::string( "key" ) + '\0' + "suffix", std::string( 10000, 'k' )
+    };
+    for( const int now : { 1000, std::numeric_limits<int>::min(), std::numeric_limits<int>::max() } ) {
+        calendar::turn = time_point::from_turn( now );
+        for( const int duration : { -1, 0, 1, calendar::INDEFINITELY_LONG,
+                                   std::numeric_limits<int>::min(), std::numeric_limits<int>::max() } ) {
+            for( const std::string &name : names ) {
+                for( const std::string &key : keys ) {
+                    CAPTURE( now, duration, name.size(), key.size() );
+                    events = timed_event_manager();
+                    std::ostringstream input;
+                    JsonOut writer( input );
+                    writer.start_object();
+                    writer.member( "place_override", name );
+                    writer.member( "length", duration );
+                    writer.member( "key", key );
+                    writer.end_object();
+                    talk_effect_t native;
+                    // Capture optional test-mode text-style diagnostics while
+                    // loading; this case compares runtime queue semantics.
+                    capture_debugmsg_during( [&]() {
+                        native.parse_sub_effect( json_loader::from_string( input.str() ).get_object(),
+                                                 "lua_place_override_native" );
+                    } );
+                    dialogue conversation;
+                    native.apply( conversation );
+                    REQUIRE( events.get_all().size() == 1 );
+                    const time_point expected_when = events.get_all().back().when;
+                    const std::string expected_name = events.get_all().back().string_id;
+                    const std::string expected_key = events.get_all().back().key;
+                    CHECK( expected_name == to_translation( name ).translated() );
+
+                    events = timed_event_manager();
+                    const time_point sentinel_when = time_point::from_turn( 77 );
+                    events.add( timed_event_type::CUSTOM_LIGHT_LEVEL, sentinel_when, -1,
+                                tripoint_abs_ms::zero, 72, "sentinel-name", "sentinel-key" );
+                    const sol::protected_function_result call = override_name(
+                                expected_name, cata::lua_platform::script_time_duration::from_native(
+                                    time_duration::from_turns( duration ) ), key );
+                    REQUIRE( call.valid() );
+                    const sol::table result = call;
+                    REQUIRE( result["ok"].get<bool>() );
+                    const sol::table value = result["value"];
+                    CHECK( value["name"].get<std::string>() == expected_name );
+                    CHECK( value["key"].get<std::string>() == expected_key );
+                    CHECK( value["when"].get<cata::lua_platform::script_time_point>().to_native() == expected_when );
+                    REQUIRE( events.get_all().size() == 2 );
+                    const timed_event &actual = events.get_all().back();
+                    CHECK( actual.type == timed_event_type::OVERRIDE_PLACE );
+                    CHECK( actual.when == expected_when );
+                    CHECK( actual.string_id == expected_name );
+                    CHECK( actual.key == expected_key );
+                    CHECK( actual.map_square == tripoint_abs_ms::zero );
+                    CHECK( actual.faction_id == -1 );
+                    CHECK( actual.strength == -1 );
+                    CHECK( events.get_all().front().key == "sentinel-key" );
+                    CHECK( events.get_all().front().when == sentinel_when );
+                }
+            }
+        }
+    }
+    CHECK( static_cast<std::size_t>( fixture.write_gate_calls ) == 3 * 6 * names.size() * keys.size() );
 }
 
 TEST_CASE( "lua_platform_location_copy_matches_native_timed_submap_copy",

@@ -26531,9 +26531,19 @@ def render_static_location_revert(
 def render_static_place_override(
     effect: dict[str, Any], actor_expression: str | None = None,
 ) -> list[str] | None:
-    """Native translated text and unrestricted duration need an exact bridge."""
-    del effect, actor_expression
-    return None
+    """Queue literal translated text with native JSON duration and raw key."""
+    del actor_expression
+    if set(effect) - {"place_override", "length", "key"} or "length" not in effect:
+        return None
+    name = _render_assignment_translation_literal(effect.get("place_override"))
+    duration = parse_native_duration_turns(effect["length"])
+    key = effect.get("key", "")
+    if name is None or duration is None or not lua_quotable_native_variable_string(key):
+        return None
+    return [
+        "    service_value(services.world.override_place_name(",
+        f"        {name}, services.time.duration({duration}, \"turn\"), {lua_quote(key)}))",
+    ]
 
 
 def render_static_transform_radius(
@@ -36570,14 +36580,13 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: native place_override translates its text and "
-                        "schedules the requested duration; the typed world service "
-                        "rejects empty/long names and out-of-range durations."
+                        "    -- TODO: place_override needs supported translation "
+                        "loading and source-proven dynamic text/duration/key providers."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs translated-text and duration-range parity"
+                        "needs translation-loader or dynamic-provider semantics"
                     )
                     all_effects_converted = False
             elif (

@@ -123,7 +123,6 @@ constexpr int maximum_transform_line_length = 4096;
 constexpr int maximum_transform_radius = 60;
 constexpr time_duration maximum_world_change_delay = 10000_days;
 constexpr std::size_t maximum_world_event_key_bytes = 256;
-constexpr std::size_t maximum_place_name_bytes = 1024;
 constexpr std::size_t maximum_world_spawn_flags = 128;
 constexpr std::size_t maximum_world_group_items = 256;
 constexpr int maximum_location_search_radius = 1000;
@@ -2931,20 +2930,9 @@ sol::table override_world_place_name(
     const script_time_duration &requested_duration,
     const sol::optional<std::string> &requested_key )
 {
-    constexpr std::string_view api_name =
-        "services.world.override_place_name";
-    if( name.empty() || name.size() > maximum_place_name_bytes ) {
-        throw std::invalid_argument(
-            std::string( api_name ) +
-            " name must contain 1..1024 bytes" );
-    }
-    const time_duration duration = require_world_change_delay(
-                                       requested_duration,
-                                       api_name, false );
+    const time_duration duration = requested_duration.to_native();
     const std::string key = requested_key.value_or( "" );
-    require_world_event_key( key, api_name );
-    const time_point when =
-        calendar::turn + duration + 1_seconds;
+    const time_point when = timed_event_due_time( duration, 1_seconds );
     get_timed_events().add(
         timed_event_type::OVERRIDE_PLACE,
         when, -1, tripoint_abs_ms::zero,

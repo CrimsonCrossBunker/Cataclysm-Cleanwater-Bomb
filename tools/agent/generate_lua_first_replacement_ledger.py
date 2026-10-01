@@ -2786,7 +2786,7 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "transform_item"): "services.items",
     ("eoc-effects", "clear_dimension"): "services.dialogue",
     ("eoc-effects", "clear_overrides"): "services.dialogue",
-    ("eoc-effects", "place_override"): "services.dialogue",
+    ("eoc-effects", "place_override"): "services.world",
     ("eoc-effects", "transform_line"): "services.world",
     ("eoc-effects", "u_assign_activity"): "services.activities",
     ("eoc-effects", "npc_assign_activity"): "services.activities",

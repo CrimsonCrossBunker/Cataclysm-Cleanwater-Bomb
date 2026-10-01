@@ -5283,7 +5283,7 @@ talk_effect_fun_t::func f_place_override( const JsonObject &jo, std::string_view
 
     return [new_place, dov_length, key]( dialogue & d ) {
         get_timed_events().add( timed_event_type::OVERRIDE_PLACE,
-                                calendar::turn + dov_length.evaluate( d ) + 1_seconds,
+                                timed_event_due_time( dov_length.evaluate( d ), 1_seconds ),
                                 //Timed events happen before the player turn and eocs are during so we add a second here to sync them up using the same variable
                                 -1, tripoint_abs_ms::zero, -1, new_place.evaluate( d ).translated(), key.evaluate( d ) );
     };

@@ -415,6 +415,19 @@ function CcbWorldApi.schedule_location_revert(position, delay, key) end
 ---@return CcbResult result `value` is a CcbWorldLocationCopyResult.
 function CcbWorldApi.schedule_location_copy(source, destination, delay, key) end
 
+---@class CcbWorldPlaceNameOverrideResult
+---@field name string Queued display name, preserving all source bytes.
+---@field when TimePoint Native due time for the queued override.
+---@field key string Native event key.
+
+---Queue a native place-name override. Translate authored text before calling if needed.
+---@param name string Display text; empty, NUL and arbitrary-length strings are valid.
+---@param duration TimeDuration Any native signed-int duration, including zero and negative values.
+---Due time includes the native one-second offset and saturates only beyond the time_point range.
+---@param key? string Native event key; empty, NUL and arbitrary-length strings are valid.
+---@return CcbResult result `value` is a CcbWorldPlaceNameOverrideResult.
+function CcbWorldApi.override_place_name(name, duration, key) end
+
 ---@class CcbWorldRescheduleEventsResult
 ---@field key string Native event key that was matched.
 ---@field matched integer Number of queued timed events with this exact key.
