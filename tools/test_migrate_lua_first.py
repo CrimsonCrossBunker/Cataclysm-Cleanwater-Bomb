@@ -1704,9 +1704,9 @@ local actor,partner={},{}
 local context={data={}}
 local calls=0
 local function service_value(r) assert(r.ok);return r.value end
-local services={variables={resolve=function(data,owner,scope,name)
- return {ok=true,value={exists=PRESENT,value=nil}}
-end},translate=function(value) calls=calls+1;return 'translated:'..value end}
+local function read()return {ok=true,value={exists=PRESENT,value=PRESENT and '' or nil}}end
+local services={variables={get_string=read,get_global_string=read},
+ translate=function(value) calls=calls+1;return 'translated:'..value end}
 assert(EXPRESSION==(PRESENT and '' or 'translated:fallback'))
 assert(calls==(PRESENT and 0 or 1))
 """.replace("PRESENT", "true" if present else "false").replace("EXPRESSION", expression)
@@ -2776,8 +2776,8 @@ local context={data={}}
 local calls=0
 local function service_value(result) assert(result.ok);return result.value end
 local services={
- variables={resolve=function(data,owner,scope,key)
-  assert(data==context.data and owner==partner and scope=='npc' and key=='input')
+ variables={get_string=function(owner,key)
+  assert(owner==partner and key=='input')
   return {ok=true,value={exists=PRESENT,value=PRESENT and '' or nil}}
  end},
  translate=function(text,ctxt)
@@ -2808,9 +2808,9 @@ local services={
  translate=function(text,ctxt)
   assert(text=='Hello' and ctxt=='greeting');calls=calls+1;return 'translated'
  end,
- variables={resolve=function(data,owner,scope,key)
-  assert(data==context.data and owner==partner and scope=='npc' and key=='input')
-  return {ok=true,value={value=owner[key]}}
+ variables={get_string=function(owner,key)
+  assert(owner==partner and key=='input')
+  return {ok=true,value={exists=true,value=owner[key]}}
  end}
 }
 assert(AUTHORED=='translated')
@@ -2857,6 +2857,57 @@ assert(calls==CALLS)
                 value, "actor", "actor", "partner"))
             self.assertIsNone(migrate_lua_first.render_participant_translation_expression(
                 {"u_val": "input", "default": value}, "actor", "actor", "partner"))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_translated_variables_use_native_string_reads_without_snapshot_coercion(self) -> None:
+        for scope in ("u_val", "npc_val", "global_val", "context_val"):
+            for key in ("", "key\0suffix", "k" * 10000):
+                for stored in (None, "", "raw\0value", "v" * 10000, 42, False, ["array"]):
+                    for with_default in (False, True):
+                        value = {scope: key}
+                        if with_default:
+                            value["default"] = {"str": "fallback\0raw", "ctxt": "scope\0suffix"}
+                        expression = migrate_lua_first.render_participant_translation_expression(
+                            value, "actor", "actor", "partner")
+                        self.assertIsNotNone(expression)
+                        raw = stored if isinstance(stored, str) else ""
+                        expected = raw if stored is not None else "translated fallback" if with_default else ""
+                        script = r"""
+local actor,partner={},{}
+local context={data={}}
+local trace={}
+local function service_value(r)assert(r.ok);return r.value end
+local function read(key)
+ assert(key==KEY);table.insert(trace,'read')
+ return {ok=true,value={exists=PRESENT,value=RAW}}
+end
+local services={variables={
+ resolve=function()error('general snapshot must not replace native string read')end,
+ get_string=function(owner,key)assert(owner==OWNER);return read(key)end,
+ get_global_string=read,
+ get_context_string=function(data,key)assert(data==context.data);return read(key)end,
+},translate=function(text,ctxt)
+ assert(not PRESENT and text=='fallback\0raw' and ctxt=='scope\0suffix')
+ table.insert(trace,'translate');return 'translated fallback'
+end}
+tostring=function()error('native string reads do not use tostring')end
+assert(EXPRESSION==EXPECTED)
+assert(table.concat(trace,',')==TRACE)
+""".replace("KEY", migrate_lua_first.lua_quote(key)).replace(
+                            "PRESENT", "false" if stored is None else "true",
+                        ).replace("RAW", migrate_lua_first.lua_quote(raw)).replace(
+                            "OWNER", "actor" if scope == "u_val" else "partner",
+                        ).replace("EXPRESSION", expression or "nil").replace(
+                            "EXPECTED", migrate_lua_first.lua_quote(expected),
+                        ).replace("TRACE", migrate_lua_first.lua_quote(
+                            "read,translate" if stored is None and with_default else "read",
+                        ))
+                        run = subprocess.run(["lua", "-"], input=script, text=True,
+                                             capture_output=True, timeout=10)
+                        self.assertEqual(run.returncode, 0, run.stderr)
+        for scope in ("u_val", "npc_val"):
+            self.assertIsNone(migrate_lua_first.render_participant_translation_expression(
+                {scope: "key"}, "actor", None, None))
 
     def test_set_string_renderer_rejects_shapes_outside_its_literal_contract(self) -> None:
         target = {"global_val": "output"}

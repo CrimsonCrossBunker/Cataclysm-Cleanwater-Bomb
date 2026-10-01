@@ -27713,27 +27713,25 @@ def render_participant_translation_expression(
         # assignments. str_sp produces a singular-loader diagnostic and stays
         # TODO rather than being silently treated as str.
         return _render_assignment_translation_literal(value)
-    if isinstance(value, dict) and "default" in value:
-        # A translated fallback must run only when the variable is absent.
-        # Keep unsupported indirect fallback shapes explicit for now.
+    if isinstance(value, dict) and set(value).intersection({
+            "u_val", "npc_val", "context_val", "global_val"}):
+        # Native translation_or_var wraps diag_value::str as no_translation.
+        # A general snapshot plus tostring would translate numeric/array
+        # mismatches into strings and impose unrelated snapshot/key limits.
         keys = set(value) - {"default"}
         if len(keys) != 1:
             return None
-        key = next(iter(keys))
-        owner = {"u_val": avatar_expression, "npc_val": npc_expression}.get(key)
-        if key not in {"u_val", "npc_val", "context_val", "global_val"} or (
-                key in {"u_val", "npc_val"} and owner is None):
+        scope = next(iter(keys))
+        if not lua_quotable_native_variable_string(value[scope]):
             return None
-        default = value["default"]
-        if not (isinstance(default, str) or isinstance(default, dict) and (
-                "str" in default or "str_sp" in default)):
-            return None
-        fallback = render_participant_translation_expression(
-            value["default"], target_expression, avatar_expression, npc_expression)
-        raw = render_direct_variable_snapshot({key: value[key]}, owner or target_expression)
+        fallback = lua_quote("")
+        if "default" in value:
+            fallback = _render_assignment_translation_literal(value["default"])
+        raw = _render_native_variable_string_snapshot(
+            scope, lua_quote(value[scope]), avatar_expression, npc_expression)
         if fallback is None or raw is None:
             return None
-        return ('(function(result) if result.exists ~= false then return tostring(result.value or \"\") end; '
+        return ('(function(result) if result.exists ~= false then return result.value end; '
                 f'return {fallback} end)({raw})')
     return render_participant_string_expression(
         value, target_expression, avatar_expression, npc_expression)
@@ -27765,6 +27763,24 @@ def _render_assignment_translation_literal(value: Any) -> str | None:
     return f"services.translate({arguments})"
 
 
+def _render_native_variable_string_snapshot(
+    scope: str, quoted_key: str, alpha: str | None, beta: str | None,
+) -> str | None:
+    """Read Native string type and presence without snapshotting other types."""
+    if scope == "global_val":
+        call = f"services.variables.get_global_string({quoted_key})"
+    elif scope == "context_val":
+        call = f"services.variables.get_context_string(context and context.data, {quoted_key})"
+    elif scope in {"u_val", "npc_val"}:
+        owner = alpha if scope == "u_val" else beta
+        if owner is None:
+            return None
+        call = f"services.variables.get_string({owner}, {quoted_key})"
+    else:
+        return None
+    return f"service_value({call})"
+
+
 def _render_assignment_string_value(
     value: Any, i18n: bool,
     effect_actor_targets: dict[str, tuple[str, str] | None] | None,
@@ -27773,17 +27789,11 @@ def _render_assignment_string_value(
     beta = _proven_copy_variable_target(effect_actor_targets, "npc")
 
     def read(scope: str, key: str) -> str | None:
-        if scope == "global_val":
-            call = f"services.variables.get_global_string({key})"
-        elif scope == "context_val":
-            call = f"services.variables.get_context_string(context and context.data, {key})"
-        else:
-            owner = alpha if scope == "u_val" else beta if scope == "npc_val" else None
-            if owner is None:
-                return None
-            call = f"services.variables.get_string({owner}, {key})"
+        snapshot = _render_native_variable_string_snapshot(scope, key, alpha, beta)
+        if snapshot is None:
+            return None
         return ('(function(result) if result.exists == false then return nil end; '
-                f'return result.value end)(service_value({call}))')
+                f'return result.value end)({snapshot})')
 
     fallback = None
     if i18n:
