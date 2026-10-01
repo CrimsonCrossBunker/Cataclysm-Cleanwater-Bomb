@@ -708,6 +708,12 @@ void item_contents::read_mods( item_contents &read_input )
 {
     for( item_pocket &pocket : read_input.contents ) {
         if( pocket.saved_type() == pocket_type::MOD ) {
+            for( item_pocket &mod_pocket : contents ) {
+                if( mod_pocket.is_type( pocket_type::MOD ) ) {
+                    mod_pocket.settings = pocket.settings;
+                    break;
+                }
+            }
             for( item &it : pocket.edit_contents() ) {
                 if( it.is_gunmod() || it.is_toolmod() ) {
                     insert_item( std::move( it ), pocket_type::MOD );
