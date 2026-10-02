@@ -660,8 +660,8 @@ local ModDefinition = {}
 ---@field y integer Absolute map-square y coordinate.
 ---@field z integer Absolute map-square z coordinate.
 
----Immutable deferred translation value for Item text and Skill/SkillDisplay text.
----Create with content.text or content.plural_text; ordinary strings remain untranslated.
+---Immutable deferred translation value for native text fields declared to accept it.
+---Create with content.text or content.plural_text; each field declaration determines whether plural text is accepted. Plain strings retain that field's existing behavior.
 ---@class LocalizedText
 
 ---@class ItemDefinitionOptions
@@ -864,8 +864,8 @@ function RecipeDefinition:on_complete(handler_id) end
 
 ---@class NestedRecipeCategoryDefinitionOptions
 ---@field id string Stable nested-category recipe id.
----@field name string Player-facing nested category name.
----@field description? string Player-facing category description.
+---@field name string|LocalizedText Player-facing nested category name; plural text is rejected.
+---@field description? string|LocalizedText Player-facing category description; plural text is rejected.
 ---@field category string Native crafting category id.
 ---@field subcategory string Native crafting subcategory id.
 ---@field activity_level? number Positive exertion multiplier; defaults to no exercise.
@@ -880,7 +880,7 @@ function NestedRecipeCategoryDefinition:recipe(recipe_id) end
 
 ---@class RequirementDefinitionOptions
 ---@field id string Stable reusable requirement id.
----@field name? string Optional player-facing name.
+---@field name? string|LocalizedText Optional player-facing name; plural text is rejected.
 
 ---@class RequirementAlternative
 ---@field id string Item type id.
@@ -941,7 +941,7 @@ function RequirementDefinition:quality_any(choices) end
 local RecipeGroupDefinition = {}
 
 ---@param recipe_id string
----@param description string Player-facing action description.
+---@param description string|LocalizedText Player-facing action description; plural text is rejected.
 ---@return RecipeGroupDefinition self
 function RecipeGroupDefinition:recipe(recipe_id, description) end
 
@@ -984,7 +984,7 @@ function ButcheryRequirementDefinition:requirement(speed, size, butcher, require
 
 ---@class ItemActionDefinitionOptions
 ---@field id string Stable item-action id.
----@field name? string Display name; defaults to the id.
+---@field name? string|LocalizedText Display name; defaults to the id. Plural text is rejected.
 
 ---@class ItemActionDefinition
 ---@field id string
@@ -4051,33 +4051,33 @@ function CityDefinition:pos(x, y) end
 
 ---@class FactionMissionDefinitionOptions
 ---@field id string Stable faction mission id.
----@field name string Name.
----@field desc string Description.
----@field description? string Description alias.
+---@field name string|LocalizedText Name; plural text is rejected.
+---@field desc string|LocalizedText Description; plural text is rejected.
+---@field description? string|LocalizedText Description alias; plural text is rejected.
 ---@field skill? string Required skill id.
 ---@field difficulty? string Difficulty enum name.
 ---@field risk? string Risk enum name.
 ---@field activity? string Activity level name.
----@field time? string Time estimate description.
+---@field time? string|LocalizedText Time estimate description; plural text is rejected.
 ---@field positions? integer Number of positions (0-65535).
----@field items_label? string Items label.
----@field items_possibilities? string[] Items possibilities.
----@field effects? string[] Mission effects descriptions.
----@field footer? string Footer text.
+---@field items_label? string|LocalizedText Items label; plural text is rejected.
+---@field items_possibilities? (string|LocalizedText)[] Items possibilities; plural text is rejected.
+---@field effects? (string|LocalizedText)[] Mission effects descriptions; plural text is rejected.
+---@field footer? string|LocalizedText Footer text; plural text is rejected.
 
 ---@class FactionMissionDefinition
 ---@field id string
 local FactionMissionDefinition = {}
 
----@param value string
+---@param value string|LocalizedText
 ---@return FactionMissionDefinition self
 function FactionMissionDefinition:name(value) end
 
----@param value string
+---@param value string|LocalizedText
 ---@return FactionMissionDefinition self
 function FactionMissionDefinition:desc(value) end
 
----@param value string
+---@param value string|LocalizedText
 ---@return FactionMissionDefinition self
 function FactionMissionDefinition:description(value) end
 
@@ -4097,7 +4097,7 @@ function FactionMissionDefinition:risk(value) end
 ---@return FactionMissionDefinition self
 function FactionMissionDefinition:activity(value) end
 
----@param value string
+---@param value string|LocalizedText
 ---@return FactionMissionDefinition self
 function FactionMissionDefinition:time(value) end
 
@@ -4105,35 +4105,35 @@ function FactionMissionDefinition:time(value) end
 ---@return FactionMissionDefinition self
 function FactionMissionDefinition:positions(value) end
 
----@param value string
+---@param value string|LocalizedText
 ---@return FactionMissionDefinition self
 function FactionMissionDefinition:items_label(value) end
 
----@param value string
+---@param value string|LocalizedText
 ---@return FactionMissionDefinition self
 function FactionMissionDefinition:items_possibility(value) end
 
----@param value string
+---@param value string|LocalizedText
 ---@return FactionMissionDefinition self
 function FactionMissionDefinition:add_items_possibility(value) end
 
----@param table string[]
+---@param table (string|LocalizedText)[]
 ---@return FactionMissionDefinition self
 function FactionMissionDefinition:items_possibilities(table) end
 
----@param value string
+---@param value string|LocalizedText
 ---@return FactionMissionDefinition self
 function FactionMissionDefinition:effect(value) end
 
----@param value string
+---@param value string|LocalizedText
 ---@return FactionMissionDefinition self
 function FactionMissionDefinition:add_effect(value) end
 
----@param table string[]
+---@param table (string|LocalizedText)[]
 ---@return FactionMissionDefinition self
 function FactionMissionDefinition:effects(table) end
 
----@param value string
+---@param value string|LocalizedText
 ---@return FactionMissionDefinition self
 function FactionMissionDefinition:footer(value) end
 
@@ -4308,7 +4308,7 @@ function ForestBiomeMapgenDefinition:add_terrain_furniture(ter_id, chance, furni
 
 ---@class ToolQualityDefinitionOptions
 ---@field id string Stable tool-quality id.
----@field name? string Display name; defaults to id.
+---@field name? string|LocalizedText Display name; defaults to id. Plural text is rejected.
 
 ---@class ToolQualityDefinition
 ---@field id string
@@ -4384,7 +4384,7 @@ function SkillDefinition:companion_rank_factors(combat, survival, industry) end
 
 ---@class VitaminDefinitionOptions
 ---@field id string Stable vitamin id.
----@field name? string Display name; defaults to id.
+---@field name? string|LocalizedText Display name; defaults to id. Plural text is rejected.
 ---@field kind? 'vitamin'|'toxin'|'drug'|'counter'
 ---@field deficiency? string Effect id used for deficiency.
 ---@field excess? string Effect id used for excess.
@@ -4421,11 +4421,11 @@ function VitaminDefinition:flag(flag) end
 
 ---@class JsonFlagDefinitionOptions
 ---@field id string Stable flag id.
----@field info? string Informative UI text.
----@field restriction? string Restriction phrase.
----@field name? string Player-facing name.
----@field item_prefix? string Item-name prefix.
----@field item_suffix? string Item-name suffix.
+---@field info? string|LocalizedText Informative UI text; plural text is rejected.
+---@field restriction? string|LocalizedText Restriction phrase; plural text is rejected.
+---@field name? string|LocalizedText Player-facing name; plural text is rejected.
+---@field item_prefix? string|LocalizedText Item-name prefix; plural text is rejected.
+---@field item_suffix? string|LocalizedText Item-name suffix; plural text is rejected.
 ---@field requires_flag? string Required companion flag id.
 ---@field taste_modifier? integer Comestible fun modifier.
 ---@field inherit? boolean Whether attached items pass the flag to their base item.
@@ -4441,7 +4441,7 @@ function JsonFlagDefinition:conflicts_with(flag_id) end
 
 ---@class DamageTypeDefinitionOptions
 ---@field id string Stable damage-type id.
----@field name? string Display name; defaults to id.
+---@field name? string|LocalizedText Display name; defaults to id. Plural text is rejected.
 ---@field skill? string Associated Skill id.
 ---@field magic_color? string Native color name.
 ---@field bash_conversion_factor? number Non-negative conversion factor.
@@ -4493,11 +4493,11 @@ function DamageTypeDefinition:on_damage(handler_id) end
 
 ---@class MaterialDefinitionOptions
 ---@field id string Stable material id.
----@field name? string Display name; defaults to id.
+---@field name? string|LocalizedText Display name; defaults to id. Plural text is rejected.
 ---@field salvaged_into? string Item id produced by salvage.
 ---@field repaired_with? string Repair item id.
----@field bash_damage_verb? string
----@field cut_damage_verb? string
+---@field bash_damage_verb? string|LocalizedText Bash damage verb; plural text is rejected.
+---@field cut_damage_verb? string|LocalizedText Cut damage verb; plural text is rejected.
 ---@field chip_resistance? integer Non-negative native resistance.
 ---@field breathability? integer Native breathability rank from zero through five.
 ---@field repair_difficulty? integer Native skill difficulty.
@@ -4528,7 +4528,7 @@ function MaterialDefinition:resistance(damage_type_id, amount) end
 function MaterialDefinition:vitamin(vitamin_id, amount) end
 
 ---@param level integer One-based damage adjective level.
----@param text string
+---@param text string|LocalizedText Damage adjective; plural text is rejected.
 ---@return MaterialDefinition self
 function MaterialDefinition:damage_adjective(level, text) end
 
@@ -4562,7 +4562,7 @@ function MaterialDefinition:fuel_explosion(chance_hot, chance_cold, factor, fier
 
 ---@class AmmunitionTypeDefinitionOptions
 ---@field id string Stable ammunition-family id.
----@field name? string Display name; defaults to id.
+---@field name? string|LocalizedText Display name; defaults to id. Plural text is rejected.
 ---@field default_item? string Default ammunition item id.
 
 ---@class AmmunitionTypeDefinition
@@ -4571,8 +4571,8 @@ local AmmunitionTypeDefinition = {}
 
 ---@class ItemCategoryDefinitionOptions
 ---@field id string Stable inventory category id.
----@field header? string Inventory header; defaults to id.
----@field noun? string Noun used in descriptive text; defaults to header.
+---@field header? string|LocalizedText Inventory header; defaults to id. Plural text is rejected.
+---@field noun? string|LocalizedText Noun used in descriptive text; defaults to header. Plural text is rejected.
 ---@field sort_rank? integer Lower ranks sort first.
 ---@field spawn_rate? number Non-negative item spawn multiplier.
 ---@field zone? string Default zone id.
@@ -4604,8 +4604,8 @@ function RecipeCategoryDefinition:subcategory(id) end
 
 ---@class ProficiencyCategoryDefinitionOptions
 ---@field id string Stable proficiency category id.
----@field name? string Display name; defaults to id.
----@field description string Player-facing description.
+---@field name? string|LocalizedText Display name; defaults to id. Plural text is rejected.
+---@field description string|LocalizedText Player-facing description; plural text is rejected.
 
 ---@class ProficiencyCategoryDefinition
 ---@field id string
@@ -4613,8 +4613,8 @@ local ProficiencyCategoryDefinition = {}
 
 ---@class ProficiencyDefinitionOptions
 ---@field id string Stable proficiency id.
----@field name? string Display name; defaults to id.
----@field description string Player-facing description.
+---@field name? string|LocalizedText Display name; defaults to id. Plural text is rejected.
+---@field description string|LocalizedText Player-facing description; plural text is rejected.
 ---@field category string ProficiencyCategory id.
 ---@field time_to_learn_turns? integer Positive training time in game turns.
 ---@field time_multiplier? number Non-negative default crafting time multiplier.
@@ -4641,7 +4641,7 @@ function ProficiencyDefinition:bonus(category, attribute, value) end
 
 ---@class WeaponCategoryDefinitionOptions
 ---@field id string Stable weapon category id.
----@field name? string Display name; defaults to id.
+---@field name? string|LocalizedText Display name; defaults to id. Plural text is rejected.
 
 ---@class WeaponCategoryDefinition
 ---@field id string
@@ -4688,7 +4688,7 @@ function ItemUseContext:message(text, type) end
 ---@class FactionDefinitionOptions
 ---@field id string Stable faction id.
 ---@field name? string Player-facing name; defaults to id.
----@field description? string Player-facing description.
+---@field description? string|LocalizedText Player-facing description; plural text is rejected.
 ---@field likes? integer Initial player like score.
 ---@field respects? integer Initial player respect score.
 ---@field trusts? integer Initial player trust score.
@@ -4704,6 +4704,7 @@ function ItemUseContext:message(text, type) end
 ---@field currency? string Existing item id used as faction currency.
 ---@field monster_faction? string Existing monster-faction id; defaults to human.
 ---@field relations? table<string, string[]> Relation flags keyed by target faction id.
+---@field price_rules? NpcPriceRuleOptions[] Faction trading rules; rule messages are singular text.
 
 ---@class FactionDefinition
 ---@field id string
@@ -4720,6 +4721,7 @@ local FactionDefinition = {}
 ---@field trust? integer Minimum trust.
 ---@field strict? boolean Native strict matching flag.
 ---@field rigid? boolean Native rigid restock flag.
+---@field refusal? string|LocalizedText Refusal message; plural text is rejected.
 ---@field condition_handler? string Optional Platform handler used to evaluate this group.
 
 ---@class NpcPriceRuleOptions
@@ -4730,12 +4732,13 @@ local FactionDefinition = {}
 ---@field premium? number Purchase premium; defaults to one.
 ---@field fixed_adjustment? number Optional fixed adjustment.
 ---@field price? integer Optional fixed price in cents.
+---@field message? string|LocalizedText Player-facing price-rule message; plural text is rejected.
 ---@field condition_handler? string Optional Platform handler used to evaluate this rule.
 
 ---@class NpcClassDefinitionOptions
 ---@field id string Stable NPC-class id.
----@field name? string Player-facing class name; defaults to id.
----@field job_description? string Player-facing job description.
+---@field name? string|LocalizedText Player-facing class name; defaults to id. Plural text is rejected.
+---@field job_description? string|LocalizedText Player-facing job description; plural text is rejected.
 ---@field common? boolean Whether random NPC generation may select the class.
 ---@field sells_belongings? boolean Whether the NPC sells personal belongings.
 ---@field worn? string Existing starting worn item-group id.
@@ -4758,9 +4761,9 @@ local NpcClassDefinition = {}
 
 ---@class NpcDefinitionOptions
 ---@field id string Stable NPC-template id.
----@field unique_name? string Fixed personal name.
----@field suffix? string Display-name suffix.
----@field temporary_suffix? string Temporary display-name suffix.
+---@field unique_name? string|LocalizedText Fixed personal name; plural text is rejected.
+---@field suffix? string|LocalizedText Display-name suffix; plural text is rejected.
+---@field temporary_suffix? string|LocalizedText Temporary display-name suffix; plural text is rejected.
 ---@field gender? 'male'|'female'|'random'
 ---@field class string Existing or same-transaction NPC-class id.
 ---@field faction? string Existing or same-transaction faction id.
@@ -4768,6 +4771,7 @@ local NpcClassDefinition = {}
 ---@field mission? string Native NPC-mission enum name.
 ---@field chat? string Initial dialogue topic id.
 ---@field stole_item_chat? string Stolen-item dialogue topic id.
+---@field snippets? table<string, string|LocalizedText> Snippet slot ids mapped to singular player-facing text.
 ---@field age? integer Fixed generated age.
 ---@field height? integer Fixed generated height in centimeters.
 ---@field on_death? string Platform handler invoked when the NPC dies.
@@ -4778,7 +4782,7 @@ local NpcDefinition = {}
 
 ---@class OvermapTerrainDefinitionOptions
 ---@field id string Stable overmap-terrain type id.
----@field name? string Player-facing name; defaults to id.
+---@field name? string|LocalizedText Player-facing name; defaults to id. Plural text is rejected.
 ---@field symbol? string Single display symbol.
 ---@field color? string Native color id.
 ---@field see_cost? string Native overmap see-cost enum name.
@@ -4798,7 +4802,17 @@ local OvermapTerrainDefinition = {}
 ---@field point integer[] Three-element relative overmap-terrain coordinate.
 ---@field terrain? string Concrete overmap-terrain id; empty marks a location-only footprint tile.
 ---@field locations? string[] Allowed overmap-location ids for this tile.
+---@field camp? string Native camp owner id.
+---@field camp_name? string|LocalizedText Player-facing camp name; plural text is rejected.
 ---@field flags? string[] Native special-terrain flags.
+
+---@class MutableOvermapSpecialTerrainOptions
+---@field terrain? string Concrete overmap-terrain id.
+---@field overmap? string Alias for terrain.
+---@field locations? string[] Allowed overmap-location ids.
+---@field camp? string Native camp owner id.
+---@field camp_name? string|LocalizedText Player-facing camp name; plural text is rejected.
+---@field [string] any Other accepted mutable-overmap descriptor fields.
 
 ---@class OvermapSpecialConnectionOptions
 ---@field point integer[] Three-element relative overmap-terrain coordinate.
@@ -4812,6 +4826,8 @@ local OvermapTerrainDefinition = {}
 ---@field condition_handler? string Optional Platform placement-condition handler.
 ---@field on_place? string Platform handler invoked when the special is placed.
 ---@field terrains? OvermapSpecialTerrainOptions[]
+---@field mutable_overmaps? table<string, MutableOvermapSpecialTerrainOptions> Mutable terrain descriptors keyed by overmap id.
+---@field overmaps? table<string, MutableOvermapSpecialTerrainOptions> Alias for mutable_overmaps.
 ---@field connections? OvermapSpecialConnectionOptions[]
 ---@field locations? string[] Default overmap-location ids.
 ---@field flags? string[] Native overmap-special flags.
@@ -4859,8 +4875,8 @@ local OvermapSpecialDefinition = {}
 ---@class VehiclePartDefinitionOptions
 ---@field id string Stable vehicle-part id.
 ---@field copy_from? string Existing vehicle-part id used as the patch base.
----@field name? string Player-facing name.
----@field description? string Player-facing description.
+---@field name? string|LocalizedText Player-facing name; plural text is rejected.
+---@field description? string|LocalizedText Player-facing description; plural text is rejected.
 ---@field item? string Existing or same-transaction base item id.
 ---@field location? string Existing vehicle-part-location id.
 ---@field looks_like? string Existing vehicle-part id used for presentation.
@@ -4928,7 +4944,7 @@ local VehiclePartDefinition = {}
 ---@class VehicleDefinitionOptions
 ---@field id string Stable vehicle prototype id.
 ---@field copy_from? string Existing or same-transaction vehicle id used as the patch base.
----@field name string Player-facing vehicle name.
+---@field name? string|LocalizedText Player-facing vehicle name; plural text is rejected. Omitted names inherit from copy_from or default to id.
 ---@field color_palette? string Existing vehicle-color-palette id.
 ---@field parts VehiclePartPlacementOptions[]
 ---@field items? VehicleItemPlacementOptions[]

@@ -91,6 +91,12 @@ using detail::read_singular_text;
 namespace
 {
 
+authored_text read_text_option( const sol::table &options, const char *key,
+                                const authored_text &fallback, const std::string &field )
+{
+    return detail::read_singular_text_or( options.get<sol::object>( key ), fallback, field );
+}
+
 enum class definition_operation : int { add, replace, edit, extend };
 enum class handle_lifecycle : int { building, committed, discarded };
 
@@ -212,8 +218,8 @@ struct recipe_definition_data {
     bool practice = false;
     bool uncraft = false;
     std::string result;
-    std::string name;
-    std::string description;
+    authored_text name;
+    authored_text description;
     std::string category = "CC_OTHER";
     std::string subcategory = "CSC_OTHER_OTHER";
     double activity_level = NO_EXERCISE;
@@ -256,7 +262,7 @@ struct quality_requirement_definition {
 
 struct requirement_definition_data {
     std::string id;
-    std::string name;
+    authored_text name;
     std::vector<std::vector<component_requirement>> components;
     std::vector<std::vector<component_requirement>> tools;
     std::vector<std::vector<quality_requirement_definition>> qualities;
@@ -271,7 +277,7 @@ struct recipe_group_terrain_data {
 
 struct recipe_group_recipe_data {
     std::string id;
-    std::string description;
+    authored_text description;
     std::vector<recipe_group_terrain_data> terrains;
 };
 
@@ -302,7 +308,7 @@ struct butchery_requirement_definition_data {
 
 struct item_action_definition_data {
     std::string id;
-    std::string name;
+    authored_text name;
     bool registered = false;
 };
 
@@ -385,7 +391,7 @@ struct ammo_effect_definition_data {
 
 struct tool_quality_definition_data {
     std::string id;
-    std::string name;
+    authored_text name;
     std::vector<std::pair<std::int64_t, std::string>> usages;
     bool registered = false;
 };
@@ -422,7 +428,7 @@ struct skill_definition_data {
 
 struct vitamin_definition_data {
     std::string id;
-    std::string name;
+    authored_text name;
     std::string type = "vitamin";
     std::string deficiency;
     std::string excess;
@@ -439,11 +445,11 @@ struct vitamin_definition_data {
 
 struct json_flag_definition_data {
     std::string id;
-    std::string info;
-    std::string restriction;
-    std::string name;
-    std::string item_prefix;
-    std::string item_suffix;
+    authored_text info;
+    authored_text restriction;
+    authored_text name;
+    authored_text item_prefix;
+    authored_text item_suffix;
     std::string requires_flag;
     std::set<std::string> conflicts;
     std::int64_t taste_modifier = 0;
@@ -469,13 +475,14 @@ struct material_burn_definition {
 
 struct material_definition_data {
     std::string id;
-    std::string name;
+    authored_text name;
     std::string salvaged_into;
     std::string repaired_with;
-    std::string bash_damage_verb = "damages";
-    std::string cut_damage_verb = "damages";
-    std::vector<std::string> damage_adjectives = {
-        "lightly damaged", "damaged", "very damaged", "thoroughly damaged"
+    authored_text bash_damage_verb = { "damages", std::nullopt };
+    authored_text cut_damage_verb = { "damages", std::nullopt };
+    std::vector<authored_text> damage_adjectives = {
+        { "lightly damaged", std::nullopt }, { "damaged", std::nullopt },
+        { "very damaged", std::nullopt }, { "thoroughly damaged", std::nullopt }
     };
     std::map<std::string, double> resistances;
     std::map<std::string, double> vitamins;
@@ -509,7 +516,7 @@ struct material_definition_data {
 
 struct damage_type_definition_data {
     std::string id;
-    std::string name;
+    authored_text name;
     std::string skill;
     std::string magic_color = "black";
     std::string derived_from;
@@ -535,7 +542,7 @@ struct damage_type_definition_data {
 
 struct ammunition_type_definition_data {
     std::string id;
-    std::string name;
+    authored_text name;
     std::string default_item;
     bool registered = false;
 };
@@ -548,8 +555,8 @@ struct item_category_priority_definition {
 
 struct item_category_definition_data {
     std::string id;
-    std::string header;
-    std::string noun;
+    authored_text header;
+    authored_text noun;
     std::int64_t sort_rank = 0;
     double spawn_rate = 1.0;
     std::string zone;
@@ -569,8 +576,8 @@ struct crafting_category_definition_data {
 
 struct proficiency_category_definition_data {
     std::string id;
-    std::string name;
-    std::string description;
+    authored_text name;
+    authored_text description;
     bool registered = false;
 };
 
@@ -582,8 +589,8 @@ struct proficiency_bonus_definition {
 
 struct proficiency_definition_data {
     std::string id;
-    std::string name;
-    std::string description;
+    authored_text name;
+    authored_text description;
     std::string category;
     std::int64_t time_to_learn_turns = 35996400;
     std::set<std::string> required;
@@ -600,7 +607,7 @@ struct proficiency_definition_data {
 
 struct weapon_category_definition_data {
     std::string id;
-    std::string name;
+    authored_text name;
     std::vector<std::string> proficiencies;
     bool registered = false;
 };
@@ -1423,15 +1430,16 @@ struct material_definition_handle {
     }
 
     material_definition_handle &damage_adjective( const std::int64_t level,
-            const std::string &value ) {
+            const sol::object &value ) {
         require_building_handle( token, *definition, "material" );
-        if( level < 1 || level > 64 || value.empty() ) {
+        authored_text parsed = read_singular_text( value, "", "material damage adjective" );
+        if( level < 1 || level > 64 || parsed.empty() ) {
             throw std::runtime_error( "material damage adjective level is invalid" );
         }
         if( definition->damage_adjectives.size() < static_cast<std::size_t>( level ) ) {
             definition->damage_adjectives.resize( static_cast<std::size_t>( level ) );
         }
-        definition->damage_adjectives[static_cast<std::size_t>( level - 1 )] = value;
+        definition->damage_adjectives[static_cast<std::size_t>( level - 1 )] = std::move( parsed );
         return *this;
     }
 
@@ -1564,12 +1572,14 @@ struct recipe_group_definition_handle {
     std::shared_ptr<owner_token> token;
 
     recipe_group_definition_handle &recipe( const std::string &id,
-                                            const std::string &description ) {
+                                            const sol::object &description_value ) {
         require_building_handle( token, *definition, "recipe group" );
+        authored_text description = read_singular_text( description_value, "",
+                                  "recipe-group entry description" );
         if( id.empty() || description.empty() ) {
             throw std::runtime_error( "recipe-group entry needs an id and description" );
         }
-        definition->recipes.push_back( { id, description, {} } );
+        definition->recipes.push_back( { id, std::move( description ), {} } );
         return *this;
     }
 
@@ -2440,7 +2450,8 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         }
         auto definition = std::make_shared<tool_quality_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", definition->id );
+        definition->name = read_text_option( options, "name",
+                              { definition->id, std::nullopt }, "tool quality name" );
         return tool_quality_definition_handle{ std::move( definition ), transaction->token };
     } );
     content.set_function( "SkillDisplay", [transaction]( const sol::table & options ) {
@@ -2476,7 +2487,8 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         }
         auto definition = std::make_shared<vitamin_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", definition->id );
+        definition->name = read_text_option( options, "name",
+                              { definition->id, std::nullopt }, "vitamin name" );
         definition->type = options.get_or( "kind", std::string( "vitamin" ) );
         definition->deficiency = options.get_or( "deficiency", std::string() );
         definition->excess = options.get_or( "excess", std::string() );
@@ -2491,11 +2503,14 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         }
         auto definition = std::make_shared<json_flag_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->info = options.get_or( "info", std::string() );
-        definition->restriction = options.get_or( "restriction", std::string() );
-        definition->name = options.get_or( "name", std::string() );
-        definition->item_prefix = options.get_or( "item_prefix", std::string() );
-        definition->item_suffix = options.get_or( "item_suffix", std::string() );
+        definition->info = read_text_option( options, "info", {}, "JSON flag info" );
+        definition->restriction = read_text_option( options, "restriction", {},
+                                     "JSON flag restriction" );
+        definition->name = read_text_option( options, "name", {}, "JSON flag name" );
+        definition->item_prefix = read_text_option( options, "item_prefix", {},
+                                     "JSON flag item prefix" );
+        definition->item_suffix = read_text_option( options, "item_suffix", {},
+                                     "JSON flag item suffix" );
         definition->requires_flag = options.get_or( "requires_flag", std::string() );
         definition->taste_modifier = options.get_or<std::int64_t>( "taste_modifier", 0 );
         definition->inherit = options.get_or( "inherit", true );
@@ -2518,7 +2533,8 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         }
         auto definition = std::make_shared<damage_type_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", definition->id );
+        definition->name = read_text_option( options, "name",
+                              { definition->id, std::nullopt }, "damage type name" );
         definition->skill = options.get_or( "skill", std::string() );
         definition->magic_color = options.get_or( "magic_color", std::string( "black" ) );
         definition->melee_only = options.get_or( "melee_only", false );
@@ -2544,11 +2560,16 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         }
         auto definition = std::make_shared<material_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", definition->id );
+        definition->name = read_text_option( options, "name",
+                              { definition->id, std::nullopt }, "material name" );
         definition->salvaged_into = options.get_or( "salvaged_into", std::string() );
         definition->repaired_with = options.get_or( "repaired_with", std::string() );
-        definition->bash_damage_verb = options.get_or( "bash_damage_verb", std::string( "damages" ) );
-        definition->cut_damage_verb = options.get_or( "cut_damage_verb", std::string( "damages" ) );
+        definition->bash_damage_verb = read_text_option( options, "bash_damage_verb",
+                                            definition->bash_damage_verb,
+                                            "material bash damage verb" );
+        definition->cut_damage_verb = read_text_option( options, "cut_damage_verb",
+                                           definition->cut_damage_verb,
+                                           "material cut damage verb" );
         definition->chip_resistance = options.get_or<std::int64_t>( "chip_resistance", 0 );
         definition->breathability = options.get_or<std::int64_t>( "breathability", 0 );
         definition->repair_difficulty = options.get_or<std::int64_t>( "repair_difficulty", 10 );
@@ -2574,7 +2595,8 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         }
         auto definition = std::make_shared<ammunition_type_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", definition->id );
+        definition->name = read_text_option( options, "name",
+                              { definition->id, std::nullopt }, "ammunition type name" );
         definition->default_item = options.get_or( "default_item", std::string() );
         return ammunition_type_definition_handle{ std::move( definition ), transaction->token };
     } );
@@ -2584,8 +2606,10 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         }
         auto definition = std::make_shared<item_category_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->header = options.get_or( "header", definition->id );
-        definition->noun = options.get_or( "noun", definition->header );
+        definition->header = read_text_option( options, "header",
+                                { definition->id, std::nullopt }, "item category header" );
+        definition->noun = read_text_option( options, "noun", definition->header,
+                              "item category noun" );
         definition->sort_rank = options.get_or<std::int64_t>( "sort_rank", 0 );
         definition->spawn_rate = options.get_or( "spawn_rate", 1.0 );
         definition->zone = options.get_or( "zone", std::string() );
@@ -2609,8 +2633,10 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         }
         auto definition = std::make_shared<proficiency_category_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", definition->id );
-        definition->description = options.get_or( "description", std::string() );
+        definition->name = read_text_option( options, "name",
+                              { definition->id, std::nullopt }, "proficiency category name" );
+        definition->description = read_text_option( options, "description", {},
+                                     "proficiency category description" );
         return proficiency_category_definition_handle{ std::move( definition ), transaction->token };
     } );
     content.set_function( "Proficiency", [transaction]( const sol::table & options ) {
@@ -2619,8 +2645,10 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         }
         auto definition = std::make_shared<proficiency_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", definition->id );
-        definition->description = options.get_or( "description", std::string() );
+        definition->name = read_text_option( options, "name",
+                              { definition->id, std::nullopt }, "proficiency name" );
+        definition->description = read_text_option( options, "description", {},
+                                     "proficiency description" );
         definition->category = options.get_or( "category", std::string() );
         definition->time_to_learn_turns = options.get_or<std::int64_t>(
                                               "time_to_learn_turns", 35996400 );
@@ -2639,7 +2667,8 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         }
         auto definition = std::make_shared<weapon_category_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", definition->id );
+        definition->name = read_text_option( options, "name",
+                              { definition->id, std::nullopt }, "weapon category name" );
         return weapon_category_definition_handle{ std::move( definition ), transaction->token };
     } );
     content.set_function( "Item", [transaction]( const sol::table & options ) {
@@ -2766,8 +2795,10 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         auto definition = std::make_shared<recipe_definition_data>();
         definition->nested_category = true;
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", std::string() );
-        definition->description = options.get_or( "description", std::string() );
+        definition->name = read_text_option( options, "name", {},
+                              "nested recipe category name" );
+        definition->description = read_text_option( options, "description", {},
+                                     "nested recipe category description" );
         definition->category = options.get_or( "category", std::string() );
         definition->subcategory = options.get_or( "subcategory", std::string() );
         definition->activity_level = options.get_or( "activity_level", 1.0 );
@@ -2781,7 +2812,7 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         }
         auto definition = std::make_shared<requirement_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", std::string() );
+        definition->name = read_text_option( options, "name", {}, "requirement name" );
         return requirement_definition_handle{ std::move( definition ), transaction->token };
     } );
     content.set_function( "RecipeGroup", [transaction]( const sol::table & options ) {
@@ -2818,7 +2849,8 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         }
         auto definition = std::make_shared<item_action_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", definition->id );
+        definition->name = read_text_option( options, "name",
+                              { definition->id, std::nullopt }, "item action name" );
         return item_action_definition_handle{ std::move( definition ), transaction->token };
     } );
     content.set_function( "ItemGroup", [transaction]( const sol::table & options ) {
@@ -3473,7 +3505,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "material '" + definition.id +
                                           "' has invalid wind resistance" );
             }
-            for( const std::string &adjective : definition.damage_adjectives ) {
+            for( const authored_text &adjective : definition.damage_adjectives ) {
                 if( adjective.empty() ) {
                     throw std::runtime_error( "material '" + definition.id +
                                               "' has an empty damage adjective" );
@@ -4547,11 +4579,11 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     native.id = id;
                     native.was_loaded = true;
                     native.src.emplace_back( id, mod_id( pimpl_->owner ) );
-                    native.info_ = no_translation( source.info );
-                    native.restriction_ = no_translation( source.restriction );
-                    native.name_ = no_translation( source.name );
-                    native.item_prefix_ = no_translation( source.item_prefix );
-                    native.item_suffix_ = no_translation( source.item_suffix );
+                    native.info_ = source.info.native();
+                    native.restriction_ = source.restriction.native();
+                    native.name_ = source.name.native();
+                    native.item_prefix_ = source.item_prefix.native();
+                    native.item_suffix_ = source.item_suffix.native();
                     native.conflicts_ = source.conflicts;
                     native.inherit_ = source.inherit;
                     native.craft_inherit_ = source.craft_inherit;
@@ -4583,7 +4615,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         id, id.is_valid() ? std::optional<quality>( id.obj() ) : std::nullopt );
                     quality native;
                     native.id = id;
-                    native.name = no_translation( entry.definition->name );
+                    native.name = entry.definition->name.native();
                     native.was_loaded = true;
                     native.src.emplace_back( id, mod_id( pimpl_->owner ) );
                     for( const auto &[level, text] : entry.definition->usages ) {
@@ -4662,7 +4694,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     vitamin native;
                     native.id = id;
                     native.was_loaded = true;
-                    native.name_ = no_translation( source.name );
+                    native.name_ = source.name.native();
                     native.type_ = source.type == "vitamin" ? vitamin_type::VITAMIN :
                                    source.type == "toxin" ? vitamin_type::TOXIN :
                                    source.type == "drug" ? vitamin_type::DRUG : vitamin_type::COUNTER;
@@ -4697,7 +4729,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     const damage_type_definition_data &source = *entry.definition;
                     damage_type native;
                     native.id = id;
-                    native.name = no_translation( source.name );
+                    native.name = source.name.native();
                     native.skill = source.skill.empty() ? skill_id::NULL_ID() : skill_id( source.skill );
                     native.magic_color = color_from_string( source.magic_color );
                     native.bash_conversion_factor = source.bash_conversion_factor;
@@ -4740,7 +4772,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     native.id = id;
                     native.src.emplace_back( id, mod_id( pimpl_->owner ) );
                     native.was_loaded = true;
-                    native._name = no_translation( source.name );
+                    native._name = source.name.native();
                     if( !source.salvaged_into.empty() ) {
                         native._salvaged_into = itype_id( source.salvaged_into );
                     }
@@ -4762,11 +4794,11 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     native._conductive = source.conductive;
                     native._sheet_thickness = static_cast<float>( source.sheet_thickness );
                     native._repair_difficulty = static_cast<int>( source.repair_difficulty );
-                    native._bash_dmg_verb = no_translation( source.bash_damage_verb );
-                    native._cut_dmg_verb = no_translation( source.cut_damage_verb );
+                    native._bash_dmg_verb = source.bash_damage_verb.native();
+                    native._cut_dmg_verb = source.cut_damage_verb.native();
                     native._dmg_adj.clear();
-                    for( const std::string &adjective : source.damage_adjectives ) {
-                        native._dmg_adj.push_back( no_translation( adjective ) );
+                    for( const authored_text &adjective : source.damage_adjectives ) {
+                        native._dmg_adj.push_back( adjective.native() );
                     }
                     for( const auto &[damage_id, amount] : source.resistances ) {
                         const damage_type_id damage_key( damage_id );
@@ -4819,8 +4851,8 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         id, id.is_valid() ? std::optional<proficiency_category>( id.obj() ) : std::nullopt );
                     proficiency_category native;
                     native.id = id;
-                    native._name = no_translation( entry.definition->name );
-                    native._description = no_translation( entry.definition->description );
+                    native._name = entry.definition->name.native();
+                    native._description = entry.definition->description.native();
                     native.was_loaded = true;
                     detail::proficiency_category_registry().insert( native );
                 }
@@ -4849,8 +4881,8 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     native._category = proficiency_category_id( source.category );
                     native.src.emplace_back( id, mod_id( pimpl_->owner ) );
                     native.was_loaded = true;
-                    native._name = no_translation( source.name );
-                    native._description = no_translation( source.description );
+                    native._name = source.name.native();
+                    native._description = source.description.native();
                     native._can_learn = source.can_learn;
                     native._ignore_focus = source.ignore_focus;
                     native._teachable = source.teachable;
@@ -4878,7 +4910,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     native.id = id;
                     native.src.emplace_back( id, mod_id( pimpl_->owner ) );
                     native.was_loaded = true;
-                    native.name_ = no_translation( entry.definition->name );
+                    native.name_ = entry.definition->name.native();
                     for( const std::string &proficiency : entry.definition->proficiencies ) {
                         native.proficiencies_.emplace_back( proficiency );
                     }
@@ -4890,8 +4922,8 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         id, id.is_valid() ? std::optional<item_category>( id.obj() ) : std::nullopt,
                         id.is_valid() ? id.obj().get_spawn_rate() : 1.0F );
                     const item_category_definition_data &source = *entry.definition;
-                    item_category native( id, no_translation( source.header ),
-                                          no_translation( source.noun ),
+                    item_category native( id, source.header.native(),
+                                          source.noun.native(),
                                           static_cast<int>( source.sort_rank ) );
                     native.was_loaded = true;
                     native.src.emplace_back( id, mod_id( pimpl_->owner ) );
@@ -4934,7 +4966,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         id, previous == ammunition_type::registry().end() ?
                         std::optional<ammunition_type>() : std::optional<ammunition_type>( previous->second ) );
                     ammunition_type native;
-                    native.name_ = no_translation( entry.definition->name );
+                    native.name_ = entry.definition->name.native();
                     native.default_ammotype_ = itype_id( entry.definition->default_item );
                     ammunition_type::registry()[id] = std::move( native );
                 }
@@ -5064,7 +5096,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         std::optional<item_action>( *previous ) );
                     item_action native;
                     native.id = source.id;
-                    native.name = no_translation( source.name );
+                    native.name = source.name.native();
                     detail::item_action_registry_set( native );
                 }
                 break;
@@ -5188,7 +5220,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     }
                     requirement_data native( tools, qualities, components );
                     native.id_ = id;
-                    native.name_ = no_translation( source.name );
+                    native.name_ = source.name.native();
                     requirement_data::registry()[id] = std::move( native );
                 }
                 break;
@@ -5204,7 +5236,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     for( const recipe_group_recipe_data &recipe_entry : entry.definition->recipes ) {
                         detail::recipe_group_recipe_definition native_recipe;
                         native_recipe.id = recipe_entry.id;
-                        native_recipe.description = no_translation( recipe_entry.description );
+                        native_recipe.description = recipe_entry.description.native();
                         for( const recipe_group_terrain_data &terrain : recipe_entry.terrains ) {
                             detail::recipe_group_terrain_definition native_terrain;
                             native_terrain.overmap_terrain = terrain.overmap_terrain;
@@ -5433,9 +5465,9 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     recipe native;
                     native.id = id;
                     if( entry.definition->nested_category ) {
-                        native.name_ = no_translation( entry.definition->name );
+                        native.name_ = entry.definition->name.native();
                         native.description = entry.definition->description.empty() ? translation() :
-                                             no_translation( entry.definition->description );
+                                             entry.definition->description.native();
                         native.category = crafting_category_id( entry.definition->category );
                         native.subcategory = entry.definition->subcategory;
                         native.exertion = static_cast<float>( entry.definition->activity_level );

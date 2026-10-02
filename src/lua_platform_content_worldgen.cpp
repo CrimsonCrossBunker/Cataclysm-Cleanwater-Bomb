@@ -29,6 +29,7 @@ extern "C" {
 #include "game_constants.h"
 #include "generic_factory.h"
 #include "lua_platform_content.h"
+#include "lua_platform_content_text.h"
 #include "mapdata.h"
 #include "omdata.h"
 #include "options.h"
@@ -80,6 +81,22 @@ void hash_part( std::uint64_t &state, const std::string_view value )
     append( ":" );
     append( value );
     append( ";" );
+}
+
+void hash_part( std::uint64_t &state, const detail::authored_text &value )
+{
+    hash_part( state, value.raw );
+    hash_part( state, value.translated ? "localized" : "literal" );
+    if( value.translated ) {
+        hash_part( state, value.translated->context ? "context" : "no_context" );
+        if( value.translated->context ) {
+            hash_part( state, *value.translated->context );
+        }
+        hash_part( state, value.translated->plural ? "plural" : "singular" );
+        if( value.translated->plural ) {
+            hash_part( state, *value.translated->plural );
+        }
+    }
 }
 
 template<typename Definition>
@@ -136,6 +153,38 @@ std::size_t require_dense_array( const sol::table &values,
                                      " must be a dense array" );
     }
     return count;
+}
+
+std::vector<detail::authored_text> read_authored_text_array( const sol::table &table,
+        const std::string &description )
+{
+    const std::size_t count = require_dense_array( table, description, 0, 1024 );
+    std::vector<detail::authored_text> result;
+    result.reserve( count );
+    for( std::size_t i = 1; i <= count; ++i ) {
+        detail::authored_text text = detail::read_singular_text(
+                                         table.raw_get<sol::object>( i ), {},
+                                         description + " entry" );
+        if( text.empty() ) {
+            throw std::runtime_error( description + " entries cannot be empty" );
+        }
+        result.push_back( std::move( text ) );
+    }
+    return result;
+}
+
+detail::authored_text read_required_authored_text( const sol::object &value,
+        const std::string &field )
+{
+    if( !value.valid() || value.get_type() == sol::type::nil ) {
+        throw std::invalid_argument( field + " requires string or localized text" );
+    }
+    return detail::read_singular_text( value, {}, field );
+}
+
+translation faction_mission_text( const detail::authored_text &text )
+{
+    return text.translated ? text.translated->native() : to_translation( text.raw );
 }
 
 bool fits_native_int( const std::int64_t value )
@@ -1665,18 +1714,18 @@ struct city_definition_handle {
 
 struct faction_mission_definition_data {
     std::string id;
-    std::string name;
-    std::string description;
+    detail::authored_text name;
+    detail::authored_text description;
     std::string skill;
     std::string difficulty;
     std::string risk;
     std::string activity;
-    std::string time;
+    detail::authored_text time;
     std::int64_t positions = 0;
-    std::string items_label;
-    std::vector<std::string> items_possibilities;
-    std::vector<std::string> effects;
-    std::string footer;
+    detail::authored_text items_label;
+    std::vector<detail::authored_text> items_possibilities;
+    std::vector<detail::authored_text> effects;
+    detail::authored_text footer;
     bool registered = false;
 };
 
@@ -1684,19 +1733,22 @@ struct faction_mission_definition_handle {
     std::shared_ptr<faction_mission_definition_data> definition;
     std::shared_ptr<owner_token> token;
 
-    faction_mission_definition_handle &name( const std::string &value ) {
+    faction_mission_definition_handle &name( const sol::object &value ) {
         require_building_handle( token, *definition, "faction_mission" );
-        definition->name = value;
+        detail::authored_text parsed = read_required_authored_text( value, "faction_mission name" );
+        definition->name = std::move( parsed );
         return *this;
     }
 
-    faction_mission_definition_handle &desc( const std::string &value ) {
+    faction_mission_definition_handle &desc( const sol::object &value ) {
         require_building_handle( token, *definition, "faction_mission" );
-        definition->description = value;
+        detail::authored_text parsed = read_required_authored_text( value,
+                                         "faction_mission description" );
+        definition->description = std::move( parsed );
         return *this;
     }
 
-    faction_mission_definition_handle &description( const std::string &value ) {
+    faction_mission_definition_handle &description( const sol::object &value ) {
         return desc( value );
     }
 
@@ -1724,9 +1776,10 @@ struct faction_mission_definition_handle {
         return *this;
     }
 
-    faction_mission_definition_handle &time( const std::string &value ) {
+    faction_mission_definition_handle &time( const sol::object &value ) {
         require_building_handle( token, *definition, "faction_mission" );
-        definition->time = value;
+        detail::authored_text parsed = read_required_authored_text( value, "faction_mission time" );
+        definition->time = std::move( parsed );
         return *this;
     }
 
@@ -1739,84 +1792,69 @@ struct faction_mission_definition_handle {
         return *this;
     }
 
-    faction_mission_definition_handle &items_label( const std::string &value ) {
+    faction_mission_definition_handle &items_label( const sol::object &value ) {
         require_building_handle( token, *definition, "faction_mission" );
-        definition->items_label = value;
+        detail::authored_text parsed = read_required_authored_text( value,
+                                         "faction_mission items_label" );
+        definition->items_label = std::move( parsed );
         return *this;
     }
 
-    faction_mission_definition_handle &items_possibility( const std::string &value ) {
+    faction_mission_definition_handle &items_possibility( const sol::object &value ) {
         require_building_handle( token, *definition, "faction_mission" );
-        if( value.empty() ) {
-            throw std::runtime_error( "faction_mission items_possibility needs non-empty string" );
+        detail::authored_text parsed = read_required_authored_text( value,
+                                         "faction_mission items_possibility" );
+        if( parsed.empty() ) {
+            throw std::runtime_error( "faction_mission items_possibility needs non-empty text" );
         }
         if( definition->items_possibilities.size() >= 1024 ) {
             throw std::runtime_error( "faction_mission items_possibilities exceeds Platform limit" );
         }
-        definition->items_possibilities.push_back( value );
+        definition->items_possibilities.push_back( std::move( parsed ) );
         return *this;
     }
 
-    faction_mission_definition_handle &add_items_possibility( const std::string &value ) {
+    faction_mission_definition_handle &add_items_possibility( const sol::object &value ) {
         return items_possibility( value );
     }
 
     faction_mission_definition_handle &items_possibilities( const sol::table &table ) {
         require_building_handle( token, *definition, "faction_mission" );
-        const std::size_t count = require_dense_array( table, "faction_mission items_possibilities", 0,
-                                  1024 );
-        definition->items_possibilities.clear();
-        for( std::size_t i = 1; i <= count; ++i ) {
-            const sol::object elem = table.raw_get<sol::object>( i );
-            if( !elem.is<std::string>() ) {
-                throw std::runtime_error( "faction_mission items_possibilities entries must be strings" );
-            }
-            const std::string s = elem.as<std::string>();
-            if( s.empty() ) {
-                throw std::runtime_error( "faction_mission items_possibilities entries cannot be empty" );
-            }
-            definition->items_possibilities.push_back( s );
-        }
+        std::vector<detail::authored_text> parsed = read_authored_text_array(
+                    table, "faction_mission items_possibilities" );
+        definition->items_possibilities = std::move( parsed );
         return *this;
     }
 
-    faction_mission_definition_handle &effect( const std::string &value ) {
+    faction_mission_definition_handle &effect( const sol::object &value ) {
         require_building_handle( token, *definition, "faction_mission" );
-        if( value.empty() ) {
-            throw std::runtime_error( "faction_mission effect needs non-empty string" );
+        detail::authored_text parsed = read_required_authored_text( value, "faction_mission effect" );
+        if( parsed.empty() ) {
+            throw std::runtime_error( "faction_mission effect needs non-empty text" );
         }
         if( definition->effects.size() >= 1024 ) {
             throw std::runtime_error( "faction_mission effects exceeds Platform limit" );
         }
-        definition->effects.push_back( value );
+        definition->effects.push_back( std::move( parsed ) );
         return *this;
     }
 
-    faction_mission_definition_handle &add_effect( const std::string &value ) {
+    faction_mission_definition_handle &add_effect( const sol::object &value ) {
         return effect( value );
     }
 
     faction_mission_definition_handle &effects( const sol::table &table ) {
         require_building_handle( token, *definition, "faction_mission" );
-        const std::size_t count = require_dense_array( table, "faction_mission effects", 0, 1024 );
-        definition->effects.clear();
-        for( std::size_t i = 1; i <= count; ++i ) {
-            const sol::object elem = table.raw_get<sol::object>( i );
-            if( !elem.is<std::string>() ) {
-                throw std::runtime_error( "faction_mission effects entries must be strings" );
-            }
-            const std::string s = elem.as<std::string>();
-            if( s.empty() ) {
-                throw std::runtime_error( "faction_mission effects entries cannot be empty" );
-            }
-            definition->effects.push_back( s );
-        }
+        std::vector<detail::authored_text> parsed = read_authored_text_array(
+                    table, "faction_mission effects" );
+        definition->effects = std::move( parsed );
         return *this;
     }
 
-    faction_mission_definition_handle &footer( const std::string &value ) {
+    faction_mission_definition_handle &footer( const sol::object &value ) {
         require_building_handle( token, *definition, "faction_mission" );
-        definition->footer = value;
+        detail::authored_text parsed = read_required_authored_text( value, "faction_mission footer" );
+        definition->footer = std::move( parsed );
         return *this;
     }
 
@@ -3126,39 +3164,35 @@ void worldgen_content_transaction::install_lua_api( sol::state &lua, sol::table 
         }
         auto definition = std::make_shared<faction_mission_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", std::string() );
-        definition->description = options.get_or( "desc", options.get_or( "description", std::string() ) );
+        definition->name = detail::read_singular_text_or(
+                               options.raw_get<sol::object>( "name" ), {}, "faction_mission name" );
+        sol::object description = options.raw_get<sol::object>( "desc" );
+        if( !description.valid() || description.get_type() == sol::type::nil ) {
+            description = options.raw_get<sol::object>( "description" );
+        }
+        definition->description = detail::read_singular_text_or(
+                                      description, {}, "faction_mission description" );
         definition->skill = options.get_or( "skill", std::string() );
         definition->difficulty = options.get_or( "difficulty", std::string() );
         definition->risk = options.get_or( "risk", std::string() );
         definition->activity = options.get_or( "activity", std::string() );
-        definition->time = options.get_or( "time", std::string() );
+        definition->time = detail::read_singular_text_or(
+                               options.raw_get<sol::object>( "time" ), {}, "faction_mission time" );
         definition->positions = options.get_or<std::int64_t>( "positions", 0 );
-        definition->items_label = options.get_or( "items_label", std::string() );
+        definition->items_label = detail::read_singular_text_or(
+                                      options.raw_get<sol::object>( "items_label" ), {},
+                                      "faction_mission items_label" );
         if( const sol::optional<sol::table> items_tbl =
                 options.get<sol::optional<sol::table>>( "items_possibilities" ) ) {
-            const std::size_t count = require_dense_array( *items_tbl, "faction_mission items_possibilities", 0,
-                                      1024 );
-            for( std::size_t i = 1; i <= count; ++i ) {
-                const sol::object elem = items_tbl->raw_get<sol::object>( i );
-                if( !elem.is<std::string>() ) {
-                    throw std::runtime_error( "faction_mission items_possibilities entries must be strings" );
-                }
-                definition->items_possibilities.push_back( elem.as<std::string>() );
-            }
+            definition->items_possibilities = read_authored_text_array(
+                    *items_tbl, "faction_mission items_possibilities" );
         }
         if( const sol::optional<sol::table> eff_tbl =
                 options.get<sol::optional<sol::table>>( "effects" ) ) {
-            const std::size_t count = require_dense_array( *eff_tbl, "faction_mission effects", 0, 1024 );
-            for( std::size_t i = 1; i <= count; ++i ) {
-                const sol::object elem = eff_tbl->raw_get<sol::object>( i );
-                if( !elem.is<std::string>() ) {
-                    throw std::runtime_error( "faction_mission effects entries must be strings" );
-                }
-                definition->effects.push_back( elem.as<std::string>() );
-            }
+            definition->effects = read_authored_text_array( *eff_tbl, "faction_mission effects" );
         }
-        definition->footer = options.get_or( "footer", std::string() );
+        definition->footer = detail::read_singular_text_or(
+                                 options.raw_get<sol::object>( "footer" ), {}, "faction_mission footer" );
         return faction_mission_definition_handle{ std::move( definition ), transaction->token };
     } );
     content.set_function( "RegionSettingsCity", [transaction]( const sol::table & options ) {
@@ -4135,7 +4169,7 @@ bool worldgen_content_transaction::validate( const worldgen_validation_index &in
                 throw std::runtime_error( "faction_mission '" + definition.id +
                                           "' exceeds items_possibilities Platform limit" );
             }
-            for( const std::string &item : definition.items_possibilities ) {
+            for( const detail::authored_text &item : definition.items_possibilities ) {
                 if( item.empty() ) {
                     throw std::runtime_error( "faction_mission '" + definition.id +
                                               "' has empty items_possibility" );
@@ -4145,7 +4179,7 @@ bool worldgen_content_transaction::validate( const worldgen_validation_index &in
                 throw std::runtime_error( "faction_mission '" + definition.id +
                                           "' exceeds effects Platform limit" );
             }
-            for( const std::string &eff : definition.effects ) {
+            for( const detail::authored_text &eff : definition.effects ) {
                 if( eff.empty() ) {
                     throw std::runtime_error( "faction_mission '" + definition.id +
                                               "' has empty effect" );
@@ -5085,8 +5119,8 @@ bool worldgen_content_transaction::apply( std::string &error )
                 id, id.is_valid() ? std::optional<faction_mission>( id.obj() ) : std::nullopt );
             faction_mission native;
             native.id = id;
-            native.name = to_translation( entry.definition->name );
-            native.description = to_translation( entry.definition->description );
+            native.name = faction_mission_text( entry.definition->name );
+            native.description = faction_mission_text( entry.definition->description );
             if( !entry.definition->skill.empty() ) {
                 native.skill_used = skill_id( entry.definition->skill );
             }
@@ -5132,16 +5166,16 @@ bool worldgen_content_transaction::apply( std::string &error )
             } else {
                 native.activity_level = 0.0f;
             }
-            native.time = to_translation( entry.definition->time );
+            native.time = faction_mission_text( entry.definition->time );
             native.positions = static_cast<uint16_t>( entry.definition->positions );
-            native.items_label = to_translation( entry.definition->items_label );
-            for( const std::string &poss : entry.definition->items_possibilities ) {
-                native.items_possibilities.push_back( to_translation( poss ) );
+            native.items_label = faction_mission_text( entry.definition->items_label );
+            for( const detail::authored_text &poss : entry.definition->items_possibilities ) {
+                native.items_possibilities.push_back( faction_mission_text( poss ) );
             }
-            for( const std::string &eff : entry.definition->effects ) {
-                native.effects.push_back( to_translation( eff ) );
+            for( const detail::authored_text &eff : entry.definition->effects ) {
+                native.effects.push_back( faction_mission_text( eff ) );
             }
-            native.footer = to_translation( entry.definition->footer );
+            native.footer = faction_mission_text( entry.definition->footer );
             native.was_loaded = true;
             detail::faction_mission_registry().insert( native );
         }
@@ -5991,12 +6025,12 @@ void worldgen_content_transaction::append_fingerprint( std::uint64_t &state ) co
         hash_part( state, entry.definition->items_label );
         hash_part( state, "items_possibilities" );
         hash_part( state, std::to_string( entry.definition->items_possibilities.size() ) );
-        for( const std::string &item : entry.definition->items_possibilities ) {
+        for( const detail::authored_text &item : entry.definition->items_possibilities ) {
             hash_part( state, item );
         }
         hash_part( state, "effects" );
         hash_part( state, std::to_string( entry.definition->effects.size() ) );
-        for( const std::string &eff : entry.definition->effects ) {
+        for( const detail::authored_text &eff : entry.definition->effects ) {
             hash_part( state, eff );
         }
         hash_part( state, entry.definition->footer );

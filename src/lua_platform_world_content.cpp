@@ -50,6 +50,7 @@ extern "C" {
 #include "generic_factory.h"
 #include "init.h"
 #include "lua_platform_content.h"
+#include "lua_platform_content_text.h"
 #include "lua_platform_runtime.h"
 #include "memory_fast.h"
 #include "npc.h"
@@ -66,6 +67,8 @@ namespace cata::lua_platform
 
 namespace
 {
+
+using detail::authored_text;
 
 enum class lifecycle : int {
     building,
@@ -126,7 +129,7 @@ struct price_rule_data {
     std::string item;
     std::string group;
     std::string category;
-    std::string message;
+    authored_text message;
     double markup = 1.0;
     double premium = 1.0;
     std::optional<double> fixed_adjustment;
@@ -136,7 +139,7 @@ struct price_rule_data {
 
 struct faction_data : definition_base {
     std::string name;
-    std::string description;
+    authored_text description;
     int likes = 0;
     int respects = 0;
     int trusts = 0;
@@ -162,13 +165,13 @@ struct shop_group_data {
     int trust = 0;
     bool strict = false;
     bool rigid = false;
-    std::string refusal;
+    authored_text refusal;
     std::string condition_handler;
 };
 
 struct npc_class_data : definition_base {
-    std::string name;
-    std::string job_description;
+    authored_text name;
+    authored_text job_description;
     bool common = true;
     double common_spawn_weight = 1.0;
     bool sells_belongings = true;
@@ -201,9 +204,9 @@ struct npc_class_data : definition_base {
 };
 
 struct npc_data : definition_base {
-    std::string unique_name;
-    std::string suffix;
-    std::string temporary_suffix;
+    authored_text unique_name;
+    authored_text suffix;
+    authored_text temporary_suffix;
     std::string gender = "random";
     std::string npc_class;
     std::string faction;
@@ -213,7 +216,7 @@ struct npc_data : definition_base {
     std::string stole_item_chat;
     std::vector<std::string> missions_offered;
     std::map<std::string, std::string> dialogue_topics;
-    std::map<std::string, std::string> snippets;
+    std::map<std::string, authored_text> snippets;
     std::optional<int> age;
     std::optional<int> height;
     std::optional<int> strength;
@@ -226,7 +229,7 @@ struct npc_data : definition_base {
 };
 
 struct overmap_terrain_data : definition_base {
-    std::string name;
+    authored_text name;
     std::string symbol = "?";
     std::string color = "white";
     std::string see_cost = "none";
@@ -261,7 +264,7 @@ struct special_terrain_data {
     std::set<std::string> locations;
     std::set<std::string> flags;
     std::optional<std::string> camp_owner;
-    std::string camp_name;
+    authored_text camp_name;
 };
 
 struct special_connection_data {
@@ -305,7 +308,7 @@ struct mutable_special_terrain_data {
     std::map<std::string, special_terrain_join_data> joins;
     std::map<std::string, std::string> connections;
     std::optional<std::string> camp_owner;
-    std::string camp_name;
+    authored_text camp_name;
 };
 
 struct integer_distribution_data {
@@ -409,8 +412,8 @@ struct vpart_terrain_transform_data {
 
 struct vehicle_part_data : definition_base {
     std::string copy_from;
-    std::optional<std::string> name;
-    std::optional<std::string> description;
+    std::optional<authored_text> name;
+    std::optional<authored_text> description;
     std::optional<std::string> item;
     std::optional<std::string> remove_as;
     std::optional<std::string> location;
@@ -518,7 +521,7 @@ struct vehicle_zone_data {
 
 struct vehicle_data : definition_base {
     std::string copy_from;
-    std::optional<std::string> name;
+    std::optional<authored_text> name;
     std::string color_palette;
     bool color_palette_set = false;
     std::vector<vehicle_part_placement_data> parts;
@@ -610,7 +613,8 @@ price_rule_data read_price_rule( const sol::table &rule )
     result.item = rule.get_or( "item", std::string() );
     result.group = rule.get_or( "group", std::string() );
     result.category = rule.get_or( "category", std::string() );
-    result.message = rule.get_or( "message", std::string() );
+    result.message = detail::read_singular_text_or(
+                         rule.raw_get<sol::object>( "message" ), {}, "price rule message" );
     result.markup = rule.get_or( "markup", 1.0 );
     result.premium = rule.get_or( "premium", 1.0 );
     result.fixed_adjustment = read_optional<double>( rule, "fixed_adjustment" );
@@ -621,6 +625,23 @@ price_rule_data read_price_rule( const sol::table &rule )
         throw std::invalid_argument( "price rule numeric values must be finite" );
     }
     return result;
+}
+
+authored_text read_authored_text( const sol::table &source, const std::string &field,
+                                  authored_text fallback = {} )
+{
+    return detail::read_singular_text_or( source.raw_get<sol::object>( field ), fallback,
+                                          field );
+}
+
+std::optional<authored_text> read_optional_authored_text( const sol::table &source,
+        const std::string &field )
+{
+    const sol::object value = source.raw_get<sol::object>( field );
+    if( !value.valid() || value.get_type() == sol::type::nil ) {
+        return std::nullopt;
+    }
+    return detail::read_singular_text( value, {}, field );
 }
 
 std::array<int, 3> read_point( const sol::table &source, const char *description )
@@ -964,6 +985,22 @@ void hash_part( std::uint64_t &state, const std::string_view value )
     state *= 1099511628211ULL;
 }
 
+void hash_part( std::uint64_t &state, const authored_text &value )
+{
+    hash_part( state, value.raw );
+    hash_part( state, value.translated ? "localized" : "literal" );
+    if( value.translated ) {
+        hash_part( state, value.translated->context ? "context" : "no_context" );
+        if( value.translated->context ) {
+            hash_part( state, *value.translated->context );
+        }
+        hash_part( state, value.translated->plural ? "plural" : "singular" );
+        if( value.translated->plural ) {
+            hash_part( state, *value.translated->plural );
+        }
+    }
+}
+
 template<typename Value>
 void hash_number( std::uint64_t &state, const Value value )
 {
@@ -985,6 +1022,15 @@ void hash_optional_number( std::uint64_t &state, const std::optional<Value> &val
 }
 
 void hash_optional_string( std::uint64_t &state, const std::optional<std::string> &value )
+{
+    hash_part( state, value ? "present" : "absent" );
+    if( value ) {
+        hash_part( state, *value );
+    }
+}
+
+void hash_optional_authored_text( std::uint64_t &state,
+                                  const std::optional<authored_text> &value )
 {
     hash_part( state, value ? "present" : "absent" );
     if( value ) {
@@ -1339,8 +1385,8 @@ void hash_definition( std::uint64_t &state, const vehicle_part_data &value )
 {
     hash_part( state, value.id );
     hash_part( state, value.copy_from );
-    hash_optional_string( state, value.name );
-    hash_optional_string( state, value.description );
+    hash_optional_authored_text( state, value.name );
+    hash_optional_authored_text( state, value.description );
     hash_optional_string( state, value.item );
     hash_optional_string( state, value.remove_as );
     hash_optional_string( state, value.location );
@@ -1499,7 +1545,7 @@ void hash_definition( std::uint64_t &state, const vehicle_data &value )
 {
     hash_part( state, value.id );
     hash_part( state, value.copy_from );
-    hash_optional_string( state, value.name );
+    hash_optional_authored_text( state, value.name );
     hash_bool( state, value.color_palette_set );
     hash_part( state, value.color_palette );
     for( const vehicle_part_placement_data &part : value.parts ) {
@@ -1638,7 +1684,7 @@ void set_npc_dialogue_topic( dialogue_chatbin &chat, const std::string &name,
 }
 
 void set_npc_snippet( dialogue_chatbin_snippets &snippets,
-                      const std::string &name, const std::string &text )
+                      const std::string &name, const authored_text &text )
 {
     static const std::map<std::string, translation dialogue_chatbin_snippets::*> fields = {
         { "<acknowledged>", &dialogue_chatbin_snippets::snip_acknowledged },
@@ -1717,7 +1763,7 @@ void set_npc_snippet( dialogue_chatbin_snippets &snippets,
     if( found == fields.end() ) {
         throw std::runtime_error( "unknown NPC snippet slot '" + name + "'" );
     }
-    snippets.*found->second = no_translation( text );
+    snippets.*found->second = text.native();
 }
 
 } // namespace
@@ -1801,7 +1847,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         auto value = std::make_shared<faction_data>();
         value->id = options.get_or( "id", std::string() );
         value->name = options.get_or( "name", value->id );
-        value->description = options.get_or( "description", std::string() );
+        value->description = read_authored_text( options, "description" );
         value->likes = options.get_or( "likes", 0 );
         value->respects = options.get_or( "respects", 0 );
         value->trusts = options.get_or( "trusts", 0 );
@@ -1871,8 +1917,9 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         }
         auto value = std::make_shared<npc_class_data>();
         value->id = options.get_or( "id", std::string() );
-        value->name = options.get_or( "name", value->id );
-        value->job_description = options.get_or( "job_description", std::string() );
+        value->name = read_authored_text(
+                          options, "name", authored_text{ value->id, std::nullopt } );
+        value->job_description = read_authored_text( options, "job_description" );
         value->common = options.get_or( "common", true );
         value->common_spawn_weight = options.get_or( "common_spawn_weight", 1.0 );
         value->sells_belongings = options.get_or( "sells_belongings", true );
@@ -1950,7 +1997,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                 value->shop_groups.push_back( {
                     group.get_or( "id", std::string() ), group.get_or( "trust", 0 ),
                     group.get_or( "strict", false ), group.get_or( "rigid", false ),
-                    group.get_or( "refusal", std::string() ),
+                    read_authored_text( group, "refusal" ),
                     group.get_or( "condition_handler", std::string() )
                 } );
             }
@@ -1970,9 +2017,9 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         }
         auto value = std::make_shared<npc_data>();
         value->id = options.get_or( "id", std::string() );
-        value->unique_name = options.get_or( "unique_name", std::string() );
-        value->suffix = options.get_or( "suffix", std::string() );
-        value->temporary_suffix = options.get_or( "temporary_suffix", std::string() );
+        value->unique_name = read_authored_text( options, "unique_name" );
+        value->suffix = read_authored_text( options, "suffix" );
+        value->temporary_suffix = read_authored_text( options, "temporary_suffix" );
         value->gender = options.get_or( "gender", std::string( "random" ) );
         value->npc_class = options.get_or( "class", std::string() );
         value->faction = options.get_or( "faction", std::string() );
@@ -1998,13 +2045,12 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         if( const sol::optional<sol::table> snippets =
                 options.get<sol::optional<sol::table>>( "snippets" ) ) {
             for( const auto &entry : *snippets ) {
-                if( entry.first.get_type() != sol::type::string ||
-                    entry.second.get_type() != sol::type::string ) {
+                if( entry.first.get_type() != sol::type::string ) {
                     throw std::invalid_argument(
                         "NPC snippets must map names to text" );
                 }
                 value->snippets[entry.first.as<std::string>()] =
-                    entry.second.as<std::string>();
+                    detail::read_singular_text( entry.second, {}, "NPC snippet text" );
             }
         }
         value->age = read_optional<int>( options, "age" );
@@ -2034,7 +2080,8 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         }
         auto value = std::make_shared<overmap_terrain_data>();
         value->id = options.get_or( "id", std::string() );
-        value->name = options.get_or( "name", value->id );
+        value->name = read_authored_text(
+                          options, "name", authored_text{ value->id, std::nullopt } );
         value->symbol = options.get_or( "symbol", std::string( "?" ) );
         value->color = options.get_or( "color", std::string( "white" ) );
         value->see_cost = options.get_or( "see_cost", std::string( "none" ) );
@@ -2133,7 +2180,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                                        terrain.get<sol::optional<sol::table>>( "flags" ),
                                        "overmap special terrain flags" );
                     parsed.camp_owner = read_optional<std::string>( terrain, "camp" );
-                    parsed.camp_name = terrain.get_or( "camp_name", std::string() );
+                    parsed.camp_name = read_authored_text( terrain, "camp_name" );
                     value->terrains.push_back( std::move( parsed ) );
                 }
             }
@@ -2262,7 +2309,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                                            descriptor.get<sol::optional<sol::table>>( "locations" ),
                                            "mutable special overmap locations" );
                     parsed.camp_owner = read_optional<std::string>( descriptor, "camp" );
-                    parsed.camp_name = descriptor.get_or( "camp_name", std::string() );
+                    parsed.camp_name = read_authored_text( descriptor, "camp_name" );
                     for( const char *direction : {
                              "north", "east", "south", "west", "above", "below"
                          } ) {
@@ -2368,8 +2415,8 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         auto value = std::make_shared<vehicle_part_data>();
         value->id = options.get_or( "id", std::string() );
         value->copy_from = options.get_or( "copy_from", std::string() );
-        value->name = read_optional<std::string>( options, "name" );
-        value->description = read_optional<std::string>( options, "description" );
+        value->name = read_optional_authored_text( options, "name" );
+        value->description = read_optional_authored_text( options, "description" );
         value->item = read_optional<std::string>( options, "item" );
         value->remove_as = read_optional<std::string>( options, "remove_as" );
         value->location = read_optional<std::string>( options, "location" );
@@ -2678,7 +2725,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         auto value = std::make_shared<vehicle_data>();
         value->id = options.get_or( "id", std::string() );
         value->copy_from = options.get_or( "copy_from", std::string() );
-        value->name = read_optional<std::string>( options, "name" );
+        value->name = read_optional_authored_text( options, "name" );
         if( const std::optional<std::string> palette = read_optional<std::string>(
                     options, "color_palette" ) ) {
             value->color_palette = *palette;
@@ -3421,7 +3468,7 @@ bool world_content_transaction::apply( std::string &error )
             faction_template native;
             native.id = id;
             native.set_name( source.name );
-            native.desc = no_translation( source.description );
+            native.desc = source.description.native();
             native.likes_u = source.likes;
             native.respects_u = source.respects;
             native.trusts_u = source.trusts;
@@ -3449,7 +3496,7 @@ bool world_content_transaction::apply( std::string &error )
             }
             for( const price_rule_data &rule : source.price_rules ) {
                 icg_entry base{ itype_id( rule.item ), item_category_id( rule.category ),
-                                item_group_id( rule.group ), no_translation( rule.message ), {}, {} };
+                                item_group_id( rule.group ), rule.message.native(), {}, {} };
                 if( !rule.condition_handler.empty() ) {
                     const std::string mod = pimpl_->owner;
                     const std::string owner_id = source.id;
@@ -3517,8 +3564,8 @@ bool world_content_transaction::apply( std::string &error )
             native.id = id;
             native.src.emplace_back( id, mod_id( pimpl_->owner ) );
             native.was_loaded = true;
-            native.name = no_translation( source.name );
-            native.job_description = no_translation( source.job_description );
+            native.name = source.name.native();
+            native.job_description = source.job_description.native();
             native.common = source.common;
             native.common_spawn_weight = source.common_spawn_weight;
             native.sells_belongings = source.sells_belongings;
@@ -3563,7 +3610,7 @@ bool world_content_transaction::apply( std::string &error )
                 shopkeeper_item_group native_group( group.id, group.trust,
                                                     group.strict, group.rigid );
                 if( !group.refusal.empty() ) {
-                    native_group.refusal = no_translation( group.refusal );
+                    native_group.refusal = group.refusal.native();
                 }
                 if( !group.condition_handler.empty() ) {
                     const std::string mod = pimpl_->owner;
@@ -3581,7 +3628,7 @@ bool world_content_transaction::apply( std::string &error )
             }
             for( const price_rule_data &rule : source.price_rules ) {
                 icg_entry base{ itype_id( rule.item ), item_category_id( rule.category ),
-                                item_group_id( rule.group ), no_translation( rule.message ), {}, {} };
+                                item_group_id( rule.group ), rule.message.native(), {}, {} };
                 if( !rule.condition_handler.empty() ) {
                     const std::string mod = pimpl_->owner;
                     const std::string owner_id = source.id;
@@ -3634,9 +3681,9 @@ bool world_content_transaction::apply( std::string &error )
             for( const auto &[slot, text] : source.snippets ) {
                 set_npc_snippet( native.snippets, slot, text );
             }
-            native.name_unique = no_translation( source.unique_name );
-            native.name_suffix = no_translation( source.suffix );
-            native.temp_suffix = no_translation( source.temporary_suffix );
+            native.name_unique = source.unique_name.native();
+            native.name_suffix = source.suffix.native();
+            native.temp_suffix = source.temporary_suffix.native();
             native.gender_override = source.gender == "male" ? npc_template::gender::male :
                                      source.gender == "female" ? npc_template::gender::female :
                                      npc_template::gender::random;
@@ -3677,7 +3724,7 @@ bool world_content_transaction::apply( std::string &error )
             native.id = id;
             native.src.emplace_back( id, mod_id( pimpl_->owner ) );
             native.was_loaded = true;
-            native.name = no_translation( source.name );
+            native.name = source.name.native();
             native.symbol = UTF8_getch( source.symbol );
             native.color = color_from_string( source.color, report_color_error::no );
             native.see_cost = io::string_to_enum<oter_type_t::see_costs>( source.see_cost );
@@ -3762,7 +3809,7 @@ bool world_content_transaction::apply( std::string &error )
                         oter_str_id( terrain.terrain ), locations, terrain.flags );
                     if( terrain.camp_owner ) {
                         fixed->terrains.back().camp_owner = faction_id( *terrain.camp_owner );
-                        fixed->terrains.back().camp_name = no_translation( terrain.camp_name );
+                        fixed->terrains.back().camp_name = terrain.camp_name.native();
                     }
                 }
                 for( const special_connection_data &connection : source.connections ) {
@@ -3826,7 +3873,7 @@ bool world_content_transaction::apply( std::string &error )
                     }
                     if( terrain.camp_owner ) {
                         native_terrain.camp_owner = faction_id( *terrain.camp_owner );
-                        native_terrain.camp_name = no_translation( terrain.camp_name );
+                        native_terrain.camp_name = terrain.camp_name.native();
                     }
                     mutable_data->overmaps.emplace( terrain_id, std::move( native_terrain ) );
                 }
@@ -3888,10 +3935,10 @@ bool world_content_transaction::apply( std::string &error )
             native.src.emplace_back( id, mod_id( pimpl_->owner ) );
             native.was_loaded = true;
             if( source.name ) {
-                native.name_ = no_translation( *source.name );
+                native.name_ = source.name->native();
             }
             if( source.description ) {
-                native.description = no_translation( *source.description );
+                native.description = source.description->native();
             }
             if( source.item ) {
                 native.base_item = itype_id( *source.item );
@@ -4287,7 +4334,7 @@ bool world_content_transaction::apply( std::string &error )
                                        vproto_id( source.copy_from ).obj();
             native.id = id;
             if( source.name ) {
-                native.name = no_translation( *source.name );
+                native.name = source.name->native();
             } else if( source.copy_from.empty() ) {
                 native.name = no_translation( source.id );
             }
