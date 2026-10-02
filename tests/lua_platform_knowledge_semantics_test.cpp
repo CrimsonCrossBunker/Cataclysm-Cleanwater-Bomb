@@ -942,7 +942,7 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
             const sol::protected_function sample_technique = sampler_loaded.get<sol::protected_function>();
             player.set_skill_level( skill_id( "unarmed" ), 10 );
             player.martial_arts_data->add_martialart( matype_style_karate );
-            player.martial_arts_data->style_selected = matype_style_karate;
+            player.martial_arts_data->set_style( matype_style_karate );
             const std::string nul_blacklist_id( "tec_karate_rapid\0missing",
                                                sizeof( "tec_karate_rapid\0missing" ) - 1 );
             const std::vector<std::vector<std::string>> blacklists = {
