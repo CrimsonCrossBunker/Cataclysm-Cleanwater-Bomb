@@ -12,6 +12,8 @@ extern "C" {
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
+#include <limits>
 #include <set>
 #include <stdexcept>
 #include <string_view>
@@ -148,6 +150,30 @@ struct mapgen_apply_options {
     bool cancel_on_collision = true;
     int rotation = 0;
 };
+
+void require_native_mapgen_target_range(
+    const tripoint_abs_omt &target, const std::string_view api_name )
+{
+    const auto require_axis = [api_name]( const int coordinate, const int factor,
+    const int maximum_offset, const std::string_view scale_name ) {
+        const std::int64_t scaled = static_cast<std::int64_t>( coordinate ) * factor;
+        if( scaled < std::numeric_limits<int>::min() ||
+            scaled + maximum_offset > std::numeric_limits<int>::max() ) {
+            throw std::invalid_argument(
+                std::string( api_name ) +
+                " target cannot be represented across the native " +
+                std::string( scale_name ) + " footprint" );
+        }
+    };
+    const int omt_to_sm = coords::map_squares_per( coords::scale::overmap_terrain ) /
+                          coords::map_squares_per( coords::scale::submap );
+    const int omt_to_ms = coords::map_squares_per( coords::scale::overmap_terrain );
+    require_axis( target.x(), omt_to_sm, 1, "submap" );
+    require_axis( target.y(), omt_to_sm, 1, "submap" );
+    const int omt_map_square_max_offset = omt_to_ms - 1;
+    require_axis( target.x(), omt_to_ms, omt_map_square_max_offset, "map-square" );
+    require_axis( target.y(), omt_to_ms, omt_map_square_max_offset, "map-square" );
+}
 
 std::optional<game_handle_error> read_mapgen_apply_options(
     const sol::optional<sol::object> &requested,
@@ -354,6 +380,9 @@ sol::table apply_mapgen_update(
         return make_game_error_result( state, *error );
     }
 
+    require_native_mapgen_target_range(
+        target.native_position(), "services.mapgen.apply" );
+
     mapgen_apply_options options;
     if( const std::optional<game_handle_error> error =
             read_mapgen_apply_options( requested_options, options ) ) {
@@ -435,6 +464,9 @@ sol::table run_mapgen_update(
         return make_game_error_result( state, *error );
     }
 
+    require_native_mapgen_target_range(
+        target.native_position(), "services.mapgen.run_update" );
+
     require_write();
     // This is the native immediate update path.  Unlike apply(), it does not
     // preflight or roll back external mapgen side effects; the native EOC path
@@ -492,15 +524,21 @@ sol::table schedule_mapgen_update(
         throw std::invalid_argument(
             "services.mapgen.schedule_update delay must be positive" );
     }
+    const tripoint_abs_omt target_position = target.native_position();
+    require_native_mapgen_target_range(
+        target_position, "services.mapgen.schedule_update" );
+    const tripoint_abs_ms event_position =
+        project_to<coords::ms>( target_position );
     const std::string key = requested_key.value_or( "" );
 
     require_write();
     // Match the native delayed path's one-second offset: timed events run
     // before the player turn, while the originating callbacks run during it.
-    const time_point when = calendar::turn + requested_delay.to_native() + 1_seconds;
+    const time_point when = timed_event_due_time(
+                                requested_delay.to_native(), 1_seconds );
     get_timed_events().add(
         timed_event_type::UPDATE_MAPGEN, when, -1,
-        project_to<coords::ms>( target.native_position() ), 0,
+        event_position, 0,
         update.native_id().str(), key );
     return make_game_value_result(
                state, sol::make_object(
@@ -1430,9 +1468,16 @@ void script_mapgen_context::place_corpse(
     context_state &state = require_write_state();
     const tripoint_bub_ms position = bounded_position( state, x, y );
     consume( 1 );
+    const std::int64_t corpse_turn =
+        to_turn<std::int64_t>( calendar::turn ) -
+        static_cast<std::int64_t>( age_days ) * to_turns<std::int64_t>( 1_days );
+    const std::int64_t earliest_turn =
+        to_turn<std::int64_t>( calendar::start_of_cataclysm );
+    const time_point corpse_time = time_point::from_turn(
+                                       static_cast<int>( std::max( corpse_turn,
+                                               earliest_turn ) ) );
     item corpse = item::make_corpse(
-                      type, std::max( calendar::turn - time_duration::from_days( age_days ),
-                                      calendar::start_of_cataclysm ) );
+                      type, corpse_time );
     state.data->m.add_item_or_charges( position, corpse );
 }
 

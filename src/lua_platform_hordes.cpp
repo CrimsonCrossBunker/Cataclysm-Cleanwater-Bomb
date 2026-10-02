@@ -760,6 +760,32 @@ legacy_scan scan_legacy_groups(
     const overmap_scan_bounds bounds =
         query_overmap_bounds(
             center, options.radius, api_name );
+    const int minimum_x = checked_axis_offset(
+                              center.x(), -options.radius, api_name );
+    const int maximum_x = checked_axis_offset(
+                              center.x(), options.radius, api_name );
+    const int minimum_y = checked_axis_offset(
+                              center.y(), -options.radius, api_name );
+    const int maximum_y = checked_axis_offset(
+                              center.y(), options.radius, api_name );
+    const int omt_to_sm =
+        coords::map_squares_per( coords::scale::overmap_terrain ) /
+        coords::map_squares_per( coords::scale::submap );
+    const auto projected_axis_fits = [omt_to_sm]( const int coordinate,
+    const int maximum_offset ) {
+        const std::int64_t projected =
+            static_cast<std::int64_t>( coordinate ) * omt_to_sm;
+        return projected >= std::numeric_limits<int>::min() &&
+               projected + maximum_offset <= std::numeric_limits<int>::max();
+    };
+    if( !projected_axis_fits( minimum_x, 0 ) ||
+        !projected_axis_fits( maximum_x, 1 ) ||
+        !projected_axis_fits( minimum_y, 0 ) ||
+        !projected_axis_fits( maximum_y, 1 ) ) {
+        throw std::invalid_argument(
+            api_name +
+            " query bounds cannot be represented as native submap coordinates" );
+    }
     for( int x = bounds.minimum.x();
          x <= bounds.maximum.x(); ++x ) {
         for( int y = bounds.minimum.y();
@@ -771,14 +797,6 @@ legacy_scan scan_legacy_groups(
         }
     }
 
-    const int minimum_x = checked_axis_offset(
-                              center.x(), -options.radius, api_name );
-    const int maximum_x = checked_axis_offset(
-                              center.x(), options.radius, api_name );
-    const int minimum_y = checked_axis_offset(
-                              center.y(), -options.radius, api_name );
-    const int maximum_y = checked_axis_offset(
-                              center.y(), options.radius, api_name );
     const int minimum_z = std::max(
                               -OVERMAP_DEPTH,
                               center.z() - options.radius_z );

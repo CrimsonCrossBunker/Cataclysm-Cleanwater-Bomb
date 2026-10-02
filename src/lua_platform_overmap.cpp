@@ -78,6 +78,8 @@ constexpr int maximum_search_limit = 256;
 constexpr std::size_t maximum_search_offset = 1000000;
 constexpr std::size_t maximum_search_selectors = 16;
 constexpr std::size_t maximum_selector_bytes = 256;
+// point.cpp's square-ring sizing keeps (2 * radius + 1)^2 in a signed int.
+constexpr int maximum_native_square_search_radius = 23169;
 constexpr std::size_t maximum_note_width = 1024;
 constexpr std::size_t maximum_note_bytes = 4096;
 constexpr int maximum_note_danger_radius = 100;
@@ -622,6 +624,37 @@ overmap_target_options read_overmap_target_options(
         }
     }
     return result;
+}
+
+void validate_native_target_search_range(
+    const overmap_target_options &options,
+    const tripoint_abs_omt &origin,
+    const std::string &api_name )
+{
+    const std::int64_t requested_radius = options.search_range == 0 ?
+                                          ( options.random ? OMAPX : OMAPX * 5 ) :
+                                          options.search_range;
+    const std::int64_t radius = std::max<std::int64_t>( 0, requested_radius );
+    const std::int64_t minimum_distance =
+        std::max<std::int64_t>( 0, options.min_distance );
+    if( radius > maximum_native_square_search_radius ||
+        minimum_distance > maximum_native_square_search_radius ) {
+        throw std::invalid_argument(
+            api_name +
+            " search_range/min_distance exceed the native square-search arithmetic range" );
+    }
+    if( minimum_distance <= radius ) {
+        const auto coordinate_fits = [radius]( const int coordinate ) {
+            const std::int64_t wide = coordinate;
+            return wide - radius >= std::numeric_limits<int>::min() &&
+                   wide + radius <= std::numeric_limits<int>::max();
+        };
+        if( !coordinate_fits( origin.x() ) || !coordinate_fits( origin.y() ) ) {
+            throw std::invalid_argument(
+                api_name +
+                " origin and native search range exceed the signed coordinate range" );
+        }
+    }
 }
 
 overmap_search_options read_search_options(
@@ -1170,6 +1203,15 @@ sol::table overmap_closest(
     std::optional<tripoint_abs_omt> native_match;
     overmap_search_scan scan;
     if( native_compatible ) {
+        const int native_search_range = options.radius + 1;
+        checked_axis_offset( native_origin.x(), -native_search_range,
+                             std::string( api_name ) );
+        checked_axis_offset( native_origin.x(), native_search_range,
+                             std::string( api_name ) );
+        checked_axis_offset( native_origin.y(), -native_search_range,
+                             std::string( api_name ) );
+        checked_axis_offset( native_origin.y(), native_search_range,
+                             std::string( api_name ) );
         omt_find_params params;
         params.types.reserve( options.types.size() );
         for( const terrain_selector &selector : options.types ) {
@@ -1245,6 +1287,8 @@ script_tripoint_coord overmap_find_target(
     }
     const tripoint_abs_omt search_origin = target;
     if( !selector.terrain.empty() ) {
+        validate_native_target_search_range(
+            options, search_origin, std::string( api_name ) );
         omt_find_params params;
         params.types.emplace_back( selector.terrain, selector.match );
         params.search_range = options.search_range;
@@ -1269,7 +1313,18 @@ script_tripoint_coord overmap_find_target(
     }
 
     if( options.offset ) {
-        target += *options.offset;
+        const tripoint_rel_omt &offset = *options.offset;
+        const std::int64_t x = static_cast<std::int64_t>( target.x() ) + offset.x();
+        const std::int64_t y = static_cast<std::int64_t>( target.y() ) + offset.y();
+        const std::int64_t z = static_cast<std::int64_t>( target.z() ) + offset.z();
+        if( x < std::numeric_limits<int>::min() || x > std::numeric_limits<int>::max() ||
+            y < std::numeric_limits<int>::min() || y > std::numeric_limits<int>::max() ||
+            z < std::numeric_limits<int>::min() || z > std::numeric_limits<int>::max() ) {
+            throw std::overflow_error(
+                std::string( api_name ) + " offset exceeds the signed coordinate range" );
+        }
+        target = tripoint_abs_omt( static_cast<int>( x ), static_cast<int>( y ),
+                                   static_cast<int>( z ) );
     }
     return script_tripoint_coord::from_native(
                coords::origin::abs,
@@ -1354,6 +1409,15 @@ sol::table overmap_random(
     std::vector<tripoint_abs_omt> native_matches;
     overmap_search_scan scan;
     if( native_compatible ) {
+        const int native_search_range = options.radius + 1;
+        checked_axis_offset( native_origin.x(), -native_search_range,
+                             std::string( api_name ) );
+        checked_axis_offset( native_origin.x(), native_search_range,
+                             std::string( api_name ) );
+        checked_axis_offset( native_origin.y(), -native_search_range,
+                             std::string( api_name ) );
+        checked_axis_offset( native_origin.y(), native_search_range,
+                             std::string( api_name ) );
         omt_find_params params;
         params.types.reserve( options.types.size() );
         for( const terrain_selector &selector : options.types ) {
@@ -1501,6 +1565,10 @@ bool overmap_matches_location_near(
                                        position, std::string( api_name ) );
     const std::string location_id = require_selector_text(
                                        requested, std::string( api_name ) );
+    checked_axis_offset( origin.x(), -radius, std::string( api_name ) );
+    checked_axis_offset( origin.x(), radius, std::string( api_name ) );
+    checked_axis_offset( origin.y(), -radius, std::string( api_name ) );
+    checked_axis_offset( origin.y(), radius, std::string( api_name ) );
     for( const tripoint_abs_omt &curr_pos : points_in_radius( origin, radius ) ) {
         const oter_id &terrain = overmap_buffer.ter( curr_pos );
         const std::optional<mapgen_arguments> *arguments =

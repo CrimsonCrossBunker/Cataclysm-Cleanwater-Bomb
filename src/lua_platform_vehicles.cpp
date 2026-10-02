@@ -15,6 +15,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <map>
 #include <memory>
 #include <optional>
@@ -352,6 +353,20 @@ tripoint_bub_ms require_loaded_position(
             " requires an absolute map-square Tripoint" );
     }
     const tripoint_abs_ms absolute( position.to_native() );
+    const tripoint_abs_ms map_origin =
+        here.get_abs( tripoint_bub_ms( 0, 0, 0 ) );
+    const std::int64_t local_x = static_cast<std::int64_t>( absolute.x() ) -
+                                 map_origin.x();
+    const std::int64_t local_y = static_cast<std::int64_t>( absolute.y() ) -
+                                 map_origin.y();
+    if( local_x < std::numeric_limits<int>::min() ||
+        local_x > std::numeric_limits<int>::max() ||
+        local_y < std::numeric_limits<int>::min() ||
+        local_y > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " position is outside the active map's native coordinate range" );
+    }
     if( !here.inbounds( absolute ) ) {
         throw std::invalid_argument(
             std::string( api_name ) +

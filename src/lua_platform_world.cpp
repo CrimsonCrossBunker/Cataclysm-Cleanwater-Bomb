@@ -342,6 +342,54 @@ struct location_search_options {
     bool passable_only = false;
 };
 
+int checked_scale_up_axis( int coordinate, int factor, int maximum_offset,
+                           std::string_view api_name );
+
+int checked_world_translation_axis( const int coordinate, const int map_origin,
+                                    const bool to_absolute,
+                                    const std::string_view api_name )
+{
+    const std::int64_t translated = static_cast<std::int64_t>( coordinate ) +
+                                    ( to_absolute ? map_origin :
+                                      -static_cast<std::int64_t>( map_origin ) );
+    if( translated < std::numeric_limits<int>::min() ||
+        translated > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " coordinate cannot be represented in the native map-square range" );
+    }
+    return static_cast<int>( translated );
+}
+
+std::optional<tripoint_bub_ms> map_bubble_position_if_representable(
+    const map &here, const tripoint_abs_ms &absolute )
+{
+    const tripoint_abs_ms origin =
+        here.get_abs( tripoint_bub_ms( 0, 0, 0 ) );
+    const std::int64_t x = static_cast<std::int64_t>( absolute.x() ) - origin.x();
+    const std::int64_t y = static_cast<std::int64_t>( absolute.y() ) - origin.y();
+    if( x < std::numeric_limits<int>::min() ||
+        x > std::numeric_limits<int>::max() ||
+        y < std::numeric_limits<int>::min() ||
+        y > std::numeric_limits<int>::max() ) {
+        return std::nullopt;
+    }
+    return tripoint_bub_ms( static_cast<int>( x ), static_cast<int>( y ), absolute.z() );
+}
+
+int checked_world_radius_axis( const int coordinate, const int offset,
+                               const std::string_view api_name )
+{
+    const std::int64_t adjusted = static_cast<std::int64_t>( coordinate ) + offset;
+    if( adjusted < std::numeric_limits<int>::min() ||
+        adjusted > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " radius exceeds the native map-square coordinate range" );
+    }
+    return static_cast<int>( adjusted );
+}
+
 script_tripoint_coord world_to_absolute(
     const script_tripoint_coord &position )
 {
@@ -351,19 +399,32 @@ script_tripoint_coord world_to_absolute(
             "services.world.to_absolute requires a reality-bubble Tripoint" );
     }
 
+    constexpr std::string_view api_name = "services.world.to_absolute";
     map &here = get_map();
+    const tripoint_abs_ms map_origin = here.get_abs( tripoint_bub_ms( 0, 0, 0 ) );
     if( position.native_scale() == coords::scale::map_square ) {
+        const tripoint_bub_ms local( position.to_native() );
+        checked_world_translation_axis( local.x(), map_origin.x(), true, api_name );
+        checked_world_translation_axis( local.y(), map_origin.y(), true, api_name );
         const tripoint_abs_ms absolute = here.get_abs(
-                                             tripoint_bub_ms(
-                                                     position.to_native() ) );
+                                             local );
         return script_tripoint_coord::from_native(
                    coords::origin::abs, coords::scale::map_square,
                    absolute.raw() );
     }
     if( position.native_scale() == coords::scale::submap ) {
+        const tripoint local_submap( position.to_native() );
+        const int factor = coords::map_squares_per( coords::scale::submap ) /
+                           coords::map_squares_per( coords::scale::map_square );
+        const int local_x = checked_scale_up_axis(
+                                local_submap.x, factor, 0, api_name );
+        const int local_y = checked_scale_up_axis(
+                                local_submap.y, factor, 0, api_name );
+        checked_world_translation_axis( local_x, map_origin.x(), true, api_name );
+        checked_world_translation_axis( local_y, map_origin.y(), true, api_name );
         const tripoint_bub_ms local_ms =
             coords::project_to<coords::ms>(
-                tripoint_bub_sm( position.to_native() ) );
+                tripoint_bub_sm( local_submap ) );
         const tripoint_abs_sm absolute =
             coords::project_to<coords::sm>(
                 here.get_abs( local_ms ) );
@@ -383,19 +444,32 @@ script_tripoint_coord world_to_bubble(
             "services.world.to_bubble requires an absolute Tripoint" );
     }
 
+    constexpr std::string_view api_name = "services.world.to_bubble";
     map &here = get_map();
+    const tripoint_abs_ms map_origin = here.get_abs( tripoint_bub_ms( 0, 0, 0 ) );
     if( position.native_scale() == coords::scale::map_square ) {
+        const tripoint_abs_ms absolute( position.to_native() );
+        checked_world_translation_axis( absolute.x(), map_origin.x(), false, api_name );
+        checked_world_translation_axis( absolute.y(), map_origin.y(), false, api_name );
         const tripoint_bub_ms local = here.get_bub(
-                                          tripoint_abs_ms(
-                                              position.to_native() ) );
+                                          absolute );
         return script_tripoint_coord::from_native(
                    coords::origin::reality_bubble,
                    coords::scale::map_square, local.raw() );
     }
     if( position.native_scale() == coords::scale::submap ) {
+        const tripoint_abs_sm absolute_submap( position.to_native() );
+        const int factor = coords::map_squares_per( coords::scale::submap ) /
+                           coords::map_squares_per( coords::scale::map_square );
+        const int absolute_x = checked_scale_up_axis(
+                                   absolute_submap.x(), factor, 0, api_name );
+        const int absolute_y = checked_scale_up_axis(
+                                   absolute_submap.y(), factor, 0, api_name );
+        checked_world_translation_axis( absolute_x, map_origin.x(), false, api_name );
+        checked_world_translation_axis( absolute_y, map_origin.y(), false, api_name );
         const tripoint_abs_ms absolute_ms =
             coords::project_to<coords::ms>(
-                tripoint_abs_sm( position.to_native() ) );
+                absolute_submap );
         const tripoint_bub_sm local =
             coords::project_to<coords::sm>(
                 here.get_bub( absolute_ms ) );
@@ -425,11 +499,13 @@ tripoint_bub_ms require_loaded_position(
 {
     const tripoint_abs_ms absolute =
         require_absolute_ms( position, api_name );
-    if( !here.inbounds( absolute ) ) {
+    const std::optional<tripoint_bub_ms> local =
+        map_bubble_position_if_representable( here, absolute );
+    if( !local || !here.inbounds( *local ) ) {
         throw std::invalid_argument(
             api_name + " position is outside the active map" );
     }
-    return here.get_bub( absolute );
+    return *local;
 }
 
 bool world_has_line_of_sight(
@@ -1573,11 +1649,23 @@ sol::table find_world_location(
     map &active_map = get_map();
     map *selected_map = &active_map;
     std::unique_ptr<map> distant_map;
-    const bool distant = !active_map.inbounds( origin );
+    const std::optional<tripoint_bub_ms> active_local_origin =
+        map_bubble_position_if_representable( active_map, origin );
+    const bool distant = !active_local_origin ||
+                         !active_map.inbounds( *active_local_origin );
     if( distant ) {
+        const tripoint_abs_sm detached_origin =
+            project_to<coords::sm>( origin );
+        const int factor = coords::map_squares_per( coords::scale::submap ) /
+                           coords::map_squares_per( coords::scale::map_square );
         distant_map = std::make_unique<map>();
-        distant_map->load(
-            project_to<coords::sm>( origin ), false );
+        const int detached_map_max_offset =
+            distant_map->get_my_MAPSIZE() * coords::map_squares_per( coords::scale::submap ) - 1;
+        checked_scale_up_axis(
+            detached_origin.x(), factor, detached_map_max_offset, api_name );
+        checked_scale_up_axis(
+            detached_origin.y(), factor, detached_map_max_offset, api_name );
+        distant_map->load( detached_origin, false );
         selected_map = distant_map.get();
     }
     map &here = *selected_map;
@@ -1602,7 +1690,9 @@ sol::table find_world_location(
                            coords::origin::abs,
                            coords::scale::map_square,
                            origin.raw() );
-    if( !here.inbounds( origin ) ) {
+    const std::optional<tripoint_bub_ms> local_origin =
+        map_bubble_position_if_representable( here, origin );
+    if( !local_origin || !here.inbounds( *local_origin ) ) {
         result["reason"] = "origin_not_loaded";
         result["position"] = sol::nil;
         return result;
@@ -1619,7 +1709,7 @@ sol::table find_world_location(
                               project_to<coords::sm>( origin ),
                               submap_radius );
         }
-        const tripoint_bub_ms center = here.get_bub( origin );
+        const tripoint_bub_ms center = *local_origin;
         bool matched = false;
         for( const tripoint_bub_ms &position :
              here.points_in_radius(
@@ -2395,17 +2485,18 @@ sol::table place_world_spawn_items(
                                          position,
                                          "services.world item spawning" );
     map &here = get_map();
-    const bool loaded = here.inbounds( absolute );
+    const std::optional<tripoint_bub_ms> local_position =
+        map_bubble_position_if_representable( here, absolute );
+    const bool loaded = local_position && here.inbounds( *local_position );
     sol::state_view state( lua );
     sol::table items = state.create_table(
                            static_cast<int>( generated.size() ), 0 );
     std::size_t added_count = 0;
     if( loaded ) {
-        const tripoint_bub_ms local = here.get_bub( absolute );
         for( item &created : generated ) {
             item_location added =
                 here.add_item_or_charges_ret_loc(
-                    local, std::move( created ), false );
+                    *local_position, std::move( created ), false );
             if( !added ) {
                 break;
             }
@@ -2423,8 +2514,18 @@ sol::table place_world_spawn_items(
         }
     } else {
         tinymap distant;
-        distant.load(
-            project_to<coords::omt>( absolute ), false );
+        const tripoint_abs_omt distant_origin =
+            project_to<coords::omt>( absolute );
+        const int factor = coords::map_squares_per( coords::scale::overmap_terrain );
+        const int distant_map_max_offset =
+            distant.get_my_MAPSIZE() * coords::map_squares_per( coords::scale::submap ) - 1;
+        checked_scale_up_axis(
+            distant_origin.x(), factor, distant_map_max_offset,
+            "services.world item spawning" );
+        checked_scale_up_axis(
+            distant_origin.y(), factor, distant_map_max_offset,
+            "services.world item spawning" );
+        distant.load( distant_origin, false );
         const tripoint_omt_ms local = distant.get_omt( absolute );
         for( item &created : generated ) {
             item &added = distant.add_item_or_charges(
@@ -2679,6 +2780,18 @@ transform_radius_options read_transform_radius_options(
     return result;
 }
 
+void require_transform_radius_native_footprint(
+    const tripoint_abs_ms &lower, const std::string_view api_name )
+{
+    const tripoint_abs_sm submap_origin = project_to<coords::sm>( lower );
+    const int map_square_factor = coords::map_squares_per( coords::scale::submap );
+    const int native_map_square_max_offset = MAPSIZE * map_square_factor - 1;
+    checked_scale_up_axis(
+        submap_origin.x(), map_square_factor, native_map_square_max_offset, api_name );
+    checked_scale_up_axis(
+        submap_origin.y(), map_square_factor, native_map_square_max_offset, api_name );
+}
+
 sol::table transform_world_radius(
     sol::this_state lua, const script_tripoint_coord &position,
     const int radius, const script_game_id &requested_transform,
@@ -2699,14 +2812,23 @@ sol::table transform_world_radius(
                                        std::string( api_name ) );
     const transform_radius_options options =
         read_transform_radius_options( requested_options );
+    const tripoint_abs_ms lower = tripoint_abs_ms(
+                                      checked_world_radius_axis( center.x(), -radius, api_name ),
+                                      checked_world_radius_axis( center.y(), -radius, api_name ),
+                                      center.z() );
+    const tripoint_abs_ms upper = tripoint_abs_ms(
+                                      checked_world_radius_axis( center.x(), radius, api_name ),
+                                      checked_world_radius_axis( center.y(), radius, api_name ),
+                                      center.z() );
     sol::state_view state( lua );
     sol::table value = state.create_table();
     value["position"] = position;
     value["radius"] = radius;
     value["transform"] = requested_transform;
     if( options.delay > 0_turns ) {
-        const time_point when =
-            calendar::turn + options.delay + 1_seconds;
+        require_transform_radius_native_footprint( lower, api_name );
+        const time_point when = timed_event_due_time(
+                                    options.delay, 1_seconds );
         get_timed_events().add(
             timed_event_type::TRANSFORM_RADIUS,
             when, -1, center, radius,
@@ -2718,15 +2840,18 @@ sol::table transform_world_radius(
         map &bubble = reality_bubble();
         std::unique_ptr<map> distant;
         map *target = &bubble;
-        const tripoint_abs_ms lower =
-            center - point( radius, radius );
-        const tripoint_abs_ms upper =
-            center + point( radius, radius );
-        if( !bubble.inbounds( lower ) ||
-            !bubble.inbounds( upper ) ) {
+        const std::optional<tripoint_bub_ms> local_lower =
+            map_bubble_position_if_representable( bubble, lower );
+        const std::optional<tripoint_bub_ms> local_upper =
+            map_bubble_position_if_representable( bubble, upper );
+        if( !local_lower || !local_upper ||
+            !bubble.inbounds( *local_lower ) ||
+            !bubble.inbounds( *local_upper ) ) {
+            const tripoint_abs_sm detached_origin =
+                project_to<coords::sm>( lower );
+            require_transform_radius_native_footprint( lower, api_name );
             distant = std::make_unique<map>();
-            distant->load(
-                project_to<coords::sm>( lower ), false );
+            distant->load( detached_origin, false );
             target = distant.get();
         }
         target->transform_radius(
@@ -2738,6 +2863,29 @@ sol::table transform_world_radius(
     return make_game_value_result(
                state, sol::make_object(
                    state, std::move( value ) ) );
+}
+
+void require_world_linked_item_offsets_fit(
+    visitable &items, const tripoint_rel_ms &offset,
+    const std::string_view api_name )
+{
+    items.visit_items( [&]( item * value, item * ) {
+        if( value->has_link_data() && !value->has_no_links() &&
+            value->link().t_abs_pos != tripoint_abs_ms::invalid ) {
+            const tripoint_abs_ms &target = value->link().t_abs_pos;
+            const std::int64_t x = static_cast<std::int64_t>( target.x() ) + offset.x();
+            const std::int64_t y = static_cast<std::int64_t>( target.y() ) + offset.y();
+            const std::int64_t z = static_cast<std::int64_t>( target.z() ) + offset.z();
+            if( x < std::numeric_limits<int>::min() || x > std::numeric_limits<int>::max() ||
+                y < std::numeric_limits<int>::min() || y > std::numeric_limits<int>::max() ||
+                z < std::numeric_limits<int>::min() || z > std::numeric_limits<int>::max() ) {
+                throw std::invalid_argument(
+                    std::string( api_name ) +
+                    " linked item target exceeds the native map-square coordinate range" );
+            }
+        }
+        return VisitResponse::NEXT;
+    } );
 }
 
 void translate_world_linked_items(
@@ -2767,10 +2915,88 @@ void translate_submap_linked_items(
     }
 }
 
-void ensure_omt_submaps( const tripoint_abs_omt &position )
+void require_submap_linked_item_offsets_fit(
+    submap &value, const tripoint_rel_ms &offset,
+    const std::string_view api_name )
 {
-    const tripoint_abs_sm base =
-        project_to<coords::sm>( position );
+    for( int x = 0; x < SEEX; ++x ) {
+        for( int y = 0; y < SEEY; ++y ) {
+            for( item &entry : value.get_items( point_sm_ms( x, y ) ) ) {
+                require_world_linked_item_offsets_fit( entry, offset, api_name );
+            }
+        }
+    }
+}
+
+int checked_scale_up_axis(
+    const int coordinate, const int factor, const int maximum_offset,
+    const std::string_view api_name )
+{
+    const std::int64_t scaled =
+        static_cast<std::int64_t>( coordinate ) * factor;
+    if( scaled < std::numeric_limits<int>::min() ||
+        scaled + maximum_offset > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " position cannot be represented at the native map scale" );
+    }
+    return static_cast<int>( scaled );
+}
+
+tripoint_abs_sm checked_omt_to_sm_base(
+    const tripoint_abs_omt &position, const std::string_view api_name )
+{
+    const int factor = coords::map_squares_per( coords::scale::overmap_terrain ) /
+                       coords::map_squares_per( coords::scale::submap );
+    return tripoint_abs_sm(
+               checked_scale_up_axis( position.x(), factor, 1, api_name ),
+               checked_scale_up_axis( position.y(), factor, 1, api_name ),
+               position.z() );
+}
+
+tripoint_abs_ms checked_omt_to_ms(
+    const tripoint_abs_omt &position, const std::string_view api_name )
+{
+    const int factor = coords::map_squares_per( coords::scale::overmap_terrain );
+    const int maximum_offset = factor - 1;
+    return tripoint_abs_ms(
+               checked_scale_up_axis( position.x(), factor, maximum_offset, api_name ),
+               checked_scale_up_axis( position.y(), factor, maximum_offset, api_name ),
+               position.z() );
+}
+
+tripoint_abs_ms checked_sm_to_ms(
+    const tripoint_abs_sm &position, const std::string_view api_name )
+{
+    const int factor = coords::map_squares_per( coords::scale::submap );
+    const int maximum_offset = factor - 1;
+    return tripoint_abs_ms(
+               checked_scale_up_axis( position.x(), factor, maximum_offset, api_name ),
+               checked_scale_up_axis( position.y(), factor, maximum_offset, api_name ),
+               position.z() );
+}
+
+tripoint_rel_ms checked_world_location_offset(
+    const tripoint_abs_ms &destination, const tripoint_abs_ms &source,
+    const std::string_view api_name )
+{
+    const std::int64_t x = static_cast<std::int64_t>( destination.x() ) - source.x();
+    const std::int64_t y = static_cast<std::int64_t>( destination.y() ) - source.y();
+    const std::int64_t z = static_cast<std::int64_t>( destination.z() ) - source.z();
+    if( x < std::numeric_limits<int>::min() || x > std::numeric_limits<int>::max() ||
+        y < std::numeric_limits<int>::min() || y > std::numeric_limits<int>::max() ||
+        z < std::numeric_limits<int>::min() || z > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " source and destination exceed the native coordinate delta range" );
+    }
+    return tripoint_rel_ms( static_cast<int>( x ), static_cast<int>( y ),
+                            static_cast<int>( z ) );
+}
+
+void ensure_omt_submaps( const tripoint_abs_omt &position,
+                         const tripoint_abs_sm &base )
+{
     if( !MAPBUFFER.submap_exists( base ) ) {
         tinymap generated;
         generated.load( position, true );
@@ -2780,6 +3006,12 @@ void ensure_omt_submaps( const tripoint_abs_omt &position )
 struct world_location_event_key {
     std::string fixed;
     sol::protected_function provider;
+};
+
+struct pending_world_location_snapshot {
+    tripoint_abs_ms position;
+    submap snapshot;
+    std::string key;
 };
 
 world_location_event_key read_world_location_event_key(
@@ -2832,10 +3064,20 @@ sol::table schedule_world_location_revert(
     // Native fixes due time before generation and evaluates one key per submap.
     // Own each snapshot before calling a Lua provider; never retain providers.
     const time_point when = timed_event_due_time( delay, 1_seconds );
-    ensure_omt_submaps( omt );
-    const tripoint_abs_sm base = project_to<coords::sm>( omt );
+    const tripoint_abs_sm base = checked_omt_to_sm_base( omt, api_name );
+    std::array<tripoint_abs_ms, 4> event_positions;
+    std::size_t event_index = 0;
+    for( int x = 0; x < 2; ++x ) {
+        for( int y = 0; y < 2; ++y ) {
+            event_positions[event_index++] = checked_sm_to_ms(
+                    base + point( x, y ), api_name );
+        }
+    }
+    ensure_omt_submaps( omt, base );
     sol::state_view state( lua );
     sol::table keys = state.create_table();
+    std::vector<pending_world_location_snapshot> pending;
+    pending.reserve( 4 );
     for( int x = 0; x < 2; ++x ) {
         for( int y = 0; y < 2; ++y ) {
             const tripoint_abs_sm source_position = base + point( x, y );
@@ -2845,11 +3087,18 @@ sol::table schedule_world_location_revert(
             }
             submap snapshot = source->get_revert_submap();
             const std::string key = evaluate_world_location_event_key( event_key, api_name );
-            get_timed_events().add( timed_event_type::REVERT_SUBMAP, when, -1,
-                                    project_to<coords::ms>( source_position ),
-                                    0, "", std::move( snapshot ), key );
-            keys[x * 2 + y + 1] = key;
+            pending.push_back( {
+                event_positions[pending.size()],
+                std::move( snapshot ), key
+            } );
         }
+    }
+    for( std::size_t index = 0; index < pending.size(); ++index ) {
+        pending_world_location_snapshot &event = pending[index];
+        get_timed_events().add( timed_event_type::REVERT_SUBMAP, when, -1,
+                                event.position, 0, "",
+                                std::move( event.snapshot ), event.key );
+        keys[index + 1] = event.key;
     }
     reality_bubble().invalidate_map_cache( omt.z() );
     sol::table value = state.create_table();
@@ -2884,16 +3133,27 @@ sol::table schedule_world_location_copy(
     const time_duration delay = requested_delay.to_native();
     world_location_event_key event_key = read_world_location_event_key( requested_key, api_name );
     const time_point when = timed_event_due_time( delay, 1_seconds );
+    const tripoint_abs_sm source_base = checked_omt_to_sm_base( source, api_name );
+    const tripoint_abs_sm destination_base = checked_omt_to_sm_base( destination, api_name );
+    const tripoint_abs_ms source_ms = checked_omt_to_ms( source, api_name );
+    const tripoint_abs_ms destination_ms = checked_omt_to_ms( destination, api_name );
+    const tripoint_rel_ms offset = checked_world_location_offset(
+                                       destination_ms, source_ms, api_name );
+    std::array<tripoint_abs_ms, 4> event_positions;
+    std::size_t event_index = 0;
+    for( int x = 0; x < 2; ++x ) {
+        for( int y = 0; y < 2; ++y ) {
+            event_positions[event_index++] = checked_sm_to_ms(
+                    destination_base + point( x, y ), api_name );
+        }
+    }
     // Match native f_copy_location's ordering: prepare the destination first,
     // then read existing source submaps without generating a missing source.
-    ensure_omt_submaps( destination );
-    const tripoint_rel_ms offset =
-        project_to<coords::ms>( destination ) -
-        project_to<coords::ms>( source );
-    const tripoint_abs_sm source_base = project_to<coords::sm>( source );
-    const tripoint_abs_sm destination_base = project_to<coords::sm>( destination );
+    ensure_omt_submaps( destination, destination_base );
     sol::state_view state( lua );
     sol::table keys = state.create_table();
+    std::vector<pending_world_location_snapshot> pending;
+    pending.reserve( 4 );
     for( int x = 0; x < 2; ++x ) {
         for( int y = 0; y < 2; ++y ) {
             submap *source_submap = MAPBUFFER.lookup_submap( source_base + point( x, y ) );
@@ -2903,13 +3163,21 @@ sol::table schedule_world_location_copy(
                     "must already exist; source submaps are not generated" );
             }
             submap snapshot = source_submap->get_revert_submap();
+            require_submap_linked_item_offsets_fit( snapshot, offset, api_name );
             translate_submap_linked_items( snapshot, offset );
             const std::string key = evaluate_world_location_event_key( event_key, api_name );
-            get_timed_events().add( timed_event_type::REVERT_SUBMAP, when, -1,
-                                    project_to<coords::ms>( destination_base + point( x, y ) ),
-                                    0, "", std::move( snapshot ), key );
-            keys[x * 2 + y + 1] = key;
+            pending.push_back( {
+                event_positions[pending.size()],
+                std::move( snapshot ), key
+            } );
         }
+    }
+    for( std::size_t index = 0; index < pending.size(); ++index ) {
+        pending_world_location_snapshot &event = pending[index];
+        get_timed_events().add( timed_event_type::REVERT_SUBMAP, when, -1,
+                                event.position, 0, "",
+                                std::move( event.snapshot ), event.key );
+        keys[index + 1] = event.key;
     }
     get_avatar().translocators.copy_translocator(
         source, destination );
@@ -3041,22 +3309,23 @@ std::optional<resolved_map_tile> resolve_map_tile_token(
         return std::nullopt;
     }
 
-    const tripoint_bub_ms local = here.get_bub( absolute );
-    if( !here.inbounds( local ) ) {
+    const std::optional<tripoint_bub_ms> local =
+        map_bubble_position_if_representable( here, absolute );
+    if( !local || !here.inbounds( *local ) ) {
         error = game_handle_error{
             "out_of_world",
             "The MapTileToken position is outside the active map bounds"
         };
         return std::nullopt;
     }
-    if( here.maptile_at( local ).wrapped_submap() == nullptr ) {
+    if( here.maptile_at( *local ).wrapped_submap() == nullptr ) {
         error = game_handle_error{
             "unloaded",
             "The MapTileToken position is not in a loaded map bubble"
         };
         return std::nullopt;
     }
-    return resolved_map_tile{ &here, local };
+    return resolved_map_tile{ &here, *local };
 }
 
 sol::table snapshot_map_vehicle_part(

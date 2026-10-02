@@ -10,6 +10,7 @@ extern "C" {
 #include <map_iterator.h>
 #include <map_selector.h>
 #include <memory_fast.h>
+#include <map_scale_constants.h>
 #include <monster_uid.h>
 #include <player_activity.h>
 #include <veh_type.h>
@@ -20,6 +21,7 @@ extern "C" {
 #include <cstdint>
 #include <exception>
 #include <filesystem>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <set>
@@ -129,18 +131,127 @@ tripoint_abs_ms require_absolute_ms(
     return tripoint_abs_ms( position.to_native() );
 }
 
+std::optional<tripoint_bub_ms> map_bubble_position_if_representable(
+    const map &here, const tripoint_abs_ms &absolute )
+{
+    const tripoint_abs_ms origin =
+        here.get_abs( tripoint_bub_ms( 0, 0, 0 ) );
+    const std::int64_t x = static_cast<std::int64_t>( absolute.x() ) - origin.x();
+    const std::int64_t y = static_cast<std::int64_t>( absolute.y() ) - origin.y();
+    if( x < std::numeric_limits<int>::min() ||
+        x > std::numeric_limits<int>::max() ||
+        y < std::numeric_limits<int>::min() ||
+        y > std::numeric_limits<int>::max() ) {
+        return std::nullopt;
+    }
+    return tripoint_bub_ms( static_cast<int>( x ), static_cast<int>( y ), absolute.z() );
+}
+
+tripoint_rel_ms checked_world_coordinate_offset(
+    const tripoint_abs_ms &destination, const tripoint_abs_ms &source,
+    const std::string_view api_name )
+{
+    const std::int64_t x = static_cast<std::int64_t>( destination.x() ) - source.x();
+    const std::int64_t y = static_cast<std::int64_t>( destination.y() ) - source.y();
+    const std::int64_t z = static_cast<std::int64_t>( destination.z() ) - source.z();
+    if( x < std::numeric_limits<int>::min() || x > std::numeric_limits<int>::max() ||
+        y < std::numeric_limits<int>::min() || y > std::numeric_limits<int>::max() ||
+        z < std::numeric_limits<int>::min() || z > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " source and destination exceed the native coordinate delta range" );
+    }
+    return tripoint_rel_ms( static_cast<int>( x ), static_cast<int>( y ),
+                            static_cast<int>( z ) );
+}
+
+void require_native_map_axis_range(
+    const std::int64_t map_square_origin, const int maximum_offset,
+    const std::string_view api_name )
+{
+    const std::int64_t map_square_end = map_square_origin + maximum_offset;
+    if( map_square_origin < std::numeric_limits<int>::min() ||
+        map_square_end > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " destination cannot be represented across the native map footprint" );
+    }
+}
+
+void require_native_omt_map_load_range(
+    const tripoint_abs_omt &destination, const int map_size_submaps,
+    const std::string_view api_name )
+{
+    const int omt_to_sm = coords::map_squares_per( coords::scale::overmap_terrain ) /
+                          coords::map_squares_per( coords::scale::submap );
+    const int sm_to_ms = coords::map_squares_per( coords::scale::submap );
+    const std::int64_t submap_max_offset = map_size_submaps - 1;
+    const auto require_axis = [=]( const int coordinate ) {
+        const std::int64_t submap_origin =
+            static_cast<std::int64_t>( coordinate ) * omt_to_sm;
+        if( submap_origin < std::numeric_limits<int>::min() ||
+            submap_origin + submap_max_offset > std::numeric_limits<int>::max() ) {
+            throw std::invalid_argument(
+                std::string( api_name ) +
+                " destination cannot be represented across the native submap footprint" );
+        }
+        const std::int64_t map_square_origin = submap_origin * sm_to_ms;
+        const std::int64_t map_square_max_offset =
+            static_cast<std::int64_t>( map_size_submaps ) * sm_to_ms - 1;
+        require_native_map_axis_range(
+            map_square_origin, static_cast<int>( map_square_max_offset ), api_name );
+    };
+    require_axis( destination.x() );
+    require_axis( destination.y() );
+}
+
+void require_avatar_overmap_load_range(
+    const tripoint_abs_ms &destination, const std::string_view api_name )
+{
+    const tripoint_abs_omt center = project_to<coords::omt>( destination );
+    const int omt_to_sm = coords::map_squares_per( coords::scale::overmap_terrain ) /
+                          coords::map_squares_per( coords::scale::submap );
+    const int sm_to_ms = coords::map_squares_per( coords::scale::submap );
+    const std::int64_t projected_x = static_cast<std::int64_t>( center.x() ) * omt_to_sm;
+    const std::int64_t projected_y = static_cast<std::int64_t>( center.y() ) * omt_to_sm;
+    if( projected_x < std::numeric_limits<int>::min() ||
+        projected_x > std::numeric_limits<int>::max() ||
+        projected_y < std::numeric_limits<int>::min() ||
+        projected_y > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " destination cannot be represented in native submap coordinates" );
+    }
+    const std::int64_t base_x = projected_x - HALF_MAPSIZE;
+    const std::int64_t base_y = projected_y - HALF_MAPSIZE;
+    if( base_x < std::numeric_limits<int>::min() ||
+        base_x + MAPSIZE - 1 > std::numeric_limits<int>::max() ||
+        base_y < std::numeric_limits<int>::min() ||
+        base_y + MAPSIZE - 1 > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " destination cannot be represented across the native submap footprint" );
+    }
+    require_native_map_axis_range(
+        base_x * sm_to_ms, MAPSIZE_X - 1, api_name );
+    require_native_map_axis_range(
+        base_y * sm_to_ms, MAPSIZE_Y - 1, api_name );
+}
+
 tripoint_bub_ms require_loaded_position(
     map &here, const script_tripoint_coord &position,
     const std::string_view api_name )
 {
     const tripoint_abs_ms absolute =
         require_absolute_ms( position, api_name );
-    if( !here.inbounds( absolute ) ) {
+    const std::optional<tripoint_bub_ms> local =
+        map_bubble_position_if_representable( here, absolute );
+    if( !local || !here.inbounds( *local ) ) {
         throw std::invalid_argument(
             std::string( api_name ) +
             " position is outside the active map" );
     }
-    return here.get_bub( absolute );
+    return *local;
 }
 
 std::string creature_scope( const Creature &creature )
@@ -1108,6 +1219,29 @@ void translate_relocated_linked_items(
     } );
 }
 
+void require_relocated_linked_item_targets_fit(
+    visitable &items, const tripoint_rel_ms &offset,
+    const std::string_view api_name )
+{
+    items.visit_items( [&]( item * entry, item * ) {
+        if( entry->has_link_data() && !entry->has_no_links() &&
+            entry->link().t_abs_pos != tripoint_abs_ms::invalid ) {
+            const tripoint_abs_ms &target = entry->link().t_abs_pos;
+            const std::int64_t x = static_cast<std::int64_t>( target.x() ) + offset.x();
+            const std::int64_t y = static_cast<std::int64_t>( target.y() ) + offset.y();
+            const std::int64_t z = static_cast<std::int64_t>( target.z() ) + offset.z();
+            if( x < std::numeric_limits<int>::min() || x > std::numeric_limits<int>::max() ||
+                y < std::numeric_limits<int>::min() || y > std::numeric_limits<int>::max() ||
+                z < std::numeric_limits<int>::min() || z > std::numeric_limits<int>::max() ) {
+                throw std::invalid_argument(
+                    std::string( api_name ) +
+                    " linked item target exceeds the native map-square coordinate range" );
+            }
+        }
+        return VisitResponse::NEXT;
+    } );
+}
+
 sol::table creature_relocation_snapshot(
     sol::state_view state, Creature &creature, const bool changed,
     const game_handle_runtime &runtime_generation,
@@ -1740,10 +1874,20 @@ sol::table teleport_avatar_to_position(
     }
 
     map &here = require_active_map( api_name );
+    const std::optional<tripoint_bub_ms> target_local =
+        map_bubble_position_if_representable( here, destination );
+    if( !target_local ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " destination exceeds the native map-square delta range" );
+    }
+    if( !here.inbounds( *target_local ) ) {
+        require_avatar_overmap_load_range( destination, api_name );
+    }
     const tripoint_abs_ms before = value->pos_abs();
     const bool was_in_vehicle = value->in_vehicle;
     const bool accepted = teleport::teleport_to_point(
-                              *value, here.get_bub( destination ), true,
+                              *value, *target_local, true,
                               false, false, options.force, options.force_safe );
     const tripoint_abs_ms after = value->pos_abs();
     if( accepted ) {
@@ -2207,9 +2351,16 @@ sol::table relocate_item(
     }
 
     const tripoint_abs_ms before = source->pos_abs();
+    const tripoint_rel_ms relocation_offset =
+        checked_world_coordinate_offset( destination, before, api_name );
+    const std::optional<tripoint_bub_ms> target_local =
+        map_bubble_position_if_representable( here, destination );
+    const bool target_is_loaded = target_local && here.inbounds( *target_local );
     item moved = **source;
+    require_relocated_linked_item_targets_fit(
+        moved, relocation_offset, api_name );
     translate_relocated_linked_items(
-        moved, destination - before );
+        moved, relocation_offset );
 
     sol::table value = state.create_table();
     const script_tripoint_coord before_value =
@@ -2220,9 +2371,9 @@ sol::table relocate_item(
     value["before"] = before_value;
     value["requested"] = requested_position;
 
-    if( here.inbounds( destination ) ) {
+    if( target_is_loaded ) {
         item &placed = here.add_item(
-                           here.get_bub( destination ),
+                           *target_local,
                            std::move( moved ) );
         if( placed.is_null() ) {
             value["accepted"] = false;
@@ -2251,8 +2402,10 @@ sol::table relocate_item(
     bool placed = false;
     {
         tinymap target_bay;
-        target_bay.load(
-            project_to<coords::omt>( destination ), false );
+        const tripoint_abs_omt target_omt = project_to<coords::omt>( destination );
+        require_native_omt_map_load_range(
+            target_omt, target_bay.get_my_MAPSIZE(), api_name );
+        target_bay.load( target_omt, false );
         swap_map swap( *target_bay.cast_to_map() );
         item &remote_item = target_bay.add_item(
                                 target_bay.get_omt( destination ),
