@@ -549,13 +549,13 @@ sol::table npc_mission_provider_state(
                              runtime_generation,
                              world_generation );
     const std::size_t selected_available_count = static_cast<std::size_t>(
-                std::count( provider.chatbin.missions.begin(),
-                            provider.chatbin.missions.end(),
-                            provider.chatbin.mission_selected ) );
+            std::count( provider.chatbin.missions.begin(),
+                        provider.chatbin.missions.end(),
+                        provider.chatbin.mission_selected ) );
     const std::size_t selected_assigned_count = static_cast<std::size_t>(
-                std::count( provider.chatbin.missions_assigned.begin(),
-                            provider.chatbin.missions_assigned.end(),
-                            provider.chatbin.mission_selected ) );
+            std::count( provider.chatbin.missions_assigned.begin(),
+                        provider.chatbin.missions_assigned.end(),
+                        provider.chatbin.mission_selected ) );
     if( !live_mission_pointer( provider.chatbin.mission_selected ) ) {
         result["selected"] = sol::nil;
         result["selected_stale"] =
@@ -2112,55 +2112,55 @@ void install_npc_domain_services(
         "assigned_for_owner",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state state, const game_handle & provider,
-            const game_handle & owner ) {
-            require_read();
-            return get_npc_mission_assigned_for_owner(
-                       state, provider, owner,
-                       current_runtime_generation(),
-                       current_world_generation() );
-        } );
+    const game_handle & owner ) {
+        require_read();
+        return get_npc_mission_assigned_for_owner(
+                   state, provider, owner,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
     missions.set_function(
         "available_count",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state state, const game_handle & provider ) {
-            require_read();
-            return get_npc_mission_available_count(
-                       state, provider,
-                       current_runtime_generation(),
-                       current_world_generation() );
-        } );
+    sol::this_state state, const game_handle & provider ) {
+        require_read();
+        return get_npc_mission_available_count(
+                   state, provider,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
     missions.set_function(
         "selected_condition",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state state, const game_handle & provider,
-            const game_handle & owner, const std::string & predicate ) {
-            require_read();
-            return get_npc_mission_selected_condition(
-                       state, provider, owner, predicate,
-                       current_runtime_generation(),
-                       current_world_generation() );
-        } );
+    const game_handle & owner, const std::string & predicate ) {
+        require_read();
+        return get_npc_mission_selected_condition(
+                   state, provider, owner, predicate,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
     missions.set_function(
         "selected_has_goal",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state state, const game_handle & provider,
-            const std::string & goal_name ) {
-            require_read();
-            return get_npc_mission_selected_has_goal(
-                       state, provider, goal_name,
-                       current_runtime_generation(),
-                       current_world_generation() );
-        } );
+    const std::string & goal_name ) {
+        require_read();
+        return get_npc_mission_selected_has_goal(
+                   state, provider, goal_name,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
     missions.set_function(
         "selected_has_generic_rewards",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state state, const game_handle & provider ) {
-            require_read();
-            return get_npc_mission_selected_has_generic_rewards(
-                       state, provider,
-                       current_runtime_generation(),
-                       current_world_generation() );
-        } );
+    sol::this_state state, const game_handle & provider ) {
+        require_read();
+        return get_npc_mission_selected_has_generic_rewards(
+                   state, provider,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
     missions.set_function(
         "select",
         [current_runtime_generation, current_world_generation, require_write](
@@ -2255,8 +2255,8 @@ void install_npc_domain_services(
     missions.set_function(
         "open_selected_reward_trade",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state state, const game_handle &provider,
-    const game_handle &owner ) {
+            sol::this_state state, const game_handle & provider,
+    const game_handle & owner ) {
         require_write();
         return open_selected_npc_mission_reward_trade(
                    state, provider, owner,
@@ -2291,7 +2291,7 @@ void install_npc_domain_services(
     npcs.set_function(
         "drop_weapon",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state state, const game_handle &handle ) {
+    sol::this_state state, const game_handle & handle ) {
         require_write();
         return drop_npc_weapon(
                    state, handle,
@@ -2301,7 +2301,7 @@ void install_npc_domain_services(
     npcs.set_function(
         "drop_stolen_items",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state state, const game_handle &handle ) {
+    sol::this_state state, const game_handle & handle ) {
         require_write();
         return drop_stolen_npc_items(
                    state, handle,

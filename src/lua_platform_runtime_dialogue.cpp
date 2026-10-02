@@ -40,12 +40,12 @@
 #include "uilist.h"
 
 #if defined(TILES)
-#include "cata_imgui.h"
-#include "cata_tiles.h"
-#include "imgui/imgui.h"
-#include "input_context.h"
-#include "sdltiles.h"
-#include "ui_manager.h"
+    #include "cata_imgui.h"
+    #include "cata_tiles.h"
+    #include "imgui/imgui.h"
+    #include "input_context.h"
+    #include "sdltiles.h"
+    #include "ui_manager.h"
 #endif
 
 namespace cata::lua_platform
@@ -123,7 +123,7 @@ void platform_canvas_context::close()
 }
 
 void platform_canvas_context::operation( const float x, const float y,
-                                       const float w, const float h )
+        const float w, const float h )
 {
     require_active();
     if( !std::isfinite( x ) || !std::isfinite( y ) || !std::isfinite( w ) ||
@@ -140,7 +140,9 @@ namespace
 {
 void require_canvas_color( const float r, const float g, const float b, const float a )
 {
-    for( const float value : { r, g, b, a } ) {
+    for( const float value : {
+             r, g, b, a
+         } ) {
         if( !std::isfinite( value ) || value < 0 || value > 1 ) {
             throw std::invalid_argument( "canvas color components must be within 0..1" );
         }
@@ -156,7 +158,7 @@ void require_canvas_string( const std::string &value, const std::size_t maximum 
 } // namespace
 
 void platform_canvas_context::rect( const float x, const float y, const float w,
-                                   const float h, const float r, const float g, const float b, const float a )
+                                    const float h, const float r, const float g, const float b, const float a )
 {
     operation( x, y, w, h );
     require_canvas_color( r, g, b, a );
@@ -169,7 +171,7 @@ void platform_canvas_context::rect( const float x, const float y, const float w,
 }
 
 void platform_canvas_context::text( const float x, const float y, const std::string &value,
-                                   const float r, const float g, const float b, const float a )
+                                    const float r, const float g, const float b, const float a )
 {
     operation( x, y, 0, 0 );
     require_canvas_string( value, 4096 );
@@ -182,7 +184,7 @@ void platform_canvas_context::text( const float x, const float y, const std::str
 }
 
 bool platform_canvas_context::sprite( const std::string &id, const float x, const float y,
-                                     const float w, const float h )
+                                      const float w, const float h )
 {
     operation( x, y, w, h );
     require_canvas_string( id, 256 );
@@ -206,12 +208,12 @@ bool platform_canvas_context::sprite( const std::string &id, const float x, cons
     }
     const SDL_Rect &source = sprite->get_source_rect();
     ImGui::GetWindowDrawList()->AddImage( reinterpret_cast<ImTextureID>( tex ),
-                                        ImVec2( origin_x_ + x * scale_, origin_y_ + y * scale_ ),
-                                        ImVec2( origin_x_ + ( x + w ) * scale_, origin_y_ + ( y + h ) * scale_ ),
-                                        ImVec2( static_cast<float>( source.x ) / atlas_width,
-                                                static_cast<float>( source.y ) / atlas_height ),
-                                        ImVec2( static_cast<float>( source.x + source.w ) / atlas_width,
-                                                static_cast<float>( source.y + source.h ) / atlas_height ) );
+                                          ImVec2( origin_x_ + x * scale_, origin_y_ + y * scale_ ),
+                                          ImVec2( origin_x_ + ( x + w ) * scale_, origin_y_ + ( y + h ) * scale_ ),
+                                          ImVec2( static_cast<float>( source.x ) / atlas_width,
+                                                  static_cast<float>( source.y ) / atlas_height ),
+                                          ImVec2( static_cast<float>( source.x + source.w ) / atlas_width,
+                                                  static_cast<float>( source.y + source.h ) / atlas_height ) );
     return true;
 #else
     return false;
@@ -219,8 +221,8 @@ bool platform_canvas_context::sprite( const std::string &id, const float x, cons
 }
 
 bool platform_canvas_context::button( const std::string &id, const std::string &label,
-                                     const float x, const float y, const float w, const float h,
-                                     const bool request_focus )
+                                      const float x, const float y, const float w, const float h,
+                                      const bool request_focus )
 {
     operation( x, y, w, h );
     require_canvas_string( id, 96 );
@@ -234,7 +236,7 @@ bool platform_canvas_context::button( const std::string &id, const std::string &
         ImGui::SetKeyboardFocusHere();
     }
     const bool clicked = ImGui::Button( ( label + "###" + id ).c_str(),
-                                       ImVec2( w * scale_, h * scale_ ) );
+                                        ImVec2( w * scale_, h * scale_ ) );
     return clicked && !cataimgui::interaction_suppressed();
 #else
     ( void )request_focus;
@@ -373,9 +375,9 @@ class platform_canvas_window : public cataimgui::window
         cataimgui::bounds get_bounds() override {
             const ImVec2 screen = ImGui::GetIO().DisplaySize;
             const float scale = std::min( { 1.0F,
-                                           std::max( 1.0F, screen.x - 48 ) / width_,
-                                           std::max( 1.0F, screen.y - 72 ) / height_ } );
-            return { -1.0F, -1.0F, width_ * scale + 32, height_ * scale + 56 };
+                                            std::max( 1.0F, screen.x - 48 ) / width_,
+                                            std::max( 1.0F, screen.y - 72 ) / height_ } );
+            return { -1.0F, -1.0F, width_ *scale + 32, height_ *scale + 56 };
         }
 
         void draw_controls() override {
@@ -390,7 +392,7 @@ class platform_canvas_window : public cataimgui::window
             const ImVec2 origin = ImGui::GetCursorScreenPos();
             const ImVec2 available = ImGui::GetContentRegionAvail();
             const float scale = std::min( { 1.0F, std::max( 1.0F, available.x ) / width_,
-                                           std::max( 1.0F, available.y ) / height_ } );
+                                            std::max( 1.0F, available.y ) / height_ } );
             const auto now = std::chrono::steady_clock::now();
             const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                                      now - started_ ).count();
@@ -402,7 +404,7 @@ class platform_canvas_window : public cataimgui::window
                                    origin.x, origin.y, scale );
             cataimgui::PushGuiFontScaled( scale );
             ImGui::PushClipRect( origin, ImVec2( origin.x + width_ * scale,
-                                               origin.y + height_ * scale ), true );
+                                                 origin.y + height_ * scale ), true );
             const on_out_of_scope cleanup( [&]() {
                 frame->invalidate();
                 ImGui::PopClipRect();
@@ -655,9 +657,9 @@ std::uint64_t register_platform_dialogue_topic( runtime &owner,
     replacement.speaker_effects = speaker_effects;
     replacement.repeat_responses = repeat_responses;
     replacement.replace_built_in_responses = descriptor.get_or(
-                "replace_built_in_responses", true );
+            "replace_built_in_responses", true );
     replacement.insert_before_standard_exits = descriptor.get_or(
-                "insert_before_standard_exits", false );
+            "insert_before_standard_exits", false );
     const auto existing = owner.declarative_dialogue_topics.find( id );
     if( existing != owner.declarative_dialogue_topics.end() ) {
         replacement.registration_id = existing->second.registration_id;
@@ -1015,8 +1017,8 @@ void detail::install_runtime_dialogue_presentation_api(
         }
         string_input_popup popup;
         popup.title( prompt ).text( initial ).description( description )
-        .width( static_cast<int>( width ) ).max_length( static_cast<int>( maximum ) )
-        .only_digits( only_digits );
+             .width( static_cast<int>( width ) ).max_length( static_cast<int>( maximum ) )
+             .only_digits( only_digits );
         popup.query();
         sol::state_view lua_state( state );
         if( popup.canceled() ) {
@@ -1273,7 +1275,7 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
         }
     };
     generated.response = cata::lua_platform::dialogue::response_from_table(
-                            descriptor, response_options );
+                             descriptor, response_options );
     generated.response.lua_response_id.reset();
 
     const sol::object condition = descriptor.raw_get<sol::object>( "condition" );
@@ -1299,7 +1301,7 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
                                          "show_reason", descriptor.get_or(
                                                  "failure_explanation", std::string() ) );
     generated.response.ignore_conditionals = generated.condition_exists &&
-            !generated.condition_result && show_anyway;
+        !generated.condition_result && show_anyway;
     if( generated.condition_exists && !generated.condition_result && !show_anyway ) {
         const std::string failure_topic = descriptor.get_or(
                                               "failure_topic", std::string() );
@@ -1355,47 +1357,47 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
             generated.response.deferred_text_condition =
                 [weak_text_condition_owner, condition_topic_id,
                  text_condition_session,
-                 text_condition]( ::dialogue &current_dialogue ) {
-                    const std::shared_ptr<runtime> callback_owner =
-                        weak_text_condition_owner.lock();
-                    if( !callback_owner || !callback_owner->world_is_ready ||
-                        callback_owner->lua == nullptr ) {
-                        return false;
-                    }
-                    const std::vector<std::shared_ptr<runtime>> &active_runtimes =
-                        detail::active_runtime_values();
-                    if( std::find( active_runtimes.begin(), active_runtimes.end(),
-                                   callback_owner ) == active_runtimes.end() ) {
-                        return false;
-                    }
-                    const cata::lua_platform::game_handle_runtime runtime_identity =
-                        callback_owner->handle_runtime();
-                    const std::size_t world_generation =
-                        detail::runtime_world_generation_storage();
-                    if( !text_condition_session ||
-                        text_condition_session->validation_error(
-                            &current_dialogue, runtime_identity, world_generation ) ||
-                        !text_condition_session->active_for(
-                            condition_topic_id, runtime_identity, world_generation,
-                            &current_dialogue ) ) {
-                        return false;
-                    }
-                    try {
-                        return evaluate_platform_dialogue_boolean(
-                                   callback_owner, current_dialogue, condition_topic_id,
-                                   text_condition, "response text_condition" );
-                    } catch( const std::exception &exception ) {
-                        DebugLog( D_ERROR, D_MAIN ) << "Lua-first Mod '" << callback_owner->mod_id
-                                                    << "' dialogue text_condition '"
-                                                    << condition_topic_id << "': " << exception.what();
-                    } catch( ... ) {
-                        DebugLog( D_ERROR, D_MAIN ) << "Lua-first Mod '" << callback_owner->mod_id
-                                                    << "' dialogue text_condition '"
-                                                    << condition_topic_id
-                                                    << "' failed with an unknown exception";
-                    }
+            text_condition]( ::dialogue & current_dialogue ) {
+                const std::shared_ptr<runtime> callback_owner =
+                    weak_text_condition_owner.lock();
+                if( !callback_owner || !callback_owner->world_is_ready ||
+                    callback_owner->lua == nullptr ) {
                     return false;
-                };
+                }
+                const std::vector<std::shared_ptr<runtime>> &active_runtimes =
+                    detail::active_runtime_values();
+                if( std::find( active_runtimes.begin(), active_runtimes.end(),
+                               callback_owner ) == active_runtimes.end() ) {
+                    return false;
+                }
+                const cata::lua_platform::game_handle_runtime runtime_identity =
+                    callback_owner->handle_runtime();
+                const std::size_t world_generation =
+                    detail::runtime_world_generation_storage();
+                if( !text_condition_session ||
+                    text_condition_session->validation_error(
+                        &current_dialogue, runtime_identity, world_generation ) ||
+                    !text_condition_session->active_for(
+                        condition_topic_id, runtime_identity, world_generation,
+                        &current_dialogue ) ) {
+                    return false;
+                }
+                try {
+                    return evaluate_platform_dialogue_boolean(
+                               callback_owner, current_dialogue, condition_topic_id,
+                               text_condition, "response text_condition" );
+                } catch( const std::exception &exception ) {
+                    DebugLog( D_ERROR, D_MAIN ) << "Lua-first Mod '" << callback_owner->mod_id
+                                                << "' dialogue text_condition '"
+                                                << condition_topic_id << "': " << exception.what();
+                } catch( ... ) {
+                    DebugLog( D_ERROR, D_MAIN ) << "Lua-first Mod '" << callback_owner->mod_id
+                                                << "' dialogue text_condition '"
+                                                << condition_topic_id
+                                                << "' failed with an unknown exception";
+                }
+                return false;
+            };
         } else {
             throw std::invalid_argument(
                 "dialogue response text_condition must be a boolean or function" );
@@ -1442,7 +1444,7 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
         }
         generated.response.trial.difficulty = static_cast<int>( difficulty );
         generated.response.trial.skill_required = trial.get_or(
-                    "skill", trial.get_or( "skill_required", std::string() ) );
+                "skill", trial.get_or( "skill_required", std::string() ) );
         if( generated.response.trial.type == TALK_TRIAL_SKILL_CHECK &&
             ( generated.response.trial.skill_required.empty() ||
               !skill_id( generated.response.trial.skill_required ).is_valid() ) ) {
@@ -1557,16 +1559,16 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
     generated.response.failure.opinion = platform_dialogue_opinion(
             descriptor.raw_get<sol::object>( "failure_opinion" ), "failure_opinion" );
     generated.response.success.mission_opinion = platform_dialogue_opinion(
-                descriptor.raw_get<sol::object>( "success_mission_opinion" ),
-                "success_mission_opinion" );
+            descriptor.raw_get<sol::object>( "success_mission_opinion" ),
+            "success_mission_opinion" );
     generated.response.failure.mission_opinion = platform_dialogue_opinion(
-                descriptor.raw_get<sol::object>( "failure_mission_opinion" ),
-                "failure_mission_opinion" );
+            descriptor.raw_get<sol::object>( "failure_mission_opinion" ),
+            "failure_mission_opinion" );
 
     const dialogue_consequence success_consequence = platform_dialogue_consequence(
-                descriptor.get_or( "success_consequence", std::string() ) );
+            descriptor.get_or( "success_consequence", std::string() ) );
     const dialogue_consequence failure_consequence = platform_dialogue_consequence(
-                descriptor.get_or( "failure_consequence", std::string() ) );
+            descriptor.get_or( "failure_consequence", std::string() ) );
     if( success_consequence != dialogue_consequence::none ) {
         generated.response.success.set_effect_consequence(
         talk_effect_fun_t( []( ::dialogue & ) {} ), success_consequence );
@@ -1630,24 +1632,24 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
             cata::lua_platform::dialogue::register_response_action_callback(
                 cata::lua_platform::dialogue::response_callback_origin::platform,
                 [weak_owner, topic_id, session, callback = *action_callback](
-                    ::dialogue & active_dialogue, const bool trial_success ) mutable {
+        ::dialogue & active_dialogue, const bool trial_success ) mutable {
             invoke_platform_dialogue_action_callback(
-                weak_owner, topic_id, session, callback, active_dialogue,
-                trial_success );
+            weak_owner, topic_id, session, callback, active_dialogue,
+            trial_success );
         }, session, topic_id );
         // Both branches share a one-shot ID; native response selection applies only one.
         generated.response.success.set_effect(
             talk_effect_fun_t( talk_effect_fun_t::func(
-                [action_id]( ::dialogue &active_dialogue ) {
-                    cata::lua_platform::dialogue::apply_response_action_callback(
-                        active_dialogue, action_id, true );
-                } ) ) );
+        [action_id]( ::dialogue & active_dialogue ) {
+            cata::lua_platform::dialogue::apply_response_action_callback(
+                active_dialogue, action_id, true );
+        } ) ) );
         generated.response.failure.set_effect(
             talk_effect_fun_t( talk_effect_fun_t::func(
-                [action_id]( ::dialogue &active_dialogue ) {
-                    cata::lua_platform::dialogue::apply_response_action_callback(
-                        active_dialogue, action_id, false );
-                } ) ) );
+        [action_id]( ::dialogue & active_dialogue ) {
+            cata::lua_platform::dialogue::apply_response_action_callback(
+                active_dialogue, action_id, false );
+        } ) ) );
     }
     if( on_select || success_callback || failure_callback ) {
         const std::weak_ptr<runtime> weak_owner( owner );
@@ -2274,7 +2276,7 @@ talk_topic invoke_platform_dialogue_response_callback(
         }
         callback_scope scope( *owner );
         const sol::protected_function_result result = callback(
-                    context, trial_success, fallback.id );
+                context, trial_success, fallback.id );
         context->invalidate();
         if( !result.valid() ) {
             const sol::error error = result;

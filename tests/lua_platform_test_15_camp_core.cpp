@@ -111,10 +111,18 @@ TEST_CASE( "lua_platform_camp_api_requires_explicit_manager_and_handles",
     sol::state lua;
     sol::table services = lua.create_table();
     cata::lua_platform::install_game_handle_api(
-        lua, services, [runtime]() { return runtime; }, []() { return std::size_t( 15 ); },
-        []() {} );
+    lua, services, [runtime]() {
+        return runtime;
+    }, []() {
+        return std::size_t( 15 );
+    },
+    []() {} );
     cata::lua_platform::install_camp_api(
-        services, [runtime]() { return runtime; }, []() { return std::size_t( 15 ); },
+    services, [runtime]() {
+        return runtime;
+    }, []() {
+        return std::size_t( 15 );
+    },
     []() {}, []() {} );
     const sol::table camps = services["camps"];
     CHECK( camps["get"].valid() );
@@ -156,11 +164,19 @@ TEST_CASE( "lua_platform_player_owned_camp_query_matches_native_condition",
     sol::state lua;
     sol::table services = lua.create_table();
     cata::lua_platform::install_game_handle_api(
-        lua, services, [runtime]() { return runtime; }, []() { return std::size_t( 17 ); },
-        []() {} );
+    lua, services, [runtime]() {
+        return runtime;
+    }, []() {
+        return std::size_t( 17 );
+    },
+    []() {} );
     cata::lua_platform::install_camp_api(
-        services, [runtime]() { return runtime; }, []() { return std::size_t( 17 ); },
-        []() {}, []() {} );
+    services, [runtime]() {
+        return runtime;
+    }, []() {
+        return std::size_t( 17 );
+    },
+    []() {}, []() {} );
 
     const conditional_t native_condition( "u_has_camp" );
     const dialogue conversation( get_talker_for( player ), get_talker_for( player ) );
@@ -199,10 +215,18 @@ TEST_CASE( "lua_platform_camp_write_gate_precedes_camp_resolution",
     sol::state lua;
     sol::table services = lua.create_table();
     cata::lua_platform::install_game_handle_api(
-        lua, services, [runtime]() { return runtime; }, []() { return std::size_t( 16 ); },
-        []() {} );
+    lua, services, [runtime]() {
+        return runtime;
+    }, []() {
+        return std::size_t( 16 );
+    },
+    []() {} );
     cata::lua_platform::install_camp_api(
-        services, [runtime]() { return runtime; }, []() { return std::size_t( 16 ); },
+    services, [runtime]() {
+        return runtime;
+    }, []() {
+        return std::size_t( 16 );
+    },
     []() {}, [&]() {
         write_gate_called = true;
         owner->retire();
@@ -235,7 +259,7 @@ TEST_CASE( "lua_platform_camp_resource_keys_reject_ambiguous_duplicates",
     std::vector<basecamp_resource> normalized;
     std::string error;
     REQUIRE( basecamp::platform_normalize_resources(
-                 { first, equivalent }, normalized, error ) );
+    { first, equivalent }, normalized, error ) );
     REQUIRE( normalized.size() == 1 );
     CHECK( normalized.front().fake_id == resource_id );
     CHECK( normalized.front().available == 10 );
@@ -244,21 +268,21 @@ TEST_CASE( "lua_platform_camp_resource_keys_reject_ambiguous_duplicates",
     basecamp_resource conflicting = equivalent;
     conflicting.ammo_id = itype_id();
     CHECK_FALSE( basecamp::platform_normalize_resources(
-                     { first, conflicting }, normalized, error ) );
+    { first, conflicting }, normalized, error ) );
     CHECK( normalized.empty() );
     CHECK( error.find( "conflicting ammo" ) != std::string::npos );
 
     basecamp_resource overflowing = first;
     overflowing.available = std::numeric_limits<int>::max();
     CHECK_FALSE( basecamp::platform_normalize_resources(
-                     { overflowing, overflowing }, normalized, error ) );
+    { overflowing, overflowing }, normalized, error ) );
     CHECK( normalized.empty() );
     CHECK( error.find( "overflow" ) != std::string::npos );
 
     basecamp_resource negative = first;
     negative.available = -1;
     CHECK_FALSE( basecamp::platform_normalize_resources(
-                     { negative }, normalized, error ) );
+    { negative }, normalized, error ) );
     CHECK( normalized.empty() );
     CHECK( error.find( "negative" ) != std::string::npos );
 }
@@ -324,10 +348,18 @@ TEST_CASE( "lua_platform_camp_inventory_exposes_only_explicit_storage_holders",
     sol::state lua;
     sol::table services = lua.create_table();
     cata::lua_platform::install_game_handle_api(
-        lua, services, [runtime]() { return runtime; }, []() { return std::size_t( 17 ); },
-        []() {} );
+    lua, services, [runtime]() {
+        return runtime;
+    }, []() {
+        return std::size_t( 17 );
+    },
+    []() {} );
     cata::lua_platform::install_camp_api(
-        services, [runtime]() { return runtime; }, []() { return std::size_t( 17 ); },
+    services, [runtime]() {
+        return runtime;
+    }, []() {
+        return std::size_t( 17 );
+    },
     []() {}, []() {} );
     const sol::table camps = services["camps"];
     CHECK( camps["inventory"]["storage_tiles"].valid() );
@@ -350,10 +382,18 @@ TEST_CASE( "lua_platform_camp_food_mutations_enter_the_write_gate_first",
     sol::state lua;
     sol::table services = lua.create_table();
     cata::lua_platform::install_game_handle_api(
-        lua, services, [runtime]() { return runtime; }, []() { return std::size_t( 18 ); },
-        []() {} );
+    lua, services, [runtime]() {
+        return runtime;
+    }, []() {
+        return std::size_t( 18 );
+    },
+    []() {} );
     cata::lua_platform::install_camp_api(
-        services, [runtime]() { return runtime; }, []() { return std::size_t( 18 ); },
+    services, [runtime]() {
+        return runtime;
+    }, []() {
+        return std::size_t( 18 );
+    },
     []() {}, [&]() {
         write_gate_called = true;
         owner->retire();
@@ -361,7 +401,7 @@ TEST_CASE( "lua_platform_camp_food_mutations_enter_the_write_gate_first",
 
     const sol::protected_function add_food = services["camps"]["food"]["add"];
     const sol::protected_function_result result = add_food(
-        camp_handle, cata::lua_platform::game_handle{}, 1 );
+            camp_handle, cata::lua_platform::game_handle{}, 1 );
     REQUIRE( result.valid() );
     CHECK( write_gate_called );
     const sol::table envelope = result.get<sol::table>();
