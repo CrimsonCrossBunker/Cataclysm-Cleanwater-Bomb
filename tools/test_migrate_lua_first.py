@@ -1099,25 +1099,30 @@ assert(table.concat(calls, ',')==CALLS)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_one_in_native_range_and_owner_are_not_clamped(self) -> None:
+        math_actor_targets = {
+            "u": ("actor", "character"), "npc": ("partner", "character"),
+            "read_u": ("actor", "character"), "read_npc": ("partner", "character"),
+        }
         values = (2147483647.9, -2147483648.9,
                   {"npc_val": "chance"}, [-2147483648, 2147483647])
         for value in values:
             expression = migrate_lua_first.render_eoc_condition_expression(
                 {"one_in_chance": value}, avatar_actor_proven=True,
-                npc_actor_proven=True, npc_actor_expression="partner")
+                npc_actor_proven=True, npc_actor_expression="partner",
+                math_actor_targets=math_actor_targets)
             self.assertIsNotNone(expression)
-            expected = 2147483647 if isinstance(value, (dict, list)) else value
+            expected = 2147483647 if isinstance(value, (dict, list)) else math.trunc(value)
             script = r"""
 local actor,partner={},{}
 local context={data={}}
 local reads=0
 local function service_value(r) assert(r.ok);return r.value end
-local services={variables={resolve=function(data,owner,scope,key)
- assert(owner==partner and scope=='npc' and key=='chance')
- reads=reads+1;return {ok=true,value={value=2147483647}}
-end},random={int=function(lo,hi)
+local services={variables={get_number=function(owner,key,options)
+ assert(owner==partner and key=='chance' and (options==nil or options.strict~=true))
+ reads=reads+1;return {ok=true,value={exists=true,value=2147483647}}
+end},random={native_int=function(lo,hi)
  assert(lo==-2147483648 and hi==2147483647);return hi
-end,one_in=function(n) assert(n==EXPECTED);return true end}}
+end,one_in=function(n) assert((n < 0 and math.ceil(n) or math.floor(n))==EXPECTED);return true end}}
 assert(EXPRESSION)
 assert(reads==READS)
 """.replace("EXPECTED", str(expected)).replace("EXPRESSION", expression)
@@ -3185,13 +3190,18 @@ assert(EXPRESSION=='bio_power_storage' and calls==1)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_effect_durations_preserve_signed_and_long_values(self) -> None:
-        durations = [(-1.8, -1), ("-10 turns", -10), ("366 days", 31622400),
+        effect_actor_targets = {
+            "u": ("actor", "character"), "npc": ("partner", "character"),
+            "read_u": ("actor", "character"), "read_npc": ("partner", "character"),
+        }
+        durations = [(-10, -10), ("-10 turns", -10), ("366 days", 31622400),
+                     ("infinite", migrate_lua_first.NATIVE_JSON_INFINITE_DURATION_TURNS),
                      ({"npc_val": "duration"}, -1), ({"math": ["-1.8"]}, -1)]
         for value, expected in durations:
             with self.subTest(value=value):
                 lines = migrate_lua_first.render_static_false_effect(
                     {"u_add_effect": "bleed", "duration": value}, True, True, {},
-                    npc_actor_expression="partner")
+                    npc_actor_expression="partner", effect_actor_targets=effect_actor_targets)
                 self.assertIsNotNone(lines)
                 script = r"""
 local actor,partner={},{}
@@ -3200,12 +3210,10 @@ local called=false
 local function service_value(r) assert(r.ok);return r.value end
 local services={
  types={id=function(kind,id) return id end},
- variables={resolve=function(data,owner,scope,key)
-  assert(owner==partner and key=='duration');return {ok=true,value={value='-1.8'}}
+ variables={get_number=function(owner,key,options)
+  assert(owner==partner and key=='duration' and (options==nil or options.strict~=true))
+  return {ok=true,value={exists=true,value=-1.8}}
  end},
- gameplay={math={evaluate=function(expression,character)
-  assert(character==actor);return {ok=true,value=-1.8}
- end}},
  time={duration=function(value,unit) assert(value==EXPECTED and unit=='turn');return value end},
  effects={add=function(character,id,duration)
   assert(character==actor and id=='bleed' and duration==EXPECTED)
@@ -3220,6 +3228,10 @@ assert(called)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_effect_intensity_ranges_preserve_integer_endpoints_and_lazy_reads(self) -> None:
+        effect_actor_targets = {
+            "u": ("actor", "character"), "npc": ("partner", "character"),
+            "read_u": ("actor", "character"), "read_npc": ("partner", "character"),
+        }
         ranges = [([2.9, -1.9], -1, 2), ([-1.9, 2.9], -1, 2),
                   ([{"u_val": "lo"}, {"npc_val": "hi"}], -1, 2)]
         for prefix, target in (("u_", "actor"), ("npc_", "partner")):
@@ -3227,15 +3239,17 @@ assert(called)
                 with self.subTest(prefix=prefix, value=value):
                     expression = migrate_lua_first.render_effect_condition(
                         {prefix + "has_any_effect": ["absent", "bleed"],
-                         "bodypart": "torso", "intensity": value}, "actor", "partner")
+                         "bodypart": "torso", "intensity": value}, "actor", "partner",
+                        effect_actor_targets)
                     self.assertIsNotNone(expression)
                     added = migrate_lua_first.render_dynamic_character_effect(
                         {prefix + "add_effect": "bleed", "duration": 10, "intensity": value},
-                        prefix + "add_effect", target, avatar_expression="actor", npc_expression="partner")
+                        prefix + "add_effect", target, avatar_expression="actor", npc_expression="partner",
+                        effect_actor_targets=effect_actor_targets)
                     self.assertIsNotNone(added)
                     script = r"""
-local actor={lo='2.9'}
-local partner={hi='-1.9'}
+local actor={lo=2.9}
+local partner={hi=-1.9}
 local context={data={}}
 local queries,random_calls,reads,adds=0,0,0,0
 local function service_value(r) assert(r.ok);return r.value end
@@ -3244,11 +3258,12 @@ local function game_id(kind,value)
 end
 local services={
  types={id=function(kind,id) return game_id(kind,id) end},
- variables={resolve=function(data,owner,scope,key)
+ variables={get_number=function(owner,key,options)
+  assert(options==nil or options.strict~=true)
   assert((owner==actor and key=='lo') or (owner==partner and key=='hi'))
-  reads=reads+1;return {ok=true,value={value=owner[key]}}
+  reads=reads+1;return {ok=true,value={exists=true,value=owner[key]}}
  end},
- random={int=function(lo,hi)
+ random={native_int=function(lo,hi)
   assert(lo==LOWER and hi==UPPER);random_calls=random_calls+1;return hi
  end},
  time={duration=function(value,unit) return value end},
@@ -3565,32 +3580,44 @@ assert(called)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_effect_duration_truncates_fractional_turns(self) -> None:
+        effect_actor_targets = {
+            "u": ("actor", "character"), "npc": ("partner", "character"),
+            "read_u": ("actor", "character"), "read_npc": ("partner", "character"),
+        }
         for duration in ({"context_val": "duration"}, {"math": ["1.8"]},
                          [{"math": ["1.8"]}, {"math": ["2.8"]}]):
             with self.subTest(duration=duration):
                 lines = migrate_lua_first.render_dynamic_character_effect(
-                    {"u_add_effect": "bleed", "duration": duration}, "u_add_effect", "actor")
+                    {"u_add_effect": "bleed", "duration": duration}, "u_add_effect", "actor",
+                    effect_actor_targets=effect_actor_targets)
                 self.assertIsNotNone(lines)
                 script = """
 local actor={}
 local context={data={duration=1.8}}
-local called=false
+local called,draws=false,0
 local function service_value(r) assert(r.ok);return r.value end
 local services={
  types={id=function(kind,id) return id end},
+ variables={get_context_number=function(data,key,options)
+  assert(data==context.data and key=='duration' and (options==nil or options.strict~=true))
+  return {ok=true,value={exists=true,value=data[key]}}
+ end},
  time={duration=function(value,unit) assert(value==1 and unit=='turn');return value end},
- gameplay={math={evaluate=function(expression) return {ok=true,value=tonumber(expression)} end}},
- random={int=function(lo,hi) assert(lo==1 and hi==2);return lo end},
+ random={native_int=function(lo,hi) assert(lo==1 and hi==2);draws=draws+1;return lo end},
  effects={add=function(target,id,duration) assert(duration==1);called=true;return {ok=true} end}
 }
 BODY
 assert(called)
-""".replace("BODY", "\n".join(lines))
+assert(draws==(EXPECTED_DRAWS))
+""".replace("BODY", "\n".join(lines)).replace(
+                    "EXPECTED_DRAWS", "1" if isinstance(duration, list) else "0")
                 result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
                 self.assertEqual(result.returncode, 0, result.stderr)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_effect_add_fields_keep_variable_owners(self) -> None:
+        targets = {"u": ("actor", "character"), "npc": ("partner", "character"),
+                   "read_u": ("actor", "character"), "read_npc": ("partner", "character")}
         for prefix, target in (("u_", "actor"), ("npc_", "partner")):
             for scope, owner in (("u_val", "actor"), ("npc_val", "partner"),
                                  ("var_val", "actor"), ("var_val", "partner")):
@@ -3599,7 +3626,7 @@ assert(called)
                         {prefix + "add_effect": {scope: "selected"},
                          "duration": {scope: "duration"}, "intensity": {scope: "intensity"},
                          "target_part": {scope: "part"}}, True, True, {},
-                        npc_actor_expression="partner")
+                        npc_actor_expression="partner", effect_actor_targets=targets)
                     self.assertIsNotNone(lines)
                     script = """
 local actor={selected='bleed',part='arm_l',duration=12,intensity=2}
@@ -3608,7 +3635,14 @@ local context={data={selected='REFselected',part='REFpart',duration='REFduration
 local called=false
 local function service_value(r) assert(r.ok);return r.value end
 local services={
- variables={resolve=function(data,owner,scope,key) return {ok=true,value={value=owner[key]}} end},
+ variables={resolve=function(data,owner,scope,key) return {ok=true,value={value=owner[key]}} end,
+ get_number=function(owner,key)
+  assert(owner==actor or owner==partner)
+  return {ok=true,value={exists=true,value=owner[key]}}
+ end,get_context_string=function(data,key)
+  assert(data==context.data and type(data[key])=='string')
+  return {ok=true,value={exists=true,value=data[key]}}
+ end},
  types={id=function(kind,id) return id end},
  time={duration=function(value,unit) assert(unit=='turn');return value end},
  effects={add=function(character,id,duration,options)
@@ -3791,6 +3825,11 @@ assert(calls == COUNT)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_effect_dynamic_intensity_is_lazy_and_uses_variable_owner(self) -> None:
+        math_actor_targets = {
+            "u": ("actor", "character"), "npc": ("context.actors.beta", "character"),
+            "read_u": ("actor", "character"),
+            "read_npc": ("context.actors.beta", "character"),
+        }
         for key in ("npc_has_effect", "npc_has_any_effect"):
             value = {"u_val": "effect"}
             if key.endswith("any_effect"):
@@ -3798,7 +3837,7 @@ assert(calls == COUNT)
             expression = migrate_lua_first.render_eoc_condition_expression(
                 {key: value, "bodypart": "arm_l", "intensity": {"u_val": "minimum"}},
                 avatar_actor_proven=True, npc_dialogue_pair_proven=True,
-                npc_actor_expression="context.actors.beta")
+                npc_actor_expression="context.actors.beta", math_actor_targets=math_actor_targets)
             self.assertIsNotNone(expression)
             script = """
 local actor={effect='bleed',minimum=2000001}
@@ -3812,8 +3851,14 @@ local function game_id(kind,value)
 end
 local services={
  variables={resolve=function(data,owner,scope,key)
-   if key=='minimum' then intensity_reads=intensity_reads+1 end
+   assert(owner==actor and scope=='u' and key=='effect')
    return {ok=true,value={value=owner[key]}}
+ end,get_number=function(owner,key,options)
+   assert(owner==actor and key=='minimum' and (options==nil or options.strict~=true))
+   if key=='minimum' then intensity_reads=intensity_reads+1 end
+   local value=owner[key]
+   if value==nil then return {ok=true,value={exists=false,value=nil}} end
+   return {ok=true,value={exists=true,value=value}}
  end},
  types={id=function(kind,id) return game_id(kind,id) end},
  effects={get=function(character,id,part)
@@ -4682,8 +4727,8 @@ assert(event.data_types.point_value == 'tripoint' and event.actors == actors)
         result = migrate_lua_first.MigrationResult()
         rendered = migrate_lua_first.render_eoc(source, result)
         self.assertFalse(result.todos)
-        self.assertIn("if not (1 == 1) then", rendered)
-        self.assertIn('context.data["boolean_value"]', rendered)
+        self.assertNotIn("services.gameplay.math", rendered)
+        self.assertIn('services.variables.get_context_number(context and context.data, "boolean_value")', rendered)
 
         script = r"""
 local actor = {}
@@ -4693,6 +4738,10 @@ migrated_eoc_functions = {}
 services = {
     characters = {avatar = function() return actor end},
     types = {id = function(kind, id) return kind .. ':' .. id end},
+    variables = {get_context_number = function(data, key)
+        assert(key == 'boolean_value' and type(data[key]) == 'number')
+        return {ok = true, value = {exists = true, value = data[key]}}
+    end},
     time = {duration = function(value, unit)
         assert(value == 1 and unit == 'turn')
         return value
@@ -4786,6 +4835,10 @@ services = {
         end,
     },
     types = {id = function(kind, id) return kind .. ':' .. id end},
+    variables = {get_context_number = function(data, key)
+        assert(key == 'boolean_value' and type(data[key]) == 'number')
+        return {ok = true, value = {exists = true, value = data[key]}}
+    end},
     time = {duration = function(value, unit)
         assert(value == 1 and unit == 'turn')
         return value
@@ -6455,10 +6508,15 @@ assert(called)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_dynamic_effect_zero_and_signed_intensity_match_native_arguments(self) -> None:
+        effect_actor_targets = {
+            "u": ("actor", "character"), "npc": ("partner", "character"),
+            "read_u": ("actor", "character"), "read_npc": ("partner", "character"),
+        }
         for prefix in ("u_", "npc_"):
             lines = migrate_lua_first.render_dynamic_character_effect(
                 {prefix + "add_effect": {"context_val": "effect"}, "duration": 0,
-                 "intensity": {"context_val": "intensity"}}, prefix + "add_effect", "actor")
+                 "intensity": {"context_val": "intensity"}}, prefix + "add_effect", "actor",
+                effect_actor_targets=effect_actor_targets)
             self.assertIsNotNone(lines)
             script = """
 local actor = {}
@@ -6467,6 +6525,10 @@ local received
 local function service_value(result) assert(result.ok); return result.value end
 local services = {
  types = { id = function(kind, id) return id end },
+ variables = { get_context_number = function(data,key,options)
+   assert(data==context.data and key=='intensity' and (options==nil or options.strict~=true))
+   return {ok=true,value={exists=true,value=data[key]}}
+ end },
  time = { duration = function(value, unit) assert(value == 0); return value end },
  effects = { add = function(target, id, duration, options)
    assert(target == actor and id == 'bleed' and duration == 0)
@@ -47439,6 +47501,8 @@ def load_tests(loader, tests, pattern):
     tests.addTests(loader.loadTestsFromTestCase(LuaMathAssignmentMigrationTest))
     from test_lua_indirect_assignment_migration import LuaIndirectAssignmentMigrationTest
     tests.addTests(loader.loadTestsFromTestCase(LuaIndirectAssignmentMigrationTest))
+    from test_lua_effect_numeric_migration import LuaEffectNumericMigrationTest
+    tests.addTests(loader.loadTestsFromTestCase(LuaEffectNumericMigrationTest))
     return tests
 
 

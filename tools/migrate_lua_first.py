@@ -123,7 +123,6 @@ WOUND_DESCRIPTION_MAX_BYTES = 32768
 MAX_EFFECT_DURATION_TURNS = 365 * 24 * 60 * 60
 MAX_RUN_EOC_ITERATIONS = 10000
 MAX_TEST_EOC_INLINE_DEPTH = 32
-NATIVE_MAX_EFFECT_INTENSITY = 1000000
 MAX_ITEM_CATEGORY_SPAWN_RATE_UPDATES = 256
 MAX_ITEM_CATEGORY_SPAWN_RATE = 1_000_000.0
 MAX_CHARACTER_DAMAGE = 1000000.0
@@ -21307,21 +21306,52 @@ def _effect_duration_expression(
     value: Any, target: str = "actor", alpha: str | None = None, beta: str | None = None,
     effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> str | None:
-    turns = parse_turns(value)
+    turns = parse_native_duration_turns(value)
     if turns is not None:
         if not NATIVE_INT_MIN <= turns <= NATIVE_INT_MAX:
             return None
         return f'services.time.duration({turns}, "turn")'
-    if isinstance(value, list):
-        value = [parse_turns(endpoint) if parse_turns(endpoint) is not None else endpoint for endpoint in value]
+    value = _normalize_native_effect_duration(value)
+    if value is None:
+        return None
     rendered = _effect_numeric_expression(value, target, alpha, beta, effect_actor_targets)
     if rendered is None:
         return None
-    # EOC duration conversion truncates toward zero. TimeDuration rejects
-    # overflow; do not turn negative/long values into zero or one year.
+    # Native time_duration stores signed int turns. The Platform TimeDuration
+    # wrapper uses a wider representation, so check before to_native narrows.
+    converted = _native_effect_integer_expression(rendered, "effect duration")
+    return f'services.time.duration({converted}, "turn")'
+
+
+def _normalize_native_effect_duration(value: Any) -> Any:
+    """Preserve time_duration JSON loader rules before evaluating providers."""
+    if isinstance(value, list):
+        if len(value) != 2 or any(isinstance(bound, list) for bound in value):
+            return None
+        bounds = [_normalize_native_effect_duration(bound) for bound in value]
+        return None if any(bound is None for bound in bounds) else bounds
+    if not isinstance(value, dict):
+        # A raw JSON float (even 1.0) is not a Native time_duration integer.
+        return parse_native_duration_turns(value)
+    provider = dict(value)
+    if "default" in provider:
+        default = parse_native_duration_turns(provider["default"])
+        if default is None:
+            return None
+        provider["default"] = default
+    return provider
+
+
+def _native_effect_integer_expression(expression: str, name: str) -> str:
+    """Convert defined Native double-to-int inputs without clamping them."""
     return (
-        'services.time.duration((function(value) return value < 0 and math.ceil(value) '
-        f'or math.floor(value) end)({rendered}), "turn")'
+        '(function(value) '
+        'assert(value == value and value ~= math.huge and value ~= -math.huge, '
+        f'{lua_quote(name + " must be finite")}); '
+        'local integer = value < 0 and math.ceil(value) or math.floor(value); '
+        f'assert(integer >= {NATIVE_INT_MIN} and integer <= {NATIVE_INT_MAX}, '
+        f'{lua_quote(name + " exceeds the signed engine range")}); '
+        f'return integer end)({expression})'
     )
 
 
@@ -21371,7 +21401,7 @@ def render_static_character_effect(
         return None
     if (
         not isinstance(intensity, int) or isinstance(intensity, bool) or
-        not -NATIVE_MAX_EFFECT_INTENSITY <= intensity <= NATIVE_MAX_EFFECT_INTENSITY
+        not NATIVE_INT_MIN <= intensity <= NATIVE_INT_MAX
     ):
         return None
     options: list[str] = []
@@ -21473,36 +21503,10 @@ def _effect_numeric_expression(
     value: Any, target: str, alpha: str | None, beta: str | None,
     effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> str | None:
-    if isinstance(value, list):
-        if len(value) != 2 or any(isinstance(endpoint, list) for endpoint in value):
-            return None
-        for endpoint in value:
-            literal = finite_number_literal(endpoint)
-            if literal is not None and not -2147483648 <= math.trunc(literal) <= 2147483647:
-                return None
-        endpoints = [_effect_numeric_expression(
-            endpoint, target, alpha, beta, effect_actor_targets) for endpoint in value]
-        if any(endpoint is None for endpoint in endpoints):
-            return None
-        # Native dbl_or_var calls integer rng: truncate toward zero before
-        # ordering the endpoints. Keep runtime errors outside the random API's
-        # supported bounds instead of silently clamping the distribution.
-        return (
-            '(function(lo, hi) lo = lo < 0 and math.ceil(lo) or math.floor(lo); '
-            'hi = hi < 0 and math.ceil(hi) or math.floor(hi); '
-            'return services.random.int(math.min(lo, hi), math.max(lo, hi)) end)('
-            f'{endpoints[0]}, {endpoints[1]})'
-        )
-    if not isinstance(value, dict) or set(value) == {"math"}:
-        return render_eoc_numeric_expression(value, "0", alpha or target, effect_actor_targets)
-    descriptor = dict(value)
-    if "default" in descriptor:
-        default = finite_number_literal(descriptor["default"])
-        if default is None:
-            return None
-        descriptor["default"] = str(default)
-    raw = render_participant_string_expression(descriptor, target, alpha, beta)
-    return None if raw is None else f"(tonumber({raw}) or 0)"
+    # A mutation recipient is not evidence of Native alpha/beta ownership.
+    # Keep the call signature for existing domain callers, but let the shared
+    # Native provider enforce exact read roles, numeric type and shared RNG.
+    return render_native_number_expression(value, effect_actor_targets)
 
 
 def render_dynamic_character_effect(
@@ -21519,8 +21523,12 @@ def render_dynamic_character_effect(
         return None
     if set(effect) - {key, "duration", "intensity", "target_part", "force"}:
         return None
-    alpha = avatar_expression or (target_expression if key.startswith("u_") else None)
-    beta = npc_expression or (target_expression if key.startswith("npc_") else None)
+    if effect_actor_targets is not None:
+        alpha = _proven_native_variable_read_target(effect_actor_targets, "u")
+        beta = _proven_native_variable_read_target(effect_actor_targets, "npc")
+    else:
+        alpha = avatar_expression or (target_expression if key.startswith("u_") else None)
+        beta = npc_expression or (target_expression if key.startswith("npc_") else None)
 
     def identifier(value: Any, kind: str) -> str | None:
         if isinstance(value, dict):
@@ -21546,8 +21554,19 @@ def render_dynamic_character_effect(
         isinstance(raw_intensity, (int, float)) and
         not isinstance(raw_intensity, bool) and
         (not math.isfinite(float(raw_intensity)) or
-         not -NATIVE_MAX_EFFECT_INTENSITY <= int(raw_intensity) <= NATIVE_MAX_EFFECT_INTENSITY)
+         not NATIVE_INT_MIN <= math.trunc(raw_intensity) <= NATIVE_INT_MAX)
     ):
+        return None
+    duration_provider = _normalize_native_effect_duration(1 if permanent else raw_duration)
+    argument_effects = [_native_number_expression_effects(value, effect_actor_targets)
+                        for value in (duration_provider, raw_intensity)]
+    # Supported string mutators can also consume Native RNG. Their calls are
+    # sibling arguments in f_add_effect, unlike RANDOM body-part selection,
+    # which happens later inside the talker after all providers are evaluated.
+    argument_effects.extend(_NativeMathEffects(draws=True, random_dependent=True)
+                            for value in (effect[key], effect.get("target_part"))
+                            if _effect_string_provider_draws(value))
+    if any(value is None for value in argument_effects) or _native_math_random_order_conflict(argument_effects):
         return None
     target_part = effect.get("target_part")
     if target_kind == "creature" and (
@@ -21577,10 +21596,11 @@ def render_dynamic_character_effect(
     if permanent:
         options.append("permanent = true")
     if intensity != "0":
-        options.append(
-            "intensity = (function(value) return value < 0 and math.ceil(value) "
-            f"or math.floor(value) end)({intensity})"
-        )
+        # RANDOM is resolved inside the native talker, after all argument
+        # providers (including intensity) have run. Sequence those providers
+        # in statements before building options rather than relying on a
+        # table constructor's field-evaluation order.
+        options.insert(0, "intensity = effect_intensity")
     force = effect.get("force", False)
     if not isinstance(force, bool):
         return None
@@ -21588,9 +21608,60 @@ def render_dynamic_character_effect(
         options.append("force = true")
     suffix = ", { " + ", ".join(options) + " }" if options else ""
     return [
-        "    service_value(services.effects.add(",
-        f"        {target_expression}, {effect_id}, {duration}{suffix}))",
+        "    do",
+        f"        local effect_id = {effect_id}",
+        f"        local effect_duration = {duration}",
+        "        local effect_intensity = " + _native_effect_integer_expression(intensity, "effect intensity"),
+        "        service_value(services.effects.add(",
+        f"            {target_expression}, effect_id, effect_duration{suffix}))",
+        "    end",
     ]
+
+
+def _effect_string_provider_draws(value: Any) -> bool:
+    if isinstance(value, dict):
+        return value.get("mutator") == "valid_technique" or any(
+            _effect_string_provider_draws(nested) for nested in value.values())
+    if isinstance(value, list):
+        return any(_effect_string_provider_draws(nested) for nested in value)
+    return False
+
+
+def _effect_argument_order_choice(
+    effect: Any, effect_actor_targets: dict[str, tuple[str, str] | None] | None,
+    mutation_targets: dict[str, tuple[str, str] | None] | None = None,
+) -> str | None:
+    if not isinstance(effect, dict):
+        return None
+    keys = {"u_add_effect", "npc_add_effect"}.intersection(effect)
+    if len(keys) != 1:
+        return None
+    key = next(iter(keys))
+    raw_duration = effect.get("duration")
+    duration = _normalize_native_effect_duration(1 if raw_duration == "PERMANENT" else raw_duration)
+    effects = [_native_number_expression_effects(value, effect_actor_targets)
+               for value in (duration, effect.get("intensity", 0))]
+    effects.extend(_NativeMathEffects(draws=True, random_dependent=True)
+                   for value in (effect[key], effect.get("target_part"))
+                   if _effect_string_provider_draws(value))
+    if any(value is None for value in effects) or not _native_math_random_order_conflict(effects):
+        return None
+    # Prove that the remaining shape is supported; an owner or API gap must
+    # not be reclassified merely because an unrelated argument also draws.
+    target = (mutation_targets or effect_actor_targets or {}).get(
+        "npc" if key.startswith("npc_") else "u")
+    if target is None:
+        return None
+    probe = dict(effect, duration=1, intensity=0)
+    if render_dynamic_character_effect(
+        probe, key, target[0], target_kind=target[1],
+        avatar_expression=_proven_native_variable_read_target(effect_actor_targets, "u"),
+        npc_expression=_proven_native_variable_read_target(effect_actor_targets, "npc"),
+        effect_actor_targets=effect_actor_targets,
+    ) is None:
+        return None
+    return ("Native add_effect providers have compiler-dependent argument evaluation; "
+            "choose a Lua order for interacting random draws")
 
 
 def _static_character_variable_descriptor(
@@ -29849,6 +29920,7 @@ def render_inventory_flag_condition(
 
 def render_effect_condition(
     condition: dict[str, Any], alpha: str | None, beta: str | None,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> str | None:
     selectors = {prefix + name for prefix in ("u_", "npc_")
                  for name in ("has_effect", "has_any_effect")}
@@ -29892,7 +29964,7 @@ def render_effect_condition(
     if literal is not None:
         intensity = lua_number(literal)
     else:
-        intensity = _effect_numeric_expression(raw_intensity, target, alpha, beta)
+        intensity = _effect_numeric_expression(raw_intensity, target, alpha, beta, effect_actor_targets)
         if intensity is None:
             return None
     query = (
@@ -30811,7 +30883,7 @@ def render_eoc_condition_expression(
             if condition == "u_is_vehicle":
                 return "actor ~= nil and actor.kind == \"vehicle\""
         if isinstance(condition, dict) and "u_has_effect" in condition:
-            return render_effect_condition(condition, "actor", None)
+            return render_effect_condition(condition, "actor", None, math_actor_targets)
         if isinstance(condition, dict) and set(condition) == {"u_has_species"}:
             species = _dynamic_id_expression(
                 condition["u_has_species"], "species", "actor"
@@ -30822,7 +30894,7 @@ def render_eoc_condition_expression(
                     species + "))"
                 )
         if isinstance(condition, dict) and "u_has_any_effect" in condition:
-            return render_effect_condition(condition, "actor", None)
+            return render_effect_condition(condition, "actor", None, math_actor_targets)
     if condition is None:
         return "true"
     if isinstance(condition, bool):
@@ -31576,7 +31648,7 @@ def render_eoc_condition_expression(
             return None
         denominator = _effect_numeric_expression(
             condition["one_in_chance"], "actor",
-            "actor" if character_actor_proven else None, npc_query_actor)
+            "actor" if character_actor_proven else None, npc_query_actor, math_actor_targets)
         if denominator is None:
             return None
         return f"services.random.one_in({denominator})"
@@ -31594,7 +31666,8 @@ def render_eoc_condition_expression(
         if numerator is not None and denominator is not None and numerator > denominator:
             return None
         expressions = [_effect_numeric_expression(
-            chance[key], "actor", "actor" if character_actor_proven else None, npc_query_actor)
+            chance[key], "actor", "actor" if character_actor_proven else None,
+            npc_query_actor, math_actor_targets)
             for key in ("x", "y")]
         if any(expression is None for expression in expressions):
             return None
@@ -32005,6 +32078,7 @@ def render_eoc_condition_expression(
                     npc_dialogue_pair_proven and
                     npc_actor_expression == "context.actors.beta"
                 ) else npc_query_actor,
+                math_actor_targets,
             )
     for effect_key, actor_proven in (
         (
@@ -32037,6 +32111,7 @@ def render_eoc_condition_expression(
                     npc_dialogue_pair_proven and
                     npc_actor_expression == "context.actors.beta"
                 ) else npc_query_actor,
+                math_actor_targets,
             )
 
     if (
@@ -33759,6 +33834,8 @@ def render_eoc(
                         false_todo = _WEIGHTED_LIST_EOC_TODO
                         false_todo_category = "manual_rewrite"
                     semantic_choice = (mutation_migration_gap(false_value) or
+                                       _effect_argument_order_choice(false_value, effect_actor_targets,
+                                                                     character_effect_actor_targets) or
                                        _location_adjust_random_order_choice(false_value, effect_actor_targets) or
                                        _math_assignment_order_choice(false_value, effect_actor_targets) or
                                        _math_random_order_choice(false_value, effect_actor_targets))
@@ -34712,14 +34789,14 @@ def render_eoc(
                     lines.extend(rendered)
                     converted_effect = True
                 else:
-                    lines.append(
-                        "    -- TODO: translate the effect amount, target, or "
-                        "options into bounded Lua values."
-                    )
+                    order_choice = _effect_argument_order_choice(
+                        effect, effect_actor_targets, character_effect_actor_targets)
+                    lines.append("    -- TODO: " + (order_choice or
+                                 "translate the effect amount, target, or options into bounded Lua values") + ".")
                     result.add_todo(
-                        "manual_rewrite",
+                        "semantic_choice" if order_choice else "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        + (order_choice or "needs domain-service conversion")
                     )
                     all_effects_converted = False
             elif (
