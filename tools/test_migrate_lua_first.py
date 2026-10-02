@@ -9405,7 +9405,7 @@ package.preload.ccb = function() return {
                             "type": "effect_on_condition",
                             "id": "math_invalid_rhs",
                             "required_event": "game_start",
-                            "effect": {"math": ["u_math_invalid = 1 / 0"]},
+                            "effect": {"math": ["u_math_invalid = 1 +"]},
                             "eoc_type": "EVENT",
                         },
                     ]
@@ -9433,8 +9433,10 @@ package.preload.ccb = function() return {
                 main,
             )
             self.assertIn('context.data["math_context"] = 0.0 + (6)', main)
+            self.assertIn("services.random.native_float(", main)
+            self.assertNotIn("EOC math_random_rhs effect #0 needs domain-service conversion", report)
             for effect_id in (
-                "math_alpha_only", "math_wrong_scope_prefix", "math_random_rhs",
+                "math_alpha_only", "math_wrong_scope_prefix",
                 "math_indirect_write", "math_function_collision",
                 "math_constant_collision", "math_invalid_rhs",
             ):
@@ -9457,7 +9459,7 @@ package.preload.ccb = function() return {
                 "custom_math_assignment_collision = 1",
                 f"u_{dialogue_name} = 1",
                 "x_unknown_scope = 1",
-                "u_math_error = 1 / 0",
+                "u_math_error = 1 +",
                 "v_indirect_target = 1",
             ):
                 with self.subTest(expression=expression):
@@ -47433,6 +47435,8 @@ def load_tests(loader, tests, pattern):
     tests.addTests(loader.loadTestsFromTestCase(LuaNumericMigrationTest))
     from test_native_math_domain_queries import NativeMathDomainQueryTest
     tests.addTests(loader.loadTestsFromTestCase(NativeMathDomainQueryTest))
+    from test_lua_math_assignment_migration import LuaMathAssignmentMigrationTest
+    tests.addTests(loader.loadTestsFromTestCase(LuaMathAssignmentMigrationTest))
     return tests
 
 

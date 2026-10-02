@@ -27792,7 +27792,7 @@ def render_static_character_math(
     effect: dict[str, Any],
     effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> list[str] | None:
-    """Render finite Native literal assignments to proven variable storage."""
+    """Render Native variable assignments without an EOC expression runtime."""
     raw = effect.get("math")
     if not isinstance(raw, list) or not raw or not all(isinstance(part, str) for part in raw):
         return None
@@ -27802,16 +27802,10 @@ def render_static_character_math(
     }
     if set(effect) - {"math"} - comment_keys:
         return None
-    raw = ["".join(raw)]
-    match = re.fullmatch(
-        r"([A-Za-z_][A-Za-z0-9_]*)\s*=\s*"
-        r"([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)",
-        raw[0].strip(),
-    )
-    if match is None:
+    assignment = _parse_native_math_variable_assignment(raw)
+    if assignment is None:
         return None
-
-    token, literal_text = match.groups()
+    token, operator, rhs = assignment
     custom_functions = _migration_math_function_ids.get()
     if custom_functions is None:
         return None
@@ -27846,51 +27840,117 @@ def render_static_character_math(
     if scope == "global" and token in {"π", "pi", "e", "true", "false"}:
         return None
 
-    try:
-        number = float(literal_text)
-    except ValueError:
-        return None
-    if not math.isfinite(number):
-        return None
-    # Keep Native stream-conversion underflow and subnormal values in TODOs.
-    mantissa = re.split(r"[eE]", literal_text, maxsplit=1)[0]
-    has_nonzero_mantissa = any(character in "123456789" for character in mantissa)
-    if has_nonzero_mantissa and (
-        number == 0.0 or abs(number) < sys.float_info.min
-    ):
-        return None
-
-    # Native '=' computes 0.0 + rhs. Keep that operation so Lua stores a
-    # double and preserves the Native result for signed-zero literals.
-    assigned_value = f"0.0 + ({lua_number(number)})"
     quoted_name = lua_quote(name)
-    if scope == "context":
-        return [f"    context.data[{quoted_name}] = {assigned_value}"]
-    if scope == "global":
+    target = None
+    if scope in {"u", "n"}:
+        role = "u" if scope == "u" else "npc"
+        target = _proven_native_variable_write_target(effect_actor_targets, role)
+        if target is None:
+            return None
+
+    def write(value: str) -> list[str]:
+        if scope == "context":
+            return [f"    context.data[{quoted_name}] = {value}"]
+        if scope == "global":
+            return [
+                "    service_value(services.variables.set_global(",
+                f"        {quoted_name}, {value}, {{ include_before = false }}))",
+            ]
         return [
-            "    service_value(services.variables.set_global(",
-            f"        {quoted_name}, {assigned_value}, {{ include_before = false }}))",
+            "    service_value(services.variables.set(",
+            f"        {target}, {quoted_name}, {value}, {{ include_before = false }}))",
         ]
 
-    if effect_actor_targets is None:
-        return None
-    role = "u" if scope == "u" else "npc"
-    target_info_key = "read_" + role
-    if target_info_key not in effect_actor_targets:
-        target_info_key = role
-    target_info = effect_actor_targets.get(target_info_key)
-    if (
-        not isinstance(target_info, tuple) or len(target_info) != 2 or
-        target_info[1] not in {"character", "monster"}
+    # Keep the compact literal path and its Native 0.0 + RHS operation. All
+    # other assignments use the same compiler as read-only math, but a type
+    # failure must skip the write rather than turn into a successful zero.
+    if operator == "=" and re.fullmatch(
+        r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?", rhs,
     ):
-        return None
-    target = _proven_native_variable_write_target(effect_actor_targets, role)
-    if target is None:
+        try:
+            number = float(rhs)
+        except ValueError:
+            return None
+        mantissa = re.split(r"[eE]", rhs, maxsplit=1)[0]
+        if not math.isfinite(number) or (
+            any(character in "123456789" for character in mantissa) and
+            abs(number) < sys.float_info.min
+        ):
+            return None
+        return write(f"0.0 + ({lua_number(number)})")
+
+    compiled = _compile_native_math_variable_assignment(raw, effect_actor_targets)
+    if compiled is None or compiled.choices:
         return None
     return [
-        "    service_value(services.variables.set(",
-        f"        {target}, {quoted_name}, {assigned_value}, {{ include_before = false }}))",
+        "    do",
+        f"        local assigned_value = {compiled.expression}",
+        "        if assigned_value ~= nil then",
+        *["        " + line for line in write("assigned_value")],
+        "        end",
+        "    end",
     ]
+
+
+def _parse_native_math_variable_assignment(value: Any) -> tuple[str, str, str] | None:
+    """Extract a top-level assignment to a bare or parenthesized variable."""
+    if not isinstance(value, list) or not value or not all(isinstance(part, str) for part in value):
+        return None
+    source = "".join(value).strip()
+    match = re.fullmatch(
+        r"((?:\(\s*)*[A-Za-z_][A-Za-z0-9_]*(?:\s*\))*)\s*"
+        r"(\+\+|--|\+=|-=|\*=|/=|%=|=(?!=))\s*(.*?)", source, re.DOTALL,
+    )
+    if match is None:
+        return None
+    left, operator, rhs = match.groups()
+    if left.count("(") != left.count(")"):
+        return None
+    token = left.replace("(", "").replace(")", "").strip()
+    if operator in {"++", "--"}:
+        if rhs:
+            return None
+        rhs = "1.0"
+    elif not rhs:
+        return None
+    return token, operator, rhs
+
+
+def _compile_native_math_variable_assignment(
+    value: Any, effect_actor_targets: dict[str, tuple[str, str] | None] | None,
+) -> _NativeMathCompilation | None:
+    assignment = _parse_native_math_variable_assignment(value)
+    if assignment is None:
+        return None
+    token, operator, rhs = assignment
+    # Validate the destination as a numeric variable, including its namespace
+    # and exact read owner; '=' must not evaluate this read at runtime.
+    functions = _migration_math_function_ids.get()
+    if functions is None or token in functions or token in {"pi", "e", "true", "false"}:
+        return None
+    if len(token) > 2 and token.startswith("v_"):
+        return None  # One-pass indirect writes are a separate Native contract.
+    if render_native_math_variable_read(token, effect_actor_targets) is None:
+        return None
+    left = "0.0" if operator == "=" else token
+    arithmetic = {"=": "+", "+=": "+", "-=": "-", "*=": "*", "/=": "/",
+                  "%=": "%", "++": "+", "--": "-"}[operator]
+    return _compile_native_numeric_math(
+        [f"({left}) {arithmetic} ({rhs})"],
+        lambda name: render_native_math_variable_read(name, effect_actor_targets),
+        lambda name, argument: _render_native_math_domain_query(name, argument, effect_actor_targets),
+        failure_value="nil",
+    )
+
+
+def _math_assignment_order_choice(
+    value: Any, effect_actor_targets: dict[str, tuple[str, str] | None] | None,
+) -> str | None:
+    if isinstance(value, dict) and "math" in value:
+        compiled = _compile_native_math_variable_assignment(value["math"], effect_actor_targets)
+        if compiled is not None and compiled.choices:
+            return "; ".join(compiled.choices)
+    return None
 
 
 def render_static_character_copy_var(
@@ -28300,8 +28360,10 @@ def render_literal_native_arithmetic(
 def _compile_native_numeric_math(
     value: Any, variable_reader: Callable[[str], str | None] | None = None,
     query_reader: Callable[[str, str | None], str | None] | None = None,
+    *, failure_value: str = "0.0",
 ) -> _NativeMathCompilation | None:
     """Compile read-only Native numeric expressions to ordinary Lua."""
+    assert failure_value in {"0.0", "nil"}
     if not isinstance(value, list) or not value or not all(isinstance(part, str) for part in value):
         return None
     source = "".join(value)  # eoc_math::from_json concatenates chunks without inserting spaces.
@@ -28717,7 +28779,7 @@ def _compile_native_numeric_math(
             statements.append('if variable_result.ok == false and variable_result.error and '
                               'variable_result.error.code == "variable_type_mismatch" then '
                               f'services.diagnostic({lua_quote("Math variable " + token + ": ")} '
-                              '.. variable_result.error.message); return 0.0 end')
+                              f'.. variable_result.error.message); return {failure_value} end')
             emit('(function(result) if result.exists == false then return 0.0 end; '
                  'return result.value end)(service_value(variable_result))', _NativeMathEffects(may_abort=True))
             need_operand = False
@@ -33665,6 +33727,7 @@ def render_eoc(
                         false_todo_category = "manual_rewrite"
                     semantic_choice = (mutation_migration_gap(false_value) or
                                        _location_adjust_random_order_choice(false_value, effect_actor_targets) or
+                                       _math_assignment_order_choice(false_value, effect_actor_targets) or
                                        _math_random_order_choice(false_value, effect_actor_targets))
                     if semantic_choice is not None:
                         false_todo = semantic_choice
@@ -37760,14 +37823,15 @@ def render_eoc(
                     lines.extend(rendered)
                     converted_effect = True
                 else:
+                    order_choice = _math_assignment_order_choice(effect, effect_actor_targets)
                     lines.append(
-                        "    -- TODO: translate this math expression into ordinary Lua "
-                        "only after proving native scope, RNG, and context semantics."
+                        "    -- TODO: " + (order_choice or "translate this math expression into ordinary Lua "
+                        "only after proving native scope, RNG, and context semantics") + "."
                     )
                     result.add_todo(
-                        "manual_rewrite",
+                        "semantic_choice" if order_choice else "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        + (order_choice or "needs domain-service conversion")
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "copy_var" in effect:

@@ -1,7 +1,10 @@
 """Numeric migration boundaries independent of the retired expression API."""
 
+import json
+from pathlib import Path
 import shutil
 import subprocess
+import tempfile
 import unittest
 
 import migrate_lua_first as migration
@@ -96,6 +99,80 @@ assert(not ok and message=='stale_runtime' and #calls==2 and diagnostics==1)
         completed = subprocess.run(["lua", "-"], input=script, text=True,
                                    capture_output=True, timeout=10)
         self.assertEqual(completed.returncode, 0, completed.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_assignment_failure_keeps_storage_and_continues_both_effect_branches(self) -> None:
+        values = []
+        for branch in (True, False):
+            value = {"type": "effect_on_condition", "id": "assignment_" + str(branch),
+                     "eoc_type": "EVENT", "required_event": "game_start",
+                     "condition": {"math": ["1" if branch else "0"]}}
+            value["effect" if branch else "false_effect"] = [
+                {"math": ["_target += _source"]}, {"math": ["_after = 7"]}]
+            values.append(value)
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "assignment.json"
+            source.write_text(json.dumps(values), encoding="utf-8")
+            result = migration.migrate(migration.load_objects([source]), "assignment_flow")
+        self.assertEqual(result.todos, [])
+        self.assertEqual(len(result.converted), 2)
+        main = result.files[Path("main.lua")]
+        self.assertNotIn("services.gameplay.math", main)
+        script = r"""
+local callbacks,diagnostics={},0
+package.preload.ccb=function() return {
+ content={},runtime={handler=function(id,fn) callbacks[id]=fn end,on=function() end},
+ services={variables={get_context_number=function(data,key,options)
+  assert(options.strict)
+  local value=data[key]
+  if type(value)=='string' then
+   return {ok=false,error={code='variable_type_mismatch',message='bad stored type'}}
+  end
+  return {ok=true,value={exists=value~=nil,value=value}}
+ end},diagnostic=function(message)
+  diagnostics=diagnostics+1
+  assert(message:find('bad stored type',1,true))
+ end}}
+end
+""" + main + r"""
+for _,id in ipairs({'migrated.assignment_True','migrated.assignment_False'}) do
+ local context={data={target=19.0,source='bad'}}
+ callbacks[id](context)
+ assert(context.data.target==19.0 and context.data.after==7.0)
+ context.data.source=3.0
+ callbacks[id](context)
+ assert(context.data.target==22.0 and context.data.after==7.0)
+end
+assert(diagnostics==2)
+"""
+        completed = subprocess.run(["lua", "-"], input=script, text=True,
+                                   capture_output=True, timeout=10)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
+    def test_assignment_order_reports_known_choices_without_hiding_owner_gaps(self) -> None:
+        values = [
+            {"type": "effect_on_condition", "id": "normal_rng_assignment",
+             "eoc_type": "EVENT", "required_event": "game_start",
+             "effect": {"math": ["u_target += rng(1,3)"]}},
+            {"type": "effect_on_condition", "id": "false_rng_assignment",
+             "eoc_type": "EVENT", "required_event": "game_start", "condition": False,
+             "false_effect": {"math": ["_target += rng(1,3)"]}},
+            {"type": "effect_on_condition", "id": "missing_owner_assignment",
+             "eoc_type": "EVENT", "required_event": "game_start",
+             "effect": {"math": ["n_target += rng(1,3)"]}},
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "choices.json"
+            source.write_text(json.dumps(values), encoding="utf-8")
+            result = migration.migrate(migration.load_objects([source]), "assignment_choices")
+        choices = [todo for todo in result.todos if todo.category == "semantic_choice"]
+        self.assertEqual(len(choices), 2)
+        self.assertTrue(all("compiler-dependent operand evaluation" in todo.message for todo in choices))
+        self.assertTrue(any("normal_rng_assignment effect #0" in todo.message for todo in choices))
+        self.assertTrue(any("false_rng_assignment false_effect #0" in todo.message for todo in choices))
+        other = [todo for todo in result.todos if "missing_owner_assignment" in todo.message]
+        self.assertEqual(len(other), 1)
+        self.assertEqual(other[0].category, "manual_rewrite")
 
 
 if __name__ == "__main__":
