@@ -105,7 +105,7 @@ TEST_CASE( "lua_platform_character_messages_match_native_actor_targeted_hook",
     lua["beta_handle"] = game_handle::from_creature(
                              beta,
                              { "npc", beta.getID().get_value(), 0, 0, 0, {} },
-                             detail::runtime_handle_identity( owner ),
+                             cata::lua_platform::detail::runtime_handle_identity( owner ),
                              runtime_world_generation() );
     const sol::protected_function_result registered = lua.safe_script( R"(
         ccb.runtime.handler("character_message_semantics", function(context)

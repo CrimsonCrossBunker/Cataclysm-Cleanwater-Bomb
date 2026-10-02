@@ -170,7 +170,7 @@ TEST_CASE( "lua_platform_progression_grant_random_missing_matches_native_roll_re
         return game_handle::from_creature(
                    platform_actor,
         { "avatar", platform_actor.getID().get_value(), 0, 0, 0, {} },
-        detail::runtime_handle_identity( owner ), runtime_world_generation() );
+        cata::lua_platform::detail::runtime_handle_identity( owner ), runtime_world_generation() );
     } );
 
     const sol::protected_function_result installed = lua.safe_script( R"(
