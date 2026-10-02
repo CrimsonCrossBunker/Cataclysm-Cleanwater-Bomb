@@ -1219,12 +1219,12 @@ function MonsterAttackDefinition:policy(handler_id) end
 
 ---@class EffectTypeDefinitionOptions
 ---@field id string Stable native effect-type id.
----@field name? string First intensity name; additional intensities use name().
----@field description? string First intensity description; additional intensities use description().
----@field remove_message? string Player-facing removal message.
+---@field name? string|LocalizedText First intensity name; additional intensities use name().
+---@field description? string|LocalizedText First intensity description; additional intensities use description().
+---@field remove_message? string|LocalizedText Player-facing removal message.
 ---@field apply_memorial_log? string Memorial text recorded when applied.
 ---@field remove_memorial_log? string Memorial text recorded when removed.
----@field blood_analysis_description? string Player-facing blood-analysis description.
+---@field blood_analysis_description? string|LocalizedText Player-facing blood-analysis description.
 ---@field maximum_intensity? integer Positive native maximum intensity; defaults to one.
 ---@field maximum_duration_turns? integer Non-negative maximum duration.
 ---@field intensity_duration_turns? integer Non-negative duration represented by one intensity.
@@ -1242,13 +1242,13 @@ function MonsterAttackDefinition:policy(handler_id) end
 ---@field id string
 local EffectTypeDefinition = {}
 
----@param text string
+---@param text string|LocalizedText
 ---@return EffectTypeDefinition self
 function EffectTypeDefinition:name(text) end
----@param text string
+---@param text string|LocalizedText
 ---@return EffectTypeDefinition self
 function EffectTypeDefinition:description(text) end
----@param text string
+---@param text string|LocalizedText
 ---@return EffectTypeDefinition self
 function EffectTypeDefinition:reduced_description(text) end
 ---@param id string
@@ -1279,7 +1279,7 @@ function EffectTypeDefinition:enchantment(id) end
 
 ---@class WeakpointDefinitionOptions
 ---@field id string Unique weakpoint id within its set.
----@field name? string Player-facing weakpoint name.
+---@field name? string|LocalizedText Player-facing weakpoint name.
 ---@field coverage? number Finite non-negative selection weight; defaults to 100.
 ---@field good? boolean Whether hitting the point is beneficial to the attacker.
 ---@field head? boolean Whether this is a head weakpoint.
@@ -1294,7 +1294,7 @@ function EffectTypeDefinition:enchantment(id) end
 ---@field intensity_max? integer Maximum intensity no lower than the minimum.
 ---@field damage_required_min? number Minimum damage percentage from zero through 100.
 ---@field damage_required_max? number Maximum damage percentage no lower than the minimum.
----@field message? string Player-facing application message.
+---@field message? string|LocalizedText Player-facing application message.
 
 ---@class WeakpointSetDefinitionOptions
 ---@field id string Stable native weakpoint-set id.
@@ -1332,7 +1332,7 @@ function WeakpointSetDefinition:critical_multiplier(weakpoint_id, damage_type, v
 function WeakpointSetDefinition:effect(weakpoint_id, options) end
 
 ---@class FieldIntensityOptions
----@field name string Player-facing intensity name.
+---@field name string|LocalizedText Player-facing intensity name.
 ---@field symbol? string Exactly one display-cell glyph.
 ---@field color? string Native color name.
 ---@field dangerous? boolean
@@ -1354,8 +1354,8 @@ function WeakpointSetDefinition:effect(weakpoint_id, options) end
 ---@field intensity? integer Positive effect intensity.
 ---@field body_part? string Existing or same-transaction BodyPart id.
 ---@field environmental? boolean
----@field message? string
----@field npc_message? string
+---@field message? string|LocalizedText
+---@field npc_message? string|LocalizedText
 
 ---@class FieldTypeDefinitionOptions
 ---@field id string Stable native field-type id.
@@ -1434,8 +1434,8 @@ function ItemGroupDefinition:entry(options) end
 
 ---@class SubBodyPartDefinitionOptions
 ---@field id string Stable native sub-body-part id.
----@field name string Player-facing singular name.
----@field plural_name? string Pair/plural name; defaults to name.
+---@field name string|LocalizedText Player-facing singular name.
+---@field plural_name? string|LocalizedText Pair/plural name; defaults to name.
 ---@field parent string Existing or same-transaction BodyPart id.
 ---@field opposite? string Existing or same-transaction SubBodyPart id; defaults to self.
 ---@field side? 'left'|'right'|'both'
@@ -1445,6 +1445,8 @@ function ItemGroupDefinition:entry(options) end
 
 ---@class SubBodyPartDefinition
 ---@field id string
+---@field name fun(self:SubBodyPartDefinition, text:string|LocalizedText):SubBodyPartDefinition
+---@field plural_name fun(self:SubBodyPartDefinition, text:string|LocalizedText):SubBodyPartDefinition
 local SubBodyPartDefinition = {}
 ---@param sub_body_part_id string Existing or same-transaction lower location.
 ---@return SubBodyPartDefinition self
@@ -1456,9 +1458,9 @@ function SubBodyPartDefinition:unarmed_damage(damage_type, amount) end
 
 ---@class WoundDefinitionOptions
 ---@field id string Stable native wound-type id.
----@field name? string Player-facing singular name; defaults to id.
+---@field name? string|LocalizedText Counted name; defaults to id.
 ---@field plural_name? string Player-facing plural name; defaults to name.
----@field description string Non-empty player-facing description.
+---@field description string|LocalizedText Non-empty player-facing description.
 ---@field pain_min? integer Minimum pain rolled when the wound is created; defaults to zero.
 ---@field pain_max? integer Maximum pain no lower than pain_min; defaults to zero.
 ---@field healing_min_turns? integer Positive minimum healing duration in turns; defaults to one.
@@ -1472,6 +1474,9 @@ function SubBodyPartDefinition:unarmed_damage(damage_type, amount) end
 
 ---@class WoundDefinition
 ---@field id string
+---@field name fun(self:WoundDefinition, text:string|LocalizedText):WoundDefinition
+---@field plural_name fun(self:WoundDefinition, text:string):WoundDefinition
+---@field description fun(self:WoundDefinition, text:string|LocalizedText):WoundDefinition
 local WoundDefinition = {}
 ---@param id string Existing or same-transaction DamageType id; each id may be added once and at least one is required.
 ---@return WoundDefinition self
@@ -1495,14 +1500,14 @@ function WoundDefinition:forbid_body_part_type(kind) end
 
 ---@class BodyPartDefinitionOptions
 ---@field id string Stable native body-part id.
----@field name string Player-facing singular name.
----@field plural_name? string Pair/plural name.
----@field accusative? string Accusative singular name.
----@field plural_accusative? string Accusative pair/plural name.
----@field heading? string UI heading.
----@field plural_heading? string UI pair/plural heading.
----@field encumbrance_text? string Encumbrance UI label.
----@field hp_bar_text? string HP-bar UI label.
+---@field name string|LocalizedText Player-facing singular name.
+---@field plural_name? string|LocalizedText Pair/plural name.
+---@field accusative? string|LocalizedText Accusative singular name.
+---@field plural_accusative? string|LocalizedText Accusative pair/plural name.
+---@field heading? string|LocalizedText UI heading.
+---@field plural_heading? string|LocalizedText UI pair/plural heading.
+---@field encumbrance_text? string|LocalizedText Encumbrance UI label.
+---@field hp_bar_text? string|LocalizedText HP-bar UI label.
 ---@field main_part? string Existing or same-transaction main BodyPart; defaults to self.
 ---@field connected_to? string Existing or same-transaction connected BodyPart.
 ---@field opposite? string Existing or same-transaction opposite BodyPart; defaults to self.
@@ -1516,6 +1521,14 @@ function WoundDefinition:forbid_body_part_type(kind) end
 
 ---@class BodyPartDefinition
 ---@field id string
+---@field name fun(self:BodyPartDefinition, text:string|LocalizedText):BodyPartDefinition
+---@field plural_name fun(self:BodyPartDefinition, text:string|LocalizedText):BodyPartDefinition
+---@field accusative fun(self:BodyPartDefinition, text:string|LocalizedText):BodyPartDefinition
+---@field plural_accusative fun(self:BodyPartDefinition, text:string|LocalizedText):BodyPartDefinition
+---@field heading fun(self:BodyPartDefinition, text:string|LocalizedText):BodyPartDefinition
+---@field plural_heading fun(self:BodyPartDefinition, text:string|LocalizedText):BodyPartDefinition
+---@field encumbrance_text fun(self:BodyPartDefinition, text:string|LocalizedText):BodyPartDefinition
+---@field hp_bar_text fun(self:BodyPartDefinition, text:string|LocalizedText):BodyPartDefinition
 local BodyPartDefinition = {}
 ---@param id string Existing or same-transaction SubBodyPart id.
 ---@return BodyPartDefinition self
@@ -1548,14 +1561,17 @@ function BodyPartDefinition:quality(quality_id, level, disable_fraction) end
 
 ---@class WoundFixDefinitionOptions
 ---@field id string Stable native wound-fix id.
----@field name? string Player-facing action name; defaults to id.
----@field description string Non-empty player-facing treatment description.
----@field success_message? string Player-facing successful-treatment message.
+---@field name? string|LocalizedText Player-facing action name; defaults to id.
+---@field description string|LocalizedText Non-empty player-facing treatment description.
+---@field success_message? string|LocalizedText Player-facing successful-treatment message.
 ---@field duration_turns? integer Non-negative base duration whose move cost fits the native integer range.
 ---@field health_delta? integer Signed body-part HP change applied by the treatment.
 
 ---@class WoundFixDefinition
 ---@field id string
+---@field name fun(self:WoundFixDefinition, text:string|LocalizedText):WoundFixDefinition
+---@field description fun(self:WoundFixDefinition, text:string|LocalizedText):WoundFixDefinition
+---@field success_message fun(self:WoundFixDefinition, text:string|LocalizedText):WoundFixDefinition
 local WoundFixDefinition = {}
 ---@param id string Existing or same-transaction Skill id.
 ---@param level integer Required level from zero through the native skill maximum.
@@ -1613,9 +1629,9 @@ function BodyGraphDefinition:part(symbol, options) end
 
 ---@class MonsterDefinitionOptions
 ---@field id string Stable native monster id.
----@field name string Player-facing singular name.
+---@field name string|LocalizedText Counted name; LocalizedText may carry its plural.
 ---@field plural_name? string Player-facing plural name.
----@field description? string Player-facing description.
+---@field description? string|LocalizedText Player-facing description.
 ---@field symbol? string Exactly one display-cell glyph.
 ---@field color? string Native color name.
 ---@field looks_like? string Tileset fallback id.
@@ -1653,6 +1669,9 @@ function BodyGraphDefinition:part(symbol, options) end
 
 ---@class MonsterDefinition
 ---@field id string
+---@field name fun(self:MonsterDefinition, text:string|LocalizedText):MonsterDefinition
+---@field plural_name fun(self:MonsterDefinition, text:string):MonsterDefinition
+---@field description fun(self:MonsterDefinition, text:string|LocalizedText):MonsterDefinition
 local MonsterDefinition = {}
 ---@param material_id string Existing or same-transaction Material id.
 ---@param portions? integer Positive material portions.
@@ -1722,11 +1741,12 @@ function MonsterDefinition:on_death(handler_id) end
 
 ---@class MoraleTypeDefinitionOptions
 ---@field id string Stable morale-type id.
----@field text string Player-facing description; may contain one `%s` item-name placeholder.
+---@field text string|LocalizedText Player-facing description; may contain one `%s` item-name placeholder.
 ---@field permanent? boolean Whether morale instances of this type are permanent.
 
 ---@class MoraleTypeDefinition
 ---@field id string
+---@field text fun(self:MoraleTypeDefinition, text:string|LocalizedText):MoraleTypeDefinition
 local MoraleTypeDefinition = {}
 
 ---@class DiseaseTypeDefinitionOptions
@@ -1755,12 +1775,14 @@ local MonsterFlagDefinition = {}
 
 ---@class SpeciesDefinitionOptions
 ---@field id string Stable monster-species id.
----@field description? string Player-facing species description.
----@field footsteps? string Player-facing footstep description; defaults to `footsteps.`.
+---@field description? string|LocalizedText Player-facing species description.
+---@field footsteps? string|LocalizedText Player-facing footstep description; defaults to `footsteps.`.
 ---@field bleeds? string Native field-type id produced by bleeding; defaults to `fd_null`.
 
 ---@class SpeciesDefinition
 ---@field id string
+---@field description fun(self:SpeciesDefinition, text:string|LocalizedText):SpeciesDefinition
+---@field footsteps fun(self:SpeciesDefinition, text:string|LocalizedText):SpeciesDefinition
 local SpeciesDefinition = {}
 
 ---@param flag_id string Native MonsterFlag id inherited by every monster in the species.
@@ -1834,9 +1856,9 @@ local ConnectGroupDefinition = {}
 
 ---@class MutationCategoryDefinitionOptions
 ---@field id string Stable mutation-category id.
----@field name? string Player-facing category name; defaults to id.
+---@field name? string|LocalizedText Player-facing category name; defaults to id.
 ---@field threshold_mutation? string Native Mutation id granted at the threshold.
----@field mutagen_message string Player-facing message after consuming category mutagen.
+---@field mutagen_message string|LocalizedText Player-facing message after consuming category mutagen.
 ---@field memorial_message? string Memorial text after crossing the threshold.
 ---@field vitamin? string Native Vitamin id used as category mutagen; defaults to `null`.
 ---@field threshold_minimum? integer Non-negative vitamin amount required for a threshold attempt.
@@ -1847,6 +1869,8 @@ local ConnectGroupDefinition = {}
 
 ---@class MutationCategoryDefinition
 ---@field id string
+---@field name fun(self:MutationCategoryDefinition, text:string|LocalizedText):MutationCategoryDefinition
+---@field mutagen_message fun(self:MutationCategoryDefinition, text:string|LocalizedText):MutationCategoryDefinition
 local MutationCategoryDefinition = {}
 
 ---@class ConstructionCategoryDefinitionOptions
@@ -5017,17 +5041,20 @@ local MathFunctionDefinition = {}
 ---@field start_with any
 local MissionDefinition = {}
 ---@class MutationDefinition
+---@field name fun(self:MutationDefinition, text:string|LocalizedText):MutationDefinition
+---@field description fun(self:MutationDefinition, text:string|LocalizedText):MutationDefinition
+---@field activation_message fun(self:MutationDefinition, text:string|LocalizedText):MutationDefinition
 ---@field armor any
----@field attack any
----@field comfort any
+---@field attack fun(self:MutationDefinition, options:CcbMutationAttackOptions):MutationDefinition
+---@field comfort fun(self:MutationDefinition, options:CcbMutationComfortOptions):MutationDefinition
 ---@field decimal_value any
 ---@field id any
 ---@field integer_value any
 ---@field personality any
----@field reflex any
+---@field reflex fun(self:MutationDefinition, options:CcbMutationReflexOptions|CcbMutationReflexCondition[]):MutationDefinition
 ---@field relationship any
----@field transform any
----@field variant any
+---@field transform fun(self:MutationDefinition, options:CcbMutationTransformOptions):MutationDefinition
+---@field variant fun(self:MutationDefinition, options:CcbMutationVariantOptions):MutationDefinition
 ---@field vitamin_absorption any
 ---@field wet_protection any
 local MutationDefinition = {}
@@ -5177,8 +5204,53 @@ function CcbPlatformContent.MathFunction(options) end
 ---@param options MissionDefinitionOptions
 ---@return MissionDefinition
 function CcbPlatformContent.Mission(options) end
----@param options CcbLuaValue
----@return any
+
+---@class MutationDefinitionOptions
+---@field id string
+---@field name string|LocalizedText
+---@field description string|LocalizedText
+---@field activation_message? string|LocalizedText
+---@field spawn_item_message? string|LocalizedText
+---@field ranged_mutation_message? string|LocalizedText
+---@field [string] any
+
+---@class CcbMutationVariantOptions
+---@field id string
+---@field name string|LocalizedText
+---@field description string|LocalizedText
+---@field [string] any
+
+---@class CcbMutationTransformOptions
+---@field target string
+---@field message? string|LocalizedText
+---@field msg_transform? string|LocalizedText
+---@field [string] any
+
+---@class CcbMutationAttackOptions
+---@field player_message? string|LocalizedText
+---@field attack_text_u? string|LocalizedText
+---@field npc_message? string|LocalizedText
+---@field attack_text_npc? string|LocalizedText
+---@field [string] any
+
+---@class CcbMutationReflexCondition
+---@field message_on? string|LocalizedText
+---@field msg_on? string|LocalizedText
+---@field message_off? string|LocalizedText
+---@field msg_off? string|LocalizedText
+---@field [string] any
+
+---@class CcbMutationComfortOptions
+---@field try_message? string|LocalizedText
+---@field hint_message? string|LocalizedText
+---@field sleep_message? string|LocalizedText
+---@field [string] any
+
+---@class CcbMutationReflexOptions
+---@field conditions CcbMutationReflexCondition[]
+
+---@param options MutationDefinitionOptions
+---@return MutationDefinition
 function CcbPlatformContent.Mutation(options) end
 ---@param options CcbLuaValue
 ---@return any

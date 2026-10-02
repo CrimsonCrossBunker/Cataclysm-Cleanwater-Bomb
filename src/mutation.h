@@ -413,8 +413,11 @@ struct mutation_branch {
          */
         int bionic_slot_bonus( const bodypart_str_id &part ) const;
         void set_platform_text( const std::string &name, const std::string &description );
+        void set_platform_text( translation name, translation description );
         void set_platform_spawn_item( const std::string &item, const std::string &message );
+        void set_platform_spawn_item( const std::string &item, translation message );
         void set_platform_ranged_mutation( const std::string &item, const std::string &message );
+        void set_platform_ranged_mutation( const std::string &item, translation message );
         void set_platform_bionic_slot_bonus( const bodypart_str_id &part, int amount );
         /**
          * All known mutations. Key is the mutation id, value is the mutation_branch that you would

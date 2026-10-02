@@ -1,4 +1,5 @@
 #include "lua_platform_content_creatures.h"
+#include "lua_platform_content_text.h"
 
 #include "lua_platform_runtime.h"
 #include "lua_platform_runtime_internal.h"
@@ -68,6 +69,67 @@ namespace cata::lua_platform
 
 namespace
 {
+
+using detail::authored_text;
+using detail::localized_text;
+using detail::read_singular_text;
+
+authored_text read_text_option( const sol::table &options, const char *key,
+                                const authored_text &fallback, const std::string &field )
+{
+    const sol::object value = options[key];
+    if( !value.valid() || value.get_type() == sol::type::nil ) {
+        return fallback;
+    }
+    return read_singular_text( value, fallback.raw, field );
+}
+
+authored_text read_text_option_with_alias( const sol::table &options, const char *key,
+        const char *alias, const authored_text &fallback, const std::string &field )
+{
+    const sol::object value = options[key];
+    if( value.valid() && value.get_type() != sol::type::nil ) {
+        return read_singular_text( value, fallback.raw, field );
+    }
+    return read_text_option( options, alias, fallback, field );
+}
+
+authored_text read_counted_name_option( const sol::table &options, const char *name_key,
+                                        const char *plural_key,
+                                        const authored_text &fallback_name,
+                                        const std::string &fallback_plural,
+                                        std::string &plural, const std::string &field )
+{
+    const sol::object name_value = options[name_key];
+    if( !name_value.valid() || name_value.get_type() == sol::type::nil ) {
+        plural = options.get_or( plural_key, fallback_plural );
+        return fallback_name;
+    }
+    authored_text name;
+    if( name_value.is<localized_text>() ) {
+        const localized_text &localized = name_value.as<const localized_text &>();
+        name = { localized.singular, localized };
+        const sol::object plural_value = options[plural_key];
+        if( plural_value.valid() && plural_value.get_type() != sol::type::nil ) {
+            plural = plural_value.as<std::string>();
+            if( localized.plural && plural != *localized.plural ) {
+                throw std::runtime_error( field + " plural conflicts with plural_name" );
+            }
+        } else {
+            plural = localized.plural.value_or( localized.singular );
+        }
+        name.translated->plural = plural;
+        return name;
+    }
+    name = read_singular_text( name_value, fallback_name.raw, field );
+    plural = options.get_or( plural_key, name.raw );
+    return name;
+}
+
+translation native_counted_name( const authored_text &name, const std::string &plural )
+{
+    return name.translated ? name.native() : pl_translation( name.raw, plural );
+}
 
 enum class definition_operation : int { add, replace, edit };
 enum class handle_lifecycle : int { building, committed, discarded };
@@ -140,6 +202,60 @@ void require_readable_handle( const std::shared_ptr<owner_token> &token,
 }
 
 template<typename Definition>
+void set_authored_text( const std::shared_ptr<owner_token> &token,
+                        const Definition &definition, authored_text &target,
+                        const sol::object &value, const std::string &field,
+                        const std::string_view kind )
+{
+    require_building_handle( token, definition, kind );
+    authored_text parsed = detail::read_singular_text_or( value, target, field );
+    target = std::move( parsed );
+}
+
+template<typename Definition>
+void set_counted_name( const std::shared_ptr<owner_token> &token,
+                       const Definition &definition, authored_text &name,
+                       std::string &plural, const sol::object &value,
+                       const std::string &field, const std::string_view kind )
+{
+    require_building_handle( token, definition, kind );
+    if( !value.valid() || value.get_type() == sol::type::nil ) {
+        return;
+    }
+    authored_text parsed;
+    if( value.is<localized_text>() ) {
+        const localized_text &localized = value.as<const localized_text &>();
+        parsed = { localized.singular, localized };
+    } else {
+        parsed = read_singular_text( value, name.raw, field );
+    }
+    std::string next_plural = plural;
+    if( parsed.translated && parsed.translated->plural ) {
+        next_plural = *parsed.translated->plural;
+    } else if( plural == name.raw ) {
+        next_plural = parsed.raw;
+    }
+    if( parsed.translated ) {
+        parsed.translated->plural = next_plural;
+    }
+    name = std::move( parsed );
+    plural = std::move( next_plural );
+}
+
+template<typename Definition>
+void set_counted_plural( const std::shared_ptr<owner_token> &token,
+                         const Definition &definition, authored_text &name,
+                         std::string &plural, const std::string &value,
+                         const std::string_view kind )
+{
+    require_building_handle( token, definition, kind );
+    if( name.translated ) {
+        name.translated->plural = value;
+    }
+    plural = value;
+}
+
+template<typename Definition>
 bool defines_registration( const std::vector<std::pair<definition_operation,
                            std::shared_ptr<Definition>>> &entries,
                            const std::string_view id )
@@ -190,6 +306,22 @@ void hash_part( std::uint64_t &state, const std::string_view value )
     append( ";" );
 }
 
+void hash_part( std::uint64_t &state, const authored_text &text )
+{
+    hash_part( state, text.raw );
+    hash_part( state, text.translated ? "localized" : "literal" );
+    if( text.translated ) {
+        hash_part( state, text.translated->plural ? "plural" : "singular" );
+        if( text.translated->plural ) {
+            hash_part( state, *text.translated->plural );
+        }
+        hash_part( state, text.translated->context ? "context" : "no_context" );
+        if( text.translated->context ) {
+            hash_part( state, *text.translated->context );
+        }
+    }
+}
+
 template<typename Registration>
 bool registration_id_exists( const std::vector<Registration> &entries,
                              const std::string_view id )
@@ -227,13 +359,13 @@ struct behavior_definition_data {
 
 struct effect_type_definition_data {
     std::string id;
-    std::vector<std::string> names;
-    std::vector<std::string> descriptions;
-    std::vector<std::string> reduced_descriptions;
-    std::string remove_message;
+    std::vector<authored_text> names;
+    std::vector<authored_text> descriptions;
+    std::vector<authored_text> reduced_descriptions;
+    authored_text remove_message;
     std::string apply_memorial_log;
     std::string remove_memorial_log;
-    std::string blood_analysis_description;
+    authored_text blood_analysis_description;
     std::int64_t maximum_intensity = 1;
     std::int64_t maximum_duration_turns = 31536000;
     std::int64_t intensity_duration_turns = 0;
@@ -274,13 +406,13 @@ struct weakpoint_effect_definition_data {
     std::int64_t intensity_max = 1;
     double damage_required_min = 0.0;
     double damage_required_max = 100.0;
-    std::string message;
+    authored_text message;
     std::string handler;
 };
 
 struct weakpoint_definition_data {
     std::string id;
-    std::string name;
+    authored_text name;
     double coverage = 100.0;
     bool good = true;
     bool head = false;
@@ -304,12 +436,12 @@ struct field_effect_definition_data {
     std::int64_t intensity = 1;
     std::string body_part;
     bool environmental = true;
-    std::string message;
-    std::string npc_message;
+    authored_text message;
+    authored_text npc_message;
 };
 
 struct field_intensity_definition_data {
-    std::string name;
+    authored_text name;
     std::string symbol = "%";
     std::string color = "white";
     bool dangerous = false;
@@ -363,8 +495,8 @@ struct field_type_definition_data {
 // Original runtime definition block 2
 struct sub_body_part_definition_data {
     std::string id;
-    std::string name;
-    std::string plural_name;
+    authored_text name;
+    authored_text plural_name;
     std::string parent;
     std::string opposite;
     std::string side = "both";
@@ -390,14 +522,14 @@ struct body_part_quality_definition_data {
 
 struct body_part_definition_data {
     std::string id;
-    std::string name;
-    std::string plural_name;
-    std::string accusative;
-    std::string plural_accusative;
-    std::string heading;
-    std::string plural_heading;
-    std::string encumbrance_text;
-    std::string hp_bar_text;
+    authored_text name;
+    authored_text plural_name;
+    authored_text accusative;
+    authored_text plural_accusative;
+    authored_text heading;
+    authored_text plural_heading;
+    authored_text encumbrance_text;
+    authored_text hp_bar_text;
     std::string main_part;
     std::string connected_to;
     std::string opposite;
@@ -430,9 +562,9 @@ struct wound_progression_definition_data {
 
 struct wound_type_definition_data {
     std::string id;
-    std::string name;
+    authored_text name;
     std::string plural_name;
-    std::string description;
+    authored_text description;
     std::int64_t pain_min = 0;
     std::int64_t pain_max = 0;
     std::int64_t healing_min_turns = 1;
@@ -464,9 +596,9 @@ struct wound_fix_requirement_definition_data {
 
 struct wound_fix_definition_data {
     std::string id;
-    std::string name;
-    std::string description;
-    std::string success_message;
+    authored_text name;
+    authored_text description;
+    authored_text success_message;
     std::int64_t duration_turns = 0;
     std::int64_t health_delta = 0;
     std::map<std::string, std::int64_t> skills;
@@ -517,9 +649,9 @@ struct monster_attack_reference_definition_data {
 
 struct monster_definition_data {
     std::string id;
-    std::string name;
+    authored_text name;
     std::string plural_name;
-    std::string description;
+    authored_text description;
     std::string symbol = "?";
     std::string color = "white";
     std::string looks_like;
@@ -674,7 +806,7 @@ class lua_monster_attack_result_actor final : public mattack_actor
 
 struct morale_type_definition_data {
     std::string id;
-    std::string text;
+    authored_text text;
     bool permanent = false;
     bool registered = false;
 };
@@ -698,8 +830,8 @@ struct monster_flag_definition_data {
 
 struct species_definition_data {
     std::string id;
-    std::string description;
-    std::string footsteps = "footsteps.";
+    authored_text description;
+    authored_text footsteps = { "footsteps.", std::nullopt };
     std::string bleeds = "fd_null";
     std::set<std::string> flags;
     std::set<std::string> anger;
@@ -737,9 +869,9 @@ struct connect_group_definition_data {
 
 struct mutation_category_definition_data {
     std::string id;
-    std::string name;
+    authored_text name;
     std::string threshold_mutation;
-    std::string mutagen_message;
+    authored_text mutagen_message;
     std::string memorial_message = "Crossed a threshold";
     std::string vitamin = "null";
     std::int64_t threshold_minimum = 2200;
@@ -753,15 +885,15 @@ struct mutation_category_definition_data {
 // Original runtime definition block 3
 struct mutation_variant_definition_data {
     std::string id;
-    std::string name;
-    std::string description;
+    authored_text name;
+    authored_text description;
     bool append_description = false;
     std::int64_t weight = 0;
 };
 
 struct mutation_transform_definition_data {
     std::string target;
-    std::string message;
+    authored_text message;
     bool active = false;
     bool safe = false;
     std::int64_t moves = 0;
@@ -802,8 +934,8 @@ struct mutation_damage_definition_data {
 };
 
 struct mutation_attack_definition_data {
-    std::string player_message;
-    std::string npc_message;
+    authored_text player_message;
+    authored_text npc_message;
     std::vector<std::string> required_mutations;
     std::vector<std::string> blocker_mutations;
     std::string bodypart;
@@ -815,9 +947,9 @@ struct mutation_attack_definition_data {
 
 struct mutation_reflex_definition_data {
     std::string handler;
-    std::string message_on;
+    authored_text message_on;
     std::string message_on_type = "neutral";
-    std::string message_off;
+    authored_text message_off;
     std::string message_off_type = "neutral";
 };
 
@@ -837,18 +969,18 @@ struct mutation_comfort_definition_data {
     bool add_human_comfort = false;
     bool use_better_comfort = false;
     bool add_sleep_aids = false;
-    std::string try_message;
+    authored_text try_message;
     std::string try_message_type = "neutral";
-    std::string hint_message;
+    authored_text hint_message;
     std::string hint_message_type = "neutral";
-    std::string sleep_message;
+    authored_text sleep_message;
     std::string sleep_message_type = "neutral";
 };
 
 struct mutation_definition_data {
     std::string id;
-    std::string name;
-    std::string description;
+    authored_text name;
+    authored_text description;
     std::int64_t points = 0;
     std::int64_t vitamin_cost = 100;
     std::int64_t visibility = 0;
@@ -887,12 +1019,12 @@ struct mutation_definition_data {
     std::optional<bool> hide_on_deactivated;
     std::optional<mutation_transform_definition_data> transform;
     std::optional<mutation_personality_definition_data> personality;
-    std::string activation_message;
+    authored_text activation_message;
     std::string scent_type;
     std::string spawn_item;
-    std::string spawn_item_message;
+    authored_text spawn_item_message;
     std::string ranged_mutation;
-    std::string ranged_mutation_message;
+    authored_text ranged_mutation_message;
     std::string override_look_id;
     std::string override_look_category;
     std::vector<mutation_variant_definition_data> variants;
@@ -1015,15 +1147,15 @@ struct effect_type_definition_handle {
         std::shared_ptr<effect_type_definition_data> definition;
         std::shared_ptr<owner_token> token;
 
-        effect_type_definition_handle &name( const std::string &text ) {
+        effect_type_definition_handle &name( const sol::object &text ) {
             return append_text( definition->names, text, "effect name" );
         }
 
-        effect_type_definition_handle &description( const std::string &text ) {
+        effect_type_definition_handle &description( const sol::object &text ) {
             return append_text( definition->descriptions, text, "effect description" );
         }
 
-        effect_type_definition_handle &reduced_description( const std::string &text ) {
+        effect_type_definition_handle &reduced_description( const sol::object &text ) {
             return append_text( definition->reduced_descriptions, text,
                                 "reduced effect description" );
         }
@@ -1068,13 +1200,14 @@ struct effect_type_definition_handle {
         }
 
     private:
-        effect_type_definition_handle &append_text( std::vector<std::string> &target,
-                const std::string &text, const std::string_view label ) {
+        effect_type_definition_handle &append_text( std::vector<authored_text> &target,
+                const sol::object &text, const std::string &label ) {
             require_building_handle( token, *definition, "effect type" );
-            if( text.empty() ) {
-                throw std::runtime_error( std::string( label ) + " cannot be empty" );
+            authored_text parsed = read_singular_text( text, {}, label );
+            if( parsed.empty() ) {
+                throw std::runtime_error( label + " cannot be empty" );
             }
-            target.push_back( text );
+            target.push_back( std::move( parsed ) );
             return *this;
         }
 
@@ -1118,7 +1251,7 @@ struct weakpoint_set_definition_handle {
             require_building_handle( token, *definition, "weakpoint set" );
             weakpoint_definition_data value;
             value.id = options.get_or( "id", std::string() );
-            value.name = options.get_or( "name", std::string() );
+            value.name = read_text_option( options, "name", {}, "weakpoint name" );
             value.coverage = options.get_or( "coverage", 100.0 );
             value.good = options.get_or( "good", true );
             value.head = options.get_or( "head", false );
@@ -1186,7 +1319,8 @@ struct weakpoint_set_definition_handle {
             value.damage_required_min = options.get_or( "damage_required_min", 0.0 );
             value.damage_required_max = options.get_or(
                                             "damage_required_max", 100.0 );
-            value.message = options.get_or( "message", std::string() );
+            value.message = read_text_option( options, "message", {},
+                               "weakpoint effect message" );
             value.handler = options.get_or(
                                 "on_apply",
                                 options.get_or( "handler", std::string() ) );
@@ -1231,6 +1365,18 @@ struct sub_body_part_definition_handle {
     std::shared_ptr<sub_body_part_definition_data> definition;
     std::shared_ptr<owner_token> token;
 
+    sub_body_part_definition_handle &name( const sol::object &value ) {
+        set_authored_text( token, *definition, definition->name, value,
+                           "sub-body-part name", "sub body part" );
+        return *this;
+    }
+
+    sub_body_part_definition_handle &plural_name( const sol::object &value ) {
+        set_authored_text( token, *definition, definition->plural_name, value,
+                           "sub-body-part plural name", "sub body part" );
+        return *this;
+    }
+
     sub_body_part_definition_handle &location_under( const std::string &id ) {
         require_building_handle( token, *definition, "sub body part" );
         if( id.empty() ) {
@@ -1259,6 +1405,54 @@ struct sub_body_part_definition_handle {
 struct body_part_definition_handle {
         std::shared_ptr<body_part_definition_data> definition;
         std::shared_ptr<owner_token> token;
+
+        body_part_definition_handle &name( const sol::object &value ) {
+            set_authored_text( token, *definition, definition->name, value,
+                               "body-part name", "body part" );
+            return *this;
+        }
+
+        body_part_definition_handle &plural_name( const sol::object &value ) {
+            set_authored_text( token, *definition, definition->plural_name, value,
+                               "body-part plural name", "body part" );
+            return *this;
+        }
+
+        body_part_definition_handle &accusative( const sol::object &value ) {
+            set_authored_text( token, *definition, definition->accusative, value,
+                               "body-part accusative", "body part" );
+            return *this;
+        }
+
+        body_part_definition_handle &plural_accusative( const sol::object &value ) {
+            set_authored_text( token, *definition, definition->plural_accusative, value,
+                               "body-part plural accusative", "body part" );
+            return *this;
+        }
+
+        body_part_definition_handle &heading( const sol::object &value ) {
+            set_authored_text( token, *definition, definition->heading, value,
+                               "body-part heading", "body part" );
+            return *this;
+        }
+
+        body_part_definition_handle &plural_heading( const sol::object &value ) {
+            set_authored_text( token, *definition, definition->plural_heading, value,
+                               "body-part plural heading", "body part" );
+            return *this;
+        }
+
+        body_part_definition_handle &encumbrance_text( const sol::object &value ) {
+            set_authored_text( token, *definition, definition->encumbrance_text, value,
+                               "body-part encumbrance text", "body part" );
+            return *this;
+        }
+
+        body_part_definition_handle &hp_bar_text( const sol::object &value ) {
+            set_authored_text( token, *definition, definition->hp_bar_text, value,
+                               "body-part HP bar text", "body part" );
+            return *this;
+        }
 
         body_part_definition_handle &sub_part( const std::string &id ) {
             require_building_handle( token, *definition, "body part" );
@@ -1343,6 +1537,24 @@ struct body_part_definition_handle {
 struct wound_type_definition_handle {
         std::shared_ptr<wound_type_definition_data> definition;
         std::shared_ptr<owner_token> token;
+
+        wound_type_definition_handle &name( const sol::object &value ) {
+            set_counted_name( token, *definition, definition->name, definition->plural_name,
+                              value, "wound name", "wound" );
+            return *this;
+        }
+
+        wound_type_definition_handle &plural_name( const std::string &value ) {
+            set_counted_plural( token, *definition, definition->name, definition->plural_name,
+                                value, "wound" );
+            return *this;
+        }
+
+        wound_type_definition_handle &description( const sol::object &value ) {
+            set_authored_text( token, *definition, definition->description, value,
+                               "wound description", "wound" );
+            return *this;
+        }
 
         wound_type_definition_handle &damage_type( const std::string &id ) {
             require_building_handle( token, *definition, "wound" );
@@ -1437,6 +1649,24 @@ struct wound_type_definition_handle {
 struct wound_fix_definition_handle {
         std::shared_ptr<wound_fix_definition_data> definition;
         std::shared_ptr<owner_token> token;
+
+        wound_fix_definition_handle &name( const sol::object &value ) {
+            set_authored_text( token, *definition, definition->name, value,
+                               "wound-fix name", "wound fix" );
+            return *this;
+        }
+
+        wound_fix_definition_handle &description( const sol::object &value ) {
+            set_authored_text( token, *definition, definition->description, value,
+                               "wound-fix description", "wound fix" );
+            return *this;
+        }
+
+        wound_fix_definition_handle &success_message( const sol::object &value ) {
+            set_authored_text( token, *definition, definition->success_message, value,
+                               "wound-fix success message", "wound fix" );
+            return *this;
+        }
 
         wound_fix_definition_handle &skill( const std::string &id,
                                             const std::int64_t level ) {
@@ -1621,6 +1851,24 @@ struct body_graph_definition_handle {
 struct monster_definition_handle {
         std::shared_ptr<monster_definition_data> definition;
         std::shared_ptr<owner_token> token;
+
+        monster_definition_handle &name( const sol::object &value ) {
+            set_counted_name( token, *definition, definition->name, definition->plural_name,
+                              value, "monster name", "monster" );
+            return *this;
+        }
+
+        monster_definition_handle &plural_name( const std::string &value ) {
+            set_counted_plural( token, *definition, definition->name, definition->plural_name,
+                                value, "monster" );
+            return *this;
+        }
+
+        monster_definition_handle &description( const sol::object &value ) {
+            set_authored_text( token, *definition, definition->description, value,
+                               "monster description", "monster" );
+            return *this;
+        }
 
         monster_definition_handle &material( const std::string &id,
                                              const sol::optional<std::int64_t> &portions ) {
@@ -1807,7 +2055,7 @@ struct field_type_definition_handle {
         field_type_definition_handle &intensity( const sol::table &options ) {
             require_building_handle( token, *definition, "field type" );
             field_intensity_definition_data value;
-            value.name = options.get_or( "name", std::string() );
+            value.name = read_text_option( options, "name", {}, "field intensity name" );
             value.symbol = options.get_or( "symbol", std::string( "%" ) );
             value.color = options.get_or( "color", std::string( "white" ) );
             value.dangerous = options.get_or( "dangerous", false );
@@ -1845,8 +2093,9 @@ struct field_type_definition_handle {
             value.intensity = options.get_or<std::int64_t>( "intensity", 1 );
             value.body_part = options.get_or( "body_part", std::string() );
             value.environmental = options.get_or( "environmental", true );
-            value.message = options.get_or( "message", std::string() );
-            value.npc_message = options.get_or( "npc_message", std::string() );
+            value.message = read_text_option( options, "message", {}, "field effect message" );
+            value.npc_message = read_text_option( options, "npc_message", {},
+                                   "field effect NPC message" );
             definition->intensity_levels[static_cast<std::size_t>( intensity_index - 1 )].
             effects.push_back( std::move( value ) );
             return *this;
@@ -1880,6 +2129,12 @@ struct field_type_definition_handle {
 struct morale_type_definition_handle {
     std::shared_ptr<morale_type_definition_data> definition;
     std::shared_ptr<owner_token> token;
+
+    morale_type_definition_handle &text( const sol::object &value ) {
+        set_authored_text( token, *definition, definition->text, value,
+                           "morale type text", "morale type" );
+        return *this;
+    }
 
     std::string id() const {
         require_readable_handle( token, *definition, "morale type" );
@@ -1919,6 +2174,18 @@ struct monster_flag_definition_handle {
 struct species_definition_handle {
     std::shared_ptr<species_definition_data> definition;
     std::shared_ptr<owner_token> token;
+
+    species_definition_handle &description( const sol::object &value ) {
+        set_authored_text( token, *definition, definition->description, value,
+                           "species description", "species" );
+        return *this;
+    }
+
+    species_definition_handle &footsteps( const sol::object &value ) {
+        set_authored_text( token, *definition, definition->footsteps, value,
+                           "species footsteps", "species" );
+        return *this;
+    }
 
     species_definition_handle &flag( const std::string &id ) {
         require_building_handle( token, *definition, "species" );
@@ -2029,6 +2296,18 @@ struct mutation_category_definition_handle {
     std::shared_ptr<mutation_category_definition_data> definition;
     std::shared_ptr<owner_token> token;
 
+    mutation_category_definition_handle &name( const sol::object &value ) {
+        set_authored_text( token, *definition, definition->name, value,
+                           "mutation-category name", "mutation category" );
+        return *this;
+    }
+
+    mutation_category_definition_handle &mutagen_message( const sol::object &value ) {
+        set_authored_text( token, *definition, definition->mutagen_message, value,
+                           "mutation-category mutagen message", "mutation category" );
+        return *this;
+    }
+
     std::string id() const {
         require_readable_handle( token, *definition, "mutation category" );
         return definition->id;
@@ -2042,12 +2321,31 @@ struct mutation_definition_handle {
     std::shared_ptr<mutation_definition_data> definition;
     std::shared_ptr<owner_token> token;
 
+    mutation_definition_handle &name( const sol::object &value ) {
+        set_authored_text( token, *definition, definition->name, value,
+                           "mutation name", "mutation" );
+        return *this;
+    }
+
+    mutation_definition_handle &description( const sol::object &value ) {
+        set_authored_text( token, *definition, definition->description, value,
+                           "mutation description", "mutation" );
+        return *this;
+    }
+
+    mutation_definition_handle &activation_message( const sol::object &value ) {
+        set_authored_text( token, *definition, definition->activation_message, value,
+                           "mutation activation message", "mutation" );
+        return *this;
+    }
+
     mutation_definition_handle &variant( const sol::table &options ) {
         require_building_handle( token, *definition, "mutation" );
         mutation_variant_definition_data value;
         value.id = options.get_or( "id", std::string() );
-        value.name = options.get_or( "name", std::string() );
-        value.description = options.get_or( "description", std::string() );
+        value.name = read_text_option( options, "name", {}, "mutation variant name" );
+        value.description = read_text_option( options, "description", {},
+                               "mutation variant description" );
         value.append_description = options.get_or(
                                        "append_description", options.get_or( "append_desc", false ) );
         value.weight = options.get_or<std::int64_t>( "weight", 0 );
@@ -2059,8 +2357,11 @@ struct mutation_definition_handle {
         require_building_handle( token, *definition, "mutation" );
         mutation_transform_definition_data value;
         value.target = options.get_or( "target", std::string() );
-        value.message = options.get_or(
-                            "message", options.get_or( "msg_transform", std::string() ) );
+        const sol::object message = options["message"];
+        value.message = message.valid() && message.get_type() != sol::type::nil ?
+                        read_singular_text( message, {}, "mutation transform message" ) :
+                        read_text_option( options, "msg_transform", {},
+                                          "mutation transform message" );
         value.active = options.get_or( "active", false );
         value.safe = options.get_or( "safe", false );
         value.moves = options.get_or<std::int64_t>( "moves", 0 );
@@ -2213,10 +2514,10 @@ struct mutation_definition_handle {
     mutation_definition_handle &attack( const sol::table &options ) {
         require_building_handle( token, *definition, "mutation" );
         mutation_attack_definition_data attack;
-        attack.player_message = options.get_or(
-                                    "player_message", options.get_or( "attack_text_u", std::string() ) );
-        attack.npc_message = options.get_or(
-                                 "npc_message", options.get_or( "attack_text_npc", std::string() ) );
+        attack.player_message = read_text_option_with_alias( options, "player_message",
+                                 "attack_text_u", {}, "mutation attack player message" );
+        attack.npc_message = read_text_option_with_alias( options, "npc_message",
+                              "attack_text_npc", {}, "mutation attack NPC message" );
         attack.bodypart = options.get_or(
                               "bodypart", options.get_or( "body_part", std::string() ) );
         attack.chance = options.get_or<std::int64_t>( "chance", 0 );
@@ -2281,12 +2582,12 @@ struct mutation_definition_handle {
             mutation_reflex_definition_data condition;
             condition.handler = entry.get_or(
                                     "handler", entry.get_or( "condition", std::string() ) );
-            condition.message_on = entry.get_or( "message_on", entry.get_or(
-                    "msg_on", std::string() ) );
+            condition.message_on = read_text_option_with_alias( entry, "message_on", "msg_on", {},
+                                     "mutation reflex activation message" );
             condition.message_on_type = entry.get_or(
                                             "message_on_type", entry.get_or( "msg_on_type", std::string( "neutral" ) ) );
-            condition.message_off = entry.get_or( "message_off", entry.get_or(
-                    "msg_off", std::string() ) );
+            condition.message_off = read_text_option_with_alias( entry, "message_off", "msg_off", {},
+                                      "mutation reflex deactivation message" );
             condition.message_off_type = entry.get_or(
                                              "message_off_type", entry.get_or( "msg_off_type", std::string( "neutral" ) ) );
             group.push_back( std::move( condition ) );
@@ -2303,11 +2604,14 @@ struct mutation_definition_handle {
         value.add_human_comfort = options.get_or( "add_human_comfort", false );
         value.use_better_comfort = options.get_or( "use_better_comfort", false );
         value.add_sleep_aids = options.get_or( "add_sleep_aids", false );
-        value.try_message = options.get_or( "try_message", std::string() );
+        value.try_message = read_text_option( options, "try_message", {},
+                               "mutation comfort try message" );
         value.try_message_type = options.get_or( "try_message_type", std::string( "neutral" ) );
-        value.hint_message = options.get_or( "hint_message", std::string() );
+        value.hint_message = read_text_option( options, "hint_message", {},
+                                "mutation comfort hint message" );
         value.hint_message_type = options.get_or( "hint_message_type", std::string( "neutral" ) );
-        value.sleep_message = options.get_or( "sleep_message", std::string() );
+        value.sleep_message = read_text_option( options, "sleep_message", {},
+                                 "mutation comfort sleep message" );
         value.sleep_message_type = options.get_or( "sleep_message_type", std::string( "neutral" ) );
         if( const sol::optional<sol::table> conditions =
                 options.get<sol::optional<sol::table>>( "conditions" ) ) {
@@ -2488,11 +2792,16 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     ccb.new_usertype<sub_body_part_definition_handle>(
         "SubBodyPartDefinition", sol::no_constructor,
         "id", sol::property( &sub_body_part_definition_handle::id ),
+        "name", &sub_body_part_definition_handle::name,
+        "plural_name", &sub_body_part_definition_handle::plural_name,
         "location_under", &sub_body_part_definition_handle::location_under,
         "unarmed_damage", &sub_body_part_definition_handle::unarmed_damage );
     ccb.new_usertype<wound_type_definition_handle>(
         "WoundDefinition", sol::no_constructor,
         "id", sol::property( &wound_type_definition_handle::id ),
+        "name", &wound_type_definition_handle::name,
+        "plural_name", &wound_type_definition_handle::plural_name,
+        "description", &wound_type_definition_handle::description,
         "damage_type", &wound_type_definition_handle::damage_type,
         "limb_score", &wound_type_definition_handle::limb_score,
         "progression", &wound_type_definition_handle::progression,
@@ -2501,6 +2810,14 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     ccb.new_usertype<body_part_definition_handle>(
         "BodyPartDefinition", sol::no_constructor,
         "id", sol::property( &body_part_definition_handle::id ),
+        "name", &body_part_definition_handle::name,
+        "plural_name", &body_part_definition_handle::plural_name,
+        "accusative", &body_part_definition_handle::accusative,
+        "plural_accusative", &body_part_definition_handle::plural_accusative,
+        "heading", &body_part_definition_handle::heading,
+        "plural_heading", &body_part_definition_handle::plural_heading,
+        "encumbrance_text", &body_part_definition_handle::encumbrance_text,
+        "hp_bar_text", &body_part_definition_handle::hp_bar_text,
         "sub_part", &body_part_definition_handle::sub_part,
         "limb_type", &body_part_definition_handle::limb_type,
         "armor", &body_part_definition_handle::armor,
@@ -2511,6 +2828,9 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     ccb.new_usertype<wound_fix_definition_handle>(
         "WoundFixDefinition", sol::no_constructor,
         "id", sol::property( &wound_fix_definition_handle::id ),
+        "name", &wound_fix_definition_handle::name,
+        "description", &wound_fix_definition_handle::description,
+        "success_message", &wound_fix_definition_handle::success_message,
         "skill", &wound_fix_definition_handle::skill,
         "proficiency", &wound_fix_definition_handle::proficiency,
         "removes", &wound_fix_definition_handle::removes,
@@ -2528,6 +2848,9 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     ccb.new_usertype<monster_definition_handle>(
         "MonsterDefinition", sol::no_constructor,
         "id", sol::property( &monster_definition_handle::id ),
+        "name", &monster_definition_handle::name,
+        "plural_name", &monster_definition_handle::plural_name,
+        "description", &monster_definition_handle::description,
         "material", &monster_definition_handle::material,
         "species", &monster_definition_handle::species,
         "category", &monster_definition_handle::category,
@@ -2549,7 +2872,8 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         "on_death", &monster_definition_handle::on_death );
     ccb.new_usertype<morale_type_definition_handle>(
         "MoraleTypeDefinition", sol::no_constructor,
-        "id", sol::property( &morale_type_definition_handle::id ) );
+        "id", sol::property( &morale_type_definition_handle::id ),
+        "text", &morale_type_definition_handle::text );
     ccb.new_usertype<disease_type_definition_handle>(
         "DiseaseTypeDefinition", sol::no_constructor,
         "id", sol::property( &disease_type_definition_handle::id ),
@@ -2560,6 +2884,8 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     ccb.new_usertype<species_definition_handle>(
         "SpeciesDefinition", sol::no_constructor,
         "id", sol::property( &species_definition_handle::id ),
+        "description", &species_definition_handle::description,
+        "footsteps", &species_definition_handle::footsteps,
         "flag", &species_definition_handle::flag,
         "anger", &species_definition_handle::anger,
         "fear", &species_definition_handle::fear,
@@ -2580,10 +2906,15 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         "id", sol::property( &connect_group_definition_handle::id ) );
     ccb.new_usertype<mutation_category_definition_handle>(
         "MutationCategoryDefinition", sol::no_constructor,
-        "id", sol::property( &mutation_category_definition_handle::id ) );
+        "id", sol::property( &mutation_category_definition_handle::id ),
+        "name", &mutation_category_definition_handle::name,
+        "mutagen_message", &mutation_category_definition_handle::mutagen_message );
     ccb.new_usertype<mutation_definition_handle>(
         "MutationDefinition", sol::no_constructor,
         "id", sol::property( &mutation_definition_handle::id ),
+        "name", &mutation_definition_handle::name,
+        "description", &mutation_definition_handle::description,
+        "activation_message", &mutation_definition_handle::activation_message,
         "variant", &mutation_definition_handle::variant,
         "transform", &mutation_definition_handle::transform,
         "personality", &mutation_definition_handle::personality,
@@ -2643,18 +2974,21 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     content.set_function( "EffectType", [this]( const sol::table & options ) {
         auto definition = std::make_shared<effect_type_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        if( const std::string value = options.get_or( "name", std::string() ); !value.empty() ) {
-            definition->names.push_back( value );
-        }
-        if( const std::string value = options.get_or( "description", std::string() );
+        if( authored_text value = read_text_option( options, "name", {}, "effect name" );
             !value.empty() ) {
-            definition->descriptions.push_back( value );
+            definition->names.push_back( std::move( value ) );
         }
-        definition->remove_message = options.get_or( "remove_message", std::string() );
+        if( authored_text value = read_text_option( options, "description", {},
+                                  "effect description" );
+            !value.empty() ) {
+            definition->descriptions.push_back( std::move( value ) );
+        }
+        definition->remove_message = read_text_option( options, "remove_message", {},
+                                        "effect remove message" );
         definition->apply_memorial_log = options.get_or( "apply_memorial_log", std::string() );
         definition->remove_memorial_log = options.get_or( "remove_memorial_log", std::string() );
-        definition->blood_analysis_description = options.get_or(
-                    "blood_analysis_description", std::string() );
+        definition->blood_analysis_description = read_text_option( options,
+                "blood_analysis_description", {}, "effect blood analysis description" );
         definition->maximum_intensity = options.get_or<std::int64_t>(
                                             "maximum_intensity", 1 );
         definition->maximum_duration_turns = options.get_or<std::int64_t>(
@@ -2727,8 +3061,9 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     content.set_function( "SubBodyPart", [this]( const sol::table & options ) {
         auto definition = std::make_shared<sub_body_part_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", std::string() );
-        definition->plural_name = options.get_or( "plural_name", std::string() );
+        definition->name = read_text_option( options, "name", {}, "sub-body-part name" );
+        definition->plural_name = read_text_option( options, "plural_name", definition->name,
+                                 "sub-body-part plural name" );
         definition->parent = options.get_or( "parent", std::string() );
         definition->opposite = options.get_or( "opposite", definition->id );
         definition->side = options.get_or( "side", std::string( "both" ) );
@@ -2741,9 +3076,11 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     content.set_function( "Wound", [this]( const sol::table & options ) {
         auto definition = std::make_shared<wound_type_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", definition->id );
-        definition->plural_name = options.get_or( "plural_name", definition->name );
-        definition->description = options.get_or( "description", std::string() );
+        definition->name = read_counted_name_option( options, "name", "plural_name",
+                             { definition->id, std::nullopt }, definition->id,
+                             definition->plural_name, "wound name" );
+        definition->description = read_text_option( options, "description", {},
+                                    "wound description" );
         definition->pain_min = options.get_or<std::int64_t>( "pain_min", 0 );
         definition->pain_max = options.get_or<std::int64_t>( "pain_max", 0 );
         definition->healing_min_turns = options.get_or<std::int64_t>(
@@ -2763,9 +3100,12 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     content.set_function( "WoundFix", [this]( const sol::table & options ) {
         auto definition = std::make_shared<wound_fix_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", definition->id );
-        definition->description = options.get_or( "description", std::string() );
-        definition->success_message = options.get_or( "success_message", std::string() );
+        definition->name = read_text_option( options, "name", { definition->id, std::nullopt },
+                             "wound-fix name" );
+        definition->description = read_text_option( options, "description", {},
+                                    "wound-fix description" );
+        definition->success_message = read_text_option( options, "success_message", {},
+                                         "wound-fix success message" );
         definition->duration_turns = options.get_or<std::int64_t>( "duration_turns", 0 );
         definition->health_delta = options.get_or<std::int64_t>( "health_delta", 0 );
         return wound_fix_definition_handle{ std::move( definition ), pimpl_->token };
@@ -2773,17 +3113,21 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     content.set_function( "BodyPart", [this]( const sol::table & options ) {
         auto definition = std::make_shared<body_part_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", std::string() );
-        definition->plural_name = options.get_or( "plural_name", definition->name );
-        definition->accusative = options.get_or( "accusative", definition->name );
-        definition->plural_accusative = options.get_or(
-                                            "plural_accusative", definition->plural_name );
-        definition->heading = options.get_or( "heading", definition->name );
-        definition->plural_heading = options.get_or(
-                                         "plural_heading", definition->plural_name );
-        definition->encumbrance_text = options.get_or(
-                                           "encumbrance_text", definition->name );
-        definition->hp_bar_text = options.get_or( "hp_bar_text", definition->name );
+        definition->name = read_text_option( options, "name", {}, "body-part name" );
+        definition->plural_name = read_text_option( options, "plural_name", definition->name,
+                                 "body-part plural name" );
+        definition->accusative = read_text_option( options, "accusative", definition->name,
+                                "body-part accusative" );
+        definition->plural_accusative = read_text_option( options, "plural_accusative",
+                                       definition->plural_name, "body-part plural accusative" );
+        definition->heading = read_text_option( options, "heading", definition->name,
+                             "body-part heading" );
+        definition->plural_heading = read_text_option( options, "plural_heading",
+                                    definition->plural_name, "body-part plural heading" );
+        definition->encumbrance_text = read_text_option( options, "encumbrance_text",
+                                      definition->name, "body-part encumbrance text" );
+        definition->hp_bar_text = read_text_option( options, "hp_bar_text", definition->name,
+                                 "body-part HP bar text" );
         definition->main_part = options.get_or( "main_part", definition->id );
         definition->connected_to = options.get_or(
                                        "connected_to", definition->main_part );
@@ -2817,9 +3161,10 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     content.set_function( "Monster", [this]( const sol::table & options ) {
         auto definition = std::make_shared<monster_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", std::string() );
-        definition->plural_name = options.get_or( "plural_name", definition->name );
-        definition->description = options.get_or( "description", std::string() );
+        definition->name = read_counted_name_option( options, "name", "plural_name",
+                             {}, {}, definition->plural_name, "monster name" );
+        definition->description = read_text_option( options, "description", {},
+                                    "monster description" );
         definition->symbol = options.get_or( "symbol", std::string( "?" ) );
         definition->color = options.get_or( "color", std::string( "white" ) );
         definition->looks_like = options.get_or( "looks_like", std::string() );
@@ -2869,7 +3214,7 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     content.set_function( "MoraleType", [this]( const sol::table & options ) {
         auto definition = std::make_shared<morale_type_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->text = options.get_or( "text", std::string() );
+        definition->text = read_text_option( options, "text", {}, "morale type text" );
         definition->permanent = options.get_or( "permanent", false );
         return morale_type_definition_handle{ std::move( definition ), pimpl_->token };
     } );
@@ -2899,8 +3244,10 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     content.set_function( "Species", [this]( const sol::table & options ) {
         auto definition = std::make_shared<species_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->description = options.get_or( "description", std::string() );
-        definition->footsteps = options.get_or( "footsteps", std::string( "footsteps." ) );
+        definition->description = read_text_option( options, "description", {},
+                                    "species description" );
+        definition->footsteps = read_text_option( options, "footsteps",
+                                  { "footsteps.", std::nullopt }, "species footsteps" );
         definition->bleeds = options.get_or( "bleeds", std::string( "fd_null" ) );
         return species_definition_handle{ std::move( definition ), pimpl_->token };
     } );
@@ -2934,11 +3281,12 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     content.set_function( "MutationCategory", [this]( const sol::table & options ) {
         auto definition = std::make_shared<mutation_category_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", definition->id );
+        definition->name = read_text_option( options, "name", { definition->id, std::nullopt },
+                              "mutation-category name" );
         definition->threshold_mutation = options.get_or(
                                              "threshold_mutation", std::string() );
-        definition->mutagen_message = options.get_or(
-                                          "mutagen_message", std::string() );
+        definition->mutagen_message = read_text_option( options, "mutagen_message", {},
+                                         "mutation-category mutagen message" );
         definition->memorial_message = options.get_or(
                                            "memorial_message", std::string( "Crossed a threshold" ) );
         definition->vitamin = options.get_or( "vitamin", std::string( "null" ) );
@@ -2957,8 +3305,9 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     const sol::table & options ) {
         auto definition = std::make_shared<mutation_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", std::string() );
-        definition->description = options.get_or( "description", std::string() );
+        definition->name = read_text_option( options, "name", {}, "mutation name" );
+        definition->description = read_text_option( options, "description", {},
+                                    "mutation description" );
         definition->points = options.get_or<std::int64_t>( "points", 0 );
         definition->vitamin_cost = options.get_or<std::int64_t>( "vitamin_cost", 100 );
         definition->visibility = options.get_or<std::int64_t>( "visibility", 0 );
@@ -2990,15 +3339,16 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         definition->player_display = options.get_or( "player_display", true );
         definition->vanity = options.get_or( "vanity", false );
         definition->dummy = options.get_or( "dummy", false );
-        definition->activation_message = options.get_or(
-                                             "activation_message", std::string() );
+        definition->activation_message = read_text_option( options, "activation_message", {},
+                                         "mutation activation message" );
         definition->scent_type = options.get_or( "scent_type", std::string() );
         definition->spawn_item = options.get_or( "spawn_item", std::string() );
-        definition->spawn_item_message = options.get_or(
-                                             "spawn_item_message", std::string() );
+        definition->spawn_item_message = read_text_option( options, "spawn_item_message", {},
+                                             "mutation spawn item message" );
         definition->ranged_mutation = options.get_or( "ranged_mutation", std::string() );
-        definition->ranged_mutation_message = options.get_or(
-                "ranged_mutation_message", std::string() );
+        definition->ranged_mutation_message = read_text_option( options,
+                                                 "ranged_mutation_message", {},
+                                                 "mutation ranged message" );
         definition->override_look_id = options.get_or( "override_look_id", std::string() );
         definition->override_look_category = options.get_or(
                 "override_look_category", std::string() );
@@ -3953,8 +4303,8 @@ bool creatures_content_transaction::apply_phase( const creatures_content_apply_p
                 native.id = id;
                 native.src.emplace_back( id, mod_id( pimpl_->owner ) );
                 native.was_loaded = true;
-                native.description = no_translation( source.description );
-                native.footsteps = no_translation( source.footsteps );
+                native.description = source.description.native();
+                native.footsteps = source.footsteps.native();
                 native.bleeds = field_type_str_id( source.bleeds );
                 for( const std::string &flag : source.flags ) {
                     native.flags.insert( mon_flag_str_id( flag ) );
@@ -4050,8 +4400,8 @@ bool creatures_content_transaction::apply_phase( const creatures_content_apply_p
                 const mutation_category_definition_data &source = *entry.definition;
                 mutation_category_trait native;
                 native.id = mutation_category_id( id );
-                native.raw_name = no_translation( source.name );
-                native.raw_mutagen_message = no_translation( source.mutagen_message );
+                native.raw_name = source.name.native();
+                native.raw_mutagen_message = source.mutagen_message.native();
                 native.raw_memorial_message = source.memorial_message;
                 native.threshold_mut = trait_id( source.threshold_mutation );
                 native.vitamin = vitamin_id( source.vitamin );
@@ -4138,25 +4488,25 @@ bool creatures_content_transaction::apply_phase( const creatures_content_apply_p
                 effect_type native;
                 native.id = efftype_id( source.id );
                 native.src.emplace_back( native.id, mod_id( pimpl_->owner ) );
-                for( const std::string &value : source.names ) {
-                    native.name.push_back( no_translation( value ) );
+                for( const authored_text &value : source.names ) {
+                    native.name.push_back( value.native() );
                 }
-                for( const std::string &value : source.descriptions ) {
-                    native.desc.push_back( no_translation( value ) );
+                for( const authored_text &value : source.descriptions ) {
+                    native.desc.push_back( value.native() );
                 }
                 if( source.reduced_descriptions.empty() ) {
                     native.reduced_desc = native.desc;
                 } else {
-                    for( const std::string &value : source.reduced_descriptions ) {
-                        native.reduced_desc.push_back( no_translation( value ) );
+                    for( const authored_text &value : source.reduced_descriptions ) {
+                        native.reduced_desc.push_back( value.native() );
                     }
                 }
                 native.remove_message = source.remove_message.empty() ? translation() :
-                                        no_translation( source.remove_message );
+                                        source.remove_message.native();
                 native.apply_memorial_log = source.apply_memorial_log;
                 native.remove_memorial_log = source.remove_memorial_log;
                 native.blood_analysis_description = source.blood_analysis_description.empty() ?
-                                                    translation() : no_translation( source.blood_analysis_description );
+                                                    translation() : source.blood_analysis_description.native();
                 native.max_intensity = static_cast<int>( source.maximum_intensity );
                 native.max_duration = time_duration::from_turns(
                                           static_cast<int>( source.maximum_duration_turns ) );
@@ -4213,8 +4563,8 @@ bool creatures_content_transaction::apply_phase( const creatures_content_apply_p
                 native.src.emplace_back( id, mod_id( pimpl_->owner ) );
                 native.opposite = sub_bodypart_str_id( source.opposite );
                 native.was_loaded = true;
-                native.name = no_translation( source.name );
-                native.name_multiple = no_translation( source.plural_name );
+                native.name = source.name.native();
+                native.name_multiple = source.plural_name.native();
                 native.part_side = platform_body_sides.at( source.side );
                 native.parent = bodypart_str_id( source.parent );
                 native.secondary = source.secondary;
@@ -4248,8 +4598,8 @@ bool creatures_content_transaction::apply_phase( const creatures_content_apply_p
                 wound_type native;
                 native.id = id;
                 native.was_loaded = true;
-                native.name_ = pl_translation( source.name, source.plural_name );
-                native.description_ = no_translation( source.description );
+                native.name_ = native_counted_name( source.name, source.plural_name );
+                native.description_ = source.description.native();
                 native.pain_ = { static_cast<int>( source.pain_min ),
                                  static_cast<int>( source.pain_max )
                                };
@@ -4319,14 +4669,14 @@ bool creatures_content_transaction::apply_phase( const creatures_content_apply_p
                 native.was_loaded = true;
                 native.legacy_id = "BP_NULL";
                 native.token = num_bp;
-                native.name = no_translation( source.name );
-                native.name_multiple = no_translation( source.plural_name );
-                native.accusative = no_translation( source.accusative );
-                native.accusative_multiple = no_translation( source.plural_accusative );
-                native.name_as_heading = no_translation( source.heading );
-                native.name_as_heading_multiple = no_translation( source.plural_heading );
-                native.encumb_text = no_translation( source.encumbrance_text );
-                native.hp_bar_ui_text = no_translation( source.hp_bar_text );
+                native.name = source.name.native();
+                native.name_multiple = source.plural_name.native();
+                native.accusative = source.accusative.native();
+                native.accusative_multiple = source.plural_accusative.native();
+                native.name_as_heading = source.heading.native();
+                native.name_as_heading_multiple = source.plural_heading.native();
+                native.encumb_text = source.encumbrance_text.native();
+                native.hp_bar_ui_text = source.hp_bar_text.native();
                 native.main_part = bodypart_str_id( source.main_part );
                 native.connected_to = bodypart_str_id( source.connected_to );
                 native.opposite_part = bodypart_str_id( source.opposite );
@@ -4451,7 +4801,7 @@ bool creatures_content_transaction::apply_phase( const creatures_content_apply_p
                 for( const field_intensity_definition_data &source_level :
                      source.intensity_levels ) {
                     field_intensity_level level;
-                    level.name = no_translation( source_level.name );
+                    level.name = source_level.name.native();
                     level.symbol = UTF8_getch( source_level.symbol );
                     level.color = color_from_string( source_level.color,
                                                      report_color_error::no );
@@ -4486,9 +4836,9 @@ bool creatures_content_transaction::apply_phase( const creatures_content_apply_p
                                     bodypart_str_id( source_effect.body_part );
                         effect.is_environmental = source_effect.environmental;
                         effect.message = source_effect.message.empty() ? translation() :
-                                         no_translation( source_effect.message );
+                                         source_effect.message.native();
                         effect.message_npc = source_effect.npc_message.empty() ? translation() :
-                                             no_translation( source_effect.npc_message );
+                                             source_effect.npc_message.native();
                         level.field_effects.push_back( std::move( effect ) );
                     }
                     native.intensity_levels.push_back( std::move( level ) );
@@ -4576,7 +4926,7 @@ bool creatures_content_transaction::apply_phase( const creatures_content_apply_p
                     weakpoint point;
                     point.id = source_point.id;
                     point.name = source_point.name.empty() ? translation() :
-                                 no_translation( source_point.name );
+                                 source_point.name.native();
                     point.coverage = static_cast<float>( source_point.coverage );
                     point.is_good = source_point.good;
                     point.is_head = source_point.head;
@@ -4611,7 +4961,7 @@ bool creatures_content_transaction::apply_phase( const creatures_content_apply_p
                             static_cast<float>( source_effect.damage_required_max )
                         };
                         effect.message = source_effect.message.empty() ? translation() :
-                                         no_translation( source_effect.message );
+                                         source_effect.message.native();
                         effect.lua_platform_mod = pimpl_->owner;
                         effect.lua_platform_handler = source_effect.handler;
                         effect.lua_platform_set_id = entry.definition->id;
@@ -4637,7 +4987,7 @@ bool creatures_content_transaction::apply_phase( const creatures_content_apply_p
                 native.id = id;
                 native.was_loaded = true;
                 native.src.emplace_back( id, mod_id( pimpl_->owner ) );
-                native.text = no_translation( entry.definition->text );
+                native.text = entry.definition->text.native();
                 native.permanent = entry.definition->permanent;
                 detail::morale_type_registry().insert( native );
             }
@@ -4683,9 +5033,9 @@ bool creatures_content_transaction::apply_phase( const creatures_content_apply_p
                 wound_fix native;
                 native.id = id;
                 native.was_loaded = true;
-                native.name = no_translation( source.name );
-                native.description = no_translation( source.description );
-                native.success_msg = no_translation( source.success_message );
+                native.name = source.name.native();
+                native.description = source.description.native();
+                native.success_msg = source.success_message.native();
                 native.time = time_duration::from_turns( static_cast<int>( source.duration_turns ) );
                 native.mod_hp = static_cast<int>( source.health_delta );
                 for( const auto &[skill, level] : source.skills ) {
@@ -4741,9 +5091,9 @@ bool creatures_content_transaction::apply_phase( const creatures_content_apply_p
                 native.id = id;
                 native.src.emplace_back( id, mod_id( pimpl_->owner ) );
                 native.was_loaded = true;
-                native.name = pl_translation( source.name, source.plural_name );
+                native.name = native_counted_name( source.name, source.plural_name );
                 native.description = source.description.empty() ? translation() :
-                                     no_translation( source.description );
+                                     source.description.native();
                 native.sym = source.symbol;
                 native.color = color_from_string( source.color, report_color_error::no );
                 native.looks_like = source.looks_like;
@@ -4885,7 +5235,7 @@ bool creatures_content_transaction::apply_phase( const creatures_content_apply_p
                 native.id = id;
                 native.src.emplace_back( id, mod_id( pimpl_->owner ) );
                 native.was_loaded = true;
-                native.set_platform_text( source.name, source.description );
+                native.set_platform_text( source.name.native(), source.description.native() );
                 native.points = static_cast<int>( source.points );
                 native.vitamin_cost = static_cast<int>( source.vitamin_cost );
                 native.visibility = static_cast<int>( source.visibility );
@@ -4926,19 +5276,19 @@ bool creatures_content_transaction::apply_phase( const creatures_content_apply_p
                 native.dummy = source.dummy;
                 native.hide_on_activated = source.hide_on_activated;
                 native.hide_on_deactivated = source.hide_on_deactivated;
-                native.activation_msg = no_translation(
-                                            source.activation_message.empty() ?
-                                            "You activate your %s." : source.activation_message );
+                native.activation_msg = source.activation_message.empty() ?
+                                        no_translation( "You activate your %s." ) :
+                                        source.activation_message.native();
                 if( !source.scent_type.empty() ) {
                     native.scent_typeid = scenttype_id( source.scent_type );
                 }
                 if( !source.spawn_item.empty() ) {
                     native.set_platform_spawn_item(
-                        source.spawn_item, source.spawn_item_message );
+                        source.spawn_item, source.spawn_item_message.native() );
                 }
                 if( !source.ranged_mutation.empty() ) {
                     native.set_platform_ranged_mutation(
-                        source.ranged_mutation, source.ranged_mutation_message );
+                        source.ranged_mutation, source.ranged_mutation_message.native() );
                 }
                 if( !source.override_look_id.empty() ) {
                     native.override_look.emplace(
@@ -4947,7 +5297,7 @@ bool creatures_content_transaction::apply_phase( const creatures_content_apply_p
                 if( source.transform ) {
                     native.transform = cata::make_value<mut_transform>();
                     native.transform->target = trait_id( source.transform->target );
-                    native.transform->msg_transform = no_translation( source.transform->message );
+                    native.transform->msg_transform = source.transform->message.native();
                     native.transform->active = source.transform->active;
                     native.transform->safe = source.transform->safe;
                     native.transform->moves = static_cast<int>( source.transform->moves );
@@ -4974,8 +5324,8 @@ bool creatures_content_transaction::apply_phase( const creatures_content_apply_p
                 for( const mutation_variant_definition_data &variant : source.variants ) {
                     mutation_variant value;
                     value.id = variant.id;
-                    value.alt_name = no_translation( variant.name );
-                    value.alt_description = no_translation( variant.description );
+                    value.alt_name = variant.name.native();
+                    value.alt_description = variant.description.native();
                     value.append_desc = variant.append_description;
                     value.weight = static_cast<int>( variant.weight );
                     value.parent = id;
@@ -5132,8 +5482,8 @@ bool creatures_content_transaction::apply_phase( const creatures_content_apply_p
                 };
                 for( const mutation_attack_definition_data &value : source.attacks ) {
                     mut_attack attack;
-                    attack.attack_text_u = no_translation( value.player_message );
-                    attack.attack_text_npc = no_translation( value.npc_message );
+                    attack.attack_text_u = value.player_message.native();
+                    attack.attack_text_npc = value.npc_message.native();
                     for( const std::string &required : value.required_mutations ) {
                         attack.required_mutations.emplace( required );
                     }
@@ -5168,11 +5518,11 @@ bool creatures_content_transaction::apply_phase( const creatures_content_apply_p
                                        owner, mutation_id, handler, dialogue ).value_or( false );
                         };
                         trigger.msg_on = {
-                            no_translation( value.message_on ),
+                            value.message_on.native(),
                             *io::string_to_enum_optional<game_message_type>( value.message_on_type )
                         };
                         trigger.msg_off = {
-                            no_translation( value.message_off ),
+                            value.message_off.native(),
                             *io::string_to_enum_optional<game_message_type>( value.message_off_type )
                         };
                         trigger.was_loaded = true;
@@ -5187,13 +5537,13 @@ bool creatures_content_transaction::apply_phase( const creatures_content_apply_p
                     comfort.add_human_comfort = value.add_human_comfort;
                     comfort.use_better_comfort = value.use_better_comfort;
                     comfort.add_sleep_aids = value.add_sleep_aids;
-                    comfort.msg_try.text = no_translation( value.try_message );
+                    comfort.msg_try.text = value.try_message.native();
                     comfort.msg_try.type = *io::string_to_enum_optional<game_message_type>(
                                                value.try_message_type );
-                    comfort.msg_hint.text = no_translation( value.hint_message );
+                    comfort.msg_hint.text = value.hint_message.native();
                     comfort.msg_hint.type = *io::string_to_enum_optional<game_message_type>(
                                                 value.hint_message_type );
-                    comfort.msg_sleep.text = no_translation( value.sleep_message );
+                    comfort.msg_sleep.text = value.sleep_message.native();
                     comfort.msg_sleep.type = *io::string_to_enum_optional<game_message_type>(
                                                  value.sleep_message_type );
                     for( const mutation_comfort_condition_definition_data &condition :
@@ -5794,15 +6144,15 @@ void creatures_content_transaction::append_fingerprint(
             hash_part( state, operation_name( entry.operation ) );
             const effect_type_definition_data &value = *entry.definition;
             hash_part( state, value.id );
-            for( const std::string &text : value.names ) {
+            for( const authored_text &text : value.names ) {
                 hash_part( state, "name" );
                 hash_part( state, text );
             }
-            for( const std::string &text : value.descriptions ) {
+            for( const authored_text &text : value.descriptions ) {
                 hash_part( state, "description" );
                 hash_part( state, text );
             }
-            for( const std::string &text : value.reduced_descriptions ) {
+            for( const authored_text &text : value.reduced_descriptions ) {
                 hash_part( state, "reduced_description" );
                 hash_part( state, text );
             }
@@ -6289,6 +6639,21 @@ void creatures_content_transaction::append_fingerprint(
             hash_part( state, value.id );
             hash_part( state, value.name );
             hash_part( state, value.description );
+            hash_part( state, "activation_message" );
+            hash_part( state, value.activation_message );
+            if( value.transform ) {
+                hash_part( state, "transform_message" );
+                hash_part( state, value.transform->message );
+            } else {
+                hash_part( state, "no_transform" );
+            }
+            for( const mutation_variant_definition_data &variant : value.variants ) {
+                hash_part( state, "variant_name" );
+                hash_part( state, variant.id );
+                hash_part( state, variant.name );
+                hash_part( state, "variant_description" );
+                hash_part( state, variant.description );
+            }
             hash_number( value.points );
             hash_number( value.vitamin_cost );
             hash_number( value.visibility );
@@ -6328,6 +6693,22 @@ void creatures_content_transaction::append_fingerprint(
                 hash_strings( attack.blocker_mutations );
                 hash_part( state, attack.bodypart );
                 hash_number( attack.chance );
+            }
+            for( const auto &group : value.reflex_triggers ) {
+                for( const mutation_reflex_definition_data &trigger : group ) {
+                    hash_part( state, "reflex_message_on" );
+                    hash_part( state, trigger.message_on );
+                    hash_part( state, "reflex_message_off" );
+                    hash_part( state, trigger.message_off );
+                }
+            }
+            for( const mutation_comfort_definition_data &comfort : value.comfort ) {
+                hash_part( state, "comfort_try_message" );
+                hash_part( state, comfort.try_message );
+                hash_part( state, "comfort_hint_message" );
+                hash_part( state, comfort.hint_message );
+                hash_part( state, "comfort_sleep_message" );
+                hash_part( state, comfort.sleep_message );
             }
         }
     }

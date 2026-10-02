@@ -626,22 +626,38 @@ int mutation_branch::bionic_slot_bonus( const bodypart_str_id &part ) const
 void mutation_branch::set_platform_text( const std::string &name,
         const std::string &description )
 {
-    raw_name = no_translation( name );
-    raw_desc = no_translation( description );
+    set_platform_text( no_translation( name ), no_translation( description ) );
+}
+
+void mutation_branch::set_platform_text( translation name, translation description )
+{
+    raw_name = std::move( name );
+    raw_desc = std::move( description );
 }
 
 void mutation_branch::set_platform_spawn_item( const std::string &item,
         const std::string &message )
 {
+    set_platform_spawn_item( item, no_translation( message ) );
+}
+
+void mutation_branch::set_platform_spawn_item( const std::string &item, translation message )
+{
     spawn_item = itype_id( item );
-    raw_spawn_item_message = no_translation( message );
+    raw_spawn_item_message = std::move( message );
 }
 
 void mutation_branch::set_platform_ranged_mutation( const std::string &item,
         const std::string &message )
 {
+    set_platform_ranged_mutation( item, no_translation( message ) );
+}
+
+void mutation_branch::set_platform_ranged_mutation( const std::string &item,
+        translation message )
+{
     ranged_mutation = itype_id( item );
-    raw_ranged_mutation_message = no_translation( message );
+    raw_ranged_mutation_message = std::move( message );
 }
 
 void mutation_branch::set_platform_bionic_slot_bonus( const bodypart_str_id &part,
