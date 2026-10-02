@@ -35042,10 +35042,52 @@ pointer=nil;reads=0;assert(evaluate()==-1.7 and reads==0)
                     self.assertIn('get_number(context.actors.interlocutor, "dx")', rendered)
                     self.assertIn('set(context.actors.interlocutor, "out", location', rendered)
         # These shapes are still open work, not guessed or clamped conversions.
-        for adjustment in ([1, 2], {"math": ["rand(10)"]}):
+        for adjustment in ([{"global_val": "bound"}, 2], {"math": ["rand(10)"]}):
             self.assertIsNone(migrate_lua_first.render_static_location_variable_adjust({
                 "location_variable_adjust": {"context_val": "center"}, "x_adjust": adjustment},
                 "location_variable_adjust", False, False))
+        self.assertIsNone(migrate_lua_first.render_static_location_variable_adjust({
+            "location_variable_adjust": {"context_val": "center"},
+            "x_adjust": [1, 2], "y_adjust": [3, 4]}, "location_variable_adjust", False, False))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_location_adjust_constant_range_uses_native_rng_before_unit_conversion(self) -> None:
+        for axis in ("x_adjust", "y_adjust", "z_adjust"):
+            lines = migrate_lua_first.render_static_location_variable_adjust({
+                "location_variable_adjust": {"context_val": "missing"}, axis: [3.9, -2.7],
+                "overmap_tile": True}, "location_variable_adjust", False, False)
+            self.assertIsNotNone(lines)
+            script = r"""
+local context={data={}}
+local draws=0
+local function point(x,y,z) return {x=x,y=y,z=z,
+ add=function(self,other) return point(self.x+other.x,self.y+other.y,self.z+other.z) end,
+ to=function(self,scale) assert(scale=='ms');return point(self.x*24,self.y*24,self.z) end} end
+local services={coords={tripoint_abs_ms=point,tripoint_rel_ms=point,tripoint_rel_omt=point},
+ variables={get_context_tripoint=function() return {ok=true,value={exists=false}} end},
+ random={native_int=function(lower,upper)
+ assert(lower==-2 and upper==3);draws=draws+1;return lower
+end}}
+local function service_value(result) assert(result.ok);return result.value end
+BODY
+local value=context.data.missing
+assert(draws==1 and value.x==EXPECTED_X and value.y==EXPECTED_Y and value.z==EXPECTED_Z)
+""".replace("BODY", "\n".join(lines or []))
+            expected = [-48 if axis == "x_adjust" else 0, -48 if axis == "y_adjust" else 0,
+                        -2 if axis == "z_adjust" else 0]
+            for name, value in zip(("EXPECTED_X", "EXPECTED_Y", "EXPECTED_Z"), expected):
+                script = script.replace(name, str(value))
+            result = subprocess.run(["lua", "-"], input=script, text=True,
+                                    capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+        for bounds, expected in (([0.9, 0.1], (0, 0)),
+                                 ([2147483647.9, 2147483647.1], (2147483647, 2147483647)),
+                                 ([-2147483648.9, -2147483648.1], (-2147483648, -2147483648)),
+                                 ([-2147483648, 2147483647], (-2147483648, 2147483647))):
+            self.assertEqual(migrate_lua_first.render_native_number_expression(bounds),
+                             f"services.random.native_int({expected[0]}, {expected[1]})")
+        for bounds in ([2147483648, 0], [-2147483649, 0], [0], [0, 1, 2], [True, 1]):
+            self.assertIsNone(migrate_lua_first.render_native_number_expression(bounds))
 
     def test_location_variable_search_applies_coordinate_adjustment_once(
         self,

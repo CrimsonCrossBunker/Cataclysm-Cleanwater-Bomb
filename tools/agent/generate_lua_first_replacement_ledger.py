@@ -3033,6 +3033,7 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
     ("eoc-effects", "location_variable_adjust"): [
         "src/npctalk.cpp", "src/lua_platform_bindings_coords.cpp",
         "src/lua_platform_variables.cpp", "tests/lua_platform_variable_native_key_test.cpp",
+        "tests/lua_platform_random_range_test.cpp",
         "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
     ],
     ("eoc-effects", "npc_location_variable"): [

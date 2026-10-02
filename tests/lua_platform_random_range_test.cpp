@@ -4,6 +4,7 @@
 #include <functional>
 #include <memory>
 #include <set>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -13,10 +14,13 @@
 #include "cata_scope_helpers.h"
 #include "character_id.h"
 #include "condition.h"
+#include "coordinates.h"
 #include "dialogue.h"
 #include "dialogue_helpers.h"
 #include "global_vars.h"
+#include "json.h"
 #include "json_loader.h"
+#include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_runtime.h"
 #include "lua_platform_runtime_internal.h"
@@ -206,6 +210,126 @@ ccb.runtime.on("world_ready","duration_ranges")
     const sol::table actual = lua["results"];
     for( std::size_t i = 0; i < expected.size(); ++i ) {
         CHECK( actual[i + 1].get<int>() == expected[i] );
+    }
+    CHECK( lua["following_draw"].get<int>() == expected_next );
+    CHECK( rng_get_engine() == expected_rng );
+}
+
+TEST_CASE( "lua_platform_single_axis_location_ranges_match_native_coordinates_and_rng",
+           "[lua][platform][random_range][coords][semantic]" )
+{
+    using namespace cata::lua_platform;
+    clear_active_runtimes();
+    const cata_default_random_engine saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
+    global_variables::impl_t saved_globals = get_globals().get_global_values();
+    const on_out_of_scope restore_state( [&]() {
+        rng_get_engine() = saved_rng;
+        get_globals().set_global_values( std::move( saved_globals ) );
+    } );
+    struct location_range_case {
+        int axis;
+        double lower;
+        double upper;
+        bool overmap;
+    };
+    std::vector<location_range_case> cases;
+    for( int axis = 0; axis < 3; ++axis ) {
+        for( const auto &bounds : std::vector<std::pair<double, double>>{
+                 { -2.7, 3.9 }, { 3.9, -2.7 }, { 0.9, 0.1 },
+                 { 2147483647.9, 2147483647.1 }, { -2147483648.9, -2147483648.1 },
+                 { -2147483648.0, 2147483647.0 } } ) {
+            cases.push_back( { axis, bounds.first, bounds.second, false } );
+            if( bounds.first >= -3 && bounds.first <= 4 && bounds.second >= -3 && bounds.second <= 4 ) {
+                cases.push_back( { axis, bounds.first, bounds.second, true } );
+            }
+        }
+    }
+    constexpr unsigned int seed = 58169;
+    CAPTURE( seed );
+    get_globals().set_global_value( "location_range_source", tripoint_abs_ms::zero );
+    dialogue conversation;
+    rng_set_engine_seed( seed );
+    std::vector<tripoint> expected;
+    for( const location_range_case &range : cases ) {
+        std::ostringstream input;
+        {
+            JsonOut writer( input );
+            writer.start_object();
+            writer.member( "location_variable_adjust" );
+            writer.start_object();
+            writer.member( "global_val", "location_range_source" );
+            writer.end_object();
+            writer.member( "output_var" );
+            writer.start_object();
+            writer.member( "context_val", "result" );
+            writer.end_object();
+            writer.member( "overmap_tile", range.overmap );
+            writer.member( range.axis == 0 ? "x_adjust" : range.axis == 1 ? "y_adjust" : "z_adjust" );
+            writer.start_array();
+            writer.write( range.lower );
+            writer.write( range.upper );
+            writer.end_array();
+            writer.end_object();
+        }
+        talk_effect_t effect;
+        effect.parse_sub_effect( json_loader::from_string( input.str() ).get_object(),
+                                 "single_axis_location_range" );
+        for( const talk_effect_fun_t &operation : effect.effects ) {
+            operation( conversation );
+        }
+        expected.push_back( conversation.get_value( "result" ).tripoint().raw() );
+    }
+    const int expected_next = rng( -100, 100 );
+    const cata_default_random_engine expected_rng = rng_get_engine(); // NOLINT(cata-determinism)
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::math, sol::lib::table );
+    sol::table ccb = lua.create_table();
+    const std::shared_ptr<runtime> owner = make_runtime( "single_axis_location_ranges", 4913, lua );
+    const on_out_of_scope cleanup( []() {
+        clear_active_runtimes();
+    } );
+    install_runtime_api( owner, lua, ccb );
+    set_active_runtimes( { owner } );
+    lua["ccb"] = ccb;
+    sol::table inputs = lua.create_table();
+    for( std::size_t index = 0; index < cases.size(); ++index ) {
+        const location_range_case &range = cases[index];
+        sol::table row = lua.create_table();
+        row["axis"] = range.axis + 1;
+        row["lower"] = static_cast<int>( range.lower );
+        row["upper"] = static_cast<int>( range.upper );
+        row["overmap"] = range.overmap;
+        inputs[index + 1] = row;
+    }
+    lua["inputs"] = inputs;
+    REQUIRE( lua.safe_script( R"(
+        ccb.runtime.handler('single_axis_ranges', function()
+            local services = ccb.services
+            local read = services.variables.get_global_tripoint('location_range_source')
+            assert(read.ok and read.value.exists)
+            results = {}
+            for index, input in ipairs(inputs) do
+                local offset = {0, 0, 0}
+                offset[input.axis] = services.random.native_int(
+                    math.min(input.lower, input.upper), math.max(input.lower, input.upper))
+                if input.overmap and input.axis < 3 then
+                    offset[input.axis] = offset[input.axis] * services.coords.tripoint_rel_omt(1, 0, 0):to('ms').x
+                end
+                results[index] = read.value.value:add(services.coords.tripoint_rel_ms(
+                    offset[1], offset[2], offset[3]))
+            end
+            following_draw = services.random.native_int(-100, 100)
+            done = true
+        end)
+        ccb.runtime.on('world_ready', 'single_axis_ranges')
+    )", sol::script_pass_on_error ).valid() );
+    rng_set_engine_seed( seed );
+    runtime_world_ready( true );
+    REQUIRE( lua["done"].get_or( false ) );
+    const sol::table actual = lua["results"];
+    for( std::size_t index = 0; index < expected.size(); ++index ) {
+        CAPTURE( index );
+        CHECK( actual[index + 1].get<script_tripoint_coord>().to_native() == expected[index] );
     }
     CHECK( lua["following_draw"].get<int>() == expected_next );
     CHECK( rng_get_engine() == expected_rng );

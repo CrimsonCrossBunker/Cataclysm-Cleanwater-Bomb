@@ -24482,6 +24482,10 @@ def render_static_location_variable_adjust(
     overmap_tile = effect.get("overmap_tile", False)
     if source is None or not isinstance(z_override, bool) or not isinstance(overmap_tile, bool):
         return None
+    # Native evaluates x/y inside one constructor call: more than one RNG
+    # draw has compiler-dependent ordering. Do not silently pick an order.
+    if sum(isinstance(effect.get(name), list) for name in ("x_adjust", "y_adjust", "z_adjust")) > 1:
+        return None
     adjustments = [render_native_number_expression(effect.get(name, 0), effect_actor_targets)
                    for name in ("x_adjust", "y_adjust", "z_adjust")]
     if any(expression is None for expression in adjustments):
@@ -27992,7 +27996,7 @@ def _render_native_variable_number_snapshot(
 def render_native_number_expression(
     value: Any, effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> str | None:
-    """Read an untruncated Native double; ranges and math need separate lowering."""
+    """Read a Native double or draw one constant-bound Native integer range."""
     def double_literal(candidate: Any) -> str | None:
         literal = finite_number_literal(candidate)
         if literal is None:
@@ -28004,6 +28008,20 @@ def render_native_number_expression(
     literal = double_literal(value)
     if literal is not None:
         return literal
+    if isinstance(value, list):
+        if len(value) != 2:
+            return None
+        bounds = [finite_number_literal(bound) for bound in value]
+        if any(bound is None for bound in bounds):
+            return None
+        # value_or_var_pair<double> calls rng(int, int), not rng_float.
+        # Each bound converts from Native double toward zero BEFORE sorting.
+        integer_bounds = [math.trunc(float(bound)) for bound in bounds]
+        if any(bound < NATIVE_INT_MIN or bound > NATIVE_INT_MAX for bound in integer_bounds):
+            return None
+        lower, upper = sorted(integer_bounds)
+        # Even a singleton advances Native RNG; never fold it to a constant.
+        return f"services.random.native_int({lower}, {upper})"
     scopes = ("u_val", "npc_val", "global_val", "var_val", "context_val")
     if not isinstance(value, dict) or set(value) - set(scopes) - {"default"}:
         return None
