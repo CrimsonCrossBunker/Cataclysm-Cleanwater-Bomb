@@ -3082,7 +3082,9 @@ class training_activity_actor : public activity_actor
             initial_moves( initial_moves ), subject( subject ), teaching( false ), teacher( teacher ) {};
 
         bool matches_assignment( const training_activity_actor &other ) const {
-            return initial_moves == other.initial_moves && subject == other.subject &&
+            return initial_moves == other.initial_moves && subject.skill == other.subject.skill &&
+                   subject.style == other.subject.style && subject.spell == other.subject.spell &&
+                   subject.prof == other.subject.prof &&
                    teaching == other.teaching &&
                    ( teaching ? trainees == other.trainees : teacher == other.teacher );
         }
