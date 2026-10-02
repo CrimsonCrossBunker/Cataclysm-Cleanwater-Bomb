@@ -36,7 +36,7 @@ TEST_CASE( "lua_platform_numeric_migration_preserves_integer_context_and_math_fa
 
     eoc_math native;
     native.deserialize( json_loader::from_string(
-                            R"({"math":["1 + (_event_int * _event_int * _event_int > 1e20)"]})" ) );
+                            R"json({"math":["1 + (_event_int * _event_int * _event_int > 1e20)"]})json" ) );
     finalize_conditions();
     // Captured ordinary-Lua output from render_eoc_numeric_expression. No raw
     // math.evaluate/apply call participates in the migrated runtime path.
