@@ -99,8 +99,8 @@ TEST_CASE( "lua_platform_overmap_location_queries_match_native_conditions",
         fixture.abs_omt_position( fixture.source_omt );
     const sol::protected_function matches_location =
         fixture.services["overmap"]["matches_location"];
-    const auto compare_at = [&]( const std::string &condition_json,
-    const std::string &location ) {
+    const auto compare_at = [&]( const std::string & condition_json,
+    const std::string & location ) {
         const conditional_t native_condition( json_loader::from_string(
                 condition_json ).get_object() );
         const bool native_result = native_condition( conversation );
@@ -117,8 +117,8 @@ TEST_CASE( "lua_platform_overmap_location_queries_match_native_conditions",
 
     const sol::protected_function matches_near =
         fixture.services["overmap"]["matches_location_near"];
-    const auto compare_near = [&]( const std::string &condition_json,
-    const std::string &location, const int native_radius ) {
+    const auto compare_near = [&]( const std::string & condition_json,
+    const std::string & location, const int native_radius ) {
         const conditional_t native_condition( json_loader::from_string(
                 condition_json ).get_object() );
         const bool native_result = native_condition( conversation );
@@ -178,8 +178,8 @@ TEST_CASE( "lua_platform_npc_overmap_conditions_match_native_beta_positions",
         fixture.abs_omt_position( partner.pos_abs_omt() );
     const sol::protected_function matches_location =
         fixture.services["overmap"]["matches_location"];
-    const auto compare_at = [&]( const std::string &condition_json,
-    const std::string &location ) {
+    const auto compare_at = [&]( const std::string & condition_json,
+    const std::string & location ) {
         const conditional_t native_condition( json_loader::from_string(
                 condition_json ).get_object() );
         const bool native_result = native_condition( conversation );
@@ -195,8 +195,8 @@ TEST_CASE( "lua_platform_npc_overmap_conditions_match_native_beta_positions",
 
     const sol::protected_function matches_near =
         fixture.services["overmap"]["matches_location_near"];
-    const auto compare_near = [&]( const std::string &condition_json,
-    const std::string &location, const int native_radius ) {
+    const auto compare_near = [&]( const std::string & condition_json,
+    const std::string & location, const int native_radius ) {
         const conditional_t native_condition( json_loader::from_string(
                 condition_json ).get_object() );
         const bool native_result = native_condition( conversation );
@@ -280,8 +280,8 @@ TEST_CASE( "lua_platform_overmap_route_reveal_matches_native_path_semantics",
         for( int dx = -2; dx <= 3; ++dx ) {
             native_seen.push_back( fixture.source_overmap->seen(
                                        tripoint_om_omt( local_start.x() + dx,
-                                               local_start.y() + dy,
-                                               local_start.z() ) ) );
+                                           local_start.y() + dy,
+                                           local_start.z() ) ) );
         }
     }
     CHECK( native_seen[13] == om_vision_level::full );
@@ -299,16 +299,16 @@ TEST_CASE( "lua_platform_overmap_route_reveal_matches_native_path_semantics",
     const sol::protected_function reveal_route =
         fixture.overmap_api()["reveal_route"];
     const sol::protected_function_result platform_result = reveal_route(
-                fixture.abs_omt_position( start ),
-                fixture.abs_omt_position( end ), 1, true );
+            fixture.abs_omt_position( start ),
+            fixture.abs_omt_position( end ), 1, true );
     REQUIRE( platform_result.valid() );
     CHECK( platform_result.get<bool>() == native_found );
     std::size_t seen_index = 0;
     for( int dy = -2; dy <= 2; ++dy ) {
         for( int dx = -2; dx <= 3; ++dx ) {
             CHECK( fixture.source_overmap->seen( tripoint_om_omt(
-                       local_start.x() + dx, local_start.y() + dy,
-                       local_start.z() ) ) == native_seen[seen_index++] );
+                    local_start.x() + dx, local_start.y() + dy,
+                    local_start.z() ) ) == native_seen[seen_index++] );
         }
     }
     CHECK( fixture.write_called );
@@ -318,15 +318,15 @@ TEST_CASE( "lua_platform_overmap_route_reveal_matches_native_path_semantics",
             coords::origin::abs, coords::scale::map_square,
             project_to<coords::ms>( start ).raw() );
     const sol::protected_function_result wrong_scale_result = reveal_route(
-                wrong_scale, fixture.abs_omt_position( end ), 1, true );
+            wrong_scale, fixture.abs_omt_position( end ), 1, true );
     CHECK_FALSE( wrong_scale_result.valid() );
     const sol::protected_function_result excessive_radius_result = reveal_route(
-                fixture.abs_omt_position( start ),
-                fixture.abs_omt_position( end ), 31, true );
+            fixture.abs_omt_position( start ),
+            fixture.abs_omt_position( end ), 31, true );
     CHECK_FALSE( excessive_radius_result.valid() );
     const sol::protected_function_result fractional_radius_result = reveal_route(
-                fixture.abs_omt_position( start ),
-                fixture.abs_omt_position( end ), 1.5, true );
+            fixture.abs_omt_position( start ),
+            fixture.abs_omt_position( end ), 1.5, true );
     CHECK_FALSE( fractional_radius_result.valid() );
 }
 
@@ -391,7 +391,7 @@ TEST_CASE( "lua_platform_overmap_native_reveal_matches_native_area_semantics",
            coords::scale::overmap_terrain );
     CHECK( projected_center.to_native() == center.raw() );
     const sol::protected_function_result platform_result = reveal_native(
-                projected_center, 2 );
+            projected_center, 2 );
     REQUIRE( platform_result.valid() );
     CHECK( platform_result.get<bool>() == native_changed );
     std::size_t seen_index = 0;
@@ -404,7 +404,7 @@ TEST_CASE( "lua_platform_overmap_native_reveal_matches_native_area_semantics",
     CHECK( fixture.write_called );
 
     const sol::protected_function_result zero_radius_result = reveal_native(
-                fixture.abs_omt_position( center ), 0 );
+            fixture.abs_omt_position( center ), 0 );
     REQUIRE( zero_radius_result.valid() );
     CHECK( zero_radius_result.get<bool>() );
     for( const reveal_tile_preimage &tile : preimage ) {
@@ -480,18 +480,18 @@ TEST_CASE( "lua_platform_overmap_target_search_matches_native_mission_target",
     sol::table selector = fixture.lua.create_table();
     selector["terrain"] = "faction_base";
     selector["match"] = cata::lua_platform::script_enum_value::from(
-                             "OtMatchType", "prefix" );
+                            "OtMatchType", "prefix" );
     sol::table options = fixture.lua.create_table();
     options["random"] = true;
     options["search_range"] = 1.9;
     options["min_distance"] = 0.9;
     options["z"] = 1.9;
     options["offset"] = cata::lua_platform::script_tripoint_coord::from_native(
-                            coords::origin::rel,
+                            coords::origin::relative,
                             coords::scale::overmap_terrain,
                             tripoint{ 1, 0, 0 } );
     const sol::protected_function_result platform_result = find_target(
-                fixture.abs_omt_position( fixture.source_omt ), selector, options );
+            fixture.abs_omt_position( fixture.source_omt ), selector, options );
     REQUIRE( platform_result.valid() );
     const tripoint_abs_omt platform_target(
         platform_result.get<cata::lua_platform::script_tripoint_coord>().to_native() );
@@ -524,13 +524,13 @@ TEST_CASE( "lua_platform_overmap_target_search_retries_with_generation_and_retur
     sol::table selector = fixture.lua.create_table();
     selector["terrain"] = "__missing_platform_test_terrain__";
     selector["match"] = cata::lua_platform::script_enum_value::from(
-                             "OtMatchType", "exact" );
+                            "OtMatchType", "exact" );
     sol::table options = fixture.lua.create_table();
     options["search_range"] = lua_Integer{ 3 };
     options["min_distance"] = lua_Integer{ 0 };
     options["z"] = lua_Integer{ 0 };
     const sol::protected_function_result platform_result = find_target(
-                fixture.abs_omt_position( remote_origin ), selector, options );
+            fixture.abs_omt_position( remote_origin ), selector, options );
     REQUIRE( platform_result.valid() );
     const tripoint_abs_omt platform_target(
         platform_result.get<cata::lua_platform::script_tripoint_coord>().to_native() );
