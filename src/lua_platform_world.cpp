@@ -1660,7 +1660,7 @@ sol::table find_world_location(
                            coords::map_squares_per( coords::scale::map_square );
         distant_map = std::make_unique<map>();
         const int detached_map_max_offset =
-            distant_map->get_my_MAPSIZE() * coords::map_squares_per( coords::scale::submap ) - 1;
+            distant_map->getmapsize() * coords::map_squares_per( coords::scale::submap ) - 1;
         checked_scale_up_axis(
             detached_origin.x(), factor, detached_map_max_offset, api_name );
         checked_scale_up_axis(
@@ -2518,7 +2518,7 @@ sol::table place_world_spawn_items(
             project_to<coords::omt>( absolute );
         const int factor = coords::map_squares_per( coords::scale::overmap_terrain );
         const int distant_map_max_offset =
-            distant.get_my_MAPSIZE() * coords::map_squares_per( coords::scale::submap ) - 1;
+            distant.getmapsize() * coords::map_squares_per( coords::scale::submap ) - 1;
         checked_scale_up_axis(
             distant_origin.x(), factor, distant_map_max_offset,
             "services.world item spawning" );
