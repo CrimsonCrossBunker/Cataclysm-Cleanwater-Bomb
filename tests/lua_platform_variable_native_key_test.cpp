@@ -28,6 +28,7 @@
 #include "lua_platform_handle.h"
 #include "lua_platform_sol.h"
 #include "lua_platform_variables.h"
+#include "math_parser.h"
 #include "math_parser_diag_value.h"
 #include "type_id.h"
 #include "vehicle.h"
@@ -1038,6 +1039,168 @@ TEST_CASE( "lua_platform_location_adjust_matches_native_fractional_units_and_mis
         data["result"] = "untouched";
         CHECK_FALSE( adjust( "missing", invalid, 0.0, 0.0, false, false, data ).valid() );
         CHECK( data["result"].get<std::string>() == "untouched" );
+    }
+}
+
+TEST_CASE( "lua_platform_literal_arithmetic_matches_native_parser_binding_and_double_precision",
+           "[lua][platform][semantic][coords][math]" )
+{
+    variable_api_fixture fixture;
+    fixture.lua.open_libraries( sol::lib::math );
+    struct arithmetic_case {
+        const char *source;
+        double expected;
+        const char *lua_expression;
+    };
+    // These ordinary Lua expressions are captured migration output. Tool
+    // regressions execute the current emitter; this oracle checks its Native
+    // operator semantics without exposing the legacy parser to Mod authors.
+    const std::vector<arithmetic_case> cases = {
+        { "1 +2 * 3", 7.0, R"lua(
+(function() local values = {};
+values[1] = 1.0;
+values[2] = 2.0;
+values[3] = 3.0;
+values[4] = values[2] * values[3];
+values[5] = values[1] + values[4];
+return values[5] end)()
+)lua" },
+        { "(1 + 2) * 3", 9.0, R"lua(
+(function() local values = {};
+values[1] = 1.0;
+values[2] = 2.0;
+values[3] = values[1] + values[2];
+values[4] = 3.0;
+values[5] = values[3] * values[4];
+return values[5] end)()
+)lua" },
+        { "-2^2", 4.0, R"lua(
+(function() local values = {};
+values[1] = 2.0;
+values[2] = -(values[1]);
+values[3] = 2.0;
+values[4] = values[2] ^ values[3];
+return values[4] end)()
+)lua" },
+        { "-(2^2)", -4.0, R"lua(
+(function() local values = {};
+values[1] = 2.0;
+values[2] = 2.0;
+values[3] = values[1] ^ values[2];
+values[4] = -(values[3]);
+return values[4] end)()
+)lua" },
+        { "2^-2", 0.25, R"lua(
+(function() local values = {};
+values[1] = 2.0;
+values[2] = 2.0;
+values[3] = -(values[2]);
+values[4] = values[1] ^ values[3];
+return values[4] end)()
+)lua" },
+        { "2^3^2", 512.0, R"lua(
+(function() local values = {};
+values[1] = 2.0;
+values[2] = 3.0;
+values[3] = 2.0;
+values[4] = values[2] ^ values[3];
+values[5] = values[1] ^ values[4];
+return values[5] end)()
+)lua" },
+        { "-5%2", -1.0, R"lua(
+(function() local values = {};
+values[1] = 5.0;
+values[2] = -(values[1]);
+values[3] = 2.0;
+values[4] = math.fmod(values[2], values[3]);
+return values[4] end)()
+)lua" },
+        { "5%-2", 1.0, R"lua(
+(function() local values = {};
+values[1] = 5.0;
+values[2] = 2.0;
+values[3] = -(values[2]);
+values[4] = math.fmod(values[1], values[3]);
+return values[4] end)()
+)lua" },
+        { "14%6%4", 0.0, R"lua(
+(function() local values = {};
+values[1] = 14.0;
+values[2] = 6.0;
+values[3] = 4.0;
+values[4] = math.fmod(values[2], values[3]);
+values[5] = math.fmod(values[1], values[4]);
+return values[5] end)()
+)lua" },
+        { "14%6*4", 14.0, R"lua(
+(function() local values = {};
+values[1] = 14.0;
+values[2] = 6.0;
+values[3] = 4.0;
+values[4] = values[2] * values[3];
+values[5] = math.fmod(values[1], values[4]);
+return values[5] end)()
+)lua" },
+        { "14*6%4", 0.0, R"lua(
+(function() local values = {};
+values[1] = 14.0;
+values[2] = 6.0;
+values[3] = values[1] * values[2];
+values[4] = 4.0;
+values[5] = math.fmod(values[3], values[4]);
+return values[5] end)()
+)lua" },
+        { "+2--3", 5.0, R"lua(
+(function() local values = {};
+values[1] = 2.0;
+values[2] = values[1];
+values[3] = 3.0;
+values[4] = -(values[3]);
+values[5] = values[2] - values[4];
+return values[5] end)()
+)lua" },
+        { ".5 + 1.e1", 10.5, R"lua(
+(function() local values = {};
+values[1] = 0.5;
+values[2] = 10.0;
+values[3] = values[1] + values[2];
+return values[3] end)()
+)lua" },
+        { "1\v+\f2", 3.0, R"lua(
+(function() local values = {};
+values[1] = 1.0;
+values[2] = 2.0;
+values[3] = values[1] + values[2];
+return values[3] end)()
+)lua" },
+        { "9007199254740993 + 1", 9007199254740992.0, R"lua(
+(function() local values = {};
+values[1] = 9007199254740992.0;
+values[2] = 1.0;
+values[3] = values[1] + values[2];
+return values[3] end)()
+)lua" },
+        { "(1e300 + 1e300) / 1e300", 2.0, R"lua(
+(function() local values = {};
+values[1] = 1.0000000000000001e+300;
+values[2] = 1.0000000000000001e+300;
+values[3] = values[1] + values[2];
+values[4] = 1.0000000000000001e+300;
+values[5] = values[3] / values[4];
+return values[5] end)()
+)lua" }
+    };
+    dialogue conversation;
+    for( const arithmetic_case &row : cases ) {
+        CAPTURE( row.source );
+        math_exp native;
+        REQUIRE( native.parse( row.source ) );
+        const double expected = native.eval( conversation );
+        CHECK( expected == row.expected );
+        const sol::protected_function_result call = fixture.lua.safe_script(
+                    std::string( "return " ) + row.lua_expression, sol::script_pass_on_error );
+        REQUIRE( call.valid() );
+        CHECK( call.get<double>() == expected );
     }
 }
 

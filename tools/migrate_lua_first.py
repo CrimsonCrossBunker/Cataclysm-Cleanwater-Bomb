@@ -27993,6 +27993,101 @@ def _render_native_variable_number_snapshot(
     return f"service_value({call})"
 
 
+def render_literal_native_arithmetic(value: Any) -> str | None:
+    """Compile numeric Native arithmetic to flat ordinary Lua statements."""
+    if not isinstance(value, list) or not value or not all(isinstance(part, str) for part in value):
+        return None
+    source = "".join(value)  # eoc_math::from_json concatenates chunks without inserting spaces.
+    token_pattern = re.compile(r"(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?|[()+*/%^\-]")
+    operators: list[str] = []
+    operands: list[int] = []
+    statements = ["local values = {}"]
+    count = 0
+    need_operand = True
+    precedence = {"+": 2, "-": 2, "*": 3, "/": 3, "%": 3, "^": 4}
+
+    def emit(expression: str) -> None:
+        nonlocal count
+        count += 1
+        statements.append(f"values[{count}] = {expression}")
+        operands.append(count)
+
+    def apply_operator(operator: str) -> bool:
+        if operator in {"u+", "u-"}:
+            if not operands:
+                return False
+            operand = operands.pop()
+            emit(f"values[{operand}]" if operator == "u+" else f"-(values[{operand}])")
+            return True
+        if len(operands) < 2:
+            return False
+        right, left = operands.pop(), operands.pop()
+        emit(f"math.fmod(values[{left}], values[{right}])" if operator == "%" else
+             f"values[{left}] {operator} values[{right}]")
+        return True
+
+    position = 0
+    while position < len(source):
+        if source[position] in " \t\r\n\v\f":
+            position += 1
+            continue
+        match = token_pattern.match(source, position)
+        if match is None:
+            return None
+        token = match.group()
+        position = match.end()
+        if token[0] in "0123456789.":
+            if not need_operand:
+                return None
+            number = float(token)
+            significand = token.lower().split("e", 1)[0]
+            if not math.isfinite(number) or (any(digit in "123456789" for digit in significand)
+                                            and abs(number) < sys.float_info.min):
+                return None  # Native classic-locale stream conversion can reject underflow.
+            text = format(number, ".17g")
+            emit(text if "." in text or "e" in text else text + ".0")
+            need_operand = False
+        elif token == "(":
+            if not need_operand:
+                return None
+            operators.append(token)
+        elif token == ")":
+            if need_operand:
+                return None
+            while operators and operators[-1] != "(":
+                if not apply_operator(operators.pop()):
+                    return None
+            if not operators:
+                return None
+            operators.pop()
+        elif need_operand:
+            if token not in {"+", "-"}:
+                return None
+            operators.append("u" + token)
+        else:
+            # Match math_parser_impl.h's actual pop rule: the PREVIOUS
+            # operator's associativity controls equal-precedence popping.
+            # Native unary signs pop before all binary operators, including ^.
+            while operators and operators[-1] != "(":
+                previous = operators[-1]
+                if not (previous.startswith("u") or precedence[previous] > precedence[token] or
+                        (precedence[previous] == precedence[token] and previous not in {"%", "^"})):
+                    break
+                if not apply_operator(operators.pop()):
+                    return None
+            operators.append(token)
+            need_operand = True
+    if need_operand:
+        return None
+    while operators:
+        operator = operators.pop()
+        if operator == "(" or not apply_operator(operator):
+            return None
+    if len(operands) != 1:
+        return None
+    return "(function() " + "; ".join(statements) + f"; return values[{operands[0]}] end)()"
+
+
 def render_native_number_expression(
     value: Any, effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> str | None:
@@ -28008,6 +28103,8 @@ def render_native_number_expression(
     literal = double_literal(value)
     if literal is not None:
         return literal
+    if isinstance(value, dict) and set(value) == {"math"}:
+        return render_literal_native_arithmetic(value["math"])
     if isinstance(value, list):
         if len(value) != 2:
             return None

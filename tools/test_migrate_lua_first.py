@@ -35168,6 +35168,62 @@ assert(context.data.position.x==EXPECTED_X and context.data.position.y==EXPECTED
                                     capture_output=True, timeout=10)
             self.assertEqual(result.returncode, 0, result.stderr)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_literal_native_math_compiles_to_ordinary_lua_with_native_binding_rules(self) -> None:
+        cases = [
+            (["1 +", "2 * 3"], 7.0), (["(1 + 2) * 3"], 9.0),
+            (["-2^2"], 4.0), (["-(2^2)"], -4.0), (["2^-2"], 0.25),
+            (["2^3^2"], 512.0), (["-5%2"], -1.0), (["5%-2"], 1.0),
+            (["14%6%4"], 0.0), (["14%6*4"], 14.0), (["14*6%4"], 0.0),
+            (["+2--3"], 5.0), ([".5 + 1.e1"], 10.5), (["1\v+\f2"], 3.0),
+            (["9007199254740993 + 1"], 9007199254740992.0),
+            (["(1e300 + 1e300) / 1e300"], 2.0),
+        ]
+        for chunks, expected in cases:
+            expression = migrate_lua_first.render_native_number_expression({"math": chunks})
+            self.assertIsNotNone(expression)
+            self.assertNotIn("services.", expression or "")
+            script = "local result = " + (expression or "nil") + f"\nassert(result == {expected!r})\n"
+            result = subprocess.run(["lua", "-"], input=script, text=True,
+                                    capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+        for chunks in ([], [""], ["1", 2], ["1 / / 2"], ["()"], ["1(2)"], ["(1+2"],
+                       ["1 2"], ["1e309"], ["1e-999"], ["_dynamic"], ["rand(3)"],
+                       ["u_strength()"], ["1 > 0"], ["1 = 2"], ["١ + 2"], ["1\0+2"]):
+            self.assertIsNone(migrate_lua_first.render_native_number_expression({"math": chunks}))
+        # Flat statements avoid Lua's nested-expression/local-variable limits;
+        # source length alone is not an invented Native parser restriction.
+        expression = migrate_lua_first.render_native_number_expression({"math": ["1+" * 4100 + "1"]})
+        self.assertIsNotNone(expression)
+        result = subprocess.run(["lua", "-"], input="assert(" + (expression or "nil") + " == 4101)\n",
+                                text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_location_adjust_math_arithmetic_and_math_bounds_use_pure_lua(self) -> None:
+        lines = migrate_lua_first.render_static_location_variable_adjust({
+            "location_variable_adjust": {"context_val": "position"},
+            "x_adjust": {"math": ["-2^2"]},
+            "y_adjust": [{"math": ["-5%2"]}, {"math": ["2^3"]}],
+            "z_adjust": {"math": ["14%6*4"]}}, "location_variable_adjust", False, False)
+        self.assertIsNotNone(lines)
+        self.assertNotIn("gameplay.math", "\n".join(lines or []))
+        script = r"""
+local context={data={}}
+local draws=0
+local function point(x,y,z) return {x=x,y=y,z=z,add=function(self,other)
+ return point(self.x+other.x,self.y+other.y,self.z+other.z)
+end} end
+local services={coords={tripoint_abs_ms=point,tripoint_rel_ms=point},
+ variables={get_context_tripoint=function() return {ok=true,value={exists=false}} end},
+ random={native_int=function(lower,upper) assert(lower==-1 and upper==8);draws=draws+1;return upper end}}
+local function service_value(result) assert(result.ok);return result.value end
+BODY
+assert(draws==1 and context.data.position.x==4 and context.data.position.y==8 and context.data.position.z==14)
+""".replace("BODY", "\n".join(lines or []))
+        result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_location_variable_search_applies_coordinate_adjustment_once(
         self,
     ) -> None:
