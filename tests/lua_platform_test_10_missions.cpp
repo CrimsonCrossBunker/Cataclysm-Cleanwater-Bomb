@@ -153,11 +153,11 @@ TEST_CASE( "lua_platform_active_mission_pages_preserve_native_order_and_tokens",
         return active_world;
     };
     cata::lua_platform::install_value_type_api(
-        lua, services, []() {} );
+    lua, services, []() {} );
     cata::lua_platform::install_game_handle_api(
-        lua, services, current_runtime, current_world, []() {} );
+    lua, services, current_runtime, current_world, []() {} );
     cata::lua_platform::install_mission_api(
-        services, current_runtime, current_world, []() {}, []() {} );
+    services, current_runtime, current_world, []() {}, []() {} );
     const cata::lua_platform::game_handle owner_handle =
         cata::lua_platform::game_handle::from_creature(
             owner,
@@ -179,8 +179,8 @@ TEST_CASE( "lua_platform_active_mission_pages_preserve_native_order_and_tokens",
     const sol::table first_items = first_page["items"];
     const sol::table first_item = first_items[1];
     const cata::lua_platform::mission_token first_token =
-        first_item["token"].get<
-            cata::lua_platform::mission_token>();
+        first_item["token"].get <
+        cata::lua_platform::mission_token > ();
     CHECK( first_token.uid() == second_uid->get_id() );
 
     sol::table second_options = lua.create_table();
@@ -195,8 +195,8 @@ TEST_CASE( "lua_platform_active_mission_pages_preserve_native_order_and_tokens",
     CHECK( second_page["total"].get<std::size_t>() == 2 );
     CHECK( second_page["offset"].get<std::size_t>() == 1 );
     CHECK_FALSE( second_page["has_more"].get<bool>() );
-    CHECK( second_item["token"].get<
-               cata::lua_platform::mission_token>().uid() ==
+    CHECK( second_item["token"].get <
+           cata::lua_platform::mission_token > ().uid() ==
            first_uid->get_id() );
 
     CHECK_FALSE( second_uid->is_complete( character_id(), owner ) );
@@ -297,16 +297,16 @@ TEST_CASE( "lua_platform_mission_abandon_matches_native_remove_first_match",
         return active_world;
     };
     cata::lua_platform::install_value_type_api(
-        lua, services, []() {} );
+    lua, services, []() {} );
     cata::lua_platform::install_game_handle_api(
-        lua, services, current_runtime, current_world, []() {} );
+    lua, services, current_runtime, current_world, []() {} );
     cata::lua_platform::install_mission_api(
-        services, current_runtime, current_world, []() {}, []() {} );
+    services, current_runtime, current_world, []() {}, []() {} );
     const cata::lua_platform::game_handle owner_handle =
         cata::lua_platform::game_handle::from_creature(
             platform_owner,
-            { "avatar", platform_owner.getID().get_value(), 0, 0, 0, {} },
-            runtime, active_world );
+    { "avatar", platform_owner.getID().get_value(), 0, 0, 0, {} },
+    runtime, active_world );
 
     const sol::table missions = services["missions"];
     const sol::protected_function active = missions["active"];
@@ -583,9 +583,9 @@ TEST_CASE( "lua_platform_npc_mission_reward_calls_native_no_selection_path",
         return world_generation;
     };
     cata::lua_platform::install_game_handle_api(
-        lua, services, current_runtime, current_world, []() {} );
+    lua, services, current_runtime, current_world, []() {} );
     cata::lua_platform::install_npc_api(
-        services, current_runtime, current_world, []() {}, [&]() {
+    services, current_runtime, current_world, []() {}, [&]() {
         write_gate_called = true;
     }, []() {} );
     const cata::lua_platform::game_handle provider_handle =
@@ -595,8 +595,8 @@ TEST_CASE( "lua_platform_npc_mission_reward_calls_native_no_selection_path",
     const cata::lua_platform::game_handle active_avatar_handle =
         cata::lua_platform::game_handle::from_creature(
             active_avatar,
-            { "avatar", active_avatar.getID().get_value(), 0, 0, 0, {} },
-            runtime, world_generation );
+    { "avatar", active_avatar.getID().get_value(), 0, 0, 0, {} },
+    runtime, world_generation );
     const sol::table npc_services = services["npcs"];
     const sol::table mission_services = npc_services["missions"];
     const sol::protected_function open_reward_trade =
@@ -608,7 +608,7 @@ TEST_CASE( "lua_platform_npc_mission_reward_calls_native_no_selection_path",
     talk_function::mission_reward( provider );
     CHECK( provider.op_of_u.owed == debt_before );
     sol::protected_function_result result = open_reward_trade(
-                provider_handle, active_avatar_handle );
+            provider_handle, active_avatar_handle );
     REQUIRE( result.valid() );
     const sol::table envelope = result.get<sol::table>();
     REQUIRE( envelope["ok"].get<bool>() );
@@ -625,7 +625,7 @@ TEST_CASE( "lua_platform_npc_mission_reward_calls_native_no_selection_path",
             other_avatar, { "avatar", 7392, 0, 0, 0, {} },
             runtime, world_generation );
     sol::protected_function_result unsupported = open_reward_trade(
-                provider_handle, other_avatar_handle );
+            provider_handle, other_avatar_handle );
     REQUIRE( unsupported.valid() );
     const sol::table unsupported_envelope = unsupported.get<sol::table>();
     CHECK_FALSE( unsupported_envelope["ok"].get<bool>() );
@@ -780,14 +780,14 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     };
     const conditional_t native_generic_rewards_condition(
         "mission_has_generic_rewards" );
-    dialogue mission_dialogue(
+    dialogue reward_dialogue(
         get_talker_for( owner ), get_talker_for( *provider ) );
     const auto compare_selected_generic_rewards = [&]() {
         const bool native_result = native_generic_rewards_condition(
-                                       mission_dialogue );
+                                       reward_dialogue );
         const bool platform_result = boolean_from(
-                                        selected_has_generic_rewards(
-                                            provider_handle ) );
+                                         selected_has_generic_rewards(
+                                             provider_handle ) );
         CHECK( native_result == platform_result );
     };
 
@@ -801,20 +801,22 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
            ["returned"].get<int>() == 0 );
     CHECK( integer_from( available_count( provider_handle ) ) == 0 );
     CHECK_FALSE( boolean_from( has_active_mission( owner_handle, mission_id ) ) );
-    for( const char *predicate : { "complete", "incomplete", "failed" } ) {
+    for( const char *predicate : {
+             "complete", "incomplete", "failed"
+         } ) {
         CHECK_FALSE( boolean_from( selected_condition(
-                                      provider_handle, owner_handle, predicate ) ) );
+                                       provider_handle, owner_handle, predicate ) ) );
     }
     CHECK_FALSE( boolean_from( selected_has_goal(
-                                  provider_handle, "MGOAL_CONDITION" ) ) );
+                                   provider_handle, "MGOAL_CONDITION" ) ) );
     CHECK_FALSE( boolean_from( selected_has_goal(
-                                  provider_handle, "NOT_A_MISSION_GOAL" ) ) );
+                                   provider_handle, "NOT_A_MISSION_GOAL" ) ) );
     CHECK( boolean_from( selected_has_generic_rewards( provider_handle ) ) );
     CHECK( error_code( selected_condition(
                            provider_handle, owner_handle, "unknown" ) ) ==
            "invalid_predicate" );
     sol::table initial_owner_missions = value_from(
-            assigned_for_owner( provider_handle, owner_handle ) );
+                                            assigned_for_owner( provider_handle, owner_handle ) );
     CHECK( initial_owner_missions["total"].get<int>() == 0 );
 
     sol::table offer_value = value_from( offer( provider_handle, mission_id ) );
@@ -866,7 +868,7 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     CHECK( owner.get_active_missions().size() == 1 );
     CHECK( boolean_from( has_active_mission( owner_handle, mission_id ) ) );
     sol::table one_owner_assignment = value_from(
-            assigned_for_owner( provider_handle, owner_handle ) );
+                                          assigned_for_owner( provider_handle, owner_handle ) );
     CHECK( one_owner_assignment["total"].get<int>() == 1 );
     CHECK( value_from( npc_snapshot( provider_handle ) )["assigned_missions_value"].get<int>() == 125 );
     const int opinion_before_rejection = provider->op_of_u.value;
@@ -1017,8 +1019,8 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     REQUIRE( owned_for_dialogue != nullptr );
     owned_for_dialogue->set_assigned_player_id( owner.getID() );
     mission *second_owned_for_dialogue = mission::reserve_new(
-                                             mission_type_id( "TEST_MISSION_GOAL_CONDITION1" ),
-                                             provider->getID() );
+            mission_type_id( "TEST_MISSION_GOAL_CONDITION1" ),
+            provider->getID() );
     REQUIRE( second_owned_for_dialogue != nullptr );
     second_owned_for_dialogue->set_assigned_player_id( owner.getID() );
     mission *owned_by_other = mission::reserve_new(
@@ -1054,7 +1056,8 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
         const std::size_t native_count =
             mission_dialogue.const_actor( true )->available_missions().size();
         CHECK( native_count == expected );
-        CHECK( integer_from( available_count( provider_handle ) ) == native_count );
+        CHECK( static_cast<std::size_t>( integer_from( available_count( provider_handle ) ) ) ==
+               native_count );
         CHECK( no_available_mission( mission_dialogue ) == ( native_count == 0 ) );
         CHECK( one_available_mission( mission_dialogue ) == ( native_count == 1 ) );
         CHECK( many_available_missions( mission_dialogue ) == ( native_count >= 2 ) );
@@ -1119,7 +1122,7 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     cata::lua_platform::dialogue::end_session( mission_dialogue );
     CHECK_THROWS( mission_context.assigned_mission_count() );
     const sol::protected_function_result stale_lua_count = lua.safe_script(
-                "return mission_dialogue_context:assigned_mission_count()" );
+            "return mission_dialogue_context:assigned_mission_count()" );
     CHECK_FALSE( stale_lua_count.valid() );
 
     provider->chatbin.missions_assigned = {
@@ -1146,12 +1149,12 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
                                           R"({"mission_goal":"MGOAL_CONDITION"})" )
                                       .get_object() );
     const conditional_t npc_mission_goal( json_loader::from_string(
-                                              R"({"npc_mission_goal":"MGOAL_CONDITION"})" )
+            R"({"npc_mission_goal":"MGOAL_CONDITION"})" )
                                           .get_object() );
     // Native mission status aliases select beta's mission; complete/incomplete
     // then evaluate it with get_avatar(), which is the explicit service owner.
     const auto compare_selected_status = [&]( const char *predicate,
-            const conditional_t &native_condition ) {
+    const conditional_t &native_condition ) {
         CHECK( native_condition( selected_mission_dialogue ) ==
                boolean_from( selected_condition(
                                  provider_handle, current_avatar_handle,
@@ -1166,7 +1169,7 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
         compare_selected_status( "failed", npc_mission_failed );
         const bool api_goal = boolean_from(
                                   selected_has_goal( provider_handle,
-                                          "MGOAL_CONDITION" ) );
+                                      "MGOAL_CONDITION" ) );
         CHECK( mission_goal( selected_mission_dialogue ) == api_goal );
         CHECK( npc_mission_goal( selected_mission_dialogue ) == api_goal );
     };
@@ -1174,7 +1177,7 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
 
     // Compare the native status selectors after lifecycle transitions as
     // well as while the beta's selected mission is still reserved.
-    const auto make_selected_for_owner = [&]( const mission_type_id &type ) {
+    const auto make_selected_for_owner = [&]( const mission_type_id & type ) {
         mission *selected = mission::reserve_new( type, provider->getID() );
         REQUIRE( selected != nullptr );
         selected->set_assigned_player_id( character_id() );
@@ -1232,7 +1235,8 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
         const std::size_t native_count =
             npc_alpha_mission_dialogue.const_actor( false )->available_missions().size();
         CHECK( native_count == expected );
-        CHECK( integer_from( available_count( provider_handle ) ) == native_count );
+        CHECK( static_cast<std::size_t>( integer_from( available_count( provider_handle ) ) ) ==
+               native_count );
         CHECK( alpha_no_available_mission( npc_alpha_mission_dialogue ) ==
                ( native_count == 0 ) );
         CHECK( alpha_one_available_mission( npc_alpha_mission_dialogue ) ==
@@ -1249,7 +1253,7 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     provider->chatbin.missions.clear();
 
     const auto compare_alpha_selected_status = [&]( const char *predicate,
-            const conditional_t &native_condition ) {
+    const conditional_t &native_condition ) {
         CHECK( native_condition( npc_alpha_mission_dialogue ) ==
                boolean_from( selected_condition(
                                  provider_handle, current_avatar_handle,
@@ -1293,12 +1297,14 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     sol::table stale_state = value_from( state( provider_handle ) );
     CHECK_FALSE( stale_state["selected"].valid() );
     CHECK( stale_state["selected_stale"].get<bool>() );
-    for( const char *predicate : { "complete", "incomplete", "failed" } ) {
+    for( const char *predicate : {
+             "complete", "incomplete", "failed"
+         } ) {
         CHECK_FALSE( boolean_from( selected_condition(
-                                      provider_handle, owner_handle, predicate ) ) );
+                                       provider_handle, owner_handle, predicate ) ) );
     }
     CHECK_FALSE( boolean_from( selected_has_goal(
-                                  provider_handle, "MGOAL_CONDITION" ) ) );
+                                   provider_handle, "MGOAL_CONDITION" ) ) );
     CHECK( error_code( selected_has_generic_rewards( provider_handle ) ) ==
            "stale_mission" );
     provider->chatbin.mission_selected = nullptr;
