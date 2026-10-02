@@ -197,33 +197,49 @@ sol::table get_definition(
                addiction_id( id.value() ).obj() );
 }
 
+struct addiction_state_snapshot {
+    addiction_id id;
+    std::string name;
+    bool present = false;
+    int intensity = 0;
+    time_duration sated = 0_turns;
+};
+
+addiction_state_snapshot capture_state(
+    const addiction_id &id, const addiction *state )
+{
+    return {
+        id,
+        id.obj().get_name().translated(),
+        state != nullptr,
+        state == nullptr ? 0 : state->intensity,
+        state == nullptr ? 0_turns : state->sated
+    };
+}
+
 sol::table snapshot_state(
-    sol::state_view lua, const addiction_id &id,
-    const addiction *state )
+    sol::state_view lua, const addiction_state_snapshot &state )
 {
     sol::table result = lua.create_table();
     result["id"] = script_game_id(
-                       "addiction", id.str() );
-    result["name"] =
-        id.obj().get_name().translated();
-    result["present"] = state != nullptr;
-    result["intensity"] =
-        state == nullptr ? 0 : state->intensity;
-    result["active"] =
-        state != nullptr &&
-        state->intensity >= MIN_ADDICTION_LEVEL;
+                       "addiction", state.id.str() );
+    result["name"] = state.name;
+    result["present"] = state.present;
+    result["intensity"] = state.intensity;
+    result["active"] = state.present &&
+                       state.intensity >= MIN_ADDICTION_LEVEL;
     result["minimum_active_intensity"] =
         MIN_ADDICTION_LEVEL;
     result["maximum_intensity"] =
         MAX_ADDICTION_LEVEL;
-    if( state == nullptr ) {
+    if( !state.present ) {
         result["sated"] = sol::nil;
         result["withdrawing"] = false;
     } else {
         result["sated"] =
             script_time_duration::from_native(
-                state->sated );
-        result["withdrawing"] = state->sated < 0_turns;
+                state.sated );
+        result["withdrawing"] = state.sated < 0_turns;
     }
     return result;
 }
@@ -269,18 +285,19 @@ state_list_options read_state_list_options(
     return result;
 }
 
-std::vector<const addiction *> sorted_addictions(
+std::vector<addiction_state_snapshot> sorted_addictions(
     const Character &character )
 {
-    std::vector<const addiction *> result;
+    std::vector<addiction_state_snapshot> result;
     result.reserve( character.addictions.size() );
     for( const addiction &entry : character.addictions ) {
-        result.push_back( &entry );
+        result.push_back( capture_state( entry.type, &entry ) );
     }
     std::sort(
         result.begin(), result.end(),
-    []( const addiction * lhs, const addiction * rhs ) {
-        return lhs->type.str() < rhs->type.str();
+    []( const addiction_state_snapshot & lhs,
+        const addiction_state_snapshot & rhs ) {
+        return lhs.id.str() < rhs.id.str();
     } );
     return result;
 }
@@ -302,7 +319,7 @@ sol::table list_states(
         return make_game_error_result( state, *error );
     }
 
-    const std::vector<const addiction *> entries =
+    const std::vector<addiction_state_snapshot> entries =
         sorted_addictions( *character );
     const std::size_t first = std::min<std::size_t>(
                                   options.offset, entries.size() );
@@ -312,8 +329,7 @@ sol::table list_states(
                            static_cast<int>( last - first ), 0 );
     for( std::size_t index = first; index < last; ++index ) {
         items[index - first + 1] =
-            snapshot_state(
-                state, entries[index]->type, entries[index] );
+            snapshot_state( state, entries[index] );
     }
     sol::table value = state.create_table();
     value["items"] = std::move( items );
@@ -345,9 +361,8 @@ sol::table get_state(
     const addiction_id id( requested_id.value() );
     return make_game_value_result(
                state, sol::make_object(
-                   state, snapshot_state(
-                       state, id,
-                       find_addiction( *character, id ) ) ) );
+                   state, snapshot_state( state, capture_state(
+                       id, find_addiction( *character, id ) ) ) ) );
 }
 
 sol::table expose_state(
@@ -375,26 +390,30 @@ sol::table expose_state(
     const addiction_id id( requested_id.value() );
     const addiction *before_entry =
         find_addiction( *character, id );
-    const int before_intensity =
-        before_entry == nullptr ? 0 : before_entry->intensity;
-    const time_duration before_sated =
-        before_entry == nullptr ? 0_turns : before_entry->sated;
-    sol::table before =
-        snapshot_state( state, id, before_entry );
+    const addiction_state_snapshot before_state =
+        capture_state( id, before_entry );
+    sol::table before = snapshot_state( state, before_state );
+    character = resolve_exact_character(
+                    handle, runtime_generation,
+                    world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
     character->add_addiction( id, strength );
-    const addiction *after_entry =
-        find_addiction( *character, id );
-    const int after_intensity =
-        after_entry == nullptr ? 0 : after_entry->intensity;
-    const time_duration after_sated =
-        after_entry == nullptr ? 0_turns : after_entry->sated;
+    Character *after_character = resolve_exact_character(
+                                    handle, runtime_generation,
+                                    world_generation, error );
+    if( after_character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const addiction_state_snapshot after_state = capture_state(
+                id, find_addiction( *after_character, id ) );
     sol::table value = state.create_table();
     value["changed"] =
-        before_intensity != after_intensity ||
-        before_sated != after_sated;
+        before_state.intensity != after_state.intensity ||
+        before_state.sated != after_state.sated;
     value["before"] = std::move( before );
-    value["after"] =
-        snapshot_state( state, id, after_entry );
+    value["after"] = snapshot_state( state, after_state );
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
@@ -419,17 +438,31 @@ sol::table remove_state(
     const addiction_id id( requested_id.value() );
     const addiction *before_entry =
         find_addiction( *character, id );
-    const bool changed = before_entry != nullptr;
-    sol::table before =
-        snapshot_state( state, id, before_entry );
+    const addiction_state_snapshot before_state =
+        capture_state( id, before_entry );
+    sol::table before = snapshot_state( state, before_state );
+    character = resolve_exact_character(
+                    handle, runtime_generation,
+                    world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const bool changed = find_addiction( *character, id ) != nullptr;
     if( changed ) {
         character->rem_addiction( id );
     }
+    Character *after_character = resolve_exact_character(
+                                    handle, runtime_generation,
+                                    world_generation, error );
+    if( after_character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const addiction_state_snapshot after_state = capture_state(
+                id, find_addiction( *after_character, id ) );
     sol::table value = state.create_table();
     value["changed"] = changed;
     value["before"] = std::move( before );
-    value["after"] =
-        snapshot_state( state, id, nullptr );
+    value["after"] = snapshot_state( state, after_state );
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
@@ -506,14 +539,21 @@ sol::table set_state(
     const addiction_id id( requested_id.value() );
     addiction *entry =
         find_addiction( *character, id );
-    sol::table before =
-        snapshot_state( state, id, entry );
+    const addiction_state_snapshot before_state =
+        capture_state( id, entry );
+    sol::table before = snapshot_state( state, before_state );
+    character = resolve_exact_character(
+                    handle, runtime_generation,
+                    world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    entry = find_addiction( *character, id );
     if( adjustments.intensity &&
         *adjustments.intensity == 0 ) {
         if( entry != nullptr ) {
             character->rem_addiction( id );
         }
-        entry = nullptr;
     } else {
         if( entry == nullptr ) {
             if( !adjustments.intensity ) {
@@ -523,6 +563,12 @@ sol::table set_state(
             }
             character->add_addiction(
                 id, maximum_exposure_strength );
+            character = resolve_exact_character(
+                            handle, runtime_generation,
+                            world_generation, error );
+            if( character == nullptr ) {
+                return make_game_error_result( state, *error );
+            }
             entry = find_addiction( *character, id );
         }
         if( entry == nullptr ) {
@@ -537,10 +583,17 @@ sol::table set_state(
         }
     }
 
+    character = resolve_exact_character(
+                    handle, runtime_generation,
+                    world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const addiction_state_snapshot after_state = capture_state(
+                id, find_addiction( *character, id ) );
     sol::table value = state.create_table();
     value["before"] = std::move( before );
-    value["after"] =
-        snapshot_state( state, id, entry );
+    value["after"] = snapshot_state( state, after_state );
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
@@ -569,14 +622,36 @@ sol::table run_effect_state(
             "services.addictions.run_effect requires "
             "a present addiction" );
     }
-    sol::table before =
-        snapshot_state( state, id, entry );
+    const addiction_state_snapshot before_state =
+        capture_state( id, entry );
+    sol::table before = snapshot_state( state, before_state );
+    character = resolve_exact_character(
+                    handle, runtime_generation,
+                    world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    entry = find_addiction( *character, id );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, game_handle_error{
+            "not_found", "The character no longer has the requested addiction"
+        } );
+    }
     const bool applied = entry->run_effect( *character );
+    Character *after_character = resolve_exact_character(
+                                    handle, runtime_generation,
+                                    world_generation, error );
+    if( after_character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const addiction *after_entry =
+        find_addiction( *after_character, id );
+    const addiction_state_snapshot after_state =
+        capture_state( id, after_entry );
     sol::table value = state.create_table();
     value["applied"] = applied;
     value["before"] = std::move( before );
-    value["after"] =
-        snapshot_state( state, id, entry );
+    value["after"] = snapshot_state( state, after_state );
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }

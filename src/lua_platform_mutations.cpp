@@ -617,34 +617,61 @@ std::string mutation_variant_id(
            std::string() : found->variant;
 }
 
-sol::table snapshot_state(
-    sol::state_view lua, const Character &character,
-    const trait_id &id, const std::string &variant )
+struct mutation_state_snapshot {
+    std::string id;
+    std::string name;
+    std::string description;
+    std::string variant;
+    bool functioning = false;
+    bool permanent = false;
+    bool base_trait = false;
+    bool activatable = false;
+    bool active = false;
+    bool can_activate = false;
+    time_duration cost_timer = 0_turns;
+};
+
+mutation_state_snapshot capture_state(
+    const Character &character, const trait_id &id,
+    const std::string &variant )
 {
     const mutation_branch &definition = id.obj();
+    return {
+        id.str(),
+        definition.name( variant ),
+        character.mutation_desc( id ),
+        variant,
+        character.has_trait( id ),
+        character.has_permanent_trait( id ),
+        character.has_base_trait( id ),
+        definition.activated,
+        character.has_active_mutation( id ),
+        definition.activated && character.can_power_mutation( id ),
+        character.get_cost_timer( id )
+    };
+}
+
+sol::table snapshot_state(
+    sol::state_view lua, const mutation_state_snapshot &state )
+{
     sol::table result = lua.create_table();
     result["id"] = script_game_id(
-                       "mutation", id.str() );
-    result["name"] = definition.name( variant );
-    result["description"] =
-        character.mutation_desc( id );
-    result["functioning"] = character.has_trait( id );
-    result["permanent"] =
-        character.has_permanent_trait( id );
-    result["base_trait"] = character.has_base_trait( id );
-    result["activatable"] = definition.activated;
-    result["active"] =
-        character.has_active_mutation( id );
-    result["can_activate"] =
-        definition.activated &&
-        character.can_power_mutation( id );
+                       "mutation", state.id );
+    result["name"] = state.name;
+    result["description"] = state.description;
+    result["functioning"] = state.functioning;
+    result["permanent"] = state.permanent;
+    result["base_trait"] = state.base_trait;
+    result["activatable"] = state.activatable;
+    result["active"] = state.active;
+    result["can_activate"] = state.can_activate;
     result["cost_timer"] =
         script_time_duration::from_native(
-            character.get_cost_timer( id ) );
-    if( variant.empty() ) {
+            state.cost_timer );
+    if( state.variant.empty() ) {
         result["variant"] = sol::nil;
     } else {
-        result["variant"] = variant;
+        result["variant"] = state.variant;
     }
     return result;
 }
@@ -685,14 +712,19 @@ sol::table list_states(
                                      mutations.size() - offset,
                                      static_cast<std::size_t>(
                                          options.limit ) );
+    std::vector<mutation_state_snapshot> snapshots;
+    snapshots.reserve( returned );
+    for( std::size_t index = 0; index < returned; ++index ) {
+        const trait_and_var &entry = mutations[offset + index];
+        snapshots.push_back( capture_state(
+                                 *character, entry.trait,
+                                 entry.variant ) );
+    }
     sol::table items = state.create_table(
                            static_cast<int>( returned ), 0 );
     for( std::size_t index = 0; index < returned; ++index ) {
-        const trait_and_var &entry =
-            mutations[offset + index];
         items[index + 1] = snapshot_state(
-                               state, *character,
-                               entry.trait, entry.variant );
+                               state, snapshots[index] );
     }
     sol::table value = state.create_table();
     value["items"] = std::move( items );
@@ -915,11 +947,13 @@ sol::table set_purifiable(
         }
     }
     const bool after = character->purifiable( id );
+    const bool present = character->has_trait( id );
+    const bool changed = before != after;
     sol::table value = state.create_table();
-    value["present"] = character->has_trait( id );
+    value["present"] = present;
     value["before"] = before;
     value["after"] = after;
-    value["changed"] = before != after;
+    value["changed"] = changed;
     return make_game_value_result(
                state, sol::make_object(
                    state, std::move( value ) ) );
@@ -959,10 +993,28 @@ sol::table remove_category(
     }
     sol::table removed = state.create_table(
                              static_cast<int>( to_remove.size() ), 0 );
+    character = resolve_exact_character(
+                    handle, runtime_generation,
+                    world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
     for( std::size_t index = 0; index < to_remove.size(); ++index ) {
         removed[index + 1] = script_game_id(
                                  "mutation", to_remove[index].str() );
+        character = resolve_exact_character(
+                        handle, runtime_generation,
+                        world_generation, error );
+        if( character == nullptr ) {
+            return make_game_error_result( state, *error );
+        }
         character->unset_mutation( to_remove[index] );
+        character = resolve_exact_character(
+                        handle, runtime_generation,
+                        world_generation, error );
+        if( character == nullptr ) {
+            return make_game_error_result( state, *error );
+        }
     }
     sol::table value = state.create_table();
     value["category"] = requested_category;
@@ -1001,9 +1053,27 @@ sol::table remove_type(
     }
     sol::table removed = state.create_table(
                              static_cast<int>( to_remove.size() ), 0 );
+    character = resolve_exact_character(
+                    handle, runtime_generation,
+                    world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
     for( std::size_t index = 0; index < to_remove.size(); ++index ) {
         removed[index + 1] = script_game_id( "mutation", to_remove[index].str() );
+        character = resolve_exact_character(
+                        handle, runtime_generation,
+                        world_generation, error );
+        if( character == nullptr ) {
+            return make_game_error_result( state, *error );
+        }
         character->unset_mutation( to_remove[index] );
+        character = resolve_exact_character(
+                        handle, runtime_generation,
+                        world_generation, error );
+        if( character == nullptr ) {
+            return make_game_error_result( state, *error );
+        }
     }
     sol::table value = state.create_table();
     value["type"] = type;
@@ -1039,8 +1109,9 @@ sol::table get_state(
     }
     const std::string variant = mutation_variant_id(
                                     *character, id, true );
-    sol::table value = snapshot_state(
-                           state, *character, id, variant );
+    const mutation_state_snapshot snapshot =
+        capture_state( *character, id, variant );
+    sol::table value = snapshot_state( state, snapshot );
     return make_game_value_result(
                state,
                sol::make_object( state, std::move( value ) ) );
@@ -1072,6 +1143,12 @@ sol::table mutate_state(
     const bool use_vitamins = requested_use_vitamins.value_or( true );
     const std::vector<trait_and_var> before = mutation_state( *character );
     character->mutate( chance, use_vitamins );
+    character = resolve_exact_character(
+                    handle, runtime_generation,
+                    world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
     const std::vector<trait_and_var> after = mutation_state( *character );
     return make_game_value_result(
                state,
@@ -1102,6 +1179,12 @@ sol::table mutate_category_state(
     const bool true_random = requested_true_random.value_or( false );
     const std::vector<trait_and_var> before = mutation_state( *character );
     character->mutate_category( category, use_vitamins, true_random );
+    character = resolve_exact_character(
+                    handle, runtime_generation,
+                    world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
     const std::vector<trait_and_var> after = mutation_state( *character );
     return make_game_value_result(
                state,
@@ -1135,6 +1218,12 @@ sol::table mutate_towards_state(
     const bool accepted = character->mutate_towards(
                               trait_id( requested_mutation.value() ),
                               category, nullptr, use_vitamins );
+    character = resolve_exact_character(
+                    handle, runtime_generation,
+                    world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
     const std::vector<trait_and_var> after = mutation_state( *character );
     return make_game_value_result(
                state,
@@ -1192,14 +1281,28 @@ sol::table replace_conflicting_state(
         for( const std::string &type : other->types ) {
             if( id->types.find( type ) != id->types.end() ) {
                 character->unset_mutation( other );
+                character = resolve_exact_character(
+                                handle, runtime_generation,
+                                world_generation, error );
+                if( character == nullptr ) {
+                    return make_game_error_result( state, *error );
+                }
                 break;
             }
         }
     }
     character->set_mutation( id, variant );
+    character = resolve_exact_character(
+                    handle, runtime_generation,
+                    world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const bool present = character->has_permanent_trait( id );
+    const std::string resulting_variant = mutation_variant_id( *character, id, false );
     sol::table result = state.create_table();
-    result["present"] = character->has_permanent_trait( id );
-    result["variant"] = mutation_variant_id( *character, id, false );
+    result["present"] = present;
+    result["variant"] = resulting_variant;
     return make_game_value_result( state, sol::make_object( state, std::move( result ) ) );
 }
 
@@ -1234,6 +1337,12 @@ sol::table grant_state(
                                           id.obj(), requested_variant_id,
                                           "services.mutations.grant" );
     character->set_mutation( id, variant );
+    character = resolve_exact_character(
+                    handle, runtime_generation,
+                    world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
     if( !character->has_permanent_trait( id ) ) {
         return make_game_error_result(
         state, game_handle_error{
@@ -1243,10 +1352,17 @@ sol::table grant_state(
     }
     get_event_bus().send<event_type::gains_mutation>(
         character->getID(), id );
+    character = resolve_exact_character(
+                    handle, runtime_generation,
+                    world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
     const std::string variant_id =
         variant == nullptr ? std::string() : variant->id;
-    sol::table value = snapshot_state(
-                           state, *character, id, variant_id );
+    const mutation_state_snapshot snapshot =
+        capture_state( *character, id, variant_id );
+    sol::table value = snapshot_state( state, snapshot );
     return make_game_value_result(
                state,
                sol::make_object( state, std::move( value ) ) );
@@ -1267,10 +1383,18 @@ sol::table erase_state(
     const trait_id id( requested_id.value() );
     const bool existed = character->has_permanent_trait( id );
     character->unset_mutation( id );
+    character = resolve_exact_character(
+                    handle, runtime_generation,
+                    world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const bool present = character->has_permanent_trait( id );
+    const bool base_trait = character->has_base_trait( id );
     sol::table result = state.create_table();
     result["existed"] = existed;
-    result["present"] = character->has_permanent_trait( id );
-    result["base_trait"] = character->has_base_trait( id );
+    result["present"] = present;
+    result["base_trait"] = base_trait;
     return make_game_value_result( state, sol::make_object( state, std::move( result ) ) );
 }
 
@@ -1301,19 +1425,40 @@ sol::table remove_state(
     }
     const std::string variant =
         mutation_variant_id( *character, id, false );
-    sol::table before = snapshot_state(
-                            state, *character, id, variant );
-    if( character->has_base_trait( id ) ) {
-        character->toggle_trait( id, variant );
-    } else {
-        get_event_bus().send<event_type::loses_mutation>(
-            character->getID(), id );
-        character->unset_mutation( id );
+    const mutation_state_snapshot before_snapshot =
+        capture_state( *character, id, variant );
+    sol::table before = snapshot_state( state, before_snapshot );
+    character = resolve_exact_character(
+                    handle, runtime_generation,
+                    world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
     }
+    if( character->has_permanent_trait( id ) ) {
+        if( character->has_base_trait( id ) ) {
+            character->toggle_trait( id, mutation_variant_id( *character, id, false ) );
+        } else {
+            get_event_bus().send<event_type::loses_mutation>(
+                character->getID(), id );
+            character = resolve_exact_character(
+                            handle, runtime_generation,
+                            world_generation, error );
+            if( character == nullptr ) {
+                return make_game_error_result( state, *error );
+            }
+            character->unset_mutation( id );
+        }
+    }
+    character = resolve_exact_character(
+                    handle, runtime_generation,
+                    world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const bool present = character->has_permanent_trait( id );
     sol::table value = state.create_table();
     value["removed"] = std::move( before );
-    value["present"] =
-        character->has_permanent_trait( id );
+    value["present"] = present;
     return make_game_value_result(
                state,
                sol::make_object( state, std::move( value ) ) );
@@ -1338,9 +1483,17 @@ sol::table invoke_activation(
     } else {
         character->deactivate_mutation( id );
     }
+    Character *after_character = resolve_exact_character(
+                                    handle, runtime_generation,
+                                    world_generation, error );
+    if( after_character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const bool present = after_character->has_permanent_trait( id );
+    const bool is_active = after_character->has_active_mutation( id );
     sol::table result = state.create_table();
-    result["present"] = character->has_permanent_trait( id );
-    result["active"] = character->has_active_mutation( id );
+    result["present"] = present;
+    result["active"] = is_active;
     return make_game_value_result( state, sol::make_object( state, std::move( result ) ) );
 }
 
@@ -1377,29 +1530,48 @@ sol::table set_active_state(
     }
     const std::string variant =
         mutation_variant_id( *character, id, false );
-    sol::table before = snapshot_state(
-                            state, *character, id, variant );
+    const mutation_state_snapshot before_snapshot =
+        capture_state( *character, id, variant );
+    sol::table before = snapshot_state( state, before_snapshot );
+    character = resolve_exact_character(
+                    handle, runtime_generation,
+                    world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
     if( desired ) {
-        if( retrigger || !character->has_active_mutation( id ) ) {
+        if( character->has_permanent_trait( id ) &&
+            ( retrigger || !character->has_active_mutation( id ) ) ) {
             character->activate_mutation( id );
         }
-    } else if( retrigger || character->has_active_mutation( id ) ) {
+    } else if( character->has_permanent_trait( id ) &&
+               ( retrigger || character->has_active_mutation( id ) ) ) {
         character->deactivate_mutation( id );
     }
+    Character *after_character = resolve_exact_character(
+                                    handle, runtime_generation,
+                                    world_generation, error );
+    if( after_character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
     const bool present =
-        character->has_permanent_trait( id );
+        after_character->has_permanent_trait( id );
     const bool active = present &&
-                        character->has_active_mutation( id );
+                        after_character->has_active_mutation( id );
+    std::optional<mutation_state_snapshot> after_snapshot;
+    if( present ) {
+        after_snapshot = capture_state(
+                             *after_character, id,
+                             mutation_variant_id(
+                                 *after_character, id, false ) );
+    }
     sol::table value = state.create_table();
     value["before"] = std::move( before );
     value["requested"] = desired;
     value["accepted"] = active == desired;
     value["present"] = present;
-    if( present ) {
-        value["after"] = snapshot_state(
-                             state, *character, id,
-                             mutation_variant_id(
-                                 *character, id, false ) );
+    if( after_snapshot ) {
+        value["after"] = snapshot_state( state, *after_snapshot );
     } else {
         value["after"] = sol::nil;
     }
@@ -1440,13 +1612,31 @@ sol::table set_variant_state(
                                           "services.mutations.set_variant" );
     const std::string before_id =
         mutation_variant_id( *character, id, false );
-    sol::table before = snapshot_state(
-                            state, *character, id, before_id );
+    const mutation_state_snapshot before_snapshot =
+        capture_state( *character, id, before_id );
+    sol::table before = snapshot_state( state, before_snapshot );
+    character = resolve_exact_character(
+                    handle, runtime_generation,
+                    world_generation, error );
+    if( character == nullptr || !character->has_permanent_trait( id ) ) {
+        return character == nullptr ? make_game_error_result( state, *error ) :
+               make_game_error_result( state, game_handle_error{
+                   "not_permanent",
+                   "The character no longer owns the requested mutation"
+               } );
+    }
     character->set_mut_variant( id, variant );
+    character = resolve_exact_character(
+                    handle, runtime_generation,
+                    world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const mutation_state_snapshot after_snapshot =
+        capture_state( *character, id, variant->id );
     sol::table value = state.create_table();
     value["before"] = std::move( before );
-    value["after"] = snapshot_state(
-                         state, *character, id, variant->id );
+    value["after"] = snapshot_state( state, after_snapshot );
     return make_game_value_result(
                state,
                sol::make_object( state, std::move( value ) ) );
