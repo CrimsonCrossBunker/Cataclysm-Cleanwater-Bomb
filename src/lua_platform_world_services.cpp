@@ -2404,7 +2404,7 @@ sol::table relocate_item(
         tinymap target_bay;
         const tripoint_abs_omt target_omt = project_to<coords::omt>( destination );
         require_native_omt_map_load_range(
-            target_omt, target_bay.get_my_MAPSIZE(), api_name );
+            target_omt, target_bay.cast_to_map()->getmapsize(), api_name );
         target_bay.load( target_omt, false );
         swap_map swap( *target_bay.cast_to_map() );
         item &remote_item = target_bay.add_item(
