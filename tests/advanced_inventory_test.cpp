@@ -1,13 +1,16 @@
 #include <algorithm>
 #include <climits>
 #include <cstddef>
+#include <functional>
 #include <initializer_list>
 #include <list>
 #include <map>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "activity_actor_definitions.h"
 #include "advanced_inv.h"
 #include "advanced_inv_area.h"
 #include "advanced_inv_listitem.h"
@@ -18,19 +21,20 @@
 #include "cata_scope_helpers.h"
 #include "character_attire.h"
 #include "coordinates.h"
-#include "item.h"
 #include "inventory_ui.h"
+#include "item.h"
 #include "item_location.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_selector.h"
+#include "player_activity.h"
 #include "player_helpers.h"
 #include "pocket_type.h"
 #include "ret_val.h"
 #include "rng.h"
 #include "type_id.h"
-#include "units.h"
 #include "uistate.h"
+#include "units.h"
 
 
 static const itype_id itype_9mm( "9mm" );
@@ -199,6 +203,50 @@ TEST_CASE( "advanced_inventory_keeps_source_pane_after_moving_one_item",
     advinv.init();
     CHECK( advinv.get_src() == ( source_left ? advanced_inventory::left :
                                  advanced_inventory::right ) );
+}
+
+TEST_CASE( "advanced_inventory_keeps_transfer_ui_but_hides_during_consumption",
+           "[items][advanced_inv][activity][ui]" )
+{
+    clear_avatar();
+    clear_map();
+    restore_on_out_of_scope<advanced_inv_save_state> restore( uistate.transfer_save );
+    on_out_of_scope reset_menu( []() {
+        get_avatar().cancel_activity();
+        uistate.open_menu = nullptr;
+        cancel_aim_processing();
+    } );
+    avatar &you = get_avatar();
+    REQUIRE( you.wear_item( item( itype_backpack ) ) );
+    get_map().add_item_or_charges( you.pos_bub(), item( itype_knife_combat ) );
+
+    advanced_inventory advinv;
+    // Yield before reading input, with the real UI adaptor installed.
+    you.set_moves( -1 );
+    advinv.display();
+    REQUIRE( advinv.is_visible() );
+    init_panes( advinv, AIM_CENTER, AIM_INVENTORY );
+    const advanced_inventory::side source = advinv.get_src();
+
+    SECTION( "Moving items retains the UI and batch transfer progress" ) {
+        advinv.process_action( "MOVE_SINGLE_ITEM" );
+        REQUIRE( you.activity );
+        uistate.transfer_save.re_enter_move_all = aim_entry::MAP;
+        advinv.hide_for_activity();
+        CHECK( advinv.is_visible() );
+        CHECK( advinv.get_src() == source );
+        CHECK( uistate.transfer_save.exit_code == aim_exit::re_entry );
+        CHECK( uistate.transfer_save.re_enter_move_all == aim_entry::MAP );
+    }
+
+    SECTION( "Consuming hides the UI before the consume menu can take over" ) {
+        you.assign_activity( consume_activity_actor( item( itype_water_clean ) ) );
+        REQUIRE( you.activity );
+        advinv.hide_for_activity();
+        CHECK_FALSE( advinv.is_visible() );
+        CHECK( advinv.get_src() == source );
+        CHECK( uistate.transfer_save.re_enter_move_all == aim_entry::START );
+    }
 }
 
 /* this should mirror what query_charges returns as max items when transferring to inventory */

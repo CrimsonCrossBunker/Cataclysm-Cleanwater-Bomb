@@ -75,6 +75,7 @@
     #include <SDL_keyboard.h>
 #endif
 
+static const activity_id ACT_CONSUME( "ACT_CONSUME" );
 static const flag_id json_flag_NO_RELOAD( "NO_RELOAD" );
 static const flag_id json_flag_NO_UNLOAD( "NO_UNLOAD" );
 
@@ -129,9 +130,7 @@ void create_advanced_inv()
     advinv->display();
     if( uistate.transfer_save.exit_code == aim_exit::re_entry &&
         !get_avatar().activity.is_null() ) {
-        // Keep the inventory state for re-entry, but stop drawing it while
-        // the activity runs.  Otherwise eating leaves a stale overlay on the map.
-        advinv->temp_hide();
+        advinv->hide_for_activity();
     } else {
         advinv.reset();
         cancel_aim_processing();
@@ -2046,7 +2045,7 @@ void advanced_inventory::display()
         g->wait_popup_reset();
     }
 
-    if( !ui ) {
+    if( !is_visible() ) {
         init();
         ui = std::make_unique<ui_adaptor>();
         ui->on_screen_resize( [&]( ui_adaptor & ui ) {
@@ -2490,6 +2489,15 @@ void advanced_inventory::temp_hide()
     ui = nullptr;
     do_return_entry();
     cancel_aim_processing();
+}
+
+void advanced_inventory::hide_for_activity()
+{
+    // Transfers return to this UI, so keep its adaptor and move-all progress.
+    // Consuming can reopen a different menu; hide AIM to avoid a stale overlay.
+    if( get_avatar().activity.id() == ACT_CONSUME ) {
+        temp_hide();
+    }
 }
 
 bool advanced_inventory::is_processing() const
