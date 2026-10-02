@@ -32,6 +32,7 @@
 #include "lua_platform_sol.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "map_helpers_tests.h"
 #include "map_scale_constants.h"
 #include "npctalk.h"
 #include "player_helpers.h"
@@ -45,6 +46,9 @@
 #include "weather_type.h"
 
 static const field_type_str_id field_fd_web( "fd_web" );
+static const field_type_str_id field_fd_blood( "fd_blood" );
+static const field_type_str_id field_fd_smoke( "fd_smoke" );
+static const field_type_str_id field_fd_fire( "fd_fire" );
 static const efftype_id effect_webbed_for_test( "webbed" );
 static const ter_str_id ter_t_floor( "t_floor" );
 static const ter_str_id ter_t_wall( "t_wall" );
@@ -55,7 +59,7 @@ static int loaded_adjacent_map_zlevel( map &here, const tripoint_bub_ms &center 
     for( const int z : {
              center.z() + 1, center.z() - 1
          } ) {
-        if( here.inbounds_z( z ) && here.get_submap_at_grid( tripoint_rel_sm{ center.x() / SEEX,
+        if( here.inbounds_z( z ) && map_meddler::get_submap_at_grid( here, tripoint_rel_sm{ center.x() / SEEX,
                 center.y() / SEEY, z } ) != nullptr ) {
             return z;
         }
@@ -458,7 +462,7 @@ TEST_CASE( "lua_platform_environment_set_furniture_matches_bounded_map_semantics
         const int target_z = loaded_adjacent_map_zlevel( here, center );
         REQUIRE( target_z != center.z() );
         const tripoint_bub_ms target( center.x(), center.y(), target_z );
-        REQUIRE( here.get_submap_at_grid( tripoint_rel_sm{ target.x() / SEEX, target.y() / SEEY, target_z } ) !=
+        REQUIRE( map_meddler::get_submap_at_grid( here, tripoint_rel_sm{ target.x() / SEEX, target.y() / SEEY, target_z } ) !=
                  nullptr );
         const ter_id original_target_terrain = here.ter( target );
         const ter_id original_current_terrain = here.ter( center );
@@ -931,7 +935,7 @@ TEST_CASE( "lua_platform_environment_set_terrain_matches_native_eoc_area_semanti
         const int target_z = loaded_adjacent_map_zlevel( here, center );
         REQUIRE( target_z != center.z() );
         const tripoint_bub_ms target( center.x(), center.y(), target_z );
-        REQUIRE( here.get_submap_at_grid( tripoint_rel_sm{ target.x() / SEEX, target.y() / SEEY, target_z } ) !=
+        REQUIRE( map_meddler::get_submap_at_grid( here, tripoint_rel_sm{ target.x() / SEEX, target.y() / SEEY, target_z } ) !=
                  nullptr );
         const ter_id original_target = here.ter( target );
         const ter_id original_current = here.ter( center );
@@ -1064,7 +1068,7 @@ TEST_CASE( "lua_platform_environment_add_field_area_matches_native_f_field",
     };
     tripoint_abs_ms native_target_position = center_abs;
     auto run_native_field_effect = [&]( const std::string &effect_json ) {
-        dialogue context( get_talker_for( get_avatar() ) );
+        dialogue context( get_talker_for( get_avatar() ), nullptr );
         context.set_value( "field_center", native_target_position );
         talk_effect_t native_effect;
         native_effect.parse_sub_effect(
@@ -1430,7 +1434,7 @@ TEST_CASE( "lua_platform_environment_set_trap_area_matches_native_f_set_trap",
             effect_json += ", \"square\":true";
         }
         effect_json += "}";
-        dialogue context( get_talker_for( get_avatar() ) );
+        dialogue context( get_talker_for( get_avatar() ), nullptr );
         context.set_value( "trap_center", absolute );
         talk_effect_t native_effect;
         native_effect.parse_sub_effect(
@@ -1502,13 +1506,13 @@ TEST_CASE( "lua_platform_environment_set_trap_area_matches_native_f_set_trap",
     REQUIRE( target_z != center.z() );
     const tripoint_bub_ms upper_center( center.x(), center.y(), target_z );
     REQUIRE( here.inbounds( upper_center ) );
-    submap *const upper_submap = here.get_submap_at_grid( tripoint_rel_sm{
+    submap *const upper_submap = map_meddler::get_submap_at_grid( here, tripoint_rel_sm{
         upper_center.x() / SEEX, upper_center.y() / SEEY, target_z
     } );
     if( here.supports_zlevels() ) {
         REQUIRE( upper_submap != nullptr );
     }
-    const submap *const current_submap = here.get_submap_at_grid( tripoint_rel_sm{
+    const submap *const current_submap = map_meddler::get_submap_at_grid( here, tripoint_rel_sm{
         center.x() / SEEX, center.y() / SEEY, center.z()
     } );
     REQUIRE( current_submap != nullptr );
@@ -1529,7 +1533,7 @@ TEST_CASE( "lua_platform_environment_set_trap_area_matches_native_f_set_trap",
     lua["trap_position"] = script_tripoint_coord::from_native(
                                coords::origin::abs, coords::scale::map_square,
                                upper_absolute.raw() );
-    dialogue upper_native_context( get_talker_for( get_avatar() ) );
+    dialogue upper_native_context( get_talker_for( get_avatar() ), nullptr );
     upper_native_context.set_value( "trap_center", upper_absolute );
     talk_effect_t upper_native_effect;
     upper_native_effect.parse_sub_effect(
@@ -1553,10 +1557,10 @@ TEST_CASE( "lua_platform_environment_set_trap_area_matches_native_f_set_trap",
     }
     CHECK( here.tr_at( upper_center ).id == beartrap.id() );
     if( here.supports_zlevels() ) {
-        CHECK( here.get_submap_at_grid( tripoint_rel_sm{ upper_center.x() / SEEX,
+        CHECK( map_meddler::get_submap_at_grid( here, tripoint_rel_sm{ upper_center.x() / SEEX,
                                           upper_center.y() / SEEY, target_z } ) == upper_submap );
     } else {
-        CHECK( here.get_submap_at_grid( tripoint_rel_sm{ center.x() / SEEX,
+        CHECK( map_meddler::get_submap_at_grid( here, tripoint_rel_sm{ center.x() / SEEX,
                                           center.y() / SEEY, center.z() } ) == current_submap );
     }
 
@@ -1615,7 +1619,7 @@ TEST_CASE( "lua_platform_environment_set_trap_area_matches_native_f_set_trap",
     REQUIRE( here.inbounds( builtin_center ) );
     here.ter_set( builtin_center, pit );
     REQUIRE( here.ter( builtin_center ) == pit.id() );
-    dialogue builtin_context( get_talker_for( get_avatar() ) );
+    dialogue builtin_context( get_talker_for( get_avatar() ), nullptr );
     const tripoint_abs_ms builtin_absolute = here.get_abs( builtin_center );
     builtin_context.set_value( "trap_center", builtin_absolute );
     talk_effect_t builtin_native_effect;
@@ -1661,7 +1665,7 @@ TEST_CASE( "lua_platform_environment_set_trap_area_matches_native_f_set_trap",
     native_trap_json +=
         R"(\u0000tail", "location":{"context_val":"trap_center"}, "radius":0})";
     const std::string long_trap_bytes = std::string( 320, 'x' ) + std::string( "\0tail", 5 );
-    dialogue long_id_context( get_talker_for( get_avatar() ) );
+    dialogue long_id_context( get_talker_for( get_avatar() ), nullptr );
     long_id_context.set_value( "trap_center", here.get_abs( center ) );
     talk_effect_t long_id_native_effect;
     long_id_native_effect.parse_sub_effect( json_loader::from_string( native_trap_json ).get_object(),
