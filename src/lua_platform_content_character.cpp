@@ -385,8 +385,8 @@ struct enchantment_fake_spell_definition_data {
     std::int64_t level = 0;
     bool self = false;
     std::int64_t trigger_once_in = 1;
-    std::string trigger_message;
-    std::string npc_trigger_message;
+    authored_text trigger_message;
+    authored_text npc_trigger_message;
 };
 
 struct enchantment_vision_description_definition_data {
@@ -1148,9 +1148,10 @@ struct enchantment_definition_handle {
         spell.self = options.get_or( "self", fake_spell::self_default );
         spell.trigger_once_in = options.get_or<std::int64_t>(
                                     "trigger_once_in", fake_spell::trigger_once_in_default );
-        spell.trigger_message = options.get_or( "trigger_message", std::string() );
-        spell.npc_trigger_message = options.get_or(
-                                        "npc_trigger_message", std::string() );
+        spell.trigger_message = read_singular_text(
+                                    options.get<sol::object>( "trigger_message" ), {}, "spell trigger message" );
+        spell.npc_trigger_message = read_singular_text(
+                                        options.get<sol::object>( "npc_trigger_message" ), {}, "NPC spell trigger message" );
         return spell;
     }
 
@@ -5794,8 +5795,8 @@ bool character_content_transaction::apply_phase(
                         }
                         result.level = static_cast<int>( source.level );
                         result.trigger_once_in = static_cast<int>( source.trigger_once_in );
-                        result.trigger_message = no_translation( source.trigger_message );
-                        result.npc_trigger_message = no_translation( source.npc_trigger_message );
+                        result.trigger_message = source.trigger_message.native();
+                        result.npc_trigger_message = source.npc_trigger_message.native();
                         return result;
                     };
                     for( const enchantment_fake_spell_definition_data &spell : source.hit_you_effects ) {
@@ -5906,8 +5907,8 @@ bool character_content_transaction::apply_phase(
                         }
                         result.level = static_cast<int>( value.level );
                         result.trigger_once_in = static_cast<int>( value.trigger_once_in );
-                        result.trigger_message = no_translation( value.trigger_message );
-                        result.npc_trigger_message = no_translation( value.npc_trigger_message );
+                        result.trigger_message = value.trigger_message.native();
+                        result.npc_trigger_message = value.npc_trigger_message.native();
                         return result;
                     };
 
@@ -6125,8 +6126,8 @@ bool character_content_transaction::apply_phase(
                         }
                         result.level = static_cast<int>( value.level );
                         result.trigger_once_in = static_cast<int>( value.trigger_once_in );
-                        result.trigger_message = no_translation( value.trigger_message );
-                        result.npc_trigger_message = no_translation( value.npc_trigger_message );
+                        result.trigger_message = value.trigger_message.native();
+                        result.npc_trigger_message = value.npc_trigger_message.native();
                         return result;
                     };
                     for( const enchantment_fake_spell_definition_data &spell :

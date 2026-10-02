@@ -4920,7 +4920,7 @@ local VehiclePartDefinition = {}
 local VehicleDefinition = {}
 
 ---@class BionicDefinition
----@field activation_spell any
+---@field activation_spell fun(self:BionicDefinition, options:CcbFakeSpellOptions):BionicDefinition
 ---@field armor any
 ---@field auto_deactivate any
 ---@field available_upgrade any
@@ -4969,9 +4969,9 @@ function ComputerAccessContext:set_value(key, value) end
 ---@field custom any
 ---@field effect any
 ---@field encumbrance any
----@field every any
----@field hit_me any
----@field hit_you any
+---@field every fun(self:EnchantmentDefinition, turns:integer, options:CcbFakeSpellOptions):EnchantmentDefinition
+---@field hit_me fun(self:EnchantmentDefinition, options:CcbFakeSpellOptions):EnchantmentDefinition
+---@field hit_you fun(self:EnchantmentDefinition, options:CcbFakeSpellOptions):EnchantmentDefinition
 ---@field id any
 ---@field incoming_damage any
 ---@field limb_score any
@@ -5082,7 +5082,7 @@ local RelicProcgenDefinition = {}
 ---@field bodypart any
 ---@field caster_when fun(self:SpellDefinition, handler:string, failure_message:string|LocalizedText):SpellDefinition
 ---@field dynamic_stat any
----@field extra_spell any
+---@field extra_spell fun(self:SpellDefinition, options:CcbFakeSpellOptions):SpellDefinition
 ---@field flag any
 ---@field id any
 ---@field ignore_species any
@@ -5127,6 +5127,7 @@ local WidgetDefinition = {}
 ---@field name string|LocalizedText
 ---@field description string|LocalizedText
 ---@field cant_remove_reason? string|LocalizedText
+---@field activation_spell? CcbFakeSpellOptions
 ---@field [string] any
 
 ---@param options BionicDefinitionOptions
@@ -5141,6 +5142,13 @@ function CcbPlatformContent.Bionic(options) end
 
 ---@class CcbEnchantmentVisionDescription
 ---@field text string|LocalizedText
+---@field [string] any
+
+---@class CcbFakeSpellOptions
+---@field id? string
+---@field spell? string
+---@field trigger_message? string|LocalizedText
+---@field npc_trigger_message? string|LocalizedText
 ---@field [string] any
 
 ---@class CcbEnchantmentVisionOptions
