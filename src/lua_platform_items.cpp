@@ -668,8 +668,8 @@ std::optional<game_handle_error> build_item_query_root(
 {
     resolved_item_holder resolved;
     if( const std::optional<game_handle_error> error = resolve_item_holder(
-                descriptor, runtime_generation, world_generation,
-                nullptr, resolved ) ) {
+            descriptor, runtime_generation, world_generation,
+            nullptr, resolved ) ) {
         return error;
     }
     result = {};
@@ -1224,7 +1224,7 @@ sol::table item_page(
 
     item_query_root root;
     if( const std::optional<game_handle_error> error = build_item_query_root(
-                descriptor, runtime_generation, world_generation, root ) ) {
+            descriptor, runtime_generation, world_generation, root ) ) {
         return make_game_error_result( state, *error );
     }
 
@@ -2661,11 +2661,11 @@ sol::table activate_item(
     const int before_damage = actually_used->damage();
     const bool before_active = actually_used->is_active();
     const game_handle actually_used_handle = make_character_item_handle(
-                *character, *actually_used, "platform_item_use_item",
-                runtime_generation, world_generation );
+            *character, *actually_used, "platform_item_use_item",
+            runtime_generation, world_generation );
     const bool destroyed = character->invoke_item( entry, method, target );
     const native_handle_result<item> after = item_handle.resolve_item(
-                runtime_generation, world_generation );
+            runtime_generation, world_generation );
     const native_handle_result<item> actually_used_after_handle =
         actually_used_handle.resolve_item( runtime_generation, world_generation );
     item *actually_used_after = after ? after.value->get_usable_item( method ) : nullptr;
@@ -3824,9 +3824,9 @@ sol::table inventory_has_item_flag(
         return make_game_error_result( state, *error );
     }
     return make_game_value_result(
-                   state, sol::make_object(
-                       state, character->has_item_with_flag(
-                           flag_id( requested_flag.value() ) ) ) );
+               state, sol::make_object(
+                   state, character->has_item_with_flag(
+                       flag_id( requested_flag.value() ) ) ) );
 }
 
 sol::table inventory_has_item_type_flag(
@@ -4408,7 +4408,7 @@ sol::table remove_inventory_items_by_type(
     // particular, remove_weapon() moves from the Character's weapon slot.
     const itype_id native_type( type.value() );
     std::list<item> removed = character->remove_items_with(
-                                  [&native_type]( const item &entry ) {
+    [&native_type]( const item & entry ) {
         if( entry.typeId() != native_type ) {
             return false;
         }
@@ -4459,7 +4459,7 @@ sol::table hand_in_inventory_items(
     sol::table value = raw_value.as<sol::table>();
     const itype_id native_type( type.value() );
     const int display_count = static_cast<int>( std::max<std::int64_t>(
-                                  1, requested_count ) );
+            1, requested_count ) );
     if( display_count == 1 ) {
         value["notice"] = string_format(
                               to_translation( "You give %1$s a %2$s." ).translated(),
@@ -4493,8 +4493,8 @@ sol::table transfer_inventory_items_by_type(
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_exact_character(
-                              character_handle, runtime_generation,
-                              world_generation, error );
+                               character_handle, runtime_generation,
+                               world_generation, error );
     if( character == nullptr ) {
         return make_game_error_result( state, *error );
     }
@@ -4525,7 +4525,7 @@ sol::table transfer_inventory_items_by_type(
                               to_translation( "You don't have a %1$s!" ).translated(),
                               item::nname( native_type ) );
         return make_game_value_result(
-               state, sol::make_object( std::move( value ) ) );
+                   state, sol::make_object( state, std::move( value ) ) );
     }
 
     // Resolve ownership only once native inventory selection has succeeded;
@@ -4538,8 +4538,8 @@ sol::table transfer_inventory_items_by_type(
         } );
     }
     std::list<item> transferred = use_charge_path ?
-                                 character->use_charges( native_type, count ) :
-                                 character->use_amount( native_type, count );
+                                  character->use_charges( native_type, count ) :
+                                  character->use_amount( native_type, count );
     const std::size_t fragment_count = transferred.size();
     for( item &entry : transferred ) {
         entry.set_owner( recipient_faction->id );
@@ -4563,7 +4563,7 @@ sol::table transfer_inventory_items_by_type(
                               item::nname( native_type, count ) );
     }
     return make_game_value_result(
-               state, sol::make_object( std::move( value ) ) );
+               state, sol::make_object( state, std::move( value ) ) );
 }
 
 sol::table consume_inventory_sum(
@@ -4648,7 +4648,7 @@ sol::table consume_inventory_sum(
         }
         const std::vector<item_comp> components = {
             item_comp(
-                itype_id( entry.id.value() ), entry.consume )
+            itype_id( entry.id.value() ), entry.consume )
         };
         const std::list<item> removed =
             character->consume_items( components );
@@ -4746,12 +4746,12 @@ sol::table consume_dialogue_inventory_sum(
         return make_game_error_result( state, *error );
     }
 
-    const auto legal_to_consume = [character]( const item &entry ) {
+    const auto legal_to_consume = [character]( const item & entry ) {
         return entry.is_owned_by( *character );
     };
     std::unordered_set<item_location> all_items = get_map().all_items(
-                legal_to_consume, *character,
-                Access_Inventory | Access_Map_Around | Access_Vehicle );
+            legal_to_consume, *character,
+            Access_Inventory | Access_Map_Around | Access_Vehicle );
     double coverage = 0.0;
     int removed_items = 0;
     int modified_charge_stacks = 0;
@@ -4765,9 +4765,9 @@ sol::table consume_dialogue_inventory_sum(
                 const int available = location->count_by_charges() ?
                                       location->charges : 1;
                 const int amount_to_remove = std::min(
-                        available,
-                        static_cast<int>( std::ceil(
-                                ( 1.0 - coverage ) * entry.desired ) ) );
+                                                 available,
+                                                 static_cast<int>( std::ceil(
+                                                         ( 1.0 - coverage ) * entry.desired ) ) );
                 coverage += amount_to_remove / entry.desired;
 
                 if( amount_to_remove >= available ) {
@@ -5152,8 +5152,8 @@ std::optional<game_handle_error> insert_item_into_holder(
         destination.container->on_contents_changed();
         inserted.value = result.value();
         inserted.rollback = [pocket = destination.pocket,
-                                    container = destination.container,
-               value = result.value()]() mutable {
+                             container = destination.container,
+        value = result.value()]() mutable {
             const std::optional<item> removed = pocket->remove_item( *value );
             if( removed )
             {
@@ -5190,8 +5190,8 @@ std::optional<game_handle_error> insert_item_into_holder(
     }
     inserted.value = & **added;
     inserted.rollback = [vehicle = destination.vehicle,
-                                 part = destination.part,
-            value = inserted.value]() mutable {
+                         part = destination.part,
+    value = inserted.value]() mutable {
         return vehicle->remove_item( *part, value );
     };
     return std::nullopt;
@@ -5287,21 +5287,21 @@ sol::table transfer_item(
         read_item_holder_descriptor( destination_holder_table, api_name );
     sol::state_view state( lua );
     const native_handle_result<item> resolved = item_handle.resolve_item(
-                runtime_generation, world_generation );
+            runtime_generation, world_generation );
     if( !resolved ) {
         return make_game_error_result( state, *resolved.error );
     }
 
     resolved_item_holder source;
     if( const std::optional<game_handle_error> error = resolve_item_holder(
-                source_descriptor, runtime_generation, world_generation,
-                resolved.value, source ) ) {
+            source_descriptor, runtime_generation, world_generation,
+            resolved.value, source ) ) {
         return make_game_error_result( state, *error );
     }
     resolved_item_holder destination;
     if( const std::optional<game_handle_error> error = resolve_item_holder(
-                destination_descriptor, runtime_generation, world_generation,
-                nullptr, destination ) ) {
+            destination_descriptor, runtime_generation, world_generation,
+            nullptr, destination ) ) {
         return make_game_error_result( state, *error );
     }
     if( same_item_holder( source, destination ) ) {
@@ -5342,11 +5342,11 @@ sol::table transfer_item(
     }
     inserted_item inserted;
     if( const std::optional<game_handle_error> error = insert_item_into_holder(
-                destination, source_copy, resolved.value, inserted ) ) {
+            destination, source_copy, resolved.value, inserted ) ) {
         return make_game_error_result( state, *error );
     }
     const native_handle_result<item> still_source = item_handle.resolve_item(
-                runtime_generation, world_generation );
+            runtime_generation, world_generation );
     if( !still_source || still_source.value != resolved.value ) {
         const bool rolled_back = inserted.rollback && inserted.rollback();
         if( !rolled_back ) {
@@ -5722,7 +5722,7 @@ std::optional<game_handle_error> prepare_equipment_transaction(
     }
 
     const native_handle_result<item> resolved_item = item_handle.resolve_item(
-                runtime_generation, world_generation );
+            runtime_generation, world_generation );
     if( !resolved_item ) {
         return resolved_item.error;
     }
@@ -5893,7 +5893,7 @@ std::optional<game_handle_error> prepare_equipment_transaction(
             };
         }
         const ret_val<void> equip_change_permitted = actor->can_wear(
-                    *resolved_item.value, true );
+                *resolved_item.value, true );
         if( !equip_change_permitted.success() ) {
             return game_handle_error{
                 "cannot_wear", equip_change_permitted.str()
@@ -6286,7 +6286,7 @@ std::optional<game_handle_error> resolve_trade_source_holder(
     }
     resolved_item_holder owner;
     if( const auto error = resolve_item_holder( owner_descriptor, runtime, world_generation,
-                           nullptr, owner ) ) {
+        nullptr, owner ) ) {
         return error;
     }
     item_holder_descriptor pocket_descriptor;
@@ -6294,7 +6294,7 @@ std::optional<game_handle_error> resolve_trade_source_holder(
     pocket_descriptor.container = holder.container;
     pocket_descriptor.pocket_index = holder.pocket_index;
     if( const auto error = resolve_item_holder( pocket_descriptor, runtime, world_generation,
-                           target, result ) ) {
+        target, result ) ) {
         return error;
     }
     if( owner.character == nullptr || result.container == nullptr ||
@@ -6566,7 +6566,7 @@ std::optional<game_handle_error> require_recipe_inventory_destination(
     const sol::table &requested, item_holder_descriptor &descriptor )
 {
     if( const std::optional<game_handle_error> error = recipe_character_holder(
-                requested, "services.camps.tasks.recipe_work", descriptor ) ) {
+            requested, "services.camps.tasks.recipe_work", descriptor ) ) {
         return error;
     }
     if( descriptor.slot != "inventory" ) {
@@ -6643,7 +6643,7 @@ std::optional<game_handle_error> stage_platform_trade_items(
         destination_descriptor.slot = request.destination_holder.slot;
 
         const native_handle_result<item> resolved = request.item_handle.resolve_item(
-                    current_runtime, current_world_generation );
+                current_runtime, current_world_generation );
         if( !resolved ) {
             return resolved.error;
         }
@@ -6657,14 +6657,14 @@ std::optional<game_handle_error> stage_platform_trade_items(
 
         resolved_item_holder source;
         if( const std::optional<game_handle_error> error = resolve_trade_source_holder(
-                    request.source_holder, current_runtime, current_world_generation,
-                    resolved.value, source ) ) {
+                request.source_holder, current_runtime, current_world_generation,
+                resolved.value, source ) ) {
             return error;
         }
         resolved_item_holder destination;
         if( const std::optional<game_handle_error> error = resolve_item_holder(
-                    destination_descriptor, current_runtime, current_world_generation,
-                    nullptr, destination ) ) {
+                destination_descriptor, current_runtime, current_world_generation,
+                nullptr, destination ) ) {
             return error;
         }
         if( source.character == nullptr || destination.character == nullptr ||
@@ -6753,7 +6753,7 @@ std::optional<game_handle_error> stage_platform_trade_items(
         }
         trade_item_insertion reservation;
         if( const std::optional<game_handle_error> error = insert_owned_trade_item(
-                    destination, probe, reservation ) ) {
+                destination, probe, reservation ) ) {
             const bool released = release_trade_reservations( reservations );
             if( !released ) {
                 bump_item_query_mutation_epoch();
@@ -6782,7 +6782,7 @@ std::optional<game_handle_error> stage_platform_trade_items(
         const std::size_t index = &request - requests.data();
         prepared_trade_item &entry = prepared[index];
         const native_handle_result<item> resolved = request.item_handle.resolve_item(
-                    current_runtime, current_world_generation );
+                current_runtime, current_world_generation );
         if( !resolved || resolved.value != entry.source_item ||
             resolved.value->uid().get_value() != entry.source_uid ||
             ( resolved.value->count_by_charges() ? resolved.value->charges : 1 ) !=
@@ -6793,8 +6793,8 @@ std::optional<game_handle_error> stage_platform_trade_items(
         }
         resolved_item_holder source;
         if( const std::optional<game_handle_error> error = resolve_trade_source_holder(
-                    request.source_holder, current_runtime, current_world_generation,
-                    resolved.value, source ) ) {
+                request.source_holder, current_runtime, current_world_generation,
+                resolved.value, source ) ) {
             return error;
         }
         if( source.character != entry.source || source.pocket != entry.source_pocket ) {
@@ -6808,8 +6808,8 @@ std::optional<game_handle_error> stage_platform_trade_items(
         destination_descriptor.slot = request.destination_holder.slot;
         resolved_item_holder destination;
         if( const std::optional<game_handle_error> error = resolve_item_holder(
-                    destination_descriptor, current_runtime, current_world_generation,
-                    nullptr, destination ) ) {
+                destination_descriptor, current_runtime, current_world_generation,
+                nullptr, destination ) ) {
             return error;
         }
         if( destination.character != entry.destination ) {
@@ -6823,7 +6823,7 @@ std::optional<game_handle_error> stage_platform_trade_items(
     // vectors have already been sized and all callback storage is allocated
     // before extraction can make the transaction observable.
     const std::shared_ptr<std::vector<prepared_trade_item>> prepared_state =
-                std::make_shared<std::vector<prepared_trade_item>>( std::move( prepared ) );
+        std::make_shared<std::vector<prepared_trade_item>>( std::move( prepared ) );
     transaction.rollback = [prepared_state]() mutable {
         const bool restored = restore_prepared_trade_items( *prepared_state );
         bump_item_query_mutation_epoch();
@@ -6913,7 +6913,7 @@ std::optional<game_handle_error> stage_platform_trade_items(
         const std::int64_t destination_uid = entry.escrow.uid().get_value();
         trade_item_insertion inserted;
         if( const std::optional<game_handle_error> error = insert_owned_trade_item(
-                    destination, entry.escrow, inserted ) ) {
+                destination, entry.escrow, inserted ) ) {
             return rollback_failure( error->code, error->message );
         }
         if( inserted.value == nullptr ||
@@ -7005,18 +7005,18 @@ std::optional<game_handle_error> stage_platform_recipe_items(
     for( const platform_recipe_item_request &request : requests ) {
         item_holder_descriptor descriptor;
         if( const std::optional<game_handle_error> error = recipe_character_holder(
-                    request.source_holder, "services.camps.tasks.start", descriptor ) ) {
+                request.source_holder, "services.camps.tasks.start", descriptor ) ) {
             return error;
         }
         const native_handle_result<item> resolved = request.item_handle.resolve_item(
-                    current_runtime, current_world_generation );
+                current_runtime, current_world_generation );
         if( !resolved ) {
             return resolved.error;
         }
         resolved_item_holder holder;
         if( const std::optional<game_handle_error> error = resolve_item_holder(
-                    descriptor, current_runtime, current_world_generation,
-                    resolved.value, holder ) ) {
+                descriptor, current_runtime, current_world_generation,
+                resolved.value, holder ) ) {
             return error;
         }
         if( holder.character == nullptr || resolved.value == nullptr ||
@@ -7282,8 +7282,8 @@ std::optional<game_handle_error> restore_platform_recipe_items(
     for( const basecamp_platform_recipe_escrow_item &entry : items ) {
         platform_recipe_item_transaction current;
         if( const std::optional<game_handle_error> error = restore_platform_recipe_item(
-                    entry, destination_holder, current_runtime,
-                    current_world_generation, current ) ) {
+                entry, destination_holder, current_runtime,
+                current_world_generation, current ) ) {
             bool rolled_back = true;
             for( auto it = inserted.rbegin(); it != inserted.rend(); ++it ) {
                 if( it->rollback ) {
@@ -7586,7 +7586,7 @@ void install_item_api(
         "has_ammo",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state, const game_handle & item_handle,
-            const game_handle & character ) {
+    const game_handle & character ) {
         require_read();
         return item_has_ammo(
                    lua_state, item_handle, character,
@@ -7816,7 +7816,7 @@ void install_item_api(
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state, const game_handle & character,
             const script_game_id & type, const std::int64_t count,
-            const std::int64_t charges ) {
+    const std::int64_t charges ) {
         require_read();
         return inventory_has_items(
                    lua_state, character, type, count, charges,
@@ -8005,10 +8005,10 @@ void install_item_api(
         "consume_by_type",
         [current_runtime_generation, current_world_generation, require_item_write](
             sol::this_state lua_state,
-            const game_handle &character,
-            const script_game_id &type,
+            const game_handle & character,
+            const script_game_id & type,
             const std::int64_t count,
-            const std::int64_t charges ) {
+    const std::int64_t charges ) {
         require_item_write();
         return consume_inventory_by_type(
                    lua_state, character, type, count, charges,
@@ -8019,8 +8019,8 @@ void install_item_api(
         "remove_type",
         [current_runtime_generation, current_world_generation, require_item_write](
             sol::this_state lua_state,
-            const game_handle &character,
-            const script_game_id &type ) {
+            const game_handle & character,
+    const script_game_id & type ) {
         require_item_write();
         return remove_inventory_items_by_type(
                    lua_state, character, type,
@@ -8047,10 +8047,10 @@ void install_item_api(
         "transfer_by_type",
         [current_runtime_generation, current_world_generation, require_item_write](
             sol::this_state lua_state,
-            const game_handle &character,
-            const game_handle &recipient,
-            const script_game_id &type,
-            const std::int64_t count ) {
+            const game_handle & character,
+            const game_handle & recipient,
+            const script_game_id & type,
+    const std::int64_t count ) {
         require_item_write();
         return transfer_inventory_items_by_type(
                    lua_state, character, recipient, type, count,
@@ -8075,8 +8075,8 @@ void install_item_api(
             sol::this_state lua_state,
             const sol::optional<game_handle> &alpha,
             const sol::optional<game_handle> &beta,
-            const std::string &participant,
-            const sol::table &entries ) {
+            const std::string & participant,
+    const sol::table & entries ) {
         require_item_write();
         return consume_dialogue_inventory_sum(
                    lua_state, alpha, beta, participant, entries,
@@ -8134,7 +8134,7 @@ void install_item_api(
         "stow_current_weapon",
         [current_runtime_generation, current_world_generation, require_item_write](
             sol::this_state lua_state,
-            const game_handle &actor ) {
+    const game_handle & actor ) {
         require_item_write();
         return equipment_stow_current_weapon(
                    lua_state, actor, current_runtime_generation(),
