@@ -75,7 +75,7 @@ struct assignment_case {
     bool expects_nan = false;
     bool expects_negative_zero = false;
     bool expects_positive_zero = false;
-    std::string_view rhs_math;
+    std::string_view rhs_math = {};
 };
 
 constexpr std::array assignment_cases = {
