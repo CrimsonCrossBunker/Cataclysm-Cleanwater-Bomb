@@ -55,7 +55,7 @@ struct effect_case {
     unsigned int seed;
     std::optional<int> expected_duration_turns;
     std::optional<int> expected_intensity;
-    std::optional<std::pair<int, int>> duration_bounds;
+    std::optional<std::pair<int, int>> duration_bounds = std::nullopt;
     bool expects_type_diagnostic = false;
     bool expects_negative_duration = false;
     bool expects_effect_maximum_clamp = false;
