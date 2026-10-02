@@ -31,6 +31,7 @@
 #include "lua_platform_variables.h"
 #include "math_parser.h"
 #include "math_parser_diag_value.h"
+#include "math_parser_type.h"
 #include "type_id.h"
 #include "vehicle.h"
 #include "veh_type.h"
@@ -199,6 +200,8 @@ TEST_CASE( "lua_platform_native_variable_keys_keep_native_string_range",
     const sol::protected_function resolve = fixture.variables["resolve"];
     const sol::protected_function set_resolved = fixture.variables["set_resolved"];
     sol::table context = fixture.lua.create_table();
+    sol::table strict = fixture.lua.create_table();
+    strict["strict"] = true;
 
     const std::vector<std::string> keys = native_boundary_keys();
     REQUIRE( keys[1].size() == 129 );
@@ -215,6 +218,7 @@ TEST_CASE( "lua_platform_native_variable_keys_keep_native_string_range",
                 REQUIRE( owner.get( key ) != nullptr );
                 const double expected = owner.get( key )->dbl();
                 CHECK( require_value( get_number( owner.handle, key ) )["value"].get<double>() == expected );
+                CHECK( require_value( get_number( owner.handle, key, strict ) )["value"].get<double>() == expected );
             }
             for( const tripoint &position : { tripoint::zero, tripoint( -25, 49, -3 ),
                                              tripoint( std::numeric_limits<int>::min(),
@@ -422,6 +426,149 @@ TEST_CASE( "lua_platform_native_non_nul_variable_keys_round_trip_in_save_json",
         const auto global_value = restored_global_values.find( keys[index] );
         REQUIRE( global_value != restored_global_values.end() );
         CHECK( global_value->second.str() == "saved-global-" + std::to_string( index ) );
+    }
+}
+
+TEST_CASE( "lua_platform_strict_numeric_reads_distinguish_type_failure_missing_and_zero",
+           "[lua][platform][semantic][variables][math]" )
+{
+    global_values_restore restore_global_values;
+    variable_api_fixture fixture;
+    const sol::protected_function read_global = fixture.variables["get_global_number"];
+    const sol::protected_function read_context = fixture.variables["get_context_number"];
+    const sol::protected_function read_owner = fixture.variables["get_number"];
+    sol::table strict = fixture.lua.create_table();
+    strict["strict"] = true;
+    sol::table permissive = fixture.lua.create_table();
+    permissive["strict"] = false;
+    const auto make_value = []( const int shape ) -> std::optional<diag_value> {
+        switch( shape ) {
+            case 0: return std::nullopt;
+            case 1: return diag_value{};
+            case 2: return diag_value( 0.0 );
+            case 3: return diag_value( -3.9 );
+            case 4: return diag_value( std::string( "7.9" ) );
+            case 5: return diag_value( diag_array( 5000, diag_value( 4.0 ) ) );
+            case 6: return diag_value( tripoint_abs_ms( -3, 4, 5 ) );
+            case 7: return diag_value( diag_value::legacy_value( "7.9" ) );
+            default: return diag_value( diag_value::legacy_value( "not-a-number" ) );
+        }
+    };
+    const std::vector<std::string> keys = { "", std::string( 10000, 'k' ), std::string( "raw\0key", 7 ) };
+    for( const bool context_scope : { false, true } ) {
+        for( const std::string &key : keys ) {
+            for( int shape = 0; shape < ( context_scope ? 7 : 9 ); ++shape ) {
+                CAPTURE( context_scope, key.size(), shape );
+                const std::optional<diag_value> native_value = make_value( shape );
+                double expected = 0.0;
+                std::string type_error;
+                const std::string native_diagnostic = capture_debugmsg_during( [&]() {
+                    if( native_value ) {
+                        try {
+                            expected = native_value->dbl( const_dialogue{} );
+                        } catch( const math::exception &error ) {
+                            type_error = error.what();
+                        }
+                    }
+                } );
+                get_globals().remove_global_value( key );
+                sol::table data = fixture.lua.create_table();
+                if( context_scope ) {
+                    if( shape == 1 ) {
+                        data.raw_set( key, fixture.services["types"]["null"].get<sol::object>() );
+                    } else if( shape == 2 || shape == 3 ) {
+                        data.raw_set( key, native_value->dbl() );
+                    } else if( shape == 4 ) {
+                        data.raw_set( key, native_value->str() );
+                    } else if( shape == 5 ) {
+                        // Contents need not be convertible or acyclic: only
+                        // the native outer array type determines this error.
+                        sol::table cycle = fixture.lua.create_table();
+                        cycle["self"] = cycle;
+                        data.raw_set( key, cycle );
+                    } else if( shape == 6 ) {
+                        data.raw_set( key, cata::lua_platform::script_tripoint_coord::from_native(
+                                          coords::origin::abs, coords::scale::map_square,
+                                          native_value->tripoint().raw() ) );
+                    }
+                } else if( native_value ) {
+                    // Legacy conversion caches belong to each independent
+                    // comparison; do not reuse the oracle's converted value.
+                    get_globals().set_global_value( key, *make_value( shape ) );
+                }
+                sol::protected_function_result call;
+                const std::string actual_diagnostic = capture_debugmsg_during( [&]() {
+                    call = context_scope ? read_context( data, key, strict ) : read_global( key, strict );
+                } );
+                CHECK( actual_diagnostic == native_diagnostic );
+                if( type_error.empty() ) {
+                    const sol::table value = require_value( call );
+                    CHECK( value["exists"].get<bool>() == native_value.has_value() );
+                    if( native_value ) {
+                        CHECK( value["value"].get<double>() == expected );
+                    } else {
+                        CHECK( value["value"].get<sol::object>().get_type() == sol::type::nil );
+                    }
+                } else {
+                    const sol::table error = require_error( call, "variable_type_mismatch" );
+                    CHECK( error["message"].get<std::string>() == type_error );
+                    CHECK( actual_diagnostic.empty() );
+                    // Existing callers retain the diagnostic-and-zero mode.
+                    const std::string permissive_diagnostic = capture_debugmsg_during( [&]() {
+                        const sol::table value = context_scope ? require_value( read_context( data, key, permissive ) ) :
+                                                 require_value( read_global( key, permissive ) );
+                        CHECK( value["exists"].get<bool>() );
+                        CHECK( value["value"].get<double>() == 0.0 );
+                    } );
+                    CHECK_FALSE( permissive_diagnostic.empty() );
+                }
+            }
+        }
+    }
+    sol::table data = fixture.lua.create_table();
+    for( const bool flag : { false, true } ) {
+        data["flag"] = flag;
+        CHECK( require_value( read_context( data, "flag", strict ) )["value"].get<double>() ==
+               ( flag ? 1.0 : 0.0 ) );
+    }
+    CHECK_FALSE( require_value( read_context( sol::nil, "missing", strict ) )["exists"].get<bool>() );
+    require_error( read_owner( game_handle{}, "key", strict ), "wrong_kind" );
+    avatar alpha;
+    alpha.normalize();
+    alpha.setID( character_id( 4913 ), true );
+    const game_handle owner = game_handle::from_creature(
+                                 alpha, { "avatar", alpha.getID().get_value(), 0, 0, 0, {} }, fixture.runtime, 1 );
+    CHECK_FALSE( require_value( read_owner( owner, "missing", strict ) )["exists"].get<bool>() );
+    alpha.set_value( "wrong", diag_value( std::string( "9" ) ) );
+    require_error( read_owner( owner, "wrong", strict ), "variable_type_mismatch" );
+    const game_handle_runtime old_generation( fixture.runtime_owner, 2 );
+    const game_handle stale = game_handle::from_creature(
+                                 alpha, { "avatar", alpha.getID().get_value(), 0, 0, 0, {} }, old_generation, 1 );
+    require_error( read_owner( stale, "wrong", strict ), "stale_runtime" );
+    for( const sol::object &bad : {
+             sol::make_object( fixture.lua, 1.0 ), sol::make_object( fixture.lua, "true" ),
+             sol::make_object( fixture.lua, fixture.lua.create_table() )
+         } ) {
+        sol::table options = fixture.lua.create_table();
+        options["strict"] = bad;
+        CHECK_FALSE( read_global( "missing", options ).valid() );
+        CHECK_FALSE( read_context( data, "missing", options ).valid() );
+        CHECK_FALSE( read_owner( game_handle{}, "missing", options ).valid() );
+    }
+}
+
+TEST_CASE( "native_invalid_legacy_number_diagnostic_names_value_and_requested_type",
+           "[lua][platform][semantic][variables][math]" )
+{
+    for( const bool strict : { false, true } ) {
+        diag_value stored( diag_value::legacy_value( "not-a-number" ) );
+        const std::string diagnostic = capture_debugmsg_during( [&]() {
+            // Native legacy conversion uses its diagnostic-and-zero path even
+            // inside a strict read; each independent value owns its cache.
+            CHECK( ( strict ? stored.dbl( const_dialogue{} ) : stored.dbl() ) == 0.0 );
+        } );
+        CHECK( diagnostic.find( "Could not convert legacy value \"not-a-number\" to a double" ) !=
+               std::string::npos );
     }
 }
 

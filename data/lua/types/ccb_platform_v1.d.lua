@@ -11118,25 +11118,35 @@ function CcbVariablesApi.get_string(owner, key) end
 ---@class CcbVariableNumberReadResult: CcbResult
 ---@field value? CcbVariableNumberReadValue
 
+---@class CcbVariableNumberReadOptions
+---@field strict? boolean Default false. True returns a variable_type_mismatch error for incompatible stored types, preserving valid zero and missing keys.
+
 ---Read the native numeric type directly, including legacy conversion and type diagnostics.
 ---A stored incompatible type emits its native diagnostic and yields zero; no array snapshot limits apply.
+---With strict=true, incompatible types return a structured error instead of emitting a type diagnostic and yielding zero.
+---Legacy conversion retains native caching and diagnostics in either mode.
 ---@param key string Raw native global key.
+---@param options? CcbVariableNumberReadOptions
 ---@return CcbVariableNumberReadResult
-function CcbVariablesApi.get_global_number(key) end
+function CcbVariablesApi.get_global_number(key, options) end
 
 ---Read the numeric type of a callback slot. Boolean values use native numeric storage (1 or 0).
 ---NullValue yields zero without a diagnostic; strings, arrays and absolute map-square coordinates
 ---emit the native type diagnostic and yield zero. Array contents are not traversed.
+---With strict=true, incompatible types return variable_type_mismatch without traversing array contents or emitting a type diagnostic.
 ---@param context table<string, any>|nil
 ---@param key string Raw key, including empty, long and embedded-NUL bytes.
+---@param options? CcbVariableNumberReadOptions
 ---@return CcbVariableNumberReadResult
-function CcbVariablesApi.get_context_number(context, key) end
+function CcbVariablesApi.get_context_number(context, key, options) end
 
 ---Read an actor, item or vehicle variable directly as a native number, retaining handle validation.
+---Strict reads distinguish type errors from zero/missing; handle errors remain their original error codes.
 ---@param owner GameHandle
 ---@param key string Raw native storage key.
+---@param options? CcbVariableNumberReadOptions
 ---@return CcbVariableNumberReadResult
-function CcbVariablesApi.get_number(owner, key) end
+function CcbVariablesApi.get_number(owner, key, options) end
 
 ---@class CcbVariableTripointReadValue
 ---@field exists boolean Whether the selected native storage key is present.
