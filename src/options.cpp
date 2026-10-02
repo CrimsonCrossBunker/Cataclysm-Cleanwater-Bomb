@@ -2061,6 +2061,10 @@ void options_manager::add_options_general()
     add_option_group( "general", Group( "player_safe_opts", to_translation( "Player safety options" ),
                                         to_translation( "Options regarding player safety." ) ),
     [&]( const std::string & page_id ) {
+        add( "ACID_DANGER_WARNING", page_id, to_translation( "Acid hazard warnings" ),
+             to_translation( "Warn before entering acid and prevent pulping acid-filled corpses without adequate protection.  Disabling this permits these actions and suppresses acid activity interruptions, but does not prevent acid damage or corrosion." ),
+             true );
+
         add( "DANGEROUS_TERRAIN_WARNING_PROMPT", page_id,
              to_translation( "Dangerous terrain warning prompt" ),
              to_translation( "Always: You will be prompted to move onto dangerous tiles.  Running: You will only be able to move onto dangerous tiles while running and will be prompted.  Crouching: You will only be able to move onto a dangerous tile while crouching and will be prompted.  Never:  You will not be able to move onto a dangerous tile unless running and will not be warned or prompted." ),
