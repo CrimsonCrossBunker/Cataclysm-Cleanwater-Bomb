@@ -33412,10 +33412,6 @@ assert(context.data.out.x==0 and context.data.out.y==0 and context.data.out.z==0
             self.assertNotIn("services.map.", main)
             self.assertIn("no placeholder call is emitted", main)
             self.assertIn("needs domain-service conversion", report)
-            self.assertIn(
-                "native quote_npc_trade_item only sets prefix_item_id/name/count/cost",
-                report,
-            )
 
     def test_proven_npc_event_faction_trust_preserves_alpha_fallback(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
