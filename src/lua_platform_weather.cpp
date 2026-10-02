@@ -1259,8 +1259,23 @@ sol::table override_light(
         throw std::invalid_argument(
             "services.weather.override_light key exceeds 256 bytes" );
     }
-    const time_point expires_at =
-        calendar::turn + duration + 1_seconds;
+    const std::int64_t requested_when_turn =
+        to_turn<std::int64_t>( calendar::turn ) +
+        to_turns<std::int64_t>( duration );
+    if( requested_when_turn < std::numeric_limits<int>::min() ||
+        requested_when_turn > std::numeric_limits<int>::max() ) {
+        throw std::overflow_error(
+            "services.weather.override_light expiration exceeds the engine time range" );
+    }
+    const std::int64_t expires_at_turn =
+        requested_when_turn + to_turns<std::int64_t>( 1_seconds );
+    if( expires_at_turn < std::numeric_limits<int>::min() ||
+        expires_at_turn > std::numeric_limits<int>::max() ) {
+        throw std::overflow_error(
+            "services.weather.override_light expiration exceeds the engine time range" );
+    }
+    const time_point expires_at = time_point::from_turn(
+                                      static_cast<int>( expires_at_turn ) );
     timed_event_manager &timed_events =
         get_timed_events();
     bool replaced = false;
