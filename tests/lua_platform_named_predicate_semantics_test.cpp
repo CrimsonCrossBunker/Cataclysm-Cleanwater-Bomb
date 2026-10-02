@@ -11,13 +11,13 @@
 #include "type_id.h"
 
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-#include "avatar.h"
-#include "cata_scope_helpers.h"
-#include "character_id.h"
-#include "lua_platform_bindings_values.h"
-#include "lua_platform_handle.h"
-#include "lua_platform_mutations.h"
-#include "lua_platform_sol.h"
+    #include "avatar.h"
+    #include "cata_scope_helpers.h"
+    #include "character_id.h"
+    #include "lua_platform_bindings_values.h"
+    #include "lua_platform_handle.h"
+    #include "lua_platform_mutations.h"
+    #include "lua_platform_sol.h"
 #endif
 
 TEST_CASE( "lua_migration_native_named_predicate_accepts_empty_name",
@@ -85,7 +85,7 @@ TEST_CASE( "lua_platform_named_predicate_uses_current_dialogue_alpha",
     native_child_alpha.normalize();
     native_child_alpha.setID( character_id( 7402 ), true );
     native_child_alpha.set_mutation( quick );
-    dialogue native_original( get_talker_for( native_original_alpha ) , nullptr );
+    dialogue native_original( get_talker_for( native_original_alpha ), nullptr );
 
     talk_effect_t store_native_predicate;
     store_native_predicate.parse_sub_effect( json_loader::from_string(
@@ -95,8 +95,8 @@ TEST_CASE( "lua_platform_named_predicate_uses_current_dialogue_alpha",
         operation( native_original );
     }
     const conditional_t read_native_predicate( json_loader::from_string(
-            R"({"get_condition":"alpha_trait"})"
-        ).get_object() );
+                R"({"get_condition":"alpha_trait"})"
+            ).get_object() );
 
     sol::state lua;
     lua.open_libraries( sol::lib::base );
@@ -126,13 +126,13 @@ TEST_CASE( "lua_platform_named_predicate_uses_current_dialogue_alpha",
     const platform::game_handle original_alpha_handle =
         platform::game_handle::from_creature(
             platform_original_alpha,
-            { "avatar", platform_original_alpha.getID().get_value(), 0, 0, 0, {} },
-            runtime, 1 );
+    { "avatar", platform_original_alpha.getID().get_value(), 0, 0, 0, {} },
+    runtime, 1 );
     const platform::game_handle child_alpha_handle =
         platform::game_handle::from_creature(
             native_child_alpha,
-            { "npc", native_child_alpha.getID().get_value(), 0, 0, 0, {} },
-            runtime, 1 );
+    { "npc", native_child_alpha.getID().get_value(), 0, 0, 0, {} },
+    runtime, 1 );
     lua["services"] = services;
     const sol::protected_function_result helpers = lua.safe_script( R"(
         local function service_value(result)
@@ -173,7 +173,7 @@ TEST_CASE( "lua_platform_named_predicate_uses_current_dialogue_alpha",
     sol::protected_function read_named = lua["read_named"];
     const bool native_original_result = read_native_predicate( native_original );
     const sol::protected_function_result platform_original_call = read_named(
-                original_context, original_alpha_handle );
+            original_context, original_alpha_handle );
     REQUIRE( platform_original_call.valid() );
     CHECK_FALSE( native_original_result );
     CHECK( platform_original_call.get<bool>() == native_original_result );
@@ -188,7 +188,7 @@ TEST_CASE( "lua_platform_named_predicate_uses_current_dialogue_alpha",
     const sol::table child_context = child_context_call;
     const bool native_child_result = read_native_predicate( native_child );
     const sol::protected_function_result platform_child_call = read_named(
-                child_context, child_alpha_handle );
+            child_context, child_alpha_handle );
     REQUIRE( platform_child_call.valid() );
     CHECK( native_child_result );
     CHECK( platform_child_call.get<bool>() == native_child_result );

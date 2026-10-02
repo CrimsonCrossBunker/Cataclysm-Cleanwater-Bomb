@@ -189,7 +189,9 @@ TEST_CASE( "lua_platform_native_random_float_matches_game_stream_and_nonfinite_d
         { inf, 1 }, { 1, inf }, { -inf, 1 }, { 1, -inf },
         { -inf, inf }, { nan, 1 }, { 1, nan }, { nan, nan },
     };
-    for( const unsigned int seed : { 58169u, 58170u } ) {
+    for( const unsigned int seed : {
+             58169u, 58170u
+         } ) {
         for( const auto &range : ranges ) {
             CAPTURE( seed, range.first, range.second );
             rng_set_engine_seed( seed );
@@ -264,7 +266,8 @@ end
         const char *expression;
     };
     const std::vector<random_case> cases = {
-        { "rand(_bound)", R"lua(
+        {
+            "rand(_bound)", R"lua(
 (function() local values = {};
 local variable_result;
 variable_result = services.variables.get_context_number(context and context.data, "bound", {strict=true});
@@ -278,8 +281,10 @@ if values[1] < 0.0 or 1.0 / values[1] < 0.0 then values[2] = -values[2] end;
 assert(values[2] == values[2] and values[2] >= -2147483648 and values[2] <= 2147483647, "rand rounded bound is outside the native signed integer range");
 values[3] = services.random.native_int(math.min(0.0,values[2]), math.max(0.0,values[2])) + 0.0;
 return values[3] end)()
-)lua" },
-        { "rng(_lo,_hi)", R"lua(
+)lua"
+        },
+        {
+            "rng(_lo,_hi)", R"lua(
 (function() local values = {};
 local variable_result;
 variable_result = services.variables.get_context_number(context and context.data, "lo", {strict=true});
@@ -294,8 +299,10 @@ values[2] = (function(result) if result.exists == false then return 0.0 end;
 return result.value end)(service_value(variable_result));
 values[3] = services.random.native_float(values[1], values[2]);
 return values[3] end)()
-)lua" },
-        { "_choose?rand(_bound):rng(_lo,_hi)", R"lua(
+)lua"
+        },
+        {
+            "_choose?rand(_bound):rng(_lo,_hi)", R"lua(
 (function() local values = {};
 local variable_result;
 variable_result = services.variables.get_context_number(context and context.data, "choose", {strict=true});
@@ -334,7 +341,8 @@ values[7] = services.random.native_float(values[5], values[6]);
 values[8] = values[7];
 ::math_end_8::;
 return values[8] end)()
-)lua" }
+)lua"
+        }
     };
     struct number_case {
         double bound;
@@ -364,7 +372,9 @@ return values[8] end)()
         native.deserialize( json_loader::from_string(
                                 std::string( "{\"math\":[\"" ) + row.source + "\"]}" ) );
         finalize_conditions();
-        for( const unsigned int seed : { 58171u, 58172u } ) {
+        for( const unsigned int seed : {
+                 58171u, 58172u
+             } ) {
             for( const number_case &number : numbers ) {
                 // Five additional storage shapes use the first valid tuple;
                 // this checks missing/null/strict failure before any RNG draw.
@@ -374,8 +384,9 @@ return values[8] end)()
                     sol::table data = lua.create_table();
                     conversation.set_value( "choose", diag_value( number.choose ) );
                     data["choose"] = number.choose;
-                    for( const auto &field : std::vector<std::pair<std::string, double>>{
-                             { "bound", number.bound }, { "lo", number.lower }, { "hi", number.upper } } ) {
+                    for( const auto &field : std::vector<std::pair<std::string, double>> {
+                    { "bound", number.bound }, { "lo", number.lower }, { "hi", number.upper }
+                } ) {
                         if( shape == 0 ) {
                             conversation.set_value( field.first, diag_value( field.second ) );
                             data[field.first] = field.second;
@@ -391,7 +402,7 @@ return values[8] end)()
                         } else if( shape == 5 ) {
                             conversation.set_value( field.first, diag_value( tripoint_abs_ms( 1, 2, 3 ) ) );
                             data[field.first] = script_tripoint_coord::from_native(
-                                                   coords::origin::abs, coords::scale::map_square, tripoint( 1, 2, 3 ) );
+                                                    coords::origin::abs, coords::scale::map_square, tripoint( 1, 2, 3 ) );
                         }
                     }
                     sol::table context = lua.create_table();
@@ -519,10 +530,11 @@ TEST_CASE( "lua_platform_single_axis_location_ranges_match_native_coordinates_an
     };
     std::vector<location_range_case> cases;
     for( int axis = 0; axis < 3; ++axis ) {
-        for( const auto &bounds : std::vector<std::pair<double, double>>{
-                 { -2.7, 3.9 }, { 3.9, -2.7 }, { 0.9, 0.1 },
-                 { 2147483647.9, 2147483647.1 }, { -2147483648.9, -2147483648.1 },
-                 { -2147483648.0, 2147483647.0 } } ) {
+        for( const auto &bounds : std::vector<std::pair<double, double>> {
+        { -2.7, 3.9 }, { 3.9, -2.7 }, { 0.9, 0.1 },
+        { 2147483647.9, 2147483647.1 }, { -2147483648.9, -2147483648.1 },
+        { -2147483648.0, 2147483647.0 }
+    } ) {
             cases.push_back( { axis, bounds.first, bounds.second, false } );
             if( axis < 2 ) {
                 cases.push_back( { axis, bounds.first, bounds.second, false, true } );
@@ -675,11 +687,14 @@ TEST_CASE( "lua_platform_variable_numeric_ranges_match_native_presence_types_and
             { "u_val", var_type::u }, { "npc_val", var_type::npc },
             { "global_val", var_type::global }, { "context_val", var_type::context },
             { "var_val", var_type::var }
-        }};
+        }
+    };
     std::vector<bound_case> cases;
     for( const auto &scope : scopes ) {
-        for( const std::string &key : { std::string{}, std::string( "raw\0bound", 9 ),
-                                       std::string( 10000, 'k' ) } ) {
+        for( const std::string &key : {
+                 std::string{}, std::string( "raw\0bound", 9 ),
+                 std::string( 10000, 'k' )
+             } ) {
             for( int mode = 0; mode < 7; ++mode ) {
                 if( scope.second != var_type::context || mode != 6 ) {
                     // Lua callback strings are ordinary strings, not legacy values.
@@ -689,13 +704,14 @@ TEST_CASE( "lua_platform_variable_numeric_ranges_match_native_presence_types_and
         }
     }
     const auto lower_value = []( int mode ) -> std::optional<diag_value> {
-        switch( mode ) {
-            case 0:
-                return std::nullopt;
-            case 1:
-                return diag_value{};
-            case 2:
-                return diag_value( -3.9 );
+        switch( mode )
+    {
+        case 0:
+            return std::nullopt;
+        case 1:
+            return diag_value{};
+        case 2:
+            return diag_value( -3.9 );
             case 3:
                 return diag_value( diag_array( 5000, diag_value( 4.0 ) ) );
             case 4:
@@ -706,7 +722,7 @@ TEST_CASE( "lua_platform_variable_numeric_ranges_match_native_presence_types_and
                 return diag_value( diag_value::legacy_value( "7.9" ) );
         }
     };
-    const auto reset_case = [&]( const bound_case &bound, dialogue &conversation ) {
+    const auto reset_case = [&]( const bound_case & bound, dialogue & conversation ) {
         alpha.remove_value( bound.key );
         beta.remove_value( bound.key );
         get_globals().remove_global_value( bound.key );
@@ -760,9 +776,9 @@ TEST_CASE( "lua_platform_variable_numeric_ranges_match_native_presence_types_and
     lua["ccb"] = ccb;
     const std::size_t world_generation = cata::lua_platform::detail::runtime_world_generation_storage();
     lua["alpha"] = game_handle::from_creature( alpha, { "avatar", 4914, 0, 0, 0, {} },
-                   owner->handle_runtime(), world_generation );
+        owner->handle_runtime(), world_generation );
     lua["beta"] = game_handle::from_creature( beta, { "avatar", 4915, 0, 0, 0, {} },
-                  owner->handle_runtime(), world_generation );
+        owner->handle_runtime(), world_generation );
     sol::table inputs = lua.create_table();
     for( std::size_t index = 0; index < cases.size(); ++index ) {
         sol::table row = lua.create_table();
@@ -798,7 +814,7 @@ TEST_CASE( "lua_platform_variable_numeric_ranges_match_native_presence_types_and
         return data;
     } );
     std::vector<std::string> actual_diagnostics;
-    lua.set_function( "capture_bound_draw", [&]( const sol::protected_function &draw ) {
+    lua.set_function( "capture_bound_draw", [&]( const sol::protected_function & draw ) {
         int value = 0;
         actual_diagnostics.push_back( capture_debugmsg_during( [&]() {
             const sol::protected_function_result call = draw();
@@ -1021,11 +1037,11 @@ TEST_CASE( "lua_platform_sample_range_matches_native_draw_order_and_state",
     talk_effect_t native_effect;
     const std::string replace_json = replace ? "true" : "false";
     native_effect.parse_sub_effect( json_loader::from_string(
-            R"({"sample_range":{"count":4,"min":-2,"max":4,"replace":)" +
-            replace_json +
-            R"(,"target_vars":[{"u_val":"sample_range_a"},{"u_val":"sample_range_b"},)"
-            R"({"u_val":"sample_range_c"},{"u_val":"sample_range_d"}]}})"
-        ).get_object(), "sample_range_semantics" );
+                                        R"({"sample_range":{"count":4,"min":-2,"max":4,"replace":)" +
+                                        replace_json +
+                                        R"(,"target_vars":[{"u_val":"sample_range_a"},{"u_val":"sample_range_b"},)"
+                                        R"({"u_val":"sample_range_c"},{"u_val":"sample_range_d"}]}})"
+                                    ).get_object(), "sample_range_semantics" );
     finalize_conditions();
 
     dialogue native_dialogue( get_talker_for( native_actor ), nullptr );

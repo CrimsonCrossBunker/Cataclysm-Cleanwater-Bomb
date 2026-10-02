@@ -43,8 +43,7 @@ struct variable_ref {
     assignment_scope scope;
     std::string_view key;
 
-    std::string math_token() const
-    {
+    std::string math_token() const {
         switch( scope ) {
             case assignment_scope::alpha:
                 return "u_" + std::string( key );
@@ -201,13 +200,16 @@ void set_storage_value( const variable_ref &variable, const stored_value &value,
         return;
     }
 
-    const diag_value converted = std::visit( []( const auto &entry ) -> diag_value {
+    const diag_value converted = std::visit( []( const auto & entry ) -> diag_value {
         using value_type = std::decay_t<decltype( entry )>;
-        if constexpr( std::is_same_v<value_type, std::monostate> ) {
+        if constexpr( std::is_same_v<value_type, std::monostate> )
+        {
             return {};
-        } else if constexpr( std::is_same_v<value_type, double> ) {
+        } else if constexpr( std::is_same_v<value_type, double> )
+        {
             return diag_value( entry );
-        } else {
+        } else
+        {
             return diag_value( std::string( entry ) );
         }
     }, value );
@@ -269,8 +271,7 @@ eoc_math native_assignment( const assignment_case &test_case )
 class saved_global_values
 {
     public:
-        saved_global_values()
-        {
+        saved_global_values() {
             for( const assignment_case &test_case : assignment_cases ) {
                 save_if_global( test_case.target );
                 if( test_case.rhs ) {
@@ -279,8 +280,7 @@ class saved_global_values
             }
         }
 
-        ~saved_global_values()
-        {
+        ~saved_global_values() {
             for( const auto &entry : previous_values ) {
                 if( entry.second ) {
                     get_globals().set_global_value( entry.first, *entry.second );
@@ -291,8 +291,7 @@ class saved_global_values
         }
 
     private:
-        void save_if_global( const variable_ref &variable )
-        {
+        void save_if_global( const variable_ref &variable ) {
             if( variable.scope != assignment_scope::global ) {
                 return;
             }
@@ -478,7 +477,7 @@ TEST_CASE( "lua_platform_dynamic_assignment_migration_matches_native_math",
     lua.open_libraries( sol::lib::base, sol::lib::table, sol::lib::math );
     sol::table ccb = lua.create_table();
     const std::shared_ptr<platform::runtime> owner = platform::make_runtime(
-                "dynamic_assignment_migration", 7813, lua );
+            "dynamic_assignment_migration", 7813, lua );
     platform::install_runtime_api( owner, lua, ccb );
     platform::set_active_runtimes( { owner } );
     const on_out_of_scope clear_runtimes( []() {

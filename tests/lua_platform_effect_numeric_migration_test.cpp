@@ -166,110 +166,110 @@ constexpr std::array effect_cases = {
 // read_u=alpha_owner and read_npc=beta_owner are real Character-backed handles.
 constexpr std::array<std::string_view, 6> captured_lua_output = {
     // u math duration and direct u_val intensity
-        "    do\n        local effect_id = services.types.id(\"effect\", \"bleed\")\n  "
-        "      local effect_duration = services.time.duration((function(value) as"
-        "sert(value == value and value ~= math.huge and value ~= -math.huge, \"eff"
-        "ect duration must be finite\"); local integer = value < 0 and math.ceil(v"
-        "alue) or math.floor(value); assert(integer >= -2147483648 and integer <="
-        " 2147483647, \"effect duration exceeds the signed engine range\"); return "
-        "integer end)((function() local values = {}; local variable_result; varia"
-        "ble_result = services.variables.get_number(alpha_owner, \"math_duration\","
-        " {strict=true}); if variable_result.ok == false and variable_result.erro"
-        "r and variable_result.error.code == \"variable_type_mismatch\" then servic"
-        "es.diagnostic(\"Math variable u_math_duration: \" .. variable_result.error"
-        ".message); return 0.0 end; values[1] = (function(result) if result.exist"
-        "s == false then return 0.0 end; return result.value end)(service_value(v"
-        "ariable_result)); return values[1] end)()), \"turn\")\n        local effect"
-        "_intensity = (function(value) assert(value == value and value ~= math.hu"
-        "ge and value ~= -math.huge, \"effect intensity must be finite\"); local in"
-        "teger = value < 0 and math.ceil(value) or math.floor(value); assert(inte"
-        "ger >= -2147483648 and integer <= 2147483647, \"effect intensity exceeds "
-        "the signed engine range\"); return integer end)((function(result) if resu"
-        "lt.exists == false then return 0.0 end; return result.value end)(service"
-        "_value(services.variables.get_number(alpha_owner, \"intensity_value\"))))\n"
-        "        service_value(services.effects.add(\n            alpha_owner, eff"
-        "ect_id, effect_duration, { intensity = effect_intensity, body_part = ser"
-        "vices.types.id(\"body_part\", \"arm_l\") }))\n    end",
+    "    do\n        local effect_id = services.types.id(\"effect\", \"bleed\")\n  "
+    "      local effect_duration = services.time.duration((function(value) as"
+    "sert(value == value and value ~= math.huge and value ~= -math.huge, \"eff"
+    "ect duration must be finite\"); local integer = value < 0 and math.ceil(v"
+    "alue) or math.floor(value); assert(integer >= -2147483648 and integer <="
+    " 2147483647, \"effect duration exceeds the signed engine range\"); return "
+    "integer end)((function() local values = {}; local variable_result; varia"
+    "ble_result = services.variables.get_number(alpha_owner, \"math_duration\","
+    " {strict=true}); if variable_result.ok == false and variable_result.erro"
+    "r and variable_result.error.code == \"variable_type_mismatch\" then servic"
+    "es.diagnostic(\"Math variable u_math_duration: \" .. variable_result.error"
+    ".message); return 0.0 end; values[1] = (function(result) if result.exist"
+    "s == false then return 0.0 end; return result.value end)(service_value(v"
+    "ariable_result)); return values[1] end)()), \"turn\")\n        local effect"
+    "_intensity = (function(value) assert(value == value and value ~= math.hu"
+    "ge and value ~= -math.huge, \"effect intensity must be finite\"); local in"
+    "teger = value < 0 and math.ceil(value) or math.floor(value); assert(inte"
+    "ger >= -2147483648 and integer <= 2147483647, \"effect intensity exceeds "
+    "the signed engine range\"); return integer end)((function(result) if resu"
+    "lt.exists == false then return 0.0 end; return result.value end)(service"
+    "_value(services.variables.get_number(alpha_owner, \"intensity_value\"))))\n"
+    "        service_value(services.effects.add(\n            alpha_owner, eff"
+    "ect_id, effect_duration, { intensity = effect_intensity, body_part = ser"
+    "vices.types.id(\"body_part\", \"arm_l\") }))\n    end",
     // n math duration for the beta talker
-        "    do\n        local effect_id = services.types.id(\"effect\", \"bleed\")\n  "
-        "      local effect_duration = services.time.duration((function(value) as"
-        "sert(value == value and value ~= math.huge and value ~= -math.huge, \"eff"
-        "ect duration must be finite\"); local integer = value < 0 and math.ceil(v"
-        "alue) or math.floor(value); assert(integer >= -2147483648 and integer <="
-        " 2147483647, \"effect duration exceeds the signed engine range\"); return "
-        "integer end)((function() local values = {}; local variable_result; varia"
-        "ble_result = services.variables.get_number(beta_owner, \"math_duration\", "
-        "{strict=true}); if variable_result.ok == false and variable_result.error"
-        " and variable_result.error.code == \"variable_type_mismatch\" then service"
-        "s.diagnostic(\"Math variable n_math_duration: \" .. variable_result.error."
-        "message); return 0.0 end; values[1] = (function(result) if result.exists"
-        " == false then return 0.0 end; return result.value end)(service_value(va"
-        "riable_result)); return values[1] end)()), \"turn\")\n        local effect_"
-        "intensity = (function(value) assert(value == value and value ~= math.hug"
-        "e and value ~= -math.huge, \"effect intensity must be finite\"); local int"
-        "eger = value < 0 and math.ceil(value) or math.floor(value); assert(integ"
-        "er >= -2147483648 and integer <= 2147483647, \"effect intensity exceeds t"
-        "he signed engine range\"); return integer end)(1.0)\n        service_value"
-        "(services.effects.add(\n            beta_owner, effect_id, effect_duratio"
-        "n, { intensity = effect_intensity, body_part = services.types.id(\"body_p"
-        "art\", \"arm_l\") }))\n    end",
+    "    do\n        local effect_id = services.types.id(\"effect\", \"bleed\")\n  "
+    "      local effect_duration = services.time.duration((function(value) as"
+    "sert(value == value and value ~= math.huge and value ~= -math.huge, \"eff"
+    "ect duration must be finite\"); local integer = value < 0 and math.ceil(v"
+    "alue) or math.floor(value); assert(integer >= -2147483648 and integer <="
+    " 2147483647, \"effect duration exceeds the signed engine range\"); return "
+    "integer end)((function() local values = {}; local variable_result; varia"
+    "ble_result = services.variables.get_number(beta_owner, \"math_duration\", "
+    "{strict=true}); if variable_result.ok == false and variable_result.error"
+    " and variable_result.error.code == \"variable_type_mismatch\" then service"
+    "s.diagnostic(\"Math variable n_math_duration: \" .. variable_result.error."
+    "message); return 0.0 end; values[1] = (function(result) if result.exists"
+    " == false then return 0.0 end; return result.value end)(service_value(va"
+    "riable_result)); return values[1] end)()), \"turn\")\n        local effect_"
+    "intensity = (function(value) assert(value == value and value ~= math.hug"
+    "e and value ~= -math.huge, \"effect intensity must be finite\"); local int"
+    "eger = value < 0 and math.ceil(value) or math.floor(value); assert(integ"
+    "er >= -2147483648 and integer <= 2147483647, \"effect intensity exceeds t"
+    "he signed engine range\"); return integer end)(1.0)\n        service_value"
+    "(services.effects.add(\n            beta_owner, effect_id, effect_duratio"
+    "n, { intensity = effect_intensity, body_part = services.types.id(\"body_p"
+    "art\", \"arm_l\") }))\n    end",
     // variable duration with a numeric default
-        "    do\n        local effect_id = services.types.id(\"effect\", \"bleed\")\n  "
-        "      local effect_duration = services.time.duration((function(value) as"
-        "sert(value == value and value ~= math.huge and value ~= -math.huge, \"eff"
-        "ect duration must be finite\"); local integer = value < 0 and math.ceil(v"
-        "alue) or math.floor(value); assert(integer >= -2147483648 and integer <="
-        " 2147483647, \"effect duration exceeds the signed engine range\"); return "
-        "integer end)((function(result) if result.exists == false then return 17."
-        "0 end; return result.value end)(service_value(services.variables.get_num"
-        "ber(alpha_owner, \"default_duration\")))), \"turn\")\n        local effect_in"
-        "tensity = (function(value) assert(value == value and value ~= math.huge "
-        "and value ~= -math.huge, \"effect intensity must be finite\"); local integ"
-        "er = value < 0 and math.ceil(value) or math.floor(value); assert(integer"
-        " >= -2147483648 and integer <= 2147483647, \"effect intensity exceeds the"
-        " signed engine range\"); return integer end)(1.0)\n        service_value(s"
-        "ervices.effects.add(\n            alpha_owner, effect_id, effect_duration"
-        ", { intensity = effect_intensity, body_part = services.types.id(\"body_pa"
-        "rt\", \"arm_l\") }))\n    end",
+    "    do\n        local effect_id = services.types.id(\"effect\", \"bleed\")\n  "
+    "      local effect_duration = services.time.duration((function(value) as"
+    "sert(value == value and value ~= math.huge and value ~= -math.huge, \"eff"
+    "ect duration must be finite\"); local integer = value < 0 and math.ceil(v"
+    "alue) or math.floor(value); assert(integer >= -2147483648 and integer <="
+    " 2147483647, \"effect duration exceeds the signed engine range\"); return "
+    "integer end)((function(result) if result.exists == false then return 17."
+    "0 end; return result.value end)(service_value(services.variables.get_num"
+    "ber(alpha_owner, \"default_duration\")))), \"turn\")\n        local effect_in"
+    "tensity = (function(value) assert(value == value and value ~= math.huge "
+    "and value ~= -math.huge, \"effect intensity must be finite\"); local integ"
+    "er = value < 0 and math.ceil(value) or math.floor(value); assert(integer"
+    " >= -2147483648 and integer <= 2147483647, \"effect intensity exceeds the"
+    " signed engine range\"); return integer end)(1.0)\n        service_value(s"
+    "ervices.effects.add(\n            alpha_owner, effect_id, effect_duration"
+    ", { intensity = effect_intensity, body_part = services.types.id(\"body_pa"
+    "rt\", \"arm_l\") }))\n    end",
     // reversed Native duration range
-        "    do\n        local effect_id = services.types.id(\"effect\", \"bleed\")\n  "
-        "      local effect_duration = services.time.duration((function(value) as"
-        "sert(value == value and value ~= math.huge and value ~= -math.huge, \"eff"
-        "ect duration must be finite\"); local integer = value < 0 and math.ceil(v"
-        "alue) or math.floor(value); assert(integer >= -2147483648 and integer <="
-        " 2147483647, \"effect duration exceeds the signed engine range\"); return "
-        "integer end)(services.random.native_int(3, 9)), \"turn\")\n        local ef"
-        "fect_intensity = (function(value) assert(value == value and value ~= mat"
-        "h.huge and value ~= -math.huge, \"effect intensity must be finite\"); loca"
-        "l integer = value < 0 and math.ceil(value) or math.floor(value); assert("
-        "integer >= -2147483648 and integer <= 2147483647, \"effect intensity exce"
-        "eds the signed engine range\"); return integer end)(1.0)\n        service_"
-        "value(services.effects.add(\n            alpha_owner, effect_id, effect_d"
-        "uration, { intensity = effect_intensity, body_part = services.types.id(\""
-        "body_part\", \"arm_l\") }))\n    end",
+    "    do\n        local effect_id = services.types.id(\"effect\", \"bleed\")\n  "
+    "      local effect_duration = services.time.duration((function(value) as"
+    "sert(value == value and value ~= math.huge and value ~= -math.huge, \"eff"
+    "ect duration must be finite\"); local integer = value < 0 and math.ceil(v"
+    "alue) or math.floor(value); assert(integer >= -2147483648 and integer <="
+    " 2147483647, \"effect duration exceeds the signed engine range\"); return "
+    "integer end)(services.random.native_int(3, 9)), \"turn\")\n        local ef"
+    "fect_intensity = (function(value) assert(value == value and value ~= mat"
+    "h.huge and value ~= -math.huge, \"effect intensity must be finite\"); loca"
+    "l integer = value < 0 and math.ceil(value) or math.floor(value); assert("
+    "integer >= -2147483648 and integer <= 2147483647, \"effect intensity exce"
+    "eds the signed engine range\"); return integer end)(1.0)\n        service_"
+    "value(services.effects.add(\n            alpha_owner, effect_id, effect_d"
+    "uration, { intensity = effect_intensity, body_part = services.types.id(\""
+    "body_part\", \"arm_l\") }))\n    end",
     // intensity singleton range and Native RANDOM body-part selection
-        "    do\n        local effect_id = services.types.id(\"effect\", \"bleed\")\n  "
-        "      local effect_duration = services.time.duration(12, \"turn\")\n       "
-        " local effect_intensity = (function(value) assert(value == value and val"
-        "ue ~= math.huge and value ~= -math.huge, \"effect intensity must be finit"
-        "e\"); local integer = value < 0 and math.ceil(value) or math.floor(value)"
-        "; assert(integer >= -2147483648 and integer <= 2147483647, \"effect inten"
-        "sity exceeds the signed engine range\"); return integer end)(services.ran"
-        "dom.native_int(2, 2))\n        service_value(services.effects.add(\n      "
-        "      alpha_owner, effect_id, effect_duration, { intensity = effect_inte"
-        "nsity, body_part = service_value(services.characters.random_body_part(se"
-        "rvices.characters.avatar(), true)) }))\n    end",
+    "    do\n        local effect_id = services.types.id(\"effect\", \"bleed\")\n  "
+    "      local effect_duration = services.time.duration(12, \"turn\")\n       "
+    " local effect_intensity = (function(value) assert(value == value and val"
+    "ue ~= math.huge and value ~= -math.huge, \"effect intensity must be finit"
+    "e\"); local integer = value < 0 and math.ceil(value) or math.floor(value)"
+    "; assert(integer >= -2147483648 and integer <= 2147483647, \"effect inten"
+    "sity exceeds the signed engine range\"); return integer end)(services.ran"
+    "dom.native_int(2, 2))\n        service_value(services.effects.add(\n      "
+    "      alpha_owner, effect_id, effect_duration, { intensity = effect_inte"
+    "nsity, body_part = service_value(services.characters.random_body_part(se"
+    "rvices.characters.avatar(), true)) }))\n    end",
     // Native duration literal at 366 days
-        "    do\n        local effect_id = services.types.id(\"effect\", \"bleed\")\n  "
-        "      local effect_duration = services.time.duration(31622400, \"turn\")\n "
-        "       local effect_intensity = (function(value) assert(value == value a"
-        "nd value ~= math.huge and value ~= -math.huge, \"effect intensity must be"
-        " finite\"); local integer = value < 0 and math.ceil(value) or math.floor("
-        "value); assert(integer >= -2147483648 and integer <= 2147483647, \"effect"
-        " intensity exceeds the signed engine range\"); return integer end)(1.0)\n "
-        "       service_value(services.effects.add(\n            alpha_owner, effe"
-        "ct_id, effect_duration, { intensity = effect_intensity, body_part = serv"
-        "ices.types.id(\"body_part\", \"arm_l\") }))\n    end",
+    "    do\n        local effect_id = services.types.id(\"effect\", \"bleed\")\n  "
+    "      local effect_duration = services.time.duration(31622400, \"turn\")\n "
+    "       local effect_intensity = (function(value) assert(value == value a"
+    "nd value ~= math.huge and value ~= -math.huge, \"effect intensity must be"
+    " finite\"); local integer = value < 0 and math.ceil(value) or math.floor("
+    "value); assert(integer >= -2147483648 and integer <= 2147483647, \"effect"
+    " intensity exceeds the signed engine range\"); return integer end)(1.0)\n "
+    "       service_value(services.effects.add(\n            alpha_owner, effe"
+    "ct_id, effect_duration, { intensity = effect_intensity, body_part = serv"
+    "ices.types.id(\"body_part\", \"arm_l\") }))\n    end",
 };
 
 void set_character_value( Character &character, const std::string_view key,
@@ -289,8 +289,10 @@ void initialize_case_values( const effect_case &test_case, avatar &alpha, npc &b
 {
     alpha.clear_effects();
     beta.clear_effects();
-    for( Character *character : { static_cast<Character *>( &alpha ),
-                                  static_cast<Character *>( &beta ) } ) {
+    for( Character *character : {
+             static_cast<Character *>( &alpha ),
+             static_cast<Character *>( &beta )
+         } ) {
         character->remove_value( "math_duration" );
         character->remove_value( "intensity_value" );
         character->remove_value( "default_duration" );
@@ -391,7 +393,7 @@ TEST_CASE( "lua_platform_dynamic_effect_numeric_matches_native_talk_effect",
     lua.open_libraries( sol::lib::base, sol::lib::table, sol::lib::math, sol::lib::string );
     sol::table ccb = lua.create_table();
     const std::shared_ptr<platform::runtime> owner = platform::make_runtime(
-                "effect_numeric_migration", 7933, lua );
+            "effect_numeric_migration", 7933, lua );
     platform::install_runtime_api( owner, lua, ccb );
     platform::set_active_runtimes( { owner } );
     const on_out_of_scope clear_runtimes( []() {
@@ -417,7 +419,7 @@ TEST_CASE( "lua_platform_dynamic_effect_numeric_matches_native_talk_effect",
             native_effects[index].apply( conversation );
         } );
         const std::optional<effect_snapshot> expected = find_effect(
-                    target_character( test_case, alpha, beta ), test_case.expects_random_part );
+                target_character( test_case, alpha, beta ), test_case.expects_random_part );
         REQUIRE( expected.has_value() );
         if( test_case.expected_duration_turns ) {
             CHECK( expected->duration == time_duration::from_turns(
@@ -454,7 +456,7 @@ TEST_CASE( "lua_platform_dynamic_effect_numeric_matches_native_talk_effect",
         beta.clear_effects();
         rng_set_engine_seed( test_case.seed );
         const std::string lua_script = lua_diagnostic_script(
-                                          captured_lua_output[test_case.output_index] );
+                                           captured_lua_output[test_case.output_index] );
         sol::protected_function_result lua_result;
         const std::string lua_diagnostic = capture_debugmsg_during( [&]() {
             platform::detail::callback_scope active_callback( *owner );
@@ -466,7 +468,7 @@ TEST_CASE( "lua_platform_dynamic_effect_numeric_matches_native_talk_effect",
         }
         REQUIRE( lua_result.valid() );
         const std::optional<effect_snapshot> actual = find_effect(
-                    target_character( test_case, alpha, beta ), test_case.expects_random_part );
+                target_character( test_case, alpha, beta ), test_case.expects_random_part );
         REQUIRE( actual.has_value() );
         CHECK( actual->duration == expected->duration );
         CHECK( actual->maximum_duration == expected->maximum_duration );

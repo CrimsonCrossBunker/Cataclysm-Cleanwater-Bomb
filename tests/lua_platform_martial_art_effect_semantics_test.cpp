@@ -28,12 +28,12 @@ TEST_CASE( "lua_platform_martial_art_effect_service_matches_native_effect_ids",
     platform_avatar.normalize();
     native_avatar.setID( character_id( 7201 ), true );
     platform_avatar.setID( character_id( 7202 ), true );
-    dialogue native_dialogue( get_talker_for( native_avatar ) , nullptr );
+    dialogue native_dialogue( get_talker_for( native_avatar ), nullptr );
 
     sol::state lua;
     sol::table ccb = lua.create_table();
     const auto runtime = cata::lua_platform::make_runtime(
-                            "martial_art_effect_semantics", 7203, lua );
+                             "martial_art_effect_semantics", 7203, lua );
     const on_out_of_scope cleanup( []() {
         cata::lua_platform::clear_active_runtimes();
     } );
@@ -44,9 +44,9 @@ TEST_CASE( "lua_platform_martial_art_effect_service_matches_native_effect_ids",
     const cata::lua_platform::game_handle handle =
         cata::lua_platform::game_handle::from_creature(
             platform_avatar,
-            { "avatar", platform_avatar.getID().get_value(), 0, 0, 0, {} },
-            cata::lua_platform::detail::runtime_handle_identity( runtime ),
-            cata::lua_platform::runtime_world_generation() );
+    { "avatar", platform_avatar.getID().get_value(), 0, 0, 0, {} },
+    cata::lua_platform::detail::runtime_handle_identity( runtime ),
+    cata::lua_platform::runtime_world_generation() );
     sol::table services = ccb["services"];
 
     const auto apply_native_effect = [&native_dialogue]( const std::string & key,
@@ -65,15 +65,17 @@ TEST_CASE( "lua_platform_martial_art_effect_service_matches_native_effect_ids",
     const std::string & id ) {
         sol::protected_function function = services["martial_arts"][operation];
         const sol::protected_function_result call = function(
-                    handle, cata::lua_platform::script_game_id( "martial_art", id ) );
+                handle, cata::lua_platform::script_game_id( "martial_art", id ) );
         REQUIRE( call.valid() );
         const sol::table result = call;
         REQUIRE( result["ok"].get<bool>() );
         return result["value"]["changed"].get<bool>();
     };
 
-    for( const std::string &id : { std::string( "style_karate" ),
-                                   std::string( "style_not_registered" ) } ) {
+    for( const std::string &id : {
+             std::string( "style_karate" ),
+             std::string( "style_not_registered" )
+         } ) {
         const matype_id style( id );
         const cata::lua_platform::script_game_id typed_id( "martial_art", id );
         CHECK( typed_id.is_valid() == style.is_valid() );

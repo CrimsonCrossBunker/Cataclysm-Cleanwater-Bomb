@@ -70,8 +70,8 @@ TEST_CASE( "lua_platform_direct_wound_services_match_native_effects",
         cata::lua_platform::retire_npc_handle_identity( platform_beta );
     } );
 
-    dialogue native_alpha_dialogue( get_talker_for( native_alpha ) , nullptr );
-    dialogue hostile_native_npc_dialogue( get_talker_for( native_beta ) , nullptr );
+    dialogue native_alpha_dialogue( get_talker_for( native_alpha ), nullptr );
+    dialogue hostile_native_npc_dialogue( get_talker_for( native_beta ), nullptr );
     const bodypart_id requested_part = body_part_dragonfly_head.id();
     native_alpha.set_mutation( trait_masochist_for_wound_test );
     platform_alpha.set_mutation( trait_masochist_for_wound_test );
@@ -92,12 +92,12 @@ TEST_CASE( "lua_platform_direct_wound_services_match_native_effects",
 
     bool completed = false;
     lua.set_function( "accept", [&]( const sol::table & ) {
-        const auto handle_for = [&]( Character &creature, const bool is_npc ) {
+        const auto handle_for = [&]( Character & creature, const bool is_npc ) {
             return cata::lua_platform::game_handle::from_creature(
                        creature,
-                       { is_npc ? "npc" : "avatar", creature.getID().get_value(), 0, 0, 0, {} },
-                       cata::lua_platform::detail::runtime_handle_identity( runtime ),
-                       cata::lua_platform::runtime_world_generation() );
+            { is_npc ? "npc" : "avatar", creature.getID().get_value(), 0, 0, 0, {} },
+            cata::lua_platform::detail::runtime_handle_identity( runtime ),
+            cata::lua_platform::runtime_world_generation() );
         };
         const cata::lua_platform::game_handle alpha_handle = handle_for( platform_alpha, false );
         const cata::lua_platform::game_handle beta_handle = handle_for( platform_beta, true );
@@ -111,7 +111,7 @@ TEST_CASE( "lua_platform_direct_wound_services_match_native_effects",
         REQUIRE( wound_id.is_valid() );
         const sol::table services = ccb["services"];
 
-        const auto apply_native = []( dialogue &context, const std::string &source ) {
+        const auto apply_native = []( dialogue & context, const std::string & source ) {
             talk_effect_t effect;
             effect.parse_sub_effect( json_loader::from_string( source ).get_object(),
                                      "lua_platform_wounds_semantics_test" );
@@ -119,8 +119,8 @@ TEST_CASE( "lua_platform_direct_wound_services_match_native_effects",
                 function( context );
             }
         };
-        const auto apply_platform = [&]( const std::string &method,
-                                         const cata::lua_platform::game_handle &handle ) {
+        const auto apply_platform = [&]( const std::string & method,
+        const cata::lua_platform::game_handle & handle ) {
             sol::protected_function function = services["wounds"][method];
             const sol::protected_function_result call = function( handle, part_id, wound_id );
             REQUIRE( call.valid() );
@@ -128,7 +128,7 @@ TEST_CASE( "lua_platform_direct_wound_services_match_native_effects",
             REQUIRE( result["ok"].get<bool>() );
             return result["value"]["changed"].get<bool>();
         };
-        const auto wound_count = [&]( Character &character ) {
+        const auto wound_count = [&]( Character & character ) {
             return static_cast<int>( character.get_part( requested_part )->get_wounds().size() );
         };
 
@@ -151,7 +151,7 @@ TEST_CASE( "lua_platform_direct_wound_services_match_native_effects",
         const auto capped_add = [&]() {
             sol::protected_function function = services["wounds"]["add"];
             const sol::protected_function_result call = function(
-                        capped_handle, exact_part_id, wound_id );
+                    capped_handle, exact_part_id, wound_id );
             REQUIRE( call.valid() );
             const sol::table result = call;
             REQUIRE( result["ok"].get<bool>() );
@@ -193,7 +193,7 @@ TEST_CASE( "lua_platform_direct_wound_services_match_native_effects",
 
         sol::protected_function legacy_remove = services["wounds"]["remove"];
         const sol::protected_function_result legacy_remove_call = legacy_remove(
-                    capped_handle, exact_part_id, wound_id );
+                capped_handle, exact_part_id, wound_id );
         REQUIRE( legacy_remove_call.valid() );
         const sol::table legacy_remove_result = legacy_remove_call;
         REQUIRE( legacy_remove_result["ok"].get<bool>() );
@@ -202,24 +202,24 @@ TEST_CASE( "lua_platform_direct_wound_services_match_native_effects",
 
         sol::protected_function unknown_add = services["wounds"]["add_unbounded"];
         const sol::protected_function_result unknown_call = unknown_add(
-                    alpha_handle, part_id,
-                    cata::lua_platform::script_game_id( "wound", "wound_not_registered" ) );
+                alpha_handle, part_id,
+                cata::lua_platform::script_game_id( "wound", "wound_not_registered" ) );
         CHECK_FALSE( unknown_call.valid() );
         const sol::protected_function_result unknown_part_call = unknown_add(
-                    alpha_handle,
-                    cata::lua_platform::script_game_id( "body_part", "part_not_registered" ),
-                    wound_id );
+                alpha_handle,
+                cata::lua_platform::script_game_id( "body_part", "part_not_registered" ),
+                wound_id );
         CHECK_FALSE( unknown_part_call.valid() );
         sol::protected_function unknown_remove = services["wounds"]["remove_all_direct"];
         const sol::protected_function_result unknown_remove_call = unknown_remove(
-                    alpha_handle, part_id,
-                    cata::lua_platform::script_game_id( "wound", "wound_not_registered" ) );
+                alpha_handle, part_id,
+                cata::lua_platform::script_game_id( "wound", "wound_not_registered" ) );
         CHECK_FALSE( unknown_remove_call.valid() );
         CHECK( wound_count( platform_alpha ) == 0 );
         completed = true;
     } );
     sol::protected_function_result registered = ccb["runtime"]["handler"](
-                "accept", lua["accept"] );
+            "accept", lua["accept"] );
     REQUIRE( registered.valid() );
     registered = ccb["runtime"]["on"]( "world_ready", "accept" );
     REQUIRE( registered.valid() );

@@ -135,8 +135,8 @@ struct effect_fixture {
                 const std::string &part, const int intensity ) {
         sol::protected_function function = services["effects"]["has"];
         sol::protected_function_result call = function( handle( npc_target ),
-                                              cata::lua_platform::script_game_id( "effect", id ),
-                                              cata::lua_platform::script_game_id( "body_part", part ), intensity );
+            cata::lua_platform::script_game_id( "effect", id ),
+            cata::lua_platform::script_game_id( "body_part", part ), intensity );
         REQUIRE( call.valid() );
         sol::table result = call;
         REQUIRE( result["ok"].get<bool>() );
@@ -181,14 +181,14 @@ TEST_CASE( "lua_platform_first_topic_matches_native_beta_alpha_fallback",
 
     sol::table npcs = fixture.lua.create_table();
     cata::lua_platform::install_npc_domain_services(
-        npcs, [&]() {
+    npcs, [&]() {
         return fixture.runtime;
     }, [&]() {
         return fixture.world;
     }, []() {}, []() {} );
     const sol::protected_function set_first_topic = npcs["set_first_topic"];
     const sol::protected_function_result platform_result = set_first_topic(
-                fixture.handle( true ), "TALK_AFTER" );
+            fixture.handle( true ), "TALK_AFTER" );
     REQUIRE( platform_result.valid() );
     const sol::table result = platform_result.get<sol::table>();
     REQUIRE( result["ok"].get<bool>() );
@@ -227,7 +227,7 @@ TEST_CASE( "lua_platform_faction_numeric_writes_match_native_fallback",
     dialogue native_context( get_talker_for( native ), nullptr );
     CHECK( native_context.has_alpha );
     CHECK_FALSE( native_context.has_beta );
-    const auto run_native = [&]( const std::string &source ) {
+    const auto run_native = [&]( const std::string & source ) {
         const JsonValue value = json_loader::from_string( source );
         talk_effect_t effect;
         effect.parse_sub_effect( value.get_object(), "faction_numeric_semantics" );
@@ -252,7 +252,7 @@ TEST_CASE( "lua_platform_faction_numeric_writes_match_native_fallback",
     shared_faction->trusts_u = 30;
     sol::table npcs = fixture.lua.create_table();
     cata::lua_platform::install_npc_domain_services(
-        npcs, [&]() {
+    npcs, [&]() {
         return fixture.runtime;
     }, [&]() {
         return fixture.world;
@@ -271,7 +271,7 @@ TEST_CASE( "lua_platform_faction_numeric_writes_match_native_fallback",
     CHECK( native_integral_trust == -5 );
     shared_faction->trusts_u = -10;
     cata::lua_platform::install_creature_api(
-        fixture.services, [&]() {
+    fixture.services, [&]() {
         return fixture.runtime;
     }, [&]() {
         return fixture.world;
@@ -279,7 +279,7 @@ TEST_CASE( "lua_platform_faction_numeric_writes_match_native_fallback",
     const sol::protected_function add_trust =
         fixture.services["characters"]["add_faction_trust"];
     const sol::protected_function_result trust_call = add_trust(
-                fixture.handle( true ), 5 );
+            fixture.handle( true ), 5 );
     REQUIRE( trust_call.valid() );
     REQUIRE( trust_call.get<sol::table>()["ok"].get<bool>() );
     CHECK( shared_faction->trusts_u == native_integral_trust );
@@ -289,7 +289,7 @@ TEST_CASE( "lua_platform_faction_numeric_writes_match_native_fallback",
     const int native_fractional_trust = shared_faction->trusts_u;
     shared_faction->trusts_u = -10;
     const sol::protected_function_result truncated_delta_call = add_trust(
-                fixture.handle( true ), 1 );
+            fixture.handle( true ), 1 );
     REQUIRE( truncated_delta_call.valid() );
     REQUIRE( truncated_delta_call.get<sol::table>()["ok"].get<bool>() );
     CHECK( native_fractional_trust == -8 );
@@ -307,7 +307,7 @@ TEST_CASE( "lua_platform_faction_numeric_writes_match_native_fallback",
     shared_faction->respects_u = 20;
     shared_faction->trusts_u = 30;
     const sol::protected_function_result lone_wolf_call = add_rep(
-                fixture.handle( true ), 4 );
+            fixture.handle( true ), 4 );
     REQUIRE( lone_wolf_call.valid() );
     REQUIRE( lone_wolf_call.get<sol::table>()["ok"].get<bool>() );
     CHECK( shared_faction->likes_u == 10 );
@@ -354,7 +354,7 @@ TEST_CASE( "lua_platform_drop_weapon_matches_native_player_effect",
     effect_fixture fixture;
     bool write_called = false;
     cata::lua_platform::install_creature_api(
-        fixture.services, [&]() {
+    fixture.services, [&]() {
         return fixture.runtime;
     }, [&]() {
         return fixture.world;
@@ -381,7 +381,7 @@ TEST_CASE( "lua_platform_drop_weapon_matches_native_player_effect",
     const sol::protected_function_result empty_avatar_handle = avatar_handle_fn();
     REQUIRE( empty_avatar_handle.valid() );
     const sol::protected_function_result empty_avatar = drop(
-                empty_avatar_handle.get<cata::lua_platform::game_handle>() );
+            empty_avatar_handle.get<cata::lua_platform::game_handle>() );
     REQUIRE( empty_avatar.valid() );
     const sol::table empty_result = empty_avatar.get<sol::table>();
     REQUIRE( empty_result["ok"].get<bool>() );
@@ -423,17 +423,18 @@ TEST_CASE( "lua_platform_drop_weapon_matches_native_player_effect",
     const tripoint_abs_ms position = player.pos_abs();
     const cata::lua_platform::game_handle old_item_handle =
         cata::lua_platform::game_handle::from_item(
-            *wielded,
-            { "character_wielded", wielded->uid().get_value(),
-              position.x(), position.y(), position.z(), {} },
-            fixture.runtime, fixture.world );
+    *wielded, {
+        "character_wielded", wielded->uid().get_value(),
+        position.x(), position.y(), position.z(), {}
+    },
+    fixture.runtime, fixture.world );
     const std::uint64_t item_epoch =
         cata::lua_platform::item_holder_mutation_generation();
     const int armed_count = count_rocks_at_player();
     const sol::protected_function_result armed_avatar_handle = avatar_handle_fn();
     REQUIRE( armed_avatar_handle.valid() );
     const sol::protected_function_result armed = drop(
-                armed_avatar_handle.get<cata::lua_platform::game_handle>() );
+            armed_avatar_handle.get<cata::lua_platform::game_handle>() );
     REQUIRE( armed.valid() );
     const sol::table armed_result = armed.get<sol::table>();
     REQUIRE( armed_result["ok"].get<bool>() );
@@ -640,10 +641,10 @@ end
         REQUIRE( result.valid() );
         CHECK( evaluations == before + 1 );
         const std::string source = R"({")" + prefix +
-            R"(has_effect":"bleed","bodypart":"arm_l","intensity":)" +
-            std::to_string( minimum ) + "}";
-            CHECK( result.get<bool>() == fixture.legacy_condition( source ) );
-}
+                                   R"(has_effect":"bleed","bodypart":"arm_l","intensity":)" +
+                                   std::to_string( minimum ) + "}";
+        CHECK( result.get<bool>() == fixture.legacy_condition( source ) );
+    }
 }
 
 TEST_CASE( "lua_platform_effects_add_remove_match_legacy_for_exact_body_part",
@@ -676,9 +677,9 @@ TEST_CASE( "lua_platform_effects_add_remove_match_legacy_for_exact_body_part",
                               R"(, "force": true})" );
         sol::protected_function add = modern.services["effects"]["add"];
         sol::protected_function_result call = add( modern.handle( npc_target ),
-                                              cata::lua_platform::script_game_id( "effect", "bleed" ),
-                                              cata::lua_platform::script_time_duration::from_native( permanent ? 1_turns : 10_turns ),
-                                              options );
+            cata::lua_platform::script_game_id( "effect", "bleed" ),
+            cata::lua_platform::script_time_duration::from_native( permanent ? 1_turns : 10_turns ),
+            options );
         REQUIRE( call.valid() );
         sol::table result = call;
         REQUIRE( result["ok"].get<bool>() );
@@ -695,8 +696,8 @@ TEST_CASE( "lua_platform_effects_add_remove_match_legacy_for_exact_body_part",
                               R"(lose_effect": "bleed", "target_part": "arm_l"})" );
         sol::protected_function remove = modern.services["effects"]["remove"];
         sol::protected_function_result call = remove( modern.handle( npc_target ),
-                                              cata::lua_platform::script_game_id( "effect", "bleed" ),
-                                              cata::lua_platform::script_game_id( "body_part", "arm_l" ) );
+            cata::lua_platform::script_game_id( "effect", "bleed" ),
+            cata::lua_platform::script_game_id( "body_part", "arm_l" ) );
         REQUIRE( call.valid() );
         sol::table result = call;
         REQUIRE( result["ok"].get<bool>() );
@@ -738,7 +739,7 @@ TEST_CASE( "lua_platform_effects_accept_registered_parts_outside_current_anatomy
     options["intensity"] = 1;
     sol::protected_function add = modern.services["effects"]["add"];
     sol::protected_function_result add_call = add( modern.handle( npc_target ), id,
-            cata::lua_platform::script_time_duration::from_native( 10_turns ), options );
+        cata::lua_platform::script_time_duration::from_native( 10_turns ), options );
     REQUIRE( add_call.valid() );
     sol::table added = add_call;
     REQUIRE( added["ok"].get<bool>() );
@@ -822,7 +823,7 @@ TEST_CASE( "lua_platform_effects_all_removal_preserves_part_events",
     const cata::lua_platform::script_game_id id( "effect", "bleed" );
     for( std::size_t i = 0; i < native_parts.size(); ++i ) {
         const cata::lua_platform::script_game_id part = parts[i +
-                  1].get<cata::lua_platform::script_game_id>();
+            1].get<cata::lua_platform::script_game_id>();
         CHECK( part.value() == native_parts[i].id().str() );
         sol::protected_function_result call = remove( modern.handle( npc_target ), id, part );
         REQUIRE( call.valid() );
@@ -859,9 +860,9 @@ TEST_CASE( "lua_platform_effects_fractional_duration_matches_legacy_truncation",
     options["intensity"] = 1;
     sol::protected_function add = modern.services["effects"]["add"];
     sol::protected_function_result call = add( modern.handle( npc_target ),
-                                          cata::lua_platform::script_game_id( "effect", "bleed" ),
-                                          cata::lua_platform::script_time_duration::from_native(
-                                                  time_duration::from_turns( static_cast<int>( turns ) ) ), options );
+        cata::lua_platform::script_game_id( "effect", "bleed" ),
+        cata::lua_platform::script_time_duration::from_native(
+            time_duration::from_turns( static_cast<int>( turns ) ) ), options );
     REQUIRE( call.valid() );
     sol::table result = call;
     REQUIRE( result["ok"].get<bool>() );
@@ -889,8 +890,8 @@ TEST_CASE( "lua_platform_effects_zero_duration_matches_legacy_application",
     options["intensity"] = 1;
     sol::protected_function add = modern.services["effects"]["add"];
     sol::protected_function_result call = add( modern.handle( npc_target ),
-                                          cata::lua_platform::script_game_id( "effect", "bleed" ),
-                                          cata::lua_platform::script_time_duration::from_native( 0_turns ), options );
+        cata::lua_platform::script_game_id( "effect", "bleed" ),
+        cata::lua_platform::script_time_duration::from_native( 0_turns ), options );
     REQUIRE( call.valid() );
     sol::table result = call;
     REQUIRE( result["ok"].get<bool>() );
@@ -919,9 +920,9 @@ TEST_CASE( "lua_platform_effects_signed_and_long_durations_match_legacy",
     options["intensity"] = 1;
     sol::protected_function add = modern.services["effects"]["add"];
     sol::protected_function_result call = add( modern.handle( npc_target ),
-                                          cata::lua_platform::script_game_id( "effect", "bleed" ),
-                                          cata::lua_platform::script_time_duration::from_native( time_duration::from_turns( turns ) ),
-                                          options );
+        cata::lua_platform::script_game_id( "effect", "bleed" ),
+        cata::lua_platform::script_time_duration::from_native( time_duration::from_turns( turns ) ),
+        options );
     REQUIRE( call.valid() );
     sol::table result = call;
     REQUIRE( result["ok"].get<bool>() );
@@ -955,8 +956,8 @@ TEST_CASE( "lua_platform_effects_negative_add_intensity_is_not_a_delta",
                           R"("duration": 0, "target_part": "arm_l", "intensity": -1})" );
     sol::protected_function adjust = modern.services["effects"]["adjust_intensity"];
     sol::protected_function_result call = adjust( modern.handle( npc_target ),
-                                          cata::lua_platform::script_game_id( "effect", "bleed" ), -1,
-                                          cata::lua_platform::script_game_id( "body_part", "arm_l" ) );
+        cata::lua_platform::script_game_id( "effect", "bleed" ), -1,
+        cata::lua_platform::script_game_id( "body_part", "arm_l" ) );
     REQUIRE( call.valid() );
     sol::table result = call;
     REQUIRE( result["ok"].get<bool>() );
@@ -1053,7 +1054,7 @@ TEST_CASE( "lua_platform_pickup_at_requires_an_active_callback",
         return drop_locations();
     };
     cata::lua_platform::install_activity_api(
-        fixture.services, [&]() {
+    fixture.services, [&]() {
         return fixture.runtime;
     }, [&]() {
         return fixture.world;
@@ -1084,7 +1085,7 @@ TEST_CASE( "lua_platform_pickup_at_rejects_invalid_options_before_selection",
         return drop_locations();
     };
     cata::lua_platform::install_activity_api(
-        fixture.services, [&]() {
+    fixture.services, [&]() {
         return fixture.runtime;
     }, [&]() {
         return fixture.world;
@@ -1099,10 +1100,14 @@ TEST_CASE( "lua_platform_pickup_at_rejects_invalid_options_before_selection",
     sol::protected_function pickup = fixture.services["activities"]["pickup_at"];
     const std::vector<std::pair<std::string, double>> invalid_options = {
         { "extra_moves_per_item", 1.5 },
-        { "extra_moves_per_item",
-          static_cast<double>( std::numeric_limits<int>::max() ) + 1.0 },
-        { "max_volume_ml",
-          static_cast<double>( std::numeric_limits<int>::max() ) + 1.0 },
+        {
+            "extra_moves_per_item",
+            static_cast<double>( std::numeric_limits<int>::max() ) + 1.0
+        },
+        {
+            "max_volume_ml",
+            static_cast<double>( std::numeric_limits<int>::max() ) + 1.0
+        },
         { "max_mass_g", 1e300 },
         { "unknown_option", 1.0 },
     };
@@ -1117,7 +1122,7 @@ TEST_CASE( "lua_platform_pickup_at_rejects_invalid_options_before_selection",
                                      coords::origin::relative, coords::scale::map_square,
                                      absolute.raw() );
     sol::protected_function_result bad_frame_call = pickup(
-                fixture.handle( false ), relative_target );
+            fixture.handle( false ), relative_target );
     CHECK_FALSE( bad_frame_call.valid() );
     CHECK_FALSE( picker_called );
     CHECK_FALSE( fixture.player.activity );
@@ -1136,15 +1141,15 @@ TEST_CASE( "lua_platform_pickup_at_empty_native_selection_keeps_activity",
     bool received_target = false;
     bool received_options = false;
     cata::lua_platform::activity_pickup_selector picker =
-    [&]( const std::set<tripoint_bub_ms> &targets, Pickup::pick_info &info ) {
-        received_target = targets == std::set<tripoint_bub_ms>{ local };
+    [&]( const std::set<tripoint_bub_ms> &targets, Pickup::pick_info & info ) {
+        received_target = targets == std::set<tripoint_bub_ms> { local };
         received_options = info.extra_moves_per_distance == 11 &&
                            info.max_volume == units::from_milliliter( 1250 ) &&
                            info.max_mass == units::from_milligram( std::int64_t{ 2500 } );
         return drop_locations();
     };
     cata::lua_platform::install_activity_api(
-        fixture.services, [&]() {
+    fixture.services, [&]() {
         return fixture.runtime;
     }, [&]() {
         return fixture.world;
@@ -1177,7 +1182,9 @@ TEST_CASE( "lua_platform_pickup_at_empty_native_selection_keeps_activity",
 TEST_CASE( "lua_platform_pickup_at_schedules_native_batch_for_exact_character",
            "[lua][platform][activities][semantic]" )
 {
-    for( const bool npc_target : { false, true } ) {
+    for( const bool npc_target : {
+             false, true
+         } ) {
         clear_map();
         effect_fixture fixture;
         map &here = get_map();
@@ -1196,19 +1203,19 @@ TEST_CASE( "lua_platform_pickup_at_schedules_native_batch_for_exact_character",
         bool got_native_target = false;
         bool got_native_limits = false;
         cata::lua_platform::activity_pickup_selector picker =
-        [&, selected]( const std::set<tripoint_bub_ms> &targets,
-                       Pickup::pick_info &info ) {
+            [ &, selected]( const std::set<tripoint_bub_ms> &targets,
+        Pickup::pick_info & info ) {
             // The production selector is game_menus::inv::pickup, whose native
             // implementation adds both vehicle and map items for each target.
             // This seam checks its inputs and selected batch without opening UI.
-            got_native_target = targets == std::set<tripoint_bub_ms>{ local };
+            got_native_target = targets == std::set<tripoint_bub_ms> { local };
             got_native_limits = info.extra_moves_per_distance == -4 &&
                                 info.max_volume == units::from_milliliter( -2 ) &&
                                 info.max_mass == units::from_milligram( std::int64_t{ -2 } );
             return selected;
         };
         cata::lua_platform::install_activity_api(
-            fixture.services, [&]() {
+        fixture.services, [&]() {
             return fixture.runtime;
         }, [&]() {
             return fixture.world;
@@ -1246,7 +1253,7 @@ TEST_CASE( "lua_platform_pickup_at_schedules_native_batch_for_exact_character",
         const JsonObject actor = actor_wrapper.get_object( "actor_data" );
         std::vector<int> quantities;
         actor.read( "quantities", quantities );
-        CHECK( quantities == std::vector<int>{ 1, 1 } );
+        CHECK( quantities == std::vector<int> { 1, 1 } );
         Pickup::pick_info activity_info;
         activity_info.deserialize( actor.get_object( "info" ) );
         CHECK( activity_info.extra_moves_per_distance == 0 );
@@ -1574,7 +1581,7 @@ TEST_CASE( "lua_platform_npc_drop_weapon_matches_native_talk_effect",
     native.setID( character_id( 9100 ), true );
     native.setpos( get_map(), tripoint_bub_ms( 62, 60, 0 ) );
 
-    const auto count_rocks_at = []( const tripoint_bub_ms &position ) {
+    const auto count_rocks_at = []( const tripoint_bub_ms & position ) {
         int count = 0;
         for( const item &entry : get_map().i_at( position ) ) {
             if( entry.typeId() == itype_id( "rock" ) ) {
@@ -1583,7 +1590,7 @@ TEST_CASE( "lua_platform_npc_drop_weapon_matches_native_talk_effect",
         }
         return count;
     };
-    const auto count_items_at = []( const tripoint_bub_ms &position ) {
+    const auto count_items_at = []( const tripoint_bub_ms & position ) {
         return get_map().i_at( position ).size();
     };
 
@@ -1610,7 +1617,7 @@ TEST_CASE( "lua_platform_npc_drop_weapon_matches_native_talk_effect",
 
     sol::table npcs = fixture.lua.create_table();
     cata::lua_platform::install_npc_domain_services(
-        npcs, [&]() {
+    npcs, [&]() {
         return fixture.runtime;
     }, [&]() {
         return fixture.world;
@@ -1635,7 +1642,7 @@ TEST_CASE( "lua_platform_npc_drop_weapon_matches_native_talk_effect",
     const std::size_t guarded_order_before =
         count_items_at( fixture.other.pos_bub() );
     const sol::protected_function_result guarded_order = orders(
-                fixture.handle( true ), "drop_weapon" );
+            fixture.handle( true ), "drop_weapon" );
     REQUIRE( guarded_order.valid() );
     CHECK_FALSE( guarded_order.get<sol::table>()["ok"].get<bool>() );
     CHECK( guarded_order.get<sol::table>()["error"]["code"].get<std::string>() ==
@@ -1650,10 +1657,11 @@ TEST_CASE( "lua_platform_npc_drop_weapon_matches_native_talk_effect",
     const tripoint_abs_ms position = fixture.other.pos_abs();
     const cata::lua_platform::game_handle old_item_handle =
         cata::lua_platform::game_handle::from_item(
-            *wielded,
-            { "character_wielded", wielded->uid().get_value(),
-              position.x(), position.y(), position.z(), {} },
-            fixture.runtime, fixture.world );
+    *wielded, {
+        "character_wielded", wielded->uid().get_value(),
+        position.x(), position.y(), position.z(), {}
+    },
+    fixture.runtime, fixture.world );
     fixture.other.hallucination = true;
     const int hallucination_before = count_rocks_at( fixture.other.pos_bub() );
     const std::size_t hallucination_items_before =
@@ -2062,8 +2070,8 @@ TEST_CASE( "lua_platform_purchased_pet_matches_native_spawn_and_disposition",
     options["permanent"] = true;
     sol::protected_function add = fixture.services["effects"]["add"];
     sol::protected_function_result effect_call = add(
-                handle, cata::lua_platform::script_game_id( "effect", "pet" ),
-                cata::lua_platform::script_time_duration::from_native( 1_turns ), options );
+            handle, cata::lua_platform::script_game_id( "effect", "pet" ),
+            cata::lua_platform::script_time_duration::from_native( 1_turns ), options );
     REQUIRE( effect_call.valid() );
     sol::table effect_result = effect_call;
     REQUIRE( effect_result["ok"].get<bool>() );
@@ -2080,7 +2088,7 @@ TEST_CASE( "lua_platform_purchased_pet_matches_native_spawn_and_disposition",
     // equivalent Platform-spawned Monster; don't remove twice from one target.
     sol::protected_function remove = fixture.services["effects"]["remove"];
     sol::protected_function_result remove_call = remove(
-                handle, cata::lua_platform::script_game_id( "effect", "pet" ), sol::lua_nil );
+            handle, cata::lua_platform::script_game_id( "effect", "pet" ), sol::lua_nil );
     REQUIRE( remove_call.valid() );
     sol::table remove_result = remove_call;
     REQUIRE( remove_result["ok"].get<bool>() );
@@ -2476,7 +2484,7 @@ TEST_CASE( "lua_platform_ally_rule_toggle_uses_effective_override_state",
         const bool expected_base_after = !effective_before;
 
         sol::protected_function_result call = toggle(
-                    fixture.handle( true ), "allow_sleep", sol::lua_nil );
+                fixture.handle( true ), "allow_sleep", sol::lua_nil );
         REQUIRE( call.valid() );
         sol::table result = call;
         REQUIRE( result["ok"].get<bool>() );
@@ -2514,10 +2522,14 @@ TEST_CASE( "lua_platform_npc_rule_setters_match_native_effects",
         { R"({"toggle_npc_rule":"allow_sleep"})", "allies", "allow_sleep", -1 },
         { R"({"set_npc_aim_rule":"AIM_PRECISE"})", "aim", "AIM_PRECISE" },
         { R"({"set_npc_engagement_rule":"ENGAGE_ALL"})", "engagement", "ENGAGE_ALL" },
-        { R"({"set_npc_cbm_recharge_rule":"CBM_RECHARGE_ALL"})",
-          "cbm_recharge", "CBM_RECHARGE_ALL" },
-        { R"({"set_npc_cbm_reserve_rule":"CBM_RESERVE_ALL"})",
-          "cbm_reserve", "CBM_RESERVE_ALL" },
+        {
+            R"({"set_npc_cbm_recharge_rule":"CBM_RECHARGE_ALL"})",
+            "cbm_recharge", "CBM_RECHARGE_ALL"
+        },
+        {
+            R"({"set_npc_cbm_reserve_rule":"CBM_RESERVE_ALL"})",
+            "cbm_reserve", "CBM_RESERVE_ALL"
+        },
     };
     const auto rule_state = [&]() {
         return std::tuple{
@@ -2547,9 +2559,9 @@ TEST_CASE( "lua_platform_npc_rule_setters_match_native_effects",
         if( entry.family == "allies" ) {
             sol::protected_function set_rule = fixture.services["npcs"]["set_ally_rule"];
             sol::protected_function_result call = entry.requested_enabled < 0 ?
-                    set_rule( fixture.handle( true ), entry.rule, sol::lua_nil ) :
-                    set_rule( fixture.handle( true ), entry.rule,
-                              entry.requested_enabled != 0 );
+                                                  set_rule( fixture.handle( true ), entry.rule, sol::lua_nil ) :
+                                                  set_rule( fixture.handle( true ), entry.rule,
+                                                      entry.requested_enabled != 0 );
             REQUIRE( call.valid() );
             sol::table result = call;
             REQUIRE( result["ok"].get<bool>() );

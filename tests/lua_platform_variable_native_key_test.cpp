@@ -216,16 +216,21 @@ TEST_CASE( "lua_platform_native_variable_keys_keep_native_string_range",
             INFO( "native owner: " << owner.name << ", key index: " << key_index <<
                   ", key bytes: " << key.size() );
 
-            for( const double number : { -3.9, 0.0, 3.9, 2147483647.0, -2147483648.0 } ) {
+            for( const double number : {
+                     -3.9, 0.0, 3.9, 2147483647.0, -2147483648.0
+                 } ) {
                 require_success( set( owner.handle, key, number ) );
                 REQUIRE( owner.get( key ) != nullptr );
                 const double expected = owner.get( key )->dbl();
                 CHECK( require_value( get_number( owner.handle, key ) )["value"].get<double>() == expected );
-                CHECK( require_value( get_number( owner.handle, key, strict ) )["value"].get<double>() == expected );
+                CHECK( require_value( get_number( owner.handle, key,
+                                                  strict ) )["value"].get<double>() == expected );
             }
-            for( const tripoint &position : { tripoint::zero, tripoint( -25, 49, -3 ),
-                                             tripoint( std::numeric_limits<int>::min(),
-                                                       std::numeric_limits<int>::max(), 0 ) } ) {
+            for( const tripoint &position : {
+                     tripoint::zero, tripoint( -25, 49, -3 ),
+                     tripoint( std::numeric_limits<int>::min(),
+                               std::numeric_limits<int>::max(), 0 )
+                 } ) {
                 require_success( set( owner.handle, key, cata::lua_platform::script_tripoint_coord::from_native(
                                           coords::origin::abs, coords::scale::map_square, position ) ) );
                 REQUIRE( owner.get( key ) != nullptr );
@@ -251,7 +256,7 @@ TEST_CASE( "lua_platform_native_variable_keys_keep_native_string_range",
             require_success( set( owner.handle, key, owner_value ) );
 
             CHECK( require_value( resolve( context, owner.handle, "u", key ) )[
-            "value"].get<std::string>() == owner_value );
+                       "value"].get<std::string>() == owner_value );
             require_success( set_resolved( context, owner.handle, "u", key, "resolved-owner" ) );
             CHECK( owner.get( key )->str() == "resolved-owner" );
 
@@ -259,7 +264,7 @@ TEST_CASE( "lua_platform_native_variable_keys_keep_native_string_range",
             CHECK( require_value( get_global( key ) )["value"].get<std::string>() ==
                    "resolved-owner" );
             CHECK( require_value( resolve( context, sol::nil, "global", key ) )[
-            "value"].get<std::string>() == "resolved-owner" );
+                       "value"].get<std::string>() == "resolved-owner" );
 
             require_success( set_global( key, "global-value" ) );
             CHECK( require_value( get_global( key ) )["value"].get<std::string>() ==
@@ -267,7 +272,7 @@ TEST_CASE( "lua_platform_native_variable_keys_keep_native_string_range",
             require_success( set_resolved( context, sol::nil, "global", key,
                                            "resolved-global" ) );
             CHECK( require_value( resolve( context, sol::nil, "global", key ) )[
-            "value"].get<std::string>() == "resolved-global" );
+                       "value"].get<std::string>() == "resolved-global" );
 
             require_success( copy( sol::nil, key, owner.handle, key ) );
             CHECK( require_value( get( owner.handle, key ) )["value"].get<std::string>() ==
@@ -342,14 +347,14 @@ TEST_CASE( "lua_platform_native_variable_long_keys_survive_var_indirection",
     const sol::protected_function get_global = fixture.variables["get_global"];
 
     CHECK( require_value( resolve( context, player_handle, "var", "actor_reference" ) )[
-            "value"].get<std::string>() == "actor-before" );
+               "value"].get<std::string>() == "actor-before" );
     require_success( set_resolved( context, player_handle, "var", "actor_reference",
                                    "actor-after" ) );
     CHECK( require_value( get( player_handle, long_key ) )["value"].get<std::string>() ==
            "actor-after" );
 
     CHECK( require_value( resolve( context, sol::nil, "var", "global_reference" ) )[
-            "value"].get<std::string>() == "global-before" );
+               "value"].get<std::string>() == "global-before" );
     require_success( set_resolved( context, sol::nil, "var", "global_reference",
                                    "global-after" ) );
     CHECK( require_value( get_global( long_key ) )["value"].get<std::string>() ==
@@ -367,7 +372,7 @@ TEST_CASE( "lua_platform_callback_context_variable_keys_remain_bounded",
     const std::string maximum_key( 128, 'c' );
     require_success( set_resolved( context, sol::nil, "context", maximum_key, "accepted" ) );
     CHECK( require_value( resolve( context, sol::nil, "context", maximum_key ) )[
-            "value"].get<std::string>() == "accepted" );
+               "value"].get<std::string>() == "accepted" );
 
     for( const std::string &key : native_boundary_keys() ) {
         INFO( "context key bytes: " << key.size() );
@@ -445,20 +450,32 @@ TEST_CASE( "lua_platform_strict_numeric_reads_distinguish_type_failure_missing_a
     sol::table permissive = fixture.lua.create_table();
     permissive["strict"] = false;
     const auto make_value = []( const int shape ) -> std::optional<diag_value> {
-        switch( shape ) {
-            case 0: return std::nullopt;
-            case 1: return diag_value{};
-            case 2: return diag_value( 0.0 );
-            case 3: return diag_value( -3.9 );
-            case 4: return diag_value( std::string( "7.9" ) );
-            case 5: return diag_value( diag_array( 5000, diag_value( 4.0 ) ) );
-            case 6: return diag_value( tripoint_abs_ms( -3, 4, 5 ) );
-            case 7: return diag_value( diag_value::legacy_value( "7.9" ) );
-            default: return diag_value( diag_value::legacy_value( "not-a-number" ) );
+        switch( shape )
+    {
+        case 0:
+            return std::nullopt;
+        case 1:
+            return diag_value{};
+        case 2:
+            return diag_value( 0.0 );
+            case 3:
+                return diag_value( -3.9 );
+            case 4:
+                return diag_value( std::string( "7.9" ) );
+            case 5:
+                return diag_value( diag_array( 5000, diag_value( 4.0 ) ) );
+            case 6:
+                return diag_value( tripoint_abs_ms( -3, 4, 5 ) );
+            case 7:
+                return diag_value( diag_value::legacy_value( "7.9" ) );
+            default:
+                return diag_value( diag_value::legacy_value( "not-a-number" ) );
         }
     };
     const std::vector<std::string> keys = { "", std::string( 10000, 'k' ), std::string( "raw\0key", 7 ) };
-    for( const bool context_scope : { false, true } ) {
+    for( const bool context_scope : {
+             false, true
+         } ) {
         for( const std::string &key : keys ) {
             for( int shape = 0; shape < ( context_scope ? 7 : 9 ); ++shape ) {
                 CAPTURE( context_scope, key.size(), shape );
@@ -529,7 +546,9 @@ TEST_CASE( "lua_platform_strict_numeric_reads_distinguish_type_failure_missing_a
         }
     }
     sol::table data = fixture.lua.create_table();
-    for( const bool flag : { false, true } ) {
+    for( const bool flag : {
+             false, true
+         } ) {
         data["flag"] = flag;
         CHECK( require_value( read_context( data, "flag", strict ) )["value"].get<double>() ==
                ( flag ? 1.0 : 0.0 ) );
@@ -540,13 +559,13 @@ TEST_CASE( "lua_platform_strict_numeric_reads_distinguish_type_failure_missing_a
     alpha.normalize();
     alpha.setID( character_id( 4913 ), true );
     const game_handle owner = game_handle::from_creature(
-                                 alpha, { "avatar", alpha.getID().get_value(), 0, 0, 0, {} }, fixture.runtime, 1 );
+                                  alpha, { "avatar", alpha.getID().get_value(), 0, 0, 0, {} }, fixture.runtime, 1 );
     CHECK_FALSE( require_value( read_owner( owner, "missing", strict ) )["exists"].get<bool>() );
     alpha.set_value( "wrong", diag_value( std::string( "9" ) ) );
     require_error( read_owner( owner, "wrong", strict ), "variable_type_mismatch" );
     const game_handle_runtime old_generation( fixture.runtime_owner, 2 );
     const game_handle stale = game_handle::from_creature(
-                                 alpha, { "avatar", alpha.getID().get_value(), 0, 0, 0, {} }, old_generation, 1 );
+                                  alpha, { "avatar", alpha.getID().get_value(), 0, 0, 0, {} }, old_generation, 1 );
     require_error( read_owner( stale, "wrong", strict ), "stale_runtime" );
     for( const sol::object &bad : {
              sol::make_object( fixture.lua, 1.0 ), sol::make_object( fixture.lua, "true" ),
@@ -563,7 +582,9 @@ TEST_CASE( "lua_platform_strict_numeric_reads_distinguish_type_failure_missing_a
 TEST_CASE( "native_invalid_legacy_number_diagnostic_names_value_and_requested_type",
            "[lua][platform][semantic][variables][math]" )
 {
-    for( const bool strict : { false, true } ) {
+    for( const bool strict : {
+             false, true
+         } ) {
         diag_value stored( diag_value::legacy_value( "not-a-number" ) );
         const std::string diagnostic = capture_debugmsg_during( [&]() {
             // Native legacy conversion uses its diagnostic-and-zero path even
@@ -592,8 +613,12 @@ TEST_CASE( "lua_platform_numeric_variable_duration_matches_native_presence_and_c
         diag_value( diag_value::legacy_value( "-3.9" ) ),
         diag_value( diag_value::legacy_value( "not-a-number" ) ),
     };
-    for( const bool context_scope : { false, true } ) {
-        for( const int fallback : { 0, 7, calendar::INDEFINITELY_LONG } ) {
+    for( const bool context_scope : {
+             false, true
+         } ) {
+        for( const int fallback : {
+                 0, 7, calendar::INDEFINITELY_LONG
+             } ) {
             for( std::size_t i = 0; i < values.size(); ++i ) {
                 if( context_scope && i >= 10 ) {
                     continue; // Lua callback values do not have a legacy-string type.
@@ -664,14 +689,18 @@ TEST_CASE( "lua_platform_numeric_variable_duration_matches_native_presence_and_c
     }
     sol::table data = fixture.lua.create_table();
     data[key] = true;
-    CHECK( require_value( read_context( data, key ) )["value"].get<double>() == diag_value( true ).dbl() );
+    CHECK( require_value( read_context( data,
+                                        key ) )["value"].get<double>() == diag_value( true ).dbl() );
     data[key] = false;
-    CHECK( require_value( read_context( data, key ) )["value"].get<double>() == diag_value( false ).dbl() );
+    CHECK( require_value( read_context( data,
+                                        key ) )["value"].get<double>() == diag_value( false ).dbl() );
     const sol::table missing = require_value( read_context( sol::nil, key ) );
     CHECK_FALSE( missing["exists"].get<bool>() );
-    for( const double bad : { std::numeric_limits<double>::infinity(),
-                             -std::numeric_limits<double>::infinity(),
-                             std::numeric_limits<double>::quiet_NaN(), 2147483648.0, -2147483649.0 } ) {
+    for( const double bad : {
+             std::numeric_limits<double>::infinity(),
+             -std::numeric_limits<double>::infinity(),
+             std::numeric_limits<double>::quiet_NaN(), 2147483648.0, -2147483649.0
+         } ) {
         CAPTURE( bad );
         const sol::protected_function_result rejected = duration( bad );
         CHECK_FALSE( rejected.valid() );
@@ -700,15 +729,19 @@ TEST_CASE( "lua_platform_coordinate_variable_reads_match_native_types_presence_a
     const std::vector<std::optional<diag_value>> values = {
         std::nullopt, diag_value{}, diag_value( tripoint_abs_ms( negative ) ),
         diag_value( tripoint_abs_ms( std::numeric_limits<int>::min(),
-                                   std::numeric_limits<int>::max(), 0 ) ),
+                                     std::numeric_limits<int>::max(), 0 ) ),
         diag_value( 3.9 ), diag_value( true ), diag_value( negative.to_string() ),
         diag_value( diag_array( 5000, diag_value( 4.0 ) ) ),
         diag_value( diag_value::legacy_value( negative.to_string() ) ),
         diag_value( diag_value::legacy_value( "not-a-coordinate" ) ),
     };
-    for( const var_type scope : { var_type::u, var_type::npc, var_type::global, var_type::context } ) {
-        for( const std::string &key : { std::string{}, std::string( "raw\0tail", 8 ),
-                                       std::string( 10000, 'k' ), std::string( "坐标" ) } ) {
+    for( const var_type scope : {
+             var_type::u, var_type::npc, var_type::global, var_type::context
+         } ) {
+        for( const std::string &key : {
+                 std::string{}, std::string( "raw\0tail", 8 ),
+                 std::string( 10000, 'k' ), std::string( "坐标" )
+             } ) {
             for( std::size_t index = 0; index < values.size(); ++index ) {
                 if( scope == var_type::context && index >= 8 ) {
                     continue; // Callback Lua strings do not have a legacy storage type.
@@ -792,7 +825,8 @@ TEST_CASE( "lua_platform_coordinate_variable_reads_match_native_types_presence_a
              cata::lua_platform::script_tripoint_coord::from_native(
                  coords::origin::abs, coords::scale::overmap_terrain, negative ),
              cata::lua_platform::script_tripoint_coord::from_native(
-                 coords::origin::relative, coords::scale::map_square, negative ) } ) {
+                 coords::origin::relative, coords::scale::map_square, negative )
+         } ) {
         invalid["key"] = coordinate;
         CHECK_FALSE( read_context( invalid, "key" ).valid() );
     }
@@ -814,9 +848,9 @@ TEST_CASE( "lua_platform_indirect_numeric_duration_matches_native_participants_a
     fixture.lua.open_libraries( sol::lib::string );
     fixture.lua["services"] = fixture.services;
     fixture.lua["alpha"] = game_handle::from_creature(
-                              alpha, { "avatar", alpha.getID().get_value(), 0, 0, 0, {} }, fixture.runtime, 1 );
+                               alpha, { "avatar", alpha.getID().get_value(), 0, 0, 0, {} }, fixture.runtime, 1 );
     fixture.lua["beta"] = game_handle::from_creature(
-                             beta, { "avatar", beta.getID().get_value(), 0, 0, 0, {} }, fixture.runtime, 1 );
+                              beta, { "avatar", beta.getID().get_value(), 0, 0, 0, {} }, fixture.runtime, 1 );
     // The migration tool tests execute the generated expression. Here the
     // same one-pass operation calls real registered APIs against Native
     // duration_or_var, including diagnostics and unrelated large arrays.
@@ -852,13 +886,19 @@ TEST_CASE( "lua_platform_indirect_numeric_duration_matches_native_participants_a
         diag_value( std::string( 10000, 'k' ) ),
     };
     for( std::size_t index = 0; index < pointers.size(); ++index ) {
-        for( const bool present : { false, true } ) {
-            for( const int fallback : { -7, calendar::INDEFINITELY_LONG } ) {
+        for( const bool present : {
+                 false, true
+             } ) {
+            for( const int fallback : {
+                     -7, calendar::INDEFINITELY_LONG
+                 } ) {
                 CAPTURE( index, present, fallback );
                 dialogue conversation( get_talker_for( alpha ), get_talker_for( beta ) );
                 sol::table data = fixture.lua.create_table();
-                for( const std::string &key : { std::string( "key" ), std::string{}, raw_key,
-                                               std::string( "var_next" ), std::string( 10000, 'k' ) } ) {
+                for( const std::string &key : {
+                         std::string( "key" ), std::string{}, raw_key,
+                         std::string( "var_next" ), std::string( 10000, 'k' )
+                     } ) {
                     alpha.remove_value( key );
                     beta.remove_value( key );
                     get_globals().remove_global_value( key );
@@ -966,11 +1006,14 @@ TEST_CASE( "lua_platform_coordinate_reflection_matches_native_variable_scopes",
             { "u_val", var_type::u }, { "npc_val", var_type::npc },
             { "global_val", var_type::global }, { "context_val", var_type::context },
             { "var_val", var_type::var }
-        }};
+        }
+    };
     for( const auto &center_scope : scopes ) {
         for( const auto &output_scope : scopes ) {
-            for( const std::string &suffix : { std::string{}, std::string( "raw\0tail", 8 ),
-                                              std::string( 10000, 'k' ) } ) {
+            for( const std::string &suffix : {
+                     std::string{}, std::string( "raw\0tail", 8 ),
+                     std::string( 10000, 'k' )
+                 } ) {
                 CAPTURE( center_scope.first, output_scope.first, suffix.size() );
                 dialogue conversation( get_talker_for( alpha ), get_talker_for( beta ) );
                 const std::string center_key = "center" + suffix;
@@ -1030,12 +1073,13 @@ TEST_CASE( "lua_platform_coordinate_reflection_matches_native_variable_scopes",
                 for( const talk_effect_fun_t &effect : native_effect.effects ) {
                     effect( conversation );
                 }
-                const tripoint expected = read_var_value( { output_owner, output_key }, conversation ).tripoint().raw();
+                const tripoint expected = read_var_value( { output_owner, output_key },
+                    conversation ).tripoint().raw();
                 CHECK( expected == tripoint( -5, 10, -10 ) );
                 write_var_value( output_owner, output_key, &conversation,
                                  diag_value( diag_array( 5000, diag_value( 4.0 ) ) ) );
                 const sol::protected_function_result call = reflect(
-                            center_scope.first, center_key, output_scope.first, output_key, data );
+                        center_scope.first, center_key, output_scope.first, output_key, data );
                 REQUIRE( call.valid() );
                 CHECK( call.get<cata::lua_platform::script_tripoint_coord>().to_native() == expected );
                 const tripoint stored = output_owner == var_type::context ?
@@ -1065,11 +1109,11 @@ TEST_CASE( "lua_platform_registered_reflection_rejects_frame_and_range_errors",
     };
     const auto zero = coordinate( coords::origin::abs, coords::scale::map_square, tripoint::zero );
     CHECK_FALSE( reflect( zero, coordinate( coords::origin::relative,
-                                           coords::scale::map_square, tripoint::zero ) ).valid() );
+                                            coords::scale::map_square, tripoint::zero ) ).valid() );
     CHECK_FALSE( reflect( zero, coordinate( coords::origin::abs,
-                                           coords::scale::overmap_terrain, tripoint::zero ) ).valid() );
+                                            coords::scale::overmap_terrain, tripoint::zero ) ).valid() );
     CHECK_FALSE( reflect( coordinate( coords::origin::abs, coords::scale::map_square,
-                                     tripoint( std::numeric_limits<int>::min(), 0, 0 ) ), zero ).valid() );
+                                      tripoint( std::numeric_limits<int>::min(), 0, 0 ) ), zero ).valid() );
 }
 
 TEST_CASE( "lua_platform_location_adjust_matches_native_fractional_units_and_missing_coordinates",
@@ -1116,15 +1160,20 @@ TEST_CASE( "lua_platform_location_adjust_matches_native_fractional_units_and_mis
             { -1.7, 2.7, -0.7, true, true, tripoint( -40, 64, 0 ) },
             { 0.0, 0.0, 3.9, false, false, tripoint( 0, 0, 3 ) },
             { 0.0, 0.0, -3.9, false, true, tripoint( 0, 0, -3 ) },
-            { 2147483647.9, -2147483648.9, 0.0, false, false,
-              tripoint( std::numeric_limits<int>::max(), std::numeric_limits<int>::min(), 0 ) }
-        }};
+            {
+                2147483647.9, -2147483648.9, 0.0, false, false,
+                tripoint( std::numeric_limits<int>::max(), std::numeric_limits<int>::min(), 0 )
+            }
+        }
+    };
     const std::vector<std::optional<diag_value>> sources = {
         std::nullopt, diag_value{}, diag_value( tripoint_abs_ms( 0, 0, 5 ) ),
         diag_value( diag_value::legacy_value( tripoint( 0, 0, 5 ).to_string() ) )
     };
-    for( const std::string &key : { std::string{}, std::string( "raw\0key", 7 ),
-                                   std::string( 10000, 'k' ) } ) {
+    for( const std::string &key : {
+             std::string{}, std::string( "raw\0key", 7 ),
+             std::string( 10000, 'k' )
+         } ) {
         for( std::size_t source_index = 0; source_index < sources.size(); ++source_index ) {
             for( const adjustment_case &adjustment : cases ) {
                 CAPTURE( key.size(), source_index, adjustment.x, adjustment.y,
@@ -1174,8 +1223,8 @@ TEST_CASE( "lua_platform_location_adjust_matches_native_fractional_units_and_mis
                 }
                 data["result"] = old;
                 const sol::protected_function_result call = adjust(
-                            key, adjustment.x, adjustment.y, adjustment.z,
-                            adjustment.overmap, adjustment.override_z, data );
+                        key, adjustment.x, adjustment.y, adjustment.z,
+                        adjustment.overmap, adjustment.override_z, data );
                 REQUIRE( call.valid() );
                 CHECK( call.get<cata::lua_platform::script_tripoint_coord>().to_native() == expected );
                 CHECK( data["result"].get<cata::lua_platform::script_tripoint_coord>().to_native() == expected );
@@ -1183,8 +1232,10 @@ TEST_CASE( "lua_platform_location_adjust_matches_native_fractional_units_and_mis
         }
     }
     sol::table data = fixture.lua.create_table();
-    for( const double invalid : { std::numeric_limits<double>::infinity(),
-                                 std::numeric_limits<double>::quiet_NaN(), 2147483648.0, -2147483649.0 } ) {
+    for( const double invalid : {
+             std::numeric_limits<double>::infinity(),
+             std::numeric_limits<double>::quiet_NaN(), 2147483648.0, -2147483649.0
+         } ) {
         // Native floating-to-int conversion has no defined result here; reject
         // before writing rather than claiming parity with undefined behavior.
         data["result"] = "untouched";
@@ -1207,7 +1258,8 @@ TEST_CASE( "lua_platform_literal_arithmetic_matches_native_parser_binding_and_do
     // regressions execute the current emitter; this oracle checks its Native
     // operator semantics without exposing the legacy parser to Mod authors.
     const std::vector<arithmetic_case> cases = {
-        { "1 +2 * 3", 7.0, R"lua(
+        {
+            "1 +2 * 3", 7.0, R"lua(
 (function() local values = {};
 values[1] = 1.0;
 values[2] = 2.0;
@@ -1215,8 +1267,10 @@ values[3] = 3.0;
 values[4] = values[2] * values[3];
 values[5] = values[1] + values[4];
 return values[5] end)()
-)lua" },
-        { "(1 + 2) * 3", 9.0, R"lua(
+)lua"
+        },
+        {
+            "(1 + 2) * 3", 9.0, R"lua(
 (function() local values = {};
 values[1] = 1.0;
 values[2] = 2.0;
@@ -1224,32 +1278,40 @@ values[3] = values[1] + values[2];
 values[4] = 3.0;
 values[5] = values[3] * values[4];
 return values[5] end)()
-)lua" },
-        { "-2^2", 4.0, R"lua(
+)lua"
+        },
+        {
+            "-2^2", 4.0, R"lua(
 (function() local values = {};
 values[1] = 2.0;
 values[2] = -(values[1]);
 values[3] = 2.0;
 values[4] = values[2] ^ values[3];
 return values[4] end)()
-)lua" },
-        { "-(2^2)", -4.0, R"lua(
+)lua"
+        },
+        {
+            "-(2^2)", -4.0, R"lua(
 (function() local values = {};
 values[1] = 2.0;
 values[2] = 2.0;
 values[3] = values[1] ^ values[2];
 values[4] = -(values[3]);
 return values[4] end)()
-)lua" },
-        { "2^-2", 0.25, R"lua(
+)lua"
+        },
+        {
+            "2^-2", 0.25, R"lua(
 (function() local values = {};
 values[1] = 2.0;
 values[2] = 2.0;
 values[3] = -(values[2]);
 values[4] = values[1] ^ values[3];
 return values[4] end)()
-)lua" },
-        { "2^3^2", 512.0, R"lua(
+)lua"
+        },
+        {
+            "2^3^2", 512.0, R"lua(
 (function() local values = {};
 values[1] = 2.0;
 values[2] = 3.0;
@@ -1257,24 +1319,30 @@ values[3] = 2.0;
 values[4] = values[2] ^ values[3];
 values[5] = values[1] ^ values[4];
 return values[5] end)()
-)lua" },
-        { "-5%2", -1.0, R"lua(
+)lua"
+        },
+        {
+            "-5%2", -1.0, R"lua(
 (function() local values = {};
 values[1] = 5.0;
 values[2] = -(values[1]);
 values[3] = 2.0;
 values[4] = math.fmod(values[2], values[3]);
 return values[4] end)()
-)lua" },
-        { "5%-2", 1.0, R"lua(
+)lua"
+        },
+        {
+            "5%-2", 1.0, R"lua(
 (function() local values = {};
 values[1] = 5.0;
 values[2] = 2.0;
 values[3] = -(values[2]);
 values[4] = math.fmod(values[1], values[3]);
 return values[4] end)()
-)lua" },
-        { "14%6%4", 0.0, R"lua(
+)lua"
+        },
+        {
+            "14%6%4", 0.0, R"lua(
 (function() local values = {};
 values[1] = 14.0;
 values[2] = 6.0;
@@ -1282,8 +1350,10 @@ values[3] = 4.0;
 values[4] = math.fmod(values[2], values[3]);
 values[5] = math.fmod(values[1], values[4]);
 return values[5] end)()
-)lua" },
-        { "14%6*4", 14.0, R"lua(
+)lua"
+        },
+        {
+            "14%6*4", 14.0, R"lua(
 (function() local values = {};
 values[1] = 14.0;
 values[2] = 6.0;
@@ -1291,8 +1361,10 @@ values[3] = 4.0;
 values[4] = values[2] * values[3];
 values[5] = math.fmod(values[1], values[4]);
 return values[5] end)()
-)lua" },
-        { "14*6%4", 0.0, R"lua(
+)lua"
+        },
+        {
+            "14*6%4", 0.0, R"lua(
 (function() local values = {};
 values[1] = 14.0;
 values[2] = 6.0;
@@ -1300,8 +1372,10 @@ values[3] = values[1] * values[2];
 values[4] = 4.0;
 values[5] = math.fmod(values[3], values[4]);
 return values[5] end)()
-)lua" },
-        { "+2--3", 5.0, R"lua(
+)lua"
+        },
+        {
+            "+2--3", 5.0, R"lua(
 (function() local values = {};
 values[1] = 2.0;
 values[2] = values[1];
@@ -1309,29 +1383,37 @@ values[3] = 3.0;
 values[4] = -(values[3]);
 values[5] = values[2] - values[4];
 return values[5] end)()
-)lua" },
-        { ".5 + 1.e1", 10.5, R"lua(
+)lua"
+        },
+        {
+            ".5 + 1.e1", 10.5, R"lua(
 (function() local values = {};
 values[1] = 0.5;
 values[2] = 10.0;
 values[3] = values[1] + values[2];
 return values[3] end)()
-)lua" },
-        { "1\v+\f2", 3.0, R"lua(
+)lua"
+        },
+        {
+            "1\v+\f2", 3.0, R"lua(
 (function() local values = {};
 values[1] = 1.0;
 values[2] = 2.0;
 values[3] = values[1] + values[2];
 return values[3] end)()
-)lua" },
-        { "9007199254740993 + 1", 9007199254740992.0, R"lua(
+)lua"
+        },
+        {
+            "9007199254740993 + 1", 9007199254740992.0, R"lua(
 (function() local values = {};
 values[1] = 9007199254740992.0;
 values[2] = 1.0;
 values[3] = values[1] + values[2];
 return values[3] end)()
-)lua" },
-        { "(1e300 + 1e300) / 1e300", 2.0, R"lua(
+)lua"
+        },
+        {
+            "(1e300 + 1e300) / 1e300", 2.0, R"lua(
 (function() local values = {};
 values[1] = 1.0000000000000001e+300;
 values[2] = 1.0000000000000001e+300;
@@ -1339,7 +1421,8 @@ values[3] = values[1] + values[2];
 values[4] = 1.0000000000000001e+300;
 values[5] = values[3] / values[4];
 return values[5] end)()
-)lua" }
+)lua"
+        }
     };
     dialogue conversation;
     for( const arithmetic_case &row : cases ) {
@@ -1349,7 +1432,7 @@ return values[5] end)()
         const double expected = native.eval( conversation );
         CHECK( expected == row.expected );
         const sol::protected_function_result call = fixture.lua.safe_script(
-                    std::string( "return " ) + row.lua_expression, sol::script_pass_on_error );
+                std::string( "return " ) + row.lua_expression, sol::script_pass_on_error );
         REQUIRE( call.valid() );
         CHECK( call.get<double>() == expected );
     }
@@ -1405,7 +1488,9 @@ end
         REQUIRE( call.valid() );
         CHECK( call.get<double>() == native.eval( conversation ) );
     }
-    for( const char *source : { "!!1", "!+1", "!-1", "+!1", "-!0", "--1", "++1", "+ -1" } ) {
+    for( const char *source : {
+             "!!1", "!+1", "!-1", "+!1", "-!0", "--1", "++1", "+ -1"
+         } ) {
         CAPTURE( source );
         bool parsed = true;
         const std::string diagnostic = capture_debugmsg_during( [&]() {
@@ -1551,7 +1636,8 @@ end
         const char *expression;
     };
     const std::vector<ternary_case> cases = {
-        { "_choose?_good:_bad", R"lua(
+        {
+            "_choose?_good:_bad", R"lua(
 (function() local values = {};
 local variable_result;
 variable_result = services.variables.get_context_number(context and context.data, "choose", {strict=true});
@@ -1579,8 +1665,10 @@ return result.value end)(service_value(variable_result));
 values[4] = values[3];
 ::math_end_4::;
 return values[4] end)()
-)lua" },
-        { "_choose?_bad:_good", R"lua(
+)lua"
+        },
+        {
+            "_choose?_bad:_good", R"lua(
 (function() local values = {};
 local variable_result;
 variable_result = services.variables.get_context_number(context and context.data, "choose", {strict=true});
@@ -1608,8 +1696,10 @@ return result.value end)(service_value(variable_result));
 values[4] = values[3];
 ::math_end_4::;
 return values[4] end)()
-)lua" },
-        { "(_choose?_good:_bad)+3", R"lua(
+)lua"
+        },
+        {
+            "(_choose?_good:_bad)+3", R"lua(
 (function() local values = {};
 local variable_result;
 variable_result = services.variables.get_context_number(context and context.data, "choose", {strict=true});
@@ -1639,8 +1729,10 @@ values[4] = values[3];
 values[5] = 3.0;
 values[6] = values[4] + values[5];
 return values[6] end)()
-)lua" },
-        { "(_choose?from_celsius(_good):from_celsius(_bad))+3", R"lua(
+)lua"
+        },
+        {
+            "(_choose?from_celsius(_good):from_celsius(_bad))+3", R"lua(
 (function() local values = {};
 local variable_result;
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
@@ -1673,7 +1765,8 @@ values[6] = values[5];
 values[7] = 3.0;
 values[8] = values[6] + values[7];
 return values[8] end)()
-)lua" }
+)lua"
+        }
     };
     struct condition_case {
         int shape; // 0 absent, 1 null, 2 number, 3 mismatched string.
@@ -1764,24 +1857,31 @@ TEST_CASE( "lua_platform_literal_functions_match_native_math_values_and_signed_z
     // Captured ordinary Lua migration output. Tool tests independently execute
     // the current emitter; the Native parser remains private to this oracle.
     const std::vector<function_case> cases = {
-        { "abs(-3)", 3.0, R"lua(
+        {
+            "abs(-3)", 3.0, R"lua(
 (function() local values = {};
 values[1] = 3.0;
 values[2] = -(values[1]);
 values[3] = math.abs(values[2]);
 return values[3] end)()
-)lua" },
-        { "max()", 0.0, R"lua(
+)lua"
+        },
+        {
+            "max()", 0.0, R"lua(
 (function() local values = {};
 values[1] = 0.0;
 return values[1] end)()
-)lua" },
-        { "min()", 0.0, R"lua(
+)lua"
+        },
+        {
+            "min()", 0.0, R"lua(
 (function() local values = {};
 values[1] = 0.0;
 return values[1] end)()
-)lua" },
-        { "max(2,min(3,1+4),-1)", 3.0, R"lua(
+)lua"
+        },
+        {
+            "max(2,min(3,1+4),-1)", 3.0, R"lua(
 (function() local values = {};
 values[1] = 2.0;
 values[2] = 3.0;
@@ -1796,8 +1896,10 @@ values[9] = values[1];
 if values[6] > values[9] then values[9] = values[6] end;
 if values[8] > values[9] then values[9] = values[8] end;
 return values[9] end)()
-)lua" },
-        { "-abs(-2)^2", 4.0, R"lua(
+)lua"
+        },
+        {
+            "-abs(-2)^2", 4.0, R"lua(
 (function() local values = {};
 values[1] = 2.0;
 values[2] = -(values[1]);
@@ -1806,61 +1908,77 @@ values[4] = -(values[3]);
 values[5] = 2.0;
 values[6] = values[4] ^ values[5];
 return values[6] end)()
-)lua" },
-        { "floor(2.9)", 2.0, R"lua(
+)lua"
+        },
+        {
+            "floor(2.9)", 2.0, R"lua(
 (function() local values = {};
 values[1] = 2.8999999999999999;
 values[2] = math.floor(values[1]) + 0.0;
 if values[2] == 0.0 and 1.0 / values[1] < 0.0 then values[2] = -0.0 end;
 return values[2] end)()
-)lua" },
-        { "floor(-2.9)", -3.0, R"lua(
+)lua"
+        },
+        {
+            "floor(-2.9)", -3.0, R"lua(
 (function() local values = {};
 values[1] = 2.8999999999999999;
 values[2] = -(values[1]);
 values[3] = math.floor(values[2]) + 0.0;
 if values[3] == 0.0 and 1.0 / values[2] < 0.0 then values[3] = -0.0 end;
 return values[3] end)()
-)lua" },
-        { "ceil(2.1)", 3.0, R"lua(
+)lua"
+        },
+        {
+            "ceil(2.1)", 3.0, R"lua(
 (function() local values = {};
 values[1] = 2.1000000000000001;
 values[2] = math.ceil(values[1]) + 0.0;
 if values[2] == 0.0 and 1.0 / values[1] < 0.0 then values[2] = -0.0 end;
 return values[2] end)()
-)lua" },
-        { "ceil(-2.1)", -2.0, R"lua(
+)lua"
+        },
+        {
+            "ceil(-2.1)", -2.0, R"lua(
 (function() local values = {};
 values[1] = 2.1000000000000001;
 values[2] = -(values[1]);
 values[3] = math.ceil(values[2]) + 0.0;
 if values[3] == 0.0 and 1.0 / values[2] < 0.0 then values[3] = -0.0 end;
 return values[3] end)()
-)lua" },
-        { "trunc(2.9)", 2.0, R"lua(
+)lua"
+        },
+        {
+            "trunc(2.9)", 2.0, R"lua(
 (function() local values = {};
 values[1] = 2.8999999999999999;
 values[2] = math.modf(values[1]) + 0.0;
 if values[2] == 0.0 and 1.0 / values[1] < 0.0 then values[2] = -0.0 end;
 return values[2] end)()
-)lua" },
-        { "trunc(-2.9)", -2.0, R"lua(
+)lua"
+        },
+        {
+            "trunc(-2.9)", -2.0, R"lua(
 (function() local values = {};
 values[1] = 2.8999999999999999;
 values[2] = -(values[1]);
 values[3] = math.modf(values[2]) + 0.0;
 if values[3] == 0.0 and 1.0 / values[2] < 0.0 then values[3] = -0.0 end;
 return values[3] end)()
-)lua" },
-        { "round(2.5)", 3.0, R"lua(
+)lua"
+        },
+        {
+            "round(2.5)", 3.0, R"lua(
 (function() local values = {};
 values[1] = 2.5;
 values[2] = math.floor(math.abs(values[1])) + 0.0;
 if math.abs(values[1]) - values[2] >= 0.5 then values[2] = values[2] + 1.0 end;
 if values[1] < 0.0 or 1.0 / values[1] < 0.0 then values[2] = -values[2] end;
 return values[2] end)()
-)lua" },
-        { "round(-2.5)", -3.0, R"lua(
+)lua"
+        },
+        {
+            "round(-2.5)", -3.0, R"lua(
 (function() local values = {};
 values[1] = 2.5;
 values[2] = -(values[1]);
@@ -1868,16 +1986,20 @@ values[3] = math.floor(math.abs(values[2])) + 0.0;
 if math.abs(values[2]) - values[3] >= 0.5 then values[3] = values[3] + 1.0 end;
 if values[2] < 0.0 or 1.0 / values[2] < 0.0 then values[3] = -values[3] end;
 return values[3] end)()
-)lua" },
-        { "round(0.49999999999999994)", 0.0, R"lua(
+)lua"
+        },
+        {
+            "round(0.49999999999999994)", 0.0, R"lua(
 (function() local values = {};
 values[1] = 0.49999999999999994;
 values[2] = math.floor(math.abs(values[1])) + 0.0;
 if math.abs(values[1]) - values[2] >= 0.5 then values[2] = values[2] + 1.0 end;
 if values[1] < 0.0 or 1.0 / values[1] < 0.0 then values[2] = -values[2] end;
 return values[2] end)()
-)lua" },
-        { "round(-0.49999999999999994)", -0.0, R"lua(
+)lua"
+        },
+        {
+            "round(-0.49999999999999994)", -0.0, R"lua(
 (function() local values = {};
 values[1] = 0.49999999999999994;
 values[2] = -(values[1]);
@@ -1885,8 +2007,10 @@ values[3] = math.floor(math.abs(values[2])) + 0.0;
 if math.abs(values[2]) - values[3] >= 0.5 then values[3] = values[3] + 1.0 end;
 if values[2] < 0.0 or 1.0 / values[2] < 0.0 then values[3] = -values[3] end;
 return values[3] end)()
-)lua" },
-        { "floor(9007199254740992)+floor(1)", 9007199254740992.0, R"lua(
+)lua"
+        },
+        {
+            "floor(9007199254740992)+floor(1)", 9007199254740992.0, R"lua(
 (function() local values = {};
 values[1] = 9007199254740992.0;
 values[2] = math.floor(values[1]) + 0.0;
@@ -1896,8 +2020,10 @@ values[4] = math.floor(values[3]) + 0.0;
 if values[4] == 0.0 and 1.0 / values[3] < 0.0 then values[4] = -0.0 end;
 values[5] = values[2] + values[4];
 return values[5] end)()
-)lua" },
-        { "ceil(9007199254740992)+ceil(1)", 9007199254740992.0, R"lua(
+)lua"
+        },
+        {
+            "ceil(9007199254740992)+ceil(1)", 9007199254740992.0, R"lua(
 (function() local values = {};
 values[1] = 9007199254740992.0;
 values[2] = math.ceil(values[1]) + 0.0;
@@ -1907,8 +2033,10 @@ values[4] = math.ceil(values[3]) + 0.0;
 if values[4] == 0.0 and 1.0 / values[3] < 0.0 then values[4] = -0.0 end;
 values[5] = values[2] + values[4];
 return values[5] end)()
-)lua" },
-        { "trunc(9007199254740992)+trunc(1)", 9007199254740992.0, R"lua(
+)lua"
+        },
+        {
+            "trunc(9007199254740992)+trunc(1)", 9007199254740992.0, R"lua(
 (function() local values = {};
 values[1] = 9007199254740992.0;
 values[2] = math.modf(values[1]) + 0.0;
@@ -1918,8 +2046,10 @@ values[4] = math.modf(values[3]) + 0.0;
 if values[4] == 0.0 and 1.0 / values[3] < 0.0 then values[4] = -0.0 end;
 values[5] = values[2] + values[4];
 return values[5] end)()
-)lua" },
-        { "round(9007199254740992)+round(1)", 9007199254740992.0, R"lua(
+)lua"
+        },
+        {
+            "round(9007199254740992)+round(1)", 9007199254740992.0, R"lua(
 (function() local values = {};
 values[1] = 9007199254740992.0;
 values[2] = math.floor(math.abs(values[1])) + 0.0;
@@ -1931,8 +2061,10 @@ if math.abs(values[3]) - values[4] >= 0.5 then values[4] = values[4] + 1.0 end;
 if values[3] < 0.0 or 1.0 / values[3] < 0.0 then values[4] = -values[4] end;
 values[5] = values[2] + values[4];
 return values[5] end)()
-)lua" },
-        { "sqrt(9)+log(e)", 4.0, R"lua(
+)lua"
+        },
+        {
+            "sqrt(9)+log(e)", 4.0, R"lua(
 (function() local values = {};
 values[1] = 9.0;
 values[2] = math.sqrt(values[1]);
@@ -1940,28 +2072,36 @@ values[3] = 2.718281828459045;
 values[4] = math.log(values[3]);
 values[5] = values[2] + values[4];
 return values[5] end)()
-)lua" },
-        { "sin(pi/2)", 1.0, R"lua(
+)lua"
+        },
+        {
+            "sin(pi/2)", 1.0, R"lua(
 (function() local values = {};
 values[1] = 3.141592653589793;
 values[2] = 2.0;
 values[3] = values[1] / values[2];
 values[4] = math.sin(values[3]);
 return values[4] end)()
-)lua" },
-        { "cos(π)", -1.0, R"lua(
+)lua"
+        },
+        {
+            "cos(π)", -1.0, R"lua(
 (function() local values = {};
 values[1] = 3.141592653589793;
 values[2] = math.cos(values[1]);
 return values[2] end)()
-)lua" },
-        { "tan(0)", 0.0, R"lua(
+)lua"
+        },
+        {
+            "tan(0)", 0.0, R"lua(
 (function() local values = {};
 values[1] = 0.0;
 values[2] = math.tan(values[1]);
 return values[2] end)()
-)lua" },
-        { "true+false+_test_()", 43.0, R"lua(
+)lua"
+        },
+        {
+            "true+false+_test_()", 43.0, R"lua(
 (function() local values = {};
 values[1] = 1.0;
 values[2] = 0.0;
@@ -1969,8 +2109,10 @@ values[3] = values[1] + values[2];
 values[4] = 42.0;
 values[5] = values[3] + values[4];
 return values[5] end)()
-)lua" },
-        { "2^ceil(2.1)", 8.0, R"lua(
+)lua"
+        },
+        {
+            "2^ceil(2.1)", 8.0, R"lua(
 (function() local values = {};
 values[1] = 2.0;
 values[2] = 2.1000000000000001;
@@ -1978,32 +2120,40 @@ values[3] = math.ceil(values[2]) + 0.0;
 if values[3] == 0.0 and 1.0 / values[2] < 0.0 then values[3] = -0.0 end;
 values[4] = values[1] ^ values[3];
 return values[4] end)()
-)lua" },
-        { "floor(-0)", -0.0, R"lua(
+)lua"
+        },
+        {
+            "floor(-0)", -0.0, R"lua(
 (function() local values = {};
 values[1] = 0.0;
 values[2] = -(values[1]);
 values[3] = math.floor(values[2]) + 0.0;
 if values[3] == 0.0 and 1.0 / values[2] < 0.0 then values[3] = -0.0 end;
 return values[3] end)()
-)lua" },
-        { "ceil(-0.25)", -0.0, R"lua(
+)lua"
+        },
+        {
+            "ceil(-0.25)", -0.0, R"lua(
 (function() local values = {};
 values[1] = 0.25;
 values[2] = -(values[1]);
 values[3] = math.ceil(values[2]) + 0.0;
 if values[3] == 0.0 and 1.0 / values[2] < 0.0 then values[3] = -0.0 end;
 return values[3] end)()
-)lua" },
-        { "trunc(-0.25)", -0.0, R"lua(
+)lua"
+        },
+        {
+            "trunc(-0.25)", -0.0, R"lua(
 (function() local values = {};
 values[1] = 0.25;
 values[2] = -(values[1]);
 values[3] = math.modf(values[2]) + 0.0;
 if values[3] == 0.0 and 1.0 / values[2] < 0.0 then values[3] = -0.0 end;
 return values[3] end)()
-)lua" },
-        { "round(-0.25)", -0.0, R"lua(
+)lua"
+        },
+        {
+            "round(-0.25)", -0.0, R"lua(
 (function() local values = {};
 values[1] = 0.25;
 values[2] = -(values[1]);
@@ -2011,29 +2161,37 @@ values[3] = math.floor(math.abs(values[2])) + 0.0;
 if math.abs(values[2]) - values[3] >= 0.5 then values[3] = values[3] + 1.0 end;
 if values[2] < 0.0 or 1.0 / values[2] < 0.0 then values[3] = -values[3] end;
 return values[3] end)()
-)lua" },
-        { "sqrt(-0)", -0.0, R"lua(
+)lua"
+        },
+        {
+            "sqrt(-0)", -0.0, R"lua(
 (function() local values = {};
 values[1] = 0.0;
 values[2] = -(values[1]);
 values[3] = math.sqrt(values[2]);
 return values[3] end)()
-)lua" },
-        { "sin(-0)", -0.0, R"lua(
+)lua"
+        },
+        {
+            "sin(-0)", -0.0, R"lua(
 (function() local values = {};
 values[1] = 0.0;
 values[2] = -(values[1]);
 values[3] = math.sin(values[2]);
 return values[3] end)()
-)lua" },
-        { "tan(-0)", -0.0, R"lua(
+)lua"
+        },
+        {
+            "tan(-0)", -0.0, R"lua(
 (function() local values = {};
 values[1] = 0.0;
 values[2] = -(values[1]);
 values[3] = math.tan(values[2]);
 return values[3] end)()
-)lua" },
-        { "min(0,-0)", 0.0, R"lua(
+)lua"
+        },
+        {
+            "min(0,-0)", 0.0, R"lua(
 (function() local values = {};
 values[1] = 0.0;
 values[2] = 0.0;
@@ -2041,8 +2199,10 @@ values[3] = -(values[2]);
 values[4] = values[1];
 if values[3] < values[4] then values[4] = values[3] end;
 return values[4] end)()
-)lua" },
-        { "min(-0,0)", -0.0, R"lua(
+)lua"
+        },
+        {
+            "min(-0,0)", -0.0, R"lua(
 (function() local values = {};
 values[1] = 0.0;
 values[2] = -(values[1]);
@@ -2050,8 +2210,10 @@ values[3] = 0.0;
 values[4] = values[2];
 if values[3] < values[4] then values[4] = values[3] end;
 return values[4] end)()
-)lua" },
-        { "max(0,-0)", 0.0, R"lua(
+)lua"
+        },
+        {
+            "max(0,-0)", 0.0, R"lua(
 (function() local values = {};
 values[1] = 0.0;
 values[2] = 0.0;
@@ -2059,8 +2221,10 @@ values[3] = -(values[2]);
 values[4] = values[1];
 if values[3] > values[4] then values[4] = values[3] end;
 return values[4] end)()
-)lua" },
-        { "max(-0,0)", -0.0, R"lua(
+)lua"
+        },
+        {
+            "max(-0,0)", -0.0, R"lua(
 (function() local values = {};
 values[1] = 0.0;
 values[2] = -(values[1]);
@@ -2068,8 +2232,10 @@ values[3] = 0.0;
 values[4] = values[2];
 if values[3] > values[4] then values[4] = values[3] end;
 return values[4] end)()
-)lua" },
-        { "min(1,0/0,2)", 1.0, R"lua(
+)lua"
+        },
+        {
+            "min(1,0/0,2)", 1.0, R"lua(
 (function() local values = {};
 values[1] = 1.0;
 values[2] = 0.0;
@@ -2080,8 +2246,10 @@ values[6] = values[1];
 if values[4] < values[6] then values[6] = values[4] end;
 if values[5] < values[6] then values[6] = values[5] end;
 return values[6] end)()
-)lua" },
-        { "max(1,0/0,2)", 2.0, R"lua(
+)lua"
+        },
+        {
+            "max(1,0/0,2)", 2.0, R"lua(
 (function() local values = {};
 values[1] = 1.0;
 values[2] = 0.0;
@@ -2092,8 +2260,10 @@ values[6] = values[1];
 if values[4] > values[6] then values[6] = values[4] end;
 if values[5] > values[6] then values[6] = values[5] end;
 return values[6] end)()
-)lua" },
-        { "min(0/0,1)", std::numeric_limits<double>::quiet_NaN(), R"lua(
+)lua"
+        },
+        {
+            "min(0/0,1)", std::numeric_limits<double>::quiet_NaN(), R"lua(
 (function() local values = {};
 values[1] = 0.0;
 values[2] = 0.0;
@@ -2102,8 +2272,10 @@ values[4] = 1.0;
 values[5] = values[3];
 if values[4] < values[5] then values[5] = values[4] end;
 return values[5] end)()
-)lua" },
-        { "max(0/0,1)", std::numeric_limits<double>::quiet_NaN(), R"lua(
+)lua"
+        },
+        {
+            "max(0/0,1)", std::numeric_limits<double>::quiet_NaN(), R"lua(
 (function() local values = {};
 values[1] = 0.0;
 values[2] = 0.0;
@@ -2112,8 +2284,10 @@ values[4] = 1.0;
 values[5] = values[3];
 if values[4] > values[5] then values[5] = values[4] end;
 return values[5] end)()
-)lua" },
-        { "round(0/0)", std::numeric_limits<double>::quiet_NaN(), R"lua(
+)lua"
+        },
+        {
+            "round(0/0)", std::numeric_limits<double>::quiet_NaN(), R"lua(
 (function() local values = {};
 values[1] = 0.0;
 values[2] = 0.0;
@@ -2122,7 +2296,8 @@ values[4] = math.floor(math.abs(values[3])) + 0.0;
 if math.abs(values[3]) - values[4] >= 0.5 then values[4] = values[4] + 1.0 end;
 if values[3] < 0.0 or 1.0 / values[3] < 0.0 then values[4] = -values[4] end;
 return values[4] end)()
-)lua" }
+)lua"
+        }
     };
     dialogue conversation;
     for( const function_case &row : cases ) {
@@ -2131,7 +2306,7 @@ return values[4] end)()
         REQUIRE( native.parse( row.source ) );
         const double expected = native.eval( conversation );
         const sol::protected_function_result call = fixture.lua.safe_script(
-                    std::string( "return " ) + row.lua_expression, sol::script_pass_on_error );
+                std::string( "return " ) + row.lua_expression, sol::script_pass_on_error );
         REQUIRE( call.valid() );
         const double actual = call.get<double>();
         if( std::isnan( row.expected ) ) {
@@ -2160,367 +2335,464 @@ TEST_CASE( "lua_platform_temperature_math_matches_native_float_units",
     // Native units::temperature stores float. Lua must reproduce conversion
     // boundaries and float intermediates, rather than use double-only offsets.
     const std::vector<temperature_case> cases = {
-        { "celsius(0.0)", R"lua(
+        {
+            "celsius(0.0)", R"lua(
 (function() local values = {};
 values[1] = 0.0;
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[2] = native_float(native_float(values[1]) - native_float(273.150));
 return values[2] end)()
-)lua" },
-        { "celsius(-0.0)", R"lua(
+)lua"
+        },
+        {
+            "celsius(-0.0)", R"lua(
 (function() local values = {};
 values[1] = 0.0;
 values[2] = -(values[1]);
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[3] = native_float(native_float(values[2]) - native_float(273.150));
 return values[3] end)()
-)lua" },
-        { "celsius(273.15)", R"lua(
+)lua"
+        },
+        {
+            "celsius(273.15)", R"lua(
 (function() local values = {};
 values[1] = 273.14999999999998;
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[2] = native_float(native_float(values[1]) - native_float(273.150));
 return values[2] end)()
-)lua" },
-        { "celsius(310.15)", R"lua(
+)lua"
+        },
+        {
+            "celsius(310.15)", R"lua(
 (function() local values = {};
 values[1] = 310.14999999999998;
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[2] = native_float(native_float(values[1]) - native_float(273.150));
 return values[2] end)()
-)lua" },
-        { "celsius(-273.15)", R"lua(
+)lua"
+        },
+        {
+            "celsius(-273.15)", R"lua(
 (function() local values = {};
 values[1] = 273.14999999999998;
 values[2] = -(values[1]);
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[3] = native_float(native_float(values[2]) - native_float(273.150));
 return values[3] end)()
-)lua" },
-        { "celsius(-459.67)", R"lua(
+)lua"
+        },
+        {
+            "celsius(-459.67)", R"lua(
 (function() local values = {};
 values[1] = 459.67000000000002;
 values[2] = -(values[1]);
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[3] = native_float(native_float(values[2]) - native_float(273.150));
 return values[3] end)()
-)lua" },
-        { "celsius(1e-40)", R"lua(
+)lua"
+        },
+        {
+            "celsius(1e-40)", R"lua(
 (function() local values = {};
 values[1] = 9.9999999999999993e-41;
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[2] = native_float(native_float(values[1]) - native_float(273.150));
 return values[2] end)()
-)lua" },
-        { "celsius(-1e-40)", R"lua(
+)lua"
+        },
+        {
+            "celsius(-1e-40)", R"lua(
 (function() local values = {};
 values[1] = 9.9999999999999993e-41;
 values[2] = -(values[1]);
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[3] = native_float(native_float(values[2]) - native_float(273.150));
 return values[3] end)()
-)lua" },
-        { "celsius(16777217.0)", R"lua(
+)lua"
+        },
+        {
+            "celsius(16777217.0)", R"lua(
 (function() local values = {};
 values[1] = 16777217.0;
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[2] = native_float(native_float(values[1]) - native_float(273.150));
 return values[2] end)()
-)lua" },
-        { "celsius(-16777217.0)", R"lua(
+)lua"
+        },
+        {
+            "celsius(-16777217.0)", R"lua(
 (function() local values = {};
 values[1] = 16777217.0;
 values[2] = -(values[1]);
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[3] = native_float(native_float(values[2]) - native_float(273.150));
 return values[3] end)()
-)lua" },
-        { "celsius(1e+30)", R"lua(
+)lua"
+        },
+        {
+            "celsius(1e+30)", R"lua(
 (function() local values = {};
 values[1] = 1e+30;
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[2] = native_float(native_float(values[1]) - native_float(273.150));
 return values[2] end)()
-)lua" },
-        { "celsius(-1e+30)", R"lua(
+)lua"
+        },
+        {
+            "celsius(-1e+30)", R"lua(
 (function() local values = {};
 values[1] = 1e+30;
 values[2] = -(values[1]);
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[3] = native_float(native_float(values[2]) - native_float(273.150));
 return values[3] end)()
-)lua" },
-        { "fahrenheit(0.0)", R"lua(
+)lua"
+        },
+        {
+            "fahrenheit(0.0)", R"lua(
 (function() local values = {};
 values[1] = 0.0;
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[2] = native_float(native_float(native_float(values[1]) * native_float(1.8)) - native_float(459.67));
 return values[2] end)()
-)lua" },
-        { "fahrenheit(-0.0)", R"lua(
+)lua"
+        },
+        {
+            "fahrenheit(-0.0)", R"lua(
 (function() local values = {};
 values[1] = 0.0;
 values[2] = -(values[1]);
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[3] = native_float(native_float(native_float(values[2]) * native_float(1.8)) - native_float(459.67));
 return values[3] end)()
-)lua" },
-        { "fahrenheit(273.15)", R"lua(
+)lua"
+        },
+        {
+            "fahrenheit(273.15)", R"lua(
 (function() local values = {};
 values[1] = 273.14999999999998;
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[2] = native_float(native_float(native_float(values[1]) * native_float(1.8)) - native_float(459.67));
 return values[2] end)()
-)lua" },
-        { "fahrenheit(310.15)", R"lua(
+)lua"
+        },
+        {
+            "fahrenheit(310.15)", R"lua(
 (function() local values = {};
 values[1] = 310.14999999999998;
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[2] = native_float(native_float(native_float(values[1]) * native_float(1.8)) - native_float(459.67));
 return values[2] end)()
-)lua" },
-        { "fahrenheit(-273.15)", R"lua(
+)lua"
+        },
+        {
+            "fahrenheit(-273.15)", R"lua(
 (function() local values = {};
 values[1] = 273.14999999999998;
 values[2] = -(values[1]);
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[3] = native_float(native_float(native_float(values[2]) * native_float(1.8)) - native_float(459.67));
 return values[3] end)()
-)lua" },
-        { "fahrenheit(-459.67)", R"lua(
+)lua"
+        },
+        {
+            "fahrenheit(-459.67)", R"lua(
 (function() local values = {};
 values[1] = 459.67000000000002;
 values[2] = -(values[1]);
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[3] = native_float(native_float(native_float(values[2]) * native_float(1.8)) - native_float(459.67));
 return values[3] end)()
-)lua" },
-        { "fahrenheit(1e-40)", R"lua(
+)lua"
+        },
+        {
+            "fahrenheit(1e-40)", R"lua(
 (function() local values = {};
 values[1] = 9.9999999999999993e-41;
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[2] = native_float(native_float(native_float(values[1]) * native_float(1.8)) - native_float(459.67));
 return values[2] end)()
-)lua" },
-        { "fahrenheit(-1e-40)", R"lua(
+)lua"
+        },
+        {
+            "fahrenheit(-1e-40)", R"lua(
 (function() local values = {};
 values[1] = 9.9999999999999993e-41;
 values[2] = -(values[1]);
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[3] = native_float(native_float(native_float(values[2]) * native_float(1.8)) - native_float(459.67));
 return values[3] end)()
-)lua" },
-        { "fahrenheit(16777217.0)", R"lua(
+)lua"
+        },
+        {
+            "fahrenheit(16777217.0)", R"lua(
 (function() local values = {};
 values[1] = 16777217.0;
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[2] = native_float(native_float(native_float(values[1]) * native_float(1.8)) - native_float(459.67));
 return values[2] end)()
-)lua" },
-        { "fahrenheit(-16777217.0)", R"lua(
+)lua"
+        },
+        {
+            "fahrenheit(-16777217.0)", R"lua(
 (function() local values = {};
 values[1] = 16777217.0;
 values[2] = -(values[1]);
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[3] = native_float(native_float(native_float(values[2]) * native_float(1.8)) - native_float(459.67));
 return values[3] end)()
-)lua" },
-        { "fahrenheit(1e+30)", R"lua(
+)lua"
+        },
+        {
+            "fahrenheit(1e+30)", R"lua(
 (function() local values = {};
 values[1] = 1e+30;
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[2] = native_float(native_float(native_float(values[1]) * native_float(1.8)) - native_float(459.67));
 return values[2] end)()
-)lua" },
-        { "fahrenheit(-1e+30)", R"lua(
+)lua"
+        },
+        {
+            "fahrenheit(-1e+30)", R"lua(
 (function() local values = {};
 values[1] = 1e+30;
 values[2] = -(values[1]);
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[3] = native_float(native_float(native_float(values[2]) * native_float(1.8)) - native_float(459.67));
 return values[3] end)()
-)lua" },
-        { "from_celsius(0.0)", R"lua(
+)lua"
+        },
+        {
+            "from_celsius(0.0)", R"lua(
 (function() local values = {};
 values[1] = 0.0;
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[2] = native_float(values[1] + native_float(273.150));
 return values[2] end)()
-)lua" },
-        { "from_celsius(-0.0)", R"lua(
+)lua"
+        },
+        {
+            "from_celsius(-0.0)", R"lua(
 (function() local values = {};
 values[1] = 0.0;
 values[2] = -(values[1]);
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[3] = native_float(values[2] + native_float(273.150));
 return values[3] end)()
-)lua" },
-        { "from_celsius(273.15)", R"lua(
+)lua"
+        },
+        {
+            "from_celsius(273.15)", R"lua(
 (function() local values = {};
 values[1] = 273.14999999999998;
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[2] = native_float(values[1] + native_float(273.150));
 return values[2] end)()
-)lua" },
-        { "from_celsius(310.15)", R"lua(
+)lua"
+        },
+        {
+            "from_celsius(310.15)", R"lua(
 (function() local values = {};
 values[1] = 310.14999999999998;
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[2] = native_float(values[1] + native_float(273.150));
 return values[2] end)()
-)lua" },
-        { "from_celsius(-273.15)", R"lua(
+)lua"
+        },
+        {
+            "from_celsius(-273.15)", R"lua(
 (function() local values = {};
 values[1] = 273.14999999999998;
 values[2] = -(values[1]);
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[3] = native_float(values[2] + native_float(273.150));
 return values[3] end)()
-)lua" },
-        { "from_celsius(-459.67)", R"lua(
+)lua"
+        },
+        {
+            "from_celsius(-459.67)", R"lua(
 (function() local values = {};
 values[1] = 459.67000000000002;
 values[2] = -(values[1]);
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[3] = native_float(values[2] + native_float(273.150));
 return values[3] end)()
-)lua" },
-        { "from_celsius(1e-40)", R"lua(
+)lua"
+        },
+        {
+            "from_celsius(1e-40)", R"lua(
 (function() local values = {};
 values[1] = 9.9999999999999993e-41;
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[2] = native_float(values[1] + native_float(273.150));
 return values[2] end)()
-)lua" },
-        { "from_celsius(-1e-40)", R"lua(
+)lua"
+        },
+        {
+            "from_celsius(-1e-40)", R"lua(
 (function() local values = {};
 values[1] = 9.9999999999999993e-41;
 values[2] = -(values[1]);
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[3] = native_float(values[2] + native_float(273.150));
 return values[3] end)()
-)lua" },
-        { "from_celsius(16777217.0)", R"lua(
+)lua"
+        },
+        {
+            "from_celsius(16777217.0)", R"lua(
 (function() local values = {};
 values[1] = 16777217.0;
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[2] = native_float(values[1] + native_float(273.150));
 return values[2] end)()
-)lua" },
-        { "from_celsius(-16777217.0)", R"lua(
+)lua"
+        },
+        {
+            "from_celsius(-16777217.0)", R"lua(
 (function() local values = {};
 values[1] = 16777217.0;
 values[2] = -(values[1]);
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[3] = native_float(values[2] + native_float(273.150));
 return values[3] end)()
-)lua" },
-        { "from_celsius(1e+30)", R"lua(
+)lua"
+        },
+        {
+            "from_celsius(1e+30)", R"lua(
 (function() local values = {};
 values[1] = 1e+30;
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[2] = native_float(values[1] + native_float(273.150));
 return values[2] end)()
-)lua" },
-        { "from_celsius(-1e+30)", R"lua(
+)lua"
+        },
+        {
+            "from_celsius(-1e+30)", R"lua(
 (function() local values = {};
 values[1] = 1e+30;
 values[2] = -(values[1]);
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[3] = native_float(values[2] + native_float(273.150));
 return values[3] end)()
-)lua" },
-        { "from_fahrenheit(0.0)", R"lua(
+)lua"
+        },
+        {
+            "from_fahrenheit(0.0)", R"lua(
 (function() local values = {};
 values[1] = 0.0;
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[2] = native_float((values[1] + native_float(459.67)) / native_float(1.8));
 return values[2] end)()
-)lua" },
-        { "from_fahrenheit(-0.0)", R"lua(
+)lua"
+        },
+        {
+            "from_fahrenheit(-0.0)", R"lua(
 (function() local values = {};
 values[1] = 0.0;
 values[2] = -(values[1]);
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[3] = native_float((values[2] + native_float(459.67)) / native_float(1.8));
 return values[3] end)()
-)lua" },
-        { "from_fahrenheit(273.15)", R"lua(
+)lua"
+        },
+        {
+            "from_fahrenheit(273.15)", R"lua(
 (function() local values = {};
 values[1] = 273.14999999999998;
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[2] = native_float((values[1] + native_float(459.67)) / native_float(1.8));
 return values[2] end)()
-)lua" },
-        { "from_fahrenheit(310.15)", R"lua(
+)lua"
+        },
+        {
+            "from_fahrenheit(310.15)", R"lua(
 (function() local values = {};
 values[1] = 310.14999999999998;
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[2] = native_float((values[1] + native_float(459.67)) / native_float(1.8));
 return values[2] end)()
-)lua" },
-        { "from_fahrenheit(-273.15)", R"lua(
+)lua"
+        },
+        {
+            "from_fahrenheit(-273.15)", R"lua(
 (function() local values = {};
 values[1] = 273.14999999999998;
 values[2] = -(values[1]);
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[3] = native_float((values[2] + native_float(459.67)) / native_float(1.8));
 return values[3] end)()
-)lua" },
-        { "from_fahrenheit(-459.67)", R"lua(
+)lua"
+        },
+        {
+            "from_fahrenheit(-459.67)", R"lua(
 (function() local values = {};
 values[1] = 459.67000000000002;
 values[2] = -(values[1]);
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[3] = native_float((values[2] + native_float(459.67)) / native_float(1.8));
 return values[3] end)()
-)lua" },
-        { "from_fahrenheit(1e-40)", R"lua(
+)lua"
+        },
+        {
+            "from_fahrenheit(1e-40)", R"lua(
 (function() local values = {};
 values[1] = 9.9999999999999993e-41;
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[2] = native_float((values[1] + native_float(459.67)) / native_float(1.8));
 return values[2] end)()
-)lua" },
-        { "from_fahrenheit(-1e-40)", R"lua(
+)lua"
+        },
+        {
+            "from_fahrenheit(-1e-40)", R"lua(
 (function() local values = {};
 values[1] = 9.9999999999999993e-41;
 values[2] = -(values[1]);
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[3] = native_float((values[2] + native_float(459.67)) / native_float(1.8));
 return values[3] end)()
-)lua" },
-        { "from_fahrenheit(16777217.0)", R"lua(
+)lua"
+        },
+        {
+            "from_fahrenheit(16777217.0)", R"lua(
 (function() local values = {};
 values[1] = 16777217.0;
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[2] = native_float((values[1] + native_float(459.67)) / native_float(1.8));
 return values[2] end)()
-)lua" },
-        { "from_fahrenheit(-16777217.0)", R"lua(
+)lua"
+        },
+        {
+            "from_fahrenheit(-16777217.0)", R"lua(
 (function() local values = {};
 values[1] = 16777217.0;
 values[2] = -(values[1]);
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[3] = native_float((values[2] + native_float(459.67)) / native_float(1.8));
 return values[3] end)()
-)lua" },
-        { "from_fahrenheit(1e+30)", R"lua(
+)lua"
+        },
+        {
+            "from_fahrenheit(1e+30)", R"lua(
 (function() local values = {};
 values[1] = 1e+30;
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[2] = native_float((values[1] + native_float(459.67)) / native_float(1.8));
 return values[2] end)()
-)lua" },
-        { "from_fahrenheit(-1e+30)", R"lua(
+)lua"
+        },
+        {
+            "from_fahrenheit(-1e+30)", R"lua(
 (function() local values = {};
 values[1] = 1e+30;
 values[2] = -(values[1]);
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
 values[3] = native_float((values[2] + native_float(459.67)) / native_float(1.8));
 return values[3] end)()
-)lua" },
-        { "celsius(from_celsius(37))+fahrenheit(from_fahrenheit(98.6))", R"lua(
+)lua"
+        },
+        {
+            "celsius(from_celsius(37))+fahrenheit(from_fahrenheit(98.6))", R"lua(
 (function() local values = {};
 values[1] = 37.0;
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
@@ -2531,7 +2803,8 @@ values[5] = native_float((values[4] + native_float(459.67)) / native_float(1.8))
 values[6] = native_float(native_float(native_float(values[5]) * native_float(1.8)) - native_float(459.67));
 values[7] = values[3] + values[6];
 return values[7] end)()
-)lua" }
+)lua"
+        }
     };
     dialogue conversation;
     for( const temperature_case &row : cases ) {
@@ -2540,7 +2813,7 @@ return values[7] end)()
         REQUIRE( native.parse( row.source ) );
         const double expected = native.eval( conversation );
         const sol::protected_function_result call = fixture.lua.safe_script(
-                    std::string( "return " ) + row.lua_expression, sol::script_pass_on_error );
+                std::string( "return " ) + row.lua_expression, sol::script_pass_on_error );
         REQUIRE( call.valid() );
         const double actual = call.get<double>();
         CHECK( actual == expected );
@@ -2563,42 +2836,53 @@ TEST_CASE( "lua_platform_pure_math_conditions_match_native_comparison_and_truth"
     // Compare actual conditional_t loading/evaluation with ordinary emitted
     // Lua, including nonzero/NaN truth and numeric comparison subexpressions.
     const std::vector<predicate_case> cases = {
-        { "2 > 1", true, R"lua(
+        {
+            "2 > 1", true, R"lua(
 ((function() local values = {};
 values[1] = 2.0;
 values[2] = 1.0;
 values[3] = (values[1] > values[2]) and 1.0 or 0.0;
 return values[3] end)() ~= 0.0)
-)lua" },
-        { "1.25e2 >= 125", true, R"lua(
+)lua"
+        },
+        {
+            "1.25e2 >= 125", true, R"lua(
 ((function() local values = {};
 values[1] = 125.0;
 values[2] = 125.0;
 values[3] = (values[1] >= values[2]) and 1.0 or 0.0;
 return values[3] end)() ~= 0.0)
-)lua" },
-        { "1 >= 0", true, R"lua(
+)lua"
+        },
+        {
+            "1 >= 0", true, R"lua(
 ((function() local values = {};
 values[1] = 1.0;
 values[2] = 0.0;
 values[3] = (values[1] >= values[2]) and 1.0 or 0.0;
 return values[3] end)() ~= 0.0)
-)lua" },
-        { "1 != 0", true, R"lua(
+)lua"
+        },
+        {
+            "1 != 0", true, R"lua(
 ((function() local values = {};
 values[1] = 1.0;
 values[2] = 0.0;
 values[3] = (values[1] ~= values[2]) and 1.0 or 0.0;
 return values[3] end)() ~= 0.0)
-)lua" },
-        { "1 != 1", false, R"lua(
+)lua"
+        },
+        {
+            "1 != 1", false, R"lua(
 ((function() local values = {};
 values[1] = 1.0;
 values[2] = 1.0;
 values[3] = (values[1] ~= values[2]) and 1.0 or 0.0;
 return values[3] end)() ~= 0.0)
-)lua" },
-        { "1 + 2 > 0", true, R"lua(
+)lua"
+        },
+        {
+            "1 + 2 > 0", true, R"lua(
 ((function() local values = {};
 values[1] = 1.0;
 values[2] = 2.0;
@@ -2606,8 +2890,10 @@ values[3] = values[1] + values[2];
 values[4] = 0.0;
 values[5] = (values[3] > values[4]) and 1.0 or 0.0;
 return values[5] end)() ~= 0.0)
-)lua" },
-        { "1 / 0 > 0", true, R"lua(
+)lua"
+        },
+        {
+            "1 / 0 > 0", true, R"lua(
 ((function() local values = {};
 values[1] = 1.0;
 values[2] = 0.0;
@@ -2615,8 +2901,10 @@ values[3] = values[1] / values[2];
 values[4] = 0.0;
 values[5] = (values[3] > values[4]) and 1.0 or 0.0;
 return values[5] end)() ~= 0.0)
-)lua" },
-        { "0 / 0 == 0", false, R"lua(
+)lua"
+        },
+        {
+            "0 / 0 == 0", false, R"lua(
 ((function() local values = {};
 values[1] = 0.0;
 values[2] = 0.0;
@@ -2624,8 +2912,10 @@ values[3] = values[1] / values[2];
 values[4] = 0.0;
 values[5] = (values[3] == values[4]) and 1.0 or 0.0;
 return values[5] end)() ~= 0.0)
-)lua" },
-        { "0 / 0 != 0", true, R"lua(
+)lua"
+        },
+        {
+            "0 / 0 != 0", true, R"lua(
 ((function() local values = {};
 values[1] = 0.0;
 values[2] = 0.0;
@@ -2633,8 +2923,10 @@ values[3] = values[1] / values[2];
 values[4] = 0.0;
 values[5] = (values[3] ~= values[4]) and 1.0 or 0.0;
 return values[5] end)() ~= 0.0)
-)lua" },
-        { "0 / 0 < 0", false, R"lua(
+)lua"
+        },
+        {
+            "0 / 0 < 0", false, R"lua(
 ((function() local values = {};
 values[1] = 0.0;
 values[2] = 0.0;
@@ -2642,32 +2934,42 @@ values[3] = values[1] / values[2];
 values[4] = 0.0;
 values[5] = (values[3] < values[4]) and 1.0 or 0.0;
 return values[5] end)() ~= 0.0)
-)lua" },
-        { "0 / 0", true, R"lua(
+)lua"
+        },
+        {
+            "0 / 0", true, R"lua(
 ((function() local values = {};
 values[1] = 0.0;
 values[2] = 0.0;
 values[3] = values[1] / values[2];
 return values[3] end)() ~= 0.0)
-)lua" },
-        { "0", false, R"lua(
+)lua"
+        },
+        {
+            "0", false, R"lua(
 ((function() local values = {};
 values[1] = 0.0;
 return values[1] end)() ~= 0.0)
-)lua" },
-        { "-0", false, R"lua(
+)lua"
+        },
+        {
+            "-0", false, R"lua(
 ((function() local values = {};
 values[1] = 0.0;
 values[2] = -(values[1]);
 return values[2] end)() ~= 0.0)
-)lua" },
-        { "-1", true, R"lua(
+)lua"
+        },
+        {
+            "-1", true, R"lua(
 ((function() local values = {};
 values[1] = 1.0;
 values[2] = -(values[1]);
 return values[2] end)() ~= 0.0)
-)lua" },
-        { "2 < 1 < 1", true, R"lua(
+)lua"
+        },
+        {
+            "2 < 1 < 1", true, R"lua(
 ((function() local values = {};
 values[1] = 2.0;
 values[2] = 1.0;
@@ -2675,8 +2977,10 @@ values[3] = (values[1] < values[2]) and 1.0 or 0.0;
 values[4] = 1.0;
 values[5] = (values[3] < values[4]) and 1.0 or 0.0;
 return values[5] end)() ~= 0.0)
-)lua" },
-        { "2 > 1 == 1", true, R"lua(
+)lua"
+        },
+        {
+            "2 > 1 == 1", true, R"lua(
 ((function() local values = {};
 values[1] = 2.0;
 values[2] = 1.0;
@@ -2684,8 +2988,10 @@ values[3] = (values[1] > values[2]) and 1.0 or 0.0;
 values[4] = 1.0;
 values[5] = (values[3] == values[4]) and 1.0 or 0.0;
 return values[5] end)() ~= 0.0)
-)lua" },
-        { "(2 > 1) + (3 != 4) == 2", true, R"lua(
+)lua"
+        },
+        {
+            "(2 > 1) + (3 != 4) == 2", true, R"lua(
 ((function() local values = {};
 values[1] = 2.0;
 values[2] = 1.0;
@@ -2697,8 +3003,10 @@ values[7] = values[3] + values[6];
 values[8] = 2.0;
 values[9] = (values[7] == values[8]) and 1.0 or 0.0;
 return values[9] end)() ~= 0.0)
-)lua" },
-        { "round(-2.5) <= -3", true, R"lua(
+)lua"
+        },
+        {
+            "round(-2.5) <= -3", true, R"lua(
 ((function() local values = {};
 values[1] = 2.5;
 values[2] = -(values[1]);
@@ -2709,8 +3017,10 @@ values[4] = 3.0;
 values[5] = -(values[4]);
 values[6] = (values[3] <= values[5]) and 1.0 or 0.0;
 return values[6] end)() ~= 0.0)
-)lua" },
-        { "max(1,2) == 2", true, R"lua(
+)lua"
+        },
+        {
+            "max(1,2) == 2", true, R"lua(
 ((function() local values = {};
 values[1] = 1.0;
 values[2] = 2.0;
@@ -2719,8 +3029,10 @@ if values[2] > values[3] then values[3] = values[2] end;
 values[4] = 2.0;
 values[5] = (values[3] == values[4]) and 1.0 or 0.0;
 return values[5] end)() ~= 0.0)
-)lua" },
-        { "celsius(from_celsius(37)) == 37", true, R"lua(
+)lua"
+        },
+        {
+            "celsius(from_celsius(37)) == 37", true, R"lua(
 ((function() local values = {};
 values[1] = 37.0;
 local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
@@ -2729,7 +3041,8 @@ values[3] = native_float(native_float(values[2]) - native_float(273.150));
 values[4] = 37.0;
 values[5] = (values[3] == values[4]) and 1.0 or 0.0;
 return values[5] end)() ~= 0.0)
-)lua" }
+)lua"
+        }
     };
     dialogue conversation;
     for( const predicate_case &row : cases ) {
@@ -2740,7 +3053,7 @@ return values[5] end)() ~= 0.0)
         const bool expected = native( conversation );
         CHECK( expected == row.expected );
         const sol::protected_function_result call = fixture.lua.safe_script(
-                    std::string( "return " ) + row.lua_expression, sol::script_pass_on_error );
+                std::string( "return " ) + row.lua_expression, sol::script_pass_on_error );
         REQUIRE( call.valid() );
         CHECK( call.get<bool>() == expected );
     }
@@ -2777,9 +3090,9 @@ end
     beta.setID( character_id( 4923 ), true );
     const auto generation = cata::lua_platform::detail::runtime_world_generation_storage();
     lua["alpha"] = game_handle::from_creature( alpha,
-                   { "avatar", 4922, 0, 0, 0, {} }, owner->handle_runtime(), generation );
+    { "avatar", 4922, 0, 0, 0, {} }, owner->handle_runtime(), generation );
     lua["beta"] = game_handle::from_creature( beta,
-                  { "avatar", 4923, 0, 0, 0, {} }, owner->handle_runtime(), generation );
+    { "avatar", 4923, 0, 0, 0, {} }, owner->handle_runtime(), generation );
     struct variable_case {
         const char *identifier;
         var_type scope;
@@ -2787,7 +3100,8 @@ end
         const char *lua_expression;
     };
     const std::vector<variable_case> cases = {
-        { "score", var_type::global, "score", R"lua(
+        {
+            "score", var_type::global, "score", R"lua(
 (function() local values = {};
 local variable_result;
 variable_result = services.variables.get_global_number("score", {strict=true});
@@ -2801,8 +3115,10 @@ if values[2] > values[3] then values[3] = values[2] end;
 values[4] = 3.0;
 values[5] = values[3] + values[4];
 return values[5] end)()
-)lua" },
-        { "_score", var_type::context, "score", R"lua(
+)lua"
+        },
+        {
+            "_score", var_type::context, "score", R"lua(
 (function() local values = {};
 local variable_result;
 variable_result = services.variables.get_context_number(context and context.data, "score", {strict=true});
@@ -2816,8 +3132,10 @@ if values[2] > values[3] then values[3] = values[2] end;
 values[4] = 3.0;
 values[5] = values[3] + values[4];
 return values[5] end)()
-)lua" },
-        { "u_score", var_type::u, "score", R"lua(
+)lua"
+        },
+        {
+            "u_score", var_type::u, "score", R"lua(
 (function() local values = {};
 local variable_result;
 variable_result = services.variables.get_number(alpha, "score", {strict=true});
@@ -2831,8 +3149,10 @@ if values[2] > values[3] then values[3] = values[2] end;
 values[4] = 3.0;
 values[5] = values[3] + values[4];
 return values[5] end)()
-)lua" },
-        { "n_score", var_type::npc, "score", R"lua(
+)lua"
+        },
+        {
+            "n_score", var_type::npc, "score", R"lua(
 (function() local values = {};
 local variable_result;
 variable_result = services.variables.get_number(beta, "score", {strict=true});
@@ -2846,8 +3166,10 @@ if values[2] > values[3] then values[3] = values[2] end;
 values[4] = 3.0;
 values[5] = values[3] + values[4];
 return values[5] end)()
-)lua" },
-        { "u_", var_type::global, "u_", R"lua(
+)lua"
+        },
+        {
+            "u_", var_type::global, "u_", R"lua(
 (function() local values = {};
 local variable_result;
 variable_result = services.variables.get_global_number("u_", {strict=true});
@@ -2861,8 +3183,10 @@ if values[2] > values[3] then values[3] = values[2] end;
 values[4] = 3.0;
 values[5] = values[3] + values[4];
 return values[5] end)()
-)lua" },
-        { "_", var_type::global, "_", R"lua(
+)lua"
+        },
+        {
+            "_", var_type::global, "_", R"lua(
 (function() local values = {};
 local variable_result;
 variable_result = services.variables.get_global_number("_", {strict=true});
@@ -2876,25 +3200,36 @@ if values[2] > values[3] then values[3] = values[2] end;
 values[4] = 3.0;
 values[5] = values[3] + values[4];
 return values[5] end)()
-)lua" }
+)lua"
+        }
     };
     const auto make_value = []( const int shape ) -> std::optional<diag_value> {
-        switch( shape ) {
-            case 0: return std::nullopt;
-            case 1: return diag_value{};
-            case 2: return diag_value( -3.9 );
-            case 3: return diag_value( 7.5 );
-            case 4: return diag_value( std::string( "7.9" ) );
-            case 5: return diag_value( diag_array( 5000, diag_value( 4.0 ) ) );
-            case 6: return diag_value( tripoint_abs_ms( -3, 4, 5 ) );
-            case 7: return diag_value( diag_value::legacy_value( "7.9" ) );
-            default: return diag_value( diag_value::legacy_value( "not-a-number" ) );
+        switch( shape )
+    {
+        case 0:
+            return std::nullopt;
+        case 1:
+            return diag_value{};
+        case 2:
+            return diag_value( -3.9 );
+            case 3:
+                return diag_value( 7.5 );
+            case 4:
+                return diag_value( std::string( "7.9" ) );
+            case 5:
+                return diag_value( diag_array( 5000, diag_value( 4.0 ) ) );
+            case 6:
+                return diag_value( tripoint_abs_ms( -3, 4, 5 ) );
+            case 7:
+                return diag_value( diag_value::legacy_value( "7.9" ) );
+            default:
+                return diag_value( diag_value::legacy_value( "not-a-number" ) );
         }
     };
     for( const variable_case &row : cases ) {
         for( int shape = 0; shape < ( row.scope == var_type::context ? 7 : 9 ); ++shape ) {
             CAPTURE( row.identifier, shape );
-            const auto prepare = [&]( dialogue &conversation, const std::optional<diag_value> &value ) {
+            const auto prepare = [&]( dialogue & conversation, const std::optional<diag_value> &value ) {
                 get_globals().remove_global_value( row.key );
                 alpha.remove_value( row.key );
                 beta.remove_value( row.key );
@@ -2938,7 +3273,7 @@ return values[5] end)()
                     data[row.key] = array;
                 } else {
                     data[row.key] = script_tripoint_coord::from_native(
-                                       coords::origin::abs, coords::scale::map_square, tripoint( -3, 4, 5 ) );
+                                        coords::origin::abs, coords::scale::map_square, tripoint( -3, 4, 5 ) );
                 }
             }
             sol::table context = lua.create_table();
@@ -3019,9 +3354,9 @@ end
     beta.setID( character_id( 4943 ), true );
     const auto generation = cata::lua_platform::detail::runtime_world_generation_storage();
     lua["alpha"] = game_handle::from_creature( alpha,
-                   { "avatar", 4942, 0, 0, 0, {} }, owner->handle_runtime(), generation );
+    { "avatar", 4942, 0, 0, 0, {} }, owner->handle_runtime(), generation );
     lua["beta"] = game_handle::from_creature( beta,
-                  { "avatar", 4943, 0, 0, 0, {} }, owner->handle_runtime(), generation );
+    { "avatar", 4943, 0, 0, 0, {} }, owner->handle_runtime(), generation );
     // The root identifier is ordinary ASCII, but its dynamic target is a raw
     // native storage key. The empty-key cases differ from bare math identifiers.
     const std::string raw_key = std::string( "raw\0", 4 ) + std::string( 10000, 'k' );
@@ -3087,7 +3422,7 @@ end
             } else if( row.shape == 5 ) {
                 conversation.set_value( "pointer", diag_value( tripoint_abs_ms( -3, 4, 5 ) ) );
                 data["pointer"] = script_tripoint_coord::from_native(
-                                       coords::origin::abs, coords::scale::map_square, tripoint( -3, 4, 5 ) );
+                                      coords::origin::abs, coords::scale::map_square, tripoint( -3, 4, 5 ) );
             }
             std::optional<diag_value> value;
             sol::object lua_value = sol::make_object( lua, sol::nil );
@@ -3106,7 +3441,7 @@ end
             } else if( target_shape == 5 ) {
                 value = diag_value( tripoint_abs_ms( 1, 2, 3 ) );
                 lua_value = sol::make_object( lua, script_tripoint_coord::from_native(
-                                                coords::origin::abs, coords::scale::map_square, tripoint( 1, 2, 3 ) ) );
+                                                  coords::origin::abs, coords::scale::map_square, tripoint( 1, 2, 3 ) ) );
             }
             if( value ) {
                 if( row.target_scope == var_type::global ) {

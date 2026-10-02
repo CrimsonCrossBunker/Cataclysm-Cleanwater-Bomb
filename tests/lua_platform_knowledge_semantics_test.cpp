@@ -100,19 +100,21 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
         const cata::lua_platform::game_handle avatar_handle = handle_for( player, false );
         const cata::lua_platform::game_handle beta_handle = handle_for( partner, true );
         const sol::table avatar_snapshot = value_of(
-                services["characters"]["snapshot"], avatar_handle ).as<sol::table>();
+                                               services["characters"]["snapshot"], avatar_handle ).as<sol::table>();
         const sol::table beta_snapshot = value_of(
-                services["characters"]["snapshot"], beta_handle ).as<sol::table>();
+                                             services["characters"]["snapshot"], beta_handle ).as<sol::table>();
         // The Exodii device handoff uses the display name 'social' as a skill
         // ID (the registered ID is 'speech').  Both paths must evaluate that
         // exact native expression; skills.get would reject the invalid ID.
         const skill_id social( "social" );
         const conditional_t below_three( json_loader::from_string(
-                                            R"({"math":["u_skill('social') < 3"]})" ).get_object() );
+                                             R"({"math":["u_skill('social') < 3"]})" ).get_object() );
         const conditional_t above_two( json_loader::from_string(
                                            R"({"math":["u_skill('social') > 2"]})" ).get_object() );
         finalize_conditions();
-        for( const int level : { 0, 2, 3, 5, 9 } ) {
+        for( const int level : {
+                 0, 2, 3, 5, 9
+             } ) {
             player.set_skill_level( social, level );
             const double below_value = value_of(
                                            services["gameplay"]["math"]["evaluate"],
@@ -125,9 +127,9 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
             CHECK( above_two( conversation ) == ( above_value != 0 ) );
         }
         const sol::table avatar_activity = value_of(
-                services["activities"]["snapshot"], avatar_handle ).as<sol::table>();
+                                               services["activities"]["snapshot"], avatar_handle ).as<sol::table>();
         const sol::table beta_activity = value_of(
-                services["activities"]["snapshot"], beta_handle ).as<sol::table>();
+                                             services["activities"]["snapshot"], beta_handle ).as<sol::table>();
         const conditional_t avatar_has_activity_condition( json_loader::from_string(
                     R"({"u_has_activity":"ignored"})" ).get_object() );
         const conditional_t beta_has_activity_condition( json_loader::from_string(
@@ -193,7 +195,7 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
                                                    std::string( R"({")" ).append( prefix ).append(
                                                        "has_worn_with_flag" ).append(
                                                        R"(": "WATERPROOF", "bodypart": ")" ).append(
-                                                           body_part ).append( R"("})" ) ).get_object() );
+                                                       body_part ).append( R"("})" ) ).get_object() );
                 return condition( conversation );
             };
             // Teaching depends on student knowledge, not training enabled or practical level.
@@ -229,10 +231,10 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
             player.martial_arts_data->clear_styles();
             partner.martial_arts_data->clear_styles();
             const matype_id &training_style = is_npc ? matype_style_judo :
-                                                  matype_style_karate;
+                                              matype_style_karate;
             teacher.martial_arts_data->add_martialart( training_style );
             const spell_id &training_spell = is_npc ? spell_test_spell_lava :
-                                                spell_test_spell_pew;
+                                             spell_test_spell_pew;
             teacher.magic->learn_spell( training_spell, teacher, true );
             const conditional_t styles_condition( prefix + "train_styles" );
             const conditional_t spells_condition( prefix + "train_spells" );
@@ -277,8 +279,8 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
             CHECK_FALSE( spells_condition( conversation ) );
             REQUIRE( teacher.wear_item( item( itype_test_hazmat_shirt ), false ).has_value() );
             for( const auto &part_expected : std::vector<std::pair<std::string, bool>> {
-                     { "torso", true }, { "head", false }
-                 } ) {
+            { "torso", true }, { "head", false }
+        } ) {
                 const std::string &body_part = part_expected.first;
                 const bool expected = part_expected.second;
                 const bool old_value = legacy_worn_flag( body_part );
@@ -611,8 +613,8 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
             }
         }
 
-        const auto compare_game_option = [&]( const std::string &selector,
-                                              const std::string &option_id ) {
+        const auto compare_game_option = [&]( const std::string & selector,
+        const std::string & option_id ) {
             std::string native_value;
             const std::string native_diagnostic = capture_debugmsg_during( [&]() {
                 native_value = ::get_option<std::string>( option_id );
@@ -693,8 +695,8 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
         // proficiency predicate: most faction IDs are not proficiencies.
         const sol::protected_function monster_faction = services["registry"]["monster_default_faction"];
         REQUIRE( monster_faction.valid() );
-        const auto make_monster_condition = [&]( const std::string &selector,
-        const std::string &id_text ) {
+        const auto make_monster_condition = [&]( const std::string & selector,
+        const std::string & id_text ) {
             std::ostringstream source;
             {
                 JsonOut json( source );
@@ -740,14 +742,14 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
                 } );
                 CHECK( condition_diagnostic == native_diagnostic );
                 CHECK( native_match == value_of( services["proficiencies"]["has_id_text"],
-                                                handle_for_selector( selector ), platform_faction ).as<bool>() );
+                                                 handle_for_selector( selector ), platform_faction ).as<bool>() );
             }
         }
 
         // A technique's localized authored text is not its formatted rule
         // description, nor a typed-ID snapshot that rejects unknown IDs.
-        const auto make_technique_condition = [&]( const std::string &selector,
-            const std::string &mutator, const std::string &id_text ) {
+        const auto make_technique_condition = [&]( const std::string & selector,
+        const std::string & mutator, const std::string & id_text ) {
             std::ostringstream source;
             {
                 JsonOut json( source );
@@ -770,7 +772,9 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
         REQUIRE( matec_id( "tech_base_headbutt" ).is_valid() );
         CHECK( matec_id( "tec_none" )->description.translated().empty() );
         CHECK_FALSE( matec_id( "tech_base_headbutt" )->description.translated().empty() );
-        for( const bool use_name : { true, false } ) {
+        for( const bool use_name : {
+                 true, false
+             } ) {
             const std::string mutator = use_name ? "ma_technique_name" : "ma_technique_description";
             const std::string method = use_name ? "technique_name" : "technique_description";
             const sol::protected_function read_text = services["martial_arts"][method];
@@ -800,7 +804,7 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
                     } );
                     CHECK( condition_diagnostic == native_diagnostic );
                     CHECK( native_match == value_of( services["proficiencies"]["has_id_text"],
-                                                    handle_for_selector( selector ), platform_text ).as<bool>() );
+                                                     handle_for_selector( selector ), platform_text ).as<bool>() );
                 }
             }
         }
@@ -818,7 +822,7 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
                 "return function(context) return context:topic_item() end", sol::script_pass_on_error );
         REQUIRE( loaded.valid() );
         const sol::protected_function read_topic_item = loaded.get<sol::protected_function>();
-        const auto make_topic_condition = [&]( const std::string &selector ) {
+        const auto make_topic_condition = [&]( const std::string & selector ) {
             return conditional_t( json_loader::from_string(
                                       "{\"" + selector + "_has_proficiency\":{\"mutator\":\"topic_item\"}}" ).get_object() );
         };
@@ -840,12 +844,12 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
                 effect_on_condition activated;
                 activated.has_condition = true;
                 std::string observed_item = "not_evaluated";
-                activated.condition = [&]( const const_dialogue &frame ) {
+                activated.condition = [&]( const const_dialogue & frame ) {
                     observed_item = frame.cur_item.str();
                     return condition( frame );
                 };
                 const bool empty_match = value_of( services["proficiencies"]["has_id_text"],
-                                                  handle_for_selector( selector ), std::string() ).as<bool>();
+                                                   handle_for_selector( selector ), std::string() ).as<bool>();
                 CHECK( activated.activate( conversation, false ) == empty_match );
                 CHECK( observed_item.empty() );
                 CHECK( conversation.cur_item.str() == id_text );
@@ -869,7 +873,7 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
         };
         for( const std::string &method : dialogue_string_methods ) {
             talker *const variable_actor = method == "get_string" ? nullptr :
-                                          conversation.actor( method == "interlocutor_variable_string" );
+                                           conversation.actor( method == "interlocutor_variable_string" );
             for( const std::string &key : dialogue_keys ) {
                 CAPTURE( method, key );
                 if( variable_actor ) {
@@ -915,7 +919,8 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
         const sol::protected_function_result stale_topic = read_topic_item( topic_context );
         CHECK_FALSE( stale_topic.valid() );
         for( const std::string &method : dialogue_string_methods ) {
-            const sol::protected_function_result stale_string = read_dialogue_string( topic_context, method, "" );
+            const sol::protected_function_result stale_string = read_dialogue_string( topic_context, method,
+                "" );
             CHECK_FALSE( stale_string.valid() );
         }
 
@@ -936,19 +941,21 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
                 runtime_identity, world_generation );
             REQUIRE( selection_context.valid() );
             const sol::protected_function_result sampler_loaded = lua.safe_script(
-                        "return function(ctx, c, d, b, blacklist) "
-                        "return ctx:sample_technique(c, d, b, blacklist) end", sol::script_pass_on_error );
+                    "return function(ctx, c, d, b, blacklist) "
+                    "return ctx:sample_technique(c, d, b, blacklist) end", sol::script_pass_on_error );
             REQUIRE( sampler_loaded.valid() );
             const sol::protected_function sample_technique = sampler_loaded.get<sol::protected_function>();
             player.set_skill_level( skill_id( "unarmed" ), 10 );
             player.martial_arts_data->add_martialart( matype_style_karate );
             player.martial_arts_data->set_style( matype_style_karate );
             const std::string nul_blacklist_id( "tec_karate_rapid\0missing",
-                                               sizeof( "tec_karate_rapid\0missing" ) - 1 );
+                                                sizeof( "tec_karate_rapid\0missing" ) - 1 );
             const std::vector<std::vector<std::string>> blacklists = {
                 {}, { "", "tec_unknown_raw", nul_blacklist_id, "无此招式", std::string( 10000, 'x' ) },
-                { "tec_karate_rapid", "tec_karate_precise", "tec_karate_roundhouse",
-                  "tec_karate_staff", "tec_karate_staff_crit" },
+                {
+                    "tec_karate_rapid", "tec_karate_precise", "tec_karate_roundhouse",
+                    "tec_karate_staff", "tec_karate_staff_crit"
+                },
                 std::vector<std::string>( 300, nul_blacklist_id )
             };
             bool saw_selected_technique = false;
@@ -968,15 +975,18 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
                     options["dodge_counter"] = dodge_counter;
                     options["block_counter"] = block_counter;
                     options["blacklist"] = raw_blacklist;
-                    for( const unsigned int seed : { 4911U, 4912U } ) {
+                    for( const unsigned int seed : {
+                             4911U, 4912U
+                         } ) {
                         rng_set_engine_seed( seed );
                         const std::string native_id = conversation.const_actor( false )->get_random_technique(
                                                           partner, critical, dodge_counter, block_counter, native_blacklist ).str();
                         const auto native_rng_after = rng_get_engine(); // NOLINT(cata-determinism)
                         rng_set_engine_seed( seed );
                         const sol::table selected = value_of( services["characters"]["choose_technique"],
-                                                    alpha_handle, beta_handle, options ).as<sol::table>();
-                        const std::string platform_id = selected["technique"].get<cata::lua_platform::script_game_id>().value();
+                                                              alpha_handle, beta_handle, options ).as<sol::table>();
+                        const std::string platform_id =
+                            selected["technique"].get<cata::lua_platform::script_game_id>().value();
                         CAPTURE( flags, seed, blacklist.size(), native_id, platform_id );
                         CHECK( platform_id == native_id );
                         CHECK( selected["found"].get<bool>() == ( native_id != tec_none.str() ) );
@@ -986,7 +996,7 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
                         // pair and consumes exactly the same shared RNG state.
                         rng_set_engine_seed( seed );
                         const sol::protected_function_result sampled = sample_technique(
-                                    selection_context, critical, dodge_counter, block_counter, raw_blacklist );
+                                selection_context, critical, dodge_counter, block_counter, raw_blacklist );
                         REQUIRE( sampled.valid() );
                         CHECK( sampled.get<std::string>() == native_id );
                         CHECK( rng_get_engine() == native_rng_after );
@@ -1020,12 +1030,13 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
             // Native has_array does not evaluate non-array blacklist values.
             // They have the same result and RNG state as no blacklist.
             for( const std::string &ignored : std::vector<std::string> {
-                     "null", "false", "42", "\"ignored\"", "{\"npc_val\":\"not_read\"}"
-                 } ) {
+            "null", "false", "42", "\"ignored\"", "{\"npc_val\":\"not_read\"}"
+        } ) {
                 rng_set_engine_seed( 4911 );
                 const sol::table selected = value_of( services["characters"]["choose_technique"],
-                                                    alpha_handle, beta_handle ).as<sol::table>();
-                const std::string platform_id = selected["technique"].get<cata::lua_platform::script_game_id>().value();
+                                                      alpha_handle, beta_handle ).as<sol::table>();
+                const std::string platform_id =
+                    selected["technique"].get<cata::lua_platform::script_game_id>().value();
                 const auto platform_rng_after = rng_get_engine(); // NOLINT(cata-determinism)
                 for( const std::string &selector : selectors ) {
                     CAPTURE( ignored, selector );
@@ -1041,7 +1052,7 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
             CHECK_FALSE( selection_context.valid() );
             const auto rng_before_stale = rng_get_engine(); // NOLINT(cata-determinism)
             const sol::protected_function_result stale_sample = sample_technique(
-                        selection_context, false, false, false, sol::nil );
+                    selection_context, false, false, false, sol::nil );
             CHECK_FALSE( stale_sample.valid() );
             CHECK( rng_get_engine() == rng_before_stale );
 
@@ -1063,7 +1074,7 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
                                                     partner, false, false, false ).str();
             REQUIRE( native_fallback.empty() );
             const sol::protected_function_result sampled_fallback = sample_technique(
-                        fallback_context, false, false, false, sol::nil );
+                    fallback_context, false, false, false, sol::nil );
             REQUIRE( sampled_fallback.valid() );
             CHECK( sampled_fallback.get<std::string>() == native_fallback );
             CHECK( rng_get_engine() == rng_before_fallback );
@@ -1082,7 +1093,7 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
                 "proficiency invalid target context is stale", {}, invalid_session,
                 runtime_identity, world_generation );
             const sol::protected_function_result invalid_target = sample_technique(
-                        invalid_context, false, false, false, sol::nil );
+                    invalid_context, false, false, false, sol::nil );
             CHECK_FALSE( invalid_target.valid() );
             CHECK( rng_get_engine() == rng_before_fallback );
         }
@@ -1513,11 +1524,11 @@ TEST_CASE( "lua_platform_roll_contested_matches_native_rng_semantics",
     };
     cata_default_random_engine expected_native_engine;
     lua.set_function( "native_roll_contested", [&native_conditions, &conversation,
-    &expected_native_engine](
+            &expected_native_engine](
     const int index, const unsigned int seed ) {
         rng_set_engine_seed( seed );
         const conditional_t condition( json_loader::from_string(
-                                          native_conditions.at( index - 1 ) ).get_object() );
+                                           native_conditions.at( index - 1 ) ).get_object() );
         const bool result = condition( conversation );
         expected_native_engine = rng_get_engine();
         // Let the following Platform native_int call draw from the same seed.

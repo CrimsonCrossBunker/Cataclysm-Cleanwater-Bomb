@@ -141,11 +141,13 @@ void set_native_value( const variable_ref &variable, const stored_value &value,
         return;
     }
 
-    const diag_value converted = std::visit( []( const auto &entry ) -> diag_value {
+    const diag_value converted = std::visit( []( const auto & entry ) -> diag_value {
         using value_type = std::decay_t<decltype( entry )>;
-        if constexpr( std::is_same_v<value_type, std::monostate> ) {
+        if constexpr( std::is_same_v<value_type, std::monostate> )
+        {
             return {};
-        } else {
+        } else
+        {
             return diag_value( entry );
         }
     }, value );
@@ -273,7 +275,7 @@ void check_lua_value( const assignment_case &test_case, const stored_value &expe
         return;
     }
     check_native_value( lookup_native_value( test_case.target, alpha, beta, native_context ),
-                       expected );
+                        expected );
 }
 
 void set_lua_context_value( sol::table &data, const std::string &key,
@@ -356,7 +358,7 @@ TEST_CASE( "lua_platform_indirect_assignment_migration_matches_native_math",
     lua.open_libraries( sol::lib::base, sol::lib::table, sol::lib::math, sol::lib::string );
     sol::table ccb = lua.create_table();
     const std::shared_ptr<platform::runtime> owner = platform::make_runtime(
-                "indirect_assignment_migration", 7923, lua );
+            "indirect_assignment_migration", 7923, lua );
     platform::install_runtime_api( owner, lua, ccb );
     platform::set_active_runtimes( { owner } );
     const on_out_of_scope clear_runtimes( []() {
@@ -375,60 +377,98 @@ TEST_CASE( "lua_platform_indirect_assignment_migration_matches_native_math",
 
     const std::string long_raw_key = std::string( "raw\0", 4 ) + std::string( 8189, 'k' );
     const std::vector<assignment_case> cases = {
-        { "alpha overwrite ignores old string", assignment_operation::assign,
-          pointer_shape::string, "u_indirect_alpha", { storage_scope::alpha, "indirect_alpha" },
-          std::string( "old alpha" ), 7.5 },
-        { "beta add reads an indirect alpha RHS", assignment_operation::add,
-          pointer_shape::string, "n_indirect_beta", { storage_scope::beta, "indirect_beta" },
-          8.25, 9.75, false, false,
-          rhs_case{ "u_indirect_rhs", { storage_scope::alpha, "indirect_rhs" }, 1.5 } },
-        { "context increment", assignment_operation::increment, pointer_shape::string,
-          "_indirect_context", { storage_scope::context, "indirect_context" }, 5.25, 6.25 },
-        { "raw NUL long pointer stays global", assignment_operation::assign,
-          pointer_shape::string, long_raw_key, { storage_scope::global, long_raw_key },
-          std::monostate{}, 7.5 },
-        { "unrecognized prefix is global", assignment_operation::assign,
-          pointer_shape::string, "x_indirect_global",
-          { storage_scope::global, "x_indirect_global" },
-          4.0, 7.5 },
-        { "v_next is parsed once as global", assignment_operation::increment,
-          pointer_shape::string, "v_next", { storage_scope::global, "v_next" },
-          4.0, 5.0, false, false, std::nullopt, true },
-        { "missing pointer reads zero then writes", assignment_operation::increment,
-          pointer_shape::missing, "", { storage_scope::global, "" }, 31.0, 1.0 },
-        { "null pointer string writes empty global", assignment_operation::assign,
-          pointer_shape::null_value, "", { storage_scope::global, "" }, 31.0, 7.5 },
-        { "null pointer reads and writes empty global", assignment_operation::increment,
-          pointer_shape::null_value, "", { storage_scope::global, "" }, 31.0, 32.0 },
-        { "numeric pointer string mismatch writes empty global", assignment_operation::assign,
-          pointer_shape::number, "", { storage_scope::global, "" }, 31.0, 7.5, false, true },
-        { "numeric pointer read and write both resolve empty global",
-          assignment_operation::increment, pointer_shape::number, "",
-          { storage_scope::global, "" }, 31.0, 32.0, false, true,
-          std::nullopt, false, 2 },
-        { "array pointer string mismatch writes empty global", assignment_operation::assign,
-          pointer_shape::array, "", { storage_scope::global, "" }, 31.0, 7.5, false, true },
-        { "coordinate pointer string mismatch writes empty global", assignment_operation::assign,
-          pointer_shape::coordinate, "", { storage_scope::global, "" }, 31.0, 7.5, false, true },
-        { "empty string pointer writes empty global", assignment_operation::assign,
-          pointer_shape::string, "", { storage_scope::global, "" }, 31.0, 7.5 },
-        { "u prefix with empty key targets alpha", assignment_operation::assign,
-          pointer_shape::string, "u_", { storage_scope::alpha, "" }, 2.0, 7.5 },
-        { "n prefix with empty key targets beta", assignment_operation::assign,
-          pointer_shape::string, "n_", { storage_scope::beta, "" }, 2.0, 7.5 },
-        { "double underscore strips one prefix", assignment_operation::assign,
-          pointer_shape::string, "__indirect_context",
-          { storage_scope::context, "_indirect_context" },
-          2.0, 7.5 },
-        { "bad indirect old value leaves alpha unchanged", assignment_operation::add,
-          pointer_shape::string, "u_indirect_bad_old", { storage_scope::alpha, "indirect_bad_old" },
-          std::string( "keep old" ), 0.0, true, false,
-          rhs_case{ "u_indirect_rhs", { storage_scope::alpha, "indirect_rhs" }, 1.5 } },
-        { "bad indirect RHS leaves beta unchanged", assignment_operation::add,
-          pointer_shape::string, "n_indirect_bad_rhs", { storage_scope::beta, "indirect_bad_rhs" },
-          12.0, 12.0, true, false,
-          rhs_case{ "u_indirect_bad_rhs", { storage_scope::alpha, "indirect_bad_rhs" },
-                    std::string( "not numeric" ) } },
+        {
+            "alpha overwrite ignores old string", assignment_operation::assign,
+            pointer_shape::string, "u_indirect_alpha", { storage_scope::alpha, "indirect_alpha" },
+            std::string( "old alpha" ), 7.5
+        },
+        {
+            "beta add reads an indirect alpha RHS", assignment_operation::add,
+            pointer_shape::string, "n_indirect_beta", { storage_scope::beta, "indirect_beta" },
+            8.25, 9.75, false, false,
+            rhs_case{ "u_indirect_rhs", { storage_scope::alpha, "indirect_rhs" }, 1.5 }
+        },
+        {
+            "context increment", assignment_operation::increment, pointer_shape::string,
+            "_indirect_context", { storage_scope::context, "indirect_context" }, 5.25, 6.25
+        },
+        {
+            "raw NUL long pointer stays global", assignment_operation::assign,
+            pointer_shape::string, long_raw_key, { storage_scope::global, long_raw_key },
+            std::monostate{}, 7.5
+        },
+        {
+            "unrecognized prefix is global", assignment_operation::assign,
+            pointer_shape::string, "x_indirect_global",
+            { storage_scope::global, "x_indirect_global" },
+            4.0, 7.5
+        },
+        {
+            "v_next is parsed once as global", assignment_operation::increment,
+            pointer_shape::string, "v_next", { storage_scope::global, "v_next" },
+            4.0, 5.0, false, false, std::nullopt, true
+        },
+        {
+            "missing pointer reads zero then writes", assignment_operation::increment,
+            pointer_shape::missing, "", { storage_scope::global, "" }, 31.0, 1.0
+        },
+        {
+            "null pointer string writes empty global", assignment_operation::assign,
+            pointer_shape::null_value, "", { storage_scope::global, "" }, 31.0, 7.5
+        },
+        {
+            "null pointer reads and writes empty global", assignment_operation::increment,
+            pointer_shape::null_value, "", { storage_scope::global, "" }, 31.0, 32.0
+        },
+        {
+            "numeric pointer string mismatch writes empty global", assignment_operation::assign,
+            pointer_shape::number, "", { storage_scope::global, "" }, 31.0, 7.5, false, true
+        },
+        {
+            "numeric pointer read and write both resolve empty global",
+            assignment_operation::increment, pointer_shape::number, "",
+            { storage_scope::global, "" }, 31.0, 32.0, false, true,
+            std::nullopt, false, 2
+        },
+        {
+            "array pointer string mismatch writes empty global", assignment_operation::assign,
+            pointer_shape::array, "", { storage_scope::global, "" }, 31.0, 7.5, false, true
+        },
+        {
+            "coordinate pointer string mismatch writes empty global", assignment_operation::assign,
+            pointer_shape::coordinate, "", { storage_scope::global, "" }, 31.0, 7.5, false, true
+        },
+        {
+            "empty string pointer writes empty global", assignment_operation::assign,
+            pointer_shape::string, "", { storage_scope::global, "" }, 31.0, 7.5
+        },
+        {
+            "u prefix with empty key targets alpha", assignment_operation::assign,
+            pointer_shape::string, "u_", { storage_scope::alpha, "" }, 2.0, 7.5
+        },
+        {
+            "n prefix with empty key targets beta", assignment_operation::assign,
+            pointer_shape::string, "n_", { storage_scope::beta, "" }, 2.0, 7.5
+        },
+        {
+            "double underscore strips one prefix", assignment_operation::assign,
+            pointer_shape::string, "__indirect_context",
+            { storage_scope::context, "_indirect_context" },
+            2.0, 7.5
+        },
+        {
+            "bad indirect old value leaves alpha unchanged", assignment_operation::add,
+            pointer_shape::string, "u_indirect_bad_old", { storage_scope::alpha, "indirect_bad_old" },
+            std::string( "keep old" ), 0.0, true, false,
+            rhs_case{ "u_indirect_rhs", { storage_scope::alpha, "indirect_rhs" }, 1.5 }
+        },
+        {
+            "bad indirect RHS leaves beta unchanged", assignment_operation::add,
+            pointer_shape::string, "n_indirect_bad_rhs", { storage_scope::beta, "indirect_bad_rhs" },
+            12.0, 12.0, true, false,
+            rhs_case{ "u_indirect_bad_rhs", { storage_scope::alpha, "indirect_bad_rhs" },
+                std::string( "not numeric" ) }
+        },
     };
 
     std::array<eoc_math, 3> native_math = {
@@ -576,8 +616,8 @@ TEST_CASE( "lua_platform_indirect_assignment_migration_matches_native_math",
                 break;
             case pointer_shape::coordinate:
                 context_data["pointer"] = platform::script_tripoint_coord::from_native(
-                                               coords::origin::abs, coords::scale::map_square,
-                                               tripoint( 1, 2, 3 ) );
+                                              coords::origin::abs, coords::scale::map_square,
+                                              tripoint( 1, 2, 3 ) );
                 break;
         }
         if( test_case.rhs ) {
