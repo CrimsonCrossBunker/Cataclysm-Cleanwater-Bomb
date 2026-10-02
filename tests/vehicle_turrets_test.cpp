@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "calendar.h"
+#include "avatar.h"
 #include "cata_catch.h"
 #include "character.h"
 #include "character_attire.h"
@@ -23,6 +24,7 @@
 #include "pocket_type.h"
 #include "point.h"
 #include "ret_val.h"
+#include "ranged.h"
 #include "type_id.h"
 #include "units.h"
 #include "value_ptr.h"
@@ -72,6 +74,92 @@ static void clear_faults_from_vp( vehicle_part &vp )
     item base_copy( vp.get_base() );
     base_copy.faults.clear();
     vp.set_base( std::move( base_copy ) );
+}
+
+TEST_CASE( "vehicle_mount_supports_naval_rifle_strength", "[vehicle][gun][turret]" )
+{
+    clear_map_without_vision();
+    clear_avatar();
+    map &here = get_map();
+    build_test_map( ter_id( "t_pavement" ) );
+    set_time_to_day();
+    here.invalidate_map_cache( 0 );
+    here.build_map_cache( 0, true );
+    avatar &you = get_avatar();
+    const tripoint_bub_ms pos( 65, 65, 0 );
+    vehicle *veh = here.add_vehicle( vehicle_prototype_test_turret_rig, pos, 0_degrees, 0,
+                                     veh_spawn_status::PRISTINE, false, true );
+    REQUIRE( veh );
+    const int index = veh->install_part( here, point_rel_ms::zero, vpart_id( "turret_ree_33" ) );
+    REQUIRE( index >= 0 );
+    vehicle_part &part = veh->part( index );
+    you.setpos( here, veh->bub_part_pos( here, part ) );
+    turret_data turret = veh->turret_query( part );
+    REQUIRE( turret );
+    // Installation may remove the handheld tripod: the mount must suffice.
+    for( item *mod : turret.base()->gunmods() ) {
+        turret.base()->remove_item( *mod );
+    }
+    REQUIRE( turret.base()->gunmods().empty() );
+    std::vector<std::string> messages;
+    CHECK( turret.base()->get_min_str() == 0 );
+    CHECK( gunmode_checks_common( you, here, messages, turret.base()->gun_current_mode() ) );
+
+    REQUIRE( part.ammo_set( itype_id( "33naval_ball" ) ) > 0 );
+    veh->set_owner( you );
+    part.enabled = true;
+    part.reset_target( veh->abs_part_pos( part ) );
+    monster &target = spawn_test_monster( "mon_zombie_hulk", pos + tripoint( 3, 0, 0 ), false );
+    const int original_hp = target.get_hp();
+    // Keep the observer outside the IFF safety zone during automatic fire.
+    you.setpos( here, tripoint_bub_ms( 10, 10, 0 ) );
+    int shots = 0;
+    for( int attempt = 0; attempt < 3 && target.get_hp() == original_hp; ++attempt ) {
+        shots += veh->automatic_fire_turret( part );
+    }
+    CHECK( shots > 0 );
+    CHECK( target.get_hp() < original_hp );
+
+    const item removed = veh->part_to_item( here, part );
+    CHECK( removed.get_min_str() == 90 );
+    CHECK_FALSE( you.meets_stat_requirements( removed ) );
+    here.destroy_vehicle( veh );
+}
+
+TEST_CASE( "mounted_flamethrowers_keep_detachable_fuel_tanks", "[vehicle][gun][turret]" )
+{
+    clear_map_without_vision();
+    clear_avatar();
+    map &here = get_map();
+    const std::string gun = GENERATE( std::string( "flamethrower" ),
+                                      std::string( "rm451_flamethrower" ) );
+    vehicle *veh = here.add_vehicle( vehicle_prototype_test_turret_rig,
+                                     tripoint_bub_ms( 65, 65, 0 ), 0_degrees, 0,
+                                     veh_spawn_status::PRISTINE, false, true );
+    REQUIRE( veh );
+    const int index = veh->install_part( here, point_rel_ms::zero, vpart_id( "turret_" + gun ) );
+    REQUIRE( index >= 0 );
+    turret_data turret = veh->turret_query( veh->part( index ) );
+    REQUIRE( turret );
+    CHECK_FALSE( turret.uses_vehicle_tanks_or_batteries() );
+    CHECK( turret.can_reload() );
+    CHECK_FALSE( turret.can_unload() );
+    item fuel_tank( itype_id( "pressurized_tank" ) );
+    fuel_tank.ammo_set( turret.base()->ammo_default(), 1000 );
+    REQUIRE( fuel_tank.ammo_remaining() == 1000 );
+    REQUIRE( turret.base()->put_in( fuel_tank, pocket_type::MAGAZINE_WELL ).success() );
+    CHECK( turret.can_unload() );
+    CHECK( turret.query() == turret_data::status::ready );
+    avatar &you = get_avatar();
+    you.setpos( here, veh->bub_part_pos( here, veh->part( index ) ) );
+    CHECK( turret.fire( you, &here, you.pos_bub() + point( 5, 0 ) ) > 0 );
+    CHECK( turret.base()->ammo_remaining() < 1000 );
+    REQUIRE( turret.base()->magazine_current() );
+    turret.base()->remove_item( *turret.base()->magazine_current() );
+    CHECK_FALSE( turret.can_unload() );
+    CHECK( turret.can_reload() );
+    here.destroy_vehicle( veh );
+    explosion_handler::process_explosions();
 }
 
 // Install, reload and fire every possible vehicle turret.
