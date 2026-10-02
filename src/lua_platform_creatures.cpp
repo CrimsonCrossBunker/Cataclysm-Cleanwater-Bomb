@@ -68,7 +68,6 @@ extern "C" {
 #include "mtype.h"
 #include "npc.h"
 #include "overmapbuffer.h"
-#include "player_helpers.h"
 #include "profession.h"
 #include "rng.h"
 #include "translation.h"
@@ -4657,7 +4656,7 @@ void install_creature_api(
                 "services.characters.drop_weapon requires the current player Character"
             } );
         }
-        const item_location wielded = character->get_wielded_item();
+        item_location wielded = character->get_wielded_item();
         const bool dropped = static_cast<bool>( wielded );
         if( wielded ) {
             retire_item_handle_identity( *wielded );
