@@ -1621,7 +1621,7 @@ void Character::burn_fuel( bionic &bio )
     bionic &current_bio = **current_bionic;
 
     units::energy energy_gain = 0_kJ;
-    map &here = live_character->get_map();
+    map &here = get_map();
 
     // Each bionic *should* have only one power source.
     // Avoid draining multiple sources. So check for energy_gain = 0_kJ
@@ -1744,7 +1744,7 @@ void Character::burn_fuel( bionic &bio )
     if( live_character == nullptr ) {
         return;
     }
-    live_character->get_map().emit_field( live_character->pos_bub(), power_generation_emission );
+    get_map().emit_field( live_character->pos_bub(), power_generation_emission );
 }
 
 void Character::heat_emission( const bionic &bio, units::energy fuel_energy )
@@ -1769,7 +1769,7 @@ void Character::heat_emission( const bionic &bio, units::energy fuel_energy )
     if( live_character == nullptr ) {
         return;
     }
-    map &here = live_character->get_map();
+    map &here = get_map();
     if( hotness.is_valid() ) {
         const int heat_spread = std::max( heat_prod / 10 - heat_level, 1 );
         here.emit_field( live_character->pos_bub(), hotness, heat_spread );
@@ -2628,7 +2628,7 @@ void Character::perform_uninstall( const bionic &bio, int difficulty, int succes
         live_character->add_msg_player_or_npc(
             m_neutral, _( "Your parts are jiggled back into their familiar places." ),
             _( "<npcname>'s parts are jiggled back into their familiar places." ) );
-        live_character->add_msg( m_good, _( "Successfully removed %s." ), bio_id.obj().name );
+        add_msg( m_good, _( "Successfully removed %s." ), bio_id.obj().name );
         live_character->remove_bionic( **bio_opt );
         live_creature = character_reference.get();
         live_character = live_creature == nullptr ? nullptr :
@@ -2667,14 +2667,13 @@ void Character::perform_uninstall( const bionic &bio, int difficulty, int succes
             const bionic_uid dependent_uid = dependent.get_uid();
             const bionic_id dependent_id = dependent.id;
             const std::optional<item> dependent_source_item = dependent.source_item;
-            const std::vector<trait_id> dependent_mutations =
-                dependent_id->give_mut_on_removal;
+            const auto dependent_mutations = dependent_id->give_mut_on_removal;
             if( !live_character->find_bionic_by_uid( dependent_uid ) ) {
                 continue;
             }
-            live_character->add_msg( m_neutral, _( "%s removed with %s." ),
-                                     dependent_id->name.translated(),
-                                     bio_id->name.translated() );
+            add_msg( m_neutral, _( "%s removed with %s." ),
+                     dependent_id->name.translated(),
+                     bio_id->name.translated() );
             get_event_bus().send<event_type::removes_cbm>( getID(), dependent_id );
             live_creature = character_reference.get();
             live_character = live_creature == nullptr ? nullptr :
@@ -2711,7 +2710,7 @@ void Character::perform_uninstall( const bionic &bio, int difficulty, int succes
                 dependent_cbm.set_flag( flag_NO_STERILE );
                 dependent_cbm.set_flag( flag_NO_PACKED );
                 dependent_cbm.set_fault( fault_bionic_salvaged, false, nullptr, true );
-                live_character->get_map().add_item(
+                get_map().add_item(
                     live_character->pos_bub(), dependent_cbm );
             } else {
                 item dependent_cbm( itype_burnt_out_bionic );
@@ -2722,7 +2721,7 @@ void Character::perform_uninstall( const bionic &bio, int difficulty, int succes
                 dependent_cbm.set_flag( flag_NO_STERILE );
                 dependent_cbm.set_flag( flag_NO_PACKED );
                 dependent_cbm.set_fault( fault_bionic_salvaged, false, nullptr, true );
-                live_character->get_map().add_item(
+                get_map().add_item(
                     live_character->pos_bub(), dependent_cbm );
             }
         }
@@ -2758,7 +2757,7 @@ void Character::perform_uninstall( const bionic &bio, int difficulty, int succes
             cbm.set_flag( flag_NO_STERILE );
             cbm.set_flag( flag_NO_PACKED );
             cbm.set_fault( fault_bionic_salvaged, false, nullptr, true );
-            live_character->get_map().add_item( live_character->pos_bub(), cbm );
+            get_map().add_item( live_character->pos_bub(), cbm );
         } else {
             item cbm( itype_burnt_out_bionic );
             if( item::type_is_defined( bio_id->itype() ) ) {
@@ -2768,7 +2767,7 @@ void Character::perform_uninstall( const bionic &bio, int difficulty, int succes
             cbm.set_flag( flag_NO_STERILE );
             cbm.set_flag( flag_NO_PACKED );
             cbm.set_fault( fault_bionic_salvaged, false, nullptr, true );
-            live_character->get_map().add_item( live_character->pos_bub(), cbm );
+            get_map().add_item( live_character->pos_bub(), cbm );
         }
     } else {
         get_event_bus().send<event_type::fails_to_remove_cbm>( getID(), bio_id );
@@ -2789,7 +2788,7 @@ void Character::perform_uninstall( const bionic &bio, int difficulty, int succes
     Character *live_character = live_creature == nullptr ? nullptr :
                                 live_creature->as_character();
     if( live_character != nullptr ) {
-        map &here = live_character->get_map();
+        map &here = get_map();
         here.invalidate_map_cache( here.get_abs_sub().z() );
     }
 }
@@ -3113,14 +3112,14 @@ void Character::perform_install( const bionic_id &bid, bionic_uid upbio_uid, int
                     return;
                 }
                 //~ %1$s - name of the bionic to be upgraded (inferior), %2$s - name of the upgraded bionic (superior).
-                live_character->add_msg( m_good, _( "Successfully upgraded %1$s to %2$s." ), bio_name,
-                                         bid.obj().name );
+                add_msg( m_good, _( "Successfully upgraded %1$s to %2$s." ), bio_name,
+                         bid.obj().name );
             } else {
                 debugmsg( "Couldn't find bionic with UID %d to upgrade", upbio_uid );
             }
         } else {
             //~ %s - name of the bionic.
-            live_character->add_msg( m_good, _( "Successfully installed %s." ), bid.obj().name );
+            add_msg( m_good, _( "Successfully installed %s." ), bid.obj().name );
         }
 
         live_character->add_bionic( bid, 0, false, source_item_snapshot );
@@ -3172,7 +3171,7 @@ void Character::perform_install( const bionic_id &bid, bionic_uid upbio_uid, int
     if( live_character == nullptr ) {
         return;
     }
-    map &here = live_character->get_map();
+    map &here = get_map();
     here.invalidate_map_cache( here.get_abs_sub().z() );
 }
 
@@ -3300,7 +3299,7 @@ void Character::bionics_install_failure( const bionic_id &bid, const std::string
         cbm.set_flag( flag_NO_STERILE );
         cbm.set_flag( flag_NO_PACKED );
         cbm.set_fault( fault_bionic_salvaged, false, nullptr, true );
-        live_character->get_map().add_item( patient_pos, cbm );
+        get_map().add_item( patient_pos, cbm );
     }
 }
 
