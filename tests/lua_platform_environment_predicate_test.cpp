@@ -37,6 +37,7 @@
 #include "npctalk.h"
 #include "player_helpers.h"
 #include "worldfactory.h"
+#include "trap.h"
 #if defined(LOCALIZE)
 #include "translation_manager.h"
 #include "translations.h"
@@ -1185,7 +1186,9 @@ TEST_CASE( "lua_platform_environment_add_field_area_matches_native_f_field",
         REQUIRE( target_z != center.z() );
         const tripoint_bub_ms target_center( center.x(), center.y(), target_z );
         REQUIRE( here.inbounds( target_center ) );
-        submap *const target_submap = here.unsafe_get_submap_at( target_center );
+        const tripoint_rel_sm target_grid( target_center.x() / SEEX,
+                                           target_center.y() / SEEY, target_z );
+        submap *const target_submap = map_meddler::get_submap_at_grid( here, target_grid );
         REQUIRE( target_submap != nullptr );
         const ter_id original_target_terrain = here.ter( target_center );
         REQUIRE( here.ter_set( target_center, ter_t_floor ) );
@@ -1218,7 +1221,7 @@ TEST_CASE( "lua_platform_environment_add_field_area_matches_native_f_field",
         }
         CHECK( here.get_field( target_center, field_fd_smoke.id() ) != nullptr );
         CHECK( here.get_field( center, field_fd_smoke.id() ) == nullptr );
-        CHECK( here.unsafe_get_submap_at( target_center ) == target_submap );
+        CHECK( map_meddler::get_submap_at_grid( here, target_grid ) == target_submap );
         here.remove_field( target_center, field_fd_smoke.id() );
     }
 
