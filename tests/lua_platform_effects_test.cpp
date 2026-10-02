@@ -172,7 +172,7 @@ TEST_CASE( "lua_platform_first_topic_matches_native_beta_alpha_fallback",
     native_effect.parse_sub_effect( native_input, "first_topic_semantics" );
     // This is the event bridge shape used by npc_becomes_hostile: one NPC alpha,
     // no beta, so native actor(true) falls back to the same NPC.
-    dialogue native_context( get_talker_for( native ) );
+    dialogue native_context( get_talker_for( native ), nullptr );
     CHECK( native_context.has_alpha );
     CHECK_FALSE( native_context.has_beta );
     for( const talk_effect_fun_t &operation : native_effect.effects ) {
@@ -224,7 +224,7 @@ TEST_CASE( "lua_platform_faction_numeric_writes_match_native_fallback",
                shared_faction->trusts_u, shared_faction->lone_wolf_faction };
     shared_faction->lone_wolf_faction = false;
 
-    dialogue native_context( get_talker_for( native ) );
+    dialogue native_context( get_talker_for( native ), nullptr );
     CHECK( native_context.has_alpha );
     CHECK_FALSE( native_context.has_beta );
     const auto run_native = [&]( const std::string &source ) {
@@ -326,7 +326,7 @@ TEST_CASE( "native_open_dialogue_skips_ui_for_non_avatar_alpha",
                                       R"({"open_dialogue":{"topic":"TALK_TEST"}})" );
     talk_effect_t native_effect;
     native_effect.parse_sub_effect( native_json.get_object(), "open_dialogue_semantics" );
-    dialogue native_context( get_talker_for( interlocutor ) );
+    dialogue native_context( get_talker_for( interlocutor ), nullptr );
     CHECK( native_context.has_alpha );
     CHECK_FALSE( native_context.has_beta );
     for( const talk_effect_fun_t &operation : native_effect.effects ) {
@@ -391,7 +391,7 @@ TEST_CASE( "lua_platform_drop_weapon_matches_native_player_effect",
     CHECK( count_rocks_at_player() == empty_count );
     CHECK( cata::lua_platform::item_holder_mutation_generation() == empty_epoch );
 
-    for( const cata::lua_platform::game_handle wrong_target : {
+    for( const cata::lua_platform::game_handle &wrong_target : {
              fixture.handle( false ), fixture.handle( true )
          } ) {
         const sol::protected_function_result wrong = drop( wrong_target );
@@ -418,7 +418,7 @@ TEST_CASE( "lua_platform_drop_weapon_matches_native_player_effect",
 
     item weapon( itype_id( "rock" ), calendar::turn_zero );
     REQUIRE( player.Character::wield( weapon, std::nullopt, false ) );
-    const item_location wielded = player.get_wielded_item();
+    item_location wielded = player.get_wielded_item();
     REQUIRE( wielded );
     const tripoint_abs_ms position = player.pos_abs();
     const cata::lua_platform::game_handle old_item_handle =
@@ -1645,7 +1645,7 @@ TEST_CASE( "lua_platform_npc_drop_weapon_matches_native_talk_effect",
     item platform_weapon( itype_id( "rock" ), calendar::turn_zero );
     REQUIRE( fixture.other.Character::wield(
                  platform_weapon, std::nullopt, false ) );
-    const item_location wielded = fixture.other.get_wielded_item();
+    item_location wielded = fixture.other.get_wielded_item();
     REQUIRE( wielded );
     const tripoint_abs_ms position = fixture.other.pos_abs();
     const cata::lua_platform::game_handle old_item_handle =
