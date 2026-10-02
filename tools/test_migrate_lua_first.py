@@ -35168,6 +35168,49 @@ assert(context.data.position.x==EXPECTED_X and context.data.position.y==EXPECTED
                                     capture_output=True, timeout=10)
             self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_location_adjust_random_order_choice_is_explicit_without_masking_other_gaps(self) -> None:
+        for branch in ("effect", "false_effect"):
+            for valid, category in ((True, "semantic_choice"), (False, "manual_rewrite")):
+                source = migrate_lua_first.SourceObject(Path("xy_order.json"), 0, {
+                    "type": "effect_on_condition", "id": "xy_order", "eoc_type": "EVENT",
+                    "required_event": "game_start", "condition": "is_day", "effect": [], branch: {
+                        "location_variable_adjust": {"context_val": "position"},
+                        "x_adjust": [1, 2], "y_adjust": [3, 4] if valid else [[1, 2], 4]}})
+                result = migrate_lua_first.MigrationResult()
+                rendered = migrate_lua_first.render_eoc(source, result)
+                self.assertEqual([todo.category for todo in result.todos], [category])
+                self.assertEqual("Native X/Y random evaluation order is compiler-dependent" in rendered, valid)
+                self.assertNotIn("services.random.native_int(", rendered)
+        unproven_beta = {"location_variable_adjust": {"npc_val": "position"},
+                         "x_adjust": [1, 2], "y_adjust": [3, 4]}
+        self.assertIsNone(migrate_lua_first._location_adjust_random_order_choice(unproven_beta, {}))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_location_adjust_singleton_xy_ranges_keep_three_shared_rng_draws(self) -> None:
+        for overmap, expected_xy in ((False, (3, 7)), (True, (72, 168))):
+            lines = migrate_lua_first.render_static_location_variable_adjust({
+                "location_variable_adjust": {"context_val": "position"}, "x_adjust": [3.9, 3.1],
+                "y_adjust": [7.9, 7.1], "z_adjust": [1.9, 1.1], "overmap_tile": overmap},
+                "location_variable_adjust", False, False)
+            self.assertIsNotNone(lines)
+            script = r"""
+local context={data={}}
+local draws={}
+local function point(x,y,z) return {x=x,y=y,z=z,add=function(self,other)
+ return point(self.x+other.x,self.y+other.y,self.z+other.z)
+end,to=function(self,scale) assert(scale=='ms');return point(self.x*24,self.y*24,self.z) end} end
+local services={coords={tripoint_abs_ms=point,tripoint_rel_ms=point,tripoint_rel_omt=point},
+ variables={get_context_tripoint=function() return {ok=true,value={exists=false}} end},
+ random={native_int=function(lower,upper) assert(lower==upper);draws[#draws+1]=lower;return lower end}}
+local function service_value(result) assert(result.ok);return result.value end
+BODY
+assert(#draws==3 and draws[1]==3 and draws[2]==7 and draws[3]==1)
+assert(context.data.position.x==EXPECTED_X and context.data.position.y==EXPECTED_Y and context.data.position.z==1)
+""".replace("BODY", "\n".join(lines or []))
+            script = script.replace("EXPECTED_X", str(expected_xy[0])).replace("EXPECTED_Y", str(expected_xy[1]))
+            result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_literal_native_math_compiles_to_ordinary_lua_with_native_binding_rules(self) -> None:
         cases = [

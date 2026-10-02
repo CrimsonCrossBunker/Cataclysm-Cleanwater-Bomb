@@ -24463,6 +24463,16 @@ def _coordinate_write_lines(
     ]
 
 
+def _native_literal_singleton_range(value: Any) -> bool:
+    if not isinstance(value, list) or len(value) != 2:
+        return False
+    bounds = [finite_number_literal(bound) for bound in value]
+    if any(bound is None for bound in bounds):
+        return False
+    integers = [math.trunc(float(bound)) for bound in bounds]
+    return integers[0] == integers[1] and NATIVE_INT_MIN <= integers[0] <= NATIVE_INT_MAX
+
+
 def render_static_location_variable_adjust(
     effect: dict[str, Any],
     key: str,
@@ -24484,7 +24494,8 @@ def render_static_location_variable_adjust(
         return None
     # Native evaluates x/y inside one constructor call: more than one RNG
     # draw has compiler-dependent ordering. Do not silently pick an order.
-    if all(isinstance(effect.get(name), list) for name in ("x_adjust", "y_adjust")):
+    if (all(isinstance(effect.get(name), list) for name in ("x_adjust", "y_adjust")) and
+            not all(_native_literal_singleton_range(effect[name]) for name in ("x_adjust", "y_adjust"))):
         return None
     adjustments = [render_native_number_expression(effect.get(name, 0), effect_actor_targets)
                    for name in ("x_adjust", "y_adjust", "z_adjust")]
@@ -24520,6 +24531,27 @@ def render_static_location_variable_adjust(
     lines.extend("    " + line for line in writes)
     lines.append("    end")
     return lines
+
+
+def _location_adjust_random_order_choice(
+    effect: Any, effect_actor_targets: dict[str, tuple[str, str] | None] | None,
+) -> str | None:
+    if (not isinstance(effect, dict) or "location_variable_adjust" not in effect or
+            not all(isinstance(effect.get(name), list) for name in ("x_adjust", "y_adjust")) or
+            all(_native_literal_singleton_range(effect[name]) for name in ("x_adjust", "y_adjust"))):
+        return None
+    # Classify only when the remaining shape and its storage owners can be
+    # lowered. Do not conceal unsupported bounds or absent participants.
+    if render_native_number_expression(effect["y_adjust"], effect_actor_targets) is None:
+        return None
+    probe = dict(effect)
+    probe["y_adjust"] = 0
+    if render_static_location_variable_adjust(
+            probe, "location_variable_adjust", False, False, effect_actor_targets) is None:
+        return None
+    return ("Native X/Y random evaluation order is compiler-dependent; choose an intentional "
+            "Lua draw order. Z is evaluated after the XY offset. Existing coordinate, variable "
+            "and shared RNG services suffice; no additional Platform API is required")
 
 
 def _coordinate_source_expression(
@@ -32933,9 +32965,11 @@ def render_eoc(
                     ):
                         false_todo = _WEIGHTED_LIST_EOC_TODO
                         false_todo_category = "manual_rewrite"
-                    semantic_choice = mutation_migration_gap(false_value)
+                    semantic_choice = (mutation_migration_gap(false_value) or
+                                       _location_adjust_random_order_choice(false_value, effect_actor_targets))
                     if semantic_choice is not None:
                         false_todo = semantic_choice
+                        false_todo_category = "semantic_choice"
                     lines.append(
                         f"        -- TODO: {false_todo}."
                     )
@@ -35185,14 +35219,15 @@ def render_eoc(
                     lines.extend(rendered)
                     converted_effect = True
                 else:
+                    order_choice = _location_adjust_random_order_choice(effect, effect_actor_targets)
                     lines.append(
-                        "    -- TODO: translate location-variable arithmetic "
-                        "through typed coordinate variables."
+                        "    -- TODO: " + (order_choice or "translate location-variable arithmetic "
+                                          "through typed coordinate variables") + "."
                     )
                     result.add_todo(
-                        "manual_rewrite",
+                        "semantic_choice" if order_choice else "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        + (order_choice or "needs domain-service conversion")
                     )
                     all_effects_converted = False
             elif (

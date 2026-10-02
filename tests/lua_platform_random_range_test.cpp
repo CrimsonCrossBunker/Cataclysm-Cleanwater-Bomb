@@ -236,6 +236,7 @@ TEST_CASE( "lua_platform_single_axis_location_ranges_match_native_coordinates_an
         double upper;
         bool overmap;
         bool paired_z = false;
+        bool singleton_y = false;
     };
     std::vector<location_range_case> cases;
     for( int axis = 0; axis < 3; ++axis ) {
@@ -252,6 +253,10 @@ TEST_CASE( "lua_platform_single_axis_location_ranges_match_native_coordinates_an
             }
         }
     }
+    // Both XY ranges are fixed after Native truncation: their values and
+    // shared RNG consumption are independent of argument evaluation order.
+    cases.push_back( { 0, 3.9, 3.1, false, true, true } );
+    cases.push_back( { 0, 3.9, 3.1, true, true, true } );
     constexpr unsigned int seed = 58169;
     CAPTURE( seed );
     get_globals().set_global_value( "location_range_source", tripoint_abs_ms::zero );
@@ -277,6 +282,13 @@ TEST_CASE( "lua_platform_single_axis_location_ranges_match_native_coordinates_an
             writer.write( range.lower );
             writer.write( range.upper );
             writer.end_array();
+            if( range.singleton_y ) {
+                writer.member( "y_adjust" );
+                writer.start_array();
+                writer.write( 7.9 );
+                writer.write( 7.1 );
+                writer.end_array();
+            }
             if( range.paired_z ) {
                 writer.member( "z_adjust" );
                 writer.start_array();
@@ -315,6 +327,7 @@ TEST_CASE( "lua_platform_single_axis_location_ranges_match_native_coordinates_an
         row["upper"] = static_cast<int>( range.upper );
         row["overmap"] = range.overmap;
         row["paired_z"] = range.paired_z;
+        row["singleton_y"] = range.singleton_y;
         inputs[index + 1] = row;
     }
     lua["inputs"] = inputs;
@@ -328,8 +341,12 @@ TEST_CASE( "lua_platform_single_axis_location_ranges_match_native_coordinates_an
                 local offset = {0, 0, 0}
                 offset[input.axis] = services.random.native_int(
                     math.min(input.lower, input.upper), math.max(input.lower, input.upper))
+                if input.singleton_y then offset[2] = services.random.native_int(7, 7) end
                 if input.overmap and input.axis < 3 then
                     offset[input.axis] = offset[input.axis] * services.coords.tripoint_rel_omt(1, 0, 0):to('ms').x
+                end
+                if input.singleton_y and input.overmap then
+                    offset[2] = offset[2] * services.coords.tripoint_rel_omt(1, 0, 0):to('ms').x
                 end
                 if input.paired_z then offset[3] = services.random.native_int(7, 9) end
                 results[index] = read.value.value:add(services.coords.tripoint_rel_ms(
