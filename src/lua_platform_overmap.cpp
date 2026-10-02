@@ -91,6 +91,18 @@ constexpr int maximum_location_near_radius = 30;
 constexpr std::size_t initial_overmap_tile_owner_generation = 1;
 constexpr std::size_t initial_overmap_mutation_epoch = 1;
 
+int checked_axis_offset( const int value, const int offset,
+                         const std::string &api_name )
+{
+    const std::int64_t result = static_cast<std::int64_t>( value ) + offset;
+    if( result < std::numeric_limits<int>::min() ||
+        result > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument(
+            api_name + " query bounds overflow native coordinates" );
+    }
+    return static_cast<int>( result );
+}
+
 struct overmap_tile_position_less {
     bool operator()( const tripoint_abs_omt &lhs,
                      const tripoint_abs_omt &rhs ) const noexcept {
@@ -611,7 +623,7 @@ overmap_target_options read_overmap_target_options(
             }
             const script_tripoint_coord &offset =
                 entry.second.as<const script_tripoint_coord &>();
-            if( offset.native_origin() != coords::origin::rel ||
+            if( offset.native_origin() != coords::origin::relative ||
                 offset.native_scale() != coords::scale::overmap_terrain ) {
                 throw std::invalid_argument(
                     api_name +
