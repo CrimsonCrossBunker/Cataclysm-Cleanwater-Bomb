@@ -5072,7 +5072,7 @@ local ProfessionItemSubstitutionDefinition = {}
 local RelicProcgenDefinition = {}
 ---@class SpellDefinition
 ---@field bodypart any
----@field caster_when any
+---@field caster_when fun(self:SpellDefinition, handler:string, failure_message:string|LocalizedText):SpellDefinition
 ---@field dynamic_stat any
 ---@field extra_spell any
 ---@field flag any
@@ -5085,7 +5085,7 @@ local RelicProcgenDefinition = {}
 ---@field target any
 ---@field target_monster any
 ---@field target_species any
----@field target_when any
+---@field target_when fun(self:SpellDefinition, handler:string, failure_message:string|LocalizedText):SpellDefinition
 local SpellDefinition = {}
 ---@class TerrainTransformDefinition
 ---@field field any
@@ -5118,6 +5118,7 @@ local WidgetDefinition = {}
 ---@field id string
 ---@field name string|LocalizedText
 ---@field description string|LocalizedText
+---@field cant_remove_reason? string|LocalizedText
 ---@field [string] any
 
 ---@param options BionicDefinitionOptions
@@ -5163,6 +5164,10 @@ function CcbPlatformContent.RelicProcgen(options) end
 ---@field id string
 ---@field name string|LocalizedText
 ---@field description string|LocalizedText
+---@field message? string|LocalizedText
+---@field sound_description? string|LocalizedText
+---@field caster_condition_fail_message? string|LocalizedText
+---@field target_condition_fail_message? string|LocalizedText
 ---@field [string] any
 
 ---@param options SpellDefinitionOptions

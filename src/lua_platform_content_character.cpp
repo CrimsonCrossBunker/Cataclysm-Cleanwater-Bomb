@@ -436,7 +436,7 @@ struct bionic_definition_data {
     std::string id;
     authored_text name;
     authored_text description;
-    std::optional<std::string> cant_remove_reason;
+    std::optional<authored_text> cant_remove_reason;
     std::int64_t activation_energy_millijoules = 0;
     std::int64_t deactivation_energy_millijoules = 0;
     std::int64_t over_time_energy_millijoules = 0;
@@ -492,11 +492,11 @@ struct spell_definition_data {
     std::string id;
     authored_text name;
     authored_text description;
-    std::string message = "You cast %s!";
+    authored_text message{ "You cast %s!", std::nullopt };
     std::string skill = "spellcraft";
     std::string magic_type;
     std::string components;
-    std::string sound_description = "an explosion.";
+    authored_text sound_description{ "an explosion.", std::nullopt };
     std::string sound_type = "combat";
     bool sound_ambient = false;
     std::string sound_id;
@@ -516,9 +516,9 @@ struct spell_definition_data {
     std::string exp_for_level_formula;
     std::optional<std::int64_t> max_book_level;
     std::string caster_condition_handler;
-    std::string caster_condition_fail_message;
+    authored_text caster_condition_fail_message;
     std::string target_condition_handler;
-    std::string target_condition_fail_message;
+    authored_text target_condition_fail_message;
     std::vector<std::string> valid_targets;
     std::vector<std::string> flags;
     std::vector<std::string> targeted_monsters;
@@ -1556,18 +1556,22 @@ struct spell_definition_handle {
     }
 
     spell_definition_handle &caster_when( const std::string &handler,
-                                          const std::string &failure_message ) {
+                                          const sol::object &failure_message ) {
         require_building_handle( token, *definition, "spell" );
+        authored_text message = read_singular_text(
+                                    failure_message, {}, "spell caster failure message" );
         definition->caster_condition_handler = handler;
-        definition->caster_condition_fail_message = failure_message;
+        definition->caster_condition_fail_message = std::move( message );
         return *this;
     }
 
     spell_definition_handle &target_when( const std::string &handler,
-                                          const std::string &failure_message ) {
+                                          const sol::object &failure_message ) {
         require_building_handle( token, *definition, "spell" );
+        authored_text message = read_singular_text(
+                                    failure_message, {}, "spell target failure message" );
         definition->target_condition_handler = handler;
-        definition->target_condition_fail_message = failure_message;
+        definition->target_condition_fail_message = std::move( message );
         return *this;
     }
 
@@ -2521,9 +2525,10 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
                                options.get<sol::object>( "name" ), {}, "bionic name" );
         definition->description = read_singular_text(
                                       options.get<sol::object>( "description" ), {}, "bionic description" );
-        if( const sol::optional<std::string> reason =
-                options.get<sol::optional<std::string>>( "cant_remove_reason" ) ) {
-            definition->cant_remove_reason = *reason;
+        const sol::object reason = options.get<sol::object>( "cant_remove_reason" );
+        if( reason.valid() && reason.get_type() != sol::type::nil ) {
+            definition->cant_remove_reason = read_singular_text(
+                                                reason, {}, "bionic removal reason" );
         }
         definition->activation_energy_millijoules = options.get_or<std::int64_t>(
                     "activation_energy_millijoules", 0 );
@@ -2725,12 +2730,15 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
                                options.get<sol::object>( "name" ), {}, "spell name" );
         definition->description = read_singular_text(
                                       options.get<sol::object>( "description" ), {}, "spell description" );
-        definition->message = options.get_or( "message", definition->message );
+        definition->message = read_singular_text(
+                                  options.get<sol::object>( "message" ), definition->message.raw,
+                                  "spell casting message" );
         definition->skill = options.get_or( "skill", definition->skill );
         definition->magic_type = options.get_or( "magic_type", std::string() );
         definition->components = options.get_or( "components", std::string() );
-        definition->sound_description = options.get_or(
-                                            "sound_description", definition->sound_description );
+        definition->sound_description = read_singular_text(
+                                            options.get<sol::object>( "sound_description" ),
+                                            definition->sound_description.raw, "spell sound description" );
         definition->sound_type = options.get_or( "sound_type", definition->sound_type );
         definition->sound_ambient = options.get_or( "sound_ambient", false );
         definition->sound_id = options.get_or( "sound_id", std::string() );
@@ -2772,12 +2780,14 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
         }
         definition->caster_condition_handler = options.get_or(
                 "caster_condition", options.get_or( "caster_condition_handler", std::string() ) );
-        definition->caster_condition_fail_message = options.get_or(
-                    "caster_condition_fail_message", std::string() );
+        definition->caster_condition_fail_message = read_singular_text(
+                    options.get<sol::object>( "caster_condition_fail_message" ), {},
+                    "spell caster failure message" );
         definition->target_condition_handler = options.get_or(
                 "target_condition", options.get_or( "target_condition_handler", std::string() ) );
-        definition->target_condition_fail_message = options.get_or(
-                    "target_condition_fail_message", std::string() );
+        definition->target_condition_fail_message = read_singular_text(
+                    options.get<sol::object>( "target_condition_fail_message" ), {},
+                    "spell target failure message" );
         definition->teachable = options.get_or( "teachable", true );
         if( const sol::optional<sol::table> channel =
                 options.get<sol::optional<sol::table>>( "channel" ) ) {
@@ -5865,7 +5875,7 @@ bool character_content_transaction::apply_phase(
                     native.name = source.name.native();
                     native.description = source.description.native();
                     if( source.cant_remove_reason ) {
-                        native.cant_remove_reason = no_translation( *source.cant_remove_reason );
+                        native.cant_remove_reason = source.cant_remove_reason->native();
                     }
                     native.power_activate = units::from_millijoule(
                                                 source.activation_energy_millijoules );
@@ -6021,11 +6031,11 @@ bool character_content_transaction::apply_phase(
                     native.was_loaded = true;
                     native.name = source.name.native();
                     native.description = source.description.native();
-                    native.message = no_translation( source.message );
+                    native.message = source.message.native();
                     native.skill = skill_id( source.skill );
                     native.teachable = source.teachable;
                     native.spell_components = requirement_id( source.components );
-                    native.sound_description = no_translation( source.sound_description );
+                    native.sound_description = source.sound_description.native();
                     native.sound_type = *io::string_to_enum_optional<sounds::sound_t>( source.sound_type );
                     native.sound_ambient = source.sound_ambient;
                     native.sound_id = source.sound_id;
@@ -6131,8 +6141,7 @@ bool character_content_transaction::apply_phase(
                                        owner, spell_name, "caster", handler, dialogue ).value_or( false );
                         };
                     }
-                    native.caster_condition_fail_message_ = no_translation(
-                            source.caster_condition_fail_message );
+                    native.caster_condition_fail_message_ = source.caster_condition_fail_message.native();
                     if( !source.target_condition_handler.empty() ) {
 
                         const std::string owner = pimpl_->owner;
@@ -6145,8 +6154,7 @@ bool character_content_transaction::apply_phase(
                                        owner, spell_name, "target", handler, dialogue ).value_or( false );
                         };
                     }
-                    native.target_condition_fail_message_ = no_translation(
-                            source.target_condition_fail_message );
+                    native.target_condition_fail_message_ = source.target_condition_fail_message.native();
                     const auto make_stat = [&]( const std::string & name ) {
                         dbl_or_var result( source.stats.at( name ) );
                         const auto maximum = source.stat_maximums.find( name );
@@ -6939,8 +6947,11 @@ void character_content_transaction::append_fingerprint(
                 hash_part( state, value.id );
                 hash_part( state, value.name );
                 hash_part( state, value.description );
-                hash_part( state, value.cant_remove_reason ?
-                           *value.cant_remove_reason : "no_cant_remove_reason" );
+                if( value.cant_remove_reason ) {
+                    hash_part( state, *value.cant_remove_reason );
+                } else {
+                    hash_part( state, "no_cant_remove_reason" );
+                }
                 hash_part( state, std::to_string( value.activation_energy_millijoules ) );
                 hash_part( state, std::to_string( value.deactivation_energy_millijoules ) );
                 hash_part( state, std::to_string( value.over_time_energy_millijoules ) );
