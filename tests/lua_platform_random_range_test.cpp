@@ -25,6 +25,7 @@
 #include "global_vars.h"
 #include "json.h"
 #include "json_loader.h"
+#include "lua_platform_bindings_coords.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_runtime.h"
