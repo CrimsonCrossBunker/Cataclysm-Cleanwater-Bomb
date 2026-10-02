@@ -497,7 +497,10 @@ assert(calls[3].target == beta and calls[3].id == 'QUICK')
                     result = self.migrate_effect(
                         event,
                         "nothing",
-                        condition={prefix + "has_trait": "QUICK"},
+                        # Event alpha is the avatar/NPC; npc_has_trait reads
+                        # const_actor(true) and cannot query a missing beta.
+                        # npc_add_trait instead uses actor(true)'s alpha fallback.
+                        condition={"u_has_trait": "QUICK"},
                         false_effect={prefix + operation: "VULNERABLECHILL"},
                     )
                     self.assertEqual(len(result.converted), 1)
@@ -577,6 +580,7 @@ assert(calls[3].target == beta and calls[3].id == 'QUICK')
                     {
                         "type": "effect_on_condition",
                         "id": "mutation_effect",
+                        "eoc_type": "EVENT",
                         "required_event": event,
                         "effect": effect,
                         **extra,
@@ -587,6 +591,21 @@ assert(calls[3].target == beta and calls[3].id == 'QUICK')
             return migration.migrate(
                 migration.load_objects([source]), "mutation_mod"
             )
+
+    def test_required_event_alone_does_not_prove_mutation_callback_actor(self):
+        # effect_on_condition::load/notify registers only EVENT EOCs.
+        # A required_event field on an ACTIVATION EOC is not an event trigger.
+        for prefix, event in (("u_", "game_start"), ("npc_", "npc_becomes_hostile")):
+            with self.subTest(prefix=prefix):
+                result = self.migrate_effect(
+                    event, {prefix + "add_trait": "VULNERABLECHILL"},
+                    eoc_type="ACTIVATION",
+                )
+                self.assertEqual(result.converted, [])
+                self.assertTrue(any("needs an explicit Platform trigger" in todo.message
+                                    for todo in result.todos))
+                self.assertNotIn("runtime.on(\"game:" + event,
+                                 result.files[Path("main.lua")])
 
     def test_mutation_type_removal_lowers_only_proven_literal_targets(self):
         for selector, event in (
@@ -630,7 +649,7 @@ assert(calls[3].target == beta and calls[3].id == 'QUICK')
                     result.files[Path("main.lua")],
                 )
                 self.assertIn(
-                    "mutation-type removal requires a proven Character actor",
+                    "mutation-type removal requires an event-exclusive live Character source",
                     result.files[Path("MIGRATION_REPORT.md")],
                 )
 
