@@ -2573,6 +2573,183 @@ return values[5] end)()
     CHECK_FALSE( diagnostic( "after unload" ).valid() );
 }
 
+TEST_CASE( "lua_platform_emitted_indirect_math_reads_match_native_pointer_resolution",
+           "[lua][platform][semantic][variables][math]" )
+{
+    using namespace cata::lua_platform;
+    global_values_restore restore_global_values;
+    clear_active_runtimes();
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::math, sol::lib::string );
+    sol::table ccb = lua.create_table();
+    const auto owner = make_runtime( "indirect_math_reads", 4941, lua );
+    const on_out_of_scope cleanup( []() {
+        clear_active_runtimes();
+    } );
+    install_runtime_api( owner, lua, ccb );
+    set_active_runtimes( { owner } );
+    runtime_world_ready( true );
+    lua["services"] = ccb["services"];
+    REQUIRE( lua.safe_script( R"lua(
+function service_value(result)
+ if not result.ok then error(result.error.message,0) end
+ return result.value
+end
+function evaluate_indirect_math()
+ return (function() local values = {}; local variable_result;
+ variable_result = (function(pointer)
+  if pointer.exists == false then return {ok=true,value={exists=false}} end;
+  if string.sub(pointer.value,1,2)=="u_" then
+   return services.variables.get_number(alpha,string.sub(pointer.value,3),{strict=true})
+  elseif string.sub(pointer.value,1,2)=="n_" then
+   return services.variables.get_number(beta,string.sub(pointer.value,3),{strict=true})
+  elseif string.sub(pointer.value,1,1)=="_" then
+   return services.variables.get_context_number(context and context.data,string.sub(pointer.value,2),{strict=true})
+  else return services.variables.get_global_number(pointer.value,{strict=true}) end
+ end)(service_value(services.variables.get_context_string(context and context.data,"pointer")));
+ if variable_result.ok == false and variable_result.error and variable_result.error.code == "variable_type_mismatch" then
+  services.diagnostic("Math variable v_pointer: " .. variable_result.error.message); return 0.0
+ end;
+ values[1] = (function(result) if result.exists == false then return 0.0 end;
+  return result.value end)(service_value(variable_result));
+ values[2] = 3.0; values[3] = values[1] + values[2]; return values[3] end)()
+end
+)lua", sol::script_pass_on_error ).valid() );
+    avatar alpha;
+    avatar beta;
+    alpha.normalize();
+    beta.normalize();
+    alpha.setID( character_id( 4942 ), true );
+    beta.setID( character_id( 4943 ), true );
+    const auto generation = detail::runtime_world_generation_storage();
+    lua["alpha"] = game_handle::from_creature( alpha,
+                   { "avatar", 4942, 0, 0, 0, {} }, owner->handle_runtime(), generation );
+    lua["beta"] = game_handle::from_creature( beta,
+                  { "avatar", 4943, 0, 0, 0, {} }, owner->handle_runtime(), generation );
+    // The root identifier is ordinary ASCII, but its dynamic target is a raw
+    // native storage key. The empty-key cases differ from bare math identifiers.
+    const std::string raw_key = std::string( "raw\0", 4 ) + std::string( 10000, 'k' );
+    struct pointer_case {
+        int shape; // 0 missing, 1 string, 2 null, 3 number, 4 array, 5 coordinate, 6 bool.
+        std::string text;
+        var_type target_scope;
+        std::string target_key;
+    };
+    const std::vector<pointer_case> pointers = {
+        { 1, "u_" + raw_key, var_type::u, raw_key },
+        { 1, "n_" + raw_key, var_type::npc, raw_key },
+        { 1, "_" + raw_key, var_type::context, raw_key },
+        { 1, raw_key, var_type::global, raw_key },
+        { 1, "v_next", var_type::global, "v_next" },
+        { 1, "x_name", var_type::global, "x_name" },
+        { 1, "__name", var_type::context, "_name" },
+        { 1, "u_", var_type::u, "" },
+        { 1, "n_", var_type::npc, "" },
+        { 1, "_", var_type::context, "" },
+        { 1, "", var_type::global, "" },
+        { 0, "", var_type::global, "" },
+        { 2, "", var_type::global, "" },
+        { 3, "", var_type::global, "" },
+        { 4, "", var_type::global, "" },
+        { 5, "", var_type::global, "" },
+        { 6, "", var_type::global, "" },
+    };
+    eoc_math native;
+    native.deserialize( json_loader::from_string( R"({"math":["v_pointer+3"]})" ) );
+    finalize_conditions();
+    const sol::protected_function evaluate = lua["evaluate_indirect_math"];
+    for( const pointer_case &row : pointers ) {
+        for( int target_shape = 0; target_shape < 6; ++target_shape ) {
+            CAPTURE( row.shape, row.text, row.target_scope, target_shape );
+            get_globals().remove_global_value( row.target_key );
+            alpha.remove_value( row.target_key );
+            beta.remove_value( row.target_key );
+            dialogue conversation( get_talker_for( alpha ), get_talker_for( beta ) );
+            sol::table data = lua.create_table();
+            // If v_next were incorrectly parsed recursively, these lead to a
+            // different value. Native process_variable performs one parse only.
+            conversation.set_value( "next", diag_value( "u_trap" ) );
+            data["next"] = "u_trap";
+            alpha.set_value( "trap", diag_value( 99.0 ) );
+            if( row.shape == 1 ) {
+                conversation.set_value( "pointer", diag_value( row.text ) );
+                data["pointer"] = row.text;
+            } else if( row.shape == 2 ) {
+                conversation.set_value( "pointer", diag_value{} );
+                data["pointer"] = ccb["services"]["types"]["null"].get<sol::object>();
+            } else if( row.shape == 3 || row.shape == 6 ) {
+                conversation.set_value( "pointer", diag_value( 1.0 ) );
+                data["pointer"] = row.shape == 6 ? sol::make_object( lua, true ) :
+                                  sol::make_object( lua, 1.0 );
+            } else if( row.shape == 4 ) {
+                conversation.set_value( "pointer", diag_value( diag_array( 5000, diag_value( 1.0 ) ) ) );
+                sol::table array = lua.create_table();
+                for( int i = 1; i <= 5000; ++i ) {
+                    array[i] = 1.0;
+                }
+                data["pointer"] = array;
+            } else if( row.shape == 5 ) {
+                conversation.set_value( "pointer", diag_value( tripoint_abs_ms( -3, 4, 5 ) ) );
+                data["pointer"] = script_tripoint_coord::from_native(
+                                       coords::origin::abs, coords::scale::map_square, tripoint( -3, 4, 5 ) );
+            }
+            std::optional<diag_value> value;
+            sol::object lua_value = sol::make_object( lua, sol::nil );
+            if( target_shape == 1 ) {
+                value = diag_value{};
+                lua_value = ccb["services"]["types"]["null"].get<sol::object>();
+            } else if( target_shape == 2 ) {
+                value = diag_value( 5.0 );
+                lua_value = sol::make_object( lua, 5.0 );
+            } else if( target_shape == 3 ) {
+                value = diag_value( std::string( "5" ) );
+                lua_value = sol::make_object( lua, std::string( "5" ) );
+            } else if( target_shape == 4 ) {
+                value = diag_value( diag_array( 5000, diag_value( 5.0 ) ) );
+                lua_value = sol::make_object( lua, lua.create_table() );
+            } else if( target_shape == 5 ) {
+                value = diag_value( tripoint_abs_ms( 1, 2, 3 ) );
+                lua_value = sol::make_object( lua, script_tripoint_coord::from_native(
+                                                coords::origin::abs, coords::scale::map_square, tripoint( 1, 2, 3 ) ) );
+            }
+            if( value ) {
+                if( row.target_scope == var_type::global ) {
+                    get_globals().set_global_value( row.target_key, *value );
+                } else if( row.target_scope == var_type::context ) {
+                    conversation.set_value( row.target_key, *value );
+                    data[row.target_key] = lua_value;
+                } else if( row.target_scope == var_type::u ) {
+                    alpha.set_value( row.target_key, *value );
+                } else {
+                    beta.set_value( row.target_key, *value );
+                }
+            }
+            sol::table context = lua.create_table();
+            context["data"] = data;
+            lua["context"] = context;
+            double expected = 0.0;
+            const std::string native_diagnostic = capture_debugmsg_during( [&]() {
+                expected = native.act( conversation );
+            } );
+            sol::protected_function_result call;
+            const std::string lua_diagnostic = capture_debugmsg_during( [&]() {
+                detail::callback_scope callback( *owner );
+                call = evaluate();
+            } );
+            REQUIRE( call.valid() );
+            CHECK( call.get<double>() == expected );
+            CHECK( native_diagnostic.empty() == lua_diagnostic.empty() );
+            if( row.shape == 0 ) {
+                CHECK( expected == 3.0 ); // Missing pointer must not read the global empty key.
+            } else if( target_shape >= 3 ) {
+                CHECK( expected == 0.0 ); // The entire expression aborts on a bad target type.
+                CHECK( native_diagnostic.find( "Type mismatch" ) != std::string::npos );
+                CHECK( lua_diagnostic.find( "Type mismatch" ) != std::string::npos );
+            }
+        }
+    }
+}
+
 TEST_CASE( "native_variable_reads_do_not_share_missing_beta_mutation_fallback",
            "[lua][platform][semantic][variables]" )
 {
