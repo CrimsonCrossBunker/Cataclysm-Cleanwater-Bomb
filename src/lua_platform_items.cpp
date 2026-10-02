@@ -2660,14 +2660,20 @@ sol::table activate_item(
     const int before_charges = actually_used->charges;
     const int before_damage = actually_used->damage();
     const bool before_active = actually_used->is_active();
+    const game_handle actually_used_handle = make_character_item_handle(
+                *character, *actually_used, "platform_item_use_item",
+                runtime_generation, world_generation );
     const bool destroyed = character->invoke_item( entry, method, target );
     const native_handle_result<item> after = item_handle.resolve_item(
                 runtime_generation, world_generation );
+    const native_handle_result<item> actually_used_after_handle =
+        actually_used_handle.resolve_item( runtime_generation, world_generation );
     item *actually_used_after = after ? after.value->get_usable_item( method ) : nullptr;
-    const bool changed = destroyed || !after || ( actually_used_after != nullptr && (
-                                            before_charges != actually_used_after->charges ||
-                                            before_damage != actually_used_after->damage() ||
-                                            before_active != actually_used_after->is_active() ) );
+    const bool changed = destroyed || !after || !actually_used_after_handle ||
+                         ( actually_used_after != nullptr &&
+                           ( before_charges != actually_used_after->charges ||
+                             before_damage != actually_used_after->damage() ||
+                             before_active != actually_used_after->is_active() ) );
     sol::table value = state.create_table();
     value["accepted"] = changed;
     value["destroyed"] = destroyed || !after;
