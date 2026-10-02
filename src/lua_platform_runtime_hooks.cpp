@@ -3092,7 +3092,7 @@ bool invoke_activity_type_handler(
 {
     for( auto iterator = detail::active_runtime_values().rbegin();
          iterator != detail::active_runtime_values().rend(); ++iterator ) {
-        const std::shared_ptr<runtime> &owner = *iterator;
+        const std::shared_ptr<runtime> owner = *iterator;
         if( !owner ) {
             continue;
         }
@@ -3114,18 +3114,36 @@ bool invoke_activity_type_handler(
             return true;
         }
 
-        sol::table payload = owner->lua->create_table();
-        payload["activity_type_id"] = std::string( activity_type_id_value );
-        payload["phase"] = std::string( phase );
-        payload["character"] = platform_creature_handle( *owner, character );
-        payload["moves_total"] = activity.moves_total;
-        payload["moves_left"] = activity.moves_left;
-        payload["index"] = activity.index;
-        payload["position"] = activity.position;
-        payload["name"] = activity.name;
-
-        sol::protected_function callback = handler->second.callback;
+        const safe_reference<Creature> character_reference = character.get_safe_reference();
+        const std::uint64_t activity_identity = activity.identity_generation();
+        const auto same_activity = [&]() {
+            return character_reference && activity &&
+                   activity.identity_generation() == activity_identity;
+        };
+        const std::string dispatched_id( activity_type_id_value );
+        const std::string dispatched_phase( phase );
+        const game_handle character_handle = platform_creature_handle( *owner, character );
+        const int original_moves_total = activity.moves_total;
+        const int original_moves_left = activity.moves_left;
+        const int original_index = activity.index;
+        const int original_position = activity.position;
+        const std::string original_name = activity.name;
         callback_scope scope( *owner );
+        sol::protected_function callback = handler->second.callback;
+        sol::table payload = owner->lua->create_table();
+        payload["activity_type_id"] = dispatched_id;
+        payload["phase"] = dispatched_phase;
+        payload["character"] = character_handle;
+        payload["moves_total"] = original_moves_total;
+        payload["moves_left"] = original_moves_left;
+        payload["index"] = original_index;
+        payload["position"] = original_position;
+        payload["name"] = original_name;
+
+        if( !same_activity() ) {
+            return true;
+        }
+
         const sol::protected_function_result result = callback( payload );
         if( !result.valid() ) {
             report_callback_error( *owner, handler_id, result );
@@ -3141,6 +3159,14 @@ bool invoke_activity_type_handler(
             return true;
         }
 
+        if( !same_activity() ) {
+            return true;
+        }
+        const int current_moves_total = activity.moves_total;
+        const int current_moves_left = activity.moves_left;
+        const int current_index = activity.index;
+        const int current_position = activity.position;
+        const std::string current_name = activity.name;
         try {
             const sol::table returned = result.get<sol::table>();
             const auto integer_field = [&returned]( const std::string & field,
@@ -3164,10 +3190,10 @@ bool invoke_activity_type_handler(
                 return static_cast<int>( value );
             };
 
-            const int moves_total = integer_field( "moves_total", activity.moves_total );
-            const int moves_left = integer_field( "moves_left", activity.moves_left );
-            const int index = integer_field( "index", activity.index );
-            const int position = integer_field( "position", activity.position );
+            const int moves_total = integer_field( "moves_total", current_moves_total );
+            const int moves_left = integer_field( "moves_left", current_moves_left );
+            const int index = integer_field( "index", current_index );
+            const int position = integer_field( "position", current_position );
             if( moves_total < 0 ) {
                 throw std::invalid_argument(
                     "activity result field 'moves_total' cannot be negative" );
@@ -3183,7 +3209,7 @@ bool invoke_activity_type_handler(
                 cancel = candidate->as<bool>();
             }
 
-            std::string name = activity.name;
+            std::string name = current_name;
             if( const sol::optional<sol::object> candidate =
                     returned.get<sol::optional<sol::object>>( "name" ) ) {
                 if( candidate->get_type() != sol::type::string ) {
@@ -3197,6 +3223,9 @@ bool invoke_activity_type_handler(
                 }
             }
 
+            if( !same_activity() ) {
+                return true;
+            }
             activity.moves_total = moves_total;
             activity.moves_left = moves_left;
             activity.index = index;

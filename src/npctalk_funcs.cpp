@@ -378,12 +378,19 @@ void talk_function::dismount( npc &p )
 
 void talk_function::find_mount( npc &p )
 {
+    const shared_ptr_fast<npc> npc_lifetime = g->shared_from( p );
     // first find one nearby
     for( monster &critter : g->all_monsters() ) {
         if( p.can_mount( critter ) ) {
             // keep the horse still for some time, so that NPC can catch up to it and mount it.
-            p.assign_activity( find_mount_activity_actor() );
-            p.chosen_mount = g->shared_from( critter );
+            const shared_ptr_fast<monster> mount_lifetime =
+                g->shared_from( critter );
+            if( !npc_lifetime || !mount_lifetime ) {
+                return;
+            }
+            p.chosen_mount = mount_lifetime;
+            p.assign_activity(
+                find_mount_activity_actor( mount_lifetime->uid().get_value() ) );
             // we found one, that's all we need.
             return;
         }

@@ -9899,7 +9899,7 @@ local CcbItemsApi = {}
 ---@param item_handle GameHandle Exact live source Item handle; no same-id lookup.
 ---@param source_holder CcbItemHolder Exact current holder descriptor for the source.
 ---@param destination_holder CcbItemHolder Explicit destination holder descriptor.
----@param quantity? integer Whole item count or bounded charge count; defaults to the complete source item.
+---@param quantity? integer Whole item count or bounded charge count; defaults to the complete source item. Partial transfer of a container stack with contents returns unsupported_transfer.
 ---@return CcbResult result `value` is a CcbItemTransferResult; destination rejection leaves the source unchanged.
 function CcbItemsApi.transfer(item_handle, source_holder, destination_holder, quantity) end
 ---@param holder CcbItemHolder Explicit Character, map-tile, container-pocket, or vehicle-cargo root.
@@ -11070,16 +11070,24 @@ function CcbPlatformAchievementsApi.complete(id) end
 ---@field resumable boolean
 ---@field progress number Clamped progress from zero through one when the move budget permits it.
 
+---@class CcbPlatformCharacterActivitySnapshot: CcbPlatformActivitySnapshot
+---@field backlog_size integer Total number of suspended native activities.
+---@field backlog CcbPlatformActivitySnapshot[] Detached snapshots of the first 128 suspended activities, in native order.
+---@field backlog_truncated boolean True when backlog_size exceeds the returned backlog length.
+
 ---@class CcbPlatformActivityMutation
 ---@field changed boolean
 ---@field activity CcbPlatformActivitySnapshot Resulting current activity.
+
+---@class CcbPlatformActivityCancellation: CcbPlatformActivityMutation
+---@field activity CcbPlatformCharacterActivitySnapshot Resulting current activity and backlog.
 
 ---@class CcbPlatformActivitiesApi
 local CcbPlatformActivitiesApi = {}
 
 ---Read a detached snapshot of one Character's current native activity.
 ---@param character GameHandle Character handle.
----@return CcbResult result `value` is a CcbPlatformActivitySnapshot.
+---@return CcbResult result `value` is a CcbPlatformCharacterActivitySnapshot.
 function CcbPlatformActivitiesApi.snapshot(character) end
 
 ---Assign a plain time-based activity through native Character assignment rules.
@@ -11093,7 +11101,7 @@ function CcbPlatformActivitiesApi.assign_timed(character, id, duration) end
 
 ---Cancel the current activity through native cleanup, backlog, and resumption rules.
 ---@param character GameHandle Character handle.
----@return CcbResult result `value` is a CcbPlatformActivityMutation.
+---@return CcbResult result `value` is a CcbPlatformActivityCancellation.
 function CcbPlatformActivitiesApi.cancel(character) end
 
 ---@class CcbPlatformWoundSnapshot
