@@ -21,6 +21,7 @@
 #include "dialogue_helpers.h"
 #include "global_vars.h"
 #include "json_loader.h"
+#include "lua_platform_bindings_coords.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_runtime.h"
@@ -78,7 +79,7 @@ struct assignment_case {
     double expected_value;
     bool expects_error = false;
     bool expects_pointer_type_diagnostic = false;
-    std::optional<rhs_case> rhs;
+    std::optional<rhs_case> rhs = std::nullopt;
     bool verifies_single_parse = false;
     unsigned int pointer_type_diagnostic_count = 1;
 };
@@ -259,7 +260,7 @@ void check_lua_value( const assignment_case &test_case, const stored_value &expe
     if( test_case.target.scope == storage_scope::context ) {
         const sol::object actual = context_data.raw_get<sol::object>( test_case.target.key );
         if( std::holds_alternative<std::monostate>( expected ) ) {
-            CHECK_FALSE( actual.valid() && actual.get_type() != sol::type::nil );
+            CHECK_FALSE( ( actual.valid() && actual.get_type() != sol::type::nil ) );
         } else if( const double *number = std::get_if<double>( &expected ) ) {
             REQUIRE( actual.valid() );
             REQUIRE( actual.get_type() == sol::type::number );
@@ -574,7 +575,7 @@ TEST_CASE( "lua_platform_indirect_assignment_migration_matches_native_math",
                 context_data["pointer"] = lua.create_table();
                 break;
             case pointer_shape::coordinate:
-                context_data["pointer"] = script_tripoint_coord::from_native(
+                context_data["pointer"] = platform::script_tripoint_coord::from_native(
                                                coords::origin::abs, coords::scale::map_square,
                                                tripoint( 1, 2, 3 ) );
                 break;
