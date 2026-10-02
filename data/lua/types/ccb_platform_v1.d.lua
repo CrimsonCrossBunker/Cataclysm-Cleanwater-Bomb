@@ -5114,8 +5114,14 @@ local VehicleSpawnDefinition = {}
 ---@field flag any
 ---@field id any
 local WidgetDefinition = {}
----@param options CcbLuaValue
----@return any
+---@class BionicDefinitionOptions
+---@field id string
+---@field name string|LocalizedText
+---@field description string|LocalizedText
+---@field [string] any
+
+---@param options BionicDefinitionOptions
+---@return BionicDefinition
 function CcbPlatformContent.Bionic(options) end
 ---@param options CcbLuaValue
 ---@return any
@@ -5153,8 +5159,14 @@ function CcbPlatformContent.ProfessionItemSubstitution(options) end
 ---@param options CcbLuaValue
 ---@return any
 function CcbPlatformContent.RelicProcgen(options) end
----@param options CcbLuaValue
----@return any
+---@class SpellDefinitionOptions
+---@field id string
+---@field name string|LocalizedText
+---@field description string|LocalizedText
+---@field [string] any
+
+---@param options SpellDefinitionOptions
+---@return SpellDefinition
 function CcbPlatformContent.Spell(options) end
 ---@param options CcbLuaValue
 ---@return any

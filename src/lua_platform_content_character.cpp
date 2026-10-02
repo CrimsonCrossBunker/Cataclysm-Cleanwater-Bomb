@@ -1,4 +1,5 @@
 #include "lua_platform_content_character.h"
+#include "lua_platform_content_text.h"
 
 #include "lua_platform_runtime.h"
 #include "lua_platform_runtime_internal.h"
@@ -64,6 +65,9 @@ extern "C" {
 
 namespace cata::lua_platform
 {
+
+using detail::authored_text;
+using detail::read_singular_text;
 
 using detail::invoke_enchantment_condition_handler;
 using detail::invoke_enchantment_number_handler;
@@ -180,6 +184,18 @@ void hash_part( std::uint64_t &state, const std::string_view value )
     append( ":" );
     append( value );
     append( ";" );
+}
+
+void hash_part( std::uint64_t &state, const authored_text &text )
+{
+    hash_part( state, text.raw );
+    hash_part( state, text.translated ? "localized" : "literal" );
+    if( text.translated ) {
+        hash_part( state, text.translated->context ? "context" : "no_context" );
+        if( text.translated->context ) {
+            hash_part( state, *text.translated->context );
+        }
+    }
 }
 
 template<typename Registration>
@@ -418,8 +434,8 @@ struct bionic_protection_definition_data {
 
 struct bionic_definition_data {
     std::string id;
-    std::string name;
-    std::string description;
+    authored_text name;
+    authored_text description;
     std::optional<std::string> cant_remove_reason;
     std::int64_t activation_energy_millijoules = 0;
     std::int64_t deactivation_energy_millijoules = 0;
@@ -474,8 +490,8 @@ struct bionic_definition_data {
 
 struct spell_definition_data {
     std::string id;
-    std::string name;
-    std::string description;
+    authored_text name;
+    authored_text description;
     std::string message = "You cast %s!";
     std::string skill = "spellcraft";
     std::string magic_type;
@@ -2501,8 +2517,10 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
         }
         auto definition = std::make_shared<bionic_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", std::string() );
-        definition->description = options.get_or( "description", std::string() );
+        definition->name = read_singular_text(
+                               options.get<sol::object>( "name" ), {}, "bionic name" );
+        definition->description = read_singular_text(
+                                      options.get<sol::object>( "description" ), {}, "bionic description" );
         if( const sol::optional<std::string> reason =
                 options.get<sol::optional<std::string>>( "cant_remove_reason" ) ) {
             definition->cant_remove_reason = *reason;
@@ -2703,8 +2721,10 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
         }
         auto definition = std::make_shared<spell_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", std::string() );
-        definition->description = options.get_or( "description", std::string() );
+        definition->name = read_singular_text(
+                               options.get<sol::object>( "name" ), {}, "spell name" );
+        definition->description = read_singular_text(
+                                      options.get<sol::object>( "description" ), {}, "spell description" );
         definition->message = options.get_or( "message", definition->message );
         definition->skill = options.get_or( "skill", definition->skill );
         definition->magic_type = options.get_or( "magic_type", std::string() );
@@ -5842,8 +5862,8 @@ bool character_content_transaction::apply_phase(
                     native.id = id;
                     native.src.emplace_back( id, mod_id( pimpl_->owner ) );
                     native.was_loaded = true;
-                    native.name = no_translation( source.name );
-                    native.description = no_translation( source.description );
+                    native.name = source.name.native();
+                    native.description = source.description.native();
                     if( source.cant_remove_reason ) {
                         native.cant_remove_reason = no_translation( *source.cant_remove_reason );
                     }
@@ -5999,8 +6019,8 @@ bool character_content_transaction::apply_phase(
                     native.src_mod = mod_id( pimpl_->owner );
                     native.src.emplace_back( id, native.src_mod );
                     native.was_loaded = true;
-                    native.name = no_translation( source.name );
-                    native.description = no_translation( source.description );
+                    native.name = source.name.native();
+                    native.description = source.description.native();
                     native.message = no_translation( source.message );
                     native.skill = skill_id( source.skill );
                     native.teachable = source.teachable;
