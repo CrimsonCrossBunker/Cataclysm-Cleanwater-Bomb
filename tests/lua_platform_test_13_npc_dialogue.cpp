@@ -1892,7 +1892,6 @@ TEST_CASE( "lua_platform_dialogue_clear_mission_matches_native_talk_effect",
     mission::clear_all();
     struct mission_cleanup {
         ~mission_cleanup() {
-            cata::lua_platform::clear_active_runtimes();
             mission::clear_all();
         }
     } cleanup;
@@ -1954,6 +1953,9 @@ TEST_CASE( "lua_platform_dialogue_clear_mission_matches_native_talk_effect",
     sol::table ccb = owner_lua.create_table();
     const std::shared_ptr<cata::lua_platform::runtime> owner_runtime =
         cata::lua_platform::make_runtime( "dialogue_clear_mission", 93, owner_lua );
+    on_out_of_scope runtime_cleanup( []() {
+        cata::lua_platform::clear_active_runtimes();
+    } );
     cata::lua_platform::install_runtime_api( owner_runtime, owner_lua, ccb );
     owner_lua["ccb"] = ccb;
     owner_lua.script( R"(
