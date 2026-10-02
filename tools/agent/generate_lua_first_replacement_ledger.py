@@ -2829,7 +2829,7 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "npc_run_vehicle_eocs"): "services.vehicles",
     ("eoc-effects", "u_run_vehicle_eocs"): "services.vehicles",
     ("eoc-effects", "copy_location"): "services.world",
-    ("eoc-effects", "location_variable_adjust"): "services.map",
+    ("eoc-effects", "location_variable_adjust"): "services.coords-and-variables",
     ("eoc-effects", "mapgen_update"): "services.map",
     ("eoc-effects", "npc_location_variable"): "services.map",
     ("eoc-effects", "npc_map_run_eocs"): "services.map",
@@ -3031,7 +3031,8 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
         "tests/lua_platform_mutations_test.cpp",
     ],
     ("eoc-effects", "location_variable_adjust"): [
-        "src/npctalk.cpp", "src/lua_platform_bindings_values.cpp",
+        "src/npctalk.cpp", "src/lua_platform_bindings_coords.cpp",
+        "src/lua_platform_variables.cpp", "tests/lua_platform_variable_native_key_test.cpp",
         "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
     ],
     ("eoc-effects", "npc_location_variable"): [

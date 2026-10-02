@@ -920,6 +920,127 @@ TEST_CASE( "lua_platform_registered_reflection_rejects_frame_and_range_errors",
                                      tripoint( std::numeric_limits<int>::min(), 0, 0 ) ), zero ).valid() );
 }
 
+TEST_CASE( "lua_platform_location_adjust_matches_native_fractional_units_and_missing_coordinates",
+           "[lua][platform][semantic][variables][coords]" )
+{
+    global_values_restore restore_global_values;
+    avatar alpha;
+    variable_api_fixture fixture;
+    fixture.lua.open_libraries( sol::lib::math );
+    fixture.lua["services"] = fixture.services;
+    REQUIRE( fixture.lua.safe_script( R"(
+        local function value(result) assert(result.ok); return result.value end
+        function adjust_location(key, x, y, z, overmap, override, data)
+            local function truncate_axis(number)
+                assert(number == number and number ~= math.huge and number ~= -math.huge)
+                local axis = math.modf(number)
+                assert(axis >= -2147483648 and axis <= 2147483647)
+                return axis
+            end
+            local read = value(services.variables.get_global_tripoint(key))
+            local location = read.exists and read.value or services.coords.tripoint_abs_ms(0, 0, 0)
+            local factor = overmap and services.coords.tripoint_rel_omt(1, 0, 0):to('ms').x or 1
+            location = location:add(services.coords.tripoint_rel_ms(
+                truncate_axis(x * factor), truncate_axis(y * factor), 0))
+            z = truncate_axis(z)
+            if override then location = services.coords.tripoint_abs_ms(location.x, location.y, z)
+            else location = location:add(services.coords.tripoint_rel_ms(0, 0, z)) end
+            data.result = location
+            return location
+        end
+    )", sol::script_pass_on_error ).valid() );
+    const sol::protected_function adjust = fixture.lua["adjust_location"];
+    struct adjustment_case {
+        double x;
+        double y;
+        double z;
+        bool overmap;
+        bool override_z;
+        tripoint expected_offset;
+    };
+    const std::array<adjustment_case, 6> cases = {{
+            { -1.7, 2.7, -0.7, false, false, tripoint( -1, 2, 0 ) },
+            { -1.7, 2.7, -0.7, true, false, tripoint( -40, 64, 0 ) },
+            { -1.7, 2.7, -0.7, true, true, tripoint( -40, 64, 0 ) },
+            { 0.0, 0.0, 3.9, false, false, tripoint( 0, 0, 3 ) },
+            { 0.0, 0.0, -3.9, false, true, tripoint( 0, 0, -3 ) },
+            { 2147483647.9, -2147483648.9, 0.0, false, false,
+              tripoint( std::numeric_limits<int>::max(), std::numeric_limits<int>::min(), 0 ) }
+        }};
+    const std::vector<std::optional<diag_value>> sources = {
+        std::nullopt, diag_value{}, diag_value( tripoint_abs_ms( 0, 0, 5 ) ),
+        diag_value( diag_value::legacy_value( tripoint( 0, 0, 5 ).to_string() ) )
+    };
+    for( const std::string &key : { std::string{}, std::string( "raw\0key", 7 ),
+                                   std::string( 10000, 'k' ) } ) {
+        for( std::size_t source_index = 0; source_index < sources.size(); ++source_index ) {
+            for( const adjustment_case &adjustment : cases ) {
+                CAPTURE( key.size(), source_index, adjustment.x, adjustment.y,
+                         adjustment.z, adjustment.overmap, adjustment.override_z );
+                const auto reset_source = [&]() {
+                    get_globals().remove_global_value( key );
+                    if( sources[source_index] ) {
+                        get_globals().set_global_value( key, *sources[source_index] );
+                    }
+                };
+                reset_source();
+                dialogue conversation( get_talker_for( alpha ), nullptr );
+                std::ostringstream input;
+                {
+                    JsonOut writer( input );
+                    writer.start_object();
+                    writer.member( "location_variable_adjust" );
+                    writer.start_object();
+                    writer.member( "global_val", key );
+                    writer.end_object();
+                    writer.member( "output_var" );
+                    writer.start_object();
+                    writer.member( "context_val", "result" );
+                    writer.end_object();
+                    writer.member( "x_adjust", adjustment.x );
+                    writer.member( "y_adjust", adjustment.y );
+                    writer.member( "z_adjust", adjustment.z );
+                    writer.member( "overmap_tile", adjustment.overmap );
+                    writer.member( "z_override", adjustment.override_z );
+                    writer.end_object();
+                }
+                talk_effect_t native_effect;
+                native_effect.parse_sub_effect( json_loader::from_string( input.str() ).get_object(),
+                                                "location_adjust_coordinate_comparison" );
+                for( const talk_effect_fun_t &effect : native_effect.effects ) {
+                    effect( conversation );
+                }
+                const tripoint expected = conversation.get_value( "result" ).tripoint().raw();
+                const int base_z = source_index >= 2 && !adjustment.override_z ? 5 : 0;
+                CHECK( expected == tripoint( adjustment.expected_offset.x,
+                                             adjustment.expected_offset.y, adjustment.expected_offset.z + base_z ) );
+                reset_source(); // Read the original legacy value, not Native's conversion cache.
+                sol::table data = fixture.lua.create_table();
+                sol::table old = fixture.lua.create_table();
+                for( int index = 1; index <= 5000; ++index ) {
+                    old[index] = 4.0;
+                }
+                data["result"] = old;
+                const sol::protected_function_result call = adjust(
+                            key, adjustment.x, adjustment.y, adjustment.z,
+                            adjustment.overmap, adjustment.override_z, data );
+                REQUIRE( call.valid() );
+                CHECK( call.get<cata::lua_platform::script_tripoint_coord>().to_native() == expected );
+                CHECK( data["result"].get<cata::lua_platform::script_tripoint_coord>().to_native() == expected );
+            }
+        }
+    }
+    sol::table data = fixture.lua.create_table();
+    for( const double invalid : { std::numeric_limits<double>::infinity(),
+                                 std::numeric_limits<double>::quiet_NaN(), 2147483648.0, -2147483649.0 } ) {
+        // Native floating-to-int conversion has no defined result here; reject
+        // before writing rather than claiming parity with undefined behavior.
+        data["result"] = "untouched";
+        CHECK_FALSE( adjust( "missing", invalid, 0.0, 0.0, false, false, data ).valid() );
+        CHECK( data["result"].get<std::string>() == "untouched" );
+    }
+}
+
 TEST_CASE( "native_variable_reads_do_not_share_missing_beta_mutation_fallback",
            "[lua][platform][semantic][variables]" )
 {

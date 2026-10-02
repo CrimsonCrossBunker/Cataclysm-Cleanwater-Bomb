@@ -34,6 +34,13 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
         self.assertIn("src/lua_platform_variables.cpp", entry["evidence"])
         self.assertIn("tests/lua_platform_variable_native_key_test.cpp", entry["evidence"])
 
+    def test_location_adjust_uses_coordinate_and_variable_services_without_acceptance_claim(self):
+        entry = disposition("eoc-effects", "location_variable_adjust", {})
+        self.assertEqual(entry["target"], "services.coords-and-variables")
+        self.assertEqual(entry["status"], "bounded_implemented_unverified")
+        self.assertIn("src/lua_platform_variables.cpp", entry["evidence"])
+        self.assertIn("tests/lua_platform_variable_native_key_test.cpp", entry["evidence"])
+
     def test_engine_backed_control_flow_is_not_exempt_from_acceptance(self):
         entries = {(entry["inventory"], entry["selector"]): entry
                    for entry in build_ledger()["entries"]}

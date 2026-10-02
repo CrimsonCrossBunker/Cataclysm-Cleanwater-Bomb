@@ -34582,11 +34582,11 @@ assert(context.data.out.x==0 and context.data.out.y==0 and context.data.out.z==0
             self.assertEqual(len(result.converted), 10)
             self.assertEqual(len(result.partial), 1)
             self.assertIn(
-                'services.variables.get(actor, "origin"))',
+                'services.variables.get_tripoint(actor, "origin"))',
                 main,
             )
             self.assertIn(
-                'services.coords.tripoint_rel_ms(math.max(-1000000',
+                'location:add(services.coords.tripoint_rel_ms(x_adjust, y_adjust, 0))',
                 main,
             )
             self.assertNotIn('services.targeting.choose_map_square("Pick a tile"', main)
@@ -34901,7 +34901,7 @@ assert(context.data.picked==selected)
             self.assertNotIn("tripoint_omt_ms(", main)
             self.assertNotIn("math.floor(", main)
 
-    def test_fractional_overmap_tile_location_adjustment_stays_todo(
+    def test_fractional_overmap_tile_location_adjustment_multiplies_before_truncation(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -34927,10 +34927,125 @@ assert(context.data.picked==selected)
             )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(result.converted, [])
-            self.assertTrue(result.partial)
-            self.assertTrue(result.todos)
-            self.assertNotIn("services.coords.tripoint_rel_omt(", main)
+            self.assertEqual(len(result.converted), 1)
+            self.assertEqual(result.partial, [])
+            self.assertEqual(result.todos, [])
+            self.assertIn('truncate_axis((-1.7) * map_squares_per_omt)', main)
+            self.assertIn('tripoint_rel_omt(1, 0, 0):to("ms").x', main)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_location_adjust_emitted_lua_handles_missing_fractional_and_cross_scope_values(self) -> None:
+        owners = {"u": ("alpha", "character"), "npc": ("beta", "monster")}
+        cases = [
+            ({"x_adjust": -1.7, "y_adjust": 2.7, "z_adjust": -0.7}, (-1, 2, 0)),
+            ({"x_adjust": -1.7, "y_adjust": 2.7, "z_adjust": -0.7,
+              "overmap_tile": True}, (-40, 64, 0)),
+            ({"x_adjust": {"context_val": "dx", "default": -1.7},
+              "y_adjust": {"global_val": "dy", "default": 2.7},
+              "z_adjust": {"npc_val": "dz", "default": 3.9},
+              "z_override": True, "overmap_tile": True}, (-40, 0, 3)),
+            ({"x_adjust": 2147483647.9, "y_adjust": -2147483648.9}, (2147483647, -2147483648, 0)),
+        ]
+        raw_key = "k" * 10000 + "\0tail"
+        for adjustments, expected in cases:
+            effect = {"location_variable_adjust": {"context_val": "missing", "default": "ignored"},
+                      "output_var": {"global_val": raw_key}, **adjustments}
+            lines = migrate_lua_first.render_static_location_variable_adjust(
+                effect, "location_variable_adjust", False, False, owners)
+            self.assertIsNotNone(lines)
+            self.assertNotIn("ignored", "\n".join(lines or []))
+            script = r"""
+local alpha,beta={},{}
+local context={data={}}
+local writes=0
+local function point(x,y,z)
+ assert(x==math.modf(x) and y==math.modf(y) and z==math.modf(z))
+ assert(x>=-2147483648 and x<=2147483647 and y>=-2147483648 and y<=2147483647)
+ return {x=x,y=y,z=z,add=function(self,other) return point(self.x+other.x,self.y+other.y,self.z+other.z) end,
+ to=function(self,scale) assert(scale=='ms');return point(self.x*24,self.y*24,self.z) end}
+end
+local services={coords={tripoint_abs_ms=point,tripoint_rel_ms=point,tripoint_rel_omt=point},
+ variables={get_context_tripoint=function(data,key)
+ assert(data==context.data and key=='missing');return {ok=true,value={exists=false}}
+end,get_context_number=function(data,key)
+ assert(key=='dx');return {ok=true,value={exists=false}}
+end,get_global_number=function(key)
+ assert(key=='dy');return {ok=true,value={exists=true,value=0}}
+end,get_number=function(owner,key)
+ assert(owner==beta and key=='dz');return {ok=true,value={exists=false}}
+end,set_global=function(key,value,options)
+ assert(key==KEY and options.include_before==false)
+ assert(value.x==EXPECTED_X and value.y==EXPECTED_Y and value.z==EXPECTED_Z)
+ writes=writes+1;return {ok=true,value={}}
+end}}
+local function service_value(result) assert(result.ok);return result.value end
+BODY
+assert(writes==1)
+""".replace("BODY", "\n".join(lines or [])).replace("KEY", migrate_lua_first.lua_quote(raw_key))
+            for name, number in zip(("EXPECTED_X", "EXPECTED_Y", "EXPECTED_Z"), expected):
+                script = script.replace(name, str(number))
+            result = subprocess.run(["lua", "-"], input=script, text=True,
+                                    capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_native_number_expression_preserves_pointer_presence_default_and_raw_key(self) -> None:
+        owners = {"u": ("alpha", "character"), "npc": ("beta", "monster")}
+        raw_key = "raw\0" + "k" * 10000
+        expression = migrate_lua_first.render_native_number_expression(
+            {"var_val": raw_key, "default": -1.7}, owners)
+        self.assertIsNotNone(expression)
+        script = r"""
+local alpha,beta={},{}
+local context={data={}}
+local pointer,exists,number,reads
+local services={variables={get_context_string=function(data,key)
+ assert(data==context.data and key==KEY);return {ok=true,value={exists=pointer~=nil,value=pointer}}
+end}}
+local function read(scope,key)
+ reads=reads+1;assert(scope==expected_scope and key==expected_key)
+ return {ok=true,value={exists=exists,value=number}}
+end
+services.variables.get_number=function(owner,key) return read(owner==alpha and 'u' or 'npc',key) end
+services.variables.get_global_number=function(key) return read('global',key) end
+services.variables.get_context_number=function(data,key) assert(data==context.data);return read('context',key) end
+local function service_value(result) assert(result.ok);return result.value end
+local function evaluate() return EXPRESSION end
+for _,case in ipairs({{'u_out','u','out'},{'n_out','npc','out'},{'_out','context','out'},
+ {'var_u_out','global','var_u_out'},{'','global',''},{'n_','npc',''},
+ {'n_'..KEY,'npc',KEY}}) do
+ pointer=case[1];expected_scope=case[2];expected_key=case[3]
+ for _,value in ipairs({0,-0.7,2147483647.9,-2147483648.9}) do
+  exists=true;number=value;reads=0;assert(evaluate()==value and reads==1)
+ end
+ exists=false;number=nil;reads=0;assert(evaluate()==-1.7 and reads==1)
+end
+pointer=nil;reads=0;assert(evaluate()==-1.7 and reads==0)
+""".replace("EXPRESSION", expression or "").replace("KEY", migrate_lua_first.lua_quote(raw_key))
+        result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_location_adjust_requires_storage_proofs_in_normal_and_false_branches(self) -> None:
+        for event, supported in (("character_melee_attacks_monster", True),
+                                 ("character_kills_character", False), ("npc_becomes_hostile", False)):
+            for branch in ("effect", "false_effect"):
+                source = migrate_lua_first.SourceObject(Path("adjust_owners.json"), 0, {
+                    "type": "effect_on_condition", "id": "adjust_owners", "eoc_type": "EVENT",
+                    "required_event": event, "condition": "is_day", "effect": [], branch: {
+                        "location_variable_adjust": {"u_val": "center"},
+                        "output_var": {"npc_val": "out"}, "x_adjust": {"npc_val": "dx"}}})
+                result = migrate_lua_first.MigrationResult()
+                rendered = migrate_lua_first.render_eoc(source, result)
+                self.assertEqual(not result.todos, supported)
+                self.assertEqual("local function truncate_axis(value)" in rendered, supported)
+                if supported:
+                    self.assertIn('get_number(context.actors.interlocutor, "dx")', rendered)
+                    self.assertIn('set(context.actors.interlocutor, "out", location', rendered)
+        # These shapes are still open work, not guessed or clamped conversions.
+        for adjustment in ([1, 2], {"math": ["rand(10)"]}):
+            self.assertIsNone(migrate_lua_first.render_static_location_variable_adjust({
+                "location_variable_adjust": {"context_val": "center"}, "x_adjust": adjustment},
+                "location_variable_adjust", False, False))
 
     def test_location_variable_search_applies_coordinate_adjustment_once(
         self,
@@ -34966,42 +35081,25 @@ assert(context.data.picked==selected)
             self.assertEqual(main.count("math.modf("), 1)
             self.assertNotIn("x_adjust =", main)
 
-    def test_lowers_var_indirected_coordinate_writes_with_resolved_variable_service(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            source = Path(temporary) / "source.json"
-            source.write_text(
-                json.dumps(
-                    {
-                        "type": "effect_on_condition",
-                        "id": "indirected_coordinate",
-                        "required_event": "game_start",
-                        "effect": {
-                            "location_variable_adjust": {"var_val": "input_name"},
-                            "output_var": {"var_val": "output_name"},
-                            "x_adjust": 1,
-                        },
-                        "eoc_type": "EVENT",
-                    }
-                ),
-                encoding="utf-8",
-            )
-            result = migrate_lua_first.migrate(
-                migrate_lua_first.load_objects([source]), "indirected_coordinate_mod"
-            )
-            main = result.files[Path("main.lua")]
-            report = result.files[Path("MIGRATION_REPORT.md")]
-
-            self.assertEqual(len(result.converted), 1)
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
-            self.assertIn(
-                'services.variables.resolve(\n'
-                '        context.data, actor, "var", "input_name")',
-                main,
-            )
-            self.assertIn('services.variables.set_resolved(', main)
-            self.assertIn('"var", "output_name", location', main)
-            self.assertNotIn("typed coordinate variables", report)
+    def test_var_indirected_coordinate_adjust_requires_both_native_storage_owners(self) -> None:
+        for event, supported in (("game_start", False), ("character_melee_attacks_monster", True)):
+            source = migrate_lua_first.SourceObject(Path("indirected_coordinate.json"), 0, {
+                "type": "effect_on_condition", "id": "indirected_coordinate", "eoc_type": "EVENT",
+                "required_event": event, "effect": {
+                    "location_variable_adjust": {"var_val": "input_name"},
+                    "output_var": {"var_val": "output_name"}, "x_adjust": 1}})
+            result = migrate_lua_first.MigrationResult()
+            main = migrate_lua_first.render_eoc(source, result)
+            self.assertEqual(not result.todos, supported)
+            self.assertNotIn("services.variables.resolve(", main)
+            self.assertNotIn("services.variables.set_resolved(", main)
+            if supported:
+                self.assertIn('get_context_string(context and context.data, "input_name")', main)
+                self.assertIn('context and context.data, "output_name"', main)
+                self.assertIn('get_tripoint(context.actors.interlocutor, string.sub(pointer.value, 3))', main)
+                self.assertIn('include_before = false', main)
+            else:
+                self.assertIn("TODO: translate location-variable arithmetic", main)
 
     def test_migrates_region_settings_ravine(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

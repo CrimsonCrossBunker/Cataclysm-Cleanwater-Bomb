@@ -5911,6 +5911,12 @@ def render_static_false_effect(
         if rendered is None:
             return None
         return [line.replace("    ", "        ", 1) for line in rendered]
+    if isinstance(effect, dict) and "location_variable_adjust" in effect:
+        rendered = render_static_location_variable_adjust(
+            effect, "location_variable_adjust", False, False, effect_actor_targets)
+        if rendered is None:
+            return None
+        return [line.replace("    ", "        ", 1) for line in rendered]
     if isinstance(effect, dict) and "mirror_coordinates" in effect:
         rendered = render_static_mirror_coordinates(
             effect, False, False, effect_actor_targets)
@@ -24462,126 +24468,52 @@ def render_static_location_variable_adjust(
     key: str,
     avatar_actor_proven: bool,
     npc_actor_proven: bool,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> list[str] | None:
-    """Lower same-scope literal coordinate arithmetic without random search."""
-    comment_keys = {
-        name for name in effect
-        if isinstance(name, str) and name.startswith("//")
-    }
+    """Adjust typed Native coordinates using proven read and write storage."""
+    del avatar_actor_proven, npc_actor_proven
+    comment_keys = {name for name in effect if isinstance(name, str) and name.startswith("//")}
     if key not in effect or set(effect) - comment_keys - {
-        key, "x_adjust", "y_adjust", "z_adjust", "z_override", "overmap_tile",
-        "output_var",
+        key, "x_adjust", "y_adjust", "z_adjust", "z_override", "overmap_tile", "output_var",
     }:
         return None
-    source = _coordinate_variable_descriptor(effect[key])
-    if source is None:
-        return None
+    source = render_native_coordinate_variable_expression(effect[key], effect_actor_targets)
     z_override = effect.get("z_override", False)
     overmap_tile = effect.get("overmap_tile", False)
-    if not isinstance(z_override, bool) or not isinstance(overmap_tile, bool):
+    if source is None or not isinstance(z_override, bool) or not isinstance(overmap_tile, bool):
         return None
-    output = source
-    if "output_var" in effect:
-        output = _coordinate_variable_descriptor(effect["output_var"])
-        if output is None or output[0] != source[0]:
-            return None
-    x_adjust = _coordinate_numeric_expression(
-        effect.get("x_adjust", 0), avatar_actor_proven, npc_actor_proven,
-        require_integer=overmap_tile,
-    )
-    y_adjust = _coordinate_numeric_expression(
-        effect.get("y_adjust", 0), avatar_actor_proven, npc_actor_proven,
-        require_integer=overmap_tile,
-    )
-    z_adjust = _coordinate_numeric_expression(
-        effect.get("z_adjust", 0), avatar_actor_proven, npc_actor_proven
-    )
-    if x_adjust is None or y_adjust is None or z_adjust is None:
+    adjustments = [render_native_number_expression(effect.get(name, 0), effect_actor_targets)
+                   for name in ("x_adjust", "y_adjust", "z_adjust")]
+    if any(expression is None for expression in adjustments):
         return None
-    offset = (
-        "services.coords.tripoint_rel_omt("
-        f"{x_adjust}, {y_adjust}, 0):to(\"ms\")"
-        if overmap_tile else
-        f"services.coords.tripoint_rel_ms({x_adjust}, {y_adjust}, 0)"
-    )
-    if source[0] in {"u", "npc"}:
-        source_handle = _coordinate_variable_handle(
-            source[0], avatar_actor_proven, npc_actor_proven
-        )
-        if source_handle is None:
-            return None
-        read = (
-            "service_value(services.variables.get("
-            f"{source_handle}, {lua_quote(source[1])}))"
-        )
-        source_value = "location_result.value"
-        lines = [
-            f"    local location_result = {read}",
-            "    if location_result.exists and location_result.value ~= nil then",
-        ]
-    elif source[0] == "global":
-        lines = [
-            "    local location_result = service_value(services.variables.get_global("
-            f"{lua_quote(source[1])}))",
-            "    if location_result.exists and location_result.value ~= nil then",
-        ]
-        source_value = "location_result.value"
-    elif source[0] == "context":
-        lines = [
-            f"    local location = context.data[{lua_quote(source[1])}]",
-            "    if location ~= nil then",
-        ]
-        source_value = "location"
-    else:
-        variable_actor = (
-            "actor" if (avatar_actor_proven or npc_actor_proven)
-            else "services.characters.avatar()"
-        )
-        lines = [
-            "    local location_result = service_value(services.variables.resolve(",
-            f"        context.data, {variable_actor}, \"var\", {lua_quote(source[1])}))",
-            "    if location_result.exists and location_result.value ~= nil then",
-        ]
-        source_value = "location_result.value"
-    lines.append(f"        local location = {source_value}:add({offset})")
+    writes = render_native_coordinate_variable_write_lines(
+        effect.get("output_var", effect[key]), "location", effect_actor_targets)
+    if writes is None:
+        return None
+    factor = " * map_squares_per_omt" if overmap_tile else ""
+    lines = [
+        "    do",
+        *(['        local map_squares_per_omt = services.coords.tripoint_rel_omt(1, 0, 0):to("ms").x']
+          if overmap_tile else []),
+        "        local function truncate_axis(value)",
+        "            assert(value == value and value ~= math.huge and value ~= -math.huge,",
+        '                "coordinate adjustment must be finite")',
+        "            local axis = math.modf(value)",
+        "            assert(axis >= -2147483648 and axis <= 2147483647,",
+        '                "coordinate adjustment exceeds the signed engine range")',
+        "            return axis",
+        "        end",
+        f"        local location = {source}",
+        f"        local x_adjust = truncate_axis(({adjustments[0]}){factor})",
+        f"        local y_adjust = truncate_axis(({adjustments[1]}){factor})",
+        "        location = location:add(services.coords.tripoint_rel_ms(x_adjust, y_adjust, 0))",
+        f"        local z_adjust = truncate_axis({adjustments[2]})",
+    ]
     if z_override:
-        lines.append(
-            "        location = services.coords.tripoint_abs_ms("
-            f"location.x, location.y, {z_adjust})"
-        )
-    elif z_adjust != "0":
-        lines.append(
-            "        location = location:add(services.coords.tripoint_rel_ms(0, 0, "
-            f"{z_adjust}))"
-        )
-    if output[0] in {"u", "npc"}:
-        output_handle = _coordinate_variable_handle(
-            output[0], avatar_actor_proven, npc_actor_proven
-        )
-        if output_handle is None:
-            return None
-        lines.extend([
-            "        services.variables.set(",
-            f"            {output_handle}, {lua_quote(output[1])}, location)",
-        ])
-    elif output[0] == "global":
-        lines.extend([
-            "        services.variables.set_global(",
-            f"            {lua_quote(output[1])}, location)",
-        ])
-    elif output[0] == "context":
-        lines.append(
-            f"        context.data[{lua_quote(output[1])}] = location"
-        )
+        lines.append("        location = services.coords.tripoint_abs_ms(location.x, location.y, z_adjust)")
     else:
-        variable_actor = (
-            "actor" if (avatar_actor_proven or npc_actor_proven)
-            else "services.characters.avatar()"
-        )
-        lines.extend([
-            "        service_value(services.variables.set_resolved(",
-            f"            context.data, {variable_actor}, \"var\", {lua_quote(output[1])}, location))",
-        ])
+        lines.append("        location = location:add(services.coords.tripoint_rel_ms(0, 0, z_adjust))")
+    lines.extend("    " + line for line in writes)
     lines.append("    end")
     return lines
 
@@ -28055,6 +27987,54 @@ def _render_native_variable_number_snapshot(
     else:
         return None
     return f"service_value({call})"
+
+
+def render_native_number_expression(
+    value: Any, effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
+) -> str | None:
+    """Read an untruncated Native double; ranges and math need separate lowering."""
+    def double_literal(candidate: Any) -> str | None:
+        literal = finite_number_literal(candidate)
+        if literal is None:
+            return None
+        text = format(float(literal), ".17g")
+        # Native JSON numeric values are doubles, including authored integers.
+        return text if "." in text or "e" in text else text + ".0"
+
+    literal = double_literal(value)
+    if literal is not None:
+        return literal
+    scopes = ("u_val", "npc_val", "global_val", "var_val", "context_val")
+    if not isinstance(value, dict) or set(value) - set(scopes) - {"default"}:
+        return None
+    scope = next((candidate for candidate in scopes if candidate in value), None)
+    if scope is None or not lua_quotable_native_variable_string(value[scope]):
+        return None
+    default = double_literal(value.get("default", 0))
+    if default is None:
+        return None
+    alpha = _proven_native_variable_read_target(effect_actor_targets, "u")
+    beta = _proven_native_variable_read_target(effect_actor_targets, "npc")
+    if scope == "var_val":
+        pointer = _render_native_variable_string_snapshot("context_val", lua_quote(value[scope]), alpha, beta)
+        reads = [_render_native_variable_number_snapshot(source, name, alpha, beta)
+                 for source, name in (("u_val", "string.sub(pointer.value, 3)"),
+                                      ("npc_val", "string.sub(pointer.value, 3)"),
+                                      ("context_val", "string.sub(pointer.value, 2)"),
+                                      ("global_val", "pointer.value"))]
+        if any(read is None for read in reads):
+            return None
+        read = ('(function(pointer) if pointer.exists == false then return pointer end; '
+                'if string.sub(pointer.value, 1, 2) == "u_" then return ' + reads[0] +
+                ' elseif string.sub(pointer.value, 1, 2) == "n_" then return ' + reads[1] +
+                ' elseif string.sub(pointer.value, 1, 1) == "_" then return ' + reads[2] +
+                ' else return ' + reads[3] + ' end end)(' + pointer + ')')
+    else:
+        read = _render_native_variable_number_snapshot(scope, lua_quote(value[scope]), alpha, beta)
+        if read is None:
+            return None
+    return ('(function(result) if result.exists == false then return ' + default +
+            ' end; return result.value end)(' + read + ')')
 
 
 def _render_native_variable_string_snapshot(
@@ -35067,7 +35047,7 @@ def render_eoc(
             ):
                 rendered = render_static_location_variable_adjust(
                     effect, "location_variable_adjust", avatar_actor_proven,
-                    npc_event_character_actor_proven,
+                    npc_event_character_actor_proven, effect_actor_targets,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
