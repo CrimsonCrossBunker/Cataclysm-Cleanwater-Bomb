@@ -163,7 +163,7 @@ TEST_CASE( "lua_platform_drop_stolen_items_matches_native_item_return",
     const auto add_inventory = [&]( avatar &holder ) {
         stolen_inventory added;
         item flat( itype_rock, calendar::turn_zero );
-        if( !holder.wield( flat, std::nullopt, false ) ) {
+        if( !holder.Character::wield( flat, std::nullopt, false ) ) {
             return added;
         }
         item_location flat_location = holder.get_wielded_item();
@@ -481,9 +481,9 @@ TEST_CASE( "lua_migrated_social_conditions_match_native_talker_slots",
     REQUIRE( beta_without_assignment_result["ok"].get<bool>() );
     CHECK( native_without_assignment ==
            beta_without_assignment_result["value"]["has_assigned_camp"].get<bool>() );
-    const dialogue avatar_beta_context( get_talker_for( alpha ),
-                                        get_talker_for( player ) );
-    CHECK_FALSE( npc_assigned_camp_condition( avatar_beta_context ) );
+    const dialogue camp_avatar_beta_context( get_talker_for( alpha ),
+                                             get_talker_for( player ) );
+    CHECK_FALSE( npc_assigned_camp_condition( camp_avatar_beta_context ) );
     const sol::protected_function ai_rules = services["npcs"]["ai_rules"];
     const sol::protected_function_result beta_rules_call = ai_rules( beta_handle );
     REQUIRE( beta_rules_call.valid() );
