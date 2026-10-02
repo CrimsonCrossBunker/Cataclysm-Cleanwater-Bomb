@@ -762,24 +762,26 @@ void npc::check_or_use_weapon_cbm( const bionic_id &cbm_id )
 // Well, because like diseases, which are also in a Big Switch, bionics don't
 // share functions....
 
-bool Character::activate_bionic( bionic &bio, bool eff_only, bool *close_bionics_ui )
+bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close_bionics_ui )
 {
+    const safe_reference<Creature> character_reference = get_safe_reference();
+    const bionic_uid activation_uid = initial_bio.get_uid();
     const bool mounted = is_mounted();
-    if( bio.incapacitated_time > 0_turns ) {
+    if( initial_bio.incapacitated_time > 0_turns ) {
         add_msg( m_info, _( "Your %s is shorting out and can't be activated." ),
-                 bio.info().name );
+                 initial_bio.info().name );
         return false;
     }
 
-    if( !eff_only && bio.info().activate_remove_cbm ) {
+    if( !eff_only && initial_bio.info().activate_remove_cbm ) {
         // Close bionics UI if caller requested it
         if( close_bionics_ui ) {
             *close_bionics_ui = true;
         }
 
         int difficulty = 12;
-        if( item::type_is_defined( bio.id->itype() ) ) {
-            const itype *type = item::find_type( bio.id->itype() );
+        if( item::type_is_defined( initial_bio.id->itype() ) ) {
+            const itype *type = item::find_type( initial_bio.id->itype() );
             if( type->bionic ) {
                 difficulty = type->bionic->difficulty;
             }
@@ -788,7 +790,11 @@ bool Character::activate_bionic( bionic &bio, bool eff_only, bool *close_bionics
         const int success_positive = 1;
         const int pl_skill_big = INT_MAX / 4;
 
-        perform_uninstall( bio, difficulty, success_positive, pl_skill_big );
+        perform_uninstall( initial_bio, difficulty, success_positive, pl_skill_big );
+
+        if( !character_reference ) {
+            return false;
+        }
 
         bio_flag_cache.clear();
         calc_encumbrance();
@@ -796,41 +802,95 @@ bool Character::activate_bionic( bionic &bio, bool eff_only, bool *close_bionics
         return true;
     }
 
+    const bionic_id activated_bionic_id = initial_bio.id;
+    const units::energy activation_cost = initial_bio.info().power_activate;
+    const std::vector<effect_on_condition_id> activation_eocs =
+        activated_bionic_id->activated_eocs;
+
     // eff_only means only do the effect without messing with stats or displaying messages
     if( !eff_only ) {
-        if( bio.powered ) {
+        if( initial_bio.powered ) {
             // It's already on!
             return false;
         }
-        if( !enough_power_for( bio.id ) ) {
+        if( !enough_power_for( initial_bio.id ) ) {
             add_msg_if_player( m_info, _( "You don't have the power to activate your %s." ),
-                               bio.info().name );
+                               initial_bio.info().name );
             return false;
         }
 
-        const bionic_fuels result = bionic_fuel_check( bio, true );
+        const bionic_fuels result = bionic_fuel_check( initial_bio, true );
         if( !result.can_be_on ) {
             return false;
         }
 
-        if( !bio.activate_spell( *this ) ) {
+        if( !initial_bio.activate_spell( *this ) ) {
             // the spell this bionic uses was unable to be cast
             return false;
         }
 
-        // We can actually activate now, do activation-y things
-        mod_power_level( -bio.info().power_activate );
-
-        bio.powered = bio.info().has_flag( json_flag_BIONIC_TOGGLED ) || bio.info().charge_time > 0_turns;
-
-        if( bio.info().charge_time > 0_turns ) {
-            bio.charge_timer = bio.info().charge_time;
+        Creature *live_creature = character_reference.get();
+        Character *live_character = live_creature == nullptr ? nullptr :
+                                    live_creature->as_character();
+        if( live_character == nullptr ) {
+            return false;
         }
-        if( !bio.id->enchantments.empty() ) {
+        const std::optional<bionic *> spell_bionic =
+            live_character->find_bionic_by_uid( activation_uid );
+        if( !spell_bionic ) {
+            return false;
+        }
+        bionic &current_bio = **spell_bionic;
+
+        // We can actually activate now, do activation-y things
+        mod_power_level( -activation_cost );
+
+        current_bio.powered = current_bio.info().has_flag( json_flag_BIONIC_TOGGLED ) ||
+                              current_bio.info().charge_time > 0_turns;
+
+        if( current_bio.info().charge_time > 0_turns ) {
+            current_bio.charge_timer = current_bio.info().charge_time;
+        }
+        if( !current_bio.id->enchantments.empty() ) {
             recalculate_enchantment_cache();
         }
     }
 
+    for( const effect_on_condition_id &eoc : activation_eocs ) {
+        dialogue d( get_talker_for( *this ), nullptr );
+        write_var_value( var_type::context, "act_cost", &d,
+                         units::to_millijoule( activation_cost ) );
+        eoc->activate_activation_only( d, "a bionic activation", "bionic being activated", "bionic" );
+        Creature *live_creature = character_reference.get();
+        Character *live_character = live_creature == nullptr ? nullptr :
+                                    live_creature->as_character();
+        if( live_character == nullptr ||
+            !live_character->find_bionic_by_uid( activation_uid ) ) {
+            return false;
+        }
+    }
+    cata::lua_platform::dispatch_native_hook( "on_bionic_activated", {
+        { "character", this },
+        { "bionic", cata::lua_platform::native_callback_id{ "bionic", activated_bionic_id.str() } },
+        { "bionic_uid", static_cast<std::int64_t>( activation_uid ) },
+        {
+            "activation_cost_millijoules",
+            units::to_millijoule( activation_cost )
+        }
+    } );
+    Creature *live_creature = character_reference.get();
+    Character *live_character = live_creature == nullptr ? nullptr :
+                                live_creature->as_character();
+    if( live_character == nullptr ) {
+        return false;
+    }
+    const std::optional<bionic *> activated_bionic =
+        live_character->find_bionic_by_uid( activation_uid );
+    if( !activated_bionic ) {
+        return false;
+    }
+
+    bionic &bio = **activated_bionic;
     auto add_msg_activate = [&]() {
         if( !eff_only ) {
             add_msg_if_player( m_info, _( "You activate your %s." ), bio.info().name );
@@ -838,25 +898,33 @@ bool Character::activate_bionic( bionic &bio, bool eff_only, bool *close_bionics
     };
     auto refund_power = [&]() {
         if( !eff_only ) {
-            mod_power_level( bio.info().power_activate );
+            mod_power_level( activation_cost );
         }
     };
-
-    for( const effect_on_condition_id &eoc : bio.id->activated_eocs ) {
-        dialogue d( get_talker_for( *this ), nullptr );
-        write_var_value( var_type::context, "act_cost", &d,
-                         units::to_millijoule( bio.info().power_activate ) );
-        eoc->activate_activation_only( d, "a bionic activation", "bionic being activated", "bionic" );
-    }
-    cata::lua_platform::dispatch_native_hook( "on_bionic_activated", {
-        { "character", this },
-        { "bionic", cata::lua_platform::native_callback_id{ "bionic", bio.id.str() } },
-        { "bionic_uid", static_cast<std::int64_t>( bio.get_uid() ) },
-        {
-            "activation_cost_millijoules",
-            units::to_millijoule( bio.info().power_activate )
+    const auto finish_activation = [&]() {
+        Creature *current_creature = character_reference.get();
+        Character *current_character = current_creature == nullptr ? nullptr :
+                                       current_creature->as_character();
+        if( current_character == nullptr ) {
+            return false;
         }
-    } );
+        const std::optional<bionic *> current_bionic =
+            current_character->find_bionic_by_uid( activation_uid );
+        if( !current_bionic ) {
+            return false;
+        }
+        const bionic &current = **current_bionic;
+        const bool refresh_items = current.has_weapon() ||
+                                   !current.info().passive_pseudo_items.empty() ||
+                                   !current.info().toggled_pseudo_items.empty();
+        current_character->bio_flag_cache.clear();
+        current_character->calc_encumbrance();
+        if( refresh_items ) {
+            current_character->invalidate_pseudo_items();
+            current_character->invalidate_crafting_inventory();
+        }
+        return true;
+    };
 
     item tmp_item;
     avatar &player_character = get_avatar();
@@ -891,13 +959,34 @@ bool Character::activate_bionic( bionic &bio, bool eff_only, bool *close_bionics
         if( weapon.has_flag( flag_NO_UNWIELD ) ) {
             if( get_weapon_bionic_uid() ) {
                 if( std::optional<bionic *> bio_opt = find_bionic_by_uid( get_weapon_bionic_uid() ) ) {
-                    if( deactivate_bionic( **bio_opt, eff_only ) ) {
+                    const bool deactivated = deactivate_bionic( **bio_opt, eff_only );
+                    Creature *live_creature = character_reference.get();
+                    Character *live_character = live_creature == nullptr ? nullptr :
+                                                live_creature->as_character();
+                    if( live_character == nullptr ) {
+                        return false;
+                    }
+                    const std::optional<bionic *> current_activation =
+                        live_character->find_bionic_by_uid( activation_uid );
+                    if( !current_activation ) {
+                        refund_power();
+                        return false;
+                    }
+                    if( deactivated ) {
                         // restore state and try again
                         refund_power();
-                        bio.powered = false;
+                        ( **current_activation ).powered = false;
                         // note: deep recursion is not possible, as `deactivate_bionic` won't return true second time
-                        return activate_bionic( bio, eff_only, close_bionics_ui );
+                        return live_character->activate_bionic(
+                                   **current_activation, eff_only,
+                                   close_bionics_ui );
                     }
+
+                    add_msg_if_player( m_info, _( "Deactivate your %s first!" ),
+                                       live_character->weapon.tname() );
+                    refund_power();
+                    ( **current_activation ).powered = false;
+                    return false;
                 } else {
                     debugmsg( "Can't find currently activated weapon bionic with UID %d", get_weapon_bionic_uid() );
                     weapon_bionic_uid = 0;
@@ -916,11 +1005,36 @@ bool Character::activate_bionic( bionic &bio, bool eff_only, bool *close_bionics
 
         if( !weapon.is_null() ) {
             const std::string query = string_format( _( "Stop wielding %s?" ), weapon.tname() );
-            if( !dispose_item( item_location( *this, &weapon ), query ) ) {
-                refund_power();
-                bio.powered = false;
+            const bool disposed = dispose_item(
+                                      item_location( *this, &weapon ), query );
+            Creature *live_creature = character_reference.get();
+            Character *live_character = live_creature == nullptr ? nullptr :
+                                        live_creature->as_character();
+            if( live_character == nullptr ) {
                 return false;
             }
+            const std::optional<bionic *> current_activation =
+                live_character->find_bionic_by_uid( activation_uid );
+            if( !current_activation ) {
+                refund_power();
+                return false;
+            }
+            if( !disposed ) {
+                refund_power();
+                ( **current_activation ).powered = false;
+                return false;
+            }
+            bionic &post_dispose_bio = **current_activation;
+            if( !eff_only ) {
+                live_character->add_msg_if_player(
+                    m_info, _( "You activate your %s." ),
+                    post_dispose_bio.info().name );
+            }
+
+            live_character->set_wielded_item( post_dispose_bio.get_weapon() );
+            live_character->get_wielded_item()->invlet = '#';
+            live_character->weapon_bionic_uid = post_dispose_bio.get_uid();
+            return finish_activation();
         }
 
         add_msg_activate();
@@ -1174,8 +1288,16 @@ bool Character::activate_bionic( bionic &bio, bool eff_only, bool *close_bionics
             }
             ctr.charges = units::to_kilojoule( get_power_level() );
             int power_use = invoke_item( &ctr );
-            mod_power_level( units::from_kilojoule( static_cast<std::int64_t>( -power_use ) ) );
-            bio.powered = ctr.active;
+            if( !character_reference ) {
+                return false;
+            }
+            const std::optional<bionic *> current_bionic =
+                find_bionic_by_uid( activation_uid );
+            if( !current_bionic ) {
+                return false;
+            }
+            mod_power_level( units::from_kilojoule( -static_cast<std::int64_t>( power_use ) ) );
+            ( **current_bionic ).powered = ctr.active;
         } else {
             bio.powered = g->remoteveh() != nullptr || maybe_get_value( "remote_controlling" );
         }
@@ -1247,17 +1369,7 @@ bool Character::activate_bionic( bionic &bio, bool eff_only, bool *close_bionics
             }
         }
     }
-    bio_flag_cache.clear();
-    calc_encumbrance();
-
-    // Also reset crafting inventory cache if this bionic spawned a fake item
-    if( bio.has_weapon() || !bio.info().passive_pseudo_items.empty() ||
-        !bio.info().toggled_pseudo_items.empty() ) {
-        invalidate_pseudo_items();
-        invalidate_crafting_inventory();
-    }
-
-    return true;
+    return finish_activation();
 }
 
 
@@ -1289,11 +1401,12 @@ ret_val<void> Character::can_deactivate_bionic( bionic &bio, bool eff_only ) con
     return ret_val<void>::make_success();
 }
 
-bool Character::deactivate_bionic( bionic &bio, bool eff_only )
+bool Character::deactivate_bionic( bionic &initial_bio, bool eff_only )
 {
+    const safe_reference<Creature> character_reference = get_safe_reference();
     const map &here = get_map();
 
-    const auto can_deactivate = can_deactivate_bionic( bio, eff_only );
+    const auto can_deactivate = can_deactivate_bionic( initial_bio, eff_only );
     bio_flag_cache.clear();
     if( !can_deactivate.success() ) {
         if( !can_deactivate.str().empty() ) {
@@ -1305,26 +1418,52 @@ bool Character::deactivate_bionic( bionic &bio, bool eff_only )
     // Just do the effect, no stat changing or messages
     if( !eff_only ) {
         //We can actually deactivate now, do deactivation-y things
-        mod_power_level( -bio.info().power_deactivate );
-        bio.powered = false;
-        add_msg_if_player( m_neutral, _( "You deactivate your %s." ), bio.info().name );
+        mod_power_level( -initial_bio.info().power_deactivate );
+        initial_bio.powered = false;
+        add_msg_if_player( m_neutral, _( "You deactivate your %s." ), initial_bio.info().name );
     }
 
     // Deactivation effects go here
 
-    for( const effect_on_condition_id &eoc : bio.id->deactivated_eocs ) {
+    const bionic_uid deactivation_uid = initial_bio.get_uid();
+    const bionic_id deactivated_bionic_id = initial_bio.id;
+    const units::energy deactivation_cost = initial_bio.info().power_deactivate;
+    const std::vector<effect_on_condition_id> deactivation_eocs =
+        deactivated_bionic_id->deactivated_eocs;
+    for( const effect_on_condition_id &eoc : deactivation_eocs ) {
         dialogue d( get_talker_for( *this ), nullptr );
         eoc->activate_activation_only( d, "a bionic deactivation", "bionic being activated", "bionic" );
+        Creature *live_creature = character_reference.get();
+        Character *live_character = live_creature == nullptr ? nullptr :
+                                    live_creature->as_character();
+        if( live_character == nullptr ) {
+            return false;
+        }
+        if( !live_character->find_bionic_by_uid( deactivation_uid ) ) {
+            return true;
+        }
     }
     cata::lua_platform::dispatch_native_hook( "on_bionic_deactivated", {
         { "character", this },
-        { "bionic", cata::lua_platform::native_callback_id{ "bionic", bio.id.str() } },
-        { "bionic_uid", static_cast<std::int64_t>( bio.get_uid() ) },
+        { "bionic", cata::lua_platform::native_callback_id{ "bionic", deactivated_bionic_id.str() } },
+        { "bionic_uid", static_cast<std::int64_t>( deactivation_uid ) },
         {
             "deactivation_cost_millijoules",
-            units::to_millijoule( bio.info().power_deactivate )
+            units::to_millijoule( deactivation_cost )
         }
     } );
+    Creature *live_creature = character_reference.get();
+    Character *live_character = live_creature == nullptr ? nullptr :
+                                live_creature->as_character();
+    if( live_character == nullptr ) {
+        return false;
+    }
+    const std::optional<bionic *> deactivated_bionic =
+        live_character->find_bionic_by_uid( deactivation_uid );
+    if( !deactivated_bionic ) {
+        return true;
+    }
+    bionic &bio = **deactivated_bionic;
 
     if( bio.info().has_flag( json_flag_BIONIC_WEAPON ) ) {
         if( bio.get_uid() == get_weapon_bionic_uid() ) {
@@ -1444,6 +1583,8 @@ Character::bionic_fuels Character::bionic_fuel_check( bionic &bio,
 
 void Character::burn_fuel( bionic &bio )
 {
+    const safe_reference<Creature> character_reference = get_safe_reference();
+    const bionic_uid bio_uid = bio.get_uid();
     float efficiency;
     if( !bio.powered ) {
         // Modifiers for passive bionic
@@ -1467,8 +1608,20 @@ void Character::burn_fuel( bionic &bio )
 
     bionic_fuels result = bionic_fuel_check( bio, false );
 
+    Creature *live_creature = character_reference.get();
+    Character *live_character = live_creature == nullptr ? nullptr :
+                                live_creature->as_character();
+    if( live_character == nullptr ) {
+        return;
+    }
+    const std::optional<bionic *> current_bionic = live_character->find_bionic_by_uid( bio_uid );
+    if( !current_bionic ) {
+        return;
+    }
+    bionic &current_bio = **current_bionic;
+
     units::energy energy_gain = 0_kJ;
-    map &here = get_map();
+    map &here = live_character->get_map();
 
     // Each bionic *should* have only one power source.
     // Avoid draining multiple sources. So check for energy_gain = 0_kJ
@@ -1500,9 +1653,9 @@ void Character::burn_fuel( bionic &bio )
             }
             energy_gain = fuel->fuel_energy();
 
-            if( bio.is_safe_fuel_on() &&
+            if( current_bio.is_safe_fuel_on() &&
                 get_power_level() + energy_gain * efficiency >= get_max_power_level() * std::min( 1.0f,
-                        bio.get_safe_fuel_thresh() ) ) {
+                        current_bio.get_safe_fuel_thresh() ) ) {
                 // Do not waste fuel charging over limit.
                 return;
             }
@@ -1517,19 +1670,19 @@ void Character::burn_fuel( bionic &bio )
                 i_rem( fuel );
                 depleted = true;
             }
-            if( depleted && !bio.auto_shutdown ) {
+            if( depleted && !current_bio.auto_shutdown ) {
                 add_msg_player_or_npc( m_info,
                                        _( "Your %s runs out of fuel." ),
                                        _( "<npcname>'s %s runs out of fuel." ),
-                                       bio.info().name );
+                                       current_bio.info().name );
             }
 
         }
     }
 
     // There *could* be multiple fuel sources. But we just check first for solar.
-    bool solar_powered = ( !bio.id->fuel_opts.empty() &&
-                           bio.id->fuel_opts.front() == fuel_type_sun_light ) ||
+    bool solar_powered = ( !current_bio.id->fuel_opts.empty() &&
+                           current_bio.id->fuel_opts.front() == fuel_type_sun_light ) ||
                          !result.connected_solar.empty();
     if( energy_gain == 0_J && solar_powered && !g->is_sheltered( pos_bub() ) ) {
         // Some sort of solar source
@@ -1546,16 +1699,16 @@ void Character::burn_fuel( bionic &bio )
     }
 
     // There *could* be multiple fuel sources. But we just check first for solar.
-    bool metabolism_powered = !bio.id->fuel_opts.empty() &&
-                              bio.id->fuel_opts.front() == fuel_type_metabolism;
+    bool metabolism_powered = !current_bio.id->fuel_opts.empty() &&
+                              current_bio.id->fuel_opts.front() == fuel_type_metabolism;
     if( energy_gain == 0_J && metabolism_powered ) {
         // Bionic powered by metabolism
         // 1kcal = 4184 J
         energy_gain = 4184_J;
 
-        if( bio.is_safe_fuel_on() &&
+        if( current_bio.is_safe_fuel_on() &&
             get_power_level() + energy_gain * efficiency >= get_max_power_level() * std::min( 1.0f,
-                    bio.get_safe_fuel_thresh() ) ) {
+                    current_bio.get_safe_fuel_thresh() ) ) {
             // Do not waste fuel charging over limit.
             // Individual power sources need their own check for this because power per charge can be large.
             return;
@@ -1565,7 +1718,8 @@ void Character::burn_fuel( bionic &bio )
     }
 
     // There *could* be multiple fuel sources. But we just check first for solar.
-    bool wind_powered = !bio.id->fuel_opts.empty() && bio.id->fuel_opts.front() == fuel_type_wind;
+    bool wind_powered = !current_bio.id->fuel_opts.empty() &&
+                        current_bio.id->fuel_opts.front() == fuel_type_wind;
     if( energy_gain == 0_J && wind_powered ) {
         // Wind power
         int vehwindspeed = 0;
@@ -1581,28 +1735,53 @@ void Character::burn_fuel( bionic &bio )
         energy_gain = 1_kJ * windpower;
     }
 
-    mod_power_level( energy_gain * efficiency );
-    heat_emission( bio, energy_gain );
-    here.emit_field( pos_bub(), bio.info().power_gen_emission );
+    const emit_id power_generation_emission = current_bio.info().power_gen_emission;
+    live_character->mod_power_level( energy_gain * efficiency );
+    live_character->heat_emission( current_bio, energy_gain );
+    live_creature = character_reference.get();
+    live_character = live_creature == nullptr ? nullptr :
+                     live_creature->as_character();
+    if( live_character == nullptr ) {
+        return;
+    }
+    live_character->get_map().emit_field( live_character->pos_bub(), power_generation_emission );
 }
 
 void Character::heat_emission( const bionic &bio, units::energy fuel_energy )
 {
-    if( !bio.info().exothermic_power_gen ) {
+    const safe_reference<Creature> character_reference = get_safe_reference();
+    const bionic_data &bio_info = bio.info();
+    if( !bio_info.exothermic_power_gen ) {
         return;
     }
-    const float efficiency = bio.info().fuel_efficiency;
+    const float efficiency = bio_info.fuel_efficiency;
+    std::vector<bodypart_id> occupied_body_parts;
+    for( const auto &part : bio_info.occupied_bodyparts ) {
+        occupied_body_parts.push_back( part.first.id() );
+    }
 
     const int heat_prod = units::to_kilojoule( fuel_energy * ( 1.0f - efficiency ) );
     const int heat_level = std::min( heat_prod / 10, 4 );
     const emit_id hotness = emit_id( "emit_hot_air" + std::to_string( heat_level ) + "_cbm" );
-    map &here = get_map();
+    Creature *live_creature = character_reference.get();
+    Character *live_character = live_creature == nullptr ? nullptr :
+                                live_creature->as_character();
+    if( live_character == nullptr ) {
+        return;
+    }
+    map &here = live_character->get_map();
     if( hotness.is_valid() ) {
         const int heat_spread = std::max( heat_prod / 10 - heat_level, 1 );
-        here.emit_field( pos_bub(), hotness, heat_spread );
+        here.emit_field( live_character->pos_bub(), hotness, heat_spread );
     }
-    for( const std::pair<const bodypart_str_id, size_t> &bp : bio.info().occupied_bodyparts ) {
-        add_effect( effect_heating_bionic, 2_seconds, bp.first.id(), false, heat_prod );
+    for( const bodypart_id &part : occupied_body_parts ) {
+        live_creature = character_reference.get();
+        live_character = live_creature == nullptr ? nullptr :
+                         live_creature->as_character();
+        if( live_character == nullptr ) {
+            return;
+        }
+        live_character->add_effect( effect_heating_bionic, 2_seconds, part, false, heat_prod );
     }
 }
 
@@ -1655,28 +1834,30 @@ static bool attempt_recharge( Character &p, bionic &bio, units::energy &amount )
     return recharged;
 }
 
-void Character::process_bionic( bionic &bio )
+void Character::process_bionic( bionic &initial_bio )
 {
+    const safe_reference<Creature> character_reference = get_safe_reference();
+    const bionic_uid processed_uid = initial_bio.get_uid();
 
     // Only powered bionics should be processed
-    if( !bio.powered ) {
-        burn_fuel( bio );
+    if( !initial_bio.powered ) {
+        burn_fuel( initial_bio );
         return;
     }
 
-    if( bio.get_uid() == get_weapon_bionic_uid() ) {
-        const bool wrong_weapon_wielded = weapon.typeId() != bio.get_weapon().typeId() ||
+    if( initial_bio.get_uid() == get_weapon_bionic_uid() ) {
+        const bool wrong_weapon_wielded = weapon.typeId() != initial_bio.get_weapon().typeId() ||
                                           !weapon.has_flag( flag_NO_UNWIELD );
 
         if( wrong_weapon_wielded ) {
             // Wielded weapon replaced in an unexpected way
-            debugmsg( "Wielded weapon doesn't match the expected weapon equipped from %s", bio.id->name );
+            debugmsg( "Wielded weapon doesn't match the expected weapon equipped from %s", initial_bio.id->name );
             weapon_bionic_uid = 0;
         }
 
         if( weapon.is_null() || wrong_weapon_wielded ) {
             // Force deactivation because the weapon is gone
-            force_bionic_deactivation( bio );
+            force_bionic_deactivation( initial_bio );
             return;
         }
     }
@@ -1686,23 +1867,34 @@ void Character::process_bionic( bionic &bio )
 
     units::energy cost = 0_mJ;
 
-    bio.charge_timer = std::max( 0_turns, bio.charge_timer - discharge_rate );
-    if( bio.charge_timer <= 0_turns ) {
-        if( bio.info().charge_time > 0_turns ) {
-            if( bio.info().has_flag( json_flag_BIONIC_POWER_SOURCE ) ) {
+    initial_bio.charge_timer = std::max( 0_turns, initial_bio.charge_timer - discharge_rate );
+    if( initial_bio.charge_timer <= 0_turns ) {
+        if( initial_bio.info().charge_time > 0_turns ) {
+            if( initial_bio.info().has_flag( json_flag_BIONIC_POWER_SOURCE ) ) {
                 // Convert fuel to bionic power
-                burn_fuel( bio );
+                burn_fuel( initial_bio );
+                Creature *live_creature = character_reference.get();
+                Character *live_character = live_creature == nullptr ? nullptr :
+                                            live_creature->as_character();
+                if( live_character == nullptr ) {
+                    return;
+                }
+                const std::optional<bionic *> current_bio =
+                    live_character->find_bionic_by_uid( processed_uid );
+                if( !current_bio ) {
+                    return;
+                }
                 // Reset timer
-                bio.charge_timer = bio.info().charge_time;
+                ( **current_bio ).charge_timer = ( **current_bio ).info().charge_time;
             } else {
                 // Try to recharge our bionic if it is made for it
-                bool recharged = attempt_recharge( *this, bio, cost );
+                bool recharged = attempt_recharge( *this, initial_bio, cost );
                 if( !recharged ) {
                     // No power to recharge, so deactivate
-                    bio.powered = false;
-                    add_msg_if_player( m_neutral, _( "Your %s powers down." ), bio.info().name );
+                    initial_bio.powered = false;
+                    add_msg_if_player( m_neutral, _( "Your %s powers down." ), initial_bio.info().name );
                     // This purposely bypasses the deactivation cost
-                    deactivate_bionic( bio, true );
+                    deactivate_bionic( initial_bio, true );
                     return;
                 }
                 if( cost > 0_mJ ) {
@@ -1712,19 +1904,73 @@ void Character::process_bionic( bionic &bio )
         }
     }
 
-    for( const effect_on_condition_id &eoc : bio.id->processed_eocs ) {
+    Creature *live_creature = character_reference.get();
+    Character *live_character = live_creature == nullptr ? nullptr :
+                                live_creature->as_character();
+    if( live_character == nullptr ) {
+        return;
+    }
+    const std::optional<bionic *> before_callbacks =
+        live_character->find_bionic_by_uid( processed_uid );
+    if( !before_callbacks ) {
+        return;
+    }
+    const bionic_id processed_bionic_id = ( **before_callbacks ).id;
+    const units::energy overtime_cost = ( **before_callbacks ).info().power_over_time;
+    const std::vector<effect_on_condition_id> processed_eocs =
+        processed_bionic_id->processed_eocs;
+    for( const effect_on_condition_id &eoc : processed_eocs ) {
         dialogue d( get_talker_for( *this ), nullptr );
         eoc->activate_activation_only( d, "a bionic process", "bionic being activated", "bionic" );
+        live_creature = character_reference.get();
+        live_character = live_creature == nullptr ? nullptr :
+                         live_creature->as_character();
+        if( live_character == nullptr ||
+            !live_character->find_bionic_by_uid( processed_uid ) ) {
+            return;
+        }
     }
     cata::lua_platform::dispatch_native_hook( "on_bionic_processed", {
         { "character", this },
-        { "bionic", cata::lua_platform::native_callback_id{ "bionic", bio.id.str() } },
-        { "bionic_uid", static_cast<std::int64_t>( bio.get_uid() ) },
+        { "bionic", cata::lua_platform::native_callback_id{ "bionic", processed_bionic_id.str() } },
+        { "bionic_uid", static_cast<std::int64_t>( processed_uid ) },
         {
             "over_time_energy_millijoules",
-            units::to_millijoule( bio.info().power_over_time )
+            units::to_millijoule( overtime_cost )
         }
     } );
+    live_creature = character_reference.get();
+    live_character = live_creature == nullptr ? nullptr :
+                     live_creature->as_character();
+    if( live_character == nullptr ) {
+        return;
+    }
+    const std::optional<bionic *> processed_bionic =
+        live_character->find_bionic_by_uid( processed_uid );
+    if( !processed_bionic ) {
+        return;
+    }
+    bionic &bio = **processed_bionic;
+    const std::string processed_bionic_name = bio.info().name.translated();
+    const auto deactivate_processed_bionic = [&]() {
+        Creature *current_creature = character_reference.get();
+        Character *current_character = current_creature == nullptr ? nullptr :
+                                       current_creature->as_character();
+        if( current_character == nullptr ) {
+            return false;
+        }
+        const std::optional<bionic *> current_bionic =
+            current_character->find_bionic_by_uid( processed_uid );
+        if( !current_bionic ) {
+            return false;
+        }
+        current_character->deactivate_bionic( **current_bionic );
+        current_creature = character_reference.get();
+        current_character = current_creature == nullptr ? nullptr :
+                            current_creature->as_character();
+        return current_character != nullptr &&
+               current_character->find_bionic_by_uid( processed_uid ).has_value();
+    };
 
     // Bionic effects on every turn they are active go here.
     if( bio.id == bio_remote ) {
@@ -1766,6 +2012,9 @@ void Character::process_bionic( bionic &bio )
             if( get_stored_kcal() >= 5 && !damaged_hp_parts.empty() ) {
                 const bodypart_id part_to_heal = damaged_hp_parts[ rng( 0, damaged_hp_parts.size() - 1 ) ];
                 heal( part_to_heal, 1 );
+                if( !character_reference ) {
+                    return;
+                }
                 mod_stored_kcal( -5 );
             }
         }
@@ -1793,13 +2042,19 @@ void Character::process_bionic( bionic &bio )
                                _( "Your %s activates and you feel your throat open up and air filling your lungs!" ),
                                bio.info().name );
             remove_effect( effect_asthma );
+            if( !character_reference ) {
+                return;
+            }
             mod_power_level( -trigger_cost );
         }
     } else if( bio.id == bio_evap ) {
         if( is_underwater() ) {
             add_msg_if_player( m_info,
-                               _( "Your %s deactivates after it finds itself completely submerged in water." ), bio.info().name );
-            deactivate_bionic( bio );
+                               _( "Your %s deactivates after it finds itself completely submerged in water." ),
+                               processed_bionic_name );
+            if( !deactivate_processed_bionic() ) {
+                return;
+            }
         }
 
         // Aero-Evaporator provides water at 60 watts with 2 L / kWh efficiency
@@ -1815,12 +2070,14 @@ void Character::process_bionic( bionic &bio )
             if( water_available == 0 ) {
                 add_msg_if_player( m_bad,
                                    _( "There is not enough humidity in the air for your %s to function." ),
-                                   bio.info().name );
-                deactivate_bionic( bio );
+                                   processed_bionic_name );
+                if( !deactivate_processed_bionic() ) {
+                    return;
+                }
             } else if( water_available == 1 ) {
                 add_msg_if_player( m_mixed,
                                    _( "Your %s issues a low humidity warning.  Efficiency is reduced." ),
-                                   bio.info().name );
+                                   processed_bionic_name );
             }
 
             mod_thirst( -water_available );
@@ -1829,8 +2086,9 @@ void Character::process_bionic( bionic &bio )
         if( get_thirst() < -40 ) {
             add_msg_if_player( m_good,
                                _( "You are properly hydrated.  Your %s chirps happily." ),
-                               bio.info().name );
-            deactivate_bionic( bio );
+                               processed_bionic_name );
+            deactivate_processed_bionic();
+            return;
         }
     } else if( bio.id == afs_bio_dopamine_stimulators ) {
         // Aftershock
@@ -2248,10 +2506,19 @@ bool Character::can_uninstall_bionic( const bionic &bio, Character &installer, b
 bool Character::uninstall_bionic( const bionic &bio, Character &installer, bool autodoc,
                                   int skill_level )
 {
+    const safe_reference<Creature> patient_reference = get_safe_reference();
+    const safe_reference<Creature> installer_reference = installer.get_safe_reference();
+    const bionic_uid target_uid = bio.get_uid();
+    const bionic_id target_id = bio.id;
+    std::vector<bodypart_id> occupied_body_parts;
+    for( const auto &part : target_id->occupied_bodyparts ) {
+        occupied_body_parts.push_back( part.first.id() );
+    }
+
     // if malfunctioning bionics doesn't have associated item it gets a difficulty of 12
     int difficulty = 12;
-    if( item::type_is_defined( bio.id->itype() ) ) {
-        const itype *type = item::find_type( bio.id->itype() );
+    if( item::type_is_defined( target_id->itype() ) ) {
+        const itype *type = item::find_type( target_id->itype() );
         if( type->bionic ) {
             difficulty = type->bionic->difficulty;
         }
@@ -2262,22 +2529,70 @@ bool Character::uninstall_bionic( const bionic &bio, Character &installer, bool 
     int chance_of_success = bionic_success_chance( autodoc, skill_level, difficulty + 2, installer );
 
     // Surgery is imminent, retract claws or blade if active
-    for( bionic &it : *installer.my_bionics ) {
+    std::vector<bionic_uid> weapon_bionics_to_deactivate;
+    for( const bionic &it : *installer.my_bionics ) {
         if( it.powered && it.info().has_flag( json_flag_BIONIC_WEAPON ) ) {
-            installer.deactivate_bionic( it );
+            weapon_bionics_to_deactivate.push_back( it.get_uid() );
+        }
+    }
+    for( const bionic_uid uid : weapon_bionics_to_deactivate ) {
+        Creature *live_installer_creature = installer_reference.get();
+        Creature *live_patient_creature = patient_reference.get();
+        if( live_installer_creature == nullptr || live_patient_creature == nullptr ) {
+            return false;
+        }
+        Character *live_installer = live_installer_creature->as_character();
+        Character *live_patient = live_patient_creature->as_character();
+        if( live_installer == nullptr || live_patient == nullptr ) {
+            return false;
+        }
+        const std::optional<bionic *> installed =
+            live_installer->find_bionic_by_uid( uid );
+        if( installed && ( **installed ).powered &&
+            ( **installed ).info().has_flag( json_flag_BIONIC_WEAPON ) ) {
+            live_installer->deactivate_bionic( **installed );
+        }
+        if( !installer_reference || !patient_reference ) {
+            return false;
         }
     }
 
-    int success = chance_of_success - rng( 1, 100 );
-    if( installer.has_trait( trait_DEBUG_BIONICS ) ||
-        installer.has_flag( json_flag_MANUAL_CBM_INSTALLATION ) ) {
-        perform_uninstall( bio, difficulty, success, pl_skill );
-        return true;
+    Creature *live_patient_creature = patient_reference.get();
+    Creature *live_installer_creature = installer_reference.get();
+    if( live_patient_creature == nullptr || live_installer_creature == nullptr ) {
+        return false;
     }
-    assign_activity( bionic_operation_activity_actor( false, success, autodoc, pl_skill,
-                     difficulty, bio.id, bio.get_uid() ) );
-    for( const std::pair<const bodypart_str_id, size_t> &elem : bio.id->occupied_bodyparts ) {
-        add_effect( effect_under_operation, difficulty * 20_minutes, elem.first.id(), true, difficulty );
+    Character *live_patient = live_patient_creature->as_character();
+    Character *live_installer = live_installer_creature->as_character();
+    if( live_patient == nullptr || live_installer == nullptr ||
+        !live_patient->find_bionic_by_uid( target_uid ) ) {
+        return false;
+    }
+
+    int success = chance_of_success - rng( 1, 100 );
+    if( live_installer->has_trait( trait_DEBUG_BIONICS ) ||
+        live_installer->has_flag( json_flag_MANUAL_CBM_INSTALLATION ) ) {
+        const std::optional<bionic *> target =
+            live_patient->find_bionic_by_uid( target_uid );
+        if( !target ) {
+            return false;
+        }
+        live_patient->perform_uninstall( **target, difficulty, success, pl_skill );
+        return static_cast<bool>( patient_reference );
+    }
+    live_patient->assign_activity( bionic_operation_activity_actor(
+                                       false, success, autodoc, pl_skill,
+                                       difficulty, target_id, target_uid ) );
+    if( !patient_reference ) {
+        return false;
+    }
+    for( const bodypart_id &part : occupied_body_parts ) {
+        live_patient->add_effect(
+            effect_under_operation, difficulty * 20_minutes,
+            part, true, difficulty );
+        if( !patient_reference ) {
+            return false;
+        }
     }
 
     return true;
@@ -2285,26 +2600,45 @@ bool Character::uninstall_bionic( const bionic &bio, Character &installer, bool 
 
 void Character::perform_uninstall( const bionic &bio, int difficulty, int success, int pl_skill )
 {
-    map &here = get_map();
-    std::optional<bionic *> bio_opt = find_bionic_by_uid( bio.get_uid() );
+    const safe_reference<Creature> character_reference = get_safe_reference();
+    const bionic_uid bio_uid = bio.get_uid();
+    const bionic_id bio_id = bio.id;
+    const std::optional<item> bio_source_item = bio.source_item;
+    std::optional<bionic *> bio_opt = find_bionic_by_uid( bio_uid );
     if( !bio_opt ) {
-        debugmsg( "Tried to uninstall non-existent bionic with UID %d", bio.get_uid() );
+        debugmsg( "Tried to uninstall non-existent bionic with UID %d", bio_uid );
         return;
     }
 
     if( success > 0 ) {
-        get_event_bus().send<event_type::removes_cbm>( getID(), bio.id );
+        get_event_bus().send<event_type::removes_cbm>( getID(), bio_id );
+        Creature *live_creature = character_reference.get();
+        Character *live_character = live_creature == nullptr ? nullptr :
+                                    live_creature->as_character();
+        if( live_character == nullptr ) {
+            return;
+        }
+        bio_opt = live_character->find_bionic_by_uid( bio_uid );
+        if( !bio_opt ) {
+            return;
+        }
 
         // until bionics can be flagged as non-removable
-        add_msg_player_or_npc( m_neutral, _( "Your parts are jiggled back into their familiar places." ),
-                               _( "<npcname>'s parts are jiggled back into their familiar places." ) );
-        add_msg( m_good, _( "Successfully removed %s." ), bio.id.obj().name );
-        const bionic_id bio_id = bio.id;
-        const std::optional<item> bio_source_item = bio.source_item;
-        remove_bionic( bio );
+        live_character->add_msg_player_or_npc(
+            m_neutral, _( "Your parts are jiggled back into their familiar places." ),
+            _( "<npcname>'s parts are jiggled back into their familiar places." ) );
+        live_character->add_msg( m_good, _( "Successfully removed %s." ), bio_id.obj().name );
+        live_character->remove_bionic( **bio_opt );
+        live_creature = character_reference.get();
+        live_character = live_creature == nullptr ? nullptr :
+                         live_creature->as_character();
+        if( live_character == nullptr ) {
+            return;
+        }
+
         // remove dependent bionics
         std::vector<bionic> dependent_bionics;
-        for( const bionic &installed : *my_bionics ) {
+        for( const bionic &installed : *live_character->my_bionics ) {
             if( installed.id == bio_id ) {
                 continue;
             }
@@ -2323,17 +2657,51 @@ void Character::perform_uninstall( const bionic &bio, int difficulty, int succes
         }
 
         for( const bionic &dependent : dependent_bionics ) {
-            if( !find_bionic_by_uid( dependent.get_uid() ) ) {
+            live_creature = character_reference.get();
+            live_character = live_creature == nullptr ? nullptr :
+                             live_creature->as_character();
+            if( live_character == nullptr ) {
+                return;
+            }
+            const bionic_uid dependent_uid = dependent.get_uid();
+            const bionic_id dependent_id = dependent.id;
+            const std::optional<item> dependent_source_item = dependent.source_item;
+            const std::vector<trait_id> dependent_mutations =
+                dependent_id->give_mut_on_removal;
+            if( !live_character->find_bionic_by_uid( dependent_uid ) ) {
                 continue;
             }
-            add_msg( m_neutral, _( "%s removed with %s." ), dependent.id->name.translated(),
-                     bio_id->name.translated() );
-            get_event_bus().send<event_type::removes_cbm>( getID(), dependent.id );
-            const std::optional<item> dependent_source_item = dependent.source_item;
-            remove_bionic( dependent );
-            for( const trait_id &mid : dependent.id->give_mut_on_removal ) {
-                if( !has_trait( mid ) ) {
-                    set_mutation( mid );
+            live_character->add_msg( m_neutral, _( "%s removed with %s." ),
+                                     dependent_id->name.translated(),
+                                     bio_id->name.translated() );
+            get_event_bus().send<event_type::removes_cbm>( getID(), dependent_id );
+            live_creature = character_reference.get();
+            live_character = live_creature == nullptr ? nullptr :
+                             live_creature->as_character();
+            if( live_character == nullptr ) {
+                return;
+            }
+            const std::optional<bionic *> current_dependent =
+                live_character->find_bionic_by_uid( dependent_uid );
+            if( !current_dependent ) {
+                continue;
+            }
+            live_character->remove_bionic( **current_dependent );
+            live_creature = character_reference.get();
+            live_character = live_creature == nullptr ? nullptr :
+                             live_creature->as_character();
+            if( live_character == nullptr ) {
+                return;
+            }
+            for( const trait_id &mid : dependent_mutations ) {
+                if( !live_character->has_trait( mid ) ) {
+                    live_character->set_mutation( mid );
+                    live_creature = character_reference.get();
+                    live_character = live_creature == nullptr ? nullptr :
+                                     live_creature->as_character();
+                    if( live_character == nullptr ) {
+                        return;
+                    }
                 }
             }
             if( dependent_source_item ) {
@@ -2342,34 +2710,54 @@ void Character::perform_uninstall( const bionic &bio, int difficulty, int succes
                 dependent_cbm.set_flag( flag_NO_STERILE );
                 dependent_cbm.set_flag( flag_NO_PACKED );
                 dependent_cbm.set_fault( fault_bionic_salvaged, false, nullptr, true );
-                here.add_item( pos_bub(), dependent_cbm );
+                live_character->get_map().add_item(
+                    live_character->pos_bub(), dependent_cbm );
             } else {
                 item dependent_cbm( itype_burnt_out_bionic );
-                if( item::type_is_defined( dependent.id->itype() ) ) {
-                    dependent_cbm = item( dependent.id->itype() );
+                if( item::type_is_defined( dependent_id->itype() ) ) {
+                    dependent_cbm = item( dependent_id->itype() );
                 }
                 dependent_cbm.set_flag( flag_FILTHY );
                 dependent_cbm.set_flag( flag_NO_STERILE );
                 dependent_cbm.set_flag( flag_NO_PACKED );
                 dependent_cbm.set_fault( fault_bionic_salvaged, false, nullptr, true );
-                here.add_item( pos_bub(), dependent_cbm );
+                live_character->get_map().add_item(
+                    live_character->pos_bub(), dependent_cbm );
             }
         }
 
         // give us any muts it's supposed to (silently) if removed
         for( const trait_id &mid : bio_id->give_mut_on_removal ) {
-            if( !has_trait( mid ) ) {
-                set_mutation( mid );
+            live_creature = character_reference.get();
+            live_character = live_creature == nullptr ? nullptr :
+                             live_creature->as_character();
+            if( live_character == nullptr ) {
+                return;
+            }
+            if( !live_character->has_trait( mid ) ) {
+                live_character->set_mutation( mid );
+                live_creature = character_reference.get();
+                live_character = live_creature == nullptr ? nullptr :
+                                 live_creature->as_character();
+                if( live_character == nullptr ) {
+                    return;
+                }
             }
         }
 
+        live_creature = character_reference.get();
+        live_character = live_creature == nullptr ? nullptr :
+                         live_creature->as_character();
+        if( live_character == nullptr ) {
+            return;
+        }
         if( bio_source_item ) {
             item cbm = *bio_source_item;
             cbm.set_flag( flag_FILTHY );
             cbm.set_flag( flag_NO_STERILE );
             cbm.set_flag( flag_NO_PACKED );
             cbm.set_fault( fault_bionic_salvaged, false, nullptr, true );
-            here.add_item( pos_bub(), cbm );
+            live_character->get_map().add_item( live_character->pos_bub(), cbm );
         } else {
             item cbm( itype_burnt_out_bionic );
             if( item::type_is_defined( bio_id->itype() ) ) {
@@ -2379,18 +2767,30 @@ void Character::perform_uninstall( const bionic &bio, int difficulty, int succes
             cbm.set_flag( flag_NO_STERILE );
             cbm.set_flag( flag_NO_PACKED );
             cbm.set_fault( fault_bionic_salvaged, false, nullptr, true );
-            here.add_item( pos_bub(), cbm );
+            live_character->get_map().add_item( live_character->pos_bub(), cbm );
         }
     } else {
-        get_event_bus().send<event_type::fails_to_remove_cbm>( getID(), bio.id );
+        get_event_bus().send<event_type::fails_to_remove_cbm>( getID(), bio_id );
+        Creature *live_creature = character_reference.get();
+        Character *live_character = live_creature == nullptr ? nullptr :
+                                    live_creature->as_character();
+        if( live_character == nullptr ) {
+            return;
+        }
         // for chance_of_success calculation, shift skill down to a float between ~0.4 - 30
         float adjusted_skill = static_cast<float>( pl_skill ) - std::min( static_cast<float>( 40 ),
                                static_cast<float>( pl_skill ) - static_cast<float>( pl_skill ) / static_cast<float>
                                ( 10.0 ) );
-        bionics_uninstall_failure( difficulty, success, adjusted_skill );
+        live_character->bionics_uninstall_failure( difficulty, success, adjusted_skill );
 
     }
-    here.invalidate_map_cache( here.get_abs_sub().z() );
+    Creature *live_creature = character_reference.get();
+    Character *live_character = live_creature == nullptr ? nullptr :
+                                live_creature->as_character();
+    if( live_character != nullptr ) {
+        map &here = live_character->get_map();
+        here.invalidate_map_cache( here.get_abs_sub().z() );
+    }
 }
 
 bool Character::uninstall_bionic( const bionic &bio, monster &installer, Character &patient,
@@ -2631,6 +3031,7 @@ float Character::env_surgery_bonus( int radius ) const
 bool Character::install_bionics( const itype &type, Character &installer, bool autodoc,
                                  int skill_level, const std::optional<item> &source_item )
 {
+    const safe_reference<Creature> character_reference = get_safe_reference();
     if( !type.bionic ) {
         debugmsg( "Tried to install NULL bionic" );
         return false;
@@ -2660,16 +3061,22 @@ bool Character::install_bionics( const itype &type, Character &installer, bool a
         installer.has_flag( json_flag_MANUAL_CBM_INSTALLATION ) ) {
         perform_install( bioid, upbio_uid, difficulty, success, pl_skill, "NOT_MED",
                          bioid->canceled_mutations, pos_bub(), source_item );
-        return true;
+        return static_cast<bool>( character_reference );
     }
     const std::string installer_name = installer.has_trait( trait_PROF_MED ) ||
                                        installer.has_trait( trait_PROF_AUTODOC ) ? installer.disp_name( true ) : "NOT_MED";
 
     assign_activity( bionic_operation_activity_actor( true, success, autodoc, pl_skill,
                      difficulty, bioid, upbio_uid, installer_name, source_item ) );
+    if( !character_reference ) {
+        return false;
+    }
 
     for( const std::pair<const bodypart_str_id, size_t> &elem : bioid->occupied_bodyparts ) {
         add_effect( effect_under_operation, difficulty * 20_minutes, elem.first.id(), true, difficulty );
+        if( !character_reference ) {
+            return false;
+        }
     }
 
     return true;
@@ -2680,52 +3087,98 @@ void Character::perform_install( const bionic_id &bid, bionic_uid upbio_uid, int
                                  const std::vector<trait_id> &trait_to_rem, const tripoint_bub_ms &patient_pos,
                                  const std::optional<item> &source_item )
 {
+    const safe_reference<Creature> character_reference = get_safe_reference();
+    const std::string installer_name_snapshot = installer_name;
+    const std::optional<item> source_item_snapshot = source_item;
     // if we chop off a limb, our stored kcal should decrease proportionally
     float cached_healthy_kcal = get_healthy_kcal();
 
     if( success > 0 ) {
         get_event_bus().send<event_type::installs_cbm>( getID(), bid );
+        Creature *live_creature = character_reference.get();
+        Character *live_character = live_creature == nullptr ? nullptr :
+                                    live_creature->as_character();
+        if( live_character == nullptr ) {
+            return;
+        }
         if( upbio_uid ) {
-            if( std::optional<bionic *> upbio = find_bionic_by_uid( upbio_uid ) ) {
+            if( std::optional<bionic *> upbio = live_character->find_bionic_by_uid( upbio_uid ) ) {
                 const std::string bio_name = ( *upbio )->id->name.translated();
-                remove_bionic( **upbio );
+                live_character->remove_bionic( **upbio );
+                live_creature = character_reference.get();
+                live_character = live_creature == nullptr ? nullptr :
+                                 live_creature->as_character();
+                if( live_character == nullptr ) {
+                    return;
+                }
                 //~ %1$s - name of the bionic to be upgraded (inferior), %2$s - name of the upgraded bionic (superior).
-                add_msg( m_good, _( "Successfully upgraded %1$s to %2$s." ), bio_name, bid.obj().name );
+                live_character->add_msg( m_good, _( "Successfully upgraded %1$s to %2$s." ), bio_name,
+                                         bid.obj().name );
             } else {
                 debugmsg( "Couldn't find bionic with UID %d to upgrade", upbio_uid );
             }
         } else {
             //~ %s - name of the bionic.
-            add_msg( m_good, _( "Successfully installed %s." ), bid.obj().name );
+            live_character->add_msg( m_good, _( "Successfully installed %s." ), bid.obj().name );
         }
 
-        add_bionic( bid, 0, false, source_item );
+        live_character->add_bionic( bid, 0, false, source_item_snapshot );
+        live_creature = character_reference.get();
+        live_character = live_creature == nullptr ? nullptr :
+                         live_creature->as_character();
+        if( live_character == nullptr ) {
+            return;
+        }
 
         for( const trait_id &tid : trait_to_rem ) {
-            if( has_trait( tid ) ) {
-                remove_mutation( tid );
+            if( live_character->has_trait( tid ) ) {
+                live_character->remove_mutation( tid );
+                live_creature = character_reference.get();
+                live_character = live_creature == nullptr ? nullptr :
+                                 live_creature->as_character();
+                if( live_character == nullptr ) {
+                    return;
+                }
             }
         }
         // now that bionic has been added, compare our new healthy kcal to our old healthy kcal and multiply stored kcal by the ratio
-        set_stored_kcal( get_stored_kcal() * ( static_cast<float>( get_healthy_kcal() ) /
-                                               cached_healthy_kcal ) );
+        live_character->set_stored_kcal( live_character->get_stored_kcal() *
+                                         ( static_cast<float>( live_character->get_healthy_kcal() ) /
+                                           cached_healthy_kcal ) );
 
     } else {
         get_event_bus().send<event_type::fails_to_install_cbm>( getID(), bid );
+        Creature *live_creature = character_reference.get();
+        Character *live_character = live_creature == nullptr ? nullptr :
+                                    live_creature->as_character();
+        if( live_character == nullptr ) {
+            return;
+        }
 
         // for chance_of_success calculation, shift skill down to a float between ~0.4 - 30
         float adjusted_skill = static_cast<float>( pl_skill ) - std::min( static_cast<float>( 40 ),
                                static_cast<float>( pl_skill ) - static_cast<float>( pl_skill ) / static_cast<float>
                                ( 10.0 ) );
-        bionics_install_failure( bid, installer_name, difficulty, success, adjusted_skill, patient_pos );
+        live_character->bionics_install_failure( bid, installer_name_snapshot, difficulty, success,
+                adjusted_skill, patient_pos );
+        if( !character_reference ) {
+            return;
+        }
     }
-    map &here = get_map();
+    Creature *live_creature = character_reference.get();
+    Character *live_character = live_creature == nullptr ? nullptr :
+                                live_creature->as_character();
+    if( live_character == nullptr ) {
+        return;
+    }
+    map &here = live_character->get_map();
     here.invalidate_map_cache( here.get_abs_sub().z() );
 }
 
 void Character::bionics_install_failure( const bionic_id &bid, const std::string &installer,
         int difficulty, int success, float adjusted_skill, const tripoint_bub_ms &patient_pos )
 {
+    const safe_reference<Creature> character_reference = get_safe_reference();
     // "success" should be passed in as a negative integer representing how far off we
     // were for a successful install.  We use this to determine consequences for failing.
     success = std::abs( success );
@@ -2787,25 +3240,47 @@ void Character::bionics_install_failure( const bionic_id &bid, const std::string
                 } else {
                     const bionic_id &id = random_entry( valid );
                     add_bionic( id );
-                    get_event_bus().send<event_type::installs_faulty_cbm>( getID(), id );
+                    Creature *live_creature = character_reference.get();
+                    Character *live_character = live_creature == nullptr ? nullptr :
+                                                live_creature->as_character();
+                    if( live_character == nullptr ) {
+                        return;
+                    }
+                    get_event_bus().send<event_type::installs_faulty_cbm>( live_character->getID(), id );
+                    if( !character_reference ) {
+                        return;
+                    }
                 }
 
                 break;
             }
             case 4:
             case 5: {
-                for( const bodypart_id &bp : get_all_body_parts() ) {
-                    if( has_effect( effect_under_operation, bp.id() ) ) {
+                const std::vector<bodypart_id> all_body_parts = get_all_body_parts();
+                for( const bodypart_id &bp : all_body_parts ) {
+                    Creature *live_creature = character_reference.get();
+                    Character *live_character = live_creature == nullptr ? nullptr :
+                                                live_creature->as_character();
+                    if( live_character == nullptr ) {
+                        return;
+                    }
+                    if( live_character->has_effect( effect_under_operation, bp.id() ) ) {
                         if( bp_hurt.count( bp->main_part ) > 0 ) {
                             continue;
                         }
                         bp_hurt.emplace( bp->main_part );
 
-                        apply_damage( this, bp, rng( 25, 50 ), true );
-                        roll_critical_bionics_failure( bp );
+                        apply_damage( live_character, bp, rng( 25, 50 ), true );
+                        live_creature = character_reference.get();
+                        live_character = live_creature == nullptr ? nullptr :
+                                         live_creature->as_character();
+                        if( live_character == nullptr ) {
+                            return;
+                        }
+                        live_character->roll_critical_bionics_failure( bp );
 
-                        add_msg_player_or_npc( m_bad, _( "Your %s is damaged." ), _( "<npcname>'s %s is damaged." ),
-                                               body_part_name_accusative( bp ) );
+                        live_character->add_msg_player_or_npc( m_bad, _( "Your %s is damaged." ),
+                                _( "<npcname>'s %s is damaged." ), body_part_name_accusative( bp ) );
                     }
                 }
                 drop_cbm = true;
@@ -2814,11 +3289,17 @@ void Character::bionics_install_failure( const bionic_id &bid, const std::string
         }
     }
     if( drop_cbm ) {
+        Creature *live_creature = character_reference.get();
+        Character *live_character = live_creature == nullptr ? nullptr :
+                                    live_creature->as_character();
+        if( live_character == nullptr ) {
+            return;
+        }
         item cbm( bid->itype() );
         cbm.set_flag( flag_NO_STERILE );
         cbm.set_flag( flag_NO_PACKED );
         cbm.set_fault( fault_bionic_salvaged, false, nullptr, true );
-        get_map().add_item( patient_pos, cbm );
+        live_character->get_map().add_item( patient_pos, cbm );
     }
 }
 
@@ -2926,33 +3407,48 @@ bionic_uid Character::add_bionic( const bionic_id &b, bionic_uid parent_uid,
                                   bool suppress_debug,
                                   const std::optional<item> &source_item )
 {
-    if( has_bionic( b ) && !b->dupes_allowed ) {
+    const safe_reference<Creature> character_reference = get_safe_reference();
+    const bionic_id bionic_type = b;
+    if( has_bionic( bionic_type ) && !bionic_type->dupes_allowed ) {
         if( !suppress_debug ) {
-            debugmsg( "Tried to install bionic %s that is already installed!", b.c_str() );
+            debugmsg( "Tried to install bionic %s that is already installed!", bionic_type.c_str() );
         }
         return 0;
     }
 
-    const units::energy pow_up = b->capacity;
+    const units::energy pow_up = bionic_type->capacity;
     if( pow_up > 0_J ) {
         add_msg_if_player( m_good, _( "Increased storage capacity by %i." ),
                            units::to_kilojoule( pow_up ) );
     }
 
     bionic_uid bio_uid = generate_bionic_uid();
+    const auto still_installed = [&]() {
+        Creature *live_creature = character_reference.get();
+        Character *live_character = live_creature == nullptr ? nullptr :
+                                    live_creature->as_character();
+        return live_character != nullptr &&
+               live_character->find_bionic_by_uid( bio_uid ).has_value();
+    };
 
-    const char invlet = b->activated ? get_free_invlet( *this ) : ' ';
-    my_bionics->emplace_back( b, invlet, bio_uid, parent_uid, source_item );
+    const char invlet = bionic_type->activated ? get_free_invlet( *this ) : ' ';
+    my_bionics->emplace_back( bionic_type, invlet, bio_uid, parent_uid, source_item );
     bionic &bio = my_bionics->back();
     if( bio.id->activated_on_install ) {
         activate_bionic( bio );
+        if( !still_installed() ) {
+            return 0;
+        }
     }
 
-    for( const bionic_id &inc_bid : b->included_bionics ) {
+    for( const bionic_id &inc_bid : bionic_type->included_bionics ) {
         add_bionic( inc_bid, bio_uid, suppress_debug, std::nullopt );
+        if( !still_installed() ) {
+            return 0;
+        }
     }
 
-    for( const std::pair<const spell_id, int> &spell_pair : b->learned_spells ) {
+    for( const std::pair<const spell_id, int> &spell_pair : bionic_type->learned_spells ) {
         const spell_id learned_spell = spell_pair.first;
         if( learned_spell->spell_class != trait_NONE ) {
             const trait_id spell_class = learned_spell->spell_class;
@@ -2960,28 +3456,46 @@ bionic_uid Character::add_bionic( const bionic_id &b, bionic_uid parent_uid,
             // for best UX, include those spell classes in "canceled_mutations"
             if( !has_trait( spell_class ) ) {
                 set_mutation( spell_class );
+                if( !still_installed() ) {
+                    return 0;
+                }
                 on_mutation_gain( spell_class );
+                if( !still_installed() ) {
+                    return 0;
+                }
                 add_msg_if_player( mutation_desc( spell_class ) );
             }
         }
         if( !magic->knows_spell( learned_spell ) ) {
             magic->learn_spell( learned_spell, *this, true );
+            if( !still_installed() ) {
+                return 0;
+            }
         }
         spell &known_spell = magic->get_spell( learned_spell );
         // spells you learn from installing a bionic upgrade spells you know if they are the same
         if( known_spell.get_level() < spell_pair.second ) {
             known_spell.set_level( *this, spell_pair.second );
+            if( !still_installed() ) {
+                return 0;
+            }
         }
     }
 
-    for( const proficiency_id &learned : b->proficiencies ) {
+    for( const proficiency_id &learned : bionic_type->proficiencies ) {
         add_proficiency( learned );
+        if( !still_installed() ) {
+            return 0;
+        }
     }
 
-    for( const itype_id &pseudo : b->passive_pseudo_items ) {
+    for( const itype_id &pseudo : bionic_type->passive_pseudo_items ) {
         item tmparmor( pseudo );
         if( tmparmor.has_flag( flag_INTEGRATED ) ) {
             wear_item( tmparmor, false );
+            if( !still_installed() ) {
+                return 0;
+            }
         }
     }
     bio_flag_cache.clear();
@@ -2994,10 +3508,13 @@ bionic_uid Character::add_bionic( const bionic_id &b, bionic_uid parent_uid,
         // enhanced vision counts as optics for overmap sight range.
         g->update_overmap_seen();
     }
-    if( !b->enchantments.empty() ) {
+    if( !bionic_type->enchantments.empty() ) {
         recalculate_enchantment_cache();
     }
     effect_on_conditions::process_reactivate( *this );
+    if( !still_installed() ) {
+        return 0;
+    }
 
     return bio_uid;
 }
@@ -3028,6 +3545,7 @@ std::optional<bionic *> Character::find_bionic_by_uid( bionic_uid bio_uid ) cons
 
 void Character::remove_bionic( const bionic &bio )
 {
+    const safe_reference<Creature> character_reference = get_safe_reference();
     const bionic_uid bio_uid = bio.get_uid();
     std::optional<bionic *> bio_opt = find_bionic_by_uid( bio_uid );
     if( !bio_opt ) {
@@ -3035,10 +3553,11 @@ void Character::remove_bionic( const bionic &bio )
         return;
     }
 
-    bionic_collection new_my_bionics;
+    const bionic removed_bionic = **bio_opt;
+    bionic_collection remaining_bionics;
     // any spells you should not forget due to still having a bionic installed that has it.
     std::set<spell_id> cbm_spells;
-    for( bionic &i : *my_bionics ) {
+    for( const bionic &i : *my_bionics ) {
         // Linked bionics: if either is removed, the other is removed as well.
         if( i.get_uid() == bio_uid || i.get_parent_uid() == bio_uid ) {
             continue;
@@ -3048,28 +3567,37 @@ void Character::remove_bionic( const bionic &bio )
             cbm_spells.emplace( spell_pair.first );
         }
 
-        new_my_bionics.push_back( i );
+        remaining_bionics.push_back( i );
     }
+    *my_bionics = std::move( remaining_bionics );
 
     // any spells you learn from installing a bionic you forget.
-    for( const std::pair<const spell_id, int> &spell_pair : bio.id->learned_spells ) {
+    for( const std::pair<const spell_id, int> &spell_pair : removed_bionic.id->learned_spells ) {
         if( cbm_spells.count( spell_pair.first ) == 0 ) {
             magic->forget_spell( spell_pair.first );
+            if( !character_reference ) {
+                return;
+            }
         }
     }
 
-    for( const proficiency_id &lost : bio.id->proficiencies ) {
+    for( const proficiency_id &lost : removed_bionic.id->proficiencies ) {
         lose_proficiency( lost );
+        if( !character_reference ) {
+            return;
+        }
     }
 
-    for( const itype_id &popped_armor : bio.id->passive_pseudo_items ) {
+    for( const itype_id &popped_armor : removed_bionic.id->passive_pseudo_items ) {
         remove_worn_items_with( [&]( item & armor ) {
             return armor.typeId() == popped_armor;
         } );
+        if( !character_reference ) {
+            return;
+        }
     }
 
-    const bool has_enchantments = !bio.id->enchantments.empty();
-    *my_bionics = new_my_bionics;
+    const bool has_enchantments = !removed_bionic.id->enchantments.empty();
     bio_flag_cache.clear();
     update_last_bionic_uid();
     invalidate_pseudo_items();
@@ -3082,6 +3610,9 @@ void Character::remove_bionic( const bionic &bio )
     // clean up any changes from bionic limbs
     recalculate_bodyparts();
     effect_on_conditions::process_reactivate( *this );
+    if( !character_reference ) {
+        return;
+    }
 }
 
 int Character::num_bionics() const
@@ -3722,9 +4253,21 @@ void Character::update_last_bionic_uid() const
 
 void Character::force_bionic_deactivation( bionic &bio )
 {
+    const safe_reference<Creature> character_reference = get_safe_reference();
+    const bionic_uid bio_uid = bio.get_uid();
     time_duration old_time = bio.incapacitated_time;
     bio.incapacitated_time = 0_turns;
     deactivate_bionic( bio, true );
-    bio.powered = false;
-    bio.incapacitated_time = old_time;
+    Creature *live_creature = character_reference.get();
+    Character *live_character = live_creature == nullptr ? nullptr :
+                                live_creature->as_character();
+    if( live_character == nullptr ) {
+        return;
+    }
+    const std::optional<bionic *> current_bio =
+        live_character->find_bionic_by_uid( bio_uid );
+    if( current_bio ) {
+        ( **current_bio ).powered = false;
+        ( **current_bio ).incapacitated_time = old_time;
+    }
 }
