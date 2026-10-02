@@ -28517,6 +28517,153 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertNotIn("services.items.transfer", main)
             self.assertIn("services.item_categories.set_spawn_rates(", main)
 
+    def test_variable_reads_do_not_inherit_mutation_beta_fallback(self) -> None:
+        fallback = {"u": ("attacker", "character"), "npc": ("attacker", "character"),
+                    "read_u": ("attacker", "character"), "read_npc": None}
+        self.assertEqual(migrate_lua_first._proven_copy_variable_target(fallback, "npc"),
+                         "attacker")
+        for value in ({"npc_val": "delay"}, {"var_val": "pointer"}):
+            self.assertIsNone(migrate_lua_first.render_native_duration_expression(value, fallback))
+            self.assertIsNone(migrate_lua_first._render_assignment_string_value(value, False, fallback))
+        self.assertIn("get_number(attacker", migrate_lua_first.render_native_duration_expression(
+            {"u_val": "delay"}, fallback) or "")
+        # A missing-beta read needs Native diagnostics, whereas a literal
+        # write can still use the existing actor(true) mutation target.
+        self.assertIsNotNone(migrate_lua_first.render_static_character_string_var({
+            "set_string_var": "written", "target_var": {"npc_val": "target"}}, fallback))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_native_indirect_duration_emitted_lua_routes_one_pointer_and_one_read(self) -> None:
+        owners = {"u": ("alpha", "character"), "npc": ("beta", "monster")}
+        expression = migrate_lua_first.render_native_duration_expression(
+            {"var_val": "pointer", "default": "-7 turns"}, owners)
+        self.assertIsNotNone(expression)
+        script = r"""
+local alpha,beta={},{}
+local context={data={}}
+local pointer,target,reads
+local services={time={duration=function(turns,unit)
+ assert(unit=='turn');return {turns=turns}
+end,duration_from_turns=function(value)
+ return {turns=value>=0 and math.floor(value) or math.ceil(value)}
+end},variables={get_context_string=function(data,key)
+ assert(data==context.data and key=='pointer')
+ reads[#reads+1]={'pointer',key};return {ok=true,value=pointer}
+end}}
+local function read(scope,key)
+ reads[#reads+1]={scope,key};return {ok=true,value=target}
+end
+services.variables.get_number=function(owner,key)
+ assert(owner==alpha or owner==beta);return read(owner==alpha and 'u' or 'npc',key)
+end
+services.variables.get_context_number=function(data,key)
+ assert(data==context.data);return read('context',key)
+end
+services.variables.get_global_number=function(key) return read('global',key) end
+local function service_value(result) assert(result.ok);return result.value end
+local function evaluate() return EXPRESSION end
+local cases={{'u_key','u','key'},{'n_key','npc','key'},{'_key','context','key'},
+ {'key','global','key'},{'var_next','global','var_next'},{'','global',''},
+ {'u_','u',''},{'n_','npc',''},{'_','context',''},
+ {'u_raw\0tail','u','raw\0tail'},{string.rep('k',10000),'global',string.rep('k',10000)}}
+for _,case in ipairs(cases) do
+ for _,value in ipairs({{exists=false},{exists=true,value=0},
+                       {exists=true,value=-3.9},{exists=true,value=2.9}}) do
+  reads={};pointer={exists=true,value=case[1]};target=value
+  local result=evaluate().turns
+  assert(result==(value.exists==false and -7 or value.value>=0 and
+                 math.floor(value.value) or math.ceil(value.value)))
+  assert(#reads==2 and reads[1][1]=='pointer' and reads[2][1]==case[2]
+         and reads[2][2]==case[3])
+ end
+end
+reads={};pointer={exists=false};target={exists=true,value=999}
+assert(evaluate().turns==-7 and #reads==1)
+""".replace("EXPRESSION", expression or "nil")
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_location_revert_participant_reads_use_producer_proofs_in_both_branches(self) -> None:
+        for event, supported in (("character_melee_attacks_monster", True),
+                                 ("character_melee_attacks_character", True),
+                                 ("character_kills_character", False), ("game_start", False)):
+            for scope in ("npc_val", "var_val"):
+                for branch in ("effect", "false_effect"):
+                    effect = {"revert_location": {"context_val": "loc"},
+                              "time_in_future": {scope: "delay", "default": "-1 turn"},
+                              "key": {scope: "key", "default": "fallback"}}
+                    source = migrate_lua_first.SourceObject(Path("read_owners.json"), 0, {
+                        "type": "effect_on_condition", "id": "read_owners", "eoc_type": "EVENT",
+                        "required_event": event, "condition": "is_day", "effect": [], branch: effect})
+                    result = migrate_lua_first.MigrationResult()
+                    rendered = migrate_lua_first.render_eoc(source, result)
+                    with self.subTest(event=event, scope=scope, branch=branch):
+                        self.assertEqual("services.world.schedule_location_revert(" in rendered, supported)
+                        self.assertEqual(not result.todos, supported, [t.message for t in result.todos])
+                        if supported:
+                            self.assertIn("get_number(context.actors.interlocutor", rendered)
+                            self.assertIn("get_string(context.actors.interlocutor", rendered)
+                            self.assertIn("function() return", rendered)
+                            self.assertNotIn("services.characters.avatar()", rendered)
+        # Read restrictions also apply to existing string assignments; they
+        # must not silently turn a kill victim into the attacker's storage.
+        for branch in ("effect", "false_effect"):
+            source = migrate_lua_first.SourceObject(Path("kill_read.json"), 0, {
+                "type": "effect_on_condition", "id": "kill_read", "eoc_type": "EVENT",
+                "required_event": "character_kills_character", "condition": "is_day",
+                "effect": [], branch: {"set_string_var": {"npc_val": "name"},
+                                      "target_var": {"global_val": "out"}}})
+            result = migrate_lua_first.MigrationResult()
+            rendered = migrate_lua_first.render_eoc(source, result)
+            self.assertTrue(result.todos)
+            self.assertNotIn("services.variables.get_string(actor", rendered)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_indirect_revert_key_provider_reloads_pointer_after_each_generation(self) -> None:
+        lines = migrate_lua_first.render_static_location_revert({
+            "revert_location": {"context_val": "loc"}, "time_in_future": {"u_val": "delay"},
+            "key": {"var_val": "pointer", "default": "fallback"}}, "revert_location",
+            effect_actor_targets={"u": ("alpha", "character"), "npc": ("beta", "monster")})
+        self.assertIsNotNone(lines)
+        script = r"""
+local alpha,beta={},{}
+local context={data={loc={project_to=function(self,scale) assert(scale=='omt');return self end}}}
+local generated,index,reads=false,0,0
+local services={time={duration_from_turns=function(value) assert(value==3.9);return 3 end},
+ variables={get_number=function(owner,key)
+  assert(not generated and owner==alpha and key=='delay')
+  return {ok=true,value={exists=true,value=3.9}}
+ end,get_context_string=function(data,key)
+  assert(generated and data==context.data and key=='pointer');reads=reads+1
+  return {ok=true,value={exists=true,value=({'u_key','n_key','_key','var_next'})[index]}}
+ end},world={schedule_location_revert=function(position,delay,key)
+  assert(position==context.data.loc and delay==3 and reads==0 and type(key)=='function')
+  generated=true
+  for i=1,4 do index=i;assert(key()==({'alpha','beta','context','global'})[i]) end
+ end}}
+services.variables.get_string=function(owner,key)
+ assert(generated and key=='key');reads=reads+1
+ return {ok=true,value={exists=true,value=owner==alpha and 'alpha' or 'beta'}}
+end
+local read_pointer=services.variables.get_context_string
+services.variables.get_context_string=function(data,key)
+ if key=='pointer' then return read_pointer(data,key) end
+ assert(generated and data==context.data and key=='key');reads=reads+1
+ return {ok=true,value={exists=true,value='context'}}
+end
+services.variables.get_global_string=function(key)
+ assert(generated and key=='var_next');reads=reads+1
+ return {ok=true,value={exists=true,value='global'}}
+end
+local function service_value(result) assert(result.ok);return result.value end
+BODY
+assert(reads==8)
+""".replace("BODY", "\n".join(lines or []))
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_native_dynamic_duration_ranges_preserve_sources_and_rng(self) -> None:
         for value in ([0, 0], [2147483647, -2147483648], ["infinite", "infinite"],
                       [{"global_val": "turns", "default": "-3 turns"},

@@ -5900,6 +5900,12 @@ def render_static_false_effect(
         if rendered is None:
             return None
         return [line.replace("    ", "        ", 1) for line in rendered]
+    if isinstance(effect, dict) and "revert_location" in effect:
+        rendered = render_static_location_revert(
+            effect, "revert_location", effect_actor_targets=effect_actor_targets)
+        if rendered is None:
+            return None
+        return [line.replace("    ", "        ", 1) for line in rendered]
     if isinstance(effect, dict) and "give_achievement" in effect:
         if (
             set(effect) != {"give_achievement"} or
@@ -25799,7 +25805,10 @@ def _literal_nonnegative_integer(
     return int(literal)
 
 
-def render_native_duration_expression(value: Any) -> str | None:
+def render_native_duration_expression(
+    value: Any,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
+) -> str | None:
     """Preserve native numeric duration reads and RNG without invented clamps."""
     if isinstance(value, list):
         if len(value) != 2:
@@ -25807,7 +25816,7 @@ def render_native_duration_expression(value: Any) -> str | None:
         # Native pair members are single value_or_var instances, not pairs.
         if any(isinstance(bound, list) for bound in value):
             return None
-        bounds = [render_native_duration_expression(bound) for bound in value]
+        bounds = [render_native_duration_expression(bound, effect_actor_targets) for bound in value]
         if any(bound is None for bound in bounds):
             return None
         # Do not collapse equal ranges: Native rng still consumes its stream.
@@ -25825,9 +25834,7 @@ def render_native_duration_expression(value: Any) -> str | None:
     scope = next((candidate for candidate in (
         "u_val", "npc_val", "global_val", "var_val", "context_val",
     ) if candidate in value), None)
-    # No ambient avatar/NPC fallback can prove a dialogue owner. Global and
-    # callback-context storage do not need that participant proof.
-    if scope not in {"global_val", "context_val"}:
+    if scope is None:
         return None
     key = value[scope]
     if not lua_quotable_native_variable_string(key):
@@ -25837,15 +25844,38 @@ def render_native_duration_expression(value: Any) -> str | None:
         # Preserve loader errors/diagnostics explicitly rather than guessing
         # a numeric fallback from unsupported default syntax.
         return None
-    if scope == "global_val":
-        read = f'services.variables.get_global_number({lua_quote(key)})'
+    alpha = _proven_native_variable_read_target(effect_actor_targets, "u")
+    beta = _proven_native_variable_read_target(effect_actor_targets, "npc")
+    if scope == "var_val":
+        # Native parses one context pointer, then reads one concrete scope.
+        # Mutation fallback is not a read-owner proof: const_actor(true) does
+        # not substitute alpha when beta is missing.
+        pointer = _render_native_variable_string_snapshot(
+            "context_val", lua_quote(key), alpha, beta)
+        reads = [_render_native_variable_number_snapshot(source, name, alpha, beta)
+                 for source, name in (
+                     ("u_val", "string.sub(pointer.value, 3)"),
+                     ("npc_val", "string.sub(pointer.value, 3)"),
+                     ("context_val", "string.sub(pointer.value, 2)"),
+                     ("global_val", "pointer.value"),
+                 )]
+        if any(read is None for read in reads):
+            return None
+        read = (
+            '(function(pointer) if pointer.exists == false then return pointer end; '
+            'if string.sub(pointer.value, 1, 2) == "u_" then return ' + reads[0] +
+            ' elseif string.sub(pointer.value, 1, 2) == "n_" then return ' + reads[1] +
+            ' elseif string.sub(pointer.value, 1, 1) == "_" then return ' + reads[2] +
+            ' else return ' + reads[3] + ' end end)(' + pointer + ')'
+        )
     else:
-        read = ('services.variables.get_context_number(context and context.data, '
-                + lua_quote(key) + ')')
+        read = _render_native_variable_number_snapshot(scope, lua_quote(key), alpha, beta)
+        if read is None:
+            return None
     return ('(function(result) if result.exists == false then return '
             f'services.time.duration({default}, "turn") end; '
             'return services.time.duration_from_turns(result.value) end)('
-            f'service_value({read}))')
+            f'{read})')
 
 
 def _duration_expression(
@@ -26535,6 +26565,7 @@ def render_static_location_revert(
     effect: dict[str, Any], key: str,
     avatar_actor_proven: bool = False,
     npc_actor_proven: bool = False,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> list[str] | None:
     if key != "revert_location" or key not in effect:
         return None
@@ -26544,32 +26575,17 @@ def render_static_location_revert(
     target = _coordinate_source_expression(
         effect[key], avatar_actor_proven, npc_actor_proven
     )
-    delay = render_native_duration_expression(effect.get("time_in_future"))
+    delay = render_native_duration_expression(effect.get("time_in_future"), effect_actor_targets)
     event_key = effect.get("key", "")
     event_key_expression = None
     if lua_quotable_native_variable_string(event_key):
         event_key_expression = lua_quote(event_key)
     elif isinstance(event_key, dict):
-        # Native chooses the first var_info scope in this order. Without an
-        # exact dialogue-participant proof, only context/global reads are safe.
-        scope = next((candidate for candidate in (
-            "u_val", "npc_val", "global_val", "var_val", "context_val",
-        ) if candidate in event_key), None)
-        if scope in {"global_val", "context_val"}:
-            def read(variable_scope: str, quoted_key: str) -> str | None:
-                snapshot = _render_native_variable_string_snapshot(
-                    variable_scope, quoted_key, None, None)
-                if snapshot is None:
-                    return None
-                return ('(function(result) if result.exists == false then return nil end; '
-                        f'return result.value end)({snapshot})')
-
-            expression = render_proficiency_id_expression(
-                event_key, variable_string_reader=read)
-            if expression is not None:
-                # Native evaluates the key after map generation, once for
-                # each submap. An eager string argument loses those reads.
-                event_key_expression = f"function() return {expression} end"
+        expression = _render_assignment_string_value(event_key, False, effect_actor_targets)
+        if expression is not None:
+            # Native evaluates the key after map generation, once for
+            # each submap. An eager string argument loses those reads.
+            event_key_expression = f"function() return {expression} end"
     if target is None or delay is None or event_key_expression is None:
         return None
     target_omt = f"({target}):project_to(\"omt\")"
@@ -27760,6 +27776,18 @@ def _proven_copy_variable_target(
     return target_info[0]
 
 
+def _proven_native_variable_read_target(
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None,
+    role: str,
+) -> str | None:
+    """Resolve const_actor storage separately from actor mutation fallback."""
+    if effect_actor_targets is None:
+        return None
+    read_role = "read_" + role
+    return _proven_copy_variable_target(
+        effect_actor_targets, read_role if read_role in effect_actor_targets else role)
+
+
 def render_participant_translation_expression(
     value: Any, target_expression: str,
     avatar_expression: str | None, npc_expression: str | None,
@@ -27844,6 +27872,24 @@ def _render_assignment_translation_literal(value: Any) -> str | None:
     return f"services.translate({arguments})"
 
 
+def _render_native_variable_number_snapshot(
+    scope: str, quoted_key: str, alpha: str | None, beta: str | None,
+) -> str | None:
+    """Read Native numeric type and presence using an exact storage owner."""
+    if scope == "global_val":
+        call = f"services.variables.get_global_number({quoted_key})"
+    elif scope == "context_val":
+        call = f"services.variables.get_context_number(context and context.data, {quoted_key})"
+    elif scope in {"u_val", "npc_val"}:
+        owner = alpha if scope == "u_val" else beta
+        if owner is None:
+            return None
+        call = f"services.variables.get_number({owner}, {quoted_key})"
+    else:
+        return None
+    return f"service_value({call})"
+
+
 def _render_native_variable_string_snapshot(
     scope: str, quoted_key: str, alpha: str | None, beta: str | None,
 ) -> str | None:
@@ -27866,8 +27912,8 @@ def _render_assignment_string_value(
     value: Any, i18n: bool,
     effect_actor_targets: dict[str, tuple[str, str] | None] | None,
 ) -> str | None:
-    alpha = _proven_copy_variable_target(effect_actor_targets, "u")
-    beta = _proven_copy_variable_target(effect_actor_targets, "npc")
+    alpha = _proven_native_variable_read_target(effect_actor_targets, "u")
+    beta = _proven_native_variable_read_target(effect_actor_targets, "npc")
 
     def read(scope: str, key: str) -> str | None:
         snapshot = _render_native_variable_string_snapshot(scope, key, alpha, beta)
@@ -27904,7 +27950,8 @@ def _render_assignment_string_value(
                         "str" in default or "str_sp" in default):
                     return None
                 fallback = lua_quote("")
-    alpha_info = (effect_actor_targets or {}).get("u")
+    targets = effect_actor_targets or {}
+    alpha_info = targets.get("read_u", targets.get("u"))
     technique_alpha = alpha if alpha is not None and alpha_info[1] == "character" else None
     return render_proficiency_id_expression(
         value, alpha_owner=technique_alpha, beta_owner=beta,
@@ -31959,6 +32006,18 @@ def render_eoc(
     )
     if native_beta_absent_proven:
         effect_actor_targets["text_npc"] = ("nil", "absent")
+    effect_actor_targets["read_u"] = alpha_effect_target
+    effect_actor_targets["read_npc"] = beta_effect_target
+    if (
+        native_beta_absent_proven or npc_fatal_hook or
+        required_event == "character_kills_character" or
+        exact_npc_actor_proven and required_event not in VICTIM_CHARACTER_EVENTS and
+        required_event not in MONSTER_BETA_EVENTS and not training_pair_proven
+    ):
+        # Native reads use const_actor, which has no mutation alpha fallback.
+        # Fatal-hook killer lifetime and missing-beta diagnostics are not a
+        # proven readable storage owner; retain those shapes for manual review.
+        effect_actor_targets["read_npc"] = None
     # Keep the general EOC participant map intact for unrelated npc_* APIs.
     # The native effect callbacks use dialogue::actor(true), which in NPC_DEATH
     # selects the killer when present and alpha-falls back to the dead NPC.
@@ -35118,7 +35177,7 @@ def render_eoc(
                     all_effects_converted = False
             elif isinstance(effect, dict) and "revert_location" in effect:
                 rendered = render_static_location_revert(
-                    effect, "revert_location"
+                    effect, "revert_location", effect_actor_targets=effect_actor_targets
                 )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -35126,10 +35185,10 @@ def render_eoc(
                 else:
                     lines.append(
                         "    -- TODO: location revert requires a proven typed coordinate, "
-                        "a native constant/context/global duration or two-bound range, "
-                        "and a raw literal or context/global string key. Math-backed "
-                        "durations and participant/indirect variables still need "
-                        "exact source proofs."
+                        "a native duration or two-bound range, and a raw string key; "
+                        "participant/indirect reads require exact const_actor owners. "
+                        "Math-backed durations and absent-owner diagnostics still "
+                        "need exact source proofs."
                     )
                     result.add_todo(
                         "manual_rewrite",

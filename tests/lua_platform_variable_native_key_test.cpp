@@ -509,4 +509,136 @@ TEST_CASE( "lua_platform_numeric_variable_duration_matches_native_presence_and_c
     }
 }
 
+TEST_CASE( "lua_platform_indirect_numeric_duration_matches_native_participants_and_pointer_types",
+           "[lua][platform][semantic][variables][time]" )
+{
+    global_values_restore restore_global_values;
+    avatar alpha;
+    avatar beta;
+    alpha.normalize();
+    beta.normalize();
+    alpha.setID( character_id( 4921 ), true );
+    beta.setID( character_id( 4922 ), true );
+    variable_api_fixture fixture;
+    fixture.lua.open_libraries( sol::lib::string );
+    fixture.lua["services"] = fixture.services;
+    fixture.lua["alpha"] = game_handle::from_creature(
+                              alpha, { "avatar", alpha.getID().get_value(), 0, 0, 0, {} }, fixture.runtime, 1 );
+    fixture.lua["beta"] = game_handle::from_creature(
+                             beta, { "avatar", beta.getID().get_value(), 0, 0, 0, {} }, fixture.runtime, 1 );
+    // The migration tool tests execute the generated expression. Here the
+    // same one-pass operation calls real registered APIs against Native
+    // duration_or_var, including diagnostics and unrelated large arrays.
+    const sol::protected_function_result loaded = fixture.lua.safe_script( R"(
+        local function value(result) assert(result.ok); return result.value end
+        function read_duration(data, pointer_key, fallback)
+            local pointer = value(services.variables.get_context_string(data, pointer_key))
+            if pointer.exists == false then return services.time.duration(fallback, "turn") end
+            local text, result = pointer.value
+            if string.sub(text, 1, 2) == "u_" then
+                result = value(services.variables.get_number(alpha, string.sub(text, 3)))
+            elseif string.sub(text, 1, 2) == "n_" then
+                result = value(services.variables.get_number(beta, string.sub(text, 3)))
+            elseif string.sub(text, 1, 1) == "_" then
+                result = value(services.variables.get_context_number(data, string.sub(text, 2)))
+            else
+                result = value(services.variables.get_global_number(text))
+            end
+            if result.exists == false then return services.time.duration(fallback, "turn") end
+            return services.time.duration_from_turns(result.value)
+        end
+    )", sol::script_pass_on_error );
+    REQUIRE( loaded.valid() );
+    const sol::protected_function read_duration = fixture.lua["read_duration"];
+    const std::string pointer_key = std::string( "pointer\0", 8 ) + std::string( 300, 'p' );
+    const std::string raw_key = std::string( "raw\0tail", 8 );
+    const std::vector<std::optional<diag_value>> pointers = {
+        std::nullopt, diag_value{}, diag_value( 12.0 ),
+        diag_value( diag_array( 5000, diag_value( 4.0 ) ) ),
+        diag_value( "u_key" ), diag_value( "n_key" ), diag_value( "_key" ), diag_value( "key" ),
+        diag_value( "u_" ), diag_value( "n_" ), diag_value( "_" ), diag_value( "" ),
+        diag_value( "var_next" ), diag_value( "u_" + raw_key ),
+        diag_value( std::string( 10000, 'k' ) ),
+    };
+    for( std::size_t index = 0; index < pointers.size(); ++index ) {
+        for( const bool present : { false, true } ) {
+            for( const int fallback : { -7, calendar::INDEFINITELY_LONG } ) {
+                CAPTURE( index, present, fallback );
+                dialogue conversation( get_talker_for( alpha ), get_talker_for( beta ) );
+                sol::table data = fixture.lua.create_table();
+                for( const std::string &key : { std::string( "key" ), std::string{}, raw_key,
+                                               std::string( "var_next" ), std::string( 10000, 'k' ) } ) {
+                    alpha.remove_value( key );
+                    beta.remove_value( key );
+                    get_globals().remove_global_value( key );
+                    if( present ) {
+                        // Distinct values detect accidental scope/owner fallback.
+                        alpha.set_value( key, diag_value( 3.9 ) );
+                        beta.set_value( key, diag_value( -4.9 ) );
+                        conversation.set_value( key, diag_value( 5.9 ) );
+                        data.raw_set( key, 5.9 );
+                        get_globals().set_global_value( key, diag_value( -6.9 ) );
+                    }
+                }
+                if( pointers[index] ) {
+                    conversation.set_value( pointer_key, *pointers[index] );
+                    if( index == 1 ) {
+                        data.raw_set( pointer_key, fixture.services["types"]["null"].get<sol::object>() );
+                    } else if( pointers[index]->is_dbl() ) {
+                        data.raw_set( pointer_key, pointers[index]->dbl() );
+                    } else if( pointers[index]->is_array() ) {
+                        sol::table oversized = fixture.lua.create_table();
+                        for( int entry = 1; entry <= 5000; ++entry ) {
+                            oversized[entry] = 4.0;
+                        }
+                        data.raw_set( pointer_key, oversized );
+                    } else {
+                        data.raw_set( pointer_key, pointers[index]->str() );
+                    }
+                }
+                std::ostringstream input;
+                JsonOut writer( input );
+                writer.start_object();
+                writer.member( "var_val", pointer_key );
+                writer.member( "default", fallback );
+                writer.end_object();
+                duration_or_var native;
+                native.deserialize( json_loader::from_string( input.str() ) );
+                time_duration expected;
+                const std::string native_diagnostic = capture_debugmsg_during( [&]() {
+                    expected = native.evaluate( conversation );
+                } );
+                time_duration actual;
+                const std::string platform_diagnostic = capture_debugmsg_during( [&]() {
+                    const sol::protected_function_result converted = read_duration( data, pointer_key, fallback );
+                    REQUIRE( converted.valid() );
+                    actual = converted.get<cata::lua_platform::script_time_duration>().to_native();
+                } );
+                CHECK( actual == expected );
+                CHECK( platform_diagnostic == native_diagnostic );
+            }
+        }
+    }
+}
+
+TEST_CASE( "native_variable_reads_do_not_share_missing_beta_mutation_fallback",
+           "[lua][platform][semantic][variables]" )
+{
+    avatar alpha;
+    alpha.set_value( "key", diag_value( 11.0 ) );
+    dialogue conversation( get_talker_for( alpha ), nullptr );
+    const var_info info{ var_type::npc, "key" };
+    const diag_value *read = nullptr;
+    const std::string read_diagnostic = capture_debugmsg_during( [&]() {
+        read = maybe_read_var_value( info, conversation );
+    } );
+    CHECK( read == nullptr );
+    CHECK( read_diagnostic.find( "invalid beta talker" ) != std::string::npos );
+    const std::string write_diagnostic = capture_debugmsg_during( [&]() {
+        conversation.actor( true )->set_value( "key", diag_value( 22.0 ) );
+    } );
+    CHECK( alpha.get_value( "key" ).dbl() == 22.0 );
+    CHECK( write_diagnostic.find( "invalid beta talker" ) != std::string::npos );
+}
+
 #endif // defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
