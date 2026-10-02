@@ -25799,6 +25799,55 @@ def _literal_nonnegative_integer(
     return int(literal)
 
 
+def render_native_duration_expression(value: Any) -> str | None:
+    """Preserve native numeric duration reads and RNG without invented clamps."""
+    if isinstance(value, list):
+        if len(value) != 2:
+            return None
+        # Native pair members are single value_or_var instances, not pairs.
+        if any(isinstance(bound, list) for bound in value):
+            return None
+        bounds = [render_native_duration_expression(bound) for bound in value]
+        if any(bound is None for bound in bounds):
+            return None
+        # Do not collapse equal ranges: Native rng still consumes its stream.
+        return ('(function(lower, upper) return services.time.duration('
+                'services.random.native_int(math.min(lower.turns, upper.turns), '
+                'math.max(lower.turns, upper.turns)), "turn") end)('
+                + ", ".join(bounds) + ')')
+    turns = parse_native_duration_turns(value)
+    if turns is not None:
+        return f'services.time.duration({turns}, "turn")'
+    if not isinstance(value, dict):
+        return None
+    if set(value) & {"relative", "proportional", "extend", "delete"}:
+        return None
+    scope = next((candidate for candidate in (
+        "u_val", "npc_val", "global_val", "var_val", "context_val",
+    ) if candidate in value), None)
+    # No ambient avatar/NPC fallback can prove a dialogue owner. Global and
+    # callback-context storage do not need that participant proof.
+    if scope not in {"global_val", "context_val"}:
+        return None
+    key = value[scope]
+    if not lua_quotable_native_variable_string(key):
+        return None
+    default = parse_native_duration_turns(value.get("default", 0))
+    if default is None:
+        # Preserve loader errors/diagnostics explicitly rather than guessing
+        # a numeric fallback from unsupported default syntax.
+        return None
+    if scope == "global_val":
+        read = f'services.variables.get_global_number({lua_quote(key)})'
+    else:
+        read = ('services.variables.get_context_number(context and context.data, '
+                + lua_quote(key) + ')')
+    return ('(function(result) if result.exists == false then return '
+            f'services.time.duration({default}, "turn") end; '
+            'return services.time.duration_from_turns(result.value) end)('
+            f'service_value({read}))')
+
+
 def _duration_expression(
     value: Any, *, minimum: int = 0, actor_expression: str = "actor",
     truncate: bool = False
@@ -26495,9 +26544,7 @@ def render_static_location_revert(
     target = _coordinate_source_expression(
         effect[key], avatar_actor_proven, npc_actor_proven
     )
-    duration = parse_native_duration_turns(effect.get("time_in_future"))
-    delay = (f'services.time.duration({duration}, "turn")'
-             if duration is not None else None)
+    delay = render_native_duration_expression(effect.get("time_in_future"))
     event_key = effect.get("key", "")
     event_key_expression = None
     if lua_quotable_native_variable_string(event_key):
@@ -35079,9 +35126,10 @@ def render_eoc(
                 else:
                     lines.append(
                         "    -- TODO: location revert requires a proven typed coordinate, "
-                        "a native literal duration, and a raw literal or context/global "
-                        "string key. Dynamic duration and participant/indirect keys "
-                        "need exact dialogue-source proofs."
+                        "a native constant/context/global duration or two-bound range, "
+                        "and a raw literal or context/global string key. Math-backed "
+                        "durations and participant/indirect variables still need "
+                        "exact source proofs."
                     )
                     result.add_todo(
                         "manual_rewrite",

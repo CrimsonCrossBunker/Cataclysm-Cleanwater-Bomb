@@ -28517,6 +28517,84 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertNotIn("services.items.transfer", main)
             self.assertIn("services.item_categories.set_spawn_rates(", main)
 
+    def test_native_dynamic_duration_ranges_preserve_sources_and_rng(self) -> None:
+        for value in ([0, 0], [2147483647, -2147483648], ["infinite", "infinite"],
+                      [{"global_val": "turns", "default": "-3 turns"},
+                       {"context_val": "turns", "default": "infinite"}]):
+            expression = migrate_lua_first.render_native_duration_expression(value)
+            self.assertIsNotNone(expression)
+            self.assertIn("services.random.native_int", expression or "")
+            self.assertNotIn("services.random.int(", expression or "")
+            self.assertNotIn("math.floor", expression or "")
+        for value in ([], [1], [1, 2, 3], [[1, 2], 3],
+                      {"u_val": "turns"}, {"npc_val": "turns"}, {"var_val": "turns"},
+                      {"global_val": "turns", "u_val": "shadow"}, {"math": ["1"]},
+                      {"global_val": "turns", "default": "invalid duration"},
+                      {"global_val": "turns", "relative": {"default": "1 turn"}}):
+            self.assertIsNone(migrate_lua_first.render_native_duration_expression(value))
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source.json"
+            source.write_text(json.dumps([{
+                "type": "effect_on_condition", "id": "revert_dynamic_delay",
+                "eoc_type": "EVENT", "required_event": "game_start", "effect": [
+                    {"revert_location": {"context_val": "loc"},
+                     "time_in_future": [{"context_val": "delay", "default": "-1 turn"},
+                                        {"global_val": "delay", "default": "infinite"}],
+                     "key": "range"},
+                ],
+            }]), encoding="utf-8")
+            result = migrate_lua_first.migrate(migrate_lua_first.load_objects([source]), "duration_mod")
+            body = result.files[Path("main.lua")]
+            self.assertIn("get_context_number", body)
+            self.assertIn("get_global_number", body)
+            self.assertIn("duration_from_turns", body)
+            self.assertIn("services.random.native_int", body)
+            self.assertIn("services.world.schedule_location_revert", body)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_native_dynamic_duration_emitted_lua_distinguishes_missing_from_zero(self) -> None:
+        expression = migrate_lua_first.render_native_duration_expression([
+            {"context_val": "left", "default": "infinite"},
+            {"global_val": "right", "default": "-3 turns"},
+        ])
+        self.assertIsNotNone(expression)
+        script = r"""
+local context={data={}}
+local reads,rng_calls={},{}
+local left,right
+local services={time={duration=function(turns,unit)
+ assert(unit=='turn');return {turns=turns}
+end,duration_from_turns=function(value)
+ assert(type(value)=='number')
+ return {turns=value>=0 and math.floor(value) or math.ceil(value)}
+end},variables={get_context_number=function(data,key)
+ assert(data==context.data and key=='left');reads[#reads+1]='left';return {ok=true,value=left}
+end,get_global_number=function(key)
+ assert(key=='right');reads[#reads+1]='right';return {ok=true,value=right}
+end},random={native_int=function(lower,upper)
+ assert(lower<=upper);rng_calls[#rng_calls+1]={lower,upper};return lower
+end}}
+local function service_value(result) assert(result.ok);return result.value end
+local function evaluate() return EXPRESSION end
+left={exists=false};right={exists=false}
+assert(evaluate().turns==-3)
+assert(rng_calls[1][1]==-3 and rng_calls[1][2]==21474836)
+left={exists=true,value=0};right={exists=true,value=0}
+assert(evaluate().turns==0)
+assert(rng_calls[2][1]==0 and rng_calls[2][2]==0)
+left={exists=true,value=-3.9};right={exists=true,value=2.9}
+assert(evaluate().turns==-3)
+assert(rng_calls[3][1]==-3 and rng_calls[3][2]==2)
+left={exists=true,value=2147483647};right={exists=true,value=-2147483648}
+assert(evaluate().turns==-2147483648)
+assert(rng_calls[4][1]==-2147483648 and rng_calls[4][2]==2147483647)
+assert(#rng_calls==4 and #reads==8)
+for i=1,8,2 do assert(reads[i]=='left' and reads[i+1]=='right') end
+""".replace("EXPRESSION", expression or "nil")
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_location_revert_preserves_native_literal_range_and_raw_keys(self) -> None:
         key = "键" * 500 + '\0raw'
         for raw_delay, expected in ((0, 0), (-3, -3), (-2147483648, -2147483648),

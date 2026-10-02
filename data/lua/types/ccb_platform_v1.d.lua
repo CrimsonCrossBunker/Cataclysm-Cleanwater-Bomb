@@ -125,6 +125,33 @@ function CcbCoordsApi.project_to(value, scale) end
 ---@operator sub(TimePoint|TimeDuration): TimeDuration|TimePoint
 ---@operator eq(TimePoint): boolean
 
+---@class CcbTimeApi
+local CcbTimeApi = {}
+
+---@param value integer Whole units within the native signed-int turn range after conversion.
+---@param unit string Supported native time unit.
+---@return TimeDuration
+function CcbTimeApi.duration(value, unit) end
+
+---Convert fractional turns using native truncation toward zero; zero and negative values are preserved.
+---Reject nonfinite values or a truncated result outside native signed-int bounds.
+---@param turns number
+---@return TimeDuration
+function CcbTimeApi.duration_from_turns(turns) end
+
+---@param turn integer Native signed-int turn.
+---@return TimePoint
+function CcbTimeApi.point(turn) end
+
+---@return TimePoint Current native calendar time.
+function CcbTimeApi.now() end
+
+---@return TimePoint Native turn zero.
+function CcbTimeApi.turn_zero() end
+
+---@return TimePoint Native before-time-starts sentinel.
+function CcbTimeApi.before_time_starts() end
+
 ---@class UnitValue
 ---@field kind string Native unit kind.
 ---@field value number
@@ -11076,6 +11103,33 @@ function CcbVariablesApi.get_context_string(context, key) end
 ---@param key string Native storage key; full byte sequences are preserved.
 ---@return CcbVariableStringReadResult
 function CcbVariablesApi.get_string(owner, key) end
+
+---@class CcbVariableNumberReadValue
+---@field exists boolean Whether the selected native storage key is present.
+---@field value? number Native numeric read; explicit empty values yield zero, missing keys yield nil.
+
+---@class CcbVariableNumberReadResult: CcbResult
+---@field value? CcbVariableNumberReadValue
+
+---Read the native numeric type directly, including legacy conversion and type diagnostics.
+---A stored incompatible type emits its native diagnostic and yields zero; no array snapshot limits apply.
+---@param key string Raw native global key.
+---@return CcbVariableNumberReadResult
+function CcbVariablesApi.get_global_number(key) end
+
+---Read the numeric type of a callback slot. Boolean values use native numeric storage (1 or 0).
+---NullValue yields zero without a diagnostic; strings, arrays and absolute map-square coordinates
+---emit the native type diagnostic and yield zero. Array contents are not traversed.
+---@param context table<string, any>|nil
+---@param key string Raw key, including empty, long and embedded-NUL bytes.
+---@return CcbVariableNumberReadResult
+function CcbVariablesApi.get_context_number(context, key) end
+
+---Read an actor, item or vehicle variable directly as a native number, retaining handle validation.
+---@param owner GameHandle
+---@param key string Raw native storage key.
+---@return CcbVariableNumberReadResult
+function CcbVariablesApi.get_number(owner, key) end
 
 ---@param key string Native global storage key; callback-context key limits do not apply.
 ---@param value boolean|number|string|TripointCoord|NullValue|any[]|nil

@@ -1339,6 +1339,16 @@ void install_value_type_api(
         require_values();
         return script_time_duration::from( value, unit );
     } );
+    time.set_function(
+        "duration_from_turns",
+    [require_values]( const double turns ) {
+        require_values();
+        // Match native time_duration::from_turns(double) for representable
+        // results, without invoking undefined float-to-int conversion.
+        const std::int64_t whole_turns = checked_turn_count(
+                                            std::trunc( turns ), "duration_from_turns" );
+        return script_time_duration::from( whole_turns, "turn" );
+    } );
     time.set_function( "point", [require_values]( const std::int64_t turn ) {
         require_values();
         return script_time_point::from_turn( turn );

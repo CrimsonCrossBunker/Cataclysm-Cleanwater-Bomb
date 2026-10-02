@@ -15,6 +15,7 @@
 #include "condition.h"
 #include "dialogue.h"
 #include "dialogue_helpers.h"
+#include "global_vars.h"
 #include "json_loader.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_runtime.h"
@@ -138,6 +139,76 @@ ccb.runtime.on("world_ready", "check_native_rng")
             "return pcall(ccb.services.random.native_int, 0, 1)" );
     REQUIRE( outside_callback.valid() );
     CHECK_FALSE( outside_callback.get<bool>() );
+}
+
+TEST_CASE( "lua_platform_duration_ranges_match_native_value_pair_and_rng_state",
+           "[lua][platform][random_range][time][semantic]" )
+{
+    using namespace cata::lua_platform;
+    clear_active_runtimes();
+    const cata_default_random_engine saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
+    global_variables::impl_t saved_globals = get_globals().get_global_values();
+    const on_out_of_scope restore_state( [&]() {
+        rng_get_engine() = saved_rng;
+        get_globals().set_global_values( std::move( saved_globals ) );
+    } );
+    const std::vector<std::string> sources = {
+        "[0,0]", "[-3,5]", "[2147483647,-2147483648]", R"(["infinite","infinite"])",
+        R"([{"context_val":"left","default":"infinite"},{"global_val":"right","default":"-3 turns"}])"
+    };
+    dialogue conversation;
+    conversation.set_value( "left", -3.9 );
+    get_globals().set_global_value( "right", 2.9 );
+    constexpr unsigned int seed = 58168;
+    CAPTURE( seed );
+    rng_set_engine_seed( seed );
+    std::vector<int> expected;
+    for( const std::string &source : sources ) {
+        duration_or_var native;
+        native.deserialize( json_loader::from_string( source ) );
+        expected.push_back( to_turns<int>( native.evaluate( conversation ) ) );
+    }
+    const int expected_next = rng( -100, 100 );
+    const cata_default_random_engine expected_rng = rng_get_engine(); // NOLINT(cata-determinism)
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::math );
+    sol::table ccb = lua.create_table();
+    const std::shared_ptr<runtime> owner = make_runtime( "native_duration_range", 4906, lua );
+    const on_out_of_scope cleanup( []() {
+        clear_active_runtimes();
+    } );
+    install_runtime_api( owner, lua, ccb );
+    set_active_runtimes( { owner } );
+    lua["ccb"] = ccb;
+    const sol::protected_function_result installed = lua.safe_script( R"(
+ccb.runtime.handler("duration_ranges", function()
+    local services=ccb.services
+    local function draw(lower,upper)
+        lower=services.time.duration_from_turns(lower)
+        upper=services.time.duration_from_turns(upper)
+        return services.time.duration(services.random.native_int(
+            math.min(lower.turns,upper.turns),math.max(lower.turns,upper.turns)),"turn").turns
+    end
+    results={draw(0,0),draw(-3,5),draw(2147483647,-2147483648),draw(21474836,21474836)}
+    local left=services.variables.get_context_number({left=-3.9},"left")
+    local right=services.variables.get_global_number("right")
+    assert(left.ok and right.ok and left.value.exists and right.value.exists)
+    results[5]=draw(left.value.value,right.value.value)
+    following_draw=services.random.native_int(-100,100)
+    done=true
+end)
+ccb.runtime.on("world_ready","duration_ranges")
+)" );
+    REQUIRE( installed.valid() );
+    rng_set_engine_seed( seed );
+    runtime_world_ready( true );
+    REQUIRE( lua["done"].get_or( false ) );
+    const sol::table actual = lua["results"];
+    for( std::size_t i = 0; i < expected.size(); ++i ) {
+        CHECK( actual[i + 1].get<int>() == expected[i] );
+    }
+    CHECK( lua["following_draw"].get<int>() == expected_next );
+    CHECK( rng_get_engine() == expected_rng );
 }
 
 TEST_CASE( "lua_platform_weighted_index_matches_native_weighted_list_draws",

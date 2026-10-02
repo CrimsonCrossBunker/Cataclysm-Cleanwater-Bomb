@@ -3,6 +3,8 @@
 #include <array>
 #include <cstddef>
 #include <functional>
+#include <limits>
+#include <optional>
 #include <initializer_list>
 #include <memory>
 #include <sstream>
@@ -11,8 +13,12 @@
 #include <vector>
 
 #include "avatar.h"
+#include "calendar.h"
 #include "cata_catch.h"
 #include "character_id.h"
+#include "debug.h"
+#include "dialogue.h"
+#include "dialogue_helpers.h"
 #include "global_vars.h"
 #include "item.h"
 #include "json.h"
@@ -179,6 +185,7 @@ TEST_CASE( "lua_platform_native_variable_keys_keep_native_string_range",
 
     const sol::protected_function get = fixture.variables["get"];
     const sol::protected_function get_string = fixture.variables["get_string"];
+    const sol::protected_function get_number = fixture.variables["get_number"];
     const sol::protected_function set = fixture.variables["set"];
     const sol::protected_function remove = fixture.variables["remove"];
     const sol::protected_function get_global = fixture.variables["get_global"];
@@ -199,6 +206,12 @@ TEST_CASE( "lua_platform_native_variable_keys_keep_native_string_range",
             INFO( "native owner: " << owner.name << ", key index: " << key_index <<
                   ", key bytes: " << key.size() );
 
+            for( const double number : { -3.9, 0.0, 3.9, 2147483647.0, -2147483648.0 } ) {
+                require_success( set( owner.handle, key, number ) );
+                REQUIRE( owner.get( key ) != nullptr );
+                const double expected = owner.get( key )->dbl();
+                CHECK( require_value( get_number( owner.handle, key ) )["value"].get<double>() == expected );
+            }
             const std::string owner_value = std::string( "owner-" ) + owner.name;
             require_success( set( owner.handle, key, owner_value ) );
             REQUIRE( owner.get( key ) != nullptr );
@@ -390,6 +403,109 @@ TEST_CASE( "lua_platform_native_non_nul_variable_keys_round_trip_in_save_json",
         const auto global_value = restored_global_values.find( keys[index] );
         REQUIRE( global_value != restored_global_values.end() );
         CHECK( global_value->second.str() == "saved-global-" + std::to_string( index ) );
+    }
+}
+
+TEST_CASE( "lua_platform_numeric_variable_duration_matches_native_presence_and_conversion",
+           "[lua][platform][semantic][variables][time]" )
+{
+    global_values_restore restore_global_values;
+    variable_api_fixture fixture;
+    const sol::protected_function read_global = fixture.variables["get_global_number"];
+    const sol::protected_function read_context = fixture.variables["get_context_number"];
+    const sol::protected_function duration = fixture.services["time"]["duration_from_turns"];
+    const std::string key = std::string( 300, 'k' ) + '\0' + "tail";
+    const std::vector<std::optional<diag_value>> values = {
+        std::nullopt, diag_value{}, diag_value( 0.0 ), diag_value( 3.9 ), diag_value( -3.9 ),
+        diag_value( 2147483647.75 ), diag_value( -2147483648.75 ),
+        diag_value( std::string( "3.9" ) ), diag_value( diag_array( 5000, diag_value( 4.0 ) ) ),
+        diag_value( tripoint_abs_ms( 3, 4, 5 ) ),
+        diag_value( diag_value::legacy_value( "-3.9" ) ),
+        diag_value( diag_value::legacy_value( "not-a-number" ) ),
+    };
+    for( const bool context_scope : { false, true } ) {
+        for( const int fallback : { 0, 7, calendar::INDEFINITELY_LONG } ) {
+            for( std::size_t i = 0; i < values.size(); ++i ) {
+                if( context_scope && i >= 10 ) {
+                    continue; // Lua callback values do not have a legacy-string type.
+                }
+                CAPTURE( context_scope, fallback, i );
+                dialogue conversation;
+                get_globals().remove_global_value( key );
+                if( values[i] ) {
+                    if( context_scope ) {
+                        conversation.set_value( key, *values[i] );
+                    } else {
+                        get_globals().set_global_value( key, *values[i] );
+                    }
+                }
+                std::ostringstream input;
+                JsonOut writer( input );
+                writer.start_object();
+                writer.member( context_scope ? "context_val" : "global_val", key );
+                writer.member( "default", fallback );
+                writer.end_object();
+                duration_or_var native;
+                native.deserialize( json_loader::from_string( input.str() ) );
+                time_duration expected;
+                const std::string native_diagnostic = capture_debugmsg_during( [&]() {
+                    expected = native.evaluate( conversation );
+                } );
+                sol::table data = fixture.lua.create_table();
+                if( context_scope && values[i] ) {
+                    if( i == 1 ) {
+                        data.raw_set( key, fixture.services["types"]["null"].get<sol::object>() );
+                    } else if( values[i]->is_dbl() ) {
+                        data.raw_set( key, values[i]->dbl() );
+                    } else if( values[i]->is_str() ) {
+                        data.raw_set( key, values[i]->str() );
+                    } else if( values[i]->is_array() ) {
+                        sol::table oversized = fixture.lua.create_table();
+                        for( int entry = 1; entry <= 5000; ++entry ) {
+                            oversized[entry] = 4.0;
+                        }
+                        data.raw_set( key, oversized );
+                    } else {
+                        data.raw_set( key, cata::lua_platform::script_tripoint_coord::from_native(
+                                          coords::origin::abs, coords::scale::map_square,
+                                          values[i]->tripoint().raw() ) );
+                    }
+                } else if( !context_scope && values[i] ) {
+                    // Reset the legacy conversion cache before the second path.
+                    get_globals().set_global_value( key, *values[i] );
+                }
+                time_duration actual;
+                const std::string platform_diagnostic = capture_debugmsg_during( [&]() {
+                    const sol::table result = context_scope ? require_value( read_context( data, key ) ) :
+                                              require_value( read_global( key ) );
+                    CHECK( result["exists"].get<bool>() == values[i].has_value() );
+                    if( !result["exists"].get<bool>() ) {
+                        CHECK( result["value"].get<sol::object>().get_type() == sol::type::nil );
+                        actual = time_duration::from_turns( fallback );
+                    } else {
+                        const sol::protected_function_result converted = duration( result["value"].get<double>() );
+                        REQUIRE( converted.valid() );
+                        actual = converted.get<cata::lua_platform::script_time_duration>().to_native();
+                    }
+                } );
+                CHECK( actual == expected );
+                CHECK( platform_diagnostic == native_diagnostic );
+            }
+        }
+    }
+    sol::table data = fixture.lua.create_table();
+    data[key] = true;
+    CHECK( require_value( read_context( data, key ) )["value"].get<double>() == diag_value( true ).dbl() );
+    data[key] = false;
+    CHECK( require_value( read_context( data, key ) )["value"].get<double>() == diag_value( false ).dbl() );
+    const sol::table missing = require_value( read_context( sol::nil, key ) );
+    CHECK_FALSE( missing["exists"].get<bool>() );
+    for( const double bad : { std::numeric_limits<double>::infinity(),
+                             -std::numeric_limits<double>::infinity(),
+                             std::numeric_limits<double>::quiet_NaN(), 2147483648.0, -2147483649.0 } ) {
+        CAPTURE( bad );
+        const sol::protected_function_result rejected = duration( bad );
+        CHECK_FALSE( rejected.valid() );
     }
 }
 
