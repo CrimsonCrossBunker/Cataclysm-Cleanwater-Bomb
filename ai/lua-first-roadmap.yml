@@ -5,14 +5,16 @@ direction_status: accepted
 platform_version: 1
 authority_path: data/lua/LUA_FIRST_PLATFORM.md
 current_contract: ccb Platform v1
-target: Lua is the sole executable authoring language for CCB core content and Mods through one Platform runtime, one ccb entrypoint, a typed content model and registrars, lifecycle-safe generic domain services, and explicit migration boundaries; passive schema-validatable JSON may remain in the same typed C++ content model, while EOC is removed only after its references reach zero. Runtime hardening, recommended standard helpers, internationalization, and cookbook/console/author experience remain independently tracked follow-on work.
+target: Develop directly usable native capabilities for ordinary Lua authoring through the sole Platform v1 runtime and ccb entrypoint. Automatic EOC migration and its dedicated tests are frozen maintenance tools, and selector coverage or migration TODO counts are not sprint completion criteria. Source-only sprints change implementation and necessary API declarations without prose, test expansion, builds, checkers or generated refreshes; acceptance is separately requested. Passive schema-validatable JSON may remain, and EOC is removed only after its references reach zero.
 current_phase: core_platform_complete
 
 verification_policy:
-  implementation_loop: domain_batch_with_focused_checks
-  acceptance_gate: scoped_gate_after_each_domain_batch
+  implementation_loop: source_only_domain_batches
+  acceptance_gate: separately_requested_scoped_acceptance
   forbidden_before_gate:
     - cxx_build
+    - catch2
+    - python_suite
     - contract_generation
     - ledger_refresh
     - full_corpus_audit
@@ -180,7 +182,7 @@ milestones:
     depends_on: [native-hooks-and-identity, complex-content-registrar]
     scope: Character, inventory, map, NPC/creature, vehicle, mission, weather, task, dialogue, and presentation workflows expressed through the sole Platform; this closes reusable capabilities, not every legacy selector.
     exit_criteria:
-      - Each domain batch has native services, LuaLS declarations, migration shapes, and test source.
+      - Each domain batch has directly usable native services and matching LuaLS declarations; relevant runtime tests belong to acceptance, and automatic migration output is not required.
       - Bounded support names the real shapes it accepts and leaves other shapes as TODOs.
       - No EOC-key-shaped runner, legacy object, or hidden compatibility call is introduced as a shortcut; the existing runner remains private for core and old Mods until its references are zero.
     evidence:
@@ -632,7 +634,7 @@ capabilities:
     target_surface: Optional selected core and bundled content authored through Platform Lua with stable ids and save behavior; passive schema-validatable JSON may remain in the shared typed C++ model.
     legacy_dependency: none
     evidence: [tools/migrate_lua_first.py, data/mods/Lua_First_Example/main.lua, data/reference/json/ccb_json_object_types.json]
-    next_actions: [Start only when a concrete content owner elects a migration; do not make whole-corpus migration or TODO count a Platform completion condition.]
+    next_actions: ["Frozen maintenance; start only when a concrete content owner explicitly requests migration work, and do not make automatic conversion, whole-corpus migration or TODO counts Platform completion conditions."]
   - id: acceptance
     phase: acceptance
     status: complete

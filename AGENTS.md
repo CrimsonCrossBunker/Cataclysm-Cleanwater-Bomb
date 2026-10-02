@@ -49,18 +49,21 @@ Lua runtime and public authoring contract; the former API v5 runtime,
 capability sandbox, manifest, and `game.*` compatibility surface are removed
 rather than maintained as a second system.
 
-Lua-first EOC capability work follows `data/lua/LUA_FIRST_EOC_WORKFLOW.md`.
-Finish one domain batch with its implementation, declarations, and test source.
-Run the affected acceptance gate once; reuse passing evidence while its inputs
-and build configuration are unchanged. Focused tool tests are allowed during
-implementation. Defer C++ builds, broad suites and generated refreshes to batch
-acceptance; full corpus audits are for migration, parity claims, or EOC removal.
+Lua Platform work follows `data/lua/LUA_FIRST_EOC_WORKFLOW.md`. Develop native
+capabilities for ordinary Lua authoring in coherent domain batches. Automatic
+EOC migration and its dedicated tests are frozen maintenance tools, not Platform
+completion requirements. A source-only sprint updates implementation and necessary
+API declarations without writing prose, expanding test matrices, compiling,
+running tests or checkers, or refreshing generated reports. Record source progress
+without claiming acceptance. Run only the affected gate in a separately requested
+acceptance phase; reuse evidence while its inputs are unchanged.
 `ai/test-matrix.yml` lists available checks, not a mandate to run them all.
 
-Lua-first 的 EOC 能力开发遵循 `data/lua/LUA_FIRST_EOC_WORKFLOW.md`：按完整领域批次同步
-实现、声明与测试，集中验收受影响的范围；输入和构建配置不变时复用已通过证据。开发中可执行
-聚焦工具测试，C++ 构建、宽测试与生成刷新留到批次验收；全量语料审计用于迁移、完整替代声明
-或删除 EOC。`ai/test-matrix.yml` 是可选检查的路由表，不是每轮全跑的清单。
+Lua 平台按完整领域批次开发实际原生能力，遵循 `data/lua/LUA_FIRST_EOC_WORKFLOW.md`。
+自动 EOC 迁移器及其专用测试冻结为维护工具，不作为平台完成条件。纯代码冲刺只修改实现和必要
+API 声明，不写说明文档、不扩展测试矩阵、不编译、不运行测试或检查器、不刷新生成报告；只记录
+代码进展，不宣称验收通过。另行进入验收阶段后只执行受影响门禁，输入不变时复用已有证据。
+`ai/test-matrix.yml` 是可选检查路由，不是每轮全跑的清单。
 
 ## Modification boundaries / 修改边界
 

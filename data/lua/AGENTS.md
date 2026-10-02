@@ -8,9 +8,9 @@ tracked in `ai/lua-first-roadmap.yml`.
 - `types/ccb_platform_v1.d.lua`, native Platform registrations, and generated
   Platform inventories are authoritative for the current Lua runtime contract.
 - `LUA_FIRST_PLATFORM.md` is authoritative for CCB Lua 0.1 platform design decisions.
-- `LUA_FIRST_EOC_WORKFLOW.md` defines the active EOC-capability objective,
-  domain-batch development cadence, and scoped acceptance gates.  Follow it
-  for Lua-first EOC parity work.
+- `LUA_FIRST_EOC_WORKFLOW.md` defines native capability development and separately
+  requested acceptance. Automatic migration is frozen maintenance, not a mandatory
+  part of a Platform batch or its completion criteria.
 - The accepted trust policy in `LUA_FIRST_PLATFORM.md` permits full standard
   libraries and external/native modules at the player's risk. Do not reintroduce
   sandbox tiers or mandatory global runtime quotas; preserve supported `ccb`
@@ -30,17 +30,22 @@ tracked in `ai/lua-first-roadmap.yml`.
   The scaffolder may add optional `.luarc.json` and a frozen `.ccb-sdk/` for
   editor use; neither is a runtime manifest, and `--no-editor` omits them.
 - `ai/lua-first-replacement-ledger.yml` is generated. Change its generator,
-  never the ledger by hand. A bounded or primitive disposition is not
-  completeness; only the final semantic gate may produce a verified status.
+  never the ledger by hand. It is historical migration evidence, not a Platform
+  sprint checklist or completion percentage. Do not refresh it during source-only
+  development. A bounded or primitive disposition is not completeness; only actual
+  acceptance evidence may produce a verified status.
 - `primitive_available_unverified` means only that composable native domain
   building blocks exist; it is not selector-level parity and must not be
   described as a completed migration.
-- `bounded_implemented_unverified` means one or more explicitly named legacy
+- In the historical ledger, `bounded_implemented_unverified` means named legacy
   shapes have source, declarations, tests, migration output, and documentation;
-  it never claims that every legal shape of that selector has parity.
-- `tools/migrate_lua_first.py` may emit native Lua skeletons and explicit TODO
-  reports.  It must never generate a JSON loader, EOC runner, or raw legacy
-  object as a hidden compatibility path.
+  it never claims that every legal shape of that selector has parity. This is not
+  a required checklist for a new native capability or a source-only sprint.
+- `tools/migrate_lua_first.py` and its dedicated tool tests are frozen. Work on
+  them only when a concrete migration maintenance task is explicitly requested;
+  never make automatic coverage of legacy syntax a Platform development target.
+  They must never generate a JSON loader, EOC runner, or raw legacy object as a
+  hidden compatibility path.
 - Platform Mods must not require a `lua/` subdirectory or author-maintained
   JSON manifest.  Templates may recommend structure but may not require it.
 

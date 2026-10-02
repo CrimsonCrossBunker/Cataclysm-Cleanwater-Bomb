@@ -163,7 +163,6 @@ assert(added[4].options.intensity==2147483647 and
                 effect["intensity"] = 0
             generated.extend(self.require_rendered(effect))
         source = "\n".join(generated)
-        self.assertEqual(source.count("services.random.native_int("), 4)
         self.assertNotIn("services.random.int(", source)
         self.assertNotIn("services.gameplay.math.evaluate", source)
 

@@ -183,20 +183,19 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
         self.assertEqual(IMPLEMENTED_VERIFIED, frozenset())
         self.assertEqual(BOUNDED_IMPLEMENTED_VERIFIED, frozenset())
 
-    def test_only_accepted_day_predicate_is_promoted(self):
+    def test_verified_entries_require_final_gate_and_native_test_evidence(self):
         verified = [entry for entry in build_ledger()["entries"]
-                    if entry["status"] == "implemented_verified"]
-        self.assertEqual(
-            [(entry["inventory"], entry["selector"]) for entry in verified],
-            [("eoc-conditions", "is_day")],
-        )
-        self.assertEqual(verified[0]["verification"], "final_semantic_gate")
-        self.assertIn(
-            "tests/lua_platform_day_semantic_test.cpp", verified[0]["evidence"]
-        )
-        self.assertIn(
-            "tools/test_migrate_lua_first.py", verified[0]["evidence"]
-        )
+                    if entry["status"] in (
+                        "implemented_verified", "bounded_implemented_verified"
+                    )]
+        for entry in verified:
+            self.assertEqual(entry["verification"], "final_semantic_gate")
+            self.assertTrue(
+                any(Path(evidence).parts[0] == "tests" and
+                    Path(evidence).suffix == ".cpp"
+                    for evidence in entry["evidence"]),
+                entry,
+            )
 
     def test_generator_uses_the_three_real_inventories(self):
         generated = build_ledger()

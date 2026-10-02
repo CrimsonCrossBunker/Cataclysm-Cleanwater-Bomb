@@ -19,15 +19,6 @@ on:
       - 'tools/lua_api/**'
       - 'tools/create_lua_mod.py'
       - 'tools/test_create_lua_mod.py'
-      - 'tools/migrate_lua_first.py'
-      - 'tools/test_migrate_lua_first.py'
-      - 'tools/test_lua_mutation_migration.py'
-      - 'tools/test_lua_named_predicate_migration.py'
-      - 'tools/test_lua_numeric_migration.py'
-      - 'tools/test_native_math_domain_queries.py'
-      - 'tools/test_lua_math_assignment_migration.py'
-      - 'tools/test_lua_indirect_assignment_migration.py'
-      - 'tools/test_lua_effect_numeric_migration.py'
   push:
     branches: [ master ]
     paths:
@@ -47,15 +38,6 @@ on:
       - 'tools/lua_api/**'
       - 'tools/create_lua_mod.py'
       - 'tools/test_create_lua_mod.py'
-      - 'tools/migrate_lua_first.py'
-      - 'tools/test_migrate_lua_first.py'
-      - 'tools/test_lua_mutation_migration.py'
-      - 'tools/test_lua_named_predicate_migration.py'
-      - 'tools/test_lua_numeric_migration.py'
-      - 'tools/test_native_math_domain_queries.py'
-      - 'tools/test_lua_math_assignment_migration.py'
-      - 'tools/test_lua_indirect_assignment_migration.py'
-      - 'tools/test_lua_effect_numeric_migration.py'
   workflow_dispatch:
     inputs:
       native_test_filter:
@@ -91,14 +73,6 @@ jobs:
         # Includes live repository checks for all five contracts and negative cases.
         run: |
           python3 -m unittest discover -s tools/lua_api -p 'test_*.py'
-
-      - name: Validate Lua-first migration semantics
-        run: |
-          if ! command -v lua >/dev/null; then
-            sudo apt-get update
-            sudo apt-get install -y lua5.4
-          fi
-          python3 tools/test_migrate_lua_first.py
 
       - name: Validate Mod scaffolds and editor diagnostics
         env:

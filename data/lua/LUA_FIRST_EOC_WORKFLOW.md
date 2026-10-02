@@ -1,4 +1,4 @@
-# Lua-first EOC capability workflow / Lua-first EOC 能力流程
+# Lua Platform development workflow / Lua 平台开发流程
 
 Status: active workflow for the sole `require("ccb")` / Platform v1 system.
 状态：唯一 `require("ccb")` / Platform v1 系统的当前开发流程。
@@ -8,16 +8,17 @@ Status: active workflow for the sole `require("ccb")` / Platform v1 system.
 Work on one complete author workflow at a time, in this order:
 
 1. Fix runtime blockers that prevent loading, playing, saving, or reloading.
-2. Close and verify composable native domain capabilities needed to replace EOC.
-3. Migrate shipped behaviour after capability acceptance; remove the EOC runner
-   only when an exact reference audit proves its references are zero.
+2. Develop directly usable native domain capabilities for ordinary Lua authoring.
+3. Enter runtime acceptance only when separately requested. Automatic migration
+   is frozen maintenance and is not a required stage of Platform development.
 
 Lua is the sole executable authoring language. Passive schema-validatable JSON
 may remain. Do not add public JSON loaders, EOC runners, legacy key trees, or
 hidden compatibility calls; the transitional EOC path stays private.
 
-每次只推进一个完整作者工作流：先修复加载、游玩、存档与重载阻塞，再补齐并验证替代 EOC
-所需的领域能力，通过能力验收后迁移现有行为。精确引用审计证明 EOC 引用归零后才删除 runner。
+每次只推进一个完整作者工作流：先修复加载、游玩、存档与重载阻塞，再补齐普通 Lua 直接使用的
+原生能力；运行验收另行安排。自动迁移器冻结为维护工具，不作为平台开发的必经阶段。
+精确引用审计证明 EOC 引用归零后才删除 runner。
 静态 JSON 可以保留；Lua 是唯一可执行作者语言。不得新增公开 JSON loader、EOC runner、
 旧键树或隐藏兼容调用。过渡期的旧 EOC 执行路径仍是私有兼容基础设施。
 
@@ -40,17 +41,35 @@ accepting that policy.
 
 ## One domain batch / 单个领域批次
 
-A batch records its author-visible result, affected files, unresolved boundary,
-and acceptance evidence in one compact checkpoint. Include native implementation,
-LuaLS declarations, relevant regression tests, and migration output when affected.
-Use ordinary Lua functions and typed domain services, not selector-shaped APIs.
-Do not create another progress tracker or update generated counts after each edit.
+A batch changes native implementation and necessary LuaLS declarations for a
+concrete author-visible capability or defect. Use ordinary Lua and typed domain
+services, not selector-shaped APIs. In a source-only sprint, do not change repository documentation,
+add test matrices, compile, run tests or checkers, or refresh generated outputs.
+Review source and diffs, commit coherent batches, and report source completion
+without claiming acceptance. Preserve existing meaningful runtime tests for the
+later acceptance phase. Do not create another progress tracker.
 
-批次只记录作者可用结果、涉及文件、未解决边界和验收证据；同步修改受影响的实现、LuaLS 声明、
-回归测试与迁移输出。用普通 Lua 和类型化领域服务组合行为，不按 selector 逐个复刻 API。
-不另建进度系统，不在每次编辑后刷新生成统计。
+每批围绕实际能力或缺陷同步修改原生实现和必要 LuaLS 声明，用普通 Lua 和类型化服务组合行为。
+纯代码冲刺不写说明文档、不扩展测试矩阵、不编译、不运行测试或检查器、不刷新生成结果。
+只阅读源码和差异、按完整逻辑批次提交，并报告代码完成情况；不得把未运行代码称为验收通过。
+已有有效运行测试保留到后续验收，不另建进度系统。
 
-## Validation / 验证流程
+The migrator and its dedicated Python tests remain available as frozen historical
+tools. Change them only for an explicitly requested migration maintenance task.
+The 586-entry replacement ledger is historical scope evidence, not a sprint target.
+Legacy-syntax permutations, generated-text assertions and ledger status snapshots
+must not drive native capability development. Extract useful API regressions from
+migration-specific native tests instead of expanding legacy parity matrices.
+
+迁移器及专用 Python 测试保留为冻结的历史工具，只有明确的迁移维护任务才修改。586 项账本是
+历史范围证据，不是冲刺目标；旧语法变体、生成文本断言和账本状态快照不得推动原生能力开发。
+迁移专项原生测试中有价值的接口回归保留，不再扩展旧行为对照矩阵。
+
+## Separately requested acceptance / 另行安排的验收
+
+This section is for acceptance, not the source-only sprint. Do not invoke its
+commands while the user has requested development without compilation or testing.
+本节仅在另行进入验收阶段时使用；用户要求只开发、不编译测试期间不得执行下列命令。
 
 `ai/test-matrix.yml` lists available checks. Select them for the changed inputs;
 it does not require every listed command for every Lua task.
@@ -60,7 +79,7 @@ it does not require every listed command for every Lua task.
 | Lua contract or its Python tools / Lua 契约及其 Python 工具 | Run the single contract suite below; it includes live repository checks and negative cases / 运行下方统一套件，包含真实仓库校验与反例 |
 | Native Lua behaviour / 原生 Lua 行为 | Build once and run one matching Catch2 process; include lifecycle, saves and handles when affected / 一次构建、一个匹配的 Catch2 进程，按影响覆盖生命周期、存档和句柄 |
 | Disabled-build integration / 禁用构建集成 | Add the disabled-build route when build inputs or disabled paths change / 构建输入或禁用路径变化时增加禁用构建验收 |
-| Migration or real content / 迁移器或真实内容 | Check changed migration shapes and load affected content / 检查受影响的迁移形状并加载对应内容 |
+| Explicit migration maintenance / 明确的迁移维护任务 | Check only the requested tool changes; not a Platform gate / 仅检查所请求的工具改动，不作为平台门禁 |
 | Workflow or prose only / 仅流程或说明 | Check affected metadata, links and workflow syntax / 检查相关元数据、链接与工作流语法 |
 
 ```sh
@@ -74,14 +93,15 @@ do not run all five again before or after the suite.
 统一套件已执行 LuaLS、原生清单、公开契约、同步覆盖和 CMake 校验。各 CLI 保留用于定位问题，
 不要在统一套件前后再重复运行五个检查器。
 
-During implementation, write tests with the code. Use focused Python tests or
-syntax checks when useful; defer C++ builds, broad suites and generated refreshes
-to batch acceptance. A broad `[lua][platform]` run already includes
+During acceptance, retain or add focused tests that prove actual runtime behavior,
+errors, state persistence and handle lifetime. Avoid assertions that only freeze
+generated text, API counts or today's progress state. A broad `[lua][platform]` run already includes
 `[playable_mvp]`; do not run that subset again on the same binary and inputs.
 Tool-only or documentation-only changes do not need a game build.
 
-开发时测试随代码编写，按需执行聚焦 Python 测试或语法检查；C++ 构建、宽测试与生成刷新留到
-批次验收。`[lua][platform]` 已包含 `[playable_mvp]`，相同程序和输入不重复运行子集。
+验收阶段保留或补充能证明实际运行行为、错误处理、状态持久化与句柄生命周期的聚焦测试。
+不为固定生成文本、接口数量或当前进度状态扩展测试。`[lua][platform]` 已包含
+`[playable_mvp]`，相同程序和输入不重复运行子集。
 只改工具或文档无需编译游戏。
 
 Refresh generated outputs only when their declared inputs change, in dependency
