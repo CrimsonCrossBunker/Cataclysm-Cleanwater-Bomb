@@ -11055,6 +11055,7 @@ function CcbTypesApi.id_kinds() end
 
 ---@class CcbVariablesApi
 ---Native-backed actor/item/vehicle/global storage preserves full byte sequences for top-level strings, including NUL.
+---Top-level numeric writes preserve native IEEE doubles, including signed zero, infinity and NaN.
 ---Nested array strings and callback-context writes retain bounded diag-value conversion; native copy stays direct.
 local CcbVariablesApi = {}
 
@@ -11086,6 +11087,7 @@ function CcbVariablesApi.get(character, key) end
 ---@param key string Native actor/item/vehicle storage key; callback-context key limits do not apply.
 ---@param value boolean|number|string|TripointCoord|NullValue|any[]|nil
 ---Top-level native strings preserve all bytes; strings in arrays remain bounded.
+---Top-level numbers preserve IEEE double values, including infinity and NaN.
 ---@param options CcbVariableMutationOptions?
 ---@return CcbResult result `value` contains existed and after; before is present by default and omitted when include_before=false.
 function CcbVariablesApi.set(character, key, value, options) end
@@ -11197,6 +11199,7 @@ function CcbVariablesApi.get_context_tripoint(context, key) end
 ---@param key string Native global storage key; callback-context key limits do not apply.
 ---@param value boolean|number|string|TripointCoord|NullValue|any[]|nil
 ---Top-level native strings preserve all bytes; strings in arrays remain bounded.
+---Top-level numbers preserve IEEE double values, including infinity and NaN.
 ---@param options CcbVariableMutationOptions?
 ---@return CcbResult result `value` contains existed and after; before is present by default and omitted when include_before=false.
 function CcbVariablesApi.set_global(key, value, options) end
@@ -11917,34 +11920,9 @@ function CcbPlatformEnvironmentQueries.safe_mode_dangerous(direction) end
 ---@class CcbPlatformGameplayApi
 ---@field strings CcbPlatformStringPredicates
 ---@field mods CcbPlatformModQueries
----@field math CcbPlatformMathApi
 ---@field environment CcbPlatformEnvironmentQueries
 ---@field options CcbPlatformGameplayOptionsApi
 local CcbPlatformGameplayApi = {}
-
----@class CcbPlatformMathApi
-local CcbPlatformMathApi = {}
-
----Evaluate a native, non-assignment gameplay expression against the supplied
----alpha actor, optional beta actor, and detached callback context.  This is a
----domain expression service, not an EOC runner; it returns a finite number.
----The context table is copied for evaluation and is not written back.
----@param expression string Native math expression, at most 8192 bytes.
----@param actor? GameHandle Alpha Character/creature used for u_ variables; defaults to the avatar.
----@param context? table<string, boolean|number|string|TripointCoord|NullValue>
----@param beta? GameHandle Beta Character/creature used for n_ variables; when omitted, native dialogue semantics fall back to alpha.
----@return CcbResult result `value` is the finite numeric result.
-function CcbPlatformMathApi.evaluate(expression, actor, context, beta) end
-
----Evaluate and apply a native assignment expression against an active callback.
----The context table is copied; assignments to context variables are not written
----back.  Do not use v_ indirect assignments when their target can be context.
----@param expression string Native math assignment, at most 8192 bytes.
----@param actor? GameHandle Alpha Character/creature used for u_ variables; defaults to the avatar.
----@param context? table<string, boolean|number|string|TripointCoord|NullValue>
----@param beta? GameHandle Beta Character/creature used for n_ variables; when omitted, native dialogue semantics fall back to alpha.
----@return CcbResult result `value` is the finite numeric result.
-function CcbPlatformMathApi.apply(expression, actor, context, beta) end
 
 ---@class CcbCharacterSensesSnapshot
 ---@field can_see boolean Native Character visibility state: not blind and either awake or flagged SEESLEEP.

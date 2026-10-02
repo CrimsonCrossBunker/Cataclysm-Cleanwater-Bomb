@@ -91,6 +91,11 @@ sol::object context_value_to_lua( sol::state_view lua, const diag_value &value )
 
 diag_value native_variable_value_from_lua( const sol::object &value, const std::string &key )
 {
+    if( value.get_type() == sol::type::number ) {
+        // Native variable arithmetic stores IEEE doubles, including infinities
+        // and NaN. Preserve that representation for scalar numeric writes.
+        return diag_value( value.as<double>() );
+    }
     if( value.get_type() == sol::type::string ) {
         return diag_value( value.as<std::string>() );
     }
