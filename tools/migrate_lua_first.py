@@ -27810,9 +27810,8 @@ def render_static_character_math(
     if custom_functions is None:
         return None
 
-    # Match math_exp_impl::new_var scope parsing exactly; unsupported scope
-    # prefixes and v_ indirection stay TODO until their write semantics are
-    # represented by a typed Lua path.
+    # Match math_exp_impl::new_var scope parsing exactly. Indirect v_ targets
+    # parse a stored pointer once, after the assignment value is evaluated.
     if len(token) > 2 and token[1] == "_":
         prefix = token[0]
         if prefix not in {"u", "n", "v"}:
@@ -27825,9 +27824,6 @@ def render_static_character_math(
     else:
         scope = "global"
         name = token
-
-    if scope == "var":
-        return None
 
     common_functions, dialogue_functions = native_math_nonvariable_names()
     scoped_name = token[2:] if len(token) > 2 and token[1] == "_" else token
@@ -27842,6 +27838,13 @@ def render_static_character_math(
 
     quoted_name = lua_quote(name)
     target = None
+    indirect_alpha = None
+    indirect_beta = None
+    if scope == "var":
+        indirect_alpha = _proven_native_variable_write_target(effect_actor_targets, "u")
+        indirect_beta = _proven_native_variable_write_target(effect_actor_targets, "npc")
+        if indirect_alpha is None or indirect_beta is None:
+            return None
     if scope in {"u", "n"}:
         role = "u" if scope == "u" else "npc"
         target = _proven_native_variable_write_target(effect_actor_targets, role)
@@ -27849,6 +27852,9 @@ def render_static_character_math(
             return None
 
     def write(value: str) -> list[str]:
+        if scope == "var":
+            return _render_native_math_indirect_variable_write(
+                quoted_name, value, indirect_alpha, indirect_beta)
         if scope == "context":
             return [f"    context.data[{quoted_name}] = {value}"]
         if scope == "global":
@@ -27928,8 +27934,6 @@ def _compile_native_math_variable_assignment(
     functions = _migration_math_function_ids.get()
     if functions is None or token in functions or token in {"pi", "e", "true", "false"}:
         return None
-    if len(token) > 2 and token.startswith("v_"):
-        return None  # One-pass indirect writes are a separate Native contract.
     if render_native_math_variable_read(token, effect_actor_targets) is None:
         return None
     left = "0.0" if operator == "=" else token
@@ -27951,6 +27955,35 @@ def _math_assignment_order_choice(
         if compiled is not None and compiled.choices:
             return "; ".join(compiled.choices)
     return None
+
+
+def _render_native_math_indirect_variable_write(
+    quoted_key: str, value: str, alpha: str, beta: str,
+) -> list[str]:
+    """Mirror write_var_value's one-pass pointer read, after RHS evaluation."""
+    # The read and write contracts differ on a missing pointer: math reads
+    # return zero without a target lookup, but writes use the empty string
+    # sentinel and consequently write the empty global key.
+    pointer = _render_native_variable_string_snapshot("context_val", quoted_key, alpha, beta)
+    return [
+        "    do",
+        "        local target_name = (function(pointer) "
+        'if pointer.exists == false then return "" end; '
+        f"return pointer.value end)({pointer})",
+        '        if string.sub(target_name, 1, 2) == "u_" then',
+        "            service_value(services.variables.set(",
+        f"                {alpha}, string.sub(target_name, 3), {value}, {{ include_before = false }}))",
+        '        elseif string.sub(target_name, 1, 2) == "n_" then',
+        "            service_value(services.variables.set(",
+        f"                {beta}, string.sub(target_name, 3), {value}, {{ include_before = false }}))",
+        '        elseif string.sub(target_name, 1, 1) == "_" then',
+        f"            context.data[string.sub(target_name, 2)] = {value}",
+        "        else",
+        "            service_value(services.variables.set_global(",
+        f"                target_name, {value}, {{ include_before = false }}))",
+        "        end",
+        "    end",
+    ]
 
 
 def render_static_character_copy_var(

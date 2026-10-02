@@ -47437,6 +47437,8 @@ def load_tests(loader, tests, pattern):
     tests.addTests(loader.loadTestsFromTestCase(NativeMathDomainQueryTest))
     from test_lua_math_assignment_migration import LuaMathAssignmentMigrationTest
     tests.addTests(loader.loadTestsFromTestCase(LuaMathAssignmentMigrationTest))
+    from test_lua_indirect_assignment_migration import LuaIndirectAssignmentMigrationTest
+    tests.addTests(loader.loadTestsFromTestCase(LuaIndirectAssignmentMigrationTest))
     return tests
 
 

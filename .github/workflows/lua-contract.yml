@@ -26,6 +26,7 @@ on:
       - 'tools/test_lua_numeric_migration.py'
       - 'tools/test_native_math_domain_queries.py'
       - 'tools/test_lua_math_assignment_migration.py'
+      - 'tools/test_lua_indirect_assignment_migration.py'
   push:
     branches: [ master ]
     paths:
@@ -52,6 +53,7 @@ on:
       - 'tools/test_lua_numeric_migration.py'
       - 'tools/test_native_math_domain_queries.py'
       - 'tools/test_lua_math_assignment_migration.py'
+      - 'tools/test_lua_indirect_assignment_migration.py'
   workflow_dispatch:
     inputs:
       native_test_filter:
