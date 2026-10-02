@@ -1342,7 +1342,7 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
         // after topic response generation and speaker effects.
         if( text_condition.get_type() == sol::type::boolean ) {
             const bool result = text_condition.as<bool>();
-            generated.response.deferred_text_condition = [result]( dialogue & ) {
+            generated.response.deferred_text_condition = [result]( ::dialogue & ) {
                 return result;
             };
         } else if( text_condition.get_type() == sol::type::function ) {
@@ -1355,7 +1355,7 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
             generated.response.deferred_text_condition =
                 [weak_text_condition_owner, condition_topic_id,
                  text_condition_session,
-                 text_condition]( dialogue &current_dialogue ) {
+                 text_condition]( ::dialogue &current_dialogue ) {
                     const std::shared_ptr<runtime> callback_owner =
                         weak_text_condition_owner.lock();
                     if( !callback_owner || !callback_owner->world_is_ready ||
