@@ -10,6 +10,7 @@ extern "C" {
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <limits>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -335,10 +336,10 @@ effect_add_options read_add_options(
                     "services.effects.add intensity must be an integer" );
             }
             const lua_Integer intensity = value.as<lua_Integer>();
-            if( intensity < -maximum_effect_assignment_intensity ||
-                intensity > maximum_effect_assignment_intensity ) {
+            if( intensity < std::numeric_limits<int>::min() ||
+                intensity > std::numeric_limits<int>::max() ) {
                 throw std::invalid_argument(
-                    "services.effects.add intensity is outside its limit" );
+                    "services.effects.add intensity must fit a native int" );
             }
             result.intensity = static_cast<int>( intensity );
         } else if( key == "force" ) {

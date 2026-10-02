@@ -9993,7 +9993,7 @@ function CcbPlatformWoundsApi.remove(character, body_part, wound) end
 ---@class CcbEffectAddOptions
 ---@field body_part? GameId Registered GameId<body_part>; native effects may refer to parts outside the current anatomy.
 ---@field permanent? boolean Defaults to false.
----@field intensity? integer Native intensity input, -1000000 through 1000000; defaults to zero. Nonpositive values use native default/stacking rules, not a signed delta.
+---@field intensity? integer Native signed int input (-2147483648 through 2147483647); defaults to zero. Nonpositive values use native default/stacking rules, not a signed delta.
 ---@field force? boolean Bypass native immunity checks; defaults to false.
 
 ---@class CcbMoraleAddOptions
