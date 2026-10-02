@@ -28122,6 +28122,7 @@ def render_literal_native_arithmetic(
     functions = {name: 1 for name in ("abs", "floor", "ceil", "trunc", "round",
                                      "sqrt", "log", "sin", "cos", "tan")}
     functions.update({"min": -1, "max": -1, "_test_": 0})
+    functions["clamp"] = 3
     functions.update({name: 1 for name in ("celsius", "fahrenheit", "from_celsius", "from_fahrenheit")})
 
     def emit(expression: str) -> None:
@@ -28137,6 +28138,15 @@ def render_literal_native_arithmetic(
             return False
         if name == "_test_":
             emit("42.0")
+        elif name == "clamp":
+            value, lower, upper = (f"values[{argument}]" for argument in arguments)
+            emit(value)
+            result = f"values[{count}]"
+            statements.append(f"if {upper} < {lower} then "
+                              'services.diagnostic(string.format("clamp called with hi < lo (%f < %f)", '
+                              f"{upper}, {lower})); "
+                              f"elseif {value} < {lower} then {result} = {lower}; "
+                              f"elseif {upper} < {value} then {result} = {upper} end")
         elif name in {"min", "max"}:
             # std::min/max_element keep the first equal/unordered operand.
             # Folding avoids Lua's argument/register limit for Native variadics.

@@ -1417,6 +1417,113 @@ end
     }
 }
 
+TEST_CASE( "lua_platform_math_clamp_matches_native_limits_signed_zero_and_diagnostics",
+           "[lua][platform][semantic][variables][math]" )
+{
+    using namespace cata::lua_platform;
+    clear_active_runtimes();
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::math, sol::lib::string );
+    sol::table ccb = lua.create_table();
+    const auto owner = make_runtime( "clamp_math", 4951, lua );
+    const on_out_of_scope cleanup( []() {
+        clear_active_runtimes();
+    } );
+    install_runtime_api( owner, lua, ccb );
+    set_active_runtimes( { owner } );
+    runtime_world_ready( true );
+    lua["services"] = ccb["services"];
+    REQUIRE( lua.safe_script( R"lua(
+function service_value(result)
+ if not result.ok then error(result.error.message,0) end
+ return result.value
+end
+function evaluate_clamp()
+ return (function() local values = {};
+ local variable_result;
+ variable_result = services.variables.get_context_number(context and context.data, "value", {strict=true});
+ if variable_result.ok == false and variable_result.error and variable_result.error.code == "variable_type_mismatch" then services.diagnostic("Math variable _value: " .. variable_result.error.message);
+ return 0.0 end;
+ values[1] = (function(result) if result.exists == false then return 0.0 end;
+ return result.value end)(service_value(variable_result));
+ variable_result = services.variables.get_context_number(context and context.data, "lo", {strict=true});
+ if variable_result.ok == false and variable_result.error and variable_result.error.code == "variable_type_mismatch" then services.diagnostic("Math variable _lo: " .. variable_result.error.message);
+ return 0.0 end;
+ values[2] = (function(result) if result.exists == false then return 0.0 end;
+ return result.value end)(service_value(variable_result));
+ variable_result = services.variables.get_context_number(context and context.data, "hi", {strict=true});
+ if variable_result.ok == false and variable_result.error and variable_result.error.code == "variable_type_mismatch" then services.diagnostic("Math variable _hi: " .. variable_result.error.message);
+ return 0.0 end;
+ values[3] = (function(result) if result.exists == false then return 0.0 end;
+ return result.value end)(service_value(variable_result));
+ values[4] = values[1];
+ if values[3] < values[2] then services.diagnostic(string.format("clamp called with hi < lo (%f < %f)", values[3], values[2]));
+ elseif values[1] < values[2] then values[4] = values[2];
+ elseif values[3] < values[1] then values[4] = values[3] end;
+ return values[4] end)()
+end
+)lua", sol::script_pass_on_error ).valid() );
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    const double inf = std::numeric_limits<double>::infinity();
+    struct clamp_case {
+        double value;
+        double lower;
+        double upper;
+    };
+    const std::vector<clamp_case> cases = {
+        { 5, 1, 10 }, { -2, 1, 10 }, { 12, 1, 10 }, { 5, 3, 3 },
+        { 5, 10, 1 }, { -0.0, 0.0, 1 }, { 0.0, -0.0, 1 },
+        { -1, -0.0, 0.0 }, { 1, 0.0, -0.0 },
+        { 5, nan, 3 }, { -1, 0, nan }, { 5, nan, nan }, { nan, 1, 2 },
+        { 5, inf, -inf }, { inf, 1, 2 }, { -inf, 1, 2 },
+        { 5, -inf, inf }, { inf, -inf, inf }, { nan, 10, 1 },
+        { std::numeric_limits<double>::max(), -1, 1 },
+        { std::numeric_limits<double>::denorm_min(), 0, 1 },
+    };
+    math_exp native;
+    REQUIRE( native.parse( "clamp(_value,_lo,_hi)" ) );
+    const sol::protected_function evaluate = lua["evaluate_clamp"];
+    for( const clamp_case &row : cases ) {
+        CAPTURE( row.value, row.lower, row.upper );
+        dialogue conversation;
+        conversation.set_value( "value", diag_value( row.value ) );
+        conversation.set_value( "lo", diag_value( row.lower ) );
+        conversation.set_value( "hi", diag_value( row.upper ) );
+        sol::table data = lua.create_table();
+        data["value"] = row.value;
+        data["lo"] = row.lower;
+        data["hi"] = row.upper;
+        sol::table context = lua.create_table();
+        context["data"] = data;
+        lua["context"] = context;
+        double expected = 0;
+        const std::string native_diagnostic = capture_debugmsg_during( [&]() {
+            expected = native.eval( conversation );
+        } );
+        sol::protected_function_result call;
+        const std::string lua_diagnostic = capture_debugmsg_during( [&]() {
+            detail::callback_scope callback( *owner );
+            call = evaluate();
+        } );
+        REQUIRE( call.valid() );
+        const double actual = call.get<double>();
+        if( std::isnan( expected ) ) {
+            CHECK( std::isnan( actual ) );
+        } else {
+            CHECK( actual == expected );
+            if( expected == 0.0 ) {
+                CHECK( std::signbit( actual ) == std::signbit( expected ) );
+            }
+        }
+        CHECK( native_diagnostic.empty() == lua_diagnostic.empty() );
+        CHECK( native_diagnostic.empty() == !( row.upper < row.lower ) );
+        if( row.upper < row.lower ) {
+            CHECK( native_diagnostic.find( "clamp called with hi < lo" ) != std::string::npos );
+            CHECK( lua_diagnostic.find( "clamp called with hi < lo" ) != std::string::npos );
+        }
+    }
+}
+
 TEST_CASE( "lua_platform_literal_functions_match_native_math_values_and_signed_zero",
            "[lua][platform][semantic][coords][math]" )
 {

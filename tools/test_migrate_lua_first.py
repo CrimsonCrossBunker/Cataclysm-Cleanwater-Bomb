@@ -9286,7 +9286,7 @@ assert(#events == 9)
         for source in (
             "u_health() > 0", "n_score > 0", "_context_score > 0", "NaN > 0",
             "١ > 0", "1e309 > 0", "1e-999 > 0", "9" * 400 + " > 0",
-            "1 = 2", "rand(3) > 0", "clamp(1,2,3) > 0",
+            "1 = 2", "rand(3) > 0", "clamp(1,2) > 0",
         ):
             with self.subTest(source=source):
                 self.assertIsNone(migrate_lua_first.render_static_condition_math({"math": [source]}))
@@ -35304,6 +35304,40 @@ assert(context.data.position.x==EXPECTED_X and context.data.position.y==EXPECTED
         self.assertEqual(completed.returncode, 0, completed.stderr)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_native_math_clamp_keeps_original_value_and_diagnostic_for_reversed_bounds(self) -> None:
+        cases = [
+            ("clamp(5,1,10)", 5.0, False), ("clamp(-2,1,10)", 1.0, False),
+            ("clamp(12,1,10)", 10.0, False), ("clamp(5,3,3)", 3.0, False),
+            ("clamp(5,10,1)", 5.0, True), ("clamp(5,10,1)+3", 8.0, True),
+            ("clamp(-0,0,1)", -0.0, False), ("clamp(0,-0,1)", 0.0, False),
+            ("clamp(-1,-0,0)", -0.0, False), ("clamp(1,0,-0)", -0.0, False),
+            ("clamp(5,0/0,3)", 3.0, False), ("clamp(-1,0,0/0)", 0.0, False),
+            ("clamp(5,0/0,0/0)", 5.0, False), ("clamp(5,1/0,-1/0)", 5.0, True),
+            ("clamp(clamp(5,10,1),0,4)", 4.0, True),
+        ]
+        for source, expected, warning in cases:
+            with self.subTest(source=source):
+                expression = migrate_lua_first.render_native_number_expression({"math": [source]})
+                self.assertIsNotNone(expression)
+                sign = "<" if math.copysign(1.0, expected) < 0 else ">"
+                zero_check = f"assert(1.0/result {sign} 0.0)" if expected == 0 else ""
+                script = ("local diagnostics={}; local services={diagnostic=function(message) "
+                          "diagnostics[#diagnostics+1]=message end}; local result=" + str(expression) +
+                          f"; assert(result == {expected!r}); {zero_check}; " +
+                          f"assert(#diagnostics == {int(warning)}); " +
+                          "if #diagnostics>0 then assert(string.find(diagnostics[1],"
+                          "'clamp called with hi < lo',1,true)) end")
+                completed = subprocess.run(["lua", "-"], input=script, text=True,
+                                           capture_output=True, timeout=10)
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+        expression = migrate_lua_first.render_native_number_expression({"math": ["clamp(0/0,1,2)"]})
+        completed = subprocess.run(["lua", "-"], input=f"local result={expression}; assert(result~=result)",
+                                   text=True, capture_output=True, timeout=10)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        for source in ("clamp()", "clamp(1)", "clamp(1,2)", "clamp(1,2,3,4)"):
+            self.assertIsNone(migrate_lua_first.render_literal_native_arithmetic([source]))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_literal_native_math_functions_keep_double_rounding_and_signed_zero(self) -> None:
         cases = [
             ("abs(-3)", 3.0), ("max()", 0.0), ("min()", 0.0),
@@ -35351,7 +35385,7 @@ assert(context.data.position.x==EXPECTED_X and context.data.position.y==EXPECTED
             self.assertEqual(result.returncode, 0, result.stderr)
         for source in ("abs()", "abs(1,2)", "_test_(1)", "max(1,)", "max(,1)",
                        "max(+)", "(1,2)", "max((1,2))", "pi(2)", "abs abs(2)",
-                       "max(1,,2)", "max(1)2", "max(1)(2)", "clamp(1,2,3)",
+                       "max(1,,2)", "max(1)2", "max(1)(2)", "clamp(1,2)",
                        "rand(3)", "rng(1,2)", "u_strength()"):
             self.assertIsNone(migrate_lua_first.render_literal_native_arithmetic([source]))
         expression = migrate_lua_first.render_literal_native_arithmetic(["max(" + "1," * 300 + "2)"])
