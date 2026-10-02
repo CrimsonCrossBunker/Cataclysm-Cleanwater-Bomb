@@ -9237,7 +9237,8 @@ assert(#events == 9)
                             "type": "effect_on_condition",
                             "id": "dynamic_condition_math",
                             "required_event": "game_start",
-                            "condition": {"math": ["u_score == 1"]},
+                            # game_start proves alpha, but supplies no beta reader.
+                            "condition": {"math": ["n_score == 1"]},
                             "effect": "nothing",
                             "eoc_type": "EVENT",
                         },
@@ -35322,6 +35323,209 @@ assert(context.data.position.x==EXPECTED_X and context.data.position.y==EXPECTED
         result = subprocess.run(["lua", "-"], input=f"assert({expression} == 2.0)",
                                 text=True, capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_native_math_variables_use_checked_reads_and_abort_whole_expression(self) -> None:
+        owners = {"read_u": ("alpha", "character"), "read_npc": ("beta", "character")}
+        token = migrate_lua_first._migration_math_function_ids.set(
+            migrate_lua_first.native_core_math_function_ids())
+        try:
+            for identifier, scope, key in (("score", "global", "score"),
+                                            ("_score", "context", "score"),
+                                            ("u_score", "u", "score"), ("n_score", "npc", "score"),
+                                            ("u_", "global", "u_"), ("_", "global", "_")):
+                with self.subTest(identifier=identifier):
+                    expression = migrate_lua_first.render_native_number_expression(
+                        {"math": [f"max({identifier},1)+3"]}, owners)
+                    self.assertIsNotNone(expression)
+                    script = r"""
+local alpha,beta={},{}
+local context={data={}}
+local mode,reads,diagnostics
+local function read(scope,key,options)
+ assert(scope==SCOPE and key==KEY and options.strict==true)
+ reads=reads+1
+ if mode=='missing' then return {ok=true,value={exists=false}} end
+ if mode=='wrong' then return {ok=false,error={code='variable_type_mismatch',message='bad numeric type'}} end
+ if mode=='stale' then return {ok=false,error={code='stale_runtime',message='stale'}} end
+ return {ok=true,value={exists=true,value=mode=='zero' and 0.0 or 7.5}}
+end
+local services={variables={
+ get_number=function(owner,key,options) return read(owner==alpha and 'u' or 'npc',key,options) end,
+ get_global_number=function(key,options) return read('global',key,options) end,
+ get_context_number=function(data,key,options) assert(data==context.data); return read('context',key,options) end},
+ diagnostic=function(message) diagnostics=diagnostics+1; assert(message:find(IDENTIFIER,1,true)) end}
+local function service_value(result) if not result.ok then error(result.error.code,0) end; return result.value end
+local function evaluate() return EXPRESSION end
+for _,row in ipairs({{'missing',4.0},{'zero',4.0},{'number',10.5},{'wrong',0.0}}) do
+ mode,reads,diagnostics=row[1],0,0
+ assert(evaluate()==row[2] and reads==1)
+ assert(diagnostics==(mode=='wrong' and 1 or 0))
+end
+mode,reads,diagnostics='stale',0,0
+local ok,message=pcall(evaluate)
+assert(not ok and message=='stale_runtime' and reads==1 and diagnostics==0)
+""".replace("SCOPE", migrate_lua_first.lua_quote(scope)).replace("KEY", migrate_lua_first.lua_quote(key))
+                    script = script.replace("IDENTIFIER", migrate_lua_first.lua_quote(identifier)).replace("EXPRESSION", expression or "nil")
+                    completed = subprocess.run(["lua", "-"], input=script, text=True,
+                                               capture_output=True, timeout=10)
+                    self.assertEqual(completed.returncode, 0, completed.stderr)
+            for name in ("u_health", "health", "clamp", "rng", "rand", "scaling_factor", "__score", "x_score"):
+                self.assertIsNone(migrate_lua_first.render_native_number_expression({"math": [name]}, owners))
+            fallback = {"npc": ("alpha", "character"), "read_npc": None}
+            self.assertIsNone(migrate_lua_first.render_native_number_expression({"math": ["n_score+1"]}, fallback))
+            self.assertIsNone(migrate_lua_first.render_native_number_expression({"math": ["v_pointer+1"]}, fallback))
+        finally:
+            migrate_lua_first._migration_math_function_ids.reset(token)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_generated_actor_math_conditions_keep_proven_participants_in_nested_predicates(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "actors.json"
+            value = {"type": "effect_on_condition", "id": "actor_math", "eoc_type": "EVENT",
+                     "required_event": "character_melee_attacks_character",
+                     "condition": {"and": [{"math": ["u_score+n_score > 5"]},
+                                              {"not": {"math": ["u_score == n_score"]}}]},
+                     "effect": {"set_string_var": "yes", "target_var": {"context_val": "answer"}},
+                     "false_effect": {"set_string_var": "no", "target_var": {"context_val": "answer"}}}
+            source.write_text(json.dumps(value), encoding="utf-8")
+            result = migrate_lua_first.migrate(migrate_lua_first.load_objects([source]), "actor_math")
+            self.assertEqual(result.todos, [])
+            script = r"""
+local handlers={}
+local alpha,beta={},{}
+local a,b,reads
+package.preload.ccb=function() return {content={},runtime={
+ handler=function(id,callback) handlers[id]=callback end,on=function() end},services={
+ diagnostic=function() error('unexpected diagnostic') end,
+ random={native_int=function(lo,hi) assert(lo==0 and hi==0);return 0 end},
+ variables={get_number=function(owner,key,options)
+  assert(key=='score' and options.strict and (owner==alpha or owner==beta));reads=reads+1
+  return {ok=true,value={exists=true,value=owner==alpha and a or b}}
+ end}}} end
+""" + result.files[Path("main.lua")] + r"""
+for _,row in ipairs({{4,2,'yes',4},{2,2,'no',2},{3,3,'no',4}}) do
+ a,b,reads=row[1],row[2],0
+ local context={data={},actors={attacker=alpha,interlocutor=beta}}
+ handlers['migrated.actor_math'](context)
+ assert(context.data.answer==row[3] and reads==row[4])
+end
+"""
+            completed = subprocess.run(["lua", "-"], input=script, text=True,
+                                       capture_output=True, timeout=10)
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            # A victim id on a kill event is not a live Native beta talker.
+            value["required_event"] = "character_kills_character"
+            source.write_text(json.dumps(value), encoding="utf-8")
+            absent = migrate_lua_first.migrate(migrate_lua_first.load_objects([source]), "absent_beta")
+            self.assertTrue(any("condition TODO" in todo.message for todo in absent.todos))
+            self.assertNotIn('get_number(context.actors.interlocutor', absent.files[Path("main.lua")])
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_native_math_indirect_variable_parses_pointer_once_and_preserves_raw_target(self) -> None:
+        owners = {"read_u": ("alpha", "character"), "read_npc": ("beta", "character")}
+        token = migrate_lua_first._migration_math_function_ids.set(frozenset())
+        try:
+            expression = migrate_lua_first.render_native_number_expression({"math": ["v_pointer+3"]}, owners)
+        finally:
+            migrate_lua_first._migration_math_function_ids.reset(token)
+        self.assertIsNotNone(expression)
+        raw = "raw\0" + "k" * 10000
+        script = r"""
+local alpha,beta={},{}
+local context={data={}}
+local pointer,target_scope,target_key,missing,wrong,pointer_missing,pointer_bad
+local string_reads,number_reads,diagnostics
+local function number(scope,key,options)
+ assert(scope==target_scope and key==target_key and options.strict)
+ number_reads=number_reads+1
+ if wrong then return {ok=false,error={code='variable_type_mismatch',message='bad target'}} end
+ return {ok=true,value={exists=not missing,value=5.0}}
+end
+local services={variables={
+ get_context_string=function(data,key)
+  assert(data==context.data and key=='pointer');string_reads=string_reads+1
+  if pointer_bad then return {ok=false,error={code='stale_runtime',message='stale pointer'}} end
+  return {ok=true,value={exists=not pointer_missing,value=pointer}}
+ end,
+ get_number=function(owner,key,options) return number(owner==alpha and 'u' or 'npc',key,options) end,
+ get_global_number=function(key,options) return number('global',key,options) end,
+ get_context_number=function(data,key,options) assert(data==context.data);return number('context',key,options) end},
+ diagnostic=function() diagnostics=diagnostics+1 end}
+local function service_value(result) if not result.ok then error(result.error.code,0) end;return result.value end
+local function evaluate() return EXPRESSION end
+for _,row in ipairs({{'u_'..RAW,'u',RAW},{'n_'..RAW,'npc',RAW},{'_'..RAW,'context',RAW},
+ {'v_next','global','v_next'},{'u_','u',''},{'n_','npc',''},{'_','context',''},{'','global',''}}) do
+ pointer,target_scope,target_key=row[1],row[2],row[3]
+ for _,mode in ipairs({'number','missing','wrong','pointer_missing'}) do
+  missing,wrong,pointer_missing,pointer_bad=mode=='missing',mode=='wrong',mode=='pointer_missing',false
+  string_reads,number_reads,diagnostics=0,0,0
+  local expected=mode=='wrong' and 0.0 or ((missing or pointer_missing) and 3.0 or 8.0)
+  assert(evaluate()==expected and string_reads==1)
+  assert(number_reads==(pointer_missing and 0 or 1) and diagnostics==(wrong and 1 or 0))
+ end
+end
+pointer_bad=true
+string_reads,number_reads,diagnostics=0,0,0
+local ok,message=pcall(evaluate)
+assert(not ok and message=='stale_runtime' and string_reads==1 and number_reads==0 and diagnostics==0)
+""".replace("EXPRESSION", expression or "nil").replace("RAW", migrate_lua_first.lua_quote(raw))
+        completed = subprocess.run(["lua", "-"], input=script, text=True,
+                                   capture_output=True, timeout=10)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_generated_global_and_context_math_conditions_and_function_shadowing(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "math.json"
+            source.write_text(json.dumps([
+                {"type": "effect_on_condition", "id": "variable_math", "eoc_type": "EVENT",
+                 "required_event": "game_start", "condition": {"math": ["score+_offset >= 10"]},
+                 "effect": {"set_string_var": "yes", "target_var": {"context_val": "answer"}},
+                 "false_effect": {"set_string_var": "no", "target_var": {"context_val": "answer"}}}
+            ]), encoding="utf-8")
+            result = migrate_lua_first.migrate(migrate_lua_first.load_objects([source]), "variable_math")
+            self.assertEqual(result.todos, [])
+            self.assertEqual(len(result.converted), 1)
+            script = r"""
+local handlers,diagnostics={},0
+local bad=false
+package.preload.ccb=function() return {content={},runtime={
+ handler=function(id,callback) handlers[id]=callback end,on=function() end},services={
+ diagnostic=function(message) diagnostics=diagnostics+1 end,
+ random={native_int=function(lo,hi) assert(lo==0 and hi==0);return 0 end},
+ variables={get_global_number=function(key,options)
+  assert(key=='score' and options.strict)
+  if bad then return {ok=false,error={code='variable_type_mismatch',message='wrong type'}} end
+  return {ok=true,value={exists=true,value=7.0}}
+ end,get_context_number=function(data,key,options)
+  assert(key=='offset' and options.strict)
+  return {ok=true,value={exists=data[key]~=nil,value=data[key]}}
+ end}}} end
+""" + result.files[Path("main.lua")] + r"""
+for _,row in ipairs({{3,'yes'},{2,'no'}}) do
+ local context={data={offset=row[1]}}
+ handlers['migrated.variable_math'](context)
+ assert(context.data.answer==row[2] and diagnostics==0)
+end
+bad=true
+local context={data={offset=100}}
+handlers['migrated.variable_math'](context)
+assert(context.data.answer=='no' and diagnostics==1)
+"""
+            completed = subprocess.run(["lua", "-"], input=script, text=True,
+                                       capture_output=True, timeout=10)
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            source.write_text(json.dumps([
+                {"type": "jmath_function", "id": "pi", "num_args": 0, "return": "4"},
+                {"type": "effect_on_condition", "id": "shadow", "eoc_type": "EVENT",
+                 "required_event": "game_start", "condition": {"math": ["pi > 0"]}, "effect": "nothing"}
+            ]), encoding="utf-8")
+            shadow = migrate_lua_first.migrate(migrate_lua_first.load_objects([source]), "shadow")
+            self.assertTrue(any("condition TODO" in todo.message for todo in shadow.todos))
+        # The temporary function namespace does not escape into another migration.
+        self.assertIsNone(migrate_lua_first._migration_math_function_ids.get())
+        self.assertIsNone(migrate_lua_first.render_native_number_expression({"math": ["score"]}))
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_native_temperature_math_keeps_float_storage_and_intermediates(self) -> None:

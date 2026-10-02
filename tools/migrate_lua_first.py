@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import contextvars
 import functools
 import json
 import math
@@ -27,6 +28,11 @@ from pathlib import Path
 from typing import Any, Callable, Iterable
 
 from generate_builtin_mods import strip_jsonc_comments, strip_trailing_commas
+
+# Keep name resolution scoped to one migration, including nested calls and
+# exceptions. A bare Native custom-function name must never become a variable.
+_migration_math_function_ids: contextvars.ContextVar[frozenset[str] | None] = contextvars.ContextVar(
+    "migration_math_function_ids", default=None)
 
 try:
     from agent.migration_todo import (
@@ -28025,7 +28031,76 @@ def _render_native_variable_number_snapshot(
     return f"service_value({call})"
 
 
-def render_literal_native_arithmetic(value: Any) -> str | None:
+@functools.lru_cache(maxsize=1)
+def native_math_nonvariable_names() -> tuple[frozenset[str], frozenset[str]]:
+    common = (REPOSITORY_ROOT / "src/math_parser_func.h").read_text(encoding="utf-8")
+    dialogue = (REPOSITORY_ROOT / "src/math_parser_diag.cpp").read_text(encoding="utf-8")
+    registry = dialogue.split("dialogue_funcs{", 1)[1].split("\n};", 1)[0]
+    return (frozenset(re.findall(r'math_func\{\s*"([^"]+)"', common)),
+            frozenset(re.findall(r'^\s*\{\s*"([^"]+)"', registry, re.MULTILINE)))
+
+
+@functools.lru_cache(maxsize=1)
+def native_core_math_function_ids() -> frozenset[str]:
+    # These are the two core function catalogs, not a whole-corpus audit.
+    sources = load_objects([REPOSITORY_ROOT / "data/json/jmath.json",
+                            REPOSITORY_ROOT / "data/json/mutations/mutation_jmath.json"])
+    return frozenset(source.value["id"] for source in sources
+                     if source.value.get("type") == "jmath_function" and
+                     isinstance(source.value.get("id"), str))
+
+
+def render_native_math_variable_read(
+    token: str, effect_actor_targets: dict[str, tuple[str, str] | None] | None,
+) -> str | None:
+    """Return a checked numeric Result for an actual Native variable name."""
+    if _migration_math_function_ids.get() is None or not re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]*", token):
+        return None
+    common, dialogue = native_math_nonvariable_names()
+    scoped = token[2:] if len(token) > 2 and token[1] == "_" else token
+    if token in common or scoped in dialogue:
+        return None
+    if len(token) > 2 and token[1] == "_":
+        scope = {"u": "u_val", "n": "npc_val", "v": "var_val"}.get(token[0])
+        if scope is None:
+            return None
+        key = token[2:]
+    elif len(token) > 1 and token[0] == "_":
+        scope, key = "context_val", token[1:]
+    else:
+        scope, key = "global_val", token
+    alpha = _proven_native_variable_read_target(effect_actor_targets, "u")
+    beta = _proven_native_variable_read_target(effect_actor_targets, "npc")
+
+    def read(source: str, name: str) -> str | None:
+        if source == "global_val":
+            return f"services.variables.get_global_number({name}, {{strict=true}})"
+        if source == "context_val":
+            return f"services.variables.get_context_number(context and context.data, {name}, {{strict=true}})"
+        owner = alpha if source == "u_val" else beta
+        return None if owner is None else f"services.variables.get_number({owner}, {name}, {{strict=true}})"
+
+    if scope != "var_val":
+        return read(scope, lua_quote(key))
+    # process_variable is applied once to a permissive Native string read.
+    # Every possible dynamic target owner must actually be present.
+    reads = [read(source, name) for source, name in (
+        ("u_val", "string.sub(pointer.value,3)"), ("npc_val", "string.sub(pointer.value,3)"),
+        ("context_val", "string.sub(pointer.value,2)"), ("global_val", "pointer.value"))]
+    if any(value is None for value in reads):
+        return None
+    pointer = _render_native_variable_string_snapshot("context_val", lua_quote(key), alpha, beta)
+    return ('(function(pointer) if pointer.exists == false then '
+            'return {ok=true,value={exists=false}} end; '
+            'if string.sub(pointer.value,1,2)=="u_" then return ' + reads[0] +
+            ' elseif string.sub(pointer.value,1,2)=="n_" then return ' + reads[1] +
+            ' elseif string.sub(pointer.value,1,1)=="_" then return ' + reads[2] +
+            ' else return ' + reads[3] + ' end end)(' + pointer + ')')
+
+
+def render_literal_native_arithmetic(
+    value: Any, variable_reader: Callable[[str], str | None] | None = None,
+) -> str | None:
     """Compile pure numeric Native arithmetic/functions to ordinary Lua."""
     if not isinstance(value, list) or not value or not all(isinstance(part, str) for part in value):
         return None
@@ -28037,6 +28112,7 @@ def render_literal_native_arithmetic(value: Any) -> str | None:
     statements = ["local values = {}"]
     count = 0
     uses_native_float = False
+    uses_variable_result = False
     need_operand = True
     precedence = {"+": 2, "-": 2, "*": 3, "/": 3, "%": 3, "^": 4}
     comparisons = {"==", "!=", "<", "<=", ">", ">="}
@@ -28136,6 +28212,9 @@ def render_literal_native_arithmetic(value: Any) -> str | None:
             return None
         token = match.group()
         position = match.end()
+        custom_functions = _migration_math_function_ids.get()
+        if custom_functions is not None and token in custom_functions and token not in functions:
+            return None
         if token[0] in "0123456789.":
             if not need_operand:
                 return None
@@ -28199,7 +28278,24 @@ def render_literal_native_arithmetic(value: Any) -> str | None:
                 return None
             operators.append("f:" + token)
         elif token not in precedence:
-            return None  # Variables, RNG, diagnostics and scoped functions remain explicit TODOs.
+            if not need_operand or variable_reader is None:
+                return None
+            read = variable_reader(token)
+            if read is None:
+                return None
+            if not uses_variable_result:
+                statements.append("local variable_result")
+                uses_variable_result = True
+            statements.append(f"variable_result = {read}")
+            # A type failure aborts the entire expression, not one operand.
+            # Preserve lifetime/contract errors instead of disguising them as zero.
+            statements.append('if variable_result.ok == false and variable_result.error and '
+                              'variable_result.error.code == "variable_type_mismatch" then '
+                              f'services.diagnostic({lua_quote("Math variable " + token + ": ")} '
+                              '.. variable_result.error.message); return 0.0 end')
+            emit('(function(result) if result.exists == false then return 0.0 end; '
+                 'return result.value end)(service_value(variable_result))')
+            need_operand = False
         elif need_operand:
             if token not in {"+", "-"}:
                 return None
@@ -28244,7 +28340,8 @@ def render_native_number_expression(
     if literal is not None:
         return literal
     if isinstance(value, dict) and set(value) == {"math"}:
-        return render_literal_native_arithmetic(value["math"])
+        return render_literal_native_arithmetic(
+            value["math"], lambda token: render_native_math_variable_read(token, effect_actor_targets))
     if isinstance(value, list):
         if len(value) != 2:
             return None
@@ -28746,12 +28843,14 @@ def render_static_context_presence_condition(condition: dict[str, Any]) -> str |
 
 
 def render_static_condition_math(
-    condition: dict[str, Any]
+    condition: dict[str, Any],
+    math_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> str | None:
     """Compile pure numeric conditions and preserve Native double-to-bool truth."""
     if set(condition) != {"math"}:
         return None
-    expression = render_literal_native_arithmetic(condition.get("math"))
+    expression = render_literal_native_arithmetic(
+        condition.get("math"), lambda token: render_native_math_variable_read(token, math_actor_targets))
     return None if expression is None else f"({expression} ~= 0.0)"
 
 
@@ -29817,6 +29916,7 @@ def render_eoc_condition_expression(
     safe_space_character_beta_actor_proven: bool = False,
     named_condition_alpha_actor_proven: bool = False,
     proficiency_character_alpha_actor_proven: bool = False,
+    math_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> str | None:
     """Translate bounded legacy predicates into ordinary Lua composition."""
     # The proof bit certifies an exact Character handle.  The expression only
@@ -30510,6 +30610,7 @@ def render_eoc_condition_expression(
                     proficiency_character_alpha_actor_proven=(
                         proficiency_character_alpha_actor_proven
                     ),
+                    math_actor_targets=math_actor_targets,
                 )
 
     if set(condition) == {"get_condition"}:
@@ -30580,7 +30681,7 @@ def render_eoc_condition_expression(
     rendered_presence = render_static_context_presence_condition(condition)
     if rendered_presence is not None:
         return rendered_presence
-    rendered_math = render_static_condition_math(condition)
+    rendered_math = render_static_condition_math(condition, math_actor_targets)
     if rendered_math is not None:
         return rendered_math
     rendered_line_of_sight = render_static_line_of_sight_condition(condition)
@@ -30633,6 +30734,7 @@ def render_eoc_condition_expression(
                 proficiency_character_alpha_actor_proven=(
                     proficiency_character_alpha_actor_proven
                 ),
+                math_actor_targets=math_actor_targets,
             )
             for entry in entries
         ]
@@ -30657,6 +30759,7 @@ def render_eoc_condition_expression(
             proficiency_character_alpha_actor_proven=(
                 proficiency_character_alpha_actor_proven
             ),
+            math_actor_targets=math_actor_targets,
         )
         return None if rendered is None else f"not ({rendered})"
 
@@ -32752,6 +32855,7 @@ def render_eoc(
             proficiency_character_alpha_actor_proven=(
                 proficiency_character_alpha_actor_proven
             ),
+            math_actor_targets=effect_actor_targets,
         )
         if deactivate_expression is not None:
             lines.extend([
@@ -32812,6 +32916,7 @@ def render_eoc(
             proficiency_character_alpha_actor_proven=(
                 proficiency_character_alpha_actor_proven
             ),
+            math_actor_targets=effect_actor_targets,
         )
         condition_converted = condition_expression is not None
     false_effect_converted = True
@@ -38328,6 +38433,18 @@ def classify_non_actionable_boundaries(result: MigrationResult) -> None:
 
 def migrate(objects: list[SourceObject], mod_id: str,
             exclude_types: frozenset[str] = frozenset()) -> MigrationResult:
+    custom_functions = native_core_math_function_ids() | frozenset(
+        source.value["id"] for source in objects
+        if source.value.get("type") == "jmath_function" and isinstance(source.value.get("id"), str))
+    token = _migration_math_function_ids.set(custom_functions)
+    try:
+        return _migrate_with_math_namespace(objects, mod_id, exclude_types)
+    finally:
+        _migration_math_function_ids.reset(token)
+
+
+def _migrate_with_math_namespace(objects: list[SourceObject], mod_id: str,
+                                 exclude_types: frozenset[str]) -> MigrationResult:
     result = MigrationResult()
     raw_eoc_ids = {
         stable_id(source.value, f"anonymous_{source.index}")

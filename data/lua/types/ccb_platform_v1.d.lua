@@ -12060,6 +12060,11 @@ function CcbCreaturesApi.visible_monsters(observer, direction) end
 
 function CcbPlatformServices.message(text) end
 
+---Report an explicit developer diagnostic through the native debug-message facility.
+---Requires an active world callback; does not evaluate an expression or change gameplay state.
+---@param text string Diagnostic text, with no additional byte limit.
+function CcbPlatformServices.diagnostic(text) end
+
 ---Format text with the game's native printf syntax, including positional %1$s arguments.
 ---Available after world_ready. Pass translated text from translate/translate_plural when needed.
 ---Arguments are a dense array; NUL text/strings, unsupported values and format mismatches raise errors.

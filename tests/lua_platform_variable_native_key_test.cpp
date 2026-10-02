@@ -16,6 +16,7 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "character_id.h"
 #include "condition.h"
 #include "debug.h"
@@ -27,6 +28,8 @@
 #include "json_loader.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
+#include "lua_platform_runtime.h"
+#include "lua_platform_runtime_internal.h"
 #include "lua_platform_sol.h"
 #include "lua_platform_variables.h"
 #include "math_parser.h"
@@ -2345,6 +2348,229 @@ return values[5] end)() ~= 0.0)
         REQUIRE( call.valid() );
         CHECK( call.get<bool>() == expected );
     }
+}
+
+TEST_CASE( "lua_platform_emitted_math_variables_match_native_expression_failure_and_scopes",
+           "[lua][platform][semantic][variables][math]" )
+{
+    using namespace cata::lua_platform;
+    global_values_restore restore_global_values;
+    clear_active_runtimes();
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::math, sol::lib::string );
+    sol::table ccb = lua.create_table();
+    const auto owner = make_runtime( "math_variable_reads", 4921, lua );
+    const on_out_of_scope cleanup( []() {
+        clear_active_runtimes();
+    } );
+    install_runtime_api( owner, lua, ccb );
+    set_active_runtimes( { owner } );
+    runtime_world_ready( true );
+    lua["services"] = ccb["services"];
+    REQUIRE( lua.safe_script( R"lua(
+function service_value(result)
+ if not result.ok then error(result.error.message,0) end
+ return result.value
+end
+)lua", sol::script_pass_on_error ).valid() );
+    avatar alpha;
+    avatar beta;
+    alpha.normalize();
+    beta.normalize();
+    alpha.setID( character_id( 4922 ), true );
+    beta.setID( character_id( 4923 ), true );
+    const auto generation = detail::runtime_world_generation_storage();
+    lua["alpha"] = game_handle::from_creature( alpha,
+                   { "avatar", 4922, 0, 0, 0, {} }, owner->handle_runtime(), generation );
+    lua["beta"] = game_handle::from_creature( beta,
+                  { "avatar", 4923, 0, 0, 0, {} }, owner->handle_runtime(), generation );
+    struct variable_case {
+        const char *identifier;
+        var_type scope;
+        const char *key;
+        const char *lua_expression;
+    };
+    const std::vector<variable_case> cases = {
+        { "score", var_type::global, "score", R"lua(
+(function() local values = {};
+local variable_result;
+variable_result = services.variables.get_global_number("score", {strict=true});
+if variable_result.ok == false and variable_result.error and variable_result.error.code == "variable_type_mismatch" then services.diagnostic("Math variable score: " .. variable_result.error.message);
+return 0.0 end;
+values[1] = (function(result) if result.exists == false then return 0.0 end;
+return result.value end)(service_value(variable_result));
+values[2] = 1.0;
+values[3] = values[1];
+if values[2] > values[3] then values[3] = values[2] end;
+values[4] = 3.0;
+values[5] = values[3] + values[4];
+return values[5] end)()
+)lua" },
+        { "_score", var_type::context, "score", R"lua(
+(function() local values = {};
+local variable_result;
+variable_result = services.variables.get_context_number(context and context.data, "score", {strict=true});
+if variable_result.ok == false and variable_result.error and variable_result.error.code == "variable_type_mismatch" then services.diagnostic("Math variable _score: " .. variable_result.error.message);
+return 0.0 end;
+values[1] = (function(result) if result.exists == false then return 0.0 end;
+return result.value end)(service_value(variable_result));
+values[2] = 1.0;
+values[3] = values[1];
+if values[2] > values[3] then values[3] = values[2] end;
+values[4] = 3.0;
+values[5] = values[3] + values[4];
+return values[5] end)()
+)lua" },
+        { "u_score", var_type::u, "score", R"lua(
+(function() local values = {};
+local variable_result;
+variable_result = services.variables.get_number(alpha, "score", {strict=true});
+if variable_result.ok == false and variable_result.error and variable_result.error.code == "variable_type_mismatch" then services.diagnostic("Math variable u_score: " .. variable_result.error.message);
+return 0.0 end;
+values[1] = (function(result) if result.exists == false then return 0.0 end;
+return result.value end)(service_value(variable_result));
+values[2] = 1.0;
+values[3] = values[1];
+if values[2] > values[3] then values[3] = values[2] end;
+values[4] = 3.0;
+values[5] = values[3] + values[4];
+return values[5] end)()
+)lua" },
+        { "n_score", var_type::npc, "score", R"lua(
+(function() local values = {};
+local variable_result;
+variable_result = services.variables.get_number(beta, "score", {strict=true});
+if variable_result.ok == false and variable_result.error and variable_result.error.code == "variable_type_mismatch" then services.diagnostic("Math variable n_score: " .. variable_result.error.message);
+return 0.0 end;
+values[1] = (function(result) if result.exists == false then return 0.0 end;
+return result.value end)(service_value(variable_result));
+values[2] = 1.0;
+values[3] = values[1];
+if values[2] > values[3] then values[3] = values[2] end;
+values[4] = 3.0;
+values[5] = values[3] + values[4];
+return values[5] end)()
+)lua" },
+        { "u_", var_type::global, "u_", R"lua(
+(function() local values = {};
+local variable_result;
+variable_result = services.variables.get_global_number("u_", {strict=true});
+if variable_result.ok == false and variable_result.error and variable_result.error.code == "variable_type_mismatch" then services.diagnostic("Math variable u_: " .. variable_result.error.message);
+return 0.0 end;
+values[1] = (function(result) if result.exists == false then return 0.0 end;
+return result.value end)(service_value(variable_result));
+values[2] = 1.0;
+values[3] = values[1];
+if values[2] > values[3] then values[3] = values[2] end;
+values[4] = 3.0;
+values[5] = values[3] + values[4];
+return values[5] end)()
+)lua" },
+        { "_", var_type::global, "_", R"lua(
+(function() local values = {};
+local variable_result;
+variable_result = services.variables.get_global_number("_", {strict=true});
+if variable_result.ok == false and variable_result.error and variable_result.error.code == "variable_type_mismatch" then services.diagnostic("Math variable _: " .. variable_result.error.message);
+return 0.0 end;
+values[1] = (function(result) if result.exists == false then return 0.0 end;
+return result.value end)(service_value(variable_result));
+values[2] = 1.0;
+values[3] = values[1];
+if values[2] > values[3] then values[3] = values[2] end;
+values[4] = 3.0;
+values[5] = values[3] + values[4];
+return values[5] end)()
+)lua" }
+    };
+    const auto make_value = []( const int shape ) -> std::optional<diag_value> {
+        switch( shape ) {
+            case 0: return std::nullopt;
+            case 1: return diag_value{};
+            case 2: return diag_value( -3.9 );
+            case 3: return diag_value( 7.5 );
+            case 4: return diag_value( std::string( "7.9" ) );
+            case 5: return diag_value( diag_array( 5000, diag_value( 4.0 ) ) );
+            case 6: return diag_value( tripoint_abs_ms( -3, 4, 5 ) );
+            case 7: return diag_value( diag_value::legacy_value( "7.9" ) );
+            default: return diag_value( diag_value::legacy_value( "not-a-number" ) );
+        }
+    };
+    for( const variable_case &row : cases ) {
+        for( int shape = 0; shape < ( row.scope == var_type::context ? 7 : 9 ); ++shape ) {
+            CAPTURE( row.identifier, shape );
+            const auto prepare = [&]( dialogue &conversation, const std::optional<diag_value> &value ) {
+                get_globals().remove_global_value( row.key );
+                alpha.remove_value( row.key );
+                beta.remove_value( row.key );
+                if( value ) {
+                    if( row.scope == var_type::global ) {
+                        get_globals().set_global_value( row.key, *value );
+                    } else if( row.scope == var_type::context ) {
+                        conversation.set_value( row.key, *value );
+                    } else if( row.scope == var_type::u ) {
+                        alpha.set_value( row.key, *value );
+                    } else {
+                        beta.set_value( row.key, *value );
+                    }
+                }
+            };
+            dialogue conversation( get_talker_for( alpha ), get_talker_for( beta ) );
+            prepare( conversation, make_value( shape ) );
+            eoc_math native;
+            native.deserialize( json_loader::from_string(
+                                    std::string( "{\"math\":[\"max(" ) + row.identifier + ",1)+3\"]}" ) );
+            finalize_conditions();
+            double expected = 0.0;
+            const std::string native_diagnostic = capture_debugmsg_during( [&]() {
+                expected = native.act( conversation );
+            } );
+            // Fresh legacy caches are required for the independent Lua path.
+            prepare( conversation, make_value( shape ) );
+            sol::table data = lua.create_table();
+            if( row.scope == var_type::context && shape != 0 ) {
+                if( shape == 1 ) {
+                    data[row.key] = ccb["services"]["types"]["null"].get<sol::object>();
+                } else if( shape == 2 || shape == 3 ) {
+                    data[row.key] = make_value( shape )->dbl();
+                } else if( shape == 4 ) {
+                    data[row.key] = "7.9";
+                } else if( shape == 5 ) {
+                    sol::table array = lua.create_table();
+                    for( int i = 1; i <= 5000; ++i ) {
+                        array[i] = 4.0;
+                    }
+                    data[row.key] = array;
+                } else {
+                    data[row.key] = script_tripoint_coord::from_native(
+                                       coords::origin::abs, coords::scale::map_square, tripoint( -3, 4, 5 ) );
+                }
+            }
+            sol::table context = lua.create_table();
+            context["data"] = data;
+            lua["context"] = context;
+            sol::protected_function_result call;
+            const std::string lua_diagnostic = capture_debugmsg_during( [&]() {
+                detail::callback_scope callback( *owner );
+                call = lua.safe_script( std::string( "return " ) + row.lua_expression, sol::script_pass_on_error );
+            } );
+            REQUIRE( call.valid() );
+            CHECK( call.get<double>() == expected );
+            if( shape >= 4 && shape <= 6 ) {
+                CHECK( expected == 0.0 ); // Whole expression abort, not max(0,1)+3.
+                CHECK( native_diagnostic.find( "Type mismatch" ) != std::string::npos );
+                CHECK( lua_diagnostic.find( "Type mismatch" ) != std::string::npos );
+                CHECK( lua_diagnostic.find( row.identifier ) != std::string::npos );
+                // Diagnostics identify the Lua variable; they intentionally
+                // do not recreate a removed EOC callstack/value dump.
+            } else {
+                CHECK( lua_diagnostic.empty() == native_diagnostic.empty() );
+            }
+        }
+    }
+    const sol::protected_function diagnostic = ccb["services"]["diagnostic"];
+    CHECK_FALSE( diagnostic( "outside callback" ).valid() );
+    clear_active_runtimes();
+    CHECK_FALSE( diagnostic( "after unload" ).valid() );
 }
 
 TEST_CASE( "native_variable_reads_do_not_share_missing_beta_mutation_fallback",

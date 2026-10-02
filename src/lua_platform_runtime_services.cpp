@@ -2211,6 +2211,13 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         }
         ::add_msg( message );
     } );
+    services.set_function( "diagnostic", [weak]( const std::string &message ) {
+        const std::shared_ptr<runtime> owner = weak.lock();
+        if( !owner || !owner->world_is_ready || owner->callback_depth <= 0 ) {
+            throw std::runtime_error( "services.diagnostic requires an active world callback" );
+        }
+        debugmsg( "%s", message );
+    } );
     services.set_function( "turn", [weak]() {
         const std::shared_ptr<runtime> owner = weak.lock();
         if( !owner || !owner->world_is_ready ) {
