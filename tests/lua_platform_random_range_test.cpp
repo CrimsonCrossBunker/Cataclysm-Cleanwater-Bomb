@@ -1,8 +1,10 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
 #include <cstdint>
+#include <array>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <set>
 #include <sstream>
 #include <string>
@@ -17,6 +19,7 @@
 #include "coordinates.h"
 #include "dialogue.h"
 #include "dialogue_helpers.h"
+#include "debug.h"
 #include "global_vars.h"
 #include "json.h"
 #include "json_loader.h"
@@ -25,6 +28,7 @@
 #include "lua_platform_runtime.h"
 #include "lua_platform_runtime_internal.h"
 #include "lua_platform_sol.h"
+#include "math_parser_diag_value.h"
 #include "npctalk.h"
 #include "rng.h"
 #include "weighted_list.h"
@@ -231,6 +235,7 @@ TEST_CASE( "lua_platform_single_axis_location_ranges_match_native_coordinates_an
         double lower;
         double upper;
         bool overmap;
+        bool paired_z = false;
     };
     std::vector<location_range_case> cases;
     for( int axis = 0; axis < 3; ++axis ) {
@@ -239,6 +244,9 @@ TEST_CASE( "lua_platform_single_axis_location_ranges_match_native_coordinates_an
                  { 2147483647.9, 2147483647.1 }, { -2147483648.9, -2147483648.1 },
                  { -2147483648.0, 2147483647.0 } } ) {
             cases.push_back( { axis, bounds.first, bounds.second, false } );
+            if( axis < 2 ) {
+                cases.push_back( { axis, bounds.first, bounds.second, false, true } );
+            }
             if( bounds.first >= -3 && bounds.first <= 4 && bounds.second >= -3 && bounds.second <= 4 ) {
                 cases.push_back( { axis, bounds.first, bounds.second, true } );
             }
@@ -269,6 +277,13 @@ TEST_CASE( "lua_platform_single_axis_location_ranges_match_native_coordinates_an
             writer.write( range.lower );
             writer.write( range.upper );
             writer.end_array();
+            if( range.paired_z ) {
+                writer.member( "z_adjust" );
+                writer.start_array();
+                writer.write( 7 );
+                writer.write( 9 );
+                writer.end_array();
+            }
             writer.end_object();
         }
         talk_effect_t effect;
@@ -299,6 +314,7 @@ TEST_CASE( "lua_platform_single_axis_location_ranges_match_native_coordinates_an
         row["lower"] = static_cast<int>( range.lower );
         row["upper"] = static_cast<int>( range.upper );
         row["overmap"] = range.overmap;
+        row["paired_z"] = range.paired_z;
         inputs[index + 1] = row;
     }
     lua["inputs"] = inputs;
@@ -315,6 +331,7 @@ TEST_CASE( "lua_platform_single_axis_location_ranges_match_native_coordinates_an
                 if input.overmap and input.axis < 3 then
                     offset[input.axis] = offset[input.axis] * services.coords.tripoint_rel_omt(1, 0, 0):to('ms').x
                 end
+                if input.paired_z then offset[3] = services.random.native_int(7, 9) end
                 results[index] = read.value.value:add(services.coords.tripoint_rel_ms(
                     offset[1], offset[2], offset[3]))
             end
@@ -330,6 +347,213 @@ TEST_CASE( "lua_platform_single_axis_location_ranges_match_native_coordinates_an
     for( std::size_t index = 0; index < expected.size(); ++index ) {
         CAPTURE( index );
         CHECK( actual[index + 1].get<script_tripoint_coord>().to_native() == expected[index] );
+    }
+    CHECK( lua["following_draw"].get<int>() == expected_next );
+    CHECK( rng_get_engine() == expected_rng );
+}
+
+TEST_CASE( "lua_platform_variable_numeric_ranges_match_native_presence_types_and_rng",
+           "[lua][platform][random_range][variables][semantic]" )
+{
+    using namespace cata::lua_platform;
+    clear_active_runtimes();
+    const cata_default_random_engine saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
+    global_variables::impl_t saved_globals = get_globals().get_global_values();
+    const on_out_of_scope restore_state( [&]() {
+        rng_get_engine() = saved_rng;
+        get_globals().set_global_values( std::move( saved_globals ) );
+    } );
+    avatar alpha;
+    avatar beta;
+    alpha.normalize();
+    beta.normalize();
+    alpha.setID( character_id( 4914 ), true );
+    beta.setID( character_id( 4915 ), true );
+    struct bound_case {
+        const char *scope_name;
+        var_type scope;
+        std::string key;
+        int mode;
+    };
+    const std::array<std::pair<const char *, var_type>, 5> scopes = {{
+            { "u_val", var_type::u }, { "npc_val", var_type::npc },
+            { "global_val", var_type::global }, { "context_val", var_type::context },
+            { "var_val", var_type::var }
+        }};
+    std::vector<bound_case> cases;
+    for( const auto &scope : scopes ) {
+        for( const std::string &key : { std::string{}, std::string( "raw\0bound", 9 ),
+                                       std::string( 10000, 'k' ) } ) {
+            for( int mode = 0; mode < 7; ++mode ) {
+                if( scope.second != var_type::context || mode != 6 ) {
+                    // Lua callback strings are ordinary strings, not legacy values.
+                    cases.push_back( { scope.first, scope.second, key, mode } );
+                }
+            }
+        }
+    }
+    const auto lower_value = []( int mode ) -> std::optional<diag_value> {
+        switch( mode ) {
+            case 0:
+                return std::nullopt;
+            case 1:
+                return diag_value{};
+            case 2:
+                return diag_value( -3.9 );
+            case 3:
+                return diag_value( diag_array( 5000, diag_value( 4.0 ) ) );
+            case 4:
+                return diag_value( std::string( "-3.9" ) );
+            case 5:
+                return diag_value( true );
+            default:
+                return diag_value( diag_value::legacy_value( "7.9" ) );
+        }
+    };
+    const auto reset_case = [&]( const bound_case &bound, dialogue &conversation ) {
+        alpha.remove_value( bound.key );
+        beta.remove_value( bound.key );
+        get_globals().remove_global_value( bound.key );
+        get_globals().set_global_value( "numeric_range_upper", bound.mode == 1 ? 0.9 : 4.9 );
+        if( bound.scope == var_type::var ) {
+            conversation.set_value( bound.key, diag_value( "n_" + bound.key ) );
+        }
+        if( const auto value = lower_value( bound.mode ) ) {
+            write_var_value( bound.scope == var_type::var ? var_type::npc : bound.scope,
+                             bound.key, &conversation, *value );
+        }
+    };
+    constexpr unsigned int seed = 58170;
+    CAPTURE( seed );
+    rng_set_engine_seed( seed );
+    std::vector<int> expected;
+    std::vector<std::string> expected_diagnostics;
+    for( const bound_case &bound : cases ) {
+        dialogue conversation( get_talker_for( alpha ), get_talker_for( beta ) );
+        reset_case( bound, conversation );
+        std::ostringstream input;
+        {
+            JsonOut writer( input );
+            writer.start_array();
+            writer.start_object();
+            writer.member( bound.scope_name, bound.key );
+            writer.member( "default", -2.7 );
+            writer.end_object();
+            writer.start_object();
+            writer.member( "global_val", "numeric_range_upper" );
+            writer.end_object();
+            writer.end_array();
+        }
+        dbl_or_var native;
+        native.deserialize( json_loader::from_string( input.str() ) );
+        expected_diagnostics.push_back( capture_debugmsg_during( [&]() {
+            expected.push_back( static_cast<int>( native.evaluate( conversation ) ) );
+        } ) );
+    }
+    const int expected_next = rng( -100, 100 );
+    const cata_default_random_engine expected_rng = rng_get_engine(); // NOLINT(cata-determinism)
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::math, sol::lib::string );
+    sol::table ccb = lua.create_table();
+    const std::shared_ptr<runtime> owner = make_runtime( "variable_numeric_ranges", 4916, lua );
+    const on_out_of_scope cleanup( []() {
+        clear_active_runtimes();
+    } );
+    install_runtime_api( owner, lua, ccb );
+    set_active_runtimes( { owner } );
+    lua["ccb"] = ccb;
+    const std::size_t world_generation = detail::runtime_world_generation_storage();
+    lua["alpha"] = game_handle::from_creature( alpha, { "avatar", 4914, 0, 0, 0, {} },
+                   owner->handle_runtime(), world_generation );
+    lua["beta"] = game_handle::from_creature( beta, { "avatar", 4915, 0, 0, 0, {} },
+                  owner->handle_runtime(), world_generation );
+    sol::table inputs = lua.create_table();
+    for( std::size_t index = 0; index < cases.size(); ++index ) {
+        sol::table row = lua.create_table();
+        row["scope"] = cases[index].scope_name;
+        row["key"] = cases[index].key;
+        inputs[index + 1] = row;
+    }
+    lua["inputs"] = inputs;
+    lua.set_function( "prepare_bound", [&]( std::size_t index ) {
+        const bound_case &bound = cases.at( index - 1 );
+        dialogue conversation( get_talker_for( alpha ), get_talker_for( beta ) );
+        reset_case( bound, conversation ); // Construct a fresh legacy value, with no conversion cache.
+        sol::table data = lua.create_table();
+        if( bound.scope == var_type::var ) {
+            data.raw_set( bound.key, "n_" + bound.key );
+        } else if( bound.scope == var_type::context && bound.mode != 0 ) {
+            if( bound.mode == 1 ) {
+                data.raw_set( bound.key, ccb["services"]["types"]["null"].get<sol::object>() );
+            } else if( bound.mode == 2 ) {
+                data.raw_set( bound.key, -3.9 );
+            } else if( bound.mode == 3 ) {
+                sol::table array = lua.create_table();
+                for( int entry = 1; entry <= 5000; ++entry ) {
+                    array[entry] = 4.0;
+                }
+                data.raw_set( bound.key, array );
+            } else if( bound.mode == 4 ) {
+                data.raw_set( bound.key, std::string( "-3.9" ) );
+            } else {
+                data.raw_set( bound.key, true );
+            }
+        }
+        return data;
+    } );
+    std::vector<std::string> actual_diagnostics;
+    lua.set_function( "capture_bound_draw", [&]( const sol::protected_function &draw ) {
+        int value = 0;
+        actual_diagnostics.push_back( capture_debugmsg_during( [&]() {
+            const sol::protected_function_result call = draw();
+            REQUIRE( call.valid() );
+            value = call.get<int>();
+        } ) );
+        return value;
+    } );
+    REQUIRE( lua.safe_script( R"(
+        ccb.runtime.handler('variable_ranges', function()
+            local variables = ccb.services.variables
+            local function value(result) assert(result.ok); return result.value end
+            local function read(scope, key, data)
+                if scope == 'var_val' then
+                    local pointer = value(variables.get_context_string(data, key))
+                    if not pointer.exists then return pointer end
+                    local text = pointer.value
+                    if string.sub(text, 1, 2) == 'u_' then scope, key = 'u_val', string.sub(text, 3)
+                    elseif string.sub(text, 1, 2) == 'n_' then scope, key = 'npc_val', string.sub(text, 3)
+                    elseif string.sub(text, 1, 1) == '_' then scope, key = 'context_val', string.sub(text, 2)
+                    else scope, key = 'global_val', text end
+                end
+                if scope == 'global_val' then return value(variables.get_global_number(key)) end
+                if scope == 'context_val' then return value(variables.get_context_number(data, key)) end
+                return value(variables.get_number(scope == 'u_val' and alpha or beta, key))
+            end
+            results = {}
+            for index, input in ipairs(inputs) do
+                local data = prepare_bound(index)
+                results[index] = capture_bound_draw(function()
+                    local lower = read(input.scope, input.key, data)
+                    local upper = read('global_val', 'numeric_range_upper', data)
+                    lower = math.modf(lower.exists and lower.value or -2.7)
+                    upper = math.modf(upper.exists and upper.value or 0)
+                    return ccb.services.random.native_int(math.min(lower, upper), math.max(lower, upper))
+                end)
+            end
+            following_draw = ccb.services.random.native_int(-100, 100)
+            done = true
+        end)
+        ccb.runtime.on('world_ready', 'variable_ranges')
+    )", sol::script_pass_on_error ).valid() );
+    rng_set_engine_seed( seed );
+    runtime_world_ready( true );
+    REQUIRE( lua["done"].get_or( false ) );
+    const sol::table actual = lua["results"];
+    REQUIRE( actual_diagnostics.size() == cases.size() );
+    for( std::size_t index = 0; index < expected.size(); ++index ) {
+        CAPTURE( index );
+        CHECK( actual[index + 1].get<int>() == expected[index] );
+        CHECK( actual_diagnostics[index] == expected_diagnostics[index] );
     }
     CHECK( lua["following_draw"].get<int>() == expected_next );
     CHECK( rng_get_engine() == expected_rng );

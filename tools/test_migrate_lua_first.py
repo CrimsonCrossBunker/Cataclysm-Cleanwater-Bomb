@@ -35042,7 +35042,7 @@ pointer=nil;reads=0;assert(evaluate()==-1.7 and reads==0)
                     self.assertIn('get_number(context.actors.interlocutor, "dx")', rendered)
                     self.assertIn('set(context.actors.interlocutor, "out", location', rendered)
         # These shapes are still open work, not guessed or clamped conversions.
-        for adjustment in ([{"global_val": "bound"}, 2], {"math": ["rand(10)"]}):
+        for adjustment in ([[1, 2], 3], {"math": ["rand(10)"]}):
             self.assertIsNone(migrate_lua_first.render_static_location_variable_adjust({
                 "location_variable_adjust": {"context_val": "center"}, "x_adjust": adjustment},
                 "location_variable_adjust", False, False))
@@ -35088,6 +35088,89 @@ assert(draws==1 and value.x==EXPECTED_X and value.y==EXPECTED_Y and value.z==EXP
                              f"services.random.native_int({expected[0]}, {expected[1]})")
         for bounds in ([2147483648, 0], [-2147483649, 0], [0], [0, 1, 2], [True, 1]):
             self.assertIsNone(migrate_lua_first.render_native_number_expression(bounds))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_location_adjust_dynamic_range_reads_native_bounds_before_one_rng_draw(self) -> None:
+        owners = {"u": ("alpha", "character"), "npc": ("beta", "monster")}
+        raw_key = "raw\0" + "k" * 10000
+        for scope in ("u_val", "npc_val", "global_val", "context_val", "var_val"):
+            expression = migrate_lua_first.render_native_number_expression([
+                {scope: raw_key, "default": -2.7}, {"global_val": "upper"}], owners)
+            self.assertIsNotNone(expression)
+            script = r"""
+local alpha,beta={},{}
+local context={data={}}
+local present,number,upper,reads,draws
+local variables={}
+local function read(scope,key)
+ reads=reads+1
+ if key=='upper' then assert(scope=='global');return {ok=true,value={exists=true,value=upper}} end
+ assert(key==KEY and scope==OWNER)
+ return {ok=true,value={exists=present,value=number}}
+end
+variables.get_number=function(owner,key) return read(owner==alpha and 'u' or 'npc',key) end
+variables.get_global_number=function(key) return read('global',key) end
+variables.get_context_number=function(data,key) assert(data==context.data);return read('context',key) end
+variables.get_context_string=function(data,key)
+ assert(data==context.data and key==KEY);reads=reads+1
+ return {ok=true,value={exists=true,value='n_'..KEY}}
+end
+local services={variables=variables,random={native_int=function(lower,higher)
+ assert(reads==READ_COUNT and lower==expected_lower and higher==expected_upper)
+ draws=draws+1;return lower
+end}}
+local function service_value(result) assert(result.ok);return result.value end
+local function evaluate() return EXPRESSION end
+for _,case in ipairs({{false,0,4.9,-2,4},{true,0,0.9,0,0},
+ {true,-3.9,4.9,-3,4},{true,7.9,4.9,4,7},
+ {true,-2147483648.9,2147483647.9,-2147483648,2147483647}}) do
+ present,number,upper=case[1],case[2],case[3]
+ expected_lower,expected_upper=case[4],case[5]
+ reads,draws=0,0;assert(evaluate()==expected_lower and draws==1)
+end
+for _,bad in ipairs({math.huge,-math.huge,0/0,2147483648,-2147483649}) do
+ present=true;number=bad;upper=0;reads,draws=0,0
+ assert(not pcall(evaluate) and draws==0)
+end
+""".replace("EXPRESSION", expression or "").replace("KEY", migrate_lua_first.lua_quote(raw_key))
+            owner = {"u_val": "u", "npc_val": "npc", "global_val": "global",
+                     "context_val": "context", "var_val": "npc"}[scope]
+            script = script.replace("OWNER", migrate_lua_first.lua_quote(owner))
+            script = script.replace("READ_COUNT", "3" if scope == "var_val" else "2")
+            result = subprocess.run(["lua", "-"], input=script, text=True,
+                                    capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_location_adjust_xy_then_z_random_ranges_keep_native_phase_order(self) -> None:
+        for axis in ("x_adjust", "y_adjust"):
+            lines = migrate_lua_first.render_static_location_variable_adjust({
+                "location_variable_adjust": {"context_val": "position"}, axis: [-2, 3],
+                "z_adjust": [7, 9]}, "location_variable_adjust", False, False)
+            self.assertIsNotNone(lines)
+            script = r"""
+local context={data={}}
+local calls={}
+local function point(x,y,z) return {x=x,y=y,z=z,add=function(self,other)
+ calls[#calls+1]='add';return point(self.x+other.x,self.y+other.y,self.z+other.z)
+end} end
+local services={coords={tripoint_abs_ms=point,tripoint_rel_ms=point},
+ variables={get_context_tripoint=function() return {ok=true,value={exists=false}} end},
+ random={native_int=function(lower,upper)
+ if lower==-2 then assert(upper==3 and #calls==0);calls[#calls+1]='xy';return -2 end
+ assert(lower==7 and upper==9 and calls[1]=='xy' and calls[2]=='add')
+ calls[#calls+1]='z';return 9
+end}}
+local function service_value(result) assert(result.ok);return result.value end
+BODY
+assert(#calls==4 and calls[4]=='add')
+assert(context.data.position.x==EXPECTED_X and context.data.position.y==EXPECTED_Y and context.data.position.z==9)
+""".replace("BODY", "\n".join(lines or []))
+            script = script.replace("EXPECTED_X", "-2" if axis == "x_adjust" else "0")
+            script = script.replace("EXPECTED_Y", "-2" if axis == "y_adjust" else "0")
+            result = subprocess.run(["lua", "-"], input=script, text=True,
+                                    capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_location_variable_search_applies_coordinate_adjustment_once(
         self,
