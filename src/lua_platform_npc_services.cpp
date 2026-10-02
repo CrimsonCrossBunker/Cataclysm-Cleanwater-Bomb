@@ -1477,7 +1477,7 @@ sol::table drop_npc_weapon(
     }
 
     const bool hallucination = entry->is_hallucination();
-    const item_location wielded = entry->get_wielded_item();
+    item_location wielded = entry->get_wielded_item();
     const bool dropped = !hallucination && static_cast<bool>( wielded );
     if( dropped ) {
         retire_item_handle_identity( *wielded );
