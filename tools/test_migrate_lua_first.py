@@ -4852,7 +4852,10 @@ assert(observed_effects[3].id == 'effect:bite' and observed_effects[3].intensity
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_event_eoc_integer_context_math_handoff_preserves_raw_values(self) -> None:
-        expression = "_event_int * _event_int * _event_int"
+        # A floating-point cube exceeds the Lua integer range. Keep the final
+        # intensity defined in Native int space rather than hiding an unsafe
+        # cast behind a fake expression evaluator.
+        expression = "1 + (_event_int * _event_int * _event_int > 1e20)"
         source = migrate_lua_first.SourceObject(
             Path("event_integer_math.json"), 0, {
                 "type": "effect_on_condition",
@@ -4868,39 +4871,38 @@ assert(observed_effects[3].id == 'effect:bite' and observed_effects[3].intensity
             },
         )
         result = migrate_lua_first.MigrationResult()
-        rendered = migrate_lua_first.render_eoc(source, result)
+        namespace = migrate_lua_first._migration_math_function_ids.set(
+            migrate_lua_first.native_core_math_function_ids())
+        try:
+            rendered = migrate_lua_first.render_eoc(source, result)
+        finally:
+            migrate_lua_first._migration_math_function_ids.reset(namespace)
         self.assertFalse(result.todos)
         self.assertIn(
-            'services.gameplay.math.evaluate("_event_int * _event_int * '
-            '_event_int", actor, context.data)',
+            'services.variables.get_context_number(context and context.data, '
+            '"event_int", {strict=true})',
             rendered,
         )
+        self.assertNotIn("services.gameplay.math", rendered)
 
         script = r"""
 local actor = {}
 local handlers, subscriptions = {}, {}
-local observed_math_calls, observed_effects = {}, {}
+local observed_reads, observed_effects = {}, {}
 migrated_eoc_functions = {}
 services = {
     characters = {avatar = function() return actor end},
-    gameplay = {math = {evaluate = function(source, target, context)
-        assert(source == '_event_int * _event_int * _event_int')
-        assert(target == actor)
-        assert(type(context.event_int) == 'number')
+    variables = {get_context_number = function(context, key, options)
+        assert(key == 'event_int' and options.strict == true)
+        assert(type(context[key]) == 'number')
         if math.type ~= nil then
-            assert(math.type(context.event_int) == 'integer')
+            assert(math.type(context[key]) == 'integer')
         end
-        local call_index = #observed_math_calls + 1
-        local expected = call_index == 1 and 2147483647 or -2147483648
-        assert(context.event_int == expected)
-        observed_math_calls[call_index] = {
-            source = source,
-            event_int = context.event_int,
-        }
-        -- This test stub checks the generated handoff only; it does not
-        -- evaluate the expression or stand in for the native math oracle.
-        return {ok = true, value = call_index == 1 and 11 or 22}
-    end}},
+        local expected = #observed_reads < 3 and 2147483647 or -2147483648
+        assert(context[key] == expected)
+        observed_reads[#observed_reads + 1] = context[key]
+        return {ok = true, value = {exists = true, value = context[key] + 0.0}}
+    end},
     types = {id = function(kind, id) return kind .. ':' .. id end},
     time = {duration = function(value, unit)
         assert(value == 1 and unit == 'turn')
@@ -4928,12 +4930,8 @@ end
 assert(subscriptions['game:game_start'] == 'migrated.native_event_integer_math')
 handlers['migrated.native_event_integer_math'](event(2147483647))
 handlers['migrated.native_event_integer_math'](event(-2147483648))
-assert(#observed_math_calls == 2 and #observed_effects == 2)
-assert(observed_math_calls[1].event_int == 2147483647)
-assert(observed_math_calls[2].event_int == -2147483648)
-assert(observed_math_calls[1].source == '_event_int * _event_int * _event_int')
-assert(observed_math_calls[2].source == '_event_int * _event_int * _event_int')
-assert(observed_effects[1] == 11 and observed_effects[2] == 22)
+assert(#observed_reads == 6 and #observed_effects == 2)
+assert(observed_effects[1] == 2 and observed_effects[2] == 1)
 """.replace("GENERATED", rendered)
         run = subprocess.run(["lua", "-"], input=script, text=True,
                              capture_output=True, timeout=10)
@@ -8472,17 +8470,21 @@ assert(not ok and string.find(message, 'stale_world', 1, true))
             )
             self.assertIn('tostring(services.turn_native_int())', main)
             self.assertIn('context.data["required"] ~= nil', main)
-            self.assertIn("1 == 1", main)
-            self.assertIn('copy_source_key = "u", actor, "source"', main)
+            self.assertIn("values[1] == values[2]", main)
+            self.assertIn(
+                'services.variables.copy(\n        actor, "source",\n        actor, "target")',
+                main,
+            )
             self.assertNotIn('services.variables.remove(actor, "target", { include_before = false })', main)
             self.assertIn(
                 'services.variables.set(\n        actor, "label"',
                 main,
             )
             self.assertIn(
-                'services.gameplay.math.apply("u_score = 2", actor, context.data, nil)',
+                'services.variables.set(\n        actor, "score", 0.0 + (2), { include_before = false })',
                 main,
             )
+            self.assertNotIn("services.gameplay.math.apply", main)
             self.assertEqual(main.count("local function service_value"), 1)
             self.assertNotIn("needs domain-service conversion", report)
             self.assertNotIn("services.state.", main)
@@ -9354,7 +9356,7 @@ package.preload.ccb = function() return {
                             "type": "effect_on_condition",
                             "id": "math_wrong_scope_prefix",
                             "required_event": "game_start",
-                            "effect": {"math": ["npc_wrong_scope = 5"]},
+                            "effect": {"math": ["x_wrong_scope = 5"]},
                             "eoc_type": "EVENT",
                         },
                         {
@@ -9362,6 +9364,13 @@ package.preload.ccb = function() return {
                             "id": "math_random_rhs",
                             "required_event": "game_start",
                             "effect": {"math": ["u_math_random = rng(1, 3)"]},
+                            "eoc_type": "EVENT",
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "math_global_write",
+                            "required_event": "game_start",
+                            "effect": {"math": ["math_global = 8"]},
                             "eoc_type": "EVENT",
                         },
                         {
@@ -9378,6 +9387,27 @@ package.preload.ccb = function() return {
                             "effect": {"math": ["v_math_target = 7"]},
                             "eoc_type": "EVENT",
                         },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "math_function_collision",
+                            "required_event": "game_start",
+                            "effect": {"math": ["abs = 9"]},
+                            "eoc_type": "EVENT",
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "math_constant_collision",
+                            "required_event": "game_start",
+                            "effect": {"math": ["pi = 10"]},
+                            "eoc_type": "EVENT",
+                        },
+                        {
+                            "type": "effect_on_condition",
+                            "id": "math_invalid_rhs",
+                            "required_event": "game_start",
+                            "effect": {"math": ["u_math_invalid = 1 / 0"]},
+                            "eoc_type": "EVENT",
+                        },
                     ]
                 ),
                 encoding="utf-8",
@@ -9389,24 +9419,151 @@ package.preload.ccb = function() return {
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(main.count("services.gameplay.math.apply("), 2)
+            self.assertNotIn("services.gameplay.math.apply", main)
             self.assertIn(
-                'services.gameplay.math.apply("u_math_alpha = 2", actor, context.data, nil)',
+                'services.variables.set(\n        actor, "math_alpha", 0.0 + (2), { include_before = false })',
                 main,
             )
             self.assertIn(
-                'services.gameplay.math.apply("n_math_beta = 3", nil, context.data, context.actors.interlocutor)',
+                'services.variables.set(\n        context.actors.interlocutor, "math_beta", 0.0 + (3), { include_before = false })',
                 main,
             )
+            self.assertIn(
+                'services.variables.set_global(\n        "math_global", 0.0 + (8), { include_before = false })',
+                main,
+            )
+            self.assertIn('context.data["math_context"] = 0.0 + (6)', main)
             for effect_id in (
                 "math_alpha_only", "math_wrong_scope_prefix", "math_random_rhs",
-                "math_context_write", "math_indirect_write",
+                "math_indirect_write", "math_function_collision",
+                "math_constant_collision", "math_invalid_rhs",
             ):
                 self.assertIn(f"EOC {effect_id} effect #0 needs domain-service conversion", report)
-            self.assertNotIn('math.apply("npc_wrong_scope = 5"', main)
-            self.assertNotIn('math.apply("u_math_random = rng(1, 3)"', main)
-            self.assertNotIn('math.apply("_math_context = 6"', main)
-            self.assertNotIn('math.apply("v_math_target = 7"', main)
+
+    def test_static_character_math_rejects_native_namespace_collisions(self) -> None:
+        common_functions, dialogue_functions = (
+            migrate_lua_first.native_math_nonvariable_names()
+        )
+        self.assertTrue(common_functions)
+        self.assertTrue(dialogue_functions)
+        function_name = sorted(common_functions)[0]
+        dialogue_name = sorted(dialogue_functions)[0]
+        function_ids = frozenset({"custom_math_assignment_collision"})
+        token = migrate_lua_first._migration_math_function_ids.set(function_ids)
+        try:
+            for expression in (
+                f"{function_name} = 1",
+                "pi = 1",
+                "custom_math_assignment_collision = 1",
+                f"u_{dialogue_name} = 1",
+                "x_unknown_scope = 1",
+                "u_math_error = 1 / 0",
+                "v_indirect_target = 1",
+            ):
+                with self.subTest(expression=expression):
+                    self.assertIsNone(
+                        migrate_lua_first.render_static_character_math(
+                            {"math": [expression]},
+                            {"u": ("actor", "character")},
+                        )
+                    )
+        finally:
+            migrate_lua_first._migration_math_function_ids.reset(token)
+
+    def test_static_character_math_requires_proven_variable_write_target(self) -> None:
+        token = migrate_lua_first._migration_math_function_ids.set(frozenset())
+        try:
+            self.assertIsNone(
+                migrate_lua_first.render_static_character_math(
+                    {"math": ["n_beta_value = 4"]},
+                    {
+                        "npc": ("actor", "character"),
+                        "read_npc": None,
+                    },
+                )
+            )
+
+            beta_lines = migrate_lua_first.render_static_character_math(
+                {"math": ["n_beta_value = 4"]},
+                {
+                    "npc": ("actor", "character"),
+                    "read_npc": ("context.actors.interlocutor", "character"),
+                },
+            )
+            self.assertIsNotNone(beta_lines)
+            self.assertIn("context.actors.interlocutor", "\n".join(beta_lines))
+            self.assertNotIn("actor,", "\n".join(beta_lines))
+
+            monster_lines = migrate_lua_first.render_static_character_math(
+                {"math": ["u_creature_value = 5"]},
+                {
+                    "u": ("mutation_fallback", "character"),
+                    "read_u": ("context.actors.speaker", "monster"),
+                },
+            )
+            self.assertIsNotNone(monster_lines)
+            self.assertIn("context.actors.speaker", "\n".join(monster_lines))
+            self.assertNotIn("mutation_fallback", "\n".join(monster_lines))
+
+            scientific_lines = migrate_lua_first.render_static_character_math(
+                {"math": ["u_scientific_value = 1.25e2"]},
+                {"u": ("actor", "character")},
+            )
+            self.assertIsNotNone(scientific_lines)
+            self.assertIn("0.0 + (125)", "\n".join(scientific_lines))
+
+            for expression in (
+                "u_subnormal_value = 1e-320",
+                "u_underflow_value = 1e-400",
+            ):
+                with self.subTest(expression=expression):
+                    self.assertIsNone(
+                        migrate_lua_first.render_static_character_math(
+                            {"math": [expression]},
+                            {"u": ("actor", "character")},
+                        )
+                    )
+        finally:
+            migrate_lua_first._migration_math_function_ids.reset(token)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_static_character_math_preserves_native_double_assignment_result(self) -> None:
+        function_ids = migrate_lua_first._migration_math_function_ids.set(frozenset())
+        try:
+            actor_targets = {"u": ("actor", "character")}
+            integer_lines = migrate_lua_first.render_static_character_math(
+                {"math": ["u_integer_value = 2"]}, actor_targets
+            )
+            negative_zero_lines = migrate_lua_first.render_static_character_math(
+                {"math": ["u_negative_zero = -0"]}, actor_targets
+            )
+        finally:
+            migrate_lua_first._migration_math_function_ids.reset(function_ids)
+        self.assertIsNotNone(integer_lines)
+        self.assertIsNotNone(negative_zero_lines)
+
+        script = r"""
+local written = {}
+local actor = {}
+local function service_value(result)
+    assert(result.ok, result.error and result.error.message or "variable write failed")
+    return result.value
+end
+local services = { variables = { set = function(target, key, value, options)
+    assert(target == actor)
+    assert(options.include_before == false)
+    written[key] = value
+    return { ok = true, value = value }
+end } }
+""" + "\n".join(integer_lines + negative_zero_lines) + r"""
+assert(written.integer_value == 2 and math.type(written.integer_value) == "float")
+assert(written.negative_zero == 0 and math.type(written.negative_zero) == "float")
+assert(1.0 / written.negative_zero == math.huge)
+"""
+        completed = subprocess.run(
+            ["lua", "-"], input=script, text=True, capture_output=True, timeout=10
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
 
     def test_plain_activity_assignment_without_native_metadata_stays_todo(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -12999,8 +13156,11 @@ package.preload.ccb = function() return {
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(len(result.converted), 4)
-            self.assertEqual(len(result.partial), 1)
+            # game_start has no proven beta for native message expansion.
+            # These unchanged message bodies remain partial independently of
+            # the identity/cash predicate and numeric compiler under test.
+            self.assertEqual(len(result.converted), 0)
+            self.assertEqual(len(result.partial), 5)
             self.assertIn(
                 "services.characters.avatar()", main
             )
@@ -13017,9 +13177,10 @@ package.preload.ccb = function() return {
                 report,
             )
             self.assertIn(
-                'services.gameplay.math.evaluate("cash_var", actor',
+                'services.variables.get_global_number("cash_var", {strict=true})',
                 main,
             )
+            self.assertNotIn("services.gameplay.math", main)
             self.assertNotIn("run_eoc", main)
 
     def test_translates_context_val_map_lookups_to_environment_queries(self) -> None:
@@ -23477,26 +23638,32 @@ assert(not available())
 
         script = "\n".join([
             'local level = 0',
+            'local level_calls = 0',
             'local alpha = {kind="creature", subtype="avatar", is_valid=function() return true end}',
-            'local context = {valid=function() return true end, speaker=function() return alpha end}',
-            'services = {gameplay={math={evaluate=function(expression, actor, values)',
-            '  assert(actor==alpha and next(values)==nil)',
-            '  local operator, threshold=expression:match("^u_skill%(\'social\'%) ([<>]) (%d+)$")',
-            '  assert(operator and threshold)',
-            '  local matched=operator=="<" and level<tonumber(threshold) or',
-            '    operator==">" and level>tonumber(threshold)',
-            '  return {ok=true, value=matched and 1 or 0}',
-            'end}}}',
+            'local monster = {kind="creature", subtype="monster", is_valid=function() return true end}',
+            'local talker = alpha',
+            'local context = {valid=function() return true end, speaker=function() return talker end}',
+            'services = {skills={level=function(actor, id)',
+            '  assert(actor==alpha and id=="social")',
+            '  level_calls=level_calls+1',
+            '  return {ok=true, value=level}',
+            'end}}',
             'local callbacks = {' + ', '.join(
                 callback.source for callback in callbacks if callback is not None
             ) + '}',
-            'for current=0,10 do',
+            'for _, current in ipairs({-1.9, -0.2, 0, 0.9, 2.9, 3, 4.9, 5, 6.9, 7, 8.9, 9, 10}) do',
             '  level=current',
-            '  local selected=current<=2 and 1 or math.min(math.floor((current-3)/2)+2, 5)',
+            '  local projected=current<0 and math.ceil(current) or math.floor(current)',
+            '  local selected=projected<=2 and 1 or math.min(math.floor((projected-3)/2)+2, 5)',
             '  for index, callback in ipairs(callbacks) do',
             '    assert(callback(context)==(index==selected), current .. ":" .. index)',
             '  end',
             'end',
+            'local calls_before_monster = level_calls',
+            'talker = monster',
+            'for index, callback in ipairs(callbacks) do assert(callback(context)==(index==1)) end',
+            'assert(level_calls==calls_before_monster)',
+            'talker = alpha',
             'alpha.is_valid=function() return false end',
             'for _, callback in ipairs(callbacks) do assert(not callback(context)) end',
         ])
@@ -39716,11 +39883,15 @@ assert(#messages==2 and messages[2]=="target")
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
+            self.assertEqual(len(result.partial), 1)
+            self.assertTrue(result.partial[0].endswith("EOC dynamic_delay_target"))
+            self.assertEqual(len(result.todos), 1)
+            self.assertIn("EOC dynamic_delay_target effect #0 needs domain-service conversion",
+                          str(result.todos[0]))
             self.assertIn("services.random.int(math.min(", main)
             self.assertIn("services.variables.get_global(\"minimum_delay\")", main)
-            self.assertIn("services.gameplay.math.evaluate(\"u_spell_level", main)
+            self.assertIn('services.spells.effective_level(actor, "delay_spell")', main)
+            self.assertNotIn("services.gameplay.math", main)
             self.assertIn('ccb.tasks.after(', main)
             self.assertNotIn("typed callback/task conversion", report)
 
@@ -40714,15 +40885,18 @@ end
             )
             main = result.files[Path("main.lua")]
 
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
+            self.assertEqual(len(result.partial), 1)
+            self.assertTrue(result.partial[0].endswith("EOC typed_variable_target"))
+            self.assertEqual(len(result.todos), 1)
+            self.assertIn("EOC typed_variable_target effect #0 needs domain-service conversion",
+                          str(result.todos[0]))
             self.assertIn(
                 'child_data["location"] = '
                 "services.coords.tripoint_abs_ms(0, 10, 0)",
                 main,
             )
-            self.assertIn('child_data["amount"] = service_value(', main)
-            self.assertIn('services.gameplay.math.evaluate("2 + 2 - 1"', main)
+            self.assertIn('child_data["amount"] = (function() local values = {}', main)
+            self.assertNotIn("services.gameplay.math", main)
 
     def test_run_eocs_nonfinite_variables_report_the_safety_boundary(
         self,
@@ -40856,7 +41030,9 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             self.assertIn(
                 'services.variables.get_global("minimum_recurrence")', main
             )
-            self.assertIn("services.gameplay.math.evaluate", main)
+            self.assertIn("now:sunrise() - now", main)
+            self.assertIn('services.time.duration(20, "day")', main)
+            self.assertNotIn("services.gameplay.math", main)
             self.assertIn(
                 'ccb.state.character.get("recurrence.global_dynamic_recurrence.scheduled"',
                 main,
@@ -41744,7 +41920,8 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             main = result.files[Path("main.lua")]
 
             self.assertNotIn("switch-control-flow conversion", main)
-            self.assertIn("services.gameplay.math.evaluate(\"u_health()\", actor", main)
+            self.assertIn("services.needs.get(actor)", main)
+            self.assertNotIn("services.gameplay.math", main)
             self.assertIn("local switch_case = 0", main)
             self.assertIn("switch_value >= (0)", main)
             self.assertIn("switch_value >= (1)", main)
@@ -41796,10 +41973,15 @@ assert(#queue==2 and queue[2].payload.data=="user field")
             main = result.files[Path("main.lua")]
             report = result.files[Path("MIGRATION_REPORT.md")]
 
-            self.assertEqual(result.partial, [])
-            self.assertEqual(result.todos, [])
+            # The child message callbacks retain their separate participant
+            # TODOs; the numeric switch itself is completely lowered.
+            self.assertEqual(len(result.partial), 2)
+            self.assertEqual(len(result.todos), 2)
+            self.assertTrue(all("requires exact dialogue participants for u_message" in str(todo)
+                                for todo in result.todos))
             self.assertNotIn("switch-control-flow conversion", report)
-            self.assertIn('services.gameplay.math.evaluate("rng(1,1)"', main)
+            self.assertIn('services.random.native_float(values[1], values[2])', main)
+            self.assertNotIn("services.gameplay.math", main)
             self.assertIn('services.variables.get_global("choice")', main)
             self.assertNotIn("switch_default", main)
 
@@ -47247,6 +47429,10 @@ def load_tests(loader, tests, pattern):
     tests.addTests(loader.loadTestsFromTestCase(MutationMigrationTest))
     from test_lua_named_predicate_migration import NamedPredicateMigrationTest
     tests.addTests(loader.loadTestsFromTestCase(NamedPredicateMigrationTest))
+    from test_lua_numeric_migration import LuaNumericMigrationTest
+    tests.addTests(loader.loadTestsFromTestCase(LuaNumericMigrationTest))
+    from test_native_math_domain_queries import NativeMathDomainQueryTest
+    tests.addTests(loader.loadTestsFromTestCase(NativeMathDomainQueryTest))
     return tests
 
 

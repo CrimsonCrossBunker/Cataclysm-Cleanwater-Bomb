@@ -23,6 +23,8 @@ on:
       - 'tools/test_migrate_lua_first.py'
       - 'tools/test_lua_mutation_migration.py'
       - 'tools/test_lua_named_predicate_migration.py'
+      - 'tools/test_lua_numeric_migration.py'
+      - 'tools/test_native_math_domain_queries.py'
   push:
     branches: [ master ]
     paths:
@@ -46,6 +48,8 @@ on:
       - 'tools/test_migrate_lua_first.py'
       - 'tools/test_lua_mutation_migration.py'
       - 'tools/test_lua_named_predicate_migration.py'
+      - 'tools/test_lua_numeric_migration.py'
+      - 'tools/test_native_math_domain_queries.py'
   workflow_dispatch:
     inputs:
       native_test_filter:

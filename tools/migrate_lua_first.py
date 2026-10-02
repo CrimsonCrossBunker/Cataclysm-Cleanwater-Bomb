@@ -4372,6 +4372,7 @@ def render_static_run_eocs(
     npc_actor_expression: str | None = None,
     global_eoc_ids: frozenset[str] = frozenset(),
     character_actor_proven: bool = False,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> list[str] | None:
     """Call named/normalised EOC functions immediately as ordinary Lua."""
     if "run_eocs" not in effect:
@@ -4654,7 +4655,8 @@ def render_static_run_eocs(
                     f'return snapshot.value end)(service_value({snapshot}))')
         rendered = render_eoc_value_expression(value, "nil", variable_actor)
         if rendered is None:
-            rendered = render_eoc_numeric_expression(value, "0", variable_actor)
+            rendered = render_eoc_numeric_expression(
+                value, "0", variable_actor, effect_actor_targets)
         if rendered is None:
             return None
         if not isinstance(value, dict) or not set(value).intersection({
@@ -4694,7 +4696,7 @@ def render_static_run_eocs(
                 rendered_bounds.append(str(parsed))
                 continue
             dynamic_bound = render_eoc_numeric_expression(
-                bound, "0", fallback_actor
+                bound, "0", fallback_actor, effect_actor_targets
             )
             if dynamic_bound is None:
                 return None
@@ -4711,7 +4713,7 @@ def render_static_run_eocs(
         # A context-backed delay is legal only when it is an integral value at
         # runtime.  tasks.after takes turns rather than a UnitValue.
         dynamic_delay = render_eoc_numeric_expression(
-            delay, "0", fallback_actor
+            delay, "0", fallback_actor, effect_actor_targets
         )
         if dynamic_delay is None:
             return None
@@ -4820,7 +4822,7 @@ def render_static_run_eocs(
             loop_count_expression = str(iterations)
         else:
             dynamic_iterations = render_eoc_numeric_expression(
-                iterations, "0", fallback_actor
+                iterations, "0", fallback_actor, effect_actor_targets
             )
             if dynamic_iterations is None:
                 return None
@@ -5881,6 +5883,7 @@ def render_static_false_effect(
             character_actor_proven=(
                 avatar_actor_proven or npc_actor_proven
             ),
+            effect_actor_targets=effect_actor_targets,
         )
         if rendered is None:
             return None
@@ -6071,6 +6074,7 @@ def render_static_false_effect(
                         effect, key, target, avatar_expression=alpha,
                         npc_expression=beta,
                         target_kind=target_kind,
+                        effect_actor_targets=effect_actor_targets,
                     )
             elif "wound" in key:
                 # The generic Character proof is weaker than the native wound
@@ -6776,7 +6780,7 @@ def render_static_switch_effect(
     switch_expression: str | None = None
     if isinstance(raw_switch, dict) and set(raw_switch) == {"math"}:
         switch_expression = render_eoc_numeric_expression(
-            raw_switch, "0", actor_expression or "actor"
+            raw_switch, "0", actor_expression or "actor", effect_actor_targets
         )
     elif (
         isinstance(raw_switch, dict) and
@@ -6829,7 +6833,7 @@ def render_static_switch_effect(
             return None
         case_value = case.get("case")
         case_expression = render_eoc_numeric_expression(
-            case_value, "0", actor_expression or "actor"
+            case_value, "0", actor_expression or "actor", effect_actor_targets
         )
         if case_expression is None:
             return None
@@ -7362,10 +7366,8 @@ def render_talk_topic_response_condition(
     if identity_condition is not None:
         return identity_condition
     if isinstance(condition, dict) and set(condition) == {"math"}:
-        # Native u_skill reads dialogue alpha even when the named skill ID is
-        # unregistered (Exodii says 'social', while the registered ID is
-        # 'speech').  Use the same native math evaluator, not skills.get,
-        # which rejects invalid IDs.  Other expressions stay TODO.
+        # Preserve Native u_skill's raw-ID lookup and dialogue-alpha scope.
+        # The typed level service does not reject an unregistered skill ID.
         expressions = condition["math"]
         if isinstance(expressions, list) and len(expressions) == 1 and isinstance(expressions[0], str):
             skill_match = re.fullmatch(
@@ -7375,18 +7377,31 @@ def render_talk_topic_response_condition(
                 operator, threshold_text = skill_match.groups()
                 threshold = int(threshold_text)
                 if threshold <= NATIVE_INT_MAX:
-                    expression = f"u_skill('social') {operator} {threshold}"
                     return LuaRaw(
                         "function(dialogue_context)\n"
                         "            if not dialogue_context:valid() then return false end\n"
                         "            local alpha = dialogue_context:speaker()\n"
-                        '            if alpha == nil or alpha.kind ~= "creature" or '
-                        '(alpha.subtype ~= "avatar" and alpha.subtype ~= "character" '
-                        'and alpha.subtype ~= "npc") then return false end\n'
-                        "            if not alpha:is_valid() then return false end\n"
-                        "            local evaluated = services.gameplay.math.evaluate("
-                        f"{lua_quote(expression)}, alpha, {{}})\n"
-                        "            return evaluated.ok and evaluated.value ~= 0\n"
+                        "            if alpha == nil then return false end\n"
+                        "            local skill_level = 0\n"
+                        '            local is_character = alpha.kind == "creature" and '
+                        '(alpha.subtype == "avatar" or alpha.subtype == "character" '
+                        'or alpha.subtype == "npc")\n'
+                        "            if is_character then\n"
+                        "                if type(alpha.is_valid) ~= \"function\" or "
+                        "not alpha:is_valid() then return false end\n"
+                        '                local result = services.skills.level(alpha, "social")\n'
+                        "                if not result.ok then return false end\n"
+                        "                skill_level = result.value\n"
+                        "            elseif type(alpha.is_valid) == \"function\" and "
+                        "not alpha:is_valid() then\n"
+                        "                return false\n"
+                        "            end\n"
+                        "            if skill_level < 0 then\n"
+                        "                skill_level = math.ceil(skill_level)\n"
+                        "            else\n"
+                        "                skill_level = math.floor(skill_level)\n"
+                        "            end\n"
+                        f"            return skill_level {operator} {threshold}\n"
                         "        end"
                     )
     if (
@@ -21145,27 +21160,19 @@ def render_eoc_string_expression(
 
 
 def render_eoc_numeric_expression(
-    value: Any, missing_default: str, actor_expression: str = "actor"
+    value: Any, missing_default: str, actor_expression: str = "actor",
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> str | None:
     if isinstance(value, bool) or isinstance(value, str):
         return None
     if isinstance(value, (int, float)):
         return lua_scalar_literal(value)
-    # Delegate native EOC math syntax to the bounded Platform expression
-    # service.  This preserves the engine's variable/functions semantics for
-    # expressions such as ``u_health()`` and ``rand(10)`` without introducing
-    # a second parser in generated Lua.
+    # The mutation recipient is not necessarily Native alpha. Only explicit
+    # read-participant evidence may authorize u_/n_/v_ math variables. Compile
+    # supported numeric syntax to ordinary Lua; unknown domain functions and
+    # ambiguous effects remain migration TODOs instead of using a raw parser.
     if isinstance(value, dict) and set(value) == {"math"}:
-        expression = value.get("math")
-        if (
-            isinstance(expression, list) and len(expression) == 1 and
-            isinstance(expression[0], str) and
-            bounded_utf8_string(expression[0], 8192, allow_empty=False)
-        ):
-            return (
-                "service_value(services.gameplay.math.evaluate("
-                f"{lua_quote(expression[0])}, {actor_expression}, context.data))"
-            )
+        return render_native_number_expression(value, effect_actor_targets)
     if isinstance(value, dict) and "default" in value:
         variable_keys = {
             key for key in value
@@ -21298,6 +21305,7 @@ def render_static_mutation_effect(
 
 def _effect_duration_expression(
     value: Any, target: str = "actor", alpha: str | None = None, beta: str | None = None,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> str | None:
     turns = parse_turns(value)
     if turns is not None:
@@ -21306,7 +21314,7 @@ def _effect_duration_expression(
         return f'services.time.duration({turns}, "turn")'
     if isinstance(value, list):
         value = [parse_turns(endpoint) if parse_turns(endpoint) is not None else endpoint for endpoint in value]
-    rendered = _effect_numeric_expression(value, target, alpha, beta)
+    rendered = _effect_numeric_expression(value, target, alpha, beta, effect_actor_targets)
     if rendered is None:
         return None
     # EOC duration conversion truncates toward zero. TimeDuration rejects
@@ -21463,6 +21471,7 @@ def render_static_character_morale(
 
 def _effect_numeric_expression(
     value: Any, target: str, alpha: str | None, beta: str | None,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> str | None:
     if isinstance(value, list):
         if len(value) != 2 or any(isinstance(endpoint, list) for endpoint in value):
@@ -21471,7 +21480,8 @@ def _effect_numeric_expression(
             literal = finite_number_literal(endpoint)
             if literal is not None and not -2147483648 <= math.trunc(literal) <= 2147483647:
                 return None
-        endpoints = [_effect_numeric_expression(endpoint, target, alpha, beta) for endpoint in value]
+        endpoints = [_effect_numeric_expression(
+            endpoint, target, alpha, beta, effect_actor_targets) for endpoint in value]
         if any(endpoint is None for endpoint in endpoints):
             return None
         # Native dbl_or_var calls integer rng: truncate toward zero before
@@ -21484,7 +21494,7 @@ def _effect_numeric_expression(
             f'{endpoints[0]}, {endpoints[1]})'
         )
     if not isinstance(value, dict) or set(value) == {"math"}:
-        return render_eoc_numeric_expression(value, "0", alpha or target)
+        return render_eoc_numeric_expression(value, "0", alpha or target, effect_actor_targets)
     descriptor = dict(value)
     if "default" in descriptor:
         default = finite_number_literal(descriptor["default"])
@@ -21499,6 +21509,7 @@ def render_dynamic_character_effect(
     effect: dict[str, Any], key: str, target_expression: str | None,
     *, avatar_expression: str | None = None, npc_expression: str | None = None,
     target_kind: str | None = "character",
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> list[str] | None:
     """Render variable-backed effect ids and durations."""
     if (
@@ -21518,12 +21529,13 @@ def render_dynamic_character_effect(
         return _dynamic_id_expression(value, kind, target_expression)
 
     def numeric(value: Any) -> str | None:
-        return _effect_numeric_expression(value, target_expression, alpha, beta)
+        return _effect_numeric_expression(value, target_expression, alpha, beta, effect_actor_targets)
 
     effect_id = identifier(effect[key], "effect")
     permanent = effect.get("duration") == "PERMANENT"
     raw_duration = effect.get("duration", "1 turn")
-    duration = _effect_duration_expression(1 if permanent else raw_duration, target_expression, alpha, beta)
+    duration = _effect_duration_expression(
+        1 if permanent else raw_duration, target_expression, alpha, beta, effect_actor_targets)
     if effect_id is None or duration is None:
         return None
     intensity = numeric(effect.get("intensity", 0))
@@ -27780,7 +27792,7 @@ def render_static_character_math(
     effect: dict[str, Any],
     effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> list[str] | None:
-    """Render finite literal assignments to an exact alpha/beta Character."""
+    """Render finite Native literal assignments to proven variable storage."""
     raw = effect.get("math")
     if not isinstance(raw, list) or not raw or not all(isinstance(part, str) for part in raw):
         return None
@@ -27792,39 +27804,92 @@ def render_static_character_math(
         return None
     raw = ["".join(raw)]
     match = re.fullmatch(
-        r"(u|n)_([A-Za-z_][A-Za-z0-9_]*)\s*=\s*"
-        r"([+-]?(?:\d+(?:\.\d*)?|\.\d+))",
+        r"([A-Za-z_][A-Za-z0-9_]*)\s*=\s*"
+        r"([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)",
         raw[0].strip(),
     )
-    if match is None or effect_actor_targets is None:
+    if match is None:
         return None
-    prefix, name, literal_text = match.groups()
-    role = "u" if prefix == "u" else "npc"
-    target = effect_actor_targets.get(role)
-    if target is None or target[1] != "character":
+
+    token, literal_text = match.groups()
+    custom_functions = _migration_math_function_ids.get()
+    if custom_functions is None:
         return None
-    if prefix == "n" and target[0] not in {
-        "context.actors.interlocutor", "context.actors.beta",
-    }:
-        # Native dialogue falls back to alpha when beta is absent; that does
-        # not prove alpha is the intended n_ target for this migrated effect.
+
+    # Match math_exp_impl::new_var scope parsing exactly; unsupported scope
+    # prefixes and v_ indirection stay TODO until their write semantics are
+    # represented by a typed Lua path.
+    if len(token) > 2 and token[1] == "_":
+        prefix = token[0]
+        if prefix not in {"u", "n", "v"}:
+            return None
+        scope = {"u": "u", "n": "n", "v": "var"}[prefix]
+        name = token[2:]
+    elif len(token) > 1 and token[0] == "_":
+        scope = "context"
+        name = token[1:]
+    else:
+        scope = "global"
+        name = token
+
+    if scope == "var":
         return None
+
+    common_functions, dialogue_functions = native_math_nonvariable_names()
+    scoped_name = token[2:] if len(token) > 2 and token[1] == "_" else token
+    if (
+        token in common_functions or token in custom_functions or
+        scoped_name in dialogue_functions
+    ):
+        return None
+    # get_constant() runs before new_var() for unscoped math identifiers.
+    if scope == "global" and token in {"π", "pi", "e", "true", "false"}:
+        return None
+
     try:
-        number = float(literal_text) if literal_text is not None else 1.0
+        number = float(literal_text)
     except ValueError:
         return None
-    if not math.isfinite(number) or abs(number) > 1000000000:
+    if not math.isfinite(number):
         return None
-    if prefix == "u":
-        actor_expression = target[0]
-        beta_expression = "nil"
-    else:
-        actor_expression = "nil"
-        beta_expression = target[0]
-    expression = f"{prefix}_{name} = {lua_number(number)}"
+    # Keep Native stream-conversion underflow and subnormal values in TODOs.
+    mantissa = re.split(r"[eE]", literal_text, maxsplit=1)[0]
+    has_nonzero_mantissa = any(character in "123456789" for character in mantissa)
+    if has_nonzero_mantissa and (
+        number == 0.0 or abs(number) < sys.float_info.min
+    ):
+        return None
+
+    # Native '=' computes 0.0 + rhs. Keep that operation so Lua stores a
+    # double and preserves the Native result for signed-zero literals.
+    assigned_value = f"0.0 + ({lua_number(number)})"
+    quoted_name = lua_quote(name)
+    if scope == "context":
+        return [f"    context.data[{quoted_name}] = {assigned_value}"]
+    if scope == "global":
+        return [
+            "    service_value(services.variables.set_global(",
+            f"        {quoted_name}, {assigned_value}, {{ include_before = false }}))",
+        ]
+
+    if effect_actor_targets is None:
+        return None
+    role = "u" if scope == "u" else "npc"
+    target_info_key = "read_" + role
+    if target_info_key not in effect_actor_targets:
+        target_info_key = role
+    target_info = effect_actor_targets.get(target_info_key)
+    if (
+        not isinstance(target_info, tuple) or len(target_info) != 2 or
+        target_info[1] not in {"character", "monster"}
+    ):
+        return None
+    target = _proven_native_variable_write_target(effect_actor_targets, role)
+    if target is None:
+        return None
     return [
-        "    service_value(services.gameplay.math.apply("
-        f"{lua_quote(expression)}, {actor_expression}, context.data, {beta_expression}))",
+        "    service_value(services.variables.set(",
+        f"        {target}, {quoted_name}, {assigned_value}, {{ include_before = false }}))",
     ]
 
 
@@ -27910,6 +27975,100 @@ def _proven_native_variable_read_target(
     read_role = "read_" + role
     return _proven_copy_variable_target(
         effect_actor_targets, read_role if read_role in effect_actor_targets else role)
+
+
+def _native_math_query_actor_target(
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None,
+    role: str,
+) -> tuple[str, str] | None:
+    """Return only a proven read participant and its concrete Native kind."""
+    if effect_actor_targets is None:
+        return None
+    read_role = "read_" + role
+    target_info = effect_actor_targets.get(
+        read_role if read_role in effect_actor_targets else role)
+    if (
+        not isinstance(target_info, tuple) or len(target_info) != 2 or
+        target_info[1] not in {"character", "monster"} or
+        not isinstance(target_info[0], str) or not target_info[0]
+    ):
+        return None
+    return target_info
+
+
+def _render_native_math_domain_query(
+    token: str,
+    string_argument: str | None,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None,
+) -> str | None:
+    """Lower a few typed Native dialogue queries without evaluating math text."""
+    function_ids = _migration_math_function_ids.get()
+    if function_ids is None or token in function_ids:
+        return None
+
+    if token in {"u_health", "n_health", "u_spell_level", "n_spell_level",
+                 "u_skill", "n_skill"}:
+        role = "u" if token[0] == "u" else "npc"
+        target = _native_math_query_actor_target(effect_actor_targets, role)
+        if target is None:
+            return None
+        expression, actor_kind = target
+        if actor_kind == "monster":
+            # talker defaults these Character-only queries to zero for Monsters.
+            return "0.0"
+        if token.endswith("_skill") and string_argument is not None:
+            return (
+                "(function(value) "
+                "assert(value == value and value ~= math.huge and value ~= -math.huge, "
+                "\"Native skill() float-to-int conversion requires a finite value\"); "
+                "local truncated = math.modf(value); "
+                "assert(truncated >= -2147483648 and truncated <= 2147483647, "
+                "\"Native skill() float-to-int conversion exceeds the native int range\"); "
+                "if truncated == 0.0 then truncated = 0.0 end; "
+                f"return truncated + 0.0 end)(service_value(services.skills.level({expression}, "
+                f"{lua_quote(string_argument)})))"
+            )
+        if token.endswith("_health") and string_argument is None:
+            return f"(service_value(services.needs.get({expression})).lifestyle + 0.0)"
+        if token.endswith("_spell_level") and string_argument is not None:
+            return ("(service_value(services.spells.effective_level("
+                    f"{expression}, {lua_quote(string_argument)})) + 0.0)")
+        return None
+
+    if token == "time_until" and string_argument == "sunrise":
+        return (
+            "(function(now) local turns = (now:sunrise() - now).turns; "
+            "if turns < 0 then turns = turns + services.time.duration(1, \"day\").turns end; "
+            "return turns + 0.0 end)(services.time.now())"
+        )
+
+    if token == "time" and string_argument == "now":
+        return "((services.time.now() - services.time.turn_zero()).turns + 0.0)"
+
+    if token == "time" and string_argument is not None:
+        match = re.fullmatch(
+            r"\s*([+-]?[0-9]+)\s*(turns?|t|seconds?|s|minutes?|m|hours?|h|days?|d)\s*",
+            string_argument,
+        )
+        if match is None:
+            return None
+        try:
+            amount = int(match.group(1))
+        except ValueError:
+            return None
+        unit_aliases = {
+            "t": ("second", 1), "turn": ("second", 1), "turns": ("second", 1),
+            "s": ("second", 1), "second": ("second", 1), "seconds": ("second", 1),
+            "m": ("minute", 60), "minute": ("minute", 60), "minutes": ("minute", 60),
+            "h": ("hour", 3600), "hour": ("hour", 3600), "hours": ("hour", 3600),
+            "d": ("day", 86400), "day": ("day", 86400), "days": ("day", 86400),
+        }
+        unit, turns_per_unit = unit_aliases[match.group(2)]
+        turns = amount * turns_per_unit
+        if not NATIVE_INT_MIN <= turns <= NATIVE_INT_MAX:
+            return None
+        return f"(services.time.duration({amount}, {lua_quote(unit)}).turns + 0.0)"
+    return None
 
 
 def _proven_native_variable_write_target(
@@ -28140,15 +28299,21 @@ def render_literal_native_arithmetic(
 
 def _compile_native_numeric_math(
     value: Any, variable_reader: Callable[[str], str | None] | None = None,
+    query_reader: Callable[[str, str | None], str | None] | None = None,
 ) -> _NativeMathCompilation | None:
     """Compile read-only Native numeric expressions to ordinary Lua."""
     if not isinstance(value, list) or not value or not all(isinstance(part, str) for part in value):
         return None
     source = "".join(value)  # eoc_math::from_json concatenates chunks without inserting spaces.
-    token_pattern = re.compile(r"(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?|[A-Za-z_][A-Za-z_0-9]*|π|==|!=|<=|>=|[(),+*/%^<>!?:\-]")
+    token_pattern = re.compile(
+        r"'(?:\\[\s\S]|[^'])*'|"
+        r"(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?|"
+        r"[A-Za-z_][A-Za-z_0-9]*|π|==|!=|<=|>=|[(),+*/%^<>!?:\-]"
+    )
     operators: list[str] = []
     operands: list[int] = []
     frames: list[tuple[int, int, str | None]] = []
+    string_arguments: dict[int, str] = {}
     # condition, operand base, branch statement start, middle result, middle code
     ternaries: list[tuple[int, int, int, int | None, list[str] | None]] = []
     statements = ["local values = {}"]
@@ -28169,6 +28334,19 @@ def _compile_native_numeric_math(
     functions["clamp"] = 3
     functions.update({"rand": 1, "rng": 2})
     functions.update({name: 1 for name in ("celsius", "fahrenheit", "from_celsius", "from_fahrenheit")})
+    functions.update({
+        "u_health": 0, "n_health": 0,
+        "u_spell_level": 1, "n_spell_level": 1,
+        "u_skill": 1, "n_skill": 1,
+        "time": 1, "time_until": 1,
+    })
+    native_query_functions = {
+        "u_health", "n_health", "u_spell_level", "n_spell_level",
+        "u_skill", "n_skill", "time", "time_until",
+    }
+    native_string_query_functions = {
+        "u_spell_level", "n_spell_level", "u_skill", "n_skill", "time", "time_until",
+    }
 
     def emit(expression: str, effects: _NativeMathEffects | None = None) -> None:
         nonlocal count
@@ -28190,6 +28368,25 @@ def _compile_native_numeric_math(
 
     def apply_function(name: str, arguments: list[int]) -> bool:
         nonlocal uses_native_float
+        if name in native_query_functions:
+            if query_reader is None:
+                return False
+            if functions[name] == 0:
+                if arguments:
+                    return False
+                string_argument = None
+            else:
+                if len(arguments) != 1 or arguments[0] not in string_arguments:
+                    return False
+                string_argument = string_arguments[arguments[0]]
+            expression = query_reader(name, string_argument)
+            if expression is None:
+                return False
+            # These exact literal queries have no Native math::exception path.
+            # A Platform lifetime Result can still propagate at runtime, but it
+            # is not a Native numeric fallback/type failure for draw ordering.
+            emit(expression)
+            return True
         expected = functions[name]
         if expected >= 0 and len(arguments) != expected:
             return False
@@ -28295,6 +28492,8 @@ def _compile_native_numeric_math(
             if middle is None or middle_code is None or len(operands) != base + 1:
                 return False
             right = operands.pop()
+            if middle in string_arguments or right in string_arguments:
+                return False
             right_code = statements[start:]
             del statements[start:]
             known = node_effects[condition].constant
@@ -28327,6 +28526,8 @@ def _compile_native_numeric_math(
             if not operands:
                 return False
             operand = operands.pop()
+            if operand in string_arguments:
+                return False
             if operator == "u!":
                 # math_opers::b_neg uses float_equals(value,0), including its
                 # two rounded additions. Lua truth and exact ==0 both differ.
@@ -28352,6 +28553,8 @@ def _compile_native_numeric_math(
         if len(operands) < 2:
             return False
         right, left = operands.pop(), operands.pop()
+        if left in string_arguments or right in string_arguments:
+            return False
         effects = [node_effects[left], node_effects[right]]
         choices = [*node_choices[left], *node_choices[right]]
         if _native_math_random_order_conflict(effects):
@@ -28380,7 +28583,24 @@ def _compile_native_numeric_math(
         custom_functions = _migration_math_function_ids.get()
         if custom_functions is not None and token in custom_functions and token not in functions:
             return None
-        if token[0] in "0123456789.":
+        if token.startswith("'") and token.endswith("'"):
+            if not need_operand or not frames:
+                return None
+            base, commas, function = frames[-1]
+            if (
+                function not in native_string_query_functions or commas != 0 or
+                len(operands) != base
+            ):
+                return None
+            # Native math::parse_string removes every backslash after lexing;
+            # mirror that behavior for the narrowly supported typed queries.
+            string_argument = token[1:-1].replace("\\", "")
+            string_key = -(len(string_arguments) + 1)
+            string_arguments[string_key] = string_argument
+            operands.append(string_key)
+            need_operand = False
+            allows_prefix_unary = False
+        elif token[0] in "0123456789.":
             if not need_operand:
                 return None
             number = float(token)
@@ -28447,6 +28667,8 @@ def _compile_native_numeric_math(
                     operators[-1].startswith("u") or precedence[operators[-1]] > 0):
                 if not apply_operator(operators.pop()):
                     return None
+            if not operands or operands[-1] in string_arguments:
+                return None
             condition = operands.pop()
             ternaries.append((condition, len(operands), len(statements), None, None))
             operators.append("?")
@@ -28464,6 +28686,8 @@ def _compile_native_numeric_math(
             if middle is not None or len(operands) != base + 1:
                 return None
             middle = operands.pop()
+            if middle in string_arguments:
+                return None
             middle_code = statements[start:]
             del statements[start:]
             ternaries[-1] = (condition, base, len(statements), middle, middle_code)
@@ -28549,8 +28773,13 @@ def render_native_number_expression(
     if literal is not None:
         return literal
     if isinstance(value, dict) and set(value) == {"math"}:
-        return render_literal_native_arithmetic(
-            value["math"], lambda token: render_native_math_variable_read(token, effect_actor_targets))
+        compiled = _compile_native_numeric_math(
+            value["math"],
+            lambda token: render_native_math_variable_read(token, effect_actor_targets),
+            lambda token, argument: _render_native_math_domain_query(
+                token, argument, effect_actor_targets),
+        )
+        return compiled.expression if compiled is not None and not compiled.choices else None
     if isinstance(value, list):
         if len(value) != 2:
             return None
@@ -28625,7 +28854,11 @@ def _native_number_expression_effects(
         return _NativeMathEffects(constant=float(literal))
     if isinstance(value, dict) and set(value) == {"math"}:
         compiled = _compile_native_numeric_math(
-            value["math"], lambda name: render_native_math_variable_read(name, effect_actor_targets))
+            value["math"],
+            lambda name: render_native_math_variable_read(name, effect_actor_targets),
+            lambda name, argument: _render_native_math_domain_query(
+                name, argument, effect_actor_targets),
+        )
         if compiled is None or compiled.choices:
             return None
         effects = compiled.effects
@@ -28658,7 +28891,10 @@ def _math_random_order_choice(
     if isinstance(value, dict):
         if set(value) == {"math"}:
             compiled = _compile_native_numeric_math(
-                value["math"], lambda name: render_native_math_variable_read(name, effect_actor_targets))
+                value["math"],
+                lambda name: render_native_math_variable_read(name, effect_actor_targets),
+                lambda name, argument: _render_native_math_domain_query(
+                    name, argument, effect_actor_targets))
             if compiled is not None and compiled.choices:
                 return "; ".join(compiled.choices)
         for nested in value.values():
@@ -29616,6 +29852,7 @@ def render_dynamic_character_condition(
     npc_actor_proven: bool,
     weapon_actor_proven: bool,
     npc_actor_expression: str = "actor",
+    math_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> str | None:
     """Lower variable-backed Character/NPC predicates through typed services.
 
@@ -29755,7 +29992,8 @@ def render_dynamic_character_condition(
                 f"service_value(services.{service}({actor}, {identifier}, 1)).has_charges)"
             )
         if service.endswith("category_count"):
-            count = render_eoc_numeric_expression(condition.get("count", 1), "1", actor)
+            count = render_eoc_numeric_expression(
+                condition.get("count", 1), "1", actor, math_actor_targets)
             if count is None:
                 return None
             return f"service_value(services.{service}({actor}, {identifier})) >= ({count})"
@@ -29823,7 +30061,7 @@ def render_dynamic_character_condition(
         proven, actor = actor_specs[scope]
         if not proven:
             return None
-        amount = render_eoc_numeric_expression(condition[key], "0", actor)
+        amount = render_eoc_numeric_expression(condition[key], "0", actor, math_actor_targets)
         if amount is None:
             return None
         return f"service_value(services.characters.snapshot({actor})).{('stats.' + field_name) if field_name != 'cash' else field_name} >= ({amount})"
@@ -32185,6 +32423,7 @@ def render_eoc_condition_expression(
         npc_actor_proven,
         weapon_actor_proven,
         npc_query_actor or "",
+        math_actor_targets,
     )
     if dynamic_character is not None:
         return dynamic_character
@@ -33630,6 +33869,7 @@ def render_eoc(
                     npc_event_character_actor_proven,
                     eoc_conditions, npc_actor_expression, global_eoc_ids,
                     character_actor_proven,
+                    effect_actor_targets,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -34370,6 +34610,7 @@ def render_eoc(
                                 "actor" if npc_event_character_actor_proven else None)
                         ),
                         target_kind=target_kind,
+                        effect_actor_targets=effect_actor_targets,
                     )
                 if rendered is not None:
                     lines.extend(rendered)
