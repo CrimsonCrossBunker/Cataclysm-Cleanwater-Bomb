@@ -3554,6 +3554,13 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         static_cast<void>( require_random_runtime() );
         return rng( static_cast<int>( minimum ), static_cast<int>( maximum ) );
     } );
+    random.set_function( "native_float", [require_random_runtime]( const double minimum,
+    const double maximum ) {
+        static_cast<void>( require_random_runtime() );
+        // Reuse the native distribution, reversed-range handling, diagnostics
+        // and draw count instead of advancing the Mod's isolated stream.
+        return rng_float( minimum, maximum );
+    } );
     random.set_function( "weighted_index", [require_random_runtime]( const sol::table &weights ) {
         const std::vector<int> native_weights = platform_random_weights( weights );
         static_cast<void>( require_random_runtime() );

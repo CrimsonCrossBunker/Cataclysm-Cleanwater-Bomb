@@ -2,7 +2,9 @@
 
 #include <cstdint>
 #include <array>
+#include <cmath>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <set>
@@ -147,6 +149,87 @@ ccb.runtime.on("world_ready", "check_native_rng")
             "return pcall(ccb.services.random.native_int, 0, 1)" );
     REQUIRE( outside_callback.valid() );
     CHECK_FALSE( outside_callback.get<bool>() );
+}
+
+TEST_CASE( "lua_platform_native_random_float_matches_game_stream_and_nonfinite_diagnostics",
+           "[lua][platform][random_range][semantic]" )
+{
+    using namespace cata::lua_platform;
+    clear_active_runtimes();
+    const cata_default_random_engine saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
+    const on_out_of_scope restore_rng( [saved_rng]() {
+        rng_get_engine() = saved_rng;
+    } );
+    sol::state lua;
+    lua.open_libraries( sol::lib::base );
+    sol::table ccb = lua.create_table();
+    const auto owner = make_runtime( "native_random_float", 4962, lua );
+    const on_out_of_scope cleanup( []() {
+        clear_active_runtimes();
+    } );
+    install_runtime_api( owner, lua, ccb );
+    set_active_runtimes( { owner } );
+    const sol::protected_function draw = ccb["services"]["random"]["native_float"];
+    const auto isolated_before = owner->random_engine;
+    CHECK_FALSE( draw( 0.0, 1.0 ).valid() );
+    {
+        detail::callback_scope callback( *owner );
+        CHECK_FALSE( draw( 0.0, 1.0 ).valid() ); // No world yet.
+    }
+    CHECK( rng_get_engine() == saved_rng );
+    runtime_world_ready( true );
+    const double inf = std::numeric_limits<double>::infinity();
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    const std::vector<std::pair<double, double>> ranges = {
+        { 0, 1 }, { 1, 0 }, { -4.5, 8.25 }, { -4.5, -4.5 },
+        { -0.0, 0.0 }, { 0.0, -0.0 }, { 1e300, 1e300 },
+        { -1e300, 1e300 }, { 1e-300, 2e-300 },
+        { -2147483648.0, 2147483647.0 },
+        { inf, 1 }, { 1, inf }, { -inf, 1 }, { 1, -inf },
+        { -inf, inf }, { nan, 1 }, { 1, nan }, { nan, nan },
+    };
+    for( const unsigned int seed : { 58169u, 58170u } ) {
+        for( const auto &range : ranges ) {
+            CAPTURE( seed, range.first, range.second );
+            rng_set_engine_seed( seed );
+            const cata_default_random_engine before = rng_get_engine(); // NOLINT(cata-determinism)
+            double expected = 0;
+            const std::string native_diagnostic = capture_debugmsg_during( [&]() {
+                expected = rng_float( range.first, range.second );
+            } );
+            const cata_default_random_engine after = rng_get_engine(); // NOLINT(cata-determinism)
+            const int expected_next = rng( -20, 20 );
+            rng_get_engine() = before;
+            sol::protected_function_result call;
+            const std::string lua_diagnostic = capture_debugmsg_during( [&]() {
+                detail::callback_scope callback( *owner );
+                call = draw( range.first, range.second );
+            } );
+            REQUIRE( call.valid() );
+            const double actual = call.get<double>();
+            CHECK( actual == expected );
+            if( expected == 0.0 ) {
+                CHECK( std::signbit( actual ) == std::signbit( expected ) );
+            }
+            CHECK( rng_get_engine() == after );
+            CHECK( rng( -20, 20 ) == expected_next );
+            CHECK( lua_diagnostic.empty() == native_diagnostic.empty() );
+            if( !std::isfinite( range.first ) || !std::isfinite( range.second ) ) {
+                CHECK( expected == 0.0 );
+                CHECK( after == before );
+                CHECK( lua_diagnostic.find( "rng_float called with nan/inf" ) != std::string::npos );
+            } else {
+                CHECK_FALSE( after == before ); // Includes singleton ranges.
+                CHECK( lua_diagnostic.empty() );
+            }
+        }
+    }
+    CHECK( owner->random_engine == isolated_before );
+    const cata_default_random_engine before_rejection = rng_get_engine(); // NOLINT(cata-determinism)
+    CHECK_FALSE( draw( 0.0, 1.0 ).valid() );
+    clear_active_runtimes();
+    CHECK_FALSE( draw( 0.0, 1.0 ).valid() );
+    CHECK( rng_get_engine() == before_rejection );
 }
 
 TEST_CASE( "lua_platform_duration_ranges_match_native_value_pair_and_rng_state",

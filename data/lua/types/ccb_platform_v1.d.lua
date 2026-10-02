@@ -11730,6 +11730,14 @@ function CcbPlatformRandomApi.int(minimum, maximum) end
 ---@return integer
 function CcbPlatformRandomApi.native_int(minimum, maximum) end
 
+---Draw through native rng_float on the shared game RNG during an active world callback.
+---Reversed bounds are swapped. Equal finite bounds still consume a native draw.
+---A NaN or infinite bound emits a native diagnostic and returns zero without drawing.
+---@param minimum number Native floating-point range endpoint.
+---@param maximum number Native floating-point range endpoint.
+---@return number
+function CcbPlatformRandomApi.native_float(minimum, maximum) end
+
 ---Pick an original 1-based row using native weighted_int_list semantics and the shared game RNG.
 ---Rows with nonpositive weights are ignored. Dense rows are limited only by the
 ---native Lua integer index range, and the positive total must not exceed 2147483647.
