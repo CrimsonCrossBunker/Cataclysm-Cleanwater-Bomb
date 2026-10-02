@@ -36,6 +36,8 @@ option(CATA_CLANG_TIDY_PLUGIN "Build Cata's custom clang-tidy checks as a plugin
 option(CATA_CLANG_TIDY_EXECUTABLE "Build Cata's custom clang-tidy checks as an executable" "OFF")
 option(WARN_STALE_DATA "Warn if file integrity check fails" "OFF")
 option(TESTS "Compile Cata's tests" "ON")
+set(CATA_TEST_SUITE "all" CACHE STRING "Native test sources to compile: all or lua")
+set_property(CACHE CATA_TEST_SUITE PROPERTY STRINGS all lua)
 option(CATA_ENABLE_LUA_PLATFORM "Enable the Lua-first Platform runtime" "ON")
 option(TRACY "Enable Tracy profiling; see doc/c++/PERFORMANCE.md." OFF)
 option(LTO "Enable link-time optimization for Release and RelWithDebInfo builds." OFF)
