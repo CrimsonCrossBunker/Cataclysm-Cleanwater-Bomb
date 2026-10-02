@@ -771,7 +771,7 @@ legacy_scan scan_legacy_groups(
     const int omt_to_sm =
         coords::map_squares_per( coords::scale::overmap_terrain ) /
         coords::map_squares_per( coords::scale::submap );
-    const auto projected_axis_fits = [omt_to_sm]( const int coordinate,
+    const auto projected_axis_fits = []( const int coordinate,
     const int maximum_offset ) {
         const std::int64_t projected =
             static_cast<std::int64_t>( coordinate ) * omt_to_sm;
