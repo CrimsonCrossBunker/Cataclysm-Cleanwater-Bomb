@@ -126,7 +126,7 @@ end
         } );
         sol::table context = lua.create_table();
         context["data"] = data;
-        detail::callback_scope active_callback( *owner );
+        cata::lua_platform::detail::callback_scope active_callback( *owner );
         sol::protected_function_result evaluated;
         capture_debugmsg_during( [&]() {
             evaluated = evaluate( context );

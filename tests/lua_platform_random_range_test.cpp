@@ -173,7 +173,7 @@ TEST_CASE( "lua_platform_native_random_float_matches_game_stream_and_nonfinite_d
     const auto isolated_before = owner->random_engine;
     CHECK_FALSE( draw( 0.0, 1.0 ).valid() );
     {
-        detail::callback_scope callback( *owner );
+        cata::lua_platform::detail::callback_scope callback( *owner );
         CHECK_FALSE( draw( 0.0, 1.0 ).valid() ); // No world yet.
     }
     CHECK( rng_get_engine() == saved_rng );
@@ -202,7 +202,7 @@ TEST_CASE( "lua_platform_native_random_float_matches_game_stream_and_nonfinite_d
             rng_get_engine() = before;
             sol::protected_function_result call;
             const std::string lua_diagnostic = capture_debugmsg_during( [&]() {
-                detail::callback_scope callback( *owner );
+                cata::lua_platform::detail::callback_scope callback( *owner );
                 call = draw( range.first, range.second );
             } );
             REQUIRE( call.valid() );
@@ -407,7 +407,7 @@ return values[8] end)()
                     rng_get_engine() = before;
                     sol::protected_function_result call;
                     const std::string lua_diagnostic = capture_debugmsg_during( [&]() {
-                        detail::callback_scope callback( *owner );
+                        cata::lua_platform::detail::callback_scope callback( *owner );
                         call = lua.safe_script( std::string( "return " ) + row.expression, sol::script_pass_on_error );
                     } );
                     REQUIRE( call.valid() );
@@ -757,7 +757,7 @@ TEST_CASE( "lua_platform_variable_numeric_ranges_match_native_presence_types_and
     install_runtime_api( owner, lua, ccb );
     set_active_runtimes( { owner } );
     lua["ccb"] = ccb;
-    const std::size_t world_generation = detail::runtime_world_generation_storage();
+    const std::size_t world_generation = cata::lua_platform::detail::runtime_world_generation_storage();
     lua["alpha"] = game_handle::from_creature( alpha, { "avatar", 4914, 0, 0, 0, {} },
                    owner->handle_runtime(), world_generation );
     lua["beta"] = game_handle::from_creature( beta, { "avatar", 4915, 0, 0, 0, {} },
@@ -1053,7 +1053,7 @@ TEST_CASE( "lua_platform_sample_range_matches_native_draw_order_and_state",
     set_active_runtimes( { owner } );
     lua["ccb"] = ccb;
     lua["sample_replace"] = replace;
-    const std::size_t world_generation = detail::runtime_world_generation_storage();
+    const std::size_t world_generation = cata::lua_platform::detail::runtime_world_generation_storage();
     lua["sample_actor"] = game_handle::from_creature(
                               platform_actor, { "avatar", 4911, 0, 0, 0, {} },
                               owner->handle_runtime(), world_generation );

@@ -34,6 +34,7 @@
 #include "map_helpers.h"
 #include "map_scale_constants.h"
 #include "npctalk.h"
+#include "player_helpers.h"
 #include "worldfactory.h"
 #if defined(LOCALIZE)
 #include "translation_manager.h"
@@ -54,7 +55,7 @@ static int loaded_adjacent_map_zlevel( map &here, const tripoint_bub_ms &center 
     for( const int z : {
              center.z() + 1, center.z() - 1
          } ) {
-        if( here.inbounds_z( z ) && here.get_submap_at_grid( { center.x() / SEEX,
+        if( here.inbounds_z( z ) && here.get_submap_at_grid( tripoint_rel_sm{ center.x() / SEEX,
                 center.y() / SEEY, z } ) != nullptr ) {
             return z;
         }
@@ -379,7 +380,7 @@ TEST_CASE( "lua_platform_environment_set_furniture_matches_bounded_map_semantics
     lua["clear_furniture_id"] = clear_furniture_id;
     sol::protected_function_result edge_furniture_result;
     {
-        detail::callback_scope active_callback( *owner );
+        cata::lua_platform::detail::callback_scope active_callback( *owner );
         edge_furniture_result = lua.safe_script(
                                     "return services.gameplay.environment.set_furniture("
                                     "edge_center_position, clear_furniture_id, 2, false, false)",
@@ -439,7 +440,7 @@ TEST_CASE( "lua_platform_environment_set_furniture_matches_bounded_map_semantics
             REQUIRE( here.furn_set( center, furn_test_f_eoc.id() ) );
             sol::protected_function_result lua_result;
             {
-                detail::callback_scope active_callback( *owner );
+                cata::lua_platform::detail::callback_scope active_callback( *owner );
                 lua_result = lua.safe_script(
                                  "return services.gameplay.environment.set_furniture("
                                  "boundary_position, clear_furniture_id, 0, false, false)",
@@ -457,7 +458,7 @@ TEST_CASE( "lua_platform_environment_set_furniture_matches_bounded_map_semantics
         const int target_z = loaded_adjacent_map_zlevel( here, center );
         REQUIRE( target_z != center.z() );
         const tripoint_bub_ms target( center.x(), center.y(), target_z );
-        REQUIRE( here.get_submap_at_grid( { target.x() / SEEX, target.y() / SEEY, target_z } ) !=
+        REQUIRE( here.get_submap_at_grid( tripoint_rel_sm{ target.x() / SEEX, target.y() / SEEY, target_z } ) !=
                  nullptr );
         const ter_id original_target_terrain = here.ter( target );
         const ter_id original_current_terrain = here.ter( center );
@@ -506,7 +507,7 @@ TEST_CASE( "lua_platform_environment_set_furniture_matches_bounded_map_semantics
         REQUIRE( here.furn_set( center, furn_test_f_eoc.id() ) );
         sol::protected_function_result lua_result;
         {
-            detail::callback_scope active_callback( *owner );
+            cata::lua_platform::detail::callback_scope active_callback( *owner );
             lua_result = lua.safe_script(
                              "return services.gameplay.environment.set_furniture("
                              "loaded_z_position, clear_furniture_id, 0, false, false)",
@@ -522,7 +523,7 @@ TEST_CASE( "lua_platform_environment_set_furniture_matches_bounded_map_semantics
         CHECK( here.furn( center ) == native_current );
     }
     {
-        detail::callback_scope active_callback( *owner );
+        cata::lua_platform::detail::callback_scope active_callback( *owner );
         const sol::protected_function_result result = lua.safe_script( R"(
             local environment = services.gameplay.environment
             -- The native default is a circle; radius 2 includes (2, 1) but not (2, 2).
@@ -544,7 +545,7 @@ TEST_CASE( "lua_platform_environment_set_furniture_matches_bounded_map_semantics
     REQUIRE( here.furn_set( center, furn_test_f_eoc.id() ) );
     REQUIRE( here.furn_set( edge, furn_test_f_eoc.id() ) );
     {
-        detail::callback_scope active_callback( *owner );
+        cata::lua_platform::detail::callback_scope active_callback( *owner );
         const sol::protected_function_result result = lua.safe_script(
                     "assert(services.gameplay.environment.set_furniture("
                     "center_position, clear_furniture_id, 2, true, false) == 25)",
@@ -560,7 +561,7 @@ TEST_CASE( "lua_platform_environment_set_furniture_matches_bounded_map_semantics
     REQUIRE( here.furn_set( center, furn_test_f_eoc.id() ) );
     REQUIRE( here.furn_set( edge, furn_test_f_eoc.id() ) );
     {
-        detail::callback_scope active_callback( *owner );
+        cata::lua_platform::detail::callback_scope active_callback( *owner );
         const sol::protected_function_result result = lua.safe_script(
                     "assert(services.gameplay.environment.set_furniture("
                     "center_position, clear_furniture_id) == 9)",
@@ -577,7 +578,7 @@ TEST_CASE( "lua_platform_environment_set_furniture_matches_bounded_map_semantics
     REQUIRE( here.furn_set( edge, furn_test_f_eoc.id() ) );
     REQUIRE( here.furn_set( far_corner, furn_test_f_eoc.id() ) );
     {
-        detail::callback_scope active_callback( *owner );
+        cata::lua_platform::detail::callback_scope active_callback( *owner );
         const sol::protected_function_result result = lua.safe_script( R"(
             local environment = services.gameplay.environment
             -- 1.9 truncates to radius 1; (2, 1) remains outside the circle.
@@ -605,7 +606,7 @@ TEST_CASE( "lua_platform_environment_set_furniture_matches_bounded_map_semantics
     const tripoint_bub_ms actor_position = here.get_bub( actor_abs );
     REQUIRE( here.furn_set( actor_position, furn_test_f_eoc.id() ) );
     {
-        detail::callback_scope active_callback( *owner );
+        cata::lua_platform::detail::callback_scope active_callback( *owner );
         const sol::protected_function_result result = lua.safe_script( R"(
             local environment = services.gameplay.environment
             assert(environment.set_furniture(
@@ -666,7 +667,7 @@ TEST_CASE( "lua_platform_environment_set_terrain_matches_native_eoc_area_semanti
     on_out_of_scope clear_location( [&]() {
         get_globals().remove_global_value( location_key );
     } );
-    const std::string terrain_id = ter_t_wall.id().str();
+    const std::string terrain_id = ter_t_wall.str();
     lua["terrain_position"] = script_tripoint_coord::from_native(
                                   coords::origin::abs, coords::scale::map_square,
                                   here.get_abs( center ).raw() );
@@ -759,7 +760,7 @@ TEST_CASE( "lua_platform_environment_set_terrain_matches_native_eoc_area_semanti
             ( test_case.avoid_creatures ? "true" : "false" ) + ")";
         sol::protected_function_result lua_result;
         {
-            detail::callback_scope active_callback( *owner );
+            cata::lua_platform::detail::callback_scope active_callback( *owner );
             lua_result = lua.safe_script( call, sol::script_pass_on_error );
         }
         if( !lua_result.valid() ) {
@@ -843,7 +844,7 @@ TEST_CASE( "lua_platform_environment_set_terrain_matches_native_eoc_area_semanti
     }
     sol::protected_function_result edge_terrain_result;
     {
-        detail::callback_scope active_callback( *owner );
+        cata::lua_platform::detail::callback_scope active_callback( *owner );
         edge_terrain_result = lua.safe_script(
                                   "return services.gameplay.environment.set_terrain("
                                   "terrain_position, terrain_id, 2, false, false)",
@@ -867,7 +868,7 @@ TEST_CASE( "lua_platform_environment_set_terrain_matches_native_eoc_area_semanti
 
     sol::protected_function_result out_of_bounds_z_result;
     {
-        detail::callback_scope active_callback( *owner );
+        cata::lua_platform::detail::callback_scope active_callback( *owner );
         out_of_bounds_z_result = lua.safe_script(
                                      "return services.gameplay.environment.set_terrain("
                                      "out_of_bounds_z_position, terrain_id, 0, false, false)",
@@ -912,7 +913,7 @@ TEST_CASE( "lua_platform_environment_set_terrain_matches_native_eoc_area_semanti
             here.ter_set( center, ter_t_floor );
             sol::protected_function_result lua_result;
             {
-                detail::callback_scope active_callback( *owner );
+                cata::lua_platform::detail::callback_scope active_callback( *owner );
                 lua_result = lua.safe_script(
                                  "return services.gameplay.environment.set_terrain("
                                  "boundary_position, terrain_id, 0, false, false)",
@@ -930,7 +931,7 @@ TEST_CASE( "lua_platform_environment_set_terrain_matches_native_eoc_area_semanti
         const int target_z = loaded_adjacent_map_zlevel( here, center );
         REQUIRE( target_z != center.z() );
         const tripoint_bub_ms target( center.x(), center.y(), target_z );
-        REQUIRE( here.get_submap_at_grid( { target.x() / SEEX, target.y() / SEEY, target_z } ) !=
+        REQUIRE( here.get_submap_at_grid( tripoint_rel_sm{ target.x() / SEEX, target.y() / SEEY, target_z } ) !=
                  nullptr );
         const ter_id original_target = here.ter( target );
         const ter_id original_current = here.ter( center );
@@ -967,7 +968,7 @@ TEST_CASE( "lua_platform_environment_set_terrain_matches_native_eoc_area_semanti
         here.ter_set( center, ter_t_floor );
         sol::protected_function_result lua_result;
         {
-            detail::callback_scope active_callback( *owner );
+            cata::lua_platform::detail::callback_scope active_callback( *owner );
             lua_result = lua.safe_script(
                              "return services.gameplay.environment.set_terrain("
                              "loaded_z_position, terrain_id, 0, false, false)",
@@ -1079,7 +1080,7 @@ TEST_CASE( "lua_platform_environment_add_field_area_matches_native_f_field",
     CHECK( std::count( native_circle_coverage.begin(), native_circle_coverage.end(), true ) == 21 );
     clear_test_field( field_fd_web.id() );
     {
-        detail::callback_scope active_callback( *owner );
+        cata::lua_platform::detail::callback_scope active_callback( *owner );
         const sol::protected_function_result result = lua.safe_script( R"(
             local environment = services.gameplay.environment
             assert(environment.add_field_area(center_position, "fd_web", {
@@ -1111,7 +1112,7 @@ TEST_CASE( "lua_platform_environment_add_field_area_matches_native_f_field",
     CHECK( std::count( native_square_coverage.begin(), native_square_coverage.end(), true ) == 25 );
     clear_test_field( field_fd_blood.id() );
     {
-        detail::callback_scope active_callback( *owner );
+        cata::lua_platform::detail::callback_scope active_callback( *owner );
         const sol::protected_function_result result = lua.safe_script(
                     "assert(services.gameplay.environment.add_field_area("
                     "center_position, \"fd_blood\", {radius=2, square=true, hit_player=false}) == 25)",
@@ -1134,7 +1135,7 @@ TEST_CASE( "lua_platform_environment_add_field_area_matches_native_f_field",
     clear_test_field( field_fd_smoke.id() );
     lua["expected_outdoor"] = expected_outdoor;
     {
-        detail::callback_scope active_callback( *owner );
+        cata::lua_platform::detail::callback_scope active_callback( *owner );
         const sol::protected_function_result result = lua.safe_script(
                     "assert(services.gameplay.environment.add_field_area("
                     "center_position, \"fd_smoke\", {radius=2, outdoor_only=true, hit_player=false}) == "
@@ -1159,7 +1160,7 @@ TEST_CASE( "lua_platform_environment_add_field_area_matches_native_f_field",
     clear_test_field( field_fd_fire.id() );
     lua["expected_indoor"] = expected_indoor;
     {
-        detail::callback_scope active_callback( *owner );
+        cata::lua_platform::detail::callback_scope active_callback( *owner );
         const sol::protected_function_result result = lua.safe_script(
                     "assert(services.gameplay.environment.add_field_area("
                     "center_position, \"fd_fire\", {radius=2, indoor_only=true, hit_player=false}) == "
@@ -1200,7 +1201,7 @@ TEST_CASE( "lua_platform_environment_add_field_area_matches_native_f_field",
         CHECK( here.get_field( center, field_fd_smoke.id() ) == nullptr );
         here.remove_field( target_center, field_fd_smoke.id() );
         {
-            detail::callback_scope active_callback( *owner );
+            cata::lua_platform::detail::callback_scope active_callback( *owner );
             const sol::protected_function_result result = lua.safe_script(
                         "assert(services.gameplay.environment.add_field_area("
                         "target_center_position, \"fd_smoke\", {radius=0, hit_player=false}) == 1)",
@@ -1234,7 +1235,7 @@ TEST_CASE( "lua_platform_environment_add_field_area_matches_native_f_field",
     clear_test_field( field_fd_smoke.id() );
     lua["expected_edge_count"] = native_edge_count;
     {
-        detail::callback_scope active_callback( *owner );
+        cata::lua_platform::detail::callback_scope active_callback( *owner );
         const sol::protected_function_result result = lua.safe_script( R"(
             assert(services.gameplay.environment.add_field_area(
                 center_position, "fd_smoke", {
@@ -1261,7 +1262,7 @@ TEST_CASE( "lua_platform_environment_add_field_area_matches_native_f_field",
     const std::array<bool, 25> native_far_coverage = field_coverage( field_fd_smoke.id() );
     CHECK( std::count( native_far_coverage.begin(), native_far_coverage.end(), true ) == 0 );
     {
-        detail::callback_scope active_callback( *owner );
+        cata::lua_platform::detail::callback_scope active_callback( *owner );
         const sol::protected_function_result result = lua.safe_script(
                 "assert(services.gameplay.environment.add_field_area("
                 "far_center_position, \"fd_smoke\", {radius=0, hit_player=false}) == 0)",
@@ -1295,7 +1296,7 @@ TEST_CASE( "lua_platform_environment_add_field_area_matches_native_f_field",
     here.remove_field( avatar_position, field_fd_web.id() );
     get_avatar().remove_effect( effect_webbed_for_test );
     {
-        detail::callback_scope active_callback( *owner );
+        cata::lua_platform::detail::callback_scope active_callback( *owner );
         const sol::protected_function_result result = lua.safe_script( R"(
             assert(services.gameplay.environment.add_field_area(
                 field_avatar_position, "fd_web", {
@@ -1325,7 +1326,7 @@ TEST_CASE( "lua_platform_environment_add_field_area_matches_native_f_field",
     CHECK_FALSE( get_avatar().has_effect( effect_webbed_for_test ) );
     here.remove_field( avatar_position, field_fd_web.id() );
     {
-        detail::callback_scope active_callback( *owner );
+        cata::lua_platform::detail::callback_scope active_callback( *owner );
         const sol::protected_function_result result = lua.safe_script( R"(
             assert(services.gameplay.environment.add_field_area(
                 field_avatar_position, "fd_web", {
@@ -1452,7 +1453,7 @@ TEST_CASE( "lua_platform_environment_set_trap_area_matches_native_f_set_trap",
         const std::string script = "return services.gameplay.environment.set_trap_area("
                                    "trap_position, \"tr_beartrap\", " + radius_argument +
                                    ", trap_square)";
-        detail::callback_scope active_callback( *owner );
+        cata::lua_platform::detail::callback_scope active_callback( *owner );
         const sol::protected_function_result result = lua.safe_script(
                     script, sol::script_pass_on_error );
         if( !result.valid() ) {
@@ -1501,13 +1502,13 @@ TEST_CASE( "lua_platform_environment_set_trap_area_matches_native_f_set_trap",
     REQUIRE( target_z != center.z() );
     const tripoint_bub_ms upper_center( center.x(), center.y(), target_z );
     REQUIRE( here.inbounds( upper_center ) );
-    submap *const upper_submap = here.get_submap_at_grid( {
+    submap *const upper_submap = here.get_submap_at_grid( tripoint_rel_sm{
         upper_center.x() / SEEX, upper_center.y() / SEEY, target_z
     } );
     if( here.supports_zlevels() ) {
         REQUIRE( upper_submap != nullptr );
     }
-    const submap *const current_submap = here.get_submap_at_grid( {
+    const submap *const current_submap = here.get_submap_at_grid( tripoint_rel_sm{
         center.x() / SEEX, center.y() / SEEY, center.z()
     } );
     REQUIRE( current_submap != nullptr );
@@ -1542,7 +1543,7 @@ TEST_CASE( "lua_platform_environment_set_trap_area_matches_native_f_set_trap",
     CHECK( here.tr_at( upper_center ).id == beartrap.id() );
     here.trap_set( upper_center, tr_null );
     {
-        detail::callback_scope active_callback( *owner );
+        cata::lua_platform::detail::callback_scope active_callback( *owner );
         const sol::protected_function_result result = lua.safe_script(
                     "return services.gameplay.environment.set_trap_area("
                     "trap_position, \"tr_beartrap\", 0, false)",
@@ -1552,10 +1553,10 @@ TEST_CASE( "lua_platform_environment_set_trap_area_matches_native_f_set_trap",
     }
     CHECK( here.tr_at( upper_center ).id == beartrap.id() );
     if( here.supports_zlevels() ) {
-        CHECK( here.get_submap_at_grid( { upper_center.x() / SEEX,
+        CHECK( here.get_submap_at_grid( tripoint_rel_sm{ upper_center.x() / SEEX,
                                           upper_center.y() / SEEY, target_z } ) == upper_submap );
     } else {
-        CHECK( here.get_submap_at_grid( { center.x() / SEEX,
+        CHECK( here.get_submap_at_grid( tripoint_rel_sm{ center.x() / SEEX,
                                           center.y() / SEEY, center.z() } ) == current_submap );
     }
 
@@ -1585,7 +1586,7 @@ TEST_CASE( "lua_platform_environment_set_trap_area_matches_native_f_set_trap",
     lua["trap_radius"] = 32768.0;
     lua["trap_square"] = true;
     {
-        detail::callback_scope active_callback( *owner );
+        cata::lua_platform::detail::callback_scope active_callback( *owner );
         const sol::protected_function_result result = lua.safe_script(
                     "return services.gameplay.environment.set_trap_area("
                     "trap_position, \"tr_beartrap\", trap_radius, trap_square)",
@@ -1599,7 +1600,7 @@ TEST_CASE( "lua_platform_environment_set_trap_area_matches_native_f_set_trap",
     lua["trap_radius"] = 46341.0;
     lua["trap_square"] = false;
     {
-        detail::callback_scope active_callback( *owner );
+        cata::lua_platform::detail::callback_scope active_callback( *owner );
         const sol::protected_function_result result = lua.safe_script(
                     "return pcall(services.gameplay.environment.set_trap_area, "
                     "trap_position, \"tr_beartrap\", trap_radius, trap_square)",
@@ -1635,7 +1636,7 @@ TEST_CASE( "lua_platform_environment_set_trap_area_matches_native_f_set_trap",
     lua["trap_square"] = false;
     int platform_builtin_attempts = 0;
     const std::string platform_builtin_diagnostic = capture_debugmsg_during( [&]() {
-        detail::callback_scope active_callback( *owner );
+        cata::lua_platform::detail::callback_scope active_callback( *owner );
         const sol::protected_function_result result = lua.safe_script(
                     "return services.gameplay.environment.set_trap_area("
                     "trap_position, \"tr_beartrap\", trap_radius, trap_square)",
@@ -1677,7 +1678,7 @@ TEST_CASE( "lua_platform_environment_set_trap_area_matches_native_f_set_trap",
     lua["trap_text"] = long_trap_bytes;
     int long_id_attempts = 0;
     const std::string platform_invalid_id_diagnostic = capture_debugmsg_during( [&]() {
-        detail::callback_scope active_callback( *owner );
+        cata::lua_platform::detail::callback_scope active_callback( *owner );
         const sol::protected_function_result result = lua.safe_script(
                     "return services.gameplay.environment.set_trap_area("
                     "trap_position, trap_text, 0, false)", sol::script_pass_on_error );

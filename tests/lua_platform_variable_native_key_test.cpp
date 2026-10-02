@@ -1502,7 +1502,7 @@ end
         } );
         sol::protected_function_result call;
         const std::string lua_diagnostic = capture_debugmsg_during( [&]() {
-            detail::callback_scope callback( *owner );
+            cata::lua_platform::detail::callback_scope callback( *owner );
             call = evaluate();
         } );
         REQUIRE( call.valid() );
@@ -1735,7 +1735,7 @@ return values[8] end)()
                 } );
                 sol::protected_function_result call;
                 const std::string lua_diagnostic = capture_debugmsg_during( [&]() {
-                    detail::callback_scope callback( *owner );
+                    cata::lua_platform::detail::callback_scope callback( *owner );
                     call = lua.safe_script( std::string( "return " ) + row.expression, sol::script_pass_on_error );
                 } );
                 REQUIRE( call.valid() );
@@ -2775,7 +2775,7 @@ end
     beta.normalize();
     alpha.setID( character_id( 4922 ), true );
     beta.setID( character_id( 4923 ), true );
-    const auto generation = detail::runtime_world_generation_storage();
+    const auto generation = cata::lua_platform::detail::runtime_world_generation_storage();
     lua["alpha"] = game_handle::from_creature( alpha,
                    { "avatar", 4922, 0, 0, 0, {} }, owner->handle_runtime(), generation );
     lua["beta"] = game_handle::from_creature( beta,
@@ -2946,7 +2946,7 @@ return values[5] end)()
             lua["context"] = context;
             sol::protected_function_result call;
             const std::string lua_diagnostic = capture_debugmsg_during( [&]() {
-                detail::callback_scope callback( *owner );
+                cata::lua_platform::detail::callback_scope callback( *owner );
                 call = lua.safe_script( std::string( "return " ) + row.lua_expression, sol::script_pass_on_error );
             } );
             REQUIRE( call.valid() );
@@ -3017,7 +3017,7 @@ end
     beta.normalize();
     alpha.setID( character_id( 4942 ), true );
     beta.setID( character_id( 4943 ), true );
-    const auto generation = detail::runtime_world_generation_storage();
+    const auto generation = cata::lua_platform::detail::runtime_world_generation_storage();
     lua["alpha"] = game_handle::from_creature( alpha,
                    { "avatar", 4942, 0, 0, 0, {} }, owner->handle_runtime(), generation );
     lua["beta"] = game_handle::from_creature( beta,
@@ -3129,7 +3129,7 @@ end
             } );
             sol::protected_function_result call;
             const std::string lua_diagnostic = capture_debugmsg_during( [&]() {
-                detail::callback_scope callback( *owner );
+                cata::lua_platform::detail::callback_scope callback( *owner );
                 call = evaluate();
             } );
             REQUIRE( call.valid() );
