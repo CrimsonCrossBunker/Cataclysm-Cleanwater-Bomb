@@ -11135,6 +11135,34 @@ function CcbVariablesApi.get_context_number(context, key) end
 ---@return CcbVariableNumberReadResult
 function CcbVariablesApi.get_number(owner, key) end
 
+---@class CcbVariableTripointReadValue
+---@field exists boolean Whether the selected native storage key is present.
+---@field value? TripointCoord Native absolute map-square coordinate; missing keys yield nil.
+
+---@class CcbVariableTripointReadResult: CcbResult
+---@field value? CcbVariableTripointReadValue
+
+---Read a stored Native coordinate, retaining legacy-string conversion and type-mismatch diagnostics.
+---Explicit empty values yield the native zero coordinate; incompatible values yield zero with their native diagnostic.
+---Ordinary strings are not parsed as legacy coordinates; unrelated arrays are not traversed or snapshotted.
+---@param owner GameHandle Creature, item or vehicle variable owner; retains handle lifetime checks.
+---@param key string Raw native key; empty, long and embedded-NUL bytes are supported.
+---@return CcbVariableTripointReadResult
+function CcbVariablesApi.get_tripoint(owner, key) end
+
+---Read a Native global coordinate with the same conversion, presence and diagnostics as get_tripoint.
+---@param key string Raw native global storage key.
+---@return CcbVariableTripointReadResult
+function CcbVariablesApi.get_global_tripoint(key) end
+
+---Read only the coordinate type of a callback slot; accepted coordinates must be absolute map squares.
+---NullValue yields zero without a diagnostic. Numeric/boolean, string and table values emit the Native type diagnostic
+---and yield zero. Tables are queried as the Native array type without traversing their contents.
+---@param context table<string, any>|nil Nil means all keys are missing.
+---@param key string Raw callback storage key.
+---@return CcbVariableTripointReadResult
+function CcbVariablesApi.get_context_tripoint(context, key) end
+
 ---@param key string Native global storage key; callback-context key limits do not apply.
 ---@param value boolean|number|string|TripointCoord|NullValue|any[]|nil
 ---Top-level native strings preserve all bytes; strings in arrays remain bounded.

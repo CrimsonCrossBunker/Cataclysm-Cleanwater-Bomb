@@ -186,6 +186,7 @@ TEST_CASE( "lua_platform_native_variable_keys_keep_native_string_range",
     const sol::protected_function get = fixture.variables["get"];
     const sol::protected_function get_string = fixture.variables["get_string"];
     const sol::protected_function get_number = fixture.variables["get_number"];
+    const sol::protected_function get_tripoint = fixture.variables["get_tripoint"];
     const sol::protected_function set = fixture.variables["set"];
     const sol::protected_function remove = fixture.variables["remove"];
     const sol::protected_function get_global = fixture.variables["get_global"];
@@ -211,6 +212,17 @@ TEST_CASE( "lua_platform_native_variable_keys_keep_native_string_range",
                 REQUIRE( owner.get( key ) != nullptr );
                 const double expected = owner.get( key )->dbl();
                 CHECK( require_value( get_number( owner.handle, key ) )["value"].get<double>() == expected );
+            }
+            for( const tripoint &position : { tripoint::zero, tripoint( -25, 49, -3 ),
+                                             tripoint( std::numeric_limits<int>::min(),
+                                                       std::numeric_limits<int>::max(), 0 ) } ) {
+                require_success( set( owner.handle, key, cata::lua_platform::script_tripoint_coord::from_native(
+                                          coords::origin::abs, coords::scale::map_square, position ) ) );
+                REQUIRE( owner.get( key ) != nullptr );
+                const sol::table result = require_value( get_tripoint( owner.handle, key ) );
+                CHECK( result["exists"].get<bool>() );
+                CHECK( result["value"].get<cata::lua_platform::script_tripoint_coord>().to_native() ==
+                       owner.get( key )->tripoint().raw() );
             }
             const std::string owner_value = std::string( "owner-" ) + owner.name;
             require_success( set( owner.handle, key, owner_value ) );
@@ -271,17 +283,20 @@ TEST_CASE( "lua_platform_variable_string_reads_preserve_handle_errors",
     player.setID( character_id( 4913 ), true );
     variable_api_fixture fixture;
     const sol::protected_function get_string = fixture.variables["get_string"];
+    const sol::protected_function get_tripoint = fixture.variables["get_tripoint"];
     const game_handle current = cata::lua_platform::game_handle::from_creature(
                                     player, { "avatar", player.getID().get_value(), 0, 0, 0, {} },
                                     fixture.runtime, 1 );
     const game_handle wrong_kind;
     require_error( get_string( wrong_kind, "key" ), "wrong_kind" );
+    require_error( get_tripoint( wrong_kind, "key" ), "wrong_kind" );
 
     const game_handle_runtime stale_runtime( fixture.runtime_owner, 2 );
     const game_handle stale = cata::lua_platform::game_handle::from_creature(
                                   player, { "avatar", player.getID().get_value(), 0, 0, 0, {} },
                                   stale_runtime, 1 );
     require_error( get_string( stale, "key" ), "stale_runtime" );
+    require_error( get_tripoint( stale, "key" ), "stale_runtime" );
 
     item item_value( itype_id( "rock" ) );
     item_identity_cleanup retire_item{ item_value };
@@ -290,6 +305,7 @@ TEST_CASE( "lua_platform_variable_string_reads_preserve_handle_errors",
                                         fixture.runtime, 1 );
     cata::lua_platform::retire_item_handle_identity( item_value );
     require_error( get_string( item_handle, "key" ), "stale_item" );
+    require_error( get_tripoint( item_handle, "key" ), "stale_item" );
     CHECK_FALSE( current.validation_error( fixture.runtime, 1 ) );
 }
 
@@ -507,6 +523,128 @@ TEST_CASE( "lua_platform_numeric_variable_duration_matches_native_presence_and_c
         const sol::protected_function_result rejected = duration( bad );
         CHECK_FALSE( rejected.valid() );
     }
+}
+
+TEST_CASE( "lua_platform_coordinate_variable_reads_match_native_types_presence_and_projection",
+           "[lua][platform][semantic][variables][coords]" )
+{
+    global_values_restore restore_global_values;
+    avatar alpha;
+    avatar beta;
+    alpha.normalize();
+    beta.normalize();
+    alpha.setID( character_id( 4925 ), true );
+    beta.setID( character_id( 4926 ), true );
+    variable_api_fixture fixture;
+    const game_handle alpha_handle = game_handle::from_creature(
+                                         alpha, { "avatar", alpha.getID().get_value(), 0, 0, 0, {} }, fixture.runtime, 1 );
+    const game_handle beta_handle = game_handle::from_creature(
+                                        beta, { "avatar", beta.getID().get_value(), 0, 0, 0, {} }, fixture.runtime, 1 );
+    const sol::protected_function read_owner = fixture.variables["get_tripoint"];
+    const sol::protected_function read_global = fixture.variables["get_global_tripoint"];
+    const sol::protected_function read_context = fixture.variables["get_context_tripoint"];
+    const tripoint negative( -25, 49, -3 );
+    const std::vector<std::optional<diag_value>> values = {
+        std::nullopt, diag_value{}, diag_value( tripoint_abs_ms( negative ) ),
+        diag_value( tripoint_abs_ms( std::numeric_limits<int>::min(),
+                                   std::numeric_limits<int>::max(), 0 ) ),
+        diag_value( 3.9 ), diag_value( true ), diag_value( negative.to_string() ),
+        diag_value( diag_array( 5000, diag_value( 4.0 ) ) ),
+        diag_value( diag_value::legacy_value( negative.to_string() ) ),
+        diag_value( diag_value::legacy_value( "not-a-coordinate" ) ),
+    };
+    for( const var_type scope : { var_type::u, var_type::npc, var_type::global, var_type::context } ) {
+        for( const std::string &key : { std::string{}, std::string( "raw\0tail", 8 ),
+                                       std::string( 10000, 'k' ), std::string( "坐标" ) } ) {
+            for( std::size_t index = 0; index < values.size(); ++index ) {
+                if( scope == var_type::context && index >= 8 ) {
+                    continue; // Callback Lua strings do not have a legacy storage type.
+                }
+                CAPTURE( scope, key.size(), index );
+                dialogue conversation( get_talker_for( alpha ), get_talker_for( beta ) );
+                sol::table data = fixture.lua.create_table();
+                const auto reset_storage = [&]() {
+                    alpha.remove_value( key );
+                    beta.remove_value( key );
+                    get_globals().remove_global_value( key );
+                    if( values[index] ) {
+                        switch( scope ) {
+                            case var_type::u:
+                                alpha.set_value( key, *values[index] );
+                                break;
+                            case var_type::npc:
+                                beta.set_value( key, *values[index] );
+                                break;
+                            case var_type::global:
+                                get_globals().set_global_value( key, *values[index] );
+                                break;
+                            default:
+                                conversation.set_value( key, *values[index] );
+                                break;
+                        }
+                    }
+                };
+                reset_storage();
+                const var_info info{ scope, key };
+                tripoint_abs_ms expected;
+                const std::string native_diagnostic = capture_debugmsg_during( [&]() {
+                    expected = read_var_value( info, conversation ).tripoint();
+                } );
+                reset_storage(); // Do not reuse a Native legacy conversion cache as evidence.
+                if( scope == var_type::context && values[index] ) {
+                    if( index == 1 ) {
+                        data.raw_set( key, fixture.services["types"]["null"].get<sol::object>() );
+                    } else if( index == 5 ) {
+                        data.raw_set( key, true );
+                    } else if( values[index]->is_dbl() ) {
+                        data.raw_set( key, values[index]->dbl() );
+                    } else if( values[index]->is_str() ) {
+                        data.raw_set( key, values[index]->str() );
+                    } else if( values[index]->is_array() ) {
+                        sol::table oversized = fixture.lua.create_table();
+                        for( int entry = 1; entry <= 5000; ++entry ) {
+                            oversized[entry] = 4.0;
+                        }
+                        data.raw_set( key, oversized );
+                    } else {
+                        data.raw_set( key, cata::lua_platform::script_tripoint_coord::from_native(
+                                          coords::origin::abs, coords::scale::map_square, values[index]->tripoint().raw() ) );
+                    }
+                }
+                tripoint actual;
+                const std::string platform_diagnostic = capture_debugmsg_during( [&]() {
+                    const sol::table result = scope == var_type::context ? require_value( read_context( data, key ) ) :
+                                              scope == var_type::global ? require_value( read_global( key ) ) :
+                                              require_value( read_owner( scope == var_type::u ? alpha_handle : beta_handle, key ) );
+                    CHECK( result["exists"].get<bool>() == values[index].has_value() );
+                    if( result["exists"].get<bool>() ) {
+                        const auto coordinate = result["value"].get<cata::lua_platform::script_tripoint_coord>();
+                        CHECK( coordinate.native_origin() == coords::origin::abs );
+                        CHECK( coordinate.native_scale() == coords::scale::map_square );
+                        actual = coordinate.to_native();
+                        CHECK( coordinate.project_to( "omt" ).to_native() ==
+                               project_to<coords::omt>( expected ).raw() );
+                    } else {
+                        CHECK( result["value"].get<sol::object>().get_type() == sol::type::nil );
+                        actual = tripoint::zero; // Native read_var_value missing -> monostate -> zero.
+                    }
+                } );
+                CHECK( actual == expected.raw() );
+                CHECK( platform_diagnostic == native_diagnostic );
+            }
+        }
+    }
+    sol::table invalid = fixture.lua.create_table();
+    for( const auto &coordinate : {
+             cata::lua_platform::script_tripoint_coord::from_native(
+                 coords::origin::abs, coords::scale::overmap_terrain, negative ),
+             cata::lua_platform::script_tripoint_coord::from_native(
+                 coords::origin::relative, coords::scale::map_square, negative ) } ) {
+        invalid["key"] = coordinate;
+        CHECK_FALSE( read_context( invalid, "key" ).valid() );
+    }
+    const sol::table missing = require_value( read_context( sol::nil, "key" ) );
+    CHECK_FALSE( missing["exists"].get<bool>() );
 }
 
 TEST_CASE( "lua_platform_indirect_numeric_duration_matches_native_participants_and_pointer_types",

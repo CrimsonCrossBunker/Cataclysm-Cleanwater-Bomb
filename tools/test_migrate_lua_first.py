@@ -28486,21 +28486,12 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertEqual(reveal_todos[0].category, "manual_rewrite")
             self.assertFalse(reveal_todos[0].platform_core_input)
             self.assertIn("services.world.schedule_location_revert(", main)
-            self.assertIn(
-                'services.world.schedule_location_revert(\n'
-                '        (context.data["loc"]):project_to("omt"),',
-                main,
-            )
-            self.assertIn(
-                "copy_location reads source and destination var_info values",
-                main,
-            )
-            self.assertIn("preserves native destination-first generation", main)
-            self.assertIn("does not prove the actor scope or coordinate types/projection", main)
-            self.assertIn("preserves arbitrary native event-key bytes", main)
-            self.assertIn("accepts the full native signed-int delay range", main)
+            self.assertIn('get_context_tripoint(context and context.data, "loc")', main)
+            self.assertIn('get_global_tripoint("ship")', main)
+            self.assertIn('get_global_tripoint("ship_new")', main)
+            self.assertIn('copy_source:project_to("omt"), copy_destination:project_to("omt")', main)
             self.assertNotIn("256 bytes", main)
-            self.assertNotIn("services.world.schedule_location_copy(", main)
+            self.assertIn("services.world.schedule_location_copy(", main)
             self.assertEqual(main.count("services.world.transform_radius("), 1)
             self.assertIn(
                 "native npc_transform_radius reads mutable beta", main
@@ -28516,6 +28507,142 @@ assert(not pcall(function() return U_EXPRESSION end))
             self.assertNotIn("services.inventory.drop_wielded", main)
             self.assertNotIn("services.items.transfer", main)
             self.assertIn("services.item_categories.set_spawn_rates(", main)
+
+    def test_native_coordinate_reads_preserve_raw_keys_priority_and_ignored_default(self) -> None:
+        owners = {"u": ("alpha", "character"), "npc": ("beta", "monster")}
+        key = "坐标" * 600 + '\0tail'
+        for scope, method in (("u_val", "get_tripoint(alpha"),
+                              ("npc_val", "get_tripoint(beta"),
+                              ("global_val", "get_global_tripoint"),
+                              ("context_val", "get_context_tripoint")):
+            expression = migrate_lua_first.render_native_coordinate_variable_expression(
+                {scope: key, "default": {"math": ["ignored_by_var_info"]}}, owners)
+            self.assertIsNotNone(expression)
+            self.assertIn(method, expression or "")
+            self.assertIn(migrate_lua_first.lua_quote(key), expression or "")
+            self.assertNotIn("ignored_by_var_info", expression or "")
+            self.assertNotIn("services.variables.resolve", expression or "")
+            self.assertNotIn("services.characters.avatar", expression or "")
+        priority = migrate_lua_first.render_native_coordinate_variable_expression(
+            {"context_val": "shadow", "global_val": "shadow", "npc_val": "beta_key",
+             "u_val": "alpha_key"}, owners)
+        self.assertIn('get_tripoint(alpha, "alpha_key")', priority or "")
+        self.assertNotIn("shadow", priority or "")
+        absent_beta = {**owners, "read_npc": None}
+        for unsupported in ({"npc_val": "key"}, {"var_val": "pointer"}):
+            self.assertIsNone(migrate_lua_first.render_native_coordinate_variable_expression(
+                unsupported, absent_beta))
+        for unsupported in ({}, {"context_val": 1}, {"context_val": "key", "relative": {}},
+                            "key", {"u_val": "key"}):
+            self.assertIsNone(migrate_lua_first.render_native_coordinate_variable_expression(unsupported))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_native_indirect_coordinates_execute_one_pointer_without_ambient_actor(self) -> None:
+        expression = migrate_lua_first.render_native_coordinate_variable_expression(
+            {"var_val": "pointer", "default": {"context_val": "not_a_default"}},
+            {"u": ("alpha", "character"), "npc": ("beta", "monster")})
+        self.assertIsNotNone(expression)
+        script = r"""
+local alpha,beta={},{}
+local context={data={}}
+local pointer,target,reads
+local zero={x=0,y=0,z=0}
+local services={coords={tripoint_abs_ms=function(x,y,z)
+ assert(x==0 and y==0 and z==0);return zero
+end},variables={get_context_string=function(data,key)
+ assert(data==context.data and key=='pointer');reads[#reads+1]={'pointer',key}
+ return {ok=true,value=pointer}
+end}}
+local function read(scope,key) reads[#reads+1]={scope,key};return {ok=true,value=target} end
+services.variables.get_tripoint=function(owner,key)
+ assert(owner==alpha or owner==beta);return read(owner==alpha and 'u' or 'npc',key)
+end
+services.variables.get_global_tripoint=function(key) return read('global',key) end
+services.variables.get_context_tripoint=function(data,key)
+ assert(data==context.data);return read('context',key)
+end
+local function service_value(result) assert(result.ok);return result.value end
+local function evaluate() return EXPRESSION end
+local cases={{'u_key','u','key'},{'n_key','npc','key'},{'_key','context','key'},
+ {'key','global','key'},{'var_next','global','var_next'},{'','global',''},
+ {'u_','u',''},{'n_','npc',''},{'_','context',''},
+ {'n_raw\0tail','npc','raw\0tail'},{string.rep('k',10000),'global',string.rep('k',10000)}}
+for _,case in ipairs(cases) do
+ for _,value in ipairs({{exists=false},{exists=true,value=zero},
+                       {exists=true,value={x=-25,y=49,z=-3}}}) do
+  reads={};pointer={exists=true,value=case[1]};target=value
+  assert(evaluate()==(value.exists==false and zero or value.value))
+  assert(#reads==2 and reads[1][1]=='pointer' and reads[2][1]==case[2]
+         and reads[2][2]==case[3])
+ end
+end
+reads={};pointer={exists=false};target={exists=true,value={x=999}}
+assert(evaluate()==zero and #reads==1)
+""".replace("EXPRESSION", expression or "nil")
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_location_copy_emitted_lua_keeps_read_order_and_four_late_keys(self) -> None:
+        lines = migrate_lua_first.render_static_location_copy({
+            "copy_location": {"global_val": "source"}, "new_loc": {"context_val": "destination"},
+            "time_in_future": {"context_val": "delay", "default": "infinite"},
+            "key": {"context_val": "event_key"}})
+        self.assertIsNotNone(lines)
+        script = r"""
+local log={}
+local generated,index=false,0
+local function point(name) return {project_to=function(self,scale)
+ assert(scale=='omt');return name
+end} end
+local context={data={}}
+local services={time={duration_from_turns=function(value) assert(value==-3.9);return -3 end},
+ variables={get_global_tripoint=function(key)
+  assert(not generated and key=='source');log[#log+1]='source'
+  return {ok=true,value={exists=true,value=point('source_omt')}}
+ end,get_context_tripoint=function(data,key)
+  assert(not generated and data==context.data and key=='destination');log[#log+1]='destination'
+  return {ok=true,value={exists=true,value=point('destination_omt')}}
+ end,get_context_number=function(data,key)
+  assert(not generated and data==context.data and key=='delay');log[#log+1]='delay'
+  return {ok=true,value={exists=true,value=-3.9}}
+ end,get_context_string=function(data,key)
+  assert(generated and data==context.data and key=='event_key');log[#log+1]='key'
+  return {ok=true,value={exists=true,value=({'','raw\0tail',string.rep('k',10000),'fourth'})[index]}}
+ end},world={schedule_location_copy=function(source,destination,delay,key)
+  assert(table.concat(log,',')=='source,destination,delay')
+  assert(source=='source_omt' and destination=='destination_omt' and delay==-3)
+  assert(type(key)=='function');generated=true
+  for i=1,4 do index=i;assert(key()==({'','raw\0tail',string.rep('k',10000),'fourth'})[i]) end
+  return {ok=true,value={events=4}}
+ end}}
+local function service_value(result) assert(result.ok);return result.value end
+BODY
+assert(table.concat(log,',')=='source,destination,delay,key,key,key,key')
+""".replace("BODY", "\n".join(lines or []))
+        result = subprocess.run(["lua", "-"], input=script, text=True,
+                                capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_location_copy_participant_coordinates_keep_const_actor_proofs(self) -> None:
+        for event, supported in (("character_melee_attacks_monster", True),
+                                 ("character_kills_character", False), ("game_start", False)):
+            for branch in ("effect", "false_effect"):
+                source = migrate_lua_first.SourceObject(Path("copy_owners.json"), 0, {
+                    "type": "effect_on_condition", "id": "copy_owners", "eoc_type": "EVENT",
+                    "required_event": event, "condition": "is_day", "effect": [],
+                    branch: {"copy_location": {"u_val": "source"}, "new_loc": {"npc_val": "destination"},
+                             "time_in_future": "0 turns", "key": "copy"}})
+                result = migrate_lua_first.MigrationResult()
+                rendered = migrate_lua_first.render_eoc(source, result)
+                with self.subTest(event=event, branch=branch):
+                    self.assertEqual("services.world.schedule_location_copy(" in rendered, supported)
+                    self.assertEqual(not result.todos, supported)
+                    if supported:
+                        self.assertIn('get_tripoint(actor, "source")', rendered)
+                        self.assertIn('get_tripoint(context.actors.interlocutor, "destination")', rendered)
+                        self.assertNotIn("services.characters.avatar()", rendered)
 
     def test_variable_reads_do_not_inherit_mutation_beta_fallback(self) -> None:
         fallback = {"u": ("attacker", "character"), "npc": ("attacker", "character"),
@@ -28631,7 +28758,10 @@ local alpha,beta={},{}
 local context={data={loc={project_to=function(self,scale) assert(scale=='omt');return self end}}}
 local generated,index,reads=false,0,0
 local services={time={duration_from_turns=function(value) assert(value==3.9);return 3 end},
- variables={get_number=function(owner,key)
+ variables={get_context_tripoint=function(data,key)
+  assert(not generated and data==context.data and key=='loc')
+  return {ok=true,value={exists=true,value=context.data.loc}}
+ end,get_number=function(owner,key)
   assert(not generated and owner==alpha and key=='delay')
   return {ok=true,value={exists=true,value=3.9}}
  end,get_context_string=function(data,key)
@@ -28798,7 +28928,10 @@ local function read(key)
 end
 local services={time={duration=function(turns,unit)
  assert(turns==0 and unit=='turn');return turns
-end},variables={get_global_string=read,get_context_string=function(data,key)
+end},variables={get_context_tripoint=function(data,key)
+ assert(not generated and data==context.data and key=='loc')
+ return {ok=true,value={exists=true,value=context.data.loc}}
+end,get_global_string=read,get_context_string=function(data,key)
  assert(data==context.data);return read(key)
 end},world={schedule_location_revert=function(position,delay,key)
  assert(reads==0 and position==context.data.loc and delay==0 and type(key)=='function')
@@ -32711,7 +32844,7 @@ assert(calls==1)
         self.assertNotIn('services.variables.get(\n        actor, "center")', rendered)
         self.assertTrue(any(todo.category == "platform_gap" for todo in result.todos))
 
-    def test_real_copy_mirror_and_transform_line_call_sites_stay_fail_closed(
+    def test_real_copy_lowering_and_unproven_mirror_transform_line_shapes(
         self,
     ) -> None:
         def walk(value: Any):
@@ -32755,11 +32888,11 @@ assert(calls==1)
             direct_eoc_probe(ship_source, copy_effect, "real_ship_copy_probe"),
             copy_result,
         )
-        self.assertIn("copy_location reads source and destination var_info values", copy_main)
-        self.assertIn("does not prove the actor scope or coordinate types/projection", copy_main)
-        self.assertIn("preserves arbitrary native event-key bytes", copy_main)
-        self.assertIn("full native signed-int delay range", copy_main)
-        self.assertNotIn("services.world.schedule_location_copy(", copy_main)
+        self.assertIn('get_global_tripoint("ship")', copy_main)
+        self.assertIn('get_global_tripoint("ship_new")', copy_main)
+        self.assertIn('services.time.duration(21474836, "turn")', copy_main)
+        self.assertIn('services.world.schedule_location_copy(', copy_main)
+        self.assertFalse(copy_result.todos)
 
         alter_effect = next(
             node for node in walk(ship_source.value)

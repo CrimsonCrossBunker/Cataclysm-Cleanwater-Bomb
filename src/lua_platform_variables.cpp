@@ -248,6 +248,33 @@ sol::table get_variable_number(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table native_variable_tripoint_read( sol::state_view state, const diag_value *stored )
+{
+    sol::table value = state.create_table();
+    value["exists"] = stored != nullptr;
+    // Query only the Native coordinate type. Retain presence, legacy-string
+    // conversion and type diagnostics without traversing unrelated arrays.
+    value["value"] = stored != nullptr ?
+                     sol::make_object( state, script_tripoint_coord::from_native(
+                                           coords::origin::abs, coords::scale::map_square, stored->tripoint().raw() ) ) :
+                     sol::make_object( state, sol::nil );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table get_variable_tripoint(
+    sol::this_state lua, const game_handle &handle, const std::string &key,
+    const game_handle_runtime &runtime_generation, const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    resolved_variable_talker resolved = resolve_variable_talker(
+                                            handle, runtime_generation, world_generation );
+    if( resolved.error ) {
+        return make_game_error_result( state, *resolved.error );
+    }
+    return native_variable_tripoint_read( state, resolved_variable_get( resolved, key ) );
+}
+
 sol::table set_variable(
     sol::this_state lua, const game_handle &handle,
     const std::string &key, const sol::object &requested,
@@ -359,6 +386,12 @@ sol::table get_global_variable_number(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table get_global_variable_tripoint( sol::this_state lua, const std::string &key )
+{
+    return native_variable_tripoint_read( sol::state_view( lua ),
+                                         get_globals().maybe_get_global_value( key ) );
+}
+
 std::string context_variable_string( const sol::object &stored )
 {
     if( stored.get_type() == sol::type::string ) {
@@ -445,6 +478,51 @@ sol::table get_context_variable_number(
     sol::table value = state.create_table();
     value["exists"] = exists;
     value["value"] = exists ? sol::make_object( state, context_variable_number( stored ) ) :
+                     sol::make_object( state, sol::nil );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+tripoint_abs_ms context_variable_tripoint( const sol::object &stored )
+{
+    if( stored.is<script_tripoint_coord>() ) {
+        const script_tripoint_coord position = stored.as<script_tripoint_coord>();
+        if( position.native_origin() != coords::origin::abs ||
+            position.native_scale() != coords::scale::map_square ) {
+            throw std::invalid_argument(
+                "services.variables.get_context_tripoint coordinates must be absolute map squares" );
+        }
+        return tripoint_abs_ms( position.to_native() );
+    }
+    if( stored.is<script_null_value>() ) {
+        return diag_value{}.tripoint();
+    }
+    if( stored.get_type() == sol::type::number || stored.get_type() == sol::type::boolean ) {
+        return diag_value( 0.0 ).tripoint();
+    }
+    if( stored.get_type() == sol::type::string ) {
+        // Ordinary stored strings are not legacy strings: do not parse them.
+        return diag_value( std::string{} ).tripoint();
+    }
+    if( stored.get_type() == sol::type::table ) {
+        return diag_value( diag_array{} ).tripoint();
+    }
+    throw std::invalid_argument(
+        "services.variables.get_context_tripoint value has no native variable storage type" );
+}
+
+sol::table get_context_variable_tripoint(
+    sol::this_state lua, const sol::optional<sol::table> &context, const std::string &key )
+{
+    sol::state_view state( lua );
+    const sol::object stored = context ? context->raw_get<sol::object>( key ) :
+                               sol::make_object( state, sol::nil );
+    const bool exists = stored.valid() && stored.get_type() != sol::type::nil;
+    sol::table value = state.create_table();
+    value["exists"] = exists;
+    value["value"] = exists ? sol::make_object( state, script_tripoint_coord::from_native(
+                         coords::origin::abs, coords::scale::map_square,
+                         context_variable_tripoint( stored ).raw() ) ) :
                      sol::make_object( state, sol::nil );
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
@@ -795,6 +873,15 @@ void install_variable_api(
                    current_world_generation() );
     } );
     variables.set_function(
+        "get_tripoint",
+        [current_runtime_generation, current_world_generation,
+         require_read]( sol::this_state lua_state, const game_handle &handle,
+                        const std::string &key ) {
+        require_read();
+        return get_variable_tripoint( lua_state, handle, key,
+                                      current_runtime_generation(), current_world_generation() );
+    } );
+    variables.set_function(
         "set",
         [current_runtime_generation, current_world_generation,
                                      require_write, has_active_callback](
@@ -858,6 +945,19 @@ void install_variable_api(
     const std::string & key ) {
         require_read();
         return get_context_variable_number( lua_state, context, key );
+    } );
+    variables.set_function(
+        "get_global_tripoint",
+    [require_read]( sol::this_state lua_state, const std::string & key ) {
+        require_read();
+        return get_global_variable_tripoint( lua_state, key );
+    } );
+    variables.set_function(
+        "get_context_tripoint",
+        [require_read]( sol::this_state lua_state, const sol::optional<sol::table> &context,
+    const std::string & key ) {
+        require_read();
+        return get_context_variable_tripoint( lua_state, context, key );
     } );
     variables.set_function(
         "set_global",

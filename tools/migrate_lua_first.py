@@ -5906,6 +5906,11 @@ def render_static_false_effect(
         if rendered is None:
             return None
         return [line.replace("    ", "        ", 1) for line in rendered]
+    if isinstance(effect, dict) and "copy_location" in effect:
+        rendered = render_static_location_copy(effect, effect_actor_targets)
+        if rendered is None:
+            return None
+        return [line.replace("    ", "        ", 1) for line in rendered]
     if isinstance(effect, dict) and "give_achievement" in effect:
         if (
             set(effect) != {"give_achievement"} or
@@ -26561,31 +26566,112 @@ def render_static_reveal_map(
     ]
 
 
+def render_native_coordinate_variable_expression(
+    value: Any,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
+) -> str | None:
+    """Read Native var_info as abs-ms, not an arbitrary Lua value snapshot."""
+    scopes = ("u_val", "npc_val", "global_val", "var_val", "context_val")
+    if not isinstance(value, dict) or set(value) - set(scopes) - {"default"}:
+        return None
+    scope = next((candidate for candidate in scopes if candidate in value), None)
+    if scope is None or not lua_quotable_native_variable_string(value[scope]):
+        return None
+    # var_info acknowledges but does not evaluate default. read_var_value's
+    # missing storage is a monostate whose tripoint() is the zero coordinate.
+    alpha = _proven_native_variable_read_target(effect_actor_targets, "u")
+    beta = _proven_native_variable_read_target(effect_actor_targets, "npc")
+
+    def read(storage: str, name: str) -> str | None:
+        if storage == "global_val":
+            call = f"services.variables.get_global_tripoint({name})"
+        elif storage == "context_val":
+            call = f"services.variables.get_context_tripoint(context and context.data, {name})"
+        else:
+            owner = alpha if storage == "u_val" else beta
+            if owner is None:
+                return None
+            call = f"services.variables.get_tripoint({owner}, {name})"
+        return f"service_value({call})"
+
+    if scope == "var_val":
+        pointer = _render_native_variable_string_snapshot(
+            "context_val", lua_quote(value[scope]), alpha, beta)
+        targets = [read(storage, name) for storage, name in (
+            ("u_val", "string.sub(pointer.value, 3)"),
+            ("npc_val", "string.sub(pointer.value, 3)"),
+            ("context_val", "string.sub(pointer.value, 2)"),
+            ("global_val", "pointer.value"),
+        )]
+        if any(target is None for target in targets):
+            return None
+        snapshot = (
+            '(function(pointer) if pointer.exists == false then return pointer end; '
+            'if string.sub(pointer.value, 1, 2) == "u_" then return ' + targets[0] +
+            ' elseif string.sub(pointer.value, 1, 2) == "n_" then return ' + targets[1] +
+            ' elseif string.sub(pointer.value, 1, 1) == "_" then return ' + targets[2] +
+            ' else return ' + targets[3] + ' end end)(' + pointer + ')'
+        )
+    else:
+        snapshot = read(scope, lua_quote(value[scope]))
+        if snapshot is None:
+            return None
+    return ('(function(result) if result.exists == false then return '
+            'services.coords.tripoint_abs_ms(0, 0, 0) end; return result.value end)('
+            + snapshot + ')')
+
+
+def _render_native_location_event_key(
+    value: Any, effect_actor_targets: dict[str, tuple[str, str] | None] | None,
+) -> str | None:
+    if lua_quotable_native_variable_string(value):
+        return lua_quote(value)
+    if not isinstance(value, dict):
+        return None
+    expression = _render_assignment_string_value(value, False, effect_actor_targets)
+    # Preserve repeated Native reads after map generation, not an eager key.
+    return f"function() return {expression} end" if expression is not None else None
+
+
+def render_static_location_copy(
+    effect: dict[str, Any],
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
+) -> list[str] | None:
+    if set(effect) - {"copy_location", "new_loc", "time_in_future", "key"}:
+        return None
+    source = render_native_coordinate_variable_expression(effect.get("copy_location"), effect_actor_targets)
+    destination = render_native_coordinate_variable_expression(effect.get("new_loc"), effect_actor_targets)
+    delay = render_native_duration_expression(effect.get("time_in_future"), effect_actor_targets)
+    key = _render_native_location_event_key(effect.get("key", ""), effect_actor_targets)
+    if source is None or destination is None or delay is None or key is None:
+        return None
+    return [
+        "    do",
+        f"        local copy_source = {source}",
+        f"        local copy_destination = {destination}",
+        f"        local copy_delay = {delay}",
+        "        service_value(services.world.schedule_location_copy(",
+        '            copy_source:project_to("omt"), copy_destination:project_to("omt"),',
+        f"            copy_delay, {key}))",
+        "    end",
+    ]
+
+
 def render_static_location_revert(
     effect: dict[str, Any], key: str,
     avatar_actor_proven: bool = False,
     npc_actor_proven: bool = False,
     effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> list[str] | None:
+    del avatar_actor_proven, npc_actor_proven
     if key != "revert_location" or key not in effect:
         return None
     allowed = {key, "time_in_future", "key"}
     if set(effect) - allowed:
         return None
-    target = _coordinate_source_expression(
-        effect[key], avatar_actor_proven, npc_actor_proven
-    )
+    target = render_native_coordinate_variable_expression(effect[key], effect_actor_targets)
     delay = render_native_duration_expression(effect.get("time_in_future"), effect_actor_targets)
-    event_key = effect.get("key", "")
-    event_key_expression = None
-    if lua_quotable_native_variable_string(event_key):
-        event_key_expression = lua_quote(event_key)
-    elif isinstance(event_key, dict):
-        expression = _render_assignment_string_value(event_key, False, effect_actor_targets)
-        if expression is not None:
-            # Native evaluates the key after map generation, once for
-            # each submap. An eager string argument loses those reads.
-            event_key_expression = f"function() return {expression} end"
+    event_key_expression = _render_native_location_event_key(effect.get("key", ""), effect_actor_targets)
     if target is None or delay is None or event_key_expression is None:
         return None
     target_omt = f"({target}):project_to(\"omt\")"
@@ -35197,27 +35283,24 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "copy_location" in effect:
-                copy_gap = (
-                    "copy_location reads source and destination var_info values as "
-                    "absolute map squares and schedules four timed submap copies "
-                    "with linked-item offsets and translocator state, then "
-                    "invalidates the destination map cache immediately. "
-                    "services.world.schedule_location_copy preserves native "
-                    "destination-first generation and does not generate missing "
-                    "source submaps, but fails closed where the native lookup has "
-                    "no defined missing-source result. The current EOC source does "
-                    "not prove the actor scope or coordinate types/projection for "
-                    "either var_info value; the typed service preserves arbitrary "
-                    "native event-key bytes and accepts the full native signed-int "
-                    "delay range. Manually trace both values before migration"
-                )
-                lines.append(f"    -- TODO: {copy_gap}.")
-                result.add_todo(
-                    "manual_rewrite",
-                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                    f"{copy_gap}"
-                )
-                all_effects_converted = False
+                rendered = render_static_location_copy(effect, effect_actor_targets)
+                if rendered is not None:
+                    lines.extend(rendered)
+                    converted_effect = True
+                else:
+                    copy_gap = (
+                        "copy_location needs Native coordinate variable reads with "
+                        "proven const_actor owners, a Native duration and raw string key. "
+                        "Missing source submaps are not generated; Native null source "
+                        "dereference has no defined parity outcome. Math durations, "
+                        "unproven participants and unsupported loaders need manual review"
+                    )
+                    lines.append(f"    -- TODO: {copy_gap}.")
+                    result.add_todo(
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} {copy_gap}"
+                    )
+                    all_effects_converted = False
             elif (
                 isinstance(effect, dict) and
                 ("u_transform_radius" in effect or "npc_transform_radius" in effect)

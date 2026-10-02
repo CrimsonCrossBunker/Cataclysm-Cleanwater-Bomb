@@ -12,12 +12,20 @@ from tools.agent.generate_lua_first_replacement_ledger import (
     TODO_CLASSIFICATIONS,
     build_ledger,
     classify_migration_todo,
+    disposition,
     legacy_evidence,
     normalize_evidence,
 )
 
 
 class LuaFirstReplacementLedgerTest(unittest.TestCase):
+    def test_location_copy_uses_world_service_without_claiming_native_acceptance(self):
+        entry = disposition("eoc-effects", "copy_location", {})
+        self.assertEqual(entry["target"], "services.world")
+        self.assertEqual(entry["status"], "bounded_implemented_unverified")
+        self.assertIn("src/lua_platform_variables.cpp", entry["evidence"])
+        self.assertIn("tests/lua_platform_variable_native_key_test.cpp", entry["evidence"])
+
     def test_engine_backed_control_flow_is_not_exempt_from_acceptance(self):
         entries = {(entry["inventory"], entry["selector"]): entry
                    for entry in build_ledger()["entries"]}
