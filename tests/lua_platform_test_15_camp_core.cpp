@@ -1,5 +1,6 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
+#include "condition.h"
 
 TEST_CASE( "lua_platform_camp_handles_reject_replacement_and_removal",
            "[lua][platform][camp]" )
