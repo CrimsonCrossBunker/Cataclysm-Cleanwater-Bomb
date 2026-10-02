@@ -151,9 +151,29 @@ struct trade_settlement_plan {
     bool free_exchange = false;
 };
 
-std::unordered_map<std::uint64_t, std::shared_ptr<trade_quote_token::state>>
+std::unordered_map<std::uint64_t, std::weak_ptr<trade_quote_token::state>>
         trade_quote_registry;
 std::uint64_t next_trade_quote_id = 1;
+constexpr std::size_t trade_quote_prune_min_interval = 64;
+std::size_t trade_quote_prune_countdown = trade_quote_prune_min_interval;
+
+void prune_expired_trade_quotes() noexcept
+{
+    if( trade_quote_prune_countdown > 1 ) {
+        --trade_quote_prune_countdown;
+        return;
+    }
+    for( auto it = trade_quote_registry.begin(); it != trade_quote_registry.end(); ) {
+        if( it->second.expired() ) {
+            it = trade_quote_registry.erase( it );
+        } else {
+            ++it;
+        }
+    }
+    trade_quote_prune_countdown = std::max(
+                                      trade_quote_prune_min_interval,
+                                      trade_quote_registry.size() );
+}
 
 bool present( const sol::object &value )
 {
@@ -973,9 +993,11 @@ void retire_trade_quote( trade_quote_token::state &snapshot,
         ++snapshot.commit_generation;
     }
     const auto registered = trade_quote_registry.find( snapshot.quote_id );
-    if( registered != trade_quote_registry.end() &&
-        registered->second.get() == &snapshot ) {
-        trade_quote_registry.erase( registered );
+    if( registered != trade_quote_registry.end() ) {
+        const std::shared_ptr<trade_quote_token::state> owner = registered->second.lock();
+        if( owner && owner.get() == &snapshot ) {
+            trade_quote_registry.erase( registered );
+        }
     }
 }
 
@@ -1102,7 +1124,8 @@ sol::table trade_quote_snapshot( sol::state_view lua,
                                  const trade_quote_token &token )
 {
     sol::table value = lua.create_table();
-    const trade_quote_token::state *snapshot_ptr = token.state_ptr();
+    const std::shared_ptr<const trade_quote_token::state> snapshot_owner = token.shared_state();
+    const trade_quote_token::state *snapshot_ptr = snapshot_owner.get();
     if( snapshot_ptr == nullptr ) {
         return value;
     }
@@ -1203,8 +1226,10 @@ std::optional<game_handle_error> validate_trade_quote(
     const game_handle_runtime &runtime, const std::size_t world_generation )
 {
     const auto registered = trade_quote_registry.find( snapshot.quote_id );
-    if( !snapshot.active || registered == trade_quote_registry.end() ||
-        registered->second.get() != &snapshot ) {
+    const std::shared_ptr<trade_quote_token::state> registered_state =
+        registered == trade_quote_registry.end() ? nullptr : registered->second.lock();
+    if( !snapshot.active || !registered_state ||
+        registered_state.get() != &snapshot ) {
         return game_handle_error{
             "stale_quote", "The TradeQuoteToken is no longer registered"
         };
@@ -1441,7 +1466,8 @@ sol::table commit_trade(
     const game_handle_runtime &runtime, const std::size_t world_generation )
 {
     sol::state_view state( lua );
-    const trade_quote_token::state *snapshot = token.state_ptr();
+    const std::shared_ptr<const trade_quote_token::state> snapshot_owner = token.shared_state();
+    const trade_quote_token::state *snapshot = snapshot_owner.get();
     if( snapshot == nullptr ) {
         return make_game_error_result( state, {
             "invalid_quote", "The TradeQuoteToken is empty"
@@ -1898,6 +1924,7 @@ sol::table quote_trade(
             "quote_registry_exhausted", "The trade quote registry is exhausted"
         } );
     }
+    prune_expired_trade_quotes();
     snapshot->quote_id = next_trade_quote_id++;
     trade_quote_registry.emplace( snapshot->quote_id, snapshot );
     const trade_quote_token token( std::move( snapshot ) );
@@ -1910,7 +1937,8 @@ sol::table get_trade_quote(
     const game_handle_runtime &runtime, const std::size_t world_generation )
 {
     sol::state_view state( lua );
-    const trade_quote_token::state *snapshot = token.state_ptr();
+    const std::shared_ptr<const trade_quote_token::state> snapshot_owner = token.shared_state();
+    const trade_quote_token::state *snapshot = snapshot_owner.get();
     if( snapshot == nullptr ) {
         return make_game_error_result( state, {
             "invalid_quote", "The TradeQuoteToken is empty"
@@ -2143,8 +2171,11 @@ bool trade_quote_token::registered() const noexcept
         return false;
     }
     const auto found = trade_quote_registry.find( state_->quote_id );
-    return found != trade_quote_registry.end() &&
-           found->second.get() == state_.get();
+    if( found == trade_quote_registry.end() ) {
+        return false;
+    }
+    const std::shared_ptr<state> registered_state = found->second.lock();
+    return registered_state && registered_state.get() == state_.get();
 }
 
 std::string trade_quote_token::to_string() const
@@ -2152,9 +2183,9 @@ std::string trade_quote_token::to_string() const
     return "TradeQuoteToken<" + std::to_string( quote_id() ) + ">";
 }
 
-const trade_quote_token::state *trade_quote_token::state_ptr() const noexcept
+std::shared_ptr<const trade_quote_token::state> trade_quote_token::shared_state() const noexcept
 {
-    return state_.get();
+    return state_;
 }
 
 bool operator==( const trade_quote_token &lhs,
@@ -2166,11 +2197,12 @@ bool operator==( const trade_quote_token &lhs,
 void retire_trade_quote_registry() noexcept
 {
     for( const auto &entry : trade_quote_registry ) {
-        if( entry.second ) {
-            entry.second->active = false;
+        if( const std::shared_ptr<trade_quote_token::state> state = entry.second.lock() ) {
+            state->active = false;
         }
     }
     trade_quote_registry.clear();
+    trade_quote_prune_countdown = trade_quote_prune_min_interval;
 }
 
 void install_trade_api(
@@ -2213,7 +2245,8 @@ void install_trade_api(
         [current_runtime_generation, current_world_generation, require_read](
     const trade_quote_token & token ) {
         require_read();
-        const trade_quote_token::state *snapshot = token.state_ptr();
+        const std::shared_ptr<const trade_quote_token::state> snapshot_owner = token.shared_state();
+        const trade_quote_token::state *snapshot = snapshot_owner.get();
         return snapshot != nullptr &&
                !validate_trade_quote( *snapshot, current_runtime_generation(),
                                       current_world_generation() );

@@ -18,9 +18,9 @@ class game_handle_runtime;
 /**
  * Opaque read-only trade quote identity.
  *
- * The state is retained only by the active Platform trade-quote registry and
- * by Lua userdata.  It contains no save representation and is retired when
- * the owning runtime or world is replaced.
+ * Each token owns its state; the active Platform trade-quote registry keeps
+ * only a weak reference.  It contains no save representation and is retired
+ * when the owning runtime or world is replaced.
  */
 class trade_quote_token
 {
@@ -47,10 +47,9 @@ class trade_quote_token
         bool registered() const noexcept;
         std::string to_string() const;
 
-        // Internal snapshot access for the native get/validation boundary.
-        // The pointed-to value is immutable through this const token view and
-        // is never exposed as a borrowed native object to Lua.
-        const state *state_ptr() const noexcept;
+        // Keep an owning local reference during native token operations,
+        // even if the weak registry is retired while the call is in flight.
+        std::shared_ptr<const state> shared_state() const noexcept;
 
         friend bool operator==( const trade_quote_token &lhs,
                                 const trade_quote_token &rhs ) noexcept;
