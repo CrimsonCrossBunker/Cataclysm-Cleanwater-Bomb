@@ -187,10 +187,14 @@ sol::table list_camps( sol::this_state lua,
 bool player_has_owned_camp()
 {
     Character &player = get_player_character();
+    const faction *player_faction = player.get_faction();
+    if( player_faction == nullptr ) {
+        return false;
+    }
     for( const tripoint_abs_omt &camp_position : player.camps ) {
         const std::optional<basecamp *> camp =
             overmap_buffer.find_camp( camp_position.xy() );
-        if( camp && ( *camp )->get_owner() == player.get_faction()->id ) {
+        if( camp && ( *camp )->get_owner() == player_faction->id ) {
             return true;
         }
     }
