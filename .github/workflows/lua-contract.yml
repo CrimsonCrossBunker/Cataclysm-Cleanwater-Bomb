@@ -8,6 +8,11 @@ on:
       - 'ai/generated-files.yml'
       - 'ai/test-matrix.yml'
       - 'data/lua/**'
+      - 'CMakeLists.txt'
+      - 'Makefile'
+      - 'tests/CMakeLists.txt'
+      - 'tests/Makefile'
+      - 'tests/test_support_sources.txt'
       - 'src/CMakeLists.txt'
       - 'src/lua/CMakeLists.txt'
       - 'src/init.cpp'
@@ -27,6 +32,11 @@ on:
       - 'ai/generated-files.yml'
       - 'ai/test-matrix.yml'
       - 'data/lua/**'
+      - 'CMakeLists.txt'
+      - 'Makefile'
+      - 'tests/CMakeLists.txt'
+      - 'tests/Makefile'
+      - 'tests/test_support_sources.txt'
       - 'src/CMakeLists.txt'
       - 'src/lua/CMakeLists.txt'
       - 'src/init.cpp'
@@ -45,6 +55,12 @@ on:
         required: false
         type: string
         default: ''
+      native_test_suite:
+        description: Compile Lua tests only, or the full native test suite
+        required: true
+        type: choice
+        options: [lua, all]
+        default: lua
 
 permissions:
   contents: read
@@ -69,14 +85,7 @@ jobs:
         run: |
           python3 -m pip install --disable-pip-version-check -r tools/lua_api/requirements.txt
 
-      - name: Validate Lua-first Platform declarations and contracts
-        # Includes live repository checks for all five contracts and negative cases.
-        run: |
-          python3 -m unittest discover -s tools/lua_api -p 'test_*.py'
-
-      - name: Validate Mod scaffolds and editor diagnostics
-        env:
-          CCB_LUALS: ${{ runner.temp }}/ccb-luals/bin/lua-language-server
+      - name: Install pinned Lua language server
         run: |
           curl --fail --location --retry 3 --silent --show-error \
             https://github.com/LuaLS/lua-language-server/releases/download/3.19.1/lua-language-server-3.19.1-linux-x64.tar.gz \
@@ -84,8 +93,15 @@ jobs:
           echo "e9235d2d72ef55bc41cf8c99cda2ed64777682024b4bb81f5dea425060c5cbb8  ${RUNNER_TEMP}/ccb-luals.tar.gz" | sha256sum --check
           mkdir -p "${RUNNER_TEMP}/ccb-luals"
           tar -xzf "${RUNNER_TEMP}/ccb-luals.tar.gz" -C "${RUNNER_TEMP}/ccb-luals"
-          python3 tools/test_create_lua_mod.py
-          python3 -m unittest discover -s tools/lua_api -p 'test_mod_sdk.py' -k LuaLanguageServerIntegrationTest
+
+      - name: Validate Lua contracts and editor diagnostics once
+        # Includes the five contract gates, negative cases and real LuaLS diagnostics.
+        env:
+          CCB_LUALS: ${{ runner.temp }}/ccb-luals/bin/lua-language-server
+        run: python3 -m unittest discover -s tools/lua_api -p 'test_*.py'
+
+      - name: Validate Mod scaffolds
+        run: python3 tools/test_create_lua_mod.py
 
   native-acceptance:
     name: Native Lua batch acceptance
@@ -94,6 +110,7 @@ jobs:
     timeout-minutes: 360
     env:
       NATIVE_TEST_FILTER: ${{ inputs.native_test_filter }}
+      CATA_TEST_SUITE: ${{ inputs.native_test_suite }}
       CCACHE_DIR: ${{ github.workspace }}/.ci-native-ccache
       CCACHE_BASEDIR: ${{ github.workspace }}
       CCACHE_MAXSIZE: 3G
@@ -109,7 +126,8 @@ jobs:
           sudo apt-get install -y g++-14 libncursesw5-dev gettext cmake ninja-build ccache
 
       - name: Restore compiler cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: compiler-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ env.CCACHE_DIR }}
           key: lua-native-gcc14-v1-${{ github.sha }}
@@ -122,10 +140,18 @@ jobs:
             '-DCMAKE_CXX_FLAGS_RELEASE=-O0 -DNDEBUG' \
             -DCURSES=ON -DTILES=OFF -DSOUND=OFF -DLOCALIZE=OFF \
             -DUSE_PREFIX_DATA_DIR=OFF -DUSE_HOME_DIR=OFF \
-            -DTESTS=ON -DBUILD_TESTING=ON -DCATA_ENABLE_LUA_PLATFORM=ON
+            -DTESTS=ON -DBUILD_TESTING=ON -DCATA_ENABLE_LUA_PLATFORM=ON \
+            -DCATA_TEST_SUITE="$CATA_TEST_SUITE"
 
       - name: Build native test binary
         run: cmake --build .ci-lua-native --target cata_test --parallel 1
+
+      - name: Save compiler cache independently of test results
+        if: ${{ always() && !cancelled() && steps.compiler-cache.outcome == 'success' && steps.compiler-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ steps.compiler-cache.outputs.cache-primary-key }}
 
       - name: Run requested native batch
         run: |

@@ -59,7 +59,7 @@ env:
   VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}\.github\vcpkg_triplets
   # Also conveniently disable ccache internal compression
   CCACHE_HARDLINK: true
-  ZSTD_CLEVEL: 17
+  ZSTD_CLEVEL: 3
 
 jobs:
   build-translations:
@@ -113,14 +113,14 @@ jobs:
       uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2 # v11.6
       id: runvcpkg
       with:
-        vcpkgDirectory: '${{ runner.workspace }}/b/vcpkg'
+        vcpkgDirectory: '${{ github.workspace }}/../b/vcpkg'
         vcpkgGitCommitId: 'f6672d8e480ccdecddfad3fd1b838ba369ffe6cd'
 
     - name: Integrate vcpkg
       run: |
         vcpkg integrate install --vcpkg-root "$env:RUNNER_WORKSPACE\b\vcpkg"
       env:
-        RUNNER_WORKSPACE: ${{ runner.workspace }}
+        RUNNER_WORKSPACE: ${{ github.workspace }}/..
 
     - name: Cache vcpkg installed packages
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -146,18 +146,18 @@ jobs:
     - name: Get ccache vars
       id: get-vars
       run: |
-        echo "datetime=$(/bin/date -u "+%Y%m%d%H%M")" >> $GITHUB_OUTPUT
-        echo "datetime-seconds=$(/bin/date +%s)" >> $GITHUB_OUTPUT
         echo "ccache-path=$(echo "$APPDATA\\ccache")" >> $GITHUB_OUTPUT
       shell: bash
 
     - name: ccache cache files
-      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      id: compiler-cache
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ steps.get-vars.outputs.ccache-path }}
         # double-dash after compiler is not a typo, it is to disambiguate between g++-<date> and g++-11-<date> for restore key prefix matching
-        key: ccache-${{ github.ref_name }}-${{ runner.os }}-msvc--${{ steps.get-vars.outputs.datetime }}
+        key: ccache-${{ github.ref_name }}-${{ runner.os }}-msvc--${{ github.sha }}
         restore-keys: |
+          ccache-${{ github.ref_name }}-${{ runner.os }}-msvc--
           ccache-master-${{ runner.os }}-msvc--
 
     - name: Configure ccache
@@ -177,32 +177,21 @@ jobs:
       run: |
           msbuild -m -p:Configuration=Release -p:Platform=x64 -p:UseSDL3=false "-target:Cataclysm-vcpkg-static;Cataclysm-test-vcpkg-static;JsonFormatter-vcpkg-static;zzip" msvc-full-features/Cataclysm-vcpkg-static.sln
 
-    - name: Get ccache cache age cutoff
-      id: get-cache-age
-      run: |
-        NOW=`/bin/date +%s`
-        DELTA=$(( $NOW - ${STEPS_GET_VARS_OUTPUTS_DATETIME_SECONDS} ))
-        echo "ccache-age=${DELTA}" >> $GITHUB_OUTPUT
-      shell: bash
-      env:
-        STEPS_GET_VARS_OUTPUTS_DATETIME_SECONDS: ${{ steps.get-vars.outputs.datetime-seconds }}
-
     - name: Post-build ccache manipulation
-      if: ${{ !failure() }}
+      id: trim-compiler-cache
+      if: ${{ always() && !cancelled() && steps.compiler-cache.outcome == 'success' }}
       run: |
-        & "$env:CDDA_CCACHE_PATH\ccache.exe" -s -v
-        & "$env:CDDA_CCACHE_PATH\ccache.exe" --evict-older-than ${env:STEPS_GET_CACHE_AGE_OUTPUTS_CCACHE_AGE}s
         & "$env:CDDA_CCACHE_PATH\ccache.exe" -s -v
         & "$env:CDDA_CCACHE_PATH\ccache.exe" -M ${{ env.CCACHE_LIMIT }}
         & "$env:CDDA_CCACHE_PATH\ccache.exe" -c
         & "$env:CDDA_CCACHE_PATH\ccache.exe" -s -v
-      env:
-        STEPS_GET_CACHE_AGE_OUTPUTS_CCACHE_AGE: ${{ steps.get-cache-age.outputs.ccache-age }}
 
-    - name: clear ccache on PRs
-      if: ${{ github.ref_name != 'master' }}
-      run: |
-        & "$env:CDDA_CCACHE_PATH\ccache.exe" -C
+    - name: Save compiler cache independently of test results
+      if: ${{ always() && !cancelled() && steps.trim-compiler-cache.outcome == 'success' && steps.compiler-cache.outputs.cache-hit != 'true' }}
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ steps.get-vars.outputs.ccache-path }}
+        key: ${{ steps.compiler-cache.outputs.cache-primary-key }}
 
     - name: Dump vcpkg logs if build failed
       if: failure()
@@ -221,7 +210,7 @@ jobs:
             }
         }
       env:
-        RUNNER_WORKSPACE: ${{ runner.workspace }}
+        RUNNER_WORKSPACE: ${{ github.workspace }}/..
 
     - name: Compile .mo files for localization
       if: ${{ github.ref_name != 'master' }}
