@@ -345,7 +345,7 @@ struct widget_definition_data {
     std::int64_t height = 1;
     std::string symbols = "-";
     std::string fill = "bucket";
-    std::string label;
+    authored_text label;
     std::string description;
     std::string style = "number";
     std::string arrange = "columns";
@@ -689,10 +689,10 @@ struct profession_item_bonus_definition_data {
 
 struct technique_definition_data {
     std::string id;
-    std::string name;
-    std::string description;
-    std::string avatar_message;
-    std::string npc_message;
+    authored_text name;
+    authored_text description;
+    authored_text avatar_message;
+    authored_text npc_message;
     bool crit_tec = false;
     bool crit_ok = false;
     bool wall_adjacent = false;
@@ -729,10 +729,10 @@ struct technique_definition_data {
 
 struct martial_art_definition_data {
     std::string id;
-    std::string name;
-    std::string description;
-    std::string initiate_avatar;
-    std::string initiate_npc;
+    authored_text name;
+    authored_text description;
+    authored_text initiate_avatar;
+    authored_text initiate_npc;
     std::int64_t priority = 0;
     std::string primary_skill;
     std::int64_t learn_difficulty = 0;
@@ -776,14 +776,14 @@ struct magic_type_definition_data {
 
 struct movement_mode_message_definition_data {
     std::string steed;
-    std::string prepare;
-    std::string success;
-    std::string failure = "You feel bugs crawl over your skin.";
+    authored_text prepare;
+    authored_text success;
+    authored_text failure = { "You feel bugs crawl over your skin.", std::nullopt };
 };
 
 struct movement_mode_definition_data {
     std::string id;
-    std::string name;
+    authored_text name;
     std::string kind = "walking";
     std::uint32_t character_symbol = 0;
     std::uint32_t panel_symbol = 0;
@@ -886,10 +886,13 @@ struct movement_mode_definition_handle {
         require_building_handle( token, *definition, "movement mode" );
         movement_mode_message_definition_data messages;
         messages.steed = steed;
-        messages.prepare = options.get_or( "prepare", std::string() );
-        messages.success = options.get_or( "success", std::string() );
-        messages.failure = options.get_or(
-                               "failure", std::string( "You feel bugs crawl over your skin." ) );
+        messages.prepare = detail::read_singular_text(
+                               options.get<sol::object>( "prepare" ), "", "movement-mode prepare message" );
+        messages.success = detail::read_singular_text(
+                               options.get<sol::object>( "success" ), "", "movement-mode success message" );
+        messages.failure = detail::read_singular_text_or(
+                               options.get<sol::object>( "failure" ), messages.failure,
+                               "movement-mode failure message" );
         if( messages.prepare.empty() || messages.success.empty() || messages.failure.empty() ) {
             throw std::runtime_error( "movement-mode messages cannot be empty" );
         }
@@ -2320,7 +2323,8 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
         definition->height = options.get_or<std::int64_t>( "height", 1 );
         definition->symbols = options.get_or( "symbols", definition->symbols );
         definition->fill = options.get_or( "fill", definition->fill );
-        definition->label = options.get_or( "label", std::string() );
+        definition->label = detail::read_singular_text(
+                                options.get<sol::object>( "label" ), "", "widget label" );
         definition->description = options.get_or( "description", std::string() );
         definition->style = options.get_or( "style", definition->style );
         definition->arrange = options.get_or( "arrange", definition->arrange );
@@ -3077,10 +3081,14 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
         }
         auto definition = std::make_shared<technique_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", std::string() );
-        definition->description = options.get_or( "description", std::string() );
-        definition->avatar_message = options.get_or( "avatar_message", std::string() );
-        definition->npc_message = options.get_or( "npc_message", std::string() );
+        definition->name = detail::read_singular_text(
+                               options.get<sol::object>( "name" ), "", "technique name" );
+        definition->description = detail::read_singular_text(
+                                      options.get<sol::object>( "description" ), "", "technique description" );
+        definition->avatar_message = detail::read_singular_text(
+                                         options.get<sol::object>( "avatar_message" ), "", "technique avatar message" );
+        definition->npc_message = detail::read_singular_text(
+                                      options.get<sol::object>( "npc_message" ), "", "technique NPC message" );
         definition->crit_tec = options.get_or( "crit_tec", false );
         definition->crit_ok = options.get_or( "crit_ok", false );
         definition->wall_adjacent = options.get_or( "wall_adjacent", false );
@@ -3121,10 +3129,14 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
         }
         auto definition = std::make_shared<martial_art_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", std::string() );
-        definition->description = options.get_or( "description", std::string() );
-        definition->initiate_avatar = options.get_or( "initiate_avatar", std::string() );
-        definition->initiate_npc = options.get_or( "initiate_npc", std::string() );
+        definition->name = detail::read_singular_text(
+                               options.get<sol::object>( "name" ), "", "martial-art name" );
+        definition->description = detail::read_singular_text(
+                                      options.get<sol::object>( "description" ), "", "martial-art description" );
+        definition->initiate_avatar = detail::read_singular_text(
+                                          options.get<sol::object>( "initiate_avatar" ), "", "martial-art avatar message" );
+        definition->initiate_npc = detail::read_singular_text(
+                                       options.get<sol::object>( "initiate_npc" ), "", "martial-art NPC message" );
         definition->priority = options.get_or<std::int64_t>( "priority", 0 );
         definition->primary_skill = options.get_or( "primary_skill", std::string() );
         definition->learn_difficulty = options.get_or<std::int64_t>( "learn_difficulty", 0 );
@@ -3188,7 +3200,8 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
         }
         auto definition = std::make_shared<movement_mode_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", definition->id );
+        definition->name = detail::read_singular_text(
+                               options.get<sol::object>( "name" ), definition->id, "movement-mode name" );
         definition->kind = options.get_or( "kind", std::string( "walking" ) );
         definition->panel_color = options.get_or( "panel_color", std::string( "white" ) );
         definition->symbol_color = options.get_or( "symbol_color", std::string( "white" ) );
@@ -5546,7 +5559,7 @@ bool character_content_transaction::apply_phase(
                     native._symbols = source.symbols;
 
                     native._fill = source.fill;
-                    native._label = no_translation( source.label );
+                    native._label = source.label.native();
                     native._description = source.description;
                     native._style = source.style;
                     native._arrange = source.arrange;
@@ -6395,14 +6408,14 @@ bool character_content_transaction::apply_phase(
                     ma_technique native;
                     native.id = id;
                     native.src.emplace_back( id, mod_id( pimpl_->owner ) );
-                    native.name = no_translation( source.name );
+                    native.name = source.name.native();
                     native.description = source.description.empty() ? translation() :
-                                         no_translation( source.description );
+                                         source.description.native();
                     if( !source.avatar_message.empty() ) {
-                        native.avatar_message = no_translation( source.avatar_message );
+                        native.avatar_message = source.avatar_message.native();
                     }
                     if( !source.npc_message.empty() ) {
-                        native.npc_message = no_translation( source.npc_message );
+                        native.npc_message = source.npc_message.native();
                     }
                     native.crit_tec = source.crit_tec;
                     native.crit_ok = source.crit_ok;
@@ -6460,14 +6473,14 @@ bool character_content_transaction::apply_phase(
                     martialart native;
                     native.id = id;
                     native.src.emplace_back( id, mod_id( pimpl_->owner ) );
-                    native.name = no_translation( source.name );
+                    native.name = source.name.native();
                     native.description = source.description.empty() ? translation() :
-                                         no_translation( source.description );
+                                         source.description.native();
                     if( !source.initiate_avatar.empty() ) {
-                        native.initiate.emplace_back( no_translation( source.initiate_avatar ) );
+                        native.initiate.emplace_back( source.initiate_avatar.native() );
                     }
                     if( !source.initiate_npc.empty() ) {
-                        native.initiate.emplace_back( no_translation( source.initiate_npc ) );
+                        native.initiate.emplace_back( source.initiate_npc.native() );
                     }
                     native.priority = static_cast<int>( source.priority );
                     native.primary_skill = source.primary_skill.empty() ?
@@ -6545,7 +6558,7 @@ bool character_content_transaction::apply_phase(
                     native.id = id;
                     native.src.emplace_back( id, mod_id( pimpl_->owner ) );
                     native.was_loaded = true;
-                    native._name = no_translation( source.name );
+                    native._name = source.name.native();
                     native._type = *platform_movement_mode_type( source.kind );
                     native._letter = source.character_symbol;
                     native._panel_letter = source.panel_symbol;
@@ -6564,9 +6577,9 @@ bool character_content_transaction::apply_phase(
                     native._stop_hauling = source.stop_hauling;
                     for( const movement_mode_message_definition_data &messages : source.messages ) {
                         const steed_type steed = *platform_steed_type( messages.steed );
-                        native.prepare_messages[steed] = no_translation( messages.prepare );
-                        native.change_messages_success[steed] = no_translation( messages.success );
-                        native.change_messages_fail[steed] = no_translation( messages.failure );
+                        native.prepare_messages[steed] = messages.prepare.native();
+                        native.change_messages_success[steed] = messages.success.native();
+                        native.change_messages_fail[steed] = messages.failure.native();
                     }
                     detail::movement_mode_registry().insert( native );
                 }

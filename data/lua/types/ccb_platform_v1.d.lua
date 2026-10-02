@@ -2480,7 +2480,7 @@ function WeatherTypeDefinition:condition(handler_id) end
 ---@class ScoreDefinitionOptions
 ---@field id string Stable score id.
 ---@field statistic string Native event-statistic id whose value is displayed.
----@field description? string Optional format string receiving the statistic value.
+---@field description? string|LocalizedText Optional format string receiving the statistic value; plural text is rejected.
 
 ---@class ScoreDefinition
 ---@field id string
@@ -2497,8 +2497,8 @@ function OverlayOrderDefinition:mutation(mutation_id, order) end
 
 ---@class ZoneTypeDefinitionOptions
 ---@field id string Stable native zone-type id.
----@field name string Player-facing zone name.
----@field description? string Player-facing explanation shown by zone UIs.
+---@field name string|LocalizedText Player-facing zone name; plural text is rejected.
+---@field description? string|LocalizedText Player-facing explanation shown by zone UIs; plural text is rejected.
 ---@field display_field string Native field type used to display marked tiles.
 ---@field can_be_personal? boolean Whether a character may own a personal instance.
 ---@field hidden? boolean Whether ordinary zone-type selection hides this definition.
@@ -2514,7 +2514,7 @@ local ZoneTypeDefinition = {}
 ---@field id string
 local SpeechPoolDefinition = {}
 
----@param sound string Player-facing speech text or sound description.
+---@param sound string|LocalizedText Player-facing speech text or sound description; plural text is rejected.
 ---@param volume integer Signed native sound volume.
 ---@return SpeechPoolDefinition self
 function SpeechPoolDefinition:line(sound, volume) end
@@ -2545,7 +2545,7 @@ function EndScreenDefinition:condition(handler_id) end
 
 ---@class ActivityTypeDefinitionOptions
 ---@field id string Stable native activity id.
----@field verb string Player-facing progressive verb used by activity UI.
+---@field verb string|LocalizedText Player-facing progressive verb used by activity UI; plural text is rejected.
 ---@field rooted? boolean Whether the character is rooted while the activity runs.
 ---@field interruptable? boolean Whether gameplay may interrupt the activity; defaults to true.
 ---@field interruptable_with_keyboard? boolean Whether keyboard input may interrupt it; defaults to true.
@@ -2593,14 +2593,14 @@ function ActivityTypeDefinition:on_finish(handler_id) end
 
 ---@class HelpTopicDefinitionOptions
 ---@field id string Stable Lua-first help-topic id.
----@field title string Player-facing topic title.
+---@field title string|LocalizedText Player-facing topic title; plural text is rejected.
 ---@field order? integer Optional global display order; omitted topics append in deterministic Mod load order.
 
 ---@class HelpTopicDefinition
 ---@field id string
 local HelpTopicDefinition = {}
 
----@param text string Player-facing paragraph; native help tokens remain available in text.
+---@param text string|LocalizedText Player-facing paragraph; native help tokens remain available and plural text is rejected.
 ---@return HelpTopicDefinition self
 function HelpTopicDefinition:paragraph(text) end
 
@@ -2609,8 +2609,8 @@ function HelpTopicDefinition:paragraph(text) end
 
 ---@class SnippetEntryOptions
 ---@field id string Stable snippet id.
----@field text string Player-facing snippet text.
----@field name? string Optional player-facing short name.
+---@field text string|LocalizedText Player-facing snippet text; plural text is rejected.
+---@field name? string|LocalizedText Optional player-facing short name; plural text is rejected.
 ---@field weight? integer Positive selection weight; defaults to 1.
 ---@field on_examine? string Named callback registered with ccb.runtime.handler; no EOC is stored.
 
@@ -2624,7 +2624,7 @@ function HelpTopicDefinition:paragraph(text) end
 ---@field id string
 local SnippetCategoryDefinition = {}
 
----@param text string Player-facing anonymous snippet text.
+---@param text string|LocalizedText Player-facing anonymous snippet text; plural text is rejected.
 ---@param weight? integer Positive selection weight; defaults to 1.
 ---@return SnippetCategoryDefinition self
 function SnippetCategoryDefinition:text(text, weight) end
@@ -2704,10 +2704,10 @@ function AttackVectorDefinition:forbids_flag(flag_id) end
 
 ---@class TechniqueDefinitionOptions
 ---@field id string Stable technique id.
----@field name string Player-facing technique name.
----@field description? string Technique description.
----@field avatar_message? string Message shown to the avatar on use.
----@field npc_message? string Message shown to NPC observers on use.
+---@field name string|LocalizedText Player-facing technique name; plural text is rejected.
+---@field description? string|LocalizedText Technique description; plural text is rejected.
+---@field avatar_message? string|LocalizedText Message shown to the avatar on use; plural text is rejected.
+---@field npc_message? string|LocalizedText Message shown to NPC observers on use; plural text is rejected.
 ---@field crit_tec? boolean Critical-only technique.
 ---@field crit_ok? boolean Usable on critical hits.
 ---@field wall_adjacent? boolean Only works near a wall.
@@ -2758,10 +2758,10 @@ function TechniqueDefinition:on_apply(handler_id) end
 
 ---@class MartialArtDefinitionOptions
 ---@field id string Stable martial-art style id.
----@field name string Player-facing style name.
----@field description? string Style description.
----@field initiate_avatar? string Message shown when the avatar starts the style.
----@field initiate_npc? string Message shown when an NPC starts the style.
+---@field name string|LocalizedText Player-facing style name; plural text is rejected.
+---@field description? string|LocalizedText Style description; plural text is rejected.
+---@field initiate_avatar? string|LocalizedText Message shown when the avatar starts the style; plural text is rejected.
+---@field initiate_npc? string|LocalizedText Message shown when an NPC starts the style; plural text is rejected.
 ---@field priority? integer Style selection priority; defaults to 0.
 ---@field primary_skill? string Primary skill id; empty means unarmed.
 ---@field learn_difficulty? integer Non-negative learning difficulty.
@@ -3209,7 +3209,7 @@ function MagicTypeDefinition:on_failure(handler_id) end
 
 ---@class MovementModeDefinitionOptions
 ---@field id string Stable movement-mode id.
----@field name? string Player-facing mode name; defaults to id.
+---@field name? string|LocalizedText Player-facing mode name; defaults to id. Plural text is rejected.
 ---@field kind? 'prone'|'crouching'|'walking'|'running' Native posture/movement category.
 ---@field character_symbol string Exactly one Unicode codepoint used in character state.
 ---@field panel_symbol string Exactly one Unicode codepoint used by the movement panel.
@@ -3225,9 +3225,9 @@ function MagicTypeDefinition:on_failure(handler_id) end
 ---@field stop_hauling? boolean Whether entering the mode stops hauling.
 
 ---@class MovementModeMessageOptions
----@field prepare string Message shown while preparing to change mode.
----@field success string Message shown after a successful change.
----@field failure? string Message shown after a failed change.
+---@field prepare string|LocalizedText Message shown while preparing to change mode; plural text is rejected.
+---@field success string|LocalizedText Message shown after a successful change; plural text is rejected.
+---@field failure? string|LocalizedText Message shown after a failed change; plural text is rejected.
 
 ---@class MovementModeDefinition
 ---@field id string
@@ -5154,6 +5154,12 @@ local VehiclePlacementDefinition = {}
 ---@field id any
 ---@field vehicle any
 local VehicleSpawnDefinition = {}
+---@class WidgetDefinitionOptions
+---@field id string Stable widget id.
+---@field label? string|LocalizedText Player-facing label; plural text is rejected.
+---@field description? string Native widget description.
+---@field [string] any Other accepted native widget options.
+
 ---@class WidgetDefinition
 ---@field bodypart any
 ---@field break_at any
@@ -5319,8 +5325,8 @@ function CcbPlatformContent.VehiclePlacement(options) end
 ---@param options CcbLuaValue
 ---@return any
 function CcbPlatformContent.VehicleSpawn(options) end
----@param options CcbLuaValue
----@return any
+---@param options WidgetDefinitionOptions
+---@return WidgetDefinition
 function CcbPlatformContent.Widget(options) end
 ---@param id string
 ---@return any
