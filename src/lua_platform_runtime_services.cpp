@@ -5468,9 +5468,6 @@ void seal_runtime_content( const std::shared_ptr<runtime> &value )
 
 void discard_runtime( const std::shared_ptr<runtime> &value )
 {
-    cata::lua_platform::reset_map_tile_tokens();
-    cata::lua_platform::reset_overmap_tile_tokens();
-    cata::lua_platform::reset_horde_tokens();
     if( value ) {
         value->game_handle_owner->retire();
         if( value->tileset_registry_generation ) {
