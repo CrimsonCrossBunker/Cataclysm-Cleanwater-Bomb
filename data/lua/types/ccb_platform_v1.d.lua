@@ -346,7 +346,8 @@ function CcbMapApi.trap_set(tile, expected_revision, trap) end
 ---@field source TripointCoord Absolute overmap-terrain snapshot source.
 ---@field destination TripointCoord Absolute overmap-terrain copy destination.
 ---@field when TimePoint Scheduled event time.
----@field key string Event key.
+---@field key? string Constant event key; omitted when a provider is supplied.
+---@field keys string[] Four event keys in submap x-then-y order.
 ---@field events integer Number of scheduled submap events; currently four.
 
 ---@class CcbWorldApi
@@ -442,8 +443,11 @@ function CcbWorldApi.schedule_location_revert(position, delay, key) end
 --- Its four submaps must already exist or be loadable; missing source submaps are not generated.
 ---@param destination TripointCoord Explicit absolute overmap-terrain copy destination.
 ---@param delay TimeDuration Any native signed-int turn delay, including zero, negative, and `INDEFINITELY_LONG_DURATION`.
---- Due time includes the native one-second offset and saturates only beyond the `time_point` range.
----@param key? string Optional native event key; arbitrary length and byte contents are preserved.
+--- Fixes due time before destination generation, including the native one-second offset and saturation at `time_point` limits.
+---@param key? string|fun():string Raw key (nil means empty), or synchronous provider evaluated separately for each submap.
+--- Generates the destination first; owns and relocates each source snapshot before calling its provider in x-then-y order.
+--- Providers are never retained. Their errors or non-string results can leave earlier events queued; the operation is not transactional.
+--- On success copies the translocator and invalidates the destination map cache after all four events are queued.
 ---@return CcbResult result `value` is a CcbWorldLocationCopyResult.
 function CcbWorldApi.schedule_location_copy(source, destination, delay, key) end
 

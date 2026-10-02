@@ -978,6 +978,126 @@ TEST_CASE( "lua_platform_location_copy_matches_native_timed_submap_copy",
     }
 }
 
+TEST_CASE( "lua_platform_location_copy_provider_owns_each_snapshot_and_fixes_due_time",
+           "[lua][platform][world][semantic]" )
+{
+    platform_overmap_travel_fixture fixture( 859, 89 );
+    platform_calendar_turn_scope calendar_scope;
+    calendar::turn = time_point::from_turn( 1000 );
+    const tripoint_abs_omt source = fixture.source_omt + tripoint( 2800, 1900, 0 );
+    const tripoint_abs_omt destination = source + tripoint( 17, -9, 0 );
+    const tripoint_abs_sm source_base = project_to<coords::sm>( source );
+    const tripoint_abs_sm destination_base = project_to<coords::sm>( destination );
+    on_out_of_scope clear_copy_maps( []() {
+        MAPBUFFER.clear_outside_reality_bubble();
+    } );
+    timed_event_manager &events = get_timed_events();
+    restore_on_out_of_scope<timed_event_manager> restore_events( std::move( events ) );
+    events = timed_event_manager();
+    tinymap source_map;
+    source_map.load( source, true );
+    const sol::protected_function copy = fixture.services["world"]["schedule_location_copy"];
+    const auto delay = cata::lua_platform::script_time_duration::from_native( -3_turns );
+    const point_sm_ms sample( 0, 0 );
+    const ter_id original = ter_str_id( "t_floor" ).id();
+    const ter_id changed = ter_str_id( "t_dirt" ).id();
+    const std::array<std::string, 4> keys = {{
+            "", std::string( "raw\0tail", 8 ), std::string( 10000, 'k' ), "copy-last"
+        }
+    };
+    const sol::protected_function_result invalid_key = copy(
+                fixture.abs_omt_position( source ), fixture.abs_omt_position( destination ), delay, 42 );
+    CHECK_FALSE( invalid_key.valid() );
+    CHECK( events.get_all().empty() );
+    CHECK_FALSE( MAPBUFFER.submap_exists( destination_base ) );
+    int calls = 0;
+    fixture.lua.set_function( "copy_key_provider", [&]() {
+        for( int x = 0; x < 2; ++x ) {
+            for( int y = 0; y < 2; ++y ) {
+                REQUIRE( MAPBUFFER.lookup_submap( destination_base + point( x, y ) ) != nullptr );
+            }
+        }
+        CHECK( events.get_all().size() == static_cast<std::size_t>( calls ) );
+        const int index = calls++;
+        submap *current = MAPBUFFER.lookup_submap( source_base + point( index / 2, index % 2 ) );
+        REQUIRE( current != nullptr );
+        // The current snapshot is owned already, but the next snapshot must
+        // observe changes made by this synchronous callback.
+        current->set_ter( sample, original );
+        if( index < 3 ) {
+            submap *next = MAPBUFFER.lookup_submap(
+                               source_base + point( ( index + 1 ) / 2, ( index + 1 ) % 2 ) );
+            REQUIRE( next != nullptr );
+            next->set_ter( sample, changed );
+        }
+        calendar::turn += 100_turns;
+        return keys[index];
+    } );
+    for( int x = 0; x < 2; ++x ) {
+        for( int y = 0; y < 2; ++y ) {
+            submap *sm = MAPBUFFER.lookup_submap( source_base + point( x, y ) );
+            REQUIRE( sm != nullptr );
+            sm->ensure_nonuniform();
+            sm->set_ter( sample, original );
+        }
+    }
+    const time_point expected_when = timed_event_due_time( -3_turns, 1_seconds );
+    const sol::protected_function_result call = copy(
+                fixture.abs_omt_position( source ), fixture.abs_omt_position( destination ), delay,
+                fixture.lua["copy_key_provider"].get<sol::protected_function>() );
+    REQUIRE( call.valid() );
+    const sol::table response = call.get<sol::table>();
+    REQUIRE( response["ok"].get<bool>() );
+    const sol::table value = response["value"];
+    CHECK( value["key"].get<sol::object>().get_type() == sol::type::nil );
+    CHECK( value["when"].get<cata::lua_platform::script_time_point>().to_native() == expected_when );
+    CHECK( calls == 4 );
+    REQUIRE( events.get_all().size() == 4 );
+    const sol::table returned_keys = value["keys"];
+    int index = 0;
+    for( const timed_event &event : events.get_all() ) {
+        CHECK( event.when == expected_when );
+        CHECK( event.key == keys[index] );
+        CHECK( returned_keys[index + 1].get<std::string>() == keys[index] );
+        CHECK( event.map_square == project_to<coords::ms>(
+                   destination_base + point( index / 2, index % 2 ) ) );
+        CHECK( event.revert.get_ter( sample ) == ( index == 0 ? original : changed ) );
+        ++index;
+    }
+    // Each failure leaves only events from completed earlier calls. Failed
+    // operations do not claim success or queue a fabricated fallback key.
+    fixture.lua.open_libraries( sol::lib::base );
+    for( const std::string &body : {
+             std::string( "if copy_calls == 3 then error('copy provider failed') end return 'key'" ),
+             std::string( "if copy_calls == 3 then return 42 end return 'key'" ),
+             std::string( "if copy_calls == 3 then return end return 'key'" ) } ) {
+        events = timed_event_manager();
+        const sol::protected_function_result loaded = fixture.lua.safe_script(
+                    "copy_calls=0; function failing_copy_key() copy_calls=copy_calls+1; " + body + " end",
+                    sol::script_pass_on_error );
+        REQUIRE( loaded.valid() );
+        const sol::protected_function_result failed = copy(
+                    fixture.abs_omt_position( source ), fixture.abs_omt_position( destination ), delay,
+                    fixture.lua["failing_copy_key"].get<sol::protected_function>() );
+        CHECK_FALSE( failed.valid() );
+        CHECK( fixture.lua["copy_calls"].get<int>() == 3 );
+        CHECK( events.get_all().size() == 2 );
+    }
+    // A nil key remains the constant empty key and needs no provider.
+    events = timed_event_manager();
+    const sol::protected_function_result nil_key = copy(
+                fixture.abs_omt_position( source ), fixture.abs_omt_position( destination ), delay, sol::nil );
+    REQUIRE( nil_key.valid() );
+    const sol::table nil_response = nil_key.get<sol::table>();
+    REQUIRE( nil_response["ok"].get<bool>() );
+    const sol::table nil_value = nil_response["value"];
+    CHECK( nil_value["key"].get<std::string>().empty() );
+    REQUIRE( events.get_all().size() == 4 );
+    for( const timed_event &event : events.get_all() ) {
+        CHECK( event.key.empty() );
+    }
+}
+
 TEST_CASE( "lua_platform_weather_write_contract_exposes_controls_and_limits",
            "[lua][platform][weather]" )
 {
