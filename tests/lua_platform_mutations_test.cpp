@@ -128,7 +128,7 @@ struct mutation_fixture {
     }
 
     void legacy_alpha_only_effect( const std::string &source, Character &alpha ) {
-        dialogue context( get_talker_for( alpha ) );
+        dialogue context( get_talker_for( alpha ) , nullptr );
         REQUIRE_FALSE( context.has_actor( true ) );
         talk_effect_t effect;
         effect.parse_sub_effect(

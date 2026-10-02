@@ -28,7 +28,7 @@ TEST_CASE( "lua_platform_martial_art_effect_service_matches_native_effect_ids",
     platform_avatar.normalize();
     native_avatar.setID( character_id( 7201 ), true );
     platform_avatar.setID( character_id( 7202 ), true );
-    dialogue native_dialogue( get_talker_for( native_avatar ) );
+    dialogue native_dialogue( get_talker_for( native_avatar ) , nullptr );
 
     sol::state lua;
     sol::table ccb = lua.create_table();

@@ -85,7 +85,7 @@ TEST_CASE( "lua_platform_named_predicate_uses_current_dialogue_alpha",
     native_child_alpha.normalize();
     native_child_alpha.setID( character_id( 7402 ), true );
     native_child_alpha.set_mutation( quick );
-    dialogue native_original( get_talker_for( native_original_alpha ) );
+    dialogue native_original( get_talker_for( native_original_alpha ) , nullptr );
 
     talk_effect_t store_native_predicate;
     store_native_predicate.parse_sub_effect( json_loader::from_string(

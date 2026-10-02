@@ -70,8 +70,8 @@ TEST_CASE( "lua_platform_direct_wound_services_match_native_effects",
         cata::lua_platform::retire_npc_handle_identity( platform_beta );
     } );
 
-    dialogue native_alpha_dialogue( get_talker_for( native_alpha ) );
-    dialogue hostile_native_npc_dialogue( get_talker_for( native_beta ) );
+    dialogue native_alpha_dialogue( get_talker_for( native_alpha ) , nullptr );
+    dialogue hostile_native_npc_dialogue( get_talker_for( native_beta ) , nullptr );
     const bodypart_id requested_part = body_part_dragonfly_head.id();
     native_alpha.set_mutation( trait_masochist_for_wound_test );
     platform_alpha.set_mutation( trait_masochist_for_wound_test );

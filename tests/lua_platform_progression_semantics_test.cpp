@@ -62,7 +62,7 @@ void run_native_roll_remainder( Character &character, const std::string &kind,
     effect.parse_sub_effect( json_loader::from_string(
                                  roll_remainder_effect_json( kind, ids ) ).get_object(),
                              "lua_platform_progression_semantics" );
-    dialogue context( get_talker_for( character ) );
+    dialogue context( get_talker_for( character ) , nullptr );
     for( const talk_effect_fun_t &operation : effect.effects ) {
         operation( context );
     }
