@@ -357,8 +357,8 @@ struct use_context_data {
     use_context_data( use_context_data && ) = delete;
     use_context_data &operator=( use_context_data && ) = delete;
 
-    Character *character = nullptr;
-    item *used_item = nullptr;
+    std::optional<game_handle> character_reference;
+    game_handle item_reference;
     item_location used_item_location;
     tripoint_bub_ms position;
     cata::lua_platform::game_handle_runtime handle_runtime;
@@ -366,14 +366,39 @@ struct use_context_data {
     bool active = true;
 
     void require_active() const {
-        if( !active || used_item == nullptr ) {
+        if( !active || !handle_runtime.has_live_owner() ||
+            world_generation != detail::runtime_world_generation_storage() ) {
             throw std::runtime_error( "stale item-use context" );
         }
     }
 
+    Character *require_character() const {
+        require_active();
+        if( !character_reference ) {
+            return nullptr;
+        }
+        const native_handle_result<Creature> resolved = character_reference->resolve_creature(
+                    handle_runtime, detail::runtime_world_generation_storage() );
+        Character *character = resolved ? resolved.value->as_character() : nullptr;
+        if( character == nullptr ) {
+            throw std::runtime_error( "stale item-use character" );
+        }
+        return character;
+    }
+
+    item &require_item() const {
+        require_active();
+        const native_handle_result<item> resolved = item_reference.resolve_item(
+                    handle_runtime, detail::runtime_world_generation_storage() );
+        if( !resolved ) {
+            throw std::runtime_error( "stale item-use item" );
+        }
+        return *resolved.value;
+    }
+
     void message( const std::string &value,
                   const sol::optional<std::string> &type ) const {
-        require_active();
+        Character *character = require_character();
         if( character == nullptr ) {
             return;
         }
@@ -383,7 +408,7 @@ struct use_context_data {
     }
 
     sol::optional<std::string> player_name() const {
-        require_active();
+        Character *character = require_character();
         if( character == nullptr ) {
             return {};
         }
@@ -391,25 +416,23 @@ struct use_context_data {
     }
 
     std::string item_id() const {
-        require_active();
-        return used_item->typeId().str();
+        return require_item().typeId().str();
     }
 
     int charges() const {
-        require_active();
-        return used_item->charges;
+        return require_item().charges;
     }
 
     void set_charges( std::int64_t value ) const {
-        require_active();
+        item &used_item = require_item();
         if( value < 0 || value > std::numeric_limits<int>::max() ) {
             throw std::runtime_error( "item charges are outside the native range" );
         }
-        used_item->charges = static_cast<int>( value );
+        used_item.charges = static_cast<int>( value );
     }
 
     sol::optional<cata::lua_platform::game_handle> character_handle() const {
-        require_active();
+        Character *character = require_character();
         if( character == nullptr ) {
             return {};
         }
@@ -423,10 +446,10 @@ struct use_context_data {
     }
 
     cata::lua_platform::game_handle item_handle() const {
-        require_active();
+        item &used_item = require_item();
         cata::lua_platform::game_handle_locator locator;
         locator.scope = "platform_item_use_item";
-        locator.stable_id = used_item->uid().get_value();
+        locator.stable_id = used_item.uid().get_value();
         if( used_item_location ) {
             const tripoint_abs_ms absolute = used_item_location.pos_abs();
             switch( used_item_location.where_recursive() ) {
@@ -451,7 +474,7 @@ struct use_context_data {
             locator.y = absolute.y();
             locator.z = absolute.z();
         }
-        return cata::lua_platform::game_handle::from_item( *used_item, std::move( locator ),
+        return cata::lua_platform::game_handle::from_item( used_item, std::move( locator ),
                 handle_runtime, world_generation );
     }
 
@@ -655,8 +678,8 @@ class use_context_lease
 
         ~use_context_lease() noexcept {
             context_.active = false;
-            context_.character = nullptr;
-            context_.used_item = nullptr;
+            context_.character_reference.reset();
+            context_.item_reference = game_handle();
             context_.used_item_location = item_location::nowhere;
         }
 
@@ -1081,6 +1104,11 @@ std::optional<int> invoke_use_handler( std::string_view mod_id,
         }
         return std::nullopt;
     }
+    if( owner->callback_depth >= 16 ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first item handler recursion limit reached for '"
+                                    << mod_id << ':' << handler_id << "'";
+        return std::nullopt;
+    }
     const auto handler = owner->handlers.find( std::string( handler_id ) );
     if( handler == owner->handlers.end() ) {
         if( character != nullptr ) {
@@ -1098,8 +1126,6 @@ std::optional<int> invoke_use_handler( std::string_view mod_id,
         return std::nullopt;
     }
     auto context = std::make_shared<use_context_data>();
-    context->character = character;
-    context->used_item = &used_item;
     context->used_item_location = character != nullptr ?
                                   item_location( *character->as_character(), &used_item ) :
                                   item_location( map_cursor( here, position ), &used_item );
@@ -1111,6 +1137,14 @@ std::optional<int> invoke_use_handler( std::string_view mod_id,
     context->position = position;
     context->handle_runtime = owner->handle_runtime();
     context->world_generation = detail::runtime_world_generation_storage();
+    game_handle_locator item_locator;
+    item_locator.scope = "platform_item_use_item";
+    context->item_reference = game_handle::from_item(
+                                  used_item, std::move( item_locator ),
+                                  context->handle_runtime, context->world_generation );
+    if( character != nullptr ) {
+        context->character_reference = detail::platform_creature_handle( *owner, *character );
+    }
     use_context_lease context_lease( *context );
     sol::protected_function callback = handler->second.callback;
     callback_scope scope( *owner );
@@ -1137,6 +1171,18 @@ std::optional<int> invoke_use_handler( std::string_view mod_id,
         ::add_msg( m_bad,
                    to_translation( "Lua-first item handler result is outside the native range." ).translated() );
         return std::nullopt;
+    }
+    if( native_result != 0 ) {
+        if( !context->item_reference.resolve_item(
+                context->handle_runtime, detail::runtime_world_generation_storage() ) ) {
+            // The callback consumed, moved or replaced the Item itself. The native
+            // caller must not apply a returned charge count to its old pointer.
+            return 0;
+        }
+        if( context->character_reference && !context->character_reference->resolve_creature(
+                context->handle_runtime, detail::runtime_world_generation_storage() ) ) {
+            return 0;
+        }
     }
     return static_cast<int>( native_result );
 }

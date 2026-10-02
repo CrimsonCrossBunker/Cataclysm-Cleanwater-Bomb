@@ -2664,7 +2664,7 @@ sol::table activate_item(
     const native_handle_result<item> after = item_handle.resolve_item(
                 runtime_generation, world_generation );
     item *actually_used_after = after ? after.value->get_usable_item( method ) : nullptr;
-    const bool changed = destroyed || ( actually_used_after != nullptr && (
+    const bool changed = destroyed || !after || ( actually_used_after != nullptr && (
                                             before_charges != actually_used_after->charges ||
                                             before_damage != actually_used_after->damage() ||
                                             before_active != actually_used_after->is_active() ) );
