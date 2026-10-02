@@ -28026,23 +28026,65 @@ def _render_native_variable_number_snapshot(
 
 
 def render_literal_native_arithmetic(value: Any) -> str | None:
-    """Compile numeric Native arithmetic to flat ordinary Lua statements."""
+    """Compile pure numeric Native arithmetic/functions to ordinary Lua."""
     if not isinstance(value, list) or not value or not all(isinstance(part, str) for part in value):
         return None
     source = "".join(value)  # eoc_math::from_json concatenates chunks without inserting spaces.
-    token_pattern = re.compile(r"(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?|[()+*/%^\-]")
+    token_pattern = re.compile(r"(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?|[A-Za-z_][A-Za-z_0-9]*|π|[(),+*/%^\-]")
     operators: list[str] = []
     operands: list[int] = []
+    frames: list[tuple[int, int, str | None]] = []
     statements = ["local values = {}"]
     count = 0
     need_operand = True
     precedence = {"+": 2, "-": 2, "*": 3, "/": 3, "%": 3, "^": 4}
+    constants = {"pi": math.pi, "π": math.pi, "e": math.e, "true": 1.0, "false": 0.0}
+    functions = {name: 1 for name in ("abs", "floor", "ceil", "trunc", "round",
+                                     "sqrt", "log", "sin", "cos", "tan")}
+    functions.update({"min": -1, "max": -1, "_test_": 0})
 
     def emit(expression: str) -> None:
         nonlocal count
         count += 1
         statements.append(f"values[{count}] = {expression}")
         operands.append(count)
+
+    def apply_function(name: str, arguments: list[int]) -> bool:
+        expected = functions[name]
+        if expected >= 0 and len(arguments) != expected:
+            return False
+        if name == "_test_":
+            emit("42.0")
+        elif name in {"min", "max"}:
+            # std::min/max_element keep the first equal/unordered operand.
+            # Folding avoids Lua's argument/register limit for Native variadics.
+            emit(f"values[{arguments[0]}]" if arguments else "0.0")
+            result = count
+            comparison = "<" if name == "min" else ">"
+            for argument in arguments[1:]:
+                statements.append(f"if values[{argument}] {comparison} values[{result}] then "
+                                  f"values[{result}] = values[{argument}] end")
+        else:
+            argument = f"values[{arguments[0]}]"
+            if name == "round":
+                # std::round rounds halfway away from zero. Adding 0.5 first
+                # would lose precision near halfway/large representable inputs.
+                emit(f"math.floor(math.abs({argument})) + 0.0")
+                result = count
+                statements.append(f"if math.abs({argument}) - values[{result}] >= 0.5 then "
+                                  f"values[{result}] = values[{result}] + 1.0 end")
+                statements.append(f"if {argument} < 0.0 or 1.0 / {argument} < 0.0 then "
+                                  f"values[{result}] = -values[{result}] end")
+            else:
+                method = "modf" if name == "trunc" else name
+                # Lua floor/ceil/modf can return integers; Native math always
+                # returns doubles. Preserve IEEE rounding in later arithmetic.
+                emit(f"math.{method}({argument})" +
+                     (" + 0.0" if name in {"floor", "ceil", "trunc"} else ""))
+                if name in {"floor", "ceil", "trunc"}:
+                    statements.append(f"if values[{count}] == 0.0 and 1.0 / {argument} < 0.0 then "
+                                      f"values[{count}] = -0.0 end")
+        return True
 
     def apply_operator(operator: str) -> bool:
         if operator in {"u+", "u-"}:
@@ -28082,9 +28124,15 @@ def render_literal_native_arithmetic(value: Any) -> str | None:
         elif token == "(":
             if not need_operand:
                 return None
+            function = operators[-1][2:] if operators and operators[-1].startswith("f:") else None
+            frames.append((len(operands), 0, function))
             operators.append(token)
         elif token == ")":
-            if need_operand:
+            if not frames:
+                return None
+            base, commas, function = frames.pop()
+            empty = need_operand and function is not None and commas == 0 and len(operands) == base and operators[-1] == "("
+            if need_operand and not empty:
                 return None
             while operators and operators[-1] != "(":
                 if not apply_operator(operators.pop()):
@@ -28092,6 +28140,40 @@ def render_literal_native_arithmetic(value: Any) -> str | None:
             if not operators:
                 return None
             operators.pop()
+            if function is None:
+                if len(operands) != base + 1:
+                    return None
+            else:
+                arguments = operands[base:]
+                if len(arguments) != (0 if empty else commas + 1):
+                    return None
+                del operands[base:]
+                operators.pop()  # function marker
+                if not apply_function(function, arguments):
+                    return None
+            need_operand = False
+        elif token == ",":
+            if need_operand or not frames or frames[-1][2] is None:
+                return None
+            while operators and operators[-1] != "(":
+                if not apply_operator(operators.pop()):
+                    return None
+            base, commas, function = frames[-1]
+            if len(operands) != base + commas + 1:
+                return None
+            frames[-1] = (base, commas + 1, function)
+            need_operand = True
+        elif token in constants:
+            if not need_operand:
+                return None
+            emit(repr(constants[token]))
+            need_operand = False
+        elif token in functions:
+            if not need_operand or not source[position:].lstrip(" \t\r\n\v\f").startswith("("):
+                return None
+            operators.append("f:" + token)
+        elif token not in precedence:
+            return None  # Variables, RNG, diagnostics and scoped functions remain explicit TODOs.
         elif need_operand:
             if token not in {"+", "-"}:
                 return None
@@ -28113,7 +28195,7 @@ def render_literal_native_arithmetic(value: Any) -> str | None:
         return None
     while operators:
         operator = operators.pop()
-        if operator == "(" or not apply_operator(operator):
+        if operator == "(" or operator.startswith("f:") or not apply_operator(operator):
             return None
     if len(operands) != 1:
         return None

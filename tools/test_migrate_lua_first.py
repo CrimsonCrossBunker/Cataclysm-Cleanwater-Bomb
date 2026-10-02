@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import shutil
 import subprocess
 import tempfile
@@ -35243,15 +35244,79 @@ assert(context.data.position.x==EXPECTED_X and context.data.position.y==EXPECTED
         self.assertEqual(result.returncode, 0, result.stderr)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_literal_native_math_functions_keep_double_rounding_and_signed_zero(self) -> None:
+        cases = [
+            ("abs(-3)", 3.0), ("max()", 0.0), ("min()", 0.0),
+            ("max(2,min(3,1+4),-1)", 3.0), ("-abs(-2)^2", 4.0),
+            ("floor(2.9)", 2.0), ("floor(-2.9)", -3.0),
+            ("ceil(2.1)", 3.0), ("ceil(-2.1)", -2.0),
+            ("trunc(2.9)", 2.0), ("trunc(-2.9)", -2.0),
+            ("round(2.5)", 3.0), ("round(-2.5)", -3.0),
+            ("round(0.49999999999999994)", 0.0),
+            ("round(-0.49999999999999994)", -0.0),
+            ("floor(9007199254740992)+floor(1)", 9007199254740992.0),
+            ("ceil(9007199254740992)+ceil(1)", 9007199254740992.0),
+            ("trunc(9007199254740992)+trunc(1)", 9007199254740992.0),
+            ("round(9007199254740992)+round(1)", 9007199254740992.0),
+            ("sqrt(9)+log(e)", 4.0), ("sin(pi/2)", 1.0),
+            ("cos(π)", -1.0), ("tan(0)", 0.0),
+            ("true+false+_test_()", 43.0), ("2^ceil(2.1)", 8.0),
+            ("floor(-0)", -0.0), ("ceil(-0.25)", -0.0),
+            ("trunc(-0.25)", -0.0), ("round(-0.25)", -0.0),
+            ("sqrt(-0)", -0.0), ("sin(-0)", -0.0), ("tan(-0)", -0.0),
+            ("min(0,-0)", 0.0), ("min(-0,0)", -0.0),
+            ("max(0,-0)", 0.0), ("max(-0,0)", -0.0),
+        ]
+        for source, expected in cases:
+            with self.subTest(source=source):
+                expression = migrate_lua_first.render_native_number_expression({"math": [source]})
+                self.assertIsNotNone(expression)
+                self.assertNotIn("services.", expression or "")
+                sign = "<" if math.copysign(1.0, expected) < 0 else ">"
+                zero = f"assert(1.0 / result {sign} 0.0)" if expected == 0 else ""
+                script = "local result = " + (expression or "nil") + f"; assert(result == {expected!r}); {zero}"
+                result = subprocess.run(["lua", "-"], input=script, text=True,
+                                        capture_output=True, timeout=10)
+                self.assertEqual(result.returncode, 0, result.stderr)
+        # std::min/max_element's first operand survives unordered comparisons.
+        for source, expected in (("min(1,0/0,2)", 1.0), ("max(1,0/0,2)", 2.0)):
+            expression = migrate_lua_first.render_literal_native_arithmetic([source])
+            result = subprocess.run(["lua", "-"], input=f"assert({expression} == {expected})",
+                                    text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+        for source in ("min(0/0,1)", "max(0/0,1)", "round(0/0)"):
+            expression = migrate_lua_first.render_literal_native_arithmetic([source])
+            result = subprocess.run(["lua", "-"], input=f"local v={expression}; assert(v~=v)",
+                                    text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+        for source in ("abs()", "abs(1,2)", "_test_(1)", "max(1,)", "max(,1)",
+                       "max(+)", "(1,2)", "max((1,2))", "pi(2)", "abs abs(2)",
+                       "max(1,,2)", "max(1)2", "max(1)(2)", "clamp(1,2,3)",
+                       "rand(3)", "rng(1,2)", "celsius(273.15)", "u_strength()"):
+            self.assertIsNone(migrate_lua_first.render_literal_native_arithmetic([source]))
+        expression = migrate_lua_first.render_literal_native_arithmetic(["max(" + "1," * 300 + "2)"])
+        self.assertIsNotNone(expression)
+        result = subprocess.run(["lua", "-"], input=f"assert({expression} == 2.0)",
+                                text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_location_adjust_math_arithmetic_and_math_bounds_use_pure_lua(self) -> None:
-        lines = migrate_lua_first.render_static_location_variable_adjust({
-            "location_variable_adjust": {"context_val": "position"},
-            "x_adjust": {"math": ["-2^2"]},
-            "y_adjust": [{"math": ["-5%2"]}, {"math": ["2^3"]}],
-            "z_adjust": {"math": ["14%6*4"]}}, "location_variable_adjust", False, False)
-        self.assertIsNotNone(lines)
-        self.assertNotIn("gameplay.math", "\n".join(lines or []))
-        script = r"""
+        adjustments = (
+            {"x_adjust": {"math": ["-2^2"]},
+             "y_adjust": [{"math": ["-5%2"]}, {"math": ["2^3"]}],
+             "z_adjust": {"math": ["14%6*4"]}},
+            {"x_adjust": {"math": ["round(3.5)"]},
+             "y_adjust": [{"math": ["min(-1,0)"]}, {"math": ["max(2^3,1)"]}],
+             "z_adjust": {"math": ["abs(-14)"]}},
+        )
+        for adjustment in adjustments:
+            lines = migrate_lua_first.render_static_location_variable_adjust({
+                "location_variable_adjust": {"context_val": "position"}, **adjustment},
+                "location_variable_adjust", False, False)
+            self.assertIsNotNone(lines)
+            self.assertNotIn("gameplay.math", "\n".join(lines or []))
+            script = r"""
 local context={data={}}
 local draws=0
 local function point(x,y,z) return {x=x,y=y,z=z,add=function(self,other)
@@ -35263,10 +35328,9 @@ local services={coords={tripoint_abs_ms=point,tripoint_rel_ms=point},
 local function service_value(result) assert(result.ok);return result.value end
 BODY
 assert(draws==1 and context.data.position.x==4 and context.data.position.y==8 and context.data.position.z==14)
-""".replace("BODY", "\n".join(lines or []))
-        result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
-        self.assertEqual(result.returncode, 0, result.stderr)
-
+    """.replace("BODY", "\n".join(lines or []))
+            result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
     def test_location_variable_search_applies_coordinate_adjustment_once(
         self,
     ) -> None:

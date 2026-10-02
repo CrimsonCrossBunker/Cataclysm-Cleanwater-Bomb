@@ -1,6 +1,7 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <functional>
 #include <limits>
@@ -1201,6 +1202,403 @@ return values[5] end)()
                     std::string( "return " ) + row.lua_expression, sol::script_pass_on_error );
         REQUIRE( call.valid() );
         CHECK( call.get<double>() == expected );
+    }
+}
+
+TEST_CASE( "lua_platform_literal_functions_match_native_math_values_and_signed_zero",
+           "[lua][platform][semantic][coords][math]" )
+{
+    variable_api_fixture fixture;
+    fixture.lua.open_libraries( sol::lib::math );
+    struct function_case {
+        const char *source;
+        double expected;
+        const char *lua_expression;
+    };
+    // Captured ordinary Lua migration output. Tool tests independently execute
+    // the current emitter; the Native parser remains private to this oracle.
+    const std::vector<function_case> cases = {
+        { "abs(-3)", 3.0, R"lua(
+(function() local values = {};
+values[1] = 3.0;
+values[2] = -(values[1]);
+values[3] = math.abs(values[2]);
+return values[3] end)()
+)lua" },
+        { "max()", 0.0, R"lua(
+(function() local values = {};
+values[1] = 0.0;
+return values[1] end)()
+)lua" },
+        { "min()", 0.0, R"lua(
+(function() local values = {};
+values[1] = 0.0;
+return values[1] end)()
+)lua" },
+        { "max(2,min(3,1+4),-1)", 3.0, R"lua(
+(function() local values = {};
+values[1] = 2.0;
+values[2] = 3.0;
+values[3] = 1.0;
+values[4] = 4.0;
+values[5] = values[3] + values[4];
+values[6] = values[2];
+if values[5] < values[6] then values[6] = values[5] end;
+values[7] = 1.0;
+values[8] = -(values[7]);
+values[9] = values[1];
+if values[6] > values[9] then values[9] = values[6] end;
+if values[8] > values[9] then values[9] = values[8] end;
+return values[9] end)()
+)lua" },
+        { "-abs(-2)^2", 4.0, R"lua(
+(function() local values = {};
+values[1] = 2.0;
+values[2] = -(values[1]);
+values[3] = math.abs(values[2]);
+values[4] = -(values[3]);
+values[5] = 2.0;
+values[6] = values[4] ^ values[5];
+return values[6] end)()
+)lua" },
+        { "floor(2.9)", 2.0, R"lua(
+(function() local values = {};
+values[1] = 2.8999999999999999;
+values[2] = math.floor(values[1]) + 0.0;
+if values[2] == 0.0 and 1.0 / values[1] < 0.0 then values[2] = -0.0 end;
+return values[2] end)()
+)lua" },
+        { "floor(-2.9)", -3.0, R"lua(
+(function() local values = {};
+values[1] = 2.8999999999999999;
+values[2] = -(values[1]);
+values[3] = math.floor(values[2]) + 0.0;
+if values[3] == 0.0 and 1.0 / values[2] < 0.0 then values[3] = -0.0 end;
+return values[3] end)()
+)lua" },
+        { "ceil(2.1)", 3.0, R"lua(
+(function() local values = {};
+values[1] = 2.1000000000000001;
+values[2] = math.ceil(values[1]) + 0.0;
+if values[2] == 0.0 and 1.0 / values[1] < 0.0 then values[2] = -0.0 end;
+return values[2] end)()
+)lua" },
+        { "ceil(-2.1)", -2.0, R"lua(
+(function() local values = {};
+values[1] = 2.1000000000000001;
+values[2] = -(values[1]);
+values[3] = math.ceil(values[2]) + 0.0;
+if values[3] == 0.0 and 1.0 / values[2] < 0.0 then values[3] = -0.0 end;
+return values[3] end)()
+)lua" },
+        { "trunc(2.9)", 2.0, R"lua(
+(function() local values = {};
+values[1] = 2.8999999999999999;
+values[2] = math.modf(values[1]) + 0.0;
+if values[2] == 0.0 and 1.0 / values[1] < 0.0 then values[2] = -0.0 end;
+return values[2] end)()
+)lua" },
+        { "trunc(-2.9)", -2.0, R"lua(
+(function() local values = {};
+values[1] = 2.8999999999999999;
+values[2] = -(values[1]);
+values[3] = math.modf(values[2]) + 0.0;
+if values[3] == 0.0 and 1.0 / values[2] < 0.0 then values[3] = -0.0 end;
+return values[3] end)()
+)lua" },
+        { "round(2.5)", 3.0, R"lua(
+(function() local values = {};
+values[1] = 2.5;
+values[2] = math.floor(math.abs(values[1])) + 0.0;
+if math.abs(values[1]) - values[2] >= 0.5 then values[2] = values[2] + 1.0 end;
+if values[1] < 0.0 or 1.0 / values[1] < 0.0 then values[2] = -values[2] end;
+return values[2] end)()
+)lua" },
+        { "round(-2.5)", -3.0, R"lua(
+(function() local values = {};
+values[1] = 2.5;
+values[2] = -(values[1]);
+values[3] = math.floor(math.abs(values[2])) + 0.0;
+if math.abs(values[2]) - values[3] >= 0.5 then values[3] = values[3] + 1.0 end;
+if values[2] < 0.0 or 1.0 / values[2] < 0.0 then values[3] = -values[3] end;
+return values[3] end)()
+)lua" },
+        { "round(0.49999999999999994)", 0.0, R"lua(
+(function() local values = {};
+values[1] = 0.49999999999999994;
+values[2] = math.floor(math.abs(values[1])) + 0.0;
+if math.abs(values[1]) - values[2] >= 0.5 then values[2] = values[2] + 1.0 end;
+if values[1] < 0.0 or 1.0 / values[1] < 0.0 then values[2] = -values[2] end;
+return values[2] end)()
+)lua" },
+        { "round(-0.49999999999999994)", -0.0, R"lua(
+(function() local values = {};
+values[1] = 0.49999999999999994;
+values[2] = -(values[1]);
+values[3] = math.floor(math.abs(values[2])) + 0.0;
+if math.abs(values[2]) - values[3] >= 0.5 then values[3] = values[3] + 1.0 end;
+if values[2] < 0.0 or 1.0 / values[2] < 0.0 then values[3] = -values[3] end;
+return values[3] end)()
+)lua" },
+        { "floor(9007199254740992)+floor(1)", 9007199254740992.0, R"lua(
+(function() local values = {};
+values[1] = 9007199254740992.0;
+values[2] = math.floor(values[1]) + 0.0;
+if values[2] == 0.0 and 1.0 / values[1] < 0.0 then values[2] = -0.0 end;
+values[3] = 1.0;
+values[4] = math.floor(values[3]) + 0.0;
+if values[4] == 0.0 and 1.0 / values[3] < 0.0 then values[4] = -0.0 end;
+values[5] = values[2] + values[4];
+return values[5] end)()
+)lua" },
+        { "ceil(9007199254740992)+ceil(1)", 9007199254740992.0, R"lua(
+(function() local values = {};
+values[1] = 9007199254740992.0;
+values[2] = math.ceil(values[1]) + 0.0;
+if values[2] == 0.0 and 1.0 / values[1] < 0.0 then values[2] = -0.0 end;
+values[3] = 1.0;
+values[4] = math.ceil(values[3]) + 0.0;
+if values[4] == 0.0 and 1.0 / values[3] < 0.0 then values[4] = -0.0 end;
+values[5] = values[2] + values[4];
+return values[5] end)()
+)lua" },
+        { "trunc(9007199254740992)+trunc(1)", 9007199254740992.0, R"lua(
+(function() local values = {};
+values[1] = 9007199254740992.0;
+values[2] = math.modf(values[1]) + 0.0;
+if values[2] == 0.0 and 1.0 / values[1] < 0.0 then values[2] = -0.0 end;
+values[3] = 1.0;
+values[4] = math.modf(values[3]) + 0.0;
+if values[4] == 0.0 and 1.0 / values[3] < 0.0 then values[4] = -0.0 end;
+values[5] = values[2] + values[4];
+return values[5] end)()
+)lua" },
+        { "round(9007199254740992)+round(1)", 9007199254740992.0, R"lua(
+(function() local values = {};
+values[1] = 9007199254740992.0;
+values[2] = math.floor(math.abs(values[1])) + 0.0;
+if math.abs(values[1]) - values[2] >= 0.5 then values[2] = values[2] + 1.0 end;
+if values[1] < 0.0 or 1.0 / values[1] < 0.0 then values[2] = -values[2] end;
+values[3] = 1.0;
+values[4] = math.floor(math.abs(values[3])) + 0.0;
+if math.abs(values[3]) - values[4] >= 0.5 then values[4] = values[4] + 1.0 end;
+if values[3] < 0.0 or 1.0 / values[3] < 0.0 then values[4] = -values[4] end;
+values[5] = values[2] + values[4];
+return values[5] end)()
+)lua" },
+        { "sqrt(9)+log(e)", 4.0, R"lua(
+(function() local values = {};
+values[1] = 9.0;
+values[2] = math.sqrt(values[1]);
+values[3] = 2.718281828459045;
+values[4] = math.log(values[3]);
+values[5] = values[2] + values[4];
+return values[5] end)()
+)lua" },
+        { "sin(pi/2)", 1.0, R"lua(
+(function() local values = {};
+values[1] = 3.141592653589793;
+values[2] = 2.0;
+values[3] = values[1] / values[2];
+values[4] = math.sin(values[3]);
+return values[4] end)()
+)lua" },
+        { "cos(π)", -1.0, R"lua(
+(function() local values = {};
+values[1] = 3.141592653589793;
+values[2] = math.cos(values[1]);
+return values[2] end)()
+)lua" },
+        { "tan(0)", 0.0, R"lua(
+(function() local values = {};
+values[1] = 0.0;
+values[2] = math.tan(values[1]);
+return values[2] end)()
+)lua" },
+        { "true+false+_test_()", 43.0, R"lua(
+(function() local values = {};
+values[1] = 1.0;
+values[2] = 0.0;
+values[3] = values[1] + values[2];
+values[4] = 42.0;
+values[5] = values[3] + values[4];
+return values[5] end)()
+)lua" },
+        { "2^ceil(2.1)", 8.0, R"lua(
+(function() local values = {};
+values[1] = 2.0;
+values[2] = 2.1000000000000001;
+values[3] = math.ceil(values[2]) + 0.0;
+if values[3] == 0.0 and 1.0 / values[2] < 0.0 then values[3] = -0.0 end;
+values[4] = values[1] ^ values[3];
+return values[4] end)()
+)lua" },
+        { "floor(-0)", -0.0, R"lua(
+(function() local values = {};
+values[1] = 0.0;
+values[2] = -(values[1]);
+values[3] = math.floor(values[2]) + 0.0;
+if values[3] == 0.0 and 1.0 / values[2] < 0.0 then values[3] = -0.0 end;
+return values[3] end)()
+)lua" },
+        { "ceil(-0.25)", -0.0, R"lua(
+(function() local values = {};
+values[1] = 0.25;
+values[2] = -(values[1]);
+values[3] = math.ceil(values[2]) + 0.0;
+if values[3] == 0.0 and 1.0 / values[2] < 0.0 then values[3] = -0.0 end;
+return values[3] end)()
+)lua" },
+        { "trunc(-0.25)", -0.0, R"lua(
+(function() local values = {};
+values[1] = 0.25;
+values[2] = -(values[1]);
+values[3] = math.modf(values[2]) + 0.0;
+if values[3] == 0.0 and 1.0 / values[2] < 0.0 then values[3] = -0.0 end;
+return values[3] end)()
+)lua" },
+        { "round(-0.25)", -0.0, R"lua(
+(function() local values = {};
+values[1] = 0.25;
+values[2] = -(values[1]);
+values[3] = math.floor(math.abs(values[2])) + 0.0;
+if math.abs(values[2]) - values[3] >= 0.5 then values[3] = values[3] + 1.0 end;
+if values[2] < 0.0 or 1.0 / values[2] < 0.0 then values[3] = -values[3] end;
+return values[3] end)()
+)lua" },
+        { "sqrt(-0)", -0.0, R"lua(
+(function() local values = {};
+values[1] = 0.0;
+values[2] = -(values[1]);
+values[3] = math.sqrt(values[2]);
+return values[3] end)()
+)lua" },
+        { "sin(-0)", -0.0, R"lua(
+(function() local values = {};
+values[1] = 0.0;
+values[2] = -(values[1]);
+values[3] = math.sin(values[2]);
+return values[3] end)()
+)lua" },
+        { "tan(-0)", -0.0, R"lua(
+(function() local values = {};
+values[1] = 0.0;
+values[2] = -(values[1]);
+values[3] = math.tan(values[2]);
+return values[3] end)()
+)lua" },
+        { "min(0,-0)", 0.0, R"lua(
+(function() local values = {};
+values[1] = 0.0;
+values[2] = 0.0;
+values[3] = -(values[2]);
+values[4] = values[1];
+if values[3] < values[4] then values[4] = values[3] end;
+return values[4] end)()
+)lua" },
+        { "min(-0,0)", -0.0, R"lua(
+(function() local values = {};
+values[1] = 0.0;
+values[2] = -(values[1]);
+values[3] = 0.0;
+values[4] = values[2];
+if values[3] < values[4] then values[4] = values[3] end;
+return values[4] end)()
+)lua" },
+        { "max(0,-0)", 0.0, R"lua(
+(function() local values = {};
+values[1] = 0.0;
+values[2] = 0.0;
+values[3] = -(values[2]);
+values[4] = values[1];
+if values[3] > values[4] then values[4] = values[3] end;
+return values[4] end)()
+)lua" },
+        { "max(-0,0)", -0.0, R"lua(
+(function() local values = {};
+values[1] = 0.0;
+values[2] = -(values[1]);
+values[3] = 0.0;
+values[4] = values[2];
+if values[3] > values[4] then values[4] = values[3] end;
+return values[4] end)()
+)lua" },
+        { "min(1,0/0,2)", 1.0, R"lua(
+(function() local values = {};
+values[1] = 1.0;
+values[2] = 0.0;
+values[3] = 0.0;
+values[4] = values[2] / values[3];
+values[5] = 2.0;
+values[6] = values[1];
+if values[4] < values[6] then values[6] = values[4] end;
+if values[5] < values[6] then values[6] = values[5] end;
+return values[6] end)()
+)lua" },
+        { "max(1,0/0,2)", 2.0, R"lua(
+(function() local values = {};
+values[1] = 1.0;
+values[2] = 0.0;
+values[3] = 0.0;
+values[4] = values[2] / values[3];
+values[5] = 2.0;
+values[6] = values[1];
+if values[4] > values[6] then values[6] = values[4] end;
+if values[5] > values[6] then values[6] = values[5] end;
+return values[6] end)()
+)lua" },
+        { "min(0/0,1)", std::numeric_limits<double>::quiet_NaN(), R"lua(
+(function() local values = {};
+values[1] = 0.0;
+values[2] = 0.0;
+values[3] = values[1] / values[2];
+values[4] = 1.0;
+values[5] = values[3];
+if values[4] < values[5] then values[5] = values[4] end;
+return values[5] end)()
+)lua" },
+        { "max(0/0,1)", std::numeric_limits<double>::quiet_NaN(), R"lua(
+(function() local values = {};
+values[1] = 0.0;
+values[2] = 0.0;
+values[3] = values[1] / values[2];
+values[4] = 1.0;
+values[5] = values[3];
+if values[4] > values[5] then values[5] = values[4] end;
+return values[5] end)()
+)lua" },
+        { "round(0/0)", std::numeric_limits<double>::quiet_NaN(), R"lua(
+(function() local values = {};
+values[1] = 0.0;
+values[2] = 0.0;
+values[3] = values[1] / values[2];
+values[4] = math.floor(math.abs(values[3])) + 0.0;
+if math.abs(values[3]) - values[4] >= 0.5 then values[4] = values[4] + 1.0 end;
+if values[3] < 0.0 or 1.0 / values[3] < 0.0 then values[4] = -values[4] end;
+return values[4] end)()
+)lua" }
+    };
+    dialogue conversation;
+    for( const function_case &row : cases ) {
+        CAPTURE( row.source );
+        math_exp native;
+        REQUIRE( native.parse( row.source ) );
+        const double expected = native.eval( conversation );
+        const sol::protected_function_result call = fixture.lua.safe_script(
+                    std::string( "return " ) + row.lua_expression, sol::script_pass_on_error );
+        REQUIRE( call.valid() );
+        const double actual = call.get<double>();
+        if( std::isnan( row.expected ) ) {
+            CHECK( std::isnan( expected ) );
+            CHECK( std::isnan( actual ) );
+        } else {
+            CHECK( expected == row.expected );
+            CHECK( actual == expected );
+            if( expected == 0.0 ) {
+                CHECK( std::signbit( expected ) == std::signbit( row.expected ) );
+                CHECK( std::signbit( actual ) == std::signbit( expected ) );
+            }
+        }
     }
 }
 
