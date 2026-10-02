@@ -1,6 +1,7 @@
 #include <clocale>
 #include <functional>
 #include <locale>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -10,6 +11,25 @@
 #include "coordinates.h"
 #include "cuboid_rectangle.h"
 #include "point.h"
+
+TEST_CASE( "coordinate_scale_division_preserves_full_signed_int_range", "[point][coords]" )
+{
+    constexpr int minimum = std::numeric_limits<int>::min();
+    constexpr int maximum = std::numeric_limits<int>::max();
+    CHECK( divide_round_to_minus_infinity( minimum, 1 ) == minimum );
+    CHECK( divide_round_to_minus_infinity( minimum, 2 ) == -1073741824 );
+    CHECK( divide_round_to_minus_infinity( minimum + 1, 2 ) == -1073741824 );
+    CHECK( divide_round_to_minus_infinity( minimum, 24 ) == -89478486 );
+    CHECK( divide_round_to_minus_infinity( minimum + 23, 24 ) == -89478485 );
+    CHECK( divide_round_to_minus_infinity( -25, 24 ) == -2 );
+    CHECK( divide_round_to_minus_infinity( -24, 24 ) == -1 );
+    CHECK( divide_round_to_minus_infinity( -1, 24 ) == -1 );
+    CHECK( divide_round_to_minus_infinity( 0, 24 ) == 0 );
+    CHECK( divide_round_to_minus_infinity( maximum, 24 ) == 89478485 );
+    const tripoint_abs_ms source( minimum, maximum, -3 );
+    CHECK( project_to<coords::omt>( source ) == tripoint_abs_omt( -89478486, 89478485, -3 ) );
+    CHECK( project_to<coords::sm>( source ) == tripoint_abs_sm( -178956971, 178956970, -3 ) );
+}
 
 TEST_CASE( "rectangle_containment_raw", "[point]" )
 {

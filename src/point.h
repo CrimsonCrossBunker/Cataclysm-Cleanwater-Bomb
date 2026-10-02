@@ -142,7 +142,9 @@ inline int divide_round_to_minus_infinity( int n, int d )
     if( n >= 0 ) {
         return n / d; // NOLINT(clang-analyzer-core.DivideZero)
     }
-    return ( n - d + 1 ) / d; // NOLINT(clang-analyzer-core.DivideZero)
+    // Coordinate scales use a positive divisor. Widen before subtracting it:
+    // valid negative coordinates near INT_MIN must not overflow the numerator.
+    return static_cast<int>( ( static_cast<std::int64_t>( n ) - d + 1 ) / d ); // NOLINT(clang-analyzer-core.DivideZero)
 }
 
 inline point multiply_xy( const point &p, int f )
