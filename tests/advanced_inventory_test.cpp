@@ -1,3 +1,4 @@
+#include <enums.h>
 #include <algorithm>
 #include <climits>
 #include <cstddef>
@@ -9,7 +10,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-
 #include "activity_actor_definitions.h"
 #include "advanced_inv.h"
 #include "advanced_inv_area.h"
@@ -27,7 +27,6 @@
 #include "map.h"
 #include "map_helpers.h"
 #include "map_selector.h"
-#include "player_activity.h"
 #include "player_helpers.h"
 #include "pocket_type.h"
 #include "ret_val.h"
