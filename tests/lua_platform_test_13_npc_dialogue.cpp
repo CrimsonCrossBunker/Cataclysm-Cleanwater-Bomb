@@ -13,6 +13,7 @@
 #include "item.h"
 #include "json_loader.h"
 #include "mission.h"
+#include "mtype.h"
 #include "map.h"
 #include "npctalk.h"
 #include "item_location.h"
@@ -30,7 +31,9 @@ class platform_item_offer_test_talker : public talker_npc
     public:
         platform_item_offer_test_talker( npc *const subject,
                                          std::vector<std::string> results ) :
-            talker_npc( subject ), subject_( subject ), results_( std::move( results ) ) {}
+            talker_character_const( subject ), talker_npc_const( subject ),
+            talker_character( subject ), talker_npc( subject ), subject_( subject ),
+            results_( std::move( results ) ) {}
 
         std::string give_item_to( const bool use_item ) override {
             use_item_calls.push_back( use_item );
@@ -50,7 +53,8 @@ class platform_dialogue_silent_npc_talker : public talker_npc
 {
     public:
         explicit platform_dialogue_silent_npc_talker( npc *const subject ) :
-            talker_npc( subject ) {}
+            talker_character_const( subject ), talker_npc_const( subject ),
+            talker_character( subject ), talker_npc( subject ) {}
 
         std::string disp_name() const override {
             return {};
@@ -61,7 +65,8 @@ class platform_dialogue_reject_pet_purchase_talker : public talker_avatar
 {
     public:
         explicit platform_dialogue_reject_pet_purchase_talker( avatar *subject ) :
-            talker_avatar( subject ) {}
+            talker_character_const( subject ), talker_avatar_const( subject ),
+            talker_character( subject ), talker_avatar( subject ) {}
 
         bool buy_monster( talker &seller, const mtype_id &, int, int, bool,
                           const translation & ) override {
@@ -279,10 +284,10 @@ TEST_CASE( "lua_platform_npc_write_gate_precedes_exact_resolution",
     sol::state lua;
     sol::table services = lua.create_table();
     cata::lua_platform::install_game_handle_api(
-        lua, services, current_runtime, current_world, []() {} );
+    lua, services, current_runtime, current_world, []() {} );
     cata::lua_platform::install_npc_api(
-        services, current_runtime, current_world, []() {},
-        [&]() {
+    services, current_runtime, current_world, []() {},
+    [&]() {
         write_gate_called = true;
         owner->retire();
     }, []() {} );
@@ -325,8 +330,8 @@ TEST_CASE( "lua_platform_open_dialogue_reports_synchronous_native_outcomes",
     refusing_npc.setID( character_id( 1274 ), true );
     refusing_npc.set_attitude( NPCATT_KILL );
     const avatar_talk_to_result rejected_native = speaker.talk_to(
-                get_talker_for( refusing_npc ), false, false, false,
-                "TALK_EXPLICIT_TEST", std::string(), false );
+            get_talker_for( refusing_npc ), false, false, false,
+            "TALK_EXPLICIT_TEST", std::string(), false );
     REQUIRE( rejected_native == avatar_talk_to_result::rejected );
     const sol::table rejected =
         cata::lua_platform::detail::make_npc_dialogue_result(
@@ -471,7 +476,7 @@ TEST_CASE( "lua_platform_open_dialogue_scopes_platform_topics_to_calling_runtime
              std::string( "TALK_CCB_HANDLER_OWNER" )
          } ) {
         const sol::protected_function_result result = owner_open(
-                    owner_call.target_handle, owner_call.speaker_handle, topic );
+                owner_call.target_handle, owner_call.speaker_handle, topic );
         REQUIRE( result.valid() );
         const sol::table envelope = result.get<sol::table>();
         REQUIRE( envelope["ok"].get<bool>() );
@@ -483,14 +488,14 @@ TEST_CASE( "lua_platform_open_dialogue_scopes_platform_topics_to_calling_runtime
     const std::vector<std::string> native_topics = get_all_talk_topic_ids();
     REQUIRE_FALSE( native_topics.empty() );
     const sol::protected_function_result native_result = owner_open(
-                owner_call.target_handle, owner_call.speaker_handle,
-                native_topics.front() );
+            owner_call.target_handle, owner_call.speaker_handle,
+            native_topics.front() );
     REQUIRE( native_result.valid() );
     REQUIRE( native_result.get<sol::table>()["ok"].get<bool>() );
 
     const sol::protected_function_result unknown_result = owner_open(
-                owner_call.target_handle, owner_call.speaker_handle,
-                "TALK_CCB_UNKNOWN_OWNER" );
+            owner_call.target_handle, owner_call.speaker_handle,
+            "TALK_CCB_UNKNOWN_OWNER" );
     CHECK_FALSE( unknown_result.valid() );
 
     sol::state foreign_lua;
@@ -518,8 +523,8 @@ TEST_CASE( "lua_platform_open_dialogue_scopes_platform_topics_to_calling_runtime
                      "TALK_CCB_DECLARATIVE_OWNER", owner_identity,
                      world_generation ) );
     const sol::protected_function_result stale_runtime_result = owner_open(
-                owner_call.target_handle, owner_call.speaker_handle,
-                "TALK_CCB_DECLARATIVE_OWNER" );
+            owner_call.target_handle, owner_call.speaker_handle,
+            "TALK_CCB_DECLARATIVE_OWNER" );
     CHECK_FALSE( stale_runtime_result.valid() );
 }
 
@@ -529,13 +534,16 @@ TEST_CASE( "lua_platform_dialogue_deferred_translation_and_text_condition_timing
     sol::state lua;
     const cata::lua_platform::dialogue::response_descriptor_options options = {
         "dialogue", "response descriptor", "has", true,
-        []( const std::string &text, const std::string_view field ) {
+        []( const std::string & text, const std::string_view field )
+        {
             cata::lua_platform::dialogue::require_text( text, "dialogue", field );
         },
-        []( const std::string &id ) {
+        []( const std::string & id )
+        {
             return cata::lua_platform::dialogue::valid_topic_id( id );
         },
-        []( sol::protected_function ) {
+        []( sol::protected_function )
+        {
             return std::uint64_t{ 1 };
         },
         { "false_text", "false_text_translation", "text_condition" }
@@ -602,7 +610,7 @@ TEST_CASE( "lua_platform_dialogue_deferred_translation_and_text_condition_timing
         cata::lua_platform::dialogue::deferred_translation_from_descriptor(
             line_descriptor, "dynamic_line_translation", dynamic_line_text, "dialogue" );
     const JsonValue native_line_json = json_loader::from_string(
-            R"({"dynamic_line":{"ctxt":"npc dialogue line","str":"A line spoken by the NPC."}})" );
+                                           R"({"dynamic_line":{"ctxt":"npc dialogue line","str":"A line spoken by the NPC."}})" );
     translation native_line;
     native_line.deserialize( native_line_json.get_object().get_object( "dynamic_line" ) );
     CHECK( platform_line == native_line );
@@ -696,7 +704,7 @@ TEST_CASE( "lua_platform_dialogue_deferred_translation_and_text_condition_timing
         }
     })" );
     const dynamic_line_t native_composed_line = dynamic_line_t::from_member(
-                native_composed_json.get_object(), "dynamic_line" );
+            native_composed_json.get_object(), "dynamic_line" );
     const std::optional<std::string> rendered_composed_line =
         cata::lua_platform::platform_dialogue_dynamic_line(
             conversation, talk_topic( "TALK_CCB_DIALOGUE_TRANSLATION_COMPOSED" ) );
@@ -719,12 +727,12 @@ TEST_CASE( "lua_platform_dialogue_deferred_translation_and_text_condition_timing
     CHECK( lua["dialogue_text_condition_calls"].get<int>() == 2 );
     lua["dialogue_text_condition_invalid"] = true;
     const talk_data failed_condition_option = conversation.responses[1].create_option_line(
-                conversation, input_event() );
+            conversation, input_event() );
     CHECK( failed_condition_option.text == false_response_text );
     CHECK( lua["dialogue_text_condition_calls"].get<int>() == 3 );
     cata::lua_platform::set_active_runtimes( {} );
     const talk_data stale_session_option = conversation.responses[1].create_option_line(
-                conversation, input_event() );
+            conversation, input_event() );
     CHECK( stale_session_option.text == false_response_text );
     CHECK( lua["dialogue_text_condition_calls"].get<int>() == 3 );
 
@@ -754,7 +762,7 @@ TEST_CASE( "lua_platform_open_dialogue_rejection_is_not_completion",
     fixture.target.set_attitude( NPCATT_KILL );
 
     const sol::protected_function_result result = fixture.open_dialogue()(
-                fixture.target_handle, fixture.speaker_handle, topics.front() );
+            fixture.target_handle, fixture.speaker_handle, topics.front() );
     REQUIRE( result.valid() );
     const sol::table envelope = result.get<sol::table>();
     REQUIRE( envelope["ok"].get<bool>() );
@@ -776,7 +784,7 @@ TEST_CASE( "lua_platform_open_dialogue_rejects_stale_participants_and_generation
         platform_npc_dialogue_fixture fixture;
         fixture.target.setID( character_id( 1275 ), true );
         const sol::protected_function_result result = fixture.open_dialogue()(
-                    fixture.target_handle, fixture.speaker_handle, topic );
+                fixture.target_handle, fixture.speaker_handle, topic );
         REQUIRE( result.valid() );
         const sol::table envelope = result.get<sol::table>();
         CHECK_FALSE( envelope["ok"].get<bool>() );
@@ -788,7 +796,7 @@ TEST_CASE( "lua_platform_open_dialogue_rejects_stale_participants_and_generation
         platform_npc_dialogue_fixture fixture;
         fixture.speaker.setID( character_id( 1276 ), true );
         const sol::protected_function_result result = fixture.open_dialogue()(
-                    fixture.target_handle, fixture.speaker_handle, topic );
+                fixture.target_handle, fixture.speaker_handle, topic );
         REQUIRE( result.valid() );
         const sol::table envelope = result.get<sol::table>();
         CHECK_FALSE( envelope["ok"].get<bool>() );
@@ -800,7 +808,7 @@ TEST_CASE( "lua_platform_open_dialogue_rejects_stale_participants_and_generation
         platform_npc_dialogue_fixture fixture;
         fixture.active_runtime = fixture.other_runtime;
         const sol::protected_function_result result = fixture.open_dialogue()(
-                    fixture.target_handle, fixture.speaker_handle, topic );
+                fixture.target_handle, fixture.speaker_handle, topic );
         REQUIRE( result.valid() );
         const sol::table envelope = result.get<sol::table>();
         CHECK_FALSE( envelope["ok"].get<bool>() );
@@ -812,7 +820,7 @@ TEST_CASE( "lua_platform_open_dialogue_rejects_stale_participants_and_generation
         platform_npc_dialogue_fixture fixture;
         fixture.active_runtime = fixture.newer_runtime;
         const sol::protected_function_result result = fixture.open_dialogue()(
-                    fixture.target_handle, fixture.speaker_handle, topic );
+                fixture.target_handle, fixture.speaker_handle, topic );
         REQUIRE( result.valid() );
         const sol::table envelope = result.get<sol::table>();
         CHECK_FALSE( envelope["ok"].get<bool>() );
@@ -824,7 +832,7 @@ TEST_CASE( "lua_platform_open_dialogue_rejects_stale_participants_and_generation
         platform_npc_dialogue_fixture fixture;
         ++fixture.active_world;
         const sol::protected_function_result result = fixture.open_dialogue()(
-                    fixture.target_handle, fixture.speaker_handle, topic );
+                fixture.target_handle, fixture.speaker_handle, topic );
         REQUIRE( result.valid() );
         const sol::table envelope = result.get<sol::table>();
         CHECK_FALSE( envelope["ok"].get<bool>() );
@@ -894,7 +902,7 @@ TEST_CASE( "lua_platform_dialogue_response_callbacks_reject_stale_topics",
     const std::uint64_t replaced_callback =
         cata::lua_platform::dialogue::register_response_callback(
             cata::lua_platform::dialogue::response_callback_origin::platform,
-            [&]( dialogue &, const talk_topic &, bool ) {
+    [&]( dialogue &, const talk_topic &, bool ) {
         ++callback_calls;
         return talk_topic( "CALLBACK_RAN" );
     }, first_session, "TALK_ONE" );
@@ -913,7 +921,7 @@ TEST_CASE( "lua_platform_dialogue_response_callbacks_reject_stale_topics",
     const std::uint64_t ended_callback =
         cata::lua_platform::dialogue::register_response_callback(
             cata::lua_platform::dialogue::response_callback_origin::platform,
-            [&]( dialogue &, const talk_topic &, bool ) {
+    [&]( dialogue &, const talk_topic &, bool ) {
         ++callback_calls;
         return talk_topic( "CALLBACK_RAN" );
     }, second_session, "TALK_TWO" );
@@ -951,7 +959,7 @@ TEST_CASE( "lua_platform_dialogue_response_action_registry_rejects_stale_session
     const std::uint64_t stale_action =
         cata::lua_platform::dialogue::register_response_action_callback(
             cata::lua_platform::dialogue::response_callback_origin::platform,
-            [&callback_calls]( dialogue &, bool ) {
+    [&callback_calls]( dialogue &, bool ) {
         ++callback_calls;
     }, first_session, "TALK_ACTION_ONE" );
 
@@ -967,7 +975,7 @@ TEST_CASE( "lua_platform_dialogue_response_action_registry_rejects_stale_session
     const std::uint64_t retired_action =
         cata::lua_platform::dialogue::register_response_action_callback(
             cata::lua_platform::dialogue::response_callback_origin::platform,
-            [&callback_calls]( dialogue &, bool ) {
+    [&callback_calls]( dialogue &, bool ) {
         ++callback_calls;
     }, current_session, "TALK_ACTION_TWO" );
     cata::lua_platform::dialogue::retire_sessions_for_world( world_generation );
@@ -983,7 +991,7 @@ TEST_CASE( "lua_platform_dialogue_response_action_registry_rejects_stale_session
     const std::uint64_t cleared_action =
         cata::lua_platform::dialogue::register_response_action_callback(
             cata::lua_platform::dialogue::response_callback_origin::platform,
-            [&callback_calls]( dialogue &, bool ) {
+    [&callback_calls]( dialogue &, bool ) {
         ++callback_calls;
     }, replacement_session, "TALK_ACTION_TWO" );
     cata::lua_platform::dialogue::clear_response_callbacks(
@@ -1195,7 +1203,7 @@ TEST_CASE( "lua_platform_dialogue_item_grant_matches_native_talk_effect",
 
     constexpr std::string_view topic_id = "TALK_CCB_ITEM_GRANT";
     constexpr std::string_view item_id = "bottle_plastic";
-    const itype_id native_item_type( std::string( item_id ) );
+    const itype_id native_item_type{ std::string( item_id ) };
     REQUIRE( native_item_type.is_valid() );
     REQUIRE_FALSE( item::count_by_charges( native_item_type ) );
 
@@ -1335,7 +1343,7 @@ TEST_CASE( "lua_platform_dialogue_purchase_pet_matches_native_talk_effect",
     dialogue native_conversation(
         get_talker_for( native_buyer ), get_talker_for( native_seller ) );
     const conditional_t native_can_buy( json_loader::from_string(
-            R"({"not":{"npc_has_effect":"sold_pet"}})" ).get_object() );
+                                            R"({"not":{"npc_has_effect":"sold_pet"}})" ).get_object() );
     CHECK( native_can_buy( native_conversation ) );
     talk_effect_t native_purchase;
     native_purchase.parse_sub_effect(
@@ -1595,9 +1603,9 @@ TEST_CASE( "lua_platform_dialogue_effect_condition_uses_native_reason_body_part"
             R"({"npc_has_effect":"bleed"})" ).get_object() );
     const cata::lua_platform::script_game_id bleed_id( "effect", "bleed" );
     for( const auto &[reason, expected] : std::vector<std::pair<std::string, bool>> {
-             { "arm_l", true }, { "leg_l", false },
-             { "unknown_dialogue_reason", false }, { "", false }
-         } ) {
+    { "arm_l", true }, { "leg_l", false },
+    { "unknown_dialogue_reason", false }, { "", false }
+} ) {
         conversation.reason = reason;
         CHECK( native_condition( conversation ) == expected );
         CHECK( context.has_interlocutor_effect( bleed_id ) == expected );
@@ -2256,7 +2264,7 @@ TEST_CASE( "lua_platform_dialogue_mission_failure_sequence_matches_native_talk_e
     CHECK( native_interlocutor.chatbin.mission_selected == native_mission );
 
     const JsonValue native_clear_json = json_loader::from_string(
-            R"({"effect":"clear_mission"})" );
+                                            R"({"effect":"clear_mission"})" );
     talk_effect_t native_clear(
         native_clear_json.get_object(), "effect", "dialogue_mission_failure_test" );
     native_clear.apply( native_conversation );
@@ -2265,7 +2273,7 @@ TEST_CASE( "lua_platform_dialogue_mission_failure_sequence_matches_native_talk_e
     CHECK( native_interlocutor.chatbin.first_topic == "TALK_BEFORE_FAILURE" );
 
     const JsonValue native_end_json = json_loader::from_string(
-            R"({"effect":"end_conversation"})" );
+                                          R"({"effect":"end_conversation"})" );
     talk_effect_t native_end(
         native_end_json.get_object(), "effect", "dialogue_mission_failure_test" );
     native_end.apply( native_conversation );
@@ -2503,7 +2511,7 @@ TEST_CASE( "lua_platform_dialogue_item_offer_delegates_native_reason_and_order",
     interlocutor.setID( character_id( 1332 ), true );
     auto injected_interlocutor = std::make_unique<platform_item_offer_test_talker>(
                                      &interlocutor,
-    std::vector<std::string> { "accepted", "refused", "cancelled" } );
+                                     std::vector<std::string> { "accepted", "refused", "cancelled" } );
     platform_item_offer_test_talker *const injected_interlocutor_ptr =
         injected_interlocutor.get();
 
@@ -2747,10 +2755,10 @@ TEST_CASE( "lua_platform_dialogue_session_scope_and_teardown_retirement",
         CHECK( second_session->active() );
 
         stale_context = std::make_unique<cata::lua_platform::dialogue::context>(
-                             nullptr, conversation, "TALK_ONE", false,
-                             "dialogue context is stale",
-                             cata::lua_platform::dialogue::context::actor_converter{}, second_session,
-                             second_runtime, world_generation );
+                            nullptr, conversation, "TALK_ONE", false,
+                            "dialogue context is stale",
+                            cata::lua_platform::dialogue::context::actor_converter{}, second_session,
+                            second_runtime, world_generation );
         CHECK( stale_context->valid() );
 
         cata::lua_platform::dialogue::retire_sessions_for_runtime( first_runtime );
@@ -2940,7 +2948,7 @@ TEST_CASE( "lua_platform_dialogue_debug_shows_failed_switch_responses_like_nativ
     interlocutor.setID( character_id( 1571 ), true );
 
     const JsonValue false_switch_json = json_loader::from_string(
-            R"({
+                                            R"({
               "text": "False switch",
               "condition": { "u_has_trait": "SPIRITUAL" },
               "switch": true
@@ -2952,12 +2960,12 @@ TEST_CASE( "lua_platform_dialogue_debug_shows_failed_switch_responses_like_nativ
               "default": true
             })" );
     const JsonValue repeat_json = json_loader::from_string(
-            R"({
+                                      R"({
               "for_item": "test_rock",
               "response": { "text": "Repeat item", "switch": true }
             })" );
     const JsonValue false_repeat_json = json_loader::from_string(
-            R"({
+                                            R"({
               "for_item": "test_rock",
               "response": {
                 "text": "Hidden repeat",
@@ -2974,7 +2982,7 @@ TEST_CASE( "lua_platform_dialogue_debug_shows_failed_switch_responses_like_nativ
         repeat_json.get_object(), "dialogue_debug_condition_test" );
     json_talk_repeat_response native_false_repeat(
         false_repeat_json.get_object(), "dialogue_debug_condition_test" );
-    const auto generate_native = [&]( dialogue &conversation, bool &switch_done ) {
+    const auto generate_native = [&]( dialogue & conversation, bool & switch_done ) {
         switch_done = false;
         std::vector<bool> switch_claims;
         for( json_talk_response *const response : {
@@ -2993,7 +3001,7 @@ TEST_CASE( "lua_platform_dialogue_debug_shows_failed_switch_responses_like_nativ
         get_talker_for( speaker ), get_talker_for( interlocutor ) );
     bool native_normal_switch_done = false;
     const std::vector<bool> native_normal_claims = generate_native(
-                native_normal, native_normal_switch_done );
+            native_normal, native_normal_switch_done );
     REQUIRE( native_normal_claims.size() == 2 );
     CHECK_FALSE( native_normal_claims[0] );
     CHECK_FALSE( native_normal_claims[1] );
@@ -3011,7 +3019,7 @@ TEST_CASE( "lua_platform_dialogue_debug_shows_failed_switch_responses_like_nativ
     native_debug.debug_ignore_conditionals = true;
     bool native_debug_switch_done = false;
     const std::vector<bool> native_debug_claims = generate_native(
-                native_debug, native_debug_switch_done );
+            native_debug, native_debug_switch_done );
     REQUIRE( native_debug_claims.size() == 2 );
     CHECK( native_debug_switch_done );
     CHECK_FALSE( native_repeat.response.gen_repeat_response(
@@ -3075,7 +3083,7 @@ TEST_CASE( "lua_platform_dialogue_debug_shows_failed_switch_responses_like_nativ
         cata::lua_platform::detail::runtime_handle_identity( owner_runtime );
     const std::size_t world_generation =
         cata::lua_platform::runtime_world_generation();
-    const auto generate_platform = [&]( dialogue &conversation ) {
+    const auto generate_platform = [&]( dialogue & conversation ) {
         const cata::lua_platform::dialogue::dialogue_session_ptr session =
             cata::lua_platform::dialogue::begin_session(
                 conversation, runtime_identity, world_generation );
