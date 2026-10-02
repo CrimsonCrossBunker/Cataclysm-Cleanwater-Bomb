@@ -794,8 +794,8 @@ sol::table requirement_group_page(
         const auto &group = groups[group_index];
         const std::size_t alternative_count = group.size();
         const std::size_t alternative_returned = std::min(
-                    alternative_count,
-                    maximum_requirement_alternatives );
+                alternative_count,
+                maximum_requirement_alternatives );
         sol::table alternatives = lua.create_table(
                                       static_cast<int>(
                                           alternative_returned ), 0 );
@@ -1217,7 +1217,7 @@ void install_crafting_api(
     recipes.set_function(
         "knows",
         [require_read, current_runtime_generation,
-                       world_generation](
+         world_generation](
             sol::this_state lua,
             const game_handle & character,
     const script_game_id & id ) {
@@ -1230,7 +1230,7 @@ void install_crafting_api(
     recipes.set_function(
         "learn",
         [require_write, current_runtime_generation,
-                        world_generation](
+         world_generation](
             sol::this_state lua,
             const game_handle & character,
             const script_game_id & id,
@@ -1245,7 +1245,7 @@ void install_crafting_api(
     recipes.set_function(
         "forget",
         [require_write, current_runtime_generation,
-                        world_generation](
+         world_generation](
             sol::this_state lua,
             const game_handle & character,
     const script_game_id & id ) {
@@ -1258,7 +1258,7 @@ void install_crafting_api(
     recipes.set_function(
         "forget_category",
         [require_write, current_runtime_generation,
-                        world_generation](
+         world_generation](
             sol::this_state lua,
             const game_handle & character,
             const script_game_id & category,
@@ -1275,10 +1275,10 @@ void install_crafting_api(
     crafting.set_function(
         "start",
         [require_write, current_runtime_generation, world_generation](
-            sol::this_state lua, const game_handle &character_handle,
-            const script_game_id &id,
+            sol::this_state lua, const game_handle & character_handle,
+            const script_game_id & id,
             const sol::optional<std::int64_t> &requested_batch,
-            const sol::optional<bool> &continue_while_possible ) {
+    const sol::optional<bool> &continue_while_possible ) {
         require_write();
         require_id( id, "recipe", "services.crafting.start" );
         const std::int64_t batch = requested_batch.value_or( 1 );
@@ -1334,8 +1334,8 @@ void install_crafting_api(
                                              character->activity.id() ==
                                              craft_wait_activity_id );
         const std::optional<script_game_id> activity = character->activity ?
-                std::make_optional( script_game_id(
-                                        "activity", character->activity.id().str() ) ) : std::nullopt;
+            std::make_optional( script_game_id(
+                                    "activity", character->activity.id().str() ) ) : std::nullopt;
         sol::table value = lua_state.create_table();
         value["recipe"] = id;
         value["batch"] = batch;

@@ -330,7 +330,7 @@ sol::table mapgen_transaction_error(
 {
     sol::table result = make_game_error_result( state, {
         report.code.empty() ? "mapgen_rejected" : report.code,
-        report.message
+                   report.message
     } );
     result["error"]["state"] = mapgen_transaction_state_name( report.state );
     result["error"]["target"] = target;
@@ -618,7 +618,7 @@ void install_mapgen_service_api(
     mapgen.set_function(
         "run_update",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state state, sol::object target, sol::object update ) {
+    sol::this_state state, sol::object target, sol::object update ) {
         return run_mapgen_update(
                    state, target, update,
                    current_runtime_generation(),
@@ -628,8 +628,8 @@ void install_mapgen_service_api(
         "schedule_update",
         [current_runtime_generation, current_world_generation, require_write](
             sol::this_state state, sol::object target, sol::object update,
-            const script_time_duration &delay,
-            const sol::optional<std::string> &key ) {
+            const script_time_duration & delay,
+    const sol::optional<std::string> &key ) {
         return schedule_mapgen_update(
                    state, target, update, delay, key,
                    current_runtime_generation(),
@@ -754,16 +754,16 @@ bool script_mapgen_context::publish_deferred(
     state.allow_write = false;
     // Zones must exist before native NPC loading/restocking can inspect the shop.
     // These are post-commit native spawns, not mutations inside the Lua transaction.
-    const auto failure = [&state]( const char *kind, const std::string &id ) {
+    const auto failure = [&state]( const char *kind, const std::string & id ) {
         state.publication_succeeded = false;
         DebugLog( D_ERROR, D_MAP_GEN ) << "Lua-first Mod '" << state.platform_mod_id
-                                     << "' post-commit " << kind << " placement failed: " << id;
+                                       << "' post-commit " << kind << " placement failed: " << id;
     };
     for( const context_state::deferred_zone &zone : state.zones ) {
         try {
             if( zone_manager::get_manager().add( zone.name, zone.type, zone.faction,
-                                                false, true, zone.start, zone.end, zone.options,
-                                                true, &state.data->m, false ) == nullptr ) {
+                                                 false, true, zone.start, zone.end, zone.options,
+                                                 true, &state.data->m, false ) == nullptr ) {
                 failure( "zone", zone.type.str() );
             }
         } catch( ... ) {
@@ -912,7 +912,7 @@ script_game_id script_mapgen_context::get_nesw( const int index ) const
     consume( 1 );
     return overmap_terrain_id(
                require_state().data->t_nesw[
-                static_cast<std::size_t>( index )] );
+                   static_cast<std::size_t>( index )] );
 }
 
 int script_mapgen_context::zlevel() const
@@ -1475,7 +1475,7 @@ void script_mapgen_context::place_corpse(
         to_turn<std::int64_t>( calendar::start_of_cataclysm );
     const time_point corpse_time = time_point::from_turn(
                                        static_cast<int>( std::max( corpse_turn,
-                                               earliest_turn ) ) );
+                                           earliest_turn ) ) );
     item corpse = item::make_corpse(
                       type, corpse_time );
     state.data->m.add_item_or_charges( position, corpse );
@@ -1841,7 +1841,7 @@ void script_mapgen_context::queue_zone(
     }
     consume( 1 );
     state.zones.push_back( { state.data->m.get_abs( start ), state.data->m.get_abs( end ),
-                            type, owner, name, std::move( options ) } );
+                             type, owner, name, std::move( options ) } );
 }
 
 void script_mapgen_context::fill_groundcover()

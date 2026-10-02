@@ -55,7 +55,7 @@ struct authored_text {
 };
 
 inline authored_text read_singular_text( const sol::object &value, const std::string &fallback,
-                                       const std::string &field )
+        const std::string &field )
 {
     if( !value.valid() || value.get_type() == sol::type::nil ) {
         return { fallback, std::nullopt };

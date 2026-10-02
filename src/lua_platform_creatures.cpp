@@ -1581,8 +1581,8 @@ sol::table heal_character(
     const int before = character->get_part_hp_cur( part );
     character->heal( part, amount );
     Character *after_character = resolve_exact_character(
-                                    handle, runtime_generation,
-                                    world_generation, error );
+                                     handle, runtime_generation,
+                                     world_generation, error );
     if( after_character == nullptr ) {
         return make_game_error_result( state, *error );
     }
@@ -1997,7 +1997,7 @@ sol::table damage_character(
             "services.characters.damage amount must be finite and within -1000000..1000000" );
     }
     const character_damage_options options = read_character_damage_options(
-                requested_options );
+            requested_options );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_exact_character(
@@ -2035,8 +2035,8 @@ sol::table damage_character(
     const dealt_damage_instance dealt = character->deal_damage(
                                             character, selected_body_part, damage );
     Character *after_character = resolve_exact_character(
-                                    handle, runtime_generation,
-                                    world_generation, error );
+                                     handle, runtime_generation,
+                                     world_generation, error );
     if( after_character == nullptr ) {
         return make_game_error_result( state, *error );
     }
@@ -2079,7 +2079,7 @@ sol::table damage_creature(
             "-1000000..1000000" );
     }
     const character_damage_options options = read_character_damage_options(
-                requested_options, std::string( api_name ), true );
+            requested_options, std::string( api_name ), true );
     sol::state_view state( lua );
     const native_handle_result<Creature> resolved_target =
         target_handle.resolve_creature( runtime_generation, world_generation );
@@ -2124,7 +2124,7 @@ sol::table damage_creature(
                        static_cast<float>( options.armor_penetration_multiplier ),
                        static_cast<float>( options.damage_multiplier ), 1.0f, 1.0f );
     const dealt_damage_instance dealt = target->deal_damage(
-            source, selected_body_part, damage );
+                                            source, selected_body_part, damage );
 
     // Damage callbacks can remove the target; do not read through the old pointer.
     const native_handle_result<Creature> after_target =
@@ -2563,7 +2563,7 @@ sol::table attack_character(
             "services.characters.attack requires a valid martial-art technique id" );
     }
     const character_attack_options options = read_character_attack_options(
-                requested_options );
+            requested_options );
     sol::state_view state( lua );
     std::optional<game_handle_error> attacker_error;
     Character *attacker = resolve_exact_character(
@@ -2573,7 +2573,7 @@ sol::table attack_character(
         return make_game_error_result( state, *attacker_error );
     }
     const native_handle_result<Creature> target = target_handle.resolve_creature(
-                runtime_generation, world_generation );
+            runtime_generation, world_generation );
     if( !target ) {
         return make_game_error_result( state, *target.error );
     }
@@ -2608,7 +2608,7 @@ sol::table choose_character_technique(
         return make_game_error_result( state, *attacker_error );
     }
     const native_handle_result<Creature> target = target_handle.resolve_creature(
-                runtime_generation, world_generation );
+            runtime_generation, world_generation );
     if( !target ) {
         return make_game_error_result( state, *target.error );
     }
@@ -2648,7 +2648,7 @@ sol::table ranged_attack_character(
         return make_game_error_result( state, *attacker_error );
     }
     const native_handle_result<Creature> target = target_handle.resolve_creature(
-                runtime_generation, world_generation );
+            runtime_generation, world_generation );
     if( !target ) {
         return make_game_error_result( state, *target.error );
     }
@@ -3646,7 +3646,7 @@ sol::table character_temperature_state(
     result["current_extreme_body_part"] = script_game_id(
             "body_part", current_extreme.id().str() );
     result["convergent_extreme_body_part"] = script_game_id(
-                "body_part", convergent_extreme.id().str() );
+            "body_part", convergent_extreme.id().str() );
     result["current_celsius"] = units::to_celsius( current );
     result["convergent_celsius"] = units::to_celsius( convergent );
     result["legacy_current"] =
@@ -4331,7 +4331,7 @@ void install_creature_api(
     creatures.set_function(
         "avatar",
         [current_runtime_generation, current_world_generation,
-                                require_read]() {
+    require_read]() {
         require_read();
         return make_creature_handle(
                    get_avatar(), current_runtime_generation(),
@@ -4394,7 +4394,7 @@ void install_creature_api(
     creatures.set_function(
         "player_can_see",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle &target ) {
+    sol::this_state lua_state, const game_handle & target ) {
         require_read();
         sol::state_view state( lua_state );
         const native_handle_result<Creature> resolved_target =
@@ -4456,7 +4456,7 @@ void install_creature_api(
         "has_body_type",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state, const game_handle & handle,
-            const std::string & body_type ) {
+    const std::string & body_type ) {
         require_read();
         return creature_has_body_type(
                    lua_state, handle, body_type,
@@ -4468,7 +4468,7 @@ void install_creature_api(
         [current_runtime_generation, current_world_generation, require_write](
             sol::this_state lua_state, const game_handle & target,
             const script_game_id & damage_type, const double amount,
-            const sol::optional<sol::table> &options ) {
+    const sol::optional<sol::table> &options ) {
         require_write();
         return damage_creature(
                    lua_state, target, damage_type, amount, options,
@@ -4478,7 +4478,7 @@ void install_creature_api(
         "heal",
         [current_runtime_generation, current_world_generation, require_write](
             sol::this_state lua_state, const game_handle & handle,
-            const script_game_id & body_part, const int amount ) {
+    const script_game_id & body_part, const int amount ) {
         require_write();
         return heal_creature(
                    lua_state, handle, body_part, amount,
@@ -4491,7 +4491,7 @@ void install_creature_api(
         "set_disposition",
         [current_runtime_generation, current_world_generation, require_write](
             sol::this_state lua_state, const game_handle & handle,
-            const sol::table & values ) {
+    const sol::table & values ) {
         require_write();
         return change_monster_disposition(
                    lua_state, handle, values, false,
@@ -4578,7 +4578,7 @@ void install_creature_api(
     characters.set_function(
         "avatar",
         [current_runtime_generation, current_world_generation,
-                                require_read]() {
+    require_read]() {
         require_read();
         return make_creature_handle(
                    get_avatar(), current_runtime_generation(),
@@ -4587,9 +4587,9 @@ void install_creature_api(
     characters.set_function(
         "add_msg_if_player",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &handle,
-            const std::string &translated_format,
-            const std::string &argument ) {
+            sol::this_state lua_state, const game_handle & handle,
+            const std::string & translated_format,
+    const std::string & argument ) {
         require_write();
         sol::state_view state( lua_state );
         if( translated_format.size() > maximum_character_message_bytes ||
@@ -4608,8 +4608,8 @@ void install_creature_api(
         }
         std::optional<game_handle_error> error;
         Character *character = resolve_exact_character(
-                                  handle, current_runtime_generation(),
-                                  current_world_generation(), error );
+                                   handle, current_runtime_generation(),
+                                   current_world_generation(), error );
         if( character == nullptr ) {
             return make_game_error_result( state, *error );
         }
@@ -4620,7 +4620,7 @@ void install_creature_api(
     characters.set_function(
         "is_in_vehicle",
         [current_runtime_generation, current_world_generation, require_read](
-            sol::this_state lua_state, const game_handle &handle ) {
+    sol::this_state lua_state, const game_handle & handle ) {
         require_read();
         sol::state_view state( lua_state );
         std::optional<game_handle_error> error;
@@ -4641,13 +4641,13 @@ void install_creature_api(
         "drop_weapon",
         [current_runtime_generation, current_world_generation,
          require_write]( sol::this_state lua_state,
-                         const game_handle &handle ) {
+    const game_handle & handle ) {
         require_write();
         sol::state_view state( lua_state );
         std::optional<game_handle_error> error;
         Character *character = resolve_exact_character(
-                                  handle, current_runtime_generation(),
-                                  current_world_generation(), error );
+                                   handle, current_runtime_generation(),
+                                   current_world_generation(), error );
         if( character == nullptr ) {
             return make_game_error_result( state, *error );
         }
@@ -5065,7 +5065,7 @@ void install_creature_api(
         }
         const bodypart_id part = character->random_body_part( main_parts_only.value_or( false ) );
         return make_game_value_result( state, sol::make_object( state,
-                                       script_game_id( "body_part", part.id().str() ) ) );
+                script_game_id( "body_part", part.id().str() ) ) );
     } );
     characters.set_function(
         "pick_body_part",

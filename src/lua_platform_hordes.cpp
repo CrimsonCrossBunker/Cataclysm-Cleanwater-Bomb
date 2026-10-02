@@ -1023,7 +1023,7 @@ sol::table snapshot_group_definition(
             snapshot_group_entry(
                 lua,
                 definition.monsters[
-             offset + index] );
+                    offset + index] );
     }
     sol::table page = lua.create_table();
     page["items"] = std::move( entries );
@@ -1811,9 +1811,9 @@ sol::table alert_entity(
         resolved->owner->hordes.extract(
             resolved->native_iterator );
     node.mapped().destination =
-        native_destination;
+            native_destination;
     node.mapped().tracking_intensity =
-        intensity;
+            intensity;
     horde_map::insert_result inserted =
         resolved->owner->hordes.insert_with_result(
             std::move( node ) );
@@ -1823,9 +1823,9 @@ sol::table alert_entity(
         }
         rollback_node.key() = original_key;
         rollback_node.mapped().destination =
-            original_destination;
+                         original_destination;
         rollback_node.mapped().tracking_intensity =
-            original_tracking_intensity;
+                         original_tracking_intensity;
         const horde_map::insert_result restored =
             resolved->owner->hordes.insert_with_result(
                 std::move( rollback_node ) );
@@ -1892,9 +1892,9 @@ sol::table broadcast_signal(
     constexpr std::string_view api_name =
         "services.hordes.broadcast_signal";
     const lua_Integer power_value = require_integer(
-                                       requested_power,
-                                       std::string( api_name ),
-                                       "signal_power" );
+                                        requested_power,
+                                        std::string( api_name ),
+                                        "signal_power" );
     if( power_value < 0 || power_value > maximum_signal_power ) {
         throw std::invalid_argument(
             std::string( api_name ) +
@@ -1934,9 +1934,9 @@ sol::table broadcast_signal(
     sol::table value = state.create_table();
     value["status"] = "broadcast";
     value["center"] = script_tripoint_coord::from_native(
-                           coords::origin::abs,
-                           coords::scale::map_square,
-                           broadcast_center.raw() );
+                          coords::origin::abs,
+                          coords::scale::map_square,
+                          broadcast_center.raw() );
     value["signal_power"] = signal_power;
     return make_game_value_result(
                state,
@@ -2653,8 +2653,8 @@ void install_horde_api(
         "broadcast_signal",
         [require_write](
             sol::this_state lua_state,
-            const script_tripoint_coord &center,
-            const sol::object &signal_power ) {
+            const script_tripoint_coord & center,
+    const sol::object & signal_power ) {
         require_write();
         return broadcast_signal(
                    lua_state, center, signal_power );

@@ -844,8 +844,8 @@ forecast_options read_forecast_options(
         result.step >
         maximum_forecast_step ) {
         throw std::invalid_argument(
-            "services.weather.forecast option 'step' "
-            "must be within 1 minute..24 hours" );
+        "services.weather.forecast option 'step' "
+        "must be within 1 minute..24 hours" );
     }
     const std::int64_t horizon =
         result.limit == 0 ? 0 :
@@ -1547,7 +1547,7 @@ void install_weather_api(
         [require_write](
             sol::this_state state, const int level,
             const script_time_duration & duration,
-            const sol::optional<std::string> &key ) {
+    const sol::optional<std::string> &key ) {
         require_write();
         return override_light(
                    state, level, duration, key );
@@ -1557,7 +1557,7 @@ void install_weather_api(
         [require_write](
             sol::this_state state, const int level,
             const script_time_duration & duration,
-            const sol::optional<std::string> &key ) {
+    const sol::optional<std::string> &key ) {
         require_write();
         return append_light_event(
                    state, level, duration, key );

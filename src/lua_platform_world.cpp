@@ -3070,7 +3070,7 @@ sol::table schedule_world_location_revert(
     for( int x = 0; x < 2; ++x ) {
         for( int y = 0; y < 2; ++y ) {
             event_positions[event_index++] = checked_sm_to_ms(
-                    base + point( x, y ), api_name );
+                                                 base + point( x, y ), api_name );
         }
     }
     ensure_omt_submaps( omt, base );
@@ -3144,7 +3144,7 @@ sol::table schedule_world_location_copy(
     for( int x = 0; x < 2; ++x ) {
         for( int y = 0; y < 2; ++y ) {
             event_positions[event_index++] = checked_sm_to_ms(
-                    destination_base + point( x, y ), api_name );
+                                                 destination_base + point( x, y ), api_name );
         }
     }
     // Match native f_copy_location's ordering: prepare the destination first,
@@ -3667,7 +3667,7 @@ sol::table snapshot_map_tile(
             requested_options );
     std::optional<game_handle_error> error;
     const std::optional<resolved_map_tile> resolved = resolve_map_tile_token(
-                token, runtime_generation, world_generation, error );
+            token, runtime_generation, world_generation, error );
     if( !resolved ) {
         return make_game_error_result( state, *error );
     }
@@ -3688,7 +3688,7 @@ sol::table edit_map_tile(
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     const std::optional<resolved_map_tile> resolved = resolve_map_tile_token(
-                token, runtime_generation, world_generation, error );
+            token, runtime_generation, world_generation, error );
     if( !resolved ) {
         return make_game_error_result( state, *error );
     }
@@ -3707,7 +3707,7 @@ sol::table edit_map_tile(
                                         changes, *resolved->value,
                                         resolved->local );
     const map_tile_original_state original = capture_map_tile_original_state(
-                *resolved->value, resolved->local );
+            *resolved->value, resolved->local );
     try {
         commit_map_tile_edit(
             *resolved->value, resolved->local, plan, original );
@@ -3755,7 +3755,7 @@ sol::table trap_set_map_tile(
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     const std::optional<resolved_map_tile> resolved = resolve_map_tile_token(
-                token, runtime_generation, world_generation, error );
+            token, runtime_generation, world_generation, error );
     if( !resolved ) {
         return make_game_error_result( state, *error );
     }
@@ -3989,9 +3989,9 @@ void install_map_api(
         "trap_set",
         [current_runtime_generation, current_world_generation, require_write](
             sol::this_state state,
-            const map_tile_token &token,
+            const map_tile_token & token,
             const lua_Integer expected_revision,
-            const script_game_id &trap ) {
+    const script_game_id & trap ) {
         if( expected_revision < 0 ) {
             throw std::invalid_argument(
                 "services.map.trap_set expected_revision cannot be negative" );
@@ -4171,7 +4171,7 @@ void install_world_api(
             sol::this_state lua_state,
             const script_tripoint_coord & position,
             const script_time_duration & delay,
-    const sol::object &key ) {
+    const sol::object & key ) {
         require_write();
         return schedule_world_location_revert(
                    lua_state, position, delay, key );
@@ -4183,7 +4183,7 @@ void install_world_api(
             const script_tripoint_coord & source,
             const script_tripoint_coord & destination,
             const script_time_duration & delay,
-    const sol::object &key ) {
+    const sol::object & key ) {
         require_write();
         return schedule_world_location_copy(
                    lua_state, source, destination,

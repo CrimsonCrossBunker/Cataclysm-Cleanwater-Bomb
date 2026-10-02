@@ -703,8 +703,8 @@ sol::table snapshot_npc(
     result["name"] = snapshot.name;
     result["display_name"] = snapshot.display_name;
     result["position"] = script_tripoint_coord::from_native(
-                              coords::origin::abs, coords::scale::map_square,
-                              snapshot.position.raw() );
+                             coords::origin::abs, coords::scale::map_square,
+                             snapshot.position.raw() );
     result["class"] = script_game_id( "npc_class", snapshot.class_id );
     if( snapshot.template_id ) {
         result["template"] = script_game_id( "npc_template", *snapshot.template_id );
@@ -737,7 +737,7 @@ sol::table snapshot_npc(
     result["first_topic"] = snapshot.first_topic;
     result["companion_role"] = snapshot.companion_role;
     result["companion_assignment"] = snapshot_companion_assignment(
-            lua, snapshot.companion_assignment );
+                                         lua, snapshot.companion_assignment );
     result["has_assigned_camp"] = snapshot.assigned_camp.has_value();
     if( snapshot.assigned_camp ) {
         result["assigned_camp"] = script_tripoint_coord::from_native(
@@ -908,8 +908,8 @@ sol::table list_npcs(
         snapshots.reserve( last - first );
         for( std::size_t index = first; index < last; ++index ) {
             snapshots.push_back( capture_npc_snapshot(
-                                    *entries[index], runtime_generation,
-                                    world_generation ) );
+                                     *entries[index], runtime_generation,
+                                     world_generation ) );
         }
     }
     sol::table items = state.create_table(
@@ -945,7 +945,7 @@ sol::table get_npc(
         return make_game_error_result( state, *error );
     }
     const npc_snapshot_data snapshot = capture_npc_snapshot(
-            *entry, runtime_generation, world_generation );
+                                           *entry, runtime_generation, world_generation );
     return make_game_value_result(
                state, sol::make_object(
                    state, snapshot_npc(
@@ -990,7 +990,7 @@ sol::table find_unique_npc(
         } );
     }
     const npc_snapshot_data snapshot = capture_npc_snapshot(
-            *entry, runtime_generation, world_generation );
+                                           *entry, runtime_generation, world_generation );
     return make_game_value_result(
                state, sol::make_object(
                    state, snapshot_npc(
@@ -1441,13 +1441,13 @@ sol::table add_npc_faction_rep(
         const std::int64_t after =
         static_cast<std::int64_t>( before ) + amount;
         if( after < std::numeric_limits<int>::min() ||
-            after > std::numeric_limits<int>::max() )
-        {
-            return std::nullopt;
-        }
-        return static_cast<int>( after );
-    };
-    const std::optional<int> likes_after = checked_add( fac->likes_u );
+        after > std::numeric_limits<int>::max() )
+    {
+        return std::nullopt;
+    }
+    return static_cast<int>( after );
+};
+const std::optional<int> likes_after = checked_add( fac->likes_u );
     const std::optional<int> respects_after = checked_add( fac->respects_u );
     const std::optional<int> trusts_after = checked_add( fac->trusts_u );
     if( !likes_after || !respects_after || !trusts_after ) {
@@ -2031,7 +2031,7 @@ sol::table join_npc_to_player(
         return make_game_error_result( state, *error );
     }
     const npc_snapshot_data after = capture_npc_snapshot(
-            *entry, runtime_generation, world_generation );
+                                        *entry, runtime_generation, world_generation );
     const std::int64_t avatar_id = owner->getID().get_value();
     sol::table value = state.create_table();
     value["before"] = std::move( before );
@@ -2099,7 +2099,7 @@ sol::table leave_npc_player(
         return make_game_error_result( state, *error );
     }
     const npc_snapshot_data after = capture_npc_snapshot(
-            *entry, runtime_generation, world_generation );
+                                        *entry, runtime_generation, world_generation );
     const bool created_faction = created != nullptr;
     const std::int64_t avatar_id = owner->getID().get_value();
     sol::table value = state.create_table();
@@ -2147,7 +2147,7 @@ sol::table set_npc_guarding(
         return make_game_error_result( state, *error );
     }
     const npc_snapshot_data after = capture_npc_snapshot(
-            *entry, runtime_generation, world_generation );
+                                        *entry, runtime_generation, world_generation );
     sol::table value = state.create_table();
     value["before"] = std::move( before );
     value["after"] = snapshot_npc(
@@ -3438,7 +3438,7 @@ void install_npc_api(
     npcs.set_function(
         "open_dialogue",
         [current_runtime_generation, current_world_generation,
-                                     require_write, invalidate_handles](
+         require_write, invalidate_handles](
             sol::this_state lua_state, const game_handle & handle,
             const game_handle & speaker,
     const std::string & topic ) {
@@ -3462,7 +3462,7 @@ void install_npc_api(
     npcs.set_function(
         "open_control_menu",
         [current_runtime_generation, current_world_generation,
-                                     require_write, invalidate_handles](
+         require_write, invalidate_handles](
     sol::this_state lua_state, const game_handle & avatar_handle ) {
         require_write();
         return open_npc_control_menu(
@@ -3473,7 +3473,7 @@ void install_npc_api(
     npcs.set_function(
         "take_control",
         [current_runtime_generation, current_world_generation,
-                                     require_write, invalidate_handles](
+         require_write, invalidate_handles](
             sol::this_state lua_state, const game_handle & handle,
     const game_handle & avatar_handle ) {
         return take_control_of_npc(

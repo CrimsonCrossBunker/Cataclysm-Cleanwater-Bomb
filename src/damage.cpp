@@ -659,7 +659,7 @@ bool damage_instance::handle_proportional( const JsonValue &jval )
         prop_damage.res_mult *= read_proportional_entry( jo, "armor_multiplier" );
         prop_damage.unconditional_res_mult *= read_proportional_entry( jo, "constant_armor_multiplier" );
         prop_damage.unconditional_damage_mult *= read_proportional_entry( jo,
-                "constant_damage_multiplier" );
+            "constant_damage_multiplier" );
         float barrel_mult = read_proportional_entry( jo, "amount" );
         for( barrel_desc &bd : prop_damage.barrels ) {
             bd.amount *= barrel_mult;
@@ -969,7 +969,7 @@ void damage_over_time_data::load( const JsonObject &obj )
 
     if( obj.has_string( "duration" ) ) {
         duration = read_from_json_string<time_duration>( obj.get_member( "duration" ),
-                   time_duration::units );
+            time_duration::units );
     } else {
         duration = time_duration::from_turns( obj.get_int( "duration", 0 ) );
     }

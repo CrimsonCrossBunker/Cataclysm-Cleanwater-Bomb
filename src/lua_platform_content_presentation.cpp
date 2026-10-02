@@ -358,14 +358,14 @@ struct snippet_category_definition_handle {
         snippet_entry_definition_data value;
         const std::string id = options.get_or( "id", std::string() );
         const detail::authored_text text = detail::read_singular_text(
-                options.get<sol::object>( "text" ), {},
-                "SnippetCategory.entry text" );
+                                               options.get<sol::object>( "text" ), {},
+                                               "SnippetCategory.entry text" );
         const detail::authored_text name = detail::read_singular_text(
-                options.get<sol::object>( "name" ), {},
-                "SnippetCategory.entry name" );
+                                               options.get<sol::object>( "name" ), {},
+                                               "SnippetCategory.entry name" );
         const std::int64_t weight = options.get_or<std::int64_t>( "weight", 1 );
         const std::string examine_handler = options.get_or(
-                "on_examine", std::string() );
+                                                "on_examine", std::string() );
         if( id.empty() || text.empty() ) {
             throw std::runtime_error(
                 "named snippet entries require non-empty id and text" );
@@ -512,7 +512,7 @@ struct presentation_content_transaction::impl {
     impl( std::string owner_id, const std::size_t owner_generation ) :
         owner( std::move( owner_id ) ), generation( owner_generation ),
         token( std::make_shared<owner_token>( owner_token{ owner, generation,
-                                              handle_lifecycle::building } ) ) {}
+                handle_lifecycle::building } ) ) {}
 
     std::string owner;
     std::size_t generation = 0;
@@ -630,11 +630,11 @@ void presentation_content_transaction::install_lua_api( sol::state &lua, sol::ta
         }
         const std::string id = options.get_or( "id", std::string() );
         const detail::authored_text name = detail::read_singular_text(
-                options.get<sol::object>( "name" ), {}, "ZoneType.name" );
+                                               options.get<sol::object>( "name" ), {}, "ZoneType.name" );
         const detail::authored_text description = detail::read_singular_text(
                 options.get<sol::object>( "description" ), {}, "ZoneType.description" );
         const std::string display_field = options.get_or(
-                "display_field", std::string() );
+                                              "display_field", std::string() );
         const bool can_be_personal = options.get_or( "can_be_personal", false );
         const bool hidden = options.get_or( "hidden", false );
         auto definition = std::make_shared<zone_type_definition_data>();
@@ -672,11 +672,11 @@ void presentation_content_transaction::install_lua_api( sol::state &lua, sol::ta
         }
         const std::string id = options.get_or( "id", std::string() );
         const detail::authored_text verb = detail::read_singular_text(
-                options.get<sol::object>( "verb" ), {}, "ActivityType.verb" );
+                                               options.get<sol::object>( "verb" ), {}, "ActivityType.verb" );
         const bool rooted = options.get_or( "rooted", false );
         const bool interruptable = options.get_or( "interruptable", true );
         const bool interruptable_with_keyboard = options.get_or(
-                    "interruptable_with_keyboard", true );
+                "interruptable_with_keyboard", true );
         const std::string based_on = options.get_or( "based_on", std::string( "speed" ) );
         const bool can_resume = options.get_or( "can_resume", true );
         const bool multi_activity = options.get_or( "multi_activity", false );
@@ -705,7 +705,7 @@ void presentation_content_transaction::install_lua_api( sol::state &lua, sol::ta
         }
         const std::string id = options.get_or( "id", std::string() );
         const detail::authored_text title = detail::read_singular_text(
-                options.get<sol::object>( "title" ), {}, "HelpTopic.title" );
+                                                options.get<sol::object>( "title" ), {}, "HelpTopic.title" );
         std::optional<std::int64_t> order;
         if( const sol::optional<std::int64_t> requested_order =
                 options.get<sol::optional<std::int64_t>>( "order" ) ) {

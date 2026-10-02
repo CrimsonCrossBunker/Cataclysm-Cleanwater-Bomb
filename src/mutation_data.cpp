@@ -1269,8 +1269,8 @@ void mutation_branch::add_entry( Trait_group &tg, const JsonObject &obj )
         ptr = std::make_unique<Single_trait_creator>( id, var, probability );
     } else if( obj.has_member( "group" ) ) {
         ptr = std::make_unique<Trait_group_creator>( trait_group::Trait_group_tag(
-                    obj.get_string( "group" ) ),
-                probability );
+                obj.get_string( "group" ) ),
+            probability );
     }
 
     if( !ptr ) {

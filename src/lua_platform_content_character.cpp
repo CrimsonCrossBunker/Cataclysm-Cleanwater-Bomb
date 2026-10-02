@@ -421,7 +421,7 @@ struct enchantment_definition_data {
     std::vector<enchantment_fake_spell_definition_data> hit_you_effects;
     std::vector<enchantment_fake_spell_definition_data> hit_me_effects;
     std::vector<std::pair<std::int64_t, enchantment_fake_spell_definition_data>>
-            intermittent_effects;
+    intermittent_effects;
     std::vector<enchantment_vision_definition_data> visions;
     bool registered = false;
 };
@@ -1268,7 +1268,7 @@ struct enchantment_definition_handle {
         vision.distance = options.get_or( "distance", 0.0 );
         vision.distance_handler = options.get_or( "distance_handler", std::string() );
         vision.condition_handler = options.get_or( "condition", options.get_or(
-                                       "condition_handler", std::string() ) );
+                "condition_handler", std::string() ) );
         vision.precise = options.get_or( "precise", false );
         vision.ignores_aiming_cone = options.get_or( "ignores_aiming_cone", false );
         if( const sol::optional<sol::table> descriptions =
@@ -1885,7 +1885,7 @@ struct character_content_transaction::impl {
     impl( std::string owner_id, const std::size_t owner_generation ) :
         owner( std::move( owner_id ) ), generation( owner_generation ),
         token( std::make_shared<owner_token>( owner_token{ owner, generation,
-                                              handle_lifecycle::building } ) ) {}
+                handle_lifecycle::building } ) ) {}
 
     std::string owner;
     std::size_t generation = 0;
@@ -2156,19 +2156,19 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
                                               options.get<sol::object>( "name" ), definition->id,
                                               "profession name" );
         definition->name_male = detail::read_singular_text_or(
-                                   options.get<sol::object>( "name_male" ), common_name,
-                                   "profession male name" );
+                                    options.get<sol::object>( "name_male" ), common_name,
+                                    "profession male name" );
         definition->name_female = detail::read_singular_text_or(
-                                     options.get<sol::object>( "name_female" ), common_name,
-                                     "profession female name" );
+                                      options.get<sol::object>( "name_female" ), common_name,
+                                      "profession female name" );
         const authored_text common_description = read_singular_text(
-                    options.get<sol::object>( "description" ), {}, "profession description" );
+                options.get<sol::object>( "description" ), {}, "profession description" );
         definition->description_male = detail::read_singular_text_or(
-                                          options.get<sol::object>( "description_male" ), common_description,
-                                          "profession male description" );
+                                           options.get<sol::object>( "description_male" ), common_description,
+                                           "profession male description" );
         definition->description_female = detail::read_singular_text_or(
-                                            options.get<sol::object>( "description_female" ), common_description,
-                                            "profession female description" );
+                                             options.get<sol::object>( "description_female" ), common_description,
+                                             "profession female description" );
         definition->points = options.get_or<std::int64_t>( "points", 0 );
         if( const sol::optional<std::int64_t> starting_cash =
                 options.get<sol::optional<std::int64_t>>( "starting_cash" ) ) {
@@ -2189,7 +2189,7 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
         definition->hard_requirement = options.get_or( "hard_requirement", false );
         definition->hobbies_whitelist = options.get_or( "whitelist_hobbies", true );
         definition->martial_arts_choice_amount = options.get_or<std::int64_t>(
-                    "starting_styles_choices_amount", 1 );
+                "starting_styles_choices_amount", 1 );
         definition->subtype = options.get_or( "subtype", std::string() );
         definition->start_handler = options.get_or(
                                         "on_start", options.get_or(
@@ -2544,18 +2544,18 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
         const sol::object reason = options.get<sol::object>( "cant_remove_reason" );
         if( reason.valid() && reason.get_type() != sol::type::nil ) {
             definition->cant_remove_reason = read_singular_text(
-                                                reason, {}, "bionic removal reason" );
+                                                 reason, {}, "bionic removal reason" );
         }
         definition->activation_energy_millijoules = options.get_or<std::int64_t>(
-                    "activation_energy_millijoules", 0 );
+                "activation_energy_millijoules", 0 );
         definition->deactivation_energy_millijoules = options.get_or<std::int64_t>(
-                    "deactivation_energy_millijoules", 0 );
+                "deactivation_energy_millijoules", 0 );
         definition->over_time_energy_millijoules = options.get_or<std::int64_t>(
-                    "over_time_energy_millijoules", 0 );
+                "over_time_energy_millijoules", 0 );
         definition->trigger_energy_millijoules = options.get_or<std::int64_t>(
-                    "trigger_energy_millijoules", 0 );
+                "trigger_energy_millijoules", 0 );
         definition->capacity_energy_millijoules = options.get_or<std::int64_t>(
-                    "capacity_energy_millijoules", 0 );
+                "capacity_energy_millijoules", 0 );
         definition->charge_time_turns = options.get_or<std::int64_t>( "charge_time_turns", 0 );
         definition->power_gen_emission = options.get_or( "power_gen_emission", std::string() );
         definition->fake_weapon = options.get_or( "fake_weapon", std::string() );
@@ -2797,13 +2797,13 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
         definition->caster_condition_handler = options.get_or(
                 "caster_condition", options.get_or( "caster_condition_handler", std::string() ) );
         definition->caster_condition_fail_message = read_singular_text(
-                    options.get<sol::object>( "caster_condition_fail_message" ), {},
-                    "spell caster failure message" );
+                options.get<sol::object>( "caster_condition_fail_message" ), {},
+                "spell caster failure message" );
         definition->target_condition_handler = options.get_or(
                 "target_condition", options.get_or( "target_condition_handler", std::string() ) );
         definition->target_condition_fail_message = read_singular_text(
-                    options.get<sol::object>( "target_condition_fail_message" ), {},
-                    "spell target failure message" );
+                options.get<sol::object>( "target_condition_fail_message" ), {},
+                "spell target failure message" );
         definition->teachable = options.get_or( "teachable", true );
         if( const sol::optional<sol::table> channel =
                 options.get<sol::optional<sol::table>>( "channel" ) ) {
@@ -2812,7 +2812,7 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
             definition->channel_turns = channel->get<sol::optional<std::int64_t>>(
                                             "turns" ).value_or( max_channel_turns );
             definition->channel_spell = channel->get_or( "spell", channel->get_or(
-                                            "channel_spell", std::string() ) );
+                    "channel_spell", std::string() ) );
             definition->channel_end_spell = channel->get_or(
                                                 "end_spell", channel->get_or(
                                                     "channel_end_spell", std::string() ) );
@@ -3000,9 +3000,9 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
                 options.get<sol::optional<sol::table>>( "phases" ) ) {
             definition->start_handler = phases->get_or( "start", definition->start_handler );
             definition->end_handler = phases->get_or( "success", phases->get_or(
-                                          "end", definition->end_handler ) );
+                    "end", definition->end_handler ) );
             definition->fail_handler = phases->get_or( "failure", phases->get_or(
-                                           "fail", definition->fail_handler ) );
+                    "fail", definition->fail_handler ) );
         }
         mission_definition_handle handle{ definition, pimpl_->token };
         const auto each_array_entry = [&options]( const char *key, const char *label,
@@ -3189,7 +3189,7 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
         definition->failure_cost_fraction = options.get_or(
                                                 "failure_cost_fraction", 0.0 );
         definition->failure_experience_fraction = options.get_or(
-                    "failure_experience_fraction", 0.2 );
+                "failure_experience_fraction", 0.2 );
         return magic_type_definition_handle{
             std::move( definition ), pimpl_->token
         };
@@ -4380,8 +4380,8 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                           definition.spell_class + "'" );
             }
             const std::optional<magic_energy_type> energy = definition.energy_source.empty() ?
-                    std::optional<magic_energy_type>() :
-                    io::string_to_enum_optional<magic_energy_type>( definition.energy_source );
+                std::optional<magic_energy_type>() :
+                io::string_to_enum_optional<magic_energy_type>( definition.energy_source );
             if( !definition.energy_source.empty() && !energy ) {
                 throw std::runtime_error( "spell '" + definition.id +
                                           "' has unknown energy source '" +
@@ -6093,8 +6093,8 @@ bool character_content_transaction::apply_phase(
                         native.magic_type = magic_type_id( source.magic_type );
                     }
                     const std::optional<magic_energy_type> energy = source.energy_source.empty() ?
-                            std::optional<magic_energy_type>() :
-                            io::string_to_enum_optional<magic_energy_type>( source.energy_source );
+                        std::optional<magic_energy_type>() :
+                        io::string_to_enum_optional<magic_energy_type>( source.energy_source );
                     native.set_platform_energy_source(
                         energy,
                         source.energy_vitamin.empty() ? std::optional<vitamin_id>() :

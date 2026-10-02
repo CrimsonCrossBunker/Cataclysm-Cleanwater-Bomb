@@ -163,7 +163,7 @@ const effect *find_effect(
     const std::optional<bodypart_id> &body_part )
 {
     const std::vector<std::reference_wrapper<const effect>> effects =
-                creature.get_effects();
+        creature.get_effects();
     const auto found = std::find_if(
                            effects.begin(), effects.end(),
     [&id, &body_part]( const std::reference_wrapper<const effect> &candidate ) {
@@ -202,7 +202,7 @@ sol::table list_effects(
         return make_game_error_result( state, *error );
     }
     const std::vector<std::reference_wrapper<const effect>> effects =
-                creature->get_effects();
+        creature->get_effects();
     const std::size_t total = effects.size();
     const std::size_t returned = std::min(
                                      total,

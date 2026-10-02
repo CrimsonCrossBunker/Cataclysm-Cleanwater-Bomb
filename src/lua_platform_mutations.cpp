@@ -1267,7 +1267,7 @@ sol::table replace_conflicting_state(
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_exact_character( handle, runtime_generation, world_generation,
-                           error );
+        error );
     if( character == nullptr ) {
         return make_game_error_result( state, *error );
     }
@@ -1376,7 +1376,7 @@ sol::table erase_state(
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_exact_character( handle, runtime_generation, world_generation,
-                           error );
+        error );
     if( character == nullptr ) {
         return make_game_error_result( state, *error );
     }
@@ -1473,7 +1473,7 @@ sol::table invoke_activation(
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_exact_character( handle, runtime_generation, world_generation,
-                           error );
+        error );
     if( character == nullptr ) {
         return make_game_error_result( state, *error );
     }
@@ -1484,8 +1484,8 @@ sol::table invoke_activation(
         character->deactivate_mutation( id );
     }
     Character *after_character = resolve_exact_character(
-                                    handle, runtime_generation,
-                                    world_generation, error );
+                                     handle, runtime_generation,
+                                     world_generation, error );
     if( after_character == nullptr ) {
         return make_game_error_result( state, *error );
     }
@@ -1549,8 +1549,8 @@ sol::table set_active_state(
         character->deactivate_mutation( id );
     }
     Character *after_character = resolve_exact_character(
-                                    handle, runtime_generation,
-                                    world_generation, error );
+                                     handle, runtime_generation,
+                                     world_generation, error );
     if( after_character == nullptr ) {
         return make_game_error_result( state, *error );
     }
@@ -1620,10 +1620,10 @@ sol::table set_variant_state(
                     world_generation, error );
     if( character == nullptr || !character->has_permanent_trait( id ) ) {
         return character == nullptr ? make_game_error_result( state, *error ) :
-               make_game_error_result( state, game_handle_error{
-                   "not_permanent",
-                   "The character no longer owns the requested mutation"
-               } );
+        make_game_error_result( state, game_handle_error{
+            "not_permanent",
+            "The character no longer owns the requested mutation"
+        } );
     }
     character->set_mut_variant( id, variant );
     character = resolve_exact_character(
@@ -1693,7 +1693,7 @@ void install_mutation_api(
         "has_id_text",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state, const game_handle & handle,
-            const std::string & id_text ) {
+    const std::string & id_text ) {
         require_read();
         return has_id_text_state(
                    lua_state, handle, id_text,
@@ -1741,7 +1741,7 @@ void install_mutation_api(
         "is_purifiable_id_text",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state, const game_handle & handle,
-            const std::string & id_text ) {
+    const std::string & id_text ) {
         require_read();
         return is_purifiable_id_text(
                    lua_state, handle, id_text,

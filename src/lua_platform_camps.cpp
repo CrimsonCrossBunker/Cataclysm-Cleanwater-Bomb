@@ -158,7 +158,7 @@ sol::table list_camps( sol::this_state lua,
     const tripoint_abs_omt native_center = require_omt( center, "services.camps.list" );
     const camp_query_options options = read_options( requested );
     const std::vector<camp_reference> references = overmap_buffer.get_camps_near(
-                project_to<coords::sm>( native_center ), options.radius_omt * 2 );
+            project_to<coords::sm>( native_center ), options.radius_omt * 2 );
     sol::state_view state( lua );
     sol::table items = state.create_table();
     int returned = 0;
@@ -207,7 +207,7 @@ basecamp *resolve_camp( const game_handle &handle,
                         std::optional<game_handle_error> &error )
 {
     const native_handle_result<basecamp> resolved = handle.resolve_camp(
-                runtime, world_generation );
+            runtime, world_generation );
     if( !resolved ) {
         error = resolved.error;
         return nullptr;
@@ -2255,9 +2255,9 @@ sol::table create_platform_task(
                                       task, camp_handle, manager_handle, worker_handle,
                                       runtime, world_generation );
     return make_game_value_result( state, sol::make_object( state,
-                                   snapshot_platform_task( state, task, camp_handle,
-                                           manager_handle, worker_handle, runtime,
-                                           world_generation, token ) ) );
+            snapshot_platform_task( state, task, camp_handle,
+                                    manager_handle, worker_handle, runtime,
+                                    world_generation, token ) ) );
 }
 
 sol::table get_platform_task(
@@ -2269,17 +2269,17 @@ sol::table get_platform_task(
     sol::state_view state( lua );
     resolved_platform_task resolved;
     if( const std::optional<game_handle_error> error = resolve_platform_task(
-                token, camp_handle, manager_handle, worker_handle, runtime,
-                world_generation, resolved ) ) {
+            token, camp_handle, manager_handle, worker_handle, runtime,
+            world_generation, resolved ) ) {
         return make_game_error_result( state, *error );
     }
     const camp_task_token current = make_camp_task_token(
                                         resolved.task, camp_handle, manager_handle,
                                         worker_handle, runtime, world_generation );
     return make_game_value_result( state, sol::make_object( state,
-                                   snapshot_platform_task( state, resolved.task,
-                                           camp_handle, manager_handle, worker_handle,
-                                           runtime, world_generation, current ) ) );
+            snapshot_platform_task( state, resolved.task,
+                                    camp_handle, manager_handle, worker_handle,
+                                    runtime, world_generation, current ) ) );
 }
 
 std::optional<camp_task_token> current_platform_task_token(
@@ -2318,8 +2318,8 @@ sol::table resolve_recipe_escrow(
 
     resolved_platform_task resolved;
     if( const std::optional<game_handle_error> error = resolve_platform_task(
-                token, camp_handle, manager_handle, worker_handle, runtime,
-                world_generation, resolved ) ) {
+            token, camp_handle, manager_handle, worker_handle, runtime,
+            world_generation, resolved ) ) {
         return make_game_error_result( state, *error );
     }
     const bool item_escrow_task =
@@ -2339,7 +2339,7 @@ sol::table resolve_recipe_escrow(
         resolved.task.recipe_escrow;
     platform_recipe_item_transaction transaction;
     if( const std::optional<game_handle_error> error = restore_platform_recipe_items(
-                escrow, *destination_holder, runtime, world_generation, transaction ) ) {
+            escrow, *destination_holder, runtime, world_generation, transaction ) ) {
         return make_game_error_result( state, *error );
     }
 
@@ -2372,12 +2372,12 @@ sol::table resolve_recipe_escrow(
         } );
     }
     return make_game_value_result( state, sol::make_object( state,
-                                   snapshot_platform_task( state, *task_it,
-                                           camp_handle, manager_handle, worker_handle,
-                                           runtime, world_generation,
-                                           current_platform_task_token(
-                                                   *task_it, camp_handle, manager_handle,
-                                                   worker_handle, runtime, world_generation ) ) ) );
+            snapshot_platform_task( state, *task_it,
+                                    camp_handle, manager_handle, worker_handle,
+                                    runtime, world_generation,
+                                    current_platform_task_token(
+                                        *task_it, camp_handle, manager_handle,
+                                        worker_handle, runtime, world_generation ) ) ) );
 }
 
 sol::table page_platform_tasks(
@@ -2529,8 +2529,8 @@ sol::table start_platform_task(
                                       *requested_items_or_duration : sol::object();
     resolved_platform_task resolved;
     if( const std::optional<game_handle_error> error = resolve_platform_task(
-                token, camp_handle, manager_handle, worker_handle, runtime,
-                world_generation, resolved ) ) {
+            token, camp_handle, manager_handle, worker_handle, runtime,
+            world_generation, resolved ) ) {
         return make_game_error_result( state, *error );
     }
     std::int64_t duration_turns = 0;
@@ -2542,8 +2542,8 @@ sol::table start_platform_task(
             } );
         }
         const std::int64_t descriptor_duration = resolved.task.recipe_work ?
-                resolved.task.recipe_work->duration_turns :
-                resolved.task.upgrade_work->duration_turns;
+            resolved.task.recipe_work->duration_turns :
+            resolved.task.upgrade_work->duration_turns;
         if( requested_duration_turns && *requested_duration_turns != descriptor_duration ) {
             return make_game_error_result( state, {
                 "invalid_duration",
@@ -2610,7 +2610,7 @@ sol::table start_platform_task(
         platform_recipe_item_transaction transaction;
         std::vector<basecamp_platform_recipe_escrow_item> escrow;
         if( const std::optional<game_handle_error> error = stage_platform_recipe_items(
-                    requests, runtime, world_generation, escrow, transaction ) ) {
+                requests, runtime, world_generation, escrow, transaction ) ) {
             return make_game_error_result( state, *error );
         }
         for( const basecamp_platform_recipe_escrow_item &entry : escrow ) {
@@ -2664,9 +2664,9 @@ sol::table start_platform_task(
                                         *task_it, camp_handle, manager_handle,
                                         worker_handle, runtime, world_generation );
     return make_game_value_result( state, sol::make_object( state,
-                                   snapshot_platform_task( state, *task_it,
-                                           camp_handle, manager_handle, worker_handle,
-                                           runtime, world_generation, current ) ) );
+            snapshot_platform_task( state, *task_it,
+                                    camp_handle, manager_handle, worker_handle,
+                                    runtime, world_generation, current ) ) );
 }
 
 sol::table finish_platform_task(
@@ -2678,8 +2678,8 @@ sol::table finish_platform_task(
     sol::state_view state( lua );
     resolved_platform_task resolved;
     if( const std::optional<game_handle_error> error = resolve_platform_task(
-                token, camp_handle, manager_handle, worker_handle, runtime,
-                world_generation, resolved ) ) {
+            token, camp_handle, manager_handle, worker_handle, runtime,
+            world_generation, resolved ) ) {
         return make_game_error_result( state, *error );
     }
     std::string rejection;
@@ -2745,13 +2745,13 @@ sol::table finish_platform_task(
             } );
         }
         return make_game_value_result( state, sol::make_object( state,
-                                       snapshot_platform_task( state, *task_it,
-                                               camp_handle, manager_handle, worker_handle,
-                                               runtime, world_generation,
-                                               current_platform_task_token(
-                                                       *task_it, camp_handle, manager_handle,
-                                                       worker_handle, runtime,
-                                                       world_generation ) ) ) );
+                snapshot_platform_task( state, *task_it,
+                                        camp_handle, manager_handle, worker_handle,
+                                        runtime, world_generation,
+                                        current_platform_task_token(
+                                            *task_it, camp_handle, manager_handle,
+                                            worker_handle, runtime,
+                                            world_generation ) ) ) );
     }
     if( !resolved.camp->platform_finish_task(
             token.task_id(), token.identity_generation(), resolved.worker,
@@ -2770,9 +2770,9 @@ sol::table finish_platform_task(
         } );
     }
     return make_game_value_result( state, sol::make_object( state,
-                                   snapshot_platform_task( state, *task_it,
-                                           camp_handle, manager_handle, worker_handle,
-                                           runtime, world_generation, std::nullopt ) ) );
+            snapshot_platform_task( state, *task_it,
+                                    camp_handle, manager_handle, worker_handle,
+                                    runtime, world_generation, std::nullopt ) ) );
 }
 
 camp_expansion_token make_camp_expansion_token(
@@ -2857,7 +2857,7 @@ std::optional<game_handle_error> resolve_camp_expansion(
             token.expansion_id(), token.identity_generation(), expansion, rejection ) ) {
         return game_handle_error{
             rejection.find( "retired" ) != std::string::npos ?
-            "stale_expansion" : "not_found", rejection
+                     "stale_expansion" : "not_found", rejection
         };
     }
     if( expansion.camp_id != camp->platform_id() ) {
@@ -2962,13 +2962,13 @@ sol::table get_camp_expansion(
     basecamp *camp = nullptr;
     basecamp_platform_expansion expansion;
     if( const std::optional<game_handle_error> error = resolve_camp_expansion(
-                token, camp_handle, manager_handle, runtime, world_generation, camp, expansion ) ) {
+            token, camp_handle, manager_handle, runtime, world_generation, camp, expansion ) ) {
         return make_game_error_result( state, *error );
     }
     const game_handle current_camp = make_camp_handle( *camp, runtime, world_generation );
     return make_game_value_result( state, sol::make_object( state,
-                                   snapshot_camp_expansion( state, *camp, expansion,
-                                           current_camp, runtime, world_generation ) ) );
+            snapshot_camp_expansion( state, *camp, expansion,
+                                     current_camp, runtime, world_generation ) ) );
 }
 
 sol::table remove_camp_expansion(
@@ -2980,7 +2980,7 @@ sol::table remove_camp_expansion(
     basecamp *camp = nullptr;
     basecamp_platform_expansion expansion;
     if( const std::optional<game_handle_error> error = resolve_camp_expansion(
-                token, camp_handle, manager_handle, runtime, world_generation, camp, expansion ) ) {
+            token, camp_handle, manager_handle, runtime, world_generation, camp, expansion ) ) {
         return make_game_error_result( state, *error );
     }
     std::string rejection;

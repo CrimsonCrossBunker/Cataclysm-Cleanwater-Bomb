@@ -388,7 +388,7 @@ terrain_selector read_target_selector(
     terrain_selector result;
     bool has_terrain = false;
     std::optional<ot_match_type> explicit_match;
-    const auto read_terrain = [&]( const sol::object &value ) {
+    const auto read_terrain = [&]( const sol::object & value ) {
         if( value.is<std::string>() ) {
             return value.as<std::string>();
         }
@@ -465,7 +465,7 @@ std::vector<terrain_selector> read_selectors(
             "' must be an array" );
     }
     std::vector<std::pair<std::size_t, terrain_selector>>
-            ordered;
+    ordered;
     const sol::table table = requested.as<sol::table>();
     for( const auto &entry : table ) {
         const sol::object key_object = entry.first;
@@ -596,10 +596,10 @@ overmap_target_options read_overmap_target_options(
                                 entry.second, api_name, key );
         } else if( key == "search_range" ) {
             result.search_range = require_native_int(
-                                     entry.second, api_name, key );
+                                      entry.second, api_name, key );
         } else if( key == "min_distance" ) {
             result.min_distance = require_native_int(
-                                     entry.second, api_name, key );
+                                      entry.second, api_name, key );
         } else if( key == "z" ) {
             result.z = require_native_int(
                            entry.second, api_name, key );
@@ -1277,10 +1277,10 @@ script_tripoint_coord overmap_find_target(
     tripoint_abs_omt target = require_absolute_omt(
                                   origin, std::string( api_name ) );
     const terrain_selector selector = read_target_selector(
-                                         requested_selector,
-                                         std::string( api_name ) );
+                                          requested_selector,
+                                          std::string( api_name ) );
     const overmap_target_options options = read_overmap_target_options(
-                requested_options, std::string( api_name ) );
+            requested_options, std::string( api_name ) );
 
     if( options.z ) {
         target.z() = *options.z;
@@ -1562,9 +1562,9 @@ bool overmap_matches_location_near(
             std::to_string( maximum_location_near_radius ) );
     }
     const tripoint_abs_omt origin = require_absolute_omt(
-                                       position, std::string( api_name ) );
+                                        position, std::string( api_name ) );
     const std::string location_id = require_selector_text(
-                                       requested, std::string( api_name ) );
+                                        requested, std::string( api_name ) );
     checked_axis_offset( origin.x(), -radius, std::string( api_name ) );
     checked_axis_offset( origin.x(), radius, std::string( api_name ) );
     checked_axis_offset( origin.y(), -radius, std::string( api_name ) );
@@ -2259,7 +2259,7 @@ bool reveal_overmap_route(
     const tripoint_abs_omt native_start = require_absolute_omt(
             start, std::string( api_name ) + " start" );
     const tripoint_abs_omt native_end = require_absolute_omt(
-            end, std::string( api_name ) + " end" );
+                                            end, std::string( api_name ) + " end" );
 
     const bool found_route = overmap_buffer.reveal_route(
                                  native_start, native_end, radius, road_only );
@@ -2451,8 +2451,8 @@ void install_overmap_api(
     const script_tripoint_coord & position ) -> sol::table {
         require_read();
         return overmap_tile_token_from_position(
-            lua_state, position, current_runtime_generation(),
-            current_world_generation() );
+        lua_state, position, current_runtime_generation(),
+        current_world_generation() );
     } );
     overmap.set_function(
         "snapshot",
@@ -2461,8 +2461,8 @@ void install_overmap_api(
     const overmap_tile_token & token ) -> sol::table {
         require_read();
         return overmap_tile_snapshot_from_token(
-            lua_state, token, current_runtime_generation(),
-            current_world_generation() );
+        lua_state, token, current_runtime_generation(),
+        current_world_generation() );
     } );
     overmap.set_function(
         "edit",
@@ -2507,7 +2507,7 @@ void install_overmap_api(
         [require_read, require_write](
             const script_tripoint_coord & origin,
             const sol::object & selector,
-            const sol::optional<sol::table> & options ) {
+    const sol::optional<sol::table> &options ) {
         require_read();
         return overmap_find_target(
                    origin, selector, options, require_write );
@@ -2545,24 +2545,24 @@ void install_overmap_api(
     overmap.set_function(
         "matches_terrain",
         [require_read](
-            const script_tripoint_coord &position,
-            const std::string &terrain_id ) {
+            const script_tripoint_coord & position,
+    const std::string & terrain_id ) {
         require_read();
         return overmap_matches_terrain( position, terrain_id );
     } );
     overmap.set_function(
         "matches_location",
         [require_read](
-            const script_tripoint_coord &position,
-            const std::string &location_id ) {
+            const script_tripoint_coord & position,
+    const std::string & location_id ) {
         require_read();
         return overmap_matches_location( position, location_id );
     } );
     overmap.set_function(
         "matches_location_near",
         [require_read](
-            const script_tripoint_coord &position,
-            const std::string &location_id, const int radius ) {
+            const script_tripoint_coord & position,
+    const std::string & location_id, const int radius ) {
         require_read();
         return overmap_matches_location_near(
                    position, location_id, radius );
@@ -2624,7 +2624,7 @@ void install_overmap_api(
         "reveal_native",
         [require_write](
             const script_tripoint_coord & center,
-            const sol::object & radius ) {
+    const sol::object & radius ) {
         require_write();
         return reveal_native_overmap( center, radius );
     } );
@@ -2634,7 +2634,7 @@ void install_overmap_api(
             const script_tripoint_coord & start,
             const script_tripoint_coord & end,
             const sol::object & radius,
-            const bool road_only ) {
+    const bool road_only ) {
         require_write();
         return reveal_overmap_route(
                    start, end, radius, road_only );

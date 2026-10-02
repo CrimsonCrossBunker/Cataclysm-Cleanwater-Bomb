@@ -787,8 +787,8 @@ sol::table remove_instance(
     }
     character->remove_bionic( **current_instance );
     Character *after_character = resolve_exact_character(
-                                    handle, runtime_generation,
-                                    world_generation, error );
+                                     handle, runtime_generation,
+                                     world_generation, error );
     if( after_character == nullptr ) {
         return make_game_error_result( state, *error );
     }
@@ -891,8 +891,8 @@ sol::table set_activation(
                           character->activate_bionic( **current_instance ) :
                           character->deactivate_bionic( **current_instance );
     Character *after_character = resolve_exact_character(
-                                    handle, runtime_generation,
-                                    world_generation, error );
+                                     handle, runtime_generation,
+                                     world_generation, error );
     if( after_character == nullptr ) {
         return make_game_error_result( state, *error );
     }
@@ -1157,8 +1157,8 @@ sol::table quote_bionic_limb_repairs(
         return make_game_error_result( state, *error );
     }
     std::optional<sol::table> result = bionic_limb_repair_state(
-            state, handle, runtime_generation, world_generation,
-            false, error );
+                                           state, handle, runtime_generation, world_generation,
+                                           false, error );
     if( !result ) {
         return make_game_error_result( state, *error );
     }
@@ -1180,8 +1180,8 @@ sol::table repair_bionic_limbs(
         return make_game_error_result( state, *error );
     }
     std::optional<sol::table> result = bionic_limb_repair_state(
-            state, handle, runtime_generation, world_generation,
-            true, error );
+                                           state, handle, runtime_generation, world_generation,
+                                           true, error );
     if( !result ) {
         return make_game_error_result( state, *error );
     }

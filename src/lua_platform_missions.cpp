@@ -1627,14 +1627,14 @@ void install_mission_api(
         "active",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state,
-            const game_handle &owner,
-            const sol::optional<sol::table> &options ) {
-            require_read();
-            return active_instances(
-                       lua_state, owner, options,
-                       current_runtime_generation(),
-                       current_world_generation() );
-        } );
+            const game_handle & owner,
+    const sol::optional<sol::table> &options ) {
+        require_read();
+        return active_instances(
+                   lua_state, owner, options,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
     missions.set_function(
         "get",
         [current_runtime_generation, current_world_generation, require_read](
@@ -1783,14 +1783,14 @@ void install_mission_api(
     missions.set_function(
         "finish",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state lua_state, const game_handle &owner,
-            const mission_token &token ) {
-            require_write();
-            return finish_instance(
-                       lua_state, owner, token,
-                       current_runtime_generation(),
-                       current_world_generation() );
-        } );
+            sol::this_state lua_state, const game_handle & owner,
+    const mission_token & token ) {
+        require_write();
+        return finish_instance(
+                   lua_state, owner, token,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
     missions.set_function(
         "cancel",
         [current_runtime_generation, current_world_generation, require_write](

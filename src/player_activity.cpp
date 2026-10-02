@@ -77,7 +77,7 @@ std::uint64_t player_activity::identity_token::next_value() noexcept
             std::terminate();
         }
     } while( !next.compare_exchange_weak( current, current + 1,
-                                        std::memory_order_relaxed ) );
+                                          std::memory_order_relaxed ) );
     return current;
 }
 

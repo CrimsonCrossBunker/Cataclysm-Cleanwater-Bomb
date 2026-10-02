@@ -271,7 +271,7 @@ static sol::table event_to_lua( runtime &owner, const cata::event &event,
                 const auto character = characters.find( name );
                 if( character != characters.end() ) {
                     const cata::lua_platform::game_handle handle = platform_creature_handle(
-                                owner, *character->second );
+                            owner, *character->second );
                     actors[name] = handle;
                 }
             }
@@ -1326,9 +1326,9 @@ static void dispatch_platform_event( const cata::event &event, const item *event
                     owner,
                     handler_id,
                     sol::make_object(
-                        *owner->lua, event_to_lua( *owner, event, characters,
-                                                   event_item, alpha_actor,
-                                                   beta_actor ) )
+                    *owner->lua, event_to_lua( *owner, event, characters,
+                    event_item, alpha_actor,
+                    beta_actor ) )
                 } );
             } catch( const std::exception &exception ) {
                 DebugLog( D_ERROR, D_MAIN ) << "Lua-first event payload for '"
@@ -1404,7 +1404,7 @@ void install_runtime_callback_api(
         const int version = static_cast<int>( requested_version );
         if( !owner->handlers.emplace( id, handler_definition{
         version, callback.as<sol::protected_function>()
-        } ).second ) {
+    } ).second ) {
             throw std::runtime_error( "duplicate handler id '" + id + "'" );
         }
     } );
@@ -1514,7 +1514,7 @@ void install_runtime_callback_api(
         const int source = static_cast<int>( from_version );
         if( !migrations.emplace( source, task_payload_migration{
         static_cast<int>( to_version ), callback.as<sol::protected_function>()
-        } ).second ) {
+    } ).second ) {
             throw std::runtime_error(
                 "duplicate task payload migration for handler '" + handler_id +
                 "' from version " + std::to_string( from_version ) );

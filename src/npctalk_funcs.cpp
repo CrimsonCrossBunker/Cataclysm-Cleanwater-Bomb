@@ -213,7 +213,7 @@ void talk_function::assign_mission( npc &p )
         return;
     } else if( miss->is_assigned() ) {
         DebugLog( D_WARNING, D_MAIN ) << "assign_mission: mission_id: " << miss->mission_id().str() <<
-                                      " is already assigned!";
+                                         " is already assigned!";
         return;
     }
     miss->assign( get_avatar() );
@@ -440,7 +440,7 @@ static int vehicle_part_repair_service_cost( const vehicle_part &part,
                                 ( 1.0 - damage_ratio ) * ( 1.0 - fault_value_multiplier );
     const double calculated_cost = std::ceil( pristine_value * repair_ratio * price_multiplier );
     return std::max( 1, static_cast<int>( std::min<double>( calculated_cost,
-                                          std::numeric_limits<int>::max() ) ) );
+            std::numeric_limits<int>::max() ) ) );
 }
 
 static int add_vehicle_repair_service_cost( const int total, const int cost )
@@ -541,7 +541,7 @@ static int vehicle_full_repair_service_cost( const vehicle &veh,
     int result = 0;
     for( const int index : part_indices ) {
         result = add_vehicle_repair_service_cost( result,
-                 vehicle_part_repair_service_cost( veh.part( index ), price_multiplier ) );
+            vehicle_part_repair_service_cost( veh.part( index ), price_multiplier ) );
     }
     return result;
 }
@@ -602,7 +602,7 @@ void talk_function::quote_vehicle_full_repair( npc &p )
     }
 
     const int cost = vehicle_full_repair_service_cost( *veh, part_indices,
-                     vehicle_part_repair_multiplier( p ) );
+        vehicle_part_repair_multiplier( p ) );
     if( cost <= 0 ) {
         p.set_value( vehicle_full_repair_status, "no_value" );
         return;
@@ -613,7 +613,7 @@ void talk_function::quote_vehicle_full_repair( npc &p )
     for( const int index : part_indices ) {
         repair_time = std::min( maximum_repair_time,
                                 repair_time + std::min( maximum_repair_time,
-                                        vehicle_part_repair_service_time( veh->part( index ), p ) ) );
+                                    vehicle_part_repair_service_time( veh->part( index ), p ) ) );
     }
     veh->set_value( vehicle_full_repair_snapshot,
                     talk_function::vehicle_service_state_snapshot( *veh ) );
@@ -637,7 +637,7 @@ void talk_function::start_vehicle_full_repair( npc &p )
         return;
     }
     const time_duration repair_time = time_duration::from_turns( static_cast<int>
-                                      ( time_value->dbl() ) );
+        ( time_value->dbl() ) );
     get_player_character().assign_activity( vehicle_part_repair_service_activity_actor(
             repair_time, p.getID(), true ) );
     p.add_effect( effect_currently_busy, repair_time );
@@ -788,7 +788,7 @@ static std::vector<vehicle_part_install_candidate> vehicle_part_sources(
                 continue;
             }
             const int item_cost = supplied_by_mechanic ? std::max( 0,
-                                  npc_trading::trading_price( player_character, mechanic,
+                npc_trading::trading_price( player_character, mechanic,
             { location, 1 } ) ) : 0;
             candidates.push_back( { location, supplied_by_mechanic, item_cost, labor_cost,
                                     add_vehicle_repair_service_cost( item_cost, labor_cost ) } );
@@ -817,9 +817,9 @@ static std::optional<vehicle_part_install_candidate> choose_vehicle_part_source(
         const std::string source = candidate.supplied_by_mechanic ? _( "mechanic" ) : _( "yours" );
         const std::string price = candidate.supplied_by_mechanic ?
                                   string_format( _( "part %1$s + labor %2$s = %3$s" ),
-                                          format_money( candidate.item_cost ),
-                                          format_money( candidate.labor_cost ),
-                                          format_money( candidate.total_cost ) ) :
+                                      format_money( candidate.item_cost ),
+                                      format_money( candidate.labor_cost ),
+                                      format_money( candidate.total_cost ) ) :
                                   string_format( _( "labor %s" ), format_money( candidate.labor_cost ) );
         menu.addentry( static_cast<int>( index ), true, MENU_AUTOASSIGN,
                        string_format( _( "%1$s: %2$s — %3$s; %4$s" ), source,
@@ -917,8 +917,8 @@ static std::optional<tripoint_abs_ms> vehicle_service_output_position( map &here
         const npc &mechanic )
 {
     const std::unordered_set<tripoint_abs_ms> candidates = zone_manager::get_manager().get_near(
-                zone_type_VEHICLE_SERVICE_OUTPUT, mechanic.pos_abs(), MAX_VIEW_DISTANCE, nullptr,
-                mechanic.get_fac_id() );
+            zone_type_VEHICLE_SERVICE_OUTPUT, mechanic.pos_abs(), MAX_VIEW_DISTANCE, nullptr,
+            mechanic.get_fac_id() );
     std::optional<tripoint_abs_ms> result;
     size_t result_item_count = std::numeric_limits<size_t>::max();
     for( const tripoint_abs_ms &candidate : candidates ) {
@@ -989,7 +989,7 @@ void talk_function::select_vehicle_part_service( npc &p )
         }
         const vehicle_part &part = veh->part( selection->part_index );
         const int cost = vehicle_part_repair_service_cost( part,
-                         vehicle_part_repair_multiplier( p ) );
+            vehicle_part_repair_multiplier( p ) );
         if( cost <= 0 ) {
             p.set_value( vehicle_part_service_status, "no_value" );
             popup( _( "The selected repair has no payable post-Cataclysm value." ) );
@@ -1010,7 +1010,7 @@ void talk_function::select_vehicle_part_service( npc &p )
                                  selection->part_index < veh->part_count() &&
                                  vehicle_part_repair_is_selectable( veh->part( selection->part_index ) ) &&
                                  vehicle_part_repair_service_cost( veh->part( selection->part_index ),
-                                         vehicle_part_repair_multiplier( p ) ) == cost;
+                                     vehicle_part_repair_multiplier( p ) ) == cost;
         if( !order_valid ) {
             p.op_of_u.owed += cost;
             p.set_value( vehicle_part_service_status, "invalidated" );
@@ -1097,7 +1097,7 @@ void talk_function::select_vehicle_part_service( npc &p )
         return;
     }
     const std::vector<vehicle_part_install_candidate> sources = vehicle_part_sources(
-                player_character, p, part, install_time, trade_items );
+            player_character, p, part, install_time, trade_items );
     std::vector<vehicle_part_install_candidate> candidates;
     if( batch ) {
         candidates = choose_vehicle_part_batch_sources( sources, mounts.size() );
@@ -1156,12 +1156,12 @@ void talk_function::select_vehicle_part_service( npc &p )
     }
     const std::string confirmation = batch ?
                                      string_format( _( "Install %1$d copies of %2$s in the selected area of the %3$s "
-                                             "for %4$s?  Estimated total time: %5$s." ),
-                                             entries.size(), part.name(), veh->name, format_money( total_cost ),
-                                             to_string_approx( total_time ) ) :
+                      "for %4$s?  Estimated total time: %5$s." ),
+                                         entries.size(), part.name(), veh->name, format_money( total_cost ),
+                                         to_string_approx( total_time ) ) :
                                      string_format( _( "Install %1$s into the %2$s for %3$s?  Estimated time: %4$s." ),
-                                             candidates.front().location->tname(), veh->name, format_money( total_cost ),
-                                             to_string_approx( total_time ) );
+                                         candidates.front().location->tname(), veh->name, format_money( total_cost ),
+                                         to_string_approx( total_time ) );
     if( !query_yn( confirmation ) ) {
         return;
     }
@@ -1315,7 +1315,7 @@ void talk_function::goto_location( npc &p )
     }
     p.goal = destination;
     p.omt_path = overmap_buffer.get_travel_path( p.pos_abs_omt(), p.goal,
-                 overmap_path_params::for_npc() ).points;
+        overmap_path_params::for_npc() ).points;
     if( destination == tripoint_abs_omt::zero || destination.is_invalid() ||
         p.omt_path.empty() ) {
         p.goal = npc::no_goal_point;
@@ -1420,7 +1420,7 @@ void talk_function::return_to_camp_duties( npc &p )
         tripoint_abs_omt surface = p.pos_abs_omt();
         surface.z() = 0;
         p.omt_path = overmap_buffer.get_travel_path( surface, *p.assigned_camp,
-                     overmap_path_params::for_npc() ).points;
+            overmap_path_params::for_npc() ).points;
     } else {
         p.goal = npc::no_goal_point;
         p.omt_path.clear();
@@ -1938,7 +1938,7 @@ void talk_function::leave( npc &p )
     p.job.clear_all_priorities();
     // create a new "lone wolf" faction for this one NPC
     faction *new_solo_fac = g->faction_manager_ptr->add_new_faction( p.name,
-                            faction_id( new_fac_id ), faction_no_faction );
+        faction_id( new_fac_id ), faction_no_faction );
     p.set_fac( new_solo_fac ? new_solo_fac->id : faction_no_faction );
     if( new_solo_fac ) {
         new_solo_fac->known_by_u = true;
@@ -2073,7 +2073,7 @@ void talk_function::player_weapon_drop( npc &/*p*/ )
 void talk_function::lead_to_safety( npc &p )
 {
     mission *reach_safety_mission = mission::reserve_new( mission_MISSION_REACH_SAFETY,
-                                    character_id() );
+        character_id() );
     reach_safety_mission->assign( get_avatar() );
     p.goal = reach_safety_mission->get_target();
     p.set_attitude( NPCATT_LEAD );

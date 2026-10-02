@@ -186,7 +186,7 @@ void require_native_omt_map_load_range(
                           coords::map_squares_per( coords::scale::submap );
     const int sm_to_ms = coords::map_squares_per( coords::scale::submap );
     const std::int64_t submap_max_offset = map_size_submaps - 1;
-    const auto require_axis = [=]( const int coordinate ) {
+    const auto require_axis = [ = ]( const int coordinate ) {
         const std::int64_t submap_origin =
             static_cast<std::int64_t>( coordinate ) * omt_to_sm;
         if( submap_origin < std::numeric_limits<int>::min() ||
