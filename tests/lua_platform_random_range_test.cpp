@@ -232,6 +232,201 @@ TEST_CASE( "lua_platform_native_random_float_matches_game_stream_and_nonfinite_d
     CHECK( rng_get_engine() == before_rejection );
 }
 
+TEST_CASE( "lua_platform_emitted_math_random_calls_match_native_rounding_errors_and_game_stream",
+           "[lua][platform][random_range][math][semantic]" )
+{
+    using namespace cata::lua_platform;
+    clear_active_runtimes();
+    const cata_default_random_engine saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
+    const on_out_of_scope restore_rng( [saved_rng]() {
+        rng_get_engine() = saved_rng;
+    } );
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::math, sol::lib::string );
+    sol::table ccb = lua.create_table();
+    const auto owner = make_runtime( "math_random_stream", 4963, lua );
+    const on_out_of_scope cleanup( []() {
+        clear_active_runtimes();
+    } );
+    install_runtime_api( owner, lua, ccb );
+    set_active_runtimes( { owner } );
+    runtime_world_ready( true );
+    lua["services"] = ccb["services"];
+    REQUIRE( lua.safe_script( R"lua(
+function service_value(result)
+ if not result.ok then error(result.error.message,0) end
+ return result.value
+end
+)lua", sol::script_pass_on_error ).valid() );
+    struct random_case {
+        const char *source;
+        const char *expression;
+    };
+    const std::vector<random_case> cases = {
+        { "rand(_bound)", R"lua(
+(function() local values = {};
+local variable_result;
+variable_result = services.variables.get_context_number(context and context.data, "bound", {strict=true});
+if variable_result.ok == false and variable_result.error and variable_result.error.code == "variable_type_mismatch" then services.diagnostic("Math variable _bound: " .. variable_result.error.message);
+return 0.0 end;
+values[1] = (function(result) if result.exists == false then return 0.0 end;
+return result.value end)(service_value(variable_result));
+values[2] = math.floor(math.abs(values[1])) + 0.0;
+if math.abs(values[1]) - values[2] >= 0.5 then values[2] = values[2] + 1.0 end;
+if values[1] < 0.0 or 1.0 / values[1] < 0.0 then values[2] = -values[2] end;
+assert(values[2] == values[2] and values[2] >= -2147483648 and values[2] <= 2147483647, "rand rounded bound is outside the native signed integer range");
+values[3] = services.random.native_int(math.min(0.0,values[2]), math.max(0.0,values[2])) + 0.0;
+return values[3] end)()
+)lua" },
+        { "rng(_lo,_hi)", R"lua(
+(function() local values = {};
+local variable_result;
+variable_result = services.variables.get_context_number(context and context.data, "lo", {strict=true});
+if variable_result.ok == false and variable_result.error and variable_result.error.code == "variable_type_mismatch" then services.diagnostic("Math variable _lo: " .. variable_result.error.message);
+return 0.0 end;
+values[1] = (function(result) if result.exists == false then return 0.0 end;
+return result.value end)(service_value(variable_result));
+variable_result = services.variables.get_context_number(context and context.data, "hi", {strict=true});
+if variable_result.ok == false and variable_result.error and variable_result.error.code == "variable_type_mismatch" then services.diagnostic("Math variable _hi: " .. variable_result.error.message);
+return 0.0 end;
+values[2] = (function(result) if result.exists == false then return 0.0 end;
+return result.value end)(service_value(variable_result));
+values[3] = services.random.native_float(values[1], values[2]);
+return values[3] end)()
+)lua" },
+        { "_choose?rand(_bound):rng(_lo,_hi)", R"lua(
+(function() local values = {};
+local variable_result;
+variable_result = services.variables.get_context_number(context and context.data, "choose", {strict=true});
+if variable_result.ok == false and variable_result.error and variable_result.error.code == "variable_type_mismatch" then services.diagnostic("Math variable _choose: " .. variable_result.error.message);
+return 0.0 end;
+values[1] = (function(result) if result.exists == false then return 0.0 end;
+return result.value end)(service_value(variable_result));
+values[8] = 0.0;
+if values[1] > 0.0 then goto math_true_8 end;
+goto math_false_8;
+::math_true_8::;
+variable_result = services.variables.get_context_number(context and context.data, "bound", {strict=true});
+if variable_result.ok == false and variable_result.error and variable_result.error.code == "variable_type_mismatch" then services.diagnostic("Math variable _bound: " .. variable_result.error.message);
+return 0.0 end;
+values[2] = (function(result) if result.exists == false then return 0.0 end;
+return result.value end)(service_value(variable_result));
+values[3] = math.floor(math.abs(values[2])) + 0.0;
+if math.abs(values[2]) - values[3] >= 0.5 then values[3] = values[3] + 1.0 end;
+if values[2] < 0.0 or 1.0 / values[2] < 0.0 then values[3] = -values[3] end;
+assert(values[3] == values[3] and values[3] >= -2147483648 and values[3] <= 2147483647, "rand rounded bound is outside the native signed integer range");
+values[4] = services.random.native_int(math.min(0.0,values[3]), math.max(0.0,values[3])) + 0.0;
+values[8] = values[4];
+goto math_end_8;
+::math_false_8::;
+variable_result = services.variables.get_context_number(context and context.data, "lo", {strict=true});
+if variable_result.ok == false and variable_result.error and variable_result.error.code == "variable_type_mismatch" then services.diagnostic("Math variable _lo: " .. variable_result.error.message);
+return 0.0 end;
+values[5] = (function(result) if result.exists == false then return 0.0 end;
+return result.value end)(service_value(variable_result));
+variable_result = services.variables.get_context_number(context and context.data, "hi", {strict=true});
+if variable_result.ok == false and variable_result.error and variable_result.error.code == "variable_type_mismatch" then services.diagnostic("Math variable _hi: " .. variable_result.error.message);
+return 0.0 end;
+values[6] = (function(result) if result.exists == false then return 0.0 end;
+return result.value end)(service_value(variable_result));
+values[7] = services.random.native_float(values[5], values[6]);
+values[8] = values[7];
+::math_end_8::;
+return values[8] end)()
+)lua" }
+    };
+    struct number_case {
+        double bound;
+        double lower;
+        double upper;
+        double choose;
+    };
+    const double inf = std::numeric_limits<double>::infinity();
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    // rand's rounded bound must be representable before the Native int cast.
+    // Its undefined conversions are NOT used as a Native oracle. rng's
+    // nonfinite bounds instead have defined diagnostic+zero/no-draw behavior.
+    const std::vector<number_case> numbers = {
+        { 0, 0, 1, 1 }, { -0.0, 1, 0, 0 },
+        { 0.49999999999999994, -2, 3, 1 },
+        { -0.49999999999999994, -2, 3, -1 },
+        { 0.5, 4, 4, 1 }, { -0.5, 4, 4, 0 },
+        { 2.5, -0.0, 0.0, 1 }, { -2.5, -0.0, 0.0, -1 },
+        { 2147483647.4, 1e300, 1e300, 1 },
+        { -2147483648.4, -1e300, 1e300, 0 },
+        { 3, inf, 1, 0 }, { 3, 1, inf, 0 },
+        { 3, nan, 1, nan }, { 3, 1, nan, 0 },
+    };
+    const auto isolated_before = owner->random_engine;
+    for( const random_case &row : cases ) {
+        eoc_math native;
+        native.deserialize( json_loader::from_string(
+                                std::string( "{\"math\":[\"" ) + row.source + "\"]}" ) );
+        finalize_conditions();
+        for( const unsigned int seed : { 58171u, 58172u } ) {
+            for( const number_case &number : numbers ) {
+                // Five additional storage shapes use the first valid tuple;
+                // this checks missing/null/strict failure before any RNG draw.
+                for( int shape = 0; shape < ( &number == &numbers.front() ? 6 : 1 ); ++shape ) {
+                    CAPTURE( row.source, seed, number.bound, number.lower, number.upper, number.choose, shape );
+                    dialogue conversation;
+                    sol::table data = lua.create_table();
+                    conversation.set_value( "choose", diag_value( number.choose ) );
+                    data["choose"] = number.choose;
+                    for( const auto &field : std::vector<std::pair<std::string, double>>{
+                             { "bound", number.bound }, { "lo", number.lower }, { "hi", number.upper } } ) {
+                        if( shape == 0 ) {
+                            conversation.set_value( field.first, diag_value( field.second ) );
+                            data[field.first] = field.second;
+                        } else if( shape == 2 ) {
+                            conversation.set_value( field.first, diag_value{} );
+                            data[field.first] = ccb["services"]["types"]["null"].get<sol::object>();
+                        } else if( shape == 3 ) {
+                            conversation.set_value( field.first, diag_value( std::string( "3" ) ) );
+                            data[field.first] = "3";
+                        } else if( shape == 4 ) {
+                            conversation.set_value( field.first, diag_value( diag_array{} ) );
+                            data[field.first] = lua.create_table();
+                        } else if( shape == 5 ) {
+                            conversation.set_value( field.first, diag_value( tripoint_abs_ms( 1, 2, 3 ) ) );
+                            data[field.first] = script_tripoint_coord::from_native(
+                                                   coords::origin::abs, coords::scale::map_square, tripoint( 1, 2, 3 ) );
+                        }
+                    }
+                    sol::table context = lua.create_table();
+                    context["data"] = data;
+                    lua["context"] = context;
+                    rng_set_engine_seed( seed );
+                    const cata_default_random_engine before = rng_get_engine(); // NOLINT(cata-determinism)
+                    double expected = 0;
+                    const std::string native_diagnostic = capture_debugmsg_during( [&]() {
+                        expected = native.act( conversation );
+                    } );
+                    const cata_default_random_engine after = rng_get_engine(); // NOLINT(cata-determinism)
+                    const int expected_next = rng( -20, 20 );
+                    rng_get_engine() = before;
+                    sol::protected_function_result call;
+                    const std::string lua_diagnostic = capture_debugmsg_during( [&]() {
+                        detail::callback_scope callback( *owner );
+                        call = lua.safe_script( std::string( "return " ) + row.expression, sol::script_pass_on_error );
+                    } );
+                    REQUIRE( call.valid() );
+                    CHECK( call.get<double>() == expected );
+                    CHECK( rng_get_engine() == after );
+                    CHECK( rng( -20, 20 ) == expected_next );
+                    CHECK( lua_diagnostic.empty() == native_diagnostic.empty() );
+                    if( shape >= 3 ) {
+                        CHECK( expected == 0.0 );
+                        CHECK( after == before );
+                        CHECK( lua_diagnostic.find( "Type mismatch" ) != std::string::npos );
+                    }
+                }
+            }
+        }
+    }
+    CHECK( owner->random_engine == isolated_before );
+}
+
 TEST_CASE( "lua_platform_duration_ranges_match_native_value_pair_and_rng_state",
            "[lua][platform][random_range][time][semantic]" )
 {

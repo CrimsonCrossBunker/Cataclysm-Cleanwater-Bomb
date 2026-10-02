@@ -24469,16 +24469,6 @@ def _coordinate_write_lines(
     ]
 
 
-def _native_literal_singleton_range(value: Any) -> bool:
-    if not isinstance(value, list) or len(value) != 2:
-        return False
-    bounds = [finite_number_literal(bound) for bound in value]
-    if any(bound is None for bound in bounds):
-        return False
-    integers = [math.trunc(float(bound)) for bound in bounds]
-    return integers[0] == integers[1] and NATIVE_INT_MIN <= integers[0] <= NATIVE_INT_MAX
-
-
 def render_static_location_variable_adjust(
     effect: dict[str, Any],
     key: str,
@@ -24498,10 +24488,11 @@ def render_static_location_variable_adjust(
     overmap_tile = effect.get("overmap_tile", False)
     if source is None or not isinstance(z_override, bool) or not isinstance(overmap_tile, bool):
         return None
-    # Native evaluates x/y inside one constructor call: more than one RNG
-    # draw has compiler-dependent ordering. Do not silently pick an order.
-    if (all(isinstance(effect.get(name), list) for name in ("x_adjust", "y_adjust")) and
-            not all(_native_literal_singleton_range(effect[name]) for name in ("x_adjust", "y_adjust"))):
+    # Native evaluates x/y inside one constructor call. Include RNG math and
+    # bound providers, not just authored range arrays, when proving order.
+    xy_effects = [_native_number_expression_effects(effect.get(name, 0), effect_actor_targets)
+                  for name in ("x_adjust", "y_adjust")]
+    if any(value is None for value in xy_effects) or _native_math_random_order_conflict(xy_effects):
         return None
     adjustments = [render_native_number_expression(effect.get(name, 0), effect_actor_targets)
                    for name in ("x_adjust", "y_adjust", "z_adjust")]
@@ -24542,9 +24533,11 @@ def render_static_location_variable_adjust(
 def _location_adjust_random_order_choice(
     effect: Any, effect_actor_targets: dict[str, tuple[str, str] | None] | None,
 ) -> str | None:
-    if (not isinstance(effect, dict) or "location_variable_adjust" not in effect or
-            not all(isinstance(effect.get(name), list) for name in ("x_adjust", "y_adjust")) or
-            all(_native_literal_singleton_range(effect[name]) for name in ("x_adjust", "y_adjust"))):
+    if not isinstance(effect, dict) or "location_variable_adjust" not in effect:
+        return None
+    xy_effects = [_native_number_expression_effects(effect.get(name, 0), effect_actor_targets)
+                  for name in ("x_adjust", "y_adjust")]
+    if any(value is None for value in xy_effects) or not _native_math_random_order_conflict(xy_effects):
         return None
     # Classify only when the remaining shape and its storage owners can be
     # lowered. Do not conceal unsupported bounds or absent participants.
@@ -28098,9 +28091,56 @@ def render_native_math_variable_read(
             ' else return ' + reads[3] + ' end end)(' + pointer + ')')
 
 
+@dataclass(frozen=True)
+class _NativeMathEffects:
+    draws: bool = False
+    random_dependent: bool = False
+    may_abort: bool = False
+    constant: float | None = None
+    singleton_kind: str | None = None
+
+
+@dataclass(frozen=True)
+class _NativeMathCompilation:
+    expression: str
+    effects: _NativeMathEffects
+    choices: tuple[str, ...] = ()
+
+
+def _merge_native_math_effects(effects: list[_NativeMathEffects]) -> _NativeMathEffects:
+    drawing = [effect for effect in effects if effect.draws]
+    kind = drawing[0].singleton_kind if drawing else None
+    if any(effect.singleton_kind != kind for effect in drawing):
+        kind = None
+    return _NativeMathEffects(
+        draws=any(effect.draws for effect in effects),
+        random_dependent=any(effect.random_dependent for effect in effects),
+        may_abort=any(effect.may_abort for effect in effects),
+        singleton_kind=kind,
+    )
+
+
+def _native_math_random_order_conflict(effects: list[_NativeMathEffects]) -> bool:
+    drawing = [effect for effect in effects if effect.draws]
+    if len(drawing) > 1 and (any(effect.random_dependent for effect in drawing) or
+                            drawing[0].singleton_kind is None or
+                            any(effect.singleton_kind != drawing[0].singleton_kind for effect in drawing)):
+        return True
+    drawing_indices = [index for index, effect in enumerate(effects) if effect.draws]
+    aborting_indices = [index for index, effect in enumerate(effects) if effect.may_abort]
+    return any(draw != abort for draw in drawing_indices for abort in aborting_indices)
+
+
 def render_literal_native_arithmetic(
     value: Any, variable_reader: Callable[[str], str | None] | None = None,
 ) -> str | None:
+    compiled = _compile_native_numeric_math(value, variable_reader)
+    return compiled.expression if compiled is not None and not compiled.choices else None
+
+
+def _compile_native_numeric_math(
+    value: Any, variable_reader: Callable[[str], str | None] | None = None,
+) -> _NativeMathCompilation | None:
     """Compile read-only Native numeric expressions to ordinary Lua."""
     if not isinstance(value, list) or not value or not all(isinstance(part, str) for part in value):
         return None
@@ -28112,6 +28152,8 @@ def render_literal_native_arithmetic(
     # condition, operand base, branch statement start, middle result, middle code
     ternaries: list[tuple[int, int, int, int | None, list[str] | None]] = []
     statements = ["local values = {}"]
+    node_effects: dict[int, _NativeMathEffects] = {}
+    node_choices: dict[int, tuple[str, ...]] = {}
     count = 0
     uses_native_float = False
     uses_variable_result = False
@@ -28125,21 +28167,76 @@ def render_literal_native_arithmetic(
                                      "sqrt", "log", "sin", "cos", "tan")}
     functions.update({"min": -1, "max": -1, "_test_": 0})
     functions["clamp"] = 3
+    functions.update({"rand": 1, "rng": 2})
     functions.update({name: 1 for name in ("celsius", "fahrenheit", "from_celsius", "from_fahrenheit")})
 
-    def emit(expression: str) -> None:
+    def emit(expression: str, effects: _NativeMathEffects | None = None) -> None:
         nonlocal count
         count += 1
         statements.append(f"values[{count}] = {expression}")
         operands.append(count)
+        node_effects[count] = effects or _NativeMathEffects()
+        node_choices[count] = ()
+
+    def emit_round(argument: str) -> None:
+        # std::round is ties away from zero; adding 0.5 loses precision at
+        # halfway neighbours and large values. Keep its signed-zero result.
+        emit(f"math.floor(math.abs({argument})) + 0.0")
+        result = count
+        statements.append(f"if math.abs({argument}) - values[{result}] >= 0.5 then "
+                          f"values[{result}] = values[{result}] + 1.0 end")
+        statements.append(f"if {argument} < 0.0 or 1.0 / {argument} < 0.0 then "
+                          f"values[{result}] = -values[{result}] end")
 
     def apply_function(name: str, arguments: list[int]) -> bool:
         nonlocal uses_native_float
         expected = functions[name]
         if expected >= 0 and len(arguments) != expected:
             return False
+        effects = [node_effects[argument] for argument in arguments]
+        result_effects = _merge_native_math_effects(effects)
+        choices = [choice for argument in arguments for choice in node_choices[argument]]
+        if _native_math_random_order_conflict(effects):
+            choices.append(f"Native function {name} uses std::transform for parameter evaluation; "
+                           "choose a Lua order for interacting random draws or failures")
         if name == "_test_":
             emit("42.0")
+        elif name == "rng":
+            emit(f"services.random.native_float(values[{arguments[0]}], values[{arguments[1]}])")
+            lower, upper = (effect.constant for effect in effects)
+            singleton = lower is not None and lower == upper
+            own_effects = _NativeMathEffects(
+                True, not singleton, False, lower if singleton else None,
+                "float" if singleton else None)
+            combined = _merge_native_math_effects([*effects, own_effects])
+            result_effects = _NativeMathEffects(
+                combined.draws, combined.random_dependent, combined.may_abort,
+                own_effects.constant, combined.singleton_kind)
+        elif name == "rand":
+            known = effects[0].constant
+            rounded = None
+            if known is not None:
+                rounded = float(math.floor(abs(known)))
+                if abs(known) - rounded >= 0.5:
+                    rounded += 1.0
+                rounded = math.copysign(rounded, known)
+                if not NATIVE_INT_MIN <= rounded <= NATIVE_INT_MAX:
+                    choices.append("Native rand would perform undefined signed integer conversion; "
+                                   "choose a representable rounded bound")
+            emit_round(f"values[{arguments[0]}]")
+            bound = f"values[{operands.pop()}]"
+            statements.append(f"assert({bound} == {bound} and {bound} >= -2147483648 "
+                              f"and {bound} <= 2147483647, "
+                              '"rand rounded bound is outside the native signed integer range")')
+            emit(f"services.random.native_int(math.min(0.0,{bound}), math.max(0.0,{bound})) + 0.0")
+            singleton = rounded == 0.0
+            own_effects = _NativeMathEffects(
+                True, not singleton, rounded is None or not NATIVE_INT_MIN <= rounded <= NATIVE_INT_MAX,
+                0.0 if singleton else None, "int" if singleton else None)
+            combined = _merge_native_math_effects([*effects, own_effects])
+            result_effects = _NativeMathEffects(
+                combined.draws, combined.random_dependent, combined.may_abort,
+                own_effects.constant, combined.singleton_kind)
         elif name == "clamp":
             value, lower, upper = (f"values[{argument}]" for argument in arguments)
             emit(value)
@@ -28176,14 +28273,7 @@ def render_literal_native_arithmetic(
         else:
             argument = f"values[{arguments[0]}]"
             if name == "round":
-                # std::round rounds halfway away from zero. Adding 0.5 first
-                # would lose precision near halfway/large representable inputs.
-                emit(f"math.floor(math.abs({argument})) + 0.0")
-                result = count
-                statements.append(f"if math.abs({argument}) - values[{result}] >= 0.5 then "
-                                  f"values[{result}] = values[{result}] + 1.0 end")
-                statements.append(f"if {argument} < 0.0 or 1.0 / {argument} < 0.0 then "
-                                  f"values[{result}] = -values[{result}] end")
+                emit_round(argument)
             else:
                 method = "modf" if name == "trunc" else name
                 # Lua floor/ceil/modf can return integers; Native math always
@@ -28193,6 +28283,8 @@ def render_literal_native_arithmetic(
                 if name in {"floor", "ceil", "trunc"}:
                     statements.append(f"if values[{count}] == 0.0 and 1.0 / {argument} < 0.0 then "
                                       f"values[{count}] = -0.0 end")
+        node_effects[count] = result_effects
+        node_choices[count] = tuple(dict.fromkeys(choices))
         return True
 
     def apply_operator(operator: str) -> bool:
@@ -28205,8 +28297,18 @@ def render_literal_native_arithmetic(
             right = operands.pop()
             right_code = statements[start:]
             del statements[start:]
-            emit("0.0")
+            known = node_effects[condition].constant
+            selected = [middle, right] if known is None else [middle if known > 0.0 else right]
+            inputs = [condition, *selected]
+            effects = _merge_native_math_effects([node_effects[node] for node in inputs])
+            if known is not None:
+                effects = _NativeMathEffects(
+                    effects.draws, effects.random_dependent, effects.may_abort,
+                    node_effects[selected[0]].constant, effects.singleton_kind)
+            emit("0.0", effects)
             result = count
+            node_choices[result] = tuple(dict.fromkeys(
+                choice for node in inputs for choice in node_choices[node]))
             # Native ternary truth is >0 (not !=0) and only one arm is
             # evaluated. Flat labels avoid Lua's nested-block depth limit;
             # all shared locals are hoisted outside these branch regions.
@@ -28229,20 +28331,40 @@ def render_literal_native_arithmetic(
                 # math_opers::b_neg uses float_equals(value,0), including its
                 # two rounded additions. Lua truth and exact ==0 both differ.
                 epsilon = repr(sys.float_info.epsilon * 100)
+                effects = node_effects[operand]
+                known = effects.constant
+                constant = None if known is None else float(
+                    known + sys.float_info.epsilon * 100 >= 0.0 and sys.float_info.epsilon * 100 >= known)
                 emit(f"(values[{operand}] + {epsilon} >= 0.0 and "
-                     f"{epsilon} >= values[{operand}]) and 1.0 or 0.0")
+                     f"{epsilon} >= values[{operand}]) and 1.0 or 0.0",
+                     _NativeMathEffects(effects.draws, effects.random_dependent, effects.may_abort,
+                                        constant, effects.singleton_kind))
             else:
-                emit(f"values[{operand}]" if operator == "u+" else f"-(values[{operand}])")
+                effects = node_effects[operand]
+                constant = effects.constant
+                if operator == "u-" and constant is not None:
+                    constant = -constant
+                emit(f"values[{operand}]" if operator == "u+" else f"-(values[{operand}])",
+                     _NativeMathEffects(effects.draws, effects.random_dependent, effects.may_abort,
+                                        constant, effects.singleton_kind))
+            node_choices[count] = node_choices[operand]
             return True
         if len(operands) < 2:
             return False
         right, left = operands.pop(), operands.pop()
+        effects = [node_effects[left], node_effects[right]]
+        choices = [*node_choices[left], *node_choices[right]]
+        if _native_math_random_order_conflict(effects):
+            choices.append(f"Native binary operator {operator} has compiler-dependent operand evaluation; "
+                           "choose a Lua order for interacting random draws or failures")
         if operator in comparisons:
             lua_operator = "~=" if operator == "!=" else operator
-            emit(f"(values[{left}] {lua_operator} values[{right}]) and 1.0 or 0.0")
+            emit(f"(values[{left}] {lua_operator} values[{right}]) and 1.0 or 0.0",
+                 _merge_native_math_effects(effects))
         else:
             emit(f"math.fmod(values[{left}], values[{right}])" if operator == "%" else
-                 f"values[{left}] {operator} values[{right}]")
+                 f"values[{left}] {operator} values[{right}]", _merge_native_math_effects(effects))
+        node_choices[count] = tuple(dict.fromkeys(choices))
         return True
 
     position = 0
@@ -28267,7 +28389,7 @@ def render_literal_native_arithmetic(
                                             and abs(number) < sys.float_info.min):
                 return None  # Native classic-locale stream conversion can reject underflow.
             text = format(number, ".17g")
-            emit(text if "." in text or "e" in text else text + ".0")
+            emit(text if "." in text or "e" in text else text + ".0", _NativeMathEffects(constant=number))
             need_operand = False
         elif token == "(":
             if not need_operand:
@@ -28351,7 +28473,7 @@ def render_literal_native_arithmetic(
         elif token in constants:
             if not need_operand:
                 return None
-            emit(repr(constants[token]))
+            emit(repr(constants[token]), _NativeMathEffects(constant=constants[token]))
             need_operand = False
         elif token in functions:
             if not need_operand or not source[position:].lstrip(" \t\r\n\v\f").startswith("("):
@@ -28373,7 +28495,7 @@ def render_literal_native_arithmetic(
                               f'services.diagnostic({lua_quote("Math variable " + token + ": ")} '
                               '.. variable_result.error.message); return 0.0 end')
             emit('(function(result) if result.exists == false then return 0.0 end; '
-                 'return result.value end)(service_value(variable_result))')
+                 'return result.value end)(service_value(variable_result))', _NativeMathEffects(may_abort=True))
             need_operand = False
         elif need_operand:
             if token not in {"+", "-"} or not allows_prefix_unary:
@@ -28407,7 +28529,8 @@ def render_literal_native_arithmetic(
                           'return (string.unpack("f", string.pack("f", value))) end')
     if uses_variable_result:
         statements.insert(1, "local variable_result")
-    return "(function() " + "; ".join(statements) + f"; return values[{operands[0]}] end)()"
+    expression = "(function() " + "; ".join(statements) + f"; return values[{operands[0]}] end)()"
+    return _NativeMathCompilation(expression, node_effects[operands[0]], node_choices[operands[0]])
 
 
 def render_native_number_expression(
@@ -28435,12 +28558,14 @@ def render_native_number_expression(
             return None
         bounds = [finite_number_literal(bound) for bound in value]
         if any(bound is None for bound in bounds):
+            effects = [_native_number_expression_effects(bound, effect_actor_targets) for bound in value]
+            if any(effect is None for effect in effects) or _native_math_random_order_conflict(effects):
+                return None
             expressions = [render_native_number_expression(bound, effect_actor_targets) for bound in value]
             if any(expression is None for expression in expressions):
                 return None
-            # Bound reads are scalar snapshots, not RNG or math callbacks.
-            # Native does not specify their diagnostic order, but both values
-            # must be obtained and truncated before one shared RNG draw.
+            # Native evaluates bounds inside one rng call. Admit only math
+            # draws whose relative order cannot change values or stream state.
             return ('(function(lower, upper) '
                     'local function integer(number) '
                     'assert(number == number and number ~= math.huge and number ~= -math.huge, '
@@ -28490,6 +28615,67 @@ def render_native_number_expression(
             return None
     return ('(function(result) if result.exists == false then return ' + default +
             ' end; return result.value end)(' + read + ')')
+
+
+def _native_number_expression_effects(
+    value: Any, effect_actor_targets: dict[str, tuple[str, str] | None] | None,
+) -> _NativeMathEffects | None:
+    literal = finite_number_literal(value)
+    if literal is not None:
+        return _NativeMathEffects(constant=float(literal))
+    if isinstance(value, dict) and set(value) == {"math"}:
+        compiled = _compile_native_numeric_math(
+            value["math"], lambda name: render_native_math_variable_read(name, effect_actor_targets))
+        if compiled is None or compiled.choices:
+            return None
+        effects = compiled.effects
+        # eoc_math catches its type failure and returns zero at this boundary.
+        # The enclosing value_or_var call is not aborted by that failure.
+        return _NativeMathEffects(effects.draws, effects.random_dependent, False,
+                                  effects.constant, effects.singleton_kind)
+    if isinstance(value, list):
+        if len(value) != 2 or any(isinstance(bound, list) for bound in value):
+            return None
+        effects = [_native_number_expression_effects(bound, effect_actor_targets) for bound in value]
+        if any(effect is None for effect in effects) or _native_math_random_order_conflict(effects):
+            return None
+        constants = [effect.constant for effect in effects]
+        singleton = (all(bound is not None and math.isfinite(bound) for bound in constants) and
+                     math.trunc(constants[0]) == math.trunc(constants[1]) and
+                     NATIVE_INT_MIN <= math.trunc(constants[0]) <= NATIVE_INT_MAX)
+        own = _NativeMathEffects(True, not singleton, False,
+                                 float(math.trunc(constants[0])) if singleton else None,
+                                 "int" if singleton else None)
+        merged = _merge_native_math_effects([*effects, own])
+        return _NativeMathEffects(merged.draws, merged.random_dependent, False,
+                                  own.constant, merged.singleton_kind)
+    return _NativeMathEffects() if render_native_number_expression(value, effect_actor_targets) is not None else None
+
+
+def _math_random_order_choice(
+    value: Any, effect_actor_targets: dict[str, tuple[str, str] | None] | None,
+) -> str | None:
+    if isinstance(value, dict):
+        if set(value) == {"math"}:
+            compiled = _compile_native_numeric_math(
+                value["math"], lambda name: render_native_math_variable_read(name, effect_actor_targets))
+            if compiled is not None and compiled.choices:
+                return "; ".join(compiled.choices)
+        for nested in value.values():
+            choice = _math_random_order_choice(nested, effect_actor_targets)
+            if choice is not None:
+                return choice
+    elif isinstance(value, list):
+        if len(value) == 2 and not any(isinstance(bound, list) for bound in value):
+            effects = [_native_number_expression_effects(bound, effect_actor_targets) for bound in value]
+            if all(effect is not None for effect in effects) and _native_math_random_order_conflict(effects):
+                return ("Native numeric range bounds have compiler-dependent evaluation order; "
+                        "choose a Lua order for interacting random draws")
+        for nested in value:
+            choice = _math_random_order_choice(nested, effect_actor_targets)
+            if choice is not None:
+                return choice
+    return None
 
 
 def _render_native_variable_string_snapshot(
@@ -33129,12 +33315,15 @@ def render_eoc(
                 "translate u_at_om_location only with a proven alpha "
                 "Character handle and native lazy overmap lookup"
             )
+        condition_order_choice = _math_random_order_choice(raw_condition, effect_actor_targets)
+        if condition_order_choice is not None:
+            condition_todo = condition_order_choice
         lines.append(f"    -- TODO: {condition_todo}.")
         # Unknown truth cannot choose either native branch. Keep the generated
         # callback inert even when later effect statements were rendered.
         lines.append("    do return false end")
         result.add_todo(
-            "manual_rewrite",
+            "semantic_choice" if condition_order_choice else "manual_rewrite",
             f"{source.location}: EOC {eoc_id} condition TODO: {condition_todo}"
         )
     elif condition_expression != "true":
@@ -33236,7 +33425,8 @@ def render_eoc(
                         false_todo = _WEIGHTED_LIST_EOC_TODO
                         false_todo_category = "manual_rewrite"
                     semantic_choice = (mutation_migration_gap(false_value) or
-                                       _location_adjust_random_order_choice(false_value, effect_actor_targets))
+                                       _location_adjust_random_order_choice(false_value, effect_actor_targets) or
+                                       _math_random_order_choice(false_value, effect_actor_targets))
                     if semantic_choice is not None:
                         false_todo = semantic_choice
                         false_todo_category = "semantic_choice"
@@ -35489,7 +35679,8 @@ def render_eoc(
                     lines.extend(rendered)
                     converted_effect = True
                 else:
-                    order_choice = _location_adjust_random_order_choice(effect, effect_actor_targets)
+                    order_choice = (_location_adjust_random_order_choice(effect, effect_actor_targets) or
+                                    _math_random_order_choice(effect, effect_actor_targets))
                     lines.append(
                         "    -- TODO: " + (order_choice or "translate location-variable arithmetic "
                                           "through typed coordinate variables") + "."

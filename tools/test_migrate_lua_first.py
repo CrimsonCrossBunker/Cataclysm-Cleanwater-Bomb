@@ -9286,7 +9286,7 @@ assert(#events == 9)
         for source in (
             "u_health() > 0", "n_score > 0", "_context_score > 0", "NaN > 0",
             "١ > 0", "1e309 > 0", "1e-999 > 0", "9" * 400 + " > 0",
-            "1 = 2", "rand(3) > 0", "clamp(1,2) > 0",
+            "1 = 2", "rand(3,4) > 0", "clamp(1,2) > 0",
         ):
             with self.subTest(source=source):
                 self.assertIsNone(migrate_lua_first.render_static_condition_math({"math": [source]}))
@@ -35257,7 +35257,7 @@ assert(context.data.position.x==EXPECTED_X and context.data.position.y==EXPECTED
                                     capture_output=True, timeout=10)
             self.assertEqual(result.returncode, 0, result.stderr)
         for chunks in ([], [""], ["1", 2], ["1 / / 2"], ["()"], ["1(2)"], ["(1+2"],
-                       ["1 2"], ["1e309"], ["1e-999"], ["_dynamic"], ["rand(3)"],
+                       ["1 2"], ["1e309"], ["1e-999"], ["_dynamic"], ["rand(3,4)"],
                        ["u_strength()"], ["1 = 2"], ["١ + 2"], ["1\0+2"]):
             self.assertIsNone(migrate_lua_first.render_native_number_expression({"math": chunks}))
         # Flat statements avoid Lua's nested-expression/local-variable limits;
@@ -35267,6 +35267,152 @@ assert(context.data.position.x==EXPECTED_X and context.data.position.y==EXPECTED
         result = subprocess.run(["lua", "-"], input="assert(" + (expression or "nil") + " == 4101)\n",
                                 text=True, capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_native_math_random_calls_keep_rounding_double_results_and_lazy_api_sequence(self) -> None:
+        cases = [
+            ("rand(2.5)", 2.0, [("int", 0, 3, 2)]),
+            ("rand(-2.5)", -2.0, [("int", -3, 0, -2)]),
+            ("rand(0.49999999999999994)", 0.0, [("int", 0, 0, 0)]),
+            ("rand(-0.49999999999999994)", 0.0, [("int", 0, 0, 0)]),
+            ("rand(2147483647.4)", 2147483647.0, [("int", 0, 2147483647, 2147483647)]),
+            ("rand(-2147483648.4)", -2147483648.0, [("int", -2147483648, 0, -2147483648)]),
+            ("rng(3,1)", 2.0, [("float", 3, 1, 2.0)]),
+            ("rng(1,1)", 1.0, [("float", 1, 1, 1.0)]),
+            ("rng(-2,3)+4", 5.5, [("float", -2, 3, 1.5)]),
+            ("max(rng(1,3),5)", 5.0, [("float", 1, 3, 2.0)]),
+            ("rand(0)+rand(0)", 0.0, [("int", 0, 0, 0), ("int", 0, 0, 0)]),
+            ("rng(1,1)+rng(2,2)", 3.0, [("float", 1, 1, 1.0), ("float", 2, 2, 2.0)]),
+            ("rand(rand(0))", 0.0, [("int", 0, 0, 0), ("int", 0, 0, 0)]),
+            ("rng(rand(0),rand(0))", 0.0,
+             [("int", 0, 0, 0), ("int", 0, 0, 0), ("float", 0, 0, 0.0)]),
+            ("rand(rng(0,0))", 0.0, [("float", 0, 0, 0.0), ("int", 0, 0, 0)]),
+            ("1?rand(3):rng(1,5)", 2.0, [("int", 0, 3, 2)]),
+            ("-1?rand(3):rng(1,5)", 2.5, [("float", 1, 5, 2.5)]),
+            ("rand(0)?rng(1,5):rand(3)", 2.0, [("int", 0, 0, 0), ("int", 0, 3, 2)]),
+            ("1?5:max(rand(2),rand(3))", 5.0, []),
+            ("1?5:rand(2147483648)", 5.0, []),
+            ("(1?0:1)?max(rand(2),rand(3)):5", 5.0, []),
+            ("9007199254740992+rand(3)", 9007199254740992.0, [("int", 0, 3, 1)]),
+        ]
+        for source, expected, calls in cases:
+            with self.subTest(source=source):
+                expression = migrate_lua_first.render_literal_native_arithmetic([source])
+                self.assertIsNotNone(expression)
+                rows = "{" + ",".join("{" + repr(kind) + f",{lo!r},{hi!r},{value!r}" + "}"
+                                      for kind, lo, hi, value in calls) + "}"
+                script = r"""
+local calls=ROWS
+local count=0
+local function draw(kind,lo,hi)
+ count=count+1
+ local row=calls[count]
+ assert(row and row[1]==kind and row[2]==lo and row[3]==hi)
+ return row[4]
+end
+local services={random={native_int=function(lo,hi) return draw('int',lo,hi) end,
+ native_float=function(lo,hi) return draw('float',lo,hi) end}}
+local result=EXPRESSION
+assert(result==EXPECTED and count==#calls)
+assert(math.type(result)=='float')
+""".replace("ROWS", rows).replace("EXPRESSION", str(expression)).replace("EXPECTED", repr(expected))
+                completed = subprocess.run(["lua", "-"], input=script, text=True,
+                                           capture_output=True, timeout=10)
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_native_math_rand_dynamic_bound_rejects_undefined_cast_before_drawing(self) -> None:
+        namespace = migrate_lua_first._migration_math_function_ids.set(frozenset())
+        try:
+            expression = migrate_lua_first.render_native_number_expression({"math": ["rand(_bound)"]})
+        finally:
+            migrate_lua_first._migration_math_function_ids.reset(namespace)
+        self.assertIsNotNone(expression)
+        script = r"""
+local context={data={}}
+local value,missing,bad,stale,draws,diagnostics
+local expected_lower,expected_upper
+local services={variables={get_context_number=function(data,key,options)
+ assert(data==context.data and key=='bound' and options.strict)
+ if bad then return {ok=false,error={code='variable_type_mismatch',message='wrong type'}} end
+ if stale then return {ok=false,error={code='stale_runtime',message='stale'}} end
+ return {ok=true,value={exists=not missing,value=value}}
+end},random={native_int=function(lo,hi)
+ draws=draws+1;assert(lo==expected_lower and hi==expected_upper);return lo
+end},diagnostic=function() diagnostics=diagnostics+1 end}
+local function service_value(result) if not result.ok then error(result.error.code,0) end;return result.value end
+local function evaluate() return EXPRESSION end
+for _,row in ipairs({{2.5,0,3},{-2.5,-3,0},{2147483647.4,0,2147483647},
+ {-2147483648.4,-2147483648,0},{0.49999999999999994,0,0}}) do
+ value,expected_lower,expected_upper=row[1],row[2],row[3]
+ missing,bad,stale,draws,diagnostics=false,false,false,0,0
+ assert(evaluate()==expected_lower and draws==1 and diagnostics==0)
+end
+for _,invalid in ipairs({math.huge,-math.huge,0/0,2147483647.5,-2147483648.5}) do
+ value,draws,diagnostics=invalid,0,0
+ assert(not pcall(evaluate) and draws==0 and diagnostics==0)
+end
+expected_lower,expected_upper=0,0;missing,draws,diagnostics=true,0,0
+assert(evaluate()==0.0 and draws==1 and diagnostics==0)
+missing,bad,draws,diagnostics=false,true,0,0
+assert(evaluate()==0.0 and draws==0 and diagnostics==1)
+bad,stale,draws,diagnostics=false,true,0,0
+local ok,message=pcall(evaluate)
+assert(not ok and message=='stale_runtime' and draws==0 and diagnostics==0)
+""".replace("EXPRESSION", str(expression))
+        completed = subprocess.run(["lua", "-"], input=script, text=True,
+                                   capture_output=True, timeout=10)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
+    def test_native_math_random_order_choices_reach_condition_and_coordinate_reports(self) -> None:
+        for source, clue in (
+            ("rand(3)+rand(5)", "binary operator"),
+            ("max(rand(3),rand(5))", "std::transform"),
+            ("rand(0)+rng(1,1)", "binary operator"),
+            ("rng(!1,1)+rng(2,3)", "binary operator"),
+            ("rand(2147483648)", "undefined signed integer conversion"),
+        ):
+            with self.subTest(source=source):
+                self.assertIsNone(migrate_lua_first.render_literal_native_arithmetic([source]))
+                choice = migrate_lua_first._math_random_order_choice({"math": [source]}, {})
+                self.assertIn(clue, choice or "")
+        namespace = migrate_lua_first._migration_math_function_ids.set(frozenset())
+        try:
+            for source in ("rng(1,3)+_bad", "max(_bad,rand(3))"):
+                self.assertIsNone(migrate_lua_first.render_native_number_expression({"math": [source]}))
+                self.assertIn("failures", migrate_lua_first._math_random_order_choice({"math": [source]}, {}) or "")
+        finally:
+            migrate_lua_first._migration_math_function_ids.reset(namespace)
+        effect = {"location_variable_adjust": {"context_val": "position"},
+                  "x_adjust": {"math": ["rand(3)"]}, "y_adjust": {"math": ["rng(1,2)"]}}
+        self.assertIsNone(migrate_lua_first.render_static_location_variable_adjust(
+            effect, "location_variable_adjust", False, False))
+        self.assertIn("X/Y", migrate_lua_first._location_adjust_random_order_choice(effect, {}) or "")
+        effect["x_adjust"] = [0, 0]
+        effect["y_adjust"] = {"math": ["rand(0)"]}
+        self.assertIsNotNone(migrate_lua_first.render_static_location_variable_adjust(
+            effect, "location_variable_adjust", False, False))
+        effect["y_adjust"] = {"math": ["rng(0,0)"]}
+        self.assertIsNone(migrate_lua_first.render_static_location_variable_adjust(
+            effect, "location_variable_adjust", False, False))
+        bounds = [{"math": ["rand(3)"]}, {"math": ["rng(1,2)"]}]
+        self.assertIsNone(migrate_lua_first.render_native_number_expression(bounds))
+        self.assertIn("range bounds", migrate_lua_first._math_random_order_choice(bounds, {}) or "")
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "random.json"
+            path.write_text(json.dumps([
+                {"type": "effect_on_condition", "id": "binary_random", "eoc_type": "EVENT",
+                 "required_event": "game_start", "condition": {"math": ["rand(3)+rand(5)>0"]}, "effect": "nothing"},
+                {"type": "effect_on_condition", "id": "parameter_random", "eoc_type": "EVENT",
+                 "required_event": "game_start", "condition": {"math": ["max(rand(3),rand(5))>0"]}, "effect": "nothing"},
+                {"type": "effect_on_condition", "id": "xy_random", "eoc_type": "EVENT",
+                 "required_event": "game_start", "effect": effect},
+            ]), encoding="utf-8")
+            result = migrate_lua_first.migrate(migrate_lua_first.load_objects([path]), "random_order")
+            self.assertEqual(len(result.todos), 3)
+            self.assertTrue(all(todo.category == "semantic_choice" for todo in result.todos))
+            self.assertTrue(all(str(path) in str(todo) for todo in result.todos))
+            self.assertIn("std::transform", result.files[Path("MIGRATION_REPORT.md")])
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_native_math_ternary_keeps_positive_truth_binding_and_deep_flat_control_flow(self) -> None:
@@ -35293,7 +35439,7 @@ assert(context.data.position.x==EXPECTED_X and context.data.position.y==EXPECTED
                                            text=True, capture_output=True, timeout=10)
                 self.assertEqual(completed.returncode, 0, completed.stderr)
         for source in ("0?", "0?1", "0?1:", "?1:2", "1?:2", "1:2", "1?2:3:4",
-                       "1?(2:3):4", "max(1?2,3)", "1?2:3 4", "1?2:rand(3)"):
+                       "1?(2:3):4", "max(1?2,3)", "1?2:3 4", "1?2:rand(3,4)"):
             with self.subTest(source=source):
                 self.assertIsNone(migrate_lua_first.render_literal_native_arithmetic([source]))
         for source in ("0?1:" * 401 + "7", "1?" * 401 + "7" + ":0" * 401):
@@ -35468,7 +35614,7 @@ assert(not ok and message=='stale_runtime' and #reads==2 and #diagnostics==0)
         for source in ("abs()", "abs(1,2)", "_test_(1)", "max(1,)", "max(,1)",
                        "max(+)", "(1,2)", "max((1,2))", "pi(2)", "abs abs(2)",
                        "max(1,,2)", "max(1)2", "max(1)(2)", "clamp(1,2)",
-                       "rand(3)", "rng(1,2)", "u_strength()"):
+                       "rand(3,4)", "rng(1)", "u_strength()"):
             self.assertIsNone(migrate_lua_first.render_literal_native_arithmetic([source]))
         expression = migrate_lua_first.render_literal_native_arithmetic(["max(" + "1," * 300 + "2)"])
         self.assertIsNotNone(expression)
