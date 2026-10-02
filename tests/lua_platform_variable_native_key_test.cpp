@@ -1602,6 +1602,408 @@ return values[4] end)()
     }
 }
 
+TEST_CASE( "lua_platform_temperature_math_matches_native_float_units",
+           "[lua][platform][semantic][coords][math]" )
+{
+    variable_api_fixture fixture;
+    fixture.lua.open_libraries( sol::lib::math, sol::lib::string );
+    struct temperature_case {
+        const char *source;
+        const char *lua_expression;
+    };
+    // Native units::temperature stores float. Lua must reproduce conversion
+    // boundaries and float intermediates, rather than use double-only offsets.
+    const std::vector<temperature_case> cases = {
+        { "celsius(0.0)", R"lua(
+(function() local values = {};
+values[1] = 0.0;
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[2] = native_float(native_float(values[1]) - native_float(273.150));
+return values[2] end)()
+)lua" },
+        { "celsius(-0.0)", R"lua(
+(function() local values = {};
+values[1] = 0.0;
+values[2] = -(values[1]);
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[3] = native_float(native_float(values[2]) - native_float(273.150));
+return values[3] end)()
+)lua" },
+        { "celsius(273.15)", R"lua(
+(function() local values = {};
+values[1] = 273.14999999999998;
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[2] = native_float(native_float(values[1]) - native_float(273.150));
+return values[2] end)()
+)lua" },
+        { "celsius(310.15)", R"lua(
+(function() local values = {};
+values[1] = 310.14999999999998;
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[2] = native_float(native_float(values[1]) - native_float(273.150));
+return values[2] end)()
+)lua" },
+        { "celsius(-273.15)", R"lua(
+(function() local values = {};
+values[1] = 273.14999999999998;
+values[2] = -(values[1]);
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[3] = native_float(native_float(values[2]) - native_float(273.150));
+return values[3] end)()
+)lua" },
+        { "celsius(-459.67)", R"lua(
+(function() local values = {};
+values[1] = 459.67000000000002;
+values[2] = -(values[1]);
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[3] = native_float(native_float(values[2]) - native_float(273.150));
+return values[3] end)()
+)lua" },
+        { "celsius(1e-40)", R"lua(
+(function() local values = {};
+values[1] = 9.9999999999999993e-41;
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[2] = native_float(native_float(values[1]) - native_float(273.150));
+return values[2] end)()
+)lua" },
+        { "celsius(-1e-40)", R"lua(
+(function() local values = {};
+values[1] = 9.9999999999999993e-41;
+values[2] = -(values[1]);
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[3] = native_float(native_float(values[2]) - native_float(273.150));
+return values[3] end)()
+)lua" },
+        { "celsius(16777217.0)", R"lua(
+(function() local values = {};
+values[1] = 16777217.0;
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[2] = native_float(native_float(values[1]) - native_float(273.150));
+return values[2] end)()
+)lua" },
+        { "celsius(-16777217.0)", R"lua(
+(function() local values = {};
+values[1] = 16777217.0;
+values[2] = -(values[1]);
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[3] = native_float(native_float(values[2]) - native_float(273.150));
+return values[3] end)()
+)lua" },
+        { "celsius(1e+30)", R"lua(
+(function() local values = {};
+values[1] = 1e+30;
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[2] = native_float(native_float(values[1]) - native_float(273.150));
+return values[2] end)()
+)lua" },
+        { "celsius(-1e+30)", R"lua(
+(function() local values = {};
+values[1] = 1e+30;
+values[2] = -(values[1]);
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[3] = native_float(native_float(values[2]) - native_float(273.150));
+return values[3] end)()
+)lua" },
+        { "fahrenheit(0.0)", R"lua(
+(function() local values = {};
+values[1] = 0.0;
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[2] = native_float(native_float(native_float(values[1]) * native_float(1.8)) - native_float(459.67));
+return values[2] end)()
+)lua" },
+        { "fahrenheit(-0.0)", R"lua(
+(function() local values = {};
+values[1] = 0.0;
+values[2] = -(values[1]);
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[3] = native_float(native_float(native_float(values[2]) * native_float(1.8)) - native_float(459.67));
+return values[3] end)()
+)lua" },
+        { "fahrenheit(273.15)", R"lua(
+(function() local values = {};
+values[1] = 273.14999999999998;
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[2] = native_float(native_float(native_float(values[1]) * native_float(1.8)) - native_float(459.67));
+return values[2] end)()
+)lua" },
+        { "fahrenheit(310.15)", R"lua(
+(function() local values = {};
+values[1] = 310.14999999999998;
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[2] = native_float(native_float(native_float(values[1]) * native_float(1.8)) - native_float(459.67));
+return values[2] end)()
+)lua" },
+        { "fahrenheit(-273.15)", R"lua(
+(function() local values = {};
+values[1] = 273.14999999999998;
+values[2] = -(values[1]);
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[3] = native_float(native_float(native_float(values[2]) * native_float(1.8)) - native_float(459.67));
+return values[3] end)()
+)lua" },
+        { "fahrenheit(-459.67)", R"lua(
+(function() local values = {};
+values[1] = 459.67000000000002;
+values[2] = -(values[1]);
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[3] = native_float(native_float(native_float(values[2]) * native_float(1.8)) - native_float(459.67));
+return values[3] end)()
+)lua" },
+        { "fahrenheit(1e-40)", R"lua(
+(function() local values = {};
+values[1] = 9.9999999999999993e-41;
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[2] = native_float(native_float(native_float(values[1]) * native_float(1.8)) - native_float(459.67));
+return values[2] end)()
+)lua" },
+        { "fahrenheit(-1e-40)", R"lua(
+(function() local values = {};
+values[1] = 9.9999999999999993e-41;
+values[2] = -(values[1]);
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[3] = native_float(native_float(native_float(values[2]) * native_float(1.8)) - native_float(459.67));
+return values[3] end)()
+)lua" },
+        { "fahrenheit(16777217.0)", R"lua(
+(function() local values = {};
+values[1] = 16777217.0;
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[2] = native_float(native_float(native_float(values[1]) * native_float(1.8)) - native_float(459.67));
+return values[2] end)()
+)lua" },
+        { "fahrenheit(-16777217.0)", R"lua(
+(function() local values = {};
+values[1] = 16777217.0;
+values[2] = -(values[1]);
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[3] = native_float(native_float(native_float(values[2]) * native_float(1.8)) - native_float(459.67));
+return values[3] end)()
+)lua" },
+        { "fahrenheit(1e+30)", R"lua(
+(function() local values = {};
+values[1] = 1e+30;
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[2] = native_float(native_float(native_float(values[1]) * native_float(1.8)) - native_float(459.67));
+return values[2] end)()
+)lua" },
+        { "fahrenheit(-1e+30)", R"lua(
+(function() local values = {};
+values[1] = 1e+30;
+values[2] = -(values[1]);
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[3] = native_float(native_float(native_float(values[2]) * native_float(1.8)) - native_float(459.67));
+return values[3] end)()
+)lua" },
+        { "from_celsius(0.0)", R"lua(
+(function() local values = {};
+values[1] = 0.0;
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[2] = native_float(values[1] + native_float(273.150));
+return values[2] end)()
+)lua" },
+        { "from_celsius(-0.0)", R"lua(
+(function() local values = {};
+values[1] = 0.0;
+values[2] = -(values[1]);
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[3] = native_float(values[2] + native_float(273.150));
+return values[3] end)()
+)lua" },
+        { "from_celsius(273.15)", R"lua(
+(function() local values = {};
+values[1] = 273.14999999999998;
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[2] = native_float(values[1] + native_float(273.150));
+return values[2] end)()
+)lua" },
+        { "from_celsius(310.15)", R"lua(
+(function() local values = {};
+values[1] = 310.14999999999998;
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[2] = native_float(values[1] + native_float(273.150));
+return values[2] end)()
+)lua" },
+        { "from_celsius(-273.15)", R"lua(
+(function() local values = {};
+values[1] = 273.14999999999998;
+values[2] = -(values[1]);
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[3] = native_float(values[2] + native_float(273.150));
+return values[3] end)()
+)lua" },
+        { "from_celsius(-459.67)", R"lua(
+(function() local values = {};
+values[1] = 459.67000000000002;
+values[2] = -(values[1]);
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[3] = native_float(values[2] + native_float(273.150));
+return values[3] end)()
+)lua" },
+        { "from_celsius(1e-40)", R"lua(
+(function() local values = {};
+values[1] = 9.9999999999999993e-41;
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[2] = native_float(values[1] + native_float(273.150));
+return values[2] end)()
+)lua" },
+        { "from_celsius(-1e-40)", R"lua(
+(function() local values = {};
+values[1] = 9.9999999999999993e-41;
+values[2] = -(values[1]);
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[3] = native_float(values[2] + native_float(273.150));
+return values[3] end)()
+)lua" },
+        { "from_celsius(16777217.0)", R"lua(
+(function() local values = {};
+values[1] = 16777217.0;
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[2] = native_float(values[1] + native_float(273.150));
+return values[2] end)()
+)lua" },
+        { "from_celsius(-16777217.0)", R"lua(
+(function() local values = {};
+values[1] = 16777217.0;
+values[2] = -(values[1]);
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[3] = native_float(values[2] + native_float(273.150));
+return values[3] end)()
+)lua" },
+        { "from_celsius(1e+30)", R"lua(
+(function() local values = {};
+values[1] = 1e+30;
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[2] = native_float(values[1] + native_float(273.150));
+return values[2] end)()
+)lua" },
+        { "from_celsius(-1e+30)", R"lua(
+(function() local values = {};
+values[1] = 1e+30;
+values[2] = -(values[1]);
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[3] = native_float(values[2] + native_float(273.150));
+return values[3] end)()
+)lua" },
+        { "from_fahrenheit(0.0)", R"lua(
+(function() local values = {};
+values[1] = 0.0;
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[2] = native_float((values[1] + native_float(459.67)) / native_float(1.8));
+return values[2] end)()
+)lua" },
+        { "from_fahrenheit(-0.0)", R"lua(
+(function() local values = {};
+values[1] = 0.0;
+values[2] = -(values[1]);
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[3] = native_float((values[2] + native_float(459.67)) / native_float(1.8));
+return values[3] end)()
+)lua" },
+        { "from_fahrenheit(273.15)", R"lua(
+(function() local values = {};
+values[1] = 273.14999999999998;
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[2] = native_float((values[1] + native_float(459.67)) / native_float(1.8));
+return values[2] end)()
+)lua" },
+        { "from_fahrenheit(310.15)", R"lua(
+(function() local values = {};
+values[1] = 310.14999999999998;
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[2] = native_float((values[1] + native_float(459.67)) / native_float(1.8));
+return values[2] end)()
+)lua" },
+        { "from_fahrenheit(-273.15)", R"lua(
+(function() local values = {};
+values[1] = 273.14999999999998;
+values[2] = -(values[1]);
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[3] = native_float((values[2] + native_float(459.67)) / native_float(1.8));
+return values[3] end)()
+)lua" },
+        { "from_fahrenheit(-459.67)", R"lua(
+(function() local values = {};
+values[1] = 459.67000000000002;
+values[2] = -(values[1]);
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[3] = native_float((values[2] + native_float(459.67)) / native_float(1.8));
+return values[3] end)()
+)lua" },
+        { "from_fahrenheit(1e-40)", R"lua(
+(function() local values = {};
+values[1] = 9.9999999999999993e-41;
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[2] = native_float((values[1] + native_float(459.67)) / native_float(1.8));
+return values[2] end)()
+)lua" },
+        { "from_fahrenheit(-1e-40)", R"lua(
+(function() local values = {};
+values[1] = 9.9999999999999993e-41;
+values[2] = -(values[1]);
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[3] = native_float((values[2] + native_float(459.67)) / native_float(1.8));
+return values[3] end)()
+)lua" },
+        { "from_fahrenheit(16777217.0)", R"lua(
+(function() local values = {};
+values[1] = 16777217.0;
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[2] = native_float((values[1] + native_float(459.67)) / native_float(1.8));
+return values[2] end)()
+)lua" },
+        { "from_fahrenheit(-16777217.0)", R"lua(
+(function() local values = {};
+values[1] = 16777217.0;
+values[2] = -(values[1]);
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[3] = native_float((values[2] + native_float(459.67)) / native_float(1.8));
+return values[3] end)()
+)lua" },
+        { "from_fahrenheit(1e+30)", R"lua(
+(function() local values = {};
+values[1] = 1e+30;
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[2] = native_float((values[1] + native_float(459.67)) / native_float(1.8));
+return values[2] end)()
+)lua" },
+        { "from_fahrenheit(-1e+30)", R"lua(
+(function() local values = {};
+values[1] = 1e+30;
+values[2] = -(values[1]);
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[3] = native_float((values[2] + native_float(459.67)) / native_float(1.8));
+return values[3] end)()
+)lua" },
+        { "celsius(from_celsius(37))+fahrenheit(from_fahrenheit(98.6))", R"lua(
+(function() local values = {};
+values[1] = 37.0;
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[2] = native_float(values[1] + native_float(273.150));
+values[3] = native_float(native_float(values[2]) - native_float(273.150));
+values[4] = 98.599999999999994;
+values[5] = native_float((values[4] + native_float(459.67)) / native_float(1.8));
+values[6] = native_float(native_float(native_float(values[5]) * native_float(1.8)) - native_float(459.67));
+values[7] = values[3] + values[6];
+return values[7] end)()
+)lua" }
+    };
+    dialogue conversation;
+    for( const temperature_case &row : cases ) {
+        CAPTURE( row.source );
+        math_exp native;
+        REQUIRE( native.parse( row.source ) );
+        const double expected = native.eval( conversation );
+        const sol::protected_function_result call = fixture.lua.safe_script(
+                    std::string( "return " ) + row.lua_expression, sol::script_pass_on_error );
+        REQUIRE( call.valid() );
+        const double actual = call.get<double>();
+        CHECK( actual == expected );
+        if( expected == 0.0 ) {
+            CHECK( std::signbit( actual ) == std::signbit( expected ) );
+        }
+    }
+}
+
 TEST_CASE( "native_variable_reads_do_not_share_missing_beta_mutation_fallback",
            "[lua][platform][semantic][variables]" )
 {

@@ -28036,12 +28036,14 @@ def render_literal_native_arithmetic(value: Any) -> str | None:
     frames: list[tuple[int, int, str | None]] = []
     statements = ["local values = {}"]
     count = 0
+    uses_native_float = False
     need_operand = True
     precedence = {"+": 2, "-": 2, "*": 3, "/": 3, "%": 3, "^": 4}
     constants = {"pi": math.pi, "π": math.pi, "e": math.e, "true": 1.0, "false": 0.0}
     functions = {name: 1 for name in ("abs", "floor", "ceil", "trunc", "round",
                                      "sqrt", "log", "sin", "cos", "tan")}
     functions.update({"min": -1, "max": -1, "_test_": 0})
+    functions.update({name: 1 for name in ("celsius", "fahrenheit", "from_celsius", "from_fahrenheit")})
 
     def emit(expression: str) -> None:
         nonlocal count
@@ -28050,6 +28052,7 @@ def render_literal_native_arithmetic(value: Any) -> str | None:
         operands.append(count)
 
     def apply_function(name: str, arguments: list[int]) -> bool:
+        nonlocal uses_native_float
         expected = functions[name]
         if expected >= 0 and len(arguments) != expected:
             return False
@@ -28064,6 +28067,23 @@ def render_literal_native_arithmetic(value: Any) -> str | None:
             for argument in arguments[1:]:
                 statements.append(f"if values[{argument}] {comparison} values[{result}] then "
                                   f"values[{result}] = values[{argument}] end")
+        elif name in {"celsius", "fahrenheit", "from_celsius", "from_fahrenheit"}:
+            # units::temperature stores native float. Match each conversion
+            # and float intermediate in units.h, using Lua's native C float
+            # packing rather than changing the ordinary double author API.
+            if not uses_native_float:
+                statements.append("local native_float = function(value) "
+                                  'return (string.unpack("f", string.pack("f", value))) end')
+                uses_native_float = True
+            argument = f"values[{arguments[0]}]"
+            if name == "celsius":
+                emit(f"native_float(native_float({argument}) - native_float(273.150))")
+            elif name == "fahrenheit":
+                emit(f"native_float(native_float(native_float({argument}) * native_float(1.8)) - native_float(459.67))")
+            elif name == "from_celsius":
+                emit(f"native_float({argument} + native_float(273.150))")
+            else:
+                emit(f"native_float(({argument} + native_float(459.67)) / native_float(1.8))")
         else:
             argument = f"values[{arguments[0]}]"
             if name == "round":

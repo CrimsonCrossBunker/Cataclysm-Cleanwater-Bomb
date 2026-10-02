@@ -4,6 +4,7 @@ import json
 import math
 import shutil
 import subprocess
+import struct
 import tempfile
 import unittest
 from collections import Counter
@@ -35292,13 +35293,51 @@ assert(context.data.position.x==EXPECTED_X and context.data.position.y==EXPECTED
         for source in ("abs()", "abs(1,2)", "_test_(1)", "max(1,)", "max(,1)",
                        "max(+)", "(1,2)", "max((1,2))", "pi(2)", "abs abs(2)",
                        "max(1,,2)", "max(1)2", "max(1)(2)", "clamp(1,2,3)",
-                       "rand(3)", "rng(1,2)", "celsius(273.15)", "u_strength()"):
+                       "rand(3)", "rng(1,2)", "u_strength()"):
             self.assertIsNone(migrate_lua_first.render_literal_native_arithmetic([source]))
         expression = migrate_lua_first.render_literal_native_arithmetic(["max(" + "1," * 300 + "2)"])
         self.assertIsNotNone(expression)
         result = subprocess.run(["lua", "-"], input=f"assert({expression} == 2.0)",
                                 text=True, capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_native_temperature_math_keeps_float_storage_and_intermediates(self) -> None:
+        def native_float(value: float) -> float:
+            return struct.unpack("f", struct.pack("f", value))[0]
+
+        celsius_offset = native_float(273.150)
+        fahrenheit_offset = native_float(459.67)
+        fahrenheit_scale = native_float(1.8)
+        conversions = {
+            "celsius": lambda value: native_float(native_float(value) - celsius_offset),
+            "fahrenheit": lambda value: native_float(native_float(native_float(value) * fahrenheit_scale) - fahrenheit_offset),
+            "from_celsius": lambda value: native_float(value + celsius_offset),
+            "from_fahrenheit": lambda value: native_float((value + fahrenheit_offset) / fahrenheit_scale),
+        }
+        for name, conversion in conversions.items():
+            for value in (0.0, -0.0, 273.15, 310.15, -273.15, -459.67,
+                          1e-40, -1e-40, 16777217.0, -16777217.0, 1e30, -1e30):
+                with self.subTest(name=name, value=value):
+                    expression = migrate_lua_first.render_native_number_expression(
+                        {"math": [f"{name}({value!r})"]})
+                    self.assertIsNotNone(expression)
+                    self.assertNotIn("services.", expression or "")
+                    expected = conversion(value)
+                    script = f"local actual = {expression}; assert(actual == {expected!r})"
+                    result = subprocess.run(["lua", "-"], input=script, text=True,
+                                            capture_output=True, timeout=10)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+        # A single helper serves nested calls, without capturing a legacy runtime.
+        source = "celsius(from_celsius(37))+fahrenheit(from_fahrenheit(98.6))"
+        expression = migrate_lua_first.render_literal_native_arithmetic([source])
+        self.assertEqual((expression or "").count("local native_float ="), 1)
+        expected = conversions["celsius"](conversions["from_celsius"](37.0)) + conversions["fahrenheit"](conversions["from_fahrenheit"](98.6))
+        result = subprocess.run(["lua", "-"], input=f"assert({expression} == {expected!r})",
+                                text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for source in ("celsius()", "fahrenheit(1,2)", "from_celsius(_value)"):
+            self.assertIsNone(migrate_lua_first.render_literal_native_arithmetic([source]))
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_location_adjust_math_arithmetic_and_math_bounds_use_pure_lua(self) -> None:
