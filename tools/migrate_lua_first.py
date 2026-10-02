@@ -28101,21 +28101,23 @@ def render_native_math_variable_read(
 def render_literal_native_arithmetic(
     value: Any, variable_reader: Callable[[str], str | None] | None = None,
 ) -> str | None:
-    """Compile pure numeric Native arithmetic/functions to ordinary Lua."""
+    """Compile read-only Native numeric expressions to ordinary Lua."""
     if not isinstance(value, list) or not value or not all(isinstance(part, str) for part in value):
         return None
     source = "".join(value)  # eoc_math::from_json concatenates chunks without inserting spaces.
-    token_pattern = re.compile(r"(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?|[A-Za-z_][A-Za-z_0-9]*|π|==|!=|<=|>=|[(),+*/%^<>!\-]")
+    token_pattern = re.compile(r"(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?|[A-Za-z_][A-Za-z_0-9]*|π|==|!=|<=|>=|[(),+*/%^<>!?:\-]")
     operators: list[str] = []
     operands: list[int] = []
     frames: list[tuple[int, int, str | None]] = []
+    # condition, operand base, branch statement start, middle result, middle code
+    ternaries: list[tuple[int, int, int, int | None, list[str] | None]] = []
     statements = ["local values = {}"]
     count = 0
     uses_native_float = False
     uses_variable_result = False
     need_operand = True
     allows_prefix_unary = True
-    precedence = {"+": 2, "-": 2, "*": 3, "/": 3, "%": 3, "^": 4}
+    precedence = {"?": 0, ":": 0, "+": 2, "-": 2, "*": 3, "/": 3, "%": 3, "^": 4}
     comparisons = {"==", "!=", "<", "<=", ">", ">="}
     precedence.update({operator: 1 for operator in comparisons})
     constants = {"pi": math.pi, "π": math.pi, "e": math.e, "true": 1.0, "false": 0.0}
@@ -28161,8 +28163,6 @@ def render_literal_native_arithmetic(
             # and float intermediate in units.h, using Lua's native C float
             # packing rather than changing the ordinary double author API.
             if not uses_native_float:
-                statements.append("local native_float = function(value) "
-                                  'return (string.unpack("f", string.pack("f", value))) end')
                 uses_native_float = True
             argument = f"values[{arguments[0]}]"
             if name == "celsius":
@@ -28196,6 +28196,31 @@ def render_literal_native_arithmetic(
         return True
 
     def apply_operator(operator: str) -> bool:
+        if operator == ":":
+            if not ternaries:
+                return False
+            condition, base, start, middle, middle_code = ternaries.pop()
+            if middle is None or middle_code is None or len(operands) != base + 1:
+                return False
+            right = operands.pop()
+            right_code = statements[start:]
+            del statements[start:]
+            emit("0.0")
+            result = count
+            # Native ternary truth is >0 (not !=0) and only one arm is
+            # evaluated. Flat labels avoid Lua's nested-block depth limit;
+            # all shared locals are hoisted outside these branch regions.
+            statements.extend([
+                f"if values[{condition}] > 0.0 then goto math_true_{result} end",
+                f"goto math_false_{result}", f"::math_true_{result}::",
+                *middle_code, f"values[{result}] = values[{middle}]",
+                f"goto math_end_{result}", f"::math_false_{result}::",
+                *right_code, f"values[{result}] = values[{right}]",
+                f"::math_end_{result}::",
+            ])
+            return True
+        if operator == "?":
+            return False  # Native rejects a ternary without its colon/right arm.
         if operator in {"u+", "u-", "u!"}:
             if not operands:
                 return False
@@ -28293,6 +28318,36 @@ def render_literal_native_arithmetic(
                 return None
             operators.append("u!")
             allows_prefix_unary = False
+        elif token == "?":
+            if need_operand:
+                return None
+            while operators and operators[-1] != "(" and (
+                    operators[-1].startswith("u") or precedence[operators[-1]] > 0):
+                if not apply_operator(operators.pop()):
+                    return None
+            condition = operands.pop()
+            ternaries.append((condition, len(operands), len(statements), None, None))
+            operators.append("?")
+            need_operand = True
+            allows_prefix_unary = True
+        elif token == ":":
+            if need_operand:
+                return None
+            while operators and operators[-1] not in {"?", "("}:
+                if not apply_operator(operators.pop()):
+                    return None
+            if not operators or operators[-1] != "?" or not ternaries:
+                return None
+            condition, base, start, middle, middle_code = ternaries[-1]
+            if middle is not None or len(operands) != base + 1:
+                return None
+            middle = operands.pop()
+            middle_code = statements[start:]
+            del statements[start:]
+            ternaries[-1] = (condition, base, len(statements), middle, middle_code)
+            operators[-1] = ":"
+            need_operand = True
+            allows_prefix_unary = True
         elif token in constants:
             if not need_operand:
                 return None
@@ -28309,7 +28364,6 @@ def render_literal_native_arithmetic(
             if read is None:
                 return None
             if not uses_variable_result:
-                statements.append("local variable_result")
                 uses_variable_result = True
             statements.append(f"variable_result = {read}")
             # A type failure aborts the entire expression, not one operand.
@@ -28333,7 +28387,7 @@ def render_literal_native_arithmetic(
             while operators and operators[-1] != "(":
                 previous = operators[-1]
                 if not (previous.startswith("u") or precedence[previous] > precedence[token] or
-                        (precedence[previous] == precedence[token] and previous not in {"%", "^"})):
+                        (precedence[previous] == precedence[token] and previous not in {"%", "^", "?", ":"})):
                     break
                 if not apply_operator(operators.pop()):
                     return None
@@ -28346,8 +28400,13 @@ def render_literal_native_arithmetic(
         operator = operators.pop()
         if operator == "(" or operator.startswith("f:") or not apply_operator(operator):
             return None
-    if len(operands) != 1:
+    if len(operands) != 1 or ternaries:
         return None
+    if uses_native_float:
+        statements.insert(1, "local native_float = function(value) "
+                          'return (string.unpack("f", string.pack("f", value))) end')
+    if uses_variable_result:
+        statements.insert(1, "local variable_result")
     return "(function() " + "; ".join(statements) + f"; return values[{operands[0]}] end)()"
 
 
@@ -32952,9 +33011,10 @@ def render_eoc(
         if isinstance(raw_condition, dict) and set(raw_condition) == {"math"}:
             condition_todo = (
                 "translate math only for pure numeric arithmetic, functions and comparisons; "
-                "variables, scoped functions, RNG, diagnostics, non-finite or "
-                "underflowing literals, and native debugmsg/false versus Platform "
-                "math exceptions do not have proven parity"
+                "lazy ternaries and checked variable reads also require proven owners and "
+                "a known function namespace. This expression still contains an unsupported "
+                "identifier, owner, scoped function, RNG, assignment or literal shape. "
+                "Native and real-corpus semantic acceptance remains pending"
             )
         elif isinstance(raw_condition, str) and raw_condition in {
             "mission_complete", "mission_failed", "mission_incomplete",

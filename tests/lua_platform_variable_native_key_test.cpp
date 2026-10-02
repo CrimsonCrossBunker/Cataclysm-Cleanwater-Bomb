@@ -1524,6 +1524,233 @@ end
     }
 }
 
+TEST_CASE( "lua_platform_math_ternaries_match_native_selected_reads_and_failure_boundaries",
+           "[lua][platform][semantic][variables][math]" )
+{
+    using namespace cata::lua_platform;
+    clear_active_runtimes();
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::math, sol::lib::string );
+    sol::table ccb = lua.create_table();
+    const auto owner = make_runtime( "ternary_math", 4961, lua );
+    const on_out_of_scope cleanup( []() {
+        clear_active_runtimes();
+    } );
+    install_runtime_api( owner, lua, ccb );
+    set_active_runtimes( { owner } );
+    runtime_world_ready( true );
+    lua["services"] = ccb["services"];
+    REQUIRE( lua.safe_script( R"lua(
+function service_value(result)
+ if not result.ok then error(result.error.message,0) end
+ return result.value
+end
+)lua", sol::script_pass_on_error ).valid() );
+    struct ternary_case {
+        const char *source;
+        const char *expression;
+    };
+    const std::vector<ternary_case> cases = {
+        { "_choose?_good:_bad", R"lua(
+(function() local values = {};
+local variable_result;
+variable_result = services.variables.get_context_number(context and context.data, "choose", {strict=true});
+if variable_result.ok == false and variable_result.error and variable_result.error.code == "variable_type_mismatch" then services.diagnostic("Math variable _choose: " .. variable_result.error.message);
+return 0.0 end;
+values[1] = (function(result) if result.exists == false then return 0.0 end;
+return result.value end)(service_value(variable_result));
+values[4] = 0.0;
+if values[1] > 0.0 then goto math_true_4 end;
+goto math_false_4;
+::math_true_4::;
+variable_result = services.variables.get_context_number(context and context.data, "good", {strict=true});
+if variable_result.ok == false and variable_result.error and variable_result.error.code == "variable_type_mismatch" then services.diagnostic("Math variable _good: " .. variable_result.error.message);
+return 0.0 end;
+values[2] = (function(result) if result.exists == false then return 0.0 end;
+return result.value end)(service_value(variable_result));
+values[4] = values[2];
+goto math_end_4;
+::math_false_4::;
+variable_result = services.variables.get_context_number(context and context.data, "bad", {strict=true});
+if variable_result.ok == false and variable_result.error and variable_result.error.code == "variable_type_mismatch" then services.diagnostic("Math variable _bad: " .. variable_result.error.message);
+return 0.0 end;
+values[3] = (function(result) if result.exists == false then return 0.0 end;
+return result.value end)(service_value(variable_result));
+values[4] = values[3];
+::math_end_4::;
+return values[4] end)()
+)lua" },
+        { "_choose?_bad:_good", R"lua(
+(function() local values = {};
+local variable_result;
+variable_result = services.variables.get_context_number(context and context.data, "choose", {strict=true});
+if variable_result.ok == false and variable_result.error and variable_result.error.code == "variable_type_mismatch" then services.diagnostic("Math variable _choose: " .. variable_result.error.message);
+return 0.0 end;
+values[1] = (function(result) if result.exists == false then return 0.0 end;
+return result.value end)(service_value(variable_result));
+values[4] = 0.0;
+if values[1] > 0.0 then goto math_true_4 end;
+goto math_false_4;
+::math_true_4::;
+variable_result = services.variables.get_context_number(context and context.data, "bad", {strict=true});
+if variable_result.ok == false and variable_result.error and variable_result.error.code == "variable_type_mismatch" then services.diagnostic("Math variable _bad: " .. variable_result.error.message);
+return 0.0 end;
+values[2] = (function(result) if result.exists == false then return 0.0 end;
+return result.value end)(service_value(variable_result));
+values[4] = values[2];
+goto math_end_4;
+::math_false_4::;
+variable_result = services.variables.get_context_number(context and context.data, "good", {strict=true});
+if variable_result.ok == false and variable_result.error and variable_result.error.code == "variable_type_mismatch" then services.diagnostic("Math variable _good: " .. variable_result.error.message);
+return 0.0 end;
+values[3] = (function(result) if result.exists == false then return 0.0 end;
+return result.value end)(service_value(variable_result));
+values[4] = values[3];
+::math_end_4::;
+return values[4] end)()
+)lua" },
+        { "(_choose?_good:_bad)+3", R"lua(
+(function() local values = {};
+local variable_result;
+variable_result = services.variables.get_context_number(context and context.data, "choose", {strict=true});
+if variable_result.ok == false and variable_result.error and variable_result.error.code == "variable_type_mismatch" then services.diagnostic("Math variable _choose: " .. variable_result.error.message);
+return 0.0 end;
+values[1] = (function(result) if result.exists == false then return 0.0 end;
+return result.value end)(service_value(variable_result));
+values[4] = 0.0;
+if values[1] > 0.0 then goto math_true_4 end;
+goto math_false_4;
+::math_true_4::;
+variable_result = services.variables.get_context_number(context and context.data, "good", {strict=true});
+if variable_result.ok == false and variable_result.error and variable_result.error.code == "variable_type_mismatch" then services.diagnostic("Math variable _good: " .. variable_result.error.message);
+return 0.0 end;
+values[2] = (function(result) if result.exists == false then return 0.0 end;
+return result.value end)(service_value(variable_result));
+values[4] = values[2];
+goto math_end_4;
+::math_false_4::;
+variable_result = services.variables.get_context_number(context and context.data, "bad", {strict=true});
+if variable_result.ok == false and variable_result.error and variable_result.error.code == "variable_type_mismatch" then services.diagnostic("Math variable _bad: " .. variable_result.error.message);
+return 0.0 end;
+values[3] = (function(result) if result.exists == false then return 0.0 end;
+return result.value end)(service_value(variable_result));
+values[4] = values[3];
+::math_end_4::;
+values[5] = 3.0;
+values[6] = values[4] + values[5];
+return values[6] end)()
+)lua" },
+        { "(_choose?from_celsius(_good):from_celsius(_bad))+3", R"lua(
+(function() local values = {};
+local variable_result;
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+variable_result = services.variables.get_context_number(context and context.data, "choose", {strict=true});
+if variable_result.ok == false and variable_result.error and variable_result.error.code == "variable_type_mismatch" then services.diagnostic("Math variable _choose: " .. variable_result.error.message);
+return 0.0 end;
+values[1] = (function(result) if result.exists == false then return 0.0 end;
+return result.value end)(service_value(variable_result));
+values[6] = 0.0;
+if values[1] > 0.0 then goto math_true_6 end;
+goto math_false_6;
+::math_true_6::;
+variable_result = services.variables.get_context_number(context and context.data, "good", {strict=true});
+if variable_result.ok == false and variable_result.error and variable_result.error.code == "variable_type_mismatch" then services.diagnostic("Math variable _good: " .. variable_result.error.message);
+return 0.0 end;
+values[2] = (function(result) if result.exists == false then return 0.0 end;
+return result.value end)(service_value(variable_result));
+values[3] = native_float(values[2] + native_float(273.150));
+values[6] = values[3];
+goto math_end_6;
+::math_false_6::;
+variable_result = services.variables.get_context_number(context and context.data, "bad", {strict=true});
+if variable_result.ok == false and variable_result.error and variable_result.error.code == "variable_type_mismatch" then services.diagnostic("Math variable _bad: " .. variable_result.error.message);
+return 0.0 end;
+values[4] = (function(result) if result.exists == false then return 0.0 end;
+return result.value end)(service_value(variable_result));
+values[5] = native_float(values[4] + native_float(273.150));
+values[6] = values[5];
+::math_end_6::;
+values[7] = 3.0;
+values[8] = values[6] + values[7];
+return values[8] end)()
+)lua" }
+    };
+    struct condition_case {
+        int shape; // 0 absent, 1 null, 2 number, 3 mismatched string.
+        double value;
+    };
+    const double inf = std::numeric_limits<double>::infinity();
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    const double epsilon = std::numeric_limits<double>::epsilon() * 100;
+    const std::vector<condition_case> conditions = {
+        { 0, 0 }, { 1, 0 }, { 2, 0 }, { 2, 1 }, { 2, -1 },
+        { 2, epsilon }, { 2, -epsilon }, { 2, inf }, { 2, -inf },
+        { 2, nan }, { 3, 0 },
+    };
+    for( const ternary_case &row : cases ) {
+        eoc_math native;
+        native.deserialize( json_loader::from_string(
+                                std::string( "{\"math\":[\"" ) + row.source + "\"]}" ) );
+        finalize_conditions();
+        for( const condition_case &condition : conditions ) {
+            for( int bad_shape = 0; bad_shape < 6; ++bad_shape ) {
+                CAPTURE( row.source, condition.shape, condition.value, bad_shape );
+                dialogue conversation;
+                sol::table data = lua.create_table();
+                conversation.set_value( "good", diag_value( 5.0 ) );
+                data["good"] = 5.0;
+                if( condition.shape == 1 ) {
+                    conversation.set_value( "choose", diag_value{} );
+                    data["choose"] = ccb["services"]["types"]["null"].get<sol::object>();
+                } else if( condition.shape == 2 ) {
+                    conversation.set_value( "choose", diag_value( condition.value ) );
+                    data["choose"] = condition.value;
+                } else if( condition.shape == 3 ) {
+                    conversation.set_value( "choose", diag_value( std::string( "1" ) ) );
+                    data["choose"] = "1";
+                }
+                if( bad_shape == 1 ) {
+                    conversation.set_value( "bad", diag_value{} );
+                    data["bad"] = ccb["services"]["types"]["null"].get<sol::object>();
+                } else if( bad_shape == 2 ) {
+                    conversation.set_value( "bad", diag_value( 7.0 ) );
+                    data["bad"] = 7.0;
+                } else if( bad_shape == 3 ) {
+                    conversation.set_value( "bad", diag_value( std::string( "7" ) ) );
+                    data["bad"] = "7";
+                } else if( bad_shape == 4 ) {
+                    conversation.set_value( "bad", diag_value( diag_array{} ) );
+                    data["bad"] = lua.create_table();
+                } else if( bad_shape == 5 ) {
+                    conversation.set_value( "bad", diag_value( tripoint_abs_ms( 1, 2, 3 ) ) );
+                    data["bad"] = script_tripoint_coord::from_native(
+                                      coords::origin::abs, coords::scale::map_square, tripoint( 1, 2, 3 ) );
+                }
+                sol::table context = lua.create_table();
+                context["data"] = data;
+                lua["context"] = context;
+                double expected = 0;
+                const std::string native_diagnostic = capture_debugmsg_during( [&]() {
+                    expected = native.act( conversation );
+                } );
+                sol::protected_function_result call;
+                const std::string lua_diagnostic = capture_debugmsg_during( [&]() {
+                    detail::callback_scope callback( *owner );
+                    call = lua.safe_script( std::string( "return " ) + row.expression, sol::script_pass_on_error );
+                } );
+                REQUIRE( call.valid() );
+                CHECK( call.get<double>() == expected );
+                CHECK( lua_diagnostic.empty() == native_diagnostic.empty() );
+                if( !native_diagnostic.empty() ) {
+                    CHECK( expected == 0.0 );
+                    CHECK( native_diagnostic.find( "Type mismatch" ) != std::string::npos );
+                    CHECK( lua_diagnostic.find( "Type mismatch" ) != std::string::npos );
+                }
+            }
+        }
+    }
+}
+
 TEST_CASE( "lua_platform_literal_functions_match_native_math_values_and_signed_zero",
            "[lua][platform][semantic][coords][math]" )
 {

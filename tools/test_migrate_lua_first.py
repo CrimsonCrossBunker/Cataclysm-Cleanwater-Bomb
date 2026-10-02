@@ -9296,7 +9296,8 @@ assert(#events == 9)
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_generated_math_conditions_dispatch_exact_true_and_false_branches(self) -> None:
         cases = (("1 != 0", "yes"), ("1 != 1", "no"),
-                 ("0/0", "yes"), ("round(-0.25)", "no"))
+                 ("0/0", "yes"), ("round(-0.25)", "no"),
+                 ("-1?1:0", "no"), ("1?1:0", "yes"), ("0/0?1:0", "no"))
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "conditions.json"
             source.write_text(json.dumps([
@@ -35266,6 +35267,87 @@ assert(context.data.position.x==EXPECTED_X and context.data.position.y==EXPECTED
         result = subprocess.run(["lua", "-"], input="assert(" + (expression or "nil") + " == 4101)\n",
                                 text=True, capture_output=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_native_math_ternary_keeps_positive_truth_binding_and_deep_flat_control_flow(self) -> None:
+        cases = [
+            ("0?1:2", 2.0), ("0==0?1:2", 1.0), ("1?0?-1:-2:1", -2.0),
+            ("1?1?-1:-2:1", -1.0), ("0?0?-1:-2:1", 1.0),
+            ("0?(0?(-1):-2):1", 1.0), ("1==1?2:3?4:5", 2.0),
+            ("0?2:3?4:5", 4.0), ("0?2:0?4:5", 5.0),
+            ("(1==1?2:3)?4:5", 4.0), ("1==1?2:(3?4:5)", 2.0),
+            ("-1?2:3", 3.0), ("-0?2:3", 3.0), ("0/0?2:3", 3.0),
+            ("1/0?2:3", 2.0), ("-1/0?2:3", 3.0), ("1e-14?2:3", 2.0),
+            ("2+3?4+5:6*7", 9.0), ("2+(0?3:4)*5", 22.0),
+            ("max(0?2:3,4)", 4.0), ("max(1,1?2:3,4?5:6)", 5.0),
+            ("1?celsius(from_celsius(37)):0", 37.0),
+            ("0?celsius(from_celsius(37)):celsius(from_celsius(12))", 12.0),
+            ("1?37:celsius(from_celsius(12))", 37.0),
+            ("1?round(2.5):trunc(-2.5)", 3.0),
+        ]
+        for source, expected in cases:
+            with self.subTest(source=source):
+                expression = migrate_lua_first.render_literal_native_arithmetic([source])
+                self.assertIsNotNone(expression)
+                completed = subprocess.run(["lua", "-"], input=f"assert({expression} == {expected!r})",
+                                           text=True, capture_output=True, timeout=10)
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+        for source in ("0?", "0?1", "0?1:", "?1:2", "1?:2", "1:2", "1?2:3:4",
+                       "1?(2:3):4", "max(1?2,3)", "1?2:3 4", "1?2:rand(3)"):
+            with self.subTest(source=source):
+                self.assertIsNone(migrate_lua_first.render_literal_native_arithmetic([source]))
+        for source in ("0?1:" * 401 + "7", "1?" * 401 + "7" + ":0" * 401):
+            expression = migrate_lua_first.render_literal_native_arithmetic([source])
+            self.assertIsNotNone(expression)
+            completed = subprocess.run(["lua", "-"], input=f"assert({expression} == 7.0)",
+                                       text=True, capture_output=True, timeout=10)
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_native_math_ternary_reads_only_selected_variables_and_preserves_whole_expression_abort(self) -> None:
+        token = migrate_lua_first._migration_math_function_ids.set(frozenset())
+        try:
+            expressions = [migrate_lua_first.render_native_number_expression({"math": [source]})
+                           for source in ("_choose?_good:_bad", "_choose?_bad:_good",
+                                          "(_choose?_good:_bad)+3", "_bad?_good:7")]
+        finally:
+            migrate_lua_first._migration_math_function_ids.reset(token)
+        self.assertTrue(all(expression is not None for expression in expressions))
+        script = r"""
+local context={data={choose=1.0,good=5.0,bad='wrong'}}
+local reads,diagnostics={},{}
+local services={variables={get_context_number=function(data,key,options)
+ assert(data==context.data and options.strict);reads[#reads+1]=key
+ if key=='bad' then return {ok=false,error={code='variable_type_mismatch',message='wrong type'}} end
+ if key=='good' and data.good=='stale' then return {ok=false,error={code='stale_runtime',message='stale'}} end
+ return {ok=true,value={exists=data[key]~=nil,value=data[key]}}
+end},diagnostic=function(message) diagnostics[#diagnostics+1]=message end}
+local function service_value(result) if not result.ok then error(result.error.code,0) end;return result.value end
+local functions={EXPRESSIONS}
+for _,row in ipairs({{1,1,5,'good',0},{-1,1,0,'bad',1},{0,1,0,'bad',1},
+ {0/0,1,0,'bad',1},{1,2,0,'bad',1},{0,2,5,'good',0},
+ {1,3,8,'good',0},{0,3,0,'bad',1}}) do
+ context.data.choose=row[1];reads,diagnostics={},{}
+ assert(functions[row[2]]()==row[3])
+ assert(#reads==2 and reads[1]=='choose' and reads[2]==row[4] and #diagnostics==row[5])
+end
+reads,diagnostics={},{}
+assert(functions[4]()==0.0 and #reads==1 and reads[1]=='bad' and #diagnostics==1)
+context.data.choose=1;context.data.good='stale';reads,diagnostics={},{}
+local ok,message=pcall(functions[1])
+assert(not ok and message=='stale_runtime' and #reads==2 and #diagnostics==0)
+""".replace("EXPRESSIONS", ",".join("function() return " + str(expression) + " end" for expression in expressions))
+        completed = subprocess.run(["lua", "-"], input=script, text=True,
+                                   capture_output=True, timeout=10)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        # Diagnostics in an unselected function arm must not occur either.
+        for source in ("1?5:clamp(7,10,1)", "0?clamp(7,10,1):5"):
+            expression = migrate_lua_first.render_literal_native_arithmetic([source])
+            completed = subprocess.run(["lua", "-"],
+                                       input="local services={diagnostic=function() error('unselected') end}; "
+                                             f"assert({expression} == 5.0)",
+                                       text=True, capture_output=True, timeout=10)
+            self.assertEqual(completed.returncode, 0, completed.stderr)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_native_math_not_keeps_epsilon_truth_and_prefix_binding(self) -> None:
