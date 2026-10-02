@@ -1539,6 +1539,16 @@ void Creature::deal_projectile_attack( map *here, Creature *source, dealt_projec
 dealt_damage_instance Creature::deal_damage( Creature *source, bodypart_id bp,
         const damage_instance &dam, const weakpoint_attack &attack, const weakpoint &wp )
 {
+    const safe_reference<Creature> target_reference = get_safe_reference();
+    const bool source_was_present = source != nullptr;
+    safe_reference<Creature> source_reference;
+    if( source_was_present ) {
+        source_reference = source->get_safe_reference();
+    }
+    const auto participants_alive = [&]() {
+        return target_reference.get() != nullptr &&
+               ( !source_was_present || source_reference.get() != nullptr );
+    };
     if( is_dead_state() || has_flag( json_flag_CANNOT_TAKE_DAMAGE ) ) {
         return dealt_damage_instance();
     }
@@ -1561,6 +1571,9 @@ dealt_damage_instance Creature::deal_damage( Creature *source, bodypart_id bp,
     for( const damage_unit &it : d.damage_units ) {
         int cur_damage = 0;
         deal_damage_handle_type( effect_source( source ), it, bp, cur_damage, total_pain );
+        if( !participants_alive() ) {
+            return dealt_dams;
+        }
         total_base_damage += std::max( 0.0f, it.amount * it.unconditional_damage_mult );
         if( cur_damage > 0 ) {
             dealt_dams.dealt_dams[it.type] += cur_damage;
@@ -1569,6 +1582,9 @@ dealt_damage_instance Creature::deal_damage( Creature *source, bodypart_id bp,
     }
     // get eocs for all damage effects
     d.ondamage_effects( source, this, dam, bp.id() );
+    if( !participants_alive() ) {
+        return dealt_dams;
+    }
 
     if( total_base_damage < total_damage ) {
         // Only deal more HP than remains if damage not including crit multipliers is higher.
@@ -1579,9 +1595,15 @@ dealt_damage_instance Creature::deal_damage( Creature *source, bodypart_id bp,
     }
 
     apply_damage( source, bp, total_damage );
+    if( !participants_alive() ) {
+        return dealt_dams;
+    }
 
     if( wkpt != nullptr ) {
         wkpt->apply_effects( *this, total_damage, attack );
+        if( !participants_alive() ) {
+            return dealt_dams;
+        }
         add_msg_debug( debugmode::DF_WEAKPOINTS, "applying weakpoint: %s", wkpt->id );
     }
 
@@ -2013,6 +2035,7 @@ void Creature::clear_effects()
 }
 bool Creature::remove_effect( const efftype_id &eff_id, const bodypart_id &bp )
 {
+    const safe_reference<Creature> creature_reference = get_safe_reference();
     if( !has_effect( eff_id, bp.id() ) ) {
         //Effect doesn't exist, so do nothing
         return false;
@@ -2099,6 +2122,9 @@ bool Creature::remove_effect( const efftype_id &eff_id, const bodypart_id &bp )
         }
         cata::lua_platform::dispatch_native_hook(
             hook_name, payload );
+        if( creature_reference.get() == nullptr ) {
+            return true;
+        }
     }
 
     return true;
