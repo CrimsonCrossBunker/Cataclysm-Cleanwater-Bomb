@@ -791,6 +791,34 @@ sol::table get_known(
                sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table effective_spell_level(
+    sol::this_state lua, const game_handle &handle,
+    const std::string &raw_spell_id,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_exact_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    const spell_id id( raw_spell_id );
+    int level = -1;
+    if( id == spell_id::NULL_ID() ) {
+        for( const spell *known : character->magic->get_spells() ) {
+            level = std::max( known->get_effective_level(), level );
+        }
+    } else if( character->magic->knows_spell( id ) ) {
+        level = character->magic->get_spell( id ).get_effective_level();
+    }
+    return make_game_value_result(
+               state, sol::make_object( state, level ) );
+}
+
 sol::table can_learn_spell(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_id,
@@ -1814,6 +1842,17 @@ void install_magic_api(
         require_read();
         return get_known(
                    lua_state, handle, id,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    spells.set_function(
+        "effective_level",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+    const std::string & raw_spell_id ) {
+        require_read();
+        return effective_spell_level(
+                   lua_state, handle, raw_spell_id,
                    current_runtime_generation(),
                    current_world_generation() );
     } );

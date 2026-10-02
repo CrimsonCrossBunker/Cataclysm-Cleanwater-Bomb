@@ -8158,6 +8158,16 @@ function CcbCharactersApi.prevent_death(character) end
 ---@return CcbResult
 function CcbCharactersApi.recalculate_enchantments(character) end
 
+---@class CcbSpellsApi
+local CcbSpellsApi = {}
+
+---Read the Native math spell_level() result for an exact Character. The
+---Native null id selects the highest known level; unknown ids return -1.
+---@param character GameHandle Exact live Character handle; no avatar fallback.
+---@param raw_spell_id string Raw Native spell id text.
+---@return CcbResult result `value` is the Native effective level.
+function CcbSpellsApi.effective_level(character, raw_spell_id) end
+
 ---@class CcbRelocationMoveOptions
 ---@field strict? true Strict mode; when supplied it must be `true`. This is the only accepted option; force and fallback policies are unsupported.
 
@@ -10948,6 +10958,14 @@ function CcbPlatformWoundsApi.remove_all_direct(character, body_part, wound) end
 
 ---@class CcbSkillsApi
 local CcbSkillsApi = {}
+
+---Return the Character's effective skill level for an exact live Character handle.
+---The raw ID is passed to the native getter without registry validation or an extra byte limit;
+---unregistered IDs retain native zero-base-level and modifier behavior.
+---@param character GameHandle Exact live Character handle; never inferred from the avatar.
+---@param id string Raw skill ID text; empty, embedded NUL and long strings follow native ID lookup.
+---@return CcbResult result `value` is the effective numeric level from Character:get_skill_level.
+function CcbSkillsApi.level(character, id) end
 
 ---Skills the teacher can teach this student, using the student's knowledge level.
 ---@param teacher GameHandle Character handle.
