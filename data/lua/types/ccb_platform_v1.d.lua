@@ -10137,6 +10137,22 @@ function CcbEquipmentApi.stow_current_weapon(actor) end
 ---@field first_topic string
 ---@field opinion CcbNpcOpinion Stored opinion; no avatar lookup is performed.
 ---@field ai_rules CcbNpcAiRulesSnapshot
+---@field dialogue_missions CcbNpcDialogueMissions
+
+---@class CcbNpcDialogueMissions
+---@field available_count integer
+---@field assigned_count integer
+---@field selected? CcbNpcSelectedMissionSnapshot
+---@field selected_stale boolean
+
+---@class CcbNpcSelectedMissionSnapshot
+---@field token MissionToken
+---@field uid integer
+---@field id GameId GameId<mission>
+---@field assigned boolean
+---@field in_progress boolean
+---@field failed boolean
+---@field has_generic_rewards boolean
 
 ---@alias CcbNpcMissionStatus 'available'|'active'|'success'|'failure'
 ---@alias CcbNpcSelectedMissionPredicate 'complete'|'incomplete'|'failed'

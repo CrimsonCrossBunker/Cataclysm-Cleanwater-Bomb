@@ -353,6 +353,15 @@ game_handle make_npc_handle(
     runtime_generation, world_generation );
 }
 
+bool live_mission_pointer( const mission *candidate )
+{
+    if( candidate == nullptr ) {
+        return false;
+    }
+    const std::vector<mission *> live = mission::get_all_active();
+    return std::find( live.begin(), live.end(), candidate ) != live.end();
+}
+
 sol::table snapshot_opinion(
     sol::state_view lua, const npc_opinion &opinion )
 {
@@ -506,6 +515,15 @@ sol::table snapshot_npc(
 {
     const tripoint_abs_ms position =
         entry.pos_abs();
+    const std::size_t available_count = entry.chatbin.missions.size();
+    const std::size_t assigned_count = entry.chatbin.missions_assigned.size();
+    const mission *selected_mission = entry.chatbin.mission_selected;
+    const bool selected_live = live_mission_pointer( selected_mission );
+    const bool selected_stale = selected_mission != nullptr && !selected_live;
+    std::optional<mission> selected_snapshot;
+    if( selected_live ) {
+        selected_snapshot.emplace( *selected_mission );
+    }
     sol::table result = lua.create_table();
     result["handle"] = make_npc_handle(
                            entry, runtime_generation,
@@ -587,33 +605,30 @@ sol::table snapshot_npc(
         result["assigned_camp"] = sol::nil;
     }
     sol::table dialogue_missions = lua.create_table();
-    dialogue_missions["available_count"] =
-        entry.chatbin.missions.size();
-    dialogue_missions["assigned_count"] =
-        entry.chatbin.missions_assigned.size();
-    mission *selected_mission =
-        entry.chatbin.mission_selected;
-    if( selected_mission == nullptr ) {
+    dialogue_missions["available_count"] = available_count;
+    dialogue_missions["assigned_count"] = assigned_count;
+    dialogue_missions["selected_stale"] = selected_stale;
+    if( !selected_snapshot ) {
         dialogue_missions["selected"] = sol::nil;
     } else {
         sol::table selected = lua.create_table();
         selected["token"] = mission_token(
-                                selected_mission->get_id(),
-                                selected_mission->identity_generation(),
+                                selected_snapshot->get_id(),
+                                selected_snapshot->identity_generation(),
                                 runtime_generation,
                                 world_generation );
-        selected["uid"] = selected_mission->get_id();
+        selected["uid"] = selected_snapshot->get_id();
         selected["id"] = script_game_id(
                              "mission",
-                             selected_mission->mission_id().str() );
+                             selected_snapshot->mission_id().str() );
         selected["assigned"] =
-            selected_mission->is_assigned();
+            selected_snapshot->is_assigned();
         selected["in_progress"] =
-            selected_mission->in_progress();
+            selected_snapshot->in_progress();
         selected["failed"] =
-            selected_mission->has_failed();
+            selected_snapshot->has_failed();
         selected["has_generic_rewards"] =
-            selected_mission->has_generic_rewards();
+            selected_snapshot->has_generic_rewards();
         dialogue_missions["selected"] =
             std::move( selected );
     }

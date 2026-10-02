@@ -3,6 +3,7 @@
 #include "lua_platform_missions.h"
 
 #include <coordinates.h>
+#include <dialogue_chatbin.h>
 extern "C" {
 #include <lua.h>
 }
@@ -22,11 +23,13 @@ extern "C" {
 #include "character_id.h"
 #include "dialogue_helpers.h"
 #include "enum_conversions.h"
+#include "game.h"
 #include "lua_platform_bindings_coords.h"
 #include "lua_platform_bindings_enums.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
 #include "mission.h"
+#include "npc.h"
 #include "type_id.h"
 
 namespace cata::lua_platform
@@ -503,11 +506,14 @@ std::string mission_status_name( const mission &entry )
 }
 
 sol::table snapshot_instance(
-    sol::state_view lua, const mission &entry,
+    sol::state_view lua, const mission &source,
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation,
     const std::optional<character_id> &selected_owner = std::nullopt )
 {
+    // Lua allocations may run a finalizer that cancels the native mission.
+    // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
+    const mission entry = source;
     sol::table result = lua.create_table();
     result["token"] = mission_token(
                           entry.get_id(),
@@ -1407,8 +1413,60 @@ sol::table cancel_reserved_instance(
                             state, *entry,
                             runtime_generation,
                             world_generation );
+
+    entry = resolve_mission( token, runtime_generation, world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    if( entry->is_assigned() ) {
+        return make_game_error_result( state, {
+            "assigned",
+            "Assigned missions must be abandoned instead of cancelled"
+        } );
+    }
+
+    npc *provider = nullptr;
+    std::vector<mission *> available_after;
+    std::vector<mission *> assigned_after;
+    bool clear_selected = false;
+    const character_id provider_id = entry->get_npc_id();
+    if( provider_id.is_valid() ) {
+        if( g == nullptr ) {
+            return make_game_error_result( state, {
+                "unavailable",
+                "The NPC mission owner cannot be resolved without an active game"
+            } );
+        }
+        provider = g->find_npc( provider_id );
+        if( provider != nullptr ) {
+            try {
+                available_after = provider->chatbin.missions;
+                available_after.erase(
+                    std::remove( available_after.begin(), available_after.end(), entry ),
+                    available_after.end() );
+                assigned_after = provider->chatbin.missions_assigned;
+                assigned_after.erase(
+                    std::remove( assigned_after.begin(), assigned_after.end(), entry ),
+                    assigned_after.end() );
+            } catch( const std::exception & ) {
+                return make_game_error_result( state, {
+                    "rejected",
+                    "The NPC mission cancellation could not be staged"
+                } );
+            }
+            clear_selected = provider->chatbin.mission_selected == entry;
+        }
+    }
+
     const bool removed =
         mission::remove_unassigned( token.uid() );
+    if( removed && provider != nullptr ) {
+        provider->chatbin.missions.swap( available_after );
+        provider->chatbin.missions_assigned.swap( assigned_after );
+        if( clear_selected ) {
+            provider->chatbin.mission_selected = nullptr;
+        }
+    }
     sol::table value = state.create_table();
     value["cancelled"] = std::move( before );
     value["removed"] = removed;
