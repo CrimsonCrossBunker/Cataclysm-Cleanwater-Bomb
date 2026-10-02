@@ -8030,6 +8030,57 @@ function CcbCampsApi.recall_worker(camp, manager, worker) end
 ---@class CcbCharactersApi
 local CcbCharactersApi = {}
 
+---@class CcbCharacterDamageOptions
+---@field body_part? GameId GameId<body_part>; omitted selects through native hit rules.
+---@field armor_penetration? number -1000000..1000000; defaults to 0.
+---@field armor_penetration_multiplier? number -1000..1000; defaults to 1.
+---@field damage_multiplier? number -1000..1000; defaults to 1.
+---@field min_hit? integer -1..1000000; defaults to -1.
+---@field max_hit? integer -1..1000000; defaults to -1, otherwise at least min_hit.
+---@field hit_roll? integer -1000000..1000000; defaults to 0.
+---@field can_attack_high? boolean Defaults to true.
+
+---@class CcbCreatureDamageOptions: CcbCharacterDamageOptions
+---@field source? GameHandle Exact Creature source; omitted means no source.
+
+---@class CcbDamageValue
+---@field damage_type GameId GameId<damage_type>
+---@field body_part GameId GameId<body_part>
+---@field requested number
+---@field before integer
+---@field after integer
+---@field dealt integer
+---@field total_dealt integer
+---@field changed boolean
+---@field source? GameHandle Present only for an explicit creatures.damage source.
+
+---@class CcbDamageResult: CcbResult
+---@field value? CcbDamageValue
+
+---@class CcbHealingValue
+---@field body_part GameId GameId<body_part>
+---@field requested integer
+---@field before integer
+---@field after integer
+---@field maximum integer
+---@field healed integer
+
+---@class CcbHealingResult: CcbResult
+---@field value? CcbHealingValue
+
+---@param character GameHandle Exact live Character; native damage source is the Character itself.
+---@param damage_type GameId GameId<damage_type>
+---@param amount number Finite -1000000..1000000.
+---@param options? CcbCharacterDamageOptions
+---@return CcbDamageResult
+function CcbCharactersApi.damage(character, damage_type, amount, options) end
+
+---@param character GameHandle Exact live Character.
+---@param body_part GameId GameId<body_part> present on the Character.
+---@param amount integer 1..10000.
+---@return CcbHealingResult
+function CcbCharactersApi.heal(character, body_part, amount) end
+
 ---@class CcbCharacterBodyPartPickOptions
 ---@field wounded? boolean If set, only select parts whose wound state matches this value.
 ---@field types? string[] Keep parts matching at least one native body-part type.
@@ -12067,6 +12118,19 @@ local CcbPlatformGameplayApi = {}
 
 ---@class CcbCreaturesApi
 local CcbCreaturesApi = {}
+
+---@param target GameHandle Exact live avatar, NPC or monster.
+---@param damage_type GameId GameId<damage_type>
+---@param amount number Finite -1000000..1000000.
+---@param options? CcbCreatureDamageOptions
+---@return CcbDamageResult result Uses native damage and virtual HP; monsters have aggregate HP.
+function CcbCreaturesApi.damage(target, damage_type, amount, options) end
+
+---@param target GameHandle Exact live avatar, NPC or monster.
+---@param body_part GameId GameId<body_part> present on the target.
+---@param amount integer 1..10000.
+---@return CcbHealingResult result Uses native healing; monster healing affects aggregate HP.
+function CcbCreaturesApi.heal(target, body_part, amount) end
 
 ---@return GameHandle Exact handle for the active avatar.
 function CcbCreaturesApi.avatar() end

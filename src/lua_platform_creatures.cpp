@@ -1580,14 +1580,21 @@ sol::table heal_character(
                                  "services.characters.heal" );
     const int before = character->get_part_hp_cur( part );
     character->heal( part, amount );
-    const int after = character->get_part_hp_cur( part );
+    Character *after_character = resolve_exact_character(
+                                    handle, runtime_generation,
+                                    world_generation, error );
+    if( after_character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const int after = after_character->get_part_hp_cur( part );
+    const int maximum = after_character->get_part_hp_max( part );
 
     sol::table value = state.create_table();
     value["body_part"] = body_part;
     value["requested"] = amount;
     value["before"] = before;
     value["after"] = after;
-    value["maximum"] = character->get_part_hp_max( part );
+    value["maximum"] = maximum;
     value["healed"] = after - before;
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
@@ -1816,6 +1823,7 @@ sol::table pick_character_body_part(
 
 struct character_damage_options {
     std::optional<script_game_id> body_part;
+    std::optional<game_handle> source;
     double armor_penetration = 0.0;
     double armor_penetration_multiplier = 1.0;
     double damage_multiplier = 1.0;
@@ -1829,21 +1837,23 @@ double bounded_damage_number( const sol::object &value,
                               const std::string &field,
                               const double fallback,
                               const double minimum,
-                              const double maximum )
+                              const double maximum,
+                              const std::string &api_name =
+                                  "services.characters.damage" )
 {
     if( !value.valid() || value.get_type() == sol::type::lua_nil ) {
         return fallback;
     }
     if( value.get_type() != sol::type::number ) {
         throw std::invalid_argument(
-            "services.characters.damage option '" + field +
+            api_name + " option '" + field +
             "' must be a finite number" );
     }
     const double requested = value.as<double>();
     if( !std::isfinite( requested ) || requested < minimum ||
         requested > maximum ) {
         throw std::invalid_argument(
-            "services.characters.damage option '" + field +
+            api_name + " option '" + field +
             "' is outside its bounded range" );
     }
     return requested;
@@ -1852,21 +1862,25 @@ double bounded_damage_number( const sol::object &value,
 int bounded_damage_hit_option( const sol::object &value,
                                const std::string &field,
                                const int fallback,
-                               const int minimum )
+                               const int minimum,
+                               const std::string &api_name =
+                                   "services.characters.damage" )
 {
     const double requested = bounded_damage_number(
                                  value, field, fallback, minimum,
-                                 maximum_character_hit_option );
+                                 maximum_character_hit_option, api_name );
     if( std::trunc( requested ) != requested ) {
         throw std::invalid_argument(
-            "services.characters.damage option '" + field +
+            api_name + " option '" + field +
             "' must be an integer" );
     }
     return static_cast<int>( requested );
 }
 
 character_damage_options read_character_damage_options(
-    const sol::optional<sol::table> &requested )
+    const sol::optional<sol::table> &requested,
+    const std::string &api_name = "services.characters.damage",
+    const bool allow_source = false )
 {
     character_damage_options result;
     if( !requested ) {
@@ -1875,61 +1889,89 @@ character_damage_options read_character_damage_options(
     for( const auto &entry : *requested ) {
         if( entry.first.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "services.characters.damage option keys must be strings" );
+                api_name + " option keys must be strings" );
         }
         const std::string key = entry.first.as<std::string>();
         if( key != "body_part" && key != "armor_penetration" &&
             key != "armor_penetration_multiplier" &&
             key != "damage_multiplier" && key != "min_hit" &&
             key != "max_hit" && key != "hit_roll" &&
-            key != "can_attack_high" ) {
+            key != "can_attack_high" && !( allow_source && key == "source" ) ) {
             throw std::invalid_argument(
-                "services.characters.damage received unknown option '" + key + "'" );
+                api_name + " received unknown option '" + key + "'" );
         }
     }
     const sol::object body_part = ( *requested )["body_part"];
     if( body_part.valid() && body_part.get_type() != sol::type::lua_nil ) {
         if( !body_part.is<script_game_id>() ) {
             throw std::invalid_argument(
-                "services.characters.damage option 'body_part' must be GameId<body_part>" );
+                api_name + " option 'body_part' must be GameId<body_part>" );
         }
         result.body_part = body_part.as<script_game_id>();
+    }
+    if( allow_source ) {
+        const sol::object source = ( *requested )["source"];
+        if( source.valid() && source.get_type() != sol::type::lua_nil ) {
+            if( !source.is<game_handle>() ) {
+                throw std::invalid_argument(
+                    api_name + " option 'source' must be a Creature GameHandle" );
+            }
+            result.source = source.as<game_handle>();
+        }
     }
     result.armor_penetration = bounded_damage_number(
                                    ( *requested )["armor_penetration"],
                                    "armor_penetration", result.armor_penetration,
                                    -maximum_character_damage,
-                                   maximum_character_damage );
+                                   maximum_character_damage, api_name );
     result.armor_penetration_multiplier = bounded_damage_number(
             ( *requested )["armor_penetration_multiplier"],
             "armor_penetration_multiplier",
             result.armor_penetration_multiplier,
             -maximum_character_damage_multiplier,
-            maximum_character_damage_multiplier );
+            maximum_character_damage_multiplier, api_name );
     result.damage_multiplier = bounded_damage_number(
                                    ( *requested )["damage_multiplier"],
                                    "damage_multiplier", result.damage_multiplier,
                                    -maximum_character_damage_multiplier,
-                                   maximum_character_damage_multiplier );
+                                   maximum_character_damage_multiplier,
+                                   api_name );
     result.min_hit = bounded_damage_hit_option(
-                         ( *requested )["min_hit"], "min_hit", result.min_hit, -1 );
+                         ( *requested )["min_hit"], "min_hit", result.min_hit,
+                         -1, api_name );
     result.max_hit = bounded_damage_hit_option(
-                         ( *requested )["max_hit"], "max_hit", result.max_hit, -1 );
+                         ( *requested )["max_hit"], "max_hit", result.max_hit,
+                         -1, api_name );
     result.hit_roll = bounded_damage_hit_option(
                           ( *requested )["hit_roll"], "hit_roll", result.hit_roll,
-                          -maximum_character_hit_option );
+                          -maximum_character_hit_option, api_name );
     const sol::object can_attack_high = ( *requested )["can_attack_high"];
     if( can_attack_high.valid() &&
         can_attack_high.get_type() != sol::type::lua_nil ) {
         if( !can_attack_high.is<bool>() ) {
             throw std::invalid_argument(
-                "services.characters.damage option 'can_attack_high' must be boolean" );
+                api_name + " option 'can_attack_high' must be boolean" );
         }
         result.can_attack_high = can_attack_high.as<bool>();
     }
     if( result.max_hit != -1 && result.max_hit < result.min_hit ) {
         throw std::invalid_argument(
-            "services.characters.damage options require max_hit >= min_hit" );
+            api_name + " options require max_hit >= min_hit" );
+    }
+    return result;
+}
+
+bodypart_id creature_body_part(
+    const Creature &creature, const script_game_id &requested,
+    const std::string &api_name )
+{
+    require_id_kind( requested, "body_part", api_name );
+    const bodypart_id result = bodypart_str_id( requested.value() ).id();
+    const std::vector<bodypart_id> available = creature.get_all_body_parts();
+    if( std::find( available.begin(), available.end(), result ) ==
+        available.end() ) {
+        throw std::invalid_argument(
+            api_name + " body part is not present on this creature" );
     }
     return result;
 }
@@ -1992,7 +2034,13 @@ sol::table damage_character(
                        static_cast<float>( options.damage_multiplier ), 1.0f, 1.0f );
     const dealt_damage_instance dealt = character->deal_damage(
                                             character, selected_body_part, damage );
-    const int after = character->get_part_hp_cur( selected_body_part );
+    Character *after_character = resolve_exact_character(
+                                    handle, runtime_generation,
+                                    world_generation, error );
+    if( after_character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const int after = after_character->get_part_hp_cur( selected_body_part );
 
     sol::table value = state.create_table();
     value["damage_type"] = requested_damage_type;
@@ -2004,6 +2052,143 @@ sol::table damage_character(
     value["dealt"] = dealt.type_damage( damage_type );
     value["total_dealt"] = dealt.total_damage();
     value["changed"] = before != after;
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table damage_creature(
+    sol::this_state lua, const game_handle &target_handle,
+    const script_game_id &requested_damage_type, const double amount,
+    const sol::optional<sol::table> &requested_options,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    constexpr std::string_view api_name = "services.creatures.damage";
+    if( requested_damage_type.kind() != "damage_type" ) {
+        throw std::invalid_argument(
+            "services.creatures.damage requires GameId<damage_type>" );
+    }
+    if( !requested_damage_type.is_valid() ) {
+        throw std::invalid_argument(
+            "services.creatures.damage requires a valid GameId<damage_type>" );
+    }
+    if( !std::isfinite( amount ) || amount < -maximum_character_damage ||
+        amount > maximum_character_damage ) {
+        throw std::invalid_argument(
+            "services.creatures.damage amount must be finite and within "
+            "-1000000..1000000" );
+    }
+    const character_damage_options options = read_character_damage_options(
+                requested_options, std::string( api_name ), true );
+    sol::state_view state( lua );
+    const native_handle_result<Creature> resolved_target =
+        target_handle.resolve_creature( runtime_generation, world_generation );
+    if( !resolved_target ) {
+        return make_game_error_result( state, *resolved_target.error );
+    }
+    Creature *target = resolved_target.value;
+
+    bodypart_id selected_body_part;
+    if( options.body_part ) {
+        selected_body_part = creature_body_part(
+                                 *target, *options.body_part,
+                                 std::string( api_name ) );
+    } else {
+        selected_body_part = target->select_body_part(
+                                 options.min_hit, options.max_hit,
+                                 options.can_attack_high, options.hit_roll );
+        if( selected_body_part == bodypart_str_id::NULL_ID() ) {
+            return make_game_error_result( state, {
+                "unavailable",
+                "No body part satisfies the requested damage hit constraints"
+            } );
+        }
+    }
+
+    Creature *source = nullptr;
+    if( options.source ) {
+        const native_handle_result<Creature> resolved_source =
+            options.source->resolve_creature( runtime_generation, world_generation );
+        if( !resolved_source ) {
+            return make_game_error_result( state, *resolved_source.error );
+        }
+        source = resolved_source.value;
+    }
+
+    const damage_type_id damage_type( requested_damage_type.value() );
+    const int before = target->get_hp( selected_body_part );
+    damage_instance damage;
+    damage.add_damage( damage_type,
+                       static_cast<float>( amount ),
+                       static_cast<float>( options.armor_penetration ),
+                       static_cast<float>( options.armor_penetration_multiplier ),
+                       static_cast<float>( options.damage_multiplier ), 1.0f, 1.0f );
+    const dealt_damage_instance dealt = target->deal_damage(
+            source, selected_body_part, damage );
+
+    // Damage callbacks can remove the target; do not read through the old pointer.
+    const native_handle_result<Creature> after_target =
+        target_handle.resolve_creature( runtime_generation, world_generation );
+    if( !after_target ) {
+        return make_game_error_result( state, *after_target.error );
+    }
+    const int after = after_target.value->get_hp( selected_body_part );
+    sol::table value = state.create_table();
+    value["damage_type"] = requested_damage_type;
+    value["body_part"] = script_game_id(
+                             "body_part", selected_body_part.id().str() );
+    value["requested"] = amount;
+    value["before"] = before;
+    value["after"] = after;
+    value["dealt"] = dealt.type_damage( damage_type );
+    value["total_dealt"] = dealt.total_damage();
+    value["changed"] = before != after;
+    if( options.source ) {
+        value["source"] = *options.source;
+    } else {
+        value["source"] = sol::nil;
+    }
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table heal_creature(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_body_part, const int amount,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    constexpr std::string_view api_name = "services.creatures.heal";
+    if( amount <= 0 || amount > maximum_character_healing ) {
+        throw std::invalid_argument(
+            "services.creatures.heal amount must be between 1 and 10000" );
+    }
+    sol::state_view state( lua );
+    const native_handle_result<Creature> resolved =
+        handle.resolve_creature( runtime_generation, world_generation );
+    if( !resolved ) {
+        return make_game_error_result( state, *resolved.error );
+    }
+    const bodypart_id part = creature_body_part(
+                                 *resolved.value, requested_body_part,
+                                 std::string( api_name ) );
+    const int before = resolved.value->get_hp( part );
+    resolved.value->heal_bp( part, amount );
+
+    const native_handle_result<Creature> after_creature =
+        handle.resolve_creature( runtime_generation, world_generation );
+    if( !after_creature ) {
+        return make_game_error_result( state, *after_creature.error );
+    }
+    const int after = after_creature.value->get_hp( part );
+    const int maximum = after_creature.value->get_hp_max( part );
+    sol::table value = state.create_table();
+    value["body_part"] = requested_body_part;
+    value["requested"] = amount;
+    value["before"] = before;
+    value["after"] = after;
+    value["maximum"] = maximum;
+    value["healed"] = after - before;
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
@@ -4271,12 +4456,33 @@ void install_creature_api(
         "has_body_type",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state, const game_handle & handle,
-    const std::string & body_type ) {
+            const std::string & body_type ) {
         require_read();
         return creature_has_body_type(
                    lua_state, handle, body_type,
                    current_runtime_generation(),
                    current_world_generation() );
+    } );
+    creatures.set_function(
+        "damage",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & target,
+            const script_game_id & damage_type, const double amount,
+            const sol::optional<sol::table> &options ) {
+        require_write();
+        return damage_creature(
+                   lua_state, target, damage_type, amount, options,
+                   current_runtime_generation(), current_world_generation() );
+    } );
+    creatures.set_function(
+        "heal",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+            const script_game_id & body_part, const int amount ) {
+        require_write();
+        return heal_creature(
+                   lua_state, handle, body_part, amount,
+                   current_runtime_generation(), current_world_generation() );
     } );
     services["creatures"] = std::move( creatures );
 
@@ -4285,7 +4491,7 @@ void install_creature_api(
         "set_disposition",
         [current_runtime_generation, current_world_generation, require_write](
             sol::this_state lua_state, const game_handle & handle,
-    const sol::table & values ) {
+            const sol::table & values ) {
         require_write();
         return change_monster_disposition(
                    lua_state, handle, values, false,
