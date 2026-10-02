@@ -4981,7 +4981,7 @@ function ComputerAccessContext:set_value(key, value) end
 ---@field post_armor_damage any
 ---@field skill any
 ---@field value any
----@field vision any
+---@field vision fun(self:EnchantmentDefinition, options:CcbEnchantmentVisionOptions):EnchantmentDefinition
 local EnchantmentDefinition = {}
 ---@class EventStatisticDefinition
 ---@field id any
@@ -5132,8 +5132,23 @@ local WidgetDefinition = {}
 ---@param options BionicDefinitionOptions
 ---@return BionicDefinition
 function CcbPlatformContent.Bionic(options) end
----@param options CcbLuaValue
----@return any
+
+---@class EnchantmentDefinitionOptions
+---@field id string
+---@field name? string|LocalizedText
+---@field description? string|LocalizedText
+---@field [string] any
+
+---@class CcbEnchantmentVisionDescription
+---@field text string|LocalizedText
+---@field [string] any
+
+---@class CcbEnchantmentVisionOptions
+---@field descriptions? CcbEnchantmentVisionDescription[]
+---@field [string] any
+
+---@param options EnchantmentDefinitionOptions
+---@return EnchantmentDefinition
 function CcbPlatformContent.Enchantment(options) end
 ---@param options CcbLuaValue
 ---@return any

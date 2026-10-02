@@ -393,7 +393,7 @@ struct enchantment_vision_description_definition_data {
     std::string id = "infrared_creature";
     std::string color = "red";
     std::string symbol = "?";
-    std::string text;
+    authored_text text;
     std::string condition_handler;
 };
 
@@ -408,8 +408,8 @@ struct enchantment_vision_definition_data {
 
 struct enchantment_definition_data {
     std::string id;
-    std::string name;
-    std::string description;
+    authored_text name;
+    authored_text description;
     std::string has = "HELD";
     std::string condition = "ALWAYS";
     std::string condition_handler;
@@ -1283,7 +1283,8 @@ struct enchantment_definition_handle {
                 description.color = item.get_or( "color", description.color );
                 description.symbol = item.get_or(
                                          "symbol", item.get_or( "sym", description.symbol ) );
-                description.text = item.get_or( "text", std::string() );
+                description.text = read_singular_text(
+                                       item.get<sol::object>( "text" ), {}, "enchantment vision description" );
                 description.condition_handler = item.get_or(
                                                     "condition", item.get_or( "condition_handler", std::string() ) );
                 vision.descriptions.push_back( std::move( description ) );
@@ -2411,8 +2412,10 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
         }
         auto definition = std::make_shared<enchantment_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", std::string() );
-        definition->description = options.get_or( "description", std::string() );
+        definition->name = read_singular_text(
+                               options.get<sol::object>( "name" ), {}, "enchantment name" );
+        definition->description = read_singular_text(
+                                      options.get<sol::object>( "description" ), {}, "enchantment description" );
         definition->has = options.get_or( "has", definition->has );
         definition->condition = options.get_or( "condition", definition->condition );
         definition->condition_handler = options.get_or(
@@ -5651,8 +5654,8 @@ bool character_content_transaction::apply_phase(
                     native.id = id;
                     native.was_loaded = true;
                     native.src.emplace_back( id, mod_id( pimpl_->owner ) );
-                    native.name = no_translation( source.name );
-                    native.description = no_translation( source.description );
+                    native.name = source.name.native();
+                    native.description = source.description.native();
                     native.active_conditions.first =
                         *io::string_to_enum_optional<enchantment::has>( source.has );
                     native.active_conditions.second =
@@ -5842,8 +5845,8 @@ bool character_content_transaction::apply_phase(
                             result.color = color_from_string(
                                                description.color, report_color_error::no );
                             result.symbol = description.symbol;
-                            result.text = description.text;
-                            result.description = no_translation( description.text );
+                            result.text = description.text.raw;
+                            result.description = description.text.native();
                             if( description.condition_handler.empty() ) {
                                 result.condition = []( const const_dialogue & ) {
                                     return true;
