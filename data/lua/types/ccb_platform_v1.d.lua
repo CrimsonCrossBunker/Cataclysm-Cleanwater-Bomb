@@ -11553,6 +11553,26 @@ function CcbPlatformBionicsApi.remove_type(character, id) end
 ---@class CcbRecipesApi
 local CcbRecipesApi = {}
 
+---@class CcbCraftingStartValue
+---@field recipe GameId GameId<recipe>
+---@field batch integer
+---@field continue_while_possible boolean
+---@field craft_activity_active boolean
+---@field activity? GameId GameId<activity>
+
+---@class CcbCraftingStartResult: CcbResult
+---@field value? CcbCraftingStartValue
+
+---@class CcbCraftingApi
+local CcbCraftingApi = {}
+
+---@param character GameHandle Exact avatar; NPC crafting uses activities.assign_npc_job.
+---@param recipe GameId GameId<recipe> currently available to the avatar.
+---@param batch? integer 1..1000; defaults to 1.
+---@param continue_while_possible? boolean Defaults to false.
+---@return CcbCraftingStartResult result Native component selection may open prompts or be cancelled; the value reports the resulting activity.
+function CcbCraftingApi.start(character, recipe, batch, continue_while_possible) end
+
 ---@class CcbRequirementsApi
 local CcbRequirementsApi = {}
 
