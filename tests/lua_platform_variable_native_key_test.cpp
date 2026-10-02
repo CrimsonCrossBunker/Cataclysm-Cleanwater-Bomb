@@ -16,6 +16,7 @@
 #include "calendar.h"
 #include "cata_catch.h"
 #include "character_id.h"
+#include "condition.h"
 #include "debug.h"
 #include "dialogue.h"
 #include "dialogue_helpers.h"
@@ -772,6 +773,11 @@ TEST_CASE( "native_variable_reads_do_not_share_missing_beta_mutation_fallback",
     } );
     CHECK( read == nullptr );
     CHECK( read_diagnostic.find( "invalid beta talker" ) != std::string::npos );
+    const std::string guarded_write_diagnostic = capture_debugmsg_during( [&]() {
+        write_var_value( var_type::npc, "key", &conversation, diag_value( 33.0 ) );
+    } );
+    CHECK( alpha.get_value( "key" ).dbl() == 11.0 );
+    CHECK( guarded_write_diagnostic.find( "invalid beta talker" ) != std::string::npos );
     const std::string write_diagnostic = capture_debugmsg_during( [&]() {
         conversation.actor( true )->set_value( "key", diag_value( 22.0 ) );
     } );

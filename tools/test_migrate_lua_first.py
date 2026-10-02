@@ -28654,10 +28654,35 @@ assert(table.concat(log,',')=='source,destination,delay,key,key,key,key')
             self.assertIsNone(migrate_lua_first._render_assignment_string_value(value, False, fallback))
         self.assertIn("get_number(attacker", migrate_lua_first.render_native_duration_expression(
             {"u_val": "delay"}, fallback) or "")
-        # A missing-beta read needs Native diagnostics, whereas a literal
-        # write can still use the existing actor(true) mutation target.
-        self.assertIsNotNone(migrate_lua_first.render_static_character_string_var({
+        # write_var_value checks has_beta; it does not use raw actor(true)'s
+        # mutation fallback, even for a literal string assignment.
+        self.assertIsNone(migrate_lua_first.render_static_character_string_var({
             "set_string_var": "written", "target_var": {"npc_val": "target"}}, fallback))
+        for source, target in (({"npc_val": "source"}, {"global_val": "target"}),
+                               ({"global_val": "source"}, {"npc_val": "target"})):
+            self.assertIsNone(migrate_lua_first.render_static_character_copy_var({
+                "copy_var": source, "target_var": target}, fallback))
+
+    def test_variable_writes_require_present_beta_in_normal_and_false_branches(self) -> None:
+        for event, supported in (("character_melee_attacks_character", True),
+                                 ("character_kills_character", False),
+                                 ("npc_becomes_hostile", False)):
+            for branch in ("effect", "false_effect"):
+                for effect in ({"set_string_var": "written", "target_var": {"npc_val": "target"}},
+                               {"copy_var": {"global_val": "source"}, "target_var": {"npc_val": "target"}},
+                               {"copy_var": {"npc_val": "source"}, "target_var": {"global_val": "target"}}):
+                    source = migrate_lua_first.SourceObject(Path("write_presence.json"), 0, {
+                        "type": "effect_on_condition", "id": "write_presence", "eoc_type": "EVENT",
+                        "required_event": event, "condition": "is_day", "effect": [], branch: effect})
+                    result = migrate_lua_first.MigrationResult()
+                    rendered = migrate_lua_first.render_eoc(source, result)
+                    with self.subTest(event=event, branch=branch, effect=effect):
+                        self.assertEqual(not result.todos, supported)
+                        if supported:
+                            self.assertIn("context.actors.interlocutor", rendered)
+                        else:
+                            self.assertNotIn("services.variables.copy(", rendered)
+                            self.assertNotIn('services.variables.set(actor, "target"', rendered)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_native_indirect_duration_emitted_lua_routes_one_pointer_and_one_read(self) -> None:

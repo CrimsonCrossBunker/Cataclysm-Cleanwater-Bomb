@@ -27827,17 +27827,12 @@ def render_static_character_copy_var(
         target[0] not in {"u", "npc", "global"}
     ):
         return None
-    alpha = _proven_copy_variable_target(effect_actor_targets, "u")
-    beta = _proven_copy_variable_target(effect_actor_targets, "npc")
-    for scope, _ in (source, target):
-        if (
-            (scope == "u" and alpha is None) or
-            (scope == "npc" and beta is None)
-        ):
-            return None
-
-    source_owner = {"u": alpha, "npc": beta, "global": "nil"}[source[0]]
-    target_owner = {"u": alpha, "npc": beta, "global": "nil"}[target[0]]
+    source_owner = ("nil" if source[0] == "global" else
+                    _proven_native_variable_read_target(effect_actor_targets, source[0]))
+    target_owner = ("nil" if target[0] == "global" else
+                    _proven_native_variable_write_target(effect_actor_targets, target[0]))
+    if source_owner is None or target_owner is None:
+        return None
     return [
         "    service_value(services.variables.copy(",
         f"        {source_owner}, {lua_quote(source[1])},",
@@ -27872,6 +27867,16 @@ def _proven_native_variable_read_target(
     read_role = "read_" + role
     return _proven_copy_variable_target(
         effect_actor_targets, read_role if read_role in effect_actor_targets else role)
+
+
+def _proven_native_variable_write_target(
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None,
+    role: str,
+) -> str | None:
+    """write_var_value checks has_alpha/has_beta before calling actor()."""
+    # Unlike a raw dialogue::actor(true) mutation, this writer does not fall
+    # back to alpha when beta is absent. Its storage owner must actually exist.
+    return _proven_native_variable_read_target(effect_actor_targets, role)
 
 
 def render_participant_translation_expression(
@@ -28082,13 +28087,13 @@ def render_static_character_string_var(
 
     owner: str | None = None
     if target[0] == "u":
-        owner = _proven_copy_variable_target(effect_actor_targets, "u")
+        owner = _proven_native_variable_write_target(effect_actor_targets, "u")
     elif target[0] == "npc":
-        owner = _proven_copy_variable_target(effect_actor_targets, "npc")
+        owner = _proven_native_variable_write_target(effect_actor_targets, "npc")
     if target[0] in {"u", "npc"} and owner is None:
         return None
-    indirect_alpha = _proven_copy_variable_target(effect_actor_targets, "u")
-    indirect_beta = _proven_copy_variable_target(effect_actor_targets, "npc")
+    indirect_alpha = _proven_native_variable_write_target(effect_actor_targets, "u")
+    indirect_beta = _proven_native_variable_write_target(effect_actor_targets, "npc")
     if target[0] == "var" and (indirect_alpha is None or indirect_beta is None):
         # Runtime pointer text may name either participant. Do not invent a
         # live actor or silently skip native invalid-participant diagnostics.
