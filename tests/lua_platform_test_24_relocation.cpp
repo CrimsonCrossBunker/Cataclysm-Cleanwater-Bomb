@@ -35,7 +35,7 @@ TEST_CASE( "lua_platform_relocation_moves_monster_with_explicit_token",
 
     const cata::lua_platform::game_handle unsupported_handle;
     const sol::table strict_options = fixture.lua.create_table_with(
-                                           "strict", true );
+                                          "strict", true );
     const sol::protected_function_result unsupported = move(
             unsupported_handle, token, strict_options );
     REQUIRE( unsupported.valid() );
@@ -101,7 +101,7 @@ TEST_CASE( "lua_platform_relocation_moves_npc_with_explicit_token",
 
     const sol::protected_function move = fixture.relocation_api()["move"];
     const sol::table strict_options = fixture.lua.create_table_with(
-                                           "strict", true );
+                                          "strict", true );
     const std::uint64_t epoch_before =
         cata::lua_platform::map_mutation_epoch();
     const std::size_t identity_generation =
@@ -166,7 +166,7 @@ TEST_CASE( "lua_platform_relocation_moves_vehicle_with_explicit_token_and_preser
 
     const sol::protected_function move = fixture.relocation_api()["move"];
     const sol::table strict_options = fixture.lua.create_table_with(
-                                           "strict", true );
+                                          "strict", true );
     const std::uint64_t epoch_before =
         cata::lua_platform::map_mutation_epoch();
     const sol::protected_function_result moved = move(
@@ -247,7 +247,7 @@ TEST_CASE( "lua_platform_relocation_rejects_vehicle_footprint_collisions_without
 
         const sol::protected_function move = fixture.relocation_api()["move"];
         const sol::table strict_options = fixture.lua.create_table_with(
-                                               "strict", true );
+                                              "strict", true );
         const std::uint64_t epoch_before =
             cata::lua_platform::map_mutation_epoch();
         const sol::protected_function_result blocked = move(
@@ -303,7 +303,7 @@ TEST_CASE( "lua_platform_relocation_rejects_vehicle_footprint_collisions_without
 
         const sol::protected_function move = fixture.relocation_api()["move"];
         const sol::table strict_options = fixture.lua.create_table_with(
-                                               "strict", true );
+                                              "strict", true );
         const std::uint64_t epoch_before =
             cata::lua_platform::map_mutation_epoch();
         const sol::protected_function_result blocked = move(
@@ -359,7 +359,7 @@ TEST_CASE( "lua_platform_relocation_rejects_vehicle_footprint_collisions_without
 
         const sol::protected_function move = fixture.relocation_api()["move"];
         const sol::table strict_options = fixture.lua.create_table_with(
-                                               "strict", true );
+                                              "strict", true );
         const std::uint64_t epoch_before =
             cata::lua_platform::map_mutation_epoch();
         const sol::protected_function_result blocked = move(
@@ -410,7 +410,7 @@ TEST_CASE( "lua_platform_relocation_rejects_unloaded_inactive_npc_without_mutati
 
         const sol::protected_function move = fixture.relocation_api()["move"];
         const sol::table strict_options = fixture.lua.create_table_with(
-                                               "strict", true );
+                                              "strict", true );
         const tripoint_abs_ms source_position = fixture.test_npc->pos_abs();
         const npc *source_npc = fixture.test_npc;
         const character_id npc_id = fixture.npc_id;
@@ -445,7 +445,7 @@ TEST_CASE( "lua_platform_relocation_rejects_unloaded_inactive_npc_without_mutati
 
         const sol::protected_function move = fixture.relocation_api()["move"];
         const sol::table strict_options = fixture.lua.create_table_with(
-                                               "strict", true );
+                                              "strict", true );
         const cata::lua_platform::game_handle npc_handle = fixture.npc_handle;
         const character_id npc_id = fixture.npc_id;
         const std::uint64_t epoch_before =
@@ -487,7 +487,7 @@ TEST_CASE( "lua_platform_relocation_rejects_coupled_npc_states_and_preserves_reg
 
         const sol::protected_function move = fixture.relocation_api()["move"];
         const sol::table strict_options = fixture.lua.create_table_with(
-                                               "strict", true );
+                                              "strict", true );
         const tripoint_abs_ms source_position = fixture.test_npc->pos_abs();
         const npc *source_npc = fixture.test_npc;
         const character_id npc_id = fixture.npc_id;
@@ -523,7 +523,7 @@ TEST_CASE( "lua_platform_relocation_rejects_coupled_npc_states_and_preserves_reg
 
         const sol::protected_function move = fixture.relocation_api()["move"];
         const sol::table strict_options = fixture.lua.create_table_with(
-                                               "strict", true );
+                                              "strict", true );
         const tripoint_abs_ms source_position = fixture.test_npc->pos_abs();
         const npc *source_npc = fixture.test_npc;
         const character_id npc_id = fixture.npc_id;
@@ -559,7 +559,7 @@ TEST_CASE( "lua_platform_relocation_rejects_coupled_npc_states_and_preserves_reg
 
         const sol::protected_function move = fixture.relocation_api()["move"];
         const sol::table strict_options = fixture.lua.create_table_with(
-                                               "strict", true );
+                                              "strict", true );
         const tripoint_abs_ms source_position = fixture.test_npc->pos_abs();
         const npc *source_npc = fixture.test_npc;
         const character_id npc_id = fixture.npc_id;
@@ -596,7 +596,7 @@ TEST_CASE( "lua_platform_relocation_rejects_coupled_npc_states_and_preserves_reg
 
         const sol::protected_function move = fixture.relocation_api()["move"];
         const sol::table strict_options = fixture.lua.create_table_with(
-                                               "strict", true );
+                                              "strict", true );
         const tripoint_abs_ms source_position = fixture.test_npc->pos_abs();
         const npc *source_npc = fixture.test_npc;
         const character_id npc_id = fixture.npc_id;
@@ -632,7 +632,7 @@ TEST_CASE( "lua_platform_relocation_rejects_coupled_npc_states_and_preserves_reg
 
         const sol::protected_function move = fixture.relocation_api()["move"];
         const sol::table strict_options = fixture.lua.create_table_with(
-                                               "strict", true );
+                                              "strict", true );
         const tripoint_abs_ms source_position = fixture.test_npc->pos_abs();
         const npc *source_npc = fixture.test_npc;
         const character_id npc_id = fixture.npc_id;
@@ -668,7 +668,7 @@ TEST_CASE( "lua_platform_relocation_rejects_coupled_npc_states_and_preserves_reg
 
         const sol::protected_function move = fixture.relocation_api()["move"];
         const sol::table strict_options = fixture.lua.create_table_with(
-                                               "strict", true );
+                                              "strict", true );
         const tripoint_abs_ms source_position = fixture.test_npc->pos_abs();
         const npc *source_npc = fixture.test_npc;
         const character_id npc_id = fixture.npc_id;
@@ -710,7 +710,7 @@ TEST_CASE( "lua_platform_relocation_rejects_blocked_occupied_z_and_unloaded",
         .get<cata::lua_platform::map_tile_token>();
     const sol::protected_function move = fixture.relocation_api()["move"];
     const sol::table strict_options = fixture.lua.create_table_with(
-                                           "strict", true );
+                                          "strict", true );
     const std::uint64_t epoch_before =
         cata::lua_platform::map_mutation_epoch();
 
@@ -766,7 +766,7 @@ TEST_CASE( "lua_platform_relocation_rejects_blocked_occupied_z_and_unloaded",
 
     const int map_width = here.getmapsize() * SEEX;
     const tripoint_abs_ms unloaded_position = fixture.source_abs +
-            tripoint_rel_ms( map_width, 0, 0 );
+        tripoint_rel_ms( map_width, 0, 0 );
     const sol::protected_function_result unloaded = tile(
             fixture.position( unloaded_position ) );
     REQUIRE( unloaded.valid() );
@@ -850,7 +850,7 @@ TEST_CASE( "lua_platform_relocation_rolls_back_and_updates_tracker_atomically",
         .get<cata::lua_platform::map_tile_token>();
     const sol::protected_function move = fixture.relocation_api()["move"];
     const sol::table strict_options = fixture.lua.create_table_with(
-                                           "strict", true );
+                                          "strict", true );
     const std::uint64_t epoch_before =
         cata::lua_platform::map_mutation_epoch();
     const std::size_t identity_generation =
@@ -919,7 +919,7 @@ TEST_CASE( "lua_platform_relocation_moves_avatar_with_explicit_token",
 
     const sol::protected_function move = fixture.relocation_api()["move"];
     const sol::table strict_options = fixture.lua.create_table_with(
-                                           "strict", true );
+                                          "strict", true );
     const std::uint64_t epoch_before =
         cata::lua_platform::map_mutation_epoch();
     const std::size_t identity_generation =
@@ -979,7 +979,7 @@ TEST_CASE( "lua_platform_avatar_teleport_matches_native_success_path",
     const sol::protected_function teleport_avatar =
         fixture.relocation_api()["teleport_avatar"];
     const sol::protected_function_result teleported = teleport_avatar(
-                fixture.avatar_handle, target );
+            fixture.avatar_handle, target );
     REQUIRE( teleported.valid() );
     const sol::table envelope = teleported.get<sol::table>();
     REQUIRE( envelope["ok"].get<bool>() );
@@ -1020,7 +1020,7 @@ TEST_CASE( "lua_platform_avatar_teleport_force_fallback_matches_native",
         fixture.relocation_api()["teleport_avatar"];
     const sol::table options = fixture.lua.create_table_with( "force", true );
     const sol::protected_function_result teleported = teleport_avatar(
-                fixture.avatar_handle, target, options );
+            fixture.avatar_handle, target, options );
     REQUIRE( teleported.valid() );
     const sol::table envelope = teleported.get<sol::table>();
     REQUIRE( envelope["ok"].get<bool>() );
@@ -1061,7 +1061,7 @@ TEST_CASE( "lua_platform_avatar_teleport_force_safe_collision_matches_native",
         fixture.relocation_api()["teleport_avatar"];
     const sol::table options = fixture.lua.create_table_with( "force_safe", true );
     const sol::protected_function_result teleported = teleport_avatar(
-                fixture.avatar_handle, target, options );
+            fixture.avatar_handle, target, options );
     REQUIRE( teleported.valid() );
     const sol::table envelope = teleported.get<sol::table>();
     REQUIRE( envelope["ok"].get<bool>() );
@@ -1090,7 +1090,7 @@ TEST_CASE( "lua_platform_avatar_teleport_matches_native_same_position_rejection"
     const sol::protected_function teleport_avatar =
         fixture.relocation_api()["teleport_avatar"];
     const sol::protected_function_result unchanged = teleport_avatar(
-                fixture.avatar_handle, target );
+            fixture.avatar_handle, target );
     REQUIRE( unchanged.valid() );
     const sol::table envelope = unchanged.get<sol::table>();
     REQUIRE( envelope["ok"].get<bool>() );
@@ -1102,7 +1102,7 @@ TEST_CASE( "lua_platform_avatar_teleport_matches_native_same_position_rejection"
 
     const cata::lua_platform::script_tripoint_coord local_target =
         cata::lua_platform::script_tripoint_coord::from_native(
-            coords::origin::local, coords::scale::map_square, tripoint::zero );
+            coords::origin::reality_bubble, coords::scale::map_square, tripoint::zero );
     CHECK_FALSE( teleport_avatar( fixture.avatar_handle, local_target ).valid() );
 }
 
@@ -1115,7 +1115,7 @@ TEST_CASE( "lua_platform_relocation_avatar_never_loads_map_or_uses_fallback",
     const sol::protected_function tile = fixture.map_api()["tile"];
     const sol::protected_function move = fixture.relocation_api()["move"];
     const sol::table strict_options = fixture.lua.create_table_with(
-                                           "strict", true );
+                                          "strict", true );
     const sol::table relocation = fixture.relocation_api();
     CHECK_FALSE( relocation["current"].valid() );
     CHECK_FALSE( relocation["nearest"].valid() );
@@ -1182,7 +1182,7 @@ TEST_CASE( "lua_platform_relocation_avatar_never_loads_map_or_uses_fallback",
 TEST_CASE( "lua_platform_relocation_rejects_coupled_avatar_states",
            "[lua][platform][relocation][avatar][state]" )
 {
-    const auto check_rejected = []( platform_avatar_relocation_fixture &fixture ) {
+    const auto check_rejected = []( platform_avatar_relocation_fixture & fixture ) {
         const sol::protected_function tile = fixture.map_api()["tile"];
         const sol::protected_function_result token_result = tile(
                 fixture.position( fixture.target_local ) );
@@ -1195,7 +1195,7 @@ TEST_CASE( "lua_platform_relocation_rejects_coupled_avatar_states",
 
         const sol::protected_function move = fixture.relocation_api()["move"];
         const sol::table strict_options = fixture.lua.create_table_with(
-                                               "strict", true );
+                                              "strict", true );
         const tripoint_abs_ms position_before = get_avatar().pos_abs();
         const std::uint64_t epoch_before =
             cata::lua_platform::map_mutation_epoch();
@@ -1232,7 +1232,7 @@ TEST_CASE( "lua_platform_relocation_rejects_coupled_avatar_states",
 TEST_CASE( "lua_platform_relocation_rejects_vehicle_coupled_states_without_mutation",
            "[lua][platform][relocation][vehicle][state]" )
 {
-    const auto check_rejected = []( platform_vehicle_relocation_fixture &fixture ) {
+    const auto check_rejected = []( platform_vehicle_relocation_fixture & fixture ) {
         REQUIRE( fixture.test_vehicle );
         const std::size_t vehicle_identity_generation =
             fixture.vehicle_handle.identity_generation();
@@ -1250,7 +1250,7 @@ TEST_CASE( "lua_platform_relocation_rejects_vehicle_coupled_states_without_mutat
 
         const sol::protected_function move = fixture.relocation_api()["move"];
         const sol::table strict_options = fixture.lua.create_table_with(
-                                               "strict", true );
+                                              "strict", true );
         const std::uint64_t epoch_before =
             cata::lua_platform::map_mutation_epoch();
         const sol::protected_function_result rejected = move(
@@ -1277,7 +1277,7 @@ TEST_CASE( "lua_platform_relocation_rejects_vehicle_coupled_states_without_mutat
         REQUIRE( fixture.test_vehicle );
         item_location remote_control = get_avatar().i_add(
                                            item( itype_id( "remotevehcontrol" ),
-                                                 calendar::turn_zero ) );
+                                               calendar::turn_zero ) );
         REQUIRE( remote_control != item_location::nowhere );
         remote_control->active = true;
         REQUIRE( get_avatar().has_active_item(
@@ -1350,7 +1350,7 @@ TEST_CASE( "lua_platform_relocation_rejects_vehicle_coupled_states_without_mutat
             fixture.vehicle_handle.identity_generation();
         const sol::protected_function move = fixture.relocation_api()["move"];
         const sol::table strict_options = fixture.lua.create_table_with(
-                                               "strict", true );
+                                              "strict", true );
         const sol::protected_function_result rejected = move(
                 fixture.vehicle_handle, token, strict_options );
         REQUIRE( rejected.valid() );
@@ -1390,13 +1390,15 @@ TEST_CASE( "lua_platform_dimension_travel_rejects_inputs_without_mutating_state"
     CHECK( get_avatar().pos_abs() == avatar_position_before );
     CHECK( get_map().get_abs_sub() == map_abs_sub_before );
 
-    for( const char *filter : { "all", "follower", "enemy", "none" } ) {
+    for( const char *filter : {
+             "all", "follower", "enemy", "none"
+         } ) {
         const sol::table options = fixture.lua.create_table_with(
                                        "npc_travel_radius", 60,
                                        "npc_travel_filter", filter,
                                        "item_travel_radius", 60 );
         const sol::protected_function_result already_there = travel(
-                    dimension_before.str(), options );
+                dimension_before.str(), options );
         REQUIRE( already_there.valid() );
         const sol::table envelope = already_there.get<sol::table>();
         REQUIRE( envelope["ok"].get<bool>() );
@@ -1409,13 +1411,13 @@ TEST_CASE( "lua_platform_dimension_travel_rejects_inputs_without_mutating_state"
     }
 
     const sol::table invalid_options = fixture.lua.create_table_with(
-            "npc_travel_radius", 61 );
+                                           "npc_travel_radius", 61 );
     const sol::protected_function_result rejected_options = travel(
             dimension_before.str(), invalid_options );
     CHECK_FALSE( rejected_options.valid() );
 
     const std::string alternate_dimension = dimension_before.str() == "highlands" ?
-            "default" : "highlands";
+                                            "default" : "highlands";
     REQUIRE( dimension_id( alternate_dimension ).is_valid() );
     REQUIRE_FALSE( get_map().veh_at( get_avatar().pos_bub() ) );
     const sol::table take_vehicle = fixture.lua.create_table_with(
