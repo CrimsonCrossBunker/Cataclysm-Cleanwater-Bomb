@@ -284,10 +284,10 @@ struct profession_trait_definition_data {
 
 struct profession_definition_data {
     std::string id;
-    std::string name_male;
-    std::string name_female;
-    std::string description_male;
-    std::string description_female;
+    authored_text name_male;
+    authored_text name_female;
+    authored_text description_male;
+    authored_text description_female;
     std::int64_t points = 0;
     std::optional<std::int64_t> starting_cash;
     std::string npc_background = "BG_survival_story_UNIVERSAL";
@@ -2147,15 +2147,23 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
         }
         auto definition = std::make_shared<profession_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        const std::string common_name = options.get_or( "name", definition->id );
-        definition->name_male = options.get_or( "name_male", common_name );
-        definition->name_female = options.get_or( "name_female", common_name );
-        const std::string common_description =
-            options.get_or( "description", std::string() );
-        definition->description_male = options.get_or(
-                                           "description_male", common_description );
-        definition->description_female = options.get_or(
-                                             "description_female", common_description );
+        const authored_text common_name = read_singular_text(
+                                              options.get<sol::object>( "name" ), definition->id,
+                                              "profession name" );
+        definition->name_male = detail::read_singular_text_or(
+                                   options.get<sol::object>( "name_male" ), common_name,
+                                   "profession male name" );
+        definition->name_female = detail::read_singular_text_or(
+                                     options.get<sol::object>( "name_female" ), common_name,
+                                     "profession female name" );
+        const authored_text common_description = read_singular_text(
+                    options.get<sol::object>( "description" ), {}, "profession description" );
+        definition->description_male = detail::read_singular_text_or(
+                                          options.get<sol::object>( "description_male" ), common_description,
+                                          "profession male description" );
+        definition->description_female = detail::read_singular_text_or(
+                                            options.get<sol::object>( "description_female" ), common_description,
+                                            "profession female description" );
         definition->points = options.get_or<std::int64_t>( "points", 0 );
         if( const sol::optional<std::int64_t> starting_cash =
                 options.get<sol::optional<std::int64_t>>( "starting_cash" ) ) {
@@ -5412,10 +5420,10 @@ bool character_content_transaction::apply_phase(
                     profession native;
                     native.id = id;
                     native.was_loaded = true;
-                    native._name_male = no_translation( source.name_male );
-                    native._name_female = no_translation( source.name_female );
-                    native._description_male = no_translation( source.description_male );
-                    native._description_female = no_translation( source.description_female );
+                    native._name_male = source.name_male.native();
+                    native._name_female = source.name_female.native();
+                    native._description_male = source.description_male.native();
+                    native._description_female = source.description_female.native();
                     native._point_cost = static_cast<int>( source.points );
                     if( source.starting_cash ) {
                         native._starting_cash = static_cast<int>( *source.starting_cash );

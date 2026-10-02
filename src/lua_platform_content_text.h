@@ -70,6 +70,15 @@ inline authored_text read_singular_text( const sol::object &value, const std::st
     return { value.as<std::string>(), std::nullopt };
 }
 
+inline authored_text read_singular_text_or( const sol::object &value,
+        const authored_text &fallback, const std::string &field )
+{
+    if( !value.valid() || value.get_type() == sol::type::nil ) {
+        return fallback;
+    }
+    return read_singular_text( value, {}, field );
+}
+
 } // namespace cata::lua_platform::detail
 
 #endif // CATA_ENABLE_LUA_PLATFORM

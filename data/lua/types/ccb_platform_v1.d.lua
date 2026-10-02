@@ -5148,8 +5148,19 @@ function CcbPlatformContent.PlantLifecycle(options) end
 ---@param options CcbLuaValue
 ---@return any
 function CcbPlatformContent.PostProcessGenerator(options) end
----@param options CcbLuaValue
----@return any
+
+---@class ProfessionDefinitionOptions
+---@field id string
+---@field name? string|LocalizedText
+---@field name_male? string|LocalizedText
+---@field name_female? string|LocalizedText
+---@field description? string|LocalizedText
+---@field description_male? string|LocalizedText
+---@field description_female? string|LocalizedText
+---@field [string] any
+
+---@param options ProfessionDefinitionOptions
+---@return ProfessionDefinition
 function CcbPlatformContent.Profession(options) end
 ---@param options CcbLuaValue
 ---@return any
