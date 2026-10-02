@@ -9230,7 +9230,7 @@ assert(#events == 9)
                             "condition": {
                                 "expects_vars": [{"context_val": "name"}]
                             },
-                            "effect": {"message": "not proven"},
+                            "effect": "nothing",
                             "eoc_type": "EVENT",
                         },
                         {
@@ -9238,7 +9238,7 @@ assert(#events == 9)
                             "id": "dynamic_condition_math",
                             "required_event": "game_start",
                             "condition": {"math": ["u_score == 1"]},
-                            "effect": {"message": "not proven"},
+                            "effect": "nothing",
                             "eoc_type": "EVENT",
                         },
                     ]
@@ -9257,52 +9257,74 @@ assert(#events == 9)
             self.assertEqual(len(result.todos), 2)
             self.assertNotIn("context.data[", main)
             self.assertNotIn("services.gameplay.math.evaluate", main)
-            self.assertIn("finite numeric-literal comparisons", report)
+            self.assertIn("pure numeric arithmetic, functions and comparisons", report)
 
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_math_conditions_lower_only_finite_literal_comparisons(self) -> None:
-        expression = migrate_lua_first.render_static_condition_math(
-            {"math": ["2", " > ", "1"]}
-        )
-        self.assertEqual(
-            expression,
-            f"{migrate_lua_first.lua_number(2.0)} > "
-            f"{migrate_lua_first.lua_number(1.0)}",
-        )
-        self.assertEqual(
-            migrate_lua_first.render_static_condition_math(
-                {"math": ["1.25e2", " >= ", "125"]}
-            ),
-            "125 >= 125",
-        )
-        self.assertEqual(
-            migrate_lua_first.render_eoc_condition_expression(
-                {"math": ["1 >= 0"]}
-            ),
-            "1 >= 0",
-        )
+        cases = [
+            (["2", " > ", "1"], True), (["1.25e2", " >= ", "125"], True),
+            (["1 >= 0"], True), (["1 != 0"], True), (["1 != 1"], False),
+            (["1 + 2 > 0"], True), (["1 / 0 > 0"], True),
+            (["0 / 0 == 0"], False), (["0 / 0 != 0"], True),
+            (["0 / 0 < 0"], False), (["0 / 0"], True),
+            (["0"], False), (["-0"], False), (["-1"], True),
+            (["2 < 1 < 1"], True), (["2 > 1 == 1"], True),
+            (["(2 > 1) + (3 != 4) == 2"], True),
+            (["round(-2.5) <= -3"], True), (["max(1,2) == 2"], True),
+            (["celsius(from_celsius(37)) == 37"], True),
+        ]
+        for chunks, expected in cases:
+            with self.subTest(chunks=chunks):
+                expression = migrate_lua_first.render_eoc_condition_expression({"math": chunks})
+                self.assertIsNotNone(expression)
+                self.assertNotIn("services.", expression or "")
+                script = f"local value={expression}; assert(value == {str(expected).lower()})"
+                result = subprocess.run(["lua", "-"], input=script, text=True,
+                                        capture_output=True, timeout=10)
+                self.assertEqual(result.returncode, 0, result.stderr)
         for source in (
-            "u_health() > 0",
-            "n_score > 0",
-            "_context_score > 0",
-            "1 / 0 > 0",
-            "NaN > 0",
-            "١ > 0",
-            "1e309 > 0",
-            "1e-999 > 0",
-            "1 + 2 > 0",
-            "9" * 400 + " > 0",
+            "u_health() > 0", "n_score > 0", "_context_score > 0", "NaN > 0",
+            "١ > 0", "1e309 > 0", "1e-999 > 0", "9" * 400 + " > 0",
+            "1 = 2", "rand(3) > 0", "clamp(1,2,3) > 0",
         ):
             with self.subTest(source=source):
-                self.assertIsNone(
-                    migrate_lua_first.render_static_condition_math(
-                        {"math": [source]}
-                    )
-                )
-        self.assertIsNone(
-            migrate_lua_first.render_eoc_condition_expression(
-                {"math": ["n_score > 0"]}, avatar_actor_proven=True
-            )
-        )
+                self.assertIsNone(migrate_lua_first.render_static_condition_math({"math": [source]}))
+        self.assertIsNone(migrate_lua_first.render_eoc_condition_expression(
+            {"math": ["n_score > 0"]}, avatar_actor_proven=True))
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_generated_math_conditions_dispatch_exact_true_and_false_branches(self) -> None:
+        cases = (("1 != 0", "yes"), ("1 != 1", "no"),
+                 ("0/0", "yes"), ("round(-0.25)", "no"))
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "conditions.json"
+            source.write_text(json.dumps([
+                {"type": "effect_on_condition", "id": f"comparison_{index}",
+                 "eoc_type": "EVENT", "required_event": "game_start",
+                 "condition": {"math": [expression]},
+                 "effect": {"set_string_var": "yes", "target_var": {"context_val": "result"}},
+                 "false_effect": {"set_string_var": "no", "target_var": {"context_val": "result"}}}
+                for index, (expression, _) in enumerate(cases)
+            ]), encoding="utf-8")
+            result = migrate_lua_first.migrate(migrate_lua_first.load_objects([source]), "comparison_mod")
+        self.assertEqual(len(result.converted), len(cases))
+        self.assertEqual(result.todos, [])
+        script = r"""
+local handlers, draws = {}, 0
+package.preload.ccb = function() return {
+ content={}, runtime={handler=function(id,callback) handlers[id]=callback end, on=function() end},
+ services={random={native_int=function(lower,upper)
+  assert(lower==0 and upper==0); draws=draws+1; return 0
+ end}}
+} end
+""" + result.files[Path("main.lua")]
+        for index, (_, expected) in enumerate(cases):
+            script += f'\ndo local context={{data={{}}}}; handlers["migrated.comparison_{index}"](context); '
+            script += f'assert(context.data.result == "{expected}") end\n'
+        script += f"assert(draws == {len(cases)})"
+        completed = subprocess.run(["lua", "-"], input=script, text=True,
+                                   capture_output=True, timeout=10)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
 
     def test_math_effects_require_native_scope_and_proven_character_roles(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -35234,7 +35256,7 @@ assert(context.data.position.x==EXPECTED_X and context.data.position.y==EXPECTED
             self.assertEqual(result.returncode, 0, result.stderr)
         for chunks in ([], [""], ["1", 2], ["1 / / 2"], ["()"], ["1(2)"], ["(1+2"],
                        ["1 2"], ["1e309"], ["1e-999"], ["_dynamic"], ["rand(3)"],
-                       ["u_strength()"], ["1 > 0"], ["1 = 2"], ["١ + 2"], ["1\0+2"]):
+                       ["u_strength()"], ["1 = 2"], ["١ + 2"], ["1\0+2"]):
             self.assertIsNone(migrate_lua_first.render_native_number_expression({"math": chunks}))
         # Flat statements avoid Lua's nested-expression/local-variable limits;
         # source length alone is not an invented Native parser restriction.

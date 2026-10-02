@@ -2004,6 +2004,202 @@ return values[7] end)()
     }
 }
 
+TEST_CASE( "lua_platform_pure_math_conditions_match_native_comparison_and_truth",
+           "[lua][platform][semantic][variables][math]" )
+{
+    variable_api_fixture fixture;
+    fixture.lua.open_libraries( sol::lib::math, sol::lib::string );
+    struct predicate_case {
+        const char *source;
+        bool expected;
+        const char *lua_expression;
+    };
+    // Compare actual conditional_t loading/evaluation with ordinary emitted
+    // Lua, including nonzero/NaN truth and numeric comparison subexpressions.
+    const std::vector<predicate_case> cases = {
+        { "2 > 1", true, R"lua(
+((function() local values = {};
+values[1] = 2.0;
+values[2] = 1.0;
+values[3] = (values[1] > values[2]) and 1.0 or 0.0;
+return values[3] end)() ~= 0.0)
+)lua" },
+        { "1.25e2 >= 125", true, R"lua(
+((function() local values = {};
+values[1] = 125.0;
+values[2] = 125.0;
+values[3] = (values[1] >= values[2]) and 1.0 or 0.0;
+return values[3] end)() ~= 0.0)
+)lua" },
+        { "1 >= 0", true, R"lua(
+((function() local values = {};
+values[1] = 1.0;
+values[2] = 0.0;
+values[3] = (values[1] >= values[2]) and 1.0 or 0.0;
+return values[3] end)() ~= 0.0)
+)lua" },
+        { "1 != 0", true, R"lua(
+((function() local values = {};
+values[1] = 1.0;
+values[2] = 0.0;
+values[3] = (values[1] ~= values[2]) and 1.0 or 0.0;
+return values[3] end)() ~= 0.0)
+)lua" },
+        { "1 != 1", false, R"lua(
+((function() local values = {};
+values[1] = 1.0;
+values[2] = 1.0;
+values[3] = (values[1] ~= values[2]) and 1.0 or 0.0;
+return values[3] end)() ~= 0.0)
+)lua" },
+        { "1 + 2 > 0", true, R"lua(
+((function() local values = {};
+values[1] = 1.0;
+values[2] = 2.0;
+values[3] = values[1] + values[2];
+values[4] = 0.0;
+values[5] = (values[3] > values[4]) and 1.0 or 0.0;
+return values[5] end)() ~= 0.0)
+)lua" },
+        { "1 / 0 > 0", true, R"lua(
+((function() local values = {};
+values[1] = 1.0;
+values[2] = 0.0;
+values[3] = values[1] / values[2];
+values[4] = 0.0;
+values[5] = (values[3] > values[4]) and 1.0 or 0.0;
+return values[5] end)() ~= 0.0)
+)lua" },
+        { "0 / 0 == 0", false, R"lua(
+((function() local values = {};
+values[1] = 0.0;
+values[2] = 0.0;
+values[3] = values[1] / values[2];
+values[4] = 0.0;
+values[5] = (values[3] == values[4]) and 1.0 or 0.0;
+return values[5] end)() ~= 0.0)
+)lua" },
+        { "0 / 0 != 0", true, R"lua(
+((function() local values = {};
+values[1] = 0.0;
+values[2] = 0.0;
+values[3] = values[1] / values[2];
+values[4] = 0.0;
+values[5] = (values[3] ~= values[4]) and 1.0 or 0.0;
+return values[5] end)() ~= 0.0)
+)lua" },
+        { "0 / 0 < 0", false, R"lua(
+((function() local values = {};
+values[1] = 0.0;
+values[2] = 0.0;
+values[3] = values[1] / values[2];
+values[4] = 0.0;
+values[5] = (values[3] < values[4]) and 1.0 or 0.0;
+return values[5] end)() ~= 0.0)
+)lua" },
+        { "0 / 0", true, R"lua(
+((function() local values = {};
+values[1] = 0.0;
+values[2] = 0.0;
+values[3] = values[1] / values[2];
+return values[3] end)() ~= 0.0)
+)lua" },
+        { "0", false, R"lua(
+((function() local values = {};
+values[1] = 0.0;
+return values[1] end)() ~= 0.0)
+)lua" },
+        { "-0", false, R"lua(
+((function() local values = {};
+values[1] = 0.0;
+values[2] = -(values[1]);
+return values[2] end)() ~= 0.0)
+)lua" },
+        { "-1", true, R"lua(
+((function() local values = {};
+values[1] = 1.0;
+values[2] = -(values[1]);
+return values[2] end)() ~= 0.0)
+)lua" },
+        { "2 < 1 < 1", true, R"lua(
+((function() local values = {};
+values[1] = 2.0;
+values[2] = 1.0;
+values[3] = (values[1] < values[2]) and 1.0 or 0.0;
+values[4] = 1.0;
+values[5] = (values[3] < values[4]) and 1.0 or 0.0;
+return values[5] end)() ~= 0.0)
+)lua" },
+        { "2 > 1 == 1", true, R"lua(
+((function() local values = {};
+values[1] = 2.0;
+values[2] = 1.0;
+values[3] = (values[1] > values[2]) and 1.0 or 0.0;
+values[4] = 1.0;
+values[5] = (values[3] == values[4]) and 1.0 or 0.0;
+return values[5] end)() ~= 0.0)
+)lua" },
+        { "(2 > 1) + (3 != 4) == 2", true, R"lua(
+((function() local values = {};
+values[1] = 2.0;
+values[2] = 1.0;
+values[3] = (values[1] > values[2]) and 1.0 or 0.0;
+values[4] = 3.0;
+values[5] = 4.0;
+values[6] = (values[4] ~= values[5]) and 1.0 or 0.0;
+values[7] = values[3] + values[6];
+values[8] = 2.0;
+values[9] = (values[7] == values[8]) and 1.0 or 0.0;
+return values[9] end)() ~= 0.0)
+)lua" },
+        { "round(-2.5) <= -3", true, R"lua(
+((function() local values = {};
+values[1] = 2.5;
+values[2] = -(values[1]);
+values[3] = math.floor(math.abs(values[2])) + 0.0;
+if math.abs(values[2]) - values[3] >= 0.5 then values[3] = values[3] + 1.0 end;
+if values[2] < 0.0 or 1.0 / values[2] < 0.0 then values[3] = -values[3] end;
+values[4] = 3.0;
+values[5] = -(values[4]);
+values[6] = (values[3] <= values[5]) and 1.0 or 0.0;
+return values[6] end)() ~= 0.0)
+)lua" },
+        { "max(1,2) == 2", true, R"lua(
+((function() local values = {};
+values[1] = 1.0;
+values[2] = 2.0;
+values[3] = values[1];
+if values[2] > values[3] then values[3] = values[2] end;
+values[4] = 2.0;
+values[5] = (values[3] == values[4]) and 1.0 or 0.0;
+return values[5] end)() ~= 0.0)
+)lua" },
+        { "celsius(from_celsius(37)) == 37", true, R"lua(
+((function() local values = {};
+values[1] = 37.0;
+local native_float = function(value) return (string.unpack("f", string.pack("f", value))) end;
+values[2] = native_float(values[1] + native_float(273.150));
+values[3] = native_float(native_float(values[2]) - native_float(273.150));
+values[4] = 37.0;
+values[5] = (values[3] == values[4]) and 1.0 or 0.0;
+return values[5] end)() ~= 0.0)
+)lua" }
+    };
+    dialogue conversation;
+    for( const predicate_case &row : cases ) {
+        CAPTURE( row.source );
+        const conditional_t native( json_loader::from_string(
+                                        std::string( "{\"math\":[\"" ) + row.source + "\"]}" ).get_object() );
+        finalize_conditions();
+        const bool expected = native( conversation );
+        CHECK( expected == row.expected );
+        const sol::protected_function_result call = fixture.lua.safe_script(
+                    std::string( "return " ) + row.lua_expression, sol::script_pass_on_error );
+        REQUIRE( call.valid() );
+        CHECK( call.get<bool>() == expected );
+    }
+}
+
 TEST_CASE( "native_variable_reads_do_not_share_missing_beta_mutation_fallback",
            "[lua][platform][semantic][variables]" )
 {

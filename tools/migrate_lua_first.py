@@ -28030,7 +28030,7 @@ def render_literal_native_arithmetic(value: Any) -> str | None:
     if not isinstance(value, list) or not value or not all(isinstance(part, str) for part in value):
         return None
     source = "".join(value)  # eoc_math::from_json concatenates chunks without inserting spaces.
-    token_pattern = re.compile(r"(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?|[A-Za-z_][A-Za-z_0-9]*|π|[(),+*/%^\-]")
+    token_pattern = re.compile(r"(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?|[A-Za-z_][A-Za-z_0-9]*|π|==|!=|<=|>=|[(),+*/%^<>\-]")
     operators: list[str] = []
     operands: list[int] = []
     frames: list[tuple[int, int, str | None]] = []
@@ -28039,6 +28039,8 @@ def render_literal_native_arithmetic(value: Any) -> str | None:
     uses_native_float = False
     need_operand = True
     precedence = {"+": 2, "-": 2, "*": 3, "/": 3, "%": 3, "^": 4}
+    comparisons = {"==", "!=", "<", "<=", ">", ">="}
+    precedence.update({operator: 1 for operator in comparisons})
     constants = {"pi": math.pi, "π": math.pi, "e": math.e, "true": 1.0, "false": 0.0}
     functions = {name: 1 for name in ("abs", "floor", "ceil", "trunc", "round",
                                      "sqrt", "log", "sin", "cos", "tan")}
@@ -28116,8 +28118,12 @@ def render_literal_native_arithmetic(value: Any) -> str | None:
         if len(operands) < 2:
             return False
         right, left = operands.pop(), operands.pop()
-        emit(f"math.fmod(values[{left}], values[{right}])" if operator == "%" else
-             f"values[{left}] {operator} values[{right}]")
+        if operator in comparisons:
+            lua_operator = "~=" if operator == "!=" else operator
+            emit(f"(values[{left}] {lua_operator} values[{right}]) and 1.0 or 0.0")
+        else:
+            emit(f"math.fmod(values[{left}], values[{right}])" if operator == "%" else
+                 f"values[{left}] {operator} values[{right}]")
         return True
 
     position = 0
@@ -28742,41 +28748,11 @@ def render_static_context_presence_condition(condition: dict[str, Any]) -> str |
 def render_static_condition_math(
     condition: dict[str, Any]
 ) -> str | None:
-    """Render only finite numeric-literal comparisons from legacy math conditions."""
+    """Compile pure numeric conditions and preserve Native double-to-bool truth."""
     if set(condition) != {"math"}:
         return None
-    raw = condition.get("math")
-    if not isinstance(raw, list) or not raw or not all(
-        isinstance(part, str) for part in raw
-    ):
-        return None
-    expression = "".join(raw)
-    if len(expression) > 8192 or "\0" in expression:
-        return None
-    number = r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?"
-    match = re.fullmatch(
-        rf"[ \t\r\n]*({number})[ \t\r\n]*"
-        rf"(==|!=|<=|>=|<|>)[ \t\r\n]*"
-        rf"({number})[ \t\r\n]*",
-        expression,
-    )
-    if match is None:
-        return None
-    try:
-        left = float(match.group(1))
-        right = float(match.group(3))
-    except ValueError:
-        return None
-    if not math.isfinite(left) or not math.isfinite(right):
-        return None
-    for literal, value in zip((match.group(1), match.group(3)), (left, right)):
-        significand = literal.lstrip("+-").split("e", 1)[0].split("E", 1)[0]
-        nonzero_literal = any(digit in "123456789" for digit in significand)
-        if nonzero_literal and (value == 0.0 or abs(value) < sys.float_info.min):
-            # The native stream parser may reject underflow while Lua parses
-            # the emitted double as zero/subnormal; keep that boundary TODO.
-            return None
-    return f"{lua_number(left)} {match.group(2)} {lua_number(right)}"
+    expression = render_literal_native_arithmetic(condition.get("math"))
+    return None if expression is None else f"({expression} ~= 0.0)"
 
 
 def render_static_line_of_sight_condition(
@@ -32843,8 +32819,8 @@ def render_eoc(
         condition_todo = "translate the legacy condition into a Lua predicate"
         if isinstance(raw_condition, dict) and set(raw_condition) == {"math"}:
             condition_todo = (
-                "translate math only for finite numeric-literal comparisons; "
-                "dynamic variables or functions, arithmetic, non-finite or "
+                "translate math only for pure numeric arithmetic, functions and comparisons; "
+                "variables, scoped functions, RNG, diagnostics, non-finite or "
                 "underflowing literals, and native debugmsg/false versus Platform "
                 "math exceptions do not have proven parity"
             )
