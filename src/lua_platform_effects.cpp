@@ -10,6 +10,7 @@ extern "C" {
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <limits>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -335,10 +336,10 @@ effect_add_options read_add_options(
                     "services.effects.add intensity must be an integer" );
             }
             const lua_Integer intensity = value.as<lua_Integer>();
-            if( intensity < -maximum_effect_assignment_intensity ||
-                intensity > maximum_effect_assignment_intensity ) {
+            if( intensity < std::numeric_limits<int>::min() ||
+                intensity > std::numeric_limits<int>::max() ) {
                 throw std::invalid_argument(
-                    "services.effects.add intensity is outside its limit" );
+                    "services.effects.add intensity must fit a native int" );
             }
             result.intensity = static_cast<int>( intensity );
         } else if( key == "force" ) {
@@ -381,8 +382,14 @@ sol::table add_effect(
 {
     require_id_kind(
         requested_id, "effect", "services.effects.add" );
-    // TimeDuration already checks the native signed turn range. Preserve
-    // negative and long durations; Creature/effect owns expiry and clamping.
+    const std::int64_t duration_turns = duration.turns();
+    if( duration_turns < std::numeric_limits<int>::min() ||
+        duration_turns > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument(
+            "services.effects.add duration must fit native signed int turns" );
+    }
+    // Preserve negative and long durations within the native signed turn
+    // range; Creature/effect owns expiry and clamping.
     const effect_add_options options =
         read_add_options( requested_options );
     sol::state_view state( lua );

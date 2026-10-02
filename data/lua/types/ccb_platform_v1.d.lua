@@ -10942,7 +10942,9 @@ function CcbPlatformWoundsApi.remove_all_direct(character, body_part, wound) end
 ---@class CcbEffectAddOptions
 ---@field body_part? GameId Registered GameId<body_part>; native effects may refer to parts outside the current anatomy.
 ---@field permanent? boolean Defaults to false.
----@field intensity? integer Native intensity input, -1000000 through 1000000; defaults to zero. Nonpositive values use native default/stacking rules, not a signed delta.
+---@field intensity? integer Native signed int range (-2147483648 through
+---2147483647); defaults to zero. Nonpositive values use native default/stacking
+---rules, not a signed delta.
 ---@field force? boolean Bypass native immunity checks; defaults to false.
 
 ---@class CcbMoraleAddOptions
@@ -11283,7 +11285,8 @@ local CcbEffectsApi = {}
 ---it still applies immediately and expires when native effect processing runs.
 ---@param creature GameHandle Exact live Creature handle; Character or monster.
 ---@param effect GameId
----@param duration TimeDuration Native signed turn range; the effect definition applies its own maximum duration.
+---@param duration TimeDuration Native signed int turn range
+---(-2147483648 through 2147483647); effect definition applies its own maximum duration.
 ---@param options? CcbEffectAddOptions
 ---@return CcbResult
 function CcbEffectsApi.add(creature, effect, duration, options) end
