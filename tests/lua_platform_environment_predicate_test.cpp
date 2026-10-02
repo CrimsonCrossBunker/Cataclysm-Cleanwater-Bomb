@@ -1419,7 +1419,7 @@ TEST_CASE( "lua_platform_environment_set_trap_area_matches_native_f_set_trap",
             for( int dy = -2; dy <= 2; ++dy ) {
                 const tripoint_bub_ms position = area_center + tripoint_rel_ms( dx, dy, 0 );
                 coverage[index++] = here.inbounds( position ) &&
-                                    here.tr_at( position ).id == beartrap.id();
+                                    here.tr_at( position ).id.id() == beartrap.id();
             }
         }
         return coverage;
@@ -1492,7 +1492,7 @@ TEST_CASE( "lua_platform_environment_set_trap_area_matches_native_f_set_trap",
     CHECK( compare_case( center, "-1.9", true, -1.9, true ) == 1 );
     prepare_area( center );
     run_native( center, "-1", true, true );
-    CHECK( here.tr_at( center + tripoint_rel_ms( 1, 1, 0 ) ).id == beartrap.id() );
+    CHECK( here.tr_at( center + tripoint_rel_ms( 1, 1, 0 ) ).id.id() == beartrap.id() );
     prepare_area( center );
     CHECK( compare_case( center, "-1", true, -1.0, false ) == 0 );
     CHECK( compare_case( center, "-0.9", true, -0.9, false ) == 1 ); // truncates to zero
@@ -1520,7 +1520,7 @@ TEST_CASE( "lua_platform_environment_set_trap_area_matches_native_f_set_trap",
     } );
     REQUIRE( current_submap != nullptr );
     const ter_id original_upper_terrain = here.ter( upper_center );
-    const trap_id original_upper_trap = here.tr_at( upper_center ).id;
+    const trap_id original_upper_trap = here.tr_at( upper_center ).id.id();
     on_out_of_scope restore_upper_tile( [&]() {
         here.ter_set( upper_center, floor );
         here.trap_set( upper_center, tr_null );
@@ -1547,7 +1547,7 @@ TEST_CASE( "lua_platform_environment_set_trap_area_matches_native_f_set_trap",
     for( const talk_effect_fun_t &operation : upper_native_effect.effects ) {
         operation( upper_native_context );
     }
-    CHECK( here.tr_at( upper_center ).id == beartrap.id() );
+    CHECK( here.tr_at( upper_center ).id.id() == beartrap.id() );
     here.trap_set( upper_center, tr_null );
     {
         cata::lua_platform::detail::callback_scope active_callback( *owner );
@@ -1558,7 +1558,7 @@ TEST_CASE( "lua_platform_environment_set_trap_area_matches_native_f_set_trap",
         REQUIRE( result.valid() );
         CHECK( result.get<int>() == 1 );
     }
-    CHECK( here.tr_at( upper_center ).id == beartrap.id() );
+    CHECK( here.tr_at( upper_center ).id.id() == beartrap.id() );
     if( here.supports_zlevels() ) {
         CHECK( map_meddler::get_submap_at_grid( here, tripoint_rel_sm{ upper_center.x() / SEEX,
                                           upper_center.y() / SEEY, target_z } ) == upper_submap );
@@ -1581,7 +1581,7 @@ TEST_CASE( "lua_platform_environment_set_trap_area_matches_native_f_set_trap",
     CHECK( run_platform( center, true, 0.0, false ) == 1 );
     const auto &platform_locations = here.trap_locations( beartrap.id() );
     CHECK( std::count( platform_locations.begin(), platform_locations.end(), center ) == 1 );
-    CHECK( here.tr_at( center ).id == beartrap.id() );
+    CHECK( here.tr_at( center ).id.id() == beartrap.id() );
     prepare_area( center );
 
     // A square radius above 32767 remains usable when native endpoints are
@@ -1654,7 +1654,7 @@ TEST_CASE( "lua_platform_environment_set_trap_area_matches_native_f_set_trap",
     CHECK( native_builtin_diagnostic.find( "built-in trap" ) != std::string::npos );
     CHECK( platform_builtin_diagnostic == native_builtin_diagnostic );
     CHECK( platform_builtin_attempts == 1 );
-    CHECK( here.tr_at( builtin_center ).id == pit_trap.id() );
+    CHECK( here.tr_at( builtin_center ).id.id() == pit_trap.id() );
     CHECK( std::count( here.trap_locations( beartrap.id() ).begin(),
                        here.trap_locations( beartrap.id() ).end(), builtin_center ) == 0 );
     here.ter_set( builtin_center, floor );
@@ -1695,7 +1695,7 @@ TEST_CASE( "lua_platform_environment_set_trap_area_matches_native_f_set_trap",
     CHECK( native_invalid_id_diagnostic.find( "invalid trap id" ) != std::string::npos );
     CHECK( platform_invalid_id_diagnostic == native_invalid_id_diagnostic );
     CHECK( long_id_attempts == 1 );
-    CHECK( here.tr_at( center ).id == tr_null );
+    CHECK( here.tr_at( center ).id.id() == tr_null );
 }
 
 TEST_CASE( "lua_platform_environment_line_of_sight_matches_map_semantics",
