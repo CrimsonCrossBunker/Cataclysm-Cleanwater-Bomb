@@ -54,6 +54,9 @@
 ---@field xy fun(self: TripointCoord): PointCoord
 ---@field add fun(self: TripointCoord, other: TripointCoord): TripointCoord
 ---@field subtract fun(self: TripointCoord, other: TripointCoord): TripointCoord
+---Reflects self around center (2 * center - self), retaining matching origin and scale.
+---Uses wide intermediates; rejects mixed coordinate frames and out-of-range final axes.
+---@field mirror_around fun(self: TripointCoord, center: TripointCoord): TripointCoord
 ---@field scale_by fun(self: TripointCoord, factor: integer): TripointCoord
 ---@field project_to fun(self: TripointCoord, scale: string): TripointCoord
 ---@field project_remain fun(self: TripointCoord, scale: string): TripointCoord

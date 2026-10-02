@@ -5911,6 +5911,12 @@ def render_static_false_effect(
         if rendered is None:
             return None
         return [line.replace("    ", "        ", 1) for line in rendered]
+    if isinstance(effect, dict) and "mirror_coordinates" in effect:
+        rendered = render_static_mirror_coordinates(
+            effect, False, False, effect_actor_targets)
+        if rendered is None:
+            return None
+        return [line.replace("    ", "        ", 1) for line in rendered]
     if isinstance(effect, dict) and "give_achievement" in effect:
         if (
             set(effect) != {"give_achievement"} or
@@ -21721,10 +21727,31 @@ def render_static_mirror_coordinates(
     effect: dict[str, Any],
     avatar_actor_proven: bool,
     npc_actor_proven: bool,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> list[str] | None:
-    """Keep fail-closed until var_info scope and value conversion are exact."""
-    del effect, avatar_actor_proven, npc_actor_proven
-    return None
+    """Reflect Native variable coordinates using real storage participants."""
+    del avatar_actor_proven, npc_actor_proven
+    if set(effect) - {"mirror_coordinates", "center_var", "relative_var"}:
+        return None
+    inputs = []
+    for name in ("center_var", "relative_var"):
+        expression = (render_native_coordinate_variable_expression(effect[name], effect_actor_targets)
+                      if name in effect else "services.coords.tripoint_abs_ms(0, 0, 0)")
+        if expression is None:
+            return None
+        inputs.append(expression)
+    writes = render_native_coordinate_variable_write_lines(
+        effect.get("mirror_coordinates"), "mirrored", effect_actor_targets)
+    if writes is None:
+        return None
+    return [
+        "    do",
+        f"        local mirror_center = {inputs[0]}",
+        f"        local mirror_relative = {inputs[1]}",
+        "        local mirrored = mirror_relative:mirror_around(mirror_center)",
+        *["    " + line for line in writes],
+        "    end",
+    ]
 
 
 def render_static_closest_city_effect(
@@ -26619,6 +26646,55 @@ def render_native_coordinate_variable_expression(
     return ('(function(result) if result.exists == false then return '
             'services.coords.tripoint_abs_ms(0, 0, 0) end; return result.value end)('
             + snapshot + ')')
+
+
+def render_native_coordinate_variable_write_lines(
+    value: Any, expression: str,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
+) -> list[str] | None:
+    """Write a coordinate without snapshotting unrelated previous values."""
+    scopes = ("u_val", "npc_val", "global_val", "var_val", "context_val")
+    if not isinstance(value, dict) or set(value) - set(scopes) - {"default"}:
+        return None
+    scope = next((candidate for candidate in scopes if candidate in value), None)
+    if scope is None or not lua_quotable_native_variable_string(value[scope]):
+        return None
+    key = lua_quote(value[scope])
+    if scope == "context_val":
+        return [f"    context.data[{key}] = {expression}"]
+    if scope == "global_val":
+        return [f"    service_value(services.variables.set_global({key}, {expression}, "
+                "{ include_before = false }))"]
+    if scope in {"u_val", "npc_val"}:
+        owner = _proven_native_variable_write_target(
+            effect_actor_targets, "u" if scope == "u_val" else "npc")
+        if owner is None:
+            return None
+        return [f"    service_value(services.variables.set({owner}, {key}, {expression}, "
+                "{ include_before = false }))"]
+    alpha = _proven_native_variable_write_target(effect_actor_targets, "u")
+    beta = _proven_native_variable_write_target(effect_actor_targets, "npc")
+    if alpha is None or beta is None:
+        return None
+    return [
+        "    do",
+        "        local pointer = service_value(services.variables.get_context_string(",
+        f"            context and context.data, {key}))",
+        '        local target = pointer.exists == false and "" or pointer.value',
+        '        if string.sub(target, 1, 2) == "u_" then',
+        f"            service_value(services.variables.set({alpha}, string.sub(target, 3), {expression}, "
+        "{ include_before = false }))",
+        '        elseif string.sub(target, 1, 2) == "n_" then',
+        f"            service_value(services.variables.set({beta}, string.sub(target, 3), {expression}, "
+        "{ include_before = false }))",
+        '        elseif string.sub(target, 1, 1) == "_" then',
+        f"            context.data[string.sub(target, 2)] = {expression}",
+        "        else",
+        f"            service_value(services.variables.set_global(target, {expression}, "
+        "{ include_before = false }))",
+        "        end",
+        "    end",
+    ]
 
 
 def _render_native_location_event_key(
@@ -36923,22 +36999,22 @@ def render_eoc(
                     all_effects_converted = False
             elif isinstance(effect, dict) and "mirror_coordinates" in effect:
                 rendered = render_static_mirror_coordinates(
-                    effect, character_actor_proven, npc_event_character_actor_proven
+                    effect, character_actor_proven, npc_event_character_actor_proven,
+                    effect_actor_targets,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: mirror_coordinates reads and writes arbitrary native "
-                        "absolute-ms var_info values; typed coordinate arithmetic alone "
-                        "does not preserve missing/legacy-string conversion or variable scopes."
+                        "    -- TODO: mirror_coordinates requires valid Native coordinate "
+                        "variable descriptors and proven present storage owners. Missing "
+                        "participants and unsupported loaders need explicit diagnostics."
                     )
                     result.add_todo(
                         "platform_gap",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs native missing/legacy-value conversion and exact "
-                        "input/output var_info scope semantics"
+                        "needs exact input/output storage presence and loader semantics"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "dimension_name" in effect:

@@ -88,6 +88,7 @@ class script_tripoint_coord
         script_tripoint_coord add_xy( const script_point_coord &rhs ) const;
         script_tripoint_coord subtract( const script_tripoint_coord &rhs ) const;
         script_tripoint_coord subtract_xy( const script_point_coord &rhs ) const;
+        script_tripoint_coord mirror_around( const script_tripoint_coord &center ) const;
         script_tripoint_coord scale_by( std::int64_t factor ) const;
         script_tripoint_coord negate() const;
         script_tripoint_coord project_to( std::string_view result_scale ) const;

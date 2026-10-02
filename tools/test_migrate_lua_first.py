@@ -32792,7 +32792,121 @@ assert(calls==1)
             self.assertEqual(main.count("TODO: translate dimension_name"), 1)
             self.assertIn("needs domain-service conversion", report)
 
-    def test_mirror_coordinates_stays_todo_without_scope_safe_operation(self) -> None:
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_mirror_emitted_lua_writes_raw_scope_without_snapshotting_old_value(self) -> None:
+        owners = {"u": ("alpha", "character"), "npc": ("beta", "monster")}
+        for destination in ("u_val", "npc_val", "global_val", "context_val", "var_val"):
+            lines = migrate_lua_first.render_static_mirror_coordinates({
+                "mirror_coordinates": {destination: "target"},
+                "center_var": {"var_val": "center_pointer"},
+                "relative_var": {"context_val": "relative"}}, False, False, owners)
+            self.assertIsNotNone(lines)
+            script = r"""
+local alpha,beta={},{}
+local context={data={center_pointer='n_center'}}
+local log,writes={},{}
+local function point(x,y,z) return {x=x,y=y,z=z,mirror_around=function(self,center)
+ log[#log+1]='reflect';return point(2*center.x-self.x,2*center.y-self.y,2*center.z-self.z)
+end} end
+local center,relative=point(3,4,-1),point(11,-2,8)
+local services={variables={get_context_string=function(data,key)
+ assert(data==context.data)
+ if key=='center_pointer' then log[#log+1]='pointer';return {ok=true,value={exists=true,value='n_center'}} end
+ assert(key=='target');log[#log+1]='target_pointer'
+ return {ok=true,value={exists=target_pointer~=nil,value=target_pointer}}
+end,get_tripoint=function(owner,key)
+ assert(owner==beta and key=='center');log[#log+1]='center'
+ return {ok=true,value={exists=true,value=center}}
+end,get_context_tripoint=function(data,key)
+ assert(data==context.data and key=='relative');log[#log+1]='relative'
+ return {ok=true,value={exists=true,value=relative}}
+end}}
+local function write(scope,key,value,options)
+ assert(options.include_before==false)
+ assert(value.x==-5 and value.y==10 and value.z==-10)
+ log[#log+1]='write';writes[#writes+1]={scope,key,value}
+ return {ok=true,value={after=value}}
+end
+services.variables.set=function(owner,key,value,options)
+ assert(owner==alpha or owner==beta);return write(owner==alpha and 'u' or 'npc',key,value,options)
+end
+services.variables.set_global=function(key,value,options) return write('global',key,value,options) end
+local function service_value(result) assert(result.ok);return result.value end
+local function evaluate()
+BODY
+end
+local scope='DESTINATION'
+local cases=scope=='var_val' and {{'u_out','u','out'},{'n_out','npc','out'},
+ {'_out','context','out'},{'out','global','out'},{'var_next','global','var_next'},
+ {'','global',''},{'u_','u',''},{'n_','npc',''},{'_','context',''},
+ {'n_raw\0tail','npc','raw\0tail'},{string.rep('k',10000),'global',string.rep('k',10000)},
+ {nil,'global',''}} or {{nil,string.sub(scope,1,-5),'target'}}
+for _,case in ipairs(cases) do
+ log={};writes={};target_pointer=case[1]
+ context.data[case[3]]={} -- old unrelated array is never snapshotted
+ for i=1,5000 do context.data[case[3]][i]=i end
+ evaluate()
+ assert(log[1]=='pointer' and log[2]=='center' and log[3]=='relative' and log[4]=='reflect')
+ if case[2]=='context' then
+  local value=context.data[case[3]]
+  assert(value.x==-5 and value.y==10 and value.z==-10 and #writes==0)
+ else
+  assert(#writes==1 and writes[1][1]==case[2] and writes[1][2]==case[3])
+ end
+ if scope=='var_val' then assert(log[5]=='target_pointer') end
+end
+""".replace("BODY", "\n".join(lines or [])).replace("DESTINATION", destination)
+            result = subprocess.run(["lua", "-"], input=script, text=True,
+                                    capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_mirror_missing_inputs_use_native_zero_and_do_not_evaluate_var_defaults(self) -> None:
+        for effect in ({"mirror_coordinates": {"context_val": "out"}},
+                       {"mirror_coordinates": {"context_val": "out"},
+                        "center_var": {"global_val": "missing", "default": {"math": ["ignored"]}},
+                        "relative_var": {"context_val": "missing", "default": "ignored"}}):
+            lines = migrate_lua_first.render_static_mirror_coordinates(effect, False, False)
+            self.assertIsNotNone(lines)
+            self.assertNotIn("ignored", "\n".join(lines or []))
+            script = r"""
+local context={data={}}
+local function zero() return {x=0,y=0,z=0,mirror_around=function(self,center)
+ assert(center.x==0 and center.y==0 and center.z==0);return zero()
+end} end
+local services={coords={tripoint_abs_ms=function(x,y,z)
+ assert(x==0 and y==0 and z==0);return zero()
+end},variables={get_global_tripoint=function(key)
+ assert(key=='missing');return {ok=true,value={exists=false}}
+end,get_context_tripoint=function(data,key)
+ assert(data==context.data and key=='missing');return {ok=true,value={exists=false}}
+end}}
+local function service_value(result) assert(result.ok);return result.value end
+BODY
+assert(context.data.out.x==0 and context.data.out.y==0 and context.data.out.z==0)
+""".replace("BODY", "\n".join(lines or []))
+            result = subprocess.run(["lua", "-"], input=script, text=True,
+                                    capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_mirror_participant_storage_proofs_apply_in_both_branches(self) -> None:
+        for event, supported in (("character_melee_attacks_monster", True),
+                                 ("character_kills_character", False), ("npc_becomes_hostile", False)):
+            for branch in ("effect", "false_effect"):
+                source = migrate_lua_first.SourceObject(Path("mirror_owners.json"), 0, {
+                    "type": "effect_on_condition", "id": "mirror_owners", "eoc_type": "EVENT",
+                    "required_event": event, "condition": "is_day", "effect": [], branch: {
+                        "mirror_coordinates": {"npc_val": "out"}, "center_var": {"u_val": "center"},
+                        "relative_var": {"npc_val": "relative"}}})
+                result = migrate_lua_first.MigrationResult()
+                rendered = migrate_lua_first.render_eoc(source, result)
+                self.assertEqual(not result.todos, supported)
+                self.assertEqual("mirror_relative:mirror_around(mirror_center)" in rendered, supported)
+                if supported:
+                    self.assertIn('get_tripoint(context.actors.interlocutor, "relative")', rendered)
+                    self.assertIn('set(context.actors.interlocutor, "out", mirrored', rendered)
+
+    def test_mirror_coordinates_converts_proven_storage_and_keeps_missing_beta_todo(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
             source.write_text(
@@ -32833,19 +32947,19 @@ assert(calls==1)
 
             self.assertEqual(len(result.converted), 0)
             self.assertEqual(len(result.partial), 1)
-            self.assertIn(
-                "absolute-ms var_info values",
-                main,
-            )
-            self.assertIn("missing/legacy-string conversion or variable scopes", main)
+            self.assertIn("proven present storage owners", main)
+            self.assertEqual(main.count("mirror_relative:mirror_around(mirror_center)"), 2)
+            self.assertIn('get_tripoint(actor, "center")', main)
+            self.assertIn('get_context_tripoint(context and context.data, "center")', main)
+            self.assertIn("include_before = false", main)
             self.assertNotIn("services.variables.get(", main)
             self.assertNotIn("scale_by(2)", main)
             self.assertEqual(
-                main.count("TODO: mirror_coordinates reads and writes arbitrary native"),
-                3,
+                main.count("TODO: mirror_coordinates requires valid Native coordinate"),
+                1,
             )
             self.assertIn(
-                "native missing/legacy-value conversion and exact input/output var_info scope semantics",
+                "exact input/output storage presence and loader semantics",
                 report,
             )
             self.assertTrue(any(todo.category == "platform_gap" for todo in result.todos))
@@ -32865,11 +32979,11 @@ assert(calls==1)
 
         rendered = migrate_lua_first.render_eoc(source, result)
 
-        self.assertIn("missing/legacy-string conversion or variable scopes", rendered)
+        self.assertIn("proven present storage owners", rendered)
         self.assertNotIn('services.variables.get(\n        actor, "center")', rendered)
         self.assertTrue(any(todo.category == "platform_gap" for todo in result.todos))
 
-    def test_real_copy_lowering_and_unproven_mirror_transform_line_shapes(
+    def test_real_copy_mirror_lowering_and_unproven_transform_line_shapes(
         self,
     ) -> None:
         def walk(value: Any):
@@ -32966,11 +33080,9 @@ assert(calls==1)
             direct_eoc_probe(shove_source, mirror_effect, "real_mirror_probe"),
             mirror_result,
         )
-        self.assertIn("missing/legacy-string conversion or variable scopes", mirror_main)
-        # EVENT payload normalization may convert typed tripoints; only the
-        # effect body must avoid an unproven mirror implementation.
-        self.assertNotIn("services.coords", mirror_main.split("runtime.handler(", 1)[0])
-        self.assertTrue(any(todo.category == "platform_gap" for todo in mirror_result.todos))
+        self.assertIn("mirror_relative:mirror_around(mirror_center)", mirror_main)
+        self.assertIn('context.data["push_direction_correct"] = mirrored', mirror_main)
+        self.assertFalse(mirror_result.todos)
 
         transform_path = (
             REPOSITORY_ROOT / "data/json/monster_special_attacks/spells.json"

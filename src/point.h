@@ -287,6 +287,10 @@ struct tripoint {
         return tripoint( xy().rotate_in_map( turns ), z );
     }
 
+    // Reflect around center with wide intermediates; reject only a final
+    // coordinate outside the signed engine range.
+    tripoint mirror_around( const tripoint &center ) const;
+
     std::string to_string() const;
     std::string to_string_writable() const;
 

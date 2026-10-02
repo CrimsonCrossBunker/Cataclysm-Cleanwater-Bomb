@@ -3081,7 +3081,9 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
         "src/npctalk.cpp", "src/lua_platform_runtime.cpp",
     ],
     ("eoc-effects", "mirror_coordinates"): [
-        "src/npctalk.cpp", "src/lua_platform_bindings_values.cpp",
+        "src/npctalk.cpp", "src/point.cpp", "src/lua_platform_bindings_coords.cpp",
+        "src/lua_platform_variables.cpp", "tests/point_test.cpp",
+        "tests/lua_platform_variable_native_key_test.cpp",
     ],
     ("eoc-effects", "closest_city"): [
         "src/npctalk.cpp", "src/overmapbuffer.cpp",

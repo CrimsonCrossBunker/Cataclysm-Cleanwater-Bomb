@@ -19,6 +19,14 @@ from tools.agent.generate_lua_first_replacement_ledger import (
 
 
 class LuaFirstReplacementLedgerTest(unittest.TestCase):
+    def test_coordinate_reflection_records_source_without_claiming_native_acceptance(self):
+        entry = disposition("eoc-effects", "mirror_coordinates", {})
+        self.assertEqual(entry["target"], "services.coords")
+        self.assertEqual(entry["status"], "bounded_implemented_unverified")
+        for path in ("src/point.cpp", "src/lua_platform_bindings_coords.cpp",
+                     "tests/point_test.cpp", "tests/lua_platform_variable_native_key_test.cpp"):
+            self.assertIn(path, entry["evidence"])
+
     def test_location_copy_uses_world_service_without_claiming_native_acceptance(self):
         entry = disposition("eoc-effects", "copy_location", {})
         self.assertEqual(entry["target"], "services.world")

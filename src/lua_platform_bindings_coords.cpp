@@ -719,6 +719,13 @@ script_tripoint_coord script_tripoint_coord::subtract_xy(
                checked_axis_difference( y_, rhs.y() ), z_ );
 }
 
+script_tripoint_coord script_tripoint_coord::mirror_around(
+    const script_tripoint_coord &center ) const
+{
+    require_matching_kind( origin_, scale_, center.origin_, center.scale_, "reflect" );
+    return from_native( origin_, scale_, to_native().mirror_around( center.to_native() ) );
+}
+
 script_tripoint_coord script_tripoint_coord::scale_by(
     const std::int64_t factor ) const
 {
@@ -996,6 +1003,7 @@ void install_coordinate_value_api(
         "subtract", sol::overload(
             &script_tripoint_coord::subtract,
             &script_tripoint_coord::subtract_xy ),
+        "mirror_around", &script_tripoint_coord::mirror_around,
         "scale_by", &script_tripoint_coord::scale_by,
         "to", &script_tripoint_coord::project_to,
         "project_to", &script_tripoint_coord::project_to,

@@ -760,6 +760,166 @@ TEST_CASE( "lua_platform_indirect_numeric_duration_matches_native_participants_a
     }
 }
 
+TEST_CASE( "lua_platform_coordinate_reflection_matches_native_variable_scopes",
+           "[lua][platform][semantic][variables][coords]" )
+{
+    global_values_restore restore_global_values;
+    avatar alpha;
+    avatar beta;
+    alpha.normalize();
+    beta.normalize();
+    alpha.setID( character_id( 4927 ), true );
+    beta.setID( character_id( 4928 ), true );
+    variable_api_fixture fixture;
+    fixture.lua.open_libraries( sol::lib::string );
+    fixture.lua["services"] = fixture.services;
+    fixture.lua["alpha"] = game_handle::from_creature(
+                               alpha, { "avatar", alpha.getID().get_value(), 0, 0, 0, {} }, fixture.runtime, 1 );
+    fixture.lua["beta"] = game_handle::from_creature(
+                              beta, { "avatar", beta.getID().get_value(), 0, 0, 0, {} }, fixture.runtime, 1 );
+    REQUIRE( fixture.lua.safe_script( R"(
+        local variables = services.variables
+        local function value(result) assert(result.ok); return result.value end
+        local function target(scope, key, data)
+            if scope ~= 'var_val' then return scope, key end
+            local pointer = value(variables.get_context_string(data, key))
+            local text = pointer.exists == false and '' or pointer.value
+            if string.sub(text, 1, 2) == 'u_' then return 'u_val', string.sub(text, 3) end
+            if string.sub(text, 1, 2) == 'n_' then return 'npc_val', string.sub(text, 3) end
+            if string.sub(text, 1, 1) == '_' then return 'context_val', string.sub(text, 2) end
+            return 'global_val', text
+        end
+        function reflect_variables(center_scope, center_key, output_scope, output_key, data)
+            local scope, key = target(center_scope, center_key, data)
+            local read
+            if scope == 'context_val' then read = value(variables.get_context_tripoint(data, key))
+            elseif scope == 'global_val' then read = value(variables.get_global_tripoint(key))
+            else read = value(variables.get_tripoint(scope == 'u_val' and alpha or beta, key)) end
+            local center = read.exists and read.value or services.coords.tripoint_abs_ms(0, 0, 0)
+            local relative = value(variables.get_context_tripoint(data, 'relative')).value
+            local reflected = relative:mirror_around(center)
+            scope, key = target(output_scope, output_key, data)
+            if scope == 'context_val' then data[key] = reflected
+            elseif scope == 'global_val' then
+                value(variables.set_global(key, reflected, {include_before = false}))
+            else
+                value(variables.set(scope == 'u_val' and alpha or beta, key, reflected,
+                    {include_before = false}))
+            end
+            return reflected
+        end
+    )", sol::script_pass_on_error ).valid() );
+    const sol::protected_function reflect = fixture.lua["reflect_variables"];
+    const std::array<std::pair<const char *, var_type>, 5> scopes = {{
+            { "u_val", var_type::u }, { "npc_val", var_type::npc },
+            { "global_val", var_type::global }, { "context_val", var_type::context },
+            { "var_val", var_type::var }
+        }};
+    for( const auto &center_scope : scopes ) {
+        for( const auto &output_scope : scopes ) {
+            for( const std::string &suffix : { std::string{}, std::string( "raw\0tail", 8 ),
+                                              std::string( 10000, 'k' ) } ) {
+                CAPTURE( center_scope.first, output_scope.first, suffix.size() );
+                dialogue conversation( get_talker_for( alpha ), get_talker_for( beta ) );
+                const std::string center_key = "center" + suffix;
+                const std::string output_key = "output" + suffix;
+                conversation.set_value( center_key, diag_value( "n_" + center_key ) );
+                conversation.set_value( output_key, diag_value( "n_" + output_key ) );
+                // Direct context coordinates and indirect pointers occupy the same key
+                // only in their respective cases; never infer a second pointer hop.
+                const var_type center_owner = center_scope.second == var_type::var ? var_type::npc :
+                                              center_scope.second;
+                const var_type output_owner = output_scope.second == var_type::var ? var_type::npc :
+                                              output_scope.second;
+                write_var_value( center_owner, center_key, &conversation,
+                                 diag_value( tripoint_abs_ms( 3, 4, -1 ) ) );
+                write_var_value( output_owner, output_key, &conversation,
+                                 diag_value( diag_array( 5000, diag_value( 4.0 ) ) ) );
+                conversation.set_value( "relative", diag_value( tripoint_abs_ms( 11, -2, 8 ) ) );
+                sol::table data = fixture.lua.create_table();
+                if( center_scope.second == var_type::context ) {
+                    data.raw_set( center_key, cata::lua_platform::script_tripoint_coord::from_native(
+                                      coords::origin::abs, coords::scale::map_square, tripoint( 3, 4, -1 ) ) );
+                } else if( center_scope.second == var_type::var ) {
+                    data.raw_set( center_key, "n_" + center_key );
+                }
+                if( output_scope.second == var_type::var ) {
+                    data.raw_set( output_key, "n_" + output_key );
+                } else if( output_scope.second == var_type::context ) {
+                    sol::table old = fixture.lua.create_table();
+                    for( int index = 1; index <= 5000; ++index ) {
+                        old[index] = 4.0;
+                    }
+                    data.raw_set( output_key, old );
+                }
+                data["relative"] = cata::lua_platform::script_tripoint_coord::from_native(
+                                       coords::origin::abs, coords::scale::map_square, tripoint( 11, -2, 8 ) );
+                std::ostringstream input;
+                {
+                    JsonOut writer( input );
+                    writer.start_object();
+                    writer.member( "mirror_coordinates" );
+                    writer.start_object();
+                    writer.member( output_scope.first, output_key );
+                    writer.end_object();
+                    writer.member( "center_var" );
+                    writer.start_object();
+                    writer.member( center_scope.first, center_key );
+                    writer.end_object();
+                    writer.member( "relative_var" );
+                    writer.start_object();
+                    writer.member( "context_val", "relative" );
+                    writer.end_object();
+                    writer.end_object();
+                }
+                talk_effect_t native_effect;
+                native_effect.parse_sub_effect( json_loader::from_string( input.str() ).get_object(),
+                                                "mirror_coordinate_scope_comparison" );
+                for( const talk_effect_fun_t &effect : native_effect.effects ) {
+                    effect( conversation );
+                }
+                const tripoint expected = read_var_value( { output_owner, output_key }, conversation ).tripoint().raw();
+                CHECK( expected == tripoint( -5, 10, -10 ) );
+                write_var_value( output_owner, output_key, &conversation,
+                                 diag_value( diag_array( 5000, diag_value( 4.0 ) ) ) );
+                const sol::protected_function_result call = reflect(
+                            center_scope.first, center_key, output_scope.first, output_key, data );
+                REQUIRE( call.valid() );
+                CHECK( call.get<cata::lua_platform::script_tripoint_coord>().to_native() == expected );
+                const tripoint stored = output_owner == var_type::context ?
+                                        data.raw_get<cata::lua_platform::script_tripoint_coord>( output_key ).to_native() :
+                                        read_var_value( { output_owner, output_key }, conversation ).tripoint().raw();
+                CHECK( stored == expected );
+            }
+        }
+    }
+}
+
+TEST_CASE( "lua_platform_registered_reflection_rejects_frame_and_range_errors",
+           "[lua][platform][semantic][coords]" )
+{
+    variable_api_fixture fixture;
+    fixture.lua["services"] = fixture.services;
+    REQUIRE( fixture.lua.safe_script( R"(
+        function reflect(relative, center) return relative:mirror_around(center) end
+        local minimum, maximum = -2147483648, 2147483647
+        local source = services.coords.tripoint_abs_ms(minimum, maximum, minimum)
+        local result = reflect(source, source)
+        assert(result.x == minimum and result.y == maximum and result.z == minimum)
+    )", sol::script_pass_on_error ).valid() );
+    const sol::protected_function reflect = fixture.lua["reflect"];
+    const auto coordinate = []( coords::origin origin, coords::scale scale, tripoint raw ) {
+        return cata::lua_platform::script_tripoint_coord::from_native( origin, scale, raw );
+    };
+    const auto zero = coordinate( coords::origin::abs, coords::scale::map_square, tripoint::zero );
+    CHECK_FALSE( reflect( zero, coordinate( coords::origin::relative,
+                                           coords::scale::map_square, tripoint::zero ) ).valid() );
+    CHECK_FALSE( reflect( zero, coordinate( coords::origin::abs,
+                                           coords::scale::overmap_terrain, tripoint::zero ) ).valid() );
+    CHECK_FALSE( reflect( coordinate( coords::origin::abs, coords::scale::map_square,
+                                     tripoint( std::numeric_limits<int>::min(), 0, 0 ) ), zero ).valid() );
+}
+
 TEST_CASE( "native_variable_reads_do_not_share_missing_beta_mutation_fallback",
            "[lua][platform][semantic][variables]" )
 {

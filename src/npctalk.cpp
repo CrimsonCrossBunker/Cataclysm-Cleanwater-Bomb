@@ -5247,9 +5247,7 @@ talk_effect_fun_t::func f_mirror_coordinates( const JsonObject &jo, std::string_
         tripoint_abs_ms const center = read_var_value( center_var, d ).tripoint();
         tripoint_abs_ms const relative = read_var_value( relative_var, d ).tripoint();
 
-        tripoint_abs_ms const mirrored( center.x() * 2 - relative.x(),
-                                        center.y() * 2 - relative.y(),
-                                        center.z() * 2 - relative.z() );
+        tripoint_abs_ms const mirrored( relative.raw().mirror_around( center.raw() ) );
 
         write_var_value( output_var.type, output_var.name, &d, mirrored );
 
