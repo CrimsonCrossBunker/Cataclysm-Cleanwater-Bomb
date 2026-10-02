@@ -23,7 +23,7 @@
 #include <monster.h>
 #include <npc.h>
 #include <pimpl.h>
-#include <player_helpers.h>
+#include "player_helpers.h"
 #include <pocket_type.h>
 #include <recipe.h>
 #include <ret_val.h>
@@ -383,7 +383,7 @@ TEST_CASE( "lua_platform_vehicle_part_service_rejects_invalid_requests_before_ui
         for( const double multiplier : {
                  -1.0, 0.0, 1000.1, std::numeric_limits<double>::infinity(),
                  std::numeric_limits<double>::quiet_NaN()
-                 } ) {
+             } ) {
             CAPTURE( multiplier );
             CHECK_FALSE( open( vehicle_handle, mechanic_handle, multiplier, 1.0 ).valid() );
             CHECK_FALSE( open( vehicle_handle, mechanic_handle, 1.0, multiplier ).valid() );
@@ -616,8 +616,8 @@ TEST_CASE( "lua_platform_inventory_remove_type_matches_character_removal_scope",
     REQUIRE( native_nested_container.put_in(
                  item( backpack_type ), pocket_type::CONTAINER ).success() );
     item &native_inventory_container = native_character.inv->add_item(
-                                          std::move( native_nested_container ),
-                                          false, false, false );
+                                           std::move( native_nested_container ),
+                                           false, false, false );
     item *native_nested_match = nullptr;
     for( item *contained : native_inventory_container.all_items_top() ) {
         if( contained->typeId() == backpack_type ) {
@@ -636,31 +636,31 @@ TEST_CASE( "lua_platform_inventory_remove_type_matches_character_removal_scope",
     item native_wielded_match( itype_rock );
     REQUIRE( native_character.Character::wield(
                  native_wielded_match, std::nullopt, false ) );
-    const item_location native_wielded_location = native_character.get_wielded_item();
+    item_location native_wielded_location = native_character.get_wielded_item();
     REQUIRE( native_wielded_location );
     item *native_wielded_item = native_wielded_location.get_item();
     REQUIRE( native_wielded_item != nullptr );
     REQUIRE( native_character.has_item( *native_wielded_item ) );
 
     const auto native_backpacks = native_character.remove_items_with(
-        [&backpack_type]( const item &entry ) {
-            return entry.typeId() == backpack_type;
-        } );
+    [&backpack_type]( const item & entry ) {
+        return entry.typeId() == backpack_type;
+    } );
     CHECK( native_backpacks.size() == 3 );
     CHECK_FALSE( native_character.is_wearing( backpack_type ) );
     CHECK_FALSE( native_character.has_amount( backpack_type, 1 ) );
     const auto native_rocks = native_character.remove_items_with(
-        []( const item &entry ) {
-            return entry.typeId() == itype_rock;
-        } );
+    []( const item & entry ) {
+        return entry.typeId() == itype_rock;
+    } );
     CHECK( native_rocks.size() == 1 );
     CHECK_FALSE( native_character.has_weapon() );
     native_character.inv->add_item( item( itype_2x4 ), false, false, false );
     const itype_id unknown_item_type( "__unknown_remove_type_test__" );
     const auto native_unknown = native_character.remove_items_with(
-        [&unknown_item_type]( const item &entry ) {
-            return entry.typeId() == unknown_item_type;
-        } );
+    [&unknown_item_type]( const item & entry ) {
+        return entry.typeId() == unknown_item_type;
+    } );
     CHECK( native_unknown.empty() );
     CHECK( native_character.has_amount( itype_2x4, 1 ) );
 
@@ -674,7 +674,7 @@ TEST_CASE( "lua_platform_inventory_remove_type_matches_character_removal_scope",
     REQUIRE( nested_container.put_in(
                  item( backpack_type ), pocket_type::CONTAINER ).success() );
     item &nested_inventory_container = character.inv->add_item(
-        std::move( nested_container ), false, false, false );
+                                           std::move( nested_container ), false, false, false );
     item *nested_inventory_match = nullptr;
     for( item *contained : nested_inventory_container.all_items_top() ) {
         if( contained->typeId() == backpack_type ) {
@@ -697,14 +697,14 @@ TEST_CASE( "lua_platform_inventory_remove_type_matches_character_removal_scope",
     const cata::lua_platform::game_handle removed_item_handle =
         cata::lua_platform::game_handle::from_item(
             inventory_match,
-            { "character_inventory", inventory_match.uid().get_value(), 0, 0, 0, {} },
-            runtime, world_generation );
+    { "character_inventory", inventory_match.uid().get_value(), 0, 0, 0, {} },
+    runtime, world_generation );
     const cata::lua_platform::game_handle nested_item_handle =
         cata::lua_platform::game_handle::from_item(
             *nested_inventory_match,
-            { "character_inventory", nested_inventory_match->uid().get_value(), 0, 0, 0, {} },
-            runtime, world_generation );
-    const item_location wielded_location = character.get_wielded_item();
+    { "character_inventory", nested_inventory_match->uid().get_value(), 0, 0, 0, {} },
+    runtime, world_generation );
+    item_location wielded_location = character.get_wielded_item();
     REQUIRE( wielded_location );
     item *wielded_item = wielded_location.get_item();
     REQUIRE( wielded_item != nullptr );
@@ -716,8 +716,8 @@ TEST_CASE( "lua_platform_inventory_remove_type_matches_character_removal_scope",
     const cata::lua_platform::game_handle wielded_item_handle =
         cata::lua_platform::game_handle::from_item(
             *wielded_item,
-            { "character_wielded", wielded_item->uid().get_value(), 0, 0, 0, {} },
-            runtime, world_generation );
+    { "character_wielded", wielded_item->uid().get_value(), 0, 0, 0, {} },
+    runtime, world_generation );
 
     sol::state lua;
     sol::table services = lua.create_table();
@@ -729,17 +729,17 @@ TEST_CASE( "lua_platform_inventory_remove_type_matches_character_removal_scope",
         return world_generation;
     };
     cata::lua_platform::install_game_handle_api(
-        lua, services, current_runtime, current_world, []() {} );
+    lua, services, current_runtime, current_world, []() {} );
     cata::lua_platform::install_item_api(
-        services, current_runtime, current_world, []() {}, [&]() {
+    services, current_runtime, current_world, []() {}, [&]() {
         ++write_gate_calls;
     } );
 
     const sol::protected_function remove_type =
         services["inventory"]["remove_type"];
     const sol::protected_function_result backpack_result = remove_type(
-                character_handle,
-                cata::lua_platform::script_game_id( "item", "backpack" ) );
+            character_handle,
+            cata::lua_platform::script_game_id( "item", "backpack" ) );
     REQUIRE( backpack_result.valid() );
     const sol::table backpack_envelope = backpack_result.get<sol::table>();
     REQUIRE( backpack_envelope["ok"].get<bool>() );
@@ -755,8 +755,8 @@ TEST_CASE( "lua_platform_inventory_remove_type_matches_character_removal_scope",
                runtime, world_generation ).has_value() );
 
     const sol::protected_function_result wielded_result = remove_type(
-                character_handle,
-                cata::lua_platform::script_game_id( "item", "rock" ) );
+            character_handle,
+            cata::lua_platform::script_game_id( "item", "rock" ) );
     REQUIRE( wielded_result.valid() );
     const sol::table wielded_envelope = wielded_result.get<sol::table>();
     REQUIRE( wielded_envelope["ok"].get<bool>() );
@@ -770,9 +770,9 @@ TEST_CASE( "lua_platform_inventory_remove_type_matches_character_removal_scope",
     const std::uint64_t before_unknown_id =
         cata::lua_platform::item_holder_mutation_generation();
     const sol::protected_function_result unknown_result = remove_type(
-                character_handle,
-                cata::lua_platform::script_game_id(
-                    "item", unknown_item_type.str() ) );
+            character_handle,
+            cata::lua_platform::script_game_id(
+                "item", unknown_item_type.str() ) );
     REQUIRE( unknown_result.valid() );
     const sol::table unknown_envelope = unknown_result.get<sol::table>();
     REQUIRE( unknown_envelope["ok"].get<bool>() );
@@ -793,9 +793,9 @@ TEST_CASE( "lua_platform_inventory_remove_type_matches_character_removal_scope",
                                  item( itype_apple ), false, false, false );
     REQUIRE( native_npc.has_item( native_npc_apple ) );
     const auto native_npc_removed = native_npc.remove_items_with(
-        []( const item &entry ) {
-            return entry.typeId() == itype_apple;
-        } );
+    []( const item & entry ) {
+        return entry.typeId() == itype_apple;
+    } );
     CHECK( native_npc_removed.size() == 1 );
 
     npc platform_npc;
@@ -810,7 +810,7 @@ TEST_CASE( "lua_platform_inventory_remove_type_matches_character_removal_scope",
             platform_npc, { "npc", platform_npc.getID().get_value(), 0, 0, 0, {} },
             runtime, world_generation );
     const sol::protected_function_result npc_result = remove_type(
-                npc_handle, cata::lua_platform::script_game_id( "item", "apple" ) );
+            npc_handle, cata::lua_platform::script_game_id( "item", "apple" ) );
     REQUIRE( npc_result.valid() );
     const sol::table npc_envelope = npc_result.get<sol::table>();
     REQUIRE( npc_envelope["ok"].get<bool>() );
@@ -853,9 +853,9 @@ TEST_CASE( "lua_platform_inventory_consume_by_type_matches_native_talker_search"
         return world_generation;
     };
     cata::lua_platform::install_game_handle_api(
-        lua, services, current_runtime, current_world, []() {} );
+    lua, services, current_runtime, current_world, []() {} );
     cata::lua_platform::install_item_api(
-        services, current_runtime, current_world, []() {}, [&]() {
+    services, current_runtime, current_world, []() {}, [&]() {
         ++write_gate_calls;
     } );
     const sol::protected_function consume =
@@ -866,8 +866,8 @@ TEST_CASE( "lua_platform_inventory_consume_by_type_matches_native_talker_search"
     const std::uint64_t epoch_before_amount =
         cata::lua_platform::item_holder_mutation_generation();
     const sol::protected_function_result amount_result = consume(
-                character_handle,
-                cata::lua_platform::script_game_id( "item", "apple" ), 1, 9 );
+            character_handle,
+            cata::lua_platform::script_game_id( "item", "apple" ), 1, 9 );
     REQUIRE( amount_result.valid() );
     const sol::table amount_envelope = amount_result.get<sol::table>();
     REQUIRE( amount_envelope["ok"].get<bool>() );
@@ -886,8 +886,8 @@ TEST_CASE( "lua_platform_inventory_consume_by_type_matches_native_talker_search"
     const std::uint64_t epoch_before_zero =
         cata::lua_platform::item_holder_mutation_generation();
     const sol::protected_function_result zero_result = consume(
-                character_handle,
-                cata::lua_platform::script_game_id( "item", "apple" ), 0, 2 );
+            character_handle,
+            cata::lua_platform::script_game_id( "item", "apple" ), 0, 2 );
     REQUIRE( zero_result.valid() );
     const sol::table zero_envelope = zero_result.get<sol::table>();
     REQUIRE( zero_envelope["ok"].get<bool>() );
@@ -899,10 +899,10 @@ TEST_CASE( "lua_platform_inventory_consume_by_type_matches_native_talker_search"
     const std::uint64_t epoch_before_out_of_range =
         cata::lua_platform::item_holder_mutation_generation();
     const sol::protected_function_result out_of_range_result = consume(
-                character_handle,
-                cata::lua_platform::script_game_id( "item", "apple" ),
-                static_cast<std::int64_t>( std::numeric_limits<int>::max() ) + 1,
-                0 );
+            character_handle,
+            cata::lua_platform::script_game_id( "item", "apple" ),
+            static_cast<std::int64_t>( std::numeric_limits<int>::max() ) + 1,
+            0 );
     CHECK_FALSE( out_of_range_result.valid() );
     CHECK( cata::lua_platform::item_holder_mutation_generation() ==
            epoch_before_out_of_range );
@@ -912,7 +912,7 @@ TEST_CASE( "lua_platform_inventory_consume_by_type_matches_native_talker_search"
     item battery( itype_battery );
     battery.charges = 5;
     item &stored_battery = character.inv->add_item(
-                              std::move( battery ), false, false, false );
+                               std::move( battery ), false, false, false );
     const cata::lua_platform::game_handle battery_handle =
         cata::lua_platform::game_handle::from_item(
             stored_battery, { "character_inventory", stored_battery.uid().get_value(), 0, 0, 0, {} },
@@ -920,8 +920,8 @@ TEST_CASE( "lua_platform_inventory_consume_by_type_matches_native_talker_search"
     const std::uint64_t epoch_before_partial_charges =
         cata::lua_platform::item_holder_mutation_generation();
     const sol::protected_function_result battery_result = consume(
-                character_handle,
-                cata::lua_platform::script_game_id( "item", "battery" ), 2, 0 );
+            character_handle,
+            cata::lua_platform::script_game_id( "item", "battery" ), 2, 0 );
     REQUIRE( battery_result.valid() );
     const sol::table battery_envelope = battery_result.get<sol::table>();
     REQUIRE( battery_envelope["ok"].get<bool>() );
@@ -933,15 +933,15 @@ TEST_CASE( "lua_platform_inventory_consume_by_type_matches_native_talker_search"
     CHECK( cata::lua_platform::item_holder_mutation_generation() >
            epoch_before_partial_charges );
     const auto partially_consumed_battery = battery_handle.resolve_item(
-                runtime, world_generation );
+            runtime, world_generation );
     REQUIRE( partially_consumed_battery );
     CHECK( partially_consumed_battery.value->charges == 3 );
 
     const std::uint64_t epoch_before_full_charges =
         cata::lua_platform::item_holder_mutation_generation();
     const sol::protected_function_result full_battery_result = consume(
-                character_handle,
-                cata::lua_platform::script_game_id( "item", "battery" ), 0, 3 );
+            character_handle,
+            cata::lua_platform::script_game_id( "item", "battery" ), 0, 3 );
     REQUIRE( full_battery_result.valid() );
     const sol::table full_battery_envelope = full_battery_result.get<sol::table>();
     REQUIRE( full_battery_envelope["ok"].get<bool>() );
@@ -961,8 +961,8 @@ TEST_CASE( "lua_platform_inventory_consume_by_type_matches_native_talker_search"
     const std::uint64_t epoch_before_tool_charges =
         cata::lua_platform::item_holder_mutation_generation();
     const sol::protected_function_result tool_result = consume(
-                character_handle,
-                cata::lua_platform::script_game_id( "item", "battery" ), 0, 2 );
+            character_handle,
+            cata::lua_platform::script_game_id( "item", "battery" ), 0, 2 );
     REQUIRE( tool_result.valid() );
     const sol::table tool_envelope = tool_result.get<sol::table>();
     REQUIRE( tool_envelope["ok"].get<bool>() );
@@ -1177,7 +1177,7 @@ TEST_CASE( "lua_platform_inventory_has_items_sum_matches_native_condition",
     const tripoint_bub_ms alpha_pos( 60, 60, 0 );
     alpha.setpos( here, alpha_pos );
     item alpha_rock( itype_rock );
-    REQUIRE( alpha.wield( alpha_rock, std::nullopt, false ) );
+    REQUIRE( alpha.Character::wield( alpha_rock, std::nullopt, false ) );
 
     npc beta;
     beta.normalize();
@@ -1194,15 +1194,17 @@ TEST_CASE( "lua_platform_inventory_has_items_sum_matches_native_condition",
     const tripoint_bub_ms beta_pos( 65, 60, 0 );
     beta.setpos( here, beta_pos );
     item beta_apple( itype_apple );
-    REQUIRE( beta.wield( beta_apple, std::nullopt, false ) );
+    REQUIRE( beta.Character::wield( beta_apple, std::nullopt, false ) );
 
     const tripoint_bub_ms alpha_vehicle_pos( 90, 60, 0 );
     const tripoint_bub_ms beta_vehicle_pos( 95, 60, 0 );
     const tripoint_bub_ms unrelated_vehicle_pos( 100, 60, 0 );
     const ter_str_id floor_id( "t_floor" );
     REQUIRE( floor_id.is_valid() );
-    for( const tripoint_bub_ms &pos : { alpha_vehicle_pos, beta_vehicle_pos,
-                                        unrelated_vehicle_pos } ) {
+    for( const tripoint_bub_ms &pos : {
+             alpha_vehicle_pos, beta_vehicle_pos,
+             unrelated_vehicle_pos
+         } ) {
         here.ter_set( pos, floor_id.id() );
     }
 
@@ -1250,13 +1252,13 @@ TEST_CASE( "lua_platform_inventory_has_items_sum_matches_native_condition",
     const cata::lua_platform::game_handle alpha_handle =
         cata::lua_platform::game_handle::from_creature(
             alpha,
-            { "avatar", alpha.getID().get_value(), 0, 0, 0, {} },
-            runtime, world_generation );
+    { "avatar", alpha.getID().get_value(), 0, 0, 0, {} },
+    runtime, world_generation );
     const cata::lua_platform::game_handle beta_handle =
         cata::lua_platform::game_handle::from_creature(
             beta,
-            { "npc", beta.getID().get_value(), 0, 0, 0, {} },
-            runtime, world_generation );
+    { "npc", beta.getID().get_value(), 0, 0, 0, {} },
+    runtime, world_generation );
     sol::state lua;
     sol::table services = lua.create_table();
     const auto current_runtime = [&]() {
@@ -1267,16 +1269,16 @@ TEST_CASE( "lua_platform_inventory_has_items_sum_matches_native_condition",
     };
     cata::lua_platform::install_value_type_api( lua, services, []() {} );
     cata::lua_platform::install_game_handle_api(
-        lua, services, current_runtime, current_world, []() {} );
+    lua, services, current_runtime, current_world, []() {} );
     cata::lua_platform::install_item_api(
-        services, current_runtime, current_world, []() {}, []() {} );
+    services, current_runtime, current_world, []() {}, []() {} );
     const sol::protected_function has_items_sum =
         services["inventory"]["has_items_sum"];
 
     dialogue native_dialogue( get_talker_for( alpha ), get_talker_for( beta ) );
     const auto compare_sum = [&]( const char *selector,
-                                  const cata::lua_platform::game_handle &target,
-                                  std::initializer_list<std::pair<const char *, double>> requested ) {
+                                  const cata::lua_platform::game_handle & target,
+    std::initializer_list<std::pair<const char *, double>> requested ) {
         std::string native_source = std::string( "{\"" ) + selector + "\":[";
         sol::table entries = lua.create_table();
         std::size_t index = 1;
@@ -1307,23 +1309,23 @@ TEST_CASE( "lua_platform_inventory_has_items_sum_matches_native_condition",
     };
 
     CHECK( compare_sum( "u_has_items_sum", alpha_handle,
-                        { { "apple", 2.0 } } ) );
+    { { "apple", 2.0 } } ) );
     CHECK( compare_sum( "u_has_items_sum", alpha_handle,
-                        { { "rock", 1.0 } } ) );
+    { { "rock", 1.0 } } ) );
     CHECK( compare_sum( "u_has_items_sum", alpha_handle,
-                        { { "apple", 4.0 }, { "rock", 2.0 } } ) );
+    { { "apple", 4.0 }, { "rock", 2.0 } } ) );
     CHECK( compare_sum( "npc_has_items_sum", beta_handle,
-                        { { "rock", 1.0 } } ) );
+    { { "rock", 1.0 } } ) );
     CHECK( compare_sum( "npc_has_items_sum", beta_handle,
-                        { { "apple", 1.0 } } ) );
+    { { "apple", 1.0 } } ) );
     CHECK_FALSE( compare_sum( "npc_has_items_sum", beta_handle,
-                              { { "apple", 2.0 } } ) );
+    { { "apple", 2.0 } } ) );
     CHECK( compare_sum( "npc_has_items_sum", beta_handle,
-                        { { "rock", 2.0 }, { "apple", 2.0 } } ) );
+    { { "rock", 2.0 }, { "apple", 2.0 } } ) );
     CHECK_FALSE( compare_sum( "u_has_items_sum", alpha_handle,
-                              { { "bandages", 1.0 } } ) );
+    { { "bandages", 1.0 } } ) );
     CHECK_FALSE( compare_sum( "npc_has_items_sum", beta_handle,
-                              { { "bandages", 1.0 } } ) );
+    { { "bandages", 1.0 } } ) );
 }
 
 TEST_CASE( "lua_platform_recipe_mutations_match_native_talk_effects",
@@ -1368,44 +1370,44 @@ TEST_CASE( "lua_platform_recipe_mutations_match_native_talk_effects",
     const cata::lua_platform::game_handle alpha_handle =
         cata::lua_platform::game_handle::from_creature(
             alpha,
-            { "avatar", alpha.getID().get_value(), 0, 0, 0, {} },
-            runtime, world_generation );
+    { "avatar", alpha.getID().get_value(), 0, 0, 0, {} },
+    runtime, world_generation );
     const cata::lua_platform::game_handle beta_handle =
         cata::lua_platform::game_handle::from_creature(
             beta,
-            { "npc", beta.getID().get_value(), 0, 0, 0, {} },
-            runtime, world_generation );
+    { "npc", beta.getID().get_value(), 0, 0, 0, {} },
+    runtime, world_generation );
 
     sol::state lua;
     sol::table services = lua.create_table();
     const auto current_runtime = [&]() {
         return runtime;
     };
-    const auto current_world = [world_generation]() {
+    const auto current_world = []() {
         return world_generation;
     };
     cata::lua_platform::install_value_type_api( lua, services, []() {} );
     cata::lua_platform::install_game_handle_api(
-        lua, services, current_runtime, current_world, []() {} );
+    lua, services, current_runtime, current_world, []() {} );
     cata::lua_platform::install_crafting_api(
-        services, current_runtime, current_world, []() {}, []() {} );
+    services, current_runtime, current_world, []() {}, []() {} );
 
     const sol::protected_function learn = services["recipes"]["learn"];
     const sol::protected_function forget = services["recipes"]["forget"];
     const sol::protected_function forget_category =
         services["recipes"]["forget_category"];
-    const auto service_after = []( sol::protected_function_result &call ) {
+    const auto service_after = []( sol::protected_function_result & call ) {
         REQUIRE( call.valid() );
         const sol::table envelope = call.get<sol::table>();
         REQUIRE( envelope["ok"].get<bool>() );
         const sol::table value = envelope["value"].get<sol::table>();
         return value["after"].get<bool>();
     };
-    const auto run_native_effect = [&]( const std::string &selector,
-                                        const std::string &id,
-                                        dialogue &context,
+    const auto run_native_effect = [&]( const std::string & selector,
+                                        const std::string & id,
+                                        dialogue & context,
                                         const bool category,
-                                        const std::string &subcategory ) {
+    const std::string & subcategory ) {
         std::string source = std::string( "{\"" ) + selector + "\":\"" + id + "\"";
         if( category ) {
             source += ",\"category\":true";
@@ -1430,8 +1432,8 @@ TEST_CASE( "lua_platform_recipe_mutations_match_native_talk_effects",
     REQUIRE( native_avatar_learned );
     alpha.forget_recipe( &regular );
     sol::protected_function_result avatar_learn_call = learn(
-                alpha_handle,
-                cata::lua_platform::script_game_id( "recipe", regular_id.str() ), false );
+            alpha_handle,
+            cata::lua_platform::script_game_id( "recipe", regular_id.str() ), false );
     CHECK( service_after( avatar_learn_call ) == native_avatar_learned );
     CHECK( alpha.knows_recipe( &regular ) == native_avatar_learned );
 
@@ -1441,8 +1443,8 @@ TEST_CASE( "lua_platform_recipe_mutations_match_native_talk_effects",
     REQUIRE_FALSE( native_avatar_forgotten );
     alpha.learn_recipe( &regular );
     sol::protected_function_result avatar_forget_call = forget(
-                alpha_handle,
-                cata::lua_platform::script_game_id( "recipe", regular_id.str() ) );
+            alpha_handle,
+            cata::lua_platform::script_game_id( "recipe", regular_id.str() ) );
     CHECK( service_after( avatar_forget_call ) == native_avatar_forgotten );
     CHECK( alpha.knows_recipe( &regular ) == native_avatar_forgotten );
 
@@ -1451,8 +1453,8 @@ TEST_CASE( "lua_platform_recipe_mutations_match_native_talk_effects",
     const bool native_never_learned = alpha.knows_recipe( &never_learn );
     REQUIRE_FALSE( native_never_learned );
     sol::protected_function_result never_learn_call = learn(
-                alpha_handle,
-                cata::lua_platform::script_game_id( "recipe", never_learn_id.str() ), false );
+            alpha_handle,
+            cata::lua_platform::script_game_id( "recipe", never_learn_id.str() ), false );
     CHECK_FALSE( service_after( never_learn_call ) );
     CHECK( alpha.knows_recipe( &never_learn ) == native_never_learned );
 
@@ -1462,8 +1464,8 @@ TEST_CASE( "lua_platform_recipe_mutations_match_native_talk_effects",
     REQUIRE( native_npc_learned );
     beta.forget_recipe( &regular );
     sol::protected_function_result npc_learn_call = learn(
-                beta_handle,
-                cata::lua_platform::script_game_id( "recipe", regular_id.str() ), false );
+            beta_handle,
+            cata::lua_platform::script_game_id( "recipe", regular_id.str() ), false );
     CHECK( service_after( npc_learn_call ) == native_npc_learned );
     CHECK( beta.knows_recipe( &regular ) == native_npc_learned );
 
@@ -1473,8 +1475,8 @@ TEST_CASE( "lua_platform_recipe_mutations_match_native_talk_effects",
     REQUIRE_FALSE( native_npc_forgotten );
     beta.learn_recipe( &regular );
     sol::protected_function_result npc_forget_call = forget(
-                beta_handle,
-                cata::lua_platform::script_game_id( "recipe", regular_id.str() ) );
+            beta_handle,
+            cata::lua_platform::script_game_id( "recipe", regular_id.str() ) );
     CHECK( service_after( npc_forget_call ) == native_npc_forgotten );
     CHECK( beta.knows_recipe( &regular ) == native_npc_forgotten );
 
@@ -1488,8 +1490,8 @@ TEST_CASE( "lua_platform_recipe_mutations_match_native_talk_effects",
     REQUIRE( native_avatar_beta_learned );
     alpha.forget_recipe( &regular );
     sol::protected_function_result avatar_beta_learn_call = learn(
-                alpha_handle,
-                cata::lua_platform::script_game_id( "recipe", regular_id.str() ), false );
+            alpha_handle,
+            cata::lua_platform::script_game_id( "recipe", regular_id.str() ), false );
     CHECK( service_after( avatar_beta_learn_call ) == native_avatar_beta_learned );
     CHECK( alpha.knows_recipe( &regular ) == native_avatar_beta_learned );
 
@@ -1501,7 +1503,7 @@ TEST_CASE( "lua_platform_recipe_mutations_match_native_talk_effects",
     REQUIRE_FALSE( alpha.knows_recipe( &regular ) );
     alpha.learn_recipe( &regular );
     sol::protected_function_result category_forget_call = forget_category(
-                alpha_handle, category_id );
+            alpha_handle, category_id );
     REQUIRE( category_forget_call.valid() );
     const sol::table category_envelope = category_forget_call.get<sol::table>();
     CHECK( category_envelope["ok"].get<bool>() );
@@ -1513,7 +1515,7 @@ TEST_CASE( "lua_platform_recipe_mutations_match_native_talk_effects",
     REQUIRE_FALSE( alpha.knows_recipe( &regular ) );
     alpha.learn_recipe( &regular );
     sol::protected_function_result subcategory_forget_call = forget_category(
-                alpha_handle, category_id, regular.subcategory );
+            alpha_handle, category_id, regular.subcategory );
     REQUIRE( subcategory_forget_call.valid() );
     const sol::table subcategory_envelope =
         subcategory_forget_call.get<sol::table>();
@@ -1562,8 +1564,10 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
 
     const ter_str_id floor_id( "t_floor" );
     REQUIRE( floor_id.is_valid() );
-    for( const tripoint_bub_ms &pos : { alpha_pos, alpha_map_pos, alpha_vehicle_pos,
-                                        beta_pos, beta_map_pos, beta_vehicle_pos } ) {
+    for( const tripoint_bub_ms &pos : {
+             alpha_pos, alpha_map_pos, alpha_vehicle_pos,
+             beta_pos, beta_map_pos, beta_vehicle_pos
+         } ) {
         here.ter_set( pos, floor_id.id() );
     }
     const tripoint_bub_ms unowned_decoy_pos( 62, 60, 0 );
@@ -1586,9 +1590,9 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
     REQUIRE( alpha_cargo.has_value() );
     REQUIRE( beta_cargo.has_value() );
 
-    const auto stock_target = [&]( Character &target, const faction_id &owner_faction,
-                                   const tripoint_bub_ms &map_pos,
-                                   vpart_reference &cargo ) {
+    const auto stock_target = [&]( Character & target, const faction_id & owner_faction,
+                                   const tripoint_bub_ms & map_pos,
+    vpart_reference & cargo ) {
         item inventory_battery( itype_battery );
         inventory_battery.charges = 5;
         inventory_battery.set_owner( owner_faction );
@@ -1626,13 +1630,13 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
     const cata::lua_platform::game_handle alpha_handle =
         cata::lua_platform::game_handle::from_creature(
             alpha,
-            { "avatar", alpha.getID().get_value(), 0, 0, 0, {} },
-            runtime, world_generation );
+    { "avatar", alpha.getID().get_value(), 0, 0, 0, {} },
+    runtime, world_generation );
     const cata::lua_platform::game_handle beta_handle =
         cata::lua_platform::game_handle::from_creature(
             beta,
-            { "npc", beta.getID().get_value(), 0, 0, 0, {} },
-            runtime, world_generation );
+    { "npc", beta.getID().get_value(), 0, 0, 0, {} },
+    runtime, world_generation );
     sol::state lua;
     sol::table services = lua.create_table();
     const auto current_runtime = [&]() {
@@ -1643,14 +1647,14 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
     };
     cata::lua_platform::install_value_type_api( lua, services, []() {} );
     cata::lua_platform::install_game_handle_api(
-        lua, services, current_runtime, current_world, []() {} );
+    lua, services, current_runtime, current_world, []() {} );
     cata::lua_platform::install_item_api(
-        services, current_runtime, current_world, []() {}, []() {} );
+    services, current_runtime, current_world, []() {}, []() {} );
 
     using item_amount_row = std::pair<const char *, double>;
-    const auto run_native_effect = [&]( const std::string &selector,
+    const auto run_native_effect = [&]( const std::string & selector,
                                         const std::initializer_list<item_amount_row> &rows,
-                                        dialogue &context ) {
+    dialogue & context ) {
         std::string source = std::string( "{\"" ) + selector + "\":[";
         bool first = true;
         for( const auto &row : rows ) {
@@ -1681,10 +1685,10 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
         }
         return entries;
     };
-    const auto consume = [&]( const sol::optional<cata::lua_platform::game_handle> &alpha_arg,
-                              const sol::optional<cata::lua_platform::game_handle> &beta_arg,
-                              const std::string &participant,
-                              const sol::table &entries ) {
+    const auto consume = [&]( sol::optional<cata::lua_platform::game_handle> alpha_arg,
+                              sol::optional<cata::lua_platform::game_handle> beta_arg,
+                              const std::string & participant,
+    const sol::table & entries ) {
         const sol::protected_function_result call =
             services["inventory"]["consume_dialogue_sum"](
                 alpha_arg, beta_arg, participant, entries );
@@ -1693,9 +1697,9 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
         REQUIRE( envelope["ok"].get<bool>() );
         return envelope["value"].get<sol::table>();
     };
-    const auto count_map_items = [&]( const tripoint_bub_ms &pos,
-                                      const itype_id &type,
-                                      const faction_id &owner_faction ) {
+    const auto count_map_items = [&]( const tripoint_bub_ms & pos,
+                                      const itype_id & type,
+    const faction_id & owner_faction ) {
         int total = 0;
         for( item &candidate : here.i_at( pos ) ) {
             if( candidate.typeId() == type && candidate.get_owner() == owner_faction ) {
@@ -1704,8 +1708,8 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
         }
         return total;
     };
-    const auto count_cargo_items = []( vpart_reference &cargo, const itype_id &type,
-                                       const faction_id &owner_faction ) {
+    const auto count_cargo_items = []( vpart_reference & cargo, const itype_id & type,
+    const faction_id & owner_faction ) {
         int total = 0;
         for( item &candidate : cargo.vehicle().get_items( cargo.part() ) ) {
             if( candidate.typeId() == type && candidate.get_owner() == owner_faction ) {
@@ -1714,9 +1718,9 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
         }
         return total;
     };
-    const auto check_target_empty = [&]( Character &target, const faction_id &faction,
-                                         const tripoint_bub_ms &map_pos,
-                                         vpart_reference &cargo ) {
+    const auto check_target_empty = [&]( Character & target, const faction_id & faction,
+                                         const tripoint_bub_ms & map_pos,
+    vpart_reference & cargo ) {
         CHECK( target.charges_of( itype_battery ) == 0 );
         CHECK( count_map_items( map_pos, itype_battery, faction ) == 0 );
         CHECK( count_cargo_items( cargo, itype_battery, faction ) == 0 );
@@ -1725,11 +1729,11 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
 
     dialogue native_pair( get_talker_for( alpha ), get_talker_for( beta ) );
     run_native_effect( "u_consume_item_sum", { { "battery", 14 }, { "rock", 1 } },
-                       native_pair );
+    native_pair );
     check_target_empty( alpha, alpha_faction, alpha_map_pos, *alpha_cargo );
     CHECK( beta.charges_of( itype_battery ) == 5 );
     run_native_effect( "npc_consume_item_sum", { { "battery", 14 }, { "rock", 1 } },
-                       native_pair );
+    native_pair );
     check_target_empty( beta, beta_faction, beta_map_pos, *beta_cargo );
     CHECK( count_map_items( unowned_decoy_pos, itype_battery, faction_id() ) == 9 );
 
@@ -1739,9 +1743,9 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
     stock_target( beta, beta_faction, beta_map_pos, *beta_cargo );
     const sol::table weighted_entries = lua_entries( { { "battery", 14 }, { "rock", 1 } } );
     const sol::table alpha_value = consume(
-            alpha_handle, beta_handle, "alpha", weighted_entries );
+                                       alpha_handle, beta_handle, "alpha", weighted_entries );
     const sol::table beta_value = consume(
-            alpha_handle, beta_handle, "beta", weighted_entries );
+                                      alpha_handle, beta_handle, "beta", weighted_entries );
     CHECK( alpha_value["coverage"].get<double>() == Approx( 12.0 / 7.0 ) );
     CHECK( beta_value["coverage"].get<double>() == Approx( 12.0 / 7.0 ) );
     CHECK( alpha_value["removed_items"].get<int>() == 4 );
@@ -1757,16 +1761,16 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
     unknown_test_battery.set_owner( alpha_faction );
     alpha.inv->add_item( std::move( unknown_test_battery ), false, false, false );
     run_native_effect( "u_consume_item_sum", { { "__unknown_native_item__", 1 } },
-                       native_pair );
+    native_pair );
     CHECK( alpha.charges_of( itype_battery ) == 5 );
     const sol::table unknown_value = consume(
-            alpha_handle, beta_handle, "alpha",
-            lua_entries( { { "__unknown_native_item__", 1 } } ) );
+                                         alpha_handle, beta_handle, "alpha",
+    lua_entries( { { "__unknown_native_item__", 1 } } ) );
     CHECK( unknown_value["coverage"].get<double>() == 0.0 );
     CHECK_FALSE( unknown_value["changed"].get<bool>() );
     run_native_effect( "u_consume_item_sum", {}, native_pair );
     const sol::table empty_value = consume(
-            alpha_handle, beta_handle, "alpha", lua_entries( {} ) );
+                                       alpha_handle, beta_handle, "alpha", lua_entries( {} ) );
     CHECK( empty_value["coverage"].get<double>() == 0.0 );
     CHECK_FALSE( empty_value["changed"].get<bool>() );
     CHECK( alpha.charges_of( itype_battery ) == 5 );
@@ -1785,7 +1789,7 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
     partial_platform_battery.set_owner( beta_faction );
     beta.inv->add_item( std::move( partial_platform_battery ), false, false, false );
     const sol::table partial_value = consume(
-            alpha_handle, beta_handle, "beta", lua_entries( { { "battery", 2 } } ) );
+    alpha_handle, beta_handle, "beta", lua_entries( { { "battery", 2 } } ) );
     CHECK( partial_value["coverage"].get<double>() == Approx( 1.0 ) );
     CHECK( partial_value["modified_charge_stacks"].get<int>() == 1 );
     CHECK( beta.charges_of( itype_battery ) == 3 );
@@ -1808,7 +1812,7 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
     beta.inv->add_item( std::move( fallback_platform_battery ), false, false, false );
     const sol::optional<cata::lua_platform::game_handle> absent_handle;
     const sol::table fallback_value = consume(
-            beta_handle, absent_handle, "beta", lua_entries( { { "battery", 2 } } ) );
+    beta_handle, absent_handle, "beta", lua_entries( { { "battery", 2 } } ) );
     CHECK( fallback_value["coverage"].get<double>() == Approx( 1.0 ) );
     CHECK( beta.charges_of( itype_battery ) == 3 );
 
@@ -1828,12 +1832,12 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
     alpha_fallback_platform_battery.set_owner( beta_faction );
     beta.inv->add_item( std::move( alpha_fallback_platform_battery ), false, false, false );
     const sol::table alpha_fallback_value = consume(
-            absent_handle, beta_handle, "alpha", lua_entries( { { "battery", 2 } } ) );
+    absent_handle, beta_handle, "alpha", lua_entries( { { "battery", 2 } } ) );
     CHECK( alpha_fallback_value["coverage"].get<double>() == Approx( 1.0 ) );
     CHECK( beta.charges_of( itype_battery ) == 3 );
 
-    const auto add_backpack_with_bandages = [&]( Character &target,
-            const faction_id &owner_faction ) {
+    const auto add_backpack_with_bandages = [&]( Character & target,
+    const faction_id & owner_faction ) {
         item backpack( itype_debug_backpack );
         backpack.set_owner( owner_faction );
         item bandages( itype_bandages );
@@ -1845,14 +1849,14 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
     REQUIRE( native_backpack != nullptr );
     dialogue native_spill_dialogue( get_talker_for( alpha ), get_talker_for( beta ) );
     run_native_effect( "npc_consume_item_sum", { { "debug_backpack", 2 } },
-                       native_spill_dialogue );
+    native_spill_dialogue );
     CHECK_FALSE( beta.has_amount( itype_debug_backpack, 1 ) );
     CHECK( count_map_items( beta_pos, itype_bandages, beta_faction ) == 1 );
 
     item *platform_backpack = add_backpack_with_bandages( beta, beta_faction );
     REQUIRE( platform_backpack != nullptr );
     item *nested_bandages = nullptr;
-    platform_backpack->visit_items( [&]( item *candidate, item *parent ) {
+    platform_backpack->visit_items( [&]( item * candidate, item * parent ) {
         if( parent != nullptr && candidate->typeId() == itype_bandages ) {
             nested_bandages = candidate;
             return VisitResponse::ABORT;
@@ -1863,16 +1867,16 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
     const cata::lua_platform::game_handle backpack_handle =
         cata::lua_platform::game_handle::from_item(
             *platform_backpack,
-            { "character_inventory", platform_backpack->uid().get_value(), 0, 0, 0, {} },
-            runtime, world_generation );
+    { "character_inventory", platform_backpack->uid().get_value(), 0, 0, 0, {} },
+    runtime, world_generation );
     const cata::lua_platform::game_handle nested_bandages_handle =
         cata::lua_platform::game_handle::from_item(
             *nested_bandages,
-            { "character_inventory", nested_bandages->uid().get_value(), 0, 0, 0, {} },
-            runtime, world_generation );
+    { "character_inventory", nested_bandages->uid().get_value(), 0, 0, 0, {} },
+    runtime, world_generation );
     const sol::table spill_value = consume(
-            alpha_handle, beta_handle, "beta",
-            lua_entries( { { "debug_backpack", 2 } } ) );
+                                       alpha_handle, beta_handle, "beta",
+    lua_entries( { { "debug_backpack", 2 } } ) );
     CHECK( spill_value["coverage"].get<double>() == Approx( 0.5 ) );
     CHECK( spill_value["removed_items"].get<int>() == 1 );
     CHECK( backpack_handle.validation_error( runtime, world_generation ).has_value() );
@@ -1908,7 +1912,7 @@ TEST_CASE( "lua_platform_item_conditions_match_native_alpha_beta_and_item_talker
     alpha_rock.set_flag( flag_id( "FIRE" ) );
     item &alpha_water = alpha.inv->add_item(
                             item( itype_water_clean ), false, false, false );
-    alpha_water.set_charges( 3 );
+    alpha_water.charges = 3;
     item alpha_tool( itype_soldering_iron_portable );
     alpha_tool.ammo_set( itype_battery, 5 );
     item &stored_alpha_tool = alpha.inv->add_item(
@@ -1932,7 +1936,7 @@ TEST_CASE( "lua_platform_item_conditions_match_native_alpha_beta_and_item_talker
     REQUIRE( beta.has_item( beta_bandages ) );
     item &beta_water = beta.inv->add_item(
                            item( itype_water_clean ), false, false, false );
-    beta_water.set_charges( 2 );
+    beta_water.charges = 2;
 
     REQUIRE( item::count_by_charges( itype_water_clean ) );
     constexpr std::size_t world_generation = 1;
@@ -1942,13 +1946,13 @@ TEST_CASE( "lua_platform_item_conditions_match_native_alpha_beta_and_item_talker
     const cata::lua_platform::game_handle alpha_handle =
         cata::lua_platform::game_handle::from_creature(
             alpha,
-            { "avatar", alpha.getID().get_value(), 0, 0, 0, {} },
-            runtime, world_generation );
+    { "avatar", alpha.getID().get_value(), 0, 0, 0, {} },
+    runtime, world_generation );
     const cata::lua_platform::game_handle beta_handle =
         cata::lua_platform::game_handle::from_creature(
             beta,
-            { "npc", beta.getID().get_value(), 0, 0, 0, {} },
-            runtime, world_generation );
+    { "npc", beta.getID().get_value(), 0, 0, 0, {} },
+    runtime, world_generation );
 
     sol::state lua;
     sol::table services = lua.create_table();
@@ -1960,9 +1964,9 @@ TEST_CASE( "lua_platform_item_conditions_match_native_alpha_beta_and_item_talker
     };
     cata::lua_platform::install_value_type_api( lua, services, []() {} );
     cata::lua_platform::install_game_handle_api(
-        lua, services, current_runtime, current_world, []() {} );
+    lua, services, current_runtime, current_world, []() {} );
     cata::lua_platform::install_item_api(
-        services, current_runtime, current_world, []() {}, []() {} );
+    services, current_runtime, current_world, []() {}, []() {} );
     const sol::protected_function has_items =
         services["inventory"]["has_items"];
     const sol::protected_function category_count =
@@ -1974,9 +1978,9 @@ TEST_CASE( "lua_platform_item_conditions_match_native_alpha_beta_and_item_talker
 
     dialogue native_pair( get_talker_for( alpha ), get_talker_for( beta ) );
     const auto compare_items = [&](
-        const char *selector, const cata::lua_platform::game_handle &target,
-        const char *item_id, const std::int64_t count,
-        const std::int64_t charges ) {
+                                   const char *selector, const cata::lua_platform::game_handle & target,
+                                   const char *item_id, const std::int64_t count,
+    const std::int64_t charges ) {
         const std::string native_source =
             std::string( "{\"" ) + selector + "\":{\"item\":\"" + item_id +
             "\",\"count\":" + std::to_string( count ) +
@@ -1985,8 +1989,8 @@ TEST_CASE( "lua_platform_item_conditions_match_native_alpha_beta_and_item_talker
             json_loader::from_string( native_source ).get_object() );
         const bool expected = native_condition( native_pair );
         const sol::protected_function_result call = has_items(
-                    target, cata::lua_platform::script_game_id( "item", item_id ),
-                    count, charges );
+                target, cata::lua_platform::script_game_id( "item", item_id ),
+                count, charges );
         REQUIRE( call.valid() );
         const sol::table envelope = call.get<sol::table>();
         REQUIRE( envelope["ok"].get<bool>() );
@@ -2011,8 +2015,8 @@ TEST_CASE( "lua_platform_item_conditions_match_native_alpha_beta_and_item_talker
     CHECK_FALSE( compare_items( "npc_has_items", beta_handle, "rock", 1, 0 ) );
 
     const auto compare_category = [&](
-        const char *selector, const cata::lua_platform::game_handle &target,
-        const char *category, const std::optional<int> count ) {
+                                      const char *selector, const cata::lua_platform::game_handle & target,
+    const char *category, const std::optional<int> count ) {
         std::string native_source = std::string( "{\"" ) + selector +
                                     "\":\"" + category + "\"";
         if( count ) {
@@ -2023,8 +2027,8 @@ TEST_CASE( "lua_platform_item_conditions_match_native_alpha_beta_and_item_talker
             json_loader::from_string( native_source ).get_object() );
         const bool expected = native_condition( native_pair );
         const sol::protected_function_result call = category_count(
-                    target,
-                    cata::lua_platform::script_game_id( "item_category", category ) );
+                target,
+                cata::lua_platform::script_game_id( "item_category", category ) );
         REQUIRE( call.valid() );
         const sol::table envelope = call.get<sol::table>();
         REQUIRE( envelope["ok"].get<bool>() );
@@ -2050,15 +2054,15 @@ TEST_CASE( "lua_platform_item_conditions_match_native_alpha_beta_and_item_talker
     compare_category( "npc_has_item_category", beta_handle, "food", 2 );
 
     const auto compare_item_type_flag = [&](
-        const char *selector, const cata::lua_platform::game_handle &target,
-        const char *flag ) {
+                                            const char *selector, const cata::lua_platform::game_handle & target,
+    const char *flag ) {
         const std::string native_source = std::string( "{\"" ) + selector +
                                           "\":\"" + flag + "\"}";
         const conditional_t native_condition(
             json_loader::from_string( native_source ).get_object() );
         const bool expected = native_condition( native_pair );
         const sol::protected_function_result call = has_item_type_flag(
-                    target, cata::lua_platform::script_game_id( "json_flag", flag ) );
+                target, cata::lua_platform::script_game_id( "json_flag", flag ) );
         REQUIRE( call.valid() );
         const sol::table envelope = call.get<sol::table>();
         REQUIRE( envelope["ok"].get<bool>() );
@@ -2076,7 +2080,7 @@ TEST_CASE( "lua_platform_item_conditions_match_native_alpha_beta_and_item_talker
     CHECK( compare_item_type_flag( "u_has_item_with_flag", alpha_handle,
                                    "UNREGISTERED_LUA_PLATFORM_TEST_FLAG" ) );
     const sol::protected_function_result instance_flag_call = has_item_flag(
-                alpha_handle, cata::lua_platform::script_game_id( "json_flag", "FIRE" ) );
+            alpha_handle, cata::lua_platform::script_game_id( "json_flag", "FIRE" ) );
     REQUIRE( instance_flag_call.valid() );
     const sol::table instance_flag_envelope = instance_flag_call.get<sol::table>();
     REQUIRE( instance_flag_envelope["ok"].get<bool>() );
@@ -2105,22 +2109,22 @@ TEST_CASE( "lua_platform_item_conditions_match_native_alpha_beta_and_item_talker
     const cata::lua_platform::game_handle loaded_handle =
         cata::lua_platform::game_handle::from_item(
             loaded_on_map,
-            { "map_item", loaded_on_map.uid().get_value(), 0, 0, 0, {} },
-            runtime, world_generation );
+    { "map_item", loaded_on_map.uid().get_value(), 0, 0, 0, {} },
+    runtime, world_generation );
     const cata::lua_platform::game_handle empty_handle =
         cata::lua_platform::game_handle::from_item(
             empty_on_map,
-            { "map_item", empty_on_map.uid().get_value(), 0, 0, 0, {} },
-            runtime, world_generation );
+    { "map_item", empty_on_map.uid().get_value(), 0, 0, 0, {} },
+    runtime, world_generation );
     const sol::protected_function has_ammo = services["items"]["has_ammo"];
     const conditional_t native_has_ammo( "has_ammo" );
-    const auto compare_ammo = [&]( item_location &location,
-                                   const cata::lua_platform::game_handle &tool_handle ) {
+    const auto compare_ammo = [&]( item_location & location,
+    const cata::lua_platform::game_handle & tool_handle ) {
         dialogue native_item_dialogue( get_talker_for( alpha ),
                                        get_talker_for( location ) );
         const bool expected = native_has_ammo( native_item_dialogue );
         const sol::protected_function_result call = has_ammo(
-                    tool_handle, alpha_handle );
+                tool_handle, alpha_handle );
         REQUIRE( call.valid() );
         const sol::table envelope = call.get<sol::table>();
         REQUIRE( envelope["ok"].get<bool>() );
