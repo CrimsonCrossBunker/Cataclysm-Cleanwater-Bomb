@@ -13,6 +13,7 @@
 #include "coordinates.h"
 #include "math_parser_diag_value.h"
 #include "global_vars.h"
+#include "safe_reference.h"
 #include "type_id.h"
 
 class JsonObject;
@@ -125,9 +126,13 @@ struct computer_failure {
 
 class computer
 {
+    private:
+        safe_reference_anchor safe_reference_anchor_;
+
     public:
         computer( const std::string &new_name, int new_security, map &here, tripoint_bub_ms new_loc );
         computer( const std::string &new_name, int new_security, tripoint_abs_ms new_loc );
+        safe_reference<computer> get_safe_reference();
 
         // Initialization
         void set_security( int Security );

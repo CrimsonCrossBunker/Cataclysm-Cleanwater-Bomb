@@ -4936,25 +4936,25 @@ local VehicleDefinition = {}
 ---@field toggled_item any
 local BionicDefinition = {}
 ---@class ComputerAccessContext
----@field access_denied any
----@field alerts any
+---@field access_denied string
+---@field alerts integer
 ---@field character GameHandle Exact Character handle; concrete Avatar/NPC subtypes are preserved.
----@field message any
----@field mission_id any
----@field name any
----@field position any
----@field security any
+---@field mission_id integer
+---@field name string
+---@field position TripointCoord
+---@field security integer
 local ComputerAccessContext = {}
+---@param text string
+function ComputerAccessContext:message(text) end
 ---@param key string
 ---@return any Detached snapshot; nested empty slots use services.types.null; top-level empty or missing values return nil.
-function ComputerAccessContext.get_value(key) end
+function ComputerAccessContext:get_value(key) end
 ---@param key string
----@return any
-function ComputerAccessContext.remove_value(key) end
+---@return boolean
+function ComputerAccessContext:remove_value(key) end
 ---@param key string
 ---@param value any Nil deletes the key; services.types.null stores an explicit empty value, including inside arrays.
----@return any Invalid values fail before mutation; existing value, array, nesting, string, key, and store limits apply.
-function ComputerAccessContext.set_value(key, value) end
+function ComputerAccessContext:set_value(key, value) end
 ---@class EnchantmentDefinition
 ---@field active_when any
 ---@field bodypart_change any

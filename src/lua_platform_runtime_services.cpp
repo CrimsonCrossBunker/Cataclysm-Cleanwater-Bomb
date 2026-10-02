@@ -506,121 +506,149 @@ struct computer_access_context {
     computer_access_context( computer_access_context && ) = delete;
     computer_access_context &operator=( computer_access_context && ) = delete;
 
-    computer *terminal = nullptr;
-    Character *character = nullptr;
+    safe_reference<computer> terminal_reference;
+    cata::lua_platform::game_handle character_reference;
     cata::lua_platform::game_handle_runtime handle_runtime;
     std::size_t world_generation = 0;
     bool active = true;
 
     void require_active() const {
-        if( !active || terminal == nullptr || character == nullptr ) {
+        if( !active || !terminal_reference || !handle_runtime.has_live_owner() ||
+            world_generation != detail::runtime_world_generation_storage() ) {
             throw std::runtime_error( "stale computer access context" );
         }
     }
 
-    void message( const std::string &value ) const {
+    computer &require_terminal() const {
         require_active();
-        character->add_msg_if_player( value );
+        computer *const terminal = terminal_reference.get();
+        if( terminal == nullptr ) {
+            throw std::runtime_error( "stale computer access terminal" );
+        }
+        return *terminal;
+    }
+
+    Character *resolve_character() const {
+        const cata::lua_platform::native_handle_result<Creature> resolved =
+            character_reference.resolve_creature(
+                handle_runtime, detail::runtime_world_generation_storage() );
+        return resolved ? resolved.value->as_character() : nullptr;
+    }
+
+    Character &require_character() const {
+        require_active();
+        Character *const character = resolve_character();
+        if( character == nullptr ) {
+            throw std::runtime_error( "stale computer access character" );
+        }
+        return *character;
+    }
+
+    bool is_live() const {
+        return active && terminal_reference.get() != nullptr &&
+               handle_runtime.has_live_owner() &&
+               world_generation == detail::runtime_world_generation_storage() &&
+               resolve_character() != nullptr;
+    }
+
+    void message( const std::string &value ) const {
+        require_character().add_msg_if_player( value );
     }
 
     std::string name() const {
-        require_active();
-        return terminal->name;
+        return require_terminal().name;
     }
 
     void set_name( const std::string &value ) const {
-        require_active();
+        computer &terminal = require_terminal();
         if( value.empty() || value.size() > 4096 ||
             value.find( '\0' ) != std::string::npos ) {
             throw std::invalid_argument(
                 "computer name must contain 1 to 4096 non-NUL bytes" );
         }
-        terminal->name = value;
+        terminal.name = value;
     }
 
     std::string access_denied() const {
-        require_active();
-        return terminal->access_denied;
+        return require_terminal().access_denied;
     }
 
     void set_access_denied( const std::string &value ) const {
-        require_active();
+        computer &terminal = require_terminal();
         if( value.size() > 4096 || value.find( '\0' ) != std::string::npos ) {
             throw std::invalid_argument(
                 "computer access-denied text exceeds its native limit" );
         }
-        terminal->set_access_denied_msg( value );
+        terminal.set_access_denied_msg( value );
     }
 
     int security() const {
-        require_active();
-        return terminal->security;
+        return require_terminal().security;
     }
 
     void set_security( const std::int64_t value ) const {
-        require_active();
+        computer &terminal = require_terminal();
         if( value < -1000000 || value > 1000000 ) {
             throw std::invalid_argument(
                 "computer security must be between -1000000 and 1000000" );
         }
-        terminal->set_security( static_cast<int>( value ) );
+        terminal.set_security( static_cast<int>( value ) );
     }
 
     int alerts() const {
-        require_active();
-        return terminal->alerts;
+        return require_terminal().alerts;
     }
 
     void set_alerts( const std::int64_t value ) const {
-        require_active();
+        computer &terminal = require_terminal();
         if( value < 0 || value > 1000000 ) {
             throw std::invalid_argument(
                 "computer alerts must be between 0 and 1000000" );
         }
-        terminal->alerts = static_cast<int>( value );
+        terminal.alerts = static_cast<int>( value );
     }
 
     int mission_id() const {
-        require_active();
-        return terminal->mission_id;
+        return require_terminal().mission_id;
     }
 
     void set_mission_id( const std::int64_t value ) const {
-        require_active();
+        computer &terminal = require_terminal();
         if( value < -1 || value > std::numeric_limits<int>::max() ) {
             throw std::invalid_argument(
                 "computer mission id is outside the native range" );
         }
-        terminal->set_mission( static_cast<int>( value ) );
+        terminal.set_mission( static_cast<int>( value ) );
     }
 
     cata::lua_platform::game_handle character_handle() const {
-        require_active();
-        const tripoint_abs_ms absolute = character->pos_abs();
-        const char *subtype = character->is_avatar() ? "avatar" :
-                              character->is_npc() ? "npc" : "character";
-        return cata::lua_platform::game_handle::from_creature( *character, {
-            subtype, character->getID().get_value(),
+        Character &character = require_character();
+        const tripoint_abs_ms absolute = character.pos_abs();
+        const char *subtype = character.is_avatar() ? "avatar" :
+                              character.is_npc() ? "npc" : "character";
+        return cata::lua_platform::game_handle::from_creature( character, {
+            subtype, character.getID().get_value(),
             absolute.x(), absolute.y(), absolute.z(), {}
         }, handle_runtime, world_generation );
     }
 
     cata::lua_platform::script_tripoint_coord position() const {
-        require_active();
+        computer &terminal = require_terminal();
         return cata::lua_platform::script_tripoint_coord::from_native(
                    coords::origin::abs, coords::scale::map_square,
-                   terminal->loc.raw() );
+                   terminal.loc.raw() );
     }
 
     sol::object get_value( sol::this_state state, const std::string &key ) const {
-        require_active();
+        const computer &terminal = require_terminal();
         require_computer_value_key( key );
-        const diag_value *stored = terminal->maybe_get_value( key );
+        const diag_value *stored = terminal.maybe_get_value( key );
         if( stored == nullptr ) {
             return sol::make_object( state, sol::lua_nil );
         }
+        const diag_value snapshot = *stored;
         return cata::lua_platform::script_diag_value_to_lua(
-                   sol::state_view( state ), *stored, "computer value",
+                   sol::state_view( state ), snapshot, "computer value",
                    maximum_computer_value_entries );
     }
 
@@ -628,23 +656,25 @@ struct computer_access_context {
         require_active();
         require_computer_value_key( key );
         if( value.get_type() == sol::type::nil ) {
-            terminal->remove_value( key );
+            require_terminal().remove_value( key );
             return;
         }
-        if( terminal->maybe_get_value( key ) == nullptr &&
-            terminal->values.size() >= maximum_computer_value_entries ) {
+        diag_value stored = cata::lua_platform::script_diag_value_from_lua(
+                                value, "computer value '" + key + "'", maximum_computer_value_entries );
+        computer &terminal = require_terminal();
+        if( terminal.maybe_get_value( key ) == nullptr &&
+            terminal.values.size() >= maximum_computer_value_entries ) {
             throw std::runtime_error(
                 "computer value store exceeds 256 entries" );
         }
-        terminal->set_value( key, cata::lua_platform::script_diag_value_from_lua(
-                                 value, "computer value '" + key + "'", maximum_computer_value_entries ) );
+        terminal.set_value( key, std::move( stored ) );
     }
 
     bool remove_value( const std::string &key ) const {
-        require_active();
+        computer &terminal = require_terminal();
         require_computer_value_key( key );
-        const bool existed = terminal->maybe_get_value( key ) != nullptr;
-        terminal->remove_value( key );
+        const bool existed = terminal.maybe_get_value( key ) != nullptr;
+        terminal.remove_value( key );
         return existed;
     }
 };
@@ -660,8 +690,10 @@ class computer_access_context_lease
 
         ~computer_access_context_lease() noexcept {
             context_.active = false;
-            context_.terminal = nullptr;
-            context_.character = nullptr;
+            context_.terminal_reference = {};
+            context_.character_reference = {};
+            context_.handle_runtime = {};
+            context_.world_generation = 0;
         }
 
     private:
@@ -1193,35 +1225,32 @@ std::optional<bool> invoke_computer_access_handler(
     if( !terminal.has_platform_access_handler() ) {
         return std::nullopt;
     }
-    const std::shared_ptr<runtime> owner = detail::find_active_runtime(
-            terminal.platform_access_mod() );
+    const std::string mod_id = terminal.platform_access_mod();
+    const std::string handler_id = terminal.platform_access_handler();
+    const std::shared_ptr<runtime> owner = detail::find_active_runtime( mod_id );
     if( !owner || !owner->world_is_ready ) {
         DebugLog( D_ERROR, D_MAIN ) << "Lua-first computer runtime unavailable for '"
-                                    << terminal.platform_access_mod() << ':'
-                                    << terminal.platform_access_handler() << "'";
+                                    << mod_id << ':' << handler_id << "'";
         return false;
     }
-    const auto handler = owner->handlers.find(
-                             terminal.platform_access_handler() );
+    const auto handler = owner->handlers.find( handler_id );
     if( handler == owner->handlers.end() || owner->callback_depth >= 16 ) {
         DebugLog( D_ERROR, D_MAIN ) << "Lua-first computer handler unavailable for '"
-                                    << terminal.platform_access_mod() << ':'
-                                    << terminal.platform_access_handler() << "'";
+                                    << mod_id << ':' << handler_id << "'";
         return false;
     }
 
     auto context = std::make_shared<computer_access_context>();
-    context->terminal = &terminal;
-    context->character = &character;
     context->handle_runtime = owner->handle_runtime();
     context->world_generation = detail::runtime_world_generation_storage();
+    context->terminal_reference = terminal.get_safe_reference();
+    context->character_reference = detail::platform_creature_handle( *owner, character );
     computer_access_context_lease lease( *context );
     sol::protected_function callback = handler->second.callback;
     callback_scope scope( *owner );
     const sol::protected_function_result result = callback( context );
     if( !result.valid() ) {
-        report_callback_error(
-            *owner, terminal.platform_access_handler(), result );
+        report_callback_error( *owner, handler_id, result );
         return false;
     }
     if( result.return_count() == 0 || result.get_type() == sol::type::nil ) {
@@ -1229,12 +1258,18 @@ std::optional<bool> invoke_computer_access_handler(
     }
     if( result.return_count() != 1 || result.get_type() != sol::type::boolean ) {
         DebugLog( D_ERROR, D_MAIN ) << "Lua-first computer handler '"
-                                    << terminal.platform_access_mod() << ':'
-                                    << terminal.platform_access_handler()
+                                    << mod_id << ':' << handler_id
                                     << "' must return nil or exactly one boolean";
         return false;
     }
-    return result.get<bool>();
+    const bool allowed = result.get<bool>();
+    if( !allowed ) {
+        return false;
+    }
+    if( !owner->world_is_ready || !context->is_live() ) {
+        return false;
+    }
+    return true;
 }
 
 namespace

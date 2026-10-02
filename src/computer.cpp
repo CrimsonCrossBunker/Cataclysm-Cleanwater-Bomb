@@ -85,6 +85,11 @@ computer::computer( const std::string &new_name, int new_security, tripoint_abs_
     loc = new_loc;
 }
 
+safe_reference<computer> computer::get_safe_reference()
+{
+    return safe_reference_anchor_.reference_to( this );
+}
+
 void computer::set_security( int Security )
 {
     security = Security;
