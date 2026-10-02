@@ -356,6 +356,14 @@ function CcbMapApi.trap_set(tile, expected_revision, trap) end
 ---@class CcbWorldApi
 local CcbWorldApi = {}
 
+---@param position TripointCoord Reality-bubble map-square or submap position.
+---@return TripointCoord position Absolute position with the same scale.
+function CcbWorldApi.to_absolute(position) end
+
+---@param position TripointCoord Absolute map-square or submap position.
+---@return TripointCoord position Reality-bubble position with the same scale.
+function CcbWorldApi.to_bubble(position) end
+
 ---@class CcbWorldSpawnedItem
 ---@field handle GameHandle Generation-bound handle for the spawned map item.
 ---@field uid integer Native item instance uid.
