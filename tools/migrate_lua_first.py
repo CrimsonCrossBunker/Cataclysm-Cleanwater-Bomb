@@ -28105,7 +28105,7 @@ def render_literal_native_arithmetic(
     if not isinstance(value, list) or not value or not all(isinstance(part, str) for part in value):
         return None
     source = "".join(value)  # eoc_math::from_json concatenates chunks without inserting spaces.
-    token_pattern = re.compile(r"(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?|[A-Za-z_][A-Za-z_0-9]*|π|==|!=|<=|>=|[(),+*/%^<>\-]")
+    token_pattern = re.compile(r"(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?|[A-Za-z_][A-Za-z_0-9]*|π|==|!=|<=|>=|[(),+*/%^<>!\-]")
     operators: list[str] = []
     operands: list[int] = []
     frames: list[tuple[int, int, str | None]] = []
@@ -28114,6 +28114,7 @@ def render_literal_native_arithmetic(
     uses_native_float = False
     uses_variable_result = False
     need_operand = True
+    allows_prefix_unary = True
     precedence = {"+": 2, "-": 2, "*": 3, "/": 3, "%": 3, "^": 4}
     comparisons = {"==", "!=", "<", "<=", ">", ">="}
     precedence.update({operator: 1 for operator in comparisons})
@@ -28185,11 +28186,18 @@ def render_literal_native_arithmetic(
         return True
 
     def apply_operator(operator: str) -> bool:
-        if operator in {"u+", "u-"}:
+        if operator in {"u+", "u-", "u!"}:
             if not operands:
                 return False
             operand = operands.pop()
-            emit(f"values[{operand}]" if operator == "u+" else f"-(values[{operand}])")
+            if operator == "u!":
+                # math_opers::b_neg uses float_equals(value,0), including its
+                # two rounded additions. Lua truth and exact ==0 both differ.
+                epsilon = repr(sys.float_info.epsilon * 100)
+                emit(f"(values[{operand}] + {epsilon} >= 0.0 and "
+                     f"{epsilon} >= values[{operand}]) and 1.0 or 0.0")
+            else:
+                emit(f"values[{operand}]" if operator == "u+" else f"-(values[{operand}])")
             return True
         if len(operands) < 2:
             return False
@@ -28232,6 +28240,7 @@ def render_literal_native_arithmetic(
             function = operators[-1][2:] if operators and operators[-1].startswith("f:") else None
             frames.append((len(operands), 0, function))
             operators.append(token)
+            allows_prefix_unary = True
         elif token == ")":
             if not frames:
                 return None
@@ -28268,6 +28277,12 @@ def render_literal_native_arithmetic(
                 return None
             frames[-1] = (base, commas + 1, function)
             need_operand = True
+            allows_prefix_unary = True
+        elif token == "!":
+            if not need_operand or not allows_prefix_unary:
+                return None
+            operators.append("u!")
+            allows_prefix_unary = False
         elif token in constants:
             if not need_operand:
                 return None
@@ -28297,9 +28312,10 @@ def render_literal_native_arithmetic(
                  'return result.value end)(service_value(variable_result))')
             need_operand = False
         elif need_operand:
-            if token not in {"+", "-"}:
+            if token not in {"+", "-"} or not allows_prefix_unary:
                 return None
             operators.append("u" + token)
+            allows_prefix_unary = False
         else:
             # Match math_parser_impl.h's actual pop rule: the PREVIOUS
             # operator's associativity controls equal-precedence popping.
@@ -28313,6 +28329,7 @@ def render_literal_native_arithmetic(
                     return None
             operators.append(token)
             need_operand = True
+            allows_prefix_unary = True
     if need_operand:
         return None
     while operators:

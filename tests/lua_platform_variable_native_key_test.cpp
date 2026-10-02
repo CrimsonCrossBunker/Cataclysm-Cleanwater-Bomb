@@ -1355,6 +1355,68 @@ return values[5] end)()
     }
 }
 
+TEST_CASE( "lua_platform_math_not_matches_native_epsilon_boundaries_and_nonfinite_values",
+           "[lua][platform][semantic][variables][math]" )
+{
+    variable_api_fixture fixture;
+    fixture.lua["services"] = fixture.services;
+    REQUIRE( fixture.lua.safe_script( R"lua(
+function service_value(result)
+ if not result.ok then error(result.error.message,0) end
+ return result.value
+end
+function evaluate_not()
+ return (function() local values = {}; local variable_result;
+ variable_result = services.variables.get_context_number(context and context.data,"value",{strict=true});
+ if variable_result.ok == false and variable_result.error and variable_result.error.code == "variable_type_mismatch" then
+  services.diagnostic("Math variable _value: " .. variable_result.error.message); return 0.0
+ end;
+ values[1] = (function(result) if result.exists == false then return 0.0 end;
+  return result.value end)(service_value(variable_result));
+ values[2] = (values[1] + 2.220446049250313e-14 >= 0.0 and 2.220446049250313e-14 >= values[1]) and 1.0 or 0.0;
+ return values[2] end)()
+end
+)lua", sol::script_pass_on_error ).valid() );
+    const double epsilon = std::numeric_limits<double>::epsilon() * 100;
+    const double infinity = std::numeric_limits<double>::infinity();
+    const std::vector<double> values = {
+        0.0, -0.0, 1.0, -1.0, epsilon, -epsilon,
+        std::nextafter( epsilon, 0.0 ), std::nextafter( epsilon, infinity ),
+        std::nextafter( -epsilon, 0.0 ), std::nextafter( -epsilon, -infinity ),
+        1e-14, -1e-14, std::numeric_limits<double>::min(),
+        -std::numeric_limits<double>::min(), std::numeric_limits<double>::denorm_min(),
+        -std::numeric_limits<double>::denorm_min(), std::numeric_limits<double>::max(),
+        -std::numeric_limits<double>::max(), infinity, -infinity,
+        std::numeric_limits<double>::quiet_NaN(),
+    };
+    math_exp native;
+    REQUIRE( native.parse( "!_value" ) );
+    const sol::protected_function evaluate = fixture.lua["evaluate_not"];
+    for( const double value : values ) {
+        CAPTURE( value );
+        dialogue conversation;
+        conversation.set_value( "value", diag_value( value ) );
+        sol::table data = fixture.lua.create_table();
+        data["value"] = value;
+        sol::table context = fixture.lua.create_table();
+        context["data"] = data;
+        fixture.lua["context"] = context;
+        const sol::protected_function_result call = evaluate();
+        REQUIRE( call.valid() );
+        CHECK( call.get<double>() == native.eval( conversation ) );
+    }
+    for( const char *source : { "!!1", "!+1", "!-1", "+!1", "-!0", "--1", "++1", "+ -1" } ) {
+        CAPTURE( source );
+        bool parsed = true;
+        const std::string diagnostic = capture_debugmsg_during( [&]() {
+            math_exp invalid;
+            parsed = invalid.parse( source );
+        } );
+        CHECK_FALSE( parsed );
+        CHECK_FALSE( diagnostic.empty() );
+    }
+}
+
 TEST_CASE( "lua_platform_literal_functions_match_native_math_values_and_signed_zero",
            "[lua][platform][semantic][coords][math]" )
 {

@@ -35268,6 +35268,42 @@ assert(context.data.position.x==EXPECTED_X and context.data.position.y==EXPECTED
         self.assertEqual(result.returncode, 0, result.stderr)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
+    def test_native_math_not_keeps_epsilon_truth_and_prefix_binding(self) -> None:
+        epsilon = math.ulp(1.0) * 100
+        cases = [
+            ("!0", 1.0), ("!(-0)", 1.0), ("!1", 0.0), ("!(-1)", 0.0),
+            ("!1e-14", 1.0), ("!(-1e-14)", 1.0),
+            ("!" + repr(epsilon), 1.0), ("!(" + repr(-epsilon) + ")", 1.0),
+            ("!" + repr(math.nextafter(epsilon, 0.0)), 1.0),
+            ("!" + repr(math.nextafter(epsilon, math.inf)), 0.0),
+            ("!(" + repr(math.nextafter(-epsilon, -math.inf)) + ")", 0.0),
+            ("!(sqrt(-1))", 0.0), ("!(1/0)", 0.0), ("!(-1/0)", 0.0),
+            ("!1+2", 2.0), ("!0+2", 3.0), ("!0^2", 1.0),
+            ("!2^0", 1.0), ("!(2^0)", 0.0), ("!2==0", 1.0),
+            ("2+!0*3", 5.0), ("-(!0)", -1.0), ("!(!0)", 0.0),
+            ("!(!1)", 1.0), ("max(!0,!1)", 1.0),
+        ]
+        for source, expected in cases:
+            with self.subTest(source=source):
+                expression = migrate_lua_first.render_native_number_expression({"math": [source]})
+                self.assertIsNotNone(expression)
+                completed = subprocess.run(["lua", "-"],
+                                           input=f"local result = {expression}\nassert(result == {expected!r})\n",
+                                           text=True, capture_output=True, timeout=10)
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+        for source in ("!!1", "!+1", "!-1", "+!1", "-!0", "--1", "++1", "+ -1",
+                       "1!2", "!", "max(!!1,2)"):
+            with self.subTest(source=source):
+                self.assertIsNone(migrate_lua_first.render_native_number_expression({"math": [source]}))
+        # Parentheses restart Native prefix allowance; flattening preserves
+        # valid deep expressions without Lua's expression-depth limit.
+        expression = migrate_lua_first.render_native_number_expression({"math": ["!(" * 401 + "0" + ")" * 401]})
+        self.assertIsNotNone(expression)
+        completed = subprocess.run(["lua", "-"], input=f"assert({expression} == 1.0)\n",
+                                   text=True, capture_output=True, timeout=10)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
+    @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
     def test_literal_native_math_functions_keep_double_rounding_and_signed_zero(self) -> None:
         cases = [
             ("abs(-3)", 3.0), ("max()", 0.0), ("min()", 0.0),
