@@ -2518,7 +2518,7 @@ sol::table place_world_spawn_items(
             project_to<coords::omt>( absolute );
         const int factor = coords::map_squares_per( coords::scale::overmap_terrain );
         const int distant_map_max_offset =
-            distant.getmapsize() * coords::map_squares_per( coords::scale::submap ) - 1;
+            distant.cast_to_map()->getmapsize() * coords::map_squares_per( coords::scale::submap ) - 1;
         checked_scale_up_axis(
             distant_origin.x(), factor, distant_map_max_offset,
             "services.world item spawning" );
