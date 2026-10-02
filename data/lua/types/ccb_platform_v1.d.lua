@@ -5167,8 +5167,15 @@ function CcbPlatformContent.EventTransformation(options) end
 ---@param options CcbLuaValue
 ---@return any
 function CcbPlatformContent.MathFunction(options) end
----@param options CcbLuaValue
----@return any
+
+---@class MissionDefinitionOptions
+---@field id string
+---@field name string|LocalizedText
+---@field description? string|LocalizedText
+---@field [string] any
+
+---@param options MissionDefinitionOptions
+---@return MissionDefinition
 function CcbPlatformContent.Mission(options) end
 ---@param options CcbLuaValue
 ---@return any

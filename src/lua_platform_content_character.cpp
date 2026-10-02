@@ -580,8 +580,8 @@ struct spell_definition_data {
 
 struct mission_definition_data {
     std::string id;
-    std::string name;
-    std::string description;
+    authored_text name;
+    authored_text description;
     std::string goal = "MGOAL_NULL";
     std::int64_t difficulty = 0;
     std::int64_t value = 0;
@@ -2937,8 +2937,10 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
         }
         auto definition = std::make_shared<mission_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", std::string() );
-        definition->description = options.get_or( "description", std::string() );
+        definition->name = read_singular_text(
+                               options.get<sol::object>( "name" ), {}, "mission name" );
+        definition->description = read_singular_text(
+                                      options.get<sol::object>( "description" ), {}, "mission description" );
         definition->goal = options.get_or( "goal", definition->goal );
         definition->difficulty = options.get_or<std::int64_t>( "difficulty", 0 );
         definition->value = options.get_or<std::int64_t>( "value", 0 );
@@ -6245,8 +6247,8 @@ bool character_content_transaction::apply_phase(
                     native.id = id;
                     native.src.emplace_back( id, mod_id( pimpl_->owner ) );
                     native.was_loaded = true;
-                    native.set_platform_name( source.name );
-                    native.description = no_translation( source.description );
+                    native.set_platform_name( source.name.native() );
+                    native.description = source.description.native();
                     native.goal = *io::string_to_enum_optional<mission_goal>( source.goal );
                     native.difficulty = static_cast<int>( source.difficulty );
                     native.value = static_cast<int>( source.value );

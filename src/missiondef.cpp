@@ -5,6 +5,7 @@
 #include <translation.h>
 #include <type_id.h>
 #include <algorithm>
+#include <utility>
 
 #include "condition.h"
 #include "debug.h"
@@ -252,7 +253,12 @@ const std::vector<mission_type> &mission_type::get_all()
 
 void mission_type::set_platform_name( const std::string &value )
 {
-    name = no_translation( value );
+    set_platform_name( no_translation( value ) );
+}
+
+void mission_type::set_platform_name( translation value )
+{
+    name = std::move( value );
 }
 
 mission_type_id mission_type::get_random_id( const mission_origin origin,
