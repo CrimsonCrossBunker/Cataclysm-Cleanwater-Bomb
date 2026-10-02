@@ -333,7 +333,7 @@ TEST_CASE( "weighted_int_list_native_eoc_selection_uses_raw_bits_modulo",
     const cata_default_random_engine after_one_raw_draw = rng_get_engine();
     rng_get_engine() = saved_engine;
 
-    CHECK( picked != nullptr && *picked == 7 );
+    CHECK( ( picked != nullptr && *picked == 7 ) );
     CHECK( after_singleton_pick == after_one_raw_draw );
 }
 
