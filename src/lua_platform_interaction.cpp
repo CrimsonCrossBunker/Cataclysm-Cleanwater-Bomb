@@ -192,7 +192,7 @@ variant_sound_options read_variant_sound_options(
 }
 
 void play_variant_sound(
-    const std::string_view id, const std::string &variant,
+    const std::string_view id, const std::string_view variant,
     const int volume, const sol::optional<sol::table> &requested )
 {
     require_sound_id( id, "id", "services.sound.play" );
@@ -327,7 +327,7 @@ ambient_sound_options read_ambient_sound_options(
 }
 
 void play_ambient_sound(
-    const std::string_view id, const std::string &variant,
+    const std::string_view id, const std::string_view variant,
     const int volume, const sol::optional<sol::table> &requested )
 {
     require_sound_id( id, "id", "services.sound.play_ambient" );
@@ -1218,7 +1218,7 @@ void install_game_interaction_api(
     sound.set_function(
         "play",
         [require_actions, has_active_callback](
-            const std::string & id, const std::string & variant,
+            const std::string_view id, const std::string_view variant,
     const int volume, const sol::optional<sol::table> &options ) {
         require_actions();
         require_active_callback(
@@ -1228,7 +1228,7 @@ void install_game_interaction_api(
     sound.set_function(
         "play_ambient",
         [require_actions, has_active_callback](
-            const std::string & id, const std::string & variant,
+            const std::string_view id, const std::string_view variant,
     const int volume, const sol::optional<sol::table> &options ) {
         require_actions();
         require_active_callback(

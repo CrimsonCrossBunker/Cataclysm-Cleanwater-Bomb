@@ -1419,8 +1419,8 @@ sol::table weather_limits(
 
 void install_weather_api(
     sol::table &services,
-    std::function<void()> require_read,
-    std::function<void()> require_write )
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write )
 {
     sol::state_view lua(
         services.lua_state() );

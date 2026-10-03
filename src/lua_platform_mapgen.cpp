@@ -1734,29 +1734,29 @@ void script_mapgen_context::set_graffiti(
 
 [[noreturn]] void script_mapgen_context::place_zone(
     const int, const int, const int, const int,
-    const std::string_view, const std::string &,
-    const std::string &, const std::string & )
+    const std::string_view, const std::string_view,
+    const std::string_view, const std::string_view )
 {
     reject_external_mutation();
 }
 
 [[noreturn]] std::int64_t script_mapgen_context::place_npc(
     const int, const int, const std::string_view,
-    const std::string & )
+    const std::string_view )
 {
     reject_external_mutation();
 }
 
 [[noreturn]] std::int64_t script_mapgen_context::place_npc_configured(
     const int, const int, const std::string_view,
-    const std::string &, const std::vector<std::string> &, const bool )
+    const std::string_view, const std::vector<std::string> &, const bool )
 {
     reject_external_mutation();
 }
 
 [[noreturn]] bool script_mapgen_context::place_vehicle(
     const int, const int, const std::string_view,
-    const int, const int, const int, const std::string & )
+    const int, const int, const int, const std::string_view )
 {
     reject_external_mutation();
 }
@@ -1783,7 +1783,7 @@ void script_mapgen_context::set_graffiti(
 }
 
 [[noreturn]] std::size_t script_mapgen_context::remove_npcs(
-    const std::string_view, const std::string & )
+    const std::string_view, const std::string_view )
 {
     reject_external_mutation();
 }

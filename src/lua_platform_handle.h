@@ -42,6 +42,8 @@ enum class game_handle_kind : int {
     camp
 };
 
+// Locator aggregates mirror the published x/y/z wire fields and existing native callers.
+// NOLINTNEXTLINE(cata-xy)
 struct game_handle_locator {
     std::string scope;
     std::int64_t stable_id = 0;

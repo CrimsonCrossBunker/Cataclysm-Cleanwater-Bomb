@@ -1268,11 +1268,11 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
     declarative_platform_dialogue_response generated;
     const cata::lua_platform::dialogue::response_descriptor_options response_options = {
         "dialogue", "response descriptor", "has", true,
-        []( const std::string & text, const std::string_view field )
+        []( const std::string_view text, const std::string_view field )
         {
             require_platform_dialogue_text( text, field );
         },
-        []( const std::string & id )
+        []( const std::string_view id )
         {
             return valid_platform_dialogue_id( id );
         },

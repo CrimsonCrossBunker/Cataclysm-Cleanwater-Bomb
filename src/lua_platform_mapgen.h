@@ -182,21 +182,21 @@ class script_mapgen_context
         void set_graffiti( int x, int y, const std::string &text );
         [[noreturn]] void place_zone( int x1, int y1, int x2, int y2,
                                       std::string_view zone_type,
-                                      const std::string &faction,
-                                      const std::string &name,
-                                      const std::string &filter );
+                                      std::string_view faction,
+                                      std::string_view name,
+                                      std::string_view filter );
         [[noreturn]] std::int64_t place_npc( int x, int y,
                                              std::string_view template_id,
-                                             const std::string &unique_id );
+                                             std::string_view unique_id );
         [[noreturn]] std::int64_t place_npc_configured(
             int x, int y, std::string_view template_id,
-            const std::string &unique_id,
+            std::string_view unique_id,
             const std::vector<std::string> &traits,
             bool mission_target );
         [[noreturn]] bool place_vehicle( int x, int y,
                                          std::string_view prototype_or_group_id,
                                          int rotation_degrees, int fuel_percent,
-                                         int status, const std::string &faction );
+                                         int status, std::string_view faction );
         [[noreturn]] void apply_faction_ownership( int x1, int y1, int x2, int y2,
                 std::string_view faction );
         [[noreturn]] void transform( int x1, int y1, int x2, int y2,
@@ -204,7 +204,7 @@ class script_mapgen_context
         [[noreturn]] std::size_t remove_vehicles( int x1, int y1, int x2, int y2,
                 const std::vector<std::string> &prototype_ids );
         [[noreturn]] std::size_t remove_npcs( std::string_view template_id,
-                                              const std::string &unique_id );
+                                              std::string_view unique_id );
         [[noreturn]] void remove_all( int x1, int y1, int x2, int y2 );
         void queue_point( const std::string &name, int x, int y );
         void queue_npc( int x, int y, const std::string &template_id,

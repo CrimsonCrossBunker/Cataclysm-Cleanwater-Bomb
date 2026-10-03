@@ -920,7 +920,7 @@ std::vector<script_tripoint_coord> script_coordinate_box(
 }
 
 void install_coordinate_value_api(
-    sol::state &lua, sol::table &services, std::function<void()> require_values )
+    sol::state &lua, sol::table &services, const std::function<void()> &require_values )
 {
     lua.new_usertype<script_point_coord>(
         "PointCoord", sol::no_constructor,
@@ -1013,7 +1013,7 @@ void install_coordinate_value_api(
         // Raw Lua axes must stay wide until the native range checks.
         // NOLINTNEXTLINE(cata-xy)
         [require_values](
-            const std::string & origin, const std::string & scale,
+            const std::string_view origin, const std::string_view scale,
     const std::int64_t x, const std::int64_t y ) {
         require_values();
         return script_point_coord::from( origin, scale, x, y );
@@ -1023,7 +1023,7 @@ void install_coordinate_value_api(
         // Raw Lua axes must stay wide until the native range checks.
         // NOLINTNEXTLINE(cata-xy)
         [require_values](
-            const std::string & origin, const std::string & scale,
+            const std::string_view origin, const std::string_view scale,
     const std::int64_t x, const std::int64_t y, const std::int64_t z ) {
         require_values();
         return script_tripoint_coord::from( origin, scale, x, y, z );
@@ -1043,12 +1043,12 @@ void install_coordinate_value_api(
         "project_to",
         sol::overload(
             [require_values](
-    const script_point_coord & value, const std::string & scale ) {
+    const script_point_coord & value, const std::string_view scale ) {
         require_values();
         return value.project_to( scale );
     },
     [require_values](
-        const script_tripoint_coord & value, const std::string & scale ) {
+        const script_tripoint_coord & value, const std::string_view scale ) {
         require_values();
         return value.project_to( scale );
     } ) );
@@ -1056,12 +1056,12 @@ void install_coordinate_value_api(
         "project_remain",
         sol::overload(
             [require_values](
-    const script_point_coord & value, const std::string & scale ) {
+    const script_point_coord & value, const std::string_view scale ) {
         require_values();
         return value.project_remain( scale );
     },
     [require_values](
-        const script_tripoint_coord & value, const std::string & scale ) {
+        const script_tripoint_coord & value, const std::string_view scale ) {
         require_values();
         return value.project_remain( scale );
     } ) );
@@ -1123,6 +1123,8 @@ void install_coordinate_value_api(
         const std::string point_name = "point_" + std::string( definition.name );
         coord_api.set_function(
             point_name,
+            // Scalar Lua axes must remain wide until checked_axis validates them.
+            // NOLINTNEXTLINE(cata-xy)
             [require_values, definition](
         const std::int64_t x, const std::int64_t y ) {
             require_values();
@@ -1135,6 +1137,8 @@ void install_coordinate_value_api(
             "tripoint_" + std::string( definition.name );
         coord_api.set_function(
             tripoint_name,
+            // Scalar Lua axes must remain wide until checked_axis validates them.
+            // NOLINTNEXTLINE(cata-xy)
             [require_values, definition](
         const std::int64_t x, const std::int64_t y, const std::int64_t z ) {
             require_values();

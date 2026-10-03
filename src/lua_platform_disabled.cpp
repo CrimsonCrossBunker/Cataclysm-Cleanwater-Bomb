@@ -20,9 +20,9 @@ namespace cata::lua_platform
 // installer symbol available so registration remains a complete build-time
 // route without manufacturing a legacy or partially functional camp API.
 void install_camp_api(
-    sol::table &, std::function<game_handle_runtime()>,
-    std::function<std::size_t()>, std::function<void()>,
-    std::function<void()> )
+    sol::table &, const std::function<game_handle_runtime()> &,
+    const std::function<std::size_t()> &, const std::function<void()> &,
+    const std::function<void()> & )
 {
 }
 
@@ -38,9 +38,9 @@ void install_map_api(
 // Keep the relocation and Avatar teleport installer linkable in a disabled
 // build without manufacturing a public services.relocation table.
 void install_relocation_move_api(
-    sol::table &, std::function<game_handle_runtime()>,
-    std::function<std::size_t()>, std::function<void()>,
-    std::function<void()>, std::function<bool()> )
+    sol::table &, const std::function<game_handle_runtime()> &,
+    const std::function<std::size_t()> &, const std::function<void()> &,
+    const std::function<void()> &, const std::function<bool()> & )
 {
 }
 
@@ -84,7 +84,7 @@ native_callback_entity::native_callback_entity( const vehicle *value )
 
 native_callback_entity_kind native_callback_entity::kind() const noexcept
 {
-    return native_callback_entity_kind::none;
+    return kind_;
 }
 
 bool native_callback_entity::valid() const noexcept

@@ -136,7 +136,7 @@ std::vector<script_tripoint_coord> script_coordinate_box(
 // Installs immutable, coordinate-space-aware Platform values under
 // services.coords.
 void install_coordinate_value_api(
-    sol::state &lua, sol::table &services, std::function<void()> require_values );
+    sol::state &lua, sol::table &services, const std::function<void()> &require_values );
 
 } // namespace cata::lua_platform
 
