@@ -97,7 +97,6 @@ jobs:
       - id: matrix_vars
         env:
           EVENT_NAME: ${{ github.event_name }}
-          IS_DRAFT: ${{ github.event.pull_request.draft }}
           RUN_TESTS: ${{ inputs.run_tests || false }}
         run: |
           echo "fail_fast=$([ "$GITHUB_REF_NAME" = "master" -o "$GITHUB_REPOSITORY_OWNER" != "CleverRaven" ] && echo false || echo true)" >> $GITHUB_OUTPUT
@@ -536,6 +535,7 @@ jobs:
       - name: Summarize component results
         env:
           EVENT_NAME: ${{ github.event_name }}
+          IS_DRAFT: ${{ github.event.pull_request.draft }}
           SHOULD_SKIP_CODE: ${{ needs.skip-duplicates-code.outputs.should_skip_code }}
           SHOULD_SKIP_DATA: ${{ needs.skip-duplicates-data.outputs.should_skip_data }}
           SKIP_TESTS: ${{ needs.matrix-variables.outputs.skip_tests }}
