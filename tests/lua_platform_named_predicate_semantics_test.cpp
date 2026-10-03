@@ -1,4 +1,8 @@
+#include <talker.h>
+#include <functional>
+#include <memory>
 #include <string>
+#include <vector>
 
 #include "avatar.h"
 #include "cata_catch.h"
@@ -10,8 +14,9 @@
 #include "npc.h"
 #include "type_id.h"
 
+static const trait_id trait_QUICK( "QUICK" );
+
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-    #include "avatar.h"
     #include "cata_scope_helpers.h"
     #include "character_id.h"
     #include "lua_platform_bindings_values.h"
@@ -53,9 +58,8 @@ TEST_CASE( "lua_migration_native_named_predicate_uses_evaluating_beta",
     original_beta.normalize();
     npc new_beta;
     new_beta.normalize();
-    const trait_id quick( "QUICK" );
-    original_beta.unset_mutation( quick );
-    new_beta.set_mutation( quick );
+    original_beta.unset_mutation( trait_QUICK );
+    new_beta.set_mutation( trait_QUICK );
     dialogue original( get_talker_for( alpha ), get_talker_for( original_beta ) );
     talk_effect_t effect;
     effect.parse_sub_effect( json_loader::from_string(
@@ -78,14 +82,13 @@ TEST_CASE( "lua_platform_named_predicate_uses_current_dialogue_alpha",
            "[lua][platform][named_predicates][semantic]" )
 {
     namespace platform = cata::lua_platform;
-    const trait_id quick( "QUICK" );
 
     avatar native_original_alpha;
     native_original_alpha.normalize();
     npc native_child_alpha;
     native_child_alpha.normalize();
     native_child_alpha.setID( character_id( 7402 ), true );
-    native_child_alpha.set_mutation( quick );
+    native_child_alpha.set_mutation( trait_QUICK );
     dialogue native_original( get_talker_for( native_original_alpha ), nullptr );
 
     talk_effect_t store_native_predicate;

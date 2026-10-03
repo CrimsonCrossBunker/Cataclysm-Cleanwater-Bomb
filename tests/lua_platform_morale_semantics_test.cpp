@@ -1,5 +1,6 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <talker.h>
 #include <functional>
 #include <memory>
 #include <string>
@@ -22,12 +23,13 @@
 #include "npc.h"
 #include "type_id.h"
 
+static const morale_type morale_feeling_good( "morale_feeling_good" );
+
 namespace cata::lua_platform
 {
 class runtime;
 }  // namespace cata::lua_platform
 
-static const morale_type morale_feeling_good( "morale_feeling_good" );
 
 TEST_CASE( "lua_platform_morale_semantics_match_legacy_character_operations",
            "[lua][platform][morale][semantic]" )

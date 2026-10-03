@@ -4,6 +4,7 @@
 #include <coordinates.h>
 #include <global_vars.h>
 #include <math_parser_diag_value.h>
+#include <safe_reference.h>
 #include <type_id.h>
 #include <locale>
 #include <sstream>

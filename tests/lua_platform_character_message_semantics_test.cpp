@@ -1,5 +1,10 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <coordinates.h>
+#include <flexbuffer_json.h>
+#include <pimpl.h>
+#include <cstddef>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -11,7 +16,6 @@
 #include "cata_catch.h"
 #include "cata_path.h"
 #include "cata_scope_helpers.h"
-#include "character.h"
 #include "character_id.h"
 #include "game.h"
 #include "inventory.h"
@@ -22,8 +26,15 @@
 #include "lua_platform_sol.h"
 #include "messages.h"
 #include "npc.h"
-#include "point.h"
 #include "type_id.h"
+
+static const itype_id itype_efile_map( "efile_map" );
+
+namespace cata::lua_platform
+{
+class runtime;
+}  // namespace cata::lua_platform
+
 
 TEST_CASE( "lua_platform_character_messages_match_native_actor_targeted_hook",
            "[lua][platform][characters][messages][semantic]" )
@@ -64,13 +75,13 @@ TEST_CASE( "lua_platform_character_messages_match_native_actor_targeted_hook",
     REQUIRE_FALSE( translated_format.empty() );
     const std::size_t placeholder = translated_format.find( "%s" );
     REQUIRE( placeholder != std::string::npos );
-    CHECK( translated_format.find( "%", placeholder + 2 ) == std::string::npos );
+    CHECK( translated_format.find( '%', placeholder + 2 ) == std::string::npos );
 
     avatar &player_target = get_avatar();
     avatar item_user;
     item_user.normalize();
     item &used_item = item_user.inv->add_item(
-                          item( itype_id( "efile_map" ) ), false, false, false );
+                          item( itype_efile_map ), false, false, false );
     npc beta;
     beta.normalize();
     beta.setID( character_id( 941701 ), true );

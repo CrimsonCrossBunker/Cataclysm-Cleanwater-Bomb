@@ -1756,6 +1756,7 @@ void Character::heat_emission( const bionic &bio, units::energy fuel_energy )
     }
     const float efficiency = bio_info.fuel_efficiency;
     std::vector<bodypart_id> occupied_body_parts;
+    occupied_body_parts.reserve( bio_info.occupied_bodyparts.size() );
     for( const auto &part : bio_info.occupied_bodyparts ) {
         occupied_body_parts.push_back( part.first.id() );
     }
@@ -3088,7 +3089,10 @@ void Character::perform_install( const bionic_id &bid, bionic_uid upbio_uid, int
                                  const std::optional<item> &source_item )
 {
     const safe_reference<Creature> character_reference = get_safe_reference();
+    // Event callbacks can remove the installer and source item; retain owned snapshots.
+    // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
     const std::string installer_name_snapshot = installer_name;
+    // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
     const std::optional<item> source_item_snapshot = source_item;
     // if we chop off a limb, our stored kcal should decrease proportionally
     float cached_healthy_kcal = get_healthy_kcal();

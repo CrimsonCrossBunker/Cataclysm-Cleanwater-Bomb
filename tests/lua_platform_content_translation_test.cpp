@@ -4,21 +4,19 @@
 #include "iuse.h"
 #include "skill.h"
 #include "translation.h"
-#if defined( LOCALIZE )
-    #include "translation_manager.h"
-    #include "translations.h"
-#endif
 
+static const itype_id itype_lua_text_default_use_label( "lua_text_default_use_label" );
 static const itype_id itype_lua_text_literal_child( "lua_text_literal_child" );
+static const itype_id itype_lua_text_literal_use_label( "lua_text_literal_use_label" );
 static const itype_id itype_lua_text_same_plural( "lua_text_same_plural" );
 static const itype_id itype_lua_text_translated_child( "lua_text_translated_child" );
 static const itype_id itype_lua_text_translated_parent( "lua_text_translated_parent" );
 static const itype_id itype_lua_text_translated_use_label( "lua_text_translated_use_label" );
-static const itype_id itype_lua_text_literal_use_label( "lua_text_literal_use_label" );
-static const itype_id itype_lua_text_default_use_label( "lua_text_default_use_label" );
+
 static const skill_displayType_id
-SkillDisplayType_lua_translated_skill_display( "lua_translated_skill_display" );
+
 static const skill_id skill_lua_translated_skill( "lua_translated_skill" );
+static SkillDisplayType_lua_translated_skill_display( "lua_translated_skill_display" );
 
 TEST_CASE( "lua_platform_item_text_preserves_deferred_native_translations",
            "[lua][platform][content][translations]" )
@@ -266,7 +264,7 @@ TEST_CASE( "lua_platform_skill_text_context_changes_static_fingerprints",
     const on_out_of_scope cleanup( []() {
         platform::shutdown();
     } );
-    const auto fingerprint = [&]( const std::string & text, const std::string &configure = "" ) {
+    const auto fingerprint = [&]( const std::string_view text, const std::string &configure = "" ) {
         files.write( std::filesystem::u8path( "main.lua" ), "local ccb = require('ccb')\n"
                      "ccb.content.add(ccb.content.SkillDisplay {id='lua_skill_text_hash_display', "
                      "label='Hash test skills'})\n"

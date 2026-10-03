@@ -1,3 +1,6 @@
+#include <string>
+#include <vector>
+
 #include "calendar.h"
 #include "cata_catch.h"
 #include "coordinates.h"

@@ -1,10 +1,20 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
-#include "lua_platform_test_support.h"
+#include <avatar.h>
+#include <calendar.h>
+#include <cata_scope_helpers.h>
+#include <type_id.h>
+#include <functional>
+#include <memory>
+#include <string>
+#include <vector>
 
-#include "effect.h"
+#include "cata_catch.h"
 #include "lua_platform_runtime.h"
 #include "lua_platform_runtime_internal.h"
+#include "lua_platform_sol.h"
+
+static const efftype_id effect_sleep( "sleep" );
 
 TEST_CASE( "lua_platform_audible_sound_reports_the_native_hearing_gate",
            "[lua][platform][sound][semantic]" )
@@ -25,14 +35,13 @@ TEST_CASE( "lua_platform_audible_sound_reports_the_native_hearing_gate",
     lua["ccb"] = ccb;
 
     avatar &player = get_avatar();
-    const efftype_id sleeping( "sleep" );
-    const bool already_sleeping = player.has_effect( sleeping );
+    const bool already_sleeping = player.has_effect( effect_sleep );
     if( !already_sleeping ) {
-        player.add_effect( sleeping, 10_turns );
+        player.add_effect( effect_sleep, 10_turns );
     }
-    const on_out_of_scope restore_sleep( [&player, already_sleeping, sleeping]() {
+    const on_out_of_scope restore_sleep( [&player, already_sleeping]() {
         if( !already_sleeping ) {
-            player.remove_effect( sleeping );
+            player.remove_effect( effect_sleep );
         }
     } );
 

@@ -1,8 +1,10 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <type_id.h>
+#include <cstddef>
+#include <functional>
 #include <memory>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "avatar.h"
@@ -18,6 +20,8 @@
 #include "math_parser.h"
 #include "npc.h"
 #include "skill.h"
+
+static const skill_id skill_speech( "speech" );
 
 TEST_CASE( "lua_platform_skills_level_matches_raw_character_and_talker_skill_values",
            "[lua][platform][skills][semantic]" )
@@ -36,13 +40,12 @@ TEST_CASE( "lua_platform_skills_level_matches_raw_character_and_talker_skill_val
         platform::retire_npc_handle_identity( beta );
     } );
 
-    const skill_id speech( "speech" );
-    alpha.set_skill_level( speech, 4 );
-    alpha.get_skill_level_object( speech ).set_exercise( 35 );
-    beta.set_skill_level( speech, 8 );
-    beta.get_skill_level_object( speech ).set_exercise( 75 );
-    const float alpha_speech = alpha.get_skill_level( speech );
-    const float beta_speech = beta.get_skill_level( speech );
+    alpha.set_skill_level( skill_speech, 4 );
+    alpha.get_skill_level_object( skill_speech ).set_exercise( 35 );
+    beta.set_skill_level( skill_speech, 8 );
+    beta.get_skill_level_object( skill_speech ).set_exercise( 75 );
+    const float alpha_speech = alpha.get_skill_level( skill_speech );
+    const float beta_speech = beta.get_skill_level( skill_speech );
 
     sol::state lua;
     sol::table ccb = lua.create_table();

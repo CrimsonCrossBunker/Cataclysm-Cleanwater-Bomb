@@ -127,6 +127,8 @@ struct computer_failure {
 class computer
 {
     private:
+        // Runtime lifetime tracking must not survive serialization.
+        // NOLINTNEXTLINE(cata-serialize)
         safe_reference_anchor safe_reference_anchor_;
 
     public:

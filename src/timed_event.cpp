@@ -1,5 +1,8 @@
 #include "timed_event.h"
 
+#include <calendar.h>
+#include <point.h>
+#include <submap.h>
 #include <array>
 #include <cstdint>
 #include <limits>
@@ -40,14 +43,10 @@
 #include "worldfactory.h"
 
 static const itype_id itype_petrified_eye( "petrified_eye" );
-
 static const map_extra_id map_extra_mx_dsa_alrp( "mx_dsa_alrp" );
-
 static const mod_id MOD_INFORMATION_aftershock_exoplanet( "aftershock_exoplanet" );
 static const mod_id MOD_INFORMATION_catalegacy_future( "catalegacy_future" );
-
 static const morale_type morale_scream( "morale_scream" );
-
 static const mtype_id mon_afs_copbot( "mon_afs_copbot" );
 static const mtype_id mon_afs_riotbot( "mon_afs_riotbot" );
 static const mtype_id mon_amigara_horror( "mon_amigara_horror" );
@@ -59,9 +58,7 @@ static const mtype_id mon_fcl_riotbot( "mon_fcl_riotbot" );
 static const mtype_id mon_sewer_snake( "mon_sewer_snake" );
 static const mtype_id mon_spider_cellar_giant( "mon_spider_cellar_giant" );
 static const mtype_id mon_spider_widow_giant( "mon_spider_widow_giant" );
-
 static const spell_id spell_dks_summon_alrp( "dks_summon_alrp" );
-
 static const ter_str_id ter_t_fault( "t_fault" );
 static const ter_str_id ter_t_grate( "t_grate" );
 static const ter_str_id ter_t_rock_floor( "t_rock_floor" );

@@ -1,14 +1,18 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <pimpl.h>
+#include <cstddef>
+#include <functional>
+#include <initializer_list>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "avatar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
 #include "character_id.h"
 #include "dialogue.h"
-#include "dialogue_helpers.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_runtime.h"
 #include "lua_platform_runtime_internal.h"
@@ -17,6 +21,8 @@
 #include "math_parser.h"
 #include "npc.h"
 #include "type_id.h"
+
+static const spell_id spell_test_spell_pew( "test_spell_pew" );
 
 TEST_CASE( "lua_platform_spell_level_query_matches_native_math_scope",
            "[lua][platform][spells][math][semantic]" )
@@ -35,12 +41,11 @@ TEST_CASE( "lua_platform_spell_level_query_matches_native_math_scope",
         platform::retire_npc_handle_identity( beta );
     } );
 
-    const spell_id known_spell( "test_spell_pew" );
-    REQUIRE( known_spell.is_valid() );
-    alpha.magic->learn_spell( known_spell, alpha, true );
-    alpha.magic->set_spell_level( known_spell, 4, &alpha );
-    beta.magic->learn_spell( known_spell, beta, true );
-    beta.magic->set_spell_level( known_spell, 2, &beta );
+    REQUIRE( spell_test_spell_pew.is_valid() );
+    alpha.magic->learn_spell( spell_test_spell_pew, alpha, true );
+    alpha.magic->set_spell_level( spell_test_spell_pew, 4, &alpha );
+    beta.magic->learn_spell( spell_test_spell_pew, beta, true );
+    beta.magic->set_spell_level( spell_test_spell_pew, 2, &beta );
 
     dialogue native_pair( get_talker_for( alpha ), get_talker_for( beta ) );
     math_exp alpha_level;

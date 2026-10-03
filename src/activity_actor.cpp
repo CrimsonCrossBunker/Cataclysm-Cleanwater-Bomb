@@ -2,6 +2,7 @@
 
 #include <activity_type.h>
 #include <clone_ptr.h>
+#include <monster_uid.h>
 
 #define MP_ENABLED
 #include <algorithm>

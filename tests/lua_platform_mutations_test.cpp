@@ -1,5 +1,10 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <coordinates.h>
+#include <creature.h>
+#include <player_activity.h>
+#include <point.h>
+#include <talker.h>
 #include <algorithm>
 #include <cstddef>
 #include <functional>
@@ -8,6 +13,7 @@
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "avatar.h"
@@ -30,18 +36,22 @@
 #include "mutation.h"
 #include "npc.h"
 #include "omdata.h"
-#include "overmapbuffer.h"
 #include "options_helpers.h"
+#include "overmapbuffer.h"
 #include "rng.h"
 #include "type_id.h"
 
+static const activity_id ACT_TREE_COMMUNION( "ACT_TREE_COMMUNION" );
 static const trait_id trait_FELINE_EARS( "FELINE_EARS" );
+static const trait_id trait_INTERSTICE_RESONANCE_2( "INTERSTICE_RESONANCE_2" );
 static const trait_id trait_QUICK( "QUICK" );
+static const trait_id trait_RESISTCHILL( "RESISTCHILL" );
 static const trait_id trait_SNAIL_TRAIL( "SNAIL_TRAIL" );
 static const trait_id trait_STRONGER_VULNERABLEWARM( "STRONGER_VULNERABLEWARM" );
+static const trait_id trait_TREE_COMMUNION( "TREE_COMMUNION" );
 static const trait_id trait_VULNERABLECHILL( "VULNERABLECHILL" );
 static const trait_id trait_VULNERABLEWARM( "VULNERABLEWARM" );
-static const trait_id trait_INTERSTICE_RESONANCE_2( "INTERSTICE_RESONANCE_2" );
+static const trait_id trait_artificial_hair_buzzcut( "artificial_hair_buzzcut" );
 
 namespace
 {
@@ -413,7 +423,8 @@ TEST_CASE( "lua_platform_mutations_query_variable_owners_and_list_boundaries",
          } ) {
         const std::string id = scope == "u_val" ? "QUICK" : "FELINE_EARS";
         CAPTURE( npc_target, scope );
-        const std::string source = R"({")" + prefix + R"(has_trait":{")" + scope + R"(":"trait"}})";
+        const std::string source = std::string( R"({")" ).append( prefix ).append(
+                                       R"(has_trait":{")" ).append( scope ).append( R"(":"trait"}})" );
         const conditional_t legacy( json_loader::from_string( source ).get_object() );
         CHECK( legacy( context ) == fixture.query( "has", npc_target, id ) );
         CHECK( legacy( context ) == ( npc_target == ( scope != "u_val" ) ) );
@@ -618,8 +629,7 @@ TEST_CASE( "lua_platform_mutation_activation_rejects_non_wooded_tree_communion_l
 {
     mutation_fixture legacy( 3900 );
     mutation_fixture platform( 4000 );
-    const trait_id trait( "TREE_COMMUNION" );
-    REQUIRE( trait.is_valid() );
+    REQUIRE( trait_TREE_COMMUNION.is_valid() );
     const tripoint_abs_omt omt = legacy.player.pos_abs_omt();
     REQUIRE( platform.player.pos_abs_omt() == omt );
     const oter_id field( "field" );
@@ -630,26 +640,26 @@ TEST_CASE( "lua_platform_mutation_activation_rejects_non_wooded_tree_communion_l
     } );
     overmap_buffer.ter_set( omt, field );
     REQUIRE_FALSE( overmap_buffer.ter( omt ).obj().is_wooded() );
-    legacy.player.set_mutation( trait );
-    platform.player.set_mutation( trait );
-    REQUIRE_FALSE( legacy.player.has_active_mutation( trait ) );
-    REQUIRE_FALSE( platform.player.has_active_mutation( trait ) );
+    legacy.player.set_mutation( trait_TREE_COMMUNION );
+    platform.player.set_mutation( trait_TREE_COMMUNION );
+    REQUIRE_FALSE( legacy.player.has_active_mutation( trait_TREE_COMMUNION ) );
+    REQUIRE_FALSE( platform.player.has_active_mutation( trait_TREE_COMMUNION ) );
 
     legacy.legacy_effect( R"({"u_activate_trait":"TREE_COMMUNION"})" );
     const sol::protected_function_result call = platform.services["mutations"]["invoke_activation"](
-                platform.handle( false ), cata::lua_platform::script_game_id( "mutation", trait.str() ), true );
+                platform.handle( false ), cata::lua_platform::script_game_id( "mutation",
+                        trait_TREE_COMMUNION.str() ), true );
     REQUIRE( call.valid() );
     REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
-    CHECK_FALSE( legacy.player.has_active_mutation( trait ) );
-    CHECK_FALSE( platform.player.has_active_mutation( trait ) );
-    CHECK( legacy.player.has_active_mutation( trait ) ==
-           platform.player.has_active_mutation( trait ) );
-    const activity_id tree_communion_activity( "ACT_TREE_COMMUNION" );
-    CHECK( legacy.player.activity.id() != tree_communion_activity );
-    CHECK( platform.player.activity.id() != tree_communion_activity );
+    CHECK_FALSE( legacy.player.has_active_mutation( trait_TREE_COMMUNION ) );
+    CHECK_FALSE( platform.player.has_active_mutation( trait_TREE_COMMUNION ) );
+    CHECK( legacy.player.has_active_mutation( trait_TREE_COMMUNION ) ==
+           platform.player.has_active_mutation( trait_TREE_COMMUNION ) );
+    CHECK( legacy.player.activity.id() != ACT_TREE_COMMUNION );
+    CHECK( platform.player.activity.id() != ACT_TREE_COMMUNION );
     CHECK( legacy.player.activity.id() == platform.player.activity.id() );
-    CHECK_FALSE( legacy.other.has_trait( trait ) );
-    CHECK_FALSE( platform.other.has_trait( trait ) );
+    CHECK_FALSE( legacy.other.has_trait( trait_TREE_COMMUNION ) );
+    CHECK_FALSE( platform.other.has_trait( trait_TREE_COMMUNION ) );
 }
 
 TEST_CASE( "lua_platform_mutation_replace_matches_legacy_context_values_for_alpha_npc",
@@ -657,11 +667,10 @@ TEST_CASE( "lua_platform_mutation_replace_matches_legacy_context_values_for_alph
 {
     mutation_fixture legacy( 3300 );
     mutation_fixture platform( 3400 );
-    const trait_id hair( "artificial_hair_buzzcut" );
-    REQUIRE( hair.is_valid() );
-    const mutation_variant *red_variant = hair->variant( "red" );
-    const mutation_variant *black_variant = hair->variant( "black" );
-    const mutation_variant *white_variant = hair->variant( "white" );
+    REQUIRE( trait_artificial_hair_buzzcut.is_valid() );
+    const mutation_variant *red_variant = trait_artificial_hair_buzzcut->variant( "red" );
+    const mutation_variant *black_variant = trait_artificial_hair_buzzcut->variant( "black" );
+    const mutation_variant *white_variant = trait_artificial_hair_buzzcut->variant( "white" );
     REQUIRE( red_variant != nullptr );
     REQUIRE( black_variant != nullptr );
     REQUIRE( white_variant != nullptr );
@@ -670,10 +679,10 @@ TEST_CASE( "lua_platform_mutation_replace_matches_legacy_context_values_for_alph
     SECTION( "dynamic_trait_id_and_static_variant" ) {
         const std::string source =
             R"({"u_add_trait":{"context_val":"trait_id"},"variant":"red"})";
-        legacy.legacy_effect( source, true, "trait_id", hair.str() );
+        legacy.legacy_effect( source, true, "trait_id", trait_artificial_hair_buzzcut.str() );
 
         sol::table context = platform.lua.create_table();
-        context["trait_id"] = hair.str();
+        context["trait_id"] = trait_artificial_hair_buzzcut.str();
         sol::protected_function resolve = platform.services["variables"]["resolve"];
         sol::protected_function_result resolved = resolve( context, sol::nil, "context", "trait_id" );
         REQUIRE( resolved.valid() );
@@ -686,19 +695,20 @@ TEST_CASE( "lua_platform_mutation_replace_matches_legacy_context_values_for_alph
                                               cata::lua_platform::script_game_id( "mutation", id ), "red" );
         REQUIRE( call.valid() );
         REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
-        CHECK( legacy.other.has_trait( hair ) == platform.other.has_trait( hair ) );
+        CHECK( legacy.other.has_trait( trait_artificial_hair_buzzcut ) == platform.other.has_trait(
+                   trait_artificial_hair_buzzcut ) );
         CHECK( legacy.other.get_mutations_variants() == platform.other.get_mutations_variants() );
-        CHECK( legacy.other.has_trait( hair ) );
+        CHECK( legacy.other.has_trait( trait_artificial_hair_buzzcut ) );
         REQUIRE( legacy.other.get_mutations_variants().size() == 1 );
         REQUIRE( platform.other.get_mutations_variants().size() == 1 );
         CHECK( legacy.other.get_mutations_variants().front().variant == "red" );
         CHECK( platform.other.get_mutations_variants().front().variant == "red" );
-        CHECK_FALSE( platform.player.has_trait( hair ) );
+        CHECK_FALSE( platform.player.has_trait( trait_artificial_hair_buzzcut ) );
     }
 
     SECTION( "bionic_color_id_context_variant" ) {
-        legacy.other.set_mutation( hair, black_variant );
-        platform.other.set_mutation( hair, black_variant );
+        legacy.other.set_mutation( trait_artificial_hair_buzzcut, black_variant );
+        platform.other.set_mutation( trait_artificial_hair_buzzcut, black_variant );
         const std::string source =
             R"({"u_add_trait":"artificial_hair_buzzcut","variant":{"context_val":"color_id"}})";
         legacy.legacy_effect( source, true, "color_id", "white" );
@@ -715,14 +725,14 @@ TEST_CASE( "lua_platform_mutation_replace_matches_legacy_context_values_for_alph
         CHECK( variant == white_variant->id );
         sol::protected_function replace = platform.services["mutations"]["replace"];
         sol::protected_function_result call = replace( alpha_npc,
-                                              cata::lua_platform::script_game_id( "mutation", hair.str() ), variant );
+                                              cata::lua_platform::script_game_id( "mutation", trait_artificial_hair_buzzcut.str() ), variant );
         REQUIRE( call.valid() );
         REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
         CHECK( legacy.other.get_mutations_variants() == platform.other.get_mutations_variants() );
         REQUIRE( platform.other.get_mutations_variants().size() == 1 );
-        CHECK( platform.other.get_mutations_variants().front().trait == hair );
+        CHECK( platform.other.get_mutations_variants().front().trait == trait_artificial_hair_buzzcut );
         CHECK( platform.other.get_mutations_variants().front().variant == "white" );
-        CHECK_FALSE( platform.player.has_trait( hair ) );
+        CHECK_FALSE( platform.player.has_trait( trait_artificial_hair_buzzcut ) );
     }
 }
 
@@ -731,8 +741,7 @@ TEST_CASE( "lua_platform_mutation_replace_matches_empty_eoc_topic_item_variant",
 {
     mutation_fixture legacy( 4300 );
     mutation_fixture platform( 4400 );
-    const trait_id hair( "artificial_hair_buzzcut" );
-    REQUIRE( hair.is_valid() );
+    REQUIRE( trait_artificial_hair_buzzcut.is_valid() );
     const std::string effect =
         R"({"u_add_trait":"artificial_hair_buzzcut","variant":{"mutator":"topic_item"}})";
     struct restore_rng {
@@ -750,12 +759,13 @@ TEST_CASE( "lua_platform_mutation_replace_matches_empty_eoc_topic_item_variant",
 
     rng_set_engine_seed( 4903 );
     const sol::protected_function_result call = platform.services["mutations"]["replace"](
-                platform.handle( false ), cata::lua_platform::script_game_id( "mutation", hair.str() ), "" );
+                platform.handle( false ), cata::lua_platform::script_game_id( "mutation",
+                        trait_artificial_hair_buzzcut.str() ), "" );
     REQUIRE( call.valid() );
     REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
     CHECK( platform.player.get_mutations_variants() == native_variants );
     REQUIRE( native_variants.size() == 1 );
-    CHECK( native_variants.front().trait == hair );
+    CHECK( native_variants.front().trait == trait_artificial_hair_buzzcut );
 }
 
 TEST_CASE( "lua_platform_mutation_replace_matches_native_conflicts_and_repeat",
@@ -876,21 +886,19 @@ TEST_CASE( "lua_platform_mutation_maintenance_matches_native_alpha_fallback_stat
     mutation_fixture platform( 3000 );
     Character &old_npc = legacy.target( true );
     Character &new_npc = platform.target( true );
-    const trait_id resist_chill( "RESISTCHILL" );
-    const trait_id vulnerable_chill( "VULNERABLECHILL" );
     for( const trait_id &trait : {
-             resist_chill, vulnerable_chill,
+             trait_RESISTCHILL, trait_VULNERABLECHILL,
              trait_STRONGER_VULNERABLEWARM
          } ) {
         old_npc.set_mutation( trait );
         new_npc.set_mutation( trait );
     }
-    legacy.player.set_mutation( resist_chill );
-    legacy.player.set_mutation( vulnerable_chill );
-    platform.target( false ).set_mutation( resist_chill );
-    platform.target( false ).set_mutation( vulnerable_chill );
+    legacy.player.set_mutation( trait_RESISTCHILL );
+    legacy.player.set_mutation( trait_VULNERABLECHILL );
+    platform.target( false ).set_mutation( trait_RESISTCHILL );
+    platform.target( false ).set_mutation( trait_VULNERABLECHILL );
     const bool avatar_purifiable_before =
-        platform.target( false ).purifiable( vulnerable_chill );
+        platform.target( false ).purifiable( trait_VULNERABLECHILL );
 
     // Compare resulting mutation state only. Platform does not mirror the
     // native missing-beta or trait-purifiability debug messages.
@@ -908,8 +916,8 @@ TEST_CASE( "lua_platform_mutation_maintenance_matches_native_alpha_fallback_stat
     REQUIRE( purifiability_call.valid() );
     sol::table purifiability_result = purifiability_call;
     REQUIRE( purifiability_result["ok"].get<bool>() );
-    CHECK( old_npc.purifiable( vulnerable_chill ) ==
-           new_npc.purifiable( vulnerable_chill ) );
+    CHECK( old_npc.purifiable( trait_VULNERABLECHILL ) ==
+           new_npc.purifiable( trait_VULNERABLECHILL ) );
 
     const std::string category_diagnostic = capture_debugmsg_during( [&]() {
         legacy.legacy_alpha_only_effect(
@@ -945,13 +953,13 @@ TEST_CASE( "lua_platform_mutation_maintenance_matches_native_alpha_fallback_stat
     const std::vector<trait_id> new_after_type = new_npc.get_mutations();
     CHECK( std::set<trait_id>( old_after_type.begin(), old_after_type.end() ) ==
            std::set<trait_id>( new_after_type.begin(), new_after_type.end() ) );
-    CHECK( legacy.player.has_trait( resist_chill ) );
-    CHECK( legacy.player.has_trait( vulnerable_chill ) );
-    CHECK( platform.target( false ).has_trait( resist_chill ) );
-    CHECK( platform.target( false ).has_trait( vulnerable_chill ) );
-    CHECK( platform.target( false ).purifiable( vulnerable_chill ) ==
+    CHECK( legacy.player.has_trait( trait_RESISTCHILL ) );
+    CHECK( legacy.player.has_trait( trait_VULNERABLECHILL ) );
+    CHECK( platform.target( false ).has_trait( trait_RESISTCHILL ) );
+    CHECK( platform.target( false ).has_trait( trait_VULNERABLECHILL ) );
+    CHECK( platform.target( false ).purifiable( trait_VULNERABLECHILL ) ==
            avatar_purifiable_before );
-    CHECK( legacy.player.purifiable( vulnerable_chill ) == avatar_purifiable_before );
+    CHECK( legacy.player.purifiable( trait_VULNERABLECHILL ) == avatar_purifiable_before );
 }
 
 TEST_CASE( "lua_platform_mutations_repeated_activation_is_not_set_active",
@@ -1197,6 +1205,7 @@ TEST_CASE( "lua_platform_mutation_definitions_native_order", "[lua][mutations]" 
         CHECK( entry["id"].get<cata::lua_platform::script_game_id>().value() == native[index].id.str() );
     }
     std::vector<std::string> sorted_ids;
+    sorted_ids.reserve( native.size() );
     for( const mutation_branch &definition : native ) {
         sorted_ids.push_back( definition.id.str() );
     }

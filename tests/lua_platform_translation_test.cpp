@@ -21,6 +21,8 @@
 #include <string_view>
 #include <vector>
 
+static const itype_id itype_water( "water" );
+
 TEST_CASE( "lua_platform_translation_fallback_and_lifetime",
            "[lua][platform][runtime][translations]" )
 {
@@ -148,7 +150,7 @@ TEST_CASE( "lua_platform_choice_positions_reject_invalid_shapes_before_ui",
     lua["loaded"] = cata::lua_platform::script_tripoint_coord::from_native(
                         coords::origin::abs, coords::scale::map_square, get_avatar().pos_abs().raw() );
     cata::lua_platform::detail::callback_scope callback( *runtime );
-    const auto result = lua.safe_script( R"(
+    const sol::protected_function_result result = lua.safe_script( R"(
         local function rejected(entries, message)
             local ok, err = pcall(ccb.presentation.choose, "test", entries)
             assert(not ok and string.find(tostring(err), message, 1, true))
@@ -255,8 +257,9 @@ TEST_CASE( "lua_platform_dialogue_text_preserves_raw_bytes_context_and_native_rn
         "category":"<ccb_text_raw_4851>",
         "text":["<context_val:ctx>","<u_val:label>","<npc_val:label>"]
     })" ).get_object(), "lua_dialogue_text_test" );
-    const auto saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
-    const on_out_of_scope restore_rng( [saved_rng]() {
+    const cata_default_random_engine saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
+    const on_out_of_scope
+    restore_rng( [saved_rng]() { // NOLINT(cata-determinism): restore the saved engine, not a new seed.
         rng_get_engine() = saved_rng;
     } );
     avatar alpha;
@@ -289,15 +292,16 @@ TEST_CASE( "lua_platform_dialogue_text_preserves_raw_bytes_context_and_native_rn
     platform::install_runtime_api( runtime, lua, ccb );
     platform::set_active_runtimes( { runtime } );
     platform::runtime_world_ready( true );
-    const auto runtime_identity = platform::detail::runtime_handle_identity( runtime );
+    const platform::game_handle_runtime runtime_identity = platform::detail::runtime_handle_identity(
+                runtime );
     const std::size_t world_generation = platform::runtime_world_generation();
     platform::dialogue::begin_session( conversation, runtime_identity, world_generation );
     const on_out_of_scope retire_session( [&]() {
         platform::dialogue::end_session( conversation );
     } );
     const std::string topic = "TALK_CCB_TEXT_RAW";
-    const auto session = platform::dialogue::session_for(
-                             conversation, topic, runtime_identity, world_generation );
+    const platform::dialogue::dialogue_session_ptr session = platform::dialogue::session_for(
+                conversation, topic, runtime_identity, world_generation );
     platform::dialogue::context context(
         lua.lua_state(), conversation, topic, false,
         "dialogue text context is stale", {}, session, runtime_identity, world_generation );
@@ -313,8 +317,8 @@ TEST_CASE( "lua_platform_dialogue_text_preserves_raw_bytes_context_and_native_rn
                    actor, { is_npc ? "npc" : "avatar", actor.getID().get_value(), 0, 0, 0, {} },
                    runtime_identity, world_generation );
     };
-    const auto alpha_handle = handle_for( alpha, false );
-    const auto beta_handle = handle_for( beta, true );
+    const platform::game_handle alpha_handle = handle_for( alpha, false );
+    const platform::game_handle beta_handle = handle_for( beta, true );
     sol::table data = lua.create_table();
     data["ctx"] = "context label";
     data["number"] = 42.0;
@@ -384,7 +388,7 @@ TEST_CASE( "lua_platform_dialogue_text_preserves_raw_bytes_context_and_native_rn
                                 *conversation.const_actor( true ), conversation,
                                 item_id.empty() ? itype_id::NULL_ID() : itype_id( item_id ) );
                 } );
-                const auto native_rng_after = rng_get_engine(); // NOLINT(cata-determinism)
+                const cata_default_random_engine native_rng_after = rng_get_engine(); // NOLINT(cata-determinism)
                 rng_set_engine_seed( seed );
                 std::string actual;
                 const std::string platform_diagnostic = capture_debugmsg_during( [&]() {
@@ -418,8 +422,8 @@ TEST_CASE( "lua_platform_dialogue_text_preserves_raw_bytes_context_and_native_rn
     std::string item_text = "<topic_item>";
     rng_set_engine_seed( 4857 );
     parse_tags( item_text, *conversation.const_actor( false ),
-                *conversation.const_actor( true ), conversation, itype_id( "water" ) );
-    const auto item_rng_after = rng_get_engine(); // NOLINT(cata-determinism)
+                *conversation.const_actor( true ), conversation, itype_water );
+    const cata_default_random_engine item_rng_after = rng_get_engine(); // NOLINT(cata-determinism)
     rng_set_engine_seed( 4857 );
     const sol::protected_function_result item_expanded = expand( context, "<topic_item>", "water" );
     REQUIRE( item_expanded.valid() );
@@ -440,7 +444,7 @@ TEST_CASE( "lua_platform_dialogue_text_preserves_raw_bytes_context_and_native_rn
     cycle[1] = cycle;
     sol::table cyclic_context = lua.create_table();
     cyclic_context["cycle"] = cycle;
-    const auto before_cycle = rng_get_engine(); // NOLINT(cata-determinism)
+    const cata_default_random_engine before_cycle = rng_get_engine(); // NOLINT(cata-determinism)
     const sol::protected_function_result rejected_cycle = expand_for(
                 "<ccb_text_raw_4851>", alpha_handle, beta_handle, sol::nil, cyclic_context );
     CHECK_FALSE( rejected_cycle.valid() );
@@ -455,7 +459,7 @@ TEST_CASE( "lua_platform_dialogue_text_preserves_raw_bytes_context_and_native_rn
     for( const sol::table &invalid_context : {
              sparse_context, invalid_key_context
          } ) {
-        const auto before_invalid = rng_get_engine(); // NOLINT(cata-determinism)
+        const cata_default_random_engine before_invalid = rng_get_engine(); // NOLINT(cata-determinism)
         CHECK_FALSE( expand_for( "<ccb_text_raw_4851>", alpha_handle, beta_handle,
                                  sol::nil, invalid_context ).valid() );
         CHECK( rng_get_engine() == before_invalid );
@@ -490,7 +494,8 @@ TEST_CASE( "lua_platform_dialogue_text_preserves_raw_bytes_context_and_native_rn
             effect( conversation );
         }
         const std::string expected = conversation.get_value( "assigned" ).str();
-        const auto assignment_rng_after = rng_get_engine(); // NOLINT(cata-determinism)
+        const cata_default_random_engine assignment_rng_after =
+            rng_get_engine(); // NOLINT(cata-determinism)
         rng_set_engine_seed( seed );
         platform::detail::callback_scope callback( *runtime );
         const sol::protected_function_result assigned = assign( alpha_handle, beta_handle, data );
@@ -499,7 +504,7 @@ TEST_CASE( "lua_platform_dialogue_text_preserves_raw_bytes_context_and_native_rn
         CHECK( rng_get_engine() == assignment_rng_after );
     }
     context.invalidate();
-    const auto before_stale = rng_get_engine(); // NOLINT(cata-determinism)
+    const cata_default_random_engine before_stale = rng_get_engine(); // NOLINT(cata-determinism)
     CHECK_FALSE( expand( context, "<ccb_text_raw_4851>", "" ).valid() );
     CHECK( rng_get_engine() == before_stale );
 }
@@ -509,8 +514,9 @@ TEST_CASE( "lua_platform_text_missing_participants_match_native_avatar_fallback"
 {
     namespace platform = cata::lua_platform;
     platform::clear_active_runtimes();
-    const auto saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
-    const on_out_of_scope restore_rng( [saved_rng]() {
+    const cata_default_random_engine saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
+    const on_out_of_scope
+    restore_rng( [saved_rng]() { // NOLINT(cata-determinism): restore the saved engine, not a new seed.
         rng_get_engine() = saved_rng;
     } );
     avatar &player = get_avatar();
@@ -610,7 +616,7 @@ TEST_CASE( "lua_platform_text_missing_participants_match_native_avatar_fallback"
             const std::string expected = native.get_value( "output" ).str();
             CHECK( native.has_alpha == ( pair.alpha != nullptr ) );
             CHECK( native.has_beta == ( pair.beta != nullptr ) );
-            const auto native_rng_after = rng_get_engine(); // NOLINT(cata-determinism)
+            const cata_default_random_engine native_rng_after = rng_get_engine(); // NOLINT(cata-determinism)
             sol::table data = lua.create_table();
             data["number"] = 41.0;
             rng_set_engine_seed( seed );
@@ -624,7 +630,7 @@ TEST_CASE( "lua_platform_text_missing_participants_match_native_avatar_fallback"
         }
     }
     const sol::protected_function expand_for = ccb["services"]["text"]["expand_for"];
-    const auto before_stale = rng_get_engine(); // NOLINT(cata-determinism)
+    const cata_default_random_engine before_stale = rng_get_engine(); // NOLINT(cata-determinism)
     const sol::object stale_beta = handle_for( &local_beta );
     platform::retire_npc_handle_identity( local_beta );
     const sol::protected_function_result rejected = expand_for(
@@ -732,7 +738,9 @@ TEST_CASE( "lua_platform_interaction_menu_preserves_native_rows_and_text",
         int native_key = MENU_AUTOASSIGN;
         if( index < static_cast<int>( keys.size() ) ) {
             row["hotkey"] = keys[index];
-            native_key = static_cast<int>( keys[index].front() );
+            // Match the native menu's char promotion, including a byte with its high bit set.
+            native_key = static_cast<int>
+                         ( keys[index].front() ); // NOLINT(bugprone-signed-char-misuse,cert-str34-c)
         }
         entries[index + 1] = row;
         expected_ids.push_back( id );
@@ -795,7 +803,7 @@ TEST_CASE( "lua_platform_interaction_menu_rejects_invalid_shapes_before_query",
            "[lua][platform][interaction]" )
 {
     sol::state lua;
-    lua.open_libraries( sol::lib::base );
+    lua.open_libraries( sol::lib::base, sol::lib::string );
     const std::vector<std::string_view> invalid_entries = {
         "return {}", "return {{id = 'x'}}", "return {{id = 1, label = 'x'}}",
         "return {{id = 'x', label = 'x', hotkey = ''}}",

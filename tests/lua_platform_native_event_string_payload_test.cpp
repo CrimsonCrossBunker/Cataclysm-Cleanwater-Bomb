@@ -1,13 +1,17 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <math_parser_diag_value.h>
+#include <functional>
+#include <initializer_list>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
-#include "condition.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
+#include "condition.h"
 #include "debug.h"
 #include "dialogue.h"
 #include "event.h"
@@ -199,14 +203,16 @@ TEST_CASE( "lua_platform_expects_vars_matches_native_context_key_presence",
     data["void_value"] = lua.create_table();
     context["data"] = data;
     lua["context"] = context;
-    const sol::protected_function platform_expects_vars = lua.load( R"(
+    const sol::protected_function_result evaluator = lua.safe_script( R"(
         return function(keys)
             for _, key in ipairs(keys) do
                 if context.data[key] == nil then return false end
             end
             return true
         end
-    )" );
+    )", sol::script_pass_on_error );
+    REQUIRE( evaluator.valid() );
+    const sol::protected_function platform_expects_vars = evaluator.get<sol::protected_function>();
 
     const auto compare = [&]( const std::string & json, const std::vector<std::string> &keys ) {
         const conditional_t native_condition(

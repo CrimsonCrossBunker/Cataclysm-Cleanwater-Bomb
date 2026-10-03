@@ -80,13 +80,14 @@
 #include "widget.h"
 #include "worldfactory.h"
 
+static const efftype_id effect_currently_busy( "currently_busy" );
+static const json_character_flag json_flag_MUTATION_THRESHOLD( "MUTATION_THRESHOLD" );
+
 // IWYU pragma: no_forward_declare cardinal_direction // need its enum_traits
 class recipe;
 struct mapgen_arguments;
 
-static const efftype_id effect_currently_busy( "currently_busy" );
 
-static const json_character_flag json_flag_MUTATION_THRESHOLD( "MUTATION_THRESHOLD" );
 
 namespace
 {

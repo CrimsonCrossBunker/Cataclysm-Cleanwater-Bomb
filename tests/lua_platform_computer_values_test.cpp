@@ -1,5 +1,6 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <character.h>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -227,7 +228,7 @@ TEST_CASE( "lua_platform_computer_character_handles_preserve_native_subtype_and_
 
         std::optional<platform::game_handle_error> error;
         const platform::game_handle_runtime runtime = fixture.owner->handle_runtime();
-        const auto world_generation = platform::runtime_world_generation();
+        const std::size_t world_generation = platform::runtime_world_generation();
         if( actor.is_avatar() ) {
             CHECK( handle.subtype_name() == "avatar" );
             CHECK( platform::resolve_exact_avatar(

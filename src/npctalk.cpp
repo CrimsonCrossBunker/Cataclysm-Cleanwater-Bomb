@@ -158,37 +158,38 @@
 #include "weather.h"
 #include "weighted_list.h"
 
-class recipe_subset;
-
 static const activity_id ACT_AIM( "ACT_AIM" );
 static const activity_id ACT_SOCIALIZE( "ACT_SOCIALIZE" );
 static const activity_id ACT_TARGET_PRACTICE( "ACT_TARGET_PRACTICE" );
 static const activity_id ACT_TRAIN( "ACT_TRAIN" );
 static const activity_id ACT_WAIT_NPC( "ACT_WAIT_NPC" );
-
 static const efftype_id effect_asked_to_train( "asked_to_train" );
 static const efftype_id effect_narcosis( "narcosis" );
 static const efftype_id effect_riding( "riding" );
 static const efftype_id effect_sleep( "sleep" );
 static const efftype_id effect_under_operation( "under_operation" );
-
 static const flag_id json_flag_NO_UNLOAD( "NO_UNLOAD" );
-
-static const itype_id fuel_type_animal( "animal" );
+static const itype_id itype_animal( "animal" );
 static const itype_id itype_foodperson_mask( "foodperson_mask" );
 static const itype_id itype_foodperson_mask_on( "foodperson_mask_on" );
-
 static const skill_id skill_firstaid( "firstaid" );
-
 static const skill_id skill_speech( "speech" );
-
 static const trait_id trait_DEBUG_MIND_CONTROL( "DEBUG_MIND_CONTROL" );
 static const trait_id trait_HALLUCINATION( "HALLUCINATION" );
 static const trait_id trait_PROF_CHURL( "PROF_CHURL" );
 static const trait_id trait_PROF_FOODP( "PROF_FOODP" );
-
 static const zone_type_id zone_type_NPC_INVESTIGATE_ONLY( "NPC_INVESTIGATE_ONLY" );
 static const zone_type_id zone_type_NPC_NO_INVESTIGATE( "NPC_NO_INVESTIGATE" );
+
+class recipe_subset;
+
+
+
+
+
+
+
+
 
 static std::map<std::string, json_talk_topic> json_talk_topics;
 
@@ -1011,7 +1012,7 @@ static void tell_veh_stop_following()
     Character &player_character = get_player_character();
     for( wrapped_vehicle &veh : get_map().get_vehicles() ) {
         vehicle *v = veh.v;
-        if( v->has_engine_type( fuel_type_animal, false ) && v->is_owned_by( player_character ) ) {
+        if( v->has_engine_type( itype_animal, false ) && v->is_owned_by( player_character ) ) {
             v->is_following = false;
             v->engine_on = false;
         }
@@ -1025,7 +1026,7 @@ static void assign_veh_to_follow()
     Character &player_character = get_player_character();
     for( wrapped_vehicle &veh : here.get_vehicles() ) {
         vehicle *v = veh.v;
-        if( v->has_engine_type( fuel_type_animal, false ) && v->is_owned_by( player_character ) ) {
+        if( v->has_engine_type( itype_animal, false ) && v->is_owned_by( player_character ) ) {
             v->activate_animal_follow( here );
         }
     }
@@ -1123,7 +1124,7 @@ void game::chat( const std::optional<tripoint_bub_ms> &p )
     std::vector<vehicle *> magic_following_vehicles;
     for( wrapped_vehicle &veh : here.get_vehicles() ) {
         vehicle *&v = veh.v;
-        if( v->has_engine_type( fuel_type_animal, false ) &&
+        if( v->has_engine_type( itype_animal, false ) &&
             v->is_owned_by( player_character ) ) {
             animal_vehicles.push_back( v );
             if( v->is_following ) {

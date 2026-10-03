@@ -89,13 +89,6 @@
 #include "vehicle.h"
 #include "vpart_position.h"
 
-#if defined(TILES)
-    #include "cata_tiles.h"
-    #include "sdltiles.h"
-#endif
-
-struct mutation_branch;
-
 static const ammo_effect_str_id ammo_effect_APPLY_SAP( "APPLY_SAP" );
 static const ammo_effect_str_id ammo_effect_BEANBAG( "BEANBAG" );
 static const ammo_effect_str_id ammo_effect_BLINDS_EYES( "BLINDS_EYES" );
@@ -110,14 +103,11 @@ static const ammo_effect_str_id ammo_effect_NO_DAMAGE_SCALING( "NO_DAMAGE_SCALIN
 static const ammo_effect_str_id ammo_effect_PARALYZEPOISON( "PARALYZEPOISON" );
 static const ammo_effect_str_id ammo_effect_ROBOT_DAZZLE( "ROBOT_DAZZLE" );
 static const ammo_effect_str_id ammo_effect_TANGLE( "TANGLE" );
-
 static const anatomy_id anatomy_human_anatomy( "human_anatomy" );
-
 static const damage_type_id damage_acid( "acid" );
 static const damage_type_id damage_bash( "bash" );
 static const damage_type_id damage_electric( "electric" );
 static const damage_type_id damage_heat( "heat" );
-
 static const efftype_id effect_all_fours( "all_fours" );
 static const efftype_id effect_blind( "blind" );
 static const efftype_id effect_downed( "downed" );
@@ -147,9 +137,7 @@ static const efftype_id effect_telepathic_ignorance( "telepathic_ignorance" );
 static const efftype_id effect_telepathic_ignorance_self( "telepathic_ignorance_self" );
 static const efftype_id effect_tied( "tied" );
 static const efftype_id effect_zapped( "zapped" );
-
 static const field_type_str_id field_fd_last_known( "fd_last_known" );
-
 static const json_character_flag json_flag_BIONIC_LIMB( "BIONIC_LIMB" );
 static const json_character_flag json_flag_CANNOT_GAIN_EFFECTS( "CANNOT_GAIN_EFFECTS" );
 static const json_character_flag json_flag_CANNOT_MOVE( "CANNOT_MOVE" );
@@ -163,7 +151,6 @@ static const json_character_flag json_flag_LIMB_UPPER( "LIMB_UPPER" );
 static const json_character_flag json_flag_SUPPRESS_INVISIBILITY( "SUPPRESS_INVISIBILITY" );
 static const json_character_flag json_flag_TEEPSHIELD( "TEEPSHIELD" );
 static const json_character_flag json_flag_TRUE_SEEING( "TRUE_SEEING" );
-
 static const material_id material_cotton( "cotton" );
 static const material_id material_flesh( "flesh" );
 static const material_id material_iflesh( "iflesh" );
@@ -175,10 +162,24 @@ static const material_id material_stone( "stone" );
 static const material_id material_veggy( "veggy" );
 static const material_id material_wood( "wood" );
 static const material_id material_wool( "wool" );
-
 static const species_id species_ROBOT( "ROBOT" );
-
 static const trait_id trait_DEBUG_CLOAK( "DEBUG_CLOAK" );
+
+#if defined(TILES)
+    #include "cata_tiles.h"
+    #include "sdltiles.h"
+#endif
+
+struct mutation_branch;
+
+
+
+
+
+
+
+
+
 
 const std::map<std::string, creature_size> Creature::size_map = {
     {"TINY",   creature_size::tiny},

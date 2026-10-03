@@ -2,6 +2,8 @@
 
 #include <line.h>
 #include <map_scale_constants.h>
+#include <memory_fast.h>
+#include <monster_uid.h>
 #include <string_formatter.h>
 #include <tileray.h>
 #include <type_id.h>
@@ -9,6 +11,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <initializer_list>
 #include <limits>
 #include <list>
 #include <map>
@@ -99,24 +102,17 @@ static const efftype_id effect_lying_down( "lying_down" );
 static const efftype_id effect_npc_suspend( "npc_suspend" );
 static const efftype_id effect_pet( "pet" );
 static const efftype_id effect_sleep( "sleep" );
-
 static const faction_id faction_no_faction( "no_faction" );
 static const faction_id faction_your_followers( "your_followers" );
-
 static const furn_str_id furn_f_counter( "f_counter" );
-
 static const json_character_flag json_flag_BIONIC_LIMB( "BIONIC_LIMB" );
 static const json_character_flag json_flag_PARTIAL_BIONIC_LIMB( "PARTIAL_BIONIC_LIMB" );
-
 static const mission_type_id mission_MISSION_REACH_SAFETY( "MISSION_REACH_SAFETY" );
-
 static const morale_type morale_haircut( "morale_haircut" );
 static const morale_type morale_shave( "morale_shave" );
-
 static const mtype_id mon_chicken( "mon_chicken" );
 static const mtype_id mon_cow( "mon_cow" );
 static const mtype_id mon_horse( "mon_horse" );
-
 static const zone_type_id zone_type_CAMP_FOOD( "CAMP_FOOD" );
 static const zone_type_id zone_type_CAMP_STORAGE( "CAMP_STORAGE" );
 static const zone_type_id zone_type_VEHICLE_SERVICE_OUTPUT( "VEHICLE_SERVICE_OUTPUT" );

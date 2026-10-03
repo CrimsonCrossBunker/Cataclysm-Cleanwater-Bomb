@@ -6,6 +6,7 @@
 #include <enums.h>
 #include <item_location.h>
 #include <point.h>
+#include <safe_reference.h>
 #include <type_id.h>
 #include <algorithm>
 #include <atomic>

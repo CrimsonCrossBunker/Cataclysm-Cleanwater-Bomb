@@ -1,6 +1,10 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
-#include <cstdint>
+#include <creature.h>
+#include <flexbuffer_json.h>
+#include <translation.h>
+#include <cstddef>
+#include <functional>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -20,17 +24,23 @@
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_runtime.h"
-#include "lua_platform_runtime_internal.h"
 #include "lua_platform_sol.h"
 #include "magic.h"
 #include "mutation.h"
-#include "npctalk.h"
 #include "recipe.h"
-#include "recipe_dictionary.h"
 #include "rng.h"
 #include "talker.h"
 #include "type_id.h"
 #include "units.h"
+
+static const bionic_id bio_batteries( "bio_batteries" );
+static const itype_id itype_brewing_cookbook( "brewing_cookbook" );
+static const recipe_id recipe_brew_mead( "brew_mead" );
+static const skill_id skill_cooking( "cooking" );
+static const spell_id spell_test_spell_pew( "test_spell_pew" );
+static const trait_id trait_FELINE_EARS( "FELINE_EARS" );
+static const trait_id trait_QUICK( "QUICK" );
+static const trait_id trait_SNAIL_TRAIL( "SNAIL_TRAIL" );
 
 namespace cata::lua_platform
 {
@@ -70,10 +80,10 @@ void run_native_roll_remainder( Character &character, const std::string &kind,
 
 void prepare_book_recipe_availability( Character &character )
 {
-    const item_location book = character.i_add( item( itype_id( "brewing_cookbook" ) ) );
+    const item_location book = character.i_add( item( itype_brewing_cookbook ) );
     character.identify( *book );
-    character.set_skill_level( skill_id( "cooking" ), 3 );
-    character.set_knowledge_level( skill_id( "cooking" ), 3 );
+    character.set_skill_level( skill_cooking, 3 );
+    character.set_knowledge_level( skill_cooking, 3 );
     character.invalidate_crafting_inventory();
 }
 
@@ -85,7 +95,7 @@ TEST_CASE( "lua_platform_progression_grant_random_missing_matches_native_roll_re
     using namespace cata::lua_platform;
     clear_active_runtimes();
     const cata_default_random_engine saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
-    const on_out_of_scope restore_rng( [saved_rng]() {
+    const on_out_of_scope restore_rng( [&saved_rng]() {
         rng_get_engine() = saved_rng;
     } );
 
@@ -95,23 +105,22 @@ TEST_CASE( "lua_platform_progression_grant_random_missing_matches_native_roll_re
     platform_actor.normalize();
     native_actor.setID( character_id( 6401 ), true );
     platform_actor.setID( character_id( 6402 ), true );
-    native_actor.set_mutation( trait_id( "QUICK" ) );
-    platform_actor.set_mutation( trait_id( "QUICK" ) );
+    native_actor.set_mutation( trait_QUICK );
+    platform_actor.set_mutation( trait_QUICK );
     native_actor.set_max_power_level( 10_kJ );
     platform_actor.set_max_power_level( 10_kJ );
     prepare_book_recipe_availability( native_actor );
     prepare_book_recipe_availability( platform_actor );
 
-    const recipe_id book_available_recipe( "brew_mead" );
-    REQUIRE( book_available_recipe.is_valid() );
+    REQUIRE( recipe_brew_mead.is_valid() );
     // Character::has_recipe includes book availability, but the talker method
     // used by f_roll_remainder reports only recipes already learned.
-    REQUIRE_FALSE( native_actor.knows_recipe( &book_available_recipe.obj() ) );
-    REQUIRE( native_actor.has_recipe( &book_available_recipe.obj() ) );
-    REQUIRE_FALSE( get_talker_for( native_actor )->has_recipe( book_available_recipe ) );
-    REQUIRE_FALSE( platform_actor.knows_recipe( &book_available_recipe.obj() ) );
-    REQUIRE( platform_actor.has_recipe( &book_available_recipe.obj() ) );
-    REQUIRE_FALSE( get_talker_for( platform_actor )->has_recipe( book_available_recipe ) );
+    REQUIRE_FALSE( native_actor.knows_recipe( &recipe_brew_mead.obj() ) );
+    REQUIRE( native_actor.has_recipe( &recipe_brew_mead.obj() ) );
+    REQUIRE_FALSE( get_talker_for( native_actor )->has_recipe( recipe_brew_mead ) );
+    REQUIRE_FALSE( platform_actor.knows_recipe( &recipe_brew_mead.obj() ) );
+    REQUIRE( platform_actor.has_recipe( &recipe_brew_mead.obj() ) );
+    REQUIRE_FALSE( get_talker_for( platform_actor )->has_recipe( recipe_brew_mead ) );
 
     std::vector<std::string> weighted_mutation_ids = { "QUICK" };
     weighted_mutation_ids.insert( weighted_mutation_ids.end(), 31, "FELINE_EARS" );
@@ -121,8 +130,8 @@ TEST_CASE( "lua_platform_progression_grant_random_missing_matches_native_roll_re
     constexpr unsigned int seed = 84621;
     rng_set_engine_seed( seed );
     run_native_roll_remainder( native_actor, "mutation", weighted_mutation_ids );
-    const bool native_has_feline_ears = native_actor.has_trait( trait_id( "FELINE_EARS" ) );
-    const bool native_has_snail_trail = native_actor.has_trait( trait_id( "SNAIL_TRAIL" ) );
+    const bool native_has_feline_ears = native_actor.has_trait( trait_FELINE_EARS );
+    const bool native_has_snail_trail = native_actor.has_trait( trait_SNAIL_TRAIL );
     REQUIRE( native_has_feline_ears != native_has_snail_trail );
     const std::string native_mutation_id = native_has_feline_ears ? "FELINE_EARS" : "SNAIL_TRAIL";
     const int native_mutation_following_draw = rng( -100, 100 );
@@ -133,18 +142,18 @@ TEST_CASE( "lua_platform_progression_grant_random_missing_matches_native_roll_re
 
     rng_set_engine_seed( seed );
     run_native_roll_remainder( native_actor, "spell", { "test_spell_pew" } );
-    REQUIRE( get_talker_for( native_actor )->get_spell_level( spell_id( "test_spell_pew" ) ) == 1 );
+    REQUIRE( get_talker_for( native_actor )->get_spell_level( spell_test_spell_pew ) == 1 );
     const int native_spell_following_draw = rng( -100, 100 );
 
     rng_set_engine_seed( seed );
     run_native_roll_remainder( native_actor, "bionic", { "bio_batteries" } );
-    REQUIRE( native_actor.has_bionic( bionic_id( "bio_batteries" ) ) );
+    REQUIRE( native_actor.has_bionic( bio_batteries ) );
     const int native_bionic_following_draw = rng( -100, 100 );
 
     rng_set_engine_seed( seed );
     run_native_roll_remainder( native_actor, "recipe", { "brew_mead" } );
-    REQUIRE( native_actor.knows_recipe( &book_available_recipe.obj() ) );
-    REQUIRE( get_talker_for( native_actor )->has_recipe( book_available_recipe ) );
+    REQUIRE( native_actor.knows_recipe( &recipe_brew_mead.obj() ) );
+    REQUIRE( get_talker_for( native_actor )->has_recipe( recipe_brew_mead ) );
     const int native_book_recipe_following_draw = rng( -100, 100 );
 
     sol::state lua;
@@ -251,26 +260,26 @@ ccb.runtime.on("world_ready", "check_progression")
     CHECK( spell_result["value"]["granted"].get<bool>() );
     CHECK( spell_result["value"]["id"].get<script_game_id>().value() == "test_spell_pew" );
     CHECK( spell_result["value"]["name"].get<std::string>() ==
-           spell_id( "test_spell_pew" )->name.translated() );
-    CHECK( get_talker_for( platform_actor )->get_spell_level( spell_id( "test_spell_pew" ) ) == 1 );
+           spell_test_spell_pew->name.translated() );
+    CHECK( get_talker_for( platform_actor )->get_spell_level( spell_test_spell_pew ) == 1 );
     CHECK( lua["spell_following_draw"].get<int>() == native_spell_following_draw );
 
     const sol::table bionic_result = value_for( "bionic_result" );
     CHECK( bionic_result["value"]["granted"].get<bool>() );
     CHECK( bionic_result["value"]["id"].get<script_game_id>().value() == "bio_batteries" );
     CHECK( bionic_result["value"]["name"].get<std::string>() ==
-           bionic_id( "bio_batteries" )->name.translated() );
-    CHECK( platform_actor.has_bionic( bionic_id( "bio_batteries" ) ) );
+           bio_batteries->name.translated() );
+    CHECK( platform_actor.has_bionic( bio_batteries ) );
     CHECK( lua["bionic_following_draw"].get<int>() == native_bionic_following_draw );
 
     const sol::table book_recipe_result = value_for( "book_recipe_result" );
     CHECK( book_recipe_result["value"]["granted"].get<bool>() );
     CHECK( book_recipe_result["value"]["id"].get<script_game_id>().value() == "brew_mead" );
     CHECK( book_recipe_result["value"]["name"].get<std::string>() ==
-           book_available_recipe->result_name() );
+           recipe_brew_mead->result_name() );
     CHECK( lua["book_recipe_following_draw"].get<int>() == native_book_recipe_following_draw );
-    CHECK( platform_actor.knows_recipe( &book_available_recipe.obj() ) );
-    CHECK( platform_actor.has_recipe( &book_available_recipe.obj() ) );
-    CHECK( get_talker_for( platform_actor )->has_recipe( book_available_recipe ) );
+    CHECK( platform_actor.knows_recipe( &recipe_brew_mead.obj() ) );
+    CHECK( platform_actor.has_recipe( &recipe_brew_mead.obj() ) );
+    CHECK( get_talker_for( platform_actor )->has_recipe( recipe_brew_mead ) );
 }
 #endif
