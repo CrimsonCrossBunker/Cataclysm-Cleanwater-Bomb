@@ -153,6 +153,7 @@ TEST_CASE( "lua_platform_item_use_context_keeps_the_native_npc_and_item_beta",
 {
     using namespace cata::lua_platform;
     REQUIRE( g != nullptr );
+    debug_reset_error_observed();
     clear_map();
 
     npc user;
