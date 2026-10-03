@@ -54,21 +54,8 @@ struct authored_text {
     }
 };
 
-inline authored_text read_singular_text( const sol::object &value, const std::string &fallback,
-        const std::string &field )
-{
-    if( !value.valid() || value.get_type() == sol::type::nil ) {
-        return { fallback, std::nullopt };
-    }
-    if( value.is<localized_text>() ) {
-        const localized_text &text = value.as<const localized_text &>();
-        if( text.plural ) {
-            throw std::runtime_error( field + " does not accept plural text" );
-        }
-        return { text.singular, text };
-    }
-    return { value.as<std::string>(), std::nullopt };
-}
+authored_text read_singular_text( const sol::object &value, const std::string &fallback,
+                                  const std::string &field );
 
 inline authored_text read_singular_text_or( const sol::object &value,
         const authored_text &fallback, const std::string &field )

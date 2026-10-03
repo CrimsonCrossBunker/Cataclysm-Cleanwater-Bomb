@@ -32,17 +32,6 @@ inline bool is_core_data_source( std::string_view id )
 }
 
 // Canonicalize before deduplicating so worlds containing both IDs load core once.
-inline void canonicalize_mod_list( std::vector<mod_id> &mods )
-{
-    std::vector<mod_id> canonical;
-    canonical.reserve( mods.size() );
-    for( const mod_id &id : mods ) {
-        const mod_id resolved = canonical_mod_id( id );
-        if( std::find( canonical.begin(), canonical.end(), resolved ) == canonical.end() ) {
-            canonical.push_back( resolved );
-        }
-    }
-    mods = std::move( canonical );
-}
+void canonicalize_mod_list( std::vector<mod_id> &mods );
 
 #endif // CATA_SRC_MOD_ID_COMPAT_H
