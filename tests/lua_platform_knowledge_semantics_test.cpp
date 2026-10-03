@@ -1,5 +1,14 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <coordinates.h>
+#include <math_parser_diag_value.h>
+#include <pimpl.h>
+#include <point.h>
+#include <talker.h>
+#include <cstddef>
+#include <optional>
+#include <random>
+#include <unordered_map>
 #include <functional>
 #include <initializer_list>
 #include <memory>
@@ -9,6 +18,7 @@
 #include <vector>
 
 #include "activity_type.h"
+#include "activity_actor_definitions.h"
 #include "avatar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
@@ -33,6 +43,7 @@
 #include "lua_platform_sol.h"
 #include "magic.h"
 #include "martialarts.h"
+#include "messages.h"
 #include "mtype.h"
 #include "npc.h"
 #include "options.h"
@@ -42,19 +53,31 @@
 #include "translation.h"
 #include "type_id.h"
 
+static const itype_id itype_longsword( "longsword" );
+static const itype_id itype_test_hazmat_shirt( "test_hazmat_shirt" );
+
+static const matec_id tech_base_headbutt( "tech_base_headbutt" );
+
+static const matype_id style_judo( "style_judo" );
+static const matype_id style_karate( "style_karate" );
+
+static const mtype_id mon_null( "mon_null" );
+static const mtype_id mon_zombie( "mon_zombie" );
+
+static const proficiency_id proficiency_prof_carving( "prof_carving" );
+
+static const skill_id skill_fabrication( "fabrication" );
+static const skill_id skill_social( "social" );
+static const skill_id skill_unarmed( "unarmed" );
+
+static const spell_id spell_test_spell_lava( "test_spell_lava" );
+static const spell_id spell_test_spell_pew( "test_spell_pew" );
+
 namespace cata::lua_platform
 {
 class runtime;
 }  // namespace cata::lua_platform
 
-static const itype_id itype_longsword( "longsword" );
-static const itype_id itype_test_hazmat_shirt( "test_hazmat_shirt" );
-static const matype_id matype_style_judo( "style_judo" );
-static const matype_id matype_style_karate( "style_karate" );
-static const proficiency_id proficiency_prof_carving( "prof_carving" );
-static const skill_id skill_fabrication( "fabrication" );
-static const spell_id spell_test_spell_lava( "test_spell_lava" );
-static const spell_id spell_test_spell_pew( "test_spell_pew" );
 
 TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
            "[lua][platform][skills][training][semantic]" )
@@ -66,8 +89,8 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
     partner.normalize();
     player.setID( character_id( 4301 ), true );
     partner.setID( character_id( 4302 ), true );
-    partner.assign_activity( activity_id( "ACT_WAIT" ), 100 );
-    partner.omt_path.emplace_back( tripoint_abs_omt{ 4, 5, 0 } );
+    partner.assign_activity( wait_activity_actor( 100_turns ) );
+    partner.omt_path.emplace_back( 4, 5, 0 );
     cata::lua_platform::register_npc_handle_identity( partner );
     const on_out_of_scope retire( [&]() {
         cata::lua_platform::retire_npc_handle_identity( partner );
@@ -105,8 +128,7 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
                                              services["characters"]["snapshot"], beta_handle ).as<sol::table>();
         // The Exodii device handoff uses the display name 'social' as a skill
         // ID (the registered ID is 'speech').  Both paths must evaluate that
-        // exact native expression; skills.get would reject the invalid ID.
-        const skill_id social( "social" );
+        // native ID fallback through skills.level; skills.get rejects the invalid ID.
         const conditional_t below_three( json_loader::from_string(
                                              R"({"math":["u_skill('social') < 3"]})" ).get_object() );
         const conditional_t above_two( json_loader::from_string(
@@ -115,13 +137,12 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
         for( const int level : {
                  0, 2, 3, 5, 9
              } ) {
-            player.set_skill_level( social, level );
-            const double below_value = value_of(
-                                           services["gameplay"]["math"]["evaluate"],
-                                           std::string( "u_skill('social') < 3" ), avatar_handle ).as<double>();
-            const double above_value = value_of(
-                                           services["gameplay"]["math"]["evaluate"],
-                                           std::string( "u_skill('social') > 2" ), avatar_handle ).as<double>();
+            player.set_skill_level( skill_social, level );
+            const double native_level = value_of(
+                                            services["skills"]["level"], avatar_handle,
+                                            skill_social.str() ).as<double>();
+            const bool below_value = native_level < 3;
+            const bool above_value = native_level > 2;
             CAPTURE( level, below_value, above_value );
             CHECK( below_three( conversation ) == ( below_value != 0 ) );
             CHECK( above_two( conversation ) == ( above_value != 0 ) );
@@ -130,17 +151,14 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
                                                services["activities"]["snapshot"], avatar_handle ).as<sol::table>();
         const sol::table beta_activity = value_of(
                                              services["activities"]["snapshot"], beta_handle ).as<sol::table>();
-        const conditional_t avatar_has_activity_condition( json_loader::from_string(
-                    R"({"u_has_activity":"ignored"})" ).get_object() );
-        const conditional_t beta_has_activity_condition( json_loader::from_string(
-                    R"({"npc_has_activity":"ignored"})" ).get_object() );
+        const conditional_t avatar_has_activity_condition( "u_has_activity" );
+        const conditional_t beta_has_activity_condition( "npc_has_activity" );
         const conditional_t beta_has_activity_simple_condition( "npc_has_activity" );
         const conditional_t avatar_is_travelling_condition( "u_is_travelling" );
         const conditional_t beta_is_travelling_condition( "npc_is_travelling" );
         // The native NPC predicate uses the talker's current player_activity,
         // not npc::has_activity()'s mission/attitude status. Both the simple
-        // string and member-object parser read dialogue beta; the object
-        // member string does not select an activity id.
+        // string selectors read each dialogue participant.
         const bool avatar_has_activity = avatar_activity["active"].get<bool>();
         const bool beta_has_activity = beta_activity["active"].get<bool>();
         const bool avatar_is_travelling =
@@ -202,7 +220,14 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
             for( const Skill &definition : Skill::skills ) {
                 teacher.set_skill_level( definition.ident(), 0 );
                 student.set_skill_level( definition.ident(), 0 );
+                teacher.set_knowledge_level( definition.ident(), 0 );
+                student.set_knowledge_level( definition.ident(), 0 );
             }
+            // The invalid native ID above is stored outside Skill::skills.
+            teacher.set_skill_level( skill_social, 0 );
+            student.set_skill_level( skill_social, 0 );
+            teacher.set_knowledge_level( skill_social, 0 );
+            student.set_knowledge_level( skill_social, 0 );
             const skill_id &fabrication = skill_fabrication;
             for( const int teacher_level : {
                      0, 3
@@ -230,8 +255,8 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
             }
             player.martial_arts_data->clear_styles();
             partner.martial_arts_data->clear_styles();
-            const matype_id &training_style = is_npc ? matype_style_judo :
-                                              matype_style_karate;
+            const matype_id &training_style = is_npc ? style_judo :
+                                              style_karate;
             teacher.martial_arts_data->add_martialart( training_style );
             const spell_id &training_spell = is_npc ? spell_test_spell_lava :
                                              spell_test_spell_pew;
@@ -421,7 +446,7 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
                 if( wielded ) {
                     item weapon( itype_longsword );
                     weapon.set_flag( flag_WATERPROOF );
-                    teacher.set_wielded_item( std::move( weapon ) );
+                    teacher.set_wielded_item( weapon );
                 }
                 const bool old_flag = legacy( "has_wielded_with_flag", "WATERPROOF" );
                 const bool new_flag = value_of(
@@ -450,6 +475,11 @@ TEST_CASE( "lua_platform_knowledge_semantics_match_both_dialogue_participants",
     registered = ccb["runtime"]["on"]( "world_ready", "accept" );
     REQUIRE( registered.valid() );
     cata::lua_platform::runtime_world_ready( true );
+    if( !completed ) {
+        for( const auto &message : Messages::recent_messages_with_formatting( 10 ) ) {
+            UNSCOPED_INFO( message.second );
+        }
+    }
     REQUIRE( completed );
 }
 
@@ -652,7 +682,7 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
             CHECK( native_match == platform_match );
         };
 
-        const auto raw_options = get_options().get_raw_options();
+        const options_manager::options_container raw_options = get_options().get_raw_options();
         const std::vector<std::string> required_option_types = {
             "string_select", "string_input", "bool", "int", "float"
         };
@@ -660,7 +690,9 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
         for( const std::string &type : required_option_types ) {
             std::string option_id;
             for( const auto &entry : raw_options ) {
+                // Choose a stable option ID; this is independent of display collation.
                 if( entry.second.getType() == type &&
+                    // NOLINTNEXTLINE(cata-use-localized-sorting)
                     ( option_id.empty() || entry.first < option_id ) ) {
                     option_id = entry.first;
                 }
@@ -716,8 +748,8 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
             "mon_zombie", "mon_null", std::string(), "mon_lua_unregistered_faction_test",
             nul_monster_id, "无此怪物", std::string( 10000, 'x' )
         };
-        REQUIRE( mtype_id( "mon_zombie" ).is_valid() );
-        REQUIRE( mtype_id( "mon_null" ).is_valid() );
+        REQUIRE( mon_zombie.is_valid() );
+        REQUIRE( mon_null.is_valid() );
         for( const std::string &id_text : monster_ids ) {
             std::string native_faction;
             const std::string native_diagnostic = capture_debugmsg_during( [&]() {
@@ -768,10 +800,10 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
             "tec_none", "tech_base_headbutt", std::string(), "tec_lua_unregistered_text_test",
             nul_technique_id, "无此招式", std::string( 10000, 'x' )
         };
-        REQUIRE( matec_id( "tec_none" ).is_valid() );
-        REQUIRE( matec_id( "tech_base_headbutt" ).is_valid() );
-        CHECK( matec_id( "tec_none" )->description.translated().empty() );
-        CHECK_FALSE( matec_id( "tech_base_headbutt" )->description.translated().empty() );
+        REQUIRE( tec_none.is_valid() );
+        REQUIRE( tech_base_headbutt.is_valid() );
+        CHECK( tec_none->description.translated().empty() );
+        CHECK_FALSE( tech_base_headbutt->description.translated().empty() );
         for( const bool use_name : {
                  true, false
              } ) {
@@ -809,11 +841,13 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
             }
         }
 
-        const auto runtime_identity = cata::lua_platform::detail::runtime_handle_identity( runtime );
+        const cata::lua_platform::game_handle_runtime runtime_identity =
+            cata::lua_platform::detail::runtime_handle_identity( runtime );
         const std::size_t world_generation = cata::lua_platform::runtime_world_generation();
         cata::lua_platform::dialogue::begin_session( conversation, runtime_identity, world_generation );
-        const auto topic_session = cata::lua_platform::dialogue::session_for(
-                                       conversation, "TALK_PROFICIENCY_TOPIC", runtime_identity, world_generation );
+        const cata::lua_platform::dialogue::dialogue_session_ptr topic_session =
+            cata::lua_platform::dialogue::session_for(
+                conversation, "TALK_PROFICIENCY_TOPIC", runtime_identity, world_generation );
         cata::lua_platform::dialogue::context topic_context(
             lua.lua_state(), conversation, "TALK_PROFICIENCY_TOPIC", false,
             "proficiency topic context is stale", {}, topic_session, runtime_identity, world_generation );
@@ -824,7 +858,7 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
         const sol::protected_function read_topic_item = loaded.get<sol::protected_function>();
         const auto make_topic_condition = [&]( const std::string & selector ) {
             return conditional_t( json_loader::from_string(
-                                      "{\"" + selector + "_has_proficiency\":{\"mutator\":\"topic_item\"}}" ).get_object() );
+                                      "{\"" + selector + R"(_has_proficiency":{"mutator":"topic_item"}})" ).get_object() );
         };
         // The topic-item text need not be a registered item. The direct
         // callback reads live changes; activated EOCs observe a fresh copy.
@@ -925,16 +959,17 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
         }
 
         {
-            const auto saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
-            const on_out_of_scope restore_rng( [saved_rng]() {
+            const cata_default_random_engine saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
+            const on_out_of_scope restore_rng( [&saved_rng]() {
                 rng_get_engine() = saved_rng;
             } );
             cata::lua_platform::dialogue::begin_session( conversation, runtime_identity, world_generation );
             const on_out_of_scope retire_selection( [&]() {
                 cata::lua_platform::dialogue::end_session( conversation );
             } );
-            const auto selection_session = cata::lua_platform::dialogue::session_for(
-                                               conversation, "TALK_PROFICIENCY_SELECTION", runtime_identity, world_generation );
+            const cata::lua_platform::dialogue::dialogue_session_ptr selection_session =
+                cata::lua_platform::dialogue::session_for(
+                    conversation, "TALK_PROFICIENCY_SELECTION", runtime_identity, world_generation );
             cata::lua_platform::dialogue::context selection_context(
                 lua.lua_state(), conversation, "TALK_PROFICIENCY_SELECTION", false,
                 "proficiency selection context is stale", {}, selection_session,
@@ -945,9 +980,9 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
                         "return ctx:sample_technique(c, d, b, blacklist) end", sol::script_pass_on_error );
             REQUIRE( sampler_loaded.valid() );
             const sol::protected_function sample_technique = sampler_loaded.get<sol::protected_function>();
-            player.set_skill_level( skill_id( "unarmed" ), 10 );
-            player.martial_arts_data->add_martialart( matype_style_karate );
-            player.martial_arts_data->set_style( matype_style_karate );
+            player.set_skill_level( skill_unarmed, 10 );
+            player.martial_arts_data->add_martialart( style_karate );
+            player.martial_arts_data->set_style( style_karate );
             const std::string nul_blacklist_id( "tec_karate_rapid\0missing",
                                                 sizeof( "tec_karate_rapid\0missing" ) - 1 );
             const std::vector<std::vector<std::string>> blacklists = {
@@ -981,7 +1016,7 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
                         rng_set_engine_seed( seed );
                         const std::string native_id = conversation.const_actor( false )->get_random_technique(
                                                           partner, critical, dodge_counter, block_counter, native_blacklist ).str();
-                        const auto native_rng_after = rng_get_engine(); // NOLINT(cata-determinism)
+                        const cata_default_random_engine native_rng_after = rng_get_engine(); // NOLINT(cata-determinism)
                         rng_set_engine_seed( seed );
                         const sol::table selected = value_of( services["characters"]["choose_technique"],
                                                               alpha_handle, beta_handle, options ).as<sol::table>();
@@ -1030,19 +1065,20 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
             // Native has_array does not evaluate non-array blacklist values.
             // They have the same result and RNG state as no blacklist.
             for( const std::string &ignored : std::vector<std::string> {
-            "null", "false", "42", "\"ignored\"", "{\"npc_val\":\"not_read\"}"
+            "null", "false", "42", "\"ignored\"", R"({"npc_val":"not_read"})"
         } ) {
                 rng_set_engine_seed( 4911 );
                 const sol::table selected = value_of( services["characters"]["choose_technique"],
                                                       alpha_handle, beta_handle ).as<sol::table>();
                 const std::string platform_id =
                     selected["technique"].get<cata::lua_platform::script_game_id>().value();
-                const auto platform_rng_after = rng_get_engine(); // NOLINT(cata-determinism)
+                const cata_default_random_engine platform_rng_after = rng_get_engine(); // NOLINT(cata-determinism)
                 for( const std::string &selector : selectors ) {
                     CAPTURE( ignored, selector );
                     const conditional_t condition( json_loader::from_string(
-                                                       "{\"" + selector + "_has_proficiency\":{\"mutator\":\"valid_technique\",\"blacklist\":" +
-                                                       ignored + "}}" ).get_object() );
+                                                       std::string( "{\"" ).append( selector ).append(
+                                                           R"(_has_proficiency":{"mutator":"valid_technique","blacklist":)" ).append(
+                                                           ignored ).append( "}}" ) ).get_object() );
                     rng_set_engine_seed( 4911 );
                     compare_id( selector, condition, platform_id );
                     CHECK( rng_get_engine() == platform_rng_after );
@@ -1050,7 +1086,7 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
             }
             cata::lua_platform::dialogue::end_session( conversation );
             CHECK_FALSE( selection_context.valid() );
-            const auto rng_before_stale = rng_get_engine(); // NOLINT(cata-determinism)
+            const cata_default_random_engine rng_before_stale = rng_get_engine(); // NOLINT(cata-determinism)
             const sol::protected_function_result stale_sample = sample_technique(
                         selection_context, false, false, false, sol::nil );
             CHECK_FALSE( stale_sample.valid() );
@@ -1063,13 +1099,14 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
             const on_out_of_scope retire_topic_speaker( [&]() {
                 cata::lua_platform::dialogue::end_session( topic_speaker );
             } );
-            const auto fallback_session = cata::lua_platform::dialogue::session_for(
-                                              topic_speaker, "TALK_PROFICIENCY_FALLBACK", runtime_identity, world_generation );
+            const cata::lua_platform::dialogue::dialogue_session_ptr fallback_session =
+                cata::lua_platform::dialogue::session_for(
+                    topic_speaker, "TALK_PROFICIENCY_FALLBACK", runtime_identity, world_generation );
             cata::lua_platform::dialogue::context fallback_context(
                 lua.lua_state(), topic_speaker, "TALK_PROFICIENCY_FALLBACK", false,
                 "proficiency fallback context is stale", {}, fallback_session,
                 runtime_identity, world_generation );
-            const auto rng_before_fallback = rng_get_engine(); // NOLINT(cata-determinism)
+            const cata_default_random_engine rng_before_fallback = rng_get_engine(); // NOLINT(cata-determinism)
             const std::string native_fallback = topic_speaker.const_actor( false )->get_random_technique(
                                                     partner, false, false, false ).str();
             REQUIRE( native_fallback.empty() );
@@ -1086,8 +1123,9 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
             const on_out_of_scope retire_topic_target( [&]() {
                 cata::lua_platform::dialogue::end_session( topic_target );
             } );
-            const auto invalid_session = cata::lua_platform::dialogue::session_for(
-                                             topic_target, "TALK_PROFICIENCY_INVALID_TARGET", runtime_identity, world_generation );
+            const cata::lua_platform::dialogue::dialogue_session_ptr invalid_session =
+                cata::lua_platform::dialogue::session_for(
+                    topic_target, "TALK_PROFICIENCY_INVALID_TARGET", runtime_identity, world_generation );
             cata::lua_platform::dialogue::context invalid_context(
                 lua.lua_state(), topic_target, "TALK_PROFICIENCY_INVALID_TARGET", false,
                 "proficiency invalid target context is stale", {}, invalid_session,
@@ -1260,9 +1298,10 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
                 conversation.set_value( key, diag_value( "u_" + source_key ) );
             }
             for( const std::string &default_fragment : default_fragments ) {
-                std::string descriptor = "{\"" + scope + "\":\"" + key + "\"";
+                std::string descriptor = std::string( "{\"" ).append( scope ).append(
+                                             "\":\"" ).append( key ).append( "\"" );
                 for( std::size_t lower = index + 1; lower < provider_scopes.size(); ++lower ) {
-                    descriptor += ",\"" + provider_scopes[lower] + "\":false";
+                    descriptor.append( ",\"" ).append( provider_scopes[lower] ).append( "\":false" );
                 }
                 descriptor += ",\"default\":" + default_fragment +
                               ",\"mutator\":\"valid_technique\",\"blacklist\":[42],"
@@ -1275,7 +1314,8 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
                 CHECK( parse_diagnostic.empty() );
                 for( const std::string &selector : selectors ) {
                     const conditional_t condition( json_loader::from_string(
-                                                       "{\"" + selector + "_has_proficiency\":" + descriptor + "}" ).get_object() );
+                                                       std::string( "{\"" ).append( selector ).append(
+                                                           "_has_proficiency\":" ).append( descriptor ).append( "}" ) ).get_object() );
                     for( int state = 0; state < 3; ++state ) {
                         if( state == 0 ) {
                             remove_scope_value( source_scope, source_key );
@@ -1288,7 +1328,7 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
                         const std::string expected = stored["exists"].get<bool>() ?
                                                      stored["value"].get<std::string>() :
                                                      ( default_fragment == "\"prof_carving\"" ? carving.str() : std::string() );
-                        const auto rng_before = rng_get_engine(); // NOLINT(cata-determinism)
+                        const cata_default_random_engine rng_before = rng_get_engine(); // NOLINT(cata-determinism)
                         CAPTURE( scope, default_fragment, selector, state );
                         CHECK( provider.evaluate( conversation ) == expected );
                         compare_id( selector, condition, expected );
@@ -1461,7 +1501,7 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
         get_globals().set_global_value( global_target_key, diag_value( carving.str() ) );
         get_globals().set_global_value( var_prefixed_key,
                                         diag_value( std::string( "prof_unregistered_var_prefix" ) ) );
-        const std::string var_pointer = var_prefixed_key;
+        const std::string &var_pointer = var_prefixed_key;
         set_pointer( diag_value( var_pointer ), sol::make_object( lua, var_pointer ) );
         for( const std::string &selector : selectors ) {
             CHECK_FALSE( compare_var_val( selector, carving.str(), false, false ) );
@@ -1501,7 +1541,7 @@ TEST_CASE( "lua_platform_roll_contested_matches_native_rng_semantics",
     player.setID( character_id( 4311 ), true );
     dialogue conversation( get_talker_for( player ), get_talker_for( player ) );
     const cata_default_random_engine saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
-    const on_out_of_scope restore_rng( [saved_rng]() {
+    const on_out_of_scope restore_rng( [&saved_rng]() {
         rng_get_engine() = saved_rng;
     } );
 
@@ -1522,6 +1562,8 @@ TEST_CASE( "lua_platform_roll_contested_matches_native_rng_semantics",
         R"({"roll_contested":2,"difficulty":5,"die_size":0})",
         R"({"roll_contested":2,"difficulty":5,"die_size":-3.9})",
     };
+    // The native oracle overwrites this with the explicitly seeded engine before comparison.
+    // NOLINTNEXTLINE(bugprone-random-generator-seed,cert-msc32-c,cert-msc51-cpp,cata-determinism)
     cata_default_random_engine expected_native_engine;
     lua.set_function( "native_roll_contested", [&native_conditions, &conversation,
                                           &expected_native_engine](

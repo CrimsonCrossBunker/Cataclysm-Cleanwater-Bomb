@@ -1,11 +1,20 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <character.h>
+#include <creature.h>
+#include <item_uid.h>
+#include <monster_uid.h>
+#include <npc_opinion.h>
+#include <pimpl.h>
+#include <ret_val.h>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <initializer_list>
 #include <list>
+#include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -19,7 +28,6 @@
 #include "condition.h"
 #include "coordinates.h"
 #include "dialogue.h"
-#include "effect.h"
 #include "faction.h"
 #include "flexbuffer_json.h"
 #include "game.h"
@@ -41,15 +49,19 @@
 #include "monster.h"
 #include "npc.h"
 #include "npctalk.h"
-#include "point.h"
-#include "pocket_type.h"
 #include "player_helpers.h"
+#include "pocket_type.h"
+#include "point.h"
 #include "type_id.h"
 
+static const efftype_id effect_currently_busy( "currently_busy" );
+static const faction_id faction_hells_raiders( "hells_raiders" );
+static const faction_id faction_your_followers( "your_followers" );
 static const itype_id itype_apple( "apple" );
 static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_bandages( "bandages" );
 static const itype_id itype_rock( "rock" );
+static const proficiency_id proficiency_prof_carving( "prof_carving" );
 
 TEST_CASE( "lua_platform_npc_follow_preserves_native_state_transitions",
            "[lua][platform][npc][semantic]" )
@@ -150,7 +162,7 @@ TEST_CASE( "lua_platform_drop_stolen_items_matches_native_item_return",
     g->faction_manager_ptr->create_if_needed();
     avatar &setup_player = get_avatar();
     npc &subject = spawn_npc( setup_player.pos_bub().xy() + point::east, "thug" );
-    subject.set_fac( faction_id( "your_followers" ) );
+    subject.set_fac( faction_your_followers );
     REQUIRE( subject.get_faction() != nullptr );
     const faction_id owner = subject.get_faction()->id;
 
@@ -347,8 +359,8 @@ TEST_CASE( "lua_migrated_social_conditions_match_native_talker_slots",
     avatar &player = get_avatar();
     npc &alpha = spawn_npc( player.pos_bub().xy() + point::south, "thug" );
     npc &beta = spawn_npc( player.pos_bub().xy() + point::north, "thug" );
-    alpha.set_fac( faction_id( "your_followers" ) );
-    beta.set_fac( faction_id( "hells_raiders" ) );
+    alpha.set_fac( faction_your_followers );
+    beta.set_fac( faction_hells_raiders );
     alpha.set_attitude( NPCATT_FOLLOW );
     beta.set_attitude( NPCATT_KILL );
     beta.assigned_camp = tripoint_abs_omt{ 31, 32, 0 };
@@ -420,20 +432,20 @@ TEST_CASE( "lua_migrated_social_conditions_match_native_talker_slots",
                 alpha, { "npc", alpha.getID().get_value(), 0, 0, 0, {} }, runtime, 1 );
     const platform::game_handle beta_handle = platform::game_handle::from_creature(
                 beta, { "npc", beta.getID().get_value(), 0, 0, 0, {} }, runtime, 1 );
-    const proficiency_id carving( "prof_carving" );
     const conditional_t npc_proficiency_condition( json_loader::from_string(
                 R"({"npc_has_proficiency":"prof_carving"})" ).get_object() );
     const sol::protected_function has_proficiency =
         services["proficiencies"]["has_id_text"];
     const auto platform_knows_proficiency = [&]( const platform::game_handle & handle ) {
-        const sol::protected_function_result call = has_proficiency( handle, carving.str() );
+        const sol::protected_function_result call = has_proficiency( handle,
+                proficiency_prof_carving.str() );
         REQUIRE( call.valid() );
         const sol::table result = call;
         REQUIRE( result["ok"].get<bool>() );
         return result["value"].get<bool>();
     };
-    alpha.add_proficiency( carving, true );
-    beta.lose_proficiency( carving );
+    alpha.add_proficiency( proficiency_prof_carving, true );
+    beta.lose_proficiency( proficiency_prof_carving );
     CHECK_FALSE( npc_proficiency_condition( context ) );
     CHECK( platform_knows_proficiency( alpha_handle ) );
     CHECK_FALSE( platform_knows_proficiency( beta_handle ) );
@@ -451,8 +463,8 @@ TEST_CASE( "lua_migrated_social_conditions_match_native_talker_slots",
     const sol::table unknown_proficiency_result = unknown_proficiency_call;
     REQUIRE( unknown_proficiency_result["ok"].get<bool>() );
     CHECK_FALSE( unknown_proficiency_result["value"].get<bool>() );
-    alpha.lose_proficiency( carving );
-    beta.add_proficiency( carving, true );
+    alpha.lose_proficiency( proficiency_prof_carving );
+    beta.add_proficiency( proficiency_prof_carving, true );
     CHECK( npc_proficiency_condition( context ) );
     CHECK_FALSE( platform_knows_proficiency( alpha_handle ) );
     CHECK( platform_knows_proficiency( beta_handle ) );
@@ -708,11 +720,10 @@ TEST_CASE( "lua_migrated_npc_nearby_and_service_conditions_match_native",
            service_from_platform( monster_handle, 100.5 ) );
     CHECK( service_condition( monster_context ) );
 
-    const efftype_id currently_busy( "currently_busy" );
-    beta.add_effect( currently_busy, 10_turns, body_part_arm_l.id(), false, 1, true );
+    beta.add_effect( effect_currently_busy, 10_turns, body_part_arm_l.id(), false, 1, true );
     CHECK( service_condition( context ) == service_from_platform( beta_handle, 100.5 ) );
     CHECK_FALSE( service_condition( context ) );
-    beta.remove_effect( currently_busy, body_part_arm_l.id() );
+    beta.remove_effect( effect_currently_busy, body_part_arm_l.id() );
     CHECK( service_condition( context ) == service_from_platform( beta_handle, 100.5 ) );
     CHECK( service_condition( context ) );
     player.cash = 100;

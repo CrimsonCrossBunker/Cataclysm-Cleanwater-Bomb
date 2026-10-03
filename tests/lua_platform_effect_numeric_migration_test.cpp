@@ -1,26 +1,31 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <calendar.h>
+#include <creature.h>
+#include <flexbuffer_json.h>
+#include <type_id.h>
 #include <array>
-#include <cmath>
+#include <cstddef>
+#include <functional>
+#include <initializer_list>
 #include <memory>
 #include <optional>
+#include <random>
 #include <string>
 #include <string_view>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
 
 #include "avatar.h"
 #include "bodypart.h"
-#include "character.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
+#include "character.h"
 #include "character_id.h"
 #include "condition.h"
 #include "debug.h"
 #include "dialogue.h"
-#include "dialogue_helpers.h"
 #include "effect.h"
 #include "json_loader.h"
 #include "lua_platform_handle.h"
@@ -30,7 +35,8 @@
 #include "math_parser_diag_value.h"
 #include "npc.h"
 #include "rng.h"
-#include "units.h"
+
+static const efftype_id effect_bleed( "bleed" );
 
 namespace
 {
@@ -62,6 +68,8 @@ struct effect_case {
     bool expects_random_part = false;
 };
 
+// Bleed derives intensity from duration (60 turns per level), capped at 40.
+// Its native effect creation overrides the requested intensity.
 constexpr std::array effect_cases = {
     effect_case{
         "u math duration and double variable intensity",
@@ -71,7 +79,7 @@ constexpr std::array effect_cases = {
             "intensity": {"u_val": "intensity_value"},
             "target_part": "arm_l"
         })",
-        effect_target::alpha, 0, 6.75, 96.5, 2.75, 8.75, {}, 58131, 6, 2
+        effect_target::alpha, 0, 6.75, 96.5, 2.75, 8.75, {}, 58131, 6, 1
     },
     effect_case{
         "n math reads the beta character",
@@ -111,7 +119,7 @@ constexpr std::array effect_cases = {
             "intensity": {"u_val": "intensity_value"},
             "target_part": "arm_l"
         })",
-        effect_target::alpha, 0, "not numeric", 96.5, 2.75, 8.75, {}, 58135, 0, 2,
+        effect_target::alpha, 0, "not numeric", 96.5, 2.75, 8.75, {}, 58135, 0, 1,
         std::nullopt, true
     },
     effect_case{
@@ -122,7 +130,7 @@ constexpr std::array effect_cases = {
             "intensity": {"u_val": "intensity_value"},
             "target_part": "arm_l"
         })",
-        effect_target::alpha, 0, -3.75, 96.5, 2.75, 8.75, {}, 58136, -3, 2,
+        effect_target::alpha, 0, -3.75, 96.5, 2.75, 8.75, {}, 58136, -3, 1,
         std::nullopt, false, true
     },
     effect_case{
@@ -146,7 +154,7 @@ constexpr std::array effect_cases = {
             "intensity": [2.5, 2.5],
             "target_part": "RANDOM"
         })",
-        effect_target::alpha, 4, {}, {}, 2.75, 8.75, {}, 58138, 12, 2,
+        effect_target::alpha, 4, {}, {}, 2.75, 8.75, {}, 58138, 12, 1,
         std::nullopt, false, false, false, true
     },
     effect_case{
@@ -157,7 +165,7 @@ constexpr std::array effect_cases = {
             "intensity": 1,
             "target_part": "arm_l"
         })",
-        effect_target::alpha, 5, {}, {}, 2.75, 8.75, {}, 58139, std::nullopt, 1,
+        effect_target::alpha, 5, {}, {}, 2.75, 8.75, {}, 58139, std::nullopt, 40,
         std::nullopt, false, false, true
     }
 };
@@ -318,10 +326,9 @@ struct effect_snapshot {
 
 std::optional<effect_snapshot> find_effect( Character &target, const bool random_part )
 {
-    static const efftype_id bleeding( "bleed" );
     if( !random_part ) {
         const bodypart_id part( "arm_l" );
-        const effect &found = target.get_effect( bleeding, part );
+        const effect &found = target.get_effect( effect_bleed, part );
         if( found.is_null() ) {
             return std::nullopt;
         }
@@ -331,7 +338,7 @@ std::optional<effect_snapshot> find_effect( Character &target, const bool random
     }
 
     for( const bodypart_id &part : target.get_all_body_parts( get_body_part_flags::none ) ) {
-        const effect &found = target.get_effect( bleeding, part );
+        const effect &found = target.get_effect( effect_bleed, part );
         if( !found.is_null() ) {
             return effect_snapshot{ found.get_duration(), found.get_max_duration(),
                                     found.get_intensity(),
@@ -362,7 +369,7 @@ TEST_CASE( "lua_platform_dynamic_effect_numeric_matches_native_talk_effect",
     namespace platform = cata::lua_platform;
     platform::clear_active_runtimes();
     const cata_default_random_engine saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
-    const on_out_of_scope restore_rng( [saved_rng]() {
+    const on_out_of_scope restore_rng( [&saved_rng]() {
         rng_get_engine() = saved_rng;
     } );
 

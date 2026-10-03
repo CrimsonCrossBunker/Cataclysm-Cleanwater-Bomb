@@ -1,7 +1,14 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <flexbuffer_json.h>
+#include <pimpl.h>
+#include <talker.h>
+#include <type_id.h>
+#include <functional>
 #include <initializer_list>
+#include <memory>
 #include <string>
+#include <vector>
 
 #include "avatar.h"
 #include "cata_catch.h"
@@ -15,8 +22,8 @@
 #include "lua_platform_handle.h"
 #include "lua_platform_runtime.h"
 #include "lua_platform_sol.h"
-#include "martialarts.h"
-#include "npctalk.h"
+
+static const matype_id style_none( "style_none" );
 
 TEST_CASE( "lua_platform_martial_art_effect_service_matches_native_effect_ids",
            "[lua][platform][martial_arts][semantic]" )
@@ -106,8 +113,8 @@ TEST_CASE( "lua_platform_martial_art_effect_service_matches_native_effect_ids",
         CHECK_FALSE( native_avatar.has_martialart( style ) );
         CHECK_FALSE( platform_avatar.has_martialart( style ) );
         if( id == "style_karate" ) {
-            CHECK( native_avatar.martial_arts_data->selected_style() == matype_id( "style_none" ) );
-            CHECK( platform_avatar.martial_arts_data->selected_style() == matype_id( "style_none" ) );
+            CHECK( native_avatar.martial_arts_data->selected_style() == style_none );
+            CHECK( platform_avatar.martial_arts_data->selected_style() == style_none );
         }
     }
 }

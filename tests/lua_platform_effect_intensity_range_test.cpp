@@ -1,6 +1,8 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <flexbuffer_json.h>
 #include <cstdint>
+#include <functional>
 #include <limits>
 #include <memory>
 #include <string>
@@ -16,23 +18,20 @@
 #include "dialogue_helpers.h"
 #include "effect.h"
 #include "json_loader.h"
-#include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
-#include "lua_platform_npcs.h"
 #include "lua_platform_runtime.h"
 #include "lua_platform_runtime_internal.h"
 #include "lua_platform_sol.h"
 #include "map_helpers.h"
 #include "npc.h"
-#include "npctalk.h"
 #include "type_id.h"
-#include "units.h"
+
+static const efftype_id effect_catch_up( "catch_up" );
 
 namespace
 {
 
 // catch_up has int_add_val=1 and max_intensity=15, so stacking is observable.
-const efftype_id effect_catch_up( "catch_up" );
 
 struct effect_intensity_fixture {
     explicit effect_intensity_fixture( const int first_id ) {

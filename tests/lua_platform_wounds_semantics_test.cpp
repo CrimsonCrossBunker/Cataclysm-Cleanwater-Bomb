@@ -1,6 +1,12 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <creature.h>
+#include <flexbuffer_json.h>
+#include <talker.h>
+#include <functional>
+#include <memory>
 #include <string>
+#include <vector>
 
 #include "avatar.h"
 #include "bodypart.h"
@@ -17,18 +23,18 @@
 #include "lua_platform_runtime.h"
 #include "lua_platform_sol.h"
 #include "npc.h"
-#include "npctalk.h"
 #include "type_id.h"
 #include "wound.h"
+
+static const bodypart_str_id body_part_head_dragonfly( "head_dragonfly" );
+static const trait_id trait_MASOCHIST( "MASOCHIST" );
+static const wound_type_id wound_wound_platform_effect_test( "wound_platform_effect_test" );
 
 namespace cata::lua_platform
 {
 class runtime;
 }  // namespace cata::lua_platform
 
-static const bodypart_str_id body_part_dragonfly_head( "head_dragonfly" );
-static const wound_type_id wound_platform_effect_test( "wound_platform_effect_test" );
-static const trait_id trait_masochist_for_wound_test( "MASOCHIST" );
 
 TEST_CASE( "lua_platform_direct_wound_services_match_native_effects",
            "[lua][platform][wounds][semantic]" )
@@ -47,7 +53,7 @@ TEST_CASE( "lua_platform_direct_wound_services_match_native_effects",
             "limit": 1
         })" ).get_object(), "lua_platform_wounds_semantics_test" );
     wound_type::finalize_all();
-    REQUIRE( wound_platform_effect_test.is_valid() );
+    REQUIRE( wound_wound_platform_effect_test.is_valid() );
 
     cata::lua_platform::clear_active_runtimes();
     avatar native_alpha;
@@ -72,10 +78,10 @@ TEST_CASE( "lua_platform_direct_wound_services_match_native_effects",
 
     dialogue native_alpha_dialogue( get_talker_for( native_alpha ), nullptr );
     dialogue hostile_native_npc_dialogue( get_talker_for( native_beta ), nullptr );
-    const bodypart_id requested_part = body_part_dragonfly_head.id();
-    native_alpha.set_mutation( trait_masochist_for_wound_test );
-    platform_alpha.set_mutation( trait_masochist_for_wound_test );
-    capped_alpha.set_mutation( trait_masochist_for_wound_test );
+    const bodypart_id requested_part = body_part_head_dragonfly.id();
+    native_alpha.set_mutation( trait_MASOCHIST );
+    platform_alpha.set_mutation( trait_MASOCHIST );
+    capped_alpha.set_mutation( trait_MASOCHIST );
     REQUIRE_FALSE( native_alpha.has_part( requested_part, body_part_filter::strict ) );
     REQUIRE( native_alpha.get_part( requested_part ) != nullptr );
     CHECK( native_alpha.get_part( requested_part )->get_id() == body_part_head.id() );
@@ -105,7 +111,7 @@ TEST_CASE( "lua_platform_direct_wound_services_match_native_effects",
         const cata::lua_platform::script_game_id part_id( "body_part", "head_dragonfly" );
         const cata::lua_platform::script_game_id exact_part_id( "body_part", "head" );
         const cata::lua_platform::script_game_id wound_id(
-            "wound", wound_platform_effect_test.str() );
+            "wound", wound_wound_platform_effect_test.str() );
         REQUIRE( part_id.is_valid() );
         REQUIRE( exact_part_id.is_valid() );
         REQUIRE( wound_id.is_valid() );

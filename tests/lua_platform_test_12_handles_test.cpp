@@ -51,14 +51,16 @@
 #include <vector>
 
 #include "cata_catch.h"
-#include "flexbuffer_json.h"
 #include "lua_platform_sol.h"
 #include "player_helpers.h"
 
+static const faction_id faction_free_merchants( "free_merchants" );
+static const faction_id faction_no_faction( "no_faction" );
 static const faction_id faction_tacoma_commune( "tacoma_commune" );
 static const flag_id json_flag_FIRE( "FIRE" );
 static const itype_id itype_2x4( "2x4" );
 static const itype_id itype_apple( "apple" );
+static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_bandages( "bandages" );
 static const itype_id itype_battery( "battery" );
 static const itype_id itype_debug_backpack( "debug_backpack" );
@@ -67,7 +69,12 @@ static const itype_id itype_medium_battery_cell( "medium_battery_cell" );
 static const itype_id itype_rock( "rock" );
 static const itype_id itype_soldering_iron_portable( "soldering_iron_portable" );
 static const itype_id itype_test_charged_fast_cutter( "test_charged_fast_cutter" );
+static const itype_id itype_unknown_remove_type_test_( "__unknown_remove_type_test__" );
 static const itype_id itype_water_clean( "water_clean" );
+static const recipe_id recipe_cudgel_test_no_tools( "cudgel_test_no_tools" );
+static const recipe_id
+recipe_faction_base_bare_bones_NPC_camp_0( "faction_base_bare_bones_NPC_camp_0" );
+static const ter_str_id ter_t_floor( "t_floor" );
 static const vproto_id vehicle_prototype_car( "car" );
 static const vproto_id vehicle_prototype_test_cargo_space( "test_cargo_space" );
 
@@ -616,27 +623,26 @@ TEST_CASE( "lua_platform_inventory_remove_type_matches_character_removal_scope",
         cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 32 );
     constexpr std::size_t world_generation = 1;
-    const itype_id backpack_type( "backpack" );
 
     avatar native_character;
     native_character.normalize();
     native_character.setID( character_id( 6401 ), true );
     item &native_inventory_match = native_character.inv->add_item(
-                                       item( backpack_type ), false, false, false );
+                                       item( itype_backpack ), false, false, false );
     item native_nested_container( itype_debug_backpack );
     REQUIRE( native_nested_container.put_in(
-                 item( backpack_type ), pocket_type::CONTAINER ).success() );
+                 item( itype_backpack ), pocket_type::CONTAINER ).success() );
     item &native_inventory_container = native_character.inv->add_item(
                                            std::move( native_nested_container ),
                                            false, false, false );
     item *native_nested_match = nullptr;
     for( item *contained : native_inventory_container.all_items_top() ) {
-        if( contained->typeId() == backpack_type ) {
+        if( contained->typeId() == itype_backpack ) {
             native_nested_match = contained;
         }
     }
     REQUIRE( native_nested_match != nullptr );
-    item native_worn_match( backpack_type );
+    item native_worn_match( itype_backpack );
     const auto native_worn = native_character.wear_item(
                                  native_worn_match, false, false, true, true );
     REQUIRE( native_worn.has_value() );
@@ -654,12 +660,12 @@ TEST_CASE( "lua_platform_inventory_remove_type_matches_character_removal_scope",
     REQUIRE( native_character.has_item( *native_wielded_item ) );
 
     const auto native_backpacks = native_character.remove_items_with(
-    [&backpack_type]( const item & entry ) {
-        return entry.typeId() == backpack_type;
+    []( const item & entry ) {
+        return entry.typeId() == itype_backpack;
     } );
     CHECK( native_backpacks.size() == 3 );
-    CHECK_FALSE( native_character.is_wearing( backpack_type ) );
-    CHECK_FALSE( native_character.has_amount( backpack_type, 1 ) );
+    CHECK_FALSE( native_character.is_wearing( itype_backpack ) );
+    CHECK_FALSE( native_character.has_amount( itype_backpack, 1 ) );
     const auto native_rocks = native_character.remove_items_with(
     []( const item & entry ) {
         return entry.typeId() == itype_rock;
@@ -667,10 +673,9 @@ TEST_CASE( "lua_platform_inventory_remove_type_matches_character_removal_scope",
     CHECK( native_rocks.size() == 1 );
     CHECK_FALSE( native_character.has_weapon() );
     native_character.inv->add_item( item( itype_2x4 ), false, false, false );
-    const itype_id unknown_item_type( "__unknown_remove_type_test__" );
     const auto native_unknown = native_character.remove_items_with(
-    [&unknown_item_type]( const item & entry ) {
-        return entry.typeId() == unknown_item_type;
+    []( const item & entry ) {
+        return entry.typeId() == itype_unknown_remove_type_test_;
     } );
     CHECK( native_unknown.empty() );
     CHECK( native_character.has_amount( itype_2x4, 1 ) );
@@ -680,20 +685,20 @@ TEST_CASE( "lua_platform_inventory_remove_type_matches_character_removal_scope",
     character.setID( character_id( 6402 ), true );
 
     item &inventory_match = character.inv->add_item(
-                                item( backpack_type ), false, false, false );
+                                item( itype_backpack ), false, false, false );
     item nested_container( itype_debug_backpack );
     REQUIRE( nested_container.put_in(
-                 item( backpack_type ), pocket_type::CONTAINER ).success() );
+                 item( itype_backpack ), pocket_type::CONTAINER ).success() );
     item &nested_inventory_container = character.inv->add_item(
                                            std::move( nested_container ), false, false, false );
     item *nested_inventory_match = nullptr;
     for( item *contained : nested_inventory_container.all_items_top() ) {
-        if( contained->typeId() == backpack_type ) {
+        if( contained->typeId() == itype_backpack ) {
             nested_inventory_match = contained;
         }
     }
     REQUIRE( nested_inventory_match != nullptr );
-    item worn_match( backpack_type );
+    item worn_match( itype_backpack );
     const auto worn = character.wear_item(
                           worn_match, false, false, true, true );
     REQUIRE( worn.has_value() );
@@ -758,8 +763,8 @@ TEST_CASE( "lua_platform_inventory_remove_type_matches_character_removal_scope",
         backpack_envelope["value"].get<sol::table>();
     CHECK( backpack_value["removed"].get<std::size_t>() ==
            native_backpacks.size() );
-    CHECK_FALSE( character.is_wearing( backpack_type ) );
-    CHECK_FALSE( character.has_amount( backpack_type, 1 ) );
+    CHECK_FALSE( character.is_wearing( itype_backpack ) );
+    CHECK_FALSE( character.has_amount( itype_backpack, 1 ) );
     CHECK( removed_item_handle.validation_error(
                runtime, world_generation ).has_value() );
     CHECK( nested_item_handle.validation_error(
@@ -783,7 +788,7 @@ TEST_CASE( "lua_platform_inventory_remove_type_matches_character_removal_scope",
     const sol::protected_function_result unknown_result = remove_type(
                 character_handle,
                 cata::lua_platform::script_game_id(
-                    "item", unknown_item_type.str() ) );
+                    "item", itype_unknown_remove_type_test_.str() ) );
     REQUIRE( unknown_result.valid() );
     const sol::table unknown_envelope = unknown_result.get<sol::table>();
     REQUIRE( unknown_envelope["ok"].get<bool>() );
@@ -1205,8 +1210,7 @@ TEST_CASE( "lua_platform_inventory_has_items_sum_matches_native_condition",
             cata::lua_platform::retire_npc_handle_identity( value );
         }
     } retire_beta_identity{ beta };
-    const faction_id beta_faction( "no_faction" );
-    REQUIRE( beta.get_faction_id() == beta_faction );
+    REQUIRE( beta.get_faction_id() == faction_no_faction );
     const tripoint_bub_ms beta_pos( 65, 60, 0 );
     beta.setpos( here, beta_pos );
     item beta_apple( itype_apple );
@@ -1215,13 +1219,12 @@ TEST_CASE( "lua_platform_inventory_has_items_sum_matches_native_condition",
     const tripoint_bub_ms alpha_vehicle_pos( 90, 60, 0 );
     const tripoint_bub_ms beta_vehicle_pos( 95, 60, 0 );
     const tripoint_bub_ms unrelated_vehicle_pos( 100, 60, 0 );
-    const ter_str_id floor_id( "t_floor" );
-    REQUIRE( floor_id.is_valid() );
+    REQUIRE( ter_t_floor.is_valid() );
     for( const tripoint_bub_ms &pos : {
              alpha_vehicle_pos, beta_vehicle_pos,
              unrelated_vehicle_pos
          } ) {
-        here.ter_set( pos, floor_id.id() );
+        here.ter_set( pos, ter_t_floor.id() );
     }
 
     vehicle *alpha_vehicle = here.add_vehicle(
@@ -1250,11 +1253,10 @@ TEST_CASE( "lua_platform_inventory_has_items_sum_matches_native_condition",
                                      unrelated_vehicle_pos,
                                      0_degrees, 0, veh_spawn_status::UNDAMAGED );
     REQUIRE( unrelated_vehicle != nullptr );
-    const faction_id unrelated_faction( "tacoma_commune" );
-    REQUIRE( unrelated_faction.is_valid() );
-    REQUIRE( unrelated_faction != alpha.get_faction_id() );
-    REQUIRE( unrelated_faction != beta.get_faction_id() );
-    unrelated_vehicle->set_owner( unrelated_faction );
+    REQUIRE( faction_tacoma_commune.is_valid() );
+    REQUIRE( faction_tacoma_commune != alpha.get_faction_id() );
+    REQUIRE( faction_tacoma_commune != beta.get_faction_id() );
+    unrelated_vehicle->set_owner( faction_tacoma_commune );
     std::optional<vpart_reference> unrelated_cargo =
         here.veh_at( unrelated_vehicle_pos ).cargo();
     REQUIRE( unrelated_cargo.has_value() );
@@ -1304,8 +1306,8 @@ TEST_CASE( "lua_platform_inventory_has_items_sum_matches_native_condition",
                 native_source += ",";
             }
             first = false;
-            native_source += std::string( "{\"item\":\"" ) + entry.first +
-                             "\",\"amount\":" + std::to_string( entry.second ) + "}";
+            native_source += std::string( R"({"item":")" ) + entry.first +
+                             R"(","amount":)" + std::to_string( entry.second ) + "}";
             sol::table row = lua.create_table();
             row["item"] = cata::lua_platform::script_game_id( "item", entry.first );
             row["amount"] = entry.second;
@@ -1369,12 +1371,10 @@ TEST_CASE( "lua_platform_recipe_mutations_match_native_talk_effects",
         }
     } retire_beta_identity{ beta };
 
-    const recipe_id regular_id( "cudgel_test_no_tools" );
-    const recipe_id never_learn_id( "faction_base_bare_bones_NPC_camp_0" );
-    REQUIRE( regular_id.is_valid() );
-    REQUIRE( never_learn_id.is_valid() );
-    const recipe &regular = regular_id.obj();
-    const recipe &never_learn = never_learn_id.obj();
+    REQUIRE( recipe_cudgel_test_no_tools.is_valid() );
+    REQUIRE( recipe_faction_base_bare_bones_NPC_camp_0.is_valid() );
+    const recipe &regular = recipe_cudgel_test_no_tools.obj();
+    const recipe &never_learn = recipe_faction_base_bare_bones_NPC_camp_0.obj();
     REQUIRE( regular.category.is_valid() );
     REQUIRE_FALSE( regular.subcategory.empty() );
     REQUIRE( never_learn.never_learn );
@@ -1429,7 +1429,7 @@ TEST_CASE( "lua_platform_recipe_mutations_match_native_talk_effects",
             source += ",\"category\":true";
         }
         if( !subcategory.empty() ) {
-            source += std::string( ",\"subcategory\":\"" ) + subcategory + "\"";
+            source += std::string( R"(,"subcategory":")" ) + subcategory + "\"";
         }
         source += "}";
         talk_effect_t native_effect;
@@ -1443,56 +1443,58 @@ TEST_CASE( "lua_platform_recipe_mutations_match_native_talk_effects",
 
     dialogue native_pair( get_talker_for( alpha ), get_talker_for( beta ) );
     alpha.forget_recipe( &regular );
-    run_native_effect( "u_learn_recipe", regular_id.str(), native_pair, false, "" );
+    run_native_effect( "u_learn_recipe", recipe_cudgel_test_no_tools.str(), native_pair, false, "" );
     const bool native_avatar_learned = alpha.knows_recipe( &regular );
     REQUIRE( native_avatar_learned );
     alpha.forget_recipe( &regular );
     sol::protected_function_result avatar_learn_call = learn(
                 alpha_handle,
-                cata::lua_platform::script_game_id( "recipe", regular_id.str() ), false );
+                cata::lua_platform::script_game_id( "recipe", recipe_cudgel_test_no_tools.str() ), false );
     CHECK( service_after( avatar_learn_call ) == native_avatar_learned );
     CHECK( alpha.knows_recipe( &regular ) == native_avatar_learned );
 
     alpha.learn_recipe( &regular );
-    run_native_effect( "u_forget_recipe", regular_id.str(), native_pair, false, "" );
+    run_native_effect( "u_forget_recipe", recipe_cudgel_test_no_tools.str(), native_pair, false, "" );
     const bool native_avatar_forgotten = alpha.knows_recipe( &regular );
     REQUIRE_FALSE( native_avatar_forgotten );
     alpha.learn_recipe( &regular );
     sol::protected_function_result avatar_forget_call = forget(
                 alpha_handle,
-                cata::lua_platform::script_game_id( "recipe", regular_id.str() ) );
+                cata::lua_platform::script_game_id( "recipe", recipe_cudgel_test_no_tools.str() ) );
     CHECK( service_after( avatar_forget_call ) == native_avatar_forgotten );
     CHECK( alpha.knows_recipe( &regular ) == native_avatar_forgotten );
 
     alpha.forget_recipe( &never_learn );
-    run_native_effect( "u_learn_recipe", never_learn_id.str(), native_pair, false, "" );
+    run_native_effect( "u_learn_recipe", recipe_faction_base_bare_bones_NPC_camp_0.str(), native_pair,
+                       false, "" );
     const bool native_never_learned = alpha.knows_recipe( &never_learn );
     REQUIRE_FALSE( native_never_learned );
     sol::protected_function_result never_learn_call = learn(
                 alpha_handle,
-                cata::lua_platform::script_game_id( "recipe", never_learn_id.str() ), false );
+                cata::lua_platform::script_game_id( "recipe", recipe_faction_base_bare_bones_NPC_camp_0.str() ),
+                false );
     CHECK_FALSE( service_after( never_learn_call ) );
     CHECK( alpha.knows_recipe( &never_learn ) == native_never_learned );
 
     beta.forget_recipe( &regular );
-    run_native_effect( "npc_learn_recipe", regular_id.str(), native_pair, false, "" );
+    run_native_effect( "npc_learn_recipe", recipe_cudgel_test_no_tools.str(), native_pair, false, "" );
     const bool native_npc_learned = beta.knows_recipe( &regular );
     REQUIRE( native_npc_learned );
     beta.forget_recipe( &regular );
     sol::protected_function_result npc_learn_call = learn(
                 beta_handle,
-                cata::lua_platform::script_game_id( "recipe", regular_id.str() ), false );
+                cata::lua_platform::script_game_id( "recipe", recipe_cudgel_test_no_tools.str() ), false );
     CHECK( service_after( npc_learn_call ) == native_npc_learned );
     CHECK( beta.knows_recipe( &regular ) == native_npc_learned );
 
     beta.learn_recipe( &regular );
-    run_native_effect( "npc_forget_recipe", regular_id.str(), native_pair, false, "" );
+    run_native_effect( "npc_forget_recipe", recipe_cudgel_test_no_tools.str(), native_pair, false, "" );
     const bool native_npc_forgotten = beta.knows_recipe( &regular );
     REQUIRE_FALSE( native_npc_forgotten );
     beta.learn_recipe( &regular );
     sol::protected_function_result npc_forget_call = forget(
                 beta_handle,
-                cata::lua_platform::script_game_id( "recipe", regular_id.str() ) );
+                cata::lua_platform::script_game_id( "recipe", recipe_cudgel_test_no_tools.str() ) );
     CHECK( service_after( npc_forget_call ) == native_npc_forgotten );
     CHECK( beta.knows_recipe( &regular ) == native_npc_forgotten );
 
@@ -1500,14 +1502,14 @@ TEST_CASE( "lua_platform_recipe_mutations_match_native_talk_effects",
     // npc_* talker dispatch and the Platform service agree when beta is Avatar.
     alpha.forget_recipe( &regular );
     dialogue avatar_beta_pair( get_talker_for( beta ), get_talker_for( alpha ) );
-    run_native_effect( "npc_learn_recipe", regular_id.str(), avatar_beta_pair,
+    run_native_effect( "npc_learn_recipe", recipe_cudgel_test_no_tools.str(), avatar_beta_pair,
                        false, "" );
     const bool native_avatar_beta_learned = alpha.knows_recipe( &regular );
     REQUIRE( native_avatar_beta_learned );
     alpha.forget_recipe( &regular );
     sol::protected_function_result avatar_beta_learn_call = learn(
                 alpha_handle,
-                cata::lua_platform::script_game_id( "recipe", regular_id.str() ), false );
+                cata::lua_platform::script_game_id( "recipe", recipe_cudgel_test_no_tools.str() ), false );
     CHECK( service_after( avatar_beta_learn_call ) == native_avatar_beta_learned );
     CHECK( alpha.knows_recipe( &regular ) == native_avatar_beta_learned );
 
@@ -1578,20 +1580,18 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
     const tripoint_bub_ms beta_vehicle_pos( 109, 110, 0 );
     beta.spawn_at_precise( here.get_abs( beta_pos ) );
 
-    const ter_str_id floor_id( "t_floor" );
-    REQUIRE( floor_id.is_valid() );
+    REQUIRE( ter_t_floor.is_valid() );
     for( const tripoint_bub_ms &pos : {
              alpha_pos, alpha_map_pos, alpha_vehicle_pos,
              beta_pos, beta_map_pos, beta_vehicle_pos
          } ) {
-        here.ter_set( pos, floor_id.id() );
+        here.ter_set( pos, ter_t_floor.id() );
     }
     const tripoint_bub_ms foreign_decoy_pos( 62, 60, 0 );
-    const faction_id foreign_faction( "free_merchants" );
-    REQUIRE( foreign_faction.is_valid() );
-    REQUIRE( foreign_faction != alpha.get_faction_id() );
-    REQUIRE( foreign_faction != beta.get_faction_id() );
-    here.ter_set( foreign_decoy_pos, floor_id.id() );
+    REQUIRE( faction_free_merchants.is_valid() );
+    REQUIRE( faction_free_merchants != alpha.get_faction_id() );
+    REQUIRE( faction_free_merchants != beta.get_faction_id() );
+    here.ter_set( foreign_decoy_pos, ter_t_floor.id() );
 
     vehicle *alpha_vehicle = here.add_vehicle(
                                  vehicle_prototype_test_cargo_space, alpha_vehicle_pos,
@@ -1627,11 +1627,11 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
         item vehicle_battery( itype_battery );
         vehicle_battery.charges = 2;
         vehicle_battery.set_owner( owner_faction );
-        cargo.vehicle().add_item( here, cargo.part(), std::move( vehicle_battery ) );
+        cargo.vehicle().add_item( here, cargo.part(), vehicle_battery );
 
         item vehicle_rock( itype_rock );
         vehicle_rock.set_owner( owner_faction );
-        cargo.vehicle().add_item( here, cargo.part(), std::move( vehicle_rock ) );
+        cargo.vehicle().add_item( here, cargo.part(), vehicle_rock );
     };
     const faction_id alpha_faction = alpha.get_faction_id();
     const faction_id beta_faction = beta.get_faction_id();
@@ -1642,7 +1642,7 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
     stock_target( beta, beta_faction, beta_map_pos, *beta_cargo );
     item foreign_battery( itype_battery );
     foreign_battery.charges = 9;
-    foreign_battery.set_owner( foreign_faction );
+    foreign_battery.set_owner( faction_free_merchants );
     here.add_item( foreign_decoy_pos, std::move( foreign_battery ) );
 
     constexpr std::size_t world_generation = 1;
@@ -1684,8 +1684,8 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
                 source += ",";
             }
             first = false;
-            source += std::string( "{\"item\":\"" ) + row.first +
-                      "\",\"amount\":" + std::to_string( row.second ) + "}";
+            source += std::string( R"({"item":")" ) + row.first +
+                      R"(","amount":)" + std::to_string( row.second ) + "}";
         }
         source += "]}";
         talk_effect_t native_effect;
@@ -1757,7 +1757,7 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
     run_native_effect( "npc_consume_item_sum", { { "battery", 14 }, { "rock", 1 } },
     native_pair );
     check_target_empty( beta, beta_faction, beta_map_pos, *beta_cargo );
-    CHECK( count_map_items( foreign_decoy_pos, itype_battery, foreign_faction ) == 9 );
+    CHECK( count_map_items( foreign_decoy_pos, itype_battery, faction_free_merchants ) == 9 );
 
     // Re-stock both role candidates, then compare Platform item mutations to
     // the real talk effects across owned inventory, map, and vehicle locations.
@@ -1774,7 +1774,7 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
     CHECK( beta_value["removed_items"].get<int>() == 4 );
     check_target_empty( alpha, alpha_faction, alpha_map_pos, *alpha_cargo );
     check_target_empty( beta, beta_faction, beta_map_pos, *beta_cargo );
-    CHECK( count_map_items( foreign_decoy_pos, itype_battery, foreign_faction ) == 9 );
+    CHECK( count_map_items( foreign_decoy_pos, itype_battery, faction_free_merchants ) == 9 );
 
     // Unknown IDs are accepted by native itype_id and match nothing; empty
     // rows likewise leave holders untouched.
@@ -2014,8 +2014,8 @@ TEST_CASE( "lua_platform_item_conditions_match_native_alpha_beta_and_item_talker
                                    const char *item_id, const std::int64_t count,
     const std::int64_t charges ) {
         const std::string native_source =
-            std::string( "{\"" ) + selector + "\":{\"item\":\"" + item_id +
-            "\",\"count\":" + std::to_string( count ) +
+            std::string( "{\"" ) + selector + R"(":{"item":")" + item_id +
+            R"(","count":)" + std::to_string( count ) +
             ",\"charges\":" + std::to_string( charges ) + "}}";
         const conditional_t native_condition(
             json_loader::from_string( native_source ).get_object() );
@@ -2120,10 +2120,9 @@ TEST_CASE( "lua_platform_item_conditions_match_native_alpha_beta_and_item_talker
 
     const tripoint_bub_ms loaded_tool_pos( 82, 60, 0 );
     const tripoint_bub_ms empty_tool_pos( 85, 60, 0 );
-    const ter_str_id floor_id( "t_floor" );
-    REQUIRE( floor_id.is_valid() );
-    here.ter_set( loaded_tool_pos, floor_id.id() );
-    here.ter_set( empty_tool_pos, floor_id.id() );
+    REQUIRE( ter_t_floor.is_valid() );
+    here.ter_set( loaded_tool_pos, ter_t_floor.id() );
+    here.ter_set( empty_tool_pos, ter_t_floor.id() );
 
     item loaded_tool( itype_test_charged_fast_cutter );
     item battery( itype_heavy_battery_cell );

@@ -1,15 +1,19 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <flexbuffer_json.h>
+#include <item_uid.h>
+#include <pimpl.h>
 #include <cstddef>
+#include <functional>
 #include <initializer_list>
+#include <memory>
 #include <string>
+#include <vector>
 
 #include "avatar.h"
 #include "cata_catch.h"
-#include "character_id.h"
 #include "dialogue.h"
 #include "dialogue_helpers.h"
-#include "flag.h"
 #include "inventory.h"
 #include "item.h"
 #include "item_location.h"
@@ -18,8 +22,10 @@
 #include "lua_platform_handle.h"
 #include "lua_platform_items.h"
 #include "lua_platform_sol.h"
-#include "npctalk.h"
 #include "type_id.h"
+
+static const flag_id json_flag_FILTHY( "FILTHY" );
+static const itype_id itype_rock( "rock" );
 
 TEST_CASE( "lua_platform_item_flag_service_matches_native_talker_slot_effects",
            "[lua][platform][items][flags][semantic]" )
@@ -31,13 +37,13 @@ TEST_CASE( "lua_platform_item_flag_service_matches_native_talker_slot_effects",
     beta_holder.normalize();
 
     item &native_alpha_item = alpha_holder.inv->add_item(
-                                  item( itype_id( "rock" ) ), false, false, false );
+                                  item( itype_rock ), false, false, false );
     item &platform_alpha_item = alpha_holder.inv->add_item(
-                                    item( itype_id( "rock" ) ), false, false, false );
+                                    item( itype_rock ), false, false, false );
     item &native_beta_item = beta_holder.inv->add_item(
-                                 item( itype_id( "rock" ) ), false, false, false );
+                                 item( itype_rock ), false, false, false );
     item &platform_beta_item = beta_holder.inv->add_item(
-                                   item( itype_id( "rock" ) ), false, false, false );
+                                   item( itype_rock ), false, false, false );
     item_location alpha_location( alpha_holder, &native_alpha_item );
     item_location beta_location( beta_holder, &native_beta_item );
 
@@ -75,14 +81,13 @@ TEST_CASE( "lua_platform_item_flag_service_matches_native_talker_slot_effects",
     const platform::game_handle alpha_handle = item_handle( platform_alpha_item );
     const platform::game_handle beta_handle = item_handle( platform_beta_item );
     const sol::protected_function set_flag = services["items"]["set_flag"];
-    const flag_id filthy( "FILTHY" );
     const platform::script_game_id filthy_id( "json_flag", "FILTHY" );
 
     const auto apply_native = [&]( const char *slot, const bool enabled ) {
         const std::string selector = std::string( slot ) +
                                      ( enabled ? "_set_flag" : "_unset_flag" );
         const std::string source = std::string( "{\"" ) + selector +
-                                   "\":\"FILTHY\"}";
+                                   R"(":"FILTHY"})";
         talk_effect_t effect;
         effect.parse_sub_effect( json_loader::from_string( source ).get_object(),
                                  "item_flag_semantics" );
@@ -104,9 +109,9 @@ TEST_CASE( "lua_platform_item_flag_service_matches_native_talker_slot_effects",
             REQUIRE( envelope["ok"].get<bool>() );
             const sol::table value = envelope["value"];
             CHECK( value["own_after"].get<bool>() == enabled );
-            CHECK( native_target.has_own_flag( filthy ) == enabled );
-            CHECK( platform_target.has_own_flag( filthy ) ==
-                   native_target.has_own_flag( filthy ) );
+            CHECK( native_target.has_own_flag( json_flag_FILTHY ) == enabled );
+            CHECK( platform_target.has_own_flag( json_flag_FILTHY ) ==
+                   native_target.has_own_flag( json_flag_FILTHY ) );
         }
     };
 
