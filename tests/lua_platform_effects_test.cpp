@@ -1201,10 +1201,18 @@ TEST_CASE( "lua_platform_pickup_at_rejects_invalid_options_before_selection",
 TEST_CASE( "lua_platform_pickup_at_empty_native_selection_keeps_activity",
            "[lua][platform][activities][semantic]" )
 {
+    clear_avatar();
     effect_fixture fixture;
-    fixture.player.assign_activity( ACT_WAIT, 100 );
-    const std::string previous_activity = fixture.player.activity.id().str();
-    const int previous_moves = fixture.player.activity.moves_total;
+    avatar &player = get_avatar();
+    const on_out_of_scope cleanup( []() {
+        clear_avatar();
+    } );
+    player.assign_activity( wait_activity_actor( 100_turns ) );
+    const auto player_handle = cata::lua_platform::game_handle::from_creature(
+                                   player, { "avatar", player.getID().get_value(), 0, 0, 0, {} },
+                                   fixture.runtime, fixture.world );
+    const std::string previous_activity = player.activity.id().str();
+    const int previous_moves = player.activity.moves_total;
     const tripoint_bub_ms local( 60, 60, 0 );
     const tripoint_abs_ms absolute = get_map().get_abs( local );
     bool received_target = false;
@@ -1235,7 +1243,7 @@ TEST_CASE( "lua_platform_pickup_at_empty_native_selection_keeps_activity",
             absolute.raw() );
     sol::protected_function pickup = fixture.services["activities"]["pickup_at"];
     sol::protected_function_result call = pickup(
-            fixture.handle( false ), target, options );
+            player_handle, target, options );
     REQUIRE( call.valid() );
     sol::table result = call;
     REQUIRE( result["ok"].get<bool>() );
@@ -1244,8 +1252,8 @@ TEST_CASE( "lua_platform_pickup_at_empty_native_selection_keeps_activity",
     CHECK( received_options );
     CHECK_FALSE( value["scheduled"].get<bool>() );
     CHECK( value["selected_count"].get<std::int64_t>() == 0 );
-    CHECK( fixture.player.activity.id().str() == previous_activity );
-    CHECK( fixture.player.activity.moves_total == previous_moves );
+    CHECK( player.activity.id().str() == previous_activity );
+    CHECK( player.activity.moves_total == previous_moves );
 }
 
 
@@ -1256,7 +1264,18 @@ TEST_CASE( "lua_platform_pickup_at_schedules_native_batch_for_exact_character",
              false, true
          } ) {
         clear_map();
+        clear_avatar();
         effect_fixture fixture;
+        active_activity_npc owned_npc( 941734 );
+        avatar &player = get_avatar();
+        Character &selected_actor = npc_target ? static_cast<Character &>( *owned_npc.target ) : player;
+        Character &other = npc_target ? player : static_cast<Character &>( *owned_npc.target );
+        const auto actor_handle = cata::lua_platform::game_handle::from_creature(
+                                      selected_actor, { npc_target ? "npc" : "avatar", selected_actor.getID().get_value(), 0, 0, 0, {} },
+                                      fixture.runtime, fixture.world );
+        const on_out_of_scope cleanup( [&player]() {
+            player.cancel_activity();
+        } );
         map &here = get_map();
         const tripoint_bub_ms local( 60, 60, 0 );
         const tripoint_abs_ms absolute = here.get_abs( local );
@@ -1302,7 +1321,7 @@ TEST_CASE( "lua_platform_pickup_at_schedules_native_batch_for_exact_character",
                 absolute.raw() );
         sol::protected_function pickup = fixture.services["activities"]["pickup_at"];
         sol::protected_function_result call = pickup(
-                fixture.handle( npc_target ), target, options );
+                actor_handle, target, options );
         REQUIRE( call.valid() );
         sol::table result = call;
         REQUIRE( result["ok"].get<bool>() );
@@ -1311,13 +1330,13 @@ TEST_CASE( "lua_platform_pickup_at_schedules_native_batch_for_exact_character",
         CHECK( got_native_limits );
         CHECK( value["scheduled"].get<bool>() );
         CHECK( value["selected_count"].get<std::int64_t>() == 2 );
-        REQUIRE( fixture.target( npc_target ).activity );
-        CHECK( fixture.target( npc_target ).activity.id().str() == "ACT_PICKUP" );
-        CHECK_FALSE( fixture.target( !npc_target ).activity );
+        REQUIRE( selected_actor.activity );
+        CHECK( selected_actor.activity.id().str() == "ACT_PICKUP" );
+        CHECK_FALSE( other.activity );
 
         std::ostringstream serialized;
         JsonOut output( serialized );
-        fixture.target( npc_target ).activity.serialize( output );
+        selected_actor.activity.serialize( output );
         JsonValue activity_value = json_loader::from_string( serialized.str() );
         const JsonObject activity = activity_value.get_object();
         const JsonObject actor_wrapper = activity.get_object( "actor" );
@@ -1448,6 +1467,8 @@ TEST_CASE( "lua_platform_npc_jobs_match_native_assignment",
     for( const auto &job : jobs ) {
         CAPTURE( job.first );
         effect_fixture fixture;
+        active_activity_npc owned_target( 941733 );
+        npc &target = *owned_target.target;
         npc native;
         native.normalize();
         job.second( native );
@@ -1461,19 +1482,21 @@ TEST_CASE( "lua_platform_npc_jobs_match_native_assignment",
             return true;
         } );
         sol::protected_function assign = fixture.services["activities"]["assign_npc_job"];
-        sol::protected_function_result call = assign( fixture.handle( true ), job.first );
+        sol::protected_function_result call = assign( cata::lua_platform::game_handle::from_creature(
+                target, { "npc", target.getID().get_value(), 0, 0, 0, {} },
+                fixture.runtime, fixture.world ), job.first );
         REQUIRE( call.valid() );
         sol::table result = call;
         REQUIRE( result["ok"].get<bool>() );
-        CHECK( fixture.other.activity.id() == native.activity.id() );
-        CHECK( fixture.other.activity.moves_total == native.activity.moves_total );
-        CHECK( fixture.other.activity.moves_left == native.activity.moves_left );
-        REQUIRE( fixture.other.activity.actor );
+        CHECK( target.activity.id() == native.activity.id() );
+        CHECK( target.activity.moves_total == native.activity.moves_total );
+        CHECK( target.activity.moves_left == native.activity.moves_left );
+        REQUIRE( target.activity.actor );
         REQUIRE( native.activity.actor );
-        CHECK( fixture.other.activity.actor->get_type() == native.activity.actor->get_type() );
-        CHECK( fixture.other.mission == native.mission );
-        CHECK( fixture.other.get_attitude() == native.get_attitude() );
-        CHECK( fixture.other.current_activity_id == native.current_activity_id );
+        CHECK( target.activity.actor->get_type() == native.activity.actor->get_type() );
+        CHECK( target.mission == native.mission );
+        CHECK( target.get_attitude() == native.get_attitude() );
+        CHECK( target.current_activity_id == native.current_activity_id );
     }
 }
 
@@ -2205,7 +2228,7 @@ TEST_CASE( "lua_platform_spawn_upgrade_option_preserves_default_and_explicit_dis
     const cata::lua_platform::script_tripoint_coord position =
         cata::lua_platform::script_tripoint_coord::from_native(
             coords::origin::abs, coords::scale::map_square,
-            get_map().get_abs( tripoint_bub_ms( 60, 60, 0 ) ).raw() );
+            get_map().get_abs( tripoint_bub_ms( 61, 60, 0 ) ).raw() );
     sol::protected_function spawn = fixture.services["spawns"]["monster"];
     const cata::lua_platform::script_game_id type( "monster", "mon_test_zombie" );
     rng_set_engine_seed( 58163 );
@@ -2213,6 +2236,8 @@ TEST_CASE( "lua_platform_spawn_upgrade_option_preserves_default_and_explicit_dis
                                           spawn( type, position, 0, mode == 1 );
     REQUIRE( call.valid() );
     sol::table result = call;
+    INFO( ( result["ok"].get<bool>() ? "" :
+            result["error"].get<sol::table>()["code"].get<std::string>() ) );
     REQUIRE( result["ok"].get<bool>() );
     sol::table value = result["value"];
     const cata::lua_platform::game_handle handle =

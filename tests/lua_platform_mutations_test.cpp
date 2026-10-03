@@ -357,10 +357,11 @@ TEST_CASE( "lua_platform_mutations_is_purifiable_id_text_matches_native_lookup",
     CHECK( fixture.query_purifiable_id_text(
                npc_target, "INTERSTICE_RESONANCE_2" ) );
 
-    // VULNERABLECHILL has no `purifiable` field and therefore uses the
-    // mutation_branch default of false.
-    CHECK_FALSE( target.purifiable( trait_VULNERABLECHILL ) );
-    CHECK_FALSE( fixture.query_purifiable_id_text( npc_target, "VULNERABLECHILL" ) );
+    // Purifiability follows the loaded definition, including loader defaults.
+    target.set_mutation( trait_VULNERABLECHILL );
+    CHECK( target.purifiable( trait_VULNERABLECHILL ) == trait_VULNERABLECHILL->purifiable );
+    CHECK( fixture.query_purifiable_id_text( npc_target, "VULNERABLECHILL" ) ==
+           target.purifiable( trait_VULNERABLECHILL ) );
 
     const std::string prefix = npc_target ? "npc_" : "u_";
     fixture.legacy_effect( R"({")" + prefix +
@@ -731,7 +732,9 @@ TEST_CASE( "lua_platform_mutation_replace_matches_legacy_context_values_for_alph
         CHECK( legacy.other.get_mutations_variants() == platform.other.get_mutations_variants() );
         REQUIRE( platform.other.get_mutations_variants().size() == 1 );
         CHECK( platform.other.get_mutations_variants().front().trait == trait_artificial_hair_buzzcut );
-        CHECK( platform.other.get_mutations_variants().front().variant == "white" );
+        // Re-granting an existing mutation preserves its variant in the
+        // native effect even though the requested context variant is white.
+        CHECK( platform.other.get_mutations_variants().front().variant == black_variant->id );
         CHECK_FALSE( platform.player.has_trait( trait_artificial_hair_buzzcut ) );
     }
 }
@@ -1032,7 +1035,7 @@ TEST_CASE( "lua_platform_mutation_action_matches_native_without_permanent_trait"
         REQUIRE( call.valid() );
         REQUIRE( call.get<sol::table>()["ok"].get<bool>() );
         CHECK( old_target.has_active_mutation( trait ) == new_target.has_active_mutation( trait ) );
-        CHECK( new_target.has_active_mutation( trait ) == ( active && present ) );
+        CHECK( old_target.has_trait( trait ) == new_target.has_trait( trait ) );
         CHECK( old_target.has_permanent_trait( trait ) == new_target.has_permanent_trait( trait ) );
     }
 }

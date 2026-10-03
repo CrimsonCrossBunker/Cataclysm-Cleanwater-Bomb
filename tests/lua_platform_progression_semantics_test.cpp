@@ -114,13 +114,15 @@ TEST_CASE( "lua_platform_progression_grant_random_missing_matches_native_roll_re
     prepare_book_recipe_availability( platform_actor );
 
     REQUIRE( recipe_brew_mead.is_valid() );
-    // Character::has_recipe includes book availability, but the talker method
+    // A book makes the recipe available for crafting, but the talker method
     // used by f_roll_remainder reports only recipes already learned.
     REQUIRE_FALSE( native_actor.knows_recipe( &recipe_brew_mead.obj() ) );
-    REQUIRE( native_actor.has_recipe( &recipe_brew_mead.obj() ) );
+    REQUIRE( native_actor.get_recipes_from_books( native_actor.crafting_inventory() ).contains(
+                 &recipe_brew_mead.obj() ) );
     REQUIRE_FALSE( get_talker_for( native_actor )->has_recipe( recipe_brew_mead ) );
     REQUIRE_FALSE( platform_actor.knows_recipe( &recipe_brew_mead.obj() ) );
-    REQUIRE( platform_actor.has_recipe( &recipe_brew_mead.obj() ) );
+    REQUIRE( platform_actor.get_recipes_from_books( platform_actor.crafting_inventory() ).contains(
+                 &recipe_brew_mead.obj() ) );
     REQUIRE_FALSE( get_talker_for( platform_actor )->has_recipe( recipe_brew_mead ) );
 
     std::vector<std::string> weighted_mutation_ids = { "QUICK" };

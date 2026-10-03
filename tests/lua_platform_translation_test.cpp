@@ -645,7 +645,7 @@ TEST_CASE( "lua_platform_text_input_preparation_preserves_native_limits_and_prov
            "[lua][platform][interaction][semantic]" )
 {
     sol::state lua;
-    lua.open_libraries( sol::lib::base, sol::lib::table );
+    lua.open_libraries( sol::lib::base, sol::lib::table, sol::lib::string );
     const std::string raw_text = std::string( 10000, 'x' ) + '\0' + "tail";
     lua["raw_text"] = raw_text;
     const sol::protected_function_result loaded = lua.safe_script( R"(

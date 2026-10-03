@@ -783,11 +783,6 @@ TEST_CASE( "lua_platform_variable_numeric_ranges_match_native_presence_types_and
     install_runtime_api( owner, lua, ccb );
     set_active_runtimes( { owner } );
     lua["ccb"] = ccb;
-    const std::size_t world_generation = cata::lua_platform::detail::runtime_world_generation_storage();
-    lua["alpha"] = game_handle::from_creature( alpha, { "avatar", 4914, 0, 0, 0, {} },
-        owner->handle_runtime(), world_generation );
-    lua["beta"] = game_handle::from_creature( beta, { "avatar", 4915, 0, 0, 0, {} },
-        owner->handle_runtime(), world_generation );
     sol::table inputs = lua.create_table();
     for( std::size_t index = 0; index < cases.size(); ++index ) {
         sol::table row = lua.create_table();
@@ -797,6 +792,11 @@ TEST_CASE( "lua_platform_variable_numeric_ranges_match_native_presence_types_and
     }
     lua["inputs"] = inputs;
     lua.set_function( "prepare_bound", [&]( std::size_t index ) {
+        const std::size_t world_generation = cata::lua_platform::detail::runtime_world_generation_storage();
+        lua["alpha"] = game_handle::from_creature( alpha, { "avatar", 4914, 0, 0, 0, {} },
+                       owner->handle_runtime(), world_generation );
+        lua["beta"] = game_handle::from_creature( beta, { "avatar", 4915, 0, 0, 0, {} },
+                      owner->handle_runtime(), world_generation );
         const bound_case &bound = cases.at( index - 1 );
         dialogue conversation( get_talker_for( alpha ), get_talker_for( beta ) );
         reset_case( bound, conversation ); // Construct a fresh legacy value, with no conversion cache.
@@ -827,6 +827,7 @@ TEST_CASE( "lua_platform_variable_numeric_ranges_match_native_presence_types_and
         int value = 0;
         actual_diagnostics.push_back( capture_debugmsg_during( [&]() {
             const sol::protected_function_result call = draw();
+            INFO( ( call.valid() ? "" : sol::error( call ).what() ) );
             REQUIRE( call.valid() );
             value = call.get<int>();
         } ) );
@@ -1081,13 +1082,15 @@ TEST_CASE( "lua_platform_sample_range_matches_native_draw_order_and_state",
     set_active_runtimes( { owner } );
     lua["ccb"] = ccb;
     lua["sample_replace"] = replace;
-    const std::size_t world_generation = cata::lua_platform::detail::runtime_world_generation_storage();
-    lua["sample_actor"] = game_handle::from_creature(
-                              platform_actor, { "avatar", 4911, 0, 0, 0, {} },
-                              owner->handle_runtime(), world_generation );
+    lua.set_function( "sample_handle", [&]() {
+        return game_handle::from_creature(
+                   platform_actor, { "avatar", 4911, 0, 0, 0, {} },
+                   owner->handle_runtime(), cata::lua_platform::detail::runtime_world_generation_storage() );
+    } );
     const sol::protected_function_result installed = lua.safe_script( R"(
 local services = ccb.services
 ccb.runtime.handler("sample_range", function()
+    local sample_actor = sample_handle()
     local samples = {}
     if sample_replace then
         for index = 1, 4 do
@@ -1107,14 +1110,17 @@ ccb.runtime.handler("sample_range", function()
     for index, name in ipairs({
         "sample_range_a", "sample_range_b", "sample_range_c", "sample_range_d"
     }) do
-        assert(services.variables.set(sample_actor, name, samples[index]).ok)
+        local result = services.variables.set(sample_actor, name, samples[index])
+        assert(result.ok, result.error and result.error.code)
     end
+    done = true
 end)
 ccb.runtime.on("world_ready", "sample_range")
 )" );
     REQUIRE( installed.valid() );
     rng_set_engine_seed( seed );
     runtime_world_ready( true );
+    REQUIRE( lua["done"].get_or( false ) );
 
     std::vector<int> actual_samples;
     actual_samples.reserve( names.size() );

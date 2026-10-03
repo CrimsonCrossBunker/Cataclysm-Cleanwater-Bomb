@@ -1155,7 +1155,7 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     cata::lua_platform::dialogue::end_session( mission_dialogue );
     CHECK_THROWS( mission_context.assigned_mission_count() );
     const sol::protected_function_result stale_lua_count = lua.safe_script(
-                "return mission_dialogue_context:assigned_mission_count()" );
+                "return mission_dialogue_context:assigned_mission_count()", sol::script_pass_on_error );
     CHECK_FALSE( stale_lua_count.valid() );
 
     provider->chatbin.missions_assigned = {

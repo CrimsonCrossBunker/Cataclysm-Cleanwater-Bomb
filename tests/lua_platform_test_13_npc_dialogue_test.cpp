@@ -882,7 +882,7 @@ TEST_CASE( "lua_platform_open_dialogue_rejects_stale_participants_and_generation
         const sol::table envelope = result.get<sol::table>();
         CHECK_FALSE( envelope["ok"].get<bool>() );
         CHECK( envelope["error"].get<sol::table>()["code"].get<std::string>() ==
-               "stale_identity" );
+               "stale_avatar_identity" );
     }
 
     SECTION( "runtime owner" ) {

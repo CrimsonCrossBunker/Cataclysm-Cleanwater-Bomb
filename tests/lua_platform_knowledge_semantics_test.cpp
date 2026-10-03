@@ -1075,10 +1075,15 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
                 const cata_default_random_engine platform_rng_after = rng_get_engine(); // NOLINT(cata-determinism)
                 for( const std::string &selector : selectors ) {
                     CAPTURE( ignored, selector );
-                    const conditional_t condition( json_loader::from_string(
+                    conditional_t condition;
+                    const std::string parse_diagnostic = capture_debugmsg_during( [&]() {
+                        condition = conditional_t( json_loader::from_string(
                                                        std::string( "{\"" ).append( selector ).append(
                                                            R"(_has_proficiency":{"mutator":"valid_technique","blacklist":)" ).append(
                                                            ignored ).append( "}}" ) ).get_object() );
+                    } );
+                    CHECK( parse_diagnostic.find( "Invalid or misplaced field name \"blacklist\"" ) !=
+                           std::string::npos );
                     rng_set_engine_seed( 4911 );
                     compare_id( selector, condition, platform_id );
                     CHECK( rng_get_engine() == platform_rng_after );
@@ -1307,15 +1312,34 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
                               ",\"mutator\":\"valid_technique\",\"blacklist\":[42],"
                               "\"i18n\":true,\"str\":\"not_translated\",\"type\":\"ignored_prefix\"}";
                 str_or_var provider;
+                if( default_fragment == "false" || default_fragment == "42" ||
+                    default_fragment == "[]" || default_fragment == "{}" ) {
+                    // var_info selects the source first, but value_or_var still
+                    // validates its default as text before any evaluation.
+                    const std::string invalid_diagnostic = capture_debugmsg_during( [&]() {
+                        CHECK_THROWS( provider.deserialize( json_loader::from_string(
+                                                                "{\"source\":" + descriptor + "}" ).get_object().get_member( "source" ) ) );
+                    } );
+                    INFO( invalid_diagnostic );
+                    continue;
+                }
                 const std::string parse_diagnostic = capture_debugmsg_during( [&]() {
                     provider.deserialize( json_loader::from_string(
                                               "{\"source\":" + descriptor + "}" ).get_object().get_member( "source" ) );
                 } );
-                CHECK( parse_diagnostic.empty() );
+                // The source wins over the extra fields, but the native parser
+                // reports those unused fields before value_or_var accepts it.
+                INFO( parse_diagnostic );
+                CHECK( parse_diagnostic.find( "Unread data." ) != std::string::npos );
                 for( const std::string &selector : selectors ) {
-                    const conditional_t condition( json_loader::from_string(
+                    conditional_t condition;
+                    const std::string condition_diagnostic = capture_debugmsg_during( [&]() {
+                        condition = conditional_t( json_loader::from_string(
                                                        std::string( "{\"" ).append( selector ).append(
                                                            "_has_proficiency\":" ).append( descriptor ).append( "}" ) ).get_object() );
+                    } );
+                    INFO( condition_diagnostic );
+                    CHECK( condition_diagnostic.find( "Unread data." ) != std::string::npos );
                     for( int state = 0; state < 3; ++state ) {
                         if( state == 0 ) {
                             remove_scope_value( source_scope, source_key );

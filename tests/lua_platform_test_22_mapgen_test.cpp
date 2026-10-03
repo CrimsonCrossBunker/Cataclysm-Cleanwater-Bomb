@@ -350,7 +350,8 @@ TEST_CASE( "lua_platform_mapgen_service_uses_typed_update_and_target_tokens",
     CHECK( mapgen["run_update"].valid() );
 
     const sol::object world_object = fixture.services["world"];
-    CHECK_FALSE( world_object.valid() );
+    REQUIRE( world_object.valid() );
+    CHECK( world_object.get_type() == sol::type::table );
 }
 
 TEST_CASE( "lua_platform_mapgen_apply_rejects_untyped_and_legacy_requests",

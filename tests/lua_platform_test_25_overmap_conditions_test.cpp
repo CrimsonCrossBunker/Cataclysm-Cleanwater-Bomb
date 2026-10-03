@@ -196,7 +196,7 @@ TEST_CASE( "lua_platform_npc_overmap_conditions_match_native_beta_positions",
     fixture.source_overmap->ter_set( beta_local, oter_id( "forest" ) );
     // Keep alpha on a field at z=0 and put beta on a forest at z=1 so the
     // native beta result cannot accidentally pass through alpha's position.
-    partner.setpos( project_to<coords::ms>( beta_position_omt ), false );
+    partner.spawn_at_precise( project_to<coords::ms>( beta_position_omt ) );
     CHECK( player.pos_abs_omt() == fixture.source_omt );
     CHECK( partner.pos_abs_omt() == beta_position_omt );
 
@@ -262,7 +262,7 @@ TEST_CASE( "lua_platform_overmap_route_reveal_matches_native_path_semantics",
     const tripoint_abs_omt end = start + tripoint::east;
     const tripoint_om_omt local_start( OMAPX / 2, OMAPY / 2,
                                        fixture.source_omt.z() );
-    const oter_id road_terrain = oter_road.id();
+    const oter_id road_terrain = oter_road_nesw.id();
     REQUIRE( road_terrain.is_valid() );
     REQUIRE( overmap_connections::guess_for( road_terrain ).is_valid() );
 
@@ -536,15 +536,15 @@ TEST_CASE( "lua_platform_overmap_target_search_retries_with_generation_and_retur
     platform_overmap_travel_fixture fixture( 827, 57 );
     REQUIRE( fixture.edit_ready );
 
-    tripoint_abs_omt remote_origin( 1000000, 1000000, 0 );
-    for( int attempt = 0; attempt < 100 &&
-         overmap_buffer.has( project_to<coords::om>( remote_origin.xy() ) );
-         ++attempt ) {
-        remote_origin.x() += OMAPX * 10;
+    // Use an unloaded neighbor of the existing world instead of a distant
+    // region whose mandatory specials recursively generate unrelated maps.
+    point_abs_om remote_overmap = project_to<coords::om>( fixture.source_omt.xy() ) + point::east;
+    for( int attempt = 0; attempt < 100 && overmap_buffer.has( remote_overmap ); ++attempt ) {
+        remote_overmap += point::east;
     }
-    const point_abs_om remote_overmap =
-        project_to<coords::om>( remote_origin.xy() );
     REQUIRE_FALSE( overmap_buffer.has( remote_overmap ) );
+    const tripoint_abs_omt remote_origin(
+        project_to<coords::omt>( remote_overmap ) + point( OMAPX / 2, OMAPY / 2 ), 0 );
 
     const sol::protected_function find_target =
         fixture.overmap_api()["find_target"];
@@ -568,7 +568,7 @@ TEST_CASE( "lua_platform_overmap_target_search_retries_with_generation_and_retur
     npc native_origin;
     native_origin.normalize();
     native_origin.setID( character_id( 8271 ), true );
-    native_origin.setpos( project_to<coords::ms>( remote_origin ), false );
+    native_origin.spawn_at_precise( project_to<coords::ms>( remote_origin ) );
     avatar &player = get_avatar();
     dialogue conversation( get_talker_for( player ), get_talker_for( player ) );
     mission_target_params native_params;
@@ -579,8 +579,12 @@ TEST_CASE( "lua_platform_overmap_target_search_retries_with_generation_and_retur
     native_params.search_range = 3.0;
     native_params.min_distance = 0.0;
     native_params.z = dbl_or_var( 0.0 );
-    const tripoint_abs_omt native_target =
-        mission_util::get_om_terrain_pos( native_params, conversation );
+    tripoint_abs_omt native_target;
+    const std::string missing_diagnostic = capture_debugmsg_during( [&]() {
+        native_target = mission_util::get_om_terrain_pos( native_params, conversation );
+    } );
+    CHECK( missing_diagnostic.find( "Unable to find and assign mission target __missing_platform_test_terrain__" )
+           != std::string::npos );
     CHECK( native_target == platform_target );
 }
 

@@ -761,7 +761,8 @@ TEST_CASE( "lua_platform_map_trap_set_matches_native_same_id_and_builtin_semanti
     REQUIRE( tr_pit.is_valid() );
 
     const tripoint_bub_ms local = fixture.local + tripoint::east;
-    REQUIRE( here.ter_set( local, ter_t_floor.id() ) );
+    here.ter_set( local, ter_t_floor.id() );
+    REQUIRE( here.ter( local ) == ter_t_floor.id() );
     here.trap_set( local, tr_beartrap.id() );
     here.memory_cache_dec_set_dirty( local, false );
 
@@ -815,18 +816,24 @@ TEST_CASE( "lua_platform_map_trap_set_matches_native_same_id_and_builtin_semanti
     REQUIRE( replaced.get<sol::table>()["ok"].get<bool>() );
     CHECK( here.tr_at( local ).id.id() == tr_rollmat.id() );
 
-    REQUIRE( here.ter_set( local, ter_t_floor.id() ) );
+    here.ter_set( local, ter_t_floor.id() );
+    REQUIRE( here.ter( local ) == ter_t_floor.id() );
     here.trap_set( local, tr_null );
-    REQUIRE( here.ter_set( local, ter_t_pit.id() ) );
+    here.ter_set( local, ter_t_pit.id() );
+    REQUIRE( here.ter( local ) == ter_t_pit.id() );
     const sol::protected_function_result built_in_snapshot =
         map_api["snapshot"]( token );
     REQUIRE( built_in_snapshot.valid() );
     REQUIRE( built_in_snapshot.get<sol::table>()["ok"].get<bool>() );
-    const sol::protected_function_result built_in = trap_set(
-                token,
-                built_in_snapshot.get<sol::table>()["value"].get<sol::table>()
-                ["revision"].get<std::uint64_t>(),
-                cata::lua_platform::script_game_id( "trap", tr_beartrap.str() ) );
+    sol::protected_function_result built_in;
+    const std::string built_in_diagnostic = capture_debugmsg_during( [&]() {
+        built_in = trap_set(
+                       token,
+                       built_in_snapshot.get<sol::table>()["value"].get<sol::table>()
+                       ["revision"].get<std::uint64_t>(),
+                       cata::lua_platform::script_game_id( "trap", tr_beartrap.str() ) );
+    } );
+    CHECK( built_in_diagnostic.find( "on top of terrain t_pit" ) != std::string::npos );
     REQUIRE( built_in.valid() );
     REQUIRE( built_in.get<sol::table>()["ok"].get<bool>() );
     CHECK( here.tr_at( local ).id.id() == tr_pit.id() );
