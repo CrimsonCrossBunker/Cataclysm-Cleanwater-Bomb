@@ -2,6 +2,7 @@
 #include <avatar.h>
 #include <calendar.h>
 #include <cata_scope_helpers.h>
+#include "debug.h"
 #include <character_id.h>
 #include <coordinates.h>
 #include <creature_tracker.h>

@@ -5,7 +5,7 @@
 #include <debug.h>
 #include <dialogue.h>
 #include <enums.h>
-#include <flexbuffer_json.h>
+#include "flexbuffer_json.h"
 #include <game.h>
 #include <item.h>
 #include <item_uid.h>

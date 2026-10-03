@@ -2,7 +2,7 @@
 #include <character_id.h>
 #include <coordinates.h>
 #include <dialogue_chatbin.h>
-#include <flexbuffer_json.h>
+#include "flexbuffer_json.h"
 #include <game.h>
 #include <json.h>
 #include <lua_platform_bindings_values.h>

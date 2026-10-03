@@ -1,7 +1,7 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
 #include <creature.h>
-#include <flexbuffer_json.h>
+#include "flexbuffer_json.h"
 #include <talker.h>
 #include <functional>
 #include <memory>

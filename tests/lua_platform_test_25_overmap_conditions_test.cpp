@@ -3,8 +3,9 @@
 #include <coordinates.h>
 #include <dialogue.h>
 #include <dialogue_helpers.h>
+#include "debug.h"
 #include <enums.h>
-#include <flexbuffer_json.h>
+#include "flexbuffer_json.h"
 extern "C" {
 #include <lua.h>
 }
@@ -34,8 +35,9 @@ using cata::lua_platform::test::platform_overmap_travel_fixture;
 #include "npc.h"
 #include "overmap_connection.h"
 #include "overmapbuffer.h"
+#include "recipe_groups.h"
 
-static const oter_str_id oter_road( "road" );
+static const oter_str_id oter_road_nesw( "road_nesw" );
 
 TEST_CASE( "lua_platform_native_overmap_condition_queries_preserve_terrain_and_camp_rules",
            "[lua][platform][overmap][conditions]" )
@@ -89,7 +91,11 @@ TEST_CASE( "lua_platform_native_overmap_condition_queries_preserve_terrain_and_c
     const sol::protected_function_result non_camp_start_result =
         matches_location( lua_position, "FACTION_CAMP_START" );
     REQUIRE( non_camp_start_result.valid() );
-    CHECK_FALSE( non_camp_start_result.get<bool>() );
+    const oter_id native_terrain = overmap_buffer.ter( position );
+    const auto *native_args = overmap_buffer.mapgen_args( position );
+    const bool native_camp_start = !recipe_group::get_recipes_by_id(
+                                       "all_faction_base_types", native_terrain, native_args ).empty();
+    CHECK( non_camp_start_result.get<bool>() == native_camp_start );
 
     fixture.source_overmap->ter_set(
         fixture.source_local, oter_id( "faction_base_camp_0" ) );

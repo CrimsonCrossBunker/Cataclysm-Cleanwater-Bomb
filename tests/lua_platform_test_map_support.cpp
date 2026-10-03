@@ -1,5 +1,22 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include "avatar.h"
+#include "creature_tracker.h"
+#include "game.h"
+#include "lua_platform_bindings_values.h"
+#include "lua_platform_items.h"
+#include "lua_platform_overmap.h"
+#include "lua_platform_world_services.h"
+#include "map_helpers.h"
+#include "monster_uid.h"
+#include "npc.h"
+#include "overmapbuffer.h"
+#include "player_activity.h"
+#include "vehicle.h"
+#include "vpart_position.h"
+#include <functional>
+#include "player_helpers.h"
+
 #include "lua_platform_test_map_support.h"
 
 static const mtype_id mon_zombie( "mon_zombie" );

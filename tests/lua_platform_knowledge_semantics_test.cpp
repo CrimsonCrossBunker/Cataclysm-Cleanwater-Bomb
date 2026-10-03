@@ -1,9 +1,10 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include "calendar.h"
+
 #include <coordinates.h>
 #include <math_parser_diag_value.h>
 #include <pimpl.h>
-#include <point.h>
 #include <talker.h>
 #include <cstddef>
 #include <optional>
@@ -17,7 +18,6 @@
 #include <utility>
 #include <vector>
 
-#include "activity_type.h"
 #include "activity_actor_definitions.h"
 #include "avatar.h"
 #include "cata_catch.h"

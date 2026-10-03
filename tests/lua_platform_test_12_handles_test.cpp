@@ -8,7 +8,7 @@
 #include <dialogue.h>
 #include <dialogue_helpers.h>
 #include <enums.h>
-#include <flexbuffer_json.h>
+#include "flexbuffer_json.h"
 #include <inventory.h>
 #include <item.h>
 #include <item_location.h>

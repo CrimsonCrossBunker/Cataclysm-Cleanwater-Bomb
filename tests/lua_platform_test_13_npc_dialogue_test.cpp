@@ -1,4 +1,6 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+
+#include "debug.h"
 #include <bodypart.h>
 #include <cata_scope_helpers.h>
 #include <character_id.h>
@@ -8,7 +10,7 @@
 #include <dialogue_win.h>
 #include <effect.h>
 #include <enums.h>
-#include <flexbuffer_json.h>
+#include "flexbuffer_json.h"
 #include <game.h>
 #include <input_enums.h>
 #include <inventory.h>

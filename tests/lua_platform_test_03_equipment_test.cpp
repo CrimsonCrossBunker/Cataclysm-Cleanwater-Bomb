@@ -1,4 +1,7 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+
+#include "ret_val.h"
+#include "visitable.h"
 #include <avatar.h>
 #include <calendar.h>
 #include <character.h>

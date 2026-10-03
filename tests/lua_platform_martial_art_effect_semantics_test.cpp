@@ -1,6 +1,6 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
-#include <flexbuffer_json.h>
+#include "flexbuffer_json.h"
 #include <pimpl.h>
 #include <talker.h>
 #include <type_id.h>
@@ -21,6 +21,7 @@
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_runtime.h"
+#include "lua_platform_runtime_internal.h"
 #include "lua_platform_sol.h"
 
 static const matype_id style_none( "style_none" );
@@ -68,8 +69,9 @@ TEST_CASE( "lua_platform_martial_art_effect_service_matches_native_effect_ids",
             function( native_dialogue );
         }
     };
-    const auto apply_platform_effect = [&services, &handle]( const std::string & operation,
+    const auto apply_platform_effect = [&services, &handle, &runtime]( const std::string & operation,
     const std::string & id ) {
+        cata::lua_platform::detail::callback_scope callback( *runtime );
         sol::protected_function function = services["martial_arts"][operation];
         const sol::protected_function_result call = function(
                     handle, cata::lua_platform::script_game_id( "martial_art", id ) );

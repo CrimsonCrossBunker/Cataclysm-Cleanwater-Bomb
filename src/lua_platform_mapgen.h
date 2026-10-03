@@ -1,4 +1,6 @@
 #pragma once
+
+#include <string_view>
 #ifndef CATA_SRC_LUA_PLATFORM_MAPGEN_H
 #define CATA_SRC_LUA_PLATFORM_MAPGEN_H
 

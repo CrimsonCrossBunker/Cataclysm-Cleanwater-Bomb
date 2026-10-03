@@ -1,5 +1,7 @@
 #if CATA_ENABLE_LUA_PLATFORM
 
+#include "creature.h"
+
 #include "lua_platform_items.h"
 
 #include <cached_options.h>

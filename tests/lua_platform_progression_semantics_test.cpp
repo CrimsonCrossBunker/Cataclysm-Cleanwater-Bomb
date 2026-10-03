@@ -1,7 +1,7 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
 #include <creature.h>
-#include <flexbuffer_json.h>
+#include "flexbuffer_json.h"
 #include <translation.h>
 #include <cstddef>
 #include <functional>
@@ -28,6 +28,7 @@
 #include "magic.h"
 #include "mutation.h"
 #include "recipe.h"
+#include "recipe_dictionary.h"
 #include "rng.h"
 #include "talker.h"
 #include "type_id.h"

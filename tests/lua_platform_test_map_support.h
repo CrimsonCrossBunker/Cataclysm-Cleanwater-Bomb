@@ -1,6 +1,32 @@
 #pragma once
 
+#include "character_id.h"
+#include "coordinates.h"
+#include "enums.h"
+#include "lua_platform_bindings_coords.h"
+#include "lua_platform_handle.h"
+#include "lua_platform_mapgen.h"
+#include "lua_platform_world.h"
+#include "map.h"
+#include "mapgendata.h"
+#include "memory_fast.h"
+#include "monster.h"
+#include "overmap.h"
+#include "point.h"
+#include "type_id.h"
+#include "units.h"
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <vector>
+#include "lua_platform_sol.h"
+
 #include "lua_platform_test_support.h"
+
+class npc;
+class vehicle;
+struct vehicle_part;
 
 namespace cata::lua_platform::test
 {

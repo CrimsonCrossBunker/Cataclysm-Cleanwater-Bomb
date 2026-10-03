@@ -1,5 +1,7 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include "debug.h"
+
 #include <coordinates.h>
 #include <item_uid.h>
 #include <pimpl.h>

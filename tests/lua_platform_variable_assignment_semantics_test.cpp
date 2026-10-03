@@ -1,6 +1,8 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
-#include <flexbuffer_json.h>
+#include <string_view>
+
+#include "flexbuffer_json.h"
 #include <cstddef>
 #include <functional>
 #include <limits>

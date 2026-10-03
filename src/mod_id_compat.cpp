@@ -1,3 +1,5 @@
+
+#include "type_id.h"
 #include "mod_id_compat.h"
 
 #include <algorithm>

@@ -1,7 +1,7 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
 #include <calendar.h>
-#include <flexbuffer_json.h>
+#include "flexbuffer_json.h"
 #include <point.h>
 #include <talker.h>
 #include <cstddef>
