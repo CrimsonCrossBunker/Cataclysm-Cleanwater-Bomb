@@ -1,6 +1,8 @@
 #include <coordinates.h>
 #include <item.h>
+extern "C" {
 #include <lua.h>
+}
 #include <lua_platform_handle.h>
 #include <lua_platform_hooks.h>
 #include <lua_platform_runtime.h>

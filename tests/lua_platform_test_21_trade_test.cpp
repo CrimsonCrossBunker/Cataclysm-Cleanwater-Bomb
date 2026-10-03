@@ -8,7 +8,9 @@
 #include <item_location.h>
 #include <item_pocket.h>
 #include <item_uid.h>
+extern "C" {
 #include <lua.h>
+}
 #include <lua_platform_bindings_values.h>
 #include <lua_platform_handle.h>
 #include <lua_platform_items.h>

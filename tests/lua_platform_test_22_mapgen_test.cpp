@@ -7,7 +7,9 @@
 #include <faction.h>
 #include <game.h>
 #include <item.h>
+extern "C" {
 #include <lua.h>
+}
 #include <lua_platform_bindings_coords.h>
 #include <lua_platform_bindings_enums.h>
 #include <lua_platform_bindings_values.h>

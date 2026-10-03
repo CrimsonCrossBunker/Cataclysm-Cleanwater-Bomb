@@ -5,7 +5,9 @@
 #include <dialogue_helpers.h>
 #include <enums.h>
 #include <flexbuffer_json.h>
+extern "C" {
 #include <lua.h>
+}
 #include <lua_platform_bindings_coords.h>
 #include <lua_platform_bindings_enums.h>
 #include <overmap.h>
