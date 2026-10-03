@@ -2250,7 +2250,7 @@ sol::table relocate_vehicle_move(
     avatar &you = get_avatar();
     if( you.get_grab_type() == object_type::VEHICLE ) {
         const optional_vpart_position grabbed_vehicle = here.veh_at(
-                you.pos_bub() + you.grab_point );
+                    you.pos_bub() + you.grab_point );
         if( grabbed_vehicle && &grabbed_vehicle->vehicle() == &entry ) {
             return make_game_error_result( state, {
                 "unsupported_state",
@@ -2497,7 +2497,7 @@ sol::table travel_to_dimension(
     vehicle *vehicle_to_take = nullptr;
     if( options.take_vehicle ) {
         const optional_vpart_position vehicle_position = here.veh_at(
-                get_avatar().pos_bub( here ) );
+                    get_avatar().pos_bub( here ) );
         if( !vehicle_position ) {
             return make_game_error_result( state, {
                 "no_vehicle",
@@ -2656,7 +2656,7 @@ void install_relocation_move_api(
     relocation.set_function(
         "teleport_avatar",
         [current_runtime_generation, current_world_generation,
-         require_write, require_dangerous_relocation, has_active_callback](
+                                     require_write, require_dangerous_relocation, has_active_callback](
             sol::this_state lua, const game_handle & handle,
             const script_tripoint_coord & position,
     const sol::optional<sol::table> &options ) {
@@ -2672,7 +2672,7 @@ void install_relocation_move_api(
     relocation.set_function(
         "move",
         [current_runtime_generation, current_world_generation,
-         require_write, require_dangerous_relocation, has_active_callback](
+                                     require_write, require_dangerous_relocation, has_active_callback](
             sol::this_state lua, const game_handle & handle,
             const map_tile_token & target,
     const sol::optional<sol::table> &options ) {
@@ -2875,7 +2875,7 @@ void install_game_world_service_api(
     relocation.set_function(
         "travel_to_omt",
         [authorize_relocation, current_runtime_generation,
-         current_world_generation, require_write](
+                               current_world_generation, require_write](
             sol::this_state lua, const game_handle & handle,
             const overmap_tile_token & target,
     const sol::optional<sol::table> &options ) {
@@ -2890,7 +2890,7 @@ void install_game_world_service_api(
     relocation.set_function(
         "item_at",
         [authorize_relocation, current_runtime_generation,
-         current_world_generation, require_write](
+                               current_world_generation, require_write](
             sol::this_state lua, const game_handle & handle,
     const script_tripoint_coord & position ) {
         require_write();

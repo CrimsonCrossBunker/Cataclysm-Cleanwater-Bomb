@@ -650,7 +650,7 @@ void install_skill_api(
         "level",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state, const game_handle & handle,
-    const std::string &id ) {
+    const std::string & id ) {
         require_read();
         return get_effective_level(
                    lua_state, handle, id,

@@ -64,8 +64,8 @@ TEST_CASE( "lua_platform_skills_level_matches_raw_character_and_talker_skill_val
                 owner->handle_runtime(), world_generation );
     const sol::protected_function level_api =
         ccb["services"]["skills"]["level"];
-    const auto invoke_level = [&]( const platform::game_handle &handle,
-                                   const std::string &id ) {
+    const auto invoke_level = [&]( const platform::game_handle & handle,
+    const std::string & id ) {
         platform::detail::callback_scope active_callback( *owner );
         const sol::protected_function_result result = level_api( handle, id );
         if( !result.valid() ) {
@@ -75,8 +75,8 @@ TEST_CASE( "lua_platform_skills_level_matches_raw_character_and_talker_skill_val
         }
         return result.get<sol::table>();
     };
-    const auto query_level = [&]( const platform::game_handle &handle,
-                                  const std::string &id ) {
+    const auto query_level = [&]( const platform::game_handle & handle,
+    const std::string & id ) {
         const sol::table result = invoke_level( handle, id );
         REQUIRE( result["ok"].get<bool>() );
         return result["value"].get<float>();
@@ -148,8 +148,8 @@ TEST_CASE( "lua_platform_skills_level_matches_raw_character_and_talker_skill_val
 
     SECTION( "stale world-generation handles return an error" ) {
         const platform::game_handle stale = platform::game_handle::from_creature(
-                alpha, { "avatar", 7111, 0, 0, 0, {} },
-                owner->handle_runtime(), world_generation + 1 );
+                                                alpha, { "avatar", 7111, 0, 0, 0, {} },
+                                                owner->handle_runtime(), world_generation + 1 );
         const sol::table result = invoke_level( stale, "speech" );
         CHECK_FALSE( result["ok"].get<bool>() );
     }

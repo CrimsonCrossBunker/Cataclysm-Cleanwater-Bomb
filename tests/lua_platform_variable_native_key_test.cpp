@@ -219,7 +219,7 @@ TEST_CASE( "lua_platform_native_variable_keys_keep_native_string_range",
 
             for( const double number : {
                      -3.9, 0.0, 3.9, 2147483647.0, -2147483648.0
-                 } ) {
+                     } ) {
                 require_success( set( owner.handle, key, number ) );
                 REQUIRE( owner.get( key ) != nullptr );
                 const double expected = owner.get( key )->dbl();
@@ -257,7 +257,7 @@ TEST_CASE( "lua_platform_native_variable_keys_keep_native_string_range",
             require_success( set( owner.handle, key, owner_value ) );
 
             CHECK( require_value( resolve( context, owner.handle, "u", key ) )[
-                       "value"].get<std::string>() == owner_value );
+            "value"].get<std::string>() == owner_value );
             require_success( set_resolved( context, owner.handle, "u", key, "resolved-owner" ) );
             CHECK( owner.get( key )->str() == "resolved-owner" );
 
@@ -265,7 +265,7 @@ TEST_CASE( "lua_platform_native_variable_keys_keep_native_string_range",
             CHECK( require_value( get_global( key ) )["value"].get<std::string>() ==
                    "resolved-owner" );
             CHECK( require_value( resolve( context, sol::nil, "global", key ) )[
-                       "value"].get<std::string>() == "resolved-owner" );
+            "value"].get<std::string>() == "resolved-owner" );
 
             require_success( set_global( key, "global-value" ) );
             CHECK( require_value( get_global( key ) )["value"].get<std::string>() ==
@@ -273,7 +273,7 @@ TEST_CASE( "lua_platform_native_variable_keys_keep_native_string_range",
             require_success( set_resolved( context, sol::nil, "global", key,
                                            "resolved-global" ) );
             CHECK( require_value( resolve( context, sol::nil, "global", key ) )[
-                       "value"].get<std::string>() == "resolved-global" );
+            "value"].get<std::string>() == "resolved-global" );
 
             require_success( copy( sol::nil, key, owner.handle, key ) );
             CHECK( require_value( get( owner.handle, key ) )["value"].get<std::string>() ==
@@ -348,14 +348,14 @@ TEST_CASE( "lua_platform_native_variable_long_keys_survive_var_indirection",
     const sol::protected_function get_global = fixture.variables["get_global"];
 
     CHECK( require_value( resolve( context, player_handle, "var", "actor_reference" ) )[
-               "value"].get<std::string>() == "actor-before" );
+            "value"].get<std::string>() == "actor-before" );
     require_success( set_resolved( context, player_handle, "var", "actor_reference",
                                    "actor-after" ) );
     CHECK( require_value( get( player_handle, long_key ) )["value"].get<std::string>() ==
            "actor-after" );
 
     CHECK( require_value( resolve( context, sol::nil, "var", "global_reference" ) )[
-               "value"].get<std::string>() == "global-before" );
+            "value"].get<std::string>() == "global-before" );
     require_success( set_resolved( context, sol::nil, "var", "global_reference",
                                    "global-after" ) );
     CHECK( require_value( get_global( long_key ) )["value"].get<std::string>() ==
@@ -425,13 +425,13 @@ TEST_CASE( "lua_platform_strict_numeric_reads_distinguish_type_failure_missing_a
     permissive["strict"] = false;
     const auto make_value = []( const int shape ) -> std::optional<diag_value> {
         switch( shape )
-    {
-        case 0:
-            return std::nullopt;
-        case 1:
-            return diag_value{};
-        case 2:
-            return diag_value( 0.0 );
+        {
+            case 0:
+                return std::nullopt;
+            case 1:
+                return diag_value{};
+            case 2:
+                return diag_value( 0.0 );
             case 3:
                 return diag_value( -3.9 );
             case 4:
@@ -865,7 +865,7 @@ TEST_CASE( "lua_platform_indirect_numeric_duration_matches_native_participants_a
              } ) {
             for( const int fallback : {
                      -7, calendar::INDEFINITELY_LONG
-                 } ) {
+                     } ) {
                 CAPTURE( index, present, fallback );
                 dialogue conversation( get_talker_for( alpha ), get_talker_for( beta ) );
                 sol::table data = fixture.lua.create_table();
@@ -1048,12 +1048,12 @@ TEST_CASE( "lua_platform_coordinate_reflection_matches_native_variable_scopes",
                     effect( conversation );
                 }
                 const tripoint expected = read_var_value( { output_owner, output_key },
-                    conversation ).tripoint().raw();
+                                          conversation ).tripoint().raw();
                 CHECK( expected == tripoint( -5, 10, -10 ) );
                 write_var_value( output_owner, output_key, &conversation,
                                  diag_value( diag_array( 5000, diag_value( 4.0 ) ) ) );
                 const sol::protected_function_result call = reflect(
-                        center_scope.first, center_key, output_scope.first, output_key, data );
+                            center_scope.first, center_key, output_scope.first, output_key, data );
                 REQUIRE( call.valid() );
                 CHECK( call.get<cata::lua_platform::script_tripoint_coord>().to_native() == expected );
                 const tripoint stored = output_owner == var_type::context ?
@@ -1197,8 +1197,8 @@ TEST_CASE( "lua_platform_location_adjust_matches_native_fractional_units_and_mis
                 }
                 data["result"] = old;
                 const sol::protected_function_result call = adjust(
-                        key, adjustment.x, adjustment.y, adjustment.z,
-                        adjustment.overmap, adjustment.override_z, data );
+                            key, adjustment.x, adjustment.y, adjustment.z,
+                            adjustment.overmap, adjustment.override_z, data );
                 REQUIRE( call.valid() );
                 CHECK( call.get<cata::lua_platform::script_tripoint_coord>().to_native() == expected );
                 CHECK( data["result"].get<cata::lua_platform::script_tripoint_coord>().to_native() == expected );

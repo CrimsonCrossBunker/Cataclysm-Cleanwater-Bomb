@@ -1632,8 +1632,8 @@ struct wound_type_definition_handle {
                                                definition->required_body_part_types :
                                                definition->forbidden_body_part_types;
             const std::vector<std::string> &opposite = required ?
-                definition->forbidden_body_part_types :
-                definition->required_body_part_types;
+                    definition->forbidden_body_part_types :
+                    definition->required_body_part_types;
             if( std::find( target.begin(), target.end(), kind ) != target.end() ) {
                 throw std::runtime_error( "wound body-part type must be unique" );
             }
@@ -2504,10 +2504,10 @@ struct mutation_definition_handle {
         damage.damage_multiplier = options.get_or(
                                        "damage_multiplier", options.get_or( "damage_mult", 1.0 ) );
         damage.unconditional_armor_penetration_multiplier = options.get_or(
-                "unconditional_armor_penetration_multiplier",
-                options.get_or( "unc_arpen_mult", 1.0 ) );
+                    "unconditional_armor_penetration_multiplier",
+                    options.get_or( "unc_arpen_mult", 1.0 ) );
         damage.unconditional_damage_multiplier = options.get_or(
-                "unconditional_damage_multiplier", options.get_or( "unc_damage_mult", 1.0 ) );
+                    "unconditional_damage_multiplier", options.get_or( "unc_damage_mult", 1.0 ) );
         return damage;
     }
 
@@ -2515,9 +2515,9 @@ struct mutation_definition_handle {
         require_building_handle( token, *definition, "mutation" );
         mutation_attack_definition_data attack;
         attack.player_message = read_text_option_with_alias( options, "player_message",
-            "attack_text_u", {}, "mutation attack player message" );
+                                "attack_text_u", {}, "mutation attack player message" );
         attack.npc_message = read_text_option_with_alias( options, "npc_message",
-            "attack_text_npc", {}, "mutation attack NPC message" );
+                             "attack_text_npc", {}, "mutation attack NPC message" );
         attack.bodypart = options.get_or(
                               "bodypart", options.get_or( "body_part", std::string() ) );
         attack.chance = options.get_or<std::int64_t>( "chance", 0 );
@@ -2583,11 +2583,11 @@ struct mutation_definition_handle {
             condition.handler = entry.get_or(
                                     "handler", entry.get_or( "condition", std::string() ) );
             condition.message_on = read_text_option_with_alias( entry, "message_on", "msg_on", {},
-                "mutation reflex activation message" );
+                                   "mutation reflex activation message" );
             condition.message_on_type = entry.get_or(
                                             "message_on_type", entry.get_or( "msg_on_type", std::string( "neutral" ) ) );
             condition.message_off = read_text_option_with_alias( entry, "message_off", "msg_off", {},
-                "mutation reflex deactivation message" );
+                                    "mutation reflex deactivation message" );
             condition.message_off_type = entry.get_or(
                                              "message_off_type", entry.get_or( "msg_off_type", std::string( "neutral" ) ) );
             group.push_back( std::move( condition ) );
@@ -2670,7 +2670,7 @@ struct creatures_content_transaction::impl {
     impl( std::string owner_id, const std::size_t owner_generation ) :
         owner( std::move( owner_id ) ), generation( owner_generation ),
         token( std::make_shared<owner_token>( owner_token{ owner, generation,
-                handle_lifecycle::building } ) ) {}
+                                              handle_lifecycle::building } ) ) {}
 
     std::string owner;
     std::size_t generation = 0;
@@ -2979,16 +2979,16 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
             definition->names.push_back( std::move( value ) );
         }
         if( authored_text value = read_text_option( options, "description", {},
-            "effect description" );
+                                  "effect description" );
             !value.empty() ) {
             definition->descriptions.push_back( std::move( value ) );
         }
         definition->remove_message = read_text_option( options, "remove_message", {},
-            "effect remove message" );
+                                     "effect remove message" );
         definition->apply_memorial_log = options.get_or( "apply_memorial_log", std::string() );
         definition->remove_memorial_log = options.get_or( "remove_memorial_log", std::string() );
         definition->blood_analysis_description = read_text_option( options,
-            "blood_analysis_description", {}, "effect blood analysis description" );
+                "blood_analysis_description", {}, "effect blood analysis description" );
         definition->maximum_intensity = options.get_or<std::int64_t>(
                                             "maximum_intensity", 1 );
         definition->maximum_duration_turns = options.get_or<std::int64_t>(
@@ -3027,7 +3027,7 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         auto definition = std::make_shared<field_type_definition_data>();
         definition->id = options.get_or( "id", std::string() );
         definition->underwater_age_speedup_turns = options.get_or<std::int64_t>(
-                "underwater_age_speedup_turns", 0 );
+                    "underwater_age_speedup_turns", 0 );
         definition->outdoor_age_speedup_turns = options.get_or<std::int64_t>(
                 "outdoor_age_speedup_turns", 0 );
         definition->decay_amount_factor = options.get_or<std::int64_t>(
@@ -3055,7 +3055,7 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         definition->indestructible = options.get_or( "indestructible", false );
         definition->mopsafe = options.get_or( "mopsafe", false );
         definition->decrease_intensity_on_contact = options.get_or(
-                "decrease_intensity_on_contact", false );
+                    "decrease_intensity_on_contact", false );
         return field_type_definition_handle{ std::move( definition ), pimpl_->token };
     } );
     content.set_function( "SubBodyPart", [this]( const sol::table & options ) {
@@ -3063,7 +3063,7 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         definition->id = options.get_or( "id", std::string() );
         definition->name = read_text_option( options, "name", {}, "sub-body-part name" );
         definition->plural_name = read_text_option( options, "plural_name", definition->name,
-            "sub-body-part plural name" );
+                                  "sub-body-part plural name" );
         definition->parent = options.get_or( "parent", std::string() );
         definition->opposite = options.get_or( "opposite", definition->id );
         definition->side = options.get_or( "side", std::string( "both" ) );
@@ -3080,7 +3080,7 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         { definition->id, std::nullopt }, definition->id,
         definition->plural_name, "wound name" );
         definition->description = read_text_option( options, "description", {},
-            "wound description" );
+                                  "wound description" );
         definition->pain_min = options.get_or<std::int64_t>( "pain_min", 0 );
         definition->pain_max = options.get_or<std::int64_t>( "pain_max", 0 );
         definition->healing_min_turns = options.get_or<std::int64_t>(
@@ -3103,9 +3103,9 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         definition->name = read_text_option( options, "name", { definition->id, std::nullopt },
                                              "wound-fix name" );
         definition->description = read_text_option( options, "description", {},
-            "wound-fix description" );
+                                  "wound-fix description" );
         definition->success_message = read_text_option( options, "success_message", {},
-            "wound-fix success message" );
+                                      "wound-fix success message" );
         definition->duration_turns = options.get_or<std::int64_t>( "duration_turns", 0 );
         definition->health_delta = options.get_or<std::int64_t>( "health_delta", 0 );
         return wound_fix_definition_handle{ std::move( definition ), pimpl_->token };
@@ -3115,19 +3115,19 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         definition->id = options.get_or( "id", std::string() );
         definition->name = read_text_option( options, "name", {}, "body-part name" );
         definition->plural_name = read_text_option( options, "plural_name", definition->name,
-            "body-part plural name" );
+                                  "body-part plural name" );
         definition->accusative = read_text_option( options, "accusative", definition->name,
-            "body-part accusative" );
+                                 "body-part accusative" );
         definition->plural_accusative = read_text_option( options, "plural_accusative",
-            definition->plural_name, "body-part plural accusative" );
+                                        definition->plural_name, "body-part plural accusative" );
         definition->heading = read_text_option( options, "heading", definition->name,
                                                 "body-part heading" );
         definition->plural_heading = read_text_option( options, "plural_heading",
-            definition->plural_name, "body-part plural heading" );
+                                     definition->plural_name, "body-part plural heading" );
         definition->encumbrance_text = read_text_option( options, "encumbrance_text",
-            definition->name, "body-part encumbrance text" );
+                                       definition->name, "body-part encumbrance text" );
         definition->hp_bar_text = read_text_option( options, "hp_bar_text", definition->name,
-            "body-part HP bar text" );
+                                  "body-part HP bar text" );
         definition->main_part = options.get_or( "main_part", definition->id );
         definition->connected_to = options.get_or(
                                        "connected_to", definition->main_part );
@@ -3162,9 +3162,9 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         auto definition = std::make_shared<monster_definition_data>();
         definition->id = options.get_or( "id", std::string() );
         definition->name = read_counted_name_option( options, "name", "plural_name",
-            {}, {}, definition->plural_name, "monster name" );
+                           {}, {}, definition->plural_name, "monster name" );
         definition->description = read_text_option( options, "description", {},
-            "monster description" );
+                                  "monster description" );
         definition->symbol = options.get_or( "symbol", std::string( "?" ) );
         definition->color = options.get_or( "color", std::string( "white" ) );
         definition->looks_like = options.get_or( "looks_like", std::string() );
@@ -3231,7 +3231,7 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         definition->maximum_intensity = options.get_or<std::int64_t>(
                                             "maximum_intensity", definition->minimum_intensity );
         if( const sol::optional<std::int64_t> value = options.get<sol::optional<std::int64_t>>(
-                "health_threshold" ) ) {
+                    "health_threshold" ) ) {
             definition->health_threshold = *value;
         }
         return disease_type_definition_handle{ std::move( definition ), pimpl_->token };
@@ -3245,7 +3245,7 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         auto definition = std::make_shared<species_definition_data>();
         definition->id = options.get_or( "id", std::string() );
         definition->description = read_text_option( options, "description", {},
-            "species description" );
+                                  "species description" );
         definition->footsteps = read_text_option( options, "footsteps",
         { "footsteps.", std::nullopt }, "species footsteps" );
         definition->bleeds = options.get_or( "bleeds", std::string( "fd_null" ) );
@@ -3286,7 +3286,7 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         definition->threshold_mutation = options.get_or(
                                              "threshold_mutation", std::string() );
         definition->mutagen_message = read_text_option( options, "mutagen_message", {},
-            "mutation-category mutagen message" );
+                                      "mutation-category mutagen message" );
         definition->memorial_message = options.get_or(
                                            "memorial_message", std::string( "Crossed a threshold" ) );
         definition->vitamin = options.get_or( "vitamin", std::string( "null" ) );
@@ -3295,7 +3295,7 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         definition->base_removal_chance = options.get_or<std::int64_t>(
                                               "base_removal_chance", 100 );
         definition->base_removal_cost_multiplier = options.get_or(
-                "base_removal_cost_multiplier", 3.0 );
+                    "base_removal_cost_multiplier", 3.0 );
         definition->work_in_progress = options.get_or( "work_in_progress", false );
         definition->skip_consistency_test = options.get_or(
                                                 "skip_consistency_test", false );
@@ -3307,7 +3307,7 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         definition->id = options.get_or( "id", std::string() );
         definition->name = read_text_option( options, "name", {}, "mutation name" );
         definition->description = read_text_option( options, "description", {},
-            "mutation description" );
+                                  "mutation description" );
         definition->points = options.get_or<std::int64_t>( "points", 0 );
         definition->vitamin_cost = options.get_or<std::int64_t>( "vitamin_cost", 100 );
         definition->visibility = options.get_or<std::int64_t>( "visibility", 0 );
@@ -3333,27 +3333,27 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         definition->purifiable = options.get_or( "purifiable", true );
         definition->threshold = options.get_or( "threshold", false );
         definition->strict_threshold_requirement = options.get_or(
-                "strict_threshold_requirement", false );
+                    "strict_threshold_requirement", false );
         definition->profession = options.get_or( "profession", false );
         definition->debug = options.get_or( "debug", false );
         definition->player_display = options.get_or( "player_display", true );
         definition->vanity = options.get_or( "vanity", false );
         definition->dummy = options.get_or( "dummy", false );
         definition->activation_message = read_text_option( options, "activation_message", {},
-            "mutation activation message" );
+                                         "mutation activation message" );
         definition->scent_type = options.get_or( "scent_type", std::string() );
         definition->spawn_item = options.get_or( "spawn_item", std::string() );
         definition->spawn_item_message = read_text_option( options, "spawn_item_message", {},
-            "mutation spawn item message" );
+                                         "mutation spawn item message" );
         definition->ranged_mutation = options.get_or( "ranged_mutation", std::string() );
         definition->ranged_mutation_message = read_text_option( options,
-            "ranged_mutation_message", {},
-            "mutation ranged message" );
+                                              "ranged_mutation_message", {},
+                                              "mutation ranged message" );
         definition->override_look_id = options.get_or( "override_look_id", std::string() );
         definition->override_look_category = options.get_or(
                 "override_look_category", std::string() );
         if( const sol::optional<std::int64_t> value = options.get<sol::optional<std::int64_t>>(
-                "scent_intensity" ) ) {
+                    "scent_intensity" ) ) {
             definition->scent_intensity = *value;
         }
         if( const sol::optional<bool> value = options.get<sol::optional<bool>>(
@@ -3366,11 +3366,11 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         }
         mutation_definition_handle handle{ definition, pimpl_->token };
         if( const sol::optional<sol::table> value = options.get<sol::optional<sol::table>>(
-                "transform" ) ) {
+                    "transform" ) ) {
             handle.transform( *value );
         }
         if( const sol::optional<sol::table> value = options.get<sol::optional<sol::table>>(
-                "personality" ) ) {
+                    "personality" ) ) {
             handle.personality( *value );
         }
         each_string( options, "flags", "mutation flags", [&handle]( const std::string & id ) {
@@ -4948,9 +4948,9 @@ bool creatures_content_transaction::apply_phase( const creatures_content_apply_p
                         effect.permanent = source_effect.permanent;
                         effect.duration = {
                             time_duration::from_turns(
-                            static_cast<int>( source_effect.duration_min_turns ) ),
+                                static_cast<int>( source_effect.duration_min_turns ) ),
                             time_duration::from_turns(
-                            static_cast<int>( source_effect.duration_max_turns ) )
+                                static_cast<int>( source_effect.duration_max_turns ) )
                         };
                         effect.intensity = {
                             static_cast<int>( source_effect.intensity_min ),
@@ -5305,21 +5305,21 @@ bool creatures_content_transaction::apply_phase( const creatures_content_apply_p
                 if( source.personality ) {
                     native.personality_score = cata::make_value<mut_personality_score>();
                     native.personality_score->min_aggression = static_cast<int>(
-                            source.personality->min_aggression );
+                                source.personality->min_aggression );
                     native.personality_score->max_aggression = static_cast<int>(
-                            source.personality->max_aggression );
+                                source.personality->max_aggression );
                     native.personality_score->min_bravery = static_cast<int>(
                             source.personality->min_bravery );
                     native.personality_score->max_bravery = static_cast<int>(
                             source.personality->max_bravery );
                     native.personality_score->min_collector = static_cast<int>(
-                            source.personality->min_collector );
+                                source.personality->min_collector );
                     native.personality_score->max_collector = static_cast<int>(
-                            source.personality->max_collector );
+                                source.personality->max_collector );
                     native.personality_score->min_altruism = static_cast<int>(
-                            source.personality->min_altruism );
+                                source.personality->min_altruism );
                     native.personality_score->max_altruism = static_cast<int>(
-                            source.personality->max_altruism );
+                                source.personality->max_altruism );
                 }
                 for( const mutation_variant_definition_data &variant : source.variants ) {
                     mutation_variant value;

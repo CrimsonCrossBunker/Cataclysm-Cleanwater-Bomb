@@ -657,9 +657,9 @@ std::uint64_t register_platform_dialogue_topic( runtime &owner,
     replacement.speaker_effects = speaker_effects;
     replacement.repeat_responses = repeat_responses;
     replacement.replace_built_in_responses = descriptor.get_or(
-            "replace_built_in_responses", true );
+                "replace_built_in_responses", true );
     replacement.insert_before_standard_exits = descriptor.get_or(
-            "insert_before_standard_exits", false );
+                "insert_before_standard_exits", false );
     const auto existing = owner.declarative_dialogue_topics.find( id );
     if( existing != owner.declarative_dialogue_topics.end() ) {
         replacement.registration_id = existing->second.registration_id;
@@ -1017,8 +1017,8 @@ void detail::install_runtime_dialogue_presentation_api(
         }
         string_input_popup popup;
         popup.title( prompt ).text( initial ).description( description )
-             .width( static_cast<int>( width ) ).max_length( static_cast<int>( maximum ) )
-             .only_digits( only_digits );
+        .width( static_cast<int>( width ) ).max_length( static_cast<int>( maximum ) )
+        .only_digits( only_digits );
         popup.query();
         sol::state_view lua_state( state );
         if( popup.canceled() ) {
@@ -1301,7 +1301,7 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
                                          "show_reason", descriptor.get_or(
                                                  "failure_explanation", std::string() ) );
     generated.response.ignore_conditionals = generated.condition_exists &&
-        !generated.condition_result && show_anyway;
+            !generated.condition_result && show_anyway;
     if( generated.condition_exists && !generated.condition_result && !show_anyway ) {
         const std::string failure_topic = descriptor.get_or(
                                               "failure_topic", std::string() );
@@ -1356,8 +1356,8 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
                     detail::runtime_world_generation_storage() );
             generated.response.deferred_text_condition =
                 [weak_text_condition_owner, condition_topic_id,
-                 text_condition_session,
-            text_condition]( ::dialogue & current_dialogue ) {
+                                            text_condition_session,
+                                       text_condition]( ::dialogue & current_dialogue ) {
                 const std::shared_ptr<runtime> callback_owner =
                     weak_text_condition_owner.lock();
                 if( !callback_owner || !callback_owner->world_is_ready ||
@@ -1365,7 +1365,7 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
                     return false;
                 }
                 const std::vector<std::shared_ptr<runtime>> &active_runtimes =
-                    detail::active_runtime_values();
+                            detail::active_runtime_values();
                 if( std::find( active_runtimes.begin(), active_runtimes.end(),
                                callback_owner ) == active_runtimes.end() ) {
                     return false;
@@ -1444,7 +1444,7 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
         }
         generated.response.trial.difficulty = static_cast<int>( difficulty );
         generated.response.trial.skill_required = trial.get_or(
-                "skill", trial.get_or( "skill_required", std::string() ) );
+                    "skill", trial.get_or( "skill_required", std::string() ) );
         if( generated.response.trial.type == TALK_TRIAL_SKILL_CHECK &&
             ( generated.response.trial.skill_required.empty() ||
               !skill_id( generated.response.trial.skill_required ).is_valid() ) ) {
@@ -1559,16 +1559,16 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
     generated.response.failure.opinion = platform_dialogue_opinion(
             descriptor.raw_get<sol::object>( "failure_opinion" ), "failure_opinion" );
     generated.response.success.mission_opinion = platform_dialogue_opinion(
-            descriptor.raw_get<sol::object>( "success_mission_opinion" ),
-            "success_mission_opinion" );
+                descriptor.raw_get<sol::object>( "success_mission_opinion" ),
+                "success_mission_opinion" );
     generated.response.failure.mission_opinion = platform_dialogue_opinion(
-            descriptor.raw_get<sol::object>( "failure_mission_opinion" ),
-            "failure_mission_opinion" );
+                descriptor.raw_get<sol::object>( "failure_mission_opinion" ),
+                "failure_mission_opinion" );
 
     const dialogue_consequence success_consequence = platform_dialogue_consequence(
-            descriptor.get_or( "success_consequence", std::string() ) );
+                descriptor.get_or( "success_consequence", std::string() ) );
     const dialogue_consequence failure_consequence = platform_dialogue_consequence(
-            descriptor.get_or( "failure_consequence", std::string() ) );
+                descriptor.get_or( "failure_consequence", std::string() ) );
     if( success_consequence != dialogue_consequence::none ) {
         generated.response.success.set_effect_consequence(
         talk_effect_fun_t( []( ::dialogue & ) {} ), success_consequence );
@@ -1634,8 +1634,8 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
                 [weak_owner, topic_id, session, callback = *action_callback](
         ::dialogue & active_dialogue, const bool trial_success ) mutable {
             invoke_platform_dialogue_action_callback(
-            weak_owner, topic_id, session, callback, active_dialogue,
-            trial_success );
+                weak_owner, topic_id, session, callback, active_dialogue,
+                trial_success );
         }, session, topic_id );
         // Both branches share a one-shot ID; native response selection applies only one.
         generated.response.success.set_effect(
@@ -2276,7 +2276,7 @@ talk_topic invoke_platform_dialogue_response_callback(
         }
         callback_scope scope( *owner );
         const sol::protected_function_result result = callback(
-                context, trial_success, fallback.id );
+                    context, trial_success, fallback.id );
         context->invalidate();
         if( !result.valid() ) {
             const sol::error error = result;

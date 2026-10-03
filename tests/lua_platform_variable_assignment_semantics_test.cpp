@@ -331,13 +331,13 @@ TEST_CASE( "lua_platform_variable_assignment_matches_literal_legacy_effects",
     const diag_value old_empty_global_value = empty_global_existed ?
             *old_empty_global : diag_value{};
     const on_out_of_scope restore_empty_global(
-        [empty_global_existed, old_empty_global_value]() {
-            if( empty_global_existed ) {
-                get_globals().set_global_value( "", old_empty_global_value );
-            } else {
-                get_globals().remove_global_value( "" );
-            }
-        } );
+    [empty_global_existed, old_empty_global_value]() {
+        if( empty_global_existed ) {
+            get_globals().set_global_value( "", old_empty_global_value );
+        } else {
+            get_globals().remove_global_value( "" );
+        }
+    } );
     get_globals().set_global_value( empty_global_key, copy_value );
     apply_talk_effect( context,
                        R"({"copy_var":{"global_val":""},"target_var":{"global_val":""}})",
@@ -361,13 +361,13 @@ TEST_CASE( "lua_platform_variable_assignment_matches_literal_legacy_effects",
     const diag_value old_string_global_value = string_global_existed ?
             *old_string_global : diag_value{};
     const on_out_of_scope restore_string_global(
-        [empty_string_global_key, string_global_existed, old_string_global_value]() {
-            if( string_global_existed ) {
-                get_globals().set_global_value( empty_string_global_key, old_string_global_value );
-            } else {
-                get_globals().remove_global_value( empty_string_global_key );
-            }
-        } );
+    [empty_string_global_key, string_global_existed, old_string_global_value]() {
+        if( string_global_existed ) {
+            get_globals().set_global_value( empty_string_global_key, old_string_global_value );
+        } else {
+            get_globals().remove_global_value( empty_string_global_key );
+        }
+    } );
     apply_talk_effect( context,
                        R"({"set_string_var":"","target_var":{"global_val":"lua_platform_set_string_empty"}})",
                        "lua_platform_set_string_empty_native" );

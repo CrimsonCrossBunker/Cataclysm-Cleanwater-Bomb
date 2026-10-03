@@ -174,7 +174,7 @@ TEST_CASE( "lua_platform_named_predicate_uses_current_dialogue_alpha",
     sol::protected_function read_named = lua["read_named"];
     const bool native_original_result = read_native_predicate( native_original );
     const sol::protected_function_result platform_original_call = read_named(
-            original_context, original_alpha_handle );
+                original_context, original_alpha_handle );
     REQUIRE( platform_original_call.valid() );
     CHECK_FALSE( native_original_result );
     CHECK( platform_original_call.get<bool>() == native_original_result );
@@ -189,7 +189,7 @@ TEST_CASE( "lua_platform_named_predicate_uses_current_dialogue_alpha",
     const sol::table child_context = child_context_call;
     const bool native_child_result = read_native_predicate( native_child );
     const sol::protected_function_result platform_child_call = read_named(
-            child_context, child_alpha_handle );
+                child_context, child_alpha_handle );
     REQUIRE( platform_child_call.valid() );
     CHECK( native_child_result );
     CHECK( platform_child_call.get<bool>() == native_child_result );

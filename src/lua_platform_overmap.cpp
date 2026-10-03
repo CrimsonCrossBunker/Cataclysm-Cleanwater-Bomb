@@ -477,7 +477,7 @@ std::vector<terrain_selector> read_selectors(
             "' must be an array" );
     }
     std::vector<std::pair<std::size_t, terrain_selector>>
-    ordered;
+            ordered;
     const sol::table table = requested.as<sol::table>();
     for( const auto &entry : table ) {
         const sol::object key_object = entry.first;
@@ -2255,9 +2255,9 @@ bool reveal_native_overmap(
 }
 
 bool reveal_overmap_route(
-    const script_tripoint_coord & start,
-    const script_tripoint_coord & end,
-    const sol::object & raw_radius,
+    const script_tripoint_coord &start,
+    const script_tripoint_coord &end,
+    const sol::object &raw_radius,
     const bool road_only )
 {
     constexpr std::string_view api_name =
@@ -2463,8 +2463,8 @@ void install_overmap_api(
     const script_tripoint_coord & position ) -> sol::table {
         require_read();
         return overmap_tile_token_from_position(
-        lua_state, position, current_runtime_generation(),
-        current_world_generation() );
+            lua_state, position, current_runtime_generation(),
+            current_world_generation() );
     } );
     overmap.set_function(
         "snapshot",
@@ -2473,8 +2473,8 @@ void install_overmap_api(
     const overmap_tile_token & token ) -> sol::table {
         require_read();
         return overmap_tile_snapshot_from_token(
-        lua_state, token, current_runtime_generation(),
-        current_world_generation() );
+            lua_state, token, current_runtime_generation(),
+            current_world_generation() );
     } );
     overmap.set_function(
         "edit",

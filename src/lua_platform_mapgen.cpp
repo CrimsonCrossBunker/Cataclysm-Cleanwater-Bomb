@@ -330,7 +330,7 @@ sol::table mapgen_transaction_error(
 {
     sol::table result = make_game_error_result( state, {
         report.code.empty() ? "mapgen_rejected" : report.code,
-                   report.message
+        report.message
     } );
     result["error"]["state"] = mapgen_transaction_state_name( report.state );
     result["error"]["target"] = target;
@@ -912,7 +912,7 @@ script_game_id script_mapgen_context::get_nesw( const int index ) const
     consume( 1 );
     return overmap_terrain_id(
                require_state().data->t_nesw[
-                   static_cast<std::size_t>( index )] );
+                static_cast<std::size_t>( index )] );
 }
 
 int script_mapgen_context::zlevel() const
@@ -1475,7 +1475,7 @@ void script_mapgen_context::place_corpse(
         to_turn<std::int64_t>( calendar::start_of_cataclysm );
     const time_point corpse_time = time_point::from_turn(
                                        static_cast<int>( std::max( corpse_turn,
-                                           earliest_turn ) ) );
+                                               earliest_turn ) ) );
     item corpse = item::make_corpse(
                       type, corpse_time );
     state.data->m.add_item_or_charges( position, corpse );

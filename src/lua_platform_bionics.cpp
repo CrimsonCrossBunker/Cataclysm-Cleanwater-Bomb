@@ -447,7 +447,7 @@ bionic_instance_snapshot capture_instance( const bionic &installed )
         installed.info().description.translated(),
         installed.invlet,
         installed.powered,
-        installed.powered && installed.incapacitated_time <= 0_turns,
+        installed.powered &&installed.incapacitated_time <= 0_turns,
         installed.info().activated,
         installed.is_included(),
         installed.show_sprite,

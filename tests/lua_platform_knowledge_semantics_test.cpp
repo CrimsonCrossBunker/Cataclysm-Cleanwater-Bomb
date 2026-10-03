@@ -543,7 +543,7 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
             return conditional_t( json_loader::from_string( source.str() ).get_object() );
         };
         const auto make_variable_condition = [&]( const std::string & selector,
-            const std::string & scope, const std::string & key, const std::string & default_id,
+                                             const std::string & scope, const std::string & key, const std::string & default_id,
         const bool with_default ) {
             std::ostringstream source;
             {
@@ -920,7 +920,7 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
         CHECK_FALSE( stale_topic.valid() );
         for( const std::string &method : dialogue_string_methods ) {
             const sol::protected_function_result stale_string = read_dialogue_string( topic_context, method,
-                "" );
+                    "" );
             CHECK_FALSE( stale_string.valid() );
         }
 
@@ -941,8 +941,8 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
                 runtime_identity, world_generation );
             REQUIRE( selection_context.valid() );
             const sol::protected_function_result sampler_loaded = lua.safe_script(
-                    "return function(ctx, c, d, b, blacklist) "
-                    "return ctx:sample_technique(c, d, b, blacklist) end", sol::script_pass_on_error );
+                        "return function(ctx, c, d, b, blacklist) "
+                        "return ctx:sample_technique(c, d, b, blacklist) end", sol::script_pass_on_error );
             REQUIRE( sampler_loaded.valid() );
             const sol::protected_function sample_technique = sampler_loaded.get<sol::protected_function>();
             player.set_skill_level( skill_id( "unarmed" ), 10 );
@@ -996,7 +996,7 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
                         // pair and consumes exactly the same shared RNG state.
                         rng_set_engine_seed( seed );
                         const sol::protected_function_result sampled = sample_technique(
-                                selection_context, critical, dodge_counter, block_counter, raw_blacklist );
+                                    selection_context, critical, dodge_counter, block_counter, raw_blacklist );
                         REQUIRE( sampled.valid() );
                         CHECK( sampled.get<std::string>() == native_id );
                         CHECK( rng_get_engine() == native_rng_after );
@@ -1052,7 +1052,7 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
             CHECK_FALSE( selection_context.valid() );
             const auto rng_before_stale = rng_get_engine(); // NOLINT(cata-determinism)
             const sol::protected_function_result stale_sample = sample_technique(
-                    selection_context, false, false, false, sol::nil );
+                        selection_context, false, false, false, sol::nil );
             CHECK_FALSE( stale_sample.valid() );
             CHECK( rng_get_engine() == rng_before_stale );
 
@@ -1074,7 +1074,7 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
                                                     partner, false, false, false ).str();
             REQUIRE( native_fallback.empty() );
             const sol::protected_function_result sampled_fallback = sample_technique(
-                    fallback_context, false, false, false, sol::nil );
+                        fallback_context, false, false, false, sol::nil );
             REQUIRE( sampled_fallback.valid() );
             CHECK( sampled_fallback.get<std::string>() == native_fallback );
             CHECK( rng_get_engine() == rng_before_fallback );
@@ -1093,7 +1093,7 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
                 "proficiency invalid target context is stale", {}, invalid_session,
                 runtime_identity, world_generation );
             const sol::protected_function_result invalid_target = sample_technique(
-                    invalid_context, false, false, false, sol::nil );
+                        invalid_context, false, false, false, sol::nil );
             CHECK_FALSE( invalid_target.valid() );
             CHECK( rng_get_engine() == rng_before_fallback );
         }
@@ -1156,7 +1156,7 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
                                         const std::string & key, const std::string & default_id, const bool with_default,
         const bool expect_type_diagnostic = false ) {
             const conditional_t condition = make_variable_condition( selector, scope, key,
-                default_id, with_default );
+                                            default_id, with_default );
             bool native = false;
             std::string native_diagnostic;
             if( expect_type_diagnostic ) {
@@ -1339,7 +1339,7 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
                                           const std::string & default_id, const bool expect_pointer_type_diagnostic,
         const bool expect_target_type_diagnostic ) {
             const conditional_t condition = make_variable_condition( selector, "var_val",
-                pointer_key, default_id, true );
+                                            pointer_key, default_id, true );
             bool native = false;
             if( expect_pointer_type_diagnostic || expect_target_type_diagnostic ) {
                 const std::string diagnostic = capture_debugmsg_during( [&]() {
@@ -1433,7 +1433,7 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
             get_globals().remove_global_value( var_prefixed_key );
         };
         const auto compare_indirect_source = [&]( const std::string & pointer_text,
-            const std::string & scope, const std::string & key, const std::string & stored_id,
+                                             const std::string & scope, const std::string & key, const std::string & stored_id,
         const std::string & default_id, const bool expected ) {
             clear_indirect_targets();
             set_scope_value( scope, key, diag_value( stored_id ), sol::make_object( lua, stored_id ) );
@@ -1470,14 +1470,14 @@ TEST_CASE( "lua_platform_proficiency_query_matches_native_id_sources",
         clear_indirect_targets();
         const std::string numeric_target_pointer = std::string( "u_" ) + alpha_target_key;
         set_pointer( diag_value( numeric_target_pointer ), sol::make_object( lua,
-                numeric_target_pointer ) );
+                     numeric_target_pointer ) );
         set_scope_value( "u_val", alpha_target_key, diag_value( 73 ), sol::make_object( lua, 73 ) );
         for( const std::string &selector : selectors ) {
             CHECK_FALSE( compare_var_val( selector, carving.str(), false, true ) );
         }
         clear_indirect_targets();
         set_pointer( diag_value( numeric_target_pointer ), sol::make_object( lua,
-                numeric_target_pointer ) );
+                     numeric_target_pointer ) );
         set_scope_value( "u_val", alpha_target_key, diag_value{}, null_value );
         for( const std::string &selector : selectors ) {
             CHECK_FALSE( compare_var_val( selector, carving.str(), false, false ) );
@@ -1524,7 +1524,7 @@ TEST_CASE( "lua_platform_roll_contested_matches_native_rng_semantics",
     };
     cata_default_random_engine expected_native_engine;
     lua.set_function( "native_roll_contested", [&native_conditions, &conversation,
-            &expected_native_engine](
+                                          &expected_native_engine](
     const int index, const unsigned int seed ) {
         rng_set_engine_seed( seed );
         const conditional_t condition( json_loader::from_string(

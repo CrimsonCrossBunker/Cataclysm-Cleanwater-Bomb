@@ -105,7 +105,7 @@ TEST_CASE( "lua_platform_hordes_broadcast_signal_matches_native_path",
         hordes["remove_entity"]( platform_token );
     } );
 
-    const auto read_entity = [&hordes]( const sol::userdata &token ) {
+    const auto read_entity = [&hordes]( const sol::userdata & token ) {
         const sol::protected_function_result result =
             hordes["entity"]( token );
         REQUIRE( result.valid() );
@@ -117,9 +117,9 @@ TEST_CASE( "lua_platform_hordes_broadcast_signal_matches_native_path",
     overmap_buffer.signal_hordes(
         project_to<coords::sm>( native_center ), signal_power );
     const tripoint_abs_ms native_broadcast_center = project_to<coords::ms>(
-            project_to<coords::sm>( native_center ) );
+                project_to<coords::sm>( native_center ) );
     const sol::table native_entity = read_entity( native_token );
-    CHECK( native_entity["destination"].get<
+    CHECK( native_entity["destination"].get <
            cata::lua_platform::script_tripoint_coord > () ==
            make_position( native_broadcast_center ) );
     CHECK( native_entity["tracking_intensity"].get<int>() == signal_power * SEEX );
@@ -132,19 +132,19 @@ TEST_CASE( "lua_platform_hordes_broadcast_signal_matches_native_path",
     REQUIRE( broadcast_envelope["ok"].get<bool>() );
     const sol::table broadcast_value = broadcast_envelope["value"];
     const tripoint_abs_ms expected_platform_center = project_to<coords::ms>(
-            project_to<coords::sm>( platform_center ) );
+                project_to<coords::sm>( platform_center ) );
     CHECK( broadcast_value["status"].get<std::string>() == "broadcast" );
-    CHECK( broadcast_value["center"].get<
+    CHECK( broadcast_value["center"].get <
            cata::lua_platform::script_tripoint_coord > () ==
            make_position( expected_platform_center ) );
     CHECK( broadcast_value["signal_power"].get<int>() == signal_power );
     const sol::table platform_entity = read_entity( platform_token );
-    CHECK( platform_entity["destination"].get<
+    CHECK( platform_entity["destination"].get <
            cata::lua_platform::script_tripoint_coord > () ==
            make_position( expected_platform_center ) );
     CHECK( platform_entity["tracking_intensity"].get<int>() == signal_power * SEEX );
     const sol::table native_entity_after = read_entity( native_token );
-    CHECK( native_entity_after["destination"].get<
+    CHECK( native_entity_after["destination"].get <
            cata::lua_platform::script_tripoint_coord > () ==
            make_position( native_broadcast_center ) );
 }

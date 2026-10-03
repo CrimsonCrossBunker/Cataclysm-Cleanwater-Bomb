@@ -358,7 +358,7 @@ TEST_CASE( "lua_platform_indirect_assignment_migration_matches_native_math",
     lua.open_libraries( sol::lib::base, sol::lib::table, sol::lib::math, sol::lib::string );
     sol::table ccb = lua.create_table();
     const std::shared_ptr<platform::runtime> owner = platform::make_runtime(
-            "indirect_assignment_migration", 7923, lua );
+                "indirect_assignment_migration", 7923, lua );
     platform::install_runtime_api( owner, lua, ccb );
     platform::set_active_runtimes( { owner } );
     const on_out_of_scope clear_runtimes( []() {

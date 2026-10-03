@@ -407,7 +407,7 @@ sol::table expose_state(
         return make_game_error_result( state, *error );
     }
     const addiction_state_snapshot after_state = capture_state(
-            id, find_addiction( *after_character, id ) );
+                id, find_addiction( *after_character, id ) );
     sol::table value = state.create_table();
     value["changed"] =
         before_state.intensity != after_state.intensity ||
@@ -458,7 +458,7 @@ sol::table remove_state(
         return make_game_error_result( state, *error );
     }
     const addiction_state_snapshot after_state = capture_state(
-            id, find_addiction( *after_character, id ) );
+                id, find_addiction( *after_character, id ) );
     sol::table value = state.create_table();
     value["changed"] = changed;
     value["before"] = std::move( before );
@@ -590,7 +590,7 @@ sol::table set_state(
         return make_game_error_result( state, *error );
     }
     const addiction_state_snapshot after_state = capture_state(
-            id, find_addiction( *character, id ) );
+                id, find_addiction( *character, id ) );
     sol::table value = state.create_table();
     value["before"] = std::move( before );
     value["after"] = snapshot_state( state, after_state );

@@ -512,7 +512,7 @@ struct presentation_content_transaction::impl {
     impl( std::string owner_id, const std::size_t owner_generation ) :
         owner( std::move( owner_id ) ), generation( owner_generation ),
         token( std::make_shared<owner_token>( owner_token{ owner, generation,
-                handle_lifecycle::building } ) ) {}
+                                              handle_lifecycle::building } ) ) {}
 
     std::string owner;
     std::size_t generation = 0;
@@ -609,7 +609,7 @@ void presentation_content_transaction::install_lua_api( sol::state &lua, sol::ta
         const std::string id = options.get_or( "id", std::string() );
         const std::string statistic = options.get_or( "statistic", std::string() );
         const detail::authored_text description = detail::read_singular_text(
-                options.get<sol::object>( "description" ), {}, "Score.description" );
+                    options.get<sol::object>( "description" ), {}, "Score.description" );
         auto definition = std::make_shared<score_definition_data>();
         definition->id = id;
         definition->statistic = statistic;
@@ -632,7 +632,7 @@ void presentation_content_transaction::install_lua_api( sol::state &lua, sol::ta
         const detail::authored_text name = detail::read_singular_text(
                                                options.get<sol::object>( "name" ), {}, "ZoneType.name" );
         const detail::authored_text description = detail::read_singular_text(
-                options.get<sol::object>( "description" ), {}, "ZoneType.description" );
+                    options.get<sol::object>( "description" ), {}, "ZoneType.description" );
         const std::string display_field = options.get_or(
                                               "display_field", std::string() );
         const bool can_be_personal = options.get_or( "can_be_personal", false );
@@ -676,7 +676,7 @@ void presentation_content_transaction::install_lua_api( sol::state &lua, sol::ta
         const bool rooted = options.get_or( "rooted", false );
         const bool interruptable = options.get_or( "interruptable", true );
         const bool interruptable_with_keyboard = options.get_or(
-                "interruptable_with_keyboard", true );
+                    "interruptable_with_keyboard", true );
         const std::string based_on = options.get_or( "based_on", std::string( "speed" ) );
         const bool can_resume = options.get_or( "can_resume", true );
         const bool multi_activity = options.get_or( "multi_activity", false );

@@ -17,7 +17,7 @@ namespace cata::lua_platform
 class game_handle_runtime;
 
 using activity_pickup_selector = std::function<drop_locations(
-    const std::set<tripoint_bub_ms> &, Pickup::pick_info & )>;
+                                     const std::set<tripoint_bub_ms> &, Pickup::pick_info & )>;
 
 // Install bounded native activity actors and activity lifecycle operations.
 // Lua receives generation-checked handles and detached state snapshots only.

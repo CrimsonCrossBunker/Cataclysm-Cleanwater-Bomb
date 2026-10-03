@@ -233,7 +233,7 @@ TEST_CASE( "lua_platform_camp_write_gate_precedes_camp_resolution",
     } );
     const sol::protected_function rename = services["camps"]["rename"];
     const sol::protected_function_result result = rename(
-            camp_handle, cata::lua_platform::game_handle{}, "New Name" );
+                camp_handle, cata::lua_platform::game_handle{}, "New Name" );
     REQUIRE( result.valid() );
     CHECK( write_gate_called );
     const sol::table envelope = result.get<sol::table>();
@@ -401,7 +401,7 @@ TEST_CASE( "lua_platform_camp_food_mutations_enter_the_write_gate_first",
 
     const sol::protected_function add_food = services["camps"]["food"]["add"];
     const sol::protected_function_result result = add_food(
-            camp_handle, cata::lua_platform::game_handle{}, 1 );
+                camp_handle, cata::lua_platform::game_handle{}, 1 );
     REQUIRE( result.valid() );
     CHECK( write_gate_called );
     const sol::table envelope = result.get<sol::table>();

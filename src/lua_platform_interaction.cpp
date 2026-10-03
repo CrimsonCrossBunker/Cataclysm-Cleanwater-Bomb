@@ -1099,7 +1099,7 @@ sol::table choose_interaction_entry(
 {
     uilist menu;
     const std::vector<std::string> ids = prepare_game_interaction_menu(
-                                            menu, requested_entries, requested_options );
+            menu, requested_entries, requested_options );
     menu.query();
     const bool accepted = menu.ret >= 0 &&
                           menu.ret < static_cast<int>( ids.size() );
@@ -1129,7 +1129,7 @@ std::unique_ptr<string_input_popup_imgui> prepare_game_text_input_popup(
     // Match the native popup's integer conversion after adding a label's
     // byte length, including widths outside the former 10..240 range.
     const int width = static_cast<int>( static_cast<std::size_t>( options.width ) +
-                                       options.width_text.size() );
+                                        options.width_text.size() );
     auto popup = std::make_unique<string_input_popup_imgui>( width, options.default_text );
     popup->set_label( evaluate_interaction_text( label, "title" ) );
     popup->set_description( evaluate_interaction_text( options.description, "description" ) );
@@ -1146,7 +1146,7 @@ std::vector<std::string> prepare_game_interaction_menu(
     menu.allow_cancel = options.allow_cancel;
     menu.hilight_disabled = options.highlight_disabled;
     menu.desc_enabled = options.show_descriptions ? *options.show_descriptions : std::any_of(
-                            choices.begin(), choices.end(), []( const interaction_choice & choice ) {
+    choices.begin(), choices.end(), []( const interaction_choice & choice ) {
         return !choice.description.empty();
     } );
     std::vector<std::string> ids;
@@ -1180,7 +1180,7 @@ void install_game_interaction_api(
     interaction.set_function(
         "input_text",
         [require_actions, has_active_callback](
-            sol::this_state lua, const sol::object &title,
+            sol::this_state lua, const sol::object & title,
     const sol::optional<sol::table> &options ) {
         require_actions();
         require_active_callback(

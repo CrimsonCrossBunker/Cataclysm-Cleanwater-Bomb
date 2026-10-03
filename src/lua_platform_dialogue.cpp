@@ -606,7 +606,7 @@ std::string context::topic_item() const
 }
 
 std::string context::sample_technique( const bool critical, const bool dodge_counter,
-                                     const bool block_counter, const sol::object &blacklist ) const
+                                       const bool block_counter, const sol::object &blacklist ) const
 {
     const ::dialogue &d = require_state().dialogue_ref();
     const std::vector<matec_id> excluded = detail::read_technique_blacklist(
@@ -620,7 +620,8 @@ std::string context::sample_technique( const bool critical, const bool dodge_cou
     }
     // Native selection is allowed in dialogue predicates. It advances the
     // shared RNG but does not execute an attack or retain either participant.
-    return alpha->get_random_technique( *target, critical, dodge_counter, block_counter, excluded ).str();
+    return alpha->get_random_technique( *target, critical, dodge_counter, block_counter,
+                                        excluded ).str();
 }
 
 bool context::has_speaker() const

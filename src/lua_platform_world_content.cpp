@@ -1993,7 +1993,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         if( const sol::optional<sol::table> groups =
                 options.get<sol::optional<sol::table>>( "shop_groups" ) ) {
             for( const sol::table &group : read_dense_array<sol::table>( *groups,
-                "NPC class shop groups" ) ) {
+                    "NPC class shop groups" ) ) {
                 value->shop_groups.push_back( {
                     group.get_or( "id", std::string() ), group.get_or( "trust", 0 ),
                     group.get_or( "strict", false ), group.get_or( "rigid", false ),
@@ -2005,7 +2005,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         if( const sol::optional<sol::table> rules =
                 options.get<sol::optional<sol::table>>( "price_rules" ) ) {
             for( const sol::table &rule : read_dense_array<sol::table>( *rules,
-                "NPC class price rules" ) ) {
+                    "NPC class price rules" ) ) {
                 value->price_rules.push_back( read_price_rule( rule ) );
             }
         }
@@ -2187,7 +2187,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
             if( const sol::optional<sol::table> connections =
                     options.get<sol::optional<sol::table>>( "connections" ) ) {
                 for( const sol::table &connection : read_dense_array<sol::table>( *connections,
-                    "overmap special connections" ) ) {
+                        "overmap special connections" ) ) {
                     const std::array<int, 3> point = read_point(
                                                          connection.get<sol::table>( "point" ), "overmap connection point" );
                     special_connection_data parsed;
@@ -2208,7 +2208,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
             if( const sol::optional<sol::table> locations =
                     options.get<sol::optional<sol::table>>( "check_for_locations" ) ) {
                 for( const sol::table &entry : read_dense_array<sol::table>( *locations,
-                    "mutable special checked locations" ) ) {
+                        "mutable special checked locations" ) ) {
                     sol::optional<sol::table> point =
                         entry.get<sol::optional<sol::table>>( "point" );
                     sol::optional<sol::table> allowed =
@@ -2234,7 +2234,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
             if( const sol::optional<sol::table> areas =
                     options.get<sol::optional<sol::table>>( "check_for_locations_area" ) ) {
                 for( const sol::table &area : read_dense_array<sol::table>( *areas,
-                    "mutable special checked location areas" ) ) {
+                        "mutable special checked location areas" ) ) {
                     const std::array<int, 3> from = read_point(
                                                         area.get<sol::table>( "from" ), "mutable special checked area start" );
                     const std::array<int, 3> to = read_point(
@@ -2391,7 +2391,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                                     piece.get_or( "overmap", std::string() ),
                                     point[0], point[1], point[2],
                                     piece.get_or( "rotation", piece.get_or(
-                                    "rot", std::string( "north" ) ) )
+                                                      "rot", std::string( "north" ) ) )
                                 } );
                             }
                         }
@@ -2727,7 +2727,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         value->copy_from = options.get_or( "copy_from", std::string() );
         value->name = read_optional_authored_text( options, "name" );
         if( const std::optional<std::string> palette = read_optional<std::string>(
-                options, "color_palette" ) ) {
+                    options, "color_palette" ) ) {
             value->color_palette = *palette;
             value->color_palette_set = true;
         }
@@ -2766,7 +2766,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         if( const sol::optional<sol::table> parts =
                 options.get<sol::optional<sol::table>>( "parts" ) ) {
             for( const sol::table &part : read_dense_array<sol::table>( *parts,
-                "vehicle parts" ) ) {
+                    "vehicle parts" ) ) {
                 value->parts.push_back( read_part_placement( part ) );
             }
         }
@@ -3507,7 +3507,7 @@ bool world_content_transaction::apply( std::string &error )
                                                     !rule.group.empty() ? rule.group : rule.category;
                     const std::string handler = rule.condition_handler;
                     base.platform_condition = [mod, owner_id, selector_kind, selector_id,
-                                               handler]( const item & candidate,
+                                                    handler]( const item & candidate,
                     const npc & shopkeeper ) {
                         return invoke_shop_condition_handler(
                                    mod, owner_id, "faction_price_rule", selector_kind,
@@ -3639,7 +3639,7 @@ bool world_content_transaction::apply( std::string &error )
                                                     !rule.group.empty() ? rule.group : rule.category;
                     const std::string handler = rule.condition_handler;
                     base.platform_condition = [mod, owner_id, selector_kind, selector_id,
-                                               handler]( const item & candidate,
+                                                    handler]( const item & candidate,
                     const npc & shopkeeper ) {
                         return invoke_shop_condition_handler(
                                    mod, owner_id, "npc_class_price_rule", selector_kind,
@@ -3957,7 +3957,7 @@ bool world_content_transaction::apply( std::string &error )
             }
             if( source.broken_color ) {
                 native.color_broken = color_from_string( *source.broken_color,
-                    report_color_error::no );
+                                      report_color_error::no );
             }
             if( source.fuel_type ) {
                 native.fuel_type = itype_id( *source.fuel_type );
@@ -4232,15 +4232,15 @@ bool world_content_transaction::apply( std::string &error )
                     source.terrain_transform->pre_flags;
                 if( source.terrain_transform->post_terrain ) {
                     native.transform_terrain_info->post_terrain = ter_str_id(
-                            *source.terrain_transform->post_terrain );
+                                *source.terrain_transform->post_terrain );
                 }
                 if( source.terrain_transform->post_furniture ) {
                     native.transform_terrain_info->post_furniture = furn_str_id(
-                            *source.terrain_transform->post_furniture );
+                                *source.terrain_transform->post_furniture );
                 }
                 if( source.terrain_transform->post_field ) {
                     native.transform_terrain_info->post_field = field_type_str_id(
-                            *source.terrain_transform->post_field );
+                                *source.terrain_transform->post_field );
                     native.transform_terrain_info->post_field_intensity =
                         source.terrain_transform->post_field_intensity;
                     native.transform_terrain_info->post_field_age =

@@ -135,7 +135,7 @@ TEST_CASE( "lua_platform_literal_assignment_migration_matches_native_math",
     context["data"] = context_data;
     lua["context"] = context;
 
-    const auto run_lua_assignment = [&]( const std::string &script ) {
+    const auto run_lua_assignment = [&]( const std::string & script ) {
         platform::detail::callback_scope active_callback( *owner );
         const sol::protected_function_result result = lua.safe_script(
                     script, sol::script_pass_on_error );

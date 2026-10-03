@@ -1023,7 +1023,7 @@ sol::table snapshot_group_definition(
             snapshot_group_entry(
                 lua,
                 definition.monsters[
-                    offset + index] );
+             offset + index] );
     }
     sol::table page = lua.create_table();
     page["items"] = std::move( entries );
@@ -1811,9 +1811,9 @@ sol::table alert_entity(
         resolved->owner->hordes.extract(
             resolved->native_iterator );
     node.mapped().destination =
-            native_destination;
+        native_destination;
     node.mapped().tracking_intensity =
-            intensity;
+        intensity;
     horde_map::insert_result inserted =
         resolved->owner->hordes.insert_with_result(
             std::move( node ) );
@@ -1823,9 +1823,9 @@ sol::table alert_entity(
         }
         rollback_node.key() = original_key;
         rollback_node.mapped().destination =
-                         original_destination;
+            original_destination;
         rollback_node.mapped().tracking_intensity =
-                         original_tracking_intensity;
+            original_tracking_intensity;
         const horde_map::insert_result restored =
             resolved->owner->hordes.insert_with_result(
                 std::move( rollback_node ) );

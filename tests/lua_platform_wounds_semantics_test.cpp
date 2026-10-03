@@ -151,7 +151,7 @@ TEST_CASE( "lua_platform_direct_wound_services_match_native_effects",
         const auto capped_add = [&]() {
             sol::protected_function function = services["wounds"]["add"];
             const sol::protected_function_result call = function(
-                    capped_handle, exact_part_id, wound_id );
+                        capped_handle, exact_part_id, wound_id );
             REQUIRE( call.valid() );
             const sol::table result = call;
             REQUIRE( result["ok"].get<bool>() );
@@ -193,7 +193,7 @@ TEST_CASE( "lua_platform_direct_wound_services_match_native_effects",
 
         sol::protected_function legacy_remove = services["wounds"]["remove"];
         const sol::protected_function_result legacy_remove_call = legacy_remove(
-                capped_handle, exact_part_id, wound_id );
+                    capped_handle, exact_part_id, wound_id );
         REQUIRE( legacy_remove_call.valid() );
         const sol::table legacy_remove_result = legacy_remove_call;
         REQUIRE( legacy_remove_result["ok"].get<bool>() );
@@ -202,24 +202,24 @@ TEST_CASE( "lua_platform_direct_wound_services_match_native_effects",
 
         sol::protected_function unknown_add = services["wounds"]["add_unbounded"];
         const sol::protected_function_result unknown_call = unknown_add(
-                alpha_handle, part_id,
-                cata::lua_platform::script_game_id( "wound", "wound_not_registered" ) );
+                    alpha_handle, part_id,
+                    cata::lua_platform::script_game_id( "wound", "wound_not_registered" ) );
         CHECK_FALSE( unknown_call.valid() );
         const sol::protected_function_result unknown_part_call = unknown_add(
-                alpha_handle,
-                cata::lua_platform::script_game_id( "body_part", "part_not_registered" ),
-                wound_id );
+                    alpha_handle,
+                    cata::lua_platform::script_game_id( "body_part", "part_not_registered" ),
+                    wound_id );
         CHECK_FALSE( unknown_part_call.valid() );
         sol::protected_function unknown_remove = services["wounds"]["remove_all_direct"];
         const sol::protected_function_result unknown_remove_call = unknown_remove(
-                alpha_handle, part_id,
-                cata::lua_platform::script_game_id( "wound", "wound_not_registered" ) );
+                    alpha_handle, part_id,
+                    cata::lua_platform::script_game_id( "wound", "wound_not_registered" ) );
         CHECK_FALSE( unknown_remove_call.valid() );
         CHECK( wound_count( platform_alpha ) == 0 );
         completed = true;
     } );
     sol::protected_function_result registered = ccb["runtime"]["handler"](
-            "accept", lua["accept"] );
+                "accept", lua["accept"] );
     REQUIRE( registered.valid() );
     registered = ccb["runtime"]["on"]( "world_ready", "accept" );
     REQUIRE( registered.valid() );

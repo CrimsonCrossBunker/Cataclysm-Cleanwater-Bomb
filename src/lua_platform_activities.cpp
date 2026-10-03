@@ -355,7 +355,7 @@ void install_activity_api(
     activities.set_function(
         "snapshot",
         [require_read, current_runtime_generation,
-         current_world_generation](
+                       current_world_generation](
             sol::this_state lua,
     const game_handle & handle ) {
         require_read();
@@ -378,7 +378,7 @@ void install_activity_api(
     activities.set_function(
         "assign_timed",
         [require_write, current_runtime_generation,
-         current_world_generation](
+                        current_world_generation](
             sol::this_state lua,
             const game_handle & handle,
             const script_game_id & id,
@@ -470,7 +470,7 @@ void install_activity_api(
     activities.set_function(
         "assign_npc_job",
         [require_write, current_runtime_generation,
-         current_world_generation](
+                        current_world_generation](
             sol::this_state lua,
             const game_handle & handle,
     const std::string & job ) {
@@ -609,7 +609,7 @@ void install_activity_api(
     activities.set_function(
         "dismount",
         [require_write, current_runtime_generation,
-         current_world_generation](
+                        current_world_generation](
             sol::this_state lua,
     const game_handle & npc_handle ) {
         require_write();
@@ -646,7 +646,7 @@ void install_activity_api(
     activities.set_function(
         "drop_nonfavorite_items",
         [require_write, current_runtime_generation,
-         current_world_generation](
+                        current_world_generation](
             sol::this_state lua,
     const game_handle & npc_handle ) {
         require_write();
@@ -702,7 +702,7 @@ void install_activity_api(
     activities.set_function(
         "revert_npc_job",
         [require_write, current_runtime_generation,
-         current_world_generation](
+                        current_world_generation](
             sol::this_state lua,
     const game_handle & handle ) {
         require_write();
@@ -747,7 +747,7 @@ void install_activity_api(
     activities.set_function(
         "socialize",
         [require_write, current_runtime_generation,
-         current_world_generation](
+                        current_world_generation](
             sol::this_state lua,
             const game_handle & character_handle,
             const game_handle & partner_handle,
@@ -810,7 +810,7 @@ void install_activity_api(
     activities.set_function(
         "read",
         [require_write, current_runtime_generation,
-         current_world_generation](
+                        current_world_generation](
             sol::this_state lua,
             const game_handle & character_handle,
             const game_handle & book_handle,
@@ -902,7 +902,7 @@ void install_activity_api(
     activities.set_function(
         "drop_item",
         [require_write, current_runtime_generation,
-         current_world_generation](
+                        current_world_generation](
             sol::this_state lua,
             const game_handle & character_handle,
             const game_handle & item_handle,
@@ -928,7 +928,7 @@ void install_activity_api(
                 "services.activities.drop_item placement must be a relative map-square Tripoint" );
         }
         const tripoint_rel_ms native_placement = tripoint_rel_ms(
-                placement->to_native() );
+                    placement->to_native() );
         const game_handle_runtime runtime =
             current_runtime_generation();
         const std::size_t world = current_world_generation();
@@ -964,7 +964,7 @@ void install_activity_api(
         retire_item_handle_identity( **location );
         const std::vector<drop_or_stash_item_info> items = {
             drop_or_stash_item_info(
-            *location, static_cast<int>( quantity ) )
+                *location, static_cast<int>( quantity ) )
         };
         character->assign_activity(
             drop_activity_actor(
@@ -992,7 +992,7 @@ void install_activity_api(
     activities.set_function(
         "pickup_item",
         [require_write, current_runtime_generation,
-         current_world_generation](
+                        current_world_generation](
             sol::this_state lua,
             const game_handle & character_handle,
             const game_handle & item_handle,
@@ -1070,7 +1070,7 @@ void install_activity_api(
         }
         const std::vector<item_location> targets = {
             item_location(
-            map_cursor( absolute ), &*found )
+                map_cursor( absolute ), &*found )
         };
         const std::vector<int> quantities = {
             static_cast<int>( quantity )
@@ -1103,7 +1103,7 @@ void install_activity_api(
     activities.set_function(
         "pickup_at",
         [require_write, has_active_callback, pickup_selector,
-         current_runtime_generation, current_world_generation](
+                        current_runtime_generation, current_world_generation](
             sol::this_state lua,
             const game_handle & character_handle,
             const script_tripoint_coord & target,
@@ -1166,7 +1166,7 @@ void install_activity_api(
     activities.set_function(
         "start_training",
         [require_write, current_runtime_generation,
-         current_world_generation](
+                        current_world_generation](
             sol::this_state lua,
             const game_handle & teacher_handle,
             const sol::table & trainee_handles,
@@ -1346,7 +1346,7 @@ void install_activity_api(
     activities.set_function(
         "wait_for_npc",
         [require_write, current_runtime_generation,
-         current_world_generation](
+                        current_world_generation](
             sol::this_state lua,
             const game_handle & character_handle,
             const game_handle & npc_handle,
@@ -1403,7 +1403,7 @@ void install_activity_api(
     activities.set_function(
         "target_practice",
         [require_write, current_runtime_generation,
-         current_world_generation](
+                        current_world_generation](
             sol::this_state lua,
     const game_handle & character_handle ) {
         require_write();
@@ -1443,7 +1443,7 @@ void install_activity_api(
     activities.set_function(
         "suspend",
         [require_write, current_runtime_generation,
-         current_world_generation](
+                        current_world_generation](
             sol::this_state lua,
     const game_handle & character_handle ) {
         require_write();
@@ -1499,7 +1499,7 @@ void install_activity_api(
     activities.set_function(
         "resume",
         [require_write, current_runtime_generation,
-         current_world_generation](
+                        current_world_generation](
             sol::this_state lua,
     const game_handle & character_handle ) {
         require_write();
@@ -1547,7 +1547,7 @@ void install_activity_api(
     activities.set_function(
         "clear_backlog",
         [require_write, current_runtime_generation,
-         current_world_generation](
+                        current_world_generation](
             sol::this_state lua,
     const game_handle & character_handle ) {
         require_write();
@@ -1575,7 +1575,7 @@ void install_activity_api(
     activities.set_function(
         "cancel",
         [require_write, current_runtime_generation,
-         current_world_generation](
+                        current_world_generation](
             sol::this_state lua,
     const game_handle & character_handle ) {
         require_write();

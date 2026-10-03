@@ -5,8 +5,8 @@
 #include "skill.h"
 #include "translation.h"
 #if defined( LOCALIZE )
-#include "translation_manager.h"
-#include "translations.h"
+    #include "translation_manager.h"
+    #include "translations.h"
 #endif
 
 static const itype_id itype_lua_text_literal_child( "lua_text_literal_child" );

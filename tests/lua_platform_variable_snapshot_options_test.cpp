@@ -109,14 +109,14 @@ TEST_CASE( "lua_platform_context_keys_match_native_variable_storage",
         sol::table context = fixture.lua.create_table();
         const var_info direct{ var_type::context, key };
         const sol::table missing = require_result_value(
-                                      resolve( context, sol::nil, "context", key ) );
+                                       resolve( context, sol::nil, "context", key ) );
         CHECK_FALSE( missing["exists"].get<bool>() );
         CHECK( maybe_read_var_value( direct, native ) == nullptr );
 
         native.set_value( key, "before" );
         context.raw_set( key, "before" );
         const sol::table direct_result = require_result_value(
-                                            resolve( context, sol::nil, "context", key ) );
+                                             resolve( context, sol::nil, "context", key ) );
         REQUIRE( maybe_read_var_value( direct, native ) != nullptr );
         CHECK( direct_result["exists"].get<bool>() );
         CHECK( direct_result["value"].get<std::string>() ==
@@ -127,14 +127,14 @@ TEST_CASE( "lua_platform_context_keys_match_native_variable_storage",
         context.raw_set( pointer, "_" + key );
         const var_info indirect{ var_type::var, pointer };
         const sol::table indirect_result = require_result_value(
-                                              resolve( context, sol::nil, "var", pointer ) );
+                                               resolve( context, sol::nil, "var", pointer ) );
         CHECK( indirect_result["exists"].get<bool>() );
         CHECK( indirect_result["value"].get<std::string>() ==
                read_var_value( indirect, native ).str() );
 
         native.set_value( key, "after" );
         const sol::table updated = require_result_value(
-                                      set_resolved( context, sol::nil, "var", pointer, "after" ) );
+                                       set_resolved( context, sol::nil, "var", pointer, "after" ) );
         CHECK( updated["existed"].get<bool>() );
         CHECK( updated["before"].get<std::string>() == "before" );
         CHECK( context.raw_get<std::string>( key ) == read_var_value( direct, native ).str() );
@@ -142,7 +142,7 @@ TEST_CASE( "lua_platform_context_keys_match_native_variable_storage",
         native.set_value( key, diag_value{} );
         require_result_value( set_resolved( context, sol::nil, "context", key, null_value ) );
         const sol::table empty = require_result_value(
-                                    resolve( context, sol::nil, "context", key ) );
+                                     resolve( context, sol::nil, "context", key ) );
         REQUIRE( maybe_read_var_value( direct, native ) != nullptr );
         CHECK( read_var_value( direct, native ).is_empty() );
         CHECK( empty["exists"].get<bool>() );
@@ -151,7 +151,7 @@ TEST_CASE( "lua_platform_context_keys_match_native_variable_storage",
         native.remove_value( key );
         require_result_value( set_resolved( context, sol::nil, "context", key, sol::nil ) );
         const sol::table removed = require_result_value(
-                                      resolve( context, sol::nil, "context", key ) );
+                                       resolve( context, sol::nil, "context", key ) );
         CHECK_FALSE( removed["exists"].get<bool>() );
         CHECK( maybe_read_var_value( direct, native ) == nullptr );
     }
@@ -253,7 +253,7 @@ TEST_CASE( "lua_platform_global_string_query_preserves_native_type_semantics",
     CHECK_FALSE( missing_owner["exists"].get<bool>() );
     CHECK( missing_owner["value"].get<sol::object>().get_type() == sol::type::nil );
 
-    const auto compare = [&]( const diag_value &stored, const bool type_mismatch ) {
+    const auto compare = [&]( const diag_value & stored, const bool type_mismatch ) {
         get_globals().set_global_value( key, stored );
         player.set_value( key, stored );
         const diag_value *native = get_globals().maybe_get_global_value( key );

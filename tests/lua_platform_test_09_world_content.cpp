@@ -30,7 +30,7 @@ struct platform_world_spawn_contract_fixture {
         active_world_generation( 1 ) {
         services = lua.create_table();
         cata::lua_platform::install_value_type_api(
-            lua, services, []() {} );
+        lua, services, []() {} );
         cata::lua_platform::install_game_handle_api(
             lua, services,
         [this]() {
@@ -204,7 +204,7 @@ TEST_CASE( "native_json_infinite_duration_is_distinct_from_int_max_duration",
 
     time_duration explicit_maximum;
     explicit_maximum.deserialize( json_loader::from_string(
-                                     std::to_string( std::numeric_limits<int>::max() ) ) );
+                                      std::to_string( std::numeric_limits<int>::max() ) ) );
     CHECK( explicit_maximum == calendar::INDEFINITELY_LONG_DURATION );
 }
 
@@ -224,10 +224,14 @@ TEST_CASE( "lua_platform_place_override_matches_native_event_queue_and_range",
     const std::vector<std::string> keys = {
         "", "place-key", std::string( "key" ) + '\0' + "suffix", std::string( 10000, 'k' )
     };
-    for( const int now : { 1000, std::numeric_limits<int>::min(), std::numeric_limits<int>::max() } ) {
+    for( const int now : {
+             1000, std::numeric_limits<int>::min(), std::numeric_limits<int>::max()
+         } ) {
         calendar::turn = time_point::from_turn( now );
-        for( const int duration : { -1, 0, 1, calendar::INDEFINITELY_LONG,
-                                   std::numeric_limits<int>::min(), std::numeric_limits<int>::max() } ) {
+        for( const int duration : {
+                 -1, 0, 1, calendar::INDEFINITELY_LONG,
+                 std::numeric_limits<int>::min(), std::numeric_limits<int>::max()
+                 } ) {
             for( const std::string &name : names ) {
                 for( const std::string &key : keys ) {
                     CAPTURE( now, duration, name.size(), key.size() );
@@ -301,7 +305,7 @@ TEST_CASE( "lua_platform_location_revert_matches_native_queue_and_range",
         MAPBUFFER.clear_outside_reality_bubble();
     } );
     get_globals().set_global_value( "lua_platform_revert_source",
-                                  project_to<coords::ms>( source ) );
+                                    project_to<coords::ms>( source ) );
     dialogue conversation( get_talker_for( get_avatar() ), get_talker_for( get_avatar() ) );
     const sol::protected_function revert = fixture.services["world"]["schedule_location_revert"];
     REQUIRE( revert.valid() );
@@ -309,11 +313,17 @@ TEST_CASE( "lua_platform_location_revert_matches_native_queue_and_range",
     const std::vector<std::string> keys = {
         "", "revert-key", std::string( "key" ) + '\0' + "tail", std::string( 10000, 'k' )
     };
-    for( const int now : { 1000, std::numeric_limits<int>::min(), std::numeric_limits<int>::max() } ) {
-        for( const int duration : { -3, 0, 1, calendar::INDEFINITELY_LONG,
-                                   std::numeric_limits<int>::min(), std::numeric_limits<int>::max() } ) {
+    for( const int now : {
+             1000, std::numeric_limits<int>::min(), std::numeric_limits<int>::max()
+         } ) {
+        for( const int duration : {
+                 -3, 0, 1, calendar::INDEFINITELY_LONG,
+                 std::numeric_limits<int>::min(), std::numeric_limits<int>::max()
+                 } ) {
             for( const std::string &key : keys ) {
-                for( const bool variable_key : { false, true } ) {
+                for( const bool variable_key : {
+                         false, true
+                     } ) {
                     CAPTURE( now, duration, key.size(), variable_key );
                     calendar::turn = time_point::from_turn( now );
                     events = timed_event_manager();
@@ -472,7 +482,7 @@ TEST_CASE( "lua_platform_location_revert_provider_owns_snapshots_and_runs_synchr
     fixture.lua.set_function( "bad_revert_key", [&]() -> sol::object {
         ++bad_calls;
         return bad_calls == 3 ? sol::make_object( fixture.lua, 42 ) :
-               sol::make_object( fixture.lua, std::string( "already-queued" ) );
+        sol::make_object( fixture.lua, std::string( "already-queued" ) );
     } );
     const sol::protected_function bad_key = fixture.lua["bad_revert_key"];
     const sol::protected_function_result failed = revert(
@@ -511,10 +521,12 @@ TEST_CASE( "lua_platform_location_revert_survives_native_save_and_actualizes",
     const std::string text = std::string( "saved graffiti" ) + '\0' + "尾部";
     const std::string key = std::string( 300, 'k' ) + '\0' + "tail";
     get_globals().set_global_value( "lua_platform_revert_source",
-                                  project_to<coords::ms>( source ) );
+                                    project_to<coords::ms>( source ) );
     const sol::protected_function revert = fixture.services["world"]["schedule_location_revert"];
     dialogue conversation( get_talker_for( get_avatar() ), get_talker_for( get_avatar() ) );
-    for( const bool native_authoring : { true, false } ) {
+    for( const bool native_authoring : {
+             true, false
+         } ) {
         CAPTURE( native_authoring );
         calendar::turn = time_point::from_turn( 1000 );
         events = timed_event_manager();
@@ -621,7 +633,9 @@ TEST_CASE( "lua_platform_location_revert_loads_legacy_snapshots_without_metadata
     restore_on_out_of_scope<timed_event_manager> restore_events( std::move( events ) );
     const point_sm_ms sample( 2, 3 );
     const tripoint_abs_ms absolute( 12000, 14400, 0 );
-    for( const bool uniform : { true, false } ) {
+    for( const bool uniform : {
+             true, false
+         } ) {
         CAPTURE( uniform );
         events = timed_event_manager();
         std::ostringstream legacy;
@@ -748,23 +762,33 @@ TEST_CASE( "lua_platform_location_copy_matches_native_timed_submap_copy",
         time_duration retime_delay;
     };
     const std::array<parity_case, 7> cases = {{
-            { "native-duration-spellings", "1t", 1_turns,
-              "1 minute 2 seconds", 1_minutes + 2_seconds },
+            {
+                "native-duration-spellings", "1t", 1_turns,
+                "1 minute 2 seconds", 1_minutes + 2_seconds
+            },
             { "", "1 turn", 1_turns, "0 turns", 0_turns },
             { std::string( 300, 'k' ), "0 turns", 0_turns, "-3 turns", -3_turns },
-            { "任务\"quoted", "-3 turns", -3_turns, "infinite",
-              time_duration::from_turns( calendar::INDEFINITELY_LONG ) },
-            { std::string( "nul\0key", 7 ), "infinite",
-              time_duration::from_turns( calendar::INDEFINITELY_LONG ),
-              std::to_string( std::numeric_limits<int>::max() ) + " turns",
-              time_duration::from_turns( std::numeric_limits<int>::max() ) },
-            { "tp_key", "infinite", time_duration::from_turns( calendar::INDEFINITELY_LONG ),
-              "0 turns", 0_turns },
-            { "copy-int-min",
-              std::to_string( std::numeric_limits<int>::min() ) + " turns",
-              time_duration::from_turns( std::numeric_limits<int>::min() ),
-              std::to_string( std::numeric_limits<int>::min() ) + " turns",
-              time_duration::from_turns( std::numeric_limits<int>::min() ) },
+            {
+                "任务\"quoted", "-3 turns", -3_turns, "infinite",
+                time_duration::from_turns( calendar::INDEFINITELY_LONG )
+            },
+            {
+                std::string( "nul\0key", 7 ), "infinite",
+                time_duration::from_turns( calendar::INDEFINITELY_LONG ),
+                std::to_string( std::numeric_limits<int>::max() ) + " turns",
+                time_duration::from_turns( std::numeric_limits<int>::max() )
+            },
+            {
+                "tp_key", "infinite", time_duration::from_turns( calendar::INDEFINITELY_LONG ),
+                "0 turns", 0_turns
+            },
+            {
+                "copy-int-min",
+                std::to_string( std::numeric_limits<int>::min() ) + " turns",
+                time_duration::from_turns( std::numeric_limits<int>::min() ),
+                std::to_string( std::numeric_limits<int>::min() ) + " turns",
+                time_duration::from_turns( std::numeric_limits<int>::min() )
+            },
         }
     };
     const sol::protected_function copy =
@@ -854,7 +878,7 @@ TEST_CASE( "lua_platform_location_copy_matches_native_timed_submap_copy",
         for( int x = 0; x < 2; ++x ) {
             for( int y = 0; y < 2; ++y, ++native, ++record_index ) {
                 const tripoint_abs_ms expected_position = project_to<coords::ms>(
-                        project_to<coords::sm>( destination ) + point( x, y ) );
+                            project_to<coords::sm>( destination ) + point( x, y ) );
                 CHECK( native->map_square == expected_position );
                 native_records[record_index] = {
                     native->type,
@@ -874,10 +898,10 @@ TEST_CASE( "lua_platform_location_copy_matches_native_timed_submap_copy",
         events = timed_event_manager();
 
         const sol::protected_function_result platform_result = copy(
-                fixture.abs_omt_position( source ),
-                fixture.abs_omt_position( destination ),
-                cata::lua_platform::script_time_duration::from_native(
-                    test_case.copy_delay ), key );
+                    fixture.abs_omt_position( source ),
+                    fixture.abs_omt_position( destination ),
+                    cata::lua_platform::script_time_duration::from_native(
+                        test_case.copy_delay ), key );
         REQUIRE( platform_result.valid() );
         const sol::table envelope = platform_result.get<sol::table>();
         REQUIRE( envelope["ok"].get<bool>() );
@@ -895,9 +919,9 @@ TEST_CASE( "lua_platform_location_copy_matches_native_timed_submap_copy",
             fixture.services["world"]["reschedule_events"];
         REQUIRE( reschedule.valid() );
         const sol::protected_function_result retime_result = reschedule(
-                key,
-                cata::lua_platform::script_time_duration::from_native(
-                    test_case.retime_delay ) );
+                    key,
+                    cata::lua_platform::script_time_duration::from_native(
+                        test_case.retime_delay ) );
         REQUIRE( retime_result.valid() );
         const sol::table retime_envelope = retime_result.get<sol::table>();
         REQUIRE( retime_envelope["ok"].get<bool>() );
@@ -914,7 +938,7 @@ TEST_CASE( "lua_platform_location_copy_matches_native_timed_submap_copy",
         for( int x = 0; x < 2; ++x ) {
             for( int y = 0; y < 2; ++y, ++native, ++platform_index ) {
                 const tripoint_abs_ms expected_position = project_to<coords::ms>(
-                        project_to<coords::sm>( destination ) + point( x, y ) );
+                            project_to<coords::sm>( destination ) + point( x, y ) );
                 CHECK( native->map_square == expected_position );
                 const location_copy_event_record &expected =
                     native_records[platform_index];
@@ -956,7 +980,7 @@ TEST_CASE( "lua_platform_location_copy_matches_native_timed_submap_copy",
     const std::string missing_key = "lua_platform_location_copy_missing_source";
     const tripoint_abs_sm missing_source_base = project_to<coords::sm>( missing_source );
     const tripoint_abs_sm missing_destination_base = project_to<coords::sm>(
-            missing_destination );
+                missing_destination );
     for( int x = 0; x < 2; ++x ) {
         for( int y = 0; y < 2; ++y ) {
             REQUIRE_FALSE( MAPBUFFER.submap_exists( missing_source_base + point( x, y ) ) );
@@ -964,9 +988,9 @@ TEST_CASE( "lua_platform_location_copy_matches_native_timed_submap_copy",
         }
     }
     const sol::protected_function_result missing_result = copy(
-            fixture.abs_omt_position( missing_source ),
-            fixture.abs_omt_position( missing_destination ),
-            cata::lua_platform::script_time_duration::from_native( 1_turns ), missing_key );
+                fixture.abs_omt_position( missing_source ),
+                fixture.abs_omt_position( missing_destination ),
+                cata::lua_platform::script_time_duration::from_native( 1_turns ), missing_key );
     CHECK_FALSE( missing_result.valid() );
     CHECK( events.get_all().size() == before_missing_source );
     CHECK_FALSE( get_avatar().translocators.knows_translocator( missing_destination ) );
@@ -1070,7 +1094,8 @@ TEST_CASE( "lua_platform_location_copy_provider_owns_each_snapshot_and_fixes_due
     for( const std::string &body : {
              std::string( "if copy_calls == 3 then error('copy provider failed') end return 'key'" ),
              std::string( "if copy_calls == 3 then return 42 end return 'key'" ),
-             std::string( "if copy_calls == 3 then return end return 'key'" ) } ) {
+             std::string( "if copy_calls == 3 then return end return 'key'" )
+         } ) {
         events = timed_event_manager();
         const sol::protected_function_result loaded = fixture.lua.safe_script(
                     "copy_calls=0; function failing_copy_key() copy_calls=copy_calls+1; " + body + " end",
@@ -1239,7 +1264,7 @@ TEST_CASE( "lua_platform_weather_write_controls_apply_valid_overrides",
     const time_point saved_nextweather = weather_manager_ref.nextweather;
     const auto saved_temperature_cache = weather_manager_ref.temperature_cache;
     using weather_precise_type = std::remove_cv_t<std::remove_reference_t<
-        decltype( *weather_manager_ref.weather_precise )>>;
+                                 decltype( *weather_manager_ref.weather_precise )>>;
     constexpr bool weather_precise_copyable =
         std::is_copy_constructible_v<weather_precise_type> &&
         std::is_copy_assignable_v<weather_precise_type>;
@@ -1261,7 +1286,7 @@ TEST_CASE( "lua_platform_weather_write_controls_apply_valid_overrides",
                                       saved_windspeed_override,
                                       saved_nextweather,
                                       saved_temperature_cache,
-                                      saved_weather_precise]() {
+    saved_weather_precise]() {
         weather_manager_ref.temperature = saved_temperature;
         weather_manager_ref.lightning_active = saved_lightning_active;
         weather_manager_ref.weather_id = saved_weather_id;
@@ -1388,19 +1413,20 @@ TEST_CASE( "lua_platform_world_spawn_item_matches_native_direct_item_initializat
 
     const auto find_spawned = [&here, &local]( const std::int64_t uid ) -> item * {
         map_stack stack = here.i_at( local );
-        for( item &entry : stack ) {
+        for( item &entry : stack )
+        {
             if( entry.uid().get_value() == uid ) {
                 return &entry;
             }
         }
         return nullptr;
     };
-    const auto spawn_through_platform = [&]( const std::string &id ) {
+    const auto spawn_through_platform = [&]( const std::string & id ) {
         const sol::table world = fixture.services["world"];
         const sol::protected_function spawn = world["spawn_item"];
         const sol::protected_function_result result = spawn(
-                script_position,
-                cata::lua_platform::script_game_id( "item", id ), 1 );
+                    script_position,
+                    cata::lua_platform::script_game_id( "item", id ), 1 );
         if( !result.valid() ) {
             return sol::table();
         }

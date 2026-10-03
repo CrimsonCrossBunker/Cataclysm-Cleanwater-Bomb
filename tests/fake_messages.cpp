@@ -35,7 +35,7 @@ std::vector<std::pair<std::string, std::string>> Messages::recent_messages( size
     return { messages.end() - static_cast<std::ptrdiff_t>( count ), messages.end() };
 }
 std::vector<std::pair<std::string, std::string>> Messages::recent_messages_with_formatting(
-    const size_t count )
+            const size_t count )
 {
     // Headless tests preserve the supplied text, including inline formatting tags.
     // Display colours and message fading belong to the UI implementation.

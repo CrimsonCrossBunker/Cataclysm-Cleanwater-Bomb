@@ -106,11 +106,11 @@ TEST_CASE( "lua_platform_npc_follow_preserves_native_state_transitions",
     }, []() {}, []() {}, []() {} );
     platform::register_npc_handle_identity( migrated );
     const platform::game_handle npc_handle = platform::game_handle::from_creature(
-            migrated, { "npc", migrated.getID().get_value(), 0, 0, 0, {} }, runtime, 1 );
+                migrated, { "npc", migrated.getID().get_value(), 0, 0, 0, {} }, runtime, 1 );
     const platform::game_handle avatar_handle = platform::game_handle::from_creature(
-            player, { "avatar", player.getID().get_value(), 0, 0, 0, {} }, runtime, 1 );
+                player, { "avatar", player.getID().get_value(), 0, 0, 0, {} }, runtime, 1 );
     sol::protected_function function = services["npcs"][temporary ? "follow_temporarily" :
-        "join_player"];
+                                       "join_player"];
     sol::protected_function_result call = temporary ? function( npc_handle ) :
                                           function( npc_handle, avatar_handle );
     REQUIRE( call.valid() );
@@ -291,7 +291,7 @@ TEST_CASE( "lua_platform_drop_stolen_items_matches_native_item_return",
     }, []() {}, []() {}, []() {} );
     platform::register_npc_handle_identity( subject );
     const platform::game_handle npc_handle = platform::game_handle::from_creature(
-            subject, { "npc", subject.getID().get_value(), 0, 0, 0, {} }, runtime, 1 );
+                subject, { "npc", subject.getID().get_value(), 0, 0, 0, {} }, runtime, 1 );
     const auto make_item_handle = [&]( item & entry ) {
         return platform::game_handle::from_item(
                    entry, { "character_inventory", entry.uid().get_value(), 0, 0, 0, {} },
@@ -365,7 +365,7 @@ TEST_CASE( "lua_migrated_social_conditions_match_native_talker_slots",
     const int previous_alpha_trust = alpha_faction->trusts_u;
     const int previous_beta_trust = beta_faction->trusts_u;
     const on_out_of_scope restore_trust( [alpha_faction, beta_faction,
-    previous_alpha_trust, previous_beta_trust]() {
+                   previous_alpha_trust, previous_beta_trust]() {
         alpha_faction->trusts_u = previous_alpha_trust;
         beta_faction->trusts_u = previous_beta_trust;
     } );
@@ -417,9 +417,9 @@ TEST_CASE( "lua_migrated_social_conditions_match_native_talker_slots",
     platform::register_npc_handle_identity( alpha );
     platform::register_npc_handle_identity( beta );
     const platform::game_handle alpha_handle = platform::game_handle::from_creature(
-            alpha, { "npc", alpha.getID().get_value(), 0, 0, 0, {} }, runtime, 1 );
+                alpha, { "npc", alpha.getID().get_value(), 0, 0, 0, {} }, runtime, 1 );
     const platform::game_handle beta_handle = platform::game_handle::from_creature(
-            beta, { "npc", beta.getID().get_value(), 0, 0, 0, {} }, runtime, 1 );
+                beta, { "npc", beta.getID().get_value(), 0, 0, 0, {} }, runtime, 1 );
     const proficiency_id carving( "prof_carving" );
     const conditional_t npc_proficiency_condition( json_loader::from_string(
                 R"({"npc_has_proficiency":"prof_carving"})" ).get_object() );
@@ -647,15 +647,15 @@ TEST_CASE( "lua_migrated_npc_nearby_and_service_conditions_match_native",
     }, current_world, []() {}, []() {} );
     platform::register_npc_handle_identity( beta );
     const platform::game_handle avatar_handle = platform::game_handle::from_creature(
-            player, { "avatar", player.getID().get_value(), 0, 0, 0, {} }, runtime, 1 );
+                player, { "avatar", player.getID().get_value(), 0, 0, 0, {} }, runtime, 1 );
     const platform::game_handle beta_handle = platform::game_handle::from_creature(
-            beta, { "npc", beta.getID().get_value(), 0, 0, 0, {} }, runtime, 1 );
+                beta, { "npc", beta.getID().get_value(), 0, 0, 0, {} }, runtime, 1 );
     const tripoint_abs_ms monster_position = get_map().get_abs( monster_beta.pos_bub() );
     const platform::game_handle monster_handle = platform::game_handle::from_creature(
-            monster_beta, { "monster", monster_beta.uid().get_value(),
-                            monster_position.x(), monster_position.y(), monster_position.z(), {}
-                          },
-            runtime, 1 );
+                monster_beta, { "monster", monster_beta.uid().get_value(),
+                                monster_position.x(), monster_position.y(), monster_position.z(), {}
+                              },
+                runtime, 1 );
     const on_out_of_scope retire_beta( [&]() {
         platform::retire_npc_handle_identity( beta );
     } );
@@ -684,8 +684,8 @@ TEST_CASE( "lua_migrated_npc_nearby_and_service_conditions_match_native",
     const double minimum_cash ) {
         const sol::protected_function has_effect = services["effects"]["has"];
         const sol::protected_function_result busy_call = has_effect(
-                interlocutor,
-                platform::script_game_id( "effect", "currently_busy" ) );
+                    interlocutor,
+                    platform::script_game_id( "effect", "currently_busy" ) );
         REQUIRE( busy_call.valid() );
         const sol::table busy_result = busy_call;
         REQUIRE( busy_result["ok"].get<bool>() );

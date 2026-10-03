@@ -6,8 +6,7 @@
 TEST_CASE( "lua_platform_mapgen_callback_transaction_native_helper",
            "[lua][platform][mapgen][transaction]" )
 {
-    SECTION( "rollback restores the callback preimage" )
-    {
+    SECTION( "rollback restores the callback preimage" ) {
         platform_mapgen_callback_transaction_test_fixture fixture;
         map &here = fixture.native_map();
         const tripoint_bub_ms position = fixture.position();
@@ -38,8 +37,7 @@ TEST_CASE( "lua_platform_mapgen_callback_transaction_native_helper",
         CHECK_FALSE( fixture.context.valid() );
     }
 
-    SECTION( "commit keeps the callback terrain change" )
-    {
+    SECTION( "commit keeps the callback terrain change" ) {
         platform_mapgen_callback_transaction_test_fixture fixture;
         map &here = fixture.native_map();
         const tripoint_bub_ms position = fixture.position();
@@ -154,8 +152,7 @@ TEST_CASE( "lua_platform_mapgen_deferred_npc_and_zones_publish_only_after_commit
     CHECK_FALSE( g->unique_npc_exists( unique_id ) );
     CHECK_THROWS( fixture.context.publish_deferred( report ) );
 
-    SECTION( "aborted callback never publishes NPCs or zones" )
-    {
+    SECTION( "aborted callback never publishes NPCs or zones" ) {
         CHECK( transaction.rollback( "callback_failed", "injected failure" ) );
         CHECK_THROWS( fixture.context.publish_deferred( report ) );
         fixture.context.invalidate();
@@ -163,8 +160,7 @@ TEST_CASE( "lua_platform_mapgen_deferred_npc_and_zones_publish_only_after_commit
         CHECK_FALSE( g->unique_npc_exists( unique_id ) );
         CHECK_THROWS( fixture.context.queue_npc( 1, 1, "test_talker", unique_id ) );
     }
-    SECTION( "commit publishes exact positions and honors NPC uniqueness" )
-    {
+    SECTION( "commit publishes exact positions and honors NPC uniqueness" ) {
         transaction.commit();
         REQUIRE( fixture.context.publish_deferred( report ) );
         CHECK( zone_count() == count_before + 3 );
@@ -172,11 +168,11 @@ TEST_CASE( "lua_platform_mapgen_deferred_npc_and_zones_publish_only_after_commit
         const shared_ptr_fast<npc> placed = overmap_buffer.find_npc_by_unique_id( unique_id );
         REQUIRE( placed );
         CHECK( placed->pos_abs() == fixture.native_map().get_abs( tripoint_bub_ms( 11, 12, 0 ) ) );
-        for( const auto &entry : std::vector<std::pair<zone_type_id, tripoint_bub_ms>>{
-                 { zone_type_id( "LOOT_UNSORTED" ), tripoint_bub_ms( 2, 3, 0 ) },
-                 { zone_type_id( "LOOT_FOOD" ), tripoint_bub_ms( 6, 7, 0 ) },
-                 { zone_type_id( "ZONE_START_POINT" ), tripoint_bub_ms( 8, 9, 0 ) }
-             } ) {
+        for( const auto &entry : std::vector<std::pair<zone_type_id, tripoint_bub_ms>> {
+        { zone_type_id( "LOOT_UNSORTED" ), tripoint_bub_ms( 2, 3, 0 ) },
+            { zone_type_id( "LOOT_FOOD" ), tripoint_bub_ms( 6, 7, 0 ) },
+            { zone_type_id( "ZONE_START_POINT" ), tripoint_bub_ms( 8, 9, 0 ) }
+        } ) {
             const zone_data *zone = zones.get_zone_at( fixture.native_map().get_abs( entry.second ),
                                     entry.first, faction_id( "your_followers" ) );
             REQUIRE( zone != nullptr );
@@ -229,7 +225,7 @@ TEST_CASE( "lua_platform_mapgen_ground_item_ownership_is_bounded_and_transaction
     const tripoint_bub_ms outside( 3, 3, 0 );
     item bottle( itype_id( "bottle_plastic" ), calendar::turn );
     REQUIRE( bottle.put_in( item( itype_id( "water" ), calendar::turn, 1 ),
-                           pocket_type::CONTAINER ).success() );
+                            pocket_type::CONTAINER ).success() );
     bottle.set_owner( previous_owner );
     here.add_item_or_charges( inside, bottle );
     here.add_item_or_charges( outside, bottle );
@@ -252,8 +248,7 @@ TEST_CASE( "lua_platform_mapgen_ground_item_ownership_is_bounded_and_transaction
     CHECK_THROWS( fixture.context.set_item_faction( 1, 1, 2, 2, "missing_mapgen_faction" ) );
     CHECK_THROWS( fixture.context.set_item_faction( 1, 1, 2, 2, "" ) );
     check_stack_owner( inside, previous_owner );
-    SECTION( "an exhausted budget leaves ownership unchanged" )
-    {
+    SECTION( "an exhausted budget leaves ownership unchanged" ) {
         while( fixture.context.operations_remaining() > 0 ) {
             fixture.context.random_int( 0, 0 );
         }
@@ -267,8 +262,7 @@ TEST_CASE( "lua_platform_mapgen_ground_item_ownership_is_bounded_and_transaction
     check_stack_owner( tripoint_bub_ms( 2, 2, 0 ), owner );
     check_stack_owner( outside, previous_owner );
 
-    SECTION( "failure restores ground and contained item ownership" )
-    {
+    SECTION( "failure restores ground and contained item ownership" ) {
         REQUIRE( transaction.rollback( "callback_failed", "injected failure" ) );
         check_stack_owner( inside, previous_owner );
         check_stack_owner( outside, previous_owner );
@@ -276,8 +270,7 @@ TEST_CASE( "lua_platform_mapgen_ground_item_ownership_is_bounded_and_transaction
             CHECK( water.get_owner().is_null() );
         }
     }
-    SECTION( "commit preserves ownership" )
-    {
+    SECTION( "commit preserves ownership" ) {
         transaction.commit();
         check_stack_owner( inside, owner );
         check_stack_owner( outside, previous_owner );
@@ -314,7 +307,7 @@ TEST_CASE( "lua_platform_mapgen_apply_rejects_untyped_and_legacy_requests",
     const sol::protected_function run_update = mapgen["run_update"];
 
     const sol::protected_function_result target_result = tile_token(
-            fixture.abs_omt_position( fixture.target_omt ) );
+                fixture.abs_omt_position( fixture.target_omt ) );
     REQUIRE( target_result.valid() );
     const sol::table target_envelope = target_result.get<sol::table>();
     REQUIRE( target_envelope["ok"].get<bool>() );
@@ -358,8 +351,10 @@ TEST_CASE( "lua_platform_mapgen_apply_rejects_untyped_and_legacy_requests",
         { "delay", fixture.lua.create_table_with( "delay", 1 ) },
         { "mission", fixture.lua.create_table_with( "mission", true ) },
         { "key", fixture.lua.create_table_with( "key", "legacy-key" ) },
-        { "cancel_on_collision=false",
-          fixture.lua.create_table_with( "cancel_on_collision", false ) },
+        {
+            "cancel_on_collision=false",
+            fixture.lua.create_table_with( "cancel_on_collision", false )
+        },
     };
     for( const auto &test_case : invalid_options ) {
         INFO( test_case.first );
@@ -369,10 +364,14 @@ TEST_CASE( "lua_platform_mapgen_apply_rejects_untyped_and_legacy_requests",
     }
 
     const std::vector<std::pair<std::string, sol::table>> unsupported_transforms = {
-        { "mirror_horizontal=true",
-          fixture.lua.create_table_with( "mirror_horizontal", true ) },
-        { "mirror_vertical=true",
-          fixture.lua.create_table_with( "mirror_vertical", true ) },
+        {
+            "mirror_horizontal=true",
+            fixture.lua.create_table_with( "mirror_horizontal", true )
+        },
+        {
+            "mirror_vertical=true",
+            fixture.lua.create_table_with( "mirror_vertical", true )
+        },
         { "rotation=1", fixture.lua.create_table_with( "rotation", 1 ) },
         { "rotation=4", fixture.lua.create_table_with( "rotation", 4 ) },
     };
@@ -408,7 +407,7 @@ TEST_CASE( "lua_platform_mapgen_run_update_matches_native_immediate_operator",
             submap *source = MAPBUFFER.lookup_submap( submap_position );
             REQUIRE( source != nullptr );
             saved_submaps.push_back( { submap_position,
-                                      source->get_revert_submap() } );
+                                       source->get_revert_submap() } );
         }
     }
     const auto restore_submaps = [&saved_submaps, position]() {
@@ -451,8 +450,8 @@ TEST_CASE( "lua_platform_mapgen_run_update_matches_native_immediate_operator",
         target_envelope["value"].get<cata::lua_platform::overmap_tile_token>();
     const sol::protected_function update_token = mapgen["update_token"];
     const sol::protected_function_result update_result = update_token(
-            cata::lua_platform::script_game_id(
-                "update_mapgen", native_id.str() ) );
+                cata::lua_platform::script_game_id(
+                    "update_mapgen", native_id.str() ) );
     REQUIRE( update_result.valid() );
     const sol::table update_envelope = update_result.get<sol::table>();
     REQUIRE( update_envelope["ok"].get<bool>() );
@@ -500,7 +499,7 @@ TEST_CASE( "lua_platform_mapgen_schedule_update_matches_native_timed_event",
         target_envelope["value"].get<cata::lua_platform::overmap_tile_token>();
     const sol::protected_function update_token = mapgen["update_token"];
     const sol::protected_function_result update_result = update_token(
-            cata::lua_platform::script_game_id( "update_mapgen", native_id.str() ) );
+                cata::lua_platform::script_game_id( "update_mapgen", native_id.str() ) );
     REQUIRE( update_result.valid() );
     const sol::table update_envelope = update_result.get<sol::table>();
     REQUIRE( update_envelope["ok"].get<bool>() );
@@ -555,7 +554,7 @@ TEST_CASE( "lua_platform_mapgen_apply_reports_preflight_rejection_without_mutati
     const sol::protected_function apply = mapgen["apply"];
 
     const sol::protected_function_result target_result = tile_token(
-            fixture.abs_omt_position( fixture.target_omt ) );
+                fixture.abs_omt_position( fixture.target_omt ) );
     REQUIRE( target_result.valid() );
     const sol::table target_envelope = target_result.get<sol::table>();
     REQUIRE( target_envelope["ok"].get<bool>() );
@@ -609,7 +608,7 @@ TEST_CASE( "lua_platform_mapgen_update_tokens_reject_invalid_and_stale_context",
     CHECK( token.owner_is_current() );
 
     const auto check_invalid_id = [&](
-        const cata::lua_platform::script_game_id &id ) {
+    const cata::lua_platform::script_game_id & id ) {
         const sol::protected_function_result result = update_token( id );
         REQUIRE( result.valid() );
         const sol::table envelope = result.get<sol::table>();
@@ -654,7 +653,7 @@ TEST_CASE( "lua_platform_overmap_tile_token_rejects_stale_runtime_world_and_owne
     const sol::protected_function tile_token = fixture.overmap_api()["tile_token"];
 
     const sol::protected_function_result token_result = tile_token(
-            fixture.abs_omt_position( fixture.target_omt ) );
+                fixture.abs_omt_position( fixture.target_omt ) );
     REQUIRE( token_result.valid() );
     const sol::table token_envelope = token_result.get<sol::table>();
     REQUIRE( token_envelope["ok"].get<bool>() );
@@ -666,7 +665,7 @@ TEST_CASE( "lua_platform_overmap_tile_token_rejects_stale_runtime_world_and_owne
     CHECK( token.owner_is_current() );
 
     const auto check_wrong_frame = [&](
-        const cata::lua_platform::script_tripoint_coord &position ) {
+    const cata::lua_platform::script_tripoint_coord & position ) {
         const sol::protected_function_result result = tile_token( position );
         REQUIRE( result.valid() );
         const sol::table envelope = result.get<sol::table>();
@@ -697,7 +696,7 @@ TEST_CASE( "lua_platform_overmap_tile_token_rejects_stale_runtime_world_and_owne
     CHECK( wrong_world_error->code == "stale_world" );
 
     CHECK_FALSE( cata::lua_platform::validate_overmap_tile_token(
-                       token, fixture.runtime, fixture.world ).has_value() );
+                     token, fixture.runtime, fixture.world ).has_value() );
 
     cata::lua_platform::reset_overmap_tile_tokens();
     CHECK_FALSE( token.owner_is_current() );
@@ -716,7 +715,7 @@ TEST_CASE( "lua_platform_overmap_travel_to_omt_requires_exact_token",
     platform_overmap_travel_fixture fixture( 802, 32 );
     const sol::protected_function tile_token = fixture.overmap_api()["tile_token"];
     const sol::protected_function_result token_result = tile_token(
-            fixture.abs_omt_position( fixture.target_omt ) );
+                fixture.abs_omt_position( fixture.target_omt ) );
     REQUIRE( token_result.valid() );
     const sol::table token_envelope = token_result.get<sol::table>();
     REQUIRE( token_envelope["ok"].get<bool>() );
@@ -734,18 +733,18 @@ TEST_CASE( "lua_platform_overmap_travel_to_omt_requires_exact_token",
     const sol::protected_function travel_to_omt =
         fixture.relocation_api()["travel_to_omt"];
     const sol::table strict_options = fixture.lua.create_table_with(
-                                           "strict", true );
+                                          "strict", true );
 
     const sol::protected_function_result raw_target = travel_to_omt(
-            fixture.avatar_handle,
-            fixture.abs_omt_position( fixture.target_omt ), strict_options );
+                fixture.avatar_handle,
+                fixture.abs_omt_position( fixture.target_omt ), strict_options );
     REQUIRE_FALSE( raw_target.valid() );
     CHECK( get_avatar().pos_abs_omt() == source_omt );
     CHECK( get_map().get_abs_sub() == source_map_abs_sub );
     CHECK( cata::lua_platform::map_mutation_epoch() == epoch_before );
 
     const sol::protected_function_result moved = travel_to_omt(
-            fixture.avatar_handle, token, strict_options );
+                fixture.avatar_handle, token, strict_options );
     REQUIRE( moved.valid() );
     const sol::table moved_envelope = moved.get<sol::table>();
     REQUIRE( moved_envelope["ok"].get<bool>() );
@@ -766,7 +765,7 @@ TEST_CASE( "lua_platform_overmap_travel_to_omt_requires_exact_token",
     const std::uint64_t epoch_after_commit =
         cata::lua_platform::map_mutation_epoch();
     const sol::protected_function_result repeated = travel_to_omt(
-            returned_handle, token, strict_options );
+                returned_handle, token, strict_options );
     REQUIRE( repeated.valid() );
     const sol::table repeated_envelope = repeated.get<sol::table>();
     REQUIRE( repeated_envelope["ok"].get<bool>() );
@@ -783,7 +782,7 @@ TEST_CASE( "lua_platform_overmap_travel_to_omt_requires_exact_token",
     const std::uint64_t epoch_before_stale =
         cata::lua_platform::map_mutation_epoch();
     const sol::protected_function_result stale = travel_to_omt(
-            returned_handle, token, strict_options );
+                returned_handle, token, strict_options );
     REQUIRE( stale.valid() );
     const sol::table stale_envelope = stale.get<sol::table>();
     REQUIRE_FALSE( stale_envelope["ok"].get<bool>() );
@@ -802,7 +801,7 @@ TEST_CASE( "lua_platform_overmap_tile_edit_uses_revision_and_keeps_token_stable"
     const sol::table overmap = fixture.overmap_api();
     const sol::protected_function tile_token = overmap["tile_token"];
     const sol::protected_function_result source_token_result = tile_token(
-            fixture.abs_omt_position( fixture.source_omt ) );
+                fixture.abs_omt_position( fixture.source_omt ) );
     REQUIRE( source_token_result.valid() );
     const sol::table source_token_envelope = source_token_result.get<sol::table>();
     REQUIRE( source_token_envelope["ok"].get<bool>() );
@@ -824,11 +823,11 @@ TEST_CASE( "lua_platform_overmap_tile_edit_uses_revision_and_keeps_token_stable"
     changes["set_note"] = fixture.lua.create_table_with(
                               "value", "platform edit" );
     changes["set_note_danger"] = fixture.lua.create_table_with(
-                                      "dangerous", true, "radius", 3 );
+                                     "dangerous", true, "radius", 3 );
 
     const sol::protected_function edit = overmap["edit"];
     const sol::protected_function_result committed = edit(
-            token, before_revision, changes );
+                token, before_revision, changes );
     REQUIRE( committed.valid() );
     const sol::table committed_envelope = committed.get<sol::table>();
     REQUIRE( committed_envelope["ok"].get<bool>() );
@@ -846,10 +845,10 @@ TEST_CASE( "lua_platform_overmap_tile_edit_uses_revision_and_keeps_token_stable"
     CHECK( committed_snapshot["note_dangerous"].get<bool>() );
     CHECK( committed_snapshot["note_danger_radius"].get<int>() == 3 );
     CHECK_FALSE( cata::lua_platform::validate_overmap_tile_token(
-                       token, fixture.runtime, fixture.world ).has_value() );
+                     token, fixture.runtime, fixture.world ).has_value() );
 
     const sol::protected_function_result stale = edit(
-            token, before_revision, changes );
+                token, before_revision, changes );
     REQUIRE( stale.valid() );
     const sol::table stale_envelope = stale.get<sol::table>();
     REQUIRE_FALSE( stale_envelope["ok"].get<bool>() );
@@ -873,7 +872,7 @@ TEST_CASE( "lua_platform_overmap_tile_edit_uses_revision_and_keeps_token_stable"
            committed_snapshot["note_danger_radius"].get<int>() );
 
     const sol::protected_function_result repeated = edit(
-            token, committed_revision, changes );
+                token, committed_revision, changes );
     REQUIRE( repeated.valid() );
     const sol::table repeated_envelope = repeated.get<sol::table>();
     REQUIRE( repeated_envelope["ok"].get<bool>() );
@@ -893,7 +892,7 @@ TEST_CASE( "lua_platform_overmap_tile_edit_seen_uses_revision",
     const sol::table overmap = fixture.overmap_api();
     const sol::protected_function tile_token = overmap["tile_token"];
     const sol::protected_function_result source_token_result = tile_token(
-            fixture.abs_omt_position( fixture.source_omt ) );
+                fixture.abs_omt_position( fixture.source_omt ) );
     REQUIRE( source_token_result.valid() );
     const sol::table source_token_envelope = source_token_result.get<sol::table>();
     REQUIRE( source_token_envelope["ok"].get<bool>() );
@@ -921,7 +920,7 @@ TEST_CASE( "lua_platform_overmap_tile_edit_seen_uses_revision",
 
     const sol::protected_function edit = overmap["edit"];
     const sol::protected_function_result committed = edit(
-            token, before_revision, changes );
+                token, before_revision, changes );
     REQUIRE( committed.valid() );
     const sol::table committed_envelope = committed.get<sol::table>();
     REQUIRE( committed_envelope["ok"].get<bool>() );
@@ -936,15 +935,14 @@ TEST_CASE( "lua_platform_overmap_tile_edit_seen_uses_revision",
 TEST_CASE( "lua_platform_overmap_tile_edit_rejects_invalid_changes_and_removes_legacy_mutators",
            "[lua][platform][overmap][mutation]" )
 {
-    SECTION( "invalid note/danger" )
-    {
+    SECTION( "invalid note/danger" ) {
         platform_overmap_travel_fixture fixture( 805, 35 );
         REQUIRE( fixture.edit_ready );
 
         const sol::table overmap = fixture.overmap_api();
         const sol::protected_function tile_token = overmap["tile_token"];
         const sol::protected_function_result source_token_result = tile_token(
-                fixture.abs_omt_position( fixture.source_omt ) );
+                    fixture.abs_omt_position( fixture.source_omt ) );
         REQUIRE( source_token_result.valid() );
         const sol::table source_token_envelope = source_token_result.get<sol::table>();
         REQUIRE( source_token_envelope["ok"].get<bool>() );
@@ -972,11 +970,11 @@ TEST_CASE( "lua_platform_overmap_tile_edit_rejects_invalid_changes_and_removes_l
         changes["set_note"] = fixture.lua.create_table_with(
                                   "clear", true );
         changes["set_note_danger"] = fixture.lua.create_table_with(
-                                          "dangerous", true, "radius", 3 );
+                                         "dangerous", true, "radius", 3 );
 
         const sol::protected_function edit = overmap["edit"];
         const sol::protected_function_result rejected = edit(
-                token, before_revision, changes );
+                    token, before_revision, changes );
         REQUIRE( rejected.valid() );
         const sol::table rejected_envelope = rejected.get<sol::table>();
         REQUIRE_FALSE( rejected_envelope["ok"].get<bool>() );
@@ -999,15 +997,14 @@ TEST_CASE( "lua_platform_overmap_tile_edit_rejects_invalid_changes_and_removes_l
                before_note_danger_radius );
     }
 
-    SECTION( "unknown field" )
-    {
+    SECTION( "unknown field" ) {
         platform_overmap_travel_fixture fixture( 806, 36 );
         REQUIRE( fixture.edit_ready );
 
         const sol::table overmap = fixture.overmap_api();
         const sol::protected_function tile_token = overmap["tile_token"];
         const sol::protected_function_result source_token_result = tile_token(
-                fixture.abs_omt_position( fixture.source_omt ) );
+                    fixture.abs_omt_position( fixture.source_omt ) );
         REQUIRE( source_token_result.valid() );
         const sol::table source_token_envelope = source_token_result.get<sol::table>();
         REQUIRE( source_token_envelope["ok"].get<bool>() );
@@ -1023,15 +1020,15 @@ TEST_CASE( "lua_platform_overmap_tile_edit_rejects_invalid_changes_and_removes_l
         const std::size_t before_revision =
             before_snapshot["revision"].get<std::size_t>();
         const std::string before_terrain =
-            before_snapshot["terrain"].get<
-                cata::lua_platform::script_game_id>().value();
+            before_snapshot["terrain"].get <
+            cata::lua_platform::script_game_id > ().value();
 
         sol::table changes = fixture.lua.create_table();
         changes["unknown"] = true;
 
         const sol::protected_function edit = overmap["edit"];
         const sol::protected_function_result rejected = edit(
-                token, before_revision, changes );
+                    token, before_revision, changes );
         REQUIRE( rejected.valid() );
         const sol::table rejected_envelope = rejected.get<sol::table>();
         REQUIRE_FALSE( rejected_envelope["ok"].get<bool>() );
@@ -1044,19 +1041,18 @@ TEST_CASE( "lua_platform_overmap_tile_edit_rejects_invalid_changes_and_removes_l
         REQUIRE( after_envelope["ok"].get<bool>() );
         const sol::table after_snapshot = after_envelope["value"].get<sol::table>();
         CHECK( after_snapshot["revision"].get<std::size_t>() == before_revision );
-        CHECK( after_snapshot["terrain"].get<
-                   cata::lua_platform::script_game_id>().value() == before_terrain );
+        CHECK( after_snapshot["terrain"].get <
+               cata::lua_platform::script_game_id > ().value() == before_terrain );
     }
 
-    SECTION( "legacy mutators removed" )
-    {
+    SECTION( "legacy mutators removed" ) {
         platform_overmap_travel_fixture fixture( 807, 37 );
         REQUIRE( fixture.edit_ready );
 
         const sol::table overmap = fixture.overmap_api();
         const sol::protected_function tile_token = overmap["tile_token"];
         const sol::protected_function_result source_token_result = tile_token(
-                fixture.abs_omt_position( fixture.source_omt ) );
+                    fixture.abs_omt_position( fixture.source_omt ) );
         REQUIRE( source_token_result.valid() );
         const sol::table source_token_envelope = source_token_result.get<sol::table>();
         REQUIRE( source_token_envelope["ok"].get<bool>() );
@@ -1084,8 +1080,7 @@ TEST_CASE( "lua_platform_overmap_tile_edit_rejects_invalid_changes_and_removes_l
         CHECK( overmap["reveal_route"].valid() );
     }
 
-    SECTION( "generated terrain" )
-    {
+    SECTION( "generated terrain" ) {
         platform_overmap_travel_fixture fixture( 808, 38 );
         REQUIRE( fixture.edit_ready );
         REQUIRE( fixture.source_overmap->is_omt_generated( fixture.source_local ) );
@@ -1093,7 +1088,7 @@ TEST_CASE( "lua_platform_overmap_tile_edit_rejects_invalid_changes_and_removes_l
         const sol::table overmap = fixture.overmap_api();
         const sol::protected_function tile_token = overmap["tile_token"];
         const sol::protected_function_result source_token_result = tile_token(
-                fixture.abs_omt_position( fixture.source_omt ) );
+                    fixture.abs_omt_position( fixture.source_omt ) );
         REQUIRE( source_token_result.valid() );
         const sol::table source_token_envelope = source_token_result.get<sol::table>();
         REQUIRE( source_token_envelope["ok"].get<bool>() );
@@ -1128,7 +1123,7 @@ TEST_CASE( "lua_platform_overmap_tile_edit_rejects_invalid_changes_and_removes_l
 
         const sol::protected_function edit = overmap["edit"];
         const sol::protected_function_result rejected = edit(
-                token, before_revision, changes );
+                    token, before_revision, changes );
         REQUIRE( rejected.valid() );
         const sol::table rejected_envelope = rejected.get<sol::table>();
         REQUIRE_FALSE( rejected_envelope["ok"].get<bool>() );
@@ -1143,8 +1138,8 @@ TEST_CASE( "lua_platform_overmap_tile_edit_rejects_invalid_changes_and_removes_l
         REQUIRE( after_envelope["ok"].get<bool>() );
         const sol::table after_snapshot = after_envelope["value"].get<sol::table>();
         CHECK( after_snapshot["revision"].get<std::size_t>() == before_revision );
-        CHECK( after_snapshot["terrain"].get<
-                   cata::lua_platform::script_game_id>().value() ==
+        CHECK( after_snapshot["terrain"].get <
+               cata::lua_platform::script_game_id > ().value() ==
                current_terrain.value() );
     }
 }

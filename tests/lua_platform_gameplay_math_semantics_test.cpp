@@ -37,8 +37,8 @@ TEST_CASE( "lua_platform_gameplay_math_requires_ordinary_lua",
     const std::size_t world_generation = platform::detail::runtime_world_generation_storage();
     lua["ccb"] = ccb;
     lua["actor"] = platform::game_handle::from_creature(
-                        alpha, { "avatar", 6511, 0, 0, 0, {} },
-                        owner->handle_runtime(), world_generation );
+                       alpha, { "avatar", 6511, 0, 0, 0, {} },
+                       owner->handle_runtime(), world_generation );
 
     platform::detail::callback_scope active_callback( *owner );
     const sol::protected_function_result result = lua.safe_script( R"(

@@ -579,7 +579,7 @@ bool Creature::sees( const map &here, const Creature &critter ) const
 
         if( seen_by_mindseers ) {
             int mindsight_bonus_range = ( has_effect( effect_eff_mind_seeing_bonus_5 ) * 5 ) + ( has_effect(
-                    effect_eff_mind_seeing_bonus_10 ) * 10 ) + ( has_effect( effect_eff_mind_seeing_bonus_20 ) * 20 )
+                                            effect_eff_mind_seeing_bonus_10 ) * 10 ) + ( has_effect( effect_eff_mind_seeing_bonus_20 ) * 20 )
                                         + ( has_effect( effect_eff_mind_seeing_bonus_30 ) * 30 );
             int mindsight_vision = 5 + mindsight_bonus_range;
             return target_range <= mindsight_vision;
@@ -1053,7 +1053,7 @@ void Creature::deal_melee_hit( Creature *source, int hit_spread, bool critical_h
     }
     damage_instance d = dam; // copy, since we will mutate in block_hit
     bodypart_id bp_hit = bp == nullptr ? select_body_part( -1, -1, source->can_attack_high(),
-        hit_spread ) : *bp;
+                         hit_spread ) : *bp;
     block_hit( source, bp_hit, d );
 
     weakpoint_attack attack_copy = attack;
@@ -1439,7 +1439,7 @@ void Creature::deal_projectile_attack( map *here, Creature *source, dealt_projec
     Character *guy = as_character();
     if( !magic ) {
         double range_dodge_chance = enchantment_cache->modify_value( enchant_vals::mod::RANGE_DODGE,
-            1.0f ) - 1.0f;
+                                    1.0f ) - 1.0f;
         if( x_in_y( range_dodge_chance, 1.0f ) ) {
             on_try_dodge();
             print_proj_avoid_msg( source, player_view );
@@ -1474,7 +1474,7 @@ void Creature::deal_projectile_attack( map *here, Creature *source, dealt_projec
     wp_attack_copy.compute_wp_skill();
 
     projectile_attack_results hit_selection = select_body_part_projectile_attack( proj, goodhit,
-        magic, missed_by, wp_attack_copy );
+            magic, missed_by, wp_attack_copy );
     wp_attack_copy.is_crit = hit_selection.is_crit;
 
     // copy it, since we're mutating.
@@ -1742,7 +1742,7 @@ bool Creature::stumble_invis( const Creature &player, const bool stumblemsg )
     if( stumblemsg ) {
         const bool player_sees = player.sees( here, *this );
         add_msg( m_bad, _( "%s stumbles into you!" ), player_sees ? this->disp_name( false,
-                true ) : _( "Something" ) );
+                 true ) : _( "Something" ) );
     }
     add_effect( effect_stumbled_into_invisible, 6_seconds );
     // Mark last known location, or extend duration if exists
@@ -1766,7 +1766,7 @@ bool Creature::attack_air( const tripoint_bub_ms &p )
         item_location cur_weapon = as_character()->used_weapon();
         item cur_weap = cur_weapon ? *cur_weapon : null_item_reference();
         move_cost = as_character()->attack_speed( cur_weap ) * ( 1 /
-            as_character()->exertion_adjusted_move_multiplier( EXTRA_EXERCISE ) );
+                    as_character()->exertion_adjusted_move_multiplier( EXTRA_EXERCISE ) );
     }
     mod_moves( -move_cost );
 
@@ -1982,22 +1982,22 @@ void Creature::add_effect( const effect_source &source, const efftype_id &eff_id
 void Creature::schedule_effect( const effect &eff, bool force, bool deferred )
 {
     scheduled_effects.push( scheduled_effect{eff.get_id(), eff.get_duration(), eff.get_bp(),
-            eff.is_permanent(), eff.get_intensity(), force,
-            deferred} );
+                            eff.is_permanent(), eff.get_intensity(), force,
+                            deferred} );
 }
 void Creature::schedule_effect( const efftype_id &eff_id, const time_duration &dur, bodypart_id bp,
                                 bool permanent, int intensity, bool force, bool deferred )
 {
     scheduled_effects.push( scheduled_effect{eff_id, dur, bp,
-            permanent, intensity, force,
-            deferred} );
+                            permanent, intensity, force,
+                            deferred} );
 }
 void Creature::schedule_effect( const efftype_id &eff_id,
                                 const time_duration &dur, bool permanent, int intensity, bool force,
                                 bool deferred )
 {
     scheduled_effects.push( scheduled_effect{eff_id, dur, bodypart_str_id::NULL_ID(),
-            permanent, intensity, force, deferred} );
+                            permanent, intensity, force, deferred} );
 }
 
 bool Creature::add_env_effect( const efftype_id &eff_id, const bodypart_id &vector, int strength,
@@ -2188,7 +2188,7 @@ bool Creature::has_effect_with_flag( const flag_id &flag ) const
 }
 
 std::vector<std::reference_wrapper<const effect>> Creature::get_effects_with_flag(
-    const flag_id &flag ) const
+            const flag_id &flag ) const
 {
     std::vector<std::reference_wrapper<const effect>> effs;
     for( auto &elem : *effects ) {
@@ -2214,7 +2214,7 @@ std::vector<std::reference_wrapper<const effect>> Creature::get_effects() const
 }
 
 std::vector<std::reference_wrapper<const effect>> Creature::get_effects_from_bp(
-    const bodypart_id &bp ) const
+            const bodypart_id &bp ) const
 {
     std::vector<std::reference_wrapper<const effect>> effs;
     for( auto &elem : *effects ) {
@@ -2967,7 +2967,7 @@ static void sort_body_parts( std::vector<bodypart_id> &bps, const Creature *c )
 
     // Topo-sort the parts from the extremities towards the head
     std::unordered_map<bodypart_id, cata::flat_set<bodypart_id>> unaccounted_parts =
-        parts_connected_to;
+                parts_connected_to;
     cata::flat_set<bodypart_id> parts_with_no_connections;
 
     for( const bodypart_id &bp : bps ) {
@@ -3658,7 +3658,7 @@ void Creature::adjust_taken_damage_by_enchantments( damage_unit &du ) const
 void Creature::adjust_taken_damage_by_enchantments_post_absorbed( damage_unit &du ) const
 {
     du.amount = std::max( 0.0, enchantment_cache->modify_damage_units_by_extra_damage( du.type,
-        du.amount ) );
+                          du.amount ) );
 }
 
 void Creature::add_msg_if_player( const translation &msg ) const

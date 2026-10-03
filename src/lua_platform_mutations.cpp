@@ -528,7 +528,7 @@ mutation_state_snapshot capture_state(
         character.has_base_trait( id ),
         definition.activated,
         character.has_active_mutation( id ),
-        definition.activated && character.can_power_mutation( id ),
+        definition.activated &&character.can_power_mutation( id ),
         character.get_cost_timer( id )
     };
 }
@@ -1149,7 +1149,7 @@ sol::table replace_conflicting_state(
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_exact_character( handle, runtime_generation, world_generation,
-        error );
+                           error );
     if( character == nullptr ) {
         return make_game_error_result( state, *error );
     }
@@ -1258,7 +1258,7 @@ sol::table erase_state(
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_exact_character( handle, runtime_generation, world_generation,
-        error );
+                           error );
     if( character == nullptr ) {
         return make_game_error_result( state, *error );
     }
@@ -1355,7 +1355,7 @@ sol::table invoke_activation(
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_exact_character( handle, runtime_generation, world_generation,
-        error );
+                           error );
     if( character == nullptr ) {
         return make_game_error_result( state, *error );
     }

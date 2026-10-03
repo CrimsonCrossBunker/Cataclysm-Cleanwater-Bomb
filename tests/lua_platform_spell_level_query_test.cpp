@@ -59,7 +59,9 @@ TEST_CASE( "lua_platform_spell_level_query_matches_native_math_scope",
     const std::string empty_id;
     const std::string nul_id( "delay\0spell", 11 );
     const std::string long_id( 8193, 'x' );
-    for( const std::string *raw_id : { &empty_id, &nul_id, &long_id } ) {
+    for( const std::string *raw_id : {
+             &empty_id, &nul_id, &long_id
+         } ) {
         const std::string source = "u_spell_level('" + *raw_id + "')";
         math_exp native_raw_id;
         REQUIRE( native_raw_id.parse( source, true ) );
@@ -70,7 +72,7 @@ TEST_CASE( "lua_platform_spell_level_query_matches_native_math_scope",
     lua.open_libraries( sol::lib::base, sol::lib::table, sol::lib::string );
     sol::table ccb = lua.create_table();
     const std::shared_ptr<platform::runtime> owner = platform::make_runtime(
-            "spell_level_query_semantics", 6413, lua );
+                "spell_level_query_semantics", 6413, lua );
     platform::install_runtime_api( owner, lua, ccb );
     platform::set_active_runtimes( { owner } );
     const on_out_of_scope clear_runtimes( []() {

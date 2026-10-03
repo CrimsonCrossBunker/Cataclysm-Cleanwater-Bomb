@@ -311,7 +311,7 @@ TEST_CASE( "EOC_activation_topic_item_uses_copied_dialogue_value", "[eoc][condit
     std::string evaluated_topic_item;
     int condition_evaluations = 0;
     eoc.condition = [&legacy_condition, &evaluated_topic_item, &condition_evaluations](
-                        const const_dialogue &condition_dialogue ) {
+    const const_dialogue & condition_dialogue ) {
         ++condition_evaluations;
         evaluated_topic_item = condition_dialogue.cur_item.str();
         return legacy_condition( condition_dialogue );

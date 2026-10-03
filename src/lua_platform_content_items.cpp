@@ -1575,7 +1575,7 @@ struct recipe_group_definition_handle {
                                             const sol::object &description_value ) {
         require_building_handle( token, *definition, "recipe group" );
         authored_text description = read_singular_text( description_value, "",
-            "recipe-group entry description" );
+                                    "recipe-group entry description" );
         if( id.empty() || description.empty() ) {
             throw std::runtime_error( "recipe-group entry needs an id and description" );
         }
@@ -2186,7 +2186,7 @@ struct items_content_transaction::impl {
     impl( std::string owner_id, std::size_t owner_generation ) :
         owner( std::move( owner_id ) ), generation( owner_generation ),
         token( std::make_shared<owner_token>( owner_token{ owner, generation,
-                handle_lifecycle::building } ) ) {}
+                                              handle_lifecycle::building } ) ) {}
 
     std::string owner;
     std::size_t generation = 0;
@@ -2227,7 +2227,7 @@ struct items_content_transaction::impl {
     std::vector<std::pair<material_id, std::optional<material_type>>> material_undo;
     std::vector<std::pair<ammotype, std::optional<ammunition_type>>> ammunition_type_undo;
     std::vector<std::tuple<item_category_id, std::optional<item_category>, float>>
-    item_category_undo;
+            item_category_undo;
     std::vector<std::pair<crafting_category_id, std::optional<crafting_category>>>
     crafting_category_undo;
     std::vector<std::pair<proficiency_category_id, std::optional<proficiency_category>>>
@@ -2473,7 +2473,7 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         definition->name = read_singular_text( options.get<sol::object>( "name" ),
                                                definition->id, "skill name" );
         definition->description = read_singular_text( options.get<sol::object>( "description" ),
-            "", "skill description" );
+                                  "", "skill description" );
         definition->display_category = options.get_or( "display_category", std::string( "none" ) );
         definition->sort_rank = options.get_or<std::int64_t>( "sort_rank", 1000000 );
         definition->teachable = options.get_or( "teachable", true );
@@ -2505,12 +2505,12 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         definition->id = options.get_or( "id", std::string() );
         definition->info = read_text_option( options, "info", {}, "JSON flag info" );
         definition->restriction = read_text_option( options, "restriction", {},
-            "JSON flag restriction" );
+                                  "JSON flag restriction" );
         definition->name = read_text_option( options, "name", {}, "JSON flag name" );
         definition->item_prefix = read_text_option( options, "item_prefix", {},
-            "JSON flag item prefix" );
+                                  "JSON flag item prefix" );
         definition->item_suffix = read_text_option( options, "item_suffix", {},
-            "JSON flag item suffix" );
+                                  "JSON flag item suffix" );
         definition->requires_flag = options.get_or( "requires_flag", std::string() );
         definition->taste_modifier = options.get_or<std::int64_t>( "taste_modifier", 0 );
         definition->inherit = options.get_or( "inherit", true );
@@ -2548,10 +2548,10 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                 "bash_conversion_factor", definition->physical ? 0.5 : 0.1 );
         definition->melee_crit_dmg_mult = options.get_or( "melee_crit_dmg_mult", 0.0 );
         definition->melee_crit_dmg_mult_per_skill = options.get_or(
-                "melee_crit_dmg_mult_per_skill", 0.0 );
+                    "melee_crit_dmg_mult_per_skill", 0.0 );
         definition->melee_crit_armor_mult = options.get_or( "melee_crit_armor_mult", 1.0 );
         definition->melee_crit_armor_penetration = options.get_or(
-                "melee_crit_armor_penetration", 0.0 );
+                    "melee_crit_armor_penetration", 0.0 );
         return damage_type_definition_handle{ std::move( definition ), transaction->token };
     } );
     content.set_function( "Material", [transaction]( const sol::table & options ) {
@@ -2565,11 +2565,11 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         definition->salvaged_into = options.get_or( "salvaged_into", std::string() );
         definition->repaired_with = options.get_or( "repaired_with", std::string() );
         definition->bash_damage_verb = read_text_option( options, "bash_damage_verb",
-            definition->bash_damage_verb,
-            "material bash damage verb" );
+                                       definition->bash_damage_verb,
+                                       "material bash damage verb" );
         definition->cut_damage_verb = read_text_option( options, "cut_damage_verb",
-            definition->cut_damage_verb,
-            "material cut damage verb" );
+                                      definition->cut_damage_verb,
+                                      "material cut damage verb" );
         definition->chip_resistance = options.get_or<std::int64_t>( "chip_resistance", 0 );
         definition->breathability = options.get_or<std::int64_t>( "breathability", 0 );
         definition->repair_difficulty = options.get_or<std::int64_t>( "repair_difficulty", 10 );
@@ -2636,7 +2636,7 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         definition->name = read_text_option( options, "name",
         { definition->id, std::nullopt }, "proficiency category name" );
         definition->description = read_text_option( options, "description", {},
-            "proficiency category description" );
+                                  "proficiency category description" );
         return proficiency_category_definition_handle{ std::move( definition ), transaction->token };
     } );
     content.set_function( "Proficiency", [transaction]( const sol::table & options ) {
@@ -2648,7 +2648,7 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         definition->name = read_text_option( options, "name",
         { definition->id, std::nullopt }, "proficiency name" );
         definition->description = read_text_option( options, "description", {},
-            "proficiency description" );
+                                  "proficiency description" );
         definition->category = options.get_or( "category", std::string() );
         definition->time_to_learn_turns = options.get_or<std::int64_t>(
                                               "time_to_learn_turns", 35996400 );
@@ -2798,7 +2798,7 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         definition->name = read_text_option( options, "name", {},
                                              "nested recipe category name" );
         definition->description = read_text_option( options, "description", {},
-            "nested recipe category description" );
+                                  "nested recipe category description" );
         definition->category = options.get_or( "category", std::string() );
         definition->subcategory = options.get_or( "subcategory", std::string() );
         definition->activity_level = options.get_or( "activity_level", 1.0 );
@@ -3707,7 +3707,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
             }
         }
         const auto validate_requirement_groups = [&]( const std::string & id,
-            const std::vector<std::vector<component_requirement>> &groups,
+                const std::vector<std::vector<component_requirement>> &groups,
         const char *kind, const bool tools ) {
             for( const std::vector<component_requirement> &group : groups ) {
                 if( group.empty() ) {
@@ -3954,7 +3954,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 if( field.field.empty() || !native_nonnegative_int( field.intensity_min ) ||
                     !native_nonnegative_int( field.intensity_max ) || field.intensity_max < field.intensity_min ||
                     !percent( field.chance ) || ( !trail && ( !native_nonnegative_int( field.radius ) ||
-                        !native_nonnegative_int( field.height ) || !native_nonnegative_int( field.footprint ) ) ) ||
+                                                  !native_nonnegative_int( field.height ) || !native_nonnegative_int( field.footprint ) ) ) ||
                     ( check_engine_state && !field_type_str_id( field.field ).is_valid() ) ) {
                     throw std::runtime_error( "ammo effect '" + definition.id + "' has an invalid " +
                                               ( trail ? "trail" : "field burst" ) );
@@ -3971,8 +3971,8 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 if( effect.effect.empty() || effect.duration_turns <= 0 || !native_int( effect.duration_turns ) ||
                     effect.intensity_min <= 0 || !native_nonnegative_int( effect.intensity_max ) ||
                     effect.intensity_max < effect.intensity_min || ( area && ( !percent( effect.chance ) ||
-                        !native_nonnegative_int( effect.radius ) || effect.hits_min <= 0 ||
-                        effect.hits_max < effect.hits_min || !native_nonnegative_int( effect.hits_max ) ) ) ||
+                            !native_nonnegative_int( effect.radius ) || effect.hits_min <= 0 ||
+                            effect.hits_max < effect.hits_min || !native_nonnegative_int( effect.hits_max ) ) ) ||
                     ( check_engine_state && !efftype_id( effect.effect ).is_valid() ) ) {
                     throw std::runtime_error( "ammo effect '" + definition.id + "' has an invalid " +
                                               ( area ? "area effect" : "on-hit effect" ) );
@@ -4262,7 +4262,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 }
             }
             const auto validate_recipe_groups = [&]( const std::vector<std::vector<component_requirement>>
-                &groups,
+                                                &groups,
             const char *kind, const bool tools ) {
                 for( const std::vector<component_requirement> &group : groups ) {
                     if( group.empty() ) {
@@ -5132,7 +5132,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     }
                     for( const item_group_entry_definition_data &source_entry : source.entries ) {
                         const Single_item_creator::Type entry_type = source_entry.group ?
-                            Single_item_creator::S_ITEM_GROUP : Single_item_creator::S_ITEM;
+                                Single_item_creator::S_ITEM_GROUP : Single_item_creator::S_ITEM;
                         std::string entry_id = source_entry.id;
                         if( !source_entry.group ) {
                             const bool declared_in_transaction = std::any_of(

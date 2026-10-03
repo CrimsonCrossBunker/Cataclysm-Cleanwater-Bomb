@@ -83,7 +83,7 @@ TEST_CASE( "lua_platform_character_messages_match_native_actor_targeted_hook",
     Messages::clear_messages();
     player_target.add_msg_if_player( translated_format, learned_name );
     const std::vector<std::pair<std::string, std::string>> expected =
-        Messages::recent_messages_with_formatting( 2 );
+                Messages::recent_messages_with_formatting( 2 );
     REQUIRE( expected.size() == 1 );
     beta.add_msg_if_player( translated_format, learned_name );
     CHECK( Messages::recent_messages_with_formatting( 2 ) == expected );
@@ -102,11 +102,6 @@ TEST_CASE( "lua_platform_character_messages_match_native_actor_targeted_hook",
     lua["ccb"] = ccb;
     lua["research_message_format"] = translated_format;
     lua["learned_name"] = learned_name;
-    lua["beta_handle"] = game_handle::from_creature(
-                             beta,
-    { "npc", beta.getID().get_value(), 0, 0, 0, {} },
-    cata::lua_platform::detail::runtime_handle_identity( owner ),
-    runtime_world_generation() );
     const sol::protected_function_result registered = lua.safe_script( R"(
         ccb.runtime.handler("character_message_semantics", function(context)
             local characters = ccb.services.characters
@@ -128,6 +123,11 @@ TEST_CASE( "lua_platform_character_messages_match_native_actor_targeted_hook",
     }
     REQUIRE( registered.valid() );
     runtime_world_ready( true );
+    lua["beta_handle"] = game_handle::from_creature(
+                             beta,
+    { "npc", beta.getID().get_value(), 0, 0, 0, {} },
+    cata::lua_platform::detail::runtime_handle_identity( owner ),
+    runtime_world_generation() );
 
     Messages::clear_messages();
     const std::optional<int> result = invoke_use_handler(

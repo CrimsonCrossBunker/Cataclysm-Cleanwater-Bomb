@@ -82,7 +82,7 @@ void require_snapshot_point(
         turn_number( calendar::turn_max ) ) {
         throw std::invalid_argument(
             std::string( api_name ) +
-        " point must be within turn_zero..turn_max" );
+            " point must be within turn_zero..turn_max" );
     }
 }
 
@@ -372,8 +372,8 @@ sol::table reschedule_events(
             "services.time.reschedule duration must be within +/-31536000 turns" );
     }
     const std::size_t matched = static_cast<std::size_t>( std::count_if(
-            get_timed_events().get_all().begin(),
-            get_timed_events().get_all().end(),
+                                    get_timed_events().get_all().begin(),
+                                    get_timed_events().get_all().end(),
     [&key]( const timed_event & event ) {
         return event.key == key;
     } ) );

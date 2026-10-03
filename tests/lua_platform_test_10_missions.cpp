@@ -625,7 +625,7 @@ TEST_CASE( "lua_platform_npc_mission_reward_calls_native_no_selection_path",
             other_avatar, { "avatar", 7392, 0, 0, 0, {} },
             runtime, world_generation );
     sol::protected_function_result unsupported = open_reward_trade(
-            provider_handle, other_avatar_handle );
+                provider_handle, other_avatar_handle );
     REQUIRE( unsupported.valid() );
     const sol::table unsupported_envelope = unsupported.get<sol::table>();
     CHECK_FALSE( unsupported_envelope["ok"].get<bool>() );
@@ -1098,7 +1098,7 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     const auto check_assigned_count = [&]( const std::size_t expected ) {
         CHECK( mission_context.assigned_mission_count() == expected );
         const sol::protected_function_result lua_count = lua.safe_script(
-                "return mission_dialogue_context:assigned_mission_count()" );
+                    "return mission_dialogue_context:assigned_mission_count()" );
         REQUIRE( lua_count.valid() );
         CHECK( lua_count.get<std::size_t>() == expected );
         CHECK( no_assigned_mission( mission_dialogue ) == ( expected == 0 ) );
@@ -1122,7 +1122,7 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     cata::lua_platform::dialogue::end_session( mission_dialogue );
     CHECK_THROWS( mission_context.assigned_mission_count() );
     const sol::protected_function_result stale_lua_count = lua.safe_script(
-            "return mission_dialogue_context:assigned_mission_count()" );
+                "return mission_dialogue_context:assigned_mission_count()" );
     CHECK_FALSE( stale_lua_count.valid() );
 
     provider->chatbin.missions_assigned = {
@@ -1169,7 +1169,7 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
         compare_selected_status( "failed", npc_mission_failed );
         const bool api_goal = boolean_from(
                                   selected_has_goal( provider_handle,
-                                      "MGOAL_CONDITION" ) );
+                                          "MGOAL_CONDITION" ) );
         CHECK( mission_goal( selected_mission_dialogue ) == api_goal );
         CHECK( npc_mission_goal( selected_mission_dialogue ) == api_goal );
     };

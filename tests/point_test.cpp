@@ -31,7 +31,8 @@ TEST_CASE( "coordinate_scale_division_preserves_full_signed_int_range", "[point]
     CHECK( project_to<coords::sm>( source ) == tripoint_abs_sm( -178956971, 178956970, -3 ) );
 }
 
-TEST_CASE( "tripoint_reflection_checks_final_range_without_intermediate_overflow", "[point][coords]" )
+TEST_CASE( "tripoint_reflection_checks_final_range_without_intermediate_overflow",
+           "[point][coords]" )
 {
     constexpr int minimum = std::numeric_limits<int>::min();
     constexpr int maximum = std::numeric_limits<int>::max();
@@ -41,8 +42,10 @@ TEST_CASE( "tripoint_reflection_checks_final_range_without_intermediate_overflow
     CHECK( tripoint( maximum, maximum, maximum ).mirror_around(
                tripoint( 1073741824, 1073741824, 1073741824 ) ) == tripoint( 1, 1, 1 ) );
     CHECK_THROWS_AS( tripoint( minimum, 0, 0 ).mirror_around( tripoint::zero ), std::overflow_error );
-    CHECK_THROWS_AS( tripoint( 0, maximum, 0 ).mirror_around( tripoint( 0, minimum, 0 ) ), std::overflow_error );
-    CHECK_THROWS_AS( tripoint( 0, 0, minimum ).mirror_around( tripoint( 0, 0, maximum ) ), std::overflow_error );
+    CHECK_THROWS_AS( tripoint( 0, maximum, 0 ).mirror_around( tripoint( 0, minimum, 0 ) ),
+                     std::overflow_error );
+    CHECK_THROWS_AS( tripoint( 0, 0, minimum ).mirror_around( tripoint( 0, 0, maximum ) ),
+                     std::overflow_error );
 }
 
 TEST_CASE( "rectangle_containment_raw", "[point]" )

@@ -715,11 +715,11 @@ void install_martial_art_api(
         require_read();
         return get_technique_definition( lua_state, id );
     } );
-    martial_arts.set_function( "technique_name", [require_read]( const std::string &id ) {
+    martial_arts.set_function( "technique_name", [require_read]( const std::string & id ) {
         require_read();
         return matec_id( id )->name.translated();
     } );
-    martial_arts.set_function( "technique_description", [require_read]( const std::string &id ) {
+    martial_arts.set_function( "technique_description", [require_read]( const std::string & id ) {
         require_read();
         // Authored short text, without the generated rule description.
         return matec_id( id )->description.translated();

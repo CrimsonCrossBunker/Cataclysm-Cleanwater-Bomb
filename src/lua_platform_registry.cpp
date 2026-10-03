@@ -639,7 +639,7 @@ void install_registry_api(
         require_read();
         return string_array( sol::state_view( lua_state ), registry_kinds() );
     } );
-    registry.set_function( "monster_default_faction", [require_read]( const std::string &id ) {
+    registry.set_function( "monster_default_faction", [require_read]( const std::string & id ) {
         require_read();
         // Preserve the native factory diagnostic and fallback definition for
         // unknown raw IDs rather than using registry.get's snapshot contract.

@@ -62,15 +62,15 @@ TEST_CASE( "lua_platform_item_flag_service_matches_native_talker_slot_effects",
     };
     platform::install_value_type_api( lua, services, []() {} );
     platform::install_game_handle_api(
-        lua, services, current_runtime, current_world, []() {} );
+    lua, services, current_runtime, current_world, []() {} );
     platform::install_item_api(
-        services, current_runtime, current_world, []() {}, []() {} );
+    services, current_runtime, current_world, []() {}, []() {} );
 
-    const auto item_handle = [&]( item &value ) {
+    const auto item_handle = [&]( item & value ) {
         return platform::game_handle::from_item(
                    value,
-                   { "character_inventory", value.uid().get_value(), 0, 0, 0, {} },
-                   runtime, world_generation );
+        { "character_inventory", value.uid().get_value(), 0, 0, 0, {} },
+        runtime, world_generation );
     };
     const platform::game_handle alpha_handle = item_handle( platform_alpha_item );
     const platform::game_handle beta_handle = item_handle( platform_beta_item );
@@ -90,10 +90,12 @@ TEST_CASE( "lua_platform_item_flag_service_matches_native_talker_slot_effects",
             operation( native_context );
         }
     };
-    const auto compare_slot = [&]( const char *slot, item &native_target,
-                                   item &platform_target,
-                                   const platform::game_handle &target_handle ) {
-        for( const bool enabled : { true, false } ) {
+    const auto compare_slot = [&]( const char *slot, item & native_target,
+                                   item & platform_target,
+    const platform::game_handle & target_handle ) {
+        for( const bool enabled : {
+                 true, false
+             } ) {
             apply_native( slot, enabled );
             const sol::protected_function_result call = set_flag(
                         target_handle, filthy_id, enabled );

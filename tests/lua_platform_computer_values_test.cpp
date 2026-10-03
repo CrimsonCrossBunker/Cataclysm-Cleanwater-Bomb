@@ -218,7 +218,7 @@ TEST_CASE( "lua_platform_computer_character_handles_preserve_native_subtype_and_
     )" );
 
     platform::runtime_world_ready( true );
-    const auto verify_actor_handle = [&]( Character &actor ) {
+    const auto verify_actor_handle = [&]( Character & actor ) {
         fixture.invoke( actor );
         const platform::game_handle handle =
             fixture.lua["saved_character"].get<platform::game_handle>();

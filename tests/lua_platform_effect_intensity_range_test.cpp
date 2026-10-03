@@ -104,7 +104,8 @@ struct effect_intensity_fixture {
                     ccb.services.time.duration(requested_duration, "turn"),
                     { intensity = requested_intensity })
             )", sol::script_pass_on_error );
-        }();
+        }
+        ();
     }
 
     avatar native_speaker;

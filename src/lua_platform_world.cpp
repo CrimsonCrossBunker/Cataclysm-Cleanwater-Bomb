@@ -3667,7 +3667,7 @@ sol::table snapshot_map_tile(
             requested_options );
     std::optional<game_handle_error> error;
     const std::optional<resolved_map_tile> resolved = resolve_map_tile_token(
-            token, runtime_generation, world_generation, error );
+                token, runtime_generation, world_generation, error );
     if( !resolved ) {
         return make_game_error_result( state, *error );
     }
@@ -3688,7 +3688,7 @@ sol::table edit_map_tile(
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     const std::optional<resolved_map_tile> resolved = resolve_map_tile_token(
-            token, runtime_generation, world_generation, error );
+                token, runtime_generation, world_generation, error );
     if( !resolved ) {
         return make_game_error_result( state, *error );
     }
@@ -3707,7 +3707,7 @@ sol::table edit_map_tile(
                                         changes, *resolved->value,
                                         resolved->local );
     const map_tile_original_state original = capture_map_tile_original_state(
-            *resolved->value, resolved->local );
+                *resolved->value, resolved->local );
     try {
         commit_map_tile_edit(
             *resolved->value, resolved->local, plan, original );
@@ -3755,7 +3755,7 @@ sol::table trap_set_map_tile(
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     const std::optional<resolved_map_tile> resolved = resolve_map_tile_token(
-            token, runtime_generation, world_generation, error );
+                token, runtime_generation, world_generation, error );
     if( !resolved ) {
         return make_game_error_result( state, *error );
     }

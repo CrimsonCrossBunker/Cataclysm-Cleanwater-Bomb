@@ -243,7 +243,9 @@ TEST_CASE( "lua_platform_contained_trade_preserves_exact_source_and_rollback_ord
     REQUIRE( fixture.ready() );
     item bag( itype_id( "backpack" ), calendar::turn );
     for( int i = 0; i < 3; ++i ) {
-        bag.force_insert_item( item( itype_id( "rock" ), calendar::turn ), pocket_type::CONTAINER );
+        item child( itype_id( "rock" ), calendar::turn );
+        child.set_var( "trade_fixture_position", std::to_string( i ) );
+        bag.force_insert_item( std::move( child ), pocket_type::CONTAINER );
     }
     bag.set_owner( *fixture.buyer );
     item &container = fixture.buyer->inv->add_item( std::move( bag ), false, false, false );
@@ -460,8 +462,8 @@ TEST_CASE( "lua_platform_talk_payment_matches_native_npc_buy_from_credit",
     const cata::lua_platform::game_handle active_avatar_handle =
         cata::lua_platform::game_handle::from_creature(
             active_avatar,
-            { "avatar", active_avatar.getID().get_value(), 0, 0, 0, {} },
-            fixture.runtime, fixture.active_world_generation );
+    { "avatar", active_avatar.getID().get_value(), 0, 0, 0, {} },
+    fixture.runtime, fixture.active_world_generation );
     constexpr int starting_credit = 500;
     constexpr int payment = 300;
 
@@ -1228,8 +1230,8 @@ TEST_CASE( "lua_platform_inventory_transfer_by_type_matches_native_sale_search_a
     const int debt_before = fixture.buyer->op_of_u.owed;
 
     const sol::protected_function_result charge_result = transfer(
-            fixture.seller_handle, fixture.buyer_handle,
-            cata::lua_platform::script_game_id( "item", "9mm" ), 3 );
+                fixture.seller_handle, fixture.buyer_handle,
+                cata::lua_platform::script_game_id( "item", "9mm" ), 3 );
     REQUIRE( charge_result.valid() );
     const sol::table charge_envelope = charge_result.get<sol::table>();
     REQUIRE( charge_envelope["ok"].get<bool>() );
@@ -1238,7 +1240,7 @@ TEST_CASE( "lua_platform_inventory_transfer_by_type_matches_native_sale_search_a
     CHECK( charge_value["kind"].get<std::string>() == "charges" );
     CHECK( fixture.live_item->charges == 5 );
     const auto transferred_charges = fixture.buyer->items_with(
-    []( const item &entry ) {
+    []( const item & entry ) {
         return entry.typeId() == itype_id( "9mm" );
     } );
     REQUIRE( transferred_charges.size() == 1 );
@@ -1249,8 +1251,8 @@ TEST_CASE( "lua_platform_inventory_transfer_by_type_matches_native_sale_search_a
     fixture.seller.inv->add_item(
         item( itype_id( "2x4" ), calendar::turn_zero ), false, false, false );
     const sol::protected_function_result item_result = transfer(
-            fixture.seller_handle, fixture.buyer_handle,
-            cata::lua_platform::script_game_id( "item", "2x4" ), 1 );
+                fixture.seller_handle, fixture.buyer_handle,
+                cata::lua_platform::script_game_id( "item", "2x4" ), 1 );
     REQUIRE( item_result.valid() );
     const sol::table item_envelope = item_result.get<sol::table>();
     REQUIRE( item_envelope["ok"].get<bool>() );
@@ -1258,7 +1260,7 @@ TEST_CASE( "lua_platform_inventory_transfer_by_type_matches_native_sale_search_a
     CHECK( item_value["matched"].get<bool>() );
     CHECK( item_value["kind"].get<std::string>() == "items" );
     const auto transferred_items = fixture.buyer->items_with(
-    []( const item &entry ) {
+    []( const item & entry ) {
         return entry.typeId() == itype_id( "2x4" );
     } );
     REQUIRE( transferred_items.size() == 1 );
@@ -1268,8 +1270,8 @@ TEST_CASE( "lua_platform_inventory_transfer_by_type_matches_native_sale_search_a
     const int charge_count_before_failure = fixture.live_item->charges;
     const std::size_t item_count_before_failure = transferred_items.size();
     const sol::protected_function_result missing_result = transfer(
-            fixture.seller_handle, fixture.buyer_handle,
-            cata::lua_platform::script_game_id( "item", "2x4" ), 2 );
+                fixture.seller_handle, fixture.buyer_handle,
+                cata::lua_platform::script_game_id( "item", "2x4" ), 2 );
     REQUIRE( missing_result.valid() );
     const sol::table missing_envelope = missing_result.get<sol::table>();
     REQUIRE( missing_envelope["ok"].get<bool>() );
@@ -1279,7 +1281,7 @@ TEST_CASE( "lua_platform_inventory_transfer_by_type_matches_native_sale_search_a
     CHECK( missing_value["notice"].get<std::string>().find( "don't have" ) !=
            std::string::npos );
     CHECK( fixture.live_item->charges == charge_count_before_failure );
-    CHECK( fixture.buyer->items_with( []( const item &entry ) {
+    CHECK( fixture.buyer->items_with( []( const item & entry ) {
         return entry.typeId() == itype_id( "2x4" );
     } ).size() == item_count_before_failure );
 }

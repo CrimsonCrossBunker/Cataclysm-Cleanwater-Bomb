@@ -126,7 +126,7 @@ class context
         std::string topic() const;
         std::string topic_item() const;
         std::string sample_technique( bool critical, bool dodge_counter, bool block_counter,
-                                     const sol::object &blacklist ) const;
+                                      const sol::object &blacklist ) const;
         bool has_speaker() const;
         bool has_interlocutor() const;
         bool interlocutor_at_safe_space() const;

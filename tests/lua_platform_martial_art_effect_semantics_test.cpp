@@ -65,7 +65,7 @@ TEST_CASE( "lua_platform_martial_art_effect_service_matches_native_effect_ids",
     const std::string & id ) {
         sol::protected_function function = services["martial_arts"][operation];
         const sol::protected_function_result call = function(
-                handle, cata::lua_platform::script_game_id( "martial_art", id ) );
+                    handle, cata::lua_platform::script_game_id( "martial_art", id ) );
         REQUIRE( call.valid() );
         const sol::table result = call;
         REQUIRE( result["ok"].get<bool>() );

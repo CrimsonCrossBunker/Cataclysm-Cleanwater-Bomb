@@ -42,7 +42,7 @@ TEST_CASE( "lua_platform_item_use_context_message_matches_native_u_message_sever
     item_location item_talker( user, &efile_map );
     dialogue native_context( get_talker_for( &user ), get_talker_for( item_talker ) );
 
-    const auto apply_native_message = [&native_context]( const std::string &source ) {
+    const auto apply_native_message = [&native_context]( const std::string & source ) {
         talk_effect_t effect;
         const JsonValue json = json_loader::from_string( source );
         effect.parse_sub_effect( json.get_object(), "item_use_message_semantics" );
@@ -58,7 +58,7 @@ TEST_CASE( "lua_platform_item_use_context_message_matches_native_u_message_sever
     apply_native_message(
         R"({"u_message":"You already noted everything this map cache can offer."})" );
     const std::vector<std::pair<std::string, std::string>> expected =
-        Messages::recent_messages_with_formatting( 2 );
+                Messages::recent_messages_with_formatting( 2 );
     REQUIRE( expected.size() == 2 );
 
     constexpr std::string_view mod_id = "item_use_message_semantics";
@@ -277,8 +277,8 @@ TEST_CASE( "lua_platform_item_use_context_keeps_the_native_npc_and_item_beta",
     lua["expected_character_subtype"] = "avatar";
     lua["fail_callback"] = false;
     const std::optional<int> avatar_result = invoke_use_handler(
-                                                mod_id, "npc_item_actor_bridge", &avatar_user,
-                                                avatar_item, nullptr, tripoint_bub_ms::zero );
+                mod_id, "npc_item_actor_bridge", &avatar_user,
+                avatar_item, nullptr, tripoint_bub_ms::zero );
     REQUIRE( avatar_result.has_value() );
     CHECK( *avatar_result == 0 );
     CHECK( lua["callback_count"].get<int>() == 3 );

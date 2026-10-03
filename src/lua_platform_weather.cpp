@@ -844,8 +844,8 @@ forecast_options read_forecast_options(
         result.step >
         maximum_forecast_step ) {
         throw std::invalid_argument(
-        "services.weather.forecast option 'step' "
-        "must be within 1 minute..24 hours" );
+            "services.weather.forecast option 'step' "
+            "must be within 1 minute..24 hours" );
     }
     const std::int64_t horizon =
         result.limit == 0 ? 0 :

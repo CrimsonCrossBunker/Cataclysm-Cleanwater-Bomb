@@ -549,13 +549,13 @@ sol::table npc_mission_provider_state(
                              runtime_generation,
                              world_generation );
     const std::size_t selected_available_count = static_cast<std::size_t>(
-            std::count( provider.chatbin.missions.begin(),
-                        provider.chatbin.missions.end(),
-                        provider.chatbin.mission_selected ) );
+                std::count( provider.chatbin.missions.begin(),
+                            provider.chatbin.missions.end(),
+                            provider.chatbin.mission_selected ) );
     const std::size_t selected_assigned_count = static_cast<std::size_t>(
-            std::count( provider.chatbin.missions_assigned.begin(),
-                        provider.chatbin.missions_assigned.end(),
-                        provider.chatbin.mission_selected ) );
+                std::count( provider.chatbin.missions_assigned.begin(),
+                            provider.chatbin.missions_assigned.end(),
+                            provider.chatbin.mission_selected ) );
     if( !live_mission_pointer( provider.chatbin.mission_selected ) ) {
         result["selected"] = sol::nil;
         result["selected_stale"] =

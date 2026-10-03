@@ -378,7 +378,7 @@ struct use_context_data {
             return nullptr;
         }
         const native_handle_result<Creature> resolved = character_reference->resolve_creature(
-                handle_runtime, detail::runtime_world_generation_storage() );
+                    handle_runtime, detail::runtime_world_generation_storage() );
         Character *character = resolved ? resolved.value->as_character() : nullptr;
         if( character == nullptr ) {
             throw std::runtime_error( "stale item-use character" );
@@ -389,7 +389,7 @@ struct use_context_data {
     item &require_item() const {
         require_active();
         const native_handle_result<item> resolved = item_reference.resolve_item(
-                handle_runtime, detail::runtime_world_generation_storage() );
+                    handle_runtime, detail::runtime_world_generation_storage() );
         if( !resolved ) {
             throw std::runtime_error( "stale item-use item" );
         }
@@ -720,19 +720,19 @@ class use_context_lease
 };
 
 std::optional<tripoint_range<tripoint_bub_ms>> clipped_area_range(
-    const map &here, const tripoint_bub_ms &center, const int radius )
+            const map &here, const tripoint_bub_ms &center, const int radius )
 {
     const std::int64_t radius_wide = radius;
     const std::int64_t max_x = static_cast<std::int64_t>( here.getmapsize() ) * SEEX - 1;
     const std::int64_t max_y = static_cast<std::int64_t>( here.getmapsize() ) * SEEY - 1;
     const std::int64_t min_x = std::max<std::int64_t>( 0,
-        static_cast<std::int64_t>( center.x() ) - radius_wide );
+                               static_cast<std::int64_t>( center.x() ) - radius_wide );
     const std::int64_t clipped_max_x = std::min( max_x,
-        static_cast<std::int64_t>( center.x() ) + radius_wide );
+                                       static_cast<std::int64_t>( center.x() ) + radius_wide );
     const std::int64_t min_y = std::max<std::int64_t>( 0,
-        static_cast<std::int64_t>( center.y() ) - radius_wide );
+                               static_cast<std::int64_t>( center.y() ) - radius_wide );
     const std::int64_t clipped_max_y = std::min( max_y,
-        static_cast<std::int64_t>( center.y() ) + radius_wide );
+                                       static_cast<std::int64_t>( center.y() ) + radius_wide );
     if( min_x > clipped_max_x || min_y > clipped_max_y ) {
         return std::nullopt;
     }
@@ -801,7 +801,7 @@ int set_platform_furniture( const tripoint_abs_ms &absolute,
     const float circle_radius = static_cast<float>( radius ) + 0.5f;
     int accepted_tiles = 0;
     const std::optional<tripoint_range<tripoint_bub_ms>> area =
-        clipped_area_range( here, center, radius );
+                clipped_area_range( here, center, radius );
     if( !area ) {
         return 0;
     }
@@ -870,7 +870,7 @@ int set_platform_terrain( const tripoint_abs_ms &absolute,
     const float circle_radius = static_cast<float>( radius ) + 0.5f;
     int changed_tiles = 0;
     const std::optional<tripoint_range<tripoint_bub_ms>> area =
-        clipped_area_range( here, center, radius );
+                clipped_area_range( here, center, radius );
     if( !area ) {
         return 0;
     }
@@ -969,7 +969,7 @@ int set_platform_trap_area( const tripoint_abs_ms &absolute,
     const float circle_radius = static_cast<float>( radius ) + 0.5f;
     int attempted_squares = 0;
     const std::optional<tripoint_range<tripoint_bub_ms>> area =
-        clipped_area_range( here, center, radius );
+                clipped_area_range( here, center, radius );
     if( !area ) {
         return 0;
     }
@@ -1097,7 +1097,7 @@ int add_platform_field_area( const tripoint_abs_ms &absolute,
     const float circle_radius = static_cast<float>( radius ) + 0.5f;
     int accepted_tiles = 0;
     const std::optional<tripoint_range<tripoint_bub_ms>> area =
-        clipped_area_range( here, center, radius );
+                clipped_area_range( here, center, radius );
     if( !area ) {
         return 0;
     }
@@ -1923,21 +1923,21 @@ mod_tileset_atlas_definition platform_tileset_atlas(
     result.sprite_width = static_cast<int>( platform_tileset_integer(
             descriptor, "sprite_width", 0, 0, 4096 ) );
     result.sprite_height = static_cast<int>( platform_tileset_integer(
-            descriptor, "sprite_height", 0, 0, 4096 ) );
+                               descriptor, "sprite_height", 0, 0, 4096 ) );
     if( ( result.sprite_width == 0 ) != ( result.sprite_height == 0 ) ) {
         throw std::invalid_argument(
             "Lua-first tileset sprite_width and sprite_height must be provided together" );
     }
     result.sprite_offset_x = static_cast<int>( platform_tileset_integer(
-            descriptor, "sprite_offset_x", 0, -4096, 4096 ) );
+                                 descriptor, "sprite_offset_x", 0, -4096, 4096 ) );
     result.sprite_offset_y = static_cast<int>( platform_tileset_integer(
-            descriptor, "sprite_offset_y", 0, -4096, 4096 ) );
+                                 descriptor, "sprite_offset_y", 0, -4096, 4096 ) );
     result.sprite_offset_x_retracted = static_cast<int>( platform_tileset_integer(
-            descriptor, "sprite_offset_x_retracted", result.sprite_offset_x,
-            -4096, 4096 ) );
+                                           descriptor, "sprite_offset_x_retracted", result.sprite_offset_x,
+                                           -4096, 4096 ) );
     result.sprite_offset_y_retracted = static_cast<int>( platform_tileset_integer(
-            descriptor, "sprite_offset_y_retracted", result.sprite_offset_y,
-            -4096, 4096 ) );
+                                           descriptor, "sprite_offset_y_retracted", result.sprite_offset_y,
+                                           -4096, 4096 ) );
     result.pixelscale = static_cast<float>( platform_tileset_number(
             descriptor, "pixelscale", 1.0, 0.0001, 64.0 ) );
     const sol::object transparency = descriptor.raw_get<sol::object>( "transparency" );
@@ -1950,11 +1950,11 @@ mod_tileset_atlas_definition platform_tileset_atlas(
         validate_platform_tileset_descriptor_keys(
             color, { "r", "g", "b" }, "Lua-first tileset transparency" );
         result.transparency_r = static_cast<int>( platform_tileset_integer(
-                color, "r", -1, -1, 255 ) );
+                                    color, "r", -1, -1, 255 ) );
         result.transparency_g = static_cast<int>( platform_tileset_integer(
-                color, "g", -1, -1, 255 ) );
+                                    color, "g", -1, -1, 255 ) );
         result.transparency_b = static_cast<int>( platform_tileset_integer(
-                color, "b", -1, -1, 255 ) );
+                                    color, "b", -1, -1, 255 ) );
         const bool disabled = result.transparency_r == -1 &&
                               result.transparency_g == -1 &&
                               result.transparency_b == -1;
@@ -2213,11 +2213,11 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
             throw std::runtime_error( "format text must not contain NUL" );
         }
         const std::size_t count = require_dense_array( arguments, "services.format arguments",
-            0, std::numeric_limits<std::size_t>::max() );
+                0, std::numeric_limits<std::size_t>::max() );
         fmt::dynamic_format_arg_store<fmt::printf_context> values;
         for( std::size_t index = 1; index <= count; ++index )
-    {
-        const sol::object value = arguments.raw_get<sol::object>( index );
+        {
+            const sol::object value = arguments.raw_get<sol::object>( index );
             switch( value.get_type() ) {
                 case sol::type::string: {
                     const std::string argument = value.as<std::string>();
@@ -2249,37 +2249,37 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     const sol::optional<std::string> &context ) -> std::string {
         require_live_runtime( weak, "services.translate" );
         if( !context )
-    {
-        // Match native translation objects, including empty text and
-        // embedded NUL. LOCALIZE's catalog lookup uses the C-string prefix;
-        // disabled localization preserves the complete source bytes.
-        return to_translation( text ).translated();
+        {
+            // Match native translation objects, including empty text and
+            // embedded NUL. LOCALIZE's catalog lookup uses the C-string prefix;
+            // disabled localization preserves the complete source bytes.
+            return to_translation( text ).translated();
         }
         // Native contextual translation skips empty raw text and passes
         // C-string prefixes to pgettext even with localization disabled.
         return translation::to_translation( *context, text ).translated();
     } );
     services.set_function( "translate_plural", [weak]( const std::string & singular,
-            const std::string & plural, const std::int64_t count,
+                           const std::string & plural, const std::int64_t count,
     const sol::optional<std::string> &context ) -> std::string {
         require_live_runtime( weak, "services.translate_plural" );
         require_translation_text( singular );
         require_translation_text( plural );
         if( context )
-    {
-        require_translation_text( *context );
+        {
+            require_translation_text( *context );
         }
         const std::size_t native_count = static_cast<std::size_t>( count );
         if( count < 0 || static_cast<std::uint64_t>( native_count ) !=
             static_cast<std::uint64_t>( count ) )
-    {
-        throw std::runtime_error( "translation count is outside the native nonnegative range" );
+        {
+            throw std::runtime_error( "translation count is outside the native nonnegative range" );
         }
 #if defined(LOCALIZE)
         TranslationManager &manager = TranslationManager::GetInstance();
         return context ? manager.TranslatePluralWithContext( context->c_str(), singular.c_str(),
-            plural.c_str(), native_count ) : manager.TranslatePlural( singular.c_str(),
-                plural.c_str(), native_count );
+                plural.c_str(), native_count ) : manager.TranslatePlural( singular.c_str(),
+                        plural.c_str(), native_count );
 #else
         return count == 1 ? singular : plural;
 #endif
@@ -2625,7 +2625,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     };
     sol::table wounds = lua.create_table();
     wounds.set_function( "snapshot", [require_read, runtime_generation, world_generation,
-                                      make_wound_snapshot]( sol::this_state state,
+                                                    make_wound_snapshot]( sol::this_state state,
                                               const cata::lua_platform::game_handle & handle,
     const cata::lua_platform::script_game_id & body_part_id ) {
         require_read();
@@ -2657,7 +2657,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                                                 make_wound_snapshot( lua_state, *part ) ) );
     } );
     wounds.set_function( "add", [require_write, runtime_generation, world_generation,
-                                 make_wound_snapshot, same_wounds]( sol::this_state state,
+                                                make_wound_snapshot, same_wounds]( sol::this_state state,
                                          const cata::lua_platform::game_handle & handle,
                                          const cata::lua_platform::script_game_id & body_part_id,
     const cata::lua_platform::script_game_id & wound_id ) {
@@ -2710,7 +2710,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                    lua_state, sol::make_object( lua_state, std::move( value ) ) );
     } );
     wounds.set_function( "remove", [require_write, runtime_generation, world_generation,
-                                    make_wound_snapshot]( sol::this_state state,
+                                                   make_wound_snapshot]( sol::this_state state,
                                             const cata::lua_platform::game_handle & handle,
                                             const cata::lua_platform::script_game_id & body_part_id,
     const cata::lua_platform::script_game_id & wound_id ) {
@@ -2759,7 +2759,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                    lua_state, sol::make_object( lua_state, std::move( value ) ) );
     } );
     wounds.set_function( "add_unbounded", [require_write, runtime_generation, world_generation,
-                                           make_wound_snapshot, same_wounds]( sol::this_state state,
+                                                          make_wound_snapshot, same_wounds]( sol::this_state state,
                                                    const cata::lua_platform::game_handle & handle,
                                                    const cata::lua_platform::script_game_id & body_part_id,
     const cata::lua_platform::script_game_id & wound_id ) {
@@ -2813,9 +2813,9 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                    lua_state, sol::make_object( lua_state, std::move( value ) ) );
     } );
     wounds.set_function( "remove_all_direct", [require_write, runtime_generation, world_generation,
-            make_wound_snapshot]( sol::this_state state,
-                                  const cata::lua_platform::game_handle & handle,
-                                  const cata::lua_platform::script_game_id & body_part_id,
+                                        make_wound_snapshot]( sol::this_state state,
+                                 const cata::lua_platform::game_handle & handle,
+                                 const cata::lua_platform::script_game_id & body_part_id,
     const cata::lua_platform::script_game_id & wound_id ) {
         require_write();
         if( body_part_id.kind() != "body_part" || !body_part_id.is_valid() ) {
@@ -3080,7 +3080,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                                           require_read, require_write );
     sol::table inventory = services["inventory"];
     inventory.set_function( "wielded", [require_read, runtime_generation,
-                                        world_generation]( sol::this_state state,
+                                                      world_generation]( sol::this_state state,
     const cata::lua_platform::game_handle & handle ) {
         require_read();
         sol::state_view lua_state( state );
@@ -3111,7 +3111,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                            world_generation() ) ) );
     } );
     inventory.set_function( "is_wearing", [require_read, runtime_generation,
-                                           world_generation]( sol::this_state state,
+                                                         world_generation]( sol::this_state state,
                                                    const cata::lua_platform::game_handle & handle,
     const cata::lua_platform::script_game_id & id ) {
         require_read();
@@ -3251,9 +3251,9 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                    lua_state, sol::make_object( lua_state, std::move( value ) ) );
     } );
     recipes.set_function( "forget_category", [require_write, runtime_generation,
-            world_generation]( sol::this_state state,
-                               const cata::lua_platform::game_handle & handle,
-                               const cata::lua_platform::script_game_id & category,
+                                         world_generation]( sol::this_state state,
+                                  const cata::lua_platform::game_handle & handle,
+                                  const cata::lua_platform::script_game_id & category,
     const sol::optional<std::string> &subcategory ) {
         require_write();
         if( category.kind() != "crafting_category" || !category.is_valid() ) {
@@ -3358,7 +3358,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         return SNIPPET.has_snippet_with_id( snippet_id( id ) );
     } );
     snippets.set_function( "get", [require_read, require_snippet_key,
-                                   snippet_record](
+                                                 snippet_record](
     sol::this_state state, const std::string & id ) {
         require_read();
         require_snippet_key( id, "services.snippets.get" );
@@ -3381,7 +3381,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         return SNIPPET.expand( text, next_snippet_seed() );
     } );
     snippets.set_function( "random", [require_read, require_snippet_key,
-                                      next_snippet_seed](
+                                                    next_snippet_seed](
     sol::this_state state, const std::string & category ) {
         require_read();
         require_snippet_key( category, "services.snippets.random" );
@@ -3397,7 +3397,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                        selected->translated(), next_snippet_seed() ) );
     } );
     snippets.set_function( "random_named", [require_read, require_snippet_key,
-                                            next_snippet_seed, snippet_record](
+                                                          next_snippet_seed, snippet_record](
     sol::this_state state, const std::string & category ) {
         require_read();
         require_snippet_key( category, "services.snippets.random_named" );
@@ -3414,7 +3414,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
 
     sol::table text_services = lua.create_table();
     text_services.set_function( "expand_for", [require_read, runtime_generation,
-            world_generation](
+                                              world_generation](
                                     sol::this_state state, const std::string & text,
                                     const sol::object & speaker_argument,
                                     const sol::object & interlocutor_argument,
@@ -3437,7 +3437,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
             item_id = item_argument.as<std::string>();
         }
         const sol::optional<sol::table> context = cata::lua_platform::read_optional_table(
-                context_argument, "services.text.expand_for context" );
+                    context_argument, "services.text.expand_for context" );
         const bool use_avatar_fallback = fallback_to_avatar.value_or( false );
         const Creature *speaker = nullptr;
         if( speaker_argument.valid() && speaker_argument.get_type() != sol::type::nil ) {
@@ -3481,7 +3481,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
             speaker == nullptr ? nullptr : get_const_talker_for( *speaker ),
             interlocutor == nullptr ? nullptr : get_const_talker_for( *interlocutor ), {}, context_values );
         const std::unique_ptr<const_talker> default_participant = use_avatar_fallback ?
-            get_const_talker_for( get_avatar() ) : std::make_unique<const_talker>();
+                get_const_talker_for( get_avatar() ) : std::make_unique<const_talker>();
         std::string expanded = text;
         parse_tags(
             expanded, dialogue_context.has_alpha ?
@@ -3536,8 +3536,8 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         return parse_platform_message_type( name, "services.messages" );
     };
     const auto add_audible_message = [weak, require_write,
-                                      platform_message_type]( const std::string & message,
-                                          const sol::optional<std::string> &type,
+                                            platform_message_type]( const std::string & message,
+                                              const sol::optional<std::string> &type,
     const bool from_outdoors ) {
         require_write();
         if( message.size() > 8192 ||
@@ -3556,7 +3556,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                                            0.01, static_cast<double>( player.hearing_ability() ) );
                 const int denominator = std::max(
                                             1, static_cast<int>( std::ceil(
-                                                    2.0 * depth / hearing ) ) );
+                                                        2.0 * depth / hearing ) ) );
                 const std::shared_ptr<runtime> owner = weak.lock();
                 if( !owner ) {
                     throw std::runtime_error( "stale Platform runtime" );
@@ -4021,7 +4021,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         return ::is_night( calendar::turn );
     } );
     const auto require_environment_absolute_position = [](
-            const cata::lua_platform::script_tripoint_coord & position,
+                const cata::lua_platform::script_tripoint_coord & position,
     const std::string & api_name ) {
         if( position.native_origin() != coords::origin::abs ||
             position.native_scale() != coords::scale::map_square ) {
@@ -4031,7 +4031,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         return tripoint_abs_ms( position.to_native() );
     };
     environment.set_function( "is_outside", [require_read,
-            require_environment_absolute_position](
+                              require_environment_absolute_position](
     const cata::lua_platform::script_tripoint_coord & position ) {
         require_read();
         map &here = get_map();
@@ -4061,9 +4061,9 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         }
         map &here = get_map();
         const tripoint_bub_ms first = here.get_bub( require_environment_absolute_position(
-                from, "services.gameplay.environment.line_of_sight" ) );
+                                          from, "services.gameplay.environment.line_of_sight" ) );
         const tripoint_bub_ms second = here.get_bub( require_environment_absolute_position(
-                to, "services.gameplay.environment.line_of_sight" ) );
+                                           to, "services.gameplay.environment.line_of_sight" ) );
         return here.sees( first, second, static_cast<int>( native_range ),
                           with_fields.value_or( true ) );
     } );
@@ -4111,7 +4111,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         return here.furn( here.get_bub( absolute ) ).id().str();
     } );
     environment.set_function( "set_furniture", [require_write,
-            require_environment_absolute_position](
+                              require_environment_absolute_position](
                                   const cata::lua_platform::script_tripoint_coord & position,
                                   const std::string & furniture_id,
                                   const sol::optional<double> &requested_radius,
@@ -4126,7 +4126,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                                        requested_avoid_creatures.value_or( false ) );
     } );
     environment.set_function( "set_terrain", [require_write,
-            require_environment_absolute_position](
+                              require_environment_absolute_position](
                                   const cata::lua_platform::script_tripoint_coord & position,
                                   const std::string & terrain_id,
                                   const sol::optional<double> &requested_radius,
@@ -4141,7 +4141,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                                      requested_avoid_creatures.value_or( false ) );
     } );
     environment.set_function( "set_trap_area", [require_write,
-            require_environment_absolute_position](
+                              require_environment_absolute_position](
                                   const cata::lua_platform::script_tripoint_coord & position,
                                   const std::string & trap_id,
                                   const sol::optional<double> &requested_radius,
@@ -4154,7 +4154,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                                        requested_square.value_or( false ) );
     } );
     environment.set_function( "add_field_area", [require_write,
-            require_environment_absolute_position](
+                              require_environment_absolute_position](
                                   const cata::lua_platform::script_tripoint_coord & position,
     const std::string & field_id, const sol::optional<sol::table> &options ) {
         require_write();
@@ -4221,7 +4221,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                 "services.gameplay.environment.safe_mode_dangerous requires a valid cardinal direction" );
         }
         return get_avatar().get_mon_visible().dangerous[
-                   static_cast<int>( *dir )];
+            static_cast<int>( *dir )];
     } );
     gameplay["environment"] = std::move( environment );
     services["gameplay"] = std::move( gameplay );
@@ -4331,7 +4331,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                                            0.01, static_cast<double>( player.hearing_ability() ) );
                 const int denominator = std::max(
                                             1, static_cast<int>( std::ceil(
-                                                    2.0 * depth / hearing ) ) );
+                                                        2.0 * depth / hearing ) ) );
                 std::uniform_int_distribution<int> gate( 1, denominator );
                 if( gate( owner->random_engine ) != 1 ) {
                     return false;
@@ -5013,7 +5013,7 @@ void apply_platform_mapgen_symbol(
                     descriptor, "monster_mission_target", false ) );
         }
         const int corpse_age_days = static_cast<int>( platform_mapgen_integer(
-                descriptor, "corpse_age_days", 0, 0, 1000000 ) );
+                                        descriptor, "corpse_age_days", 0, 0, 1000000 ) );
         const sol::object corpse = platform_mapgen_field( descriptor, "corpse" );
         if( corpse.valid() && corpse.get_type() != sol::type::nil ) {
             context->place_corpse(
@@ -5221,7 +5221,7 @@ bool dispatch_platform_mapgen_phase( mapgendata &data, const bool primary )
 {
     if( detail::current_platform_event_dispatch_depth() >= 4 ) {
         DebugLog( D_ERROR, D_MAP_GEN ) <<
-        "Lua-first Platform mapgen recursion limit reached";
+                                       "Lua-first Platform mapgen recursion limit reached";
         return false;
     }
     platform_event_dispatch_scope dispatch_scope;
@@ -5323,7 +5323,7 @@ bool dispatch_platform_mapgen_phase( mapgendata &data, const bool primary )
                                                << "' mapgen handler '"
                                                << registration.handler_id << "': "
                                                << ( rolled_back ? message :
-                "rollback_failed: " + message );
+                                                    "rollback_failed: " + message );
                 continue;
             } catch( ... ) {
                 const std::string message = "unknown exception";
@@ -5336,7 +5336,7 @@ bool dispatch_platform_mapgen_phase( mapgendata &data, const bool primary )
                                                << "' mapgen handler '"
                                                << registration.handler_id << "': "
                                                << ( rolled_back ? message :
-                "rollback_failed: " + message );
+                                                    "rollback_failed: " + message );
                 continue;
             }
         }

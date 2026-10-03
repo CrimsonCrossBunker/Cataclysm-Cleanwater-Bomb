@@ -140,7 +140,9 @@ TEST_CASE( "lua_platform_event_has_beta_matches_native_dialogue_presence",
     )" );
     const conditional_t native_has_beta( "has_beta" );
 
-    for( const bool has_beta : { false, true } ) {
+    for( const bool has_beta : {
+             false, true
+         } ) {
         std::unique_ptr<talker> beta;
         if( has_beta ) {
             beta = std::make_unique<talker>();
@@ -153,7 +155,7 @@ TEST_CASE( "lua_platform_event_has_beta_matches_native_dialogue_presence",
         sol::table actors = lua.create_table();
         if( has_beta ) {
             actors["interlocutor"] = platform::detail::platform_talker_to_lua(
-                                          *owner, *native_dialogue.const_actor( true ) );
+                                         *owner, *native_dialogue.const_actor( true ) );
         }
         context["actors"] = actors;
         lua["context"] = context;
@@ -206,7 +208,7 @@ TEST_CASE( "lua_platform_expects_vars_matches_native_context_key_presence",
         end
     )" );
 
-    const auto compare = [&]( const std::string &json, const std::vector<std::string> &keys ) {
+    const auto compare = [&]( const std::string & json, const std::vector<std::string> &keys ) {
         const conditional_t native_condition(
             json_loader::from_string( json ).get_object() );
         sol::table required = lua.create_table();

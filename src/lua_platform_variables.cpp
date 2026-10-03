@@ -418,7 +418,7 @@ sol::table get_global_variable_number(
 sol::table get_global_variable_tripoint( sol::this_state lua, const std::string &key )
 {
     return native_variable_tripoint_read( sol::state_view( lua ),
-                                         get_globals().maybe_get_global_value( key ) );
+                                          get_globals().maybe_get_global_value( key ) );
 }
 
 std::string context_variable_string( const sol::object &stored )
@@ -468,7 +468,7 @@ sol::table get_context_variable_string(
 
 double context_variable_number( const sol::object &stored, const bool strict )
 {
-    const auto read = [strict]( const diag_value &value ) {
+    const auto read = [strict]( const diag_value & value ) {
         return strict ? value.dbl( const_dialogue{} ) : value.dbl();
     };
     if( stored.get_type() == sol::type::number ) {
@@ -890,8 +890,8 @@ void install_variable_api(
     variables.set_function(
         "get_string",
         [current_runtime_generation, current_world_generation,
-         require_read]( sol::this_state lua_state, const game_handle &handle,
-                        const std::string &key ) {
+                                     require_read]( sol::this_state lua_state, const game_handle & handle,
+    const std::string & key ) {
         require_read();
         return get_variable_string(
                    lua_state, handle, key,
@@ -901,8 +901,8 @@ void install_variable_api(
     variables.set_function(
         "get_number",
         [current_runtime_generation, current_world_generation,
-         require_read]( sol::this_state lua_state, const game_handle &handle,
-                        const std::string &key, const sol::optional<sol::table> &options ) {
+                                     require_read]( sol::this_state lua_state, const game_handle & handle,
+    const std::string & key, const sol::optional<sol::table> &options ) {
         require_read();
         const bool strict = read_variable_number_strict( options );
         return get_variable_number(
@@ -913,8 +913,8 @@ void install_variable_api(
     variables.set_function(
         "get_tripoint",
         [current_runtime_generation, current_world_generation,
-         require_read]( sol::this_state lua_state, const game_handle &handle,
-                        const std::string &key ) {
+                                     require_read]( sol::this_state lua_state, const game_handle & handle,
+    const std::string & key ) {
         require_read();
         return get_variable_tripoint( lua_state, handle, key,
                                       current_runtime_generation(), current_world_generation() );
@@ -973,8 +973,8 @@ void install_variable_api(
     } );
     variables.set_function(
         "get_global_number",
-    [require_read]( sol::this_state lua_state, const std::string & key,
-                   const sol::optional<sol::table> &options ) {
+        [require_read]( sol::this_state lua_state, const std::string & key,
+    const sol::optional<sol::table> &options ) {
         require_read();
         const bool strict = read_variable_number_strict( options );
         return get_global_variable_number( lua_state, key, strict );

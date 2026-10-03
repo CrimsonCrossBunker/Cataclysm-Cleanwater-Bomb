@@ -1141,7 +1141,7 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
         }
     } else if( bio.id == bio_emp ) {
         if( const std::optional<tripoint_bub_ms> pnt = choose_adjacent(
-                _( "Create an EMP where?" ) ) ) {
+                    _( "Create an EMP where?" ) ) ) {
             add_msg_activate();
             explosion_handler::emp_blast( *pnt );
             mod_moves( -100 );
@@ -1257,7 +1257,7 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
         weather_manager &weather = get_weather();
         const units::temperature player_local_temp = weather.get_temperature( player_character.pos_bub() );
         const int windpower = get_local_windpower( weather.windspeed + vehwindspeed,
-            cur_om_ter, pos_abs(), weather.winddirection, g->is_sheltered( pos_bub() ) );
+                              cur_om_ter, pos_abs(), weather.winddirection, g->is_sheltered( pos_bub() ) );
         add_msg_if_player( m_info, _( "Temperature: %s." ), print_temperature( player_local_temp ) );
         const w_point weatherPoint = *weather.weather_precise;
         add_msg_if_player( m_info, _( "Relative Humidity: %s." ),
@@ -1271,7 +1271,7 @@ bool Character::activate_bionic( bionic &initial_bio, bool eff_only, bool *close
                            velocity_units( VU_WIND ) );
         add_msg_if_player( m_info, _( "Feels Like: %s." ),
                            print_temperature( player_local_temp + get_local_windchill( weatherPoint.temperature,
-                                   weatherPoint.humidity,  windpower ) ) );
+                                              weatherPoint.humidity,  windpower ) ) );
         std::string dirstring = get_dirstring( weather.winddirection );
         add_msg_if_player( m_info, _( "Wind Direction: From the %s." ), dirstring );
     } else if( bio.id == bio_remote ) {
@@ -1730,8 +1730,8 @@ void Character::burn_fuel( bionic &bio )
         }
         weather_manager &weather = get_weather();
         const int windpower = get_local_windpower( weather.windspeed + vehwindspeed,
-            overmap_buffer.ter( pos_abs_omt() ), pos_abs(), weather.winddirection,
-            g->is_sheltered( pos_bub() ) );
+                              overmap_buffer.ter( pos_abs_omt() ), pos_abs(), weather.winddirection,
+                              g->is_sheltered( pos_bub() ) );
         energy_gain = 1_kJ * windpower;
     }
 
@@ -1797,8 +1797,8 @@ float Character::get_effective_efficiency( const bionic &bio, float fuel_efficie
             { flag_ALLOWS_NATURAL_ATTACKS, flag_SEMITANGIBLE, flag_PERSONAL, flag_AURA } );
         }
         effective_efficiency = fuel_efficiency * ( 1.0 - ( coverage / ( 100.0 *
-            occupied_bodyparts.size() ) )
-            * coverage_penalty.value() );
+                               occupied_bodyparts.size() ) )
+                               * coverage_penalty.value() );
     }
     return effective_efficiency;
 }
@@ -2116,7 +2116,7 @@ void Character::bionics_uninstall_failure( int difficulty, int success, float ad
     // difficulties), only minor consequences occur.  At low skill levels, severe consequences
     // are more likely.
     const int failure_level = static_cast<int>( std::sqrt( success * 4.0 * difficulty /
-        adjusted_skill ) );
+                              adjusted_skill ) );
     const int fail_type = std::min( 5, failure_level );
 
     if( fail_type <= 0 ) {
@@ -2185,7 +2185,7 @@ void Character::bionics_uninstall_failure( monster &installer, Character &patien
     // difficulties), only minor consequences occur.  At low skill levels, severe consequences
     // are more likely.
     const int failure_level = static_cast<int>( std::sqrt( success * 4.0 * difficulty /
-        adjusted_skill ) );
+                              adjusted_skill ) );
     const int fail_type = std::min( 5, failure_level );
 
     bool u_see = sees( here, patient );
@@ -2351,7 +2351,7 @@ float Character::bionics_adjusted_skill( bool autodoc, int skill_level ) const
 
     // for chance_of_success calculation, shift skill down to a float between ~0.4 - 30
     float adjusted_skill = static_cast<float>( pl_skill ) - std::min( static_cast<float>( 40 ),
-        static_cast<float>( pl_skill ) - static_cast<float>( pl_skill ) / static_cast<float>( 10.0 ) );
+                           static_cast<float>( pl_skill ) - static_cast<float>( pl_skill ) / static_cast<float>( 10.0 ) );
     adjusted_skill += get_effect_int( effect_assisted );
     adjusted_skill *= env_surgery_bonus( 1 );
     return adjusted_skill;
@@ -2413,7 +2413,7 @@ int bionic_manip_cos( float adjusted_skill, int bionic_difficulty )
     // we will base chance_of_success on a ratio of skill and difficulty
     // when skill=difficulty, this gives us 1.  skill < difficulty gives a fraction.
     float skill_difficulty_parameter = static_cast<float>( adjusted_skill /
-        ( 4.0 * bionic_difficulty ) );
+                                       ( 4.0 * bionic_difficulty ) );
 
     // when skill == difficulty, chance_of_success is 50%. Chance of success drops quickly below that
     // to reserve bionics for characters with the appropriate skill.  For more difficult bionics, the
@@ -2485,7 +2485,7 @@ bool Character::can_uninstall_bionic( const bionic &bio, Character &installer, b
 
     // removal of bionics adds +2 difficulty over installation
     int chance_of_success = bionic_success_chance( autodoc, skill_level, difficulty + 2,
-        installer );
+                            installer );
 
     if( chance_of_success >= 100 ) {
         if( !player_character.query_yn(
@@ -2779,8 +2779,8 @@ void Character::perform_uninstall( const bionic &bio, int difficulty, int succes
         }
         // for chance_of_success calculation, shift skill down to a float between ~0.4 - 30
         float adjusted_skill = static_cast<float>( pl_skill ) - std::min( static_cast<float>( 40 ),
-            static_cast<float>( pl_skill ) - static_cast<float>( pl_skill ) / static_cast<float>
-            ( 10.0 ) );
+                               static_cast<float>( pl_skill ) - static_cast<float>( pl_skill ) / static_cast<float>
+                               ( 10.0 ) );
         live_character->bionics_uninstall_failure( difficulty, success, adjusted_skill );
 
     }
@@ -2934,7 +2934,7 @@ ret_val<void> Character::is_installable( const item *it, const bool by_autodoc )
 
         if( !conflicts.empty() ) {
             return ret_val<void>::make_failure( _( "CBM conflicts with: %s." ), string_join( conflicts,
-                    ", " ) );
+                                                ", " ) );
         }
     }
 
@@ -3067,7 +3067,7 @@ bool Character::install_bionics( const itype &type, Character &installer, bool a
                                        installer.has_trait( trait_PROF_AUTODOC ) ? installer.disp_name( true ) : "NOT_MED";
 
     assign_activity( bionic_operation_activity_actor( true, success, autodoc, pl_skill,
-            difficulty, bioid, upbio_uid, installer_name, source_item ) );
+                     difficulty, bioid, upbio_uid, installer_name, source_item ) );
     if( !character_reference ) {
         return false;
     }
@@ -3157,8 +3157,8 @@ void Character::perform_install( const bionic_id &bid, bionic_uid upbio_uid, int
 
         // for chance_of_success calculation, shift skill down to a float between ~0.4 - 30
         float adjusted_skill = static_cast<float>( pl_skill ) - std::min( static_cast<float>( 40 ),
-            static_cast<float>( pl_skill ) - static_cast<float>( pl_skill ) / static_cast<float>
-            ( 10.0 ) );
+                               static_cast<float>( pl_skill ) - static_cast<float>( pl_skill ) / static_cast<float>
+                               ( 10.0 ) );
         live_character->bionics_install_failure( bid, installer_name_snapshot, difficulty, success,
                 adjusted_skill, patient_pos );
         if( !character_reference ) {

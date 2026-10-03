@@ -790,7 +790,7 @@ void install_proficiency_api(
         "has_id_text",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state, const game_handle & handle,
-            const std::string & id_text ) {
+    const std::string & id_text ) {
         require_read();
         return has_id_text_state(
                    lua_state, handle, id_text,

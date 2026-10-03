@@ -791,7 +791,7 @@ struct region_settings_forest_mapgen_definition_handle {
     region_settings_forest_mapgen_definition_handle &biomes( const sol::table &values ) {
         require_building_handle( token, *definition, "region settings forest mapgen" );
         const std::size_t count = require_dense_array( values, "region settings forest mapgen biomes", 0,
-            1024 );
+                                  1024 );
         for( std::size_t i = 1; i <= count; ++i ) {
             const std::string val = values.get<std::string>( i );
             if( val.empty() ) {
@@ -885,7 +885,7 @@ struct region_settings_terrain_furniture_definition_handle {
     region_settings_terrain_furniture_definition_handle &ter_furn( const sol::table &values ) {
         require_building_handle( token, *definition, "region settings terrain furniture" );
         const std::size_t count = require_dense_array( values, "region settings terrain furniture", 0,
-            1024 );
+                                  1024 );
         for( std::size_t i = 1; i <= count; ++i ) {
             const std::string val = values.get<std::string>( i );
             if( val.empty() ) {
@@ -1743,7 +1743,7 @@ struct faction_mission_definition_handle {
     faction_mission_definition_handle &desc( const sol::object &value ) {
         require_building_handle( token, *definition, "faction_mission" );
         detail::authored_text parsed = read_required_authored_text( value,
-            "faction_mission description" );
+                                       "faction_mission description" );
         definition->description = std::move( parsed );
         return *this;
     }
@@ -1795,7 +1795,7 @@ struct faction_mission_definition_handle {
     faction_mission_definition_handle &items_label( const sol::object &value ) {
         require_building_handle( token, *definition, "faction_mission" );
         detail::authored_text parsed = read_required_authored_text( value,
-            "faction_mission items_label" );
+                                       "faction_mission items_label" );
         definition->items_label = std::move( parsed );
         return *this;
     }
@@ -1803,7 +1803,7 @@ struct faction_mission_definition_handle {
     faction_mission_definition_handle &items_possibility( const sol::object &value ) {
         require_building_handle( token, *definition, "faction_mission" );
         detail::authored_text parsed = read_required_authored_text( value,
-            "faction_mission items_possibility" );
+                                       "faction_mission items_possibility" );
         if( parsed.empty() ) {
             throw std::runtime_error( "faction_mission items_possibility needs non-empty text" );
         }
@@ -1821,7 +1821,7 @@ struct faction_mission_definition_handle {
     faction_mission_definition_handle &items_possibilities( const sol::table &table ) {
         require_building_handle( token, *definition, "faction_mission" );
         std::vector<detail::authored_text> parsed = read_authored_text_array(
-                table, "faction_mission items_possibilities" );
+                    table, "faction_mission items_possibilities" );
         definition->items_possibilities = std::move( parsed );
         return *this;
     }
@@ -1846,7 +1846,7 @@ struct faction_mission_definition_handle {
     faction_mission_definition_handle &effects( const sol::table &table ) {
         require_building_handle( token, *definition, "faction_mission" );
         std::vector<detail::authored_text> parsed = read_authored_text_array(
-                table, "faction_mission effects" );
+                    table, "faction_mission effects" );
         definition->effects = std::move( parsed );
         return *this;
     }
@@ -2286,7 +2286,7 @@ struct worldgen_content_transaction::impl {
     impl( std::string owner_id, const std::size_t owner_generation ) :
         owner( std::move( owner_id ) ), generation( owner_generation ),
         token( std::make_shared<owner_token>( owner_token{ owner, generation,
-                handle_lifecycle::building } ) ) {}
+                                              handle_lifecycle::building } ) ) {}
 
     std::string owner;
     std::size_t generation = 0;
@@ -2674,16 +2674,16 @@ void worldgen_content_transaction::install_lua_api( sol::state &lua, sol::table 
         definition->lake_depth = options.get_or<std::int64_t>( "lake_depth", -5 );
         definition->invert_lakes = options.get_or( "invert_lakes", false );
         definition->surface = options.get_or( "surface_ter", options.get_or( "surface",
-            std::string( "lake_surface" ) ) );
+                                              std::string( "lake_surface" ) ) );
         definition->shore = options.get_or( "shore_ter", options.get_or( "shore",
-            std::string( "lake_shore" ) ) );
+                                            std::string( "lake_shore" ) ) );
         definition->interior = options.get_or( "interior_ter", options.get_or( "interior",
-            std::string( "lake_water_cube" ) ) );
+                                               std::string( "lake_water_cube" ) ) );
         definition->bed = options.get_or( "bed_ter", options.get_or( "bed", std::string( "lake_bed" ) ) );
         if( const sol::optional<sol::table> shore_tbl =
                 options.get<sol::optional<sol::table>>( "shore_extendable_overmap_terrain" ) ) {
             const std::size_t count = require_dense_array( *shore_tbl, "shore extendable overmap terrain", 0,
-                1024 );
+                                      1024 );
             for( std::size_t i = 1; i <= count; ++i ) {
                 definition->shore_extendable_overmap_terrain.push_back( ( *shore_tbl ).get<std::string>( i ) );
             }
@@ -2691,7 +2691,7 @@ void worldgen_content_transaction::install_lua_api( sol::state &lua, sol::table 
         if( const sol::optional<sol::table> aliases_tbl =
                 options.get<sol::optional<sol::table>>( "shore_extendable_overmap_terrain_aliases" ) ) {
             const std::size_t count = require_dense_array( *aliases_tbl,
-                "shore extendable overmap terrain aliases", 0, 1024 );
+                                      "shore extendable overmap terrain aliases", 0, 1024 );
             for( std::size_t i = 1; i <= count; ++i ) {
                 const sol::table alias_tbl = ( *aliases_tbl ).get<sol::table>( i );
                 region_settings_lake_alias_data alias_entry;
@@ -2746,13 +2746,13 @@ void worldgen_content_transaction::install_lua_api( sol::state &lua, sol::table 
         definition->noise_threshold_swamp_adjacent_water =
             options.get_or( "noise_threshold_swamp_adjacent_water", 0.3 );
         definition->noise_threshold_swamp_isolated = options.get_or( "noise_threshold_swamp_isolated",
-            0.6 );
+                0.6 );
         definition->river_floodplain_buffer_distance_min =
             options.get_or<std::int64_t>( "river_floodplain_buffer_distance_min", 3 );
         definition->river_floodplain_buffer_distance_max =
             options.get_or<std::int64_t>( "river_floodplain_buffer_distance_max", 15 );
         definition->forest_threshold_limit = options.get_or( "forest_threshold_limit",
-            options.get_or( "max_forest", 0.395 ) );
+                                             options.get_or( "max_forest", 0.395 ) );
         if( const sol::optional<sol::table> inc_tbl =
                 options.get<sol::optional<sol::table>>( "forest_threshold_increase" ) ) {
             const std::size_t count = require_dense_array( *inc_tbl, "forest threshold increase", 4, 4 );
@@ -2788,7 +2788,7 @@ void worldgen_content_transaction::install_lua_api( sol::state &lua, sol::table 
         if( const sol::optional<sol::table> biomes_tbl =
                 options.get<sol::optional<sol::table>>( "biomes" ) ) {
             const std::size_t count = require_dense_array( *biomes_tbl,
-                "region settings forest mapgen biomes", 0, 1024 );
+                                      "region settings forest mapgen biomes", 0, 1024 );
             for( std::size_t i = 1; i <= count; ++i ) {
                 const std::string val = ( *biomes_tbl ).get<std::string>( i );
                 if( val.empty() ) {
@@ -2814,7 +2814,7 @@ void worldgen_content_transaction::install_lua_api( sol::state &lua, sol::table 
         if( const sol::optional<sol::table> extras_tbl =
                 options.get<sol::optional<sol::table>>( "extras" ) ) {
             const std::size_t count = require_dense_array( *extras_tbl, "region settings map extras", 0,
-                1024 );
+                                      1024 );
             for( std::size_t i = 1; i <= count; ++i ) {
                 const std::string val = ( *extras_tbl ).get<std::string>( i );
                 if( val.empty() ) {
@@ -2841,7 +2841,7 @@ void worldgen_content_transaction::install_lua_api( sol::state &lua, sol::table 
         if( const sol::optional<sol::table> tf_tbl =
                 options.get<sol::optional<sol::table>>( "ter_furn" ) ) {
             const std::size_t count = require_dense_array( *tf_tbl, "region settings terrain furniture", 0,
-                1024 );
+                                      1024 );
             for( std::size_t i = 1; i <= count; ++i ) {
                 const std::string val = ( *tf_tbl ).get<std::string>( i );
                 if( val.empty() ) {
@@ -2897,28 +2897,28 @@ void worldgen_content_transaction::install_lua_api( sol::state &lua, sol::table 
         definition->reserved_terrain_water_id =
             options.get_or( "reserved_terrain_water_id", std::string() );
         definition->segment_flat_special = options.get_or( "segment_flat_special",
-            options.get_or( "segment_flat", std::string() ) );
+                                           options.get_or( "segment_flat", std::string() ) );
         definition->segment_ramp_special = options.get_or( "segment_ramp_special",
-            options.get_or( "segment_ramp", std::string() ) );
+                                           options.get_or( "segment_ramp", std::string() ) );
         definition->segment_road_bridge_special =
             options.get_or( "segment_road_bridge_special",
                             options.get_or( "segment_road_bridge", std::string() ) );
         definition->segment_bridge_special = options.get_or( "segment_bridge_special",
-            options.get_or( "segment_bridge", std::string() ) );
+                                             options.get_or( "segment_bridge", std::string() ) );
         definition->segment_bridge_supports_special =
             options.get_or( "segment_bridge_supports_special",
                             options.get_or( "segment_bridge_supports", std::string() ) );
         definition->segment_overpass_special = options.get_or( "segment_overpass_special",
-            options.get_or( "segment_overpass", std::string() ) );
+                                               options.get_or( "segment_overpass", std::string() ) );
         definition->clockwise_slant_special = options.get_or( "clockwise_slant_special",
-            options.get_or( "clockwise_slant", std::string() ) );
+                                              options.get_or( "clockwise_slant", std::string() ) );
         definition->counterclockwise_slant_special =
             options.get_or( "counterclockwise_slant_special",
                             options.get_or( "counterclockwise_slant", std::string() ) );
         definition->fallback_onramp_special = options.get_or( "fallback_onramp_special",
-            options.get_or( "fallback_onramp", std::string() ) );
+                                              options.get_or( "fallback_onramp", std::string() ) );
         definition->fallback_bend_special = options.get_or( "fallback_bend_special",
-            options.get_or( "fallback_bend", std::string() ) );
+                                            options.get_or( "fallback_bend", std::string() ) );
         definition->fallback_three_way_intersection_special =
             options.get_or( "fallback_three_way_intersection_special",
                             options.get_or( "fallback_three_way_intersection", std::string() ) );
@@ -2978,7 +2978,7 @@ void worldgen_content_transaction::install_lua_api( sol::state &lua, sol::table 
         definition->place_roads = options.get_or( "place_roads", true );
         definition->place_railroads = options.get_or( "place_railroads", false );
         definition->place_railroads_before_roads = options.get_or(
-                "place_railroads_before_roads", false );
+                    "place_railroads_before_roads", false );
         definition->place_specials = options.get_or( "place_specials", true );
         definition->neighbor_connections = options.get_or(
                                                "neighbor_connections", true );
@@ -3032,9 +3032,9 @@ void worldgen_content_transaction::install_lua_api( sol::state &lua, sol::table 
             definition->rail_connection = connections->get_or(
                                               "rail_connection", std::string() );
             definition->intra_city_road_connection = connections->get_or(
-                    "intra_city_road_connection", std::string() );
+                        "intra_city_road_connection", std::string() );
             definition->inter_city_road_connection = connections->get_or(
-                    "inter_city_road_connection", std::string() );
+                        "inter_city_road_connection", std::string() );
         }
         return handle;
     } );
@@ -3316,7 +3316,7 @@ void worldgen_content_transaction::install_lua_api( sol::state &lua, sol::table 
     const std::string & id ) {
         return region_settings_forest_mapgen_definition_handle{
             edit_catalog( id, transaction->region_settings_forest_mapgens,
-            "region_settings_forest_mapgen" ),
+                          "region_settings_forest_mapgen" ),
             transaction->token
         };
     } );
@@ -3324,7 +3324,7 @@ void worldgen_content_transaction::install_lua_api( sol::state &lua, sol::table 
     const std::string & id ) {
         return region_settings_map_extras_definition_handle{
             edit_catalog( id, transaction->region_settings_map_extrases,
-            "region_settings_map_extras" ),
+                          "region_settings_map_extras" ),
             transaction->token
         };
     } );
@@ -3332,7 +3332,7 @@ void worldgen_content_transaction::install_lua_api( sol::state &lua, sol::table 
     const std::string & id ) {
         return region_settings_terrain_furniture_definition_handle{
             edit_catalog( id, transaction->region_settings_terrain_furnitures,
-            "region_settings_terrain_furniture" ),
+                          "region_settings_terrain_furniture" ),
             transaction->token
         };
     } );
@@ -3340,7 +3340,7 @@ void worldgen_content_transaction::install_lua_api( sol::state &lua, sol::table 
     const std::string & id ) {
         return region_settings_forest_trail_definition_handle{
             edit_catalog( id, transaction->region_settings_forest_trails,
-            "region_settings_forest_trail" ),
+                          "region_settings_forest_trail" ),
             transaction->token
         };
     } );
@@ -3348,7 +3348,7 @@ void worldgen_content_transaction::install_lua_api( sol::state &lua, sol::table 
     const std::string & id ) {
         return region_settings_highway_definition_handle{
             edit_catalog( id, transaction->region_settings_highways,
-            "region_settings_highway" ),
+                          "region_settings_highway" ),
             transaction->token
         };
     } );
@@ -3370,7 +3370,7 @@ void worldgen_content_transaction::install_lua_api( sol::state &lua, sol::table 
     const std::string & id ) {
         return dimension_region_layout_definition_handle{
             edit_catalog( id, transaction->dimension_region_layouts,
-            "dimension_region_layout" ),
+                          "dimension_region_layout" ),
             transaction->token
         };
     } );
@@ -3392,7 +3392,7 @@ void worldgen_content_transaction::install_lua_api( sol::state &lua, sol::table 
     const std::string & id ) {
         return region_terrain_furniture_definition_handle{
             edit_catalog( id, transaction->region_terrain_furnitures,
-            "region_terrain_furniture" ),
+                          "region_terrain_furniture" ),
             transaction->token
         };
     } );
@@ -3400,7 +3400,7 @@ void worldgen_content_transaction::install_lua_api( sol::state &lua, sol::table 
     const std::string & id ) {
         return forest_biome_component_definition_handle{
             edit_catalog( id, transaction->forest_biome_components,
-            "forest_biome_component" ),
+                          "forest_biome_component" ),
             transaction->token
         };
     } );
@@ -4721,9 +4721,9 @@ bool worldgen_content_transaction::apply( std::string &error )
                 entry.definition->noise_threshold_swamp_adjacent_water;
             native.noise_threshold_swamp_isolated = entry.definition->noise_threshold_swamp_isolated;
             native.river_floodplain_buffer_distance_min = static_cast<int>
-                ( entry.definition->river_floodplain_buffer_distance_min );
+                    ( entry.definition->river_floodplain_buffer_distance_min );
             native.river_floodplain_buffer_distance_max = static_cast<int>
-                ( entry.definition->river_floodplain_buffer_distance_max );
+                    ( entry.definition->river_floodplain_buffer_distance_max );
             native.max_forest = static_cast<float>( entry.definition->forest_threshold_limit );
             native.forest_increase = entry.definition->forest_threshold_increase;
             native.was_loaded = true;
@@ -4965,27 +4965,27 @@ bool worldgen_content_transaction::apply( std::string &error )
                 entry.definition->feature_whitelist.end() );
             if( !entry.definition->trail_connection.empty() ) {
                 native.overmap_connection.trail_connection = overmap_connection_id(
-                        entry.definition->trail_connection );
+                            entry.definition->trail_connection );
             }
             if( !entry.definition->sewer_connection.empty() ) {
                 native.overmap_connection.sewer_connection = overmap_connection_id(
-                        entry.definition->sewer_connection );
+                            entry.definition->sewer_connection );
             }
             if( !entry.definition->subway_connection.empty() ) {
                 native.overmap_connection.subway_connection = overmap_connection_id(
-                        entry.definition->subway_connection );
+                            entry.definition->subway_connection );
             }
             if( !entry.definition->rail_connection.empty() ) {
                 native.overmap_connection.rail_connection = overmap_connection_id(
-                        entry.definition->rail_connection );
+                            entry.definition->rail_connection );
             }
             if( !entry.definition->intra_city_road_connection.empty() ) {
                 native.overmap_connection.intra_city_road_connection = overmap_connection_id(
-                        entry.definition->intra_city_road_connection );
+                            entry.definition->intra_city_road_connection );
             }
             if( !entry.definition->inter_city_road_connection.empty() ) {
                 native.overmap_connection.inter_city_road_connection = overmap_connection_id(
-                        entry.definition->inter_city_road_connection );
+                            entry.definition->inter_city_road_connection );
             }
             native.place_swamps = entry.definition->place_swamps;
             native.place_roads = entry.definition->place_roads;

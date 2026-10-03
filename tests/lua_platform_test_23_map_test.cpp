@@ -135,8 +135,8 @@ TEST_CASE( "lua_platform_player_can_see_uses_active_player_view",
     fixture.lua["stale_handle"] = target_handle;
 
     const sol::protected_function_result visible = fixture.lua.safe_script(
-            "return services.creatures.player_can_see(target_handle)",
-            sol::script_pass_on_error );
+                "return services.creatures.player_can_see(target_handle)",
+                sol::script_pass_on_error );
     REQUIRE( visible.valid() );
     const sol::table visible_result = visible.get<sol::table>();
     REQUIRE( visible_result["ok"].get<bool>() );
@@ -146,8 +146,8 @@ TEST_CASE( "lua_platform_player_can_see_uses_active_player_view",
            get_player_view().sees( fixture.get_map(), *target ) );
 
     const sol::protected_function_result empty = fixture.lua.safe_script(
-            "return services.creatures.player_can_see(empty_handle)",
-            sol::script_pass_on_error );
+                "return services.creatures.player_can_see(empty_handle)",
+                sol::script_pass_on_error );
     REQUIRE( empty.valid() );
     const sol::table empty_result = empty.get<sol::table>();
     REQUIRE_FALSE( empty_result["ok"].get<bool>() );
@@ -156,8 +156,8 @@ TEST_CASE( "lua_platform_player_can_see_uses_active_player_view",
 
     ++fixture.active_world_generation;
     const sol::protected_function_result stale = fixture.lua.safe_script(
-            "return services.creatures.player_can_see(stale_handle)",
-            sol::script_pass_on_error );
+                "return services.creatures.player_can_see(stale_handle)",
+                sol::script_pass_on_error );
     REQUIRE( stale.valid() );
     const sol::table stale_result = stale.get<sol::table>();
     REQUIRE_FALSE( stale_result["ok"].get<bool>() );
@@ -193,9 +193,9 @@ TEST_CASE( "lua_platform_character_vehicle_condition_uses_map_occupancy",
     fixture.lua["services"] = fixture.services;
 
     const sol::protected_function_result on_vehicle = fixture.lua.safe_script(
-            "local player = services.characters.avatar(); "
-            "return services.characters.is_in_vehicle(player)",
-            sol::script_pass_on_error );
+                "local player = services.characters.avatar(); "
+                "return services.characters.is_in_vehicle(player)",
+                sol::script_pass_on_error );
     REQUIRE( on_vehicle.valid() );
     const sol::table on_vehicle_result = on_vehicle.get<sol::table>();
     REQUIRE( on_vehicle_result["ok"].get<bool>() );
@@ -207,9 +207,9 @@ TEST_CASE( "lua_platform_character_vehicle_condition_uses_map_occupancy",
     player.setpos( fixture.get_map(), fixture.target_local );
     player.in_vehicle = true;
     const sol::protected_function_result off_vehicle = fixture.lua.safe_script(
-            "local player = services.characters.avatar(); "
-            "return services.characters.is_in_vehicle(player)",
-            sol::script_pass_on_error );
+                "local player = services.characters.avatar(); "
+                "return services.characters.is_in_vehicle(player)",
+                sol::script_pass_on_error );
     REQUIRE( off_vehicle.valid() );
     const sol::table off_vehicle_result = off_vehicle.get<sol::table>();
     REQUIRE( off_vehicle_result["ok"].get<bool>() );
@@ -219,8 +219,8 @@ TEST_CASE( "lua_platform_character_vehicle_condition_uses_map_occupancy",
 
     fixture.lua["vehicle_handle"] = fixture.vehicle_handle;
     const sol::protected_function_result wrong_kind = fixture.lua.safe_script(
-            "return services.characters.is_in_vehicle(vehicle_handle)",
-            sol::script_pass_on_error );
+                "return services.characters.is_in_vehicle(vehicle_handle)",
+                sol::script_pass_on_error );
     REQUIRE( wrong_kind.valid() );
     const sol::table wrong_kind_result = wrong_kind.get<sol::table>();
     REQUIRE_FALSE( wrong_kind_result["ok"].get<bool>() );
@@ -243,8 +243,8 @@ TEST_CASE( "lua_platform_character_vehicle_condition_uses_map_occupancy",
     },
     fixture.active_runtime, fixture.active_world_generation );
     const sol::protected_function_result wrong_subtype = fixture.lua.safe_script(
-            "return services.characters.is_in_vehicle(non_character_handle)",
-            sol::script_pass_on_error );
+                "return services.characters.is_in_vehicle(non_character_handle)",
+                sol::script_pass_on_error );
     REQUIRE( wrong_subtype.valid() );
     const sol::table wrong_subtype_result = wrong_subtype.get<sol::table>();
     REQUIRE_FALSE( wrong_subtype_result["ok"].get<bool>() );
@@ -258,8 +258,8 @@ TEST_CASE( "lua_platform_character_vehicle_condition_uses_map_occupancy",
     REQUIRE( saved_character.valid() );
     ++fixture.active_world_generation;
     const sol::protected_function_result stale = fixture.lua.safe_script(
-            "return services.characters.is_in_vehicle(stale_character)",
-            sol::script_pass_on_error );
+                "return services.characters.is_in_vehicle(stale_character)",
+                sol::script_pass_on_error );
     REQUIRE( stale.valid() );
     const sol::table stale_result = stale.get<sol::table>();
     REQUIRE_FALSE( stale_result["ok"].get<bool>() );
@@ -294,11 +294,11 @@ TEST_CASE( "lua_platform_character_snapshot_matches_npc_movement_conditions",
     const auto check_native_match = [&]( const bool expected_controlling,
     const bool expected_driving, const bool expected_following ) {
         const optional_vpart_position control_vehicle = fixture.get_map().veh_at(
-                native_beta.pos_bub( fixture.get_map() ) );
+                    native_beta.pos_bub( fixture.get_map() ) );
         const bool native_controlling = control_vehicle &&
                                         native_beta.is_in_control_of( control_vehicle->vehicle() );
         const optional_vpart_position driving_vehicle = fixture.get_map().veh_at(
-                native_beta.pos_abs() );
+                    native_beta.pos_abs() );
         const bool native_driving = driving_vehicle &&
                                     driving_vehicle->vehicle().is_moving() &&
                                     native_beta.is_in_control_of( driving_vehicle->vehicle() );
@@ -543,9 +543,9 @@ TEST_CASE( "lua_platform_map_tile_rejects_unloaded_out_of_world_and_z_mismatch",
         std::numeric_limits<int>::max(), fixture.absolute.y(), fixture.absolute.z()
     };
     const sol::protected_function_result outside_world_result = tile(
-            cata::lua_platform::script_tripoint_coord::from_native(
-                coords::origin::abs, coords::scale::map_square,
-                outside_world.raw() ) );
+                cata::lua_platform::script_tripoint_coord::from_native(
+                    coords::origin::abs, coords::scale::map_square,
+                    outside_world.raw() ) );
     REQUIRE( outside_world_result.valid() );
     const sol::table outside_world_envelope = outside_world_result.get<sol::table>();
     REQUIRE_FALSE( outside_world_envelope["ok"].get<bool>() );
@@ -556,9 +556,9 @@ TEST_CASE( "lua_platform_map_tile_rejects_unloaded_out_of_world_and_z_mismatch",
     const tripoint_abs_ms outside_bubble = fixture.absolute +
                                            tripoint_rel_ms( map_width, 0, 0 );
     const sol::protected_function_result unloaded_result = tile(
-            cata::lua_platform::script_tripoint_coord::from_native(
-                coords::origin::abs, coords::scale::map_square,
-                outside_bubble.raw() ) );
+                cata::lua_platform::script_tripoint_coord::from_native(
+                    coords::origin::abs, coords::scale::map_square,
+                    outside_bubble.raw() ) );
     REQUIRE( unloaded_result.valid() );
     const sol::table unloaded_envelope = unloaded_result.get<sol::table>();
     REQUIRE_FALSE( unloaded_envelope["ok"].get<bool>() );
@@ -574,9 +574,9 @@ TEST_CASE( "lua_platform_map_tile_rejects_unloaded_out_of_world_and_z_mismatch",
         fixture.absolute.x(), fixture.absolute.y(), mismatched_z
     };
     const sol::protected_function_result z_result = tile(
-            cata::lua_platform::script_tripoint_coord::from_native(
-                coords::origin::abs, coords::scale::map_square,
-                z_mismatch.raw() ) );
+                cata::lua_platform::script_tripoint_coord::from_native(
+                    coords::origin::abs, coords::scale::map_square,
+                    z_mismatch.raw() ) );
     REQUIRE( z_result.valid() );
     const sol::table z_envelope = z_result.get<sol::table>();
     REQUIRE_FALSE( z_envelope["ok"].get<bool>() );
@@ -702,7 +702,7 @@ TEST_CASE( "lua_platform_map_tile_edits_are_atomic_and_rollback",
 
     fixture.write_called = false;
     const sol::protected_function_result rejected = edit(
-            token, revision, invalid_changes );
+                token, revision, invalid_changes );
     CHECK_FALSE( rejected.valid() );
     CHECK( fixture.write_called );
     CHECK( here.ter( fixture.local ) == original_terrain );
@@ -711,7 +711,7 @@ TEST_CASE( "lua_platform_map_tile_edits_are_atomic_and_rollback",
     sol::table valid_changes = fixture.lua.create_table();
     valid_changes["terrain"] = target_game_id;
     const sol::protected_function_result conflict = edit(
-            token, revision + 1, valid_changes );
+                token, revision + 1, valid_changes );
     REQUIRE( conflict.valid() );
     const sol::table conflict_envelope = conflict.get<sol::table>();
     REQUIRE_FALSE( conflict_envelope["ok"].get<bool>() );
@@ -721,7 +721,7 @@ TEST_CASE( "lua_platform_map_tile_edits_are_atomic_and_rollback",
     CHECK( cata::lua_platform::map_mutation_epoch() == revision );
 
     const sol::protected_function_result committed = edit(
-            token, revision, valid_changes );
+                token, revision, valid_changes );
     REQUIRE( committed.valid() );
     const sol::table committed_envelope = committed.get<sol::table>();
     REQUIRE( committed_envelope["ok"].get<bool>() );
@@ -752,7 +752,7 @@ TEST_CASE( "lua_platform_map_trap_set_matches_native_same_id_and_builtin_semanti
 
     const sol::table map_api = fixture.map_api();
     const sol::protected_function_result tile_result = map_api["tile"](
-            fixture.position( local ) );
+                fixture.position( local ) );
     REQUIRE( tile_result.valid() );
     REQUIRE( tile_result.get<sol::table>()["ok"].get<bool>() );
     const cata::lua_platform::map_tile_token token =
@@ -770,8 +770,8 @@ TEST_CASE( "lua_platform_map_trap_set_matches_native_same_id_and_builtin_semanti
     fixture.write_called = false;
     const sol::protected_function trap_set = map_api["trap_set"];
     const sol::protected_function_result repeated = trap_set(
-            token, revision,
-            cata::lua_platform::script_game_id( "trap", beartrap.str() ) );
+                token, revision,
+                cata::lua_platform::script_game_id( "trap", beartrap.str() ) );
     REQUIRE( repeated.valid() );
     REQUIRE( repeated.get<sol::table>()["ok"].get<bool>() );
     CHECK( fixture.write_called );
@@ -782,8 +782,8 @@ TEST_CASE( "lua_platform_map_trap_set_matches_native_same_id_and_builtin_semanti
     CHECK( cata::lua_platform::map_mutation_epoch() == epoch_before + 1 );
 
     const sol::protected_function_result stale = trap_set(
-            token, revision,
-            cata::lua_platform::script_game_id( "trap", rollmat.str() ) );
+                token, revision,
+                cata::lua_platform::script_game_id( "trap", rollmat.str() ) );
     REQUIRE( stale.valid() );
     REQUIRE_FALSE( stale.get<sol::table>()["ok"].get<bool>() );
     CHECK( stale.get<sol::table>()["error"].get<sol::table>()
@@ -794,8 +794,8 @@ TEST_CASE( "lua_platform_map_trap_set_matches_native_same_id_and_builtin_semanti
     const sol::table repeated_value = repeated.get<sol::table>()
                                       ["value"].get<sol::table>();
     const sol::protected_function_result replaced = trap_set(
-            token, repeated_value["revision"].get<std::uint64_t>(),
-            cata::lua_platform::script_game_id( "trap", rollmat.str() ) );
+                token, repeated_value["revision"].get<std::uint64_t>(),
+                cata::lua_platform::script_game_id( "trap", rollmat.str() ) );
     REQUIRE( replaced.valid() );
     REQUIRE( replaced.get<sol::table>()["ok"].get<bool>() );
     CHECK( here.tr_at( local ).id.id() == rollmat.id() );
@@ -808,10 +808,10 @@ TEST_CASE( "lua_platform_map_trap_set_matches_native_same_id_and_builtin_semanti
     REQUIRE( built_in_snapshot.valid() );
     REQUIRE( built_in_snapshot.get<sol::table>()["ok"].get<bool>() );
     const sol::protected_function_result built_in = trap_set(
-            token,
-            built_in_snapshot.get<sol::table>()["value"].get<sol::table>()
-            ["revision"].get<std::uint64_t>(),
-            cata::lua_platform::script_game_id( "trap", beartrap.str() ) );
+                token,
+                built_in_snapshot.get<sol::table>()["value"].get<sol::table>()
+                ["revision"].get<std::uint64_t>(),
+                cata::lua_platform::script_game_id( "trap", beartrap.str() ) );
     REQUIRE( built_in.valid() );
     REQUIRE( built_in.get<sol::table>()["ok"].get<bool>() );
     CHECK( here.tr_at( local ).id.id() == pit_trap.id() );
@@ -887,7 +887,7 @@ TEST_CASE( "lua_platform_map_holder_page_and_transfer_require_the_same_token",
                                         "max_depth", 0,
                                         "recursive", false );
     const sol::protected_function_result page_result = page(
-            source_holder, page_options );
+                source_holder, page_options );
     REQUIRE( page_result.valid() );
     const sol::table page_envelope = page_result.get<sol::table>();
     REQUIRE( page_envelope["ok"].get<bool>() );
@@ -905,7 +905,7 @@ TEST_CASE( "lua_platform_map_holder_page_and_transfer_require_the_same_token",
                                           "position", fixture.position() );
     CHECK_FALSE( page( bare_position_holder, page_options ).valid() );
     sol::table typed_but_wrong_frame_holder = fixture.lua.create_table_with(
-            "kind", "map_tile" );
+                "kind", "map_tile" );
     typed_but_wrong_frame_holder["tile"] =
         cata::lua_platform::script_tripoint_coord::from_native(
             coords::origin::reality_bubble, coords::scale::map_square,
@@ -918,7 +918,7 @@ TEST_CASE( "lua_platform_map_holder_page_and_transfer_require_the_same_token",
         different_owner, fixture.runtime.generation() + 1 );
     fixture.active_runtime = different_runtime;
     const sol::protected_function_result stale_destination_result = tile(
-            fixture.position( destination_local ) );
+                fixture.position( destination_local ) );
     REQUIRE( stale_destination_result.valid() );
     REQUIRE( stale_destination_result.get<sol::table>()["ok"].get<bool>() );
     const cata::lua_platform::map_tile_token stale_destination_token =
@@ -927,14 +927,14 @@ TEST_CASE( "lua_platform_map_holder_page_and_transfer_require_the_same_token",
     fixture.active_runtime = fixture.runtime;
 
     const sol::table stale_destination_holder = fixture.map_holder(
-            stale_destination_token );
+                stale_destination_token );
     const std::uint64_t item_epoch_before_failure =
         cata::lua_platform::item_holder_mutation_generation();
     const std::uint64_t map_epoch_before_failure =
         cata::lua_platform::map_mutation_epoch();
     const sol::protected_function transfer = fixture.item_api()["transfer"];
     const sol::protected_function_result stale_transfer = transfer(
-            item_handle, source_holder, stale_destination_holder );
+                item_handle, source_holder, stale_destination_holder );
     REQUIRE( stale_transfer.valid() );
     const sol::table stale_transfer_envelope = stale_transfer.get<sol::table>();
     REQUIRE_FALSE( stale_transfer_envelope["ok"].get<bool>() );
@@ -945,7 +945,7 @@ TEST_CASE( "lua_platform_map_holder_page_and_transfer_require_the_same_token",
     CHECK( cata::lua_platform::map_mutation_epoch() == map_epoch_before_failure );
 
     const sol::protected_function_result committed = transfer(
-            item_handle, source_holder, destination_holder );
+                item_handle, source_holder, destination_holder );
     REQUIRE( committed.valid() );
     const sol::table committed_envelope = committed.get<sol::table>();
     REQUIRE( committed_envelope["ok"].get<bool>() );
@@ -1008,7 +1008,7 @@ TEST_CASE( "lua_platform_map_mutation_invalidates_token_cursor_and_quote",
                                         "recursive", false );
     const sol::protected_function page = fixture.item_api()["page"];
     const sol::protected_function_result page_result = page(
-            source_holder, page_options );
+                source_holder, page_options );
     REQUIRE( page_result.valid() );
     const sol::table page_envelope = page_result.get<sol::table>();
     REQUIRE( page_envelope["ok"].get<bool>() );
@@ -1026,7 +1026,7 @@ TEST_CASE( "lua_platform_map_mutation_invalidates_token_cursor_and_quote",
         different_owner, fixture.runtime.generation() + 1 );
     fixture.active_runtime = different_runtime;
     const sol::protected_function_result stale_destination_result = tile(
-            fixture.position( destination_local ) );
+                fixture.position( destination_local ) );
     REQUIRE( stale_destination_result.valid() );
     REQUIRE( stale_destination_result.get<sol::table>()["ok"].get<bool>() );
     const cata::lua_platform::map_tile_token stale_destination_token =
@@ -1035,14 +1035,14 @@ TEST_CASE( "lua_platform_map_mutation_invalidates_token_cursor_and_quote",
     fixture.active_runtime = fixture.runtime;
 
     const sol::table stale_destination_holder = fixture.map_holder(
-            stale_destination_token );
+                stale_destination_token );
     const std::uint64_t item_epoch_before_failure =
         cata::lua_platform::item_holder_mutation_generation();
     const std::uint64_t map_epoch_before_failure =
         cata::lua_platform::map_mutation_epoch();
     const sol::protected_function transfer = fixture.item_api()["transfer"];
     const sol::protected_function_result failed_transfer = transfer(
-            item_handle, source_holder, stale_destination_holder );
+                item_handle, source_holder, stale_destination_holder );
     REQUIRE( failed_transfer.valid() );
     REQUIRE_FALSE( failed_transfer.get<sol::table>()["ok"].get<bool>() );
     CHECK( cata::lua_platform::item_holder_mutation_generation() ==
@@ -1055,7 +1055,7 @@ TEST_CASE( "lua_platform_map_mutation_invalidates_token_cursor_and_quote",
     REQUIRE( still_live_quote.get<sol::table>()["ok"].get<bool>() );
 
     const sol::protected_function_result committed = transfer(
-            item_handle, source_holder, destination_holder );
+                item_handle, source_holder, destination_holder );
     REQUIRE( committed.valid() );
     REQUIRE( committed.get<sol::table>()["ok"].get<bool>() );
     CHECK( source_token.owner_is_current() );
@@ -1068,7 +1068,7 @@ TEST_CASE( "lua_platform_map_mutation_invalidates_token_cursor_and_quote",
     CHECK( cata::lua_platform::map_mutation_epoch() > map_epoch_before_failure );
 
     const sol::protected_function_result stale_cursor = page(
-            source_holder, page_options, continuation );
+                source_holder, page_options, continuation );
     REQUIRE( stale_cursor.valid() );
     const sol::table stale_cursor_envelope = stale_cursor.get<sol::table>();
     REQUIRE_FALSE( stale_cursor_envelope["ok"].get<bool>() );

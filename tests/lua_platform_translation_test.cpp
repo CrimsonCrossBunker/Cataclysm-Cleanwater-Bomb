@@ -69,10 +69,10 @@ TEST_CASE( "lua_platform_translation_fallback_and_lifetime",
     )" );
     const sol::protected_function translate = ccb["services"]["translate"];
     for( const std::string &text : std::vector<std::string> {
-             "", "ccb translation raw regression 1901", std::string( 1, '\0' ),
-             std::string( "ccb translation NUL regression 1901" ) + '\0' + "suffix" + '\0' + "tail",
-             std::string( 10000, 'x' ), std::string( 10000, 'x' ) + '\0' + "tail"
-         } ) {
+    "", "ccb translation raw regression 1901", std::string( 1, '\0' ),
+        std::string( "ccb translation NUL regression 1901" ) + '\0' + "suffix" + '\0' + "tail",
+        std::string( 10000, 'x' ), std::string( 10000, 'x' ) + '\0' + "tail"
+    } ) {
         const sol::protected_function_result result = translate( text );
         REQUIRE( result.valid() );
         CHECK( result.get<std::string>() == to_translation( text ).translated() );
@@ -82,10 +82,10 @@ TEST_CASE( "lua_platform_translation_fallback_and_lifetime",
         CHECK( result.get<std::string>() == text );
 #endif
         for( const std::string &context : std::vector<std::string> {
-                 "", std::string( 1, '\0' ), "ccb regression context 1901",
-                 std::string( "ccb regression context 1901" ) + '\0' + "ignored suffix",
-                 std::string( 10000, 'y' ), "CCB 翻译上下文 1901"
-             } ) {
+        "", std::string( 1, '\0' ), "ccb regression context 1901",
+            std::string( "ccb regression context 1901" ) + '\0' + "ignored suffix",
+            std::string( 10000, 'y' ), "CCB 翻译上下文 1901"
+        } ) {
             CAPTURE( text.size(), context.size() );
             const sol::protected_function_result contextual_result = translate( text, context );
             REQUIRE( contextual_result.valid() );
@@ -308,7 +308,7 @@ TEST_CASE( "lua_platform_dialogue_text_preserves_raw_bytes_context_and_native_rn
     REQUIRE( loaded.valid() );
     const sol::protected_function expand = loaded.get<sol::protected_function>();
     const sol::protected_function expand_for = ccb["services"]["text"]["expand_for"];
-    const auto handle_for = [&]( Character &actor, const bool is_npc ) {
+    const auto handle_for = [&]( Character & actor, const bool is_npc ) {
         return platform::game_handle::from_creature(
                    actor, { is_npc ? "npc" : "avatar", actor.getID().get_value(), 0, 0, 0, {} },
                    runtime_identity, world_generation );
@@ -371,9 +371,11 @@ TEST_CASE( "lua_platform_dialogue_text_preserves_raw_bytes_context_and_native_rn
     };
     for( const std::string &text : texts ) {
         for( const std::string &item_id : std::vector<std::string> {
-                 "", "water", std::string( 300, 'i' ) + '\0' + "tail"
-             } ) {
-            for( const unsigned int seed : { 4854U, 4855U, 4856U } ) {
+        "", "water", std::string( 300, 'i' ) + '\0' + "tail"
+        } ) {
+            for( const unsigned int seed : {
+                     4854U, 4855U, 4856U
+                 } ) {
                 CAPTURE( text.size(), item_id.size(), seed );
                 std::string expected = text;
                 rng_set_engine_seed( seed );
@@ -450,10 +452,12 @@ TEST_CASE( "lua_platform_dialogue_text_preserves_raw_bytes_context_and_native_rn
     sparse_context["sparse"] = sparse;
     sol::table invalid_key_context = lua.create_table();
     invalid_key_context[1] = "native dialogue keys are strings";
-    for( const sol::table &invalid_context : { sparse_context, invalid_key_context } ) {
+    for( const sol::table &invalid_context : {
+             sparse_context, invalid_key_context
+         } ) {
         const auto before_invalid = rng_get_engine(); // NOLINT(cata-determinism)
         CHECK_FALSE( expand_for( "<ccb_text_raw_4851>", alpha_handle, beta_handle,
-                                sol::nil, invalid_context ).valid() );
+                                 sol::nil, invalid_context ).valid() );
         CHECK( rng_get_engine() == before_invalid );
     }
     talk_effect_t native_assignment;
@@ -475,7 +479,9 @@ TEST_CASE( "lua_platform_dialogue_text_preserves_raw_bytes_context_and_native_rn
     )", sol::script_pass_on_error );
     REQUIRE( assignment_loaded.valid() );
     const sol::protected_function assign = assignment_loaded.get<sol::protected_function>();
-    for( const unsigned int seed : { 4858U, 4859U, 4860U } ) {
+    for( const unsigned int seed : {
+             4858U, 4859U, 4860U
+         } ) {
         CAPTURE( seed );
         conversation.remove_value( "assigned" );
         data["assigned"] = sol::nil;
@@ -510,7 +516,8 @@ TEST_CASE( "lua_platform_text_missing_participants_match_native_avatar_fallback"
     avatar &player = get_avatar();
     const std::string key = "ccb_text_fallback_4861";
     const diag_value *previous = player.maybe_get_value( key );
-    const std::optional<diag_value> saved_label = previous ? std::make_optional( *previous ) : std::nullopt;
+    const std::optional<diag_value> saved_label = previous ? std::make_optional(
+                *previous ) : std::nullopt;
     player.set_value( key, "avatar fallback" );
     const on_out_of_scope restore_label( [&]() {
         if( saved_label ) {
@@ -542,13 +549,14 @@ TEST_CASE( "lua_platform_text_missing_participants_match_native_avatar_fallback"
     platform::set_active_runtimes( { runtime } );
     platform::runtime_world_ready( true );
     lua["ccb"] = ccb;
-    const auto handle_for = [&]( Character *actor ) -> sol::object {
-        if( actor == nullptr ) {
+    const auto handle_for = [&]( Character * actor ) -> sol::object {
+        if( actor == nullptr )
+        {
             return sol::make_object( lua, sol::nil );
         }
         return sol::make_object( lua, platform::game_handle::from_creature(
-                                    *actor, { actor == &local_beta ? "npc" : "avatar", actor->getID().get_value(), 0, 0, 0, {} },
-                                    platform::detail::runtime_handle_identity( runtime ), platform::runtime_world_generation() ) );
+        *actor, { actor == &local_beta ? "npc" : "avatar", actor->getID().get_value(), 0, 0, 0, {} },
+        platform::detail::runtime_handle_identity( runtime ), platform::runtime_world_generation() ) );
     };
     const std::string text = "<u_val:" + key + "> / <npc_val:" + key + "> / <context_val:number>";
     lua["text"] = text;
@@ -577,7 +585,7 @@ TEST_CASE( "lua_platform_text_missing_participants_match_native_avatar_fallback"
     }
     talk_effect_t native_assignment;
     native_assignment.parse_sub_effect( json_loader::from_string( source.str() ).get_object(),
-                                       "lua_text_missing_participants" );
+                                        "lua_text_missing_participants" );
     struct participants {
         Character *alpha;
         Character *beta;
@@ -590,7 +598,9 @@ TEST_CASE( "lua_platform_text_missing_participants_match_native_avatar_fallback"
         dialogue native( pair.alpha ? get_talker_for( *pair.alpha ) : nullptr,
                          pair.beta ? get_talker_for( *pair.beta ) : nullptr );
         native.set_value( "number", 41.0 );
-        for( const unsigned int seed : { 4864U, 4865U } ) {
+        for( const unsigned int seed : {
+                 4864U, 4865U
+             } ) {
             CAPTURE( pair.alpha == nullptr, pair.beta == nullptr, seed );
             native.remove_value( "output" );
             rng_set_engine_seed( seed );
@@ -653,8 +663,10 @@ TEST_CASE( "lua_platform_text_input_preparation_preserves_native_limits_and_prov
     CHECK( calls[1].get<std::string>() == "label" );
     CHECK( calls[2].get<std::string>() == "description" );
     CHECK( calls[3].get<std::string>() == "identifier" );
-    for( const int width : { std::numeric_limits<int>::min(), 0, 9, 241, 10000,
-                            std::numeric_limits<int>::max() } ) {
+    for( const int width : {
+             std::numeric_limits<int>::min(), 0, 9, 241, 10000,
+             std::numeric_limits<int>::max()
+         } ) {
         CAPTURE( width );
         options["width"] = width;
         auto wide = cata::lua_platform::prepare_game_text_input_popup(
@@ -668,7 +680,8 @@ TEST_CASE( "lua_platform_text_input_preparation_preserves_native_limits_and_prov
              "return {identifier=function()error('provider failed')end}"
          } ) {
         INFO( malformed );
-        const sol::protected_function_result result = lua.safe_script( malformed, sol::script_pass_on_error );
+        const sol::protected_function_result result = lua.safe_script( malformed,
+                sol::script_pass_on_error );
         REQUIRE( result.valid() );
         CHECK_THROWS( cata::lua_platform::prepare_game_text_input_popup(
                           sol::make_object( lua, "" ), result.get<sol::table>() ) );
@@ -676,7 +689,11 @@ TEST_CASE( "lua_platform_text_input_preparation_preserves_native_limits_and_prov
     sol::table services = lua.create_table();
     bool actions_requested = false;
     cata::lua_platform::install_game_interaction_api(
-        services, [&]() { actions_requested = true; }, []() { return false; } );
+    services, [&]() {
+        actions_requested = true;
+    }, []() {
+        return false;
+    } );
     lua["services"] = services;
     const sol::protected_function_result rejected = lua.safe_script( R"(
         local ok,err=pcall(services.interaction.input_text,function()
@@ -733,7 +750,7 @@ TEST_CASE( "lua_platform_interaction_menu_preserves_native_rows_and_text",
 
     uilist platform_menu;
     const std::vector<std::string> ids = cata::lua_platform::prepare_game_interaction_menu(
-                                           platform_menu, entries, options );
+            platform_menu, entries, options );
     CHECK( ids == expected_ids );
     REQUIRE( platform_menu.entries.size() == native_menu.entries.size() );
     CHECK( platform_menu.text == native_menu.text );
@@ -758,7 +775,9 @@ TEST_CASE( "lua_platform_interaction_menu_preserves_native_rows_and_text",
     empty_row["description"] = "";
     empty_descriptions[1] = empty_row;
     options["title"] = "";
-    for( const bool show : { false, true } ) {
+    for( const bool show : {
+             false, true
+         } ) {
         options["show_descriptions"] = show;
         uilist menu;
         cata::lua_platform::prepare_game_interaction_menu( menu, empty_descriptions, options );
@@ -793,7 +812,7 @@ TEST_CASE( "lua_platform_interaction_menu_rejects_invalid_shapes_before_query",
         const sol::table entries = result.get<sol::table>();
         uilist menu;
         CHECK_THROWS_AS( cata::lua_platform::prepare_game_interaction_menu(
-                            menu, entries, sol::nullopt ), std::invalid_argument );
+                             menu, entries, sol::nullopt ), std::invalid_argument );
     }
     sol::table entries = lua.create_table();
     sol::table row = lua.create_table();
@@ -811,12 +830,16 @@ TEST_CASE( "lua_platform_interaction_menu_rejects_invalid_shapes_before_query",
         const sol::table options = result.get<sol::table>();
         uilist menu;
         CHECK_THROWS_AS( cata::lua_platform::prepare_game_interaction_menu(
-                            menu, entries, options ), std::invalid_argument );
+                             menu, entries, options ), std::invalid_argument );
     }
     sol::table services = lua.create_table();
     bool actions_requested = false;
     cata::lua_platform::install_game_interaction_api(
-        services, [&actions_requested]() { actions_requested = true; }, []() { return false; } );
+    services, [&actions_requested]() {
+        actions_requested = true;
+    }, []() {
+        return false;
+    } );
     lua["services"] = services;
     const sol::protected_function_result outside_callback = lua.safe_script( R"(
         local ok, err = pcall(services.interaction.choose, {{id = 'x', label = 'x'}})

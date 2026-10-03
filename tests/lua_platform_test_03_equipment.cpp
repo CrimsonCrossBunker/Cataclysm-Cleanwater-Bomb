@@ -19,13 +19,13 @@ struct platform_equipment_fixture {
         actor.setID( character_id( actor_number ), true );
         actor_handle = cata::lua_platform::game_handle::from_creature(
                            actor,
-                           { "avatar", actor.getID().get_value(), 0, 0, 0, {} },
-                           runtime, active_world_generation );
+        { "avatar", actor.getID().get_value(), 0, 0, 0, {} },
+        runtime, active_world_generation );
 
         services = lua.create_table();
         cata::lua_platform::install_game_handle_api(
             lua, services,
-            [this]() {
+        [this]() {
             return active_runtime;
         },
         [this]() {
@@ -34,7 +34,7 @@ struct platform_equipment_fixture {
         []() {} );
         cata::lua_platform::install_item_api(
             services,
-            [this]() {
+        [this]() {
             return active_runtime;
         },
         [this]() {
@@ -76,8 +76,8 @@ struct platform_equipment_fixture {
         item &value, const std::string &scope = "character_inventory" ) const {
         return cata::lua_platform::game_handle::from_item(
                    value,
-                   { scope, value.uid().get_value(), 0, 0, 0, {} },
-                   runtime, active_world_generation );
+        { scope, value.uid().get_value(), 0, 0, 0, {} },
+        runtime, active_world_generation );
     }
 
     std::shared_ptr<const cata::lua_platform::game_handle_runtime_owner> runtime_owner;
@@ -291,9 +291,9 @@ TEST_CASE( "lua_platform_equipment_wield_inventory_to_wield",
         fixture.services["equipment"]["wield"];
 
     const sol::protected_function_result result = wield(
-            fixture.actor_handle, source_handle,
-            fixture.holder( fixture.actor_handle ),
-            fixture.holder( fixture.actor_handle ) );
+                fixture.actor_handle, source_handle,
+                fixture.holder( fixture.actor_handle ),
+                fixture.holder( fixture.actor_handle ) );
     REQUIRE( result.valid() );
     const sol::table envelope = result.get<sol::table>();
     REQUIRE( envelope["ok"].get<bool>() );
@@ -316,9 +316,9 @@ TEST_CASE( "lua_platform_equipment_wear_inventory_to_worn",
         fixture.services["equipment"]["wear"];
 
     const sol::protected_function_result result = wear(
-            fixture.actor_handle, source_handle,
-            fixture.holder( fixture.actor_handle ),
-            fixture.holder( fixture.actor_handle ) );
+                fixture.actor_handle, source_handle,
+                fixture.holder( fixture.actor_handle ),
+                fixture.holder( fixture.actor_handle ) );
     REQUIRE( result.valid() );
     const sol::table envelope = result.get<sol::table>();
     REQUIRE( envelope["ok"].get<bool>() );
@@ -346,8 +346,8 @@ TEST_CASE( "lua_platform_equipment_takeoff_to_explicit_holder",
         fixture.services["equipment"]["unequip"];
 
     const sol::protected_function_result result = unequip(
-            fixture.actor_handle, worn_handle,
-            fixture.holder( fixture.actor_handle ) );
+                fixture.actor_handle, worn_handle,
+                fixture.holder( fixture.actor_handle ) );
     REQUIRE( result.valid() );
     const sol::table envelope = result.get<sol::table>();
     REQUIRE( envelope["ok"].get<bool>() );
@@ -380,8 +380,8 @@ TEST_CASE( "lua_platform_equipment_unwield_to_explicit_holder",
         fixture.services["equipment"]["unequip"];
 
     const sol::protected_function_result result = unequip(
-            fixture.actor_handle, wielded_handle,
-            fixture.holder( fixture.actor_handle ) );
+                fixture.actor_handle, wielded_handle,
+                fixture.holder( fixture.actor_handle ) );
     REQUIRE( result.valid() );
     const sol::table envelope = result.get<sol::table>();
     REQUIRE( envelope["ok"].get<bool>() );
@@ -415,9 +415,9 @@ TEST_CASE( "lua_platform_equipment_atomic_swap",
         fixture.services["equipment"]["wield"];
 
     const sol::protected_function_result result = wield(
-            fixture.actor_handle, next_handle,
-            fixture.holder( fixture.actor_handle ),
-            fixture.holder( fixture.actor_handle ) );
+                fixture.actor_handle, next_handle,
+                fixture.holder( fixture.actor_handle ),
+                fixture.holder( fixture.actor_handle ) );
     REQUIRE( result.valid() );
     const sol::table envelope = result.get<sol::table>();
     REQUIRE( envelope["ok"].get<bool>() );
@@ -456,9 +456,9 @@ TEST_CASE( "lua_platform_equipment_conflict_destination_rollback",
         fixture.services["equipment"]["wear"];
 
     const sol::protected_function_result result = wear(
-            fixture.actor_handle, source_handle,
-            fixture.holder( fixture.actor_handle ),
-            fixture.holder( fixture.actor_handle ) );
+                fixture.actor_handle, source_handle,
+                fixture.holder( fixture.actor_handle ),
+                fixture.holder( fixture.actor_handle ) );
     REQUIRE( result.valid() );
     const sol::table envelope = result.get<sol::table>();
     REQUIRE_FALSE( envelope["ok"].get<bool>() );
@@ -482,9 +482,9 @@ TEST_CASE( "lua_platform_equipment_stale_actor_item",
     cata::lua_platform::retire_item_handle_identity( *source_item );
 
     const sol::protected_function_result stale_item_result = wield(
-            fixture.actor_handle, source_handle,
-            fixture.holder( fixture.actor_handle ),
-            fixture.holder( fixture.actor_handle ) );
+                fixture.actor_handle, source_handle,
+                fixture.holder( fixture.actor_handle ),
+                fixture.holder( fixture.actor_handle ) );
     REQUIRE( stale_item_result.valid() );
     CHECK_FALSE( stale_item_result.get<sol::table>()["ok"].get<bool>() );
     CHECK( stale_item_result.get<sol::table>()["error"].get<sol::table>()
@@ -497,9 +497,9 @@ TEST_CASE( "lua_platform_equipment_stale_actor_item",
             fixture.actor, { "character", fixture.actor.getID().get_value(), 0, 0, 0, {} },
             other_runtime, fixture.active_world_generation );
     const sol::protected_function_result stale_actor_result = wield(
-            stale_actor, source_handle,
-            fixture.holder( fixture.actor_handle ),
-            fixture.holder( fixture.actor_handle ) );
+                stale_actor, source_handle,
+                fixture.holder( fixture.actor_handle ),
+                fixture.holder( fixture.actor_handle ) );
     REQUIRE( stale_actor_result.valid() );
     CHECK_FALSE( stale_actor_result.get<sol::table>()["ok"].get<bool>() );
     CHECK( stale_actor_result.get<sol::table>()["error"].get<sol::table>()
@@ -520,15 +520,15 @@ TEST_CASE( "lua_platform_equipment_wrong_owner",
     const cata::lua_platform::game_handle foreign_handle =
         cata::lua_platform::game_handle::from_item(
             *foreign_item,
-            { "character_inventory", foreign_item->uid().get_value(), 0, 0, 0, {} },
-            fixture.runtime, fixture.active_world_generation );
+    { "character_inventory", foreign_item->uid().get_value(), 0, 0, 0, {} },
+    fixture.runtime, fixture.active_world_generation );
     const sol::protected_function wield =
         fixture.services["equipment"]["wield"];
 
     const sol::protected_function_result result = wield(
-            fixture.actor_handle, foreign_handle,
-            fixture.holder( fixture.actor_handle ),
-            fixture.holder( fixture.actor_handle ) );
+                fixture.actor_handle, foreign_handle,
+                fixture.holder( fixture.actor_handle ),
+                fixture.holder( fixture.actor_handle ) );
     REQUIRE( result.valid() );
     const sol::table envelope = result.get<sol::table>();
     REQUIRE_FALSE( envelope["ok"].get<bool>() );
@@ -557,16 +557,16 @@ TEST_CASE( "lua_platform_equipment_participant_death",
     const cata::lua_platform::game_handle source_handle =
         cata::lua_platform::game_handle::from_item(
             *source_item,
-            { "character_inventory", source_item->uid().get_value(), 0, 0, 0, {} },
-            fixture.runtime, fixture.active_world_generation );
+    { "character_inventory", source_item->uid().get_value(), 0, 0, 0, {} },
+    fixture.runtime, fixture.active_world_generation );
     const sol::protected_function wield =
         fixture.services["equipment"]["wield"];
     cata::lua_platform::retire_npc_handle_identity( dying );
 
     fixture.write_called = false;
     const sol::protected_function_result result = wield(
-            dying_handle, source_handle,
-            fixture.holder( dying_handle ), fixture.holder( dying_handle ) );
+                dying_handle, source_handle,
+                fixture.holder( dying_handle ), fixture.holder( dying_handle ) );
     REQUIRE( result.valid() );
     const sol::table envelope = result.get<sol::table>();
     REQUIRE_FALSE( envelope["ok"].get<bool>() );
@@ -599,7 +599,7 @@ TEST_CASE( "lua_platform_equipment_public_surface_has_no_legacy_helpers",
 
     cata::lua_platform::install_npc_api(
         fixture.services,
-        [fixture_ptr = &fixture]() {
+    [fixture_ptr = &fixture]() {
         return fixture_ptr->active_runtime;
     },
     [fixture_ptr = &fixture]() {
