@@ -1,5 +1,10 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <coordinates.h>
+#include <flexbuffer_json.h>
+#include <item_uid.h>
+#include <pimpl.h>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -13,6 +18,7 @@
 #include "character_id.h"
 #include "dialogue.h"
 #include "dialogue_helpers.h"
+#include "flexbuffer_json.h"
 #include "game.h"
 #include "inventory.h"
 #include "item.h"
@@ -26,9 +32,17 @@
 #include "map_helpers.h"
 #include "messages.h"
 #include "npc.h"
-#include "npctalk.h"
 #include "point.h"
 #include "type_id.h"
+
+static const itype_id itype_efile_map( "efile_map" );
+static const itype_id itype_fidget_spinner( "fidget_spinner" );
+static const itype_id itype_rock( "rock" );
+
+namespace cata::lua_platform
+{
+class runtime;
+}  // namespace cata::lua_platform
 
 TEST_CASE( "lua_platform_item_use_context_message_matches_native_u_message_severity",
            "[lua][platform][items][messages][semantic]" )
@@ -38,7 +52,7 @@ TEST_CASE( "lua_platform_item_use_context_message_matches_native_u_message_sever
 
     avatar user;
     user.normalize();
-    item &efile_map = user.inv->add_item( item( itype_id( "efile_map" ) ), false, false, false );
+    item &efile_map = user.inv->add_item( item( itype_efile_map ), false, false, false );
     item_location item_talker( user, &efile_map );
     dialogue native_context( get_talker_for( &user ), get_talker_for( item_talker ) );
 
@@ -115,7 +129,7 @@ TEST_CASE( "native_fidget_spinner_inline_eoc_returns_zero_for_avatar_and_null_al
     avatar user;
     user.normalize();
     item &avatar_spinner = user.inv->add_item(
-                               item( itype_id( "fidget_spinner" ) ), false, false, false );
+                               item( itype_fidget_spinner ), false, false, false );
     REQUIRE( avatar_spinner.type->has_use() );
 
     map &here = get_map();
@@ -127,7 +141,7 @@ TEST_CASE( "native_fidget_spinner_inline_eoc_returns_zero_for_avatar_and_null_al
     CHECK( Messages::recent_messages_with_formatting( 1 ).size() == 1 );
 
     Messages::clear_messages();
-    item local_spinner( itype_id( "fidget_spinner" ) );
+    item local_spinner( itype_fidget_spinner );
     const std::optional<int> null_alpha_result = local_spinner.type->invoke(
                 nullptr, local_spinner, &here, use_position );
     REQUIRE( null_alpha_result.has_value() );
@@ -150,16 +164,17 @@ TEST_CASE( "lua_platform_item_use_context_keeps_the_native_npc_and_item_beta",
         retire_npc_handle_identity( user );
     } );
     item &used_item = user.inv->add_item(
-                          item( itype_id( "efile_map" ) ), false, false, false );
+                          item( itype_efile_map ), false, false, false );
     avatar avatar_user;
     avatar_user.normalize();
     item &avatar_item = avatar_user.inv->add_item(
-                            item( itype_id( "efile_map" ) ), false, false, false );
+                            item( itype_efile_map ), false, false, false );
     map &here = get_map();
     const tripoint_bub_ms map_use_position( 60, 60, 0 );
     const tripoint_abs_ms map_item_position = here.get_abs( map_use_position );
     item &map_used_item = here.add_item_or_charges(
-                              map_use_position, item( itype_id( "efile_map" ) ), false );
+                              map_use_position, item( itype_rock ), false );
+    REQUIRE_FALSE( map_used_item.is_null() );
 
     constexpr std::string_view mod_id = "item_use_npc_actor_bridge";
     clear_active_runtimes();
@@ -177,6 +192,7 @@ TEST_CASE( "lua_platform_item_use_context_keeps_the_native_npc_and_item_beta",
     lua["ccb"] = ccb;
     lua["expected_character_id"] = user.getID().get_value();
     lua["expected_item_uid"] = used_item.uid().get_value();
+    lua["expected_item_id"] = "efile_map";
     lua["expected_character_subtype"] = "npc";
     lua["callback_count"] = 0;
     lua["null_character_no_return"] = false;
@@ -190,18 +206,18 @@ TEST_CASE( "lua_platform_item_use_context_keeps_the_native_npc_and_item_beta",
                 assert(character == nil)
                 assert(context.player_name == nil)
                 assert(context.item.kind == "item")
-                assert(context.item.locator.scope == "map_item")
-                assert(context.item.locator.stable_id == expected_item_uid)
-                assert(context.item.locator.position.x == expected_item_x)
-                assert(context.item.locator.position.y == expected_item_y)
-                assert(context.item.locator.position.z == expected_item_z)
+                assert(context.item:locator().scope == "map_item")
+                assert(context.item:locator().stable_id == expected_item_uid)
+                assert(context.item:locator().position.x == expected_item_x)
+                assert(context.item:locator().position.y == expected_item_y)
+                assert(context.item:locator().position.z == expected_item_z)
                 assert(context.position.x == expected_use_x)
                 assert(context.position.y == expected_use_y)
                 assert(context.position.z == expected_use_z)
                 local snapshot = ccb.services.items.snapshot(context.item, 0)
                 assert(snapshot.ok)
                 assert(snapshot.value.uid == expected_item_uid)
-                assert(snapshot.value.id.value == "efile_map")
+                assert(snapshot.value.id.value == expected_item_id)
                 context:message("No Character means no message.", "good")
                 local ignored_severity = pcall(context.message, context,
                                                "No alpha means native u_message returns early.",
@@ -221,7 +237,7 @@ TEST_CASE( "lua_platform_item_use_context_keeps_the_native_npc_and_item_beta",
             end
             assert(character.kind == "creature")
             assert(character.subtype == expected_character_subtype)
-            assert(character.locator.stable_id == expected_character_id)
+            assert(character:locator().stable_id == expected_character_id)
             assert(character:is_valid())
             assert(ccb.services.characters.snapshot(character).ok)
             if character.subtype == "npc" then
@@ -231,7 +247,7 @@ TEST_CASE( "lua_platform_item_use_context_keeps_the_native_npc_and_item_beta",
             assert(snapshot.ok)
             assert(snapshot.value.uid == expected_item_uid)
             assert(snapshot.value.id.kind == "item")
-            assert(snapshot.value.id.value == "efile_map")
+            assert(snapshot.value.id.value == expected_item_id)
             saved_context = context
             if fail_callback then
                 error("expected item-use callback failure")
@@ -249,6 +265,11 @@ TEST_CASE( "lua_platform_item_use_context_keeps_the_native_npc_and_item_beta",
     const std::optional<int> result = invoke_use_handler(
                                           mod_id, "npc_item_actor_bridge", &user,
                                           used_item, nullptr, tripoint_bub_ms::zero );
+    if( !result ) {
+        for( const auto &message : Messages::recent_messages_with_formatting( 10 ) ) {
+            UNSCOPED_INFO( message.second );
+        }
+    }
     REQUIRE( result.has_value() );
     CHECK( *result == 0 );
     CHECK( lua["callback_count"].get<int>() == 1 );
@@ -260,10 +281,13 @@ TEST_CASE( "lua_platform_item_use_context_keeps_the_native_npc_and_item_beta",
     REQUIRE( stale_after_success.valid() );
 
     lua["fail_callback"] = true;
+    REQUIRE_FALSE( debug_has_error_been_observed() );
     const std::optional<int> failed = invoke_use_handler(
                                           mod_id, "npc_item_actor_bridge", &user,
                                           used_item, nullptr, tripoint_bub_ms::zero );
     CHECK_FALSE( failed.has_value() );
+    CHECK( debug_has_error_been_observed() );
+    debug_reset_error_observed();
     CHECK( lua["callback_count"].get<int>() == 2 );
     const sol::protected_function_result stale_after_failure = lua.safe_script( R"(
         local character_ok = pcall(function() return saved_context.character end)
@@ -285,6 +309,7 @@ TEST_CASE( "lua_platform_item_use_context_keeps_the_native_npc_and_item_beta",
 
     lua["expected_character_id"] = sol::lua_nil;
     lua["expected_item_uid"] = map_used_item.uid().get_value();
+    lua["expected_item_id"] = "rock";
     lua["expected_item_x"] = map_item_position.x();
     lua["expected_item_y"] = map_item_position.y();
     lua["expected_item_z"] = map_item_position.z();
@@ -296,6 +321,12 @@ TEST_CASE( "lua_platform_item_use_context_keeps_the_native_npc_and_item_beta",
     const std::optional<int> null_character_result = invoke_use_handler(
                 mod_id, "npc_item_actor_bridge", nullptr,
                 map_used_item, &here, map_use_position );
+    if( !null_character_result ) {
+        for( const std::pair<std::string, std::string> &message :
+             Messages::recent_messages_with_formatting( 10 ) ) {
+            UNSCOPED_INFO( message.second );
+        }
+    }
     REQUIRE( null_character_result.has_value() );
     CHECK( *null_character_result == 0 );
     CHECK( lua["callback_count"].get<int>() == 4 );
@@ -328,24 +359,33 @@ TEST_CASE( "lua_platform_item_use_context_keeps_the_native_npc_and_item_beta",
     CHECK( lua["callback_count"].get<int>() == 6 );
 
     lua["fail_callback"] = true;
+    REQUIRE_FALSE( debug_has_error_been_observed() );
     const std::optional<int> null_character_failure = invoke_use_handler(
                 mod_id, "npc_item_actor_bridge", nullptr,
                 map_used_item, &here, map_use_position );
     CHECK_FALSE( null_character_failure.has_value() );
+    CHECK( debug_has_error_been_observed() );
+    debug_reset_error_observed();
     CHECK( lua["callback_count"].get<int>() == 7 );
 
+    REQUIRE_FALSE( debug_has_error_been_observed() );
     const std::optional<int> null_character_without_map = invoke_use_handler(
                 mod_id, "npc_item_actor_bridge", nullptr,
                 map_used_item, nullptr, map_use_position );
     CHECK_FALSE( null_character_without_map.has_value() );
+    CHECK( debug_has_error_been_observed() );
+    debug_reset_error_observed();
     CHECK( lua["callback_count"].get<int>() == 7 );
 
     // Ranged-hit use can pass a local item while retaining a map-cursor hint.
-    item local_item( itype_id( "efile_map" ) );
+    item local_item( itype_rock );
+    lua["fail_callback"] = false;
+    lua["null_character_nil"] = false;
+    lua["null_character_no_return"] = true;
     lua["expected_item_uid"] = local_item.uid().get_value();
-    lua["expected_item_x"] = map_use_position.x();
-    lua["expected_item_y"] = map_use_position.y();
-    lua["expected_item_z"] = map_use_position.z();
+    lua["expected_item_x"] = map_item_position.x();
+    lua["expected_item_y"] = map_item_position.y();
+    lua["expected_item_z"] = map_item_position.z();
     Messages::clear_messages();
     const std::optional<int> local_item_result = invoke_use_handler(
                 mod_id, "npc_item_actor_bridge", nullptr,

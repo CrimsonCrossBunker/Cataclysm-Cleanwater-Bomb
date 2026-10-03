@@ -1,15 +1,19 @@
+#include <map_iterator.h>
+#include <map_scale_constants.h>
+#include <map_selector.h>
+#include <safe_reference.h>
+
 #include "lua_platform_runtime.h"
 #include "lua_platform_runtime_internal.h"
 
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-#include "lua_platform_values.h"
-
 #include <character_id.h>
 #include <enums.h>
+#include <fmt/args.h>
+#include <fmt/printf.h>
 #include <item_uid.h>
 #include <math_parser_diag_value.h>
 #include <point.h>
-
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -17,20 +21,31 @@
 #include <cstdint>
 #include <filesystem>
 #include <functional>
-#include <fmt/args.h>
-#include <fmt/printf.h>
+
+#include "lua_platform_values.h"
+
 extern "C" {
 #include <lua.h>
 }
+#include <pimpl.h>
+#include <cstddef>
+#include <exception>
+#include <initializer_list>
+#include <iterator>
 #include <limits>
 #include <map>
+#include <memory>
+#include <optional>
 #include <random>
 #include <set>
 #include <sstream>
 #include <stdexcept>
+#include <string>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
 #include "achievement.h"
 #include "avatar.h"
@@ -84,6 +99,7 @@ extern "C" {
 #include "lua_platform_registry.h"
 #include "lua_platform_skills.h"
 #include "lua_platform_snapshots.h"
+#include "lua_platform_sol.h"
 #include "lua_platform_statistics.h"
 #include "lua_platform_time.h"
 #include "lua_platform_trade.h"
@@ -117,32 +133,17 @@ extern "C" {
 #include "translation.h"
 #include "type_id.h"
 #include "units.h"
-#include "worldfactory.h"
 #include "weighted_list.h"
 // Supplies enum_traits<cardinal_direction> for string_to_enum_optional.
 #include "widget.h" // IWYU pragma: keep
+#include "worldfactory.h"
 #include "wound.h"
-#include <pimpl.h>
-#include <cstddef>
-#include <exception>
-#include <initializer_list>
-#include <iterator>
-#include <memory>
-#include <optional>
-#include <string>
-#include <string_view>
-#include <vector>
-#include "lua_platform_sol.h"
-
-class recipe;
-struct bionic;
 
 static const efftype_id effect_sleep( "sleep" );
 
 namespace cata::lua_platform
 {
 
-struct script_null_value;
 
 using detail::callback_scope;
 using detail::dispatch_lifecycle;
@@ -391,7 +392,8 @@ struct use_context_data {
         const native_handle_result<item> resolved = item_reference.resolve_item(
                     handle_runtime, detail::runtime_world_generation_storage() );
         if( !resolved ) {
-            throw std::runtime_error( "stale item-use item" );
+            throw std::runtime_error( "stale item-use item: " +
+                                      ( resolved.error ? resolved.error->code : "unknown" ) );
         }
         return *resolved.value;
     }
