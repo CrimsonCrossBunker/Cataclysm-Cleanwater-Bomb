@@ -414,6 +414,9 @@ class JsonArray : JsonWithPath
 
         std::string get_string( size_t idx ) const;
         int get_int( size_t idx ) const;
+        // Re-read original numeric tokens when integer overflow must fail
+        // instead of inheriting the FlexBuffer parser's signed conversion.
+        std::vector<int> get_ints_checked() const;
         double get_float( size_t idx ) const;
 
         JsonArray get_array( size_t idx ) const;

@@ -3,7 +3,10 @@
 #include <atomic>
 #include <cstring>
 #include <istream>
+#include <memory>
 #include <optional>
+#include <stdexcept>
+#include <vector>
 
 #include "cata_unreachable.h"
 #include "filesystem.h"
@@ -289,6 +292,24 @@ void JsonObject::report_unvisited() const
         visited_fields_bitset_.set_all();
     }
 #endif
+}
+
+std::vector<int> JsonArray::get_ints_checked() const
+{
+    std::unique_ptr<std::istream> original_json = root_->get_source_stream();
+    if( !original_json ) {
+        throw std::runtime_error( "Original JSON is unavailable for a checked integer read" );
+    }
+    TextJsonIn jsin( *original_json, get_root_source_path() );
+    advance_jsin( &jsin, flexbuffer_root_from_storage( root_->get_storage() ), path_ );
+    const TextJsonArray original_array = jsin.get_array();
+    std::vector<int> result;
+    result.reserve( size() );
+    for( size_t index = 0; index < size(); ++index ) {
+        static_cast<void>( ( *this )[index] );
+        result.push_back( original_array.get_int( index ) );
+    }
+    return result;
 }
 
 void JsonObject::error_no_member( std::string_view member ) const
