@@ -1,8 +1,8 @@
 #if CATA_ENABLE_LUA_PLATFORM
 
 #include "lua_platform_items.h"
-#include "lua_platform_values.h"
 
+#include <cached_options.h>
 #include <character_attire.h>
 #include <character_id.h>
 #include <enums.h>
@@ -10,6 +10,10 @@
 #include <game.h> // IWYU pragma: keep
 #include <inventory_ui.h>
 #include <item_uid.h>
+#include <translations.h>
+#include <vpart_position.h>
+
+#include "lua_platform_values.h"
 
 extern "C" {
 #include <lua.h>
@@ -77,10 +81,13 @@ extern "C" {
 #include "output.h"
 #include "requirements.h"
 #include "string_formatter.h"
+#include "talker.h"
 #include "talker_character.h"
 #include "type_id.h"
 #include "units.h"
 #include "vehicle.h"
+
+
 
 struct bionic;
 
@@ -4345,20 +4352,22 @@ sol::table consume_inventory_by_type(
         count = 0;
     }
 
-    talker_character target( character );
+    // The mutable Character mixin alone has no const inventory queries.
+    // Native dialogue constructs the complete avatar/NPC talker.
+    std::unique_ptr<talker> target = get_talker_for( *character );
     bool matched = false;
     bool changed = false;
     if( count == 0 && charges > 0 &&
-        target.has_charges( native_type, charges, true ) ) {
-        target.use_charges( native_type, charges, true );
+        target->has_charges( native_type, charges, true ) ) {
+        target->use_charges( native_type, charges, true );
         matched = true;
         changed = true;
-    } else if( target.has_amount( native_type, count ) ) {
-        if( charges > 0 && target.has_charges( native_type, charges, true ) ) {
-            target.use_charges( native_type, charges, true );
+    } else if( target->has_amount( native_type, count ) ) {
+        if( charges > 0 && target->has_charges( native_type, charges, true ) ) {
+            target->use_charges( native_type, charges, true );
             changed = true;
         }
-        const std::list<item> consumed = target.use_amount( native_type, count );
+        const std::list<item> consumed = target->use_amount( native_type, count );
         matched = true;
         changed = changed || !consumed.empty();
     }
@@ -4370,7 +4379,7 @@ sol::table consume_inventory_by_type(
     value["matched"] = matched;
     if( !matched ) {
         const item missing_item( native_type );
-        popup( _( "%1$s doesn't have a %2$s!" ), target.disp_name(),
+        popup( _( "%1$s doesn't have a %2$s!" ), target->disp_name(),
                missing_item.tname() );
     } else if( changed ) {
         character->invalidate_crafting_inventory();

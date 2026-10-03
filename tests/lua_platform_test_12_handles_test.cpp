@@ -1,13 +1,14 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include <avatar.h>
+#include <character.h>
 #include <character_id.h>
 #include <condition.h>
 #include <coordinates.h>
 #include <debug.h>
 #include <dialogue.h>
 #include <dialogue_helpers.h>
-#include <flag.h>
-#include <game_constants.h>
+#include <enums.h>
+#include <flexbuffer_json.h>
 #include <inventory.h>
 #include <item.h>
 #include <item_location.h>
@@ -20,40 +21,49 @@
 #include <lua_platform_vehicles.h>
 #include <map.h>
 #include <map_helpers.h>
+#include <map_selector.h>
 #include <math_parser_diag_value.h>
 #include <monster.h>
 #include <npc.h>
 #include <pimpl.h>
-#include "player_helpers.h"
 #include <pocket_type.h>
+#include <point.h>
 #include <recipe.h>
 #include <ret_val.h>
+#include <talker.h>
 #include <type_id.h>
 #include <units.h>
 #include <veh_type.h>
-#include <vpart_position.h>
 #include <vehicle.h>
+#include <visitable.h>
+#include <vpart_position.h>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <initializer_list>
 #include <limits>
+#include <list>
 #include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
-#include "cata_catch.h"
-#include "lua_platform_sol.h"
-class Character;
 
+#include "cata_catch.h"
+#include "flexbuffer_json.h"
+#include "lua_platform_sol.h"
+#include "player_helpers.h"
+
+static const faction_id faction_tacoma_commune( "tacoma_commune" );
+static const flag_id json_flag_FIRE( "FIRE" );
 static const itype_id itype_2x4( "2x4" );
 static const itype_id itype_apple( "apple" );
-static const itype_id itype_heavy_battery_cell( "heavy_battery_cell" );
 static const itype_id itype_bandages( "bandages" );
 static const itype_id itype_battery( "battery" );
 static const itype_id itype_debug_backpack( "debug_backpack" );
+static const itype_id itype_heavy_battery_cell( "heavy_battery_cell" );
+static const itype_id itype_medium_battery_cell( "medium_battery_cell" );
 static const itype_id itype_rock( "rock" );
 static const itype_id itype_soldering_iron_portable( "soldering_iron_portable" );
 static const itype_id itype_test_charged_fast_cutter( "test_charged_fast_cutter" );
@@ -833,8 +843,10 @@ TEST_CASE( "lua_platform_inventory_consume_by_type_matches_native_talker_search"
     avatar character;
     character.normalize();
     character.setID( character_id( 6403 ), true );
-    item &apple = character.inv->add_item(
-                      item( itype_apple ), false, false, false );
+    item initial_apple( itype_apple );
+    character.set_wielded_item( initial_apple );
+    REQUIRE( character.has_amount( itype_apple, 1 ) );
+    item &apple = *character.get_wielded_item();
 
     const cata::lua_platform::game_handle character_handle =
         cata::lua_platform::game_handle::from_creature(
@@ -912,8 +924,8 @@ TEST_CASE( "lua_platform_inventory_consume_by_type_matches_native_talker_search"
     REQUIRE( item::count_by_charges( itype_battery ) );
     item battery( itype_battery );
     battery.charges = 5;
-    item &stored_battery = character.inv->add_item(
-                               std::move( battery ), false, false, false );
+    character.set_wielded_item( battery );
+    item &stored_battery = *character.get_wielded_item();
     const cata::lua_platform::game_handle battery_handle =
         cata::lua_platform::game_handle::from_item(
             stored_battery, { "character_inventory", stored_battery.uid().get_value(), 0, 0, 0, {} },
@@ -956,9 +968,12 @@ TEST_CASE( "lua_platform_inventory_consume_by_type_matches_native_talker_search"
 
     // talker_character's in_tools=true path includes ammo stored in tools.
     item tool( itype_soldering_iron_portable );
-    tool.ammo_set( itype_battery, 5 );
-    item &stored_tool = character.inv->add_item(
-                            std::move( tool ), false, false, false );
+    item cell( itype_medium_battery_cell );
+    cell.ammo_set( itype_battery, 5 );
+    REQUIRE( tool.put_in( cell, pocket_type::MAGAZINE_WELL ).success() );
+    REQUIRE( tool.ammo_remaining() == 5 );
+    character.set_wielded_item( tool );
+    item &stored_tool = *character.get_wielded_item();
     const std::uint64_t epoch_before_tool_charges =
         cata::lua_platform::item_holder_mutation_generation();
     const sol::protected_function_result tool_result = consume(
@@ -1550,7 +1565,7 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
     npc beta;
     beta.normalize();
     beta.setID( character_id( 6495 ), true );
-    beta.set_fac( faction_id( "tacoma_commune" ) );
+    beta.set_fac( faction_tacoma_commune );
     cata::lua_platform::register_npc_handle_identity( beta );
     struct cleanup_npc_handle_identity {
         npc &value;
@@ -1855,7 +1870,7 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
         backpack.set_owner( owner_faction );
         item bandages( itype_bandages );
         bandages.set_owner( owner_faction );
-        REQUIRE( backpack.put_in( std::move( bandages ), pocket_type::CONTAINER ).success() );
+        REQUIRE( backpack.put_in( bandages, pocket_type::CONTAINER ).success() );
         target.set_wielded_item( backpack );
         return &*target.get_wielded_item();
     };
@@ -1923,12 +1938,15 @@ TEST_CASE( "lua_platform_item_conditions_match_native_alpha_beta_and_item_talker
     item &alpha_rock = alpha.inv->add_item(
                            item( itype_rock ), false, false, false );
     REQUIRE( alpha.has_item( alpha_rock ) );
-    alpha_rock.set_flag( flag_id( "FIRE" ) );
+    alpha_rock.set_flag( json_flag_FIRE );
     item &alpha_water = alpha.inv->add_item(
                             item( itype_water_clean ), false, false, false );
     alpha_water.charges = 3;
     item alpha_tool( itype_soldering_iron_portable );
-    alpha_tool.ammo_set( itype_battery, 5 );
+    item alpha_cell( itype_medium_battery_cell );
+    alpha_cell.ammo_set( itype_battery, 5 );
+    REQUIRE( alpha_tool.put_in( alpha_cell, pocket_type::MAGAZINE_WELL ).success() );
+    REQUIRE( alpha_tool.ammo_remaining() == 5 );
     item &stored_alpha_tool = alpha.inv->add_item(
                                   std::move( alpha_tool ), false, false, false );
     REQUIRE( alpha.has_item( stored_alpha_tool ) );
