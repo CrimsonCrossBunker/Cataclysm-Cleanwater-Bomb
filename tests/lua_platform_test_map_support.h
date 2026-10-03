@@ -6,7 +6,7 @@ namespace cata::lua_platform::test
 {
 struct platform_overmap_travel_fixture {
     explicit platform_overmap_travel_fixture(
-        const std::size_t runtime_number, const std::size_t world_number );
+        std::size_t runtime_number, std::size_t world_number );
 
     ~platform_overmap_travel_fixture();
 
@@ -50,8 +50,8 @@ struct platform_overmap_travel_fixture {
 };
 
 struct platform_map_api_test_fixture {
-    explicit platform_map_api_test_fixture( const std::size_t runtime_number,
-                                            const std::size_t world_number );
+    explicit platform_map_api_test_fixture( std::size_t runtime_number,
+                                            std::size_t world_number );
 
     ~platform_map_api_test_fixture();
 
@@ -101,7 +101,7 @@ struct platform_map_api_test_fixture {
 
 struct platform_monster_relocation_fixture {
     explicit platform_monster_relocation_fixture(
-        const std::size_t runtime_number, const std::size_t world_number );
+        std::size_t runtime_number, std::size_t world_number );
 
     ~platform_monster_relocation_fixture();
 
@@ -153,7 +153,7 @@ struct platform_monster_relocation_fixture {
 
 struct platform_avatar_relocation_fixture {
     explicit platform_avatar_relocation_fixture(
-        const std::size_t runtime_number, const std::size_t world_number );
+        std::size_t runtime_number, std::size_t world_number );
 
     ~platform_avatar_relocation_fixture();
 
@@ -204,7 +204,7 @@ struct platform_avatar_relocation_fixture {
 
 struct platform_npc_relocation_fixture {
     explicit platform_npc_relocation_fixture(
-        const std::size_t runtime_number, const std::size_t world_number );
+        std::size_t runtime_number, std::size_t world_number );
 
     ~platform_npc_relocation_fixture();
 
@@ -254,7 +254,7 @@ struct platform_npc_relocation_fixture {
 
 struct platform_vehicle_relocation_fixture {
     explicit platform_vehicle_relocation_fixture(
-        const std::size_t runtime_number, const std::size_t world_number );
+        std::size_t runtime_number, std::size_t world_number );
 
     ~platform_vehicle_relocation_fixture();
 

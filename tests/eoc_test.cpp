@@ -62,49 +62,83 @@ static const activity_id ACT_ADD_VARIABLE_DURING( "ACT_ADD_VARIABLE_DURING" );
 static const activity_id ACT_GENERIC_EOC( "ACT_GENERIC_EOC" );
 static const damage_type_id damage_bash( "bash" );
 static const damage_type_id damage_bullet( "bullet" );
-
 static const effect_on_condition_id
+effect_on_condition_EOC_TEST_NPC_TRANSFORM_RADIUS_ACTOR( "EOC_TEST_NPC_TRANSFORM_RADIUS_ACTOR" );
 static const effect_on_condition_id
+effect_on_condition_EOC_TEST_PURIFIABILITY_FALSE( "EOC_TEST_PURIFIABILITY_FALSE" );
 static const effect_on_condition_id
+effect_on_condition_EOC_TEST_PURIFIABILITY_TRUE( "EOC_TEST_PURIFIABILITY_TRUE" );
+static const effect_on_condition_id
+effect_on_condition_EOC_TEST_TRANSFORM_LINE( "EOC_TEST_TRANSFORM_LINE" );
+static const effect_on_condition_id
+effect_on_condition_EOC_TEST_TRANSFORM_RADIUS( "EOC_TEST_TRANSFORM_RADIUS" );
+static const effect_on_condition_id
+effect_on_condition_EOC_TEST_U_TRANSFORM_RADIUS_ACTOR( "EOC_TEST_U_TRANSFORM_RADIUS_ACTOR" );
+static const effect_on_condition_id
+effect_on_condition_EOC_activate_mutation_to_start_test( "EOC_activate_mutation_to_start_test" );
 static const effect_on_condition_id effect_on_condition_EOC_alive_test( "EOC_alive_test" );
 static const effect_on_condition_id
+effect_on_condition_EOC_armor_math_test( "EOC_armor_math_test" );
 static const effect_on_condition_id effect_on_condition_EOC_attack_test( "EOC_attack_test" );
 static const effect_on_condition_id
+effect_on_condition_EOC_combat_mutator_test( "EOC_combat_mutator_test" );
 static const effect_on_condition_id
+effect_on_condition_EOC_compare_string_match_all_test( "EOC_compare_string_match_all_test" );
 static const effect_on_condition_id
+effect_on_condition_EOC_compare_string_test( "EOC_compare_string_test" );
 static const effect_on_condition_id
+effect_on_condition_EOC_increment_var_var( "EOC_increment_var_var" );
 static const effect_on_condition_id
+effect_on_condition_EOC_item_activate_test( "EOC_item_activate_test" );
 static const effect_on_condition_id effect_on_condition_EOC_item_flag_test( "EOC_item_flag_test" );
 static const effect_on_condition_id effect_on_condition_EOC_item_math_test( "EOC_item_math_test" );
 static const effect_on_condition_id
+effect_on_condition_EOC_item_teleport_test( "EOC_item_teleport_test" );
 static const effect_on_condition_id effect_on_condition_EOC_jmath_test( "EOC_jmath_test" );
 static const effect_on_condition_id effect_on_condition_EOC_map_test( "EOC_map_test" );
 static const effect_on_condition_id
+effect_on_condition_EOC_martial_art_test_1( "EOC_martial_art_test_1" );
 static const effect_on_condition_id
+effect_on_condition_EOC_martial_art_test_2( "EOC_martial_art_test_2" );
 static const effect_on_condition_id
+effect_on_condition_EOC_math_addiction_check( "EOC_math_addiction_check" );
 static const effect_on_condition_id effect_on_condition_EOC_math_armor( "EOC_math_armor" );
 static const effect_on_condition_id
+effect_on_condition_EOC_math_diag_assign( "EOC_math_diag_assign" );
 static const effect_on_condition_id
+effect_on_condition_EOC_math_diag_w_vars( "EOC_math_diag_w_vars" );
 static const effect_on_condition_id effect_on_condition_EOC_math_duration( "EOC_math_duration" );
 static const effect_on_condition_id effect_on_condition_EOC_math_field( "EOC_math_field" );
 static const effect_on_condition_id
+effect_on_condition_EOC_math_item_count( "EOC_math_item_count" );
 static const effect_on_condition_id
+effect_on_condition_EOC_math_proficiency( "EOC_math_proficiency" );
 static const effect_on_condition_id effect_on_condition_EOC_math_spell( "EOC_math_spell" );
 static const effect_on_condition_id effect_on_condition_EOC_math_spell_xp( "EOC_math_spell_xp" );
 static const effect_on_condition_id
+effect_on_condition_EOC_math_switch_math( "EOC_math_switch_math" );
 static const effect_on_condition_id
+effect_on_condition_EOC_math_test_context( "EOC_math_test_context" );
 static const effect_on_condition_id
+effect_on_condition_EOC_math_test_equals_assign( "EOC_math_test_equals_assign" );
 static const effect_on_condition_id
+effect_on_condition_EOC_math_test_greater_increment( "EOC_math_test_greater_increment" );
 static const effect_on_condition_id
+effect_on_condition_EOC_math_test_inline_condition( "EOC_math_test_inline_condition" );
 static const effect_on_condition_id
+effect_on_condition_EOC_math_weighted_list( "EOC_math_weighted_list" );
 static const effect_on_condition_id
+effect_on_condition_EOC_meta_test_message( "EOC_meta_test_message" );
 static const effect_on_condition_id
+effect_on_condition_EOC_meta_test_talker_type( "EOC_meta_test_talker_type" );
 static const effect_on_condition_id
+effect_on_condition_EOC_mon_nearby_test( "EOC_mon_nearby_test" );
 static const effect_on_condition_id effect_on_condition_EOC_mutator_test( "EOC_mutator_test" );
 static const effect_on_condition_id effect_on_condition_EOC_options_tests( "EOC_options_tests" );
 static const effect_on_condition_id effect_on_condition_EOC_recipe_test_1( "EOC_recipe_test_1" );
 static const effect_on_condition_id effect_on_condition_EOC_recipe_test_2( "EOC_recipe_test_2" );
 static const effect_on_condition_id
+effect_on_condition_EOC_run_inv_prepare( "EOC_run_inv_prepare" );
 static const effect_on_condition_id effect_on_condition_EOC_run_inv_test1( "EOC_run_inv_test1" );
 static const effect_on_condition_id effect_on_condition_EOC_run_inv_test2( "EOC_run_inv_test2" );
 static const effect_on_condition_id effect_on_condition_EOC_run_inv_test3( "EOC_run_inv_test3" );
@@ -113,15 +147,22 @@ static const effect_on_condition_id effect_on_condition_EOC_run_inv_test5( "EOC_
 static const effect_on_condition_id effect_on_condition_EOC_run_until_test( "EOC_run_until_test" );
 static const effect_on_condition_id effect_on_condition_EOC_run_with_test( "EOC_run_with_test" );
 static const effect_on_condition_id
+effect_on_condition_EOC_run_with_test_expects_fail( "EOC_run_with_test_expects_fail" );
 static const effect_on_condition_id
+effect_on_condition_EOC_run_with_test_expects_pass( "EOC_run_with_test_expects_pass" );
 static const effect_on_condition_id
+effect_on_condition_EOC_run_with_test_queued( "EOC_run_with_test_queued" );
 static const effect_on_condition_id
+effect_on_condition_EOC_stored_condition_test( "EOC_stored_condition_test" );
 static const effect_on_condition_id effect_on_condition_EOC_string_test( "EOC_string_test" );
 static const effect_on_condition_id
+effect_on_condition_EOC_string_test_nest( "EOC_string_test_nest" );
 static const effect_on_condition_id effect_on_condition_EOC_string_var_var( "EOC_string_var_var" );
 static const effect_on_condition_id effect_on_condition_EOC_teleport_test( "EOC_teleport_test" );
 static const effect_on_condition_id
+effect_on_condition_EOC_test_run_unique_npc( "EOC_test_run_unique_npc" );
 static const effect_on_condition_id
+effect_on_condition_EOC_test_weapon_damage( "EOC_test_weapon_damage" );
 static const effect_on_condition_id effect_on_condition_EOC_try_kill( "EOC_try_kill" );
 static const effect_on_condition_id effect_on_condition_run_eocs_1( "run_eocs_1" );
 static const effect_on_condition_id effect_on_condition_run_eocs_2( "run_eocs_2" );
@@ -129,14 +170,14 @@ static const effect_on_condition_id effect_on_condition_run_eocs_3( "run_eocs_3"
 static const effect_on_condition_id effect_on_condition_run_eocs_5( "run_eocs_5" );
 static const effect_on_condition_id effect_on_condition_run_eocs_7( "run_eocs_7" );
 static const effect_on_condition_id
+effect_on_condition_run_eocs_talker_mixes( "run_eocs_talker_mixes" );
 static const effect_on_condition_id
+effect_on_condition_run_eocs_talker_mixes_loc( "run_eocs_talker_mixes_loc" );
 static const effect_on_condition_id
-
+effect_on_condition_run_eocs_variable_types( "run_eocs_variable_types" );
 static const flag_id json_flag_FILTHY( "FILTHY" );
-
 static const furn_str_id furn_f_cardboard_box( "f_cardboard_box" );
 static const furn_str_id furn_test_f_eoc( "test_f_eoc" );
-
 static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_hammer( "hammer" );
 static const itype_id itype_shotgun_s( "shotgun_s" );
@@ -145,83 +186,27 @@ static const itype_id itype_test_eoc_armor_suit( "test_eoc_armor_suit" );
 static const itype_id itype_test_glock( "test_glock" );
 static const itype_id itype_test_knife_combat( "test_knife_combat" );
 static const itype_id itype_test_whiskey_caffenated( "test_whiskey_caffenated" );
-
 static const matype_id style_aikido( "style_aikido" );
 static const matype_id style_none( "style_none" );
-
 static const mtype_id mon_triffid( "mon_triffid" );
 static const mtype_id mon_zombie( "mon_zombie" );
 static const mtype_id mon_zombie_smoker( "mon_zombie_smoker" );
 static const mtype_id mon_zombie_tough( "mon_zombie_tough" );
-
 static const recipe_id recipe_cattail_jelly( "cattail_jelly" );
-
 static const skill_id skill_survival( "survival" );
-
 static const spell_id spell_test_eoc_spell( "test_eoc_spell" );
-
 static const ter_str_id ter_t_dirt( "t_dirt" );
 static const ter_str_id ter_t_grass( "t_grass" );
-
 static const trait_id trait_process_mutation( "process_mutation" );
 static const trait_id trait_process_mutation_two( "process_mutation_two" );
 static const trait_id trait_purifiability_first( "purifiability_first" );
 static const trait_id trait_purifiability_second( "purifiability_second" );
-
-static const effect_on_condition_id
-static const effect_on_condition_id
-effect_on_condition_EOC_TEST_PURIFIABILITY_FALSE( "EOC_TEST_PURIFIABILITY_FALSE" );
-effect_on_condition_EOC_TEST_PURIFIABILITY_TRUE( "EOC_TEST_PURIFIABILITY_TRUE" );
-effect_on_condition_EOC_TEST_TRANSFORM_LINE( "EOC_TEST_TRANSFORM_LINE" );
-effect_on_condition_EOC_TEST_TRANSFORM_RADIUS( "EOC_TEST_TRANSFORM_RADIUS" );
-static const effect_on_condition_id
-static const effect_on_condition_id
-effect_on_condition_EOC_activate_mutation_to_start_test( "EOC_activate_mutation_to_start_test" );
-effect_on_condition_EOC_armor_math_test( "EOC_armor_math_test" );
-effect_on_condition_EOC_combat_mutator_test( "EOC_combat_mutator_test" );
-effect_on_condition_EOC_compare_string_match_all_test( "EOC_compare_string_match_all_test" );
-effect_on_condition_EOC_compare_string_test( "EOC_compare_string_test" );
-effect_on_condition_EOC_increment_var_var( "EOC_increment_var_var" );
-effect_on_condition_EOC_item_activate_test( "EOC_item_activate_test" );
-effect_on_condition_EOC_item_teleport_test( "EOC_item_teleport_test" );
-effect_on_condition_EOC_martial_art_test_1( "EOC_martial_art_test_1" );
-effect_on_condition_EOC_martial_art_test_2( "EOC_martial_art_test_2" );
-effect_on_condition_EOC_math_addiction_check( "EOC_math_addiction_check" );
-effect_on_condition_EOC_math_diag_assign( "EOC_math_diag_assign" );
-effect_on_condition_EOC_math_diag_w_vars( "EOC_math_diag_w_vars" );
-effect_on_condition_EOC_math_item_count( "EOC_math_item_count" );
-effect_on_condition_EOC_math_proficiency( "EOC_math_proficiency" );
-effect_on_condition_EOC_math_switch_math( "EOC_math_switch_math" );
-effect_on_condition_EOC_math_test_context( "EOC_math_test_context" );
-effect_on_condition_EOC_math_test_equals_assign( "EOC_math_test_equals_assign" );
-effect_on_condition_EOC_math_test_greater_increment( "EOC_math_test_greater_increment" );
-effect_on_condition_EOC_math_test_inline_condition( "EOC_math_test_inline_condition" );
-effect_on_condition_EOC_math_weighted_list( "EOC_math_weighted_list" );
-effect_on_condition_EOC_meta_test_message( "EOC_meta_test_message" );
-effect_on_condition_EOC_meta_test_talker_type( "EOC_meta_test_talker_type" );
-effect_on_condition_EOC_mon_nearby_test( "EOC_mon_nearby_test" );
-effect_on_condition_EOC_run_inv_prepare( "EOC_run_inv_prepare" );
-effect_on_condition_EOC_run_with_test_expects_fail( "EOC_run_with_test_expects_fail" );
-effect_on_condition_EOC_run_with_test_expects_pass( "EOC_run_with_test_expects_pass" );
-effect_on_condition_EOC_run_with_test_queued( "EOC_run_with_test_queued" );
-effect_on_condition_EOC_stored_condition_test( "EOC_stored_condition_test" );
-effect_on_condition_EOC_string_test_nest( "EOC_string_test_nest" );
-effect_on_condition_EOC_test_run_unique_npc( "EOC_test_run_unique_npc" );
-effect_on_condition_EOC_test_weapon_damage( "EOC_test_weapon_damage" );
-effect_on_condition_run_eocs_talker_mixes( "run_eocs_talker_mixes" );
-effect_on_condition_run_eocs_talker_mixes_loc( "run_eocs_talker_mixes_loc" );
-effect_on_condition_run_eocs_variable_types( "run_eocs_variable_types" );
 
 #if defined(LOCALIZE)
     #include "translation_manager.h"
 #endif
 
 class recipe;
-
-static effect_on_condition_EOC_TEST_U_TRANSFORM_RADIUS_ACTOR(
-    "EOC_TEST_U_TRANSFORM_RADIUS_ACTOR" );
-static effect_on_condition_EOC_TEST_NPC_TRANSFORM_RADIUS_ACTOR(
-    "EOC_TEST_NPC_TRANSFORM_RADIUS_ACTOR" );
 
 namespace
 {

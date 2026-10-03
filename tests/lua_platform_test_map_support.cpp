@@ -2,6 +2,10 @@
 
 #include "lua_platform_test_map_support.h"
 
+static const mtype_id mon_zombie( "mon_zombie" );
+static const npc_template_id npc_template_test_talker( "test_talker" );
+static const ter_str_id ter_t_floor( "t_floor" );
+
 namespace cata::lua_platform::test
 {
 
@@ -189,14 +193,13 @@ platform_monster_relocation_fixture::platform_monster_relocation_fixture(
     source_abs = get_map().get_abs( local );
     target_abs = get_map().get_abs( target_local );
 
-    const ter_str_id floor_id( "t_floor" );
-    if( floor_id.is_valid() ) {
-        get_map().ter_set( local, floor_id.id() );
-        get_map().ter_set( target_local, floor_id.id() );
+    if( ter_t_floor.is_valid() ) {
+        get_map().ter_set( local, ter_t_floor.id() );
+        get_map().ter_set( target_local, ter_t_floor.id() );
     }
 
     test_monster = make_shared_fast<monster>(
-                       mtype_id( "mon_zombie" ), local );
+                       mon_zombie, local );
     if( test_monster ) {
         test_monster->set_hp( 1 );
         if( !get_creature_tracker().add( test_monster ) ) {
@@ -273,7 +276,7 @@ shared_ptr_fast<monster> platform_monster_relocation_fixture::add_monster(
     const tripoint_bub_ms &value )
 {
     shared_ptr_fast<monster> result = make_shared_fast<monster>(
-                                          mtype_id( "mon_zombie" ), value );
+                                          mon_zombie, value );
     result->set_hp( 1 );
     if( !get_creature_tracker().add( result ) ) {
         return {};
@@ -298,10 +301,9 @@ platform_avatar_relocation_fixture::platform_avatar_relocation_fixture(
     source_abs = get_map().get_abs( local );
     target_abs = get_map().get_abs( target_local );
 
-    const ter_str_id floor_id( "t_floor" );
-    if( floor_id.is_valid() ) {
-        get_map().ter_set( local, floor_id.id() );
-        get_map().ter_set( target_local, floor_id.id() );
+    if( ter_t_floor.is_valid() ) {
+        get_map().ter_set( local, ter_t_floor.id() );
+        get_map().ter_set( target_local, ter_t_floor.id() );
     }
 
     avatar &player = get_avatar();
@@ -376,7 +378,7 @@ shared_ptr_fast<monster> platform_avatar_relocation_fixture::add_monster(
     const tripoint_bub_ms &value )
 {
     shared_ptr_fast<monster> result = make_shared_fast<monster>(
-                                          mtype_id( "mon_zombie" ), value );
+                                          mon_zombie, value );
     result->set_hp( 1 );
     if( !get_creature_tracker().add( result ) ) {
         return {};
@@ -402,13 +404,12 @@ platform_npc_relocation_fixture::platform_npc_relocation_fixture(
     source_abs = get_map().get_abs( local );
     target_abs = get_map().get_abs( target_local );
 
-    const ter_str_id floor_id( "t_floor" );
-    if( floor_id.is_valid() ) {
-        get_map().ter_set( local, floor_id.id() );
-        get_map().ter_set( target_local, floor_id.id() );
+    if( ter_t_floor.is_valid() ) {
+        get_map().ter_set( local, ter_t_floor.id() );
+        get_map().ter_set( target_local, ter_t_floor.id() );
     }
 
-    npc_id = get_map().place_npc( local.xy(), npc_template_id( "test_talker" ) );
+    npc_id = get_map().place_npc( local.xy(), npc_template_test_talker );
     g->load_npcs();
     test_npc = g->find_npc( npc_id );
     if( test_npc != nullptr ) {
@@ -497,12 +498,11 @@ platform_vehicle_relocation_fixture::platform_vehicle_relocation_fixture(
     source_abs = get_map().get_abs( source_local );
     target_abs = get_map().get_abs( target_local );
 
-    const ter_str_id floor_id( "t_floor" );
-    if( floor_id.is_valid() ) {
+    if( ter_t_floor.is_valid() ) {
         for( int dx = -2; dx <= 8; ++dx ) {
             for( int dy = -2; dy <= 2; ++dy ) {
                 const tripoint_rel_ms offset( dx, dy, 0 );
-                get_map().ter_set( source_local + offset, floor_id.id() );
+                get_map().ter_set( source_local + offset, ter_t_floor.id() );
             }
         }
     }
@@ -622,7 +622,7 @@ shared_ptr_fast<monster> platform_vehicle_relocation_fixture::add_monster(
     const tripoint_bub_ms &value )
 {
     shared_ptr_fast<monster> result = make_shared_fast<monster>(
-                                          mtype_id( "mon_zombie" ), value );
+                                          mon_zombie, value );
     if( !result ) {
         return {};
     }
@@ -636,11 +636,11 @@ shared_ptr_fast<monster> platform_vehicle_relocation_fixture::add_monster(
 
 platform_mapgen_callback_transaction_test_fixture::platform_mapgen_callback_transaction_test_fixture()
     :
-    local_map( ter_str_id( "t_floor" ).id() ),
+    local_map( ter_t_floor.id() ),
     data( *local_map.cast_to_map(), mapgendata::dummy_settings ),
     context( data, true, UINT64_C( 0x6a09e667f3bcc909 ) )
 {
-    native_map().ter_set( position(), ter_str_id( "t_floor" ).id() );
+    native_map().ter_set( position(), ter_t_floor.id() );
     data.set_dir( 0, direction_before );
 }
 

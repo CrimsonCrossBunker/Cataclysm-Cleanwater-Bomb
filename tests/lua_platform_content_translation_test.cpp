@@ -14,9 +14,9 @@ static const itype_id itype_lua_text_translated_parent( "lua_text_translated_par
 static const itype_id itype_lua_text_translated_use_label( "lua_text_translated_use_label" );
 
 static const skill_displayType_id
+SkillDisplayType_lua_translated_skill_display( "lua_translated_skill_display" );
 
 static const skill_id skill_lua_translated_skill( "lua_translated_skill" );
-static SkillDisplayType_lua_translated_skill_display( "lua_translated_skill_display" );
 
 TEST_CASE( "lua_platform_item_text_preserves_deferred_native_translations",
            "[lua][platform][content][translations]" )
@@ -264,14 +264,17 @@ TEST_CASE( "lua_platform_skill_text_context_changes_static_fingerprints",
     const on_out_of_scope cleanup( []() {
         platform::shutdown();
     } );
-    const auto fingerprint = [&]( const std::string_view text, const std::string &configure = "" ) {
-        files.write( std::filesystem::u8path( "main.lua" ), "local ccb = require('ccb')\n"
-                     "ccb.content.add(ccb.content.SkillDisplay {id='lua_skill_text_hash_display', "
-                     "label='Hash test skills'})\n"
-                     "local skill = ccb.content.Skill {id='lua_skill_text_hash', "
-                     "display_category='lua_skill_text_hash_display', "
-                     "name=" + text + ", description='description'}\n" +
-                     configure + "\nccb.content.add(skill)\n" );
+    const auto fingerprint = [&]( const std::string_view text, const std::string_view configure = "" ) {
+        std::string script = "local ccb = require('ccb')\n"
+                             "ccb.content.add(ccb.content.SkillDisplay {id='lua_skill_text_hash_display', "
+                             "label='Hash test skills'})\n"
+                             "local skill = ccb.content.Skill {id='lua_skill_text_hash', "
+                             "display_category='lua_skill_text_hash_display', name=";
+        script.append( text );
+        script.append( ", description='description'}\n" );
+        script.append( configure );
+        script.append( "\nccb.content.add(skill)\n" );
+        files.write( std::filesystem::u8path( "main.lua" ), script );
         std::string error;
         const bool prepared = platform::prepare_mods( {
             { "skill-text-hash", files.root, files.root / std::filesystem::u8path( "main.lua" ) }
