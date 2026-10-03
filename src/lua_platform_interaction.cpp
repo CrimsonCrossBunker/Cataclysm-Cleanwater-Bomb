@@ -1044,7 +1044,9 @@ std::vector<interaction_choice> read_interaction_choices(
                 throw std::invalid_argument(
                     "services.interaction.choose entry hotkey must contain exactly one byte" );
             }
-            choice.hotkey = static_cast<unsigned char>( text.front() );
+            // Preserve the native menu's char promotion for single-byte keys.
+            choice.hotkey = static_cast<int>
+                            ( text.front() ); // NOLINT(bugprone-signed-char-misuse,cert-str34-c)
         }
         result.push_back( std::move( choice ) );
     }
