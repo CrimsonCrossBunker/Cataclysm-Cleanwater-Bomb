@@ -1,6 +1,58 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+#include <activity_actor_definitions.h>
+#include <avatar.h>
+#include <calendar.h>
+#include <character_id.h>
+#include <coordinates.h>
+#include <creature_tracker.h>
+#include <enums.h>
+#include <game.h>
+#include <item.h>
+#include <item_location.h>
+#include <item_uid.h>
+#include <lua_platform_bindings_coords.h>
+#include <lua_platform_handle.h>
+#include <lua_platform_world.h>
+#include <map.h>
+#include <map_scale_constants.h>
+#include <memory_fast.h>
+#include <monster.h>
+#include <monster_uid.h>
+#include <npc.h>
+#include <overmapbuffer.h>
+#include <player_activity.h>
+#include <point.h>
+#include <type_id.h>
+#include <units.h>
+#include <veh_type.h>
+#include <vehicle.h>
+#include <vpart_position.h>
+#include <cstddef>
+#include <cstdint>
+#include <initializer_list>
+#include <memory>
+#include <optional>
+#include <string>
+#include <vector>
+
+#include "cata_catch.h"
+#include "lua_platform_sol.h"
 #include "lua_platform_test_map_support.h"
+
+using cata::lua_platform::test::platform_overmap_travel_fixture;
+using cata::lua_platform::test::platform_monster_relocation_fixture;
+using cata::lua_platform::test::platform_avatar_relocation_fixture;
+using cata::lua_platform::test::platform_npc_relocation_fixture;
+using cata::lua_platform::test::platform_vehicle_relocation_fixture;
+#include "lua_platform_test_support.h"
+#include "player_helpers.h"
 #include "teleport.h"
+
+static const efftype_id effect_riding( "riding" );
+static const itype_id itype_remotevehcontrol( "remotevehcontrol" );
+static const ter_str_id ter_t_floor( "t_floor" );
+static const ter_str_id ter_t_wall( "t_wall" );
+static const vpart_id vpart_seat( "seat" );
 
 TEST_CASE( "lua_platform_relocation_moves_monster_with_explicit_token",
            "[lua][platform][relocation][monster]" )
@@ -11,12 +63,11 @@ TEST_CASE( "lua_platform_relocation_moves_monster_with_explicit_token",
     REQUIRE( monster_uid > 0 );
     CHECK( fixture.monster_handle.locator().stable_id == monster_uid );
     map &here = fixture.get_map();
-    const ter_str_id floor_id( "t_floor" );
-    REQUIRE( floor_id.is_valid() );
-    here.ter_set( fixture.local, floor_id.id() );
-    here.ter_set( fixture.target_local, floor_id.id() );
-    REQUIRE( here.ter( fixture.local ) == floor_id.id() );
-    REQUIRE( here.ter( fixture.target_local ) == floor_id.id() );
+    REQUIRE( ter_t_floor.is_valid() );
+    here.ter_set( fixture.local, ter_t_floor.id() );
+    here.ter_set( fixture.target_local, ter_t_floor.id() );
+    REQUIRE( here.ter( fixture.local ) == ter_t_floor.id() );
+    REQUIRE( here.ter( fixture.target_local ) == ter_t_floor.id() );
 
     const sol::protected_function tile = fixture.map_api()["tile"];
     const sol::protected_function_result token_result = tile(
@@ -152,7 +203,7 @@ TEST_CASE( "lua_platform_relocation_moves_vehicle_with_explicit_token_and_preser
         fixture.vehicle_handle.identity_generation();
     const std::size_t part_identity_generation =
         fixture.vehicle_part_handle.identity_generation();
-    const auto part_uid = fixture.live_part->get_base().uid().get_value();
+    const std::int64_t part_uid = fixture.live_part->get_base().uid().get_value();
 
     const sol::protected_function tile = fixture.map_api()["tile"];
     const sol::protected_function_result token_result = tile(
@@ -231,10 +282,9 @@ TEST_CASE( "lua_platform_relocation_rejects_vehicle_footprint_collisions_without
             fixture.vehicle_part_handle.identity_generation();
 
         map &here = fixture.get_map();
-        const ter_str_id wall_id( "t_wall" );
-        REQUIRE( wall_id.is_valid() );
-        here.ter_set( fixture.target_local, wall_id.id() );
-        REQUIRE( here.ter( fixture.target_local ) == wall_id.id() );
+        REQUIRE( ter_t_wall.is_valid() );
+        here.ter_set( fixture.target_local, ter_t_wall.id() );
+        REQUIRE( here.ter( fixture.target_local ) == ter_t_wall.id() );
 
         const sol::protected_function tile = fixture.map_api()["tile"];
         const sol::protected_function_result token_result = tile(
@@ -545,8 +595,8 @@ TEST_CASE( "lua_platform_relocation_rejects_coupled_npc_states_and_preserves_reg
     SECTION( "riding effect" ) {
         platform_npc_relocation_fixture fixture( 722, 21 );
         REQUIRE( fixture.test_npc );
-        fixture.test_npc->add_effect( efftype_id( "riding" ), 1_turns );
-        REQUIRE( fixture.test_npc->has_effect( efftype_id( "riding" ) ) );
+        fixture.test_npc->add_effect( effect_riding, 1_turns );
+        REQUIRE( fixture.test_npc->has_effect( effect_riding ) );
 
         const sol::protected_function tile = fixture.map_api()["tile"];
         const sol::protected_function_result token_result = tile(
@@ -694,12 +744,10 @@ TEST_CASE( "lua_platform_relocation_rejects_blocked_occupied_z_and_unloaded",
     platform_monster_relocation_fixture fixture( 710, 9 );
     REQUIRE( fixture.test_monster );
     map &here = fixture.get_map();
-    const ter_str_id floor_id( "t_floor" );
-    const ter_str_id wall_id( "t_wall" );
-    REQUIRE( floor_id.is_valid() );
-    REQUIRE( wall_id.is_valid() );
-    here.ter_set( fixture.target_local, floor_id.id() );
-    REQUIRE( here.ter( fixture.target_local ) == floor_id.id() );
+    REQUIRE( ter_t_floor.is_valid() );
+    REQUIRE( ter_t_wall.is_valid() );
+    here.ter_set( fixture.target_local, ter_t_floor.id() );
+    REQUIRE( here.ter( fixture.target_local ) == ter_t_floor.id() );
 
     const sol::protected_function tile = fixture.map_api()["tile"];
     const sol::protected_function_result token_result = tile(
@@ -715,8 +763,8 @@ TEST_CASE( "lua_platform_relocation_rejects_blocked_occupied_z_and_unloaded",
     const std::uint64_t epoch_before =
         cata::lua_platform::map_mutation_epoch();
 
-    here.ter_set( fixture.target_local, wall_id.id() );
-    REQUIRE( here.ter( fixture.target_local ) == wall_id.id() );
+    here.ter_set( fixture.target_local, ter_t_wall.id() );
+    REQUIRE( here.ter( fixture.target_local ) == ter_t_wall.id() );
     const sol::protected_function_result blocked = move(
                 fixture.monster_handle, token, strict_options );
     REQUIRE( blocked.valid() );
@@ -725,8 +773,8 @@ TEST_CASE( "lua_platform_relocation_rejects_blocked_occupied_z_and_unloaded",
     CHECK( blocked_envelope["error"].get<sol::table>()
            ["code"].get<std::string>() == "blocked" );
 
-    here.ter_set( fixture.target_local, floor_id.id() );
-    REQUIRE( here.ter( fixture.target_local ) == floor_id.id() );
+    here.ter_set( fixture.target_local, ter_t_floor.id() );
+    REQUIRE( here.ter( fixture.target_local ) == ter_t_floor.id() );
     const shared_ptr_fast<monster> occupant = fixture.add_monster(
                 fixture.target_local );
     REQUIRE( occupant );
@@ -836,12 +884,10 @@ TEST_CASE( "lua_platform_relocation_rolls_back_and_updates_tracker_atomically",
     platform_monster_relocation_fixture fixture( 711, 10 );
     REQUIRE( fixture.test_monster );
     map &here = fixture.get_map();
-    const ter_str_id floor_id( "t_floor" );
-    const ter_str_id wall_id( "t_wall" );
-    REQUIRE( floor_id.is_valid() );
-    REQUIRE( wall_id.is_valid() );
-    here.ter_set( fixture.target_local, floor_id.id() );
-    REQUIRE( here.ter( fixture.target_local ) == floor_id.id() );
+    REQUIRE( ter_t_floor.is_valid() );
+    REQUIRE( ter_t_wall.is_valid() );
+    here.ter_set( fixture.target_local, ter_t_floor.id() );
+    REQUIRE( here.ter( fixture.target_local ) == ter_t_floor.id() );
 
     const sol::protected_function tile = fixture.map_api()["tile"];
     const sol::protected_function_result token_result = tile(
@@ -880,8 +926,8 @@ TEST_CASE( "lua_platform_relocation_rolls_back_and_updates_tracker_atomically",
     CHECK( get_creature_tracker().find_by_uid( monster_uid ).get() ==
            fixture.test_monster.get() );
 
-    here.ter_set( fixture.target_local, wall_id.id() );
-    REQUIRE( here.ter( fixture.target_local ) == wall_id.id() );
+    here.ter_set( fixture.target_local, ter_t_wall.id() );
+    REQUIRE( here.ter( fixture.target_local ) == ter_t_wall.id() );
     const sol::protected_function_result blocked = move(
                 fixture.monster_handle, token, strict_options );
     REQUIRE( blocked.valid() );
@@ -894,8 +940,8 @@ TEST_CASE( "lua_platform_relocation_rolls_back_and_updates_tracker_atomically",
     CHECK_FALSE( get_creature_tracker().find( fixture.target_abs ) );
     CHECK( cata::lua_platform::map_mutation_epoch() == epoch_before );
 
-    here.ter_set( fixture.target_local, floor_id.id() );
-    REQUIRE( here.ter( fixture.target_local ) == floor_id.id() );
+    here.ter_set( fixture.target_local, ter_t_floor.id() );
+    REQUIRE( here.ter( fixture.target_local ) == ter_t_floor.id() );
     const sol::protected_function_result committed = move(
                 fixture.monster_handle, token, strict_options );
     REQUIRE( committed.valid() );
@@ -962,12 +1008,11 @@ TEST_CASE( "lua_platform_avatar_teleport_matches_native_success_path",
 {
     platform_avatar_relocation_fixture fixture( 739, 38 );
     map &here = fixture.get_map();
-    const ter_str_id floor_id( "t_floor" );
-    REQUIRE( floor_id.is_valid() );
-    here.ter_set( fixture.local, floor_id.id() );
-    REQUIRE( here.ter( fixture.local ) == floor_id.id() );
-    here.ter_set( fixture.target_local, floor_id.id() );
-    REQUIRE( here.ter( fixture.target_local ) == floor_id.id() );
+    REQUIRE( ter_t_floor.is_valid() );
+    here.ter_set( fixture.local, ter_t_floor.id() );
+    REQUIRE( here.ter( fixture.local ) == ter_t_floor.id() );
+    here.ter_set( fixture.target_local, ter_t_floor.id() );
+    REQUIRE( here.ter( fixture.target_local ) == ter_t_floor.id() );
 
     const bool native_accepted = teleport::teleport_to_point(
                                      get_avatar(), here.get_bub( fixture.target_abs ),
@@ -1005,14 +1050,12 @@ TEST_CASE( "lua_platform_avatar_teleport_force_fallback_matches_native",
 {
     platform_avatar_relocation_fixture fixture( 741, 40 );
     map &here = fixture.get_map();
-    const ter_str_id floor_id( "t_floor" );
-    const ter_str_id wall_id( "t_wall" );
-    REQUIRE( floor_id.is_valid() );
-    REQUIRE( wall_id.is_valid() );
-    here.ter_set( fixture.local, floor_id.id() );
-    REQUIRE( here.ter( fixture.local ) == floor_id.id() );
-    here.ter_set( fixture.target_local, wall_id.id() );
-    REQUIRE( here.ter( fixture.target_local ) == wall_id.id() );
+    REQUIRE( ter_t_floor.is_valid() );
+    REQUIRE( ter_t_wall.is_valid() );
+    here.ter_set( fixture.local, ter_t_floor.id() );
+    REQUIRE( here.ter( fixture.local ) == ter_t_floor.id() );
+    here.ter_set( fixture.target_local, ter_t_wall.id() );
+    REQUIRE( here.ter( fixture.target_local ) == ter_t_wall.id() );
 
     const bool native_accepted = teleport::teleport_to_point(
                                      get_avatar(), here.get_bub( fixture.target_abs ),
@@ -1051,18 +1094,17 @@ TEST_CASE( "lua_platform_avatar_teleport_force_safe_collision_matches_native",
     fixture.source_abs = here.get_abs( fixture.local );
     fixture.target_abs = here.get_abs( fixture.target_local );
     get_avatar().setpos( here, fixture.local );
-    const ter_str_id floor_id( "t_floor" );
-    REQUIRE( floor_id.is_valid() );
-    here.ter_set( fixture.local, floor_id.id() );
-    REQUIRE( here.ter( fixture.local ) == floor_id.id() );
-    here.ter_set( fixture.target_local, floor_id.id() );
-    REQUIRE( here.ter( fixture.target_local ) == floor_id.id() );
-    here.ter_set( fixture.target_local + tripoint::north, floor_id.id() );
-    REQUIRE( here.ter( fixture.target_local + tripoint::north ) == floor_id.id() );
-    here.ter_set( fixture.target_local + tripoint::south, floor_id.id() );
-    REQUIRE( here.ter( fixture.target_local + tripoint::south ) == floor_id.id() );
-    here.ter_set( fixture.target_local + tripoint::east, floor_id.id() );
-    REQUIRE( here.ter( fixture.target_local + tripoint::east ) == floor_id.id() );
+    REQUIRE( ter_t_floor.is_valid() );
+    here.ter_set( fixture.local, ter_t_floor.id() );
+    REQUIRE( here.ter( fixture.local ) == ter_t_floor.id() );
+    here.ter_set( fixture.target_local, ter_t_floor.id() );
+    REQUIRE( here.ter( fixture.target_local ) == ter_t_floor.id() );
+    here.ter_set( fixture.target_local + tripoint::north, ter_t_floor.id() );
+    REQUIRE( here.ter( fixture.target_local + tripoint::north ) == ter_t_floor.id() );
+    here.ter_set( fixture.target_local + tripoint::south, ter_t_floor.id() );
+    REQUIRE( here.ter( fixture.target_local + tripoint::south ) == ter_t_floor.id() );
+    here.ter_set( fixture.target_local + tripoint::east, ter_t_floor.id() );
+    REQUIRE( here.ter( fixture.target_local + tripoint::east ) == ter_t_floor.id() );
     REQUIRE( fixture.add_monster( fixture.target_local ) );
 
     const bool native_accepted = teleport::teleport_to_point(
@@ -1131,7 +1173,7 @@ TEST_CASE( "lua_platform_relocation_avatar_never_loads_map_or_uses_fallback",
 {
     platform_avatar_relocation_fixture fixture( 713, 12 );
     map &here = fixture.get_map();
-    const auto map_origin_before = here.get_abs_sub();
+    const tripoint_abs_sm map_origin_before = here.get_abs_sub();
     const sol::protected_function tile = fixture.map_api()["tile"];
     const sol::protected_function move = fixture.relocation_api()["move"];
     const sol::table strict_options = fixture.lua.create_table_with(
@@ -1184,7 +1226,7 @@ TEST_CASE( "lua_platform_relocation_avatar_never_loads_map_or_uses_fallback",
     const tripoint_abs_ms stale_position = get_avatar().pos_abs();
     const std::uint64_t epoch_before_stale_token =
         cata::lua_platform::map_mutation_epoch();
-    const auto map_origin_before_stale_token = here.get_abs_sub();
+    const tripoint_abs_sm map_origin_before_stale_token = here.get_abs_sub();
     cata::lua_platform::reset_map_tile_tokens();
     const sol::protected_function_result stale = move(
                 fixture.avatar_handle, stale_token, strict_options );
@@ -1296,12 +1338,12 @@ TEST_CASE( "lua_platform_relocation_rejects_vehicle_coupled_states_without_mutat
         platform_vehicle_relocation_fixture fixture( 730, 29 );
         REQUIRE( fixture.test_vehicle );
         item_location remote_control = get_avatar().i_add(
-                                           item( itype_id( "remotevehcontrol" ),
+                                           item( itype_remotevehcontrol,
                                                    calendar::turn_zero ) );
         REQUIRE( remote_control != item_location::nowhere );
         remote_control->active = true;
         REQUIRE( get_avatar().has_active_item(
-                     itype_id( "remotevehcontrol" ) ) );
+                     itype_remotevehcontrol ) );
         g->setremoteveh( fixture.test_vehicle );
         REQUIRE( g->remoteveh() == fixture.test_vehicle );
         check_rejected( fixture );
@@ -1341,9 +1383,8 @@ TEST_CASE( "lua_platform_relocation_rejects_vehicle_coupled_states_without_mutat
             fixture.test_vehicle->part( cargo_part ) );
         REQUIRE( fixture.test_vehicle->part( cargo_part ).removed );
         fixture.test_vehicle->part_removal_cleanup( here );
-        static const vpart_id seat( "seat" );
         REQUIRE( fixture.test_vehicle->install_part(
-                     here, point_rel_ms::zero, seat ) >= 0 );
+                     here, point_rel_ms::zero, vpart_seat ) >= 0 );
         here.add_vehicle_to_cache( fixture.test_vehicle );
         here.board_vehicle( fixture.source_local, &player );
         REQUIRE( player.in_vehicle );

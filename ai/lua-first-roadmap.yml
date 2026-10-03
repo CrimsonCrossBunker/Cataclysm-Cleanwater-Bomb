@@ -464,7 +464,7 @@ capabilities:
     status: source_complete_unverified
     target_surface: "ScriptMapgenContext queue_npc/queue_zone: validated current-OMT requests, bounded to 128 each, discarded on callback failure; post-commit native publication installs global zones before static NPCs and skips existing unique NPC IDs. set_item_faction changes only current-OMT ground stacks and contents inside submap rollback. This does not restore immediate external writes or promise rollback of native post-commit failures."
     legacy_dependency: none
-    evidence: [src/lua_platform_mapgen.h, src/lua_platform_mapgen.cpp, src/lua_platform_runtime_services.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test_22_mapgen.cpp]
+    evidence: [src/lua_platform_mapgen.h, src/lua_platform_mapgen.cpp, src/lua_platform_runtime_services.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test_22_mapgen_test.cpp]
     verification: pending_final_gate
     next_actions:
       - Run the native mapgen transaction and contract tests, then verify Feastmaster and AutoRetailer starts, shop zones and item ownership in game.
@@ -473,7 +473,7 @@ capabilities:
     status: source_complete_unverified
     target_surface: "Explicit NPC and buyer handles for native barter UI and service payments; active-avatar-only interactive boundary. Read-only made-to-order prototype pricing reuses native NPC trading rules. Existing-Item quote/get/commit remains unchanged; Lua owns order selection, revalidation, delivery and capacity handling."
     legacy_dependency: none
-    evidence: [src/lua_platform_trade.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test_21_trade.cpp, tools/lua_api/check_mod_usage.py, tools/lua_api/test_check_mod_usage.py]
+    evidence: [src/lua_platform_trade.cpp, data/lua/types/ccb_platform_v1.d.lua, tests/lua_platform_test_21_trade_test.cpp, tools/lua_api/check_mod_usage.py, tools/lua_api/test_check_mod_usage.py]
     verification: pending_final_gate
     next_actions:
       - Build and run the native trade tests and verify the three migrated Mods in game, including payment cancellation, partial delivery, inventory capacity and shop interaction.

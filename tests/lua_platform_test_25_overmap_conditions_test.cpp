@@ -1,18 +1,39 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+#include <avatar.h>
+#include <coordinates.h>
+#include <dialogue.h>
+#include <dialogue_helpers.h>
+#include <enums.h>
+#include <flexbuffer_json.h>
+#include <lua.h>
+#include <lua_platform_bindings_coords.h>
+#include <lua_platform_bindings_enums.h>
+#include <overmap.h>
+#include <point.h>
+#include <type_id.h>
+#include <cstddef>
+#include <functional>
 #include <limits>
+#include <optional>
 #include <string>
 #include <vector>
 
+#include "cata_catch.h"
 #include "cata_scope_helpers.h"
 #include "character_id.h"
 #include "condition.h"
 #include "json_loader.h"
+#include "lua_platform_sol.h"
 #include "lua_platform_test_map_support.h"
+
+using cata::lua_platform::test::platform_overmap_travel_fixture;
 #include "map_scale_constants.h"
 #include "mission.h"
 #include "npc.h"
 #include "overmap_connection.h"
 #include "overmapbuffer.h"
+
+static const oter_str_id oter_road( "road" );
 
 TEST_CASE( "lua_platform_native_overmap_condition_queries_preserve_terrain_and_camp_rules",
            "[lua][platform][overmap][conditions]" )
@@ -226,15 +247,14 @@ TEST_CASE( "lua_platform_overmap_route_reveal_matches_native_path_semantics",
     platform_overmap_travel_fixture fixture( 824, 54 );
     REQUIRE( fixture.edit_ready );
 
-    const int om_base_x = fixture.source_omt.x() - fixture.source_local.x();
-    const int om_base_y = fixture.source_omt.y() - fixture.source_local.y();
-    const tripoint_abs_omt start( om_base_x + OMAPX / 2,
-                                  om_base_y + OMAPY / 2,
+    const point om_base = fixture.source_omt.raw().xy() - fixture.source_local.raw().xy();
+    const tripoint_abs_omt start( om_base.x + OMAPX / 2,
+                                  om_base.y + OMAPY / 2,
                                   fixture.source_omt.z() );
     const tripoint_abs_omt end = start + tripoint::east;
     const tripoint_om_omt local_start( OMAPX / 2, OMAPY / 2,
                                        fixture.source_omt.z() );
-    const oter_id road_terrain = oter_str_id( "road" ).id();
+    const oter_id road_terrain = oter_road.id();
     REQUIRE( road_terrain.is_valid() );
     REQUIRE( overmap_connections::guess_for( road_terrain ).is_valid() );
 
@@ -336,10 +356,9 @@ TEST_CASE( "lua_platform_overmap_native_reveal_matches_native_area_semantics",
     platform_overmap_travel_fixture fixture( 825, 55 );
     REQUIRE( fixture.edit_ready );
 
-    const int om_base_x = fixture.source_omt.x() - fixture.source_local.x();
-    const int om_base_y = fixture.source_omt.y() - fixture.source_local.y();
-    const tripoint_abs_omt center( om_base_x + OMAPX / 2,
-                                   om_base_y + OMAPY / 2,
+    const point om_base = fixture.source_omt.raw().xy() - fixture.source_local.raw().xy();
+    const tripoint_abs_omt center( om_base.x + OMAPX / 2,
+                                   om_base.y + OMAPY / 2,
                                    fixture.source_omt.z() );
     const tripoint_om_omt local_center( OMAPX / 2, OMAPY / 2,
                                         fixture.source_omt.z() );
@@ -489,7 +508,7 @@ TEST_CASE( "lua_platform_overmap_target_search_matches_native_mission_target",
     options["offset"] = cata::lua_platform::script_tripoint_coord::from_native(
                             coords::origin::relative,
                             coords::scale::overmap_terrain,
-                            tripoint{ 1, 0, 0 } );
+                            tripoint::east );
     const sol::protected_function_result platform_result = find_target(
                 fixture.abs_omt_position( fixture.source_omt ), selector, options );
     REQUIRE( platform_result.valid() );

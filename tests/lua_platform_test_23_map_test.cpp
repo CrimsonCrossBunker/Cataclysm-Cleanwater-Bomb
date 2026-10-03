@@ -1,12 +1,22 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-#include "lua_platform_test_map_support.h"
 #include <avatar.h>
 #include <calendar.h>
 #include <cata_scope_helpers.h>
+#include <character_id.h>
 #include <coordinates.h>
 #include <creature_tracker.h>
 #include <field_type.h>
 #include <item.h>
+#include <monster_uid.h>
+#include <talker.h>
+#include <vehicle.h>
+#include <vpart_position.h>
+
+#include "lua_platform_test_map_support.h"
+
+using cata::lua_platform::test::platform_map_api_test_fixture;
+using cata::lua_platform::test::platform_vehicle_relocation_fixture;
+
 extern "C" {
 #include <lua.h>
 }
@@ -16,7 +26,6 @@ extern "C" {
 #include <lua_platform_items.h>
 #include <lua_platform_trade.h>
 #include <lua_platform_world.h>
-#include <magic_ter_furn_transform.h>
 #include <map.h>
 #include <map_scale_constants.h>
 #include <memory_fast.h>
@@ -24,9 +33,8 @@ extern "C" {
 #include <npc.h>
 #include <point.h>
 #include <rng.h>
-#include <trap.h>
-#include <talker_character.h>
 #include <talker_npc.h>
+#include <trap.h>
 #include <type_id.h>
 #include <viewer.h>
 #include <cstddef>
@@ -35,19 +43,28 @@ extern "C" {
 #include <initializer_list>
 #include <limits>
 #include <memory>
+#include <optional>
+#include <random>
 #include <set>
 #include <string>
 #include <utility>
+#include <vector>
+
 #include "cata_catch.h"
+#include "lua_platform_creatures.h"
 #include "lua_platform_sol.h"
 #include "lua_platform_test_support.h"
-#include "lua_platform_creatures.h"
 
 static const itype_id itype_knife_combat( "knife_combat" );
 static const itype_id itype_rock( "rock" );
 static const mtype_id mon_zombie( "mon_zombie" );
+static const ter_furn_transform_id ter_furn_transform_spider_clear_webs( "spider_clear_webs" );
 static const ter_str_id ter_t_floor( "t_floor" );
+static const ter_str_id ter_t_pit( "t_pit" );
 static const ter_str_id ter_t_wall( "t_wall" );
+static const trap_str_id tr_beartrap( "tr_beartrap" );
+static const trap_str_id tr_pit( "tr_pit" );
+static const trap_str_id tr_rollmat( "tr_rollmat" );
 
 TEST_CASE( "lua_platform_character_snapshot_intelligence_matches_native_talker",
            "[lua][platform][characters][conditions][semantic]" )
@@ -430,9 +447,9 @@ TEST_CASE( "lua_platform_transform_radius_matches_native_scope_and_rng",
     map &here = fixture.get_map();
     const tripoint_bub_ms center = fixture.local;
     const tripoint_bub_ms inside = center + tripoint::east;
-    const tripoint_bub_ms outside = center + tripoint( 1, 1, 0 );
+    const tripoint_bub_ms outside = center + tripoint::south_east;
     const field_type_id web = fd_web.id();
-    REQUIRE( ter_furn_transform_id( "spider_clear_webs" ).is_valid() );
+    REQUIRE( ter_furn_transform_spider_clear_webs.is_valid() );
     REQUIRE( here.add_field( center, web, 1, 0_turns, false ) );
     REQUIRE( here.add_field( inside, web, 1, 0_turns, false ) );
     REQUIRE( here.add_field( outside, web, 1, 0_turns, false ) );
@@ -449,7 +466,7 @@ TEST_CASE( "lua_platform_transform_radius_matches_native_scope_and_rng",
     fixture.lua["origin"] = fixture.position( center );
 
     const cata_default_random_engine saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
-    const on_out_of_scope restore_rng( [saved_rng]() {
+    const on_out_of_scope restore_rng( [&saved_rng]() {
         rng_get_engine() = saved_rng;
     } );
     constexpr unsigned int seed = 51837;
@@ -471,6 +488,8 @@ TEST_CASE( "lua_platform_transform_radius_matches_native_scope_and_rng",
     )", sol::script_pass_on_error );
     REQUIRE( transformed.valid() );
     CHECK( fixture.write_called );
+    // Snapshot the native engine to compare draw counts without advancing it.
+    // NOLINTNEXTLINE(cata-determinism)
     const cata_default_random_engine platform_rng_after = rng_get_engine();
     CHECK( here.get_field( center, web ) == nullptr );
     CHECK( here.get_field( inside, web ) == nullptr );
@@ -479,7 +498,7 @@ TEST_CASE( "lua_platform_transform_radius_matches_native_scope_and_rng",
     REQUIRE( here.add_field( center, web, 1, 0_turns, false ) );
     REQUIRE( here.add_field( inside, web, 1, 0_turns, false ) );
     rng_set_engine_seed( seed );
-    here.transform_radius( ter_furn_transform_id( "spider_clear_webs" ),
+    here.transform_radius( ter_furn_transform_spider_clear_webs,
                            1, fixture.absolute );
 
     CHECK( rng_get_engine() == platform_rng_after );
@@ -734,20 +753,15 @@ TEST_CASE( "lua_platform_map_trap_set_matches_native_same_id_and_builtin_semanti
 {
     platform_map_api_test_fixture fixture( 717, 17 );
     map &here = fixture.get_map();
-    const ter_str_id floor( "t_floor" );
-    const ter_str_id pit( "t_pit" );
-    const trap_str_id beartrap( "tr_beartrap" );
-    const trap_str_id rollmat( "tr_rollmat" );
-    const trap_str_id pit_trap( "tr_pit" );
-    REQUIRE( floor.is_valid() );
-    REQUIRE( pit.is_valid() );
-    REQUIRE( beartrap.is_valid() );
-    REQUIRE( rollmat.is_valid() );
-    REQUIRE( pit_trap.is_valid() );
+    REQUIRE( ter_t_floor.is_valid() );
+    REQUIRE( ter_t_pit.is_valid() );
+    REQUIRE( tr_beartrap.is_valid() );
+    REQUIRE( tr_rollmat.is_valid() );
+    REQUIRE( tr_pit.is_valid() );
 
     const tripoint_bub_ms local = fixture.local + tripoint::east;
-    REQUIRE( here.ter_set( local, floor.id() ) );
-    here.trap_set( local, beartrap.id() );
+    REQUIRE( here.ter_set( local, ter_t_floor.id() ) );
+    here.trap_set( local, tr_beartrap.id() );
     here.memory_cache_dec_set_dirty( local, false );
 
     const sol::table map_api = fixture.map_api();
@@ -771,11 +785,11 @@ TEST_CASE( "lua_platform_map_trap_set_matches_native_same_id_and_builtin_semanti
     const sol::protected_function trap_set = map_api["trap_set"];
     const sol::protected_function_result repeated = trap_set(
                 token, revision,
-                cata::lua_platform::script_game_id( "trap", beartrap.str() ) );
+                cata::lua_platform::script_game_id( "trap", tr_beartrap.str() ) );
     REQUIRE( repeated.valid() );
     REQUIRE( repeated.get<sol::table>()["ok"].get<bool>() );
     CHECK( fixture.write_called );
-    CHECK( here.tr_at( local ).id.id() == beartrap.id() );
+    CHECK( here.tr_at( local ).id.id() == tr_beartrap.id() );
     // Native map::trap_set marks decoration memory dirty even when asked to
     // reapply the trap already at this position.
     CHECK( here.memory_cache_dec_is_dirty( local ) );
@@ -783,26 +797,26 @@ TEST_CASE( "lua_platform_map_trap_set_matches_native_same_id_and_builtin_semanti
 
     const sol::protected_function_result stale = trap_set(
                 token, revision,
-                cata::lua_platform::script_game_id( "trap", rollmat.str() ) );
+                cata::lua_platform::script_game_id( "trap", tr_rollmat.str() ) );
     REQUIRE( stale.valid() );
     REQUIRE_FALSE( stale.get<sol::table>()["ok"].get<bool>() );
     CHECK( stale.get<sol::table>()["error"].get<sol::table>()
            ["code"].get<std::string>() == "revision_conflict" );
-    CHECK( here.tr_at( local ).id.id() == beartrap.id() );
+    CHECK( here.tr_at( local ).id.id() == tr_beartrap.id() );
     CHECK( cata::lua_platform::map_mutation_epoch() == epoch_before + 1 );
 
     const sol::table repeated_value = repeated.get<sol::table>()
                                       ["value"].get<sol::table>();
     const sol::protected_function_result replaced = trap_set(
                 token, repeated_value["revision"].get<std::uint64_t>(),
-                cata::lua_platform::script_game_id( "trap", rollmat.str() ) );
+                cata::lua_platform::script_game_id( "trap", tr_rollmat.str() ) );
     REQUIRE( replaced.valid() );
     REQUIRE( replaced.get<sol::table>()["ok"].get<bool>() );
-    CHECK( here.tr_at( local ).id.id() == rollmat.id() );
+    CHECK( here.tr_at( local ).id.id() == tr_rollmat.id() );
 
-    REQUIRE( here.ter_set( local, floor.id() ) );
+    REQUIRE( here.ter_set( local, ter_t_floor.id() ) );
     here.trap_set( local, tr_null );
-    REQUIRE( here.ter_set( local, pit.id() ) );
+    REQUIRE( here.ter_set( local, ter_t_pit.id() ) );
     const sol::protected_function_result built_in_snapshot =
         map_api["snapshot"]( token );
     REQUIRE( built_in_snapshot.valid() );
@@ -811,10 +825,10 @@ TEST_CASE( "lua_platform_map_trap_set_matches_native_same_id_and_builtin_semanti
                 token,
                 built_in_snapshot.get<sol::table>()["value"].get<sol::table>()
                 ["revision"].get<std::uint64_t>(),
-                cata::lua_platform::script_game_id( "trap", beartrap.str() ) );
+                cata::lua_platform::script_game_id( "trap", tr_beartrap.str() ) );
     REQUIRE( built_in.valid() );
     REQUIRE( built_in.get<sol::table>()["ok"].get<bool>() );
-    CHECK( here.tr_at( local ).id.id() == pit_trap.id() );
+    CHECK( here.tr_at( local ).id.id() == tr_pit.id() );
 }
 
 TEST_CASE( "lua_platform_map_tile_never_uses_avatar_or_nearest_fallback",

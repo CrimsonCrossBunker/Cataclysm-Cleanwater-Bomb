@@ -1,18 +1,51 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+#include <character_id.h>
+#include <coordinates.h>
+#include <dialogue_chatbin.h>
+#include <flexbuffer_json.h>
+#include <game.h>
+#include <json.h>
+#include <lua_platform_bindings_values.h>
+#include <lua_platform_dialogue.h>
+#include <lua_platform_handle.h>
+#include <lua_platform_missions.h>
+#include <lua_platform_npcs.h>
+#include <map.h>
+#include <map_helpers.h>
+#include <mission.h>
+#include <npc_opinion.h>
+#include <point.h>
+#include <talker.h>
+#include <type_id.h>
+#include <cstddef>
+#include <functional>
+#include <initializer_list>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <vector>
+
 #include "avatar.h"
+#include "cata_catch.h"
 #include "condition.h"
 #include "dialogue.h"
 #include "json_loader.h"
 #include "lua_platform_runtime_internal.h"
-#include "lua_platform_test_support.h"
+#include "lua_platform_sol.h"
 #include "npc.h"
 #include "npctalk.h"
+
+static const mission_type_id mission_TEST_MISSION_GENERIC_REWARD( "TEST_MISSION_GENERIC_REWARD" );
+static const mission_type_id mission_TEST_MISSION_GOAL_CONDITION1( "TEST_MISSION_GOAL_CONDITION1" );
+static const npc_template_id npc_template_test_talker( "test_talker" );
 
 TEST_CASE( "lua_platform_mission_tokens_reject_replacement_and_stale_context",
            "[lua][platform][missions]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
-    const auto other_owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr other_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 61 );
     const cata::lua_platform::game_handle_runtime other_runtime( other_owner, 61 );
     const cata::lua_platform::mission_token original(
@@ -42,8 +75,10 @@ TEST_CASE( "lua_platform_mission_tokens_reject_replacement_and_stale_context",
 TEST_CASE( "lua_platform_mission_api_requires_explicit_owner_and_generation",
            "[lua][platform][missions]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
-    const auto other_owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr other_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 62 );
     const cata::lua_platform::game_handle_runtime other_runtime( other_owner, 62 );
     cata::lua_platform::game_handle_runtime active_runtime = runtime;
@@ -121,12 +156,10 @@ TEST_CASE( "lua_platform_active_mission_pages_preserve_native_order_and_tokens",
         }
     } cleanup{ owner };
 
-    const mission_type_id duplicate_type(
-        "TEST_MISSION_GOAL_CONDITION1" );
     mission *first_uid = mission::reserve_new(
-                             duplicate_type, character_id() );
+                             mission_TEST_MISSION_GOAL_CONDITION1, character_id() );
     mission *second_uid = mission::reserve_new(
-                              duplicate_type, character_id() );
+                              mission_TEST_MISSION_GOAL_CONDITION1, character_id() );
     REQUIRE( first_uid != nullptr );
     REQUIRE( second_uid != nullptr );
     // Reverse assignment order from UID order. Native finish/remove effects
@@ -139,7 +172,7 @@ TEST_CASE( "lua_platform_active_mission_pages_preserve_native_order_and_tokens",
     CHECK( native_order[0] == second_uid );
     CHECK( native_order[1] == first_uid );
 
-    const auto runtime_owner =
+    const cata::lua_platform::game_handle_runtime_owner_ptr runtime_owner =
         cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime(
         runtime_owner, 64 );
@@ -251,16 +284,14 @@ TEST_CASE( "lua_platform_mission_abandon_matches_native_remove_first_match",
         }
     } cleanup{ platform_owner, native_owner };
 
-    const mission_type_id duplicate_type(
-        "TEST_MISSION_GOAL_CONDITION1" );
     mission *platform_first = mission::reserve_new(
-                                  duplicate_type, character_id() );
+                                  mission_TEST_MISSION_GOAL_CONDITION1, character_id() );
     mission *platform_second = mission::reserve_new(
-                                   duplicate_type, character_id() );
+                                   mission_TEST_MISSION_GOAL_CONDITION1, character_id() );
     mission *native_first = mission::reserve_new(
-                                duplicate_type, character_id() );
+                                mission_TEST_MISSION_GOAL_CONDITION1, character_id() );
     mission *native_second = mission::reserve_new(
-                                 duplicate_type, character_id() );
+                                 mission_TEST_MISSION_GOAL_CONDITION1, character_id() );
     REQUIRE( platform_first != nullptr );
     REQUIRE( platform_second != nullptr );
     REQUIRE( native_first != nullptr );
@@ -277,13 +308,13 @@ TEST_CASE( "lua_platform_mission_abandon_matches_native_remove_first_match",
     REQUIRE( native_before.size() == 2 );
     CHECK( native_before.front() == native_second );
     for( mission *entry : native_before ) {
-        if( entry->mission_id() == duplicate_type ) {
+        if( entry->mission_id() == mission_TEST_MISSION_GOAL_CONDITION1 ) {
             native_owner.remove_active_mission( *entry );
             break;
         }
     }
 
-    const auto runtime_owner =
+    const cata::lua_platform::game_handle_runtime_owner_ptr runtime_owner =
         cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime(
         runtime_owner, 67 );
@@ -388,9 +419,9 @@ TEST_CASE( "lua_platform_mission_abandon_matches_native_remove_first_match",
            ["code"].get<std::string>() == "not_active" );
 
     mission *platform_failed = mission::reserve_new(
-                                   duplicate_type, character_id() );
+                                   mission_TEST_MISSION_GOAL_CONDITION1, character_id() );
     mission *native_failed = mission::reserve_new(
-                                 duplicate_type, character_id() );
+                                 mission_TEST_MISSION_GOAL_CONDITION1, character_id() );
     REQUIRE( platform_failed != nullptr );
     REQUIRE( native_failed != nullptr );
     platform_failed->assign( platform_owner );
@@ -426,8 +457,10 @@ TEST_CASE( "lua_platform_mission_abandon_matches_native_remove_first_match",
 TEST_CASE( "lua_platform_npc_mission_provider_preflights_exact_owner_and_rollback",
            "[lua][platform][missions][npc]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
-    const auto other_owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr other_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 63 );
     const cata::lua_platform::game_handle_runtime other_runtime( other_owner, 63 );
     cata::lua_platform::game_handle_runtime active_runtime = runtime;
@@ -513,7 +546,7 @@ TEST_CASE( "lua_platform_npc_mission_provider_preflights_exact_owner_and_rollbac
 TEST_CASE( "lua_platform_npc_mission_surface_is_explicit",
            "[lua][platform][missions][npc][contract]" )
 {
-    const auto runtime_owner =
+    const cata::lua_platform::game_handle_runtime_owner_ptr runtime_owner =
         cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime(
         runtime_owner, 65 );
@@ -568,7 +601,7 @@ TEST_CASE( "lua_platform_npc_mission_reward_calls_native_no_selection_path",
     provider.setID( character_id( 7391 ), true );
     provider.chatbin.mission_selected = nullptr;
 
-    const auto runtime_owner =
+    const cata::lua_platform::game_handle_runtime_owner_ptr runtime_owner =
         cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime(
         runtime_owner, 66 );
@@ -655,7 +688,7 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
 
     const character_id provider_id = get_map().place_npc(
                                          point_bub_ms( 25, 25 ),
-                                         npc_template_id( "test_talker" ) );
+                                         npc_template_test_talker );
     g->load_npcs();
     npc *provider = g->find_npc( provider_id );
     REQUIRE( provider != nullptr );
@@ -663,9 +696,9 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     provider->chatbin.missions_assigned.clear();
     provider->chatbin.mission_selected = nullptr;
 
-    const auto runtime_owner =
+    const cata::lua_platform::game_handle_runtime_owner_ptr runtime_owner =
         cata::lua_platform::make_game_handle_runtime_owner();
-    const auto other_runtime_owner =
+    const cata::lua_platform::game_handle_runtime_owner_ptr other_runtime_owner =
         cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime(
         runtime_owner, 66 );
@@ -1014,17 +1047,17 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     CHECK( provider->chatbin.missions_assigned.empty() );
 
     mission *owned_for_dialogue = mission::reserve_new(
-                                      mission_type_id( "TEST_MISSION_GOAL_CONDITION1" ),
+                                      mission_TEST_MISSION_GOAL_CONDITION1,
                                       provider->getID() );
     REQUIRE( owned_for_dialogue != nullptr );
     owned_for_dialogue->set_assigned_player_id( owner.getID() );
     mission *second_owned_for_dialogue = mission::reserve_new(
-            mission_type_id( "TEST_MISSION_GOAL_CONDITION1" ),
+            mission_TEST_MISSION_GOAL_CONDITION1,
             provider->getID() );
     REQUIRE( second_owned_for_dialogue != nullptr );
     second_owned_for_dialogue->set_assigned_player_id( owner.getID() );
     mission *owned_by_other = mission::reserve_new(
-                                  mission_type_id( "TEST_MISSION_GOAL_CONDITION1" ),
+                                  mission_TEST_MISSION_GOAL_CONDITION1,
                                   provider->getID() );
     REQUIRE( owned_by_other != nullptr );
     owned_by_other->set_assigned_player_id( wrong_owner.getID() );
@@ -1190,14 +1223,14 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
         return selected;
     };
     mission *successful_for_dialogue = make_selected_for_owner(
-                                           mission_type_id( "TEST_MISSION_GOAL_CONDITION1" ) );
+                                           mission_TEST_MISSION_GOAL_CONDITION1 );
     successful_for_dialogue->wrap_up( wrong_owner );
     check_selected_conditions();
     CHECK( mission_complete( selected_mission_dialogue ) );
     CHECK_FALSE( mission_failed( selected_mission_dialogue ) );
     CHECK( mission_goal( selected_mission_dialogue ) );
     mission *failed_for_dialogue = make_selected_for_owner(
-                                       mission_type_id( "TEST_MISSION_GOAL_CONDITION1" ) );
+                                       mission_TEST_MISSION_GOAL_CONDITION1 );
     failed_for_dialogue->fail( wrong_owner );
     check_selected_conditions();
     CHECK( mission_failed( selected_mission_dialogue ) );
@@ -1270,7 +1303,7 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     provider->chatbin.missions_assigned.clear();
 
     mission *retired = mission::reserve_new(
-                           mission_type_id( "TEST_MISSION_GOAL_CONDITION1" ),
+                           mission_TEST_MISSION_GOAL_CONDITION1,
                            provider->getID() );
     REQUIRE( retired != nullptr );
     const cata::lua_platform::mission_token retired_token(
@@ -1310,7 +1343,7 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     provider->chatbin.mission_selected = nullptr;
 
     mission *foreign = mission::reserve_new(
-                           mission_type_id( "TEST_MISSION_GENERIC_REWARD" ),
+                           mission_TEST_MISSION_GENERIC_REWARD,
                            wrong_provider.getID() );
     REQUIRE( foreign != nullptr );
     const cata::lua_platform::mission_token foreign_token(

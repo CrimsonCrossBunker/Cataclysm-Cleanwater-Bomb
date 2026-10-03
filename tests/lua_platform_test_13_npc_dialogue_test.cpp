@@ -1,22 +1,64 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+#include <bodypart.h>
+#include <cata_scope_helpers.h>
+#include <character_id.h>
+#include <coordinates.h>
+#include <dialogue_chatbin.h>
+#include <dialogue_helpers.h>
+#include <dialogue_win.h>
+#include <effect.h>
+#include <enums.h>
+#include <flexbuffer_json.h>
+#include <game.h>
+#include <input_enums.h>
+#include <inventory.h>
+#include <lua_platform_bindings_values.h>
+#include <lua_platform_handle.h>
+#include <lua_platform_hooks.h>
+#include <lua_platform_npcs.h>
+#include <lua_platform_runtime.h>
+#include <map_helpers.h>
+#include <monster.h>
+#include <npc.h>
+#include <npc_opinion.h>
+#include <pimpl.h>
+#include <point.h>
+#include <rng.h>
+#include <talker_character.h>
+#include <talker_npc.h>
+#include <talker_topic.h>
+#include <units.h>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <initializer_list>
+#include <memory>
+#include <optional>
+#include <set>
 #include <stdexcept>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
-#include "lua_platform_test_support.h"
-#include "lua_platform_dialogue.h"
-#include "lua_platform_runtime_internal.h"
-#include "condition.h"
 #include "avatar.h"
 #include "calendar.h"
+#include "cata_catch.h"
 #include "computer.h"
+#include "condition.h"
 #include "dialogue.h"
 #include "faction.h"
 #include "item.h"
+#include "item_location.h"
 #include "json_loader.h"
+#include "lua_platform_dialogue.h"
+#include "lua_platform_runtime_internal.h"
+#include "lua_platform_sol.h"
+#include "lua_platform_test_support.h"
+#include "map.h"
 #include "mission.h"
 #include "mtype.h"
-#include "map.h"
 #include "npctalk.h"
-#include "item_location.h"
 #include "talker.h"
 #include "talker_avatar.h"
 #include "talker_furniture.h"
@@ -26,6 +68,26 @@
 #include "translation.h"
 #include "type_id.h"
 
+static const efftype_id effect_bleed( "bleed" );
+static const efftype_id effect_pacified( "pacified" );
+static const efftype_id effect_pet( "pet" );
+static const efftype_id effect_sold_pet( "sold_pet" );
+static const faction_id faction_tacoma_commune( "tacoma_commune" );
+static const itype_id itype_debug_backpack( "debug_backpack" );
+static const itype_id itype_rock( "rock" );
+static const itype_id itype_test_rock( "test_rock" );
+static const mission_type_id mission_TEST_MISSION_GENERIC_REWARD( "TEST_MISSION_GENERIC_REWARD" );
+static const mission_type_id mission_TEST_MISSION_GOAL_CONDITION1( "TEST_MISSION_GOAL_CONDITION1" );
+static const mtype_id mon_dog( "mon_dog" );
+static const mtype_id mon_zombie( "mon_zombie" );
+static const ter_str_id ter_t_floor( "t_floor" );
+static const ter_str_id ter_t_wall( "t_wall" );
+static const trait_id trait_SPIRITUAL( "SPIRITUAL" );
+
+class vehicle;
+
+namespace
+{
 class platform_item_offer_test_talker : public talker_npc
 {
     public:
@@ -72,7 +134,7 @@ class platform_dialogue_reject_pet_purchase_talker : public talker_avatar
                           const translation & ) override {
             ++purchase_calls;
             sold_pet_was_present_before_purchase = seller.has_effect(
-                    efftype_id( "sold_pet" ), bodypart_str_id::NULL_ID() );
+                    effect_sold_pet, bodypart_str_id::NULL_ID() );
             return false;
         }
 
@@ -80,9 +142,12 @@ class platform_dialogue_reject_pet_purchase_talker : public talker_avatar
         bool sold_pet_was_present_before_purchase = false;
 };
 
+} // namespace
+
 TEST_CASE( "lua_platform_exact_creature_subtypes_fail_closed", "[lua][platform]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 6 );
     monster value;
     value.set_hp( 1 );
@@ -113,7 +178,8 @@ TEST_CASE( "lua_platform_exact_creature_subtypes_fail_closed", "[lua][platform]"
 
 TEST_CASE( "lua_platform_npc_and_avatar_handles_require_exact_subtypes", "[lua][platform]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 47 );
     monster value;
     value.set_hp( 1 );
@@ -139,7 +205,8 @@ TEST_CASE( "lua_platform_npc_and_avatar_handles_require_exact_subtypes", "[lua][
 TEST_CASE( "lua_platform_npc_identity_generation_rejects_id_replacement",
            "[lua][platform][npc]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 48 );
     npc original;
     original.normalize();
@@ -163,7 +230,8 @@ TEST_CASE( "lua_platform_npc_identity_generation_rejects_id_replacement",
 TEST_CASE( "lua_platform_npc_identity_generation_rejects_same_id_replacement",
            "[lua][platform][npc]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 49 );
     npc original;
     original.normalize();
@@ -192,7 +260,8 @@ TEST_CASE( "lua_platform_npc_identity_generation_rejects_same_id_replacement",
 TEST_CASE( "lua_platform_npc_unload_reload_and_death_fail_closed",
            "[lua][platform][npc]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 50 );
     npc value;
     value.normalize();
@@ -229,8 +298,10 @@ TEST_CASE( "lua_platform_npc_unload_reload_and_death_fail_closed",
 TEST_CASE( "lua_platform_npc_handles_reject_stale_owner_world_and_runtime",
            "[lua][platform][npc]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
-    const auto other_owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr other_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 51 );
     const cata::lua_platform::game_handle_runtime other_runtime( other_owner, 51 );
     const cata::lua_platform::game_handle_runtime newer_runtime( owner, 52 );
@@ -259,7 +330,8 @@ TEST_CASE( "lua_platform_npc_handles_reject_stale_owner_world_and_runtime",
 TEST_CASE( "lua_platform_npc_write_gate_precedes_exact_resolution",
            "[lua][platform][npc]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 53 );
     const auto current_runtime = [&]() {
         return runtime;
@@ -345,7 +417,8 @@ TEST_CASE( "lua_platform_open_dialogue_reports_synchronous_native_outcomes",
     CHECK( speaker.talk_to( std::unique_ptr<talker>() ) ==
            avatar_talk_to_result::not_started );
 
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 73 );
     dialogue conversation(
         std::make_unique<talker_topic>(), std::make_unique<talker_topic>() );
@@ -540,15 +613,15 @@ TEST_CASE( "lua_platform_dialogue_deferred_translation_and_text_condition_timing
     sol::state lua;
     const cata::lua_platform::dialogue::response_descriptor_options options = {
         "dialogue", "response descriptor", "has", true,
-        []( const std::string & text, const std::string_view field )
+        []( const std::string_view text, const std::string_view field )
         {
             cata::lua_platform::dialogue::require_text( text, "dialogue", field );
         },
-        []( const std::string & id )
+        []( const std::string_view id )
         {
             return cata::lua_platform::dialogue::valid_topic_id( id );
         },
-        []( sol::protected_function )
+        []( const sol::protected_function & )
         {
             return std::uint64_t{ 1 };
         },
@@ -784,7 +857,7 @@ TEST_CASE( "lua_platform_open_dialogue_rejects_stale_participants_and_generation
 {
     const std::vector<std::string> topics = get_all_talk_topic_ids();
     REQUIRE_FALSE( topics.empty() );
-    const std::string topic = topics.front();
+    const std::string &topic = topics.front();
 
     SECTION( "NPC native identity" ) {
         platform_npc_dialogue_fixture fixture;
@@ -850,12 +923,13 @@ TEST_CASE( "lua_platform_open_dialogue_rejects_stale_participants_and_generation
 TEST_CASE( "lua_platform_dialogue_sessions_invalidate_topics_and_participants",
            "[lua][platform]" )
 {
-    monster participant{ mtype_id( "mon_zombie" ) };
+    monster participant{ mon_zombie };
     participant.set_hp( 1 );
     dialogue conversation(
         std::make_unique<talker_monster>( &participant ),
         std::make_unique<talker_topic>() );
-    const auto runtime_owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr runtime_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( runtime_owner, 1 );
     const std::size_t world_generation = 1;
 
@@ -891,12 +965,13 @@ TEST_CASE( "lua_platform_dialogue_response_callbacks_reject_stale_topics",
            "[lua][platform][dialogue]" )
 {
     cata::lua_platform::dialogue::clear_response_callbacks();
-    monster participant{ mtype_id( "mon_zombie" ) };
+    monster participant{ mon_zombie };
     participant.set_hp( 1 );
     dialogue conversation(
         std::make_unique<talker_monster>( &participant ),
         std::make_unique<talker_topic>() );
-    const auto runtime_owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr runtime_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( runtime_owner, 1 );
     const std::size_t world_generation = 1;
     cata::lua_platform::dialogue::begin_session(
@@ -953,7 +1028,8 @@ TEST_CASE( "lua_platform_dialogue_response_action_registry_rejects_stale_session
     dialogue conversation(
         std::make_unique<talker_npc>( &speaker ),
         std::make_unique<talker_npc>( &interlocutor ) );
-    const auto runtime_owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr runtime_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( runtime_owner, 1 );
     constexpr std::size_t world_generation = 1;
     cata::lua_platform::dialogue::begin_session(
@@ -1192,6 +1268,8 @@ TEST_CASE( "lua_platform_dialogue_item_grant_matches_native_talk_effect",
     platform_speaker.normalize();
     platform_speaker.setID( character_id( 1551 ), true );
     platform_speaker.setpos( here, tripoint_bub_ms( 65, 60, 0 ) );
+    REQUIRE( native_speaker.wear_item( item( itype_debug_backpack ), false ).has_value() );
+    REQUIRE( platform_speaker.wear_item( item( itype_debug_backpack ), false ).has_value() );
     npc native_interlocutor;
     native_interlocutor.normalize();
     native_interlocutor.setID( character_id( 1552 ), true );
@@ -1338,14 +1416,10 @@ TEST_CASE( "lua_platform_dialogue_purchase_pet_matches_native_talk_effect",
         cata::lua_platform::retire_npc_handle_identity( platform_seller );
     } );
 
-    const mtype_id dog_type( "mon_dog" );
-    const efftype_id pet_effect( "pet" );
-    const efftype_id pacified_effect( "pacified" );
-    const efftype_id sold_pet_effect( "sold_pet" );
-    REQUIRE( dog_type.is_valid() );
-    REQUIRE( pet_effect.is_valid() );
-    REQUIRE( pacified_effect.is_valid() );
-    REQUIRE( sold_pet_effect.is_valid() );
+    REQUIRE( mon_dog.is_valid() );
+    REQUIRE( effect_pet.is_valid() );
+    REQUIRE( effect_pacified.is_valid() );
+    REQUIRE( effect_sold_pet.is_valid() );
     native_seller.op_of_u.owed = 5000;
     platform_seller.op_of_u.owed = 5000;
 
@@ -1368,7 +1442,7 @@ TEST_CASE( "lua_platform_dialogue_purchase_pet_matches_native_talk_effect",
 
     std::vector<monster *> native_pets;
     for( monster &entry : g->all_monsters() ) {
-        if( entry.type->id == dog_type ) {
+        if( entry.type->id == mon_dog ) {
             native_pets.push_back( &entry );
         }
     }
@@ -1376,18 +1450,18 @@ TEST_CASE( "lua_platform_dialogue_purchase_pet_matches_native_talk_effect",
     const tripoint_bub_ms expected_position = native_pets.front()->pos_bub();
     const int expected_friendly = native_pets.front()->friendly;
     const bool expected_pet_permanent =
-        native_pets.front()->get_effect( pet_effect ).is_permanent();
+        native_pets.front()->get_effect( effect_pet ).is_permanent();
     const bool expected_pacified_permanent =
-        native_pets.front()->get_effect( pacified_effect ).is_permanent();
+        native_pets.front()->get_effect( effect_pacified ).is_permanent();
     CHECK( native_pets.front()->friendly == -1 );
-    CHECK( native_pets.front()->has_effect( pet_effect ) );
-    CHECK( native_pets.front()->get_effect( pet_effect ).is_permanent() );
-    CHECK( native_pets.front()->has_effect( pacified_effect ) );
-    CHECK( native_pets.front()->get_effect( pacified_effect ).is_permanent() );
+    CHECK( native_pets.front()->has_effect( effect_pet ) );
+    CHECK( native_pets.front()->get_effect( effect_pet ).is_permanent() );
+    CHECK( native_pets.front()->has_effect( effect_pacified ) );
+    CHECK( native_pets.front()->get_effect( effect_pacified ).is_permanent() );
     CHECK( native_pets.front()->unique_name.empty() );
     CHECK( native_seller.op_of_u.owed == 0 );
-    CHECK( native_seller.has_effect( sold_pet_effect ) );
-    CHECK( native_seller.get_effect_dur( sold_pet_effect ) == 24_hours );
+    CHECK( native_seller.has_effect( effect_sold_pet ) );
+    CHECK( native_seller.get_effect_dur( effect_sold_pet ) == 24_hours );
     CHECK_FALSE( native_can_buy( native_conversation ) );
 
     g->clear_zombies();
@@ -1455,23 +1529,23 @@ TEST_CASE( "lua_platform_dialogue_purchase_pet_matches_native_talk_effect",
     REQUIRE( owner_lua["purchase_result"].valid() );
     CHECK( owner_lua["purchase_result"].get<bool>() );
     CHECK( platform_seller.op_of_u.owed == 0 );
-    CHECK( platform_seller.has_effect( sold_pet_effect ) );
-    CHECK( platform_seller.get_effect_dur( sold_pet_effect ) == 24_hours );
+    CHECK( platform_seller.has_effect( effect_sold_pet ) );
+    CHECK( platform_seller.get_effect_dur( effect_sold_pet ) == 24_hours );
 
     std::vector<monster *> platform_pets;
     for( monster &entry : g->all_monsters() ) {
-        if( entry.type->id == dog_type ) {
+        if( entry.type->id == mon_dog ) {
             platform_pets.push_back( &entry );
         }
     }
     REQUIRE( platform_pets.size() == 1 );
     CHECK( platform_pets.front()->pos_bub() == expected_position );
     CHECK( platform_pets.front()->friendly == expected_friendly );
-    CHECK( platform_pets.front()->has_effect( pet_effect ) );
-    CHECK( platform_pets.front()->get_effect( pet_effect ).is_permanent() ==
+    CHECK( platform_pets.front()->has_effect( effect_pet ) );
+    CHECK( platform_pets.front()->get_effect( effect_pet ).is_permanent() ==
            expected_pet_permanent );
-    CHECK( platform_pets.front()->has_effect( pacified_effect ) );
-    CHECK( platform_pets.front()->get_effect( pacified_effect ).is_permanent() ==
+    CHECK( platform_pets.front()->has_effect( effect_pacified ) );
+    CHECK( platform_pets.front()->get_effect( effect_pacified ).is_permanent() ==
            expected_pacified_permanent );
     CHECK( platform_pets.front()->unique_name.empty() );
     cata::lua_platform::dialogue::end_session( platform_conversation );
@@ -1514,8 +1588,8 @@ TEST_CASE( "lua_platform_dialogue_pet_purchase_false_result_keeps_native_effect_
 
     CHECK( buyer_talker->purchase_calls == 1 );
     CHECK_FALSE( buyer_talker->sold_pet_was_present_before_purchase );
-    CHECK( seller.has_effect( efftype_id( "sold_pet" ) ) );
-    CHECK( seller.get_effect_dur( efftype_id( "sold_pet" ) ) == 24_hours );
+    CHECK( seller.has_effect( effect_sold_pet ) );
+    CHECK( seller.get_effect_dur( effect_sold_pet ) == 24_hours );
 }
 
 TEST_CASE( "lua_platform_dialogue_pet_purchase_keeps_partial_placement_success",
@@ -1530,16 +1604,14 @@ TEST_CASE( "lua_platform_dialogue_pet_purchase_keeps_partial_placement_success",
     map &here = get_map();
     const tripoint_bub_ms center( 60, 60, 0 );
     const tripoint_bub_ms only_open = center + tripoint_rel_ms( 1, 0, 0 );
-    const ter_str_id wall( "t_wall" );
-    const ter_str_id floor( "t_floor" );
-    REQUIRE( wall.is_valid() );
-    REQUIRE( floor.is_valid() );
+    REQUIRE( ter_t_wall.is_valid() );
+    REQUIRE( ter_t_floor.is_valid() );
     for( int x = center.x() - 3; x <= center.x() + 3; ++x ) {
         for( int y = center.y() - 3; y <= center.y() + 3; ++y ) {
-            here.ter_set( tripoint_bub_ms( x, y, center.z() ), wall );
+            here.ter_set( tripoint_bub_ms( x, y, center.z() ), ter_t_wall );
         }
     }
-    here.ter_set( only_open, floor );
+    here.ter_set( only_open, ter_t_floor );
     avatar buyer;
     buyer.normalize();
     buyer.setpos( here, center );
@@ -1549,7 +1621,7 @@ TEST_CASE( "lua_platform_dialogue_pet_purchase_keeps_partial_placement_success",
     talker_npc native_seller( &seller );
 
     const bool result = native_buyer.buy_monster(
-                            native_seller, mtype_id( "mon_dog" ), 0, 2, true,
+                            native_seller, mon_dog, 0, 2, true,
                             no_translation( "" ) );
     CHECK( result );
     std::vector<monster *> placed;
@@ -1557,10 +1629,10 @@ TEST_CASE( "lua_platform_dialogue_pet_purchase_keeps_partial_placement_success",
         placed.push_back( &entry );
     }
     REQUIRE( placed.size() == 1 );
-    CHECK( placed.front()->type->id == mtype_id( "mon_dog" ) );
+    CHECK( placed.front()->type->id == mon_dog );
     CHECK( placed.front()->friendly == -1 );
-    CHECK( placed.front()->has_effect( efftype_id( "pet" ) ) );
-    CHECK( placed.front()->has_effect( efftype_id( "pacified" ) ) );
+    CHECK( placed.front()->has_effect( effect_pet ) );
+    CHECK( placed.front()->has_effect( effect_pacified ) );
     CHECK( placed.front()->unique_name.empty() );
 }
 
@@ -1582,7 +1654,7 @@ TEST_CASE( "lua_platform_dialogue_effect_condition_uses_native_reason_body_part"
     seller.normalize();
     seller.setID( character_id( 1577 ), true );
     seller.setpos( here, tripoint_bub_ms( 61, 60, 0 ) );
-    seller.add_effect( efftype_id( "bleed" ), 10_turns,
+    seller.add_effect( effect_bleed, 10_turns,
                        bodypart_id( "arm_l" ), false, 1 );
     cata::lua_platform::register_npc_handle_identity( seller );
     on_out_of_scope retire_seller_identity( [&]() {
@@ -1622,8 +1694,24 @@ TEST_CASE( "lua_platform_dialogue_effect_condition_uses_native_reason_body_part"
     { "unknown_dialogue_reason", false }, { "", false }
 } ) {
         conversation.reason = reason;
-        CHECK( native_condition( conversation ) == expected );
-        CHECK( context.has_interlocutor_effect( bleed_id ) == expected );
+        bool native_result = false;
+        const std::string native_diagnostic = capture_debugmsg_during( [&]() {
+            native_result = native_condition( conversation );
+        } );
+        CHECK( native_result == expected );
+        bool platform_result = false;
+        const std::string platform_diagnostic = capture_debugmsg_during( [&]() {
+            platform_result = context.has_interlocutor_effect( bleed_id );
+        } );
+        CHECK( platform_result == expected );
+        if( reason != "unknown_dialogue_reason" ) {
+            CHECK( native_diagnostic.empty() );
+            CHECK( platform_diagnostic.empty() );
+        } else {
+            CHECK( native_diagnostic.find( "invalid body part id" ) != std::string::npos );
+            CHECK( ( platform_diagnostic.empty() ||
+                     platform_diagnostic.find( "invalid body part id" ) != std::string::npos ) );
+        }
     }
     cata::lua_platform::dialogue::end_session( conversation );
 }
@@ -1695,21 +1783,21 @@ TEST_CASE( "lua_platform_dialogue_kind_conditions_match_native_context_identitie
     interlocutor.normalize();
     interlocutor.setID( character_id( 1581 ), true );
     interlocutor.setpos( here, tripoint_bub_ms( 61, 60, 0 ) );
-    monster creature( mtype_id( "mon_zombie" ) );
+    monster creature( mon_zombie );
     creature.set_hp( 1 );
     avatar item_owner;
     item_owner.normalize();
     item_owner.setID( character_id( 1582 ), true );
     item_owner.setpos( here, tripoint_bub_ms( 62, 60, 0 ) );
     item &native_item = item_owner.inv->add_item(
-                            item( itype_id( "rock" ), calendar::turn_zero ),
+                            item( itype_rock, calendar::turn_zero ),
                             false, false, false );
     item_location native_item_location( item_owner, &native_item );
     REQUIRE( native_item_location );
     computer terminal( "Platform identity test", 0, here,
                        tripoint_bub_ms( 63, 60, 0 ) );
     const tripoint_bub_ms vehicle_pos( 64, 60, 0 );
-    here.ter_set( vehicle_pos, ter_str_id( "t_floor" ).id() );
+    here.ter_set( vehicle_pos, ter_t_floor.id() );
     vehicle *native_vehicle = here.add_vehicle(
                                   vehicle_prototype_test_shopping_cart, vehicle_pos,
                                   0_degrees, 0, veh_spawn_status::UNDAMAGED );
@@ -1757,7 +1845,7 @@ TEST_CASE( "lua_platform_dialogue_kind_conditions_match_native_context_identitie
             CHECK( lua_actor.as<sol::table>()["kind"].get<std::string>() == "computer" );
         } else {
             REQUIRE( lua_actor.is<cata::lua_platform::game_handle>() );
-            const cata::lua_platform::game_handle handle =
+            const cata::lua_platform::game_handle &handle =
                 lua_actor.as<cata::lua_platform::game_handle>();
             const std::string expected_handle_kind =
                 expected_kind == "avatar" || expected_kind == "npc" ||
@@ -1933,15 +2021,14 @@ TEST_CASE( "lua_platform_dialogue_clear_mission_matches_native_talk_effect",
         cata::lua_platform::retire_npc_handle_identity( platform_interlocutor );
     } );
 
-    const mission_type_id test_mission( "TEST_MISSION_GOAL_CONDITION1" );
     mission *const native_first = mission::reserve_new(
-                                      test_mission, native_interlocutor.getID() );
+                                      mission_TEST_MISSION_GOAL_CONDITION1, native_interlocutor.getID() );
     mission *const native_selected = mission::reserve_new(
-                                         test_mission, native_interlocutor.getID() );
+                                         mission_TEST_MISSION_GOAL_CONDITION1, native_interlocutor.getID() );
     mission *const platform_first = mission::reserve_new(
-                                        test_mission, platform_interlocutor.getID() );
+                                        mission_TEST_MISSION_GOAL_CONDITION1, platform_interlocutor.getID() );
     mission *const platform_selected = mission::reserve_new(
-                                           test_mission, platform_interlocutor.getID() );
+                                           mission_TEST_MISSION_GOAL_CONDITION1, platform_interlocutor.getID() );
     REQUIRE( native_first != nullptr );
     REQUIRE( native_selected != nullptr );
     REQUIRE( platform_first != nullptr );
@@ -2062,13 +2149,13 @@ TEST_CASE( "lua_platform_dialogue_mission_success_matches_native_talk_effect",
     npc native_interlocutor;
     native_interlocutor.normalize();
     native_interlocutor.setID( character_id( 1564 ), true );
-    native_interlocutor.set_fac( faction_id( "tacoma_commune" ) );
+    native_interlocutor.set_fac( faction_tacoma_commune );
     native_interlocutor.op_of_u.value = 4;
     native_interlocutor.op_of_u.anger = 2;
     npc platform_interlocutor;
     platform_interlocutor.normalize();
     platform_interlocutor.setID( character_id( 1565 ), true );
-    platform_interlocutor.set_fac( faction_id( "tacoma_commune" ) );
+    platform_interlocutor.set_fac( faction_tacoma_commune );
     platform_interlocutor.op_of_u.value = 4;
     platform_interlocutor.op_of_u.anger = 2;
     cata::lua_platform::register_npc_handle_identity( native_interlocutor );
@@ -2081,15 +2168,16 @@ TEST_CASE( "lua_platform_dialogue_mission_success_matches_native_talk_effect",
     faction *const shared_faction = native_interlocutor.get_faction();
     REQUIRE( shared_faction != nullptr );
     REQUIRE( platform_interlocutor.get_faction() == shared_faction );
-    const mission_type_id test_mission( "TEST_MISSION_GENERIC_REWARD" );
     mission *const native_mission = mission::reserve_new(
-                                        test_mission, native_interlocutor.getID() );
+                                        mission_TEST_MISSION_GENERIC_REWARD, native_interlocutor.getID() );
     mission *const platform_mission = mission::reserve_new(
-                                          test_mission, platform_interlocutor.getID() );
+                                          mission_TEST_MISSION_GENERIC_REWARD, platform_interlocutor.getID() );
     REQUIRE( native_mission != nullptr );
     REQUIRE( platform_mission != nullptr );
     native_mission->set_assigned_player_id( owner.getID() );
     platform_mission->set_assigned_player_id( owner.getID() );
+    owner.on_mission_assignment( *native_mission );
+    owner.on_mission_assignment( *platform_mission );
     native_interlocutor.chatbin.missions_assigned = { native_mission };
     native_interlocutor.chatbin.mission_selected = native_mission;
     platform_interlocutor.chatbin.missions_assigned = { platform_mission };
@@ -2258,15 +2346,16 @@ TEST_CASE( "lua_platform_dialogue_mission_failure_sequence_matches_native_talk_e
         cata::lua_platform::retire_npc_handle_identity( platform_interlocutor );
     } );
 
-    const mission_type_id test_mission( "TEST_MISSION_GENERIC_REWARD" );
     mission *const native_mission = mission::reserve_new(
-                                        test_mission, native_interlocutor.getID() );
+                                        mission_TEST_MISSION_GENERIC_REWARD, native_interlocutor.getID() );
     mission *const platform_mission = mission::reserve_new(
-                                          test_mission, platform_interlocutor.getID() );
+                                          mission_TEST_MISSION_GENERIC_REWARD, platform_interlocutor.getID() );
     REQUIRE( native_mission != nullptr );
     REQUIRE( platform_mission != nullptr );
     native_mission->set_assigned_player_id( owner.getID() );
     platform_mission->set_assigned_player_id( owner.getID() );
+    owner.on_mission_assignment( *native_mission );
+    owner.on_mission_assignment( *platform_mission );
     native_interlocutor.chatbin.missions_assigned = { native_mission };
     native_interlocutor.chatbin.mission_selected = native_mission;
     platform_interlocutor.chatbin.missions_assigned = { platform_mission };
@@ -2595,8 +2684,9 @@ TEST_CASE( "lua_platform_dialogue_item_offer_delegates_native_reason_and_order",
 
     dialogue non_npc_beta( std::make_unique<talker_topic>(),
                            std::make_unique<talker_topic>() );
-    auto non_npc_session = cata::lua_platform::dialogue::begin_session(
-                               non_npc_beta, runtime_identity, world_generation );
+    cata::lua_platform::dialogue::dialogue_session_ptr non_npc_session =
+        cata::lua_platform::dialogue::begin_session(
+            non_npc_beta, runtime_identity, world_generation );
     non_npc_session = cata::lua_platform::dialogue::session_for(
                           non_npc_beta, "TALK_CCB_ITEM_OFFER_TEST", runtime_identity,
                           world_generation );
@@ -2610,7 +2700,7 @@ TEST_CASE( "lua_platform_dialogue_item_offer_delegates_native_reason_and_order",
     CHECK( non_npc_beta.reason == native_base_reason );
 
     dialogue missing_beta( std::make_unique<talker_topic>(), nullptr );
-    auto missing_beta_session =
+    cata::lua_platform::dialogue::dialogue_session_ptr missing_beta_session =
         cata::lua_platform::dialogue::begin_session(
             missing_beta, runtime_identity, world_generation );
     missing_beta_session = cata::lua_platform::dialogue::session_for(
@@ -2638,7 +2728,8 @@ TEST_CASE( "lua_platform_dialogue_participants_keep_exact_npc_identity",
     dialogue conversation(
         std::make_unique<talker_npc>( &speaker ),
         std::make_unique<talker_npc>( &interlocutor ) );
-    const auto runtime_owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr runtime_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( runtime_owner, 1 );
     const std::size_t world_generation = 1;
     const cata::lua_platform::dialogue::dialogue_session_ptr session =
@@ -2664,7 +2755,8 @@ TEST_CASE( "lua_platform_dialogue_detached_participants_are_snapshots",
 {
     dialogue conversation(
         std::make_unique<talker_topic>(), std::make_unique<talker_topic>() );
-    const auto runtime_owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr runtime_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( runtime_owner, 1 );
     const std::size_t world_generation = 1;
     const cata::lua_platform::dialogue::dialogue_session_ptr session =
@@ -2683,13 +2775,15 @@ TEST_CASE( "lua_platform_dialogue_detached_participants_are_snapshots",
 TEST_CASE( "lua_platform_dialogue_sessions_reject_stale_identity_without_dereference",
            "[lua][platform][dialogue]" )
 {
-    monster participant{ mtype_id( "mon_zombie" ) };
+    monster participant{ mon_zombie };
     participant.set_hp( 1 );
     dialogue conversation(
         std::make_unique<talker_monster>( &participant ),
         std::make_unique<talker_topic>() );
-    const auto runtime_owner = cata::lua_platform::make_game_handle_runtime_owner();
-    const auto foreign_owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr runtime_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr foreign_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( runtime_owner, 7 );
     const cata::lua_platform::game_handle_runtime newer_runtime( runtime_owner, 8 );
     const cata::lua_platform::game_handle_runtime foreign_runtime( foreign_owner, 7 );
@@ -2762,8 +2856,10 @@ TEST_CASE( "lua_platform_dialogue_sessions_reject_stale_identity_without_derefer
 TEST_CASE( "lua_platform_dialogue_session_scope_and_teardown_retirement",
            "[lua][platform][dialogue]" )
 {
-    const auto first_owner = cata::lua_platform::make_game_handle_runtime_owner();
-    const auto second_owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr first_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr second_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime first_runtime( first_owner, 11 );
     const cata::lua_platform::game_handle_runtime second_runtime( second_owner, 11 );
     const std::size_t world_generation = 9;
@@ -2810,7 +2906,8 @@ TEST_CASE( "lua_platform_dialogue_session_scope_and_teardown_retirement",
 TEST_CASE( "lua_platform_npc_identity_generation_bump_retires_dialogue_sessions",
            "[lua][platform][dialogue][npc]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 12 );
     const std::size_t previous_world_generation =
         cata::lua_platform::runtime_world_generation();
@@ -2842,7 +2939,8 @@ TEST_CASE( "lua_platform_npc_identity_generation_bump_retires_dialogue_sessions"
 TEST_CASE( "lua_platform_dialogue_move_retires_source_and_target_sessions",
            "[lua][platform][dialogue]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 13 );
     const std::size_t world_generation = 31;
 
@@ -2962,10 +3060,9 @@ TEST_CASE( "lua_platform_dialogue_debug_shows_failed_switch_responses_like_nativ
     avatar speaker;
     speaker.normalize();
     speaker.setID( character_id( 1570 ), true );
-    REQUIRE_FALSE( speaker.has_trait( trait_id( "SPIRITUAL" ) ) );
-    const itype_id repeat_item_id( "test_rock" );
-    speaker.i_add( item( repeat_item_id, calendar::turn ) );
-    REQUIRE( speaker.has_amount( repeat_item_id, 1 ) );
+    REQUIRE_FALSE( speaker.has_trait( trait_SPIRITUAL ) );
+    speaker.i_add( item( itype_test_rock, calendar::turn ) );
+    REQUIRE( speaker.has_amount( itype_test_rock, 1 ) );
     npc interlocutor;
     interlocutor.normalize();
     interlocutor.setID( character_id( 1571 ), true );
@@ -3030,9 +3127,9 @@ TEST_CASE( "lua_platform_dialogue_debug_shows_failed_switch_responses_like_nativ
     CHECK_FALSE( native_normal_claims[1] );
     CHECK_FALSE( native_normal_switch_done );
     CHECK( native_repeat.response.gen_repeat_response(
-               native_normal, repeat_item_id, native_normal_switch_done ) );
+               native_normal, itype_test_rock, native_normal_switch_done ) );
     CHECK_FALSE( native_false_repeat.response.gen_repeat_response(
-                     native_normal, repeat_item_id, native_normal_switch_done ) );
+                     native_normal, itype_test_rock, native_normal_switch_done ) );
     REQUIRE( native_normal.responses.size() == 2 );
     CHECK( native_normal.responses[0].truetext.translated() == "Repeat item" );
     CHECK( native_normal.responses[1].truetext.translated() == "Fallback" );
@@ -3046,9 +3143,9 @@ TEST_CASE( "lua_platform_dialogue_debug_shows_failed_switch_responses_like_nativ
     REQUIRE( native_debug_claims.size() == 2 );
     CHECK( native_debug_switch_done );
     CHECK_FALSE( native_repeat.response.gen_repeat_response(
-                     native_debug, repeat_item_id, native_debug_switch_done ) );
+                     native_debug, itype_test_rock, native_debug_switch_done ) );
     CHECK_FALSE( native_false_repeat.response.gen_repeat_response(
-                     native_debug, repeat_item_id, native_debug_switch_done ) );
+                     native_debug, itype_test_rock, native_debug_switch_done ) );
     REQUIRE( native_debug.responses.size() == 2 );
     CHECK( native_debug.responses[0].truetext.translated() == "False switch" );
     CHECK( native_debug.responses[1].truetext.translated() == "Fallback" );

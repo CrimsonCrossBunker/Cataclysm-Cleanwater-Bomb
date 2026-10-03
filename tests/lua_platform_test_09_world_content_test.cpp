@@ -1,24 +1,68 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+#include <avatar.h>
+#include <cata_scope_helpers.h>
+#include <coordinates.h>
+#include <debug.h>
+#include <dialogue.h>
+#include <enums.h>
+#include <flexbuffer_json.h>
+#include <game.h>
+#include <item.h>
+#include <item_uid.h>
+#include <json.h>
+#include <json_loader.h>
+#include <lua_platform_bindings_coords.h>
+#include <lua_platform_bindings_values.h>
+#include <lua_platform_handle.h>
+#include <lua_platform_runtime.h>
+#include <lua_platform_world.h>
+#include <lua_platform_world_content.h>
+#include <map.h>
+#include <mapbuffer.h>
+#include <math_parser_diag_value.h>
+#include <overmap_ui.h>
+#include <pimpl.h>
+#include <point.h>
+#include <submap.h>
+#include <type_id.h>
+#include <units.h>
+#include <weather.h>
+#include <weather_gen.h>
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <iterator>
+#include <functional>
+#include <initializer_list>
 #include <limits>
-#include <memory>
 #include <list>
+#include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
+#include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "calendar.h"
+#include "cata_catch.h"
 #include "flag.h"
 #include "global_vars.h"
+#include "lua_platform_sol.h"
 #include "lua_platform_test_map_support.h"
-#include "magic_teleporter_list.h"
+
+using cata::lua_platform::test::platform_overmap_travel_fixture;
 #include "lua_platform_test_support.h"
+#include "magic_teleporter_list.h"
 #include "timed_event.h"
 #include "translation.h"
+
+static const itype_id itype_apple( "apple" );
+static const itype_id itype_flyer_evac( "flyer_evac" );
+static const itype_id itype_glock_19( "glock_19" );
+static const itype_id itype_power_cord( "power_cord" );
+static const ter_str_id ter_t_dirt( "t_dirt" );
+static const ter_str_id ter_t_floor( "t_floor" );
 
 namespace
 {
@@ -73,7 +117,7 @@ const item *find_world_copy_cable( const submap &source,
                                    const point_sm_ms &position )
 {
     for( const item &entry : source.get_items( position ) ) {
-        if( entry.typeId() == itype_id( "power_cord" ) ) {
+        if( entry.typeId() == itype_power_cord ) {
             return &entry;
         }
     }
@@ -104,8 +148,9 @@ std::string serialized_translocator_name( const tripoint_abs_omt &position )
     for( JsonObject entry : root.get_array( "known_teleporters" ) ) {
         tripoint_abs_omt candidate;
         entry.read( "position", candidate );
+        const std::string name = entry.get_string( "name" );
         if( candidate == position ) {
-            return entry.get_string( "name" );
+            return name;
         }
     }
     return {};
@@ -429,7 +474,7 @@ TEST_CASE( "lua_platform_location_revert_provider_owns_snapshots_and_runs_synchr
     int calls = 0;
     std::array<ter_id, 4> before;
     const point_sm_ms sample( 0, 0 );
-    ter_id changed = ter_str_id( "t_floor" ).id();
+    ter_id changed = ter_t_floor.id();
     const sol::protected_function_result invalid_key = revert(
                 fixture.abs_omt_position( source ),
                 cata::lua_platform::script_time_duration::from_native( 0_turns ), 42 );
@@ -447,7 +492,7 @@ TEST_CASE( "lua_platform_location_revert_provider_owns_snapshots_and_runs_synchr
                 if( calls == 0 ) {
                     before[x * 2 + y] = sm->get_ter( sample );
                     if( x == 0 && y == 0 && before[0] == changed ) {
-                        changed = ter_str_id( "t_dirt" ).id();
+                        changed = ter_t_dirt.id();
                     }
                 }
                 sm->set_ter( sample, changed );
@@ -535,7 +580,7 @@ TEST_CASE( "lua_platform_location_revert_survives_native_save_and_actualizes",
                 submap *sm = MAPBUFFER.lookup_submap( base + point( x, y ) );
                 REQUIRE( sm != nullptr );
                 const int index = x * 2 + y;
-                sm->set_ter( sample, ter_str_id( "t_dirt" ).id() );
+                sm->set_ter( sample, ter_t_dirt.id() );
                 sm->set_furn( sample, furn_str_id::NULL_ID() );
                 sm->set_trap( sample, trap_str_id::NULL_ID() );
                 sm->set_terrain_growth( sample, { time_point::from_turn( 200 + index ) } );
@@ -544,7 +589,7 @@ TEST_CASE( "lua_platform_location_revert_survives_native_save_and_actualizes",
                 sm->set_graffiti( sample, text );
                 sm->insert_cosmetic( sample, "ccb-test-decoration", "custom" );
                 sm->get_items( sample ).clear();
-                sm->get_items( sample ).insert( item( itype_id( "apple" ), calendar::turn ) );
+                sm->get_items( sample ).insert( item( itype_apple, calendar::turn ) );
             }
         }
         if( native_authoring ) {
@@ -594,7 +639,7 @@ TEST_CASE( "lua_platform_location_revert_survives_native_save_and_actualizes",
         for( int x = 0; x < 2; ++x ) {
             for( int y = 0; y < 2; ++y ) {
                 submap *sm = MAPBUFFER.lookup_submap( base + point( x, y ) );
-                sm->set_ter( sample, ter_str_id( "t_floor" ).id() );
+                sm->set_ter( sample, ter_t_floor.id() );
                 sm->clear_terrain_growth( sample );
                 sm->set_finite_liquid( sample, 99 );
                 sm->cosmetics.clear();
@@ -612,7 +657,7 @@ TEST_CASE( "lua_platform_location_revert_survives_native_save_and_actualizes",
                 submap *sm = MAPBUFFER.lookup_submap( base + point( x, y ) );
                 REQUIRE( sm != nullptr );
                 REQUIRE( sm->get_terrain_growth( sample ) != nullptr );
-                CHECK( sm->get_ter( sample ) == ter_str_id( "t_dirt" ).id() );
+                CHECK( sm->get_ter( sample ) == ter_t_dirt.id() );
                 CHECK( sm->get_terrain_growth( sample )->fertilized_at ==
                        time_point::from_turn( 200 + x * 2 + y ) );
                 CHECK( sm->get_finite_liquid( sample ) == 17 + x * 2 + y );
@@ -620,7 +665,7 @@ TEST_CASE( "lua_platform_location_revert_survives_native_save_and_actualizes",
                 REQUIRE( sm->cosmetics.size() == 2 );
                 CHECK( sm->cosmetics.back().str == "custom" );
                 REQUIRE( sm->get_items( sample ).size() == 1 );
-                CHECK( sm->get_items( sample ).begin()->typeId() == itype_id( "apple" ) );
+                CHECK( sm->get_items( sample ).begin()->typeId() == itype_apple );
             }
         }
     }
@@ -652,12 +697,12 @@ TEST_CASE( "lua_platform_location_revert_loads_legacy_snapshots_without_metadata
         writer.member( "key", "legacy-key" );
         writer.member( "revert" );
         if( uniform ) {
-            writer.write( ter_str_id( "t_dirt" ).id() );
+            writer.write( ter_t_dirt.id() );
         } else {
             writer.start_array();
             writer.start_object();
             writer.member( "point", sample );
-            writer.member( "ter", ter_str_id( "t_dirt" ).id() );
+            writer.member( "ter", ter_t_dirt.id() );
             writer.member( "furn", furn_str_id::NULL_ID() );
             writer.member( "trap", trap_str_id::NULL_ID() );
             writer.member( "items" );
@@ -676,7 +721,7 @@ TEST_CASE( "lua_platform_location_revert_loads_legacy_snapshots_without_metadata
         CHECK( event.when == time_point::from_turn( 1001 ) );
         CHECK( event.key == "legacy-key" );
         CHECK( event.revert.is_uniform() == uniform );
-        CHECK( event.revert.get_ter( sample ) == ter_str_id( "t_dirt" ).id() );
+        CHECK( event.revert.get_ter( sample ) == ter_t_dirt.id() );
         CHECK( event.revert.get_terrain_growth( sample ) == nullptr );
         CHECK_FALSE( event.revert.has_finite_liquid( sample ) );
         CHECK( event.revert.cosmetics.empty() );
@@ -691,9 +736,11 @@ TEST_CASE( "lua_platform_location_copy_matches_native_timed_submap_copy",
     platform_world_copy_globals_restore restore_globals;
     calendar::turn = time_point::from_turn( 1000 );
 
-    const tripoint_abs_omt source = fixture.source_omt + tripoint( 2000, 1700, 0 );
+    // Stay outside the reality bubble but within the existing overmap, so
+    // submap-copy acceptance does not generate several unrelated overmaps.
+    const tripoint_abs_omt source = fixture.source_omt + tripoint( 20, 20, 0 );
     const tripoint_abs_omt destination = source + tripoint( 19, -7, 0 );
-    const tripoint_abs_omt missing_source = source + tripoint( 4000, 4100, 0 );
+    const tripoint_abs_omt missing_source = source + tripoint( 40, 41, 0 );
     const tripoint_abs_omt missing_destination = missing_source + tripoint( 13, 17, 0 );
     const tripoint_abs_sm source_base = project_to<coords::sm>( source );
     const tripoint_abs_ms source_position = project_to<coords::ms>( source );
@@ -726,7 +773,7 @@ TEST_CASE( "lua_platform_location_copy_matches_native_timed_submap_copy",
     source_submap->ensure_nonuniform();
     const point_sm_ms cable_position( 0, 0 );
     source_submap->get_items( cable_position ).clear();
-    item cable( itype_id( "power_cord" ), calendar::turn );
+    item cable( itype_power_cord, calendar::turn );
     REQUIRE( cable.can_link_up() );
     const tripoint_abs_ms linked_target = source_position + tripoint( 71, 29, 0 );
     cable.link().target = link_state::vehicle_port;
@@ -805,8 +852,9 @@ TEST_CASE( "lua_platform_location_copy_matches_native_timed_submap_copy",
         const JsonValue native_json = json_loader::from_string(
                                           native_location_copy_effect_json(
                                               test_case.copy_delay_text, key ) );
-        talk_effect_t native_effect( native_json.get_object(), "effect",
-                                     "lua_platform_location_copy_native_parity" );
+        talk_effect_t native_effect;
+        native_effect.parse_sub_effect( native_json.get_object(),
+                                        "lua_platform_location_copy_native_parity" );
         native_effect.apply( conversation );
         REQUIRE( events.get_all().size() == 4 );
         REQUIRE( get_avatar().translocators.knows_translocator( destination ) );
@@ -834,19 +882,20 @@ TEST_CASE( "lua_platform_location_copy_matches_native_timed_submap_copy",
         REQUIRE( native_cable != nullptr );
         const tripoint_abs_ms native_link_target = native_cable->link().t_abs_pos;
         const tripoint_bub_ms native_link_source = native_cable->link().s_bub_pos;
-        const std::string native_relocation_turn =
-            native_cable->get_var( "eoc_cable_relocation_turn" );
+        const double native_relocation_turn =
+            native_cable->get_var( "eoc_cable_relocation_turn", 0.0 );
         CHECK( native_link_target == linked_target + ( destination_position - source_position ) );
         CHECK( native_link_source == tripoint_bub_ms::invalid );
-        CHECK( native_relocation_turn == "-1" );
+        CHECK( native_relocation_turn == -1.0 );
 
         events.add( timed_event_type::CUSTOM_LIGHT_LEVEL, sentinel_when, -1,
                     sentinel_position, 72, "sentinel-id", sentinel_key );
         const JsonValue alter_json = json_loader::from_string(
                                          native_alter_timed_events_effect_json(
                                              test_case.retime_delay_text, key ) );
-        talk_effect_t native_alter( alter_json.get_object(), "effect",
-                                    "lua_platform_location_copy_native_retime" );
+        talk_effect_t native_alter;
+        native_alter.parse_sub_effect( alter_json.get_object(),
+                                       "lua_platform_location_copy_native_retime" );
         native_alter.apply( conversation );
         const time_point native_retime_when = timed_event_due_time(
                 test_case.retime_delay, 0_seconds );
@@ -958,7 +1007,7 @@ TEST_CASE( "lua_platform_location_copy_matches_native_timed_submap_copy",
                     REQUIRE( platform_cable != nullptr );
                     CHECK( platform_cable->link().t_abs_pos == native_link_target );
                     CHECK( platform_cable->link().s_bub_pos == native_link_source );
-                    CHECK( platform_cable->get_var( "eoc_cable_relocation_turn" ) ==
+                    CHECK( platform_cable->get_var( "eoc_cable_relocation_turn", 0.0 ) ==
                            native_relocation_turn );
                 }
             }
@@ -1008,7 +1057,7 @@ TEST_CASE( "lua_platform_location_copy_provider_owns_each_snapshot_and_fixes_due
     platform_overmap_travel_fixture fixture( 859, 89 );
     platform_calendar_turn_scope calendar_scope;
     calendar::turn = time_point::from_turn( 1000 );
-    const tripoint_abs_omt source = fixture.source_omt + tripoint( 2800, 1900, 0 );
+    const tripoint_abs_omt source = fixture.source_omt + tripoint( 28, 19, 0 );
     const tripoint_abs_omt destination = source + tripoint( 17, -9, 0 );
     const tripoint_abs_sm source_base = project_to<coords::sm>( source );
     const tripoint_abs_sm destination_base = project_to<coords::sm>( destination );
@@ -1021,10 +1070,11 @@ TEST_CASE( "lua_platform_location_copy_provider_owns_each_snapshot_and_fixes_due
     tinymap source_map;
     source_map.load( source, true );
     const sol::protected_function copy = fixture.services["world"]["schedule_location_copy"];
-    const auto delay = cata::lua_platform::script_time_duration::from_native( -3_turns );
+    const cata::lua_platform::script_time_duration delay =
+        cata::lua_platform::script_time_duration::from_native( -3_turns );
     const point_sm_ms sample( 0, 0 );
-    const ter_id original = ter_str_id( "t_floor" ).id();
-    const ter_id changed = ter_str_id( "t_dirt" ).id();
+    const ter_id original = ter_t_floor.id();
+    const ter_id changed = ter_t_dirt.id();
     const std::array<std::string, 4> keys = {{
             "", std::string( "raw\0tail", 8 ), std::string( 10000, 'k' ), "copy-last"
         }
@@ -1293,6 +1343,8 @@ TEST_CASE( "lua_platform_weather_write_controls_apply_valid_overrides",
         weather_manager_ref.winddirection = saved_winddirection;
         weather_manager_ref.windspeed = saved_windspeed;
         weather_manager_ref.weather_changed = saved_weather_changed;
+        // Restore the exact incoming override; scoped_weather_override resets to WEATHER_NULL.
+        // NOLINTNEXTLINE(cata-tests-must-restore-global-state)
         weather_manager_ref.weather_override = saved_weather_override;
         weather_manager_ref.forced_temperature = saved_forced_temperature;
         weather_manager_ref.wind_direction_override = saved_wind_direction_override;
@@ -1437,7 +1489,7 @@ TEST_CASE( "lua_platform_world_spawn_item_matches_native_direct_item_initializat
         return envelope["value"].get<sol::table>();
     };
 
-    item native_flyer( itype_id( "flyer_evac" ), calendar::turn );
+    item native_flyer( itype_flyer_evac, calendar::turn );
     REQUIRE( native_flyer.has_flag( flag_PRESERVE_SPAWN_LOC ) );
     native_flyer.preserve_location( position );
     item &native_flyer_added = here.add_item_or_charges(
@@ -1465,7 +1517,7 @@ TEST_CASE( "lua_platform_world_spawn_item_matches_native_direct_item_initializat
            native_flyer_map_item->get_var(
                "spawn_location", tripoint_abs_ms::invalid ) );
 
-    item native_gun( itype_id( "glock_19" ), calendar::turn );
+    item native_gun( itype_glock_19, calendar::turn );
     REQUIRE_FALSE( native_gun.count_by_charges() );
     REQUIRE_FALSE( native_gun.ammo_default().is_null() );
     native_gun.ammo_set( native_gun.ammo_default() );

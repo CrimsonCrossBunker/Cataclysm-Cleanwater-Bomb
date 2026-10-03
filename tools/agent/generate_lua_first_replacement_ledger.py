@@ -3030,7 +3030,7 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
             'src/lua_platform_variables.cpp'
         ),
         (
-            'tests/lua_platform_test_09_world_content.cpp'
+            'tests/lua_platform_test_09_world_content_test.cpp'
         ), (
             'tests/lua_platform_variable_native_key_test.cpp'
         ),

@@ -1,11 +1,46 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-#include "lua_platform_test_support.h"
+#include <avatar.h>
+#include <basecamp.h>
+#include <calendar.h>
+#include <cata_scope_helpers.h>
+#include <character_id.h>
+#include <coordinates.h>
+#include <dialogue.h>
+#include <faction.h>
+#include <lua_platform_camps.h>
+#include <lua_platform_handle.h>
+#include <memory_fast.h>
+#include <monster.h>
+#include <npc.h>
+#include <point.h>
+#include <stomach.h>
+#include <type_id.h>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <limits>
+#include <map>
+#include <memory>
+#include <optional>
+#include <set>
+#include <string>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
+#include "cata_catch.h"
 #include "condition.h"
+#include "lua_platform_sol.h"
+#include "lua_platform_test_support.h"
+
+static const itype_id itype_battery( "battery" );
+static const itype_id itype_water( "water" );
 
 TEST_CASE( "lua_platform_camp_handles_reject_replacement_and_removal",
            "[lua][platform][camp]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 61 );
     basecamp original( "Platform Camp", tripoint_abs_omt{ 10, 10, 0 } );
     cata::lua_platform::register_camp_handle_identity( original );
@@ -38,8 +73,10 @@ TEST_CASE( "lua_platform_camp_handles_reject_replacement_and_removal",
 TEST_CASE( "lua_platform_camp_handles_bind_runtime_and_world_generation",
            "[lua][platform][camp]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
-    const auto other_owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr other_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 62 );
     const cata::lua_platform::game_handle_runtime other_runtime( other_owner, 62 );
     const cata::lua_platform::game_handle_runtime newer_runtime( owner, 63 );
@@ -96,7 +133,8 @@ TEST_CASE( "lua_platform_camp_assignment_preflight_is_exact_and_atomic",
 TEST_CASE( "lua_platform_camp_api_requires_explicit_manager_and_handles",
            "[lua][platform][camp]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 64 );
     basecamp camp( "API Camp", tripoint_abs_omt{ 13, 13, 0 } );
     cata::lua_platform::register_camp_handle_identity( camp );
@@ -159,7 +197,8 @@ TEST_CASE( "lua_platform_player_owned_camp_query_matches_native_condition",
         "Native Camp Condition", camp_position, faction_id::NULL_ID() );
     REQUIRE( camp_scope.camp != nullptr );
 
-    const auto runtime_owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr runtime_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( runtime_owner, 66 );
     sol::state lua;
     sol::table services = lua.create_table();
@@ -205,7 +244,8 @@ TEST_CASE( "lua_platform_player_owned_camp_query_matches_native_condition",
 TEST_CASE( "lua_platform_camp_write_gate_precedes_camp_resolution",
            "[lua][platform][camp]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 65 );
     basecamp camp( "Write Gate Camp", tripoint_abs_omt{ 14, 14, 0 } );
     cata::lua_platform::register_camp_handle_identity( camp );
@@ -245,11 +285,9 @@ TEST_CASE( "lua_platform_camp_write_gate_precedes_camp_resolution",
 TEST_CASE( "lua_platform_camp_resource_keys_reject_ambiguous_duplicates",
            "[lua][platform][camp][resources]" )
 {
-    const itype_id resource_id( "water" );
-    const itype_id charge_id( "battery" );
     basecamp_resource first;
-    first.fake_id = resource_id;
-    first.ammo_id = charge_id;
+    first.fake_id = itype_water;
+    first.ammo_id = itype_battery;
     first.available = 4;
     first.consumed = 1;
     basecamp_resource equivalent = first;
@@ -261,7 +299,7 @@ TEST_CASE( "lua_platform_camp_resource_keys_reject_ambiguous_duplicates",
     REQUIRE( basecamp::platform_normalize_resources(
     { first, equivalent }, normalized, error ) );
     REQUIRE( normalized.size() == 1 );
-    CHECK( normalized.front().fake_id == resource_id );
+    CHECK( normalized.front().fake_id == itype_water );
     CHECK( normalized.front().available == 10 );
     CHECK( normalized.front().consumed == 3 );
 
@@ -296,8 +334,8 @@ TEST_CASE( "lua_platform_camp_resource_batch_preflight_is_atomic",
     REQUIRE( camp.platform_resource_snapshot( before, error ) );
 
     const std::vector<basecamp_platform_resource_change> changes = {
-        { itype_id( "water" ), 1 },
-        { itype_id( "battery" ), -1 },
+        { itype_water, 1 },
+        { itype_battery, -1 },
     };
     CHECK_FALSE( camp.platform_adjust_resources( changes, error ) );
     const std::string failure_error = error;
@@ -337,7 +375,8 @@ TEST_CASE( "lua_platform_camp_food_balance_is_owner_scoped_and_bounded",
 TEST_CASE( "lua_platform_camp_inventory_exposes_only_explicit_storage_holders",
            "[lua][platform][camp][inventory]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 66 );
     basecamp camp( "Storage Camp", tripoint_abs_omt{ 16, 16, 0 } );
     cata::lua_platform::register_camp_handle_identity( camp );
@@ -372,7 +411,8 @@ TEST_CASE( "lua_platform_camp_inventory_exposes_only_explicit_storage_holders",
 TEST_CASE( "lua_platform_camp_food_mutations_enter_the_write_gate_first",
            "[lua][platform][camp][food]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 67 );
     basecamp camp( "Food Camp", tripoint_abs_omt{ 17, 17, 0 } );
     cata::lua_platform::register_camp_handle_identity( camp );

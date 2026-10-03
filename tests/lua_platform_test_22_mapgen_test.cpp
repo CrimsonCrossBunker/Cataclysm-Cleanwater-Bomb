@@ -1,7 +1,66 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+#include <avatar.h>
+#include <calendar.h>
+#include <cata_scope_helpers.h>
+#include <clzones.h>
+#include <coordinates.h>
+#include <faction.h>
+#include <game.h>
+#include <item.h>
+#include <lua.h>
+#include <lua_platform_bindings_coords.h>
+#include <lua_platform_bindings_enums.h>
+#include <lua_platform_bindings_values.h>
+#include <lua_platform_handle.h>
+#include <lua_platform_mapgen.h>
+#include <lua_platform_overmap.h>
+#include <lua_platform_world.h>
+#include <map.h>
+#include <map_scale_constants.h>
+#include <mapbuffer.h>
+#include <mapgen_functions.h>
+#include <mapgendata.h>
+#include <memory_fast.h>
+#include <npc.h>
+#include <overmap.h>
+#include <overmapbuffer.h>
+#include <pocket_type.h>
+#include <point.h>
+#include <ret_val.h>
+#include <submap.h>
+#include <type_id.h>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <list>
+#include <memory>
+#include <optional>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "cata_catch.h"
+#include "lua_platform_sol.h"
 #include "lua_platform_test_map_support.h"
+
+using cata::lua_platform::test::platform_overmap_travel_fixture;
+using cata::lua_platform::test::platform_mapgen_callback_transaction_test_fixture;
+#include "lua_platform_test_support.h"
 #include "mapgen.h"
 #include "timed_event.h"
+
+static const faction_id faction_tacoma_commune( "tacoma_commune" );
+static const faction_id faction_your_followers( "your_followers" );
+static const furn_str_id furn_f_bulletin( "f_bulletin" );
+static const itype_id itype_bottle_plastic( "bottle_plastic" );
+static const itype_id itype_water( "water" );
+static const npc_template_id npc_template_test_talker( "test_talker" );
+static const ter_str_id ter_t_floor( "t_floor" );
+static const ter_str_id ter_t_wall( "t_wall" );
+static const update_mapgen_id update_mapgen_fbmc_shelter_1_0( "fbmc_shelter_1_0" );
+static const zone_type_id zone_type_LOOT_FOOD( "LOOT_FOOD" );
+static const zone_type_id zone_type_LOOT_UNSORTED( "LOOT_UNSORTED" );
+static const zone_type_id zone_type_ZONE_START_POINT( "ZONE_START_POINT" );
 
 TEST_CASE( "lua_platform_mapgen_callback_transaction_native_helper",
            "[lua][platform][mapgen][transaction]" )
@@ -9,7 +68,7 @@ TEST_CASE( "lua_platform_mapgen_callback_transaction_native_helper",
     SECTION( "rollback restores the callback preimage" ) {
         platform_mapgen_callback_transaction_test_fixture fixture;
         map &here = fixture.native_map();
-        const tripoint_bub_ms position = fixture.position();
+        const tripoint_bub_ms position = platform_mapgen_callback_transaction_test_fixture::position();
         const ter_id terrain_before = here.ter( position );
         const int direction_before = fixture.data.dir( 0 );
 
@@ -21,7 +80,7 @@ TEST_CASE( "lua_platform_mapgen_callback_transaction_native_helper",
                      position.x(), position.y(),
                      cata::lua_platform::script_game_id( "terrain", "t_wall" ) ) );
         fixture.context.set_dir( 0, -37 );
-        CHECK( here.ter( position ) == ter_str_id( "t_wall" ).id() );
+        CHECK( here.ter( position ) == ter_t_wall.id() );
         CHECK( fixture.data.dir( 0 ) == -37 );
 
         REQUIRE( transaction.rollback( "callback_failed", "test" ) );
@@ -40,7 +99,7 @@ TEST_CASE( "lua_platform_mapgen_callback_transaction_native_helper",
     SECTION( "commit keeps the callback terrain change" ) {
         platform_mapgen_callback_transaction_test_fixture fixture;
         map &here = fixture.native_map();
-        const tripoint_bub_ms position = fixture.position();
+        const tripoint_bub_ms position = platform_mapgen_callback_transaction_test_fixture::position();
 
         platform_mapgen_transaction_report report;
         platform_mapgen_callback_transaction transaction( fixture.data, &report );
@@ -52,7 +111,7 @@ TEST_CASE( "lua_platform_mapgen_callback_transaction_native_helper",
         transaction.commit();
 
         CHECK( report.state == platform_mapgen_transaction_state::committed );
-        CHECK( here.ter( position ) == ter_str_id( "t_wall" ).id() );
+        CHECK( here.ter( position ) == ter_t_wall.id() );
     }
 }
 
@@ -131,10 +190,10 @@ TEST_CASE( "lua_platform_mapgen_deferred_npc_and_zones_publish_only_after_commit
             g->unique_npc_despawn( unique_id );
         }
     } );
-    REQUIRE( npc_template_id( "test_talker" ).is_valid() );
-    REQUIRE( faction_id( "your_followers" ).is_valid() );
+    REQUIRE( npc_template_test_talker.is_valid() );
+    REQUIRE( faction_your_followers.is_valid() );
     const auto zone_count = [&]() {
-        return zones.get_zones( faction_id( "your_followers" ) ).size();
+        return zones.get_zones( faction_your_followers ).size();
     };
     const std::size_t count_before = zone_count();
     platform_mapgen_transaction_report report;
@@ -169,12 +228,12 @@ TEST_CASE( "lua_platform_mapgen_deferred_npc_and_zones_publish_only_after_commit
         REQUIRE( placed );
         CHECK( placed->pos_abs() == fixture.native_map().get_abs( tripoint_bub_ms( 11, 12, 0 ) ) );
         for( const auto &entry : std::vector<std::pair<zone_type_id, tripoint_bub_ms>> {
-        { zone_type_id( "LOOT_UNSORTED" ), tripoint_bub_ms( 2, 3, 0 ) },
-            { zone_type_id( "LOOT_FOOD" ), tripoint_bub_ms( 6, 7, 0 ) },
-            { zone_type_id( "ZONE_START_POINT" ), tripoint_bub_ms( 8, 9, 0 ) }
+        { zone_type_LOOT_UNSORTED, tripoint_bub_ms( 2, 3, 0 ) },
+            { zone_type_LOOT_FOOD, tripoint_bub_ms( 6, 7, 0 ) },
+            { zone_type_ZONE_START_POINT, tripoint_bub_ms( 8, 9, 0 ) }
         } ) {
             const zone_data *zone = zones.get_zone_at( fixture.native_map().get_abs( entry.second ),
-                                    entry.first, faction_id( "your_followers" ) );
+                                    entry.first, faction_your_followers );
             REQUIRE( zone != nullptr );
             CHECK_FALSE( zone->get_is_vehicle() );
             CHECK( zone->get_start_point() == fixture.native_map().get_abs( entry.second ) );
@@ -217,16 +276,14 @@ TEST_CASE( "lua_platform_mapgen_ground_item_ownership_is_bounded_and_transaction
 {
     platform_mapgen_callback_transaction_test_fixture fixture;
     map &here = fixture.native_map();
-    const faction_id owner( "your_followers" );
-    const faction_id previous_owner( "tacoma_commune" );
-    REQUIRE( owner.is_valid() );
-    REQUIRE( previous_owner.is_valid() );
+    REQUIRE( faction_your_followers.is_valid() );
+    REQUIRE( faction_tacoma_commune.is_valid() );
     const tripoint_bub_ms inside( 1, 1, 0 );
     const tripoint_bub_ms outside( 3, 3, 0 );
-    item bottle( itype_id( "bottle_plastic" ), calendar::turn );
-    REQUIRE( bottle.put_in( item( itype_id( "water" ), calendar::turn, 1 ),
+    item bottle( itype_bottle_plastic, calendar::turn );
+    REQUIRE( bottle.put_in( item( itype_water, calendar::turn, 1 ),
                             pocket_type::CONTAINER ).success() );
-    bottle.set_owner( previous_owner );
+    bottle.set_owner( faction_tacoma_commune );
     here.add_item_or_charges( inside, bottle );
     here.add_item_or_charges( outside, bottle );
     fixture.context.place_toilet( 2, 2, 10 );
@@ -244,39 +301,39 @@ TEST_CASE( "lua_platform_mapgen_ground_item_ownership_is_bounded_and_transaction
     platform_mapgen_transaction_report report;
     platform_mapgen_callback_transaction transaction( fixture.data, &report );
     REQUIRE( transaction.ready() );
-    CHECK_THROWS( fixture.context.set_item_faction( 0, 0, 24, 23, owner.str() ) );
+    CHECK_THROWS( fixture.context.set_item_faction( 0, 0, 24, 23, faction_your_followers.str() ) );
     CHECK_THROWS( fixture.context.set_item_faction( 1, 1, 2, 2, "missing_mapgen_faction" ) );
     CHECK_THROWS( fixture.context.set_item_faction( 1, 1, 2, 2, "" ) );
-    check_stack_owner( inside, previous_owner );
+    check_stack_owner( inside, faction_tacoma_commune );
     SECTION( "an exhausted budget leaves ownership unchanged" ) {
         while( fixture.context.operations_remaining() > 0 ) {
             fixture.context.random_int( 0, 0 );
         }
-        CHECK_THROWS( fixture.context.set_item_faction( 1, 1, 2, 2, owner.str() ) );
-        check_stack_owner( inside, previous_owner );
-        check_stack_owner( outside, previous_owner );
+        CHECK_THROWS( fixture.context.set_item_faction( 1, 1, 2, 2, faction_your_followers.str() ) );
+        check_stack_owner( inside, faction_tacoma_commune );
+        check_stack_owner( outside, faction_tacoma_commune );
         return;
     }
-    fixture.context.set_item_faction( 1, 1, 2, 2, owner.str() );
-    check_stack_owner( inside, owner );
-    check_stack_owner( tripoint_bub_ms( 2, 2, 0 ), owner );
-    check_stack_owner( outside, previous_owner );
+    fixture.context.set_item_faction( 1, 1, 2, 2, faction_your_followers.str() );
+    check_stack_owner( inside, faction_your_followers );
+    check_stack_owner( tripoint_bub_ms( 2, 2, 0 ), faction_your_followers );
+    check_stack_owner( outside, faction_tacoma_commune );
 
     SECTION( "failure restores ground and contained item ownership" ) {
         REQUIRE( transaction.rollback( "callback_failed", "injected failure" ) );
-        check_stack_owner( inside, previous_owner );
-        check_stack_owner( outside, previous_owner );
+        check_stack_owner( inside, faction_tacoma_commune );
+        check_stack_owner( outside, faction_tacoma_commune );
         for( const item &water : here.i_at( tripoint_bub_ms( 2, 2, 0 ) ) ) {
             CHECK( water.get_owner().is_null() );
         }
     }
     SECTION( "commit preserves ownership" ) {
         transaction.commit();
-        check_stack_owner( inside, owner );
-        check_stack_owner( outside, previous_owner );
+        check_stack_owner( inside, faction_your_followers );
+        check_stack_owner( outside, faction_tacoma_commune );
     }
     fixture.context.invalidate();
-    CHECK_THROWS( fixture.context.set_item_faction( 1, 1, 2, 2, owner.str() ) );
+    CHECK_THROWS( fixture.context.set_item_faction( 1, 1, 2, 2, faction_your_followers.str() ) );
 }
 
 TEST_CASE( "lua_platform_mapgen_service_uses_typed_update_and_target_tokens",
@@ -421,10 +478,9 @@ TEST_CASE( "lua_platform_mapgen_run_update_matches_native_immediate_operator",
     };
     on_out_of_scope restore_map( restore_submaps );
 
-    const update_mapgen_id native_id( "fbmc_shelter_1_0" );
-    REQUIRE( has_update_mapgen_for( native_id ) );
+    REQUIRE( has_update_mapgen_for( update_mapgen_fbmc_shelter_1_0 ) );
     const ret_val<void> native = run_mapgen_update_func(
-                                     native_id, position, {}, nullptr );
+                                     update_mapgen_fbmc_shelter_1_0, position, {}, nullptr );
     REQUIRE( native.success() );
     set_queued_points();
     submap *const native_southeast = MAPBUFFER.lookup_submap(
@@ -434,8 +490,8 @@ TEST_CASE( "lua_platform_mapgen_run_update_matches_native_immediate_operator",
     const point_sm_ms changed_point( 15 - SEEX, 15 - SEEY );
     const ter_id native_terrain = native_southeast->get_ter( changed_point );
     const furn_id native_furniture = native_southeast->get_furn( changed_point );
-    CHECK( native_terrain == ter_str_id( "t_floor" ).id() );
-    CHECK( native_furniture == furn_str_id( "f_bulletin" ).id() );
+    CHECK( native_terrain == ter_t_floor.id() );
+    CHECK( native_furniture == furn_f_bulletin.id() );
     restore_submaps();
 
     const sol::table mapgen = fixture.services["mapgen"];
@@ -451,7 +507,7 @@ TEST_CASE( "lua_platform_mapgen_run_update_matches_native_immediate_operator",
     const sol::protected_function update_token = mapgen["update_token"];
     const sol::protected_function_result update_result = update_token(
                 cata::lua_platform::script_game_id(
-                    "update_mapgen", native_id.str() ) );
+                    "update_mapgen", update_mapgen_fbmc_shelter_1_0.str() ) );
     REQUIRE( update_result.valid() );
     const sol::table update_envelope = update_result.get<sol::table>();
     REQUIRE( update_envelope["ok"].get<bool>() );
@@ -486,8 +542,7 @@ TEST_CASE( "lua_platform_mapgen_schedule_update_matches_native_timed_event",
     events = timed_event_manager();
 
     const tripoint_abs_omt position = fixture.source_omt;
-    const update_mapgen_id native_id( "fbmc_shelter_1_0" );
-    REQUIRE( has_update_mapgen_for( native_id ) );
+    REQUIRE( has_update_mapgen_for( update_mapgen_fbmc_shelter_1_0 ) );
     const sol::table mapgen = fixture.services["mapgen"];
     const sol::protected_function tile_token = fixture.overmap_api()["tile_token"];
     const sol::protected_function_result target_result =
@@ -499,7 +554,7 @@ TEST_CASE( "lua_platform_mapgen_schedule_update_matches_native_timed_event",
         target_envelope["value"].get<cata::lua_platform::overmap_tile_token>();
     const sol::protected_function update_token = mapgen["update_token"];
     const sol::protected_function_result update_result = update_token(
-                cata::lua_platform::script_game_id( "update_mapgen", native_id.str() ) );
+                cata::lua_platform::script_game_id( "update_mapgen", update_mapgen_fbmc_shelter_1_0.str() ) );
     REQUIRE( update_result.valid() );
     const sol::table update_envelope = update_result.get<sol::table>();
     REQUIRE( update_envelope["ok"].get<bool>() );
@@ -518,7 +573,7 @@ TEST_CASE( "lua_platform_mapgen_schedule_update_matches_native_timed_event",
 
     const time_point when = calendar::turn + 1_minutes + 1_seconds;
     events.add( timed_event_type::UPDATE_MAPGEN, when, -1,
-                project_to<coords::ms>( position ), 0, native_id.str(), key );
+                project_to<coords::ms>( position ), 0, update_mapgen_fbmc_shelter_1_0.str(), key );
     fixture.write_called = false;
     const sol::protected_function_result result = schedule( target, update, delay, key );
     REQUIRE( result.valid() );

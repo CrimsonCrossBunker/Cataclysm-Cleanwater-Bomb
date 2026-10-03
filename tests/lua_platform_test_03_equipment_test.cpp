@@ -1,8 +1,45 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-#include "bionics.h"
-#include "lua_platform_test_support.h"
-#include "npc.h"
+#include <avatar.h>
+#include <calendar.h>
+#include <character.h>
+#include <character_id.h>
+#include <faction.h>
+#include <inventory.h>
+#include <item.h>
+#include <item_location.h>
+#include <item_uid.h>
+#include <lua_platform_handle.h>
+#include <lua_platform_items.h>
+#include <lua_platform_npcs.h>
+#include <pimpl.h>
 #include <talker_character.h>
+#include <type_id.h>
+#include <units.h>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <list>
+#include <memory>
+#include <optional>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "bionics.h"
+#include "cata_catch.h"
+#include "lua_platform_sol.h"
+#include "npc.h"
+
+static const bionic_id bio_blade( "bio_blade" );
+static const bionic_id bio_power_storage( "bio_power_storage" );
+static const faction_id faction_robofac( "robofac" );
+static const faction_id faction_your_followers( "your_followers" );
+static const itype_id itype_backpack( "backpack" );
+static const itype_id itype_backpack_hiking( "backpack_hiking" );
+static const itype_id itype_debug_backpack( "debug_backpack" );
+static const itype_id itype_rock( "rock" );
+static const itype_id itype_stick( "stick" );
 
 namespace
 {
@@ -115,7 +152,7 @@ TEST_CASE( "lua_platform_inventory_weapon_state_matches_native_stow_condition",
     };
 
     check_native_match();
-    item wielded_value( itype_id( "rock" ), calendar::turn_zero );
+    item wielded_value( itype_rock, calendar::turn_zero );
     REQUIRE( fixture.actor.Character::wield(
                  wielded_value, std::nullopt, false ) );
     check_native_match();
@@ -125,8 +162,9 @@ TEST_CASE( "lua_platform_equipment_stow_current_physical_weapon",
            "[lua][platform][equipment][weapon][semantic]" )
 {
     platform_equipment_fixture fixture( 208, 1, 6208 );
-    item weapon( itype_id( "rock" ), calendar::turn_zero );
-    const std::int64_t weapon_uid = weapon.uid().get_value();
+    REQUIRE( fixture.add_worn_item( itype_debug_backpack ) != nullptr );
+    item weapon( itype_rock, calendar::turn_zero );
+    const itype_id weapon_type = weapon.typeId();
     REQUIRE( fixture.actor.Character::wield(
                  weapon, std::nullopt, false ) );
 
@@ -143,12 +181,14 @@ TEST_CASE( "lua_platform_equipment_stow_current_physical_weapon",
     CHECK_FALSE( value["bionic_deactivated"].valid() );
     CHECK_FALSE( fixture.actor.has_weapon() );
     bool weapon_is_in_inventory = false;
-    for( const item *entry : fixture.actor.inv_dump() ) {
+    fixture.actor.visit_items( [&]( item * entry, item * ) {
         weapon_is_in_inventory = weapon_is_in_inventory ||
                                  ( entry != nullptr &&
-                                   entry->uid().get_value() == weapon_uid );
-    }
+                                   entry->typeId() == weapon_type );
+        return VisitResponse::NEXT;
+    } );
     CHECK( weapon_is_in_inventory );
+    CHECK( fixture.actor.has_amount( weapon_type, 1 ) );
 }
 
 TEST_CASE( "lua_platform_equipment_stow_current_weapon_without_weapon",
@@ -174,10 +214,10 @@ TEST_CASE( "lua_platform_equipment_stow_current_weapon_bionic_branch",
            "[lua][platform][equipment][weapon][bionic][semantic]" )
 {
     platform_equipment_fixture fixture( 209, 1, 6209 );
-    fixture.actor.add_bionic( bionic_id( "bio_power_storage" ) );
-    fixture.actor.add_bionic( bionic_id( "bio_power_storage" ) );
+    fixture.actor.add_bionic( bio_power_storage );
+    fixture.actor.add_bionic( bio_power_storage );
     fixture.actor.set_power_level( fixture.actor.get_max_power_level() );
-    fixture.actor.add_bionic( bionic_id( "bio_blade" ) );
+    fixture.actor.add_bionic( bio_blade );
     bionic &weapon_bionic = fixture.actor.bionic_at_index(
                                 fixture.actor.get_bionics().size() - 1 );
     REQUIRE( fixture.actor.activate_bionic( weapon_bionic ) );
@@ -202,10 +242,10 @@ TEST_CASE( "lua_platform_equipment_stow_current_weapon_failed_bionic_no_fallback
            "[lua][platform][equipment][weapon][bionic][semantic]" )
 {
     platform_equipment_fixture fixture( 212, 1, 6212 );
-    fixture.actor.add_bionic( bionic_id( "bio_power_storage" ) );
-    fixture.actor.add_bionic( bionic_id( "bio_power_storage" ) );
+    fixture.actor.add_bionic( bio_power_storage );
+    fixture.actor.add_bionic( bio_power_storage );
     fixture.actor.set_power_level( fixture.actor.get_max_power_level() );
-    fixture.actor.add_bionic( bionic_id( "bio_blade" ) );
+    fixture.actor.add_bionic( bio_blade );
     bionic &weapon_bionic = fixture.actor.bionic_at_index(
                                 fixture.actor.get_bionics().size() - 1 );
     REQUIRE( fixture.actor.activate_bionic( weapon_bionic ) );
@@ -233,7 +273,7 @@ TEST_CASE( "lua_platform_inventory_has_stolen_from_matches_native_condition",
     npc owner;
     owner.normalize();
     owner.setID( character_id( 6212 ), true );
-    owner.set_fac( faction_id( "your_followers" ) );
+    owner.set_fac( faction_your_followers );
     REQUIRE( owner.get_faction() != nullptr );
     REQUIRE( owner.inv_dump().empty() );
     const cata::lua_platform::game_handle owner_handle =
@@ -241,7 +281,7 @@ TEST_CASE( "lua_platform_inventory_has_stolen_from_matches_native_condition",
             owner, { "npc", owner.getID().get_value(), 0, 0, 0, {} },
             fixture.runtime, fixture.active_world_generation );
 
-    item *held_item = fixture.add_item( itype_id( "rock" ) );
+    item *held_item = fixture.add_item( itype_rock );
     REQUIRE( held_item != nullptr );
     const sol::protected_function has_stolen_from =
         fixture.services["inventory"]["has_stolen_from"];
@@ -272,10 +312,9 @@ TEST_CASE( "lua_platform_inventory_has_stolen_from_matches_native_condition",
     check_native_match( true );
     held_item->set_old_owner( owner.get_faction()->id );
     check_native_match( true );
-    const faction_id unrelated_old_owner( "robofac" );
-    REQUIRE( unrelated_old_owner.is_valid() );
-    REQUIRE( unrelated_old_owner != owner.get_faction()->id );
-    held_item->set_old_owner( unrelated_old_owner );
+    REQUIRE( faction_robofac.is_valid() );
+    REQUIRE( faction_robofac != owner.get_faction()->id );
+    held_item->set_old_owner( faction_robofac );
     check_native_match( false );
 }
 
@@ -283,17 +322,19 @@ TEST_CASE( "lua_platform_equipment_wield_inventory_to_wield",
            "[lua][platform][equipment]" )
 {
     platform_equipment_fixture fixture( 201, 1, 6201 );
-    item *source_item = fixture.add_item( itype_id( "rock" ) );
+    item *source_item = fixture.add_item( itype_rock );
     REQUIRE( source_item != nullptr );
     const cata::lua_platform::game_handle source_handle =
         fixture.item_handle( *source_item );
     const sol::protected_function wield =
         fixture.services["equipment"]["wield"];
 
+    const sol::table result_holder_1 = fixture.holder( fixture.actor_handle );
+    const sol::table result_holder_2 = fixture.holder( fixture.actor_handle );
     const sol::protected_function_result result = wield(
                 fixture.actor_handle, source_handle,
-                fixture.holder( fixture.actor_handle ),
-                fixture.holder( fixture.actor_handle ) );
+                result_holder_1,
+                result_holder_2 );
     REQUIRE( result.valid() );
     const sol::table envelope = result.get<sol::table>();
     REQUIRE( envelope["ok"].get<bool>() );
@@ -308,17 +349,19 @@ TEST_CASE( "lua_platform_equipment_wear_inventory_to_worn",
            "[lua][platform][equipment]" )
 {
     platform_equipment_fixture fixture( 202, 1, 6202 );
-    item *source_item = fixture.add_item( itype_id( "backpack" ) );
+    item *source_item = fixture.add_item( itype_backpack );
     REQUIRE( source_item != nullptr );
     const cata::lua_platform::game_handle source_handle =
         fixture.item_handle( *source_item );
     const sol::protected_function wear =
         fixture.services["equipment"]["wear"];
 
+    const sol::table result_holder_1 = fixture.holder( fixture.actor_handle );
+    const sol::table result_holder_2 = fixture.holder( fixture.actor_handle );
     const sol::protected_function_result result = wear(
                 fixture.actor_handle, source_handle,
-                fixture.holder( fixture.actor_handle ),
-                fixture.holder( fixture.actor_handle ) );
+                result_holder_1,
+                result_holder_2 );
     REQUIRE( result.valid() );
     const sol::table envelope = result.get<sol::table>();
     REQUIRE( envelope["ok"].get<bool>() );
@@ -338,7 +381,7 @@ TEST_CASE( "lua_platform_equipment_takeoff_to_explicit_holder",
            "[lua][platform][equipment]" )
 {
     platform_equipment_fixture fixture( 203, 1, 6203 );
-    item *worn_item = fixture.add_worn_item( itype_id( "backpack" ) );
+    item *worn_item = fixture.add_worn_item( itype_backpack );
     REQUIRE( worn_item != nullptr );
     const cata::lua_platform::game_handle worn_handle =
         fixture.item_handle( *worn_item, "character_worn" );
@@ -358,7 +401,7 @@ TEST_CASE( "lua_platform_equipment_takeoff_to_explicit_holder",
         moved_handle.resolve_item( fixture.active_runtime,
                                    fixture.active_world_generation );
     REQUIRE( static_cast<bool>( moved ) );
-    CHECK( !fixture.actor.is_wearing( itype_id( "backpack" ) ) );
+    CHECK( !fixture.actor.is_wearing( itype_backpack ) );
     CHECK( fixture.actor.has_item( *moved.value ) );
     CHECK( worn_handle.validation_error(
                fixture.active_runtime, fixture.active_world_generation ) );
@@ -368,7 +411,7 @@ TEST_CASE( "lua_platform_equipment_unwield_to_explicit_holder",
            "[lua][platform][equipment]" )
 {
     platform_equipment_fixture fixture( 204, 1, 6204 );
-    item wielded_value( itype_id( "rock" ), calendar::turn_zero );
+    item wielded_value( itype_rock, calendar::turn_zero );
     REQUIRE( fixture.actor.Character::wield( wielded_value, std::nullopt, false ) );
     item_location wielded_location = fixture.actor.get_wielded_item();
     REQUIRE( wielded_location );
@@ -402,28 +445,30 @@ TEST_CASE( "lua_platform_equipment_atomic_swap",
            "[lua][platform][equipment]" )
 {
     platform_equipment_fixture fixture( 205, 1, 6205 );
-    item old_value( itype_id( "rock" ), calendar::turn_zero );
+    item old_value( itype_rock, calendar::turn_zero );
     REQUIRE( fixture.actor.Character::wield( old_value, std::nullopt, false ) );
     item_location old_location = fixture.actor.get_wielded_item();
     REQUIRE( old_location );
     const std::int64_t old_uid = old_location->uid().get_value();
-    item *next_item = fixture.add_item( itype_id( "stick" ) );
+    item *next_item = fixture.add_item( itype_stick );
     REQUIRE( next_item != nullptr );
     const cata::lua_platform::game_handle next_handle =
         fixture.item_handle( *next_item );
     const sol::protected_function wield =
         fixture.services["equipment"]["wield"];
 
+    const sol::table result_holder_1 = fixture.holder( fixture.actor_handle );
+    const sol::table result_holder_2 = fixture.holder( fixture.actor_handle );
     const sol::protected_function_result result = wield(
                 fixture.actor_handle, next_handle,
-                fixture.holder( fixture.actor_handle ),
-                fixture.holder( fixture.actor_handle ) );
+                result_holder_1,
+                result_holder_2 );
     REQUIRE( result.valid() );
     const sol::table envelope = result.get<sol::table>();
     REQUIRE( envelope["ok"].get<bool>() );
     const sol::table value = envelope["value"].get<sol::table>();
     CHECK( fixture.actor.has_weapon() );
-    CHECK( fixture.actor.get_wielded_item()->typeId() == itype_id( "stick" ) );
+    CHECK( fixture.actor.get_wielded_item()->typeId() == itype_stick );
     CHECK( value["displaced_count"].get<std::size_t>() == 1 );
     const sol::table displaced = value["displaced"].get<sol::table>()[1];
     CHECK( displaced["source_uid"].get<std::int64_t>() == old_uid );
@@ -433,7 +478,7 @@ TEST_CASE( "lua_platform_equipment_atomic_swap",
         displaced_handle.resolve_item( fixture.active_runtime,
                                        fixture.active_world_generation );
     REQUIRE( static_cast<bool>( displaced_item ) );
-    CHECK( displaced_item.value->typeId() == itype_id( "rock" ) );
+    CHECK( displaced_item.value->typeId() == itype_rock );
     CHECK( fixture.actor.has_item( *displaced_item.value ) );
     CHECK( next_handle.validation_error(
                fixture.active_runtime, fixture.active_world_generation ) );
@@ -443,28 +488,38 @@ TEST_CASE( "lua_platform_equipment_conflict_destination_rollback",
            "[lua][platform][equipment]" )
 {
     platform_equipment_fixture fixture( 206, 1, 6206 );
-    const itype_id single_worn_pack( "backpack_hiking" );
-    item *existing = fixture.add_worn_item( single_worn_pack );
-    REQUIRE( existing != nullptr );
-    item *source_item = fixture.add_item( single_worn_pack );
+    const int maximum_worn = item( itype_backpack_hiking ).max_worn();
+    REQUIRE( maximum_worn > 0 );
+    item *existing = nullptr;
+    for( int index = 0; index < maximum_worn; ++index ) {
+        existing = fixture.add_worn_item( itype_backpack_hiking );
+        REQUIRE( existing != nullptr );
+    }
+    item *source_item = fixture.add_item( itype_backpack_hiking );
     REQUIRE( source_item != nullptr );
-    item *destination_blocker = fixture.add_item( single_worn_pack );
+    item *destination_blocker = fixture.add_item( itype_backpack_hiking );
     REQUIRE( destination_blocker != nullptr );
+    source_item->set_owner( fixture.actor );
+    destination_blocker->set_owner( fixture.actor );
+    REQUIRE_FALSE( fixture.actor.can_wear( *source_item ).success() );
+    REQUIRE( existing->stacks_with( *destination_blocker ) );
     const cata::lua_platform::game_handle source_handle =
         fixture.item_handle( *source_item );
     const sol::protected_function wear =
         fixture.services["equipment"]["wear"];
 
+    const sol::table result_holder_1 = fixture.holder( fixture.actor_handle );
+    const sol::table result_holder_2 = fixture.holder( fixture.actor_handle );
     const sol::protected_function_result result = wear(
                 fixture.actor_handle, source_handle,
-                fixture.holder( fixture.actor_handle ),
-                fixture.holder( fixture.actor_handle ) );
+                result_holder_1,
+                result_holder_2 );
     REQUIRE( result.valid() );
     const sol::table envelope = result.get<sol::table>();
     REQUIRE_FALSE( envelope["ok"].get<bool>() );
     CHECK( envelope["error"].get<sol::table>()["code"].get<std::string>() ==
            "destination_rejected" );
-    CHECK( fixture.actor.is_wearing( single_worn_pack ) );
+    CHECK( fixture.actor.is_wearing( itype_backpack_hiking ) );
     CHECK( fixture.actor.has_item( *source_item ) );
     CHECK( fixture.actor.has_item( *destination_blocker ) );
 }
@@ -473,7 +528,7 @@ TEST_CASE( "lua_platform_equipment_stale_actor_item",
            "[lua][platform][equipment]" )
 {
     platform_equipment_fixture fixture( 207, 1, 6207 );
-    item *source_item = fixture.add_item( itype_id( "rock" ) );
+    item *source_item = fixture.add_item( itype_rock );
     REQUIRE( source_item != nullptr );
     const cata::lua_platform::game_handle source_handle =
         fixture.item_handle( *source_item );
@@ -481,25 +536,30 @@ TEST_CASE( "lua_platform_equipment_stale_actor_item",
         fixture.services["equipment"]["wield"];
     cata::lua_platform::retire_item_handle_identity( *source_item );
 
+    const sol::table stale_item_result_holder_1 = fixture.holder( fixture.actor_handle );
+    const sol::table stale_item_result_holder_2 = fixture.holder( fixture.actor_handle );
     const sol::protected_function_result stale_item_result = wield(
                 fixture.actor_handle, source_handle,
-                fixture.holder( fixture.actor_handle ),
-                fixture.holder( fixture.actor_handle ) );
+                stale_item_result_holder_1,
+                stale_item_result_holder_2 );
     REQUIRE( stale_item_result.valid() );
     CHECK_FALSE( stale_item_result.get<sol::table>()["ok"].get<bool>() );
     CHECK( stale_item_result.get<sol::table>()["error"].get<sol::table>()
            ["code"].get<std::string>() == "stale_item" );
 
-    const auto other_owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr other_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime other_runtime( other_owner, 207 );
     const cata::lua_platform::game_handle stale_actor =
         cata::lua_platform::game_handle::from_creature(
             fixture.actor, { "character", fixture.actor.getID().get_value(), 0, 0, 0, {} },
             other_runtime, fixture.active_world_generation );
+    const sol::table stale_actor_result_holder_1 = fixture.holder( fixture.actor_handle );
+    const sol::table stale_actor_result_holder_2 = fixture.holder( fixture.actor_handle );
     const sol::protected_function_result stale_actor_result = wield(
                 stale_actor, source_handle,
-                fixture.holder( fixture.actor_handle ),
-                fixture.holder( fixture.actor_handle ) );
+                stale_actor_result_holder_1,
+                stale_actor_result_holder_2 );
     REQUIRE( stale_actor_result.valid() );
     CHECK_FALSE( stale_actor_result.get<sol::table>()["ok"].get<bool>() );
     CHECK( stale_actor_result.get<sol::table>()["error"].get<sol::table>()
@@ -514,7 +574,7 @@ TEST_CASE( "lua_platform_equipment_wrong_owner",
     owner.normalize();
     owner.setID( character_id( 7208 ), true );
     item *foreign_item = &owner.inv->add_item(
-                             item( itype_id( "rock" ), calendar::turn_zero ),
+                             item( itype_rock, calendar::turn_zero ),
                              false, false, false );
     REQUIRE( foreign_item != nullptr );
     const cata::lua_platform::game_handle foreign_handle =
@@ -525,10 +585,12 @@ TEST_CASE( "lua_platform_equipment_wrong_owner",
     const sol::protected_function wield =
         fixture.services["equipment"]["wield"];
 
+    const sol::table result_holder_1 = fixture.holder( fixture.actor_handle );
+    const sol::table result_holder_2 = fixture.holder( fixture.actor_handle );
     const sol::protected_function_result result = wield(
                 fixture.actor_handle, foreign_handle,
-                fixture.holder( fixture.actor_handle ),
-                fixture.holder( fixture.actor_handle ) );
+                result_holder_1,
+                result_holder_2 );
     REQUIRE( result.valid() );
     const sol::table envelope = result.get<sol::table>();
     REQUIRE_FALSE( envelope["ok"].get<bool>() );
@@ -547,7 +609,7 @@ TEST_CASE( "lua_platform_equipment_participant_death",
     dying.setID( character_id( 7209 ), true );
     cata::lua_platform::register_npc_handle_identity( dying );
     item *source_item = &dying.inv->add_item(
-                            item( itype_id( "rock" ), calendar::turn_zero ),
+                            item( itype_rock, calendar::turn_zero ),
                             false, false, false );
     REQUIRE( source_item != nullptr );
     const cata::lua_platform::game_handle dying_handle =
@@ -564,9 +626,11 @@ TEST_CASE( "lua_platform_equipment_participant_death",
     cata::lua_platform::retire_npc_handle_identity( dying );
 
     fixture.write_called = false;
+    const sol::table result_holder_1 = fixture.holder( dying_handle );
+    const sol::table result_holder_2 = fixture.holder( dying_handle );
     const sol::protected_function_result result = wield(
                 dying_handle, source_handle,
-                fixture.holder( dying_handle ), fixture.holder( dying_handle ) );
+                result_holder_1, result_holder_2 );
     REQUIRE( result.valid() );
     const sol::table envelope = result.get<sol::table>();
     REQUIRE_FALSE( envelope["ok"].get<bool>() );
@@ -581,7 +645,7 @@ TEST_CASE( "lua_platform_equipment_public_surface_has_no_legacy_helpers",
     platform_equipment_fixture fixture( 210, 1, 6210 );
     const sol::table equipment = fixture.services["equipment"];
     REQUIRE( equipment.valid() );
-    const std::set<std::string> expected = { "unequip", "wear", "wield" };
+    const std::set<std::string> expected = { "stow_current_weapon", "unequip", "wear", "wield" };
     std::set<std::string> exposed;
     for( const auto &entry : equipment ) {
         REQUIRE( entry.first.is<std::string>() );
@@ -591,6 +655,7 @@ TEST_CASE( "lua_platform_equipment_public_surface_has_no_legacy_helpers",
     CHECK( equipment["wield"].valid() );
     CHECK( equipment["wear"].valid() );
     CHECK( equipment["unequip"].valid() );
+    CHECK( equipment["stow_current_weapon"].valid() );
 
     const sol::table inventory = fixture.services["inventory"];
     CHECK_FALSE( inventory["remove"].valid() );
