@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_CHARACTER_MARTIAL_ARTS_H
 #define CATA_SRC_CHARACTER_MARTIAL_ARTS_H
 
+#include <map>
 #include <optional>
 #include <string>
 #include <utility>
@@ -22,6 +23,7 @@ class character_martial_arts
     private:
         std::vector<matype_id> ma_styles;
         matype_id style_selected = matype_id( "style_none" );
+        std::map<itype_id, matype_id> preferred_weapon_styles;
     public:
         character_martial_arts();
         character_martial_arts( const std::vector<matype_id> &styles,
@@ -36,6 +38,9 @@ class character_martial_arts
         // checks that style selected is one that is known, otherwise resets it
         void selected_style_check();
         bool keep_hands_free = false;
+        bool auto_style = false;
+        void remember_weapon_style( const Character &owner );
+        void auto_select_style( Character &owner );
         /** Creates the UI and handles player input for picking martial arts styles */
         bool pick_style( const Character &you );
 

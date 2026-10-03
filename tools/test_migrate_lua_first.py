@@ -10098,6 +10098,13 @@ assert(1.0 / written.negative_zero == math.huge)
                         },
                         {
                             "type": "effect_on_condition",
+                            "id": "topic_item_is_weather",
+                            "required_event": "game_start",
+                            "condition": {"is_weather": {"mutator": "topic_item"}},
+                            "effect": {"message": "topic item weather"},
+                        },
+                        {
+                            "type": "effect_on_condition",
                             "id": "unexpressed_is_weather",
                             "required_event": "game_start",
                             "condition": {

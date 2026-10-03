@@ -11,6 +11,7 @@
 #include <utility>
 
 #include "avatar.h"
+#include "bodypart.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
 #include "cata_variant.h"
@@ -25,6 +26,21 @@
 #include "npc.h"
 #include "point.h"
 #include "talker.h"
+#include "type_id.h"
+
+TEST_CASE( "math_parser_limb_score_optional_type", "[math_parser][eoc]" )
+{
+    avatar &u = get_avatar();
+    dialogue d( get_talker_for( u ), std::make_unique<talker>() );
+    math_exp expression;
+    const limb_score_id balance( "balance" );
+
+    REQUIRE( expression.parse( "u_limb_score('balance')" ) );
+    CHECK( expression.eval( d ) == Approx( u.get_limb_score( balance ) ) );
+
+    REQUIRE( expression.parse( "u_limb_score('balance', 'type': 'leg')" ) );
+    CHECK( expression.eval( d ) == Approx( u.get_limb_score( balance, bp_type::leg ) ) );
+}
 
 TEST_CASE( "diag_value_cata_variant_boolean_is_numeric", "[math_parser][nogame]" )
 {

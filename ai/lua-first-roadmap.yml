@@ -8,20 +8,6 @@ current_contract: ccb Platform v1
 target: Develop directly usable native capabilities for ordinary Lua authoring through the sole Platform v1 runtime and ccb entrypoint. Automatic EOC migration and its dedicated tests are frozen maintenance tools, and selector coverage or migration TODO counts are not sprint completion criteria. Source-only sprints change implementation and necessary API declarations without prose, test expansion, builds, checkers or generated refreshes; acceptance is separately requested. Passive schema-validatable JSON may remain, and EOC is removed only after its references reach zero.
 current_phase: core_platform_complete
 
-verification_policy:
-  implementation_loop: source_only_domain_batches
-  acceptance_gate: separately_requested_scoped_acceptance
-  forbidden_before_gate:
-    - cxx_build
-    - catch2
-    - python_suite
-    - contract_generation
-    - ledger_refresh
-    - full_corpus_audit
-  verified_requires: final_semantic_gate_with_native_and_real_corpus_evidence
-  bounded_means: named_real_shapes_are_supported_without_claiming_selector_or_domain_completeness
-  complete_means: the declared core Platform source scope is closed and the final gate passed; independent follow-on capabilities, zero migration TODOs, and whole-corpus content migration are not required
-
 corpus_sources:
   - id: json-object-types
     path: data/reference/json/ccb_json_object_types.json
@@ -208,7 +194,7 @@ milestones:
       - Primitive and bounded statuses never imply selector or domain completeness.
       - Only platform_gap dispositions drive Platform core work; TODO totals are not a completion metric.
       - TODOs remain boundary records rather than completion records; a disposition may stay open for a later capability or author decision.
-      - Verified status is emitted only after the final semantic gate, and remaining TODOs may stay open for later batches.
+      - Verified status requires direct evidence for the exact claimed scope; unrelated TODOs may remain open.
     evidence:
       - path: tools/agent/generate_lua_first_replacement_ledger.py
         kind: source

@@ -5298,6 +5298,9 @@ talk_effect_fun_t::func f_clear_dimension( const JsonObject &jo, std::string_vie
         const std::vector<cata_path> dimensions_query = get_directories_with( target_dimension_id,
                 PATH_INFO::dimensions_save_path() );
         if( dimensions_query.size() == 1 ) {
+            // Sky Island clears the destination before travel_to_dimension.
+            // Capture the previous complete save before deleting its maps.
+            g->ensure_dimension_rollback_snapshot();
             std::filesystem::remove_all( ( PATH_INFO::dimensions_save_path() /
                                            target_dimension_id ).get_unrelative_path() );
         }

@@ -3632,9 +3632,9 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
             const tripoint_abs_omt omp = origin + point( col, row );
 
             const om_vision_level vision = overmap_buffer.seen( omp );
-            // Hordes and mongroups live on the ground level, so marker
-            // visibility is evaluated at z=0 to keep them on higher z-levels.
-            const tripoint_abs_omt ground_omp( omp.xy(), 0 );
+            // Surface hordes remain visible from above, but underground views
+            // must query their own level rather than projecting surface hordes.
+            const tripoint_abs_omt ground_omp( omp.xy(), std::min( omp.z(), 0 ) );
             const bool los =
                 overmap_buffer.seen_more_than( ground_omp, om_vision_level::details ) &&
                 ( you.overmap_los( ground_omp, sight_points ) ||
@@ -3728,7 +3728,13 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
             }
 
             if( vision != om_vision_level::unseen ) {
-                if( draw_overlays && uistate.overmap_debug_mongroup ) {
+                const int horde_size = showhordes && los ?
+                                       overmap_buffer.get_horde_size( ground_omp,
+                                               horde_map_flavors::active | horde_map_flavors::idle ) : 0;
+                // The normal horde marker already represents this group.  Debug
+                // overlays should not add a second zombie sprite beneath it.
+                if( draw_overlays && uistate.overmap_debug_mongroup &&
+                    horde_size < HORDE_VISIBILITY_SIZE ) {
                     std::vector<std::unordered_map<tripoint_abs_ms, horde_entity>*> hordes = overmap_buffer.hordes_at(
                                 ground_omp );
                     if( !hordes.empty() ) {
@@ -3736,8 +3742,6 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
                     }
                 }
                 if( showhordes && los ) {
-                    const int horde_size = overmap_buffer.get_horde_size( ground_omp,
-                                           horde_map_flavors::active | horde_map_flavors::idle );
                     if( horde_size >= HORDE_VISIBILITY_SIZE ) {
                         // Scale down the range of horde population, which can be 1-576 to a range of 1-10
                         // These thresholds are generated with pow( sprite_size, 2.4 ).
@@ -3764,9 +3768,10 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
                             sprite_size = 10;
                         }
 
-                        if( find_tile_with_season( id ) ) {
-                            // NOLINTNEXTLINE(cata-translate-string-literal)
-                            draw_from_id_string( string_format( "overmap_horde_%d", sprite_size ),
+                        // NOLINTNEXTLINE(cata-translate-string-literal)
+                        const std::string horde_id = string_format( "overmap_horde_%d", sprite_size );
+                        if( find_tile_with_season( horde_id ) ) {
+                            draw_from_id_string( horde_id,
                                                  omp, 0, 0, lit_level::LIT, false );
                         } else {
                             // a little bit of hardcoded fallbacks for hordes for
@@ -3950,6 +3955,9 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
         for( const city_reference &city : overmap_buffer.get_cities_near(
                  project_to<coords::sm>( center_pos ), radius ) ) {
             const tripoint_abs_omt city_center = project_to<coords::omt>( city.abs_sm_pos );
+            if( !ui::omap::label_visible_at_z( city_center.z(), center_pos.z() ) ) {
+                continue;
+            }
             // Labels are ground-level data; test screen containment in xy by
             // projecting the label position onto the viewed z-level.
             const tripoint_abs_omt city_on_view( city_center.xy(), overmap_area.p_min.z() );
@@ -3962,7 +3970,10 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
         for( const camp_reference &camp : overmap_buffer.get_camps_near(
                  project_to<coords::sm>( center_pos ), radius ) ) {
             const tripoint_abs_omt camp_center = project_to<coords::omt>( camp.abs_sm_pos );
-            // Same xy-only containment as cities (labels are ground-level).
+            if( !ui::omap::label_visible_at_z( camp_center.z(), center_pos.z() ) ) {
+                continue;
+            }
+            // Project for screen containment only after checking the real level.
             const tripoint_abs_omt camp_on_view( camp_center.xy(), overmap_area.p_min.z() );
             if( overmap_buffer.seen_more_than( camp_center, om_vision_level::outlines ) &&
                 overmap_area.contains( camp_on_view ) ) {
@@ -4906,6 +4917,7 @@ input_context touch_input_context;
 // separately so those mutations are not mistaken for opening a different screen.
 static const input_context *touch_input_context_owner = nullptr;
 static bool android_has_active_world();
+static void android_sync_touch_input_context();
 static void android_request_repaint();
 static void android_service_display_refresh_requests();
 
@@ -5589,6 +5601,7 @@ static bool android_keyboard_occludes_shortcuts()
 // Draw quick shortcuts on top of the game view
 void draw_quick_shortcuts()
 {
+    android_sync_touch_input_context();
 
     if( !android_legacy_shortcuts_enabled() || !quick_shortcuts_enabled ||
         android_keyboard_occludes_shortcuts() ||
@@ -6138,6 +6151,42 @@ static void focus_aware_stop_text_input()
 }
 
 #if defined(__ANDROID__)
+// Rendering can happen before the next input poll, especially while loading.
+static void android_sync_touch_input_context()
+{
+    // Copy the current input context
+    input_context *new_input_context = input_context::input_context_stack.back();
+    if( new_input_context ) {
+        const bool owner_changed = new_input_context != touch_input_context_owner;
+        const bool category_changed = new_input_context->get_category() !=
+                                      touch_input_context.get_category();
+
+        // If we were in an allow_text_entry input context, and text input is still active, and we're auto-managing keyboard, hide it.
+        if( ( owner_changed || category_changed ) && touch_input_context.allow_text_entry &&
+            !android_wants_text_input( *new_input_context ) &&
+            IsTextInputActive( ::window.get() ) &&
+            get_option<bool>( "ANDROID_AUTO_KEYBOARD" ) ) {
+            focus_aware_stop_text_input();
+        }
+
+        touch_input_context = *new_input_context;
+        touch_input_context_owner = new_input_context;
+        if( owner_changed || category_changed ) {
+            if( android_ui_mode::is_new_ui_build() ) {
+                android_cancel_imgui_touch();
+            }
+            // A tap that opened a new screen must not become the first half of a
+            // double-tap gesture inside that new input context.
+            last_tap_time = 0;
+            // The HUD action snapshot and the terrain both belong to the input
+            // context being entered.  Merely asking redraw_invalidated() did
+            // nothing when the gameplay adaptor itself was still clean, leaving
+            // the previous Lua scene over a black/stale map until movement.
+            android_force_full_redraw();
+        }
+    }
+}
+
 static bool pop_extra_button_input( input_event &event )
 {
     std::scoped_lock lock( extra_button_input_mutex );
@@ -6192,37 +6241,7 @@ static void CheckMessages()
         env->DeleteLocalRef( clazz );
     }
 
-    // Copy the current input context
-    input_context *new_input_context = input_context::input_context_stack.back();
-    if( new_input_context ) {
-        const bool owner_changed = new_input_context != touch_input_context_owner;
-        const bool category_changed = new_input_context->get_category() !=
-                                      touch_input_context.get_category();
-
-        // If we were in an allow_text_entry input context, and text input is still active, and we're auto-managing keyboard, hide it.
-        if( ( owner_changed || category_changed ) && touch_input_context.allow_text_entry &&
-            !android_wants_text_input( *new_input_context ) &&
-            IsTextInputActive( ::window.get() ) &&
-            get_option<bool>( "ANDROID_AUTO_KEYBOARD" ) ) {
-            focus_aware_stop_text_input();
-        }
-
-        touch_input_context = *new_input_context;
-        touch_input_context_owner = new_input_context;
-        if( owner_changed || category_changed ) {
-            if( android_ui_mode::is_new_ui_build() ) {
-                android_cancel_imgui_touch();
-            }
-            // A tap that opened a new screen must not become the first half of a
-            // double-tap gesture inside that new input context.
-            last_tap_time = 0;
-            // The HUD action snapshot and the terrain both belong to the input
-            // context being entered.  Merely asking redraw_invalidated() did
-            // nothing when the gameplay adaptor itself was still clean, leaving
-            // the previous Lua scene over a black/stale map until movement.
-            android_force_full_redraw();
-        }
-    }
+    android_sync_touch_input_context();
 
     bool is_default_mode = touch_input_context.get_category() == "DEFAULTMODE" &&
                            android_has_active_world();
@@ -6602,7 +6621,7 @@ static void CheckMessages()
                         g && g->uquit == QUIT_NO &&
                         get_option<bool>( "ANDROID_QUICKSAVE" ) &&
                         !std::uncaught_exception() ) {
-                        g->quicksave();
+                        g->quicksave( true );
                     }
                     break;
                     // Window resize (including android screen rotation) is handled by
@@ -7121,7 +7140,8 @@ static void CheckMessages()
                         } else {
                             if( is_two_finger_touch ) {
                                 // handle zoom in/out
-                                if( !pinch_zoom_handled && is_default_mode ) {
+                                if( !pinch_zoom_handled && ( is_default_mode ||
+                                                             touch_input_context.get_category() == "OVERMAP" ) ) {
                                     float x1 = ( finger_curr_x - finger_down_x );
                                     float y1 = ( finger_curr_y - finger_down_y );
                                     float d1 = std::sqrt( x1 * x1 + y1 * y1 );

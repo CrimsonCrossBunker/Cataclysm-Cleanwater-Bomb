@@ -13,7 +13,6 @@
 #include <memory>
 #include <optional>
 #include <set>
-#include <sstream>
 #include <string_view>
 #include <tuple>
 #include <unordered_map>
@@ -25,13 +24,15 @@
     #include "adaptive_character_creator.h"
     #include "adaptive_imgui_dialog.h"
     #include "android_ui_mode.h"
+    #include "try_parse_integer.h"
 #endif
 #include "addiction.h"
 #include "bionics.h"
+#include "bodypart.h"
+#include "calendar.h"
 #include "calendar_ui.h"
 #include "cata_imgui.h"
 #include "cata_path.h"
-#include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
@@ -39,9 +40,10 @@
 #include "character_martial_arts.h"
 #include "city.h"
 #include "color.h"
+#include "coordinates.h"
 #include "debug.h"
-#include "enum_conversions.h"
 #include "enum_traits.h"
+#include "enums.h"
 #include "flexbuffer_json.h"
 #include "game_constants.h"
 #include "imgui/imgui.h"
@@ -49,6 +51,7 @@
 #include "input_enums.h"
 #include "input_popup.h"
 #include "item.h"
+#include "item_location.h"
 #include "json.h"
 #include "loading_ui.h"
 #include "localized_comparator.h"
@@ -64,16 +67,15 @@
 #include "options.h"
 #include "output.h"
 #include "overmap_ui.h"
-#include "overmapbuffer.h"
 #include "path_info.h"
 #include "pimpl.h"
 #include "player_difficulty.h"
+#include "point.h"
 #include "profession.h"
 #include "profession_group.h"
 #include "proficiency.h"
 #include "recipe.h"
 #include "recipe_dictionary.h"
-#include "regional_settings.h"
 #include "ret_val.h"
 #include "rng.h"
 #include "scenario.h"
@@ -84,10 +86,10 @@
 #include "trait_group.h"
 #include "translation.h"
 #include "translations.h"
-#include "try_parse_integer.h"
 #include "type_id.h"
-#include "uilist.h"
 #include "ui_manager.h"
+#include "uilist.h"
+#include "units.h"
 #include "units_utility.h"
 #include "veh_type.h"
 #include "worldfactory.h"
@@ -95,7 +97,9 @@
 #if defined(TILES)
     // For the character paper-doll preview: tilecontext / cata_tiles::render_character_preview,
     // the USE_CHARACTER_PREVIEW option, and the use_tiles cache.
+    #include <sstream>
     #include "cached_options.h"
+    #include "cata_scope_helpers.h"
     #include "cata_tiles.h"
     #include "sdltiles.h"
 #endif
@@ -517,10 +521,11 @@ static std::string point_pool_status_text( const Character &u, pool_type pool )
             return string_format( _( "Points remaining: %s" ),
                                   colored_balance( status.one_pool_points_left() ) );
         case pool_type::MULTI_POOL:
-            return string_format( _( "Points remaining — stats: %1$s, traits: %2$s, skills: %3$s" ),
-                                  colored_balance( status.stat_points_left ),
-                                  colored_balance( status.trait_points_left ),
-                                  colored_balance( status.skill_points_left ) );
+            return string_format(
+                       _( "Spendable points (shared, not additive) — stats: %1$s, traits: %2$s, skills: %3$s" ),
+                       colored_balance( status.stat_points_left ),
+                       colored_balance( status.trait_points_left ),
+                       colored_balance( status.skill_points_left ) );
         case pool_type::TRANSFER:
             return std::string();
     }
@@ -686,13 +691,15 @@ void Character::randomize( const bool random_scenario, bool play_now )
     randomize_height();
     randomize_blood();
     randomize_heartrate();
-    bool cities_enabled = overmap_buffer.get_settings(
-                              this->pos_abs_omt() ).get_settings_city().city_size != 0;
+    // NOTE: do not query overmap settings here: the overmap must only be
+    // generated after the world seed is set (see main_menu::new_character_tab).
+    // Use the same world-option check as the rest of the character UI.
+    bool cities_on = cities_enabled();
     if( random_scenario ) {
         std::vector<const scenario *> scenarios;
         for( const scenario &scen : scenario::get_all() ) {
             if( !scen.has_flag( flag_CHALLENGE ) && !scen.scen_is_blacklisted() &&
-                ( !scen.has_flag( flag_CITY_START ) || cities_enabled ) && scen.can_pick().success() ) {
+                ( !scen.has_flag( flag_CITY_START ) || cities_on ) && scen.can_pick().success() ) {
                 scenarios.emplace_back( &scen );
             }
         }

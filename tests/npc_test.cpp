@@ -4519,6 +4519,27 @@ TEST_CASE( "camp_resident_does_not_oscillate", "[npc][camp]" )
     }
 }
 
+TEST_CASE( "camp_worker_waits_in_place_without_a_chair", "[npc][camp]" )
+{
+    clear_map_without_vision();
+    clear_avatar();
+    map &here = get_map();
+    npc &worker = spawn_npc( { 50, 50 }, "test_talker" );
+    clear_character( worker, true );
+    const tripoint_abs_omt camp_pos = project_to<coords::omt>( worker.pos_abs() );
+    here.add_camp( camp_pos, "faction_camp" );
+    worker.assigned_camp = camp_pos;
+    const tripoint_abs_ms starting_pos = worker.pos_abs();
+
+    for( int i = 0; i < 10; ++i ) {
+        worker.set_moves( 100 );
+        worker.worker_downtime();
+        CHECK( worker.pos_abs() == starting_pos );
+    }
+
+    overmap_buffer.clear_camps( camp_pos.xy() );
+}
+
 TEST_CASE( "camp_resident_guard_transitions", "[npc][camp]" )
 {
     clear_map_without_vision();

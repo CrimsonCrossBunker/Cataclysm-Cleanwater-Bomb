@@ -42,28 +42,15 @@ rules and does not replace this file.
 | `doc/` | Legacy developer documentation awaiting classified migration | this file |
 
 The machine-readable map is `ai/project-map.yml`; validation routing is in
-`ai/test-matrix.yml`.  The long-term pure-Lua authoring direction is defined
-by `data/lua/LUA_FIRST_PLATFORM.md`, with implementation status in
-`ai/lua-first-roadmap.yml`.  Platform v1 is the repository's only supported
-Lua runtime and public authoring contract; the former API v5 runtime,
-capability sandbox, manifest, and `game.*` compatibility surface are removed
-rather than maintained as a second system.
+`ai/test-matrix.yml`. The Lua architecture is in `data/lua/LUA_FIRST_PLATFORM.md`;
+the short goal and progress page is `data/lua/LUA_FIRST_EOC_WORKFLOW.md`.
+Platform v1 and `require("ccb")` are the only supported Lua behavior entrypoint.
+For Lua changes, implement the needed behavior and run focused checks for the
+changed code; do not require a 586-item audit for each task. Keep public
+interfaces, declarations, and generated references in sync.
 
-Lua Platform work follows `data/lua/LUA_FIRST_EOC_WORKFLOW.md`. Develop native
-capabilities for ordinary Lua authoring in coherent domain batches. Automatic
-EOC migration and its dedicated tests are frozen maintenance tools, not Platform
-completion requirements. A source-only sprint updates implementation and necessary
-API declarations without writing prose, expanding test matrices, compiling,
-running tests or checkers, or refreshing generated reports. Record source progress
-without claiming acceptance. Run only the affected gate in a separately requested
-acceptance phase; reuse evidence while its inputs are unchanged.
-`ai/test-matrix.yml` lists available checks, not a mandate to run them all.
-
-Lua 平台按完整领域批次开发实际原生能力，遵循 `data/lua/LUA_FIRST_EOC_WORKFLOW.md`。
-自动 EOC 迁移器及其专用测试冻结为维护工具，不作为平台完成条件。纯代码冲刺只修改实现和必要
-API 声明，不写说明文档、不扩展测试矩阵、不编译、不运行测试或检查器、不刷新生成报告；只记录
-代码进展，不宣称验收通过。另行进入验收阶段后只执行受影响门禁，输入不变时复用已有证据。
-`ai/test-matrix.yml` 是可选检查路由，不是每轮全跑的清单。
+Lua 开发只读简短目标与进度页，按实际改动选择聚焦测试；不把逐条 EOC 语义对照当作
+每次修改的门槛。公开接口变化时同步声明和生成清单。
 
 ## Modification boundaries / 修改边界
 

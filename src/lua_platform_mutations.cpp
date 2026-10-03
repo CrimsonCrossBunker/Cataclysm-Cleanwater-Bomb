@@ -25,6 +25,7 @@ extern "C" {
 #include "event_bus.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
+#include "lua_platform_relation_page.h"
 #include "mutation.h"
 #include "type_id.h"
 #include "units.h"
@@ -118,80 +119,6 @@ sol::table mutation_operation_result(
     return value;
 }
 
-template<typename Range>
-sol::table typed_id_page(
-    sol::state_view lua, const Range &ids,
-    const std::string &kind )
-{
-    const std::size_t total = ids.size();
-    const std::size_t returned = std::min(
-                                     total, maximum_relation_values );
-    sol::table items = lua.create_table(
-                           static_cast<int>( returned ), 0 );
-    std::size_t index = 0;
-    for( const auto &id : ids ) {
-        if( index >= returned ) {
-            break;
-        }
-        items[index + 1] = script_game_id( kind, id.str() );
-        ++index;
-    }
-    sol::table result = lua.create_table();
-    result["items"] = std::move( items );
-    result["total"] = total;
-    result["returned"] = returned;
-    result["truncated"] = returned < total;
-    return result;
-}
-
-template<typename Range>
-sol::table string_page( sol::state_view lua, const Range &values )
-{
-    const std::size_t total = values.size();
-    const std::size_t returned = std::min(
-                                     total, maximum_relation_values );
-    sol::table items = lua.create_table(
-                           static_cast<int>( returned ), 0 );
-    std::size_t index = 0;
-    for( const auto &value : values ) {
-        if( index >= returned ) {
-            break;
-        }
-        items[index + 1] = value;
-        ++index;
-    }
-    sol::table result = lua.create_table();
-    result["items"] = std::move( items );
-    result["total"] = total;
-    result["returned"] = returned;
-    result["truncated"] = returned < total;
-    return result;
-}
-
-template<typename Range>
-sol::table string_id_page( sol::state_view lua, const Range &ids )
-{
-    const std::size_t total = ids.size();
-    const std::size_t returned = std::min(
-                                     total, maximum_relation_values );
-    sol::table items = lua.create_table(
-                           static_cast<int>( returned ), 0 );
-    std::size_t index = 0;
-    for( const auto &id : ids ) {
-        if( index >= returned ) {
-            break;
-        }
-        items[index + 1] = id.str();
-        ++index;
-    }
-    sol::table result = lua.create_table();
-    result["items"] = std::move( items );
-    result["total"] = total;
-    result["returned"] = returned;
-    result["truncated"] = returned < total;
-    return result;
-}
-
 template<typename Id>
 void set_optional_id(
     sol::table &table, const std::string &field,
@@ -208,16 +135,8 @@ sol::table variant_page(
     sol::state_view lua,
     const std::map<std::string, mutation_variant> &variants )
 {
-    const std::size_t total = variants.size();
-    const std::size_t returned = std::min(
-                                     total, maximum_relation_values );
-    sol::table items = lua.create_table(
-                           static_cast<int>( returned ), 0 );
-    std::size_t index = 0;
-    for( const auto &entry : variants ) {
-        if( index >= returned ) {
-            break;
-        }
+    return detail::make_bounded_relation_page( lua, variants, maximum_relation_values,
+    [&lua]( const auto & entry ) {
         const mutation_variant &variant = entry.second;
         sol::table item = lua.create_table();
         item["id"] = variant.id;
@@ -226,73 +145,36 @@ sol::table variant_page(
             variant.alt_description.translated();
         item["append_description"] = variant.append_desc;
         item["weight"] = variant.weight;
-        items[index + 1] = std::move( item );
-        ++index;
-    }
-    sol::table result = lua.create_table();
-    result["items"] = std::move( items );
-    result["total"] = total;
-    result["returned"] = returned;
-    result["truncated"] = returned < total;
-    return result;
+        return item;
+    } );
 }
 
 sol::table learned_spell_page(
     sol::state_view lua,
     const std::map<spell_id, int> &spells )
 {
-    const std::size_t total = spells.size();
-    const std::size_t returned = std::min(
-                                     total, maximum_relation_values );
-    sol::table items = lua.create_table(
-                           static_cast<int>( returned ), 0 );
-    std::size_t index = 0;
-    for( const auto &entry : spells ) {
-        if( index >= returned ) {
-            break;
-        }
+    return detail::make_bounded_relation_page( lua, spells, maximum_relation_values,
+    [&lua]( const auto & entry ) {
         sol::table item = lua.create_table();
         item["id"] = script_game_id(
                          "spell", entry.first.str() );
         item["level"] = entry.second;
-        items[index + 1] = std::move( item );
-        ++index;
-    }
-    sol::table result = lua.create_table();
-    result["items"] = std::move( items );
-    result["total"] = total;
-    result["returned"] = returned;
-    result["truncated"] = returned < total;
-    return result;
+        return item;
+    } );
 }
 
 sol::table quality_page(
     sol::state_view lua,
     const std::map<quality_id, int> &qualities )
 {
-    const std::size_t total = qualities.size();
-    const std::size_t returned = std::min(
-                                     total, maximum_relation_values );
-    sol::table items = lua.create_table(
-                           static_cast<int>( returned ), 0 );
-    std::size_t index = 0;
-    for( const auto &entry : qualities ) {
-        if( index >= returned ) {
-            break;
-        }
+    return detail::make_bounded_relation_page( lua, qualities, maximum_relation_values,
+    [&lua]( const auto & entry ) {
         sol::table item = lua.create_table();
         item["id"] = script_game_id(
                          "quality", entry.first.str() );
         item["level"] = entry.second;
-        items[index + 1] = std::move( item );
-        ++index;
-    }
-    sol::table result = lua.create_table();
-    result["items"] = std::move( items );
-    result["total"] = total;
-    result["returned"] = returned;
-    result["truncated"] = returned < total;
-    return result;
+        return item;
+    } );
 }
 
 sol::table snapshot_definition(
@@ -358,11 +240,10 @@ sol::table snapshot_definition(
     equipment["destroys_gear"] = definition.destroys_gear;
     equipment["allows_soft_gear"] =
         definition.allow_soft_gear;
-    equipment["restricted_body_parts"] = typed_id_page(
-            lua, definition.restricts_gear, "body_part" );
-    equipment["integrated_armor"] = typed_id_page(
-                                        lua,
-                                        definition.integrated_armor,
+    equipment["restricted_body_parts"] = detail::make_typed_id_page(
+            lua, maximum_relation_values, definition.restricts_gear, "body_part" );
+    equipment["integrated_armor"] = detail::make_typed_id_page(
+                                        lua, maximum_relation_values, definition.integrated_armor,
                                         "item" );
     equipment["provided_qualities"] = quality_page(
                                           lua,
@@ -376,36 +257,37 @@ sol::table snapshot_definition(
         definition.ranged_mutation, "item" );
 
     sol::table relations = lua.create_table();
-    relations["prerequisites"] = typed_id_page(
-                                     lua, definition.prereqs,
+    relations["prerequisites"] = detail::make_typed_id_page(
+                                     lua, maximum_relation_values, definition.prereqs,
                                      "mutation" );
-    relations["other_prerequisites"] = typed_id_page(
-                                           lua, definition.prereqs2,
+    relations["other_prerequisites"] = detail::make_typed_id_page(
+                                           lua, maximum_relation_values, definition.prereqs2,
                                            "mutation" );
-    relations["threshold_requirements"] = typed_id_page(
-            lua, definition.threshreq, "mutation" );
-    relations["threshold_substitutes"] = typed_id_page(
-            lua, definition.threshold_substitutes, "mutation" );
-    relations["conflicts_with"] = typed_id_page(
-                                      lua, definition.cancels,
+    relations["threshold_requirements"] = detail::make_typed_id_page(
+            lua, maximum_relation_values, definition.threshreq, "mutation" );
+    relations["threshold_substitutes"] = detail::make_typed_id_page(
+            lua, maximum_relation_values, definition.threshold_substitutes, "mutation" );
+    relations["conflicts_with"] = detail::make_typed_id_page(
+                                      lua, maximum_relation_values, definition.cancels,
                                       "mutation" );
-    relations["replaced_by"] = typed_id_page(
-                                   lua, definition.replacements,
+    relations["replaced_by"] = detail::make_typed_id_page(
+                                   lua, maximum_relation_values, definition.replacements,
                                    "mutation" );
-    relations["addition_mutations"] = typed_id_page(
-                                          lua, definition.additions, "mutation" );
-    relations["categories"] = typed_id_page(
-                                  lua, definition.category,
+    relations["addition_mutations"] = detail::make_typed_id_page(
+                                          lua, maximum_relation_values, definition.additions, "mutation" );
+    relations["categories"] = detail::make_typed_id_page(
+                                  lua, maximum_relation_values, definition.category,
                                   "mutation_category" );
-    relations["types"] = string_page( lua, definition.types );
-    relations["flags"] = typed_id_page(
-                             lua, definition.flags,
+    relations["types"] = detail::make_string_page(
+                             lua, maximum_relation_values, definition.types );
+    relations["flags"] = detail::make_typed_id_page(
+                             lua, maximum_relation_values, definition.flags,
                              "trait_flag" );
-    relations["active_flags"] = typed_id_page(
-                                    lua, definition.active_flags,
+    relations["active_flags"] = detail::make_typed_id_page(
+                                    lua, maximum_relation_values, definition.active_flags,
                                     "trait_flag" );
-    relations["inactive_flags"] = typed_id_page(
-                                      lua, definition.inactive_flags,
+    relations["inactive_flags"] = detail::make_typed_id_page(
+                                      lua, maximum_relation_values, definition.inactive_flags,
                                       "trait_flag" );
     result["relations"] = std::move( relations );
 
@@ -413,8 +295,8 @@ sol::table snapshot_definition(
                              lua, definition.variants );
     result["learned_spells"] = learned_spell_page(
                                    lua, definition.spells_learned );
-    result["enchantments"] = string_id_page(
-                                 lua, definition.enchantments );
+    result["enchantments"] = detail::make_string_id_page(
+                                 lua, maximum_relation_values, definition.enchantments );
     return result;
 }
 

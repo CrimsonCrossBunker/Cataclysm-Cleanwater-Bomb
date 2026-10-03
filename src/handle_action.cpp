@@ -1724,7 +1724,7 @@ static void sleep()
     }
 
     if( save_before_sleep ) {
-        g->quicksave();
+        g->quicksave( true );
     }
 
     player_character.set_moves( 0 );
@@ -2170,15 +2170,12 @@ static void cast_spell( bool recast_spell = false )
     }
 
     std::map<magic_type_id, bool> success_tracker = {};
-    for( const spell_id &sp : spells ) {
-        spell &temp_spell = player_character.magic->get_spell( sp );
-        temp_spell.can_cast( player_character, success_tracker );
-    }
-
-    for( auto const& [m_type, any_success] : success_tracker ) {
-        if( !any_success && m_type->cannot_cast_message.has_value() ) {
-            add_msg( game_message_params{ m_bad, gmf_bypass_cooldown },
-                     m_type->cannot_cast_message.value() );
+    if( !player_character.magic->can_cast_any_spell( player_character, success_tracker ) ) {
+        for( auto const& [m_type, any_success] : success_tracker ) {
+            if( !any_success && m_type->cannot_cast_message.has_value() ) {
+                add_msg( game_message_params{ m_bad, gmf_bypass_cooldown },
+                         m_type->cannot_cast_message.value() );
+            }
         }
     }
 
@@ -4197,6 +4194,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 if( query_yn(
                         _( "Save and disconnect?  Your character will be saved locally so you can load it on rejoin." ) ) ) {
                     if( save() ) {
+                        discard_dimension_rollback_snapshot();
                         cata_mp::mp_notify_session_ending();
                         player_character.set_moves( 0 );
                         uquit = QUIT_SAVED;
@@ -4204,6 +4202,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 }
             } else if( query_yn( _( "Save and quit?" ) ) ) {
                 if( save() ) {
+                    discard_dimension_rollback_snapshot();
                     cata_mp::mp_notify_session_ending();
                     player_character.set_moves( 0 );
                     uquit = QUIT_SAVED;
@@ -4213,6 +4212,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
 #else
             if( query_yn( _( "Save and quit?" ) ) ) {
                 if( save() ) {
+                    discard_dimension_rollback_snapshot();
                     player_character.set_moves( 0 );
                     uquit = QUIT_SAVED;
                 }

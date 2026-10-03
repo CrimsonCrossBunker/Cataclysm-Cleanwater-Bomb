@@ -31,17 +31,17 @@ sources:
 - id: json-object-types
   path: data/reference/json/ccb_json_object_types.json
   selector: type
-  source_fingerprint: sha256:9a528b3559acdd309f510c61b87680831a43360ff3e2d0c86e279dfdd77ff429
+  source_fingerprint: sha256:74c4ae08fd1139cb0b386dc1cef56d422375e59bc4c2054014cd31bd588bad07
   entry_count: 190
 - id: eoc-conditions
   path: data/reference/json/ccb_eoc_conditions.json
   selector: key
-  source_fingerprint: sha256:9a528b3559acdd309f510c61b87680831a43360ff3e2d0c86e279dfdd77ff429
+  source_fingerprint: sha256:74c4ae08fd1139cb0b386dc1cef56d422375e59bc4c2054014cd31bd588bad07
   entry_count: 275
 - id: eoc-effects
   path: data/reference/json/ccb_eoc_effects.json
   selector: key
-  source_fingerprint: sha256:9a528b3559acdd309f510c61b87680831a43360ff3e2d0c86e279dfdd77ff429
+  source_fingerprint: sha256:74c4ae08fd1139cb0b386dc1cef56d422375e59bc4c2054014cd31bd588bad07
   entry_count: 311
 summary:
   total: 776
@@ -955,7 +955,7 @@ entries:
 - inventory: eoc-conditions
   selector: npc_has_any_effect
   target_kind: shared_service
-  target: services.characters
+  target: services.effects
   status: bounded_implemented_unverified
   legacy_dependency: none
   evidence:
@@ -963,6 +963,7 @@ entries:
   - data/reference/json/ccb_eoc_conditions.json
   - src/lua_platform_effects.cpp
   - src/lua_platform_runtime.cpp
+  - tests/lua_platform_effects_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
   - tools/test_migrate_lua_first.py
@@ -1055,7 +1056,7 @@ entries:
 - inventory: eoc-conditions
   selector: npc_has_effect
   target_kind: shared_service
-  target: services.characters
+  target: services.effects
   status: bounded_implemented_unverified
   legacy_dependency: none
   evidence:
@@ -1063,6 +1064,7 @@ entries:
   - data/reference/json/ccb_eoc_conditions.json
   - src/lua_platform_effects.cpp
   - src/lua_platform_runtime.cpp
+  - tests/lua_platform_effects_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
   - tools/test_migrate_lua_first.py
@@ -1424,13 +1426,15 @@ entries:
 - inventory: eoc-conditions
   selector: npc_has_wielded_with_flag
   target_kind: shared_service
-  target: services.inventory-and-items
+  target: services.inventory
   status: bounded_implemented_unverified
   legacy_dependency: none
   evidence:
   - data/lua/types/ccb_platform_v1.d.lua
   - data/reference/json/ccb_eoc_conditions.json
+  - src/lua_platform_items.cpp
   - src/lua_platform_runtime.cpp
+  - tests/lua_platform_knowledge_semantics_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
   - tools/test_migrate_lua_first.py
@@ -1466,13 +1470,15 @@ entries:
 - inventory: eoc-conditions
   selector: npc_has_worn_with_flag
   target_kind: shared_service
-  target: services.characters
+  target: services.inventory
   status: bounded_implemented_unverified
   legacy_dependency: none
   evidence:
   - data/lua/types/ccb_platform_v1.d.lua
   - data/reference/json/ccb_eoc_conditions.json
+  - src/lua_platform_items.cpp
   - src/lua_platform_runtime.cpp
+  - tests/lua_platform_knowledge_semantics_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
   - tools/test_migrate_lua_first.py
@@ -2312,13 +2318,15 @@ entries:
 - inventory: eoc-conditions
   selector: u_are_owed
   target_kind: shared_service
-  target: services.characters
+  target: services.npcs
   status: bounded_implemented_unverified
   legacy_dependency: none
   evidence:
   - data/lua/types/ccb_platform_v1.d.lua
   - data/reference/json/ccb_eoc_conditions.json
+  - src/lua_platform_npcs.cpp
   - src/lua_platform_runtime.cpp
+  - tests/lua_platform_npc_relationship_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
   - tools/test_migrate_lua_first.py
@@ -2582,13 +2590,15 @@ entries:
 - inventory: eoc-conditions
   selector: u_friend
   target_kind: shared_service
-  target: services.characters
+  target: services.npcs
   status: bounded_implemented_unverified
   legacy_dependency: none
   evidence:
   - data/lua/types/ccb_platform_v1.d.lua
   - data/reference/json/ccb_eoc_conditions.json
+  - src/lua_platform_npcs.cpp
   - src/lua_platform_runtime.cpp
+  - tests/lua_platform_npc_relationship_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
   - tools/test_migrate_lua_first.py
@@ -2610,7 +2620,7 @@ entries:
 - inventory: eoc-conditions
   selector: u_has_any_effect
   target_kind: shared_service
-  target: services.characters
+  target: services.effects
   status: bounded_implemented_unverified
   legacy_dependency: none
   evidence:
@@ -2618,6 +2628,7 @@ entries:
   - data/reference/json/ccb_eoc_conditions.json
   - src/lua_platform_effects.cpp
   - src/lua_platform_runtime.cpp
+  - tests/lua_platform_effects_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
   - tools/test_migrate_lua_first.py
@@ -2727,7 +2738,7 @@ entries:
 - inventory: eoc-conditions
   selector: u_has_effect
   target_kind: shared_service
-  target: services.characters
+  target: services.effects
   status: bounded_implemented_unverified
   legacy_dependency: none
   evidence:
@@ -2735,6 +2746,7 @@ entries:
   - data/reference/json/ccb_eoc_conditions.json
   - src/lua_platform_effects.cpp
   - src/lua_platform_runtime.cpp
+  - tests/lua_platform_effects_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
   - tools/test_migrate_lua_first.py
@@ -2742,7 +2754,7 @@ entries:
 - inventory: eoc-conditions
   selector: u_has_faction_trust
   target_kind: shared_service
-  target: services.characters
+  target: services.factions
   status: bounded_implemented_unverified
   legacy_dependency: none
   evidence:
@@ -2750,6 +2762,7 @@ entries:
   - data/reference/json/ccb_eoc_conditions.json
   - src/lua_platform_factions.cpp
   - src/lua_platform_runtime.cpp
+  - tests/lua_platform_npc_relationship_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
   - tools/test_migrate_lua_first.py
@@ -3133,7 +3146,7 @@ entries:
 - inventory: eoc-conditions
   selector: u_has_wielded_with_flag
   target_kind: shared_service
-  target: services.inventory-and-items
+  target: services.inventory
   status: bounded_implemented_unverified
   legacy_dependency: none
   evidence:
@@ -3141,6 +3154,7 @@ entries:
   - data/reference/json/ccb_eoc_conditions.json
   - src/lua_platform_items.cpp
   - src/lua_platform_runtime.cpp
+  - tests/lua_platform_knowledge_semantics_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
   - tools/test_migrate_lua_first.py
@@ -3176,13 +3190,15 @@ entries:
 - inventory: eoc-conditions
   selector: u_has_worn_with_flag
   target_kind: shared_service
-  target: services.characters
+  target: services.inventory
   status: bounded_implemented_unverified
   legacy_dependency: none
   evidence:
   - data/lua/types/ccb_platform_v1.d.lua
   - data/reference/json/ccb_eoc_conditions.json
+  - src/lua_platform_items.cpp
   - src/lua_platform_runtime.cpp
+  - tests/lua_platform_knowledge_semantics_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
   - tools/test_migrate_lua_first.py
@@ -4308,14 +4324,18 @@ entries:
 - inventory: eoc-effects
   selector: copy_location
   target_kind: shared_service
-  target: services.map
+  target: services.world
   status: bounded_implemented_unverified
   legacy_dependency: none
   evidence:
   - data/lua/types/ccb_platform_v1.d.lua
   - data/reference/json/ccb_eoc_effects.json
   - src/lua_platform_runtime.cpp
+  - src/lua_platform_variables.cpp
+  - src/lua_platform_world.cpp
   - tests/lua_platform_test.cpp
+  - tests/lua_platform_test_09_world_content.cpp
+  - tests/lua_platform_variable_native_key_test.cpp
   - tools/migrate_lua_first.py
   - tools/test_migrate_lua_first.py
   verification: source_only
@@ -4351,7 +4371,7 @@ entries:
 - inventory: eoc-effects
   selector: custom_light_level
   target_kind: shared_service
-  target: services.gameplay
+  target: services.weather.append_light_event
   status: bounded_implemented_unverified
   legacy_dependency: none
   evidence:
@@ -5021,15 +5041,18 @@ entries:
 - inventory: eoc-effects
   selector: location_variable_adjust
   target_kind: shared_service
-  target: services.map
+  target: services.coords-and-variables
   status: bounded_implemented_unverified
   legacy_dependency: none
   evidence:
   - data/lua/types/ccb_platform_v1.d.lua
   - data/reference/json/ccb_eoc_effects.json
-  - src/lua_platform_bindings_values.cpp
+  - src/lua_platform_bindings_coords.cpp
   - src/lua_platform_runtime.cpp
+  - src/lua_platform_variables.cpp
+  - tests/lua_platform_random_range_test.cpp
   - tests/lua_platform_test.cpp
+  - tests/lua_platform_variable_native_key_test.cpp
   - tools/migrate_lua_first.py
   - tools/test_migrate_lua_first.py
   verification: source_only
@@ -5099,9 +5122,12 @@ entries:
   evidence:
   - data/lua/types/ccb_platform_v1.d.lua
   - data/reference/json/ccb_eoc_effects.json
-  - src/lua_platform_bindings_values.cpp
+  - src/lua_platform_bindings_coords.cpp
   - src/lua_platform_runtime.cpp
+  - src/lua_platform_variables.cpp
   - tests/lua_platform_test.cpp
+  - tests/lua_platform_variable_native_key_test.cpp
+  - tests/point_test.cpp
   - tools/migrate_lua_first.py
   - tools/test_migrate_lua_first.py
   verification: source_only
@@ -6408,7 +6434,7 @@ entries:
 - inventory: eoc-effects
   selector: place_override
   target_kind: shared_service
-  target: services.dialogue
+  target: services.world
   status: bounded_implemented_unverified
   legacy_dependency: none
   evidence:
@@ -6604,7 +6630,7 @@ entries:
 - inventory: eoc-effects
   selector: revert_location
   target_kind: shared_service
-  target: services.map
+  target: services.world
   status: bounded_implemented_unverified
   legacy_dependency: none
   evidence:

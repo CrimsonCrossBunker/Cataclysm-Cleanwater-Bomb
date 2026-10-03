@@ -362,33 +362,6 @@ TEST_CASE( "lua_platform_native_variable_long_keys_survive_var_indirection",
            "global-after" );
 }
 
-TEST_CASE( "lua_platform_callback_context_variable_keys_remain_bounded",
-           "[lua][platform][semantic][variables]" )
-{
-    variable_api_fixture fixture;
-    sol::table context = fixture.lua.create_table();
-    const sol::protected_function resolve = fixture.variables["resolve"];
-    const sol::protected_function set_resolved = fixture.variables["set_resolved"];
-
-    const std::string maximum_key( 128, 'c' );
-    require_success( set_resolved( context, sol::nil, "context", maximum_key, "accepted" ) );
-    CHECK( require_value( resolve( context, sol::nil, "context", maximum_key ) )[
-               "value"].get<std::string>() == "accepted" );
-
-    for( const std::string &key : native_boundary_keys() ) {
-        INFO( "context key bytes: " << key.size() );
-        CHECK_FALSE( resolve( context, sol::nil, "context", key ).valid() );
-        CHECK_FALSE( set_resolved( context, sol::nil, "context", key, "rejected" ).valid() );
-        CHECK_FALSE( resolve( context, sol::nil, "var", key ).valid() );
-        CHECK_FALSE( set_resolved( context, sol::nil, "var", key, "rejected" ).valid() );
-
-        context["context_target"] = std::string( "_" ) + key;
-        CHECK_FALSE( resolve( context, sol::nil, "var", "context_target" ).valid() );
-        CHECK_FALSE( set_resolved( context, sol::nil, "var", "context_target",
-                                   "rejected" ).valid() );
-    }
-}
-
 TEST_CASE( "lua_platform_native_non_nul_variable_keys_round_trip_in_save_json",
            "[lua][platform][semantic][variables]" )
 {

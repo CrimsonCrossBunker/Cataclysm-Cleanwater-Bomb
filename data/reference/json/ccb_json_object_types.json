@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:9a528b3559acdd309f510c61b87680831a43360ff3e2d0c86e279dfdd77ff429",
+    "source_fingerprint": "sha256:4ec19b87e8bdf3dcf6bdf0a1797455612c6a9bf1571ca43712aa3ae95a089122",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -29,8 +29,8 @@
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6770,
-    "top_level_objects": 94754,
+    "tracked_json_files": 6772,
+    "top_level_objects": 94761,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -113,7 +113,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 15119,
+        "occurrences": 15120,
         "examples": [
           {
             "path": "data/json/artifact/artifact_item_types.json",
@@ -2467,7 +2467,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 909,
+        "occurrences": 911,
         "examples": [
           {
             "path": "data/json/construction/appliances.json",
@@ -2580,7 +2580,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 525,
+        "occurrences": 526,
         "examples": [
           {
             "path": "data/json/construction_group.json",
@@ -4794,7 +4794,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 28,
+        "occurrences": 30,
         "examples": [
           {
             "path": "data/mods/Isolation-Protocol/Player/sorcery.json",
@@ -10395,7 +10395,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 600,
+        "occurrences": 601,
         "examples": [
           {
             "path": "data/json/debug/teleportation.json",

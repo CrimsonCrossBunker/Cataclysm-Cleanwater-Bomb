@@ -2646,7 +2646,7 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
     if( msg.find( R"("action":"session_ending")" ) != std::string::npos ) {
         mp_log( "[cdda-mp] SESSION-END RECV: client is leaving — auto-saving host" );
         add_msg( m_warning, _( "Your partner is leaving.  The game has been saved." ) );
-        g->quicksave();
+        g->quicksave( true );
         return;
     }
 

@@ -3750,15 +3750,18 @@ bool Character::is_immune_field( const field_type_id &fid ) const
         return has_flag( json_flag_HEATSINK ) || is_wearing( itype_rm13_armor_on );
     }
     if( ft.has_acid ) {
-        return !is_on_ground() && get_env_resist( body_part_foot_l ) >= 15 &&
-               get_env_resist( body_part_foot_r ) >= 15 &&
-               get_env_resist( body_part_leg_l ) >= 15 &&
-               get_env_resist( body_part_leg_r ) >= 15 &&
-               // FIXME: Hardcoded damage type
-               get_armor_type( damage_acid, body_part_foot_l ) >= 5 &&
-               get_armor_type( damage_acid, body_part_foot_r ) >= 5 &&
-               get_armor_type( damage_acid, body_part_leg_l ) >= 5 &&
-               get_armor_type( damage_acid, body_part_leg_r ) >= 5;
+        if( is_on_ground() ) {
+            return false;
+        }
+        // Use the same contact parts as map::creature_in_field, including
+        // hands for quadrupeds.  Standing humans do not immerse their legs.
+        const std::vector<bodypart_id> contact_parts = get_ground_contact_bodyparts();
+        return std::all_of( contact_parts.begin(), contact_parts.end(),
+        [&]( const bodypart_id & bp ) {
+            // Preserve the conservative corrosion resistance requirement:
+            // low direct damage alone does not guarantee safety from seeping acid.
+            return get_env_resist( bp ) >= 15 && get_armor_type( damage_acid, bp ) >= 5;
+        } );
     }
     // If we haven't found immunity yet fall up to the next level
     return Creature::is_immune_field( fid );
@@ -8821,6 +8824,7 @@ bool character_martial_arts::pick_style( const Character &you ) // Style selecti
 {
     enum style_selection {
         KEEP_HANDS_FREE = 0,
+        AUTO_STYLE,
         STYLE_OFFSET
     };
 
@@ -8862,6 +8866,11 @@ bool character_martial_arts::pick_style( const Character &you ) // Style selecti
                          keep_hands_free ? _( "Keep hands free (on)" ) : _( "Keep hands free (off)" ),
                          wrap60( _( "When this is enabled, player won't wield things unless explicitly told to." ) ) );
 
+    kmenu.addentry_desc( AUTO_STYLE, true, 'a',
+                         auto_style ? _( "Switch style with weapon (on)" ) :
+                         _( "Switch style with weapon (off)" ),
+                         wrap60( _( "Automatically select a learned style for your weapon.  While enabled, selecting a style remembers it as the preference for this weapon type (or for empty hands)." ) ) );
+
     kmenu.selected = STYLE_OFFSET;
 
     // +1 to keep "No Style" at top
@@ -8893,8 +8902,14 @@ bool character_martial_arts::pick_style( const Character &you ) // Style selecti
         Character &u = const_cast<Character &>( you );
         clear_all_effects( u );
         set_style( selectable_styles[selection - STYLE_OFFSET], true );
+        if( auto_style ) {
+            remember_weapon_style( you );
+        }
         ma_static_effects( u );
         martialart_use_message( you );
+    } else if( selection == AUTO_STYLE ) {
+        auto_style = !auto_style;
+        auto_select_style( const_cast<Character &>( you ) );
     } else if( selection == KEEP_HANDS_FREE ) {
         keep_hands_free = !keep_hands_free;
     } else {

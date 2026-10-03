@@ -36,6 +36,13 @@ namespace ui
 namespace omap
 {
 
+// Surface labels may project upwards.  Subterranean and elevated sites belong
+// to their own layer and must not reveal themselves through floors.
+constexpr bool label_visible_at_z( int label_z, int viewed_z )
+{
+    return label_z == viewed_z || ( label_z == 0 && viewed_z > 0 );
+}
+
 /**
  * Display overmap centered at the player's position.
  */
