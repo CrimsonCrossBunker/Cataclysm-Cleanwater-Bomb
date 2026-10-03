@@ -1,9 +1,29 @@
+#include <coordinates.h>
+#include <item.h>
+#include <lua.h>
+#include <lua_platform_handle.h>
+#include <lua_platform_hooks.h>
+#include <lua_platform_runtime.h>
+#include <point.h>
+#include <translation.h>
+#include <cstddef>
+#include <exception>
+#include <functional>
+#include <initializer_list>
+#include <map>
+#include <ostream>
+#include <unordered_map>
+
 #include "lua_platform_runtime_internal.h"
+
+// Sound-enabled builds use these bindings; the IWYU job disables sound.
+#include "music.h" // IWYU pragma: keep
+#include "sdlsound.h" // IWYU pragma: keep
+#include "lua_platform_sol.h"
 
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
 #include <algorithm>
-#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <filesystem>
@@ -25,14 +45,13 @@
 #include "item_category.h"
 #include "itype.h"
 #include "lua_platform_bindings_coords.h"
-#include "lua_platform_bindings_values.h"
+// Sol instantiates the bound member signatures, which need the complete ID type.
+#include "lua_platform_bindings_values.h" // IWYU pragma: keep
 #include "lua_platform_canvas.h"
 #include "lua_platform_dialogue.h"
 #include "map.h"
-#include "music.h"
 #include "npc_opinion.h"
 #include "output.h"
-#include "sdlsound.h"
 #include "sounds.h"
 #include "string_input_popup.h"
 #include "talker.h"
@@ -51,14 +70,14 @@
 namespace cata::lua_platform
 {
 
-talk_topic invoke_platform_dialogue_response_callback(
-    std::weak_ptr<runtime> weak_owner, std::string topic_id,
-    sol::protected_function callback, ::dialogue &d, const talk_topic &fallback,
+static talk_topic invoke_platform_dialogue_response_callback(
+    const std::weak_ptr<runtime> &weak_owner, const std::string &topic_id,
+    const sol::protected_function &callback, ::dialogue &d, const talk_topic &fallback,
     bool trial_success );
-void invoke_platform_dialogue_action_callback(
-    std::weak_ptr<runtime> weak_owner, std::string topic_id,
-    cata::lua_platform::dialogue::dialogue_session_ptr session,
-    sol::protected_function callback, ::dialogue &d, bool trial_success );
+static void invoke_platform_dialogue_action_callback(
+    const std::weak_ptr<runtime> &weak_owner, const std::string &topic_id,
+    const cata::lua_platform::dialogue::dialogue_session_ptr &session,
+    const sol::protected_function &callback, ::dialogue &d, bool trial_success );
 
 platform_canvas_context::platform_canvas_context( const int width, const int height,
         const std::int64_t elapsed_ms, const std::int64_t delta_ms,
@@ -149,7 +168,7 @@ void require_canvas_color( const float r, const float g, const float b, const fl
     }
 }
 
-void require_canvas_string( const std::string &value, const std::size_t maximum )
+void require_canvas_string( const std::string_view value, const std::size_t maximum )
 {
     if( value.size() > maximum || value.find( '\0' ) != std::string::npos ) {
         throw std::invalid_argument( "canvas string exceeds native limits" );
@@ -251,7 +270,7 @@ constexpr std::size_t maximum_platform_dialogue_extensions = 8192;
 constexpr std::size_t maximum_platform_dialogue_responses_per_topic = 1024;
 constexpr std::size_t maximum_platform_dialogue_repeat_responses_per_topic = 1024;
 
-void require_presentation_text( const std::string &value,
+void require_presentation_text( const std::string_view value,
                                 const std::string_view field,
                                 const std::size_t maximum = maximum_presentation_text_bytes )
 {
@@ -393,11 +412,12 @@ class platform_canvas_window : public cataimgui::window
             const ImVec2 available = ImGui::GetContentRegionAvail();
             const float scale = std::min( { 1.0F, std::max( 1.0F, available.x ) / width_,
                                             std::max( 1.0F, available.y ) / height_ } );
-            const auto now = std::chrono::steady_clock::now();
-            const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                     now - started_ ).count();
-            const auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                   now - previous_ ).count();
+            const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+            const std::chrono::milliseconds::rep elapsed =
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    now - started_ ).count();
+            const std::chrono::milliseconds::rep delta = std::chrono::duration_cast<std::chrono::milliseconds>(
+                        now - previous_ ).count();
             previous_ = now;
             const auto frame = std::make_shared<platform_canvas_context>(
                                    width_, height_, elapsed, std::min<std::int64_t>( delta, 250 ),
@@ -471,7 +491,7 @@ std::vector<presentation_choice> presentation_choices_from_lua(
             if( !raw_position.is<script_tripoint_coord>() ) {
                 throw std::invalid_argument( "choice position must be a typed abs_ms Tripoint" );
             }
-            const auto position = raw_position.as<script_tripoint_coord>();
+            const script_tripoint_coord position = raw_position.as<script_tripoint_coord>();
             if( position.native_origin() != coords::origin::abs ||
                 position.native_scale() != coords::scale::map_square ) {
                 throw std::invalid_argument( "choice position must use abs_ms coordinates" );
@@ -516,12 +536,12 @@ using detail::platform_callback_payload;
 using detail::platform_callback_talker_to_lua;
 using detail::platform_talker_to_lua;
 
-bool valid_platform_dialogue_id( const std::string &value )
+bool valid_platform_dialogue_id( const std::string_view value )
 {
     return cata::lua_platform::dialogue::valid_topic_id( value );
 }
 
-void require_platform_dialogue_text( const std::string &value,
+void require_platform_dialogue_text( const std::string_view value,
                                      const std::string_view field )
 {
     cata::lua_platform::dialogue::require_text( value, "ccb.dialogue", field );
@@ -1348,7 +1368,7 @@ declarative_platform_dialogue_response declarative_platform_dialogue_response_fr
                 return result;
             };
         } else if( text_condition.get_type() == sol::type::function ) {
-            const std::string condition_topic_id = topic_id;
+            const std::string &condition_topic_id = topic_id;
             const std::weak_ptr<runtime> weak_text_condition_owner( owner );
             const cata::lua_platform::dialogue::dialogue_session_ptr text_condition_session =
                 cata::lua_platform::dialogue::session_for(
@@ -2062,6 +2082,8 @@ void apply_platform_dialogue_speaker_effects( ::dialogue &d,
         apply_source( registration->owner,
                       registration->definition->speaker_effects, "topic" );
     }
+    // Callbacks can replace the active list; keep the runtimes alive during iteration.
+    // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
     const std::vector<std::shared_ptr<runtime>> runtimes = detail::active_runtime_values();
     for( const std::shared_ptr<runtime> &owner : runtimes ) {
         if( !owner || !owner->world_is_ready || owner->lua == nullptr ) {
@@ -2176,6 +2198,8 @@ bool gen_platform_dialogue_responses( ::dialogue &d, const talk_topic &topic )
 
 void extend_platform_dialogue_responses( ::dialogue &d, const talk_topic &topic )
 {
+    // Callbacks can replace the active list; keep the runtimes alive during iteration.
+    // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
     const std::vector<std::shared_ptr<runtime>> runtimes = detail::active_runtime_values();
     for( const std::shared_ptr<runtime> &owner : runtimes ) {
         if( !owner || !owner->world_is_ready || owner->lua == nullptr ) {
@@ -2210,9 +2234,9 @@ void extend_platform_dialogue_responses( ::dialogue &d, const talk_topic &topic 
 }
 
 void invoke_platform_dialogue_action_callback(
-    const std::weak_ptr<runtime> weak_owner, const std::string topic_id,
-    const cata::lua_platform::dialogue::dialogue_session_ptr session,
-    sol::protected_function callback, ::dialogue &d, const bool trial_success )
+    const std::weak_ptr<runtime> &weak_owner, const std::string &topic_id,
+    const cata::lua_platform::dialogue::dialogue_session_ptr &session,
+    const sol::protected_function &callback, ::dialogue &d, const bool trial_success )
 {
     const std::shared_ptr<runtime> owner = weak_owner.lock();
     if( !owner ) {
@@ -2260,8 +2284,8 @@ void invoke_platform_dialogue_action_callback(
 }
 
 talk_topic invoke_platform_dialogue_response_callback(
-    const std::weak_ptr<runtime> weak_owner, const std::string topic_id,
-    sol::protected_function callback, ::dialogue &d, const talk_topic &fallback,
+    const std::weak_ptr<runtime> &weak_owner, const std::string &topic_id,
+    const sol::protected_function &callback, ::dialogue &d, const talk_topic &fallback,
     const bool trial_success )
 {
     const std::shared_ptr<runtime> owner = weak_owner.lock();

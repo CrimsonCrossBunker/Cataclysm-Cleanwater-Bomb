@@ -144,6 +144,8 @@ std::vector<const proficiency_category *> matching_categories(
         result.begin(), result.end(),
         []( const proficiency_category * lhs,
     const proficiency_category * rhs ) {
+        // IDs retain byte order independently of the UI locale.
+        // NOLINTNEXTLINE(cata-use-localized-sorting)
         return lhs->id.str() < rhs->id.str();
     } );
     return result;
@@ -272,6 +274,8 @@ std::vector<const proficiency *> matching_definitions(
     std::sort(
         result.begin(), result.end(),
     []( const proficiency * lhs, const proficiency * rhs ) {
+        // IDs retain byte order independently of the UI locale.
+        // NOLINTNEXTLINE(cata-use-localized-sorting)
         return lhs->prof_id().str() < rhs->prof_id().str();
     } );
     return result;
@@ -418,6 +422,8 @@ std::vector<const proficiency *> character_definitions(
     std::sort(
         result.begin(), result.end(),
     []( const proficiency * lhs, const proficiency * rhs ) {
+        // IDs retain byte order independently of the UI locale.
+        // NOLINTNEXTLINE(cata-use-localized-sorting)
         return lhs->prof_id().str() < rhs->prof_id().str();
     } );
     return result;
@@ -729,10 +735,10 @@ sol::table set_progress_state(
 
 void install_proficiency_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write )
 {
     sol::state_view lua( services.lua_state() );
     sol::table proficiencies = lua.create_table();

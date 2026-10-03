@@ -64,6 +64,17 @@ extern "C" {
 #include "vehicle.h"
 #include "visitable.h"
 
+static const efftype_id effect_controlled( "controlled" );
+static const efftype_id effect_grabbed( "grabbed" );
+static const efftype_id effect_grabbing( "grabbing" );
+static const efftype_id effect_leashed( "leashed" );
+static const efftype_id effect_pacified( "pacified" );
+static const efftype_id effect_pet( "pet" );
+static const efftype_id effect_ridden( "ridden" );
+static const efftype_id effect_riding( "riding" );
+static const itype_id itype_power_cord( "power_cord" );
+static const trait_id trait_HALLUCINATION( "HALLUCINATION" );
+
 namespace cata::lua_platform
 {
 
@@ -78,8 +89,6 @@ constexpr std::size_t maximum_npc_spawn_traits = 128;
 constexpr std::size_t maximum_npc_unique_id_bytes = 256;
 constexpr std::size_t maximum_monster_unique_name_bytes = 256;
 
-const efftype_id effect_pacified( "pacified" );
-const efftype_id effect_pet( "pet" );
 
 void require_active_callback(
     const std::function<bool()> &has_active_callback,
@@ -136,6 +145,8 @@ std::optional<tripoint_bub_ms> map_bubble_position_if_representable(
 {
     const tripoint_abs_ms origin =
         here.get_abs( tripoint_bub_ms( 0, 0, 0 ) );
+    // Wide coordinate calculations must retain all 64 bits before native conversion.
+    // NOLINTNEXTLINE(cata-combine-locals-into-point)
     const std::int64_t x = static_cast<std::int64_t>( absolute.x() ) - origin.x();
     const std::int64_t y = static_cast<std::int64_t>( absolute.y() ) - origin.y();
     if( x < std::numeric_limits<int>::min() ||
@@ -151,6 +162,8 @@ tripoint_rel_ms checked_world_coordinate_offset(
     const tripoint_abs_ms &destination, const tripoint_abs_ms &source,
     const std::string_view api_name )
 {
+    // Wide coordinate calculations must retain all 64 bits before native conversion.
+    // NOLINTNEXTLINE(cata-combine-locals-into-point)
     const std::int64_t x = static_cast<std::int64_t>( destination.x() ) - source.x();
     const std::int64_t y = static_cast<std::int64_t>( destination.y() ) - source.y();
     const std::int64_t z = static_cast<std::int64_t>( destination.z() ) - source.z();
@@ -212,6 +225,8 @@ void require_avatar_overmap_load_range(
     const int omt_to_sm = coords::map_squares_per( coords::scale::overmap_terrain ) /
                           coords::map_squares_per( coords::scale::submap );
     const int sm_to_ms = coords::map_squares_per( coords::scale::submap );
+    // Wide coordinate calculations must retain all 64 bits before native conversion.
+    // NOLINTNEXTLINE(cata-combine-locals-into-point)
     const std::int64_t projected_x = static_cast<std::int64_t>( center.x() ) * omt_to_sm;
     const std::int64_t projected_y = static_cast<std::int64_t>( center.y() ) * omt_to_sm;
     if( projected_x < std::numeric_limits<int>::min() ||
@@ -711,7 +726,7 @@ npc_spawn_options read_npc_spawn_options(
                     throw std::invalid_argument(
                         "services.spawns.npc traits must be a dense GameId array" );
                 }
-                const script_game_id trait =
+                const script_game_id &trait =
                     trait_object.as<script_game_id>();
                 require_game_id(
                     trait, "mutation", "services.spawns.npc" );
@@ -732,11 +747,10 @@ npc_spawn_options read_npc_spawn_options(
             "services.spawns.npc cannot be both indoor_only and outdoor_only" );
     }
     if( result.hallucination ) {
-        const trait_id hallucination( "HALLUCINATION" );
         if( std::find(
                 result.traits.begin(), result.traits.end(),
-                hallucination ) == result.traits.end() ) {
-            result.traits.push_back( hallucination );
+                trait_HALLUCINATION ) == result.traits.end() ) {
+            result.traits.push_back( trait_HALLUCINATION );
         }
         result.unique_id.clear();
     }
@@ -1167,11 +1181,6 @@ relocation_move_options read_relocation_move_options(
 std::optional<game_handle_error> monster_relocation_state_error(
     monster &value )
 {
-    static const efftype_id effect_controlled( "controlled" );
-    static const efftype_id effect_grabbed( "grabbed" );
-    static const efftype_id effect_grabbing( "grabbing" );
-    static const efftype_id effect_leashed( "leashed" );
-    static const efftype_id effect_ridden( "ridden" );
 
     if( value.has_effect( effect_ridden ) || value.mounted_player != nullptr ||
         value.mounted_player_id.is_valid() ) {
@@ -1227,6 +1236,8 @@ void require_relocated_linked_item_targets_fit(
         if( entry->has_link_data() && !entry->has_no_links() &&
             entry->link().t_abs_pos != tripoint_abs_ms::invalid ) {
             const tripoint_abs_ms &target = entry->link().t_abs_pos;
+            // Wide coordinate calculations must retain all 64 bits before native conversion.
+            // NOLINTNEXTLINE(cata-combine-locals-into-point)
             const std::int64_t x = static_cast<std::int64_t>( target.x() ) + offset.x();
             const std::int64_t y = static_cast<std::int64_t>( target.y() ) + offset.y();
             const std::int64_t z = static_cast<std::int64_t>( target.z() ) + offset.z();
@@ -2035,7 +2046,6 @@ sol::table relocate_npc(
         } );
     }
 
-    static const efftype_id effect_riding( "riding" );
     if( value->is_mounted() || value->mounted_creature != nullptr ||
         value->has_effect( effect_riding ) ) {
         return make_game_error_result( state, {
@@ -2096,7 +2106,7 @@ sol::table relocate_vehicle_move(
     const map_tile_token &target_token,
     const sol::optional<sol::table> &requested_options,
     const game_handle_runtime &runtime_generation,
-    const std::size_t world_generation );
+    std::size_t world_generation );
 
 sol::table relocate_entity_move(
     sol::this_state lua, const game_handle &handle,
@@ -2209,7 +2219,6 @@ sol::table relocate_vehicle_move(
     }
 
     static const std::string flag_wiring( "WIRING" );
-    static const itype_id power_cord( "power_cord" );
 
     for( const vpart_reference &part : entry.get_all_parts_with_fakes( true ) ) {
         const tripoint_rel_ms relative =
@@ -2295,7 +2304,7 @@ sol::table relocate_vehicle_move(
             } );
         }
         if( part.info().has_flag( flag_wiring ) ||
-            part.info().base_item == power_cord ) {
+            part.info().base_item == itype_power_cord ) {
             continue;
         }
         const veh_collision collision = entry.part_collision(
@@ -2647,11 +2656,11 @@ sol::table relocate_local(
 
 void install_relocation_move_api(
     sol::table &relocation,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_write,
-    std::function<void()> require_dangerous_relocation,
-    std::function<bool()> has_active_callback )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_write,
+    const std::function<void()> &require_dangerous_relocation,
+    const std::function<bool()> &has_active_callback )
 {
     relocation.set_function(
         "teleport_avatar",
@@ -2689,12 +2698,12 @@ void install_relocation_move_api(
 
 void install_game_world_service_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write,
-    std::function<void()> require_dangerous_relocation,
-    std::function<bool()> has_active_callback )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write,
+    const std::function<void()> &require_dangerous_relocation,
+    const std::function<bool()> &has_active_callback )
 {
     sol::state_view state( services.lua_state() );
 

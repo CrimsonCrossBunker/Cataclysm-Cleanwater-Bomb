@@ -87,11 +87,10 @@ extern "C" {
 #include "units.h"
 #include "vehicle.h"
 
-
+static const flag_id json_flag_ONE_PER_LAYER( "ONE_PER_LAYER" );
 
 struct bionic;
 
-static const flag_id json_flag_ONE_PER_LAYER( "ONE_PER_LAYER" );
 
 namespace cata::lua_platform
 {

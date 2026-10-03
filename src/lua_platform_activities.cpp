@@ -6,11 +6,14 @@
 #include <activity_handlers.h>
 #include <calendar.h>
 #include <character_id.h>
+#include <clone_ptr.h>
 #include <coordinates.h>
 #include <enums.h>
 #include <game_inventory.h>
 #include <item_uid.h>
 #include <map_selector.h>
+#include <memory_fast.h>
+#include <monster_uid.h>
 #include <pickup.h>
 #include <point.h>
 #include <translation.h>
@@ -336,11 +339,11 @@ talk_function::teach_domain checked_teach_domain(
 
 void install_activity_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write,
-    std::function<bool()> has_active_callback,
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write,
+    const std::function<bool()> &has_active_callback,
     activity_pickup_selector pickup_selector )
 {
     sol::state_view lua( services.lua_state() );
@@ -1218,7 +1221,7 @@ void install_activity_api(
                 throw std::invalid_argument(
                     "services.activities.start_training trainees must be a dense GameHandle array" );
             }
-            const game_handle trainee_handle = value.as<game_handle>();
+            const game_handle &trainee_handle = value.as<game_handle>();
             Character *trainee = resolve_exact_character(
                                      trainee_handle,
                                      runtime, world, error );

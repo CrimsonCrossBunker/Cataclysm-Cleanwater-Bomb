@@ -37,8 +37,6 @@
 #include "basecamp.h"
 #include "calendar.h"
 #include "coordinates.h"
-#include "event.h"
-#include "event_bus.h"
 #include "faction.h"
 #include "game.h"
 #include "game_constants.h"
@@ -52,17 +50,25 @@
 #include "lua_platform_npc_services.h"
 #include "lua_platform_runtime.h"
 #include "map.h"
+#include "messages.h"
 #include "mission.h"
 #include "mission_companion.h"
 #include "npc.h"
 #include "npc_class.h"
 #include "npctalk.h"
-#include "messages.h"
-#include "translations.h"
 #include "npctalk_rules.h"
 #include "overmapbuffer.h"
 #include "talker_npc.h"
+#include "translations.h"
 #include "viewer.h"
+
+static const efftype_id effect_asked_for_item( "asked_for_item" );
+static const efftype_id effect_asked_personal_info( "asked_personal_info" );
+static const efftype_id effect_asked_to_follow( "asked_to_follow" );
+static const efftype_id effect_asked_to_lead( "asked_to_lead" );
+static const efftype_id effect_asked_to_train( "asked_to_train" );
+static const faction_id faction_no_faction( "no_faction" );
+static const faction_id faction_your_followers( "your_followers" );
 
 namespace cata::lua_platform
 {
@@ -84,13 +90,6 @@ constexpr std::size_t maximum_npc_role_bytes = 256;
 constexpr int maximum_opinion_delta = 1000000;
 constexpr int maximum_npc_role_radius = 1000;
 
-const faction_id faction_no_faction( "no_faction" );
-const faction_id faction_your_followers( "your_followers" );
-const efftype_id effect_asked_for_item( "asked_for_item" );
-const efftype_id effect_asked_personal_info( "asked_personal_info" );
-const efftype_id effect_asked_to_follow( "asked_to_follow" );
-const efftype_id effect_asked_to_lead( "asked_to_lead" );
-const efftype_id effect_asked_to_train( "asked_to_train" );
 
 struct definition_options {
     int offset = 0;
@@ -293,6 +292,8 @@ std::vector<const npc_class *> matching_classes(
     std::sort(
         result.begin(), result.end(),
     []( const npc_class * lhs, const npc_class * rhs ) {
+        // IDs retain byte order independently of the UI locale.
+        // NOLINTNEXTLINE(cata-use-localized-sorting)
         return lhs->id.str() < rhs->id.str();
     } );
     return result;
@@ -683,9 +684,17 @@ npc_snapshot_data capture_npc_snapshot(
     snapshot.travelling = !entry.omt_path.empty();
     snapshot.ai_rules = capture_ai_rules( entry );
     snapshot.opinion = entry.op_of_u;
+    // Preserve negative values in the native signed personality fields.
+    // NOLINTNEXTLINE(bugprone-signed-char-misuse,cert-str34-c)
     snapshot.aggression = entry.personality.aggression;
+    // Preserve negative values in the native signed personality fields.
+    // NOLINTNEXTLINE(bugprone-signed-char-misuse,cert-str34-c)
     snapshot.bravery = entry.personality.bravery;
+    // Preserve negative values in the native signed personality fields.
+    // NOLINTNEXTLINE(bugprone-signed-char-misuse,cert-str34-c)
     snapshot.collector = entry.personality.collector;
+    // Preserve negative values in the native signed personality fields.
+    // NOLINTNEXTLINE(bugprone-signed-char-misuse,cert-str34-c)
     snapshot.altruism = entry.personality.altruism;
     return snapshot;
 }
@@ -1103,7 +1112,7 @@ sol::table has_npc_follower_nearby(
                    state, !matches.empty() ) );
 }
 
-void validate_npc_name( const std::string &name )
+void validate_npc_name( const std::string_view name )
 {
     if( name.empty() ) {
         throw std::invalid_argument(
@@ -1192,7 +1201,7 @@ std::optional<npc_attitude> parse_attitude(
 
 sol::table set_npc_attitude(
     sol::this_state lua, const game_handle &handle,
-    const std::string &requested_attitude,
+    const std::string_view requested_attitude,
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
@@ -1541,7 +1550,7 @@ sol::table set_npc_faction(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
-void validate_npc_topic( const std::string &topic )
+void validate_npc_topic( const std::string_view topic )
 {
     if( topic.empty() || topic.size() > maximum_npc_topic_bytes ||
     std::any_of( topic.begin(), topic.end(), []( const unsigned char ch ) {
@@ -1843,6 +1852,8 @@ sol::table make_npc_thankful(
     }
     const npc_attitude attitude_before = entry->get_attitude();
     const std::string topic_before = entry->chatbin.first_topic;
+    // Preserve negative values in the native signed personality fields.
+    // NOLINTNEXTLINE(bugprone-signed-char-misuse,cert-str34-c)
     const int aggression_before = entry->personality.aggression;
     if( attitude_before == NPCATT_MUG ||
         attitude_before == NPCATT_WAIT_FOR_LEAVE ||
@@ -2415,8 +2426,12 @@ sol::table list_npc_destinations(
                []( const npc_destination_entry & lhs,
     const npc_destination_entry & rhs ) {
         if( lhs.kind != rhs.kind ) {
+            // Protocol tags retain byte order independently of the UI locale.
+            // NOLINTNEXTLINE(cata-use-localized-sorting)
             return lhs.kind < rhs.kind;
         }
+        // IDs retain byte order independently of the UI locale.
+        // NOLINTNEXTLINE(cata-use-localized-sorting)
         return lhs.id < rhs.id;
     } );
 
@@ -2559,7 +2574,7 @@ sol::table set_npc_guard_position(
 }
 
 void require_companion_role(
-    const std::string &role, const std::string_view api_name,
+    const std::string_view role, const std::string_view api_name,
     const bool allow_empty )
 {
     if( ( role.empty() && !allow_empty ) ||
@@ -3078,7 +3093,7 @@ void install_npc_api(
         "set_attitude",
         [current_runtime_generation, current_world_generation, require_write](
             sol::this_state lua_state, const game_handle & handle,
-    const std::string & attitude ) {
+    const std::string_view attitude ) {
         require_write();
         return set_npc_attitude(
                    lua_state, handle, attitude,

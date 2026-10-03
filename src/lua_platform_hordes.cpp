@@ -358,7 +358,8 @@ lua_Integer require_integer(
 {
     if( !requested.is<lua_Integer>() ) {
         throw std::invalid_argument(
-            api_name + " option '" + option_name + "' must be an integer" );
+            std::string( api_name ).append( " option '" ).append(
+                option_name ).append( "' must be an integer" ) );
     }
     return requested.as<lua_Integer>();
 }
@@ -370,7 +371,8 @@ bool require_boolean(
 {
     if( !requested.is<bool>() ) {
         throw std::invalid_argument(
-            api_name + " option '" + option_name + "' must be a boolean" );
+            std::string( api_name ).append( " option '" ).append(
+                option_name ).append( "' must be a boolean" ) );
     }
     return requested.as<bool>();
 }
@@ -420,7 +422,7 @@ page_options read_page_options(
                                    value, maximum_page_limit ) );
         } else {
             throw std::invalid_argument(
-                api_name + " received unknown option '" + key + "'" );
+                std::string( api_name ).append( " received unknown option '" ).append( key ).append( "'" ) );
         }
     }
     return result;
@@ -541,7 +543,7 @@ horde_query_options read_query_options(
                                     entry.second, api_name, key );
         } else {
             throw std::invalid_argument(
-                api_name + " received unknown option '" + key + "'" );
+                std::string( api_name ).append( " received unknown option '" ).append( key ).append( "'" ) );
         }
     }
     return result;
@@ -651,6 +653,8 @@ bool within_query(
     const tripoint_abs_omt &center,
     const horde_query_options &options )
 {
+    // Wide coordinate calculations must retain all 64 bits before native conversion.
+    // NOLINTNEXTLINE(cata-combine-locals-into-point)
     const std::int64_t dx =
         static_cast<std::int64_t>( position.x() ) - center.x();
     const std::int64_t dy =
@@ -733,6 +737,8 @@ entity_scan scan_entities(
         }
         if( lhs.entry->get_type()->id.str() !=
             rhs.entry->get_type()->id.str() ) {
+            // IDs retain byte order independently of the UI locale.
+            // NOLINTNEXTLINE(cata-use-localized-sorting)
             return lhs.entry->get_type()->id.str() <
                    rhs.entry->get_type()->id.str();
         }
@@ -838,6 +844,8 @@ legacy_scan scan_legacy_groups(
             return lhs.group->abs_pos < rhs.group->abs_pos;
         }
         if( lhs.group->type != rhs.group->type ) {
+            // IDs retain byte order independently of the UI locale.
+            // NOLINTNEXTLINE(cata-use-localized-sorting)
             return lhs.group->type.str() <
                    rhs.group->type.str();
         }
@@ -1147,6 +1155,8 @@ sol::table group_monsters(
         std::sort(
             monsters.begin(), monsters.end(),
         []( const mtype_id & lhs, const mtype_id & rhs ) {
+            // IDs retain byte order independently of the UI locale.
+            // NOLINTNEXTLINE(cata-use-localized-sorting)
             return lhs.str() < rhs.str();
         } );
         monsters.erase(
@@ -1908,6 +1918,8 @@ sol::table broadcast_signal(
         project_to<coords::sm>( native_center );
     const std::int64_t min_coordinate = std::numeric_limits<int>::min();
     const std::int64_t max_coordinate = std::numeric_limits<int>::max();
+    // Wide coordinate calculations must retain all 64 bits before native conversion.
+    // NOLINTNEXTLINE(cata-combine-locals-into-point)
     const std::int64_t submap_x = submap_center.x();
     const std::int64_t submap_y = submap_center.y();
     const std::int64_t map_square_x =
@@ -2037,8 +2049,8 @@ void read_legacy_setting(
                key == "nemesis_target" ) {
         if( !value.is<script_tripoint_coord>() ) {
             throw std::invalid_argument(
-                api_name + " option '" + key +
-                "' must be an absolute submap Tripoint" );
+                std::string( api_name ).append( " option '" ).append(
+                    key ).append( "' must be an absolute submap Tripoint" ) );
         }
         const tripoint_abs_sm requested =
             require_absolute_sm(
@@ -2051,7 +2063,7 @@ void read_legacy_setting(
         }
     } else {
         throw std::invalid_argument(
-            api_name + " received unknown option '" + key + "'" );
+            std::string( api_name ).append( " received unknown option '" ).append( key ).append( "'" ) );
     }
 }
 
@@ -2421,10 +2433,10 @@ void reset_horde_tokens() noexcept
 
 void install_horde_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write )
 {
     sol::state_view lua( services.lua_state() );
     lua.new_usertype<horde_entity_token>(

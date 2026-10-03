@@ -7,6 +7,7 @@ extern "C" {
 #include <lua.h>
 }
 #endif
+#include <translation.h>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -25,7 +26,7 @@ extern "C" {
 namespace cata::lua_platform
 {
 class script_game_id;
-}
+} // namespace cata::lua_platform
 
 namespace cata::lua_platform::dialogue
 {
@@ -168,8 +169,8 @@ class context
         std::shared_ptr<state> state_;
 };
 
-bool valid_topic_id( const std::string &value );
-void require_text( const std::string &value, std::string_view api_name,
+bool valid_topic_id( std::string_view value );
+void require_text( std::string_view value, std::string_view api_name,
                    std::string_view field );
 
 enum class response_callback_origin : int {

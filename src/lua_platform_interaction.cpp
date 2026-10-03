@@ -6,7 +6,7 @@ extern "C" {
 #include <lua.h>
 }
 #include <translation.h>
-#include <stdlib.h>
+#include <cstdlib>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -65,7 +65,7 @@ void require_active_callback(
 }
 
 void require_sound_id(
-    const std::string &value, const std::string_view field,
+    const std::string_view value, const std::string_view field,
     const std::string_view api_name )
 {
     if( value.empty() || value.size() > maximum_sound_id_bytes ||
@@ -192,7 +192,7 @@ variant_sound_options read_variant_sound_options(
 }
 
 void play_variant_sound(
-    const std::string &id, const std::string &variant,
+    const std::string_view id, const std::string &variant,
     const int volume, const sol::optional<sol::table> &requested )
 {
     require_sound_id( id, "id", "services.sound.play" );
@@ -248,9 +248,9 @@ ambient_channel_names = {{
 
 sfx::channel ambient_channel_from_name( const std::string &name )
 {
-    const auto found = std::find_if(
-                           ambient_channel_names.begin(),
-                           ambient_channel_names.end(),
+    const auto *const found = std::find_if(
+                                  ambient_channel_names.begin(),
+                                  ambient_channel_names.end(),
     [&name]( const auto & entry ) {
         return entry.first == name;
     } );
@@ -327,7 +327,7 @@ ambient_sound_options read_ambient_sound_options(
 }
 
 void play_ambient_sound(
-    const std::string &id, const std::string &variant,
+    const std::string_view id, const std::string &variant,
     const int volume, const sol::optional<sol::table> &requested )
 {
     require_sound_id( id, "id", "services.sound.play_ambient" );
@@ -342,7 +342,7 @@ void play_ambient_sound(
 }
 
 void require_target_prompt(
-    const std::string &value, const std::string_view field,
+    const std::string_view value, const std::string_view field,
     const std::string_view api_name )
 {
     if( value.size() > maximum_target_prompt_bytes ||
@@ -462,7 +462,7 @@ void emit_gameplay_sound(
 }
 
 sol::object absolute_selection(
-    sol::state_view state, map &here,
+    const sol::state_view &state, map &here,
     const std::optional<tripoint_bub_ms> &selected )
 {
     if( !selected ) {
@@ -476,7 +476,7 @@ sol::object absolute_selection(
 }
 
 sol::object relative_selection(
-    sol::state_view state,
+    const sol::state_view &state,
     const std::optional<tripoint_rel_ms> &selected )
 {
     if( !selected ) {
@@ -1044,7 +1044,7 @@ std::vector<interaction_choice> read_interaction_choices(
                 throw std::invalid_argument(
                     "services.interaction.choose entry hotkey must contain exactly one byte" );
             }
-            choice.hotkey = static_cast<int>( text.front() );
+            choice.hotkey = static_cast<unsigned char>( text.front() );
         }
         result.push_back( std::move( choice ) );
     }
@@ -1162,8 +1162,8 @@ std::vector<std::string> prepare_game_interaction_menu(
 
 void install_game_interaction_api(
     sol::table &services,
-    std::function<void()> require_actions,
-    std::function<bool()> has_active_callback )
+    const std::function<void()> &require_actions,
+    const std::function<bool()> &has_active_callback )
 {
     sol::state_view state( services.lua_state() );
 

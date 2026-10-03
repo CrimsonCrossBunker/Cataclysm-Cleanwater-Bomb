@@ -4,6 +4,7 @@
 
 #include <coordinates.h>
 #include <dialogue_chatbin.h>
+
 extern "C" {
 #include <lua.h>
 }
@@ -11,7 +12,9 @@ extern "C" {
 #include <translation.h>
 #include <algorithm>
 #include <cstddef>
+#include <exception>
 #include <map>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -22,7 +25,6 @@ extern "C" {
 #include "calendar.h"
 #include "character_id.h"
 #include "dialogue_helpers.h"
-#include "enum_conversions.h"
 #include "game.h"
 #include "lua_platform_bindings_coords.h"
 #include "lua_platform_bindings_enums.h"
@@ -451,6 +453,8 @@ sol::table list_definitions(
     std::sort(
         definitions.begin(), definitions.end(),
     []( const mission_type * lhs, const mission_type * rhs ) {
+        // IDs retain byte order independently of the UI locale.
+        // NOLINTNEXTLINE(cata-use-localized-sorting)
         return lhs->id.str() < rhs->id.str();
     } );
     const std::size_t offset = std::min(
@@ -1564,10 +1568,10 @@ std::string mission_token::to_string() const
 
 void install_mission_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write )
 {
     sol::state_view lua( services.lua_state() );
     lua.new_usertype<mission_token>(

@@ -152,6 +152,8 @@ std::vector<const add_type *> matching_definitions(
     std::sort(
         result.begin(), result.end(),
     []( const add_type * lhs, const add_type * rhs ) {
+        // IDs retain byte order independently of the UI locale.
+        // NOLINTNEXTLINE(cata-use-localized-sorting)
         return lhs->id.str() < rhs->id.str();
     } );
     return result;
@@ -297,6 +299,8 @@ std::vector<addiction_state_snapshot> sorted_addictions(
         result.begin(), result.end(),
         []( const addiction_state_snapshot & lhs,
     const addiction_state_snapshot & rhs ) {
+        // IDs retain byte order independently of the UI locale.
+        // NOLINTNEXTLINE(cata-use-localized-sorting)
         return lhs.id.str() < rhs.id.str();
     } );
     return result;
@@ -660,10 +664,10 @@ sol::table run_effect_state(
 
 void install_addiction_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write )
 {
     sol::state_view lua( services.lua_state() );
     sol::table addictions = lua.create_table();

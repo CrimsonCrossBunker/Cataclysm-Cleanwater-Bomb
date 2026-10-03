@@ -278,9 +278,9 @@ sol::table make_game_error_result( sol::state_view lua, const game_handle_error 
 
 void install_game_handle_api(
     sol::state &lua, sol::table &services,
-    std::function<game_handle_runtime()> current_runtime,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read );
+    const std::function<game_handle_runtime()> &current_runtime,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read );
 
 } // namespace cata::lua_platform
 

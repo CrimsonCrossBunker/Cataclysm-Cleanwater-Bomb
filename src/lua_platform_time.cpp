@@ -393,8 +393,8 @@ sol::table reschedule_events(
 
 void install_time_api(
     sol::table &services,
-    std::function<void()> require_read,
-    std::function<void()> require_write )
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write )
 {
     sol::table time =
         services["time"];

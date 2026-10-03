@@ -319,21 +319,21 @@ const std::array<id_kind_definition, 132> &id_kind_definitions()
 const id_kind_definition *find_id_kind( const std::string_view kind )
 {
     const auto &definitions = id_kind_definitions();
-    const auto found = std::lower_bound(
-                           definitions.begin(), definitions.end(), kind,
+    const auto *const found = std::lower_bound(
+                                  definitions.begin(), definitions.end(), kind,
     []( const id_kind_definition & entry, const std::string_view key ) {
         return entry.name < key;
     } );
     return found != definitions.end() && found->name == kind ? &*found : nullptr;
 }
 
-void validate_id_text( const std::string &value )
+void validate_id_text( const std::string_view value )
 {
     if( value.size() > 256 ) {
         throw std::invalid_argument( "services.types.id value exceeds 256 bytes" );
     }
     if( std::any_of( value.begin(), value.end(), []( const unsigned char ch ) {
-    return ch == '\0' || ch < 0x20U || ch == 0x7fU;
+    return ch < 0x20U || ch == 0x7fU;
 } ) ) {
         throw std::invalid_argument(
             "services.types.id value cannot contain control characters" );
@@ -468,8 +468,8 @@ const std::array<unit_kind_definition, 11> &unit_kind_definitions()
 const unit_kind_definition *find_unit_kind( const std::string_view kind )
 {
     const auto &definitions = unit_kind_definitions();
-    const auto found = std::lower_bound(
-                           definitions.begin(), definitions.end(), kind,
+    const auto *const found = std::lower_bound(
+                                  definitions.begin(), definitions.end(), kind,
     []( const unit_kind_definition & entry, const std::string_view key ) {
         return entry.name < key;
     } );
@@ -481,8 +481,8 @@ const unit_conversion *find_unit_conversion(
 {
     const unit_conversion *begin = kind.conversions;
     const unit_conversion *end = begin + kind.conversion_count;
-    const auto found = std::lower_bound(
-                           begin, end, unit,
+    const auto *const found = std::lower_bound(
+                                  begin, end, unit,
     []( const unit_conversion & entry, const std::string_view key ) {
         return entry.name < key;
     } );
@@ -590,8 +590,8 @@ constexpr std::array<time_unit_definition, 6> time_units = {{
 
 const time_unit_definition *find_time_unit( const std::string_view unit )
 {
-    const auto found = std::lower_bound(
-                           time_units.begin(), time_units.end(), unit,
+    const auto *const found = std::lower_bound(
+                                  time_units.begin(), time_units.end(), unit,
     []( const time_unit_definition & entry, const std::string_view key ) {
         return entry.name < key;
     } );
@@ -708,7 +708,7 @@ script_unit_value::script_unit_value(
     std::string kind, std::string canonical_unit,
     std::variant<std::int64_t, double> canonical )
     : kind_( std::move( kind ) ), canonical_unit_( std::move( canonical_unit ) ),
-      canonical_( std::move( canonical ) )
+      canonical_( canonical )
 {
 }
 
@@ -1225,8 +1225,8 @@ void install_value_type_api(
     sol::table units = lua.create_table();
     units.set_function(
         "new",
-        [require_values]( const std::string & kind, const sol::object & value,
-    const std::string & unit ) {
+        [require_values]( const std::string_view kind, const sol::object & value,
+    const std::string_view unit ) {
         require_values();
         if( value.get_type() != sol::type::number ) {
             throw std::invalid_argument(
@@ -1254,7 +1254,7 @@ void install_value_type_api(
     } );
     units.set_function(
         "units",
-    [require_values]( sol::this_state lua_state, const std::string & kind ) {
+    [require_values]( sol::this_state lua_state, const std::string_view kind ) {
         require_values();
         sol::state_view state( lua_state );
         sol::table result = state.create_table();
@@ -1335,7 +1335,7 @@ void install_value_type_api(
     sol::table time = lua.create_table();
     time.set_function(
         "duration",
-    [require_values]( const std::int64_t value, const std::string & unit ) {
+    [require_values]( const std::int64_t value, const std::string_view unit ) {
         require_values();
         return script_time_duration::from( value, unit );
     } );

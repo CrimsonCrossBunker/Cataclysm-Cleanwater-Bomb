@@ -36,8 +36,7 @@ extern "C" {
 static const efftype_id effect_bite( "bite" );
 static const efftype_id effect_bleed( "bleed" );
 static const json_character_flag json_flag_BIONIC_LIMB( "BIONIC_LIMB" );
-static const json_character_flag json_flag_PARTIAL_BIONIC_LIMB(
-    "PARTIAL_BIONIC_LIMB" );
+static const json_character_flag json_flag_PARTIAL_BIONIC_LIMB( "PARTIAL_BIONIC_LIMB" );
 
 namespace cata::lua_platform
 {
@@ -494,7 +493,7 @@ sol::table snapshot_instance(
 sol::table snapshot_instance(
     sol::state_view lua, const bionic &installed )
 {
-    return snapshot_instance( lua, capture_instance( installed ) );
+    return snapshot_instance( std::move( lua ), capture_instance( installed ) );
 }
 
 int instance_limit( const sol::optional<int> &requested )

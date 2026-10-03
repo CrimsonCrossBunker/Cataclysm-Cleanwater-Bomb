@@ -2,7 +2,8 @@
 
 #include "lua_platform_variables.h"
 
-#include "lua_platform_values.h"
+#include <coordinates.h>
+#include <point.h>
 #include <talker.h>
 #include <cstddef>
 #include <functional>
@@ -20,6 +21,7 @@
 #include "item.h"
 #include "lua_platform_bindings_coords.h"
 #include "lua_platform_handle.h"
+#include "lua_platform_values.h"
 #include "math_parser_diag_value.h"
 #include "math_parser_type.h"
 #include "vehicle.h"

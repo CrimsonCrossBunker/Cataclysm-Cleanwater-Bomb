@@ -2,9 +2,11 @@
 
 #include "lua_platform_crafting.h"
 
-#include <activity_type.h>
 #include <calendar.h>
+#include <coordinates.h>
 #include <crafting.h>
+#include <player_activity.h>
+
 extern "C" {
 #include <lua.h>
 }
@@ -35,7 +37,11 @@ extern "C" {
 #include "requirements.h"
 #include "type_id.h"
 
+static const activity_id ACT_CRAFT( "ACT_CRAFT" );
+static const activity_id ACT_CRAFT_WAIT( "ACT_CRAFT_WAIT" );
+
 class read_only_visitable;
+
 
 namespace cata::lua_platform
 {
@@ -1327,12 +1333,10 @@ void install_crafting_api(
             return make_game_error_result( lua_state, *error );
         }
 
-        static const activity_id craft_activity_id( "ACT_CRAFT" );
-        static const activity_id craft_wait_activity_id( "ACT_CRAFT_WAIT" );
         const bool craft_activity_active = character->activity &&
-                                           ( character->activity.id() == craft_activity_id ||
+                                           ( character->activity.id() == ACT_CRAFT ||
                                              character->activity.id() ==
-                                             craft_wait_activity_id );
+                                             ACT_CRAFT_WAIT );
         const std::optional<script_game_id> activity = character->activity ?
                 std::make_optional( script_game_id(
                                         "activity", character->activity.id().str() ) ) : std::nullopt;

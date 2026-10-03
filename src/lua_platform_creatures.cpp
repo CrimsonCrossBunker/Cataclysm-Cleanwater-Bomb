@@ -79,10 +79,11 @@ extern "C" {
 #include "widget.h"
 #include "viewer.h"
 
-// Sentinel flag mirrored from conditional_t::f_has_flag (src/condition.cpp):
-// u_has_flag checks threshold-crossing state rather than literal flag presence.
 static const json_character_flag json_flag_MUTATION_THRESHOLD( "MUTATION_THRESHOLD" );
 static const json_character_flag json_flag_SEESLEEP( "SEESLEEP" );
+
+// Sentinel flag mirrored from conditional_t::f_has_flag (src/condition.cpp):
+// u_has_flag checks threshold-crossing state rather than literal flag presence.
 
 namespace cata::lua_platform
 {
@@ -1897,7 +1898,7 @@ character_damage_options read_character_damage_options(
             key != "max_hit" && key != "hit_roll" &&
             key != "can_attack_high" && !( allow_source && key == "source" ) ) {
             throw std::invalid_argument(
-                api_name + " received unknown option '" + key + "'" );
+                std::string( api_name ).append( " received unknown option '" ).append( key ).append( "'" ) );
         }
     }
     const sol::object body_part = ( *requested )["body_part"];

@@ -1,10 +1,11 @@
 #if CATA_ENABLE_LUA_PLATFORM
 
+#include <calendar.h>
+#include <enums.h>
 #include <set>
 
 #include "lua_platform_mutations.h"
 
-#include <enums.h>
 extern "C" {
 #include <lua.h>
 }

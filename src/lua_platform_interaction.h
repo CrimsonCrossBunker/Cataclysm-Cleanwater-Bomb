@@ -29,8 +29,8 @@ std::unique_ptr<string_input_popup_imgui> prepare_game_text_input_popup(
 // Both namespaces require an active Platform mutation callback.
 void install_game_interaction_api(
     sol::table &services,
-    std::function<void()> require_actions,
-    std::function<bool()> has_active_callback );
+    const std::function<void()> &require_actions,
+    const std::function<bool()> &has_active_callback );
 
 } // namespace cata::lua_platform
 

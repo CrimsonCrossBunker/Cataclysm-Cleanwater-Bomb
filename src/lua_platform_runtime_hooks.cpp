@@ -3092,6 +3092,8 @@ bool invoke_activity_type_handler(
 {
     for( auto iterator = detail::active_runtime_values().rbegin();
          iterator != detail::active_runtime_values().rend(); ++iterator ) {
+        // Retain the runtime while its callback may change the active list.
+        // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
         const std::shared_ptr<runtime> owner = *iterator;
         if( !owner ) {
             continue;

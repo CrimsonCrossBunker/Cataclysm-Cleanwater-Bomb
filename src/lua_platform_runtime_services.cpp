@@ -725,6 +725,8 @@ std::optional<tripoint_range<tripoint_bub_ms>> clipped_area_range(
             const map &here, const tripoint_bub_ms &center, const int radius )
 {
     const std::int64_t radius_wide = radius;
+    // Wide coordinate calculations must retain all 64 bits before native conversion.
+    // NOLINTNEXTLINE(cata-combine-locals-into-point)
     const std::int64_t max_x = static_cast<std::int64_t>( here.getmapsize() ) * SEEX - 1;
     const std::int64_t max_y = static_cast<std::int64_t>( here.getmapsize() ) * SEEY - 1;
     const std::int64_t min_x = std::max<std::int64_t>( 0,
@@ -789,6 +791,8 @@ int set_platform_furniture( const tripoint_abs_ms &absolute,
         return 0;
     }
     const tripoint_abs_ms bubble_origin = here.get_abs( tripoint_bub_ms::zero );
+    // Wide coordinate calculations must retain all 64 bits before native conversion.
+    // NOLINTNEXTLINE(cata-combine-locals-into-point)
     const std::int64_t local_x = static_cast<std::int64_t>( absolute.x() ) - bubble_origin.x();
     const std::int64_t local_y = static_cast<std::int64_t>( absolute.y() ) - bubble_origin.y();
     if( local_x < std::numeric_limits<int>::lowest() ||
@@ -858,6 +862,8 @@ int set_platform_terrain( const tripoint_abs_ms &absolute,
         return 0;
     }
     const tripoint_abs_ms bubble_origin = here.get_abs( tripoint_bub_ms::zero );
+    // Wide coordinate calculations must retain all 64 bits before native conversion.
+    // NOLINTNEXTLINE(cata-combine-locals-into-point)
     const std::int64_t local_x = static_cast<std::int64_t>( absolute.x() ) - bubble_origin.x();
     const std::int64_t local_y = static_cast<std::int64_t>( absolute.y() ) - bubble_origin.y();
     if( local_x < std::numeric_limits<int>::lowest() ||
@@ -897,6 +903,8 @@ int set_platform_trap_area( const tripoint_abs_ms &absolute,
     }
     map &here = get_map();
     const tripoint_abs_ms bubble_origin = here.get_abs( tripoint_bub_ms::zero );
+    // Wide coordinate calculations must retain all 64 bits before native conversion.
+    // NOLINTNEXTLINE(cata-combine-locals-into-point)
     const std::int64_t local_x = static_cast<std::int64_t>( absolute.x() ) - bubble_origin.x();
     const std::int64_t local_y = static_cast<std::int64_t>( absolute.y() ) - bubble_origin.y();
     if( local_x < std::numeric_limits<int>::lowest() ||
@@ -931,6 +939,8 @@ int set_platform_trap_area( const tripoint_abs_ms &absolute,
     // iterator increments x/y after visiting the last point.  Every endpoint
     // must be representable and each maximum must leave room for that step.
     const std::int64_t min_x = static_cast<std::int64_t>( center.x() ) - radius;
+    // Wide coordinate calculations must retain all 64 bits before native conversion.
+    // NOLINTNEXTLINE(cata-combine-locals-into-point)
     const std::int64_t max_x = static_cast<std::int64_t>( center.x() ) + radius;
     const std::int64_t min_y = static_cast<std::int64_t>( center.y() ) - radius;
     const std::int64_t max_y = static_cast<std::int64_t>( center.y() ) + radius;
@@ -1085,6 +1095,8 @@ int add_platform_field_area( const tripoint_abs_ms &absolute,
         return 0;
     }
     const tripoint_abs_ms bubble_origin = here.get_abs( tripoint_bub_ms::zero );
+    // Wide coordinate calculations must retain all 64 bits before native conversion.
+    // NOLINTNEXTLINE(cata-combine-locals-into-point)
     const std::int64_t local_x = static_cast<std::int64_t>( absolute.x() ) - bubble_origin.x();
     const std::int64_t local_y = static_cast<std::int64_t>( absolute.y() ) - bubble_origin.y();
     if( local_x < std::numeric_limits<int>::lowest() ||
@@ -3534,7 +3546,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     } );
     services["lore"] = std::move( lore );
 
-    const auto platform_message_type = []( const std::string & name ) {
+    const auto platform_message_type = []( const std::string_view name ) {
         return parse_platform_message_type( name, "services.messages" );
     };
     const auto add_audible_message = [weak, require_write,
@@ -3758,7 +3770,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                 throw std::invalid_argument(
                     "services.progression.grant_random_missing ids must be typed GameIds" );
             }
-            const cata::lua_platform::script_game_id id =
+            const cata::lua_platform::script_game_id &id =
                 raw_id.as<cata::lua_platform::script_game_id>();
             if( id.kind() != raw_kind || id.value().size() > 256 || !id.is_valid() ) {
                 throw std::invalid_argument(

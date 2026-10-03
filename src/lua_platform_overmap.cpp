@@ -379,8 +379,7 @@ terrain_selector read_selector(
                                  api_name );
         } else {
             throw std::invalid_argument(
-                api_name +
-                " selector received unknown key '" + key + "'" );
+                std::string( api_name ).append( " selector received unknown key '" ).append( key ).append( "'" ) );
         }
     }
     if( !has_terrain ) {
@@ -453,7 +452,7 @@ terrain_selector read_target_selector(
                                  api_name );
         } else {
             throw std::invalid_argument(
-                api_name + " selector received unknown key '" + key + "'" );
+                std::string( api_name ).append( " selector received unknown key '" ).append( key ).append( "'" ) );
         }
     }
     if( !has_terrain ) {
@@ -473,8 +472,8 @@ std::vector<terrain_selector> read_selectors(
 {
     if( !requested.is<sol::table>() ) {
         throw std::invalid_argument(
-            api_name + " option '" + option_name +
-            "' must be an array" );
+            std::string( api_name ).append( " option '" ).append(
+                option_name ).append( "' must be an array" ) );
     }
     std::vector<std::pair<std::size_t, terrain_selector>>
             ordered;
@@ -483,8 +482,8 @@ std::vector<terrain_selector> read_selectors(
         const sol::object key_object = entry.first;
         if( !key_object.is<lua_Integer>() ) {
             throw std::invalid_argument(
-                api_name + " option '" + option_name +
-                "' must use consecutive integer keys" );
+                std::string( api_name ).append( " option '" ).append(
+                    option_name ).append( "' must use consecutive integer keys" ) );
         }
         const lua_Integer raw_index =
             key_object.as<lua_Integer>();
@@ -493,15 +492,14 @@ std::vector<terrain_selector> read_selectors(
             static_cast<lua_Integer>(
                 maximum_search_selectors ) ) {
             throw std::invalid_argument(
-                api_name + " option '" + option_name +
-                "' supports at most 16 selectors" );
+                std::string( api_name ).append( " option '" ).append(
+                    option_name ).append( "' supports at most 16 selectors" ) );
         }
         ordered.emplace_back(
             static_cast<std::size_t>( raw_index ),
             read_selector(
                 entry.second,
-                api_name + " option '" +
-                option_name + "'" ) );
+                std::string( api_name ).append( " option '" ).append( option_name ).append( "'" ) ) );
     }
     std::sort(
         ordered.begin(), ordered.end(),
@@ -514,8 +512,8 @@ std::vector<terrain_selector> read_selectors(
          index < ordered.size(); ++index ) {
         if( ordered[index].first != index + 1 ) {
             throw std::invalid_argument(
-                api_name + " option '" + option_name +
-                "' must use consecutive integer keys" );
+                std::string( api_name ).append( " option '" ).append(
+                    option_name ).append( "' must use consecutive integer keys" ) );
         }
         result.push_back(
             std::move( ordered[index].second ) );
@@ -530,16 +528,16 @@ int require_integer(
 {
     if( !requested.is<lua_Integer>() ) {
         throw std::invalid_argument(
-            api_name + " option '" + option_name +
-            "' must be an integer" );
+            std::string( api_name ).append( " option '" ).append(
+                option_name ).append( "' must be an integer" ) );
     }
     const lua_Integer value =
         requested.as<lua_Integer>();
     if( value < 0 ||
         value > std::numeric_limits<int>::max() ) {
         throw std::invalid_argument(
-            api_name + " option '" + option_name +
-            "' must be a non-negative int" );
+            std::string( api_name ).append( " option '" ).append(
+                option_name ).append( "' must be a non-negative int" ) );
     }
     return static_cast<int>( value );
 }
@@ -554,14 +552,15 @@ int require_native_int(
         if( value < std::numeric_limits<int>::min() ||
             value > std::numeric_limits<int>::max() ) {
             throw std::invalid_argument(
-                api_name + " option '" + option_name +
-                "' must truncate to a native int" );
+                std::string( api_name ).append( " option '" ).append(
+                    option_name ).append( "' must truncate to a native int" ) );
         }
         return static_cast<int>( value );
     }
     if( !requested.is<double>() ) {
         throw std::invalid_argument(
-            api_name + " option '" + option_name + "' must be a number" );
+            std::string( api_name ).append( " option '" ).append(
+                option_name ).append( "' must be a number" ) );
     }
     const double value = requested.as<double>();
     const double truncated = std::trunc( value );
@@ -569,8 +568,8 @@ int require_native_int(
         truncated < std::numeric_limits<int>::min() ||
         truncated > std::numeric_limits<int>::max() ) {
         throw std::invalid_argument(
-            api_name + " option '" + option_name +
-            "' must truncate to a native int" );
+            std::string( api_name ).append( " option '" ).append(
+                option_name ).append( "' must truncate to a native int" ) );
     }
     return static_cast<int>( truncated );
 }
@@ -582,8 +581,8 @@ bool require_boolean(
 {
     if( !requested.is<bool>() ) {
         throw std::invalid_argument(
-            api_name + " option '" + option_name +
-            "' must be a boolean" );
+            std::string( api_name ).append( " option '" ).append(
+                option_name ).append( "' must be a boolean" ) );
     }
     return requested.as<bool>();
 }
@@ -632,7 +631,7 @@ overmap_target_options read_overmap_target_options(
             result.offset = tripoint_rel_omt( offset.to_native() );
         } else {
             throw std::invalid_argument(
-                api_name + " received unknown option '" + key + "'" );
+                std::string( api_name ).append( " received unknown option '" ).append( key ).append( "'" ) );
         }
     }
     return result;
@@ -731,8 +730,7 @@ overmap_search_options read_search_options(
                     entry.second, api_name, key );
         } else {
             throw std::invalid_argument(
-                api_name +
-                " received unknown option '" + key + "'" );
+                std::string( api_name ).append( " received unknown option '" ).append( key ).append( "'" ) );
         }
     }
     if( result.radius > maximum_radius ) {
@@ -810,6 +808,8 @@ std::int64_t distance_key(
     const tripoint_abs_omt &origin,
     const tripoint_abs_omt &position )
 {
+    // Wide coordinate calculations must retain all 64 bits before native conversion.
+    // NOLINTNEXTLINE(cata-combine-locals-into-point)
     const std::int64_t dx =
         std::abs(
             static_cast<std::int64_t>( position.x() ) -
@@ -845,6 +845,8 @@ overmap_search_scan scan_existing_overmap(
                 if( distance < options.minimum_radius ) {
                     continue;
                 }
+                // Wide coordinate calculations must retain all 64 bits before native conversion.
+                // NOLINTNEXTLINE(cata-combine-locals-into-point)
                 const std::int64_t raw_x =
                     static_cast<std::int64_t>(
                         origin.x() ) + dx;
@@ -1326,6 +1328,8 @@ script_tripoint_coord overmap_find_target(
 
     if( options.offset ) {
         const tripoint_rel_omt &offset = *options.offset;
+        // Wide coordinate calculations must retain all 64 bits before native conversion.
+        // NOLINTNEXTLINE(cata-combine-locals-into-point)
         const std::int64_t x = static_cast<std::int64_t>( target.x() ) + offset.x();
         const std::int64_t y = static_cast<std::int64_t>( target.y() ) + offset.y();
         const std::int64_t z = static_cast<std::int64_t>( target.z() ) + offset.z();
@@ -1595,11 +1599,10 @@ bool overmap_matches_location_near(
             if( terrain_id.find( "faction_base_camp" ) != std::string::npos ) {
                 return true;
             }
-        } else if( location_id == "FACTION_CAMP_START" &&
-                   !recipe_group::get_recipes_by_id(
-                       "all_faction_base_types", terrain, arguments ).empty() ) {
-            return true;
-        } else if( oter_no_dir_or_connections( terrain ) == location_id ) {
+        } else if( ( location_id == "FACTION_CAMP_START" &&
+                     !recipe_group::get_recipes_by_id(
+                         "all_faction_base_types", terrain, arguments ).empty() ) ||
+                   oter_no_dir_or_connections( terrain ) == location_id ) {
             return true;
         }
     }
@@ -1640,7 +1643,7 @@ bool overmap_is_camp_start(
 }
 
 void validate_note(
-    const std::string &note,
+    std::string_view note,
     const std::string &api_name );
 
 sol::table edit_overmap(
@@ -2126,7 +2129,7 @@ sol::table edit_overmap(
 }
 
 void validate_note(
-    const std::string &note,
+    const std::string_view note,
     const std::string &api_name )
 {
     if( note.size() > maximum_note_bytes ) {
@@ -2164,6 +2167,8 @@ sol::table reveal_existing_overmap(
          dy <= radius; ++dy ) {
         for( int dx = -radius;
              dx <= radius; ++dx ) {
+            // Wide coordinate calculations must retain all 64 bits before native conversion.
+            // NOLINTNEXTLINE(cata-combine-locals-into-point)
             const std::int64_t raw_x =
                 static_cast<std::int64_t>(
                     native_center.x() ) + dx;
@@ -2412,11 +2417,11 @@ void reset_overmap_tile_tokens() noexcept
 
 void install_overmap_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write,
-    std::function<std::size_t( std::size_t )> random_index )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write,
+    const std::function<std::size_t( std::size_t )> &random_index )
 {
     sol::state_view lua( services.lua_state() );
     lua.new_usertype<overmap_tile_token>(

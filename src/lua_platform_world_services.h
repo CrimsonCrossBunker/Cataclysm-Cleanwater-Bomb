@@ -18,23 +18,23 @@ class game_handle_runtime;
 // unchanged.
 void install_relocation_move_api(
     sol::table &relocation,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_write,
-    std::function<void()> require_dangerous_relocation,
-    std::function<bool()> has_active_callback );
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_write,
+    const std::function<void()> &require_dangerous_relocation,
+    const std::function<bool()> &has_active_callback );
 
 // Install generation-bound spawning, follower, and avatar relocation
 // services. Mutations require an active Platform write callback. Relocation
 // additionally requires the explicit dangerous-relocation guard.
 void install_game_world_service_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write,
-    std::function<void()> require_dangerous_relocation,
-    std::function<bool()> has_active_callback );
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write,
+    const std::function<void()> &require_dangerous_relocation,
+    const std::function<bool()> &has_active_callback );
 
 } // namespace cata::lua_platform
 

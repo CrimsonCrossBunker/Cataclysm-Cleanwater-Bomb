@@ -162,6 +162,7 @@ template<typename Range, typename Id, typename Name>
 std::vector<registry_metadata> make_index( const Range &range, Id id, Name name )
 {
     std::vector<registry_metadata> result;
+    result.reserve( range.size() );
     for( const auto &entry : range ) {
         result.push_back( { id( entry ), name( entry ) } );
     }
@@ -505,7 +506,7 @@ class script_registry_catalog
         std::unordered_map<std::string, std::vector<registry_metadata>> indexes_;
 };
 
-sol::object definition_snapshot( sol::state_view lua, const std::string &kind,
+sol::object definition_snapshot( const sol::state_view &lua, const std::string &kind,
                                  const std::string &id )
 {
     if( kind == "item" ) {
@@ -630,8 +631,8 @@ list_options read_list_options( const sol::optional<sol::table> &options )
 
 void install_registry_api(
     sol::state &lua, sol::table &services,
-    std::function<void()> require_read,
-    std::function<void()> require_typed_read )
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_typed_read )
 {
     auto catalog = std::make_shared<script_registry_catalog>();
     sol::table registry = lua.create_table();

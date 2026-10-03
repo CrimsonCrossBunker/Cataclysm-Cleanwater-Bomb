@@ -4,6 +4,7 @@
 
 #include <character_id.h>
 #include <dialogue_chatbin.h>
+
 extern "C" {
 #include <lua.h>
 }
@@ -15,6 +16,7 @@ extern "C" {
 #include <exception>
 #include <iterator>
 #include <limits>
+#include <list>
 #include <map>
 #include <memory>
 #include <optional>
@@ -46,16 +48,18 @@ extern "C" {
 #include "player_activity.h"
 #include "type_id.h"
 
+static const activity_id ACT_TRAIN( "ACT_TRAIN" );
+static const efftype_id effect_bite( "bite" );
+static const efftype_id effect_bleed( "bleed" );
+static const efftype_id effect_currently_busy( "currently_busy" );
+static const efftype_id effect_infected( "infected" );
+
 namespace cata::lua_platform
 {
 
 namespace
 {
 
-const efftype_id effect_bite( "bite" );
-const efftype_id effect_bleed( "bleed" );
-const efftype_id effect_currently_busy( "currently_busy" );
-const efftype_id effect_infected( "infected" );
 constexpr std::size_t maximum_npc_mission_results = 256;
 constexpr std::size_t maximum_training_students = 64;
 
@@ -136,7 +140,7 @@ sol::table provider_service_state(
     sol::state_view lua, npc &provider )
 {
     sol::table result = character_service_state(
-                            lua, provider );
+                            std::move( lua ), provider );
     result["owed"] = provider.op_of_u.owed;
     result["attitude"] = static_cast<int>(
                              provider.get_attitude() );
@@ -1890,12 +1894,10 @@ sol::table start_npc_training(
         teacher->activity ?
         teacher->activity.id().str() :
         std::string();
-    static const activity_id training_activity(
-        "ACT_TRAIN" );
     sol::table value = state.create_table();
     value["started"] =
         teacher->activity &&
-        teacher->activity.id() == training_activity;
+        teacher->activity.id() == ACT_TRAIN;
     value["teacher"] = teacher_handle;
     value["subject"] = subject;
     value["student_count"] = students.size();
@@ -1959,8 +1961,6 @@ sol::table start_selected_npc_training(
     } else {
         talk_function::start_training( *provider );
     }
-    static const activity_id training_activity(
-        "ACT_TRAIN" );
     sol::table value = state.create_table();
     value["mode"] = mode;
     value["provider"] = provider_handle;
@@ -1968,11 +1968,11 @@ sol::table start_selected_npc_training(
     value["provider_training"] =
         provider->activity &&
         provider->activity.id() ==
-        training_activity;
+        ACT_TRAIN;
     value["player_training"] =
         student->activity &&
         student->activity.id() ==
-        training_activity;
+        ACT_TRAIN;
     return make_game_value_result(
                state, sol::make_object(
                    state, std::move( value ) ) );
@@ -1982,10 +1982,10 @@ sol::table start_selected_npc_training(
 
 void install_npc_domain_services(
     sol::table &npcs,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write )
 {
     sol::state_view lua( npcs.lua_state() );
 

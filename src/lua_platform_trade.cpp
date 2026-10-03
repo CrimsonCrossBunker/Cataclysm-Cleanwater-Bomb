@@ -4,16 +4,18 @@
 
 #include <character_id.h>
 #include <item_uid.h>
+
 extern "C" {
 #include <lua.h>
 }
 #include <npc_opinion.h>
 #include <algorithm>
-#include <cstddef>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <exception>
 #include <limits>
+#include <list>
 #include <memory>
 #include <optional>
 #include <set>
@@ -30,14 +32,16 @@ extern "C" {
 #include "faction.h"
 #include "item.h"
 #include "item_contents.h"
-#include "item_pocket.h"
 #include "item_location.h"
+#include "item_pocket.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_items.h"
 #include "npc.h"
 #include "npctrade.h"
 #include "type_id.h"
+
+static const skill_id skill_speech( "speech" );
 
 namespace cata::lua_platform
 {
@@ -249,7 +253,7 @@ void hash_trade_npc_inputs( std::uint64_t &value, const Character &party )
     hash_trade_part( value, party.is_npc() ? "npc" :
                      party.is_avatar() ? "avatar" : "character" );
     hash_trade_integer( value, party.get_int() );
-    hash_trade_integer( value, party.get_skill_level( skill_id( "speech" ) ) );
+    hash_trade_integer( value, party.get_skill_level( skill_speech ) );
     if( const npc *entry = party.as_npc() ) {
         hash_trade_integer( value, entry->op_of_u.trust );
         hash_trade_integer( value, entry->op_of_u.fear );
@@ -977,7 +981,7 @@ sol::table trade_error_result( sol::state_view lua,
                                const game_handle_error &error,
                                const std::optional<std::size_t> line_index = std::nullopt )
 {
-    sol::table result = make_game_error_result( lua, error );
+    sol::table result = make_game_error_result( std::move( lua ), error );
     if( line_index ) {
         result["error"]["line_index"] = *line_index;
     }
@@ -1808,14 +1812,14 @@ sol::table quote_trade(
     snapshot->issued_turn = to_turn<std::int64_t>( calendar::turn );
     snapshot->expires_turn = snapshot->issued_turn + options.expiry_turns;
     snapshot->tax = 0;
-    snapshot->available_settlement_modes.push_back( "cash" );
+    snapshot->available_settlement_modes.emplace_back( "cash" );
     if( options.settlement_strategy == "npc_allowance" ) {
-        snapshot->available_settlement_modes.push_back( "npc_allowance" );
+        snapshot->available_settlement_modes.emplace_back( "npc_allowance" );
     }
 
     if( ( seller->as_npc() == nullptr ) != ( buyer->as_npc() == nullptr ) &&
         ( seller->is_avatar() || buyer->is_avatar() ) ) {
-        snapshot->available_settlement_modes.push_back( "npc_debt" );
+        snapshot->available_settlement_modes.emplace_back( "npc_debt" );
     }
 
     std::set<std::int64_t> seen_uids;
@@ -2207,10 +2211,10 @@ void retire_trade_quote_registry() noexcept
 
 void install_trade_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write )
 {
     sol::state_view lua( services.lua_state() );
     lua.new_usertype<trade_quote_token>(

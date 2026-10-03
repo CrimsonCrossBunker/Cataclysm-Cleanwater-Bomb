@@ -1,5 +1,15 @@
 #include "lua_platform_content_presentation.h"
 
+#include <dialogue.h>
+#include <game_constants.h>
+#include <exception>
+#include <functional>
+#include <iterator>
+#include <type_traits>
+#include <unordered_map>
+
+enum class distraction_type : int;
+
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
 #include <algorithm>
@@ -22,7 +32,6 @@
 #include "activity_actor.h"
 #include "activity_handlers.h"
 #include "activity_type.h"
-#include "ascii_art.h"
 #include "clzones.h"
 #include "end_screen.h"
 #include "enum_conversions.h"
@@ -1227,10 +1236,10 @@ bool presentation_content_transaction::validate( const runtime &owner_runtime,
                                           "' requires tracks and one registration per transaction" );
             }
             for( const auto &[file, volume] : definition.tracks ) {
-                const std::filesystem::path path( file );
+                const std::filesystem::path path = std::filesystem::u8path( file );
                 const bool traverses_parent = std::any_of(
                 path.begin(), path.end(), []( const auto & part ) {
-                    return part == "..";
+                    return part == std::filesystem::u8path( ".." );
                 } );
                 if( file.empty() || file.size() > 4096 || file.find( '\0' ) != std::string::npos ||
                     path.is_absolute() || traverses_parent || volume < 0 || volume > 128 ) {
@@ -1252,10 +1261,10 @@ bool presentation_content_transaction::validate( const runtime &owner_runtime,
                                           "' has a volume outside 0..128" );
             }
             for( const std::string &file : definition.files ) {
-                const std::filesystem::path path( file );
+                const std::filesystem::path path = std::filesystem::u8path( file );
                 const bool traverses_parent = std::any_of(
                 path.begin(), path.end(), []( const auto & part ) {
-                    return part == "..";
+                    return part == std::filesystem::u8path( ".." );
                 } );
                 if( file.empty() || file.size() > 4096 || file.find( '\0' ) != std::string::npos ||
                     path.is_absolute() || traverses_parent ) {

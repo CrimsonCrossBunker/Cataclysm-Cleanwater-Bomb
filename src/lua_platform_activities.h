@@ -24,11 +24,11 @@ using activity_pickup_selector = std::function<drop_locations(
 // The optional selector seam keeps activity semantics testable without opening UI.
 void install_activity_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write,
-    std::function<bool()> has_active_callback,
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write,
+    const std::function<bool()> &has_active_callback,
     activity_pickup_selector pickup_selector = {} );
 
 } // namespace cata::lua_platform

@@ -413,6 +413,8 @@ sol::table list_weather_types(
         matches.begin(), matches.end(),
         []( const weather_type * lhs,
     const weather_type * rhs ) {
+        // IDs retain byte order independently of the UI locale.
+        // NOLINTNEXTLINE(cata-use-localized-sorting)
         return lhs->id.str() <
                rhs->id.str();
     } );
@@ -1164,14 +1166,14 @@ sol::table set_wind(
         get_weather();
     if( options.speed ) {
         weather.windspeed_override =
-            *options.speed;
+            options.speed;
     } else if( options.clear_speed ) {
         weather.windspeed_override =
             std::nullopt;
     }
     if( options.direction ) {
         weather.wind_direction_override =
-            *options.direction;
+            options.direction;
     } else if( options.clear_direction ) {
         weather.wind_direction_override =
             std::nullopt;

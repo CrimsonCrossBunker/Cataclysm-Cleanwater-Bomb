@@ -613,11 +613,11 @@ std::optional<game_handle_error> game_handle::validation_error(
             if( !creature_ || creature_.get() == nullptr ) {
                 return destroyed_error( kind_ );
             }
-            if( creature_.get()->is_dead_state() ) {
+            if( creature_->is_dead_state() ) {
                 return dead_error( kind_ );
             }
             if( avatar_stable_id_ ) {
-                const Character *character = creature_.get()->as_character();
+                const Character *character = creature_->as_character();
                 if( character == nullptr || !character->is_avatar() ||
                     character->getID().get_value() != *avatar_stable_id_ ) {
                     return game_handle_error{
@@ -631,7 +631,7 @@ std::optional<game_handle_error> game_handle::validation_error(
                     npc_identity_generation_ != npc_identity_->generation ) {
                     return stale_npc_identity_error();
                 }
-                const Character *character = creature_.get()->as_character();
+                const Character *character = creature_->as_character();
                 if( !npc_stable_id_ || character == nullptr ||
                     character->getID().get_value() != *npc_stable_id_ ||
                     npc_identity_->stable_id != *npc_stable_id_ ) {
@@ -643,18 +643,18 @@ std::optional<game_handle_error> game_handle::validation_error(
             if( !item_ || item_.get() == nullptr ) {
                 return destroyed_error( kind_ );
             }
-            if( item_.get()->is_null() ) {
+            if( item_->is_null() ) {
                 return game_handle_error{
                     "invalid_item",
                     "The GameHandle does not reference a live item instance"
                 };
             }
             if( item_uid_ &&
-                item_.get()->uid().get_value() != *item_uid_ ) {
+                item_->uid().get_value() != *item_uid_ ) {
                 return replaced_item_error();
             }
             if( !item_type_id_.empty() &&
-                item_.get()->typeId().str() != item_type_id_ ) {
+                item_->typeId().str() != item_type_id_ ) {
                 return replaced_item_error();
             }
             if( !item_identity_ ||
@@ -667,7 +667,7 @@ std::optional<game_handle_error> game_handle::validation_error(
                 return destroyed_error( kind_ );
             }
             if( !vehicle_uid_ || *vehicle_uid_ <= 0 ||
-                vehicle_.get()->uid().get_value() != *vehicle_uid_ ) {
+                vehicle_->uid().get_value() != *vehicle_uid_ ) {
                 return stale_vehicle_error();
             }
             if( !vehicle_identity_ ||
@@ -680,7 +680,7 @@ std::optional<game_handle_error> game_handle::validation_error(
                 return destroyed_error( kind_ );
             }
             if( !vehicle_uid_ || *vehicle_uid_ <= 0 ||
-                vehicle_.get()->uid().get_value() != *vehicle_uid_ ) {
+                vehicle_->uid().get_value() != *vehicle_uid_ ) {
                 return stale_vehicle_error();
             }
             if( !vehicle_identity_ ||
@@ -1131,9 +1131,9 @@ sol::table make_game_error_result( sol::state_view lua, const game_handle_error 
 
 void install_game_handle_api(
     sol::state &lua, sol::table &services,
-    std::function<game_handle_runtime()> current_runtime,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read )
+    const std::function<game_handle_runtime()> &current_runtime,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read )
 {
     lua.new_usertype<game_handle>(
         "GameHandle", sol::no_constructor,

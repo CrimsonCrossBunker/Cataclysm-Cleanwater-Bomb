@@ -6306,7 +6306,7 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, v.soft ? "soft" : "hard" );
                 hash_part( state, v.uncomfortable ? "uncomfortable" : "comfortable" );
                 hash_part( state, v.conductive ? "conductive" : "insulating" );
-                for( const auto &id : v.damage_adjectives ) {
+                for( const authored_text &id : v.damage_adjectives ) {
                     hash_part( state, id );
                 }
                 for( const auto &[id, amount] : v.resistances ) {

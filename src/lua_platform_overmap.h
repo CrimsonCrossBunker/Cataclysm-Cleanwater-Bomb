@@ -70,11 +70,11 @@ std::optional<game_handle_error> validate_overmap_tile_token(
 // overmap for the requested OMT to preserve native semantics.
 void install_overmap_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write,
-    std::function<std::size_t( std::size_t )> random_index );
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write,
+    const std::function<std::size_t( std::size_t )> &random_index );
 
 } // namespace cata::lua_platform
 

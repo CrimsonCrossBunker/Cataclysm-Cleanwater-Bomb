@@ -1,6 +1,6 @@
 #include "lua_platform_dialogue.h"
 
-#include "lua_platform_state.h"
+#include <bodypart.h>
 #include <calendar.h>
 #include <character_id.h>
 #include <coordinates.h>
@@ -13,12 +13,13 @@
 #include <lua_platform_hooks.h>
 #include <lua_platform_items.h>
 #include <npctalk.h>
-#include <overmapbuffer.h>
 #include <output.h>
+#include <overmapbuffer.h>
 #include <point.h>
 #include <safe_reference.h>
 #include <talker.h>
 #include <translation.h>
+#include <translations.h>
 #include <type_id.h>
 #include <cmath>
 #include <limits>
@@ -31,6 +32,7 @@
 #include "creature.h"
 #include "item.h"
 #include "lua_platform_creatures.h"
+#include "lua_platform_state.h"
 #include "math_parser_diag_value.h"
 #include "npc.h"
 
@@ -1078,13 +1080,13 @@ std::uint64_t next_response_action_callback_id = 1;
 } // namespace
 
 
-bool valid_topic_id( const std::string &value )
+bool valid_topic_id( const std::string_view value )
 {
     return !value.empty() && value.size() <= 256 &&
            value.find( '\0' ) == std::string::npos;
 }
 
-void require_text( const std::string &value, const std::string_view api_name,
+void require_text( const std::string_view value, const std::string_view api_name,
                    const std::string_view field )
 {
     if( value.empty() || value.size() > 4096 ||
@@ -1199,7 +1201,8 @@ translation deferred_translation_from_descriptor(
         }
         const std::string key = entry.first.as<std::string>();
         if( key != "context" ) {
-            throw std::invalid_argument( field_label + " has unknown field '" + key + "'" );
+            throw std::invalid_argument( std::string( field_label ).append( " has unknown field '" ).append(
+                                             key ).append( "'" ) );
         }
     }
 
