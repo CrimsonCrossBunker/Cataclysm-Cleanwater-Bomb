@@ -28591,7 +28591,7 @@ def _compile_native_numeric_math(
             statements.append(f"assert({bound} == {bound} and {bound} >= -2147483648 "
                               f"and {bound} <= 2147483647, "
                               '"rand rounded bound is outside the native signed integer range")')
-            emit(f"services.random.native_int(math.min(0.0,{bound}), math.max(0.0,{bound})) + 0.0")
+            emit(f"services.random.native_int(math.tointeger(math.min(0.0,{bound})), math.tointeger(math.max(0.0,{bound}))) + 0.0")
             singleton = rounded == 0.0
             own_effects = _NativeMathEffects(
                 True, not singleton, rounded is None or not NATIVE_INT_MIN <= rounded <= NATIVE_INT_MAX,

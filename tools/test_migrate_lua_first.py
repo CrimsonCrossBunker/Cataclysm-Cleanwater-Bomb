@@ -35543,6 +35543,7 @@ assert(context.data.position.x==EXPECTED_X and context.data.position.y==EXPECTED
 local calls=ROWS
 local count=0
 local function draw(kind,lo,hi)
+ if kind=="int" then assert(math.type(lo)=="integer" and math.type(hi)=="integer") end
  count=count+1
  local row=calls[count]
  assert(row and row[1]==kind and row[2]==lo and row[3]==hi)
@@ -35576,6 +35577,7 @@ local services={variables={get_context_number=function(data,key,options)
  if stale then return {ok=false,error={code='stale_runtime',message='stale'}} end
  return {ok=true,value={exists=not missing,value=value}}
 end},random={native_int=function(lo,hi)
+ assert(math.type(lo)=="integer" and math.type(hi)=="integer")
  draws=draws+1;assert(lo==expected_lower and hi==expected_upper);return lo
 end},diagnostic=function() diagnostics=diagnostics+1 end}
 local function service_value(result) if not result.ok then error(result.error.code,0) end;return result.value end

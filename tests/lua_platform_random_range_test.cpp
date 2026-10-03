@@ -1,8 +1,17 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
-#include <cstdint>
+#include <calendar.h>
+#include <flexbuffer_json.h>
+#include <point.h>
+#include <talker.h>
+#include <cstddef>
+#include <initializer_list>
+#include <random>
+
+#include "flexbuffer_json.h"
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <functional>
 #include <limits>
 #include <memory>
@@ -19,27 +28,20 @@
 #include "character_id.h"
 #include "condition.h"
 #include "coordinates.h"
+#include "debug.h"
 #include "dialogue.h"
 #include "dialogue_helpers.h"
-#include "debug.h"
 #include "global_vars.h"
 #include "json.h"
 #include "json_loader.h"
 #include "lua_platform_bindings_coords.h"
-#include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_runtime.h"
 #include "lua_platform_runtime_internal.h"
 #include "lua_platform_sol.h"
 #include "math_parser_diag_value.h"
-#include "npctalk.h"
 #include "rng.h"
 #include "weighted_list.h"
-
-namespace cata::lua_platform
-{
-class runtime;
-} // namespace cata::lua_platform
 
 TEST_CASE( "lua_platform_random_accepts_native_integer_boundaries",
            "[lua][platform][random_range][semantic]" )
@@ -279,7 +281,7 @@ values[2] = math.floor(math.abs(values[1])) + 0.0;
 if math.abs(values[1]) - values[2] >= 0.5 then values[2] = values[2] + 1.0 end;
 if values[1] < 0.0 or 1.0 / values[1] < 0.0 then values[2] = -values[2] end;
 assert(values[2] == values[2] and values[2] >= -2147483648 and values[2] <= 2147483647, "rand rounded bound is outside the native signed integer range");
-values[3] = services.random.native_int(math.min(0.0,values[2]), math.max(0.0,values[2])) + 0.0;
+values[3] = services.random.native_int(math.tointeger(math.min(0.0,values[2])), math.tointeger(math.max(0.0,values[2]))) + 0.0;
 return values[3] end)()
 )lua"
         },
@@ -323,7 +325,7 @@ values[3] = math.floor(math.abs(values[2])) + 0.0;
 if math.abs(values[2]) - values[3] >= 0.5 then values[3] = values[3] + 1.0 end;
 if values[2] < 0.0 or 1.0 / values[2] < 0.0 then values[3] = -values[3] end;
 assert(values[3] == values[3] and values[3] >= -2147483648 and values[3] <= 2147483647, "rand rounded bound is outside the native signed integer range");
-values[4] = services.random.native_int(math.min(0.0,values[3]), math.max(0.0,values[3])) + 0.0;
+values[4] = services.random.native_int(math.tointeger(math.min(0.0,values[3])), math.tointeger(math.max(0.0,values[3]))) + 0.0;
 values[8] = values[4];
 goto math_end_8;
 ::math_false_8::;
@@ -422,6 +424,10 @@ return values[8] end)()
                         cata::lua_platform::detail::callback_scope callback( *owner );
                         call = lua.safe_script( std::string( "return " ) + row.expression, sol::script_pass_on_error );
                     } );
+                    if( !call.valid() ) {
+                        const sol::error error = call;
+                        UNSCOPED_INFO( error.what() );
+                    }
                     REQUIRE( call.valid() );
                     CHECK( call.get<double>() == expected );
                     CHECK( rng_get_engine() == after );
