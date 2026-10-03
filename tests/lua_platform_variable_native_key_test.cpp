@@ -1,7 +1,9 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <string_view>
+
 #include <coordinates.h>
-#include <flexbuffer_json.h>
+#include "flexbuffer_json.h"
 #include <item_uid.h>
 #include <point.h>
 #include <talker.h>
@@ -669,10 +671,10 @@ TEST_CASE( "lua_platform_numeric_variable_duration_matches_native_presence_and_c
         }
     }
     sol::table data = fixture.lua.create_table();
-    data[key] = true;
+    data.raw_set( key, true );
     CHECK( require_value( read_context( data,
                                         key ) )["value"].get<double>() == diag_value( true ).dbl() );
-    data[key] = false;
+    data.raw_set( key, false );
     CHECK( require_value( read_context( data,
                                         key ) )["value"].get<double>() == diag_value( false ).dbl() );
     const sol::table missing = require_value( read_context( sol::nil, key ) );
