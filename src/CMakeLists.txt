@@ -294,6 +294,7 @@ if (TILES)
     string(REPLACE "," "-" _SHADER_STAMP_TAG "${CATA_SHADER_FORMATS}")
     set(_SHADERS_STAMP ${_SHADERS_DIR}/build-${_SHADER_STAMP_TAG}.stamp)
     file(GLOB _SHADER_SOURCES "${_SHADERS_DIR}/*.frag" "${_SHADERS_DIR}/*.vert")
+    file(GLOB _SHADER_INCLUDES "${_SHADERS_DIR}/*.glsl")
     find_package(Python3 COMPONENTS Interpreter REQUIRED)
     add_custom_command(
             OUTPUT ${_SHADERS_STAMP}
@@ -303,7 +304,7 @@ if (TILES)
                 --formats ${CATA_SHADER_FORMATS}
                 --stamp ${_SHADERS_STAMP}
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-            DEPENDS ${_SHADER_SOURCES}
+            DEPENDS ${_SHADER_SOURCES} ${_SHADER_INCLUDES}
                     ${CMAKE_SOURCE_DIR}/tools/build_shaders.py
             COMMENT "Compiling shader artifacts (${CATA_SHADER_FORMATS})"
     )

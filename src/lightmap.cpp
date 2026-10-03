@@ -255,11 +255,11 @@ bool map::build_vision_transparency_cache( int zlev )
     const tripoint_bub_ms p = player_character.pos_bub();
     const bool is_player_z = p.z() == zlev;
     const bool low_profile = is_player_z && ( player_character.is_crouching() ||
-                             player_character.is_prone() ||
-                             ( player_character.has_effect( effect_quadruped_full ) &&
-                               player_character.is_running() ) );
+        player_character.is_prone() ||
+        ( player_character.has_effect( effect_quadruped_full ) &&
+          player_character.is_running() ) );
     const std::optional<tripoint_bub_ms> override_origin = is_player_z ?
-            std::make_optional( p ) : std::nullopt;
+        std::make_optional( p ) : std::nullopt;
     const bool observer_changed = override_origin != map_cache.vision_transparency_override_origin ||
                                   low_profile != map_cache.vision_transparency_low_profile;
     if( map_cache.transparency_cache_dirty.none() && !observer_changed ) {
@@ -513,6 +513,7 @@ void map::generate_lightmap( const int zlev )
     map_cache.lightmap_dirty = false;
     // Apparent visibility depends on the rebuilt lighting, even if sight is unchanged.
     invalidate_visibility_cache();
+    map_cache.lightmap_generation = next_cache_generation();
 
     auto &lm = map_cache.lm;
     auto &sm = map_cache.sm;
@@ -669,7 +670,7 @@ void map::generate_lightmap( const int zlev )
             // TODO: [lightmap] Allow creatures to have light attacks (i.e.: eyebot)
             // TODO: [lightmap] Allow creatures to have facing and arc lights
             float critter_luminance = critter.calculate_by_enchantment( critter.type->luminance,
-                                      enchant_vals::mod::LUMINATION, true );
+                enchant_vals::mod::LUMINATION, true );
             if( critter_luminance > 0 ) {
                 apply_light_source( mp, critter_luminance );
             }
@@ -1218,7 +1219,7 @@ void castLight( cata::mdarray<Out, point_bub_ms> &output_cache,
         bool started_row = false;
         T current_transparency( 0.0 );
         float away = start - ( -distance + 0.5f ) / ( -distance -
-                     0.5f ); //The distance between our first leadingEdge and start
+            0.5f ); //The distance between our first leadingEdge and start
 
         //We initialize delta.x to -distance adjusted so that the commented start < leadingEdge condition below is never false
         delta.x = -distance + std::max( static_cast<int>( std::ceil( away * ( -distance - 0.5f ) ) ), 0 );
@@ -1398,6 +1399,9 @@ void map::build_seen_cache( const tripoint_bub_ms &origin, const int target_z, i
         seen_caches, transparency_caches, floor_caches, origin, penalty, 1.0,
         directions_to_cast );
     seen_cache_process_ledges( seen_caches, floor_caches, std::nullopt );
+    // set here too: the early return below skips the final set after the
+    // mirror pass
+    seen_cache_generation = next_cache_generation();
 
     const optional_vpart_position vp = veh_at( origin );
     if( !vp ) {
@@ -1463,6 +1467,7 @@ void map::build_seen_cache( const tripoint_bub_ms &origin, const int target_z, i
         castLightAll<float, float, sight_calc, sight_check, update_light, accumulate_transparency>(
             *mocache, transparency_cache, mirror_pos.xy(), offsetDistance );
     }
+    seen_cache_generation = next_cache_generation();
 }
 
 void map::seen_cache_process_ledges( array_of_grids_of<float> &seen_caches,

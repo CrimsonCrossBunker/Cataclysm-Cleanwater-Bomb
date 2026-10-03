@@ -58,6 +58,7 @@
 #include "json.h"
 #include "lua_platform_hooks.h"
 #include "lua_platform_runtime.h"
+#include "level_cache.h"
 #include "map.h"
 #include "map_memory.h"
 #include "map_scale_constants.h"
@@ -1232,6 +1233,12 @@ bool avatar::cant_see( const tripoint_bub_ms &p ) const
     return aim_cache[p.x()][p.y()];
 }
 
+void avatar::mark_aim_cache_dirty()
+{
+    aim_cache_dirty = true;
+    aim_cache_generation = next_cache_generation();
+}
+
 void avatar::rebuild_aim_cache() const
 {
     map &here = get_map();
@@ -1242,7 +1249,7 @@ void avatar::rebuild_aim_cache() const
     double pi = 2 * acos( 0.0 );
 
     const tripoint_bub_ms local_last_target = here.get_bub(
-                last_target_pos.value() );
+            last_target_pos.value() );
     const tripoint_bub_ms pos = pos_bub( here );
     float base_angle = atan2f( local_last_target.y() - pos.y(),
                                local_last_target.x() - pos.x() );
