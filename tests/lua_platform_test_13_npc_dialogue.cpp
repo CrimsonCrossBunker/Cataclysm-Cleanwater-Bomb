@@ -420,6 +420,9 @@ TEST_CASE( "lua_platform_open_dialogue_scopes_platform_topics_to_calling_runtime
     const std::shared_ptr<cata::lua_platform::runtime> owner_runtime =
         cata::lua_platform::make_runtime(
             "dialogue_topic_owner", 81, owner_lua );
+    on_out_of_scope runtime_cleanup( []() {
+        cata::lua_platform::clear_active_runtimes();
+    } );
     cata::lua_platform::install_runtime_api(
         owner_runtime, owner_lua, owner_ccb );
 
@@ -502,6 +505,9 @@ TEST_CASE( "lua_platform_open_dialogue_scopes_platform_topics_to_calling_runtime
     const std::shared_ptr<cata::lua_platform::runtime> foreign_runtime =
         cata::lua_platform::make_runtime(
             "dialogue_topic_foreign", 81, foreign_lua );
+    on_out_of_scope foreign_runtime_cleanup( []() {
+        cata::lua_platform::clear_active_runtimes();
+    } );
     cata::lua_platform::set_active_runtimes( {
         owner_runtime, foreign_runtime
     } );
@@ -1224,6 +1230,9 @@ TEST_CASE( "lua_platform_dialogue_item_grant_matches_native_talk_effect",
     sol::table ccb = owner_lua.create_table();
     const std::shared_ptr<cata::lua_platform::runtime> owner_runtime =
         cata::lua_platform::make_runtime( "dialogue_item_grant", 92, owner_lua );
+    on_out_of_scope runtime_cleanup( []() {
+        cata::lua_platform::clear_active_runtimes();
+    } );
     cata::lua_platform::install_runtime_api( owner_runtime, owner_lua, ccb );
     owner_lua["ccb"] = ccb;
     owner_lua.script( R"(
@@ -1386,6 +1395,9 @@ TEST_CASE( "lua_platform_dialogue_purchase_pet_matches_native_talk_effect",
     sol::table ccb = owner_lua.create_table();
     const std::shared_ptr<cata::lua_platform::runtime> owner_runtime =
         cata::lua_platform::make_runtime( "dialogue_pet_purchase", 93, owner_lua );
+    on_out_of_scope runtime_cleanup( []() {
+        cata::lua_platform::clear_active_runtimes();
+    } );
     cata::lua_platform::install_runtime_api( owner_runtime, owner_lua, ccb );
     owner_lua["ccb"] = ccb;
     owner_lua.script( R"(
@@ -1580,6 +1592,9 @@ TEST_CASE( "lua_platform_dialogue_effect_condition_uses_native_reason_body_part"
     sol::state lua;
     const std::shared_ptr<cata::lua_platform::runtime> owner_runtime =
         cata::lua_platform::make_runtime( "dialogue_effect_condition", 94, lua );
+    on_out_of_scope runtime_cleanup( []() {
+        cata::lua_platform::clear_active_runtimes();
+    } );
     cata::lua_platform::set_active_runtimes( { owner_runtime } );
     cata::lua_platform::runtime_world_ready( true );
     const cata::lua_platform::game_handle_runtime runtime_identity =
@@ -1857,6 +1872,9 @@ TEST_CASE( "lua_platform_dialogue_pet_purchase_requires_interlocutor",
     sol::state lua;
     const std::shared_ptr<cata::lua_platform::runtime> owner_runtime =
         cata::lua_platform::make_runtime( "dialogue_pet_purchase_no_beta", 95, lua );
+    on_out_of_scope runtime_cleanup( []() {
+        cata::lua_platform::clear_active_runtimes();
+    } );
     cata::lua_platform::set_active_runtimes( { owner_runtime } );
     cata::lua_platform::runtime_world_ready( true );
     const cata::lua_platform::game_handle_runtime runtime_identity =
@@ -2118,6 +2136,10 @@ TEST_CASE( "lua_platform_dialogue_mission_success_matches_native_talk_effect",
     sol::table ccb = owner_lua.create_table();
     const std::shared_ptr<cata::lua_platform::runtime> owner_runtime =
         cata::lua_platform::make_runtime( "dialogue_mission_success", 94, owner_lua );
+    // Retire the runtime while its borrowed Lua state and participants are still alive.
+    on_out_of_scope runtime_cleanup( []() {
+        cata::lua_platform::clear_active_runtimes();
+    } );
     cata::lua_platform::install_runtime_api( owner_runtime, owner_lua, ccb );
     owner_lua["ccb"] = ccb;
     owner_lua.script( R"(
@@ -2285,6 +2307,10 @@ TEST_CASE( "lua_platform_dialogue_mission_failure_sequence_matches_native_talk_e
     sol::table ccb = owner_lua.create_table();
     const std::shared_ptr<cata::lua_platform::runtime> owner_runtime =
         cata::lua_platform::make_runtime( "dialogue_mission_failure", 95, owner_lua );
+    // Retire the runtime while its borrowed Lua state and participants are still alive.
+    on_out_of_scope runtime_cleanup( []() {
+        cata::lua_platform::clear_active_runtimes();
+    } );
     cata::lua_platform::install_runtime_api( owner_runtime, owner_lua, ccb );
     owner_lua["ccb"] = ccb;
     owner_lua.script( R"(
@@ -2464,14 +2490,14 @@ TEST_CASE( "lua_platform_dialogue_item_offer_delegates_native_reason_and_order",
     // that virtual result here so acceptance, refusal, and cancellation are
     // deterministic without opening the real titled item menu.
     cata::lua_platform::clear_active_runtimes();
-    on_out_of_scope cleanup( []() {
-        cata::lua_platform::clear_active_runtimes();
-    } );
-
     sol::state owner_lua;
     sol::table ccb = owner_lua.create_table();
     const std::shared_ptr<cata::lua_platform::runtime> owner_runtime =
         cata::lua_platform::make_runtime( "dialogue_item_offer", 91, owner_lua );
+    // Retire the runtime while its borrowed Lua state and participants are still alive.
+    on_out_of_scope runtime_cleanup( []() {
+        cata::lua_platform::clear_active_runtimes();
+    } );
     cata::lua_platform::install_runtime_api( owner_runtime, owner_lua, ccb );
     owner_lua.script( R"(
         item_offer_events = {}
@@ -2932,11 +2958,6 @@ TEST_CASE( "lua_platform_dialogue_debug_shows_failed_switch_responses_like_nativ
            "[lua][platform][dialogue][runtime][semantic]" )
 {
     cata::lua_platform::clear_active_runtimes();
-    struct dialogue_debug_cleanup {
-        ~dialogue_debug_cleanup() {
-            cata::lua_platform::clear_active_runtimes();
-        }
-    } cleanup;
 
     avatar speaker;
     speaker.normalize();
@@ -3040,6 +3061,10 @@ TEST_CASE( "lua_platform_dialogue_debug_shows_failed_switch_responses_like_nativ
     sol::table ccb = owner_lua.create_table();
     const std::shared_ptr<cata::lua_platform::runtime> owner_runtime =
         cata::lua_platform::make_runtime( "dialogue_debug_conditions", 96, owner_lua );
+    // Retire the runtime while its borrowed Lua state and participants are still alive.
+    on_out_of_scope runtime_cleanup( []() {
+        cata::lua_platform::clear_active_runtimes();
+    } );
     cata::lua_platform::install_runtime_api( owner_runtime, owner_lua, ccb );
     owner_lua["ccb"] = ccb;
     sol::table false_switch = owner_lua.create_table();

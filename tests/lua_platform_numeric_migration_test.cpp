@@ -22,13 +22,13 @@ TEST_CASE( "lua_platform_numeric_migration_preserves_integer_context_and_math_fa
 {
     using namespace cata::lua_platform;
     clear_active_runtimes();
-    const on_out_of_scope cleanup( []() {
-        clear_active_runtimes();
-    } );
     sol::state lua;
     lua.open_libraries( sol::lib::base, sol::lib::math, sol::lib::string );
     sol::table ccb = lua.create_table();
     const std::shared_ptr<runtime> owner = make_runtime( "numeric_migration", 7114, lua );
+    const on_out_of_scope cleanup( []() {
+        clear_active_runtimes();
+    } );
     install_runtime_api( owner, lua, ccb );
     set_active_runtimes( { owner } );
     owner->world_is_ready = true;
