@@ -31,17 +31,17 @@ sources:
 - id: json-object-types
   path: data/reference/json/ccb_json_object_types.json
   selector: type
-  source_fingerprint: sha256:c03ffe020550d4eb6e12b7915a563f97cad79c7a3ce4fd2ed8d1b03b973c1202
+  source_fingerprint: sha256:b4276a16a6b9e9bee699952000bc913511e4d853c305019688a52c1f78e3df6d
   entry_count: 190
 - id: eoc-conditions
   path: data/reference/json/ccb_eoc_conditions.json
   selector: key
-  source_fingerprint: sha256:c03ffe020550d4eb6e12b7915a563f97cad79c7a3ce4fd2ed8d1b03b973c1202
+  source_fingerprint: sha256:b4276a16a6b9e9bee699952000bc913511e4d853c305019688a52c1f78e3df6d
   entry_count: 275
 - id: eoc-effects
   path: data/reference/json/ccb_eoc_effects.json
   selector: key
-  source_fingerprint: sha256:c03ffe020550d4eb6e12b7915a563f97cad79c7a3ce4fd2ed8d1b03b973c1202
+  source_fingerprint: sha256:b4276a16a6b9e9bee699952000bc913511e4d853c305019688a52c1f78e3df6d
   entry_count: 311
 summary:
   total: 776
@@ -4334,7 +4334,7 @@ entries:
   - src/lua_platform_variables.cpp
   - src/lua_platform_world.cpp
   - tests/lua_platform_test.cpp
-  - tests/lua_platform_test_09_world_content.cpp
+  - tests/lua_platform_test_09_world_content_test.cpp
   - tests/lua_platform_variable_native_key_test.cpp
   - tools/migrate_lua_first.py
   - tools/test_migrate_lua_first.py
