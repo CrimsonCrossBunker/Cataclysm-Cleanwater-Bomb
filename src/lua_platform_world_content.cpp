@@ -257,9 +257,7 @@ struct overmap_terrain_data : definition_base {
 };
 
 struct special_terrain_data {
-    int x = 0;
-    int y = 0;
-    int z = 0;
+    tripoint position = tripoint::zero;
     std::string terrain;
     std::set<std::string> locations;
     std::set<std::string> flags;
@@ -268,9 +266,7 @@ struct special_terrain_data {
 };
 
 struct special_connection_data {
-    int x = 0;
-    int y = 0;
-    int z = 0;
+    tripoint position = tripoint::zero;
     std::optional<std::array<int, 3>> from;
     std::string terrain;
     std::string connection;
@@ -278,9 +274,7 @@ struct special_connection_data {
 };
 
 struct special_location_data {
-    int x = 0;
-    int y = 0;
-    int z = 0;
+    tripoint position = tripoint::zero;
     std::set<std::string> locations;
 };
 
@@ -327,9 +321,7 @@ struct integer_distribution_data {
 
 struct mutable_special_piece_data {
     std::string overmap;
-    int x = 0;
-    int y = 0;
-    int z = 0;
+    tripoint position = tripoint::zero;
     std::string rotation = "north";
 };
 
@@ -490,8 +482,7 @@ struct vehicle_part_data : definition_base {
 };
 
 struct vehicle_part_placement_data {
-    int x = 0;
-    int y = 0;
+    point position = point::zero;
     std::string part;
     std::string variant;
     int with_ammo = 0;
@@ -502,8 +493,7 @@ struct vehicle_part_placement_data {
 };
 
 struct vehicle_item_data {
-    int x = 0;
-    int y = 0;
+    point position = point::zero;
     int chance = 0;
     int with_ammo = 0;
     int with_magazine = 0;
@@ -512,8 +502,7 @@ struct vehicle_item_data {
 };
 
 struct vehicle_zone_data {
-    int x = 0;
-    int y = 0;
+    point position = point::zero;
     std::string type;
     std::string name;
     std::string filter;
@@ -628,7 +617,7 @@ price_rule_data read_price_rule( const sol::table &rule )
 }
 
 authored_text read_authored_text( const sol::table &source, const std::string &field,
-                                  authored_text fallback = {} )
+                                  const authored_text &fallback = {} )
 {
     return detail::read_singular_text_or( source.raw_get<sol::object>( field ), fallback,
                                           field );
@@ -1278,9 +1267,9 @@ void hash_definition( std::uint64_t &state, const overmap_special_data &value )
         hash_interval( state, value.spawns->radius );
     }
     for( const special_terrain_data &terrain : value.terrains ) {
-        hash_number( state, terrain.x );
-        hash_number( state, terrain.y );
-        hash_number( state, terrain.z );
+        hash_number( state, terrain.position.x );
+        hash_number( state, terrain.position.y );
+        hash_number( state, terrain.position.z );
         hash_part( state, terrain.terrain );
         hash_strings( state, terrain.locations );
         hash_strings( state, terrain.flags );
@@ -1288,9 +1277,9 @@ void hash_definition( std::uint64_t &state, const overmap_special_data &value )
         hash_part( state, terrain.camp_name );
     }
     for( const special_connection_data &connection : value.connections ) {
-        hash_number( state, connection.x );
-        hash_number( state, connection.y );
-        hash_number( state, connection.z );
+        hash_number( state, connection.position.x );
+        hash_number( state, connection.position.y );
+        hash_number( state, connection.position.z );
         hash_part( state, connection.from ? "present" : "absent" );
         if( connection.from ) {
             for( const int coordinate : *connection.from ) {
@@ -1302,9 +1291,9 @@ void hash_definition( std::uint64_t &state, const overmap_special_data &value )
         hash_bool( state, connection.existing );
     }
     for( const special_location_data &location : value.check_for_locations ) {
-        hash_number( state, location.x );
-        hash_number( state, location.y );
-        hash_number( state, location.z );
+        hash_number( state, location.position.x );
+        hash_number( state, location.position.y );
+        hash_number( state, location.position.z );
         hash_strings( state, location.locations );
     }
     for( const special_join_data &join : value.joins ) {
@@ -1341,9 +1330,9 @@ void hash_definition( std::uint64_t &state, const overmap_special_data &value )
             hash_optional_number( state, rule.weight );
             for( const mutable_special_piece_data &piece : rule.pieces ) {
                 hash_part( state, piece.overmap );
-                hash_number( state, piece.x );
-                hash_number( state, piece.y );
-                hash_number( state, piece.z );
+                hash_number( state, piece.position.x );
+                hash_number( state, piece.position.y );
+                hash_number( state, piece.position.z );
                 hash_part( state, piece.rotation );
             }
         }
@@ -1549,8 +1538,8 @@ void hash_definition( std::uint64_t &state, const vehicle_data &value )
     hash_bool( state, value.color_palette_set );
     hash_part( state, value.color_palette );
     for( const vehicle_part_placement_data &part : value.parts ) {
-        hash_number( state, part.x );
-        hash_number( state, part.y );
+        hash_number( state, part.position.x );
+        hash_number( state, part.position.y );
         hash_part( state, part.part );
         hash_part( state, part.variant );
         hash_number( state, part.with_ammo );
@@ -1563,8 +1552,8 @@ void hash_definition( std::uint64_t &state, const vehicle_data &value )
     hash_part( state, value.extend_parts ? "extend_parts" : "no_extend_parts" );
     if( value.extend_parts ) {
         for( const vehicle_part_placement_data &part : *value.extend_parts ) {
-            hash_number( state, part.x );
-            hash_number( state, part.y );
+            hash_number( state, part.position.x );
+            hash_number( state, part.position.y );
             hash_part( state, part.part );
             hash_part( state, part.variant );
             hash_number( state, part.with_ammo );
@@ -1578,8 +1567,8 @@ void hash_definition( std::uint64_t &state, const vehicle_data &value )
     hash_part( state, value.delete_parts ? "delete_parts" : "no_delete_parts" );
     if( value.delete_parts ) {
         for( const vehicle_part_placement_data &part : *value.delete_parts ) {
-            hash_number( state, part.x );
-            hash_number( state, part.y );
+            hash_number( state, part.position.x );
+            hash_number( state, part.position.y );
             hash_part( state, part.part );
             hash_part( state, part.variant );
             hash_number( state, part.with_ammo );
@@ -1591,8 +1580,8 @@ void hash_definition( std::uint64_t &state, const vehicle_data &value )
         }
     }
     for( const vehicle_item_data &item : value.items ) {
-        hash_number( state, item.x );
-        hash_number( state, item.y );
+        hash_number( state, item.position.x );
+        hash_number( state, item.position.y );
         hash_number( state, item.chance );
         hash_number( state, item.with_ammo );
         hash_number( state, item.with_magazine );
@@ -1604,8 +1593,8 @@ void hash_definition( std::uint64_t &state, const vehicle_data &value )
     }
     hash_bool( state, value.items_set );
     for( const vehicle_zone_data &zone : value.zones ) {
-        hash_number( state, zone.x );
-        hash_number( state, zone.y );
+        hash_number( state, zone.position.x );
+        hash_number( state, zone.position.y );
         hash_part( state, zone.type );
         hash_part( state, zone.name );
         hash_part( state, zone.filter );
@@ -1646,8 +1635,7 @@ std::array<char32_t, 8> read_variant_symbols( const std::string &source,
 bool same_vehicle_part_placement( const vehicle_part_placement_data &lhs,
                                   const vehicle_part_placement_data &rhs )
 {
-    return lhs.x == rhs.x &&
-           lhs.y == rhs.y &&
+    return lhs.position == rhs.position &&
            lhs.part == rhs.part &&
            lhs.variant == rhs.variant &&
            lhs.with_ammo == rhs.with_ammo &&
@@ -1903,7 +1891,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                                                          condition, "power_min" );
                         native_condition.power_max = read_optional<int>(
                                                          condition, "power_max" );
-                        parsed.dynamic.push_back( std::move( native_condition ) );
+                        parsed.dynamic.push_back( native_condition );
                     }
                 }
                 value->epilogues.push_back( std::move( parsed ) );
@@ -2168,9 +2156,9 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                     const std::array<int, 3> point = read_point(
                                                          terrain.get<sol::table>( "point" ), "overmap special point" );
                     special_terrain_data parsed;
-                    parsed.x = point[0];
-                    parsed.y = point[1];
-                    parsed.z = point[2];
+                    parsed.position.x = point[0];
+                    parsed.position.y = point[1];
+                    parsed.position.z = point[2];
                     parsed.terrain = terrain.get_or( "terrain", terrain.get_or(
                                                          "overmap", std::string() ) );
                     parsed.locations = read_string_set(
@@ -2191,9 +2179,9 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                     const std::array<int, 3> point = read_point(
                                                          connection.get<sol::table>( "point" ), "overmap connection point" );
                     special_connection_data parsed;
-                    parsed.x = point[0];
-                    parsed.y = point[1];
-                    parsed.z = point[2];
+                    parsed.position.x = point[0];
+                    parsed.position.y = point[1];
+                    parsed.position.z = point[2];
                     if( const sol::optional<sol::table> from =
                             connection.get<sol::optional<sol::table>>( "from" ) ) {
                         parsed.from = read_point( *from, "overmap connection from" );
@@ -2226,7 +2214,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                     const std::array<int, 3> coordinates = read_point(
                             *point, "mutable special checked point" );
                     value->check_for_locations.push_back( {
-                        coordinates[0], coordinates[1], coordinates[2],
+                        tripoint( coordinates[0], coordinates[1], coordinates[2] ),
                         read_string_set( allowed, "mutable special checked location types" )
                     } );
                 }
@@ -2376,7 +2364,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                         parsed_rule.weight = read_optional<int>( rule, "weight" );
                         const std::string single = rule.get_or( "overmap", std::string() );
                         if( !single.empty() ) {
-                            parsed_rule.pieces.push_back( { single, 0, 0, 0, "north" } );
+                            parsed_rule.pieces.push_back( { single, tripoint::zero, "north" } );
                         } else if( const sol::optional<sol::table> chunk =
                                        rule.get<sol::optional<sol::table>>( "chunk" ) ) {
                             for( const sol::table &piece : read_dense_array<sol::table>(
@@ -2389,7 +2377,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                                 }
                                 parsed_rule.pieces.push_back( {
                                     piece.get_or( "overmap", std::string() ),
-                                    point[0], point[1], point[2],
+                                    tripoint( point[0], point[1], point[2] ),
                                     piece.get_or( "rotation", piece.get_or(
                                                       "rot", std::string( "north" ) ) )
                                 } );
@@ -2739,8 +2727,8 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
             require_known_table_keys( part, placement_fields,
                                       "vehicle part placement" );
             vehicle_part_placement_data parsed;
-            parsed.x = part.get_or( "x", 0 );
-            parsed.y = part.get_or( "y", 0 );
+            parsed.position.x = part.get_or( "x", 0 );
+            parsed.position.y = part.get_or( "y", 0 );
             parsed.part = part.get_or( "part", std::string() );
             parsed.variant = part.get_or( "variant", std::string() );
             parsed.with_ammo = part.get_or( "with_ammo", 0 );
@@ -2799,8 +2787,8 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
             for( const sol::table &item : read_dense_array<sol::table>( *items,
                     "vehicle item spawns" ) ) {
                 vehicle_item_data parsed;
-                parsed.x = item.get_or( "x", 0 );
-                parsed.y = item.get_or( "y", 0 );
+                parsed.position.x = item.get_or( "x", 0 );
+                parsed.position.y = item.get_or( "y", 0 );
                 parsed.chance = item.get_or( "chance", 0 );
                 parsed.with_ammo = item.get_or( "with_ammo", 0 );
                 parsed.with_magazine = item.get_or( "with_magazine", 0 );
@@ -2833,7 +2821,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
             for( const sol::table &zone : read_dense_array<sol::table>( *zones,
                     "vehicle zones" ) ) {
                 value->zones.push_back( {
-                    zone.get_or( "x", 0 ), zone.get_or( "y", 0 ),
+                    point( zone.get_or( "x", 0 ), zone.get_or( "y", 0 ) ),
                     zone.get_or( "type", std::string() ),
                     zone.get_or( "name", std::string() ),
                     zone.get_or( "filter", std::string() )
@@ -3082,7 +3070,7 @@ bool world_content_transaction::validate( const runtime &owner_runtime,
             if( special.subtype == "fixed" ) {
                 std::set<std::tuple<int, int, int>> points;
                 for( const special_terrain_data &terrain : special.terrains ) {
-                    if( !points.emplace( terrain.x, terrain.y, terrain.z ).second ) {
+                    if( !points.emplace( terrain.position.x, terrain.position.y, terrain.position.z ).second ) {
                         throw std::runtime_error( "overmap special '" + special.id +
                                                   "' has duplicate terrain coordinates" );
                     }
@@ -3160,7 +3148,7 @@ bool world_content_transaction::validate( const runtime &owner_runtime,
                         std::set<std::tuple<int, int, int>> positions;
                         for( const mutable_special_piece_data &piece : rule.pieces ) {
                             if( special.mutable_terrains.count( piece.overmap ) == 0 ||
-                                !positions.emplace( piece.x, piece.y, piece.z ).second ) {
+                                !positions.emplace( piece.position.x, piece.position.y, piece.position.z ).second ) {
                                 throw std::runtime_error( "mutable overmap special '" +
                                                           special.id +
                                                           "' rule has an invalid piece" );
@@ -3346,8 +3334,8 @@ bool world_content_transaction::validate( const runtime &owner_runtime,
                       part.ammo_quantity.second < part.ammo_quantity.first ) ) {
                     throw std::runtime_error( "vehicle '" + vehicle.id +
                                               "' has an invalid part placement '" + part.part +
-                                              "' at (" + std::to_string( part.x ) + ", " +
-                                              std::to_string( part.y ) + ")" );
+                                              "' at (" + std::to_string( part.position.x ) + ", " +
+                                              std::to_string( part.position.y ) + ")" );
                 }
             }
             for( const std::optional<std::vector<vehicle_part_placement_data>> *patch : {
@@ -3361,8 +3349,8 @@ bool world_content_transaction::validate( const runtime &owner_runtime,
                               part.ammo_quantity.second < part.ammo_quantity.first ) ) {
                             throw std::runtime_error( "vehicle '" + vehicle.id +
                                                       "' has an invalid collection patch for part '" + part.part +
-                                                      "' at (" + std::to_string( part.x ) + ", " +
-                                                      std::to_string( part.y ) + ")" );
+                                                      "' at (" + std::to_string( part.position.x ) + ", " +
+                                                      std::to_string( part.position.y ) + ")" );
                         }
                     }
                 }
@@ -3548,7 +3536,7 @@ bool world_content_transaction::apply( std::string &error )
                     native_condition.power_min = condition.power_min;
                     native_condition.power_max = condition.power_max;
                     native_epilogue.dynamic_conditions.push_back(
-                        std::move( native_condition ) );
+                        native_condition );
                 }
                 native.epilogue_data.push_back( std::move( native_epilogue ) );
             }
@@ -3805,7 +3793,7 @@ bool world_content_transaction::apply( std::string &error )
                         locations.insert( overmap_location_id( location ) );
                     }
                     fixed->terrains.emplace_back(
-                        tripoint_rel_omt( terrain.x, terrain.y, terrain.z ),
+                        tripoint_rel_omt( terrain.position.x, terrain.position.y, terrain.position.z ),
                         oter_str_id( terrain.terrain ), locations, terrain.flags );
                     if( terrain.camp_owner ) {
                         fixed->terrains.back().camp_owner = faction_id( *terrain.camp_owner );
@@ -3815,7 +3803,7 @@ bool world_content_transaction::apply( std::string &error )
                 for( const special_connection_data &connection : source.connections ) {
                     overmap_special_connection native_connection;
                     native_connection.p = tripoint_rel_omt(
-                                              connection.x, connection.y, connection.z );
+                                              connection.position.x, connection.position.y, connection.position.z );
                     if( connection.from ) {
                         native_connection.from = tripoint_rel_omt(
                                                      ( *connection.from )[0], ( *connection.from )[1],
@@ -3825,7 +3813,7 @@ bool world_content_transaction::apply( std::string &error )
                     native_connection.connection = overmap_connection_id(
                                                        connection.connection );
                     native_connection.existing = connection.existing;
-                    fixed->connections.push_back( std::move( native_connection ) );
+                    fixed->connections.push_back( native_connection );
                 }
                 native.data_ = std::move( fixed );
             } else {
@@ -3833,7 +3821,7 @@ bool world_content_transaction::apply( std::string &error )
                 for( const special_location_data &location : source.check_for_locations ) {
                     overmap_special_locations native_location;
                     native_location.p = tripoint_rel_omt(
-                                            location.x, location.y, location.z );
+                                            location.position.x, location.position.y, location.position.z );
                     for( const std::string &allowed : location.locations ) {
                         native_location.locations.insert( overmap_location_id( allowed ) );
                     }
@@ -3869,7 +3857,7 @@ bool world_content_transaction::apply( std::string &error )
                         mutable_special_connection native_connection;
                         native_connection.connection = overmap_connection_id( connection );
                         native_terrain.connections.emplace(
-                            read_cube_direction( direction ), std::move( native_connection ) );
+                            read_cube_direction( direction ), native_connection );
                     }
                     if( terrain.camp_owner ) {
                         native_terrain.camp_owner = faction_id( *terrain.camp_owner );
@@ -3893,7 +3881,7 @@ bool world_content_transaction::apply( std::string &error )
                             mutable_overmap_placement_rule_piece native_piece;
                             native_piece.overmap_id = piece.overmap;
                             native_piece.pos = tripoint_rel_omt(
-                                                   piece.x, piece.y, piece.z );
+                                                   piece.position.x, piece.position.y, piece.position.z );
                             native_piece.rot = read_rotation( piece.rotation );
                             native_rule.pieces.push_back( std::move( native_piece ) );
                         }
@@ -3978,13 +3966,14 @@ bool world_content_transaction::apply( std::string &error )
                 native.dmg_mod = *source.damage_modifier;
             }
             if( source.power_watts ) {
-                native.power = units::from_watt( *source.power_watts );
+                native.power = units::from_watt( static_cast<std::int64_t>( *source.power_watts ) );
             }
             if( source.epower_watts ) {
-                native.epower = units::from_watt( *source.epower_watts );
+                native.epower = units::from_watt( static_cast<std::int64_t>( *source.epower_watts ) );
             }
             if( source.energy_consumption_watts ) {
-                native.energy_consumption = units::from_watt( *source.energy_consumption_watts );
+                native.energy_consumption = units::from_watt( static_cast<std::int64_t>
+                                            ( *source.energy_consumption_watts ) );
             }
             if( source.bonus ) {
                 native.bonus = *source.bonus;
@@ -4347,7 +4336,7 @@ bool world_content_transaction::apply( std::string &error )
             }
             for( const vehicle_part_placement_data &part : source.parts ) {
                 vehicle_prototype::part_def native_part;
-                native_part.pos = point_rel_ms( part.x, part.y );
+                native_part.pos = point_rel_ms( part.position.x, part.position.y );
                 native_part.part = vpart_id( part.part );
                 native_part.variant = part.variant;
                 native_part.with_ammo = part.with_ammo;
@@ -4365,7 +4354,7 @@ bool world_content_transaction::apply( std::string &error )
             }
             const auto matches_placement = []( const vehicle_prototype::part_def & existing,
             const vehicle_part_placement_data & requested, const bool exact ) {
-                if( existing.pos != point_rel_ms( requested.x, requested.y ) ||
+                if( existing.pos != point_rel_ms( requested.position.x, requested.position.y ) ||
                     existing.part != vpart_id( requested.part ) ||
                     existing.variant != requested.variant ) {
                     return false;
@@ -4402,7 +4391,7 @@ bool world_content_transaction::apply( std::string &error )
                                                   "' extend_parts conflicts with an existing placement" );
                     }
                     vehicle_prototype::part_def native_part;
-                    native_part.pos = point_rel_ms( part.x, part.y );
+                    native_part.pos = point_rel_ms( part.position.x, part.position.y );
                     native_part.part = vpart_id( part.part );
                     native_part.variant = part.variant;
                     native_part.with_ammo = part.with_ammo;
@@ -4437,7 +4426,7 @@ bool world_content_transaction::apply( std::string &error )
             }
             for( const vehicle_item_data &spawn : source.items ) {
                 vehicle_item_spawn native_spawn;
-                native_spawn.pos = point_rel_ms( spawn.x, spawn.y );
+                native_spawn.pos = point_rel_ms( spawn.position.x, spawn.position.y );
                 native_spawn.chance = spawn.chance;
                 native_spawn.with_ammo = spawn.with_ammo;
                 native_spawn.with_magazine = spawn.with_magazine;
@@ -4455,7 +4444,7 @@ bool world_content_transaction::apply( std::string &error )
             for( const vehicle_zone_data &zone : source.zones ) {
                 native.zone_defs.push_back( {
                     zone_type_id( zone.type ), zone.name, zone.filter,
-                    point_rel_ms( zone.x, zone.y )
+                    point_rel_ms( zone.position.x, zone.position.y )
                 } );
             }
             const VehicleGroup *previous_group =

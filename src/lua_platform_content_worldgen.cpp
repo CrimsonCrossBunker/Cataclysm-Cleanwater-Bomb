@@ -1,10 +1,17 @@
 #include "lua_platform_content_worldgen.h"
 
+#include <coordinates.h>
+#include <enums.h>
+#include <map_scale_constants.h>
+#include <type_id.h>
+#include <weighted_list.h>
 #include <algorithm>
 #include <array>
+#include <bitset>
 #include <cctype>
 #include <cmath>
 #include <cstdint>
+#include <exception>
 #include <iomanip>
 #include <limits>
 #include <map>
@@ -31,7 +38,6 @@ extern "C" {
 #include "lua_platform_content.h"
 #include "lua_platform_content_text.h"
 #include "mapdata.h"
-#include "omdata.h"
 #include "options.h"
 #include "overmap_map_data_cache.h"
 #include "overmap_worldgen.h"
@@ -236,6 +242,8 @@ std::pair<std::int64_t, std::int64_t> read_exact_coordinate_table(
         throw std::runtime_error( std::string( description ) +
                                   " coordinates must be native integers" );
     }
+    // Keep both Lua axes wide until their native integer range has been checked.
+    // NOLINTNEXTLINE(cata-combine-locals-into-point)
     const std::int64_t native_x = x.as<std::int64_t>();
     const std::int64_t native_y = y.as<std::int64_t>();
     if( !fits_native_int( native_x ) || !fits_native_int( native_y ) ) {
@@ -265,7 +273,7 @@ void parse_weighted_table_entries(
     const std::string &label,
     std::vector<std::pair<std::string, std::int64_t>> &out_entries )
 {
-    const std::size_t count = require_dense_array( table, label.c_str(), 0, 1024 );
+    const std::size_t count = require_dense_array( table, label, 0, 1024 );
     for( std::size_t i = 1; i <= count; ++i ) {
         const sol::object elem = table.raw_get<sol::object>( i );
         std::string id;
@@ -274,7 +282,7 @@ void parse_weighted_table_entries(
             id = elem.as<std::string>();
         } else if( elem.is<sol::table>() ) {
             const sol::table item = elem.as<sol::table>();
-            if( require_dense_array( item, ( label + " entry" ).c_str(), 2, 2 ) != 2 ) {
+            if( require_dense_array( item, label + " entry", 2, 2 ) != 2 ) {
                 throw std::runtime_error( label + " entries must contain exactly an id and weight" );
             }
             const sol::object id_value = item.raw_get<sol::object>( 1 );
@@ -460,7 +468,7 @@ struct region_settings_lake_definition_handle {
     region_settings_lake_definition_handle &shore_extendable_alias(
         const sol::object &om_terrain_or_options,
         sol::optional<std::string> alias = sol::nullopt,
-        sol::optional<std::string> match_type = sol::nullopt ) {
+        const sol::optional<std::string> &match_type = sol::nullopt ) {
         require_building_handle( token, *definition, "region settings lake" );
         if( om_terrain_or_options.is<sol::table>() ) {
             const sol::table options = om_terrain_or_options.as<sol::table>();
@@ -482,7 +490,7 @@ struct region_settings_lake_definition_handle {
         }
         if( om_terrain_or_options.is<std::string>() && alias.has_value() ) {
             const std::string om_terrain = om_terrain_or_options.as<std::string>();
-            const std::string alias_str = *alias;
+            const std::string &alias_str = *alias;
             const std::string match = match_type.value_or( "exact" );
             if( om_terrain.empty() || alias_str.empty() ) {
                 throw std::runtime_error( "shore extendable alias requires non-empty om_terrain and alias" );
@@ -496,7 +504,7 @@ struct region_settings_lake_definition_handle {
             return *this;
         }
         throw std::runtime_error(
-            "shore_extendable_alias expects a table { om_terrain = ..., alias = ..., [om_terrain_match_type = ...] } or positional strings" );
+            "shore_extendable_alias expects a table { om_terrain = terrain_id, alias = alias_id, [om_terrain_match_type = match_type] } or positional strings" );
     }
 
     std::string id() const {
@@ -1625,11 +1633,9 @@ struct city_definition_data {
     std::string name;
     std::int64_t population = 0;
     std::int64_t size = -1;
-    std::int64_t pos_om_x = 0;
-    std::int64_t pos_om_y = 0;
+    std::array<std::int64_t, 2> pos_om = {};
     bool pos_om_set = false;
-    std::int64_t pos_x = 0;
-    std::int64_t pos_y = 0;
+    std::array<std::int64_t, 2> pos = {};
     bool pos_set = false;
     bool registered = false;
 };
@@ -1672,13 +1678,15 @@ struct city_definition_handle {
         return *this;
     }
 
+    // Preserve the published scalar Lua signature and its wide-axis range checks.
+    // NOLINTNEXTLINE(cata-xy)
     city_definition_handle &pos_om( const std::int64_t x, const std::int64_t y ) {
         require_building_handle( token, *definition, "city" );
         if( !fits_native_int( x ) || !fits_native_int( y ) ) {
             throw std::runtime_error( "city pos_om coordinate outside native integer range" );
         }
-        definition->pos_om_x = x;
-        definition->pos_om_y = y;
+        definition->pos_om[0] = x;
+        definition->pos_om[1] = y;
         definition->pos_om_set = true;
         return *this;
     }
@@ -1689,13 +1697,15 @@ struct city_definition_handle {
         return pos_om( x, y );
     }
 
+    // Preserve the published scalar Lua signature and its wide-axis range checks.
+    // NOLINTNEXTLINE(cata-xy)
     city_definition_handle &pos( const std::int64_t x, const std::int64_t y ) {
         require_building_handle( token, *definition, "city" );
         if( !fits_native_int( x ) || !fits_native_int( y ) ) {
             throw std::runtime_error( "city pos coordinate outside native integer range" );
         }
-        definition->pos_x = x;
-        definition->pos_y = y;
+        definition->pos[0] = x;
+        definition->pos[1] = y;
         definition->pos_set = true;
         return *this;
     }
@@ -3145,15 +3155,15 @@ void worldgen_content_transaction::install_lua_api( sol::state &lua, sol::table 
         if( const sol::optional<sol::table> pos_om_tbl =
                 options.get<sol::optional<sol::table>>( "pos_om" ) ) {
             const auto [x, y] = read_exact_coordinate_table( *pos_om_tbl, "city pos_om" );
-            definition->pos_om_x = x;
-            definition->pos_om_y = y;
+            definition->pos_om[0] = x;
+            definition->pos_om[1] = y;
             definition->pos_om_set = true;
         }
         if( const sol::optional<sol::table> pos_tbl =
                 options.get<sol::optional<sol::table>>( "pos" ) ) {
             const auto [x, y] = read_exact_coordinate_table( *pos_tbl, "city pos" );
-            definition->pos_x = x;
-            definition->pos_y = y;
+            definition->pos[0] = x;
+            definition->pos[1] = y;
             definition->pos_set = true;
         }
         return city_definition_handle{ std::move( definition ), transaction->token };
@@ -4092,10 +4102,10 @@ bool worldgen_content_transaction::validate( const worldgen_validation_index &in
             if( !native_int( definition.database_id ) ||
                 !native_int( definition.population ) ||
                 !native_int( definition.size ) ||
-                !native_int( definition.pos_om_x ) ||
-                !native_int( definition.pos_om_y ) ||
-                !native_int( definition.pos_x ) ||
-                !native_int( definition.pos_y ) ) {
+                !native_int( definition.pos_om[0] ) ||
+                !native_int( definition.pos_om[1] ) ||
+                !native_int( definition.pos[0] ) ||
+                !native_int( definition.pos[1] ) ) {
                 throw std::runtime_error( "city '" + definition.id +
                                           "' has integer values outside the native range" );
             }
@@ -5105,10 +5115,10 @@ bool worldgen_content_transaction::apply( std::string &error )
             native.name = entry.definition->name;
             native.population = static_cast<int>( entry.definition->population );
             native.size = static_cast<int>( entry.definition->size );
-            native.pos_om = point_abs_om( static_cast<int>( entry.definition->pos_om_x ),
-                                          static_cast<int>( entry.definition->pos_om_y ) );
-            native.pos = point_om_omt( static_cast<int>( entry.definition->pos_x ),
-                                       static_cast<int>( entry.definition->pos_y ) );
+            native.pos_om = point_abs_om( static_cast<int>( entry.definition->pos_om[0] ),
+                                          static_cast<int>( entry.definition->pos_om[1] ) );
+            native.pos = point_om_omt( static_cast<int>( entry.definition->pos[0] ),
+                                       static_cast<int>( entry.definition->pos[1] ) );
             native.was_loaded = true;
             detail::city_registry().insert( native );
         }
@@ -6005,10 +6015,10 @@ void worldgen_content_transaction::append_fingerprint( std::uint64_t &state ) co
         hash_part( state, entry.definition->name );
         hash_part( state, std::to_string( entry.definition->population ) );
         hash_part( state, std::to_string( entry.definition->size ) );
-        hash_part( state, std::to_string( entry.definition->pos_om_x ) );
-        hash_part( state, std::to_string( entry.definition->pos_om_y ) );
-        hash_part( state, std::to_string( entry.definition->pos_x ) );
-        hash_part( state, std::to_string( entry.definition->pos_y ) );
+        hash_part( state, std::to_string( entry.definition->pos_om[0] ) );
+        hash_part( state, std::to_string( entry.definition->pos_om[1] ) );
+        hash_part( state, std::to_string( entry.definition->pos[0] ) );
+        hash_part( state, std::to_string( entry.definition->pos[1] ) );
     }
     for( const faction_mission_registration &entry : pimpl_->faction_missions ) {
         hash_part( state, "faction_mission" );

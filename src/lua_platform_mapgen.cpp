@@ -2,7 +2,11 @@
 
 #include "lua_platform_mapgen.h"
 
+#include <character_id.h>
 #include <coordinates.h>
+#include <memory_fast.h>
+#include <ret_val.h>
+
 extern "C" {
 #include <lua.h>
 }
@@ -14,6 +18,7 @@ extern "C" {
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <ostream>
 #include <set>
 #include <stdexcept>
 #include <string_view>
@@ -23,7 +28,6 @@ extern "C" {
 #include "clzones.h"
 #include "computer.h"
 #include "debug.h"
-#include "faction.h"
 #include "game.h"
 #include "item.h"
 #include "item_group.h"
@@ -38,9 +42,11 @@ extern "C" {
 #include "npc.h"
 #include "omdata.h"
 #include "point.h"
-#include "trap.h"
 #include "timed_event.h"
+#include "trap.h"
 #include "type_id.h"
+
+static const furn_str_id furn_f_console( "f_console" );
 
 namespace cata::lua_platform
 {
@@ -323,7 +329,7 @@ sol::table mapgen_transaction_value(
 }
 
 sol::table mapgen_transaction_error(
-    sol::state_view state,
+    const sol::state_view &state,
     const overmap_tile_token &target,
     const mapgen_update_token &update,
     const platform_mapgen_transaction_report &report )
@@ -349,7 +355,7 @@ sol::table apply_mapgen_update(
     const sol::optional<sol::object> &requested_options,
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation,
-    std::function<void()> require_write )
+    const std::function<void()> &require_write )
 {
     sol::state_view state( lua );
     if( !requested_target.is<overmap_tile_token>() ) {
@@ -434,7 +440,7 @@ sol::table run_mapgen_update(
     const sol::object &requested_update,
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation,
-    std::function<void()> require_write )
+    const std::function<void()> &require_write )
 {
     sol::state_view state( lua );
     if( !requested_target.is<overmap_tile_token>() ) {
@@ -491,7 +497,7 @@ sol::table schedule_mapgen_update(
     const sol::optional<std::string> &requested_key,
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation,
-    std::function<void()> require_write )
+    const std::function<void()> &require_write )
 {
     sol::state_view state( lua );
     if( !requested_target.is<overmap_tile_token>() ) {
@@ -549,10 +555,10 @@ sol::table schedule_mapgen_update(
 
 void install_mapgen_service_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write )
 {
     sol::state_view lua( services.lua_state() );
     lua.new_usertype<mapgen_update_token>(
@@ -608,8 +614,8 @@ void install_mapgen_service_api(
     mapgen.set_function(
         "apply",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state state, sol::object target,
-    sol::object update, sol::optional<sol::object> options ) {
+            sol::this_state state, const sol::object & target,
+    const sol::object & update, const sol::optional<sol::object> &options ) {
         return apply_mapgen_update(
                    state, target, update, options,
                    current_runtime_generation(),
@@ -618,7 +624,7 @@ void install_mapgen_service_api(
     mapgen.set_function(
         "run_update",
         [current_runtime_generation, current_world_generation, require_write](
-    sol::this_state state, sol::object target, sol::object update ) {
+    sol::this_state state, const sol::object & target, const sol::object & update ) {
         return run_mapgen_update(
                    state, target, update,
                    current_runtime_generation(),
@@ -627,7 +633,7 @@ void install_mapgen_service_api(
     mapgen.set_function(
         "schedule_update",
         [current_runtime_generation, current_world_generation, require_write](
-            sol::this_state state, sol::object target, sol::object update,
+            sol::this_state state, const sol::object & target, const sol::object & update,
             const script_time_duration & delay,
     const sol::optional<std::string> &key ) {
         return schedule_mapgen_update(
@@ -661,7 +667,7 @@ void require_id_kind( const script_game_id &id, const std::string_view kind,
     }
 }
 
-void require_mapgen_id( const std::string &id, const std::string_view api_name )
+void require_mapgen_id( const std::string_view id, const std::string_view api_name )
 {
     if( id.empty() || id.size() > 256 ||
         id.find( '\0' ) != std::string::npos ) {
@@ -671,12 +677,12 @@ void require_mapgen_id( const std::string &id, const std::string_view api_name )
     }
 }
 
-void require_rectangle( const int x1, const int y1, const int x2, const int y2,
+void require_rectangle( const point &from, const point &to,
                         const std::string_view api_name )
 {
-    if( x1 < 0 || y1 < 0 || x2 < x1 || y2 < y1 ||
-        x2 >= script_mapgen_context::map_width ||
-        y2 >= script_mapgen_context::map_height ) {
+    if( from.x < 0 || from.y < 0 || to.x < from.x || to.y < from.y ||
+        to.x >= script_mapgen_context::map_width ||
+        to.y >= script_mapgen_context::map_height ) {
         throw std::out_of_range(
             std::string( api_name ) +
             " rectangle must stay within the current 24x24 OMT" );
@@ -1033,17 +1039,15 @@ namespace
 
 template<typename State>
 tripoint_bub_ms bounded_position(
-    State &state,
-    const int x, const int y )
+    State &state, const point &position )
 {
-    if( x < 0 || x >= script_mapgen_context::map_width ||
-        y < 0 || y >= script_mapgen_context::map_height ) {
+    if( position.x < 0 || position.x >= script_mapgen_context::map_width ||
+        position.y < 0 || position.y >= script_mapgen_context::map_height ) {
         throw std::out_of_range(
             "Lua mapgen coordinates must stay within the current "
             "24x24 OMT" );
     }
-    const tripoint_bub_ms result(
-        x, y, state.data->zlevel() );
+    const tripoint_bub_ms result( tripoint( position, state.data->zlevel() ) );
     if( !state.data->m.inbounds( result ) ) {
         throw std::out_of_range(
             "Lua mapgen coordinate is outside the bound map" );
@@ -1053,12 +1057,14 @@ tripoint_bub_ms bounded_position(
 
 } // namespace
 
+// These methods are bound directly to the published positional Lua mapgen signatures.
+// NOLINTBEGIN(cata-xy)
 script_game_id script_mapgen_context::terrain_at(
     const int x, const int y ) const
 {
     context_state &state = require_state();
     const tripoint_bub_ms position =
-        bounded_position( state, x, y );
+        bounded_position( state, point( x, y ) );
     consume( 1 );
     return script_game_id(
                "terrain", state.data->m.ter( position ).id().str() );
@@ -1069,7 +1075,7 @@ std::optional<script_game_id> script_mapgen_context::furniture_at(
 {
     context_state &state = require_state();
     const tripoint_bub_ms position =
-        bounded_position( state, x, y );
+        bounded_position( state, point( x, y ) );
     consume( 1 );
     const furn_str_id id =
         state.data->m.furn( position ).id();
@@ -1084,7 +1090,7 @@ std::optional<script_game_id> script_mapgen_context::trap_at(
 {
     context_state &state = require_state();
     const tripoint_bub_ms position =
-        bounded_position( state, x, y );
+        bounded_position( state, point( x, y ) );
     consume( 1 );
     const trap_str_id id =
         state.data->m.tr_at( position ).id;
@@ -1101,7 +1107,7 @@ bool script_mapgen_context::set_terrain(
         id, "terrain", "Lua mapgen set_terrain" );
     context_state &state = require_write_state();
     const tripoint_bub_ms position =
-        bounded_position( state, x, y );
+        bounded_position( state, point( x, y ) );
     consume( 1 );
     return state.data->m.ter_set(
                position, ter_str_id( id.value() ).id() );
@@ -1119,7 +1125,7 @@ bool script_mapgen_context::set_furniture(
     }
     context_state &state = require_write_state();
     const tripoint_bub_ms position =
-        bounded_position( state, x, y );
+        bounded_position( state, point( x, y ) );
     consume( 1 );
     return state.data->m.furn_set( position, target );
 }
@@ -1136,7 +1142,7 @@ bool script_mapgen_context::set_trap(
     }
     context_state &state = require_write_state();
     const tripoint_bub_ms position =
-        bounded_position( state, x, y );
+        bounded_position( state, point( x, y ) );
     consume( 1 );
     state.data->m.trap_set( position, target );
     return state.data->m.tr_at( position ).id.id() == target;
@@ -1152,7 +1158,7 @@ bool script_mapgen_context::set_terrain_id(
             "Lua mapgen set_terrain_id received unknown terrain '" + id + "'" );
     }
     context_state &state = require_write_state();
-    const tripoint_bub_ms position = bounded_position( state, x, y );
+    const tripoint_bub_ms position = bounded_position( state, point( x, y ) );
     consume( 1 );
     return state.data->m.ter_set( position, target.id() );
 }
@@ -1171,7 +1177,7 @@ bool script_mapgen_context::set_furniture_id(
         target = source.id();
     }
     context_state &state = require_write_state();
-    const tripoint_bub_ms position = bounded_position( state, x, y );
+    const tripoint_bub_ms position = bounded_position( state, point( x, y ) );
     consume( 1 );
     return state.data->m.furn_set( position, target );
 }
@@ -1190,7 +1196,7 @@ bool script_mapgen_context::set_trap_id(
         target = source.id();
     }
     context_state &state = require_write_state();
-    const tripoint_bub_ms position = bounded_position( state, x, y );
+    const tripoint_bub_ms position = bounded_position( state, point( x, y ) );
     consume( 1 );
     state.data->m.trap_set( position, target );
     return state.data->m.tr_at( position ).id.id() == target;
@@ -1208,7 +1214,7 @@ void script_mapgen_context::reset( const std::string &terrain_id )
     consume( static_cast<std::size_t>( map_width ) * map_height );
     for( int y = 0; y < map_height; ++y ) {
         for( int x = 0; x < map_width; ++x ) {
-            const tripoint_bub_ms position = bounded_position( state, x, y );
+            const tripoint_bub_ms position = bounded_position( state, point( x, y ) );
             state.data->m.i_clear( position );
             state.data->m.clear_fields( position );
             state.data->m.trap_set( position, tr_null );
@@ -1222,7 +1228,7 @@ void script_mapgen_context::set_item_faction(
     const int x1, const int y1, const int x2, const int y2, const std::string &faction )
 {
     context_state &state = require_write_state();
-    require_rectangle( x1, y1, x2, y2, "Lua mapgen set_item_faction" );
+    require_rectangle( point( x1, y1 ), point( x2, y2 ), "Lua mapgen set_item_faction" );
     require_mapgen_id( faction, "Lua mapgen set_item_faction" );
     const faction_id owner( faction );
     if( !owner.is_valid() ) {
@@ -1233,13 +1239,13 @@ void script_mapgen_context::set_item_faction(
     std::size_t cost = 0;
     for( int y = y1; y <= y2; ++y ) {
         for( int x = x1; x <= x2; ++x ) {
-            cost += 1 + state.data->m.i_at( bounded_position( state, x, y ) ).size();
+            cost += 1 + state.data->m.i_at( bounded_position( state, point( x, y ) ) ).size();
         }
     }
     consume( cost );
     for( int y = y1; y <= y2; ++y ) {
         for( int x = x1; x <= x2; ++x ) {
-            for( item &entry : state.data->m.i_at( bounded_position( state, x, y ) ) ) {
+            for( item &entry : state.data->m.i_at( bounded_position( state, point( x, y ) ) ) ) {
                 entry.set_owner( owner );
             }
         }
@@ -1261,7 +1267,7 @@ void script_mapgen_context::place_item(
             "Lua mapgen place_item quantity or charges are outside native limits" );
     }
     context_state &state = require_write_state();
-    const tripoint_bub_ms position = bounded_position( state, x, y );
+    const tripoint_bub_ms position = bounded_position( state, point( x, y ) );
     consume( static_cast<std::size_t>( quantity ) );
     state.data->m.spawn_item(
         position, type, static_cast<unsigned>( quantity ), charges,
@@ -1273,7 +1279,7 @@ void script_mapgen_context::place_item_group(
     const std::string &group_id, const int chance,
     const std::string &faction_id )
 {
-    require_rectangle( x1, y1, x2, y2, "Lua mapgen place_item_group" );
+    require_rectangle( point( x1, y1 ), point( x2, y2 ), "Lua mapgen place_item_group" );
     require_mapgen_id( group_id, "Lua mapgen place_item_group" );
     const item_group_id group( group_id );
     if( !item_group::group_is_defined( group ) || chance <= 0 || chance > 100 ) {
@@ -1281,8 +1287,8 @@ void script_mapgen_context::place_item_group(
             "Lua mapgen place_item_group requires a known group and chance from 1 to 100" );
     }
     context_state &state = require_write_state();
-    const tripoint_bub_ms start = bounded_position( state, x1, y1 );
-    const tripoint_bub_ms end = bounded_position( state, x2, y2 );
+    const tripoint_bub_ms start = bounded_position( state, point( x1, y1 ) );
+    const tripoint_bub_ms end = bounded_position( state, point( x2, y2 ) );
     consume( static_cast<std::size_t>( x2 - x1 + 1 ) *
              static_cast<std::size_t>( y2 - y1 + 1 ) );
     state.data->m.place_items( group, chance, start, end, true,
@@ -1305,7 +1311,7 @@ void script_mapgen_context::place_toilet(
         throw std::invalid_argument( "Lua mapgen toilet charges cannot be negative" );
     }
     context_state &state = require_write_state();
-    const tripoint_bub_ms position = bounded_position( state, x, y );
+    const tripoint_bub_ms position = bounded_position( state, point( x, y ) );
     consume( 1 );
     if( charges == 0 ) {
         state.data->m.place_toilet( position );
@@ -1326,7 +1332,7 @@ bool script_mapgen_context::add_field(
             "Lua mapgen add_field received an unknown field or invalid intensity/age" );
     }
     context_state &state = require_write_state();
-    const tripoint_bub_ms position = bounded_position( state, x, y );
+    const tripoint_bub_ms position = bounded_position( state, point( x, y ) );
     consume( 1 );
     return state.data->m.add_field(
                position, source.id(), intensity,
@@ -1343,7 +1349,7 @@ bool script_mapgen_context::remove_field(
             "Lua mapgen remove_field received unknown field '" + field_id + "'" );
     }
     context_state &state = require_write_state();
-    const tripoint_bub_ms position = bounded_position( state, x, y );
+    const tripoint_bub_ms position = bounded_position( state, point( x, y ) );
     consume( 1 );
     const field_type_id type = source.id();
     const bool existed = state.data->m.get_field( position, type ) != nullptr;
@@ -1364,7 +1370,7 @@ void script_mapgen_context::place_vending_machine(
             item_group_name + "'" );
     }
     context_state &state = require_write_state();
-    const tripoint_bub_ms position = bounded_position( state, x, y );
+    const tripoint_bub_ms position = bounded_position( state, point( x, y ) );
     consume( 1 );
     state.data->m.furn_set( position, furn_str_id::NULL_ID().id() );
     state.data->m.place_vending(
@@ -1389,7 +1395,7 @@ void script_mapgen_context::place_gas_pump(
         }
     }
     context_state &state = require_write_state();
-    const tripoint_bub_ms position = bounded_position( state, x, y );
+    const tripoint_bub_ms position = bounded_position( state, point( x, y ) );
     consume( 1 );
     state.data->m.furn_set( position, furn_str_id::NULL_ID().id() );
     if( fuel ) {
@@ -1405,7 +1411,7 @@ void script_mapgen_context::place_monster_group(
     const bool individual, const bool friendly, const std::string &name,
     const bool mission_target )
 {
-    require_rectangle( x1, y1, x2, y2,
+    require_rectangle( point( x1, y1 ), point( x2, y2 ),
                        "Lua mapgen place_monster_group" );
     require_mapgen_id( group_id, "Lua mapgen place_monster_group" );
     const mongroup_id group( group_id );
@@ -1444,7 +1450,7 @@ void script_mapgen_context::place_monster(
             "Lua mapgen place_monster received invalid monster, count, or name" );
     }
     context_state &state = require_write_state();
-    const tripoint_bub_ms position = bounded_position( state, x, y );
+    const tripoint_bub_ms position = bounded_position( state, point( x, y ) );
     consume( static_cast<std::size_t>( count ) );
     int mission_id = -1;
     if( mission_target && state.data->mission() != nullptr ) {
@@ -1466,7 +1472,7 @@ void script_mapgen_context::place_corpse(
             "Lua mapgen place_corpse received invalid monster or age" );
     }
     context_state &state = require_write_state();
-    const tripoint_bub_ms position = bounded_position( state, x, y );
+    const tripoint_bub_ms position = bounded_position( state, point( x, y ) );
     consume( 1 );
     const std::int64_t corpse_turn =
         to_turn<std::int64_t>( calendar::turn ) -
@@ -1514,7 +1520,7 @@ void script_mapgen_context::make_rubble(
             "Lua mapgen make_rubble received unknown furniture or terrain" );
     }
     context_state &state = require_write_state();
-    const tripoint_bub_ms position = bounded_position( state, x, y );
+    const tripoint_bub_ms position = bounded_position( state, point( x, y ) );
     consume( 1 );
     state.data->m.make_rubble(
         position, rubble.id(), items, floor.id(), overwrite );
@@ -1532,9 +1538,9 @@ bool script_mapgen_context::place_computer(
             "Lua mapgen computer name, access message, or security is invalid" );
     }
     context_state &state = require_write_state();
-    const tripoint_bub_ms position = bounded_position( state, x, y );
+    const tripoint_bub_ms position = bounded_position( state, point( x, y ) );
     consume( 1 );
-    state.data->m.furn_set( position, furn_str_id( "f_console" ).id() );
+    state.data->m.furn_set( position, furn_f_console.id() );
     computer *const placed = state.data->m.add_computer( position, name, security );
     if( placed == nullptr ) {
         return false;
@@ -1560,7 +1566,7 @@ void script_mapgen_context::add_computer_option(
             "Lua mapgen computer option name, action, or security is invalid" );
     }
     context_state &state = require_write_state();
-    const tripoint_bub_ms position = bounded_position( state, x, y );
+    const tripoint_bub_ms position = bounded_position( state, point( x, y ) );
     consume( 1 );
     computer *const target = state.data->m.computer_at( position );
     if( target == nullptr ) {
@@ -1579,7 +1585,7 @@ void script_mapgen_context::add_computer_failure(
             "Lua mapgen computer failure id is invalid" );
     }
     context_state &state = require_write_state();
-    const tripoint_bub_ms position = bounded_position( state, x, y );
+    const tripoint_bub_ms position = bounded_position( state, point( x, y ) );
     consume( 1 );
     computer *const target = state.data->m.computer_at( position );
     if( target == nullptr ) {
@@ -1598,7 +1604,7 @@ void script_mapgen_context::add_computer_eoc(
             "Lua mapgen add_computer_eoc received unknown EOC '" + eoc_id + "'" );
     }
     context_state &state = require_write_state();
-    const tripoint_bub_ms position = bounded_position( state, x, y );
+    const tripoint_bub_ms position = bounded_position( state, point( x, y ) );
     consume( 1 );
     computer *const target = state.data->m.computer_at( position );
     if( target == nullptr ) {
@@ -1616,7 +1622,7 @@ void script_mapgen_context::set_computer_access_handler(
         throw std::runtime_error(
             "Lua mapgen computer handlers require a Lua-first Platform owner" );
     }
-    const tripoint_bub_ms position = bounded_position( state, x, y );
+    const tripoint_bub_ms position = bounded_position( state, point( x, y ) );
     consume( 1 );
     computer *const target = state.data->m.computer_at( position );
     if( target == nullptr ) {
@@ -1631,7 +1637,7 @@ void script_mapgen_context::add_computer_chat_topic(
 {
     require_mapgen_id( topic_id, "Lua mapgen add_computer_chat_topic" );
     context_state &state = require_write_state();
-    const tripoint_bub_ms position = bounded_position( state, x, y );
+    const tripoint_bub_ms position = bounded_position( state, point( x, y ) );
     consume( 1 );
     computer *const target = state.data->m.computer_at( position );
     if( target == nullptr ) {
@@ -1673,7 +1679,7 @@ void script_mapgen_context::place_sealed_item(
         }
     }
     context_state &state = require_write_state();
-    const tripoint_bub_ms position = bounded_position( state, x, y );
+    const tripoint_bub_ms position = bounded_position( state, point( x, y ) );
     const std::size_t cost = item_type ? static_cast<std::size_t>( quantity ) : 1;
     consume( cost + ( group ? 1 : 0 ) );
     state.data->m.furn_set( position, furn_str_id::NULL_ID().id() );
@@ -1704,7 +1710,7 @@ void script_mapgen_context::place_sign(
             "Lua mapgen place_sign received unknown furniture '" + target_id + "'" );
     }
     context_state &state = require_write_state();
-    const tripoint_bub_ms position = bounded_position( state, x, y );
+    const tripoint_bub_ms position = bounded_position( state, point( x, y ) );
     consume( 1 );
     state.data->m.furn_set( position, target.id() );
     state.data->m.set_signage( position, text );
@@ -1717,7 +1723,7 @@ void script_mapgen_context::set_graffiti(
         throw std::invalid_argument( "Lua mapgen graffiti text is invalid" );
     }
     context_state &state = require_write_state();
-    const tripoint_bub_ms position = bounded_position( state, x, y );
+    const tripoint_bub_ms position = bounded_position( state, point( x, y ) );
     consume( 1 );
     if( text.empty() ) {
         state.data->m.delete_graffiti( position );
@@ -1728,28 +1734,28 @@ void script_mapgen_context::set_graffiti(
 
 [[noreturn]] void script_mapgen_context::place_zone(
     const int, const int, const int, const int,
-    const std::string &, const std::string &,
+    const std::string_view, const std::string &,
     const std::string &, const std::string & )
 {
     reject_external_mutation();
 }
 
 [[noreturn]] std::int64_t script_mapgen_context::place_npc(
-    const int, const int, const std::string &,
+    const int, const int, const std::string_view,
     const std::string & )
 {
     reject_external_mutation();
 }
 
 [[noreturn]] std::int64_t script_mapgen_context::place_npc_configured(
-    const int, const int, const std::string &,
+    const int, const int, const std::string_view,
     const std::string &, const std::vector<std::string> &, const bool )
 {
     reject_external_mutation();
 }
 
 [[noreturn]] bool script_mapgen_context::place_vehicle(
-    const int, const int, const std::string &,
+    const int, const int, const std::string_view,
     const int, const int, const int, const std::string & )
 {
     reject_external_mutation();
@@ -1757,14 +1763,14 @@ void script_mapgen_context::set_graffiti(
 
 [[noreturn]] void script_mapgen_context::apply_faction_ownership(
     const int, const int, const int, const int,
-    const std::string & )
+    const std::string_view )
 {
     reject_external_mutation();
 }
 
 [[noreturn]] void script_mapgen_context::transform(
     const int, const int, const int, const int,
-    const std::string & )
+    const std::string_view )
 {
     reject_external_mutation();
 }
@@ -1777,7 +1783,7 @@ void script_mapgen_context::set_graffiti(
 }
 
 [[noreturn]] std::size_t script_mapgen_context::remove_npcs(
-    const std::string &, const std::string & )
+    const std::string_view, const std::string & )
 {
     reject_external_mutation();
 }
@@ -1793,7 +1799,7 @@ void script_mapgen_context::queue_point(
 {
     require_mapgen_id( name, "Lua mapgen queue_point" );
     context_state &state = require_write_state();
-    const tripoint_bub_ms position = bounded_position( state, x, y );
+    const tripoint_bub_ms position = bounded_position( state, point( x, y ) );
     consume( 1 );
     queue_mapgen_point( name, state.data->m.get_abs( position ) );
 }
@@ -1802,7 +1808,7 @@ void script_mapgen_context::queue_npc(
     const int x, const int y, const std::string &template_id, const std::string &unique_id )
 {
     context_state &state = require_write_state();
-    const tripoint_bub_ms position = bounded_position( state, x, y );
+    const tripoint_bub_ms position = bounded_position( state, point( x, y ) );
     require_mapgen_id( template_id, "Lua mapgen queue_npc" );
     if( !unique_id.empty() ) {
         require_mapgen_id( unique_id, "Lua mapgen queue_npc unique_id" );
@@ -1821,9 +1827,9 @@ void script_mapgen_context::queue_zone(
     const std::string &name, const std::string &filter )
 {
     context_state &state = require_write_state();
-    require_rectangle( x1, y1, x2, y2, "Lua mapgen queue_zone" );
-    const tripoint_bub_ms start = bounded_position( state, x1, y1 );
-    const tripoint_bub_ms end = bounded_position( state, x2, y2 );
+    require_rectangle( point( x1, y1 ), point( x2, y2 ), "Lua mapgen queue_zone" );
+    const tripoint_bub_ms start = bounded_position( state, point( x1, y1 ) );
+    const tripoint_bub_ms end = bounded_position( state, point( x2, y2 ) );
     const zone_type_id type( zone_type );
     const faction_id owner( faction );
     if( !type.is_valid() || !owner.is_valid() || state.zones.size() >= 128 ||
@@ -1844,6 +1850,8 @@ void script_mapgen_context::queue_zone(
                              type, owner, name, std::move( options ) } );
 }
 
+// NOLINTEND(cata-xy)
+
 void script_mapgen_context::fill_groundcover()
 {
     context_state &state = require_write_state();
@@ -1854,12 +1862,12 @@ void script_mapgen_context::fill_groundcover()
 }
 
 [[noreturn]] void script_mapgen_context::nest(
-    const std::string &, const int, const int )
+    const std::string_view, const int, const int )
 {
     reject_external_mutation();
 }
 
-[[noreturn]] void script_mapgen_context::generate( const std::string & )
+[[noreturn]] void script_mapgen_context::generate( const std::string_view )
 {
     reject_external_mutation();
 }

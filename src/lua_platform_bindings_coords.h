@@ -19,6 +19,8 @@ namespace cata::lua_platform
 class script_point_coord
 {
     public:
+        // Lua accepts wide scalar axes; validate them before creating a native point.
+        // NOLINTNEXTLINE(cata-xy)
         static script_point_coord from(
             std::string_view origin, std::string_view scale,
             std::int64_t x, std::int64_t y );
@@ -54,22 +56,23 @@ class script_point_coord
         friend bool operator==( const script_point_coord &lhs,
                                 const script_point_coord &rhs ) {
             return lhs.origin_ == rhs.origin_ && lhs.scale_ == rhs.scale_ &&
-                   lhs.x_ == rhs.x_ && lhs.y_ == rhs.y_;
+                   lhs.value_ == rhs.value_;
         }
 
     private:
         script_point_coord(
-            coords::origin origin, coords::scale scale, int x, int y );
+            coords::origin origin, coords::scale scale, const point &value );
 
         coords::origin origin_ = coords::origin::relative;
         coords::scale scale_ = coords::scale::map_square;
-        int x_ = 0;
-        int y_ = 0;
+        point value_ = point::zero;
 };
 
 class script_tripoint_coord
 {
     public:
+        // Lua accepts wide scalar axes; validate them before creating a native tripoint.
+        // NOLINTNEXTLINE(cata-xy)
         static script_tripoint_coord from(
             std::string_view origin, std::string_view scale,
             std::int64_t x, std::int64_t y, std::int64_t z );
@@ -110,18 +113,16 @@ class script_tripoint_coord
         friend bool operator==( const script_tripoint_coord &lhs,
                                 const script_tripoint_coord &rhs ) {
             return lhs.origin_ == rhs.origin_ && lhs.scale_ == rhs.scale_ &&
-                   lhs.x_ == rhs.x_ && lhs.y_ == rhs.y_ && lhs.z_ == rhs.z_;
+                   lhs.value_ == rhs.value_;
         }
 
     private:
         script_tripoint_coord(
-            coords::origin origin, coords::scale scale, int x, int y, int z );
+            coords::origin origin, coords::scale scale, const tripoint &value );
 
         coords::origin origin_ = coords::origin::relative;
         coords::scale scale_ = coords::scale::map_square;
-        int x_ = 0;
-        int y_ = 0;
-        int z_ = 0;
+        tripoint value_ = tripoint::zero;
 };
 
 std::vector<std::string> supported_script_coordinate_kinds();

@@ -366,6 +366,8 @@ std::optional<tripoint_bub_ms> map_bubble_position_if_representable(
 {
     const tripoint_abs_ms origin =
         here.get_abs( tripoint_bub_ms( 0, 0, 0 ) );
+    // Wide coordinate calculations must retain all 64 bits before native conversion.
+    // NOLINTNEXTLINE(cata-combine-locals-into-point)
     const std::int64_t x = static_cast<std::int64_t>( absolute.x() ) - origin.x();
     const std::int64_t y = static_cast<std::int64_t>( absolute.y() ) - origin.y();
     if( x < std::numeric_limits<int>::min() ||
@@ -416,12 +418,11 @@ script_tripoint_coord world_to_absolute(
         const tripoint local_submap( position.to_native() );
         const int factor = coords::map_squares_per( coords::scale::submap ) /
                            coords::map_squares_per( coords::scale::map_square );
-        const int local_x = checked_scale_up_axis(
-                                local_submap.x, factor, 0, api_name );
-        const int local_y = checked_scale_up_axis(
-                                local_submap.y, factor, 0, api_name );
-        checked_world_translation_axis( local_x, map_origin.x(), true, api_name );
-        checked_world_translation_axis( local_y, map_origin.y(), true, api_name );
+        const point local_ms_axes(
+            checked_scale_up_axis( local_submap.x, factor, 0, api_name ),
+            checked_scale_up_axis( local_submap.y, factor, 0, api_name ) );
+        checked_world_translation_axis( local_ms_axes.x, map_origin.x(), true, api_name );
+        checked_world_translation_axis( local_ms_axes.y, map_origin.y(), true, api_name );
         const tripoint_bub_ms local_ms =
             coords::project_to<coords::ms>(
                 tripoint_bub_sm( local_submap ) );
@@ -461,12 +462,11 @@ script_tripoint_coord world_to_bubble(
         const tripoint_abs_sm absolute_submap( position.to_native() );
         const int factor = coords::map_squares_per( coords::scale::submap ) /
                            coords::map_squares_per( coords::scale::map_square );
-        const int absolute_x = checked_scale_up_axis(
-                                   absolute_submap.x(), factor, 0, api_name );
-        const int absolute_y = checked_scale_up_axis(
-                                   absolute_submap.y(), factor, 0, api_name );
-        checked_world_translation_axis( absolute_x, map_origin.x(), false, api_name );
-        checked_world_translation_axis( absolute_y, map_origin.y(), false, api_name );
+        const point absolute_ms_axes(
+            checked_scale_up_axis( absolute_submap.x(), factor, 0, api_name ),
+            checked_scale_up_axis( absolute_submap.y(), factor, 0, api_name ) );
+        checked_world_translation_axis( absolute_ms_axes.x, map_origin.x(), false, api_name );
+        checked_world_translation_axis( absolute_ms_axes.y, map_origin.y(), false, api_name );
         const tripoint_abs_ms absolute_ms =
             coords::project_to<coords::ms>(
                 absolute_submap );
@@ -2873,6 +2873,8 @@ void require_world_linked_item_offsets_fit(
         if( value->has_link_data() && !value->has_no_links() &&
             value->link().t_abs_pos != tripoint_abs_ms::invalid ) {
             const tripoint_abs_ms &target = value->link().t_abs_pos;
+            // Wide coordinate calculations must retain all 64 bits before native conversion.
+            // NOLINTNEXTLINE(cata-combine-locals-into-point)
             const std::int64_t x = static_cast<std::int64_t>( target.x() ) + offset.x();
             const std::int64_t y = static_cast<std::int64_t>( target.y() ) + offset.y();
             const std::int64_t z = static_cast<std::int64_t>( target.z() ) + offset.z();
@@ -2980,6 +2982,8 @@ tripoint_rel_ms checked_world_location_offset(
     const tripoint_abs_ms &destination, const tripoint_abs_ms &source,
     const std::string_view api_name )
 {
+    // Wide coordinate calculations must retain all 64 bits before native conversion.
+    // NOLINTNEXTLINE(cata-combine-locals-into-point)
     const std::int64_t x = static_cast<std::int64_t>( destination.x() ) - source.x();
     const std::int64_t y = static_cast<std::int64_t>( destination.y() ) - source.y();
     const std::int64_t z = static_cast<std::int64_t>( destination.z() ) - source.z();

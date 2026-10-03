@@ -108,6 +108,8 @@ class script_mapgen_context
         bool random_chance( std::uint64_t numerator,
                             std::uint64_t denominator );
 
+        // Published Lua methods retain their positional coordinate arguments.
+        // NOLINTBEGIN(cata-xy)
         script_game_id terrain_at( int x, int y ) const;
         std::optional<script_game_id> furniture_at( int x, int y ) const;
         std::optional<script_game_id> trap_at( int x, int y ) const;
@@ -136,7 +138,7 @@ class script_mapgen_context
                         int intensity, std::int64_t age_turns );
         bool remove_field( int x, int y, const std::string &field_id );
         void place_vending_machine( int x, int y,
-                                    const std::string &item_group_id,
+                                    const std::string &item_group_name,
                                     bool reinforced, bool lootable,
                                     bool powered, bool networked );
         void place_gas_pump( int x, int y, int charges,
@@ -179,29 +181,29 @@ class script_mapgen_context
                          const std::string &furniture_id );
         void set_graffiti( int x, int y, const std::string &text );
         [[noreturn]] void place_zone( int x1, int y1, int x2, int y2,
-                                      const std::string &zone_type,
+                                      std::string_view zone_type,
                                       const std::string &faction,
                                       const std::string &name,
                                       const std::string &filter );
         [[noreturn]] std::int64_t place_npc( int x, int y,
-                                             const std::string &template_id,
+                                             std::string_view template_id,
                                              const std::string &unique_id );
         [[noreturn]] std::int64_t place_npc_configured(
-            int x, int y, const std::string &template_id,
+            int x, int y, std::string_view template_id,
             const std::string &unique_id,
             const std::vector<std::string> &traits,
             bool mission_target );
         [[noreturn]] bool place_vehicle( int x, int y,
-                                         const std::string &prototype_or_group_id,
+                                         std::string_view prototype_or_group_id,
                                          int rotation_degrees, int fuel_percent,
                                          int status, const std::string &faction );
         [[noreturn]] void apply_faction_ownership( int x1, int y1, int x2, int y2,
-                const std::string &faction );
+                std::string_view faction );
         [[noreturn]] void transform( int x1, int y1, int x2, int y2,
-                                     const std::string &transform_id );
+                                     std::string_view transform_id );
         [[noreturn]] std::size_t remove_vehicles( int x1, int y1, int x2, int y2,
                 const std::vector<std::string> &prototype_ids );
-        [[noreturn]] std::size_t remove_npcs( const std::string &template_id,
+        [[noreturn]] std::size_t remove_npcs( std::string_view template_id,
                                               const std::string &unique_id );
         [[noreturn]] void remove_all( int x1, int y1, int x2, int y2 );
         void queue_point( const std::string &name, int x, int y );
@@ -212,8 +214,9 @@ class script_mapgen_context
                          const std::string &name, const std::string &filter );
 
         void fill_groundcover();
-        [[noreturn]] void nest( const std::string &id, int x, int y );
-        [[noreturn]] void generate( const std::string &id );
+        [[noreturn]] void nest( std::string_view id, int x, int y );
+        [[noreturn]] void generate( std::string_view id );
+        // NOLINTEND(cata-xy)
 
     private:
         struct context_state;
@@ -230,10 +233,10 @@ class script_mapgen_context
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 void install_mapgen_service_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write );
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write );
 
 void install_script_mapgen_context_api( sol::state &lua );
 #endif
