@@ -963,7 +963,7 @@
         "namespace": "ccb",
         "source": {
           "path": "src/lua_platform_world_content.cpp",
-          "line": 1804
+          "line": 1827
         },
         "direct_roots": [
           "FactionDefinition",
@@ -7730,7 +7730,7 @@
       "registration_name": "FactionDefinition",
       "registration": {
         "path": "src/lua_platform_world_content.cpp",
-        "line": 1815,
+        "line": 1838,
         "installer": "platform_v1.world_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -7769,7 +7769,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_world_content.cpp",
-                "line": 1816
+                "line": 1839
               }
             ]
           }
@@ -9548,7 +9548,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_handle.h",
-                "line": 157
+                "line": 159
               }
             ]
           },
@@ -9565,7 +9565,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_handle.h",
-                "line": 160
+                "line": 162
               }
             ]
           },
@@ -9582,7 +9582,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_handle.h",
-                "line": 163
+                "line": 165
               }
             ]
           },
@@ -9599,7 +9599,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_handle.h",
-                "line": 153
+                "line": 155
               }
             ]
           },
@@ -9616,7 +9616,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_handle.h",
-                "line": 189
+                "line": 191
               }
             ]
           },
@@ -9636,7 +9636,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_handle.h",
-                "line": 182
+                "line": 184
               }
             ]
           },
@@ -9653,7 +9653,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_handle.h",
-                "line": 154
+                "line": 156
               }
             ]
           },
@@ -16145,7 +16145,7 @@
       "registration_name": "NpcClassDefinition",
       "registration": {
         "path": "src/lua_platform_world_content.cpp",
-        "line": 1817,
+        "line": 1840,
         "installer": "platform_v1.world_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -16184,7 +16184,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_world_content.cpp",
-                "line": 1818
+                "line": 1841
               }
             ]
           }
@@ -16198,7 +16198,7 @@
       "registration_name": "NpcDefinition",
       "registration": {
         "path": "src/lua_platform_world_content.cpp",
-        "line": 1819,
+        "line": 1842,
         "installer": "platform_v1.world_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -16237,7 +16237,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_world_content.cpp",
-                "line": 1820
+                "line": 1843
               }
             ]
           }
@@ -17023,7 +17023,7 @@
       "registration_name": "OvermapSpecialDefinition",
       "registration": {
         "path": "src/lua_platform_world_content.cpp",
-        "line": 1823,
+        "line": 1846,
         "installer": "platform_v1.world_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -17062,7 +17062,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_world_content.cpp",
-                "line": 1824
+                "line": 1847
               }
             ]
           }
@@ -17076,7 +17076,7 @@
       "registration_name": "OvermapTerrainDefinition",
       "registration": {
         "path": "src/lua_platform_world_content.cpp",
-        "line": 1821,
+        "line": 1844,
         "installer": "platform_v1.world_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -17115,7 +17115,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_world_content.cpp",
-                "line": 1822
+                "line": 1845
               }
             ]
           }
@@ -30260,7 +30260,7 @@
       "registration_name": "VehicleDefinition",
       "registration": {
         "path": "src/lua_platform_world_content.cpp",
-        "line": 1827,
+        "line": 1850,
         "installer": "platform_v1.world_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -30299,7 +30299,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_world_content.cpp",
-                "line": 1828
+                "line": 1851
               }
             ]
           }
@@ -30508,7 +30508,7 @@
       "registration_name": "VehiclePartDefinition",
       "registration": {
         "path": "src/lua_platform_world_content.cpp",
-        "line": 1825,
+        "line": 1848,
         "installer": "platform_v1.world_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -30547,7 +30547,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_world_content.cpp",
-                "line": 1826
+                "line": 1849
               }
             ]
           }

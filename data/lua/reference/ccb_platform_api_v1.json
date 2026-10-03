@@ -32160,7 +32160,7 @@
         "lua_name": "FactionDefinition",
         "registration": {
           "installer": "platform_v1.world_content_transaction.install_lua_api",
-          "line": 1815,
+          "line": 1838,
           "namespace": "ccb",
           "path": "src/lua_platform_world_content.cpp"
         },
@@ -32902,7 +32902,7 @@
         "lua_name": "NpcClassDefinition",
         "registration": {
           "installer": "platform_v1.world_content_transaction.install_lua_api",
-          "line": 1817,
+          "line": 1840,
           "namespace": "ccb",
           "path": "src/lua_platform_world_content.cpp"
         },
@@ -32916,7 +32916,7 @@
         "lua_name": "NpcDefinition",
         "registration": {
           "installer": "platform_v1.world_content_transaction.install_lua_api",
-          "line": 1819,
+          "line": 1842,
           "namespace": "ccb",
           "path": "src/lua_platform_world_content.cpp"
         },
@@ -33028,7 +33028,7 @@
         "lua_name": "OvermapSpecialDefinition",
         "registration": {
           "installer": "platform_v1.world_content_transaction.install_lua_api",
-          "line": 1823,
+          "line": 1846,
           "namespace": "ccb",
           "path": "src/lua_platform_world_content.cpp"
         },
@@ -33042,7 +33042,7 @@
         "lua_name": "OvermapTerrainDefinition",
         "registration": {
           "installer": "platform_v1.world_content_transaction.install_lua_api",
-          "line": 1821,
+          "line": 1844,
           "namespace": "ccb",
           "path": "src/lua_platform_world_content.cpp"
         },
@@ -33896,7 +33896,7 @@
         "lua_name": "VehicleDefinition",
         "registration": {
           "installer": "platform_v1.world_content_transaction.install_lua_api",
-          "line": 1827,
+          "line": 1850,
           "namespace": "ccb",
           "path": "src/lua_platform_world_content.cpp"
         },
@@ -33938,7 +33938,7 @@
         "lua_name": "VehiclePartDefinition",
         "registration": {
           "installer": "platform_v1.world_content_transaction.install_lua_api",
-          "line": 1825,
+          "line": 1848,
           "namespace": "ccb",
           "path": "src/lua_platform_world_content.cpp"
         },
