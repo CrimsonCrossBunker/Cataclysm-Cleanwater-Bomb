@@ -32580,7 +32580,7 @@
         "lua_name": "MapTileToken",
         "registration": {
           "installer": "shared.install_map_api",
-          "line": 3919,
+          "line": 3897,
           "namespace": "global",
           "path": "src/lua_platform_world.cpp"
         },
