@@ -1,7 +1,11 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <coordinates.h>
+#include <flexbuffer_json.h>
+#include <point.h>
 #include <array>
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -22,7 +26,6 @@
 #include "global_vars.h"
 #include "json_loader.h"
 #include "lua_platform_bindings_coords.h"
-#include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_runtime.h"
 #include "lua_platform_runtime_internal.h"
@@ -244,7 +247,7 @@ void check_native_value( const diag_value *actual, const stored_value &expected 
     }
 }
 
-std::size_t diagnostic_count( const std::string &diagnostics, const std::string_view text )
+std::size_t diagnostic_count( const std::string_view diagnostics, const std::string_view text )
 {
     std::size_t count = 0;
     std::size_t position = 0;

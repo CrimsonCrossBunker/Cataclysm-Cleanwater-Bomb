@@ -1,7 +1,10 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <flexbuffer_json.h>
 #include <array>
 #include <cmath>
+#include <cstddef>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -74,7 +77,9 @@ struct assignment_case {
     bool expects_nan = false;
     bool expects_negative_zero = false;
     bool expects_positive_zero = false;
-    std::string_view rhs_math = {};
+    // Omitted aggregate fields need a default initializer under -Wmissing-field-initializers.
+    // NOLINTNEXTLINE(readability-redundant-member-init)
+    std::string_view rhs_math{};
 };
 
 constexpr std::array assignment_cases = {
@@ -169,7 +174,7 @@ constexpr std::array assignment_cases = {
         "global zero divided by zero retains native NaN",
         { assignment_scope::global, "dynamic_global_nan" }, "=",
         std::nullopt, std::monostate{}, std::monostate{}, 0.0,
-        false, false, false, false, false, false, "0/0"
+        false, false, false, true, false, false, "0/0"
     }
 };
 
@@ -739,7 +744,7 @@ TEST_CASE( "lua_platform_dynamic_assignment_migration_matches_native_math",
         "l_nan\", assigned_value, { include_before = false }))\n        end\n    end\n",
     };
     initialize_assignment_fixture( alpha, beta, native_pair );
-    sol::table lua_context = make_lua_context( lua );
+    sol::table lua_context = make_lua_context( sol::state_view( lua.lua_state() ) );
     lua["context"] = lua_context;
     const sol::table context_data = lua_context["data"];
 

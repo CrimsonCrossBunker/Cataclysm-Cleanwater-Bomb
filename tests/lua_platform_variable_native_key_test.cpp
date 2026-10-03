@@ -1,15 +1,21 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <coordinates.h>
+#include <flexbuffer_json.h>
+#include <item_uid.h>
+#include <point.h>
+#include <talker.h>
 #include <array>
 #include <cmath>
 #include <cstddef>
 #include <functional>
-#include <limits>
-#include <optional>
 #include <initializer_list>
+#include <limits>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -38,7 +44,8 @@
 #include "math_parser_type.h"
 #include "type_id.h"
 #include "vehicle.h"
-#include "veh_type.h"
+
+static const itype_id itype_rock( "rock" );
 
 namespace
 {
@@ -155,7 +162,7 @@ TEST_CASE( "lua_platform_native_variable_keys_keep_native_string_range",
     avatar player;
     player.normalize();
     player.setID( character_id( 4911 ), true );
-    item item_value( itype_id( "rock" ) );
+    item item_value( itype_rock );
     vehicle vehicle_value{ vproto_id() };
     item_identity_cleanup retire_item{ item_value };
     vehicle_identity_cleanup retire_vehicle{ vehicle_value };
@@ -177,7 +184,7 @@ TEST_CASE( "lua_platform_native_variable_keys_keep_native_string_range",
                 }
             },
             {
-                "item", item_handle, [&item_value]( const std::string & key )
+                "item", item_handle, [&item_value]( const std::string_view key )
                 {
                     return item_value.maybe_get_value( key );
                 }
@@ -314,7 +321,7 @@ TEST_CASE( "lua_platform_variable_string_reads_preserve_handle_errors",
     require_error( get_string( stale, "key" ), "stale_runtime" );
     require_error( get_tripoint( stale, "key" ), "stale_runtime" );
 
-    item item_value( itype_id( "rock" ) );
+    item item_value( itype_rock );
     item_identity_cleanup retire_item{ item_value };
     const game_handle item_handle = cata::lua_platform::game_handle::from_item(
                                         item_value, { "character_inventory", item_value.uid().get_value(), 0, 0, 0, {} },
@@ -778,7 +785,8 @@ TEST_CASE( "lua_platform_coordinate_variable_reads_match_native_types_presence_a
                                               require_value( read_owner( scope == var_type::u ? alpha_handle : beta_handle, key ) );
                     CHECK( result["exists"].get<bool>() == values[index].has_value() );
                     if( result["exists"].get<bool>() ) {
-                        const auto coordinate = result["value"].get<cata::lua_platform::script_tripoint_coord>();
+                        const cata::lua_platform::script_tripoint_coord coordinate =
+                            result["value"].get<cata::lua_platform::script_tripoint_coord>();
                         CHECK( coordinate.native_origin() == coords::origin::abs );
                         CHECK( coordinate.native_scale() == coords::scale::map_square );
                         actual = coordinate.to_native();
@@ -795,7 +803,7 @@ TEST_CASE( "lua_platform_coordinate_variable_reads_match_native_types_presence_a
         }
     }
     sol::table invalid = fixture.lua.create_table();
-    for( const auto &coordinate : {
+    for( const cata::lua_platform::script_tripoint_coord &coordinate : {
              cata::lua_platform::script_tripoint_coord::from_native(
                  coords::origin::abs, coords::scale::overmap_terrain, negative ),
              cata::lua_platform::script_tripoint_coord::from_native(
@@ -1081,7 +1089,8 @@ TEST_CASE( "lua_platform_registered_reflection_rejects_frame_and_range_errors",
     const auto coordinate = []( coords::origin origin, coords::scale scale, tripoint raw ) {
         return cata::lua_platform::script_tripoint_coord::from_native( origin, scale, raw );
     };
-    const auto zero = coordinate( coords::origin::abs, coords::scale::map_square, tripoint::zero );
+    const cata::lua_platform::script_tripoint_coord zero = coordinate( coords::origin::abs,
+            coords::scale::map_square, tripoint::zero );
     CHECK_FALSE( reflect( zero, coordinate( coords::origin::relative,
                                             coords::scale::map_square, tripoint::zero ) ).valid() );
     CHECK_FALSE( reflect( zero, coordinate( coords::origin::abs,
@@ -1187,8 +1196,7 @@ TEST_CASE( "lua_platform_location_adjust_matches_native_fractional_units_and_mis
                 }
                 const tripoint expected = conversation.get_value( "result" ).tripoint().raw();
                 const int base_z = source_index >= 2 && !adjustment.override_z ? 5 : 0;
-                CHECK( expected == tripoint( adjustment.expected_offset.x,
-                                             adjustment.expected_offset.y, adjustment.expected_offset.z + base_z ) );
+                CHECK( expected == adjustment.expected_offset + tripoint( 0, 0, base_z ) );
                 reset_source(); // Read the original legacy value, not Native's conversion cache.
                 sol::table data = fixture.lua.create_table();
                 sol::table old = fixture.lua.create_table();
@@ -1757,7 +1765,7 @@ return values[8] end)()
     for( const ternary_case &row : cases ) {
         eoc_math native;
         native.deserialize( json_loader::from_string(
-                                std::string( "{\"math\":[\"" ) + row.source + "\"]}" ) );
+                                std::string( R"({"math":[")" ) + row.source + "\"]}" ) );
         finalize_conditions();
         for( const condition_case &condition : conditions ) {
             for( int bad_shape = 0; bad_shape < 6; ++bad_shape ) {
@@ -3022,7 +3030,7 @@ return values[5] end)() ~= 0.0)
     for( const predicate_case &row : cases ) {
         CAPTURE( row.source );
         const conditional_t native( json_loader::from_string(
-                                        std::string( "{\"math\":[\"" ) + row.source + "\"]}" ).get_object() );
+                                        std::string( R"({"math":[")" ) + row.source + "\"]}" ).get_object() );
         finalize_conditions();
         const bool expected = native( conversation );
         CHECK( expected == row.expected );
@@ -3062,7 +3070,7 @@ end
     beta.normalize();
     alpha.setID( character_id( 4922 ), true );
     beta.setID( character_id( 4923 ), true );
-    const auto generation = cata::lua_platform::detail::runtime_world_generation_storage();
+    const std::size_t generation = cata::lua_platform::detail::runtime_world_generation_storage();
     lua["alpha"] = game_handle::from_creature( alpha,
     { "avatar", 4922, 0, 0, 0, {} }, owner->handle_runtime(), generation );
     lua["beta"] = game_handle::from_creature( beta,
@@ -3223,7 +3231,7 @@ return values[5] end)()
             prepare( conversation, make_value( shape ) );
             eoc_math native;
             native.deserialize( json_loader::from_string(
-                                    std::string( "{\"math\":[\"max(" ) + row.identifier + ",1)+3\"]}" ) );
+                                    std::string( R"({"math":["max()" ) + row.identifier + ",1)+3\"]}" ) );
             finalize_conditions();
             double expected = 0.0;
             const std::string native_diagnostic = capture_debugmsg_during( [&]() {
@@ -3326,7 +3334,7 @@ end
     beta.normalize();
     alpha.setID( character_id( 4942 ), true );
     beta.setID( character_id( 4943 ), true );
-    const auto generation = cata::lua_platform::detail::runtime_world_generation_storage();
+    const std::size_t generation = cata::lua_platform::detail::runtime_world_generation_storage();
     lua["alpha"] = game_handle::from_creature( alpha,
     { "avatar", 4942, 0, 0, 0, {} }, owner->handle_runtime(), generation );
     lua["beta"] = game_handle::from_creature( beta,
@@ -3411,7 +3419,8 @@ end
                 lua_value = sol::make_object( lua, std::string( "5" ) );
             } else if( target_shape == 4 ) {
                 value = diag_value( diag_array( 5000, diag_value( 5.0 ) ) );
-                lua_value = sol::make_object( lua, lua.create_table() );
+                const sol::table array = lua.create_table();
+                lua_value = sol::make_object( lua, array );
             } else if( target_shape == 5 ) {
                 value = diag_value( tripoint_abs_ms( 1, 2, 3 ) );
                 lua_value = sol::make_object( lua, script_tripoint_coord::from_native(
@@ -3422,7 +3431,8 @@ end
                     get_globals().set_global_value( row.target_key, *value );
                 } else if( row.target_scope == var_type::context ) {
                     conversation.set_value( row.target_key, *value );
-                    data[row.target_key] = lua_value;
+                    // sol field assignment uses a C string; native keys can contain NUL.
+                    data.raw_set( row.target_key, lua_value );
                 } else if( row.target_scope == var_type::u ) {
                     alpha.set_value( row.target_key, *value );
                 } else {

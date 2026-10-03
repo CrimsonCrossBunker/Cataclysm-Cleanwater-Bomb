@@ -1,3 +1,5 @@
+#include <rng.h>
+#include <random>
 #include <string>
 
 #include "cata_catch.h"
@@ -320,16 +322,22 @@ TEST_CASE( "weighted_int_list_native_eoc_selection_uses_raw_bits_modulo",
     CHECK( *list.pick( 5U ) == "third" );
     CHECK( *list.pick( 6U ) == "first" );
 
+    // Snapshot the native engine to compare draw counts without advancing it.
+    // NOLINTNEXTLINE(cata-determinism)
     const cata_default_random_engine saved_engine = rng_get_engine();
     constexpr unsigned int seed = 417;
     rng_set_engine_seed( seed );
     weighted_int_list<int> singleton;
     singleton.add( 7, 1 );
     const int *const picked = singleton.pick();
+    // Snapshot the native engine to compare draw counts without advancing it.
+    // NOLINTNEXTLINE(cata-determinism)
     const cata_default_random_engine after_singleton_pick = rng_get_engine();
 
     rng_set_engine_seed( seed );
     static_cast<void>( rng_bits() );
+    // Snapshot the native engine to compare draw counts without advancing it.
+    // NOLINTNEXTLINE(cata-determinism)
     const cata_default_random_engine after_one_raw_draw = rng_get_engine();
     rng_get_engine() = saved_engine;
 

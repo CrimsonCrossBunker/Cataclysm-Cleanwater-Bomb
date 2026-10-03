@@ -1,11 +1,14 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <debug.h>
+#include <type_id.h>
 #include <array>
 #include <cstddef>
 #include <functional>
 #include <initializer_list>
 #include <memory>
 #include <optional>
+#include <random>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -15,9 +18,9 @@
 #include "calendar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
-#include "condition.h"
 #include "character.h"
 #include "character_id.h"
+#include "condition.h"
 #include "dialogue.h"
 #include "dialogue_helpers.h"
 #include "flexbuffer_json.h"
@@ -34,6 +37,11 @@
 #include "rng.h"
 #include "translation.h"
 #include "weather.h"
+
+namespace cata::lua_platform
+{
+class runtime;
+}  // namespace cata::lua_platform
 
 TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
            "[lua][platform][strings][semantic]" )
@@ -312,8 +320,8 @@ TEST_CASE( "lua_platform_string_assignment_lazy_choices_match_native_rng_and_val
 {
     namespace platform = cata::lua_platform;
     platform::clear_active_runtimes();
-    const auto saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
-    const on_out_of_scope restore_rng( [saved_rng]() {
+    const cata_default_random_engine saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
+    const on_out_of_scope restore_rng( [&saved_rng]() {
         rng_get_engine() = saved_rng;
     } );
     avatar player;
@@ -435,7 +443,7 @@ end
                     const std::string expected = target_scope == "context_val" ?
                                                  conversation.get_value( target_key ).str() :
                                                  ( target_scope == "u_val" ? player : static_cast<Character &>( partner ) ).get_value( target_key ).str();
-                    const auto native_rng_after = rng_get_engine(); // NOLINT(cata-determinism)
+                    const cata_default_random_engine native_rng_after = rng_get_engine(); // NOLINT(cata-determinism)
                     reset_sources();
                     sol::table data = lua.create_table();
                     rng_set_engine_seed( seed );
@@ -471,8 +479,8 @@ TEST_CASE( "lua_platform_indirect_string_assignment_matches_native_targets_and_d
     namespace platform = cata::lua_platform;
     platform::clear_active_runtimes();
     restore_on_out_of_scope restore_globals( get_globals().get_global_values() );
-    const auto saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
-    const on_out_of_scope restore_rng( [saved_rng]() {
+    const cata_default_random_engine saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
+    const on_out_of_scope restore_rng( [&saved_rng]() {
         rng_get_engine() = saved_rng;
     } );
     avatar alpha;
@@ -562,7 +570,7 @@ end
                         effect( conversation );
                     }
                 } );
-                const auto native_rng_after = rng_get_engine(); // NOLINT(cata-determinism)
+                const cata_default_random_engine native_rng_after = rng_get_engine(); // NOLINT(cata-determinism)
                 const std::string native_value = target.type == var_type::context ? conversation.get_value( target.name ).str() :
                                                  target.type == var_type::u ? alpha.get_value( target.name ).str() :
                                                  target.type == var_type::npc ? beta.get_value( target.name ).str() :

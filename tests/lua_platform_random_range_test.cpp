@@ -8,7 +8,6 @@
 #include <initializer_list>
 #include <random>
 
-#include "flexbuffer_json.h"
 #include <array>
 #include <cmath>
 #include <cstdint>
@@ -104,7 +103,7 @@ TEST_CASE( "lua_platform_native_random_int_advances_the_game_rng",
     using namespace cata::lua_platform;
     clear_active_runtimes();
     const cata_default_random_engine saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
-    const on_out_of_scope restore_rng( [saved_rng]() {
+    const on_out_of_scope restore_rng( [&saved_rng]() {
         rng_get_engine() = saved_rng;
     } );
     const int expected_singleton = rng( 0, 0 );
@@ -160,7 +159,7 @@ TEST_CASE( "lua_platform_native_random_float_matches_game_stream_and_nonfinite_d
     using namespace cata::lua_platform;
     clear_active_runtimes();
     const cata_default_random_engine saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
-    const on_out_of_scope restore_rng( [saved_rng]() {
+    const on_out_of_scope restore_rng( [&saved_rng]() {
         rng_get_engine() = saved_rng;
     } );
     sol::state lua;
@@ -173,7 +172,9 @@ TEST_CASE( "lua_platform_native_random_float_matches_game_stream_and_nonfinite_d
     install_runtime_api( owner, lua, ccb );
     set_active_runtimes( { owner } );
     const sol::protected_function draw = ccb["services"]["random"]["native_float"];
-    const auto isolated_before = owner->random_engine;
+    // Snapshot the isolated engine to prove a native RNG call leaves it unchanged.
+    // NOLINTNEXTLINE(cata-determinism)
+    const std::mt19937_64 isolated_before = owner->random_engine;
     CHECK_FALSE( draw( 0.0, 1.0 ).valid() );
     {
         cata::lua_platform::detail::callback_scope callback( *owner );
@@ -243,7 +244,7 @@ TEST_CASE( "lua_platform_emitted_math_random_calls_match_native_rounding_errors_
     using namespace cata::lua_platform;
     clear_active_runtimes();
     const cata_default_random_engine saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
-    const on_out_of_scope restore_rng( [saved_rng]() {
+    const on_out_of_scope restore_rng( [&saved_rng]() {
         rng_get_engine() = saved_rng;
     } );
     sol::state lua;
@@ -368,11 +369,13 @@ return values[8] end)()
         { 3, inf, 1, 0 }, { 3, 1, inf, 0 },
         { 3, nan, 1, nan }, { 3, 1, nan, 0 },
     };
-    const auto isolated_before = owner->random_engine;
+    // Snapshot the isolated engine to prove a native RNG call leaves it unchanged.
+    // NOLINTNEXTLINE(cata-determinism)
+    const std::mt19937_64 isolated_before = owner->random_engine;
     for( const random_case &row : cases ) {
         eoc_math native;
         native.deserialize( json_loader::from_string(
-                                std::string( "{\"math\":[\"" ) + row.source + "\"]}" ) );
+                                std::string( R"({"math":[")" ) + row.source + "\"]}" ) );
         finalize_conditions();
         for( const unsigned int seed : {
                  58171u, 58172u
@@ -976,6 +979,7 @@ TEST_CASE( "lua_platform_weighted_range_rows_keep_native_random_call_order",
     constexpr unsigned int seed = 37791;
     rng_set_engine_seed( seed );
     std::vector<int> expected_weights;
+    expected_weights.reserve( ranges.size() );
     for( const std::pair<int, int> &range : ranges ) {
         expected_weights.push_back( rng( range.first, range.second ) );
     }
@@ -1056,6 +1060,7 @@ TEST_CASE( "lua_platform_sample_range_matches_native_draw_order_and_state",
         operation( native_dialogue );
     }
     std::vector<int> expected_samples;
+    expected_samples.reserve( names.size() );
     for( const std::string &name : names ) {
         expected_samples.push_back( static_cast<int>( native_actor.get_value( name ).dbl() ) );
     }
@@ -1112,6 +1117,7 @@ ccb.runtime.on("world_ready", "sample_range")
     runtime_world_ready( true );
 
     std::vector<int> actual_samples;
+    actual_samples.reserve( names.size() );
     for( const std::string &name : names ) {
         actual_samples.push_back( static_cast<int>( platform_actor.get_value( name ).dbl() ) );
     }

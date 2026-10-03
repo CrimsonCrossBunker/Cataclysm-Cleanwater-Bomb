@@ -1,6 +1,8 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <flexbuffer_json.h>
 #include <cstddef>
+#include <functional>
 #include <limits>
 #include <memory>
 #include <string>
@@ -12,7 +14,6 @@
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
 #include "character_id.h"
-#include "condition.h"
 #include "dialogue.h"
 #include "dialogue_helpers.h"
 #include "event.h"
@@ -26,7 +27,6 @@
 #include "lua_platform_sol.h"
 #include "math_parser_diag_value.h"
 #include "npc.h"
-#include "npctalk.h"
 #include "rng.h"
 
 namespace
@@ -66,7 +66,7 @@ TEST_CASE( "lua_platform_variable_assignment_matches_literal_legacy_effects",
     // Platform randomness uses a runtime-local stream.  This batch checks
     // values and events without requiring parity with the legacy global RNG.
     const cata_default_random_engine saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
-    const on_out_of_scope restore_rng( [saved_rng]() {
+    const on_out_of_scope restore_rng( [&saved_rng]() {
         rng_get_engine() = saved_rng;
     } );
 
@@ -219,7 +219,7 @@ TEST_CASE( "lua_platform_variable_assignment_matches_literal_legacy_effects",
                                partner, { "npc", 9052, 0, 0, 0, {} },
                                owner->handle_runtime(), world_generation );
 
-    const auto run_platform_write = [&lua]( const std::string & script ) {
+    const auto run_platform_write = [&lua]( const std::string_view script ) {
         const sol::protected_function_result result = lua.safe_script(
                     script, sol::script_pass_on_error );
         if( !result.valid() ) {

@@ -1,8 +1,10 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <functional>
 #include <limits>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"

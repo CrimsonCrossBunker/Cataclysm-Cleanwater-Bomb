@@ -1,6 +1,10 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <coordinates.h>
+#include <point.h>
 #include <cstddef>
+#include <functional>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -19,7 +23,6 @@
 #include "lua_platform_variables.h"
 #include "math_parser_diag_value.h"
 #include "talker.h"
-#include "type_id.h"
 
 namespace
 {
@@ -101,7 +104,7 @@ TEST_CASE( "lua_platform_context_keys_match_native_variable_storage",
     const sol::protected_function set_resolved = fixture.variables["set_resolved"];
     const sol::object null_value = fixture.services["types"]["null"];
     const std::vector<std::string> keys = {
-        "", std::string( 300, 'k' ), std::string( "raw\0key", 7 ), "\n\t\x7f原生键"
+        "", std::string( 300, 'k' ), std::string( "raw\0key", 7 ), "\n\t\x7f原生键" /* NOLINT(cata-text-style): control bytes are test inputs. */
     };
     for( const std::string &key : keys ) {
         INFO( key.size() );
@@ -175,8 +178,9 @@ TEST_CASE( "lua_platform_context_string_query_matches_native_type_diagnostics",
     const sol::object empty = fixture.services["types"]["null"];
     const std::string raw_text = std::string( 10000, 's' ) + std::string( "\0尾", 4 );
     const tripoint_abs_ms point( 1, -2, 3 );
-    const auto position = cata::lua_platform::script_tripoint_coord::from_native(
-                              coords::origin::abs, coords::scale::map_square, point.raw() );
+    const cata::lua_platform::script_tripoint_coord position =
+        cata::lua_platform::script_tripoint_coord::from_native(
+            coords::origin::abs, coords::scale::map_square, point.raw() );
     sol::table large = fixture.lua.create_table();
     for( int index = 1; index <= 512; ++index ) {
         large[index] = index;
@@ -217,8 +221,9 @@ TEST_CASE( "lua_platform_context_string_query_matches_native_type_diagnostics",
         CHECK( result["value"].get<std::string>() == expected );
         CHECK( actual_diagnostic == native_diagnostic );
     }
-    const auto relative = cata::lua_platform::script_tripoint_coord::from_native(
-                              coords::origin::relative, coords::scale::map_square, tripoint::zero );
+    const cata::lua_platform::script_tripoint_coord relative =
+        cata::lua_platform::script_tripoint_coord::from_native(
+            coords::origin::relative, coords::scale::map_square, tripoint::zero );
     context.raw_set( key, relative );
     CHECK_FALSE( query( context, key ).valid() );
     const game_handle unsupported = fixture.owner( player );
