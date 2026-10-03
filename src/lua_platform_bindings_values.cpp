@@ -320,11 +320,11 @@ const id_kind_definition *find_id_kind( const std::string_view kind )
 {
     const auto &definitions = id_kind_definitions();
     const auto *const found = std::lower_bound(
-                                  definitions.begin(), definitions.end(), kind,
+                                  definitions.data(), definitions.data() + definitions.size(), kind,
     []( const id_kind_definition & entry, const std::string_view key ) {
         return entry.name < key;
     } );
-    return found != definitions.end() && found->name == kind ? &*found : nullptr;
+    return found != definitions.data() + definitions.size() && found->name == kind ? &*found : nullptr;
 }
 
 void validate_id_text( const std::string_view value )
@@ -469,11 +469,11 @@ const unit_kind_definition *find_unit_kind( const std::string_view kind )
 {
     const auto &definitions = unit_kind_definitions();
     const auto *const found = std::lower_bound(
-                                  definitions.begin(), definitions.end(), kind,
+                                  definitions.data(), definitions.data() + definitions.size(), kind,
     []( const unit_kind_definition & entry, const std::string_view key ) {
         return entry.name < key;
     } );
-    return found != definitions.end() && found->name == kind ? &*found : nullptr;
+    return found != definitions.data() + definitions.size() && found->name == kind ? &*found : nullptr;
 }
 
 const unit_conversion *find_unit_conversion(
@@ -591,11 +591,11 @@ constexpr std::array<time_unit_definition, 6> time_units = {{
 const time_unit_definition *find_time_unit( const std::string_view unit )
 {
     const auto *const found = std::lower_bound(
-                                  time_units.begin(), time_units.end(), unit,
+                                  time_units.data(), time_units.data() + time_units.size(), unit,
     []( const time_unit_definition & entry, const std::string_view key ) {
         return entry.name < key;
     } );
-    return found != time_units.end() && found->name == unit ? &*found : nullptr;
+    return found != time_units.data() + time_units.size() && found->name == unit ? &*found : nullptr;
 }
 
 std::int64_t checked_turn_count( const long double turns, const std::string_view operation )

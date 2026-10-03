@@ -52,6 +52,8 @@
 #include "stats_tracker.h"
 #include "timed_event.h"
 
+class overmap_connection;
+
 static const dimension_id dimension_world_default( "default" );
 static const mongroup_id GROUP_ZOMBIE( "GROUP_ZOMBIE" );
 static const mongroup_id GROUP_ZOMBIE_HORDE( "GROUP_ZOMBIE_HORDE" );
@@ -66,11 +68,6 @@ static const oter_str_id oter_ocean_shore( "ocean_shore" );
 static const oter_str_id oter_ocean_surface( "ocean_surface" );
 static const oter_str_id oter_ocean_water_cube( "ocean_water_cube" );
 static const oter_str_id oter_omt_obsolete( "omt_obsolete" );
-
-class overmap_connection;
-
-
-
 
 static const string_id<overmap_connection> overmap_connection_local_road( "local_road" );
 

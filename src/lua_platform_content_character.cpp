@@ -44,6 +44,7 @@ enum class sound_t : int;
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
+#include <tuple>
 #include <vector>
 
 extern "C" {
@@ -6389,7 +6390,8 @@ void character_content_transaction::impl::apply_mission_definition()
         }
         for( const auto &[value, description] : source.likely_rewards ) {
             native.likely_rewards.emplace_back(
-                dbl_or_var( value ), str_or_var( description ) );
+                std::piecewise_construct,
+                std::forward_as_tuple( value ), std::forward_as_tuple( description ) );
         }
 
         native.deadline = duration_or_var(
