@@ -343,7 +343,10 @@ TEST_CASE( "lua_platform_location_revert_matches_native_queue_and_range",
     platform_world_copy_globals_restore restore_globals;
     timed_event_manager &events = get_timed_events();
     restore_on_out_of_scope<timed_event_manager> restore_events( std::move( events ) );
-    const tripoint_abs_omt source = fixture.source_omt + tripoint( 2300, 1900, 0 );
+    // Generate new submaps inside the existing overmap, outside the reality bubble.
+    const point_abs_omt om_origin = project_to<coords::omt>(
+                                        project_to<coords::om>( fixture.source_omt.xy() ) );
+    const tripoint_abs_omt source( om_origin + point( 30, 30 ), fixture.source_omt.z() );
     const tripoint_abs_sm base = project_to<coords::sm>( source );
     REQUIRE_FALSE( MAPBUFFER.submap_exists( base ) );
     on_out_of_scope clear_revert_maps( []() {
@@ -462,7 +465,9 @@ TEST_CASE( "lua_platform_location_revert_provider_owns_snapshots_and_runs_synchr
     timed_event_manager &events = get_timed_events();
     restore_on_out_of_scope<timed_event_manager> restore_events( std::move( events ) );
     events = timed_event_manager();
-    const tripoint_abs_omt source = fixture.source_omt + tripoint( 2400, 1950, 0 );
+    const point_abs_omt om_origin = project_to<coords::omt>(
+                                        project_to<coords::om>( fixture.source_omt.xy() ) );
+    const tripoint_abs_omt source( om_origin + point( 32, 30 ), fixture.source_omt.z() );
     const tripoint_abs_sm base = project_to<coords::sm>( source );
     REQUIRE_FALSE( MAPBUFFER.submap_exists( base ) );
     on_out_of_scope clear_revert_maps( []() {
@@ -555,7 +560,9 @@ TEST_CASE( "lua_platform_location_revert_survives_native_save_and_actualizes",
     platform_world_copy_globals_restore restore_globals;
     timed_event_manager &events = get_timed_events();
     restore_on_out_of_scope<timed_event_manager> restore_events( std::move( events ) );
-    const tripoint_abs_omt source = fixture.source_omt + tripoint( 2500, 2000, 0 );
+    const point_abs_omt om_origin = project_to<coords::omt>(
+                                        project_to<coords::om>( fixture.source_omt.xy() ) );
+    const tripoint_abs_omt source( om_origin + point( 34, 30 ), fixture.source_omt.z() );
     const tripoint_abs_sm base = project_to<coords::sm>( source );
     on_out_of_scope clear_revert_maps( []() {
         MAPBUFFER.clear_outside_reality_bubble();

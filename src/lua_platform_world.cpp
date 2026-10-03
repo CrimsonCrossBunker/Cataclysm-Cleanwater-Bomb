@@ -3012,12 +3012,6 @@ struct world_location_event_key {
     sol::protected_function provider;
 };
 
-struct pending_world_location_snapshot {
-    tripoint_abs_ms position;
-    submap snapshot;
-    std::string key;
-};
-
 world_location_event_key read_world_location_event_key(
     const sol::object &requested, const std::string_view api_name )
 {
@@ -3080,8 +3074,6 @@ sol::table schedule_world_location_revert(
     ensure_omt_submaps( omt, base );
     sol::state_view state( lua );
     sol::table keys = state.create_table();
-    std::vector<pending_world_location_snapshot> pending;
-    pending.reserve( 4 );
     for( int x = 0; x < 2; ++x ) {
         for( int y = 0; y < 2; ++y ) {
             const tripoint_abs_sm source_position = base + point( x, y );
@@ -3091,18 +3083,13 @@ sol::table schedule_world_location_revert(
             }
             submap snapshot = source->get_revert_submap();
             const std::string key = evaluate_world_location_event_key( event_key, api_name );
-            pending.push_back( {
-                event_positions[pending.size()],
-                std::move( snapshot ), key
-            } );
+            // Native scheduling is incremental: a later provider failure
+            // leaves the events queued by earlier successful providers.
+            const std::size_t index = x * 2 + y;
+            get_timed_events().add( timed_event_type::REVERT_SUBMAP, when, -1,
+                                    event_positions[index], 0, "", std::move( snapshot ), key );
+            keys[index + 1] = key;
         }
-    }
-    for( std::size_t index = 0; index < pending.size(); ++index ) {
-        pending_world_location_snapshot &event = pending[index];
-        get_timed_events().add( timed_event_type::REVERT_SUBMAP, when, -1,
-                                event.position, 0, "",
-                                std::move( event.snapshot ), event.key );
-        keys[index + 1] = event.key;
     }
     reality_bubble().invalidate_map_cache( omt.z() );
     sol::table value = state.create_table();
@@ -3156,8 +3143,6 @@ sol::table schedule_world_location_copy(
     ensure_omt_submaps( destination, destination_base );
     sol::state_view state( lua );
     sol::table keys = state.create_table();
-    std::vector<pending_world_location_snapshot> pending;
-    pending.reserve( 4 );
     for( int x = 0; x < 2; ++x ) {
         for( int y = 0; y < 2; ++y ) {
             submap *source_submap = MAPBUFFER.lookup_submap( source_base + point( x, y ) );
@@ -3170,18 +3155,11 @@ sol::table schedule_world_location_copy(
             require_submap_linked_item_offsets_fit( snapshot, offset, api_name );
             translate_submap_linked_items( snapshot, offset );
             const std::string key = evaluate_world_location_event_key( event_key, api_name );
-            pending.push_back( {
-                event_positions[pending.size()],
-                std::move( snapshot ), key
-            } );
+            const std::size_t index = x * 2 + y;
+            get_timed_events().add( timed_event_type::REVERT_SUBMAP, when, -1,
+                                    event_positions[index], 0, "", std::move( snapshot ), key );
+            keys[index + 1] = key;
         }
-    }
-    for( std::size_t index = 0; index < pending.size(); ++index ) {
-        pending_world_location_snapshot &event = pending[index];
-        get_timed_events().add( timed_event_type::REVERT_SUBMAP, when, -1,
-                                event.position, 0, "",
-                                std::move( event.snapshot ), event.key );
-        keys[index + 1] = event.key;
     }
     get_avatar().translocators.copy_translocator(
         source, destination );
