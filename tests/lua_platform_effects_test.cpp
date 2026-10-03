@@ -81,7 +81,7 @@ struct active_activity_npc {
         target->normalize();
         target->setID( character_id( id ), true );
         cata::lua_platform::register_npc_handle_identity( *target );
-        target->setpos( get_map(), get_avatar().pos_bub() + tripoint( 1, 0, 0 ) );
+        target->spawn_at_precise( get_avatar().pos_abs() + tripoint_rel_ms( 1, 0, 0 ) );
         overmap_buffer.insert_npc( target );
         g->load_npcs();
     }

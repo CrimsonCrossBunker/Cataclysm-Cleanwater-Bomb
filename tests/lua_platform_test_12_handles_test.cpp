@@ -3,6 +3,7 @@
 #include <character_id.h>
 #include <condition.h>
 #include <coordinates.h>
+#include <debug.h>
 #include <dialogue.h>
 #include <dialogue_helpers.h>
 #include <flag.h>
@@ -1560,7 +1561,7 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
     const tripoint_bub_ms beta_pos( 110, 110, 0 );
     const tripoint_bub_ms beta_map_pos( 111, 110, 0 );
     const tripoint_bub_ms beta_vehicle_pos( 109, 110, 0 );
-    beta.setpos( here, beta_pos );
+    beta.spawn_at_precise( here.get_abs( beta_pos ) );
 
     const ter_str_id floor_id( "t_floor" );
     REQUIRE( floor_id.is_valid() );
@@ -1600,7 +1601,8 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
         item inventory_battery( itype_battery );
         inventory_battery.charges = 5;
         inventory_battery.set_owner( owner_faction );
-        target.inv->add_item( std::move( inventory_battery ), false, false, false );
+        // Access_Inventory uses all_items_loc(): wielded items and worn pockets, not legacy inv.
+        target.set_wielded_item( inventory_battery );
 
         item map_battery( itype_battery );
         map_battery.charges = 3;
@@ -1764,7 +1766,7 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
     item unknown_test_battery( itype_battery );
     unknown_test_battery.charges = 5;
     unknown_test_battery.set_owner( alpha_faction );
-    alpha.inv->add_item( std::move( unknown_test_battery ), false, false, false );
+    alpha.set_wielded_item( unknown_test_battery );
     run_native_effect( "u_consume_item_sum", { { "__unknown_native_item__", 1 } },
     native_pair );
     CHECK( alpha.charges_of( itype_battery ) == 5 );
@@ -1785,14 +1787,14 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
     item partial_native_battery( itype_battery );
     partial_native_battery.charges = 5;
     partial_native_battery.set_owner( beta_faction );
-    beta.inv->add_item( std::move( partial_native_battery ), false, false, false );
+    beta.set_wielded_item( partial_native_battery );
     run_native_effect( "npc_consume_item_sum", { { "battery", 2 } }, native_pair );
     CHECK( beta.charges_of( itype_battery ) == 3 );
     beta.inv->clear();
     item partial_platform_battery( itype_battery );
     partial_platform_battery.charges = 5;
     partial_platform_battery.set_owner( beta_faction );
-    beta.inv->add_item( std::move( partial_platform_battery ), false, false, false );
+    beta.set_wielded_item( partial_platform_battery );
     const sol::table partial_value = consume(
     alpha_handle, beta_handle, "beta", lua_entries( { { "battery", 2 } } ) );
     CHECK( partial_value["coverage"].get<double>() == Approx( 1.0 ) );
@@ -1806,15 +1808,18 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
     item fallback_native_battery( itype_battery );
     fallback_native_battery.charges = 5;
     fallback_native_battery.set_owner( beta_faction );
-    beta.inv->add_item( std::move( fallback_native_battery ), false, false, false );
+    beta.set_wielded_item( fallback_native_battery );
     dialogue native_fallback( get_talker_for( beta ), std::unique_ptr<talker>() );
-    run_native_effect( "npc_consume_item_sum", { { "battery", 2 } }, native_fallback );
+    const std::string beta_fallback_diagnostic = capture_debugmsg_during( [&]() {
+        run_native_effect( "npc_consume_item_sum", { { "battery", 2 } }, native_fallback );
+    } );
+    CHECK( beta_fallback_diagnostic.find( "invalid beta talker" ) != std::string::npos );
     CHECK( beta.charges_of( itype_battery ) == 3 );
     beta.inv->clear();
     item fallback_platform_battery( itype_battery );
     fallback_platform_battery.charges = 5;
     fallback_platform_battery.set_owner( beta_faction );
-    beta.inv->add_item( std::move( fallback_platform_battery ), false, false, false );
+    beta.set_wielded_item( fallback_platform_battery );
     const sol::optional<cata::lua_platform::game_handle> absent_handle;
     const sol::table fallback_value = consume(
     beta_handle, absent_handle, "beta", lua_entries( { { "battery", 2 } } ) );
@@ -1827,15 +1832,18 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
     item alpha_fallback_native_battery( itype_battery );
     alpha_fallback_native_battery.charges = 5;
     alpha_fallback_native_battery.set_owner( beta_faction );
-    beta.inv->add_item( std::move( alpha_fallback_native_battery ), false, false, false );
+    beta.set_wielded_item( alpha_fallback_native_battery );
     dialogue native_alpha_fallback( std::unique_ptr<talker>(), get_talker_for( beta ) );
-    run_native_effect( "u_consume_item_sum", { { "battery", 2 } }, native_alpha_fallback );
+    const std::string alpha_fallback_diagnostic = capture_debugmsg_during( [&]() {
+        run_native_effect( "u_consume_item_sum", { { "battery", 2 } }, native_alpha_fallback );
+    } );
+    CHECK( alpha_fallback_diagnostic.find( "invalid alpha talker" ) != std::string::npos );
     CHECK( beta.charges_of( itype_battery ) == 3 );
     beta.inv->clear();
     item alpha_fallback_platform_battery( itype_battery );
     alpha_fallback_platform_battery.charges = 5;
     alpha_fallback_platform_battery.set_owner( beta_faction );
-    beta.inv->add_item( std::move( alpha_fallback_platform_battery ), false, false, false );
+    beta.set_wielded_item( alpha_fallback_platform_battery );
     const sol::table alpha_fallback_value = consume(
     absent_handle, beta_handle, "alpha", lua_entries( { { "battery", 2 } } ) );
     CHECK( alpha_fallback_value["coverage"].get<double>() == Approx( 1.0 ) );
@@ -1848,7 +1856,8 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
         item bandages( itype_bandages );
         bandages.set_owner( owner_faction );
         REQUIRE( backpack.put_in( std::move( bandages ), pocket_type::CONTAINER ).success() );
-        return &target.inv->add_item( std::move( backpack ), false, false, false );
+        target.set_wielded_item( backpack );
+        return &*target.get_wielded_item();
     };
     item *native_backpack = add_backpack_with_bandages( beta, beta_faction );
     REQUIRE( native_backpack != nullptr );

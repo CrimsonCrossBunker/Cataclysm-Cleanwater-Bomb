@@ -243,7 +243,7 @@ TEST_CASE( "lua_platform_contained_trade_preserves_exact_source_and_rollback_ord
     REQUIRE( fixture.ready() );
     item bag( itype_id( "backpack" ), calendar::turn );
     for( int i = 0; i < 3; ++i ) {
-        item child( itype_id( "rock" ), calendar::turn );
+        item child( itype_id( "bandages" ), calendar::turn );
         child.set_var( "trade_fixture_position", std::to_string( i ) );
         bag.force_insert_item( std::move( child ), pocket_type::CONTAINER );
     }

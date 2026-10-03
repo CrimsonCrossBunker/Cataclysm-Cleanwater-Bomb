@@ -1045,6 +1045,12 @@ TEST_CASE( "lua_platform_avatar_teleport_force_safe_collision_matches_native",
 {
     platform_avatar_relocation_fixture fixture( 742, 41 );
     map &here = fixture.get_map();
+    // force_safe searches neighboring tiles; keep the entire search in the loaded map.
+    fixture.local = tripoint_bub_ms( 60, 60, 0 );
+    fixture.target_local = fixture.local + tripoint::east;
+    fixture.source_abs = here.get_abs( fixture.local );
+    fixture.target_abs = here.get_abs( fixture.target_local );
+    get_avatar().setpos( here, fixture.local );
     const ter_str_id floor_id( "t_floor" );
     REQUIRE( floor_id.is_valid() );
     here.ter_set( fixture.local, floor_id.id() );
