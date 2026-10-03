@@ -24,7 +24,8 @@ class LuaIndirectAssignmentMigrationTest(unittest.TestCase):
 
     def render(self, expression: str, targets=None) -> list[str] | None:
         return migration.render_static_character_math(
-            {"math": [expression]}, self.targets if targets is None else targets
+            {"math": [expression]},
+            self.targets if targets is None else targets,
         )
 
     def require_rendered(self, expression: str) -> list[str]:
@@ -34,12 +35,18 @@ class LuaIndirectAssignmentMigrationTest(unittest.TestCase):
 
     def execute_lua(self, script: str) -> None:
         completed = subprocess.run(
-            ["lua", "-"], input=script, text=True, capture_output=True, timeout=10
+            ["lua", "-"],
+            input=script,
+            text=True,
+            capture_output=True,
+            timeout=10,
         )
         self.assertEqual(completed.returncode, 0, completed.stderr)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
-    def test_indirect_writes_route_one_pointer_to_proven_scopes_and_raw_keys(self) -> None:
+    def test_indirect_writes_route_one_pointer_to_proven_scopes_and_raw_keys(
+        self,
+    ) -> None:
         effects = [
             "v_u_pointer = 11",
             "v_n_pointer = 12",
@@ -51,16 +58,22 @@ class LuaIndirectAssignmentMigrationTest(unittest.TestCase):
             "v_next_pointer = 18",
         ]
         generated = [
-            line for expression in effects for line in self.require_rendered(expression)
+            line
+            for expression in effects
+            for line in self.require_rendered(expression)
         ]
         source = "\n".join(generated)
-        self.assertIn('get_context_string(context and context.data, "u_pointer")', source)
+        self.assertIn(
+            ('get_context_string(context and context.data, "u_pointer")'),
+            source,
+        )
         self.assertIn("alpha, string.sub(target_name, 3)", source)
         self.assertIn("beta, string.sub(target_name, 3)", source)
         self.assertNotIn("mutation_recipient", source)
         self.assertNotIn("mutation_npc_fallback", source)
 
-        script = r"""
+        script = (
+            r"""
 local nul_key = "raw\000key"
 local long_key = string.rep("k", 8193)
 local alpha = {values={wrong=71}}
@@ -80,7 +93,8 @@ local globals = {v_next="u_wrong_target"}
 local diagnostics,writes={},{}
 local null_value={}
 local function service_value(result)
-    if not result.ok then error(result.error and result.error.code or "service failure",0) end
+    if not result.ok then error(result.error and result.error.code or
+        "service failure",0) end
     return result.value
 end
 local function actor_store(owner)
@@ -92,7 +106,8 @@ local function number_result(store,key)
     local value=store[key]
     if value==nil then return {ok=true,value={exists=false}} end
     if type(value)~="number" then
-        return {ok=false,error={code="variable_type_mismatch",message="not numeric"}}
+        return {ok=false,error={code="variable_type_mismatch",
+            message="not numeric"}}
     end
     return {ok=true,value={exists=true,value=value}}
 end
@@ -138,11 +153,15 @@ local services={
     },
     diagnostic=function(message) diagnostics[#diagnostics+1]=message end,
 }
-""" + source + r"""
+""" +
+            source +
+            r"""
 assert(alpha.values.target==11 and math.type(alpha.values.target)=="float")
 assert(beta.values.target==12 and math.type(beta.values.target)=="float")
-assert(context.data.context_target==13 and math.type(context.data.context_target)=="float")
-assert(globals.raw_global_target==14 and math.type(globals.raw_global_target)=="float")
+assert(context.data.context_target==13 and math.type(
+    context.data.context_target)=="float")
+assert(globals.raw_global_target==14 and math.type(
+    globals.raw_global_target)=="float")
 assert(globals[""]==15 and math.type(globals[""])=="float")
 assert(globals[nul_key]==16 and math.type(globals[nul_key])=="float")
 assert(globals[long_key]==17 and math.type(globals[long_key])=="float")
@@ -152,13 +171,17 @@ assert(context.data.next=="u_nested_target")
 assert(#diagnostics==0)
 assert(#writes==7, "actor/global pointers use exactly one typed write")
 """
+        )
         self.execute_lua(script)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
-    def test_missing_pointer_reads_zero_and_compound_resolves_write_target_after_operands(self) -> None:
+    def test_missing_pointer_and_compound_write_order(
+        self,
+    ) -> None:
         missing = "\n".join(self.require_rendered("v_missing++"))
         compound = "\n".join(self.require_rendered("v_compound += _rhs"))
-        script = r"""
+        script = (
+            r"""
 local alpha={values={compound=10.0}}
 local beta={values={}}
 local context={data={compound="u_compound",rhs=2.5}}
@@ -166,7 +189,8 @@ local globals={[""]=31}
 local trace,reads,writes={}, {}, {}
 local function record(value) trace[#trace+1]=value end
 local function service_value(result)
-    if not result.ok then error(result.error and result.error.code or "service failure",0) end
+    if not result.ok then error(result.error and result.error.code or
+        "service failure",0) end
     return result.value
 end
 local function actor_store(owner)
@@ -178,7 +202,8 @@ local function number_result(store,key)
     local value=store[key]
     if value==nil then return {ok=true,value={exists=false}} end
     if type(value)~="number" then
-        return {ok=false,error={code="variable_type_mismatch",message="not numeric"}}
+        return {ok=false,error={code="variable_type_mismatch",
+            message="not numeric"}}
     end
     return {ok=true,value={exists=true,value=value}}
 end
@@ -218,34 +243,45 @@ local services={variables={
         return {ok=true,value=value}
     end,
 },diagnostic=function(message) error(message,0) end}
-""" + missing + r"""
+""" +
+            missing +
+            r"""
 assert(globals[""]==1 and math.type(globals[""])=="float",
        "a missing pointer reads as zero but writes to the empty global key")
 
 trace,reads,writes={},{},{}
-""" + compound + r"""
-assert(alpha.values.compound==12.5 and math.type(alpha.values.compound)=="float")
+""" +
+            compound +
+            r"""
+assert(alpha.values.compound==12.5 and math.type(
+    alpha.values.compound)=="float")
 assert(reads.compound==1 and writes.compound==1,
        "compound indirect assignment reads and writes the pointed number once")
         local rhs_index,read_index,write_index
         local pointer_indices={}
         for index,event in ipairs(trace) do
             if event=="rhs" then rhs_index=index end
-            if event=="pointer:compound" then pointer_indices[#pointer_indices+1]=index end
+            if event=="pointer:compound" then
+                pointer_indices[#pointer_indices+1]=index end
             if event=="target-read:compound" then read_index=index end
             if event=="target-write:compound" then write_index=index end
         end
         assert(rhs_index and read_index and write_index)
         assert(#pointer_indices==2,
-               "compound assignment resolves the pointer once for its read and once for its write")
+               "compound assignment resolves the pointer once for its read " ..
+               "and once for its write")
         assert(pointer_indices[1]<read_index)
-        assert(math.max(rhs_index,read_index)<pointer_indices[2] and pointer_indices[2]<write_index,
+        assert(math.max(rhs_index,read_index)<pointer_indices[2] and
+            pointer_indices[2]<write_index,
                "write-target resolution follows both operand evaluations")
 """
+        )
         self.execute_lua(script)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
-    def test_invalid_pointer_strings_and_bad_rhs_follow_typed_diagnostic_semantics(self) -> None:
+    def test_invalid_pointer_and_rhs_diagnostics(
+        self,
+    ) -> None:
         effects = [
             "v_null_pointer = 1",
             "v_number_pointer = 2",
@@ -254,12 +290,15 @@ assert(reads.compound==1 and writes.compound==1,
             "v_after_failure_pointer = 4",
         ]
         generated = [
-            line for expression in effects for line in self.require_rendered(expression)
+            line
+            for expression in effects
+            for line in self.require_rendered(expression)
         ]
         source = "\n".join(generated)
         self.assertIn("get_context_string", source)
 
-        script = r"""
+        script = (
+            r"""
 local alpha={values={}}
 local beta={values={}}
 local null_value={}
@@ -274,7 +313,8 @@ local context={data={
 local globals={}
 local diagnostics,pointer_reads,writes={}, {}, {}
 local function service_value(result)
-    if not result.ok then error(result.error and result.error.code or "service failure",0) end
+    if not result.ok then error(result.error and result.error.code or
+        "service failure",0) end
     return result.value
 end
 local function actor_store(owner)
@@ -286,7 +326,8 @@ local function number_result(store,key)
     local value=store[key]
     if value==nil then return {ok=true,value={exists=false}} end
     if type(value)~="number" then
-        return {ok=false,error={code="variable_type_mismatch",message="bad numeric type"}}
+        return {ok=false,error={code="variable_type_mismatch",
+            message="bad numeric type"}}
     end
     return {ok=true,value={exists=true,value=value}}
 end
@@ -296,9 +337,11 @@ local services={variables={
         pointer_reads[key]=(pointer_reads[key] or 0)+1
         local value=data[key]
         if value==nil then return {ok=true,value={exists=false}} end
-        if value==null_value then return {ok=true,value={exists=true,value=""}} end
+        if value==null_value then return {ok=true,value={exists=true,
+            value=""}} end
         if type(value)~="string" then
-            diagnostics[#diagnostics+1]="pointer value has an incompatible string type"
+            diagnostics[#diagnostics+1]=
+                "pointer value has an incompatible string type"
             return {ok=true,value={exists=true,value=""}}
         end
         return {ok=true,value={exists=true,value=value}}
@@ -328,23 +371,30 @@ local services={variables={
         return {ok=true,value=value}
     end,
 },diagnostic=function(message) diagnostics[#diagnostics+1]=message end}
-""" + source + r"""
+""" +
+            source +
+            r"""
 assert(globals[""]==3 and globals.after_failure==4)
 assert(pointer_reads.bad_rhs_pointer==nil,
        "a type-invalid RHS must stop before resolving or writing its target")
 assert(globals.must_not_write==nil)
 assert(#writes==4, "three empty-target writes and the later valid write")
-assert(#diagnostics==3, "numeric/array string diagnostics plus the bad RHS diagnostic")
+assert(#diagnostics==3,
+    "numeric/array string diagnostics plus the bad RHS diagnostic")
 """
+        )
         self.execute_lua(script)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
-    def test_one_random_draw_is_allowed_but_ambiguous_interactions_remain_todos(self) -> None:
+    def test_random_draw_and_ambiguous_interaction_todos(
+        self,
+    ) -> None:
         generated = self.require_rendered("v_draw_pointer = rng(1, 3)")
         source = "\n".join(generated)
         self.assertEqual(source.count("services.random.native_float("), 1)
 
-        script = r"""
+        script = (
+            r"""
 local alpha={values={draw=0.0}}
 local beta={values={}}
 local context={data={draw_pointer="u_draw"}}
@@ -352,7 +402,8 @@ local globals={}
 local trace,draws={},0
 local function record(value) trace[#trace+1]=value end
 local function service_value(result)
-    if not result.ok then error(result.error and result.error.code or "service failure",0) end
+    if not result.ok then error(result.error and result.error.code or
+        "service failure",0) end
     return result.value
 end
 local function actor_store(owner)
@@ -388,11 +439,14 @@ local services={
     },
     diagnostic=function(message) error(message,0) end,
 }
-""" + source + r"""
+""" +
+            source +
+            r"""
 assert(draws==1 and alpha.values.draw==2.5)
 assert(trace[1]=="draw" and trace[2]=="pointer" and trace[3]=="write",
        "the RHS draw precedes indirect resolution and write")
 """
+        )
         self.execute_lua(script)
 
         unproven_beta = dict(self.targets)

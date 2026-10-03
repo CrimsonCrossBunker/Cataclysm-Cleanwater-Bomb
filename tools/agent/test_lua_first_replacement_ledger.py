@@ -19,33 +19,54 @@ from tools.agent.generate_lua_first_replacement_ledger import (
 
 
 class LuaFirstReplacementLedgerTest(unittest.TestCase):
-    def test_coordinate_reflection_records_source_without_claiming_native_acceptance(self):
+    def test_coordinate_reflection_without_native_acceptance_claim(
+        self,
+    ):
         entry = disposition("eoc-effects", "mirror_coordinates", {})
         self.assertEqual(entry["target"], "services.coords")
         self.assertEqual(entry["status"], "bounded_implemented_unverified")
-        for path in ("src/point.cpp", "src/lua_platform_bindings_coords.cpp",
-                     "tests/point_test.cpp", "tests/lua_platform_variable_native_key_test.cpp"):
+        for path in (
+            "src/point.cpp",
+            "src/lua_platform_bindings_coords.cpp",
+            "tests/point_test.cpp",
+            ("tests/lua_platform_variable_native_key_test.cpp"),
+        ):
             self.assertIn(path, entry["evidence"])
 
-    def test_location_copy_uses_world_service_without_claiming_native_acceptance(self):
+    def test_location_copy_world_service_without_native_claim(
+        self,
+    ):
         entry = disposition("eoc-effects", "copy_location", {})
         self.assertEqual(entry["target"], "services.world")
         self.assertEqual(entry["status"], "bounded_implemented_unverified")
         self.assertIn("src/lua_platform_variables.cpp", entry["evidence"])
-        self.assertIn("tests/lua_platform_variable_native_key_test.cpp", entry["evidence"])
+        self.assertIn(
+            ("tests/lua_platform_variable_native_key_test.cpp"),
+            entry["evidence"],
+        )
 
-    def test_location_adjust_uses_coordinate_and_variable_services_without_acceptance_claim(self):
+    def test_location_adjust_services_without_acceptance_claim(
+        self,
+    ):
         entry = disposition("eoc-effects", "location_variable_adjust", {})
         self.assertEqual(entry["target"], "services.coords-and-variables")
         self.assertEqual(entry["status"], "bounded_implemented_unverified")
         self.assertIn("src/lua_platform_variables.cpp", entry["evidence"])
-        self.assertIn("tests/lua_platform_variable_native_key_test.cpp", entry["evidence"])
+        self.assertIn(
+            ("tests/lua_platform_variable_native_key_test.cpp"),
+            entry["evidence"],
+        )
 
     def test_engine_backed_control_flow_is_not_exempt_from_acceptance(self):
-        entries = {(entry["inventory"], entry["selector"]): entry
-                   for entry in build_ledger()["entries"]}
+        entries = {
+            (entry["inventory"], entry["selector"]): entry
+            for entry in build_ledger()["entries"]
+        }
         for selector in (
-            "foreach", "run_eocs", "run_eoc_selector", "weighted_list_eocs"
+            "foreach",
+            "run_eocs",
+            "run_eoc_selector",
+            "weighted_list_eocs",
         ):
             with self.subTest(selector=selector):
                 entry = entries[("eoc-effects", selector)]
@@ -60,12 +81,16 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
                 )
                 self.assertIn("tools/migrate_lua_first.py", entry["evidence"])
         for selector in ("and", "or", "not"):
-            self.assertEqual(entries[("eoc-conditions", selector)]["status"],
-                             "reviewed_not_applicable")
+            self.assertEqual(
+                entries[("eoc-conditions", selector)]["status"],
+                "reviewed_not_applicable",
+            )
 
     def test_named_predicates_require_semantic_acceptance(self):
-        entries = {(entry["inventory"], entry["selector"]): entry
-                   for entry in build_ledger()["entries"]}
+        entries = {
+            (entry["inventory"], entry["selector"]): entry
+            for entry in build_ledger()["entries"]
+        }
         for inventory, selector in (
             ("eoc-effects", "set_condition"),
             ("eoc-conditions", "get_condition"),
@@ -83,24 +108,31 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
                 self.assertIn("tools/migrate_lua_first.py", entry["evidence"])
 
     def test_mutation_actions_remain_source_only_bounded(self):
-        entries = {(entry["inventory"], entry["selector"]): entry
-                   for entry in build_ledger()["entries"]}
+        entries = {
+            (entry["inventory"], entry["selector"]): entry
+            for entry in build_ledger()["entries"]
+        }
         for prefix in ("u_", "npc_"):
             for operation, method in (
-                ("add_trait", "replace"), ("lose_trait", "erase"),
+                ("add_trait", "replace"),
+                ("lose_trait", "erase"),
                 ("activate_trait", "invoke_activation"),
                 ("deactivate_trait", "invoke_activation"),
             ):
                 entry = entries[("eoc-effects", prefix + operation)]
                 self.assertEqual(
-                    entry["target"], "services.mutations." + method)
+                    entry["target"], "services.mutations." + method
+                )
                 self.assertEqual(
-                    entry["status"], "bounded_implemented_unverified")
+                    entry["status"], "bounded_implemented_unverified"
+                )
                 self.assertEqual(entry["verification"], "source_only")
                 self.assertIn(
-                    "tests/lua_platform_mutations_test.cpp", entry["evidence"])
+                    "tests/lua_platform_mutations_test.cpp", entry["evidence"]
+                )
                 self.assertIn(
-                    "tools/test_lua_mutation_migration.py", entry["evidence"])
+                    "tools/test_lua_mutation_migration.py", entry["evidence"]
+                )
 
     def test_schema_requires_each_todo_category_and_core_input_contract(self):
         schema_root = Path(__file__).resolve().parents[2] / "ai"
@@ -183,17 +215,23 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
         self.assertEqual(IMPLEMENTED_VERIFIED, frozenset())
         self.assertEqual(BOUNDED_IMPLEMENTED_VERIFIED, frozenset())
 
-    def test_verified_entries_require_final_gate_and_native_test_evidence(self):
-        verified = [entry for entry in build_ledger()["entries"]
-                    if entry["status"] in (
-                        "implemented_verified", "bounded_implemented_verified"
-                    )]
+    def test_verified_entries_require_final_gate_and_native_test_evidence(
+        self,
+    ):
+        verified = [
+            entry
+            for entry in build_ledger()["entries"]
+            if entry["status"]
+            in ("implemented_verified", "bounded_implemented_verified")
+        ]
         for entry in verified:
             self.assertEqual(entry["verification"], "final_semantic_gate")
             self.assertTrue(
-                any(Path(evidence).parts[0] == "tests" and
+                any(
+                    Path(evidence).parts[0] == "tests" and
                     Path(evidence).suffix == ".cpp"
-                    for evidence in entry["evidence"]),
+                    for evidence in entry["evidence"]
+                ),
                 entry,
             )
 
@@ -258,9 +296,12 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
             ],
         )
         self.assertNotIn("src/" + "cata" + "lua_runtime.cpp", evidence)
-        self.assertIn("src/lua_platform_runtime.cpp", normalize_evidence(
-            "json-object-types", ["src/lua_platform_runtime.cpp"]
-        ))
+        self.assertIn(
+            "src/lua_platform_runtime.cpp",
+            normalize_evidence(
+                "json-object-types", ["src/lua_platform_runtime.cpp"]
+            ),
+        )
         self.assertIn(
             "data/reference/json/ccb_json_object_types.json",
             evidence,

@@ -2148,10 +2148,10 @@ assert(table.concat(trace,',')==TRACE)
                     "CONTEXT", migrate_lua_first.lua_quote(default["ctxt"]) if isinstance(default, dict) else "nil",
                 ).replace("RAW", migrate_lua_first.lua_quote(translated_default)).replace(
                     "EXPECTED", migrate_lua_first.lua_quote(
-                    present_value if present_value is not None else "translated" if translated_default else "",
-                )).replace("TRACE", migrate_lua_first.lua_quote(
-                    "rng,read,translate,write" if present_value is None and translated_default else "rng,read,write",
-                )).replace("BODY", "\n".join(lines or []))
+                        present_value if present_value is not None else "translated" if translated_default else "",
+                    )).replace("TRACE", migrate_lua_first.lua_quote(
+                        "rng,read,translate,write" if present_value is None and translated_default else "rng,read,write",
+                    )).replace("BODY", "\n".join(lines or []))
                 run = subprocess.run(["lua", "-"], input=script, text=True,
                                      capture_output=True, timeout=10)
                 self.assertEqual(run.returncode, 0, run.stderr)
@@ -2425,7 +2425,7 @@ local services = {
  end},
 }
 local function service_value(result) assert(result.ok);return result.value end
-'''+body+'''
+''' + body + '''
 assert(context.data.output=="raw\\0label")
 assert(table.concat(trace,",")=="rng,text,expand,pointer")
 '''
@@ -2499,7 +2499,7 @@ local services={
  end},
 }
 local function service_value(result) assert(result.ok);return result.value end
-'''+"\n".join(lines or [])+'''
+''' + "\n".join(lines or []) + '''
 assert(table.concat(trace,",")=="rng,expand,write")
 '''
         run = subprocess.run([shutil.which("lua"), "-"], input=script, text=True,
@@ -2576,7 +2576,7 @@ local services={
  end},
 }
 local function service_value(result) assert(result.ok);return result.value end
-'''+"\n".join(lines or [])+r'''
+''' + "\n".join(lines or []) + r'''
 assert(actual=='['..(ACCEPTED and entered or context.data.chosen)..']')
 assert(table.concat(trace,',')=='rng,chosen,title1,default,open,title2,description,identifier,query,expand,pointer,write')
 '''
@@ -2606,7 +2606,7 @@ local services={
  end},
 }
 local function service_value(result)assert(result.ok);return result.value end
-'''+"\n".join(lines or [])+'''
+''' + "\n".join(lines or []) + '''
 assert(context.data.output=='' and calls==2)
 '''
         run = subprocess.run([shutil.which("lua"), "-"], input=script, text=True,
@@ -2929,6 +2929,7 @@ assert(table.concat(trace,',')==TRACE)
             ("_" + pointer_key, "context", pointer_key),
             (42, "global", ""), (False, "global", ""), (["u_target"], "global", ""),
         )
+
         def literal(value: Any) -> str:
             if value is None:
                 return "nil"
@@ -6859,7 +6860,7 @@ assert(read() == 'bio_batteries')
     def test_any_effect_generated_lua_queries_live_npc(self) -> None:
         # This executes generated Lua against a service double, not the engine.
         expression = migrate_lua_first.render_eoc_condition_expression(
-                {"npc_has_any_effect": ["poison", "bleed"], "bodypart": "arm_l"},
+            {"npc_has_any_effect": ["poison", "bleed"], "bodypart": "arm_l"},
             npc_dialogue_pair_proven=True,
             npc_actor_expression="context.actors.beta")
         self.assertIsNotNone(expression)
@@ -14592,7 +14593,6 @@ assert(not available())
                 self.assertNotIn("services.npcs.set_ai_policy", main)
                 self.assertIn("needs domain-service conversion", report)
 
-
     def test_translates_character_entity_vehicle_and_npc_effects(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "source.json"
@@ -15025,8 +15025,8 @@ assert(not available())
             ["npc_gets_item_to_use", "npc_gets_item"],
         )
         self.assertTrue(all(
-            set(response) == {"text", "condition", "topic", "effect"}
-            and response["condition"] == {"not": "is_by_radio"}
+            set(response) == {"text", "condition", "topic", "effect"} and
+            response["condition"] == {"not": "is_by_radio"}
             for response in native_offers
         ))
 
@@ -16715,8 +16715,8 @@ assert(not available())
                 self.assertIsNotNone(expression)
                 assert expression is not None
                 expected_field = (
-                    fields["npc_has_activity"] if name.endswith("activity_member")
-                    or name == "negated_activity_member" else fields[name]
+                    fields["npc_has_activity"] if name.endswith("activity_member") or
+                    name == "negated_activity_member" else fields[name]
                 )
                 self.assertIn(f"state.{expected_field}", expression)
                 self.assertIn("context.actors.beta", expression)
@@ -22515,8 +22515,8 @@ assert(not available())
                 for selector in selector_counts:
                     matching = [
                         response for response in responses
-                        if isinstance(response, dict)
-                        and response.get("effect") == selector
+                        if isinstance(response, dict) and
+                        response.get("effect") == selector
                     ]
                     if not matching:
                         continue
@@ -22536,8 +22536,8 @@ assert(not available())
                     self.assertIsNotNone(rendered)
                     effect_todos = [
                         todo for todo in result.todos
-                        if "response effect" in todo.message
-                        and selector in todo.message
+                        if "response effect" in todo.message and
+                        selector in todo.message
                     ]
                     if selector == "goto_location":
                         self.assertEqual(len(effect_todos), len(matching))
@@ -22841,14 +22841,14 @@ assert(not available())
     def test_real_horde_signal_json_keeps_unproven_numeric_shapes_as_todos(self) -> None:
         source_cases = (
             (
-                REPOSITORY_ROOT
-                / "data/json/effects_on_condition/scenario_specific_eocs.json",
+                REPOSITORY_ROOT /
+                "data/json/effects_on_condition/scenario_specific_eocs.json",
                 "EOC_scenario_eldritch_ire",
                 {"math": ["7000 + 1000"]},
             ),
             (
-                REPOSITORY_ROOT
-                / "data/json/monster_special_attacks/spells.json",
+                REPOSITORY_ROOT /
+                "data/json/monster_special_attacks/spells.json",
                 "EOC_ZOMBIE_SUMMONER_SUMMON_HORDES",
                 {"math": ["_summon_effect"]},
             ),
@@ -29029,7 +29029,7 @@ assert(evaluate().turns==-7 and #reads==1)
                 "type": "effect_on_condition", "id": "kill_read", "eoc_type": "EVENT",
                 "required_event": "character_kills_character", "condition": "is_day",
                 "effect": [], branch: {"set_string_var": {"npc_val": "name"},
-                                      "target_var": {"global_val": "out"}}})
+                                       "target_var": {"global_val": "out"}}})
             result = migrate_lua_first.MigrationResult()
             rendered = migrate_lua_first.render_eoc(source, result)
             self.assertTrue(result.todos)
@@ -35867,9 +35867,9 @@ assert(not ok and message=='stale_runtime' and #reads==2 and #diagnostics==0)
             migrate_lua_first.native_core_math_function_ids())
         try:
             for identifier, scope, key in (("score", "global", "score"),
-                                            ("_score", "context", "score"),
-                                            ("u_score", "u", "score"), ("n_score", "npc", "score"),
-                                            ("u_", "global", "u_"), ("_", "global", "_")):
+                                           ("_score", "context", "score"),
+                                           ("u_score", "u", "score"), ("n_score", "npc", "score"),
+                                           ("u_", "global", "u_"), ("_", "global", "_")):
                 with self.subTest(identifier=identifier):
                     expression = migrate_lua_first.render_native_number_expression(
                         {"math": [f"max({identifier},1)+3"]}, owners)
@@ -35921,7 +35921,7 @@ assert(not ok and message=='stale_runtime' and reads==1 and diagnostics==0)
             value = {"type": "effect_on_condition", "id": "actor_math", "eoc_type": "EVENT",
                      "required_event": "character_melee_attacks_character",
                      "condition": {"and": [{"math": ["u_score+n_score > 5"]},
-                                              {"not": {"math": ["u_score == n_score"]}}]},
+                                           {"not": {"math": ["u_score == n_score"]}}]},
                      "effect": {"set_string_var": "yes", "target_var": {"context_val": "answer"}},
                      "false_effect": {"set_string_var": "no", "target_var": {"context_val": "answer"}}}
             source.write_text(json.dumps(value), encoding="utf-8")
@@ -36132,6 +36132,7 @@ assert(draws==1 and context.data.position.x==4 and context.data.position.y==8 an
     """.replace("BODY", "\n".join(lines or []))
             result = subprocess.run(["lua", "-"], input=script, text=True, capture_output=True, timeout=10)
             self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_location_variable_search_applies_coordinate_adjustment_once(
         self,
     ) -> None:
@@ -46344,10 +46345,10 @@ assert(context.data.step==0 and context.actors.character==actor and context.acto
         self.assertIsNone(
             migrate_lua_first.render_static_set_trap(
                 {
-                "set_trap": "tr_beartrap",
-                "location": location,
-                "radius": 50000,
-                "square": True,
+                    "set_trap": "tr_beartrap",
+                    "location": location,
+                    "radius": 50000,
+                    "square": True,
                 },
                 None,
                 True,

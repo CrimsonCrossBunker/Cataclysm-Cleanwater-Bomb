@@ -2434,7 +2434,9 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "u_travel_to_dimension"): "services.relocation",
     ("eoc-effects", "u_activate"): "services.items",
     ("eoc-effects", "npc_activate"): "services.items",
-    ("eoc-effects", "custom_light_level"): "services.weather.append_light_event",
+    ("eoc-effects", "custom_light_level"): (
+        'services.weather.append_light_event'
+    ),
     ("eoc-effects", "alter_timed_events"): "services.time",
     ("eoc-effects", "dimension_name"): "services.gameplay.environment",
     ("eoc-effects", "mirror_coordinates"): "services.coords",
@@ -2829,7 +2831,11 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "npc_run_vehicle_eocs"): "services.vehicles",
     ("eoc-effects", "u_run_vehicle_eocs"): "services.vehicles",
     ("eoc-effects", "copy_location"): "services.world",
-    ("eoc-effects", "location_variable_adjust"): "services.coords-and-variables",
+    ("eoc-effects", (
+        'location_variable_adjust'
+    )): (
+        'services.coords-and-variables'
+    ),
     ("eoc-effects", "mapgen_update"): "services.map",
     ("eoc-effects", "npc_location_variable"): "services.map",
     ("eoc-effects", "npc_map_run_eocs"): "services.map",
@@ -3018,8 +3024,16 @@ RETIRED_BOUNDED_IMPLEMENTED_EOC = {
 
 BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
     ("eoc-effects", "copy_location"): [
-        "src/npctalk.cpp", "src/lua_platform_world.cpp", "src/lua_platform_variables.cpp",
-        "tests/lua_platform_test_09_world_content.cpp", "tests/lua_platform_variable_native_key_test.cpp",
+        "src/npctalk.cpp", (
+            'src/lua_platform_world.cpp'
+        ), (
+            'src/lua_platform_variables.cpp'
+        ),
+        (
+            'tests/lua_platform_test_09_world_content.cpp'
+        ), (
+            'tests/lua_platform_variable_native_key_test.cpp'
+        ),
         "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
     ],
     ("eoc-effects", "u_lose_mutation_type"): [
@@ -3032,7 +3046,11 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
     ],
     ("eoc-effects", "location_variable_adjust"): [
         "src/npctalk.cpp", "src/lua_platform_bindings_coords.cpp",
-        "src/lua_platform_variables.cpp", "tests/lua_platform_variable_native_key_test.cpp",
+        (
+            'src/lua_platform_variables.cpp'
+        ), (
+            'tests/lua_platform_variable_native_key_test.cpp'
+        ),
         "tests/lua_platform_random_range_test.cpp",
         "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
     ],
@@ -3083,7 +3101,9 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
         "src/npctalk.cpp", "src/lua_platform_runtime.cpp",
     ],
     ("eoc-effects", "mirror_coordinates"): [
-        "src/npctalk.cpp", "src/point.cpp", "src/lua_platform_bindings_coords.cpp",
+        "src/npctalk.cpp", "src/point.cpp", (
+            'src/lua_platform_bindings_coords.cpp'
+        ),
         "src/lua_platform_variables.cpp", "tests/point_test.cpp",
         "tests/lua_platform_variable_native_key_test.cpp",
     ],

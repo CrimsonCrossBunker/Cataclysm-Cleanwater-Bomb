@@ -13,26 +13,42 @@ import migrate_lua_first as migration
 class LuaNumericMigrationTest(unittest.TestCase):
     def setUp(self) -> None:
         self.namespace = migration._migration_math_function_ids.set(
-            migration.native_core_math_function_ids() | {"custom_numeric"})
+            migration.native_core_math_function_ids() | {"custom_numeric"}
+        )
 
     def tearDown(self) -> None:
         migration._migration_math_function_ids.reset(self.namespace)
 
-    def test_numeric_math_requires_read_owners_and_known_namespace(self) -> None:
+    def test_numeric_math_requires_read_owners_and_known_namespace(
+        self,
+    ) -> None:
         render = migration.render_eoc_numeric_expression
-        targets = {"u": ("mutation_recipient", "character"),
-                   "npc": ("mutation_fallback", "character"),
-                   "read_u": ("alpha", "character"), "read_npc": None}
-        self.assertIsNone(render({"math": ["u_value"]}, "0", "mutation_recipient"))
-        self.assertIsNone(render({"math": ["n_value"]}, "0", "mutation_recipient", targets))
-        self.assertIsNone(render({"math": ["v_pointer"]}, "0", "mutation_recipient", targets))
+        targets = {
+            "u": ("mutation_recipient", "character"),
+            "npc": ("mutation_fallback", "character"),
+            "read_u": ("alpha", "character"),
+            "read_npc": None,
+        }
+        self.assertIsNone(
+            render({"math": ["u_value"]}, "0", "mutation_recipient")
+        )
+        self.assertIsNone(
+            render({"math": ["n_value"]}, "0", "mutation_recipient", targets)
+        )
+        self.assertIsNone(
+            render({"math": ["v_pointer"]}, "0", "mutation_recipient", targets)
+        )
         self.assertIsNone(render({"math": ["custom_numeric"]}, "0"))
         self.assertIsNone(render({"math": ["unknown_function(2)"]}, "0"))
-        self.assertIsNone(render({"math": ["u_value = 3"]}, "0", "alpha", targets))
+        self.assertIsNone(
+            render({"math": ["u_value = 3"]}, "0", "alpha", targets)
+        )
         for token in ("global_value", "_context_value", "u_", "n_", "v_", "_"):
             self.assertIsNotNone(render({"math": [token]}, "0"), token)
         targets["read_npc"] = ("beta", "character")
-        rendered = render({"math": ["u_value + n_value"]}, "0", "mutation_recipient", targets)
+        rendered = render(
+            {"math": ["u_value + n_value"]}, "0", "mutation_recipient", targets
+        )
         self.assertIn('get_number(alpha, "value", {strict=true})', rendered)
         self.assertIn('get_number(beta, "value", {strict=true})', rendered)
         self.assertNotIn("mutation_recipient", rendered)
@@ -46,10 +62,19 @@ class LuaNumericMigrationTest(unittest.TestCase):
             migration._migration_math_function_ids.reset(token)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
-    def test_numeric_math_uses_typed_reads_and_aborts_the_whole_expression(self) -> None:
-        targets = {"read_u": ("alpha", "character"), "read_npc": ("beta", "character")}
+    def test_numeric_math_uses_typed_reads_and_aborts_the_whole_expression(
+        self,
+    ) -> None:
+        targets = {
+            "read_u": ("alpha", "character"),
+            "read_npc": ("beta", "character"),
+        }
         expression = migration.render_eoc_numeric_expression(
-            {"math": ["u_value + n_value + _value + global_value"]}, "0", "other", targets)
+            {"math": [("u_value + n_value + _value + global_value")]},
+            "0",
+            "other",
+            targets,
+        )
         self.assertIsNotNone(expression)
         script = r"""
 local alpha, beta, other = {}, {}, {}
@@ -59,7 +84,8 @@ local function read(owner,key,options,value)
     assert(options.strict and key=='value')
     calls[#calls+1]=owner
     if bad and owner==beta then
-        return {ok=false,error={code='variable_type_mismatch',message='not numeric'}}
+        return {ok=false,error={code='variable_type_mismatch',
+            message='not numeric'}}
     end
     if stale and owner==beta then
         return {ok=false,error={code='stale_runtime',message='stale'}}
@@ -89,44 +115,63 @@ local function service_value(result)
 end
 local function evaluate() return EXPRESSION end
 assert(evaluate()==10 and #calls==4 and diagnostics==0)
-assert(calls[1]==alpha and calls[2]==beta and calls[3]=='context' and calls[4]=='global')
+assert(calls[1]==alpha and calls[2]==beta and calls[3]=='context' and
+    calls[4]=='global')
 bad,calls=true,{}
 assert(evaluate()==0 and #calls==2 and diagnostics==1)
 bad,stale,calls=false,true,{}
 local ok,message=pcall(evaluate)
 assert(not ok and message=='stale_runtime' and #calls==2 and diagnostics==1)
 """.replace("EXPRESSION", expression)
-        completed = subprocess.run(["lua", "-"], input=script, text=True,
-                                   capture_output=True, timeout=10)
+        completed = subprocess.run(
+            ["lua", "-"],
+            input=script,
+            text=True,
+            capture_output=True,
+            timeout=10,
+        )
         self.assertEqual(completed.returncode, 0, completed.stderr)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
-    def test_assignment_failure_keeps_storage_and_continues_both_effect_branches(self) -> None:
+    def test_assignment_failure_preserves_both_effect_branches(
+        self,
+    ) -> None:
         values = []
         for branch in (True, False):
-            value = {"type": "effect_on_condition", "id": "assignment_" + str(branch),
-                     "eoc_type": "EVENT", "required_event": "game_start",
-                     "condition": {"math": ["1" if branch else "0"]}}
+            value = {
+                "type": "effect_on_condition",
+                "id": "assignment_" + str(branch),
+                "eoc_type": "EVENT",
+                "required_event": "game_start",
+                "condition": {"math": ["1" if branch else "0"]},
+            }
             value["effect" if branch else "false_effect"] = [
-                {"math": ["_target += _source"]}, {"math": ["_after = 7"]}]
+                {"math": ["_target += _source"]},
+                {"math": ["_after = 7"]},
+            ]
             values.append(value)
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "assignment.json"
             source.write_text(json.dumps(values), encoding="utf-8")
-            result = migration.migrate(migration.load_objects([source]), "assignment_flow")
+            result = migration.migrate(
+                migration.load_objects([source]), "assignment_flow"
+            )
         self.assertEqual(result.todos, [])
         self.assertEqual(len(result.converted), 2)
         main = result.files[Path("main.lua")]
         self.assertNotIn("services.gameplay.math", main)
-        script = r"""
+        script = (
+            r"""
 local callbacks,diagnostics={},0
 package.preload.ccb=function() return {
- content={},runtime={handler=function(id,fn) callbacks[id]=fn end,on=function() end},
+ content={},runtime={handler=function(id,fn) callbacks[id]=fn end,
+     on=function() end},
  services={variables={get_context_number=function(data,key,options)
   assert(options.strict)
   local value=data[key]
   if type(value)=='string' then
-   return {ok=false,error={code='variable_type_mismatch',message='bad stored type'}}
+   return {ok=false,error={code='variable_type_mismatch',
+       message='bad stored type'}}
   end
   return {ok=true,value={exists=value~=nil,value=value}}
  end},diagnostic=function(message)
@@ -134,7 +179,9 @@ package.preload.ccb=function() return {
   assert(message:find('bad stored type',1,true))
  end}}
 end
-""" + main + r"""
+""" +
+            main +
+            r"""
 for _,id in ipairs({'migrated.assignment_True','migrated.assignment_False'}) do
  local context={data={target=19.0,source='bad'}}
  callbacks[id](context)
@@ -145,32 +192,76 @@ for _,id in ipairs({'migrated.assignment_True','migrated.assignment_False'}) do
 end
 assert(diagnostics==2)
 """
-        completed = subprocess.run(["lua", "-"], input=script, text=True,
-                                   capture_output=True, timeout=10)
+        )
+        completed = subprocess.run(
+            ["lua", "-"],
+            input=script,
+            text=True,
+            capture_output=True,
+            timeout=10,
+        )
         self.assertEqual(completed.returncode, 0, completed.stderr)
 
-    def test_assignment_order_reports_known_choices_without_hiding_owner_gaps(self) -> None:
+    def test_assignment_order_reports_known_choices_without_hiding_owner_gaps(
+        self,
+    ) -> None:
         values = [
-            {"type": "effect_on_condition", "id": "normal_rng_assignment",
-             "eoc_type": "EVENT", "required_event": "game_start",
-             "effect": {"math": ["u_target += rng(1,3)"]}},
-            {"type": "effect_on_condition", "id": "false_rng_assignment",
-             "eoc_type": "EVENT", "required_event": "game_start", "condition": False,
-             "false_effect": {"math": ["_target += rng(1,3)"]}},
-            {"type": "effect_on_condition", "id": "missing_owner_assignment",
-             "eoc_type": "EVENT", "required_event": "game_start",
-             "effect": {"math": ["n_target += rng(1,3)"]}},
+            {
+                "type": "effect_on_condition",
+                "id": "normal_rng_assignment",
+                "eoc_type": "EVENT",
+                "required_event": "game_start",
+                "effect": {"math": ["u_target += rng(1,3)"]},
+            },
+            {
+                "type": "effect_on_condition",
+                "id": "false_rng_assignment",
+                "eoc_type": "EVENT",
+                "required_event": "game_start",
+                "condition": False,
+                "false_effect": {"math": ["_target += rng(1,3)"]},
+            },
+            {
+                "type": "effect_on_condition",
+                "id": "missing_owner_assignment",
+                "eoc_type": "EVENT",
+                "required_event": "game_start",
+                "effect": {"math": ["n_target += rng(1,3)"]},
+            },
         ]
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "choices.json"
             source.write_text(json.dumps(values), encoding="utf-8")
-            result = migration.migrate(migration.load_objects([source]), "assignment_choices")
-        choices = [todo for todo in result.todos if todo.category == "semantic_choice"]
+            result = migration.migrate(
+                migration.load_objects([source]), "assignment_choices"
+            )
+        choices = [
+            todo for todo in result.todos if todo.category == "semantic_choice"
+        ]
         self.assertEqual(len(choices), 2)
-        self.assertTrue(all("compiler-dependent operand evaluation" in todo.message for todo in choices))
-        self.assertTrue(any("normal_rng_assignment effect #0" in todo.message for todo in choices))
-        self.assertTrue(any("false_rng_assignment false_effect #0" in todo.message for todo in choices))
-        other = [todo for todo in result.todos if "missing_owner_assignment" in todo.message]
+        self.assertTrue(
+            all(
+                ("compiler-dependent operand evaluation") in todo.message
+                for todo in choices
+            )
+        )
+        self.assertTrue(
+            any(
+                ("normal_rng_assignment effect #0") in todo.message
+                for todo in choices
+            )
+        )
+        self.assertTrue(
+            any(
+                ("false_rng_assignment false_effect #0") in todo.message
+                for todo in choices
+            )
+        )
+        other = [
+            todo
+            for todo in result.todos
+            if ("missing_owner_assignment") in todo.message
+        ]
         self.assertEqual(len(other), 1)
         self.assertEqual(other[0].category, "manual_rewrite")
 

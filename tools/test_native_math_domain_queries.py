@@ -9,8 +9,10 @@ import migrate_lua_first
 
 class NativeMathDomainQueryTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.function_ids_token = migrate_lua_first._migration_math_function_ids.set(
-            frozenset({"sample_mod_formula"})
+        self.function_ids_token = (
+            migrate_lua_first._migration_math_function_ids.set(
+                frozenset({"sample_mod_formula"})
+            )
         )
         self.actors = {
             "read_u": ("alpha", "character"),
@@ -18,7 +20,9 @@ class NativeMathDomainQueryTest(unittest.TestCase):
         }
 
     def tearDown(self) -> None:
-        migrate_lua_first._migration_math_function_ids.reset(self.function_ids_token)
+        migrate_lua_first._migration_math_function_ids.reset(
+            self.function_ids_token
+        )
 
     def compile(self, source: str, actors=None) -> str | None:
         return migrate_lua_first.render_native_number_expression(
@@ -35,13 +39,20 @@ class NativeMathDomainQueryTest(unittest.TestCase):
         self.assertIn("services.needs.get(alpha)", health or "")
         self.assertNotIn("gameplay.math.evaluate", health or "")
         self.assertIsNotNone(spell_level)
-        self.assertIn('services.spells.effective_level(alpha, "delay_spell")', spell_level or "")
+        self.assertIn(
+            ('services.spells.effective_level(alpha, "delay_spell")'),
+            spell_level or "",
+        )
         self.assertNotIn("services.spells.get(", spell_level or "")
         self.assertIsNotNone(skill_level)
-        self.assertIn('services.skills.level(alpha, "talk")', skill_level or "")
+        self.assertIn(
+            'services.skills.level(alpha, "talk")', skill_level or ""
+        )
         self.assertIn("math.modf(value)", skill_level or "")
         self.assertIn("truncated + 0.0", skill_level or "")
-        self.assertIn('services.skills.level(beta, "talk")', npc_skill_level or "")
+        self.assertIn(
+            'services.skills.level(beta, "talk")', npc_skill_level or ""
+        )
 
     def test_time_queries_use_typed_time_values(self) -> None:
         until_sunrise = self.compile("time_until('sunrise')")
@@ -51,12 +62,16 @@ class NativeMathDomainQueryTest(unittest.TestCase):
         self.assertIn("now:sunrise() - now", until_sunrise or "")
         self.assertIn('services.time.duration(1, "day")', until_sunrise or "")
         self.assertIsNotNone(duration)
-        self.assertIn('services.time.duration(20, "day").turns', duration or "")
+        self.assertIn(
+            'services.time.duration(20, "day").turns', duration or ""
+        )
 
     def test_missing_or_unsupported_query_proofs_fail_closed(self) -> None:
         self.assertIsNone(self.compile("u_health()", {}))
         only_alpha = {"read_u": ("alpha", "character")}
-        self.assertIsNone(self.compile("n_spell_level('delay_spell')", only_alpha))
+        self.assertIsNone(
+            self.compile("n_spell_level('delay_spell')", only_alpha)
+        )
         self.assertIsNone(self.compile("n_skill('talk')", only_alpha))
         monster = {"read_u": ("target", "monster")}
         monster_health = self.compile("u_health()", monster)
@@ -67,7 +82,9 @@ class NativeMathDomainQueryTest(unittest.TestCase):
         self.assertIn("values[1] = 0.0", monster_skill or "")
         self.assertNotIn("services.skills.level", monster_skill or "")
 
-    def test_unsupported_strings_and_custom_functions_are_rejected(self) -> None:
+    def test_unsupported_strings_and_custom_functions_are_rejected(
+        self,
+    ) -> None:
         for source in (
             "abs('1')",
             "u_health('delay_spell')",
@@ -79,13 +96,18 @@ class NativeMathDomainQueryTest(unittest.TestCase):
             with self.subTest(source=source):
                 self.assertIsNone(self.compile(source))
 
-    def test_query_strings_follow_native_unbounded_backslash_stripping(self) -> None:
+    def test_query_strings_follow_native_unbounded_backslash_stripping(
+        self,
+    ) -> None:
         escaped = self.compile("u_spell_level('delay\\\\spell')")
         long_id = "x" * 8193
         long_query = self.compile("u_spell_level('" + long_id + "')")
         nul_query = self.compile("u_spell_level('delay\0spell')")
 
-        self.assertIn('services.spells.effective_level(alpha, "delayspell")', escaped or "")
+        self.assertIn(
+            ('services.spells.effective_level(alpha, "delayspell")'),
+            escaped or "",
+        )
         self.assertIsNotNone(long_query)
         self.assertIn(long_id, long_query or "")
         self.assertIn('"delay\\000spell"', nul_query or "")
@@ -101,13 +123,23 @@ class NativeMathDomainQueryTest(unittest.TestCase):
         self.assertIn("services.skills.level(alpha", skill_expression or "")
         self.assertIn("services.random.native_float", skill_expression or "")
         safe_random = {"math": ["rng(1, u_skill('positive_fraction'))"]}
-        self.assertIsNone(migrate_lua_first._math_random_order_choice(safe_random, self.actors))
-        interacting = {"math": ["rng(1, u_skill('positive_fraction')) + rng(3, 4)"]}
-        choice = migrate_lua_first._math_random_order_choice(interacting, self.actors)
+        self.assertIsNone(
+            migrate_lua_first._math_random_order_choice(
+                safe_random, self.actors
+            )
+        )
+        interacting = {
+            "math": ["rng(1, u_skill('positive_fraction')) + rng(3, 4)"]
+        }
+        choice = migrate_lua_first._math_random_order_choice(
+            interacting, self.actors
+        )
         self.assertIn("compiler-dependent", choice or "")
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
-    def test_skill_int_projection_rejects_native_undefined_cast_ranges(self) -> None:
+    def test_skill_int_projection_rejects_native_undefined_cast_ranges(
+        self,
+    ) -> None:
         nonfinite_expression = self.compile("u_skill('nonfinite')")
         overflow_expression = self.compile("u_skill('overflow')")
         self.assertIsNotNone(nonfinite_expression)
@@ -125,13 +157,26 @@ local ok,message=pcall(function() return NONFINITE end)
 assert(not ok and string.find(message,'requires a finite value',1,true))
 ok,message=pcall(function() return OVERFLOW end)
 assert(not ok and string.find(message,'exceeds the native int range',1,true))
-""".replace("NONFINITE", nonfinite_expression).replace("OVERFLOW", overflow_expression)
-        completed = subprocess.run(["lua", "-"], input=script, text=True,
-                                   capture_output=True, timeout=10)
+""".replace("NONFINITE", nonfinite_expression).replace(
+            "OVERFLOW", overflow_expression
+        )
+        completed = subprocess.run(
+            ["lua", "-"],
+            input=script,
+            text=True,
+            capture_output=True,
+            timeout=10,
+        )
         self.assertEqual(completed.returncode, 0, completed.stderr)
         interacting = {"math": ["rng(1, u_health()) + rng(3, 4)"]}
-        self.assertIsNone(migrate_lua_first.render_native_number_expression(interacting, self.actors))
-        choice = migrate_lua_first._math_random_order_choice(interacting, self.actors)
+        self.assertIsNone(
+            migrate_lua_first.render_native_number_expression(
+                interacting, self.actors
+            )
+        )
+        choice = migrate_lua_first._math_random_order_choice(
+            interacting, self.actors
+        )
         self.assertIn("compiler-dependent", choice or "")
 
         custom_collision = migrate_lua_first._migration_math_function_ids.set(
@@ -140,10 +185,14 @@ assert(not ok and string.find(message,'exceeds the native int range',1,true))
         try:
             self.assertIsNone(self.compile("u_health()"))
         finally:
-            migrate_lua_first._migration_math_function_ids.reset(custom_collision)
+            migrate_lua_first._migration_math_function_ids.reset(
+                custom_collision
+            )
 
     @unittest.skipUnless(shutil.which("lua"), "Lua interpreter required")
-    def test_emitted_queries_execute_with_exact_owners_and_time_wrap(self) -> None:
+    def test_emitted_queries_execute_with_exact_owners_and_time_wrap(
+        self,
+    ) -> None:
         cases = (
             ("u_health() + n_health()", -1),
             ("u_spell_level('known') * 2", 8),
@@ -162,7 +211,8 @@ assert(not ok and string.find(message,'exceeds the native int range',1,true))
             with self.subTest(source=source):
                 expression = self.compile(source)
                 self.assertIsNotNone(expression)
-                script = r"""
+                script = (
+                    r"""
 local alpha,beta={},{}
 local context={data={}}
 local point_mt={}
@@ -189,7 +239,8 @@ local services={
     skills={level=function(owner,id)
         if id=='negative_fraction' then assert(owner==beta)
         else assert(owner==alpha) end
-        local levels={positive_fraction=2.8,negative_fraction=-2.8,negative_zero=-0.8}
+        local levels={positive_fraction=2.8,negative_fraction=-2.8,
+            negative_zero=-0.8}
         return {ok=true,value=levels[id] or 0.0}
     end},
     time={now=function() return point(now) end,
@@ -214,10 +265,17 @@ if SOURCE=="time_until('sunrise')" then
     now=19800
     assert(evaluate()==1800)
 end
-""".replace("EXPRESSION", expression).replace("EXPECTED", repr(expected)).replace(
-                    "SOURCE", migrate_lua_first.lua_quote(source))
-                completed = subprocess.run(["lua", "-"], input=script, text=True,
-                                           capture_output=True, timeout=10)
+""".replace("EXPRESSION", expression)
+                    .replace("EXPECTED", repr(expected))
+                    .replace("SOURCE", migrate_lua_first.lua_quote(source))
+                )
+                completed = subprocess.run(
+                    ["lua", "-"],
+                    input=script,
+                    text=True,
+                    capture_output=True,
+                    timeout=10,
+                )
                 self.assertEqual(completed.returncode, 0, completed.stderr)
 
 

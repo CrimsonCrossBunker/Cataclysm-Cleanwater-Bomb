@@ -5005,14 +5005,14 @@ def render_static_weighted_list_eocs(
         if requirement not in {"none", "avatar", "character", "creature"}:
             return None
         if requirement == "avatar" and not (
-            ( character_actor_proven or avatar_actor_proven ) and
+            (character_actor_proven or avatar_actor_proven) and
             actor_expression is not None
         ):
             # ``avatar`` means a current Character alpha may be propagated; it
             # does not prove that this alpha is the player's Avatar.
             return None
         if requirement == "character" and not (
-            ( character_actor_proven or avatar_actor_proven ) and
+            (character_actor_proven or avatar_actor_proven) and
             actor_expression is not None
         ):
             return None
@@ -5586,7 +5586,7 @@ def render_static_false_effect(
     if isinstance(effect, dict) and "u_sell_item" in effect:
         rendered = render_static_sell_item_effect(
             effect,
-            ( actor_expression or "actor" ) if sell_item_pair_proven else None,
+            (actor_expression or "actor") if sell_item_pair_proven else None,
             "context.actors.interlocutor" if sell_item_pair_proven else None,
         )
         if rendered is not None:
@@ -6155,7 +6155,7 @@ def render_static_false_effect(
         if "u_sell_item" in effect:
             rendered = render_static_sell_item_effect(
                 effect,
-                ( actor_expression or "actor" )
+                (actor_expression or "actor")
                 if sell_item_pair_proven else None,
                 "context.actors.interlocutor"
                 if sell_item_pair_proven else None,
@@ -7583,10 +7583,10 @@ def render_talk_topic_response_condition(
     # and npc_* aliases select is_npc=true. The alpha forms query the exact
     # speaker; NPC talkers expose the same raw chatbin list through the typed
     # service, while other native talkers inherit the empty list.
-    if isinstance( condition, str ) and condition in mission_count_conditions:
+    if isinstance(condition, str) and condition in mission_count_conditions:
         collection, comparison = mission_count_conditions[condition]
         if collection == "available":
-            actor_accessor = "speaker" if condition.startswith( "u_" ) else "interlocutor"
+            actor_accessor = "speaker" if condition.startswith("u_") else "interlocutor"
             count_query = (
                 "            local count = 0\n"
                 f"            local actor = dialogue_context:{actor_accessor}()\n"
@@ -7604,8 +7604,8 @@ def render_talk_topic_response_condition(
             )
         return LuaRaw(
             "function(dialogue_context)\n"
-            "            if not dialogue_context:valid() then return false end\n"
-            + count_query +
+            "            if not dialogue_context:valid() then return false end\n" +
+            count_query +
             f"            return count {comparison}\n"
             "        end"
         )
@@ -7620,11 +7620,11 @@ def render_talk_topic_response_condition(
         "mission_incomplete": "incomplete",
         "mission_failed": "failed",
     }
-    if isinstance( condition, str ) and condition in mission_status_conditions:
+    if isinstance(condition, str) and condition in mission_status_conditions:
         # A native talker NPC stores its selected mission in chatbin. Other
         # talkers inherit the native null selection and therefore return false.
         predicate = mission_status_conditions[condition]
-        actor_accessor = "speaker" if condition.startswith( "u_" ) else "interlocutor"
+        actor_accessor = "speaker" if condition.startswith("u_") else "interlocutor"
         return LuaRaw(
             "function(dialogue_context)\n"
             "            if not dialogue_context:valid() then return false end\n"
@@ -7645,7 +7645,7 @@ def render_talk_topic_response_condition(
         # talker classes have the same false result as the selected query.
         goal_key = next(iter(condition))
         goal = condition[goal_key]
-        if not isinstance( goal, str ) or goal not in NATIVE_MISSION_GOALS:
+        if not isinstance(goal, str) or goal not in NATIVE_MISSION_GOALS:
             return None
         actor_accessor = "speaker" if goal_key == "u_mission_goal" else "interlocutor"
         return LuaRaw(
@@ -25904,8 +25904,8 @@ def render_native_duration_expression(
         # Do not collapse equal ranges: Native rng still consumes its stream.
         return ('(function(lower, upper) return services.time.duration('
                 'services.random.native_int(math.min(lower.turns, upper.turns), '
-                'math.max(lower.turns, upper.turns)), "turn") end)('
-                + ", ".join(bounds) + ')')
+                'math.max(lower.turns, upper.turns)), "turn") end)(' +
+                ", ".join(bounds) + ')')
     turns = parse_native_duration_turns(value)
     if turns is not None:
         return f'services.time.duration({turns}, "turn")'
@@ -25940,7 +25940,7 @@ def render_native_duration_expression(
                      ("npc_val", "string.sub(pointer.value, 3)"),
                      ("context_val", "string.sub(pointer.value, 2)"),
                      ("global_val", "pointer.value"),
-                 )]
+        )]
         if any(read is None for read in reads):
             return None
         read = (
@@ -26456,8 +26456,8 @@ def render_static_inventory_consume_sum(
         )
     lines.extend(
         "                    { item = services.types.id(\"item\", "
-        f"{lua_quote(item_id)}), amount = {lua_number(amount)} }}"
-        + ("," if index + 1 < len(entries) else "")
+        f"{lua_quote(item_id)}), amount = {lua_number(amount)} }}" +
+        ("," if index + 1 < len(entries) else "")
         for index, (item_id, amount) in enumerate(entries)
     )
     lines.extend([
@@ -26694,8 +26694,8 @@ def render_native_coordinate_variable_expression(
         if snapshot is None:
             return None
     return ('(function(result) if result.exists == false then return '
-            'services.coords.tripoint_abs_ms(0, 0, 0) end; return result.value end)('
-            + snapshot + ')')
+            'services.coords.tripoint_abs_ms(0, 0, 0) end; return result.value end)(' +
+            snapshot + ')')
 
 
 def render_native_coordinate_variable_write_lines(
@@ -28446,8 +28446,8 @@ def _merge_native_math_effects(effects: list[_NativeMathEffects]) -> _NativeMath
 def _native_math_random_order_conflict(effects: list[_NativeMathEffects]) -> bool:
     drawing = [effect for effect in effects if effect.draws]
     if len(drawing) > 1 and (any(effect.random_dependent for effect in drawing) or
-                            drawing[0].singleton_kind is None or
-                            any(effect.singleton_kind != drawing[0].singleton_kind for effect in drawing)):
+                             drawing[0].singleton_kind is None or
+                             any(effect.singleton_kind != drawing[0].singleton_kind for effect in drawing)):
         return True
     drawing_indices = [index for index, effect in enumerate(effects) if effect.draws]
     aborting_indices = [index for index, effect in enumerate(effects) if effect.may_abort]
@@ -28495,7 +28495,7 @@ def _compile_native_numeric_math(
     precedence.update({operator: 1 for operator in comparisons})
     constants = {"pi": math.pi, "π": math.pi, "e": math.e, "true": 1.0, "false": 0.0}
     functions = {name: 1 for name in ("abs", "floor", "ceil", "trunc", "round",
-                                     "sqrt", "log", "sin", "cos", "tan")}
+                                      "sqrt", "log", "sin", "cos", "tan")}
     functions.update({"min": -1, "max": -1, "_test_": 0})
     functions["clamp"] = 3
     functions.update({"rand": 1, "rng": 2})
@@ -28771,8 +28771,8 @@ def _compile_native_numeric_math(
                 return None
             number = float(token)
             significand = token.lower().split("e", 1)[0]
-            if not math.isfinite(number) or (any(digit in "123456789" for digit in significand)
-                                            and abs(number) < sys.float_info.min):
+            if not math.isfinite(number) or (any(digit in "123456789" for digit in significand) and
+                                             abs(number) < sys.float_info.min):
                 return None  # Native classic-locale stream conversion can reject underflow.
             text = format(number, ".17g")
             emit(text if "." in text or "e" in text else text + ".0", _NativeMathEffects(constant=number))
@@ -28969,8 +28969,8 @@ def render_native_number_expression(
                     'assert(result >= -2147483648 and result <= 2147483647, '
                     '"random range bound exceeds the signed engine range"); return result end; '
                     'lower = integer(lower); upper = integer(upper); '
-                    'return services.random.native_int(math.min(lower, upper), math.max(lower, upper)) end)('
-                    + ', '.join(expressions) + ')')
+                    'return services.random.native_int(math.min(lower, upper), math.max(lower, upper)) end)(' +
+                    ', '.join(expressions) + ')')
         # value_or_var_pair<double> calls rng(int, int), not rng_float.
         # Each bound converts from Native double toward zero BEFORE sorting.
         integer_bounds = [math.trunc(float(bound)) for bound in bounds]
@@ -29222,13 +29222,14 @@ def render_static_character_string_var(
                 "title", "default_text", "description", "identifier"}:
             return None
         input_values = {}
-        for field in ("title", "default_text", "description", "identifier"):
+        for input_field in ("title", "default_text", "description", "identifier"):
             rendered_input = _render_assignment_string_value(
-                requested_input.get(field, ""), field != "identifier", effect_actor_targets
+                requested_input.get(input_field, ""),
+                input_field != "identifier", effect_actor_targets
             )
             if rendered_input is None:
                 return None
-            input_values[field] = rendered_input
+            input_values[input_field] = rendered_input
     lines = [
         "    local string_values = { " + ", ".join(
             f"function() return {value} end" for value in rendered_values
@@ -29285,7 +29286,6 @@ def render_static_character_string_var(
             f"        {owner}, {lua_quote(target[1])}, assigned_value))",
         ])
     return lines
-
 
 
 def render_static_sample_range(
@@ -32144,7 +32144,7 @@ def render_eoc_condition_expression(
     selected_mission_generic_rewards = (
         render_npc_selected_generic_rewards_condition(
             condition, npc_dialogue_pair_proven, npc_actor_expression,
-        ) if isinstance( condition, str ) else None
+        ) if isinstance(condition, str) else None
     )
     if selected_mission_generic_rewards is not None:
         return selected_mission_generic_rewards
@@ -34704,8 +34704,8 @@ def render_eoc(
                         )
                     result.add_todo(
                         "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        + (
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} " +
+                        (
                             recipe_todo
                             if unproven_recipe_effect else
                             "needs domain-service conversion"
@@ -34795,8 +34795,8 @@ def render_eoc(
                                  "translate the effect amount, target, or options into bounded Lua values") + ".")
                     result.add_todo(
                         "semantic_choice" if order_choice else "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        + (order_choice or "needs domain-service conversion")
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} " +
+                        (order_choice or "needs domain-service conversion")
                     )
                     all_effects_converted = False
             elif (
@@ -35795,7 +35795,7 @@ def render_eoc(
                     lines.extend(rendered_trap)
                     converted_effect = True
                 else:
-                    todo_category, trap_gap = set_trap_migration_todo( effect )
+                    todo_category, trap_gap = set_trap_migration_todo(effect)
                     lines.append(f"    -- TODO: {trap_gap}.")
                     result.add_todo(
                         todo_category,
@@ -35853,47 +35853,47 @@ def render_eoc(
                     converted_effect = True
                 else:
                     endpoint_keys = (
-                        _context_val_key( effect.get( "reveal_route" ) ),
-                        _context_val_key( effect.get( "target_var" ) ),
+                        _context_val_key(effect.get("reveal_route")),
+                        _context_val_key(effect.get("target_var")),
                     )
                     preceding_location_writes: set[str] = set()
                     for prior_effect in effects[:effect_index]:
-                        if not isinstance( prior_effect, dict ):
+                        if not isinstance(prior_effect, dict):
                             continue
-                        for location_key in ( "u_location_variable", "npc_location_variable" ):
-                            context_key = _context_val_key( prior_effect.get( location_key ) )
-                            target_params = prior_effect.get( "target_params" )
+                        for location_key in ("u_location_variable", "npc_location_variable"):
+                            context_key = _context_val_key(prior_effect.get(location_key))
+                            target_params = prior_effect.get("target_params")
                             if (
                                 context_key is not None and
-                                set( prior_effect ) == { location_key, "target_params" } and
-                                isinstance( target_params, dict ) and
-                                isinstance( target_params.get( "om_terrain" ), str ) and
-                                set( target_params ) <= {
+                                set(prior_effect) == {location_key, "target_params"} and
+                                isinstance(target_params, dict) and
+                                isinstance(target_params.get("om_terrain"), str) and
+                                set(target_params) <= {
                                     "om_terrain", "z", "random", "search_range",
                                 }
                             ):
-                                preceding_location_writes.add( context_key )
+                                preceding_location_writes.add(context_key)
                     endpoint_writers_proven = (
-                        all( endpoint_key is not None for endpoint_key in endpoint_keys ) and
+                        all(endpoint_key is not None for endpoint_key in endpoint_keys) and
                         all(
                             endpoint_key in preceding_location_writes
                             for endpoint_key in endpoint_keys
                         )
                     )
-                    route_radius = effect.get( "radius", 0 )
-                    route_road_only = effect.get( "road_only", False )
-                    numeric_route_radius = finite_number_literal( route_radius )
+                    route_radius = effect.get("radius", 0)
+                    route_road_only = effect.get("road_only", False)
+                    numeric_route_radius = finite_number_literal(route_radius)
                     truncated_route_radius = (
-                        math.trunc( numeric_route_radius )
+                        math.trunc(numeric_route_radius)
                         if numeric_route_radius is not None else None
                     )
                     route_options_note = (
                         f"Its static radius={route_radius} truncates toward zero to "
                         f"{truncated_route_radius} and road_only="
-                        f"{str( route_road_only ).lower()} fit the typed route service"
+                        f"{str(route_road_only).lower()} fit the typed route service"
                         if truncated_route_radius is not None and
                         0 <= truncated_route_radius <= 30 and
-                        isinstance( route_road_only, bool ) else
+                        isinstance(route_road_only, bool) else
                         "Its radius must be a finite static number that truncates "
                         "toward zero into the typed service's 0..30 range, and "
                         "road_only must be a boolean"
@@ -35942,8 +35942,8 @@ def render_eoc(
                     )
                     result.add_todo(
                         reveal_route_category,
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        + reveal_route_gap
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} " +
+                        reveal_route_gap
                     )
                     all_effects_converted = False
             elif (
@@ -36097,12 +36097,12 @@ def render_eoc(
                                     _math_random_order_choice(effect, effect_actor_targets))
                     lines.append(
                         "    -- TODO: " + (order_choice or "translate location-variable arithmetic "
-                                          "through typed coordinate variables") + "."
+                                           "through typed coordinate variables") + "."
                     )
                     result.add_todo(
                         "semantic_choice" if order_choice else "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        + (order_choice or "needs domain-service conversion")
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} " +
+                        (order_choice or "needs domain-service conversion")
                     )
                     all_effects_converted = False
             elif (
@@ -36150,8 +36150,8 @@ def render_eoc(
                         lines[-1] = "    -- TODO: " + search_gap + "."
                         result.add_todo(
                             "platform_gap",
-                            f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                            + search_gap,
+                            f"{source.location}: EOC {eoc_id} effect #{effect_index} " +
+                            search_gap,
                         )
                         if not avatar_actor_proven:
                             actor_gap = (
@@ -36161,8 +36161,8 @@ def render_eoc(
                             )
                             result.add_todo(
                                 "manual_rewrite",
-                                f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                                + actor_gap,
+                                f"{source.location}: EOC {eoc_id} effect #{effect_index} " +
+                                actor_gap,
                             )
                     else:
                         result.add_todo(
@@ -37936,12 +37936,12 @@ def render_eoc(
                     order_choice = _math_assignment_order_choice(effect, effect_actor_targets)
                     lines.append(
                         "    -- TODO: " + (order_choice or "translate this math expression into ordinary Lua "
-                        "only after proving native scope, RNG, and context semantics") + "."
+                                           "only after proving native scope, RNG, and context semantics") + "."
                     )
                     result.add_todo(
                         "semantic_choice" if order_choice else "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        + (order_choice or "needs domain-service conversion")
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} " +
+                        (order_choice or "needs domain-service conversion")
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "copy_var" in effect:
