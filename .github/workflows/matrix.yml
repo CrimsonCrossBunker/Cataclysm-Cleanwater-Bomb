@@ -97,6 +97,7 @@ jobs:
       - id: matrix_vars
         env:
           EVENT_NAME: ${{ github.event_name }}
+          IS_DRAFT: ${{ github.event.pull_request.draft }}
           RUN_TESTS: ${{ inputs.run_tests || false }}
         run: |
           echo "fail_fast=$([ "$GITHUB_REF_NAME" = "master" -o "$GITHUB_REPOSITORY_OWNER" != "CleverRaven" ] && echo false || echo true)" >> $GITHUB_OUTPUT
@@ -556,6 +557,7 @@ jobs:
             echo "| skip-code | ${SHOULD_SKIP_CODE:-unknown} |"
             echo "| skip-data | ${SHOULD_SKIP_DATA:-unknown} |"
             echo "| broad-tests-skipped | ${SKIP_TESTS:-unknown} |"
+            echo "| draft | ${IS_DRAFT:-false} |"
             echo "| matrix-variables | ${RESULT_MATRIX_VARIABLES} |"
             echo "| build-translations | ${RESULT_TRANSLATIONS} |"
             echo "| compile-shaders | ${RESULT_SHADERS} |"
@@ -579,9 +581,9 @@ jobs:
           done
 
           if [ "$EVENT_NAME" = "pull_request" ]; then
-            if [ "$SHOULD_SKIP_CODE" = "true" ] && [ "$SHOULD_SKIP_DATA" = "true" ]; then
+            if [ "$IS_DRAFT" = "true" ] || { [ "$SHOULD_SKIP_CODE" = "true" ] && [ "$SHOULD_SKIP_DATA" = "true" ]; }; then
               if [ "$RESULT_TRANSLATIONS" != "skipped" ] || [ "$RESULT_BUILDS" != "skipped" ]; then
-                echo 'Irrelevant PR route unexpectedly ran translations or builds.' >&2
+                echo 'Draft or irrelevant PR route unexpectedly ran translations or builds.' >&2
                 failed=1
               fi
             elif [ "$RESULT_TRANSLATIONS" != "success" ] || [ "$RESULT_BUILDS" != "success" ]; then
