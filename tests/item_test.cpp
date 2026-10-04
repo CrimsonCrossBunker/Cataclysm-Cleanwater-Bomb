@@ -29,6 +29,7 @@
 #include "item_factory.h"
 #include "item_location.h"
 #include "item_tname.h"
+#include "item_transformation.h"
 #include "itype.h"
 #include "material.h"
 #include "math_defines.h"
@@ -1102,6 +1103,36 @@ TEST_CASE( "module_inheritance", "[item][armor]" )
     item_location worn_muffs( worn_hat, &worn_hat->only_item() );
     avatar_action::use_item( guy, worn_muffs, "transform" );
     CHECK( worn_hat->has_flag( json_flag_DEAF ) );
+}
+
+TEST_CASE( "worn_exoskeleton_transform_refreshes_encumbrance", "[item][armor][transform]" )
+{
+    clear_avatar();
+    avatar &guy = get_avatar();
+    const std::string suit = GENERATE( std::string( "combat_exoskeleton_heavy" ),
+                                       std::string( "combat_exoskeleton_medium" ),
+                                       std::string( "combat_exoskeleton_light" ) );
+    CAPTURE( suit );
+    guy.wear_item( item( itype_id( suit ) ) );
+    REQUIRE( guy.worn.top_items_loc( guy ).size() == 1 );
+    item_location worn_suit = guy.worn.top_items_loc( guy ).front();
+    const bodypart_id torso( "torso" );
+    const int inactive_encumbrance = guy.get_part_encumbrance( torso );
+
+    item_transformation turn_on;
+    turn_on.target = itype_id( suit + "_on" );
+    // Activated transformations must retain the worn item for their caller.
+    turn_on.transform( &guy, *worn_suit, true );
+    REQUIRE( guy.is_worn( *worn_suit ) );
+    const int active_encumbrance = guy.get_part_encumbrance( torso );
+    CHECK( active_encumbrance < inactive_encumbrance );
+    guy.calc_encumbrance();
+    CHECK( guy.get_part_encumbrance( torso ) == active_encumbrance );
+
+    item_transformation turn_off;
+    turn_off.target = itype_id( suit );
+    turn_off.transform( &guy, *worn_suit, true );
+    CHECK( guy.get_part_encumbrance( torso ) == inactive_encumbrance );
 }
 
 TEST_CASE( "rigid_armor_compliance", "[item][armor]" )
