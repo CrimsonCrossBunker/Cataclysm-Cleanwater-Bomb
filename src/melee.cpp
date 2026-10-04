@@ -489,10 +489,11 @@ void Character::roll_all_damage( bool crit, damage_instance &di, bool average,
     }
 }
 
-static void melee_train( Character &you, int lo, int hi, const item &weap,
+static void melee_train( Character &you, int lo, int hi, int training_level, const item &weap,
                          const attack_vector_id vector )
 {
-    you.practice( skill_melee, std::ceil( rng( lo, hi ) / 2.0 ), hi );
+    const int melee_experience = static_cast<int>( std::ceil( rng( lo, hi ) / 2.0 ) );
+    you.practice_combat( skill_melee, melee_experience, training_level );
 
     float total = 0.f;
 
@@ -515,11 +516,13 @@ static void melee_train( Character &you, int lo, int hi, const item &weap,
 
     // Unarmed may deal cut, stab, and bash damage depending on the weapon
     if( !vector->weapon ) {
-        you.practice( skill_unarmed, std::ceil( 1 * rng( lo, hi ) ), hi );
+        you.practice_combat( skill_unarmed, rng( lo, hi ), training_level );
     } else {
         for( const std::pair<const damage_type_id, int> &dmg : dmg_vals ) {
             if( !dmg.first->skill.is_null() ) {
-                you.practice( dmg.first->skill, std::ceil( dmg.second / total * rng( lo, hi ) ), hi );
+                const int damage_experience = static_cast<int>(
+                                                  std::ceil( dmg.second / total * rng( lo, hi ) ) );
+                you.practice_combat( dmg.first->skill, damage_experience, training_level );
             }
         }
     }
@@ -755,7 +758,8 @@ bool Character::melee_attack_abstract( Creature &t, bool allow_special,
 
         if( can_train_melee ) {
             t.times_combatted_player++;
-            melee_train( *this, 2, std::min( 5, skill_training_cap ), cur_weap, attack_vector_id::NULL_ID() );
+            melee_train( *this, 2, std::min( 5, skill_training_cap ), skill_training_cap, cur_weap,
+                         attack_vector_id::NULL_ID() );
         }
 
         // Cap stumble penalty, heavy weapons are quite weak already
@@ -934,7 +938,8 @@ bool Character::melee_attack_abstract( Creature &t, bool allow_special,
 
             if( can_train_melee ) {
                 t.times_combatted_player++;
-                melee_train( *this, 5, std::min( 10, skill_training_cap ), cur_weap, vector_id );
+                melee_train( *this, 5, std::min( 10, skill_training_cap ), skill_training_cap, cur_weap,
+                             vector_id );
             }
 
             // Treat monster as seen if we see it before or after the attack
