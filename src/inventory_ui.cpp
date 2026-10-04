@@ -1324,7 +1324,9 @@ void inventory_column::set_collapsed( inventory_entry &entry, const bool collaps
         std::vector<item_location> &locations = entry.locations;
 
         for( item_location &loc : locations ) {
-            for( item_pocket *pocket : loc->get_standard_pockets() ) {
+            for( item_pocket *pocket : loc->get_pockets( []( const item_pocket & pocket ) {
+            return pocket.is_standard_type() || pocket.is_type( pocket_type::MOD );
+            } ) ) {
                 pocket->settings.set_collapse( collapse );
                 collapsed = true;
             }
