@@ -1,6 +1,10 @@
+#include <functional>
+#include <map>
+#include <utility>
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
 #include "coordinates.h"
+#include "enums.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "point.h"
