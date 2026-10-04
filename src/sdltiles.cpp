@@ -3506,8 +3506,13 @@ std::pair<std::string, bool> cata_tiles::get_omt_id_rotation_and_subtile(
         }
 
         map::get_rotation_and_subtile( val, -1, rota, subtile );
-    } else if( ot_type.has_flag( oter_flags::water ) ) {
+    } else if( ot_type.has_flag( oter_flags::water ) &&
+               !ot_type.has_flag( oter_flags::river_tile ) ) {
         // water looks nicer if it connects together
+        // Rivers are excluded: river bank tiles carry precise directional
+        // variants (river_north/east/south/west) whose sprites must follow the
+        // tile's own rotation; the connection result would override it and
+        // render bridge-adjacent bank tiles rotated 90 degrees.
         char val = 0;
 
         // populate connection information
