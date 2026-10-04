@@ -2,6 +2,7 @@
 #include <character_id.h>
 #include <coordinates.h>
 #include <dialogue_chatbin.h>
+#include "debug.h"
 #include "flexbuffer_json.h"
 #include <game.h>
 #include <json.h>
@@ -638,10 +639,16 @@ TEST_CASE( "lua_platform_npc_mission_reward_calls_native_no_selection_path",
 
     // The no-selection branch avoids opening the native barter UI, allowing a
     // direct comparison that the typed operation delegates to WRAP behavior.
-    talk_function::mission_reward( provider );
+    const std::string native_diagnostic = capture_debugmsg_during( [&]() {
+        talk_function::mission_reward( provider );
+    } );
+    CHECK( native_diagnostic.find( "Called mission_reward with null mission" ) != std::string::npos );
     CHECK( provider.op_of_u.owed == debt_before );
-    sol::protected_function_result result = open_reward_trade(
-            provider_handle, active_avatar_handle );
+    sol::protected_function_result result;
+    const std::string platform_diagnostic = capture_debugmsg_during( [&]() {
+        result = open_reward_trade( provider_handle, active_avatar_handle );
+    } );
+    CHECK( platform_diagnostic == native_diagnostic );
     REQUIRE( result.valid() );
     const sol::table envelope = result.get<sol::table>();
     REQUIRE( envelope["ok"].get<bool>() );

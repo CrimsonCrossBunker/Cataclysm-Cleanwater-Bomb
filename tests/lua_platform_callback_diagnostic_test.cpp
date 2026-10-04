@@ -24,7 +24,7 @@ TEST_CASE( "lua_platform_callback_errors_name_the_trigger_and_continue_dispatch"
 {
     cata::lua_platform::clear_active_runtimes();
     Messages::clear_messages();
-    debug_reset_error_observed();
+    REQUIRE_FALSE( debug_has_error_been_observed() );
     sol::state lua;
     sol::table ccb = lua.create_table();
     const std::shared_ptr<cata::lua_platform::runtime> runtime =

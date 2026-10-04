@@ -303,7 +303,7 @@ TEST_CASE( "lua_platform_character_snapshot_matches_npc_movement_conditions",
     npc beta;
     beta.normalize();
     beta.setID( character_id( 7334 ), true );
-    beta.setpos( fixture.get_map(), fixture.source_local );
+    beta.spawn_at_precise( fixture.get_map().get_abs( fixture.source_local ) );
     beta.set_attitude( NPCATT_FOLLOW );
     const talker_npc_const native_beta( &beta );
     const sol::protected_function snapshot =
@@ -353,7 +353,7 @@ TEST_CASE( "lua_platform_character_snapshot_matches_npc_movement_conditions",
     check_native_match( true, true, true ); // WAIT is also a native following attitude.
     beta.set_attitude( NPCATT_KILL );
     check_native_match( true, true, false ); // Not following despite the same vehicle state.
-    beta.setpos( fixture.get_map(), fixture.target_local );
+    beta.spawn_at_precise( fixture.get_map().get_abs( fixture.target_local ) );
     check_native_match( false, false, false ); // No vehicle at the native actor square.
 }
 

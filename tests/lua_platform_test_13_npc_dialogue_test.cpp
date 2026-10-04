@@ -613,6 +613,7 @@ TEST_CASE( "lua_platform_dialogue_deferred_translation_and_text_condition_timing
            "[lua][platform][npc][dialogue][translation]" )
 {
     sol::state lua;
+    lua.open_libraries( sol::lib::base );
     const cata::lua_platform::dialogue::response_descriptor_options options = {
         "dialogue", "response descriptor", "has", true,
         []( const std::string_view text, const std::string_view field )
@@ -807,8 +808,11 @@ TEST_CASE( "lua_platform_dialogue_deferred_translation_and_text_condition_timing
     CHECK( false_option.text == false_response_text );
     CHECK( lua["dialogue_text_condition_calls"].get<int>() == 2 );
     lua["dialogue_text_condition_invalid"] = true;
+    REQUIRE_FALSE( debug_has_error_been_observed() );
     const talk_data failed_condition_option = conversation.responses[1].create_option_line(
                 conversation, input_event() );
+    CHECK( debug_has_error_been_observed() );
+    debug_reset_error_observed();
     CHECK( failed_condition_option.text == false_response_text );
     CHECK( lua["dialogue_text_condition_calls"].get<int>() == 3 );
     cata::lua_platform::set_active_runtimes( {} );
@@ -1091,6 +1095,7 @@ TEST_CASE( "lua_platform_declarative_response_action_runs_before_opinion_and_on_
 {
     cata::lua_platform::clear_active_runtimes();
     sol::state owner_lua;
+    owner_lua.open_libraries( sol::lib::base );
     sol::table ccb = owner_lua.create_table();
     const std::shared_ptr<cata::lua_platform::runtime> owner_runtime =
         cata::lua_platform::make_runtime( "dialogue_action_stage", 83, owner_lua );
@@ -1201,7 +1206,10 @@ TEST_CASE( "lua_platform_declarative_response_action_runs_before_opinion_and_on_
 
     talk_response &failing_response = conversation.responses[2];
     CHECK_FALSE( failing_response.lua_response_id.has_value() );
+    REQUIRE_FALSE( debug_has_error_been_observed() );
     const talk_topic failure_callback_topic = failing_response.failure.apply( conversation );
+    CHECK( debug_has_error_been_observed() );
+    debug_reset_error_observed();
     CHECK( failure_callback_topic.id == "TALK_NONE" );
 
     const talk_topic native_success_topic = success_response.success.apply( conversation );
@@ -1275,11 +1283,11 @@ TEST_CASE( "lua_platform_dialogue_item_grant_matches_native_talk_effect",
     npc native_interlocutor;
     native_interlocutor.normalize();
     native_interlocutor.setID( character_id( 1552 ), true );
-    native_interlocutor.setpos( here, tripoint_bub_ms( 61, 60, 0 ) );
+    native_interlocutor.spawn_at_precise( here.get_abs( tripoint_bub_ms( 61, 60, 0 ) ) );
     npc platform_interlocutor;
     platform_interlocutor.normalize();
     platform_interlocutor.setID( character_id( 1553 ), true );
-    platform_interlocutor.setpos( here, tripoint_bub_ms( 66, 60, 0 ) );
+    platform_interlocutor.spawn_at_precise( here.get_abs( tripoint_bub_ms( 66, 60, 0 ) ) );
     cata::lua_platform::register_npc_handle_identity( native_interlocutor );
     cata::lua_platform::register_npc_handle_identity( platform_interlocutor );
     on_out_of_scope retire_npc_identities( [&]() {
@@ -1404,7 +1412,7 @@ TEST_CASE( "lua_platform_dialogue_purchase_pet_matches_native_talk_effect",
     npc native_seller;
     native_seller.normalize();
     native_seller.setID( character_id( 1571 ), true );
-    native_seller.setpos( here, tripoint_bub_ms( 61, 60, 0 ) );
+    native_seller.spawn_at_precise( here.get_abs( tripoint_bub_ms( 61, 60, 0 ) ) );
     avatar platform_buyer;
     platform_buyer.normalize();
     platform_buyer.setID( character_id( 1572 ), true );
@@ -1412,7 +1420,7 @@ TEST_CASE( "lua_platform_dialogue_purchase_pet_matches_native_talk_effect",
     npc platform_seller;
     platform_seller.normalize();
     platform_seller.setID( character_id( 1573 ), true );
-    platform_seller.setpos( here, tripoint_bub_ms( 61, 60, 0 ) );
+    platform_seller.spawn_at_precise( here.get_abs( tripoint_bub_ms( 61, 60, 0 ) ) );
     cata::lua_platform::register_npc_handle_identity( platform_seller );
     on_out_of_scope retire_platform_seller( [&]() {
         cata::lua_platform::retire_npc_handle_identity( platform_seller );
@@ -1569,7 +1577,7 @@ TEST_CASE( "lua_platform_dialogue_pet_purchase_false_result_keeps_native_effect_
     npc seller;
     seller.normalize();
     seller.setID( character_id( 1575 ), true );
-    seller.setpos( here, tripoint_bub_ms( 61, 60, 0 ) );
+    seller.spawn_at_precise( here.get_abs( tripoint_bub_ms( 61, 60, 0 ) ) );
 
     auto rejecting_buyer = std::make_unique<platform_dialogue_reject_pet_purchase_talker>(
                                &buyer );
@@ -1655,7 +1663,7 @@ TEST_CASE( "lua_platform_dialogue_effect_condition_uses_native_reason_body_part"
     npc seller;
     seller.normalize();
     seller.setID( character_id( 1577 ), true );
-    seller.setpos( here, tripoint_bub_ms( 61, 60, 0 ) );
+    seller.spawn_at_precise( here.get_abs( tripoint_bub_ms( 61, 60, 0 ) ) );
     seller.add_effect( effect_bleed, 10_turns,
                        bodypart_id( "arm_l" ), false, 1 );
     cata::lua_platform::register_npc_handle_identity( seller );
@@ -1784,7 +1792,7 @@ TEST_CASE( "lua_platform_dialogue_kind_conditions_match_native_context_identitie
     npc interlocutor;
     interlocutor.normalize();
     interlocutor.setID( character_id( 1581 ), true );
-    interlocutor.setpos( here, tripoint_bub_ms( 61, 60, 0 ) );
+    interlocutor.spawn_at_precise( here.get_abs( tripoint_bub_ms( 61, 60, 0 ) ) );
     monster creature( mon_zombie );
     creature.set_hp( 1 );
     avatar item_owner;

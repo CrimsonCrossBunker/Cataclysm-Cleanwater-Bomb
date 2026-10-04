@@ -35,6 +35,7 @@ struct computer_value_fixture {
     std::shared_ptr<platform::runtime> owner;
 
     computer_value_fixture() {
+        player.normalize();
         platform::clear_active_runtimes();
         lua.open_libraries( sol::lib::base, sol::lib::string );
         sol::table ccb = lua.create_table();

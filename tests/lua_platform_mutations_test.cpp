@@ -382,9 +382,18 @@ TEST_CASE( "lua_platform_mutations_is_purifiable_id_text_matches_native_lookup",
     };
     for( const std::string &text : unknown_ids ) {
         CAPTURE( npc_target, text );
-        const bool native_result = target.purifiable( trait_id( text ) );
+        bool native_result = false;
+        const std::string native_diagnostic = capture_debugmsg_during( [&]() {
+            native_result = target.purifiable( trait_id( text ) );
+        } );
         CHECK_FALSE( native_result );
-        CHECK( fixture.query_purifiable_id_text( npc_target, text ) == native_result );
+        CHECK( native_diagnostic.find( "invalid trait id" ) != std::string::npos );
+        bool platform_result = false;
+        const std::string platform_diagnostic = capture_debugmsg_during( [&]() {
+            platform_result = fixture.query_purifiable_id_text( npc_target, text );
+        } );
+        CHECK( platform_result == native_result );
+        CHECK( platform_diagnostic == native_diagnostic );
     }
 }
 

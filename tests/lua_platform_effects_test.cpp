@@ -560,8 +560,15 @@ TEST_CASE( "lua_platform_add_wet_matches_native_dialogue_actor_selection",
 
     calendar::turn = calendar::turn_zero + 12_hours;
     rng_set_engine_seed( 58163 );
-    for( const talk_effect_fun_t &operation : native_effect.effects ) {
-        operation( native_dialogue );
+    const std::string native_diagnostic = capture_debugmsg_during( [&]() {
+        for( const talk_effect_fun_t &operation : native_effect.effects ) {
+            operation( native_dialogue );
+        }
+    } );
+    if( alpha_npc_fallback ) {
+        CHECK( native_diagnostic.find( "Tried to use an invalid beta talker" ) != std::string::npos );
+    } else {
+        CHECK( native_diagnostic.empty() );
     }
     calendar::turn = calendar::turn_zero + 12_hours;
     rng_set_engine_seed( 58163 );
@@ -1691,11 +1698,11 @@ TEST_CASE( "lua_platform_npc_drop_weapon_matches_native_talk_effect",
 
     effect_fixture fixture;
     const tripoint_bub_ms npc_position( 60, 60, 0 );
-    fixture.other.setpos( get_map(), npc_position );
+    fixture.other.spawn_at_precise( get_map().get_abs( npc_position ) );
     npc native;
     native.normalize();
     native.setID( character_id( 9100 ), true );
-    native.setpos( get_map(), tripoint_bub_ms( 62, 60, 0 ) );
+    native.spawn_at_precise( get_map().get_abs( tripoint_bub_ms( 62, 60, 0 ) ) );
 
     const auto count_rocks_at = []( const tripoint_bub_ms & position ) {
         int count = 0;
@@ -2121,7 +2128,7 @@ TEST_CASE( "lua_platform_purchased_pet_matches_native_spawn_and_disposition",
     const std::string species = GENERATE( "mon_chicken", "mon_horse", "mon_cow" );
     clear_map();
     effect_fixture fixture;
-    fixture.other.setpos( get_map(), tripoint_bub_ms( 60, 60, 0 ) );
+    fixture.other.spawn_at_precise( get_map().get_abs( tripoint_bub_ms( 60, 60, 0 ) ) );
     rng_set_engine_seed( 58163 );
     if( species == "mon_chicken" ) {
         talk_function::buy_chicken( fixture.other );
@@ -2691,9 +2698,12 @@ TEST_CASE( "lua_platform_npc_rule_setters_match_native_effects",
             json_loader::from_string( entry.native_effect ).get_object(),
             "effect_acceptance" );
         finalize_conditions();
-        for( const talk_effect_fun_t &operation : native_effect.effects ) {
-            operation( native_context );
-        }
+        const std::string native_diagnostic = capture_debugmsg_during( [&]() {
+            for( const talk_effect_fun_t &operation : native_effect.effects ) {
+                operation( native_context );
+            }
+        } );
+        CHECK( native_diagnostic.find( "Tried to use an invalid beta talker" ) != std::string::npos );
         const auto native_state = rule_state();
 
         fixture.other.rules = npc_follower_rules();

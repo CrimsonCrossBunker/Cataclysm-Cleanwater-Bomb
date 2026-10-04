@@ -1212,7 +1212,7 @@ TEST_CASE( "lua_platform_inventory_has_items_sum_matches_native_condition",
     } retire_beta_identity{ beta };
     REQUIRE( beta.get_faction_id() == faction_no_faction );
     const tripoint_bub_ms beta_pos( 65, 60, 0 );
-    beta.setpos( here, beta_pos );
+    beta.spawn_at_precise( here.get_abs( beta_pos ) );
     item beta_apple( itype_apple );
     REQUIRE( beta.Character::wield( beta_apple, std::nullopt, false ) );
 
@@ -1962,7 +1962,7 @@ TEST_CASE( "lua_platform_item_conditions_match_native_alpha_beta_and_item_talker
         }
     } retire_beta_identity{ beta };
     const tripoint_bub_ms beta_pos( 65, 60, 0 );
-    beta.setpos( here, beta_pos );
+    beta.spawn_at_precise( here.get_abs( beta_pos ) );
     item &beta_bandages = beta.inv->add_item(
                               item( itype_bandages ), false, false, false );
     REQUIRE( beta.has_item( beta_bandages ) );

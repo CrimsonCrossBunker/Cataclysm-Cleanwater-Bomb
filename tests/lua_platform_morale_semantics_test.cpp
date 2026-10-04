@@ -13,6 +13,7 @@
 #include "character.h"
 #include "character_id.h"
 #include "dialogue.h"
+#include "debug.h"
 #include "dialogue_helpers.h"
 #include "flexbuffer_json.h"
 #include "json_loader.h"
@@ -147,9 +148,13 @@ TEST_CASE( "lua_platform_morale_semantics_match_legacy_character_operations",
                 json_loader::from_string(
                     R"({"npc_add_morale": "morale_feeling_good", "bonus": -7, "max_bonus": -11})"
                 ).get_object(), "morale_semantics" );
-            for( const talk_effect_fun_t &effect : fallback_effect.effects ) {
-                effect( no_beta_dialogue );
-            }
+            const std::string fallback_effect_diagnostic = capture_debugmsg_during( [&]() {
+                for( const talk_effect_fun_t &effect : fallback_effect.effects ) {
+                    effect( no_beta_dialogue );
+                }
+            } );
+            CHECK( fallback_effect_diagnostic.find( "Tried to use an invalid beta talker" ) !=
+                   std::string::npos );
             sol::protected_function fallback_add = services["morale"]["add"];
             sol::protected_function_result fallback_call = fallback_add(
                         handle, cata::lua_platform::script_game_id( "morale", type.str() ),
@@ -169,9 +174,13 @@ TEST_CASE( "lua_platform_morale_semantics_match_legacy_character_operations",
                 json_loader::from_string(
                     R"({"npc_lose_morale": "morale_feeling_good"})"
                 ).get_object(), "morale_semantics" );
-            for( const talk_effect_fun_t &effect : fallback_remove_effect.effects ) {
-                effect( no_beta_dialogue );
-            }
+            const std::string fallback_remove_effect_diagnostic = capture_debugmsg_during( [&]() {
+                for( const talk_effect_fun_t &effect : fallback_remove_effect.effects ) {
+                    effect( no_beta_dialogue );
+                }
+            } );
+            CHECK( fallback_remove_effect_diagnostic.find( "Tried to use an invalid beta talker" ) !=
+                   std::string::npos );
             sol::protected_function fallback_remove = services["morale"]["remove"];
             sol::protected_function_result remove_call = fallback_remove(
                         handle, cata::lua_platform::script_game_id( "morale", type.str() ) );
