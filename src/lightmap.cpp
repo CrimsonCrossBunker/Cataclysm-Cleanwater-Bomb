@@ -510,6 +510,8 @@ void map::generate_lightmap( const int zlev )
         return;
     }
     map_cache.lightmap_dirty = false;
+    // Apparent visibility depends on the rebuilt lighting, even if sight is unchanged.
+    invalidate_visibility_cache();
 
     auto &lm = map_cache.lm;
     auto &sm = map_cache.sm;
@@ -1290,6 +1292,8 @@ castLightAll<fragment_cloud, fragment_cloud, shrapnel_calc, shrapnel_check,
 void map::build_seen_cache( const tripoint_bub_ms &origin, const int target_z, int extension_range,
                             bool cumulative, bool camera, int penalty )
 {
+    // Notify consumers of both direct sight and camera coverage changes.
+    invalidate_visibility_cache();
     level_cache &map_cache = get_cache( target_z );
     using mdarray = cata::mdarray<float, point_bub_ms>;
     mdarray &transparency_cache = map_cache.vision_transparency_cache;

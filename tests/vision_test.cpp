@@ -392,6 +392,104 @@ BENCHMARK_TEST_CASE( "local_door_transparency_refresh", "[vision][map_cache]" )
 
 }
 
+TEST_CASE( "visibility_refreshes_after_map_cache_rebuild", "[vision][map][cache]" )
+{
+    clear_avatar();
+    clear_map();
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms original_position = you.pos_bub( here );
+    const time_point original_time = calendar::turn;
+    on_out_of_scope restore_player( [&]() {
+        you.setpos( here, original_position );
+        set_time( original_time );
+    } );
+    const tripoint_bub_ms observer( 60, 60, 0 );
+    const tripoint_bub_ms target( 64, 60, 0 );
+    you.setpos( here, observer );
+    const auto refresh = [&]() {
+        here.build_map_cache( 0 );
+        here.update_visibility_cache( 0 );
+    };
+    const auto target_visibility = [&]() {
+        return here.get_cache_ref( 0 ).visibility_cache[target.x()][target.y()];
+    };
+    const auto require_current_visibility = [&]() {
+        CHECK( target_visibility() == here.apparent_light_at( target,
+            here.get_visibility_variables_cache() ) );
+        CHECK_FALSE( here.get_visibility_variables_cache().visibility_cache_dirty );
+    };
+
+    SECTION( "door changes with a stationary observer" ) {
+        set_time( calendar::turn_zero + 12_hours );
+        const tripoint_bub_ms door( 61, 60, 0 );
+        for( int y = 0; y < MAPSIZE_Y; ++y ) {
+            here.ter_set( tripoint_bub_ms( door.x(), y, 0 ), ter_t_brick_wall );
+        }
+        here.ter_set( door, ter_str_id( "t_door_c" ) );
+        here.invalidate_visibility_cache();
+        refresh();
+        const lit_level closed_visibility = target_visibility();
+        for( const ter_str_id state : {
+                 ter_str_id( "t_door_o" ), ter_str_id( "t_door_c" )
+             } ) {
+            here.ter_set( door, state );
+            refresh();
+            require_current_visibility();
+            if( state == ter_str_id( "t_door_o" ) ) {
+                CHECK( target_visibility() != closed_visibility );
+            } else {
+                CHECK( target_visibility() == closed_visibility );
+            }
+        }
+    }
+
+    SECTION( "light changes without a sight rebuild" ) {
+        set_time( calendar::turn_zero );
+        here.ter_set( target, ter_t_floor );
+        here.invalidate_visibility_cache();
+        refresh();
+        const lit_level unlit_visibility = target_visibility();
+        here.ter_set( target, ter_t_utility_light );
+        REQUIRE_FALSE( here.get_cache_ref( 0 ).seen_cache_dirty );
+        refresh();
+        require_current_visibility();
+        CHECK( target_visibility() != unlit_visibility );
+        here.ter_set( target, ter_t_floor );
+        refresh();
+        require_current_visibility();
+        CHECK( target_visibility() == unlit_visibility );
+    }
+
+    // An unchanged map must retain the clean visibility cache fast path.
+    here.build_map_cache( 0 );
+    CHECK_FALSE( here.get_visibility_variables_cache().visibility_cache_dirty );
+    require_current_visibility();
+}
+
+BENCHMARK_TEST_CASE( "unchanged_map_visibility_refresh", "[vision][map_cache]" )
+{
+    clear_avatar();
+    clear_map();
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms original_position = you.pos_bub( here );
+    const time_point original_time = calendar::turn;
+    on_out_of_scope restore_player( [&]() {
+        you.setpos( here, original_position );
+        set_time( original_time );
+    } );
+    set_time( calendar::turn_zero + 12_hours );
+    you.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
+    here.build_map_cache( 0 );
+    here.invalidate_visibility_cache();
+    here.update_visibility_cache( 0 );
+    BENCHMARK( "unchanged map and visibility cache query" ) {
+        here.build_map_cache( 0 );
+        here.update_visibility_cache( 0 );
+    };
+}
+
 static int get_actual_light_level( const map_test_case::tile &t )
 {
     const map &here = get_map();
