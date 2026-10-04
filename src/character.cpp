@@ -55,6 +55,7 @@
 #include "city.h"
 #include "clone_ptr.h"
 #include "color.h"
+#include "combat_training.h"
 #include "coordinates.h"
 #include "creature_tracker.h"
 #include "current_map.h"
@@ -1949,7 +1950,7 @@ void Character::on_dodge( Creature *source, float difficulty, float training_lev
 
     if( source && source->times_combatted_player <= 100 ) {
         source->times_combatted_player++;
-        practice( skill_dodge, difficulty * 2, difficulty );
+        practice_combat( skill_dodge, difficulty * 2, difficulty );
     }
     martial_arts_data->ma_ondodge_effects( *this );
 
@@ -2605,6 +2606,12 @@ float Character::get_vision_threshold( float light_level ) const
 
     return std::min( LIGHT_AMBIENT_LOW,
                      threshold_for_range( range ) * dimming_from_light );
+}
+
+bool Character::practice_combat( const skill_id &id, int amount, double training_level )
+{
+    const double multiplier = combat_training_multiplier( get_skill_level( id ), training_level );
+    return practice( id, roll_remainder( amount * multiplier ), MAX_SKILL );
 }
 
 bool Character::practice( const skill_id &id, int amount, int cap, bool suppress_warning,
@@ -3758,9 +3765,12 @@ bool Character::is_immune_field( const field_type_id &fid ) const
         const std::vector<bodypart_id> contact_parts = get_ground_contact_bodyparts();
         return std::all_of( contact_parts.begin(), contact_parts.end(),
         [&]( const bodypart_id & bp ) {
-            // Preserve the conservative corrosion resistance requirement:
-            // low direct damage alone does not guarantee safety from seeping acid.
-            return get_env_resist( bp ) >= 15 && get_armor_type( damage_acid, bp ) >= 5;
+            // Match burn_body_part's maximum direct damage and add_env_effect's
+            // worst possible corrosion roll for the strongest field intensity.
+            const int intensity = ft.get_max_intensity();
+            const bool corrosion_safe = is_immune_effect( effect_corroding ) ||
+                                        get_env_resist( bp ) >= 3 * ( 2 + intensity );
+            return corrosion_safe && get_armor_type( damage_acid, bp ) >= ( 2 + intensity ) / 2;
         } );
     }
     // If we haven't found immunity yet fall up to the next level

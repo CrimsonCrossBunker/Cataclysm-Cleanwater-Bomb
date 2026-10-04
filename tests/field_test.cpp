@@ -9,6 +9,8 @@
 #include "coordinates.h"
 #include "field.h"
 #include "field_type.h"
+#include "game.h"
+#include "mtype.h"
 #include "item.h"
 #include "map.h"
 #include "map_helpers.h"
@@ -661,5 +663,33 @@ TEST_CASE( "acid_immunity_uses_ground_contact_parts", "[field][player]" )
         you.add_effect( effect_quadruped_full, 1_minutes );
         CHECK_FALSE( you.is_immune_field( fd_acid ) );
     }
+    clear_avatar();
+}
+
+TEST_CASE( "acid_warnings_do_not_control_damage", "[field][player][acid]" )
+{
+    clear_map_without_vision();
+    clear_avatar();
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const bool warnings = GENERATE( true, false );
+    const override_option warning_option( "ACID_DANGER_WARNING", warnings ? "true" : "false" );
+    const tripoint_bub_ms pos( 65, 65, 0 );
+    you.setpos( here, pos );
+    const tripoint_bub_ms acid_pos = pos + point( 1, 0 );
+    here.add_field( acid_pos, fd_acid, 3 );
+    CHECK( g->get_dangerous_tile( acid_pos ).empty() == !warnings );
+    const tripoint_bub_ms fire_pos = pos + point( 0, 1 );
+    here.add_field( fire_pos, fd_fire, 3 );
+    CHECK_FALSE( g->get_dangerous_tile( fire_pos ).empty() );
+    const mtype &corpse = mtype_id( "mon_zombie_acidic" ).obj();
+    REQUIRE( corpse.bloodType().obj().has_acid );
+    CHECK( g->can_pulp_acid_corpse( you, corpse ) == !warnings );
+    you.setpos( here, acid_pos );
+    CHECK( ( g->is_in_dangerous_field() != nullptr ) == warnings );
+    REQUIRE_FALSE( you.is_immune_field( fd_acid ) );
+    const int hp_before = you.get_hp();
+    here.creature_in_field( you );
+    CHECK( you.get_hp() < hp_before );
     clear_avatar();
 }

@@ -11,9 +11,11 @@
 #include <tuple>
 
 #include "bodypart.h"
+#include "calendar.h"
 #include "cata_assert.h"
 #include "cata_utility.h"
 #include "character.h"
+#include "coordinates.h"
 #include "creature.h"
 #include "creature_tracker.h"
 #include "damage.h"
@@ -25,6 +27,7 @@
 #include "game.h"
 #include "item.h"
 #include "itype.h"
+#include "line.h"
 #include "map.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
@@ -33,11 +36,14 @@
 #include "messages.h"
 #include "monster.h"
 #include "options.h"
+#include "point.h"
 #include "rng.h"
 #include "sounds.h"
 #include "string_formatter.h"
+#include "tileray.h"
 #include "translations.h"
 #include "trap.h"
+#include "type_id.h"
 #include "units.h"
 #include "units_utility.h"
 #include "veh_type.h"
@@ -2256,8 +2262,9 @@ void vehicle::check_falling_or_floating()
 {
     map &here = get_map();
 
-    // If we're flying none of the rest of this matters.
-    if( is_flying && is_aircraft( here ) ) {
+    // Buoyancy needs no engine, but rotor lift requires a running, fueled engine.
+    const bool has_lift = is_airship( here ) || ( engine_on && is_rotorcraft( here ) );
+    if( is_flying && has_lift ) {
         is_falling = false;
         in_deep_water = false;
         in_water = false;
@@ -2328,7 +2335,7 @@ void vehicle::check_falling_or_floating()
     in_water =  2 * water_tiles >= pts.size();
     // Water counts as support above, but a buoyant airship still has lift
     // at the water surface, even when loaded without the flying flag.
-    if( ( is_falling && is_aircraft( here ) ) || ( in_water && is_airship( here ) ) ) {
+    if( ( is_falling && has_lift ) || ( in_water && is_airship( here ) ) ) {
         is_falling = false;
         is_flying = true;
         in_water = false;

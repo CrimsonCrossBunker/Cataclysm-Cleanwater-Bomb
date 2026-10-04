@@ -214,6 +214,8 @@ class JsonValue : Json
         std::string get_string() const;
         bool get_bool() const;
         int get_int() const;
+        // Read the original JSON token when FlexBuffers may have lost integer range information.
+        int get_int_exact() const;
         unsigned int get_uint() const;
         int64_t get_int64() const;
         uint64_t get_uint64() const;
@@ -414,9 +416,6 @@ class JsonArray : JsonWithPath
 
         std::string get_string( size_t idx ) const;
         int get_int( size_t idx ) const;
-        // Re-read original numeric tokens when integer overflow must fail
-        // instead of inheriting the FlexBuffer parser's signed conversion.
-        std::vector<int> get_ints_checked() const;
         double get_float( size_t idx ) const;
 
         JsonArray get_array( size_t idx ) const;

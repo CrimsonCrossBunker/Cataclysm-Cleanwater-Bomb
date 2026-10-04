@@ -4093,6 +4093,9 @@ field_entry *game::is_in_dangerous_field()
 {
     map &here = get_map();
     for( std::pair<const field_type_id, field_entry> &field : here.field_at( u.pos_bub() ) ) {
+        if( field.first.obj().has_acid && !get_option<bool>( "ACID_DANGER_WARNING" ) ) {
+            continue;
+        }
         if( u.is_dangerous_field( field.second ) ) {
             if( u.in_vehicle ) {
                 bool not_safe = false;
@@ -7507,10 +7510,15 @@ void game::butcher( const std::optional<tripoint_bub_ms> &p )
                 if( bt.has_value() ) {
                     std::vector<butchery_data> bd;
                     for( map_stack::iterator &it : corpses ) {
+                        if( !butcher_action_applicable( u, *it, bt.value() ) ) {
+                            continue;
+                        }
                         item_location corpse_loc = item_location( map_cursor( pos ), &*it );
                         bd.emplace_back( corpse_loc, bt.value() );
                     }
-                    u.assign_activity( butchery_activity_actor( bd ) );
+                    if( !bd.empty() ) {
+                        u.assign_activity( butchery_activity_actor( bd ) );
+                    }
                 }
             } else if( indexer_index == MULTIDISASSEMBLE_ONE ) {
                 u.disassemble_all( true );
@@ -8012,7 +8020,8 @@ std::vector<std::string> game::get_dangerous_tile( const tripoint_bub_ms &dest_l
     const bool veh_dest_inside = veh_dest && veh_dest->is_inside();
 
     for( const std::pair<const field_type_id, field_entry> &e : here.field_at( dest_loc ) ) {
-        if( !u.is_dangerous_field( e.second ) ) {
+        if( ( e.first.obj().has_acid && !get_option<bool>( "ACID_DANGER_WARNING" ) ) ||
+            !u.is_dangerous_field( e.second ) ) {
             continue;
         }
 
@@ -12183,6 +12192,9 @@ bool game::can_pulp_corpse( const pulp_data &pd )
 
 bool game::can_pulp_acid_corpse( const Character &you, const mtype &corpse_mtype )
 {
+    if( you.is_avatar() && !get_option<bool>( "ACID_DANGER_WARNING" ) ) {
+        return true;
+    }
     const bool acid_immune = you.is_immune_damage( damage_acid ) ||
                              you.is_immune_field( fd_acid );
     // this corpse is acid, and you are not immune to it

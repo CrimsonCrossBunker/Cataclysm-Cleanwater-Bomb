@@ -75,16 +75,26 @@ TEST_CASE( "vehicle_heating_uses_the_selected_fuel", "[activity][heating][vehicl
     const int battery = veh->install_part( here, point_rel_ms::zero,
                                            vpart_id( "small_storage_battery" ) );
     REQUIRE( battery >= 0 );
-    veh->part( battery ).ammo_set( itype_id( "battery" ), 100 );
+    const int battery_charge = GENERATE( 0, 100 );
+    veh->part( battery ).ammo_set( itype_id( "battery" ), battery_charge );
     const bool fueled = GENERATE( false, true );
     if( fueled ) {
-        const int tank = veh->install_part( here, point_rel_ms::zero,
+        const point_rel_ms tank_mount( 1, 0 );
+        REQUIRE( veh->install_part( here, tank_mount, vpart_id( "frame" ) ) >= 0 );
+        const int tank = veh->install_part( here, tank_mount,
                                             vpart_id( "small_pressure_tank" ) );
         REQUIRE( tank >= 0 );
         veh->part( tank ).ammo_set( itype_id( "propane" ), 10 );
     }
     veh->refresh();
     here.add_vehicle_to_cache( veh );
+    if( fueled ) {
+        item cooker( itype_id( "propane_cooker" ) );
+        REQUIRE( veh->prepare_tool( here, cooker ) > 0 );
+        const heater selected = find_heater( &you, &cooker, true );
+        CHECK( selected.available_heater > 0 );
+        CHECK( selected.fuel_type == itype_id( "propane" ) );
+    }
     heater source{};
     source.consume_flag = true;
     source.pseudo_flag = true;
@@ -96,11 +106,15 @@ TEST_CASE( "vehicle_heating_uses_the_selected_fuel", "[activity][heating][vehicl
     heating_requirements cost{ 250_ml, 1, 100 };
     you.assign_activity( heat_activity_actor( { { food, 1 } }, cost, source ) );
 
-    you.activity.actor->finish( you.activity, you );
+    you.activity.actor->do_turn( you.activity, you );
+    CHECK( static_cast<bool>( you.activity ) == fueled );
+    if( you.activity ) {
+        you.activity.actor->finish( you.activity, you );
+    }
 
     CHECK_FALSE( you.activity );
     CHECK( veh->fuel_left( here, itype_id( "propane" ) ) == ( fueled ? 8 : 0 ) );
-    CHECK( veh->fuel_left( here, itype_id( "battery" ) ) == 100 );
+    CHECK( veh->fuel_left( here, itype_id( "battery" ) ) == battery_charge );
     if( !fueled ) {
         REQUIRE( food );
         CHECK_FALSE( food->has_flag( flag_id( "HOT" ) ) );

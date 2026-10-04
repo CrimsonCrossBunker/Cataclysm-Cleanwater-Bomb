@@ -4691,6 +4691,11 @@ int item::get_min_str() const
 {
     const Character &p = get_player_character();
     if( type->gun ) {
+        // Installed turrets are supported by their mount. part_to_item clears
+        // VEHICLE on removal, restoring the handheld strength requirement.
+        if( has_flag( flag_VEHICLE ) ) {
+            return 0;
+        }
         int min_str = type->min_str;
         // we really need some better check for bows than its skill
         if( type->gun->skill_used == skill_archery ) {

@@ -8415,7 +8415,11 @@ heater find_heater( Character *p, item *it, bool force_use_it )
     } else if( loc->has_flag( flag_USE_UPS ) ) {
         available_heater = units::to_kilojoule( p->available_ups() );
     }
-    return {loc, consume_flag, available_heater, heating_effect, vpt, pseudo_flag};
+    // Vehicle tools are temporary, fuelled copies. Retain their actual fuel
+    // for the activity after the copy has gone away.
+    const itype_id fuel_type = loc->ammo_current().is_null() ?
+                               loc->ammo_default() : loc->ammo_current();
+    return {loc, consume_flag, available_heater, heating_effect, vpt, pseudo_flag, fuel_type};
 
 }
 

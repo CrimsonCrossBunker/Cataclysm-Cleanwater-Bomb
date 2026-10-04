@@ -1,8 +1,10 @@
 #include "flexbuffer_json.h"
 
 #include <atomic>
+#include <cstdint>
 #include <cstring>
 #include <istream>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -138,6 +140,38 @@ std::string Json::str() const
     std::string ret;
     json_.ToString( false, true, ret );
     return ret;
+}
+
+int JsonValue::get_int_exact() const
+{
+    if( !test_int() ) {
+        throw_error( "Expected an integer" );
+    }
+    std::unique_ptr<std::istream> source = root_->get_source_stream();
+    if( !source ) {
+        // Precompiled FlexBuffers (for example, in an archive) have no JSON source.
+        // Check the stored integer without narrowing it to int first.
+        if( json_.IsUInt() ) {
+            const uint64_t number = json_.AsUInt64();
+            if( number > static_cast<uint64_t>( std::numeric_limits<int>::max() ) ) {
+                throw_error( "Integer exceeds int range" );
+            }
+            return static_cast<int>( number );
+        }
+        const int64_t number = json_.AsInt64();
+        if( number < std::numeric_limits<int>::min() ||
+            number > std::numeric_limits<int>::max() ) {
+            throw_error( "Integer exceeds int range" );
+        }
+        return static_cast<int>( number );
+    }
+    TextJsonIn jsin( *source, get_root_source_path() );
+    JsonPath path;
+    if( parent_path_ ) {
+        path = *parent_path_ + path_index_;
+    }
+    advance_jsin( &jsin, flexbuffer_root_from_storage( root_->get_storage() ), path );
+    return jsin.get_int();
 }
 
 bool JsonValue::read( bool &b, bool throw_on_error ) const
@@ -292,24 +326,6 @@ void JsonObject::report_unvisited() const
         visited_fields_bitset_.set_all();
     }
 #endif
-}
-
-std::vector<int> JsonArray::get_ints_checked() const
-{
-    std::unique_ptr<std::istream> original_json = root_->get_source_stream();
-    if( !original_json ) {
-        throw std::runtime_error( "Original JSON is unavailable for a checked integer read" );
-    }
-    TextJsonIn jsin( *original_json, get_root_source_path() );
-    advance_jsin( &jsin, flexbuffer_root_from_storage( root_->get_storage() ), path_ );
-    const TextJsonArray original_array = jsin.get_array();
-    std::vector<int> result;
-    result.reserve( size() );
-    for( size_t index = 0; index < size(); ++index ) {
-        static_cast<void>( ( *this )[index] );
-        result.push_back( original_array.get_int( index ) );
-    }
-    return result;
 }
 
 void JsonObject::error_no_member( std::string_view member ) const

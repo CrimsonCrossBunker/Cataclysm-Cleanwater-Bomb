@@ -12787,8 +12787,11 @@ void heat_activity_actor::do_turn( player_activity &act, Character &p )
             act.set_to_null();
             return;
         }
-        if( vp.value().vehicle().connected_battery_power_level( here ).first < requirements.ammo *
-            heater_data.heating_effect ) {
+        vehicle &veh = vp->vehicle();
+        const int available = heater_data.fuel_type == itype_battery ?
+                              veh.connected_battery_power_level( here ).first :
+                              veh.fuel_left( here, heater_data.fuel_type );
+        if( available < requirements.ammo * heater_data.heating_effect ) {
             p.add_msg_if_player( _( "You need more energy to heat these items." ) );
             act.set_to_null();
             return;
