@@ -1,3 +1,5 @@
+#include <string>
+
 #include "avatar.h"
 #include "butchery.h"
 #include "calendar.h"
