@@ -3758,9 +3758,12 @@ bool Character::is_immune_field( const field_type_id &fid ) const
         const std::vector<bodypart_id> contact_parts = get_ground_contact_bodyparts();
         return std::all_of( contact_parts.begin(), contact_parts.end(),
         [&]( const bodypart_id & bp ) {
-            // Preserve the conservative corrosion resistance requirement:
-            // low direct damage alone does not guarantee safety from seeping acid.
-            return get_env_resist( bp ) >= 15 && get_armor_type( damage_acid, bp ) >= 5;
+            // Match burn_body_part's maximum direct damage and add_env_effect's
+            // worst possible corrosion roll for the strongest field intensity.
+            const int intensity = ft.get_max_intensity();
+            const bool corrosion_safe = is_immune_effect( effect_corroding ) ||
+                                        get_env_resist( bp ) >= 3 * ( 2 + intensity );
+            return corrosion_safe && get_armor_type( damage_acid, bp ) >= ( 2 + intensity ) / 2;
         } );
     }
     // If we haven't found immunity yet fall up to the next level
