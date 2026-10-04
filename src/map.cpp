@@ -8717,7 +8717,8 @@ void map::update_visibility_cache( const int zlev )
     const tripoint_bub_ms pos = player_character.pos_bub( *this );
 
     if( !visibility_variables_cache.visibility_cache_dirty &&
-        pos == visibility_variables_cache.last_pos ) {
+        pos == visibility_variables_cache.last_pos &&
+        zlev == visibility_variables_cache.last_zlev ) {
         return;
     }
 
@@ -8773,6 +8774,7 @@ void map::update_visibility_cache( const int zlev )
 #endif
 
     visibility_variables_cache.last_pos = pos;
+    visibility_variables_cache.last_zlev = zlev;
     visibility_variables_cache.visibility_cache_dirty = false;
 }
 

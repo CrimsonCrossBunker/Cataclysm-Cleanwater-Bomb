@@ -467,6 +467,69 @@ TEST_CASE( "visibility_refreshes_after_map_cache_rebuild", "[vision][map][cache]
     require_current_visibility();
 }
 
+TEST_CASE( "visibility_cache_refreshes_each_requested_level", "[vision][map][cache]" )
+{
+    clear_avatar();
+    clear_map( -2, 1 );
+    scoped_weather_override weather_clear( WEATHER_CLEAR );
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms original_position = you.pos_bub( here );
+    const time_point original_time = calendar::turn;
+    on_out_of_scope restore_player( [&]() {
+        you.setpos( here, original_position );
+        set_time( original_time );
+    } );
+    set_time( calendar::turn_zero + 12_hours );
+    const tripoint_bub_ms observer( 60, 60, 1 );
+    const tripoint_bub_ms door( 61, 60, 1 );
+    const tripoint_bub_ms target( 64, 60, 1 );
+    // Upper levels start as open air; provide a floor before placing the observer.
+    for( int x = 0; x < MAPSIZE_X; ++x ) {
+        for( int y = 0; y < MAPSIZE_Y; ++y ) {
+            here.ter_set( tripoint_bub_ms( x, y, 1 ), ter_t_floor );
+        }
+    }
+    here.build_map_cache( 1 );
+    you.setpos( here, observer );
+    REQUIRE( you.pos_bub( here ) == observer );
+    for( int y = 0; y < MAPSIZE_Y; ++y ) {
+        here.ter_set( tripoint_bub_ms( door.x(), y, 1 ), ter_t_brick_wall );
+    }
+    here.ter_set( door, ter_str_id( "t_door_c" ) );
+    here.build_map_cache( 1 );
+    here.invalidate_visibility_cache();
+    here.update_visibility_cache( 1 );
+    const lit_level closed_visibility = here.get_cache_ref(
+                                            1 ).visibility_cache[target.x()][target.y()];
+
+    for( const ter_str_id state : {
+             ter_str_id( "t_door_o" ), ter_str_id( "t_door_c" )
+         } ) {
+        here.ter_set( door, state );
+        here.build_map_cache( 1 );
+        // Computing a lower level must not make an unrefreshed upper level valid.
+        here.update_visibility_cache( 0 );
+        here.update_visibility_cache( 1 );
+        const lit_level visible = here.get_cache_ref( 1 ).visibility_cache[target.x()][target.y()];
+        CHECK( visible == here.apparent_light_at( target, here.get_visibility_variables_cache() ) );
+        if( state == ter_str_id( "t_door_o" ) ) {
+            CHECK( visible != closed_visibility );
+        } else {
+            CHECK( visible == closed_visibility );
+        }
+        // The common variables must belong to the level most recently requested.
+        here.update_visibility_cache( -1 );
+        CHECK( here.get_visibility_variables_cache().g_light_level ==
+               static_cast<int>( g->light_level( -1 ) ) );
+        here.update_visibility_cache( 1 );
+        CHECK( here.get_visibility_variables_cache().g_light_level ==
+               static_cast<int>( g->light_level( 1 ) ) );
+    }
+    CHECK( you.pos_bub( here ) == observer );
+    CHECK_FALSE( here.get_visibility_variables_cache().visibility_cache_dirty );
+}
+
 BENCHMARK_TEST_CASE( "unchanged_map_visibility_refresh", "[vision][map_cache]" )
 {
     clear_avatar();

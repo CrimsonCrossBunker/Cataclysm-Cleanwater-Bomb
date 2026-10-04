@@ -146,6 +146,8 @@ struct visibility_variables {
     float vision_threshold = 0.0f;
     std::optional<field_type_id> clairvoyance_field;
     tripoint_bub_ms last_pos;
+    // The observer may request a different level without moving.
+    int last_zlev = 0;
 };
 
 struct bash_params {
