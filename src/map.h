@@ -2323,6 +2323,21 @@ class map
         // The observer belongs to this map's seen cache, not to the process.
         std::optional<std::pair<tripoint_abs_ms, int>> previous_visibility_observer;
 
+        struct char_light_state {
+            float light;
+            tripoint_bub_ms pos;
+            bool operator==( const char_light_state &o ) const {
+                return light == o.light && pos == o.pos;
+            }
+            bool operator!=( const char_light_state &o ) const {
+                return !( *this == o );
+            }
+        };
+        // Each map tracks its own light sources.  Keep both buffers so unchanged
+        // cache queries do not allocate another temporary snapshot every time.
+        std::vector<char_light_state> cached_char_lights;
+        std::vector<char_light_state> current_char_lights;
+
         // Note: no bounds check
         level_cache &get_cache( int zlev ) const {
             std::unique_ptr<level_cache, level_cache_free> &cache = caches[zlev + OVERMAP_DEPTH];

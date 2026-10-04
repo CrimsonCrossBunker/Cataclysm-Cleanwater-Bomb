@@ -12117,16 +12117,7 @@ void map::build_map_cache( const int zlev, bool skip_lightmap )
     // Detect character/NPC light changes reactively.
     // Covers equipment, effects, trade/dialogue mutations, and position changes.
     {
-        struct char_light_state {
-            float light;
-            tripoint_bub_ms pos;
-            bool operator==( const char_light_state &o ) const {
-                return light == o.light && pos == o.pos;
-            }
-            bool operator!=( const char_light_state &o ) const {
-                return !( *this == o );
-            }
-        };
+        CATA_PROFILE_SCOPE_NAMED( "map.character_light_cache" );
         auto compute = []( const Character & ch ) -> char_light_state {
             float light = ch.active_light();
             if( ch.has_effect( effect_onfire ) )
@@ -12139,20 +12130,19 @@ void map::build_map_cache( const int zlev, bool skip_lightmap )
             return { light, ch.pos_bub() };
         };
 
-        static std::vector<char_light_state> cached_char_lights;
-        std::vector<char_light_state> current_lights;
-        current_lights.push_back( compute( get_player_character() ) );
+        current_char_lights.clear();
+        current_char_lights.push_back( compute( get_player_character() ) );
         for( const npc &guy : g->all_npcs() ) {
-            current_lights.push_back( compute( guy ) );
+            current_char_lights.push_back( compute( guy ) );
         }
-        if( current_lights != cached_char_lights ) {
+        if( current_char_lights != cached_char_lights ) {
             for( const char_light_state &s : cached_char_lights ) {
                 set_lightmap_cache_dirty( s.pos.z() );
             }
-            for( const char_light_state &s : current_lights ) {
+            for( const char_light_state &s : current_char_lights ) {
                 set_lightmap_cache_dirty( s.pos.z() );
             }
-            cached_char_lights = std::move( current_lights );
+            cached_char_lights.swap( current_char_lights );
         }
     }
 
