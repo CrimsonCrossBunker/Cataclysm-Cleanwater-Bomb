@@ -14,9 +14,11 @@ extern "C" {
 #include <overmap.h>
 #include <point.h>
 #include <type_id.h>
+#include "translation.h"
 #include <cstddef>
 #include <functional>
 #include <limits>
+#include <map>
 #include <optional>
 #include <string>
 #include <vector>

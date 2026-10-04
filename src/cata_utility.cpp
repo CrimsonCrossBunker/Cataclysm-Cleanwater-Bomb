@@ -19,6 +19,7 @@
 #include "cata_path.h"
 #include "catacharset.h"
 #include "debug.h"
+#include "enums.h"
 #include "filesystem.h"
 #include "flexbuffer_json.h"
 #include "json.h"
