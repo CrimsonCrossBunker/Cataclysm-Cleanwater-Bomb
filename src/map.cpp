@@ -12118,22 +12118,24 @@ void map::build_map_cache( const int zlev, bool skip_lightmap )
     // Covers equipment, effects, trade/dialogue mutations, and position changes.
     {
         CATA_PROFILE_SCOPE_NAMED( "map.character_light_cache" );
-        auto compute = []( const Character & ch ) -> char_light_state {
+        current_char_lights.clear();
+        auto record_light = [this]( const Character & ch ) {
             float light = ch.active_light();
-            if( ch.has_effect( effect_onfire ) )
-            {
+            if( ch.has_effect( effect_onfire ) ) {
                 light += 8.0f;
-            } else if( ch.has_effect( effect_haslight ) )
-            {
+            } else if( ch.has_effect( effect_haslight ) ) {
                 light += 4.0f;
             }
-            return { light, ch.pos_bub() };
+            // A non-emitting character cannot change the lightmap by moving.
+            // Still track all emitting characters so movement and extinction invalidate it.
+            if( light != 0.0f ) {
+                current_char_lights.push_back( { light, ch.pos_bub() } );
+            }
         };
 
-        current_char_lights.clear();
-        current_char_lights.push_back( compute( get_player_character() ) );
+        record_light( get_player_character() );
         for( const npc &guy : g->all_npcs() ) {
-            current_char_lights.push_back( compute( guy ) );
+            record_light( guy );
         }
         if( current_char_lights != cached_char_lights ) {
             for( const char_light_state &s : cached_char_lights ) {

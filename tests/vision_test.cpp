@@ -23,6 +23,7 @@
 #include "map_test_case.h"
 #include "monster.h"
 #include "mtype.h"
+#include "npc.h"
 #include "options_helpers.h"
 #include "player_helpers.h"
 #include "point.h"
@@ -203,6 +204,88 @@ BENCHMARK_TEST_CASE( "unchanged_character_light_map_cache", "[vision][map_cache]
     candidate.build_map_cache( z, true );
     BENCHMARK( "unchanged cached map without lightmap generation" ) {
         candidate.build_map_cache( z, true );
+    };
+}
+
+TEST_CASE( "only_emitting_character_movement_invalidates_lightmap", "[vision][map][cache]" )
+{
+    const bool npc_actor = GENERATE( false, true );
+    const efftype_id light_effect = GENERATE( efftype_id( "haslight" ), efftype_id( "onfire" ),
+        efftype_id( "glowing" ) );
+    CAPTURE( npc_actor, light_effect );
+    clear_avatar();
+    clear_map();
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms original_position = you.pos_bub( here );
+    on_out_of_scope restore_player( [&]() {
+        you.remove_effect( light_effect );
+        you.setpos( here, original_position );
+        clear_npcs();
+    } );
+    const tripoint_bub_ms left( 60, 60, 0 );
+    const tripoint_bub_ms right( 61, 60, 0 );
+    Character &actor = npc_actor ? static_cast<Character &>( spawn_npc( left.xy(), "test_talker" ) ) :
+                       static_cast<Character &>( you );
+    actor.setpos( here, left );
+    REQUIRE( actor.active_light() == 0.0f );
+    here.build_map_cache( 0, true );
+    here.access_cache( 0 ).lightmap_dirty = false;
+
+    actor.setpos( here, right );
+    here.build_map_cache( 0, true );
+    CHECK_FALSE( here.get_cache_ref( 0 ).lightmap_dirty );
+    here.access_cache( 0 ).lightmap_dirty = false;
+
+    actor.add_effect( light_effect, 1_minutes, bodypart_id( "torso" ) );
+    here.build_map_cache( 0, true );
+    CHECK( here.get_cache_ref( 0 ).lightmap_dirty );
+    here.access_cache( 0 ).lightmap_dirty = false;
+
+    actor.setpos( here, left );
+    here.build_map_cache( 0, true );
+    CHECK( here.get_cache_ref( 0 ).lightmap_dirty );
+    here.access_cache( 0 ).lightmap_dirty = false;
+
+    actor.remove_effect( light_effect );
+    here.build_map_cache( 0, true );
+    CHECK( here.get_cache_ref( 0 ).lightmap_dirty );
+    here.access_cache( 0 ).lightmap_dirty = false;
+
+    actor.setpos( here, right );
+    here.build_map_cache( 0, true );
+    CHECK_FALSE( here.get_cache_ref( 0 ).lightmap_dirty );
+}
+
+BENCHMARK_TEST_CASE( "moving_unlit_character_map_cache", "[vision][map_cache]" )
+{
+    const bool npc_actor = GENERATE( false, true );
+    clear_avatar();
+    clear_map();
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms original_position = you.pos_bub( here );
+    const time_point original_time = calendar::turn;
+    on_out_of_scope restore_player( [&]() {
+        you.setpos( here, original_position );
+        set_time( original_time );
+        clear_npcs();
+    } );
+    set_time( calendar::turn_zero + 12_hours );
+    const tripoint_bub_ms left( 60, 60, 0 );
+    const tripoint_bub_ms right( 61, 60, 0 );
+    you.setpos( here, tripoint_bub_ms( 65, 65, 0 ) );
+    Character &actor = npc_actor ? static_cast<Character &>( spawn_npc( left.xy(), "test_talker" ) ) :
+                       static_cast<Character &>( you );
+    actor.setpos( here, left );
+    REQUIRE( actor.active_light() == 0.0f );
+    here.build_map_cache( 0 );
+    bool move_right = true;
+    BENCHMARK( npc_actor ? "moving unlit NPC with lightmap generation" :
+               "moving unlit avatar with lightmap generation" ) {
+        actor.setpos( here, move_right ? right : left );
+        move_right = !move_right;
+        here.build_map_cache( 0 );
     };
 }
 
