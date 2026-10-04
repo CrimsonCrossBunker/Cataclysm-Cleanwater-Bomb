@@ -4,6 +4,7 @@
 
 #include <array>
 #include <bitset>
+#include <optional>
 #include <set>
 #include <type_traits>
 #include <unordered_map>
@@ -87,6 +88,9 @@ struct level_cache : level_cache_default_zero_members {
         void clear();
 
         std::bitset<MAPSIZE *MAPSIZE> transparency_cache_dirty;
+        // Observer adjustments belong to this level's derived vision cache.
+        std::optional<tripoint_bub_ms> vision_transparency_override_origin;
+        bool vision_transparency_low_profile = false;
         bool outside_cache_dirty = false;
         bool floor_cache_dirty = false;
         bool seen_cache_dirty = false;

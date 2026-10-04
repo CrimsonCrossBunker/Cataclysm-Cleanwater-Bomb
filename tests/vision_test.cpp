@@ -289,6 +289,109 @@ BENCHMARK_TEST_CASE( "moving_unlit_character_map_cache", "[vision][map_cache]" )
     };
 }
 
+TEST_CASE( "local_door_changes_preserve_other_submap_vision", "[vision][map][cache]" )
+{
+    clear_avatar();
+    clear_map();
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms original_position = you.pos_bub( here );
+    on_out_of_scope restore_player( [&]() {
+        you.setpos( here, original_position );
+    } );
+    fake_map storage( ter_t_floor.id() );
+    map &candidate = *storage.cast_to_map();
+    const int z = fake_map::fake_map_z;
+    const tripoint_bub_ms door( 3, 5, z );
+    const tripoint_bub_ms window( 18, 12, z );
+    const tripoint_bub_ms behind( 22, 12, z );
+    for( int y = 0; y < SEEY * 2; ++y ) {
+        candidate.ter_set( tripoint_bub_ms( window.x(), y, z ), ter_t_brick_wall );
+    }
+    candidate.ter_set( window, ter_str_id( "t_window_stained_green" ) );
+    candidate.ter_set( door, ter_str_id( "t_door_c" ) );
+    you.setpos( candidate, tripoint_bub_ms( 14, 12, z ) );
+    candidate.set_seen_cache_dirty( z );
+    candidate.build_map_cache( z, true );
+    REQUIRE( candidate.get_cache_ref( z ).transparency_cache[window.x()][window.y()] > 0.0f );
+    REQUIRE( candidate.get_cache_ref( z ).vision_transparency_cache[window.x()][window.y()] == 0.0f );
+    REQUIRE( candidate.get_cache_ref( z ).seen_cache[behind.x()][behind.y()] == 0.0f );
+
+    for( const ter_str_id state : {
+             ter_str_id( "t_door_o" ), ter_str_id( "t_door_c" )
+         } ) {
+        candidate.ter_set( door, state );
+        REQUIRE( candidate.get_cache_ref( z ).transparency_cache_dirty.count() == 1 );
+        candidate.build_map_cache( z, true );
+        CHECK( candidate.get_cache_ref( z ).vision_transparency_cache[window.x()][window.y()] == 0.0f );
+        CHECK( candidate.get_cache_ref( z ).seen_cache[behind.x()][behind.y()] == 0.0f );
+        CHECK( candidate.get_cache_ref( z ).transparency_cache_dirty.none() );
+    }
+}
+
+TEST_CASE( "vision_posture_overrides_restore_across_submap_boundary", "[vision][map][cache]" )
+{
+    clear_avatar();
+    clear_map();
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms original_position = you.pos_bub( here );
+    on_out_of_scope restore_player( [&]() {
+        you.set_movement_mode( move_mode_walk );
+        you.setpos( here, original_position );
+    } );
+    const tripoint_bub_ms observer( 59, 59, 0 );
+    const tripoint_bub_ms frame( 60, 59, 0 );
+    const tripoint_bub_ms stained( 61, 59, 0 );
+    here.ter_set( frame, ter_str_id( "t_window_frame" ) );
+    here.ter_set( stained, ter_str_id( "t_window_stained_green" ) );
+    you.setpos( here, observer );
+    you.set_movement_mode( move_mode_crouch );
+    here.build_map_cache( 0, true );
+    REQUIRE( here.get_cache_ref( 0 ).vision_transparency_cache[frame.x()][frame.y()] == 0.0f );
+    REQUIRE( here.get_cache_ref( 0 ).vision_transparency_cache[stained.x()][stained.y()] == 0.0f );
+
+    // Moving without a terrain change must also undo the old posture region.
+    you.setpos( here, tripoint_bub_ms( 58, 59, 0 ) );
+    here.build_map_cache( 0, true );
+    CHECK( here.get_cache_ref( 0 ).vision_transparency_cache[frame.x()][frame.y()] > 0.0f );
+    CHECK( here.get_cache_ref( 0 ).vision_transparency_cache[stained.x()][stained.y()] == 0.0f );
+
+    you.set_movement_mode( move_mode_walk );
+    REQUIRE( here.get_cache_ref( 0 ).transparency_cache_dirty.count() == 1 );
+    here.build_map_cache( 0, true );
+    CHECK( here.get_cache_ref( 0 ).vision_transparency_cache[frame.x()][frame.y()] > 0.0f );
+    CHECK( here.get_cache_ref( 0 ).vision_transparency_cache[stained.x()][stained.y()] == 0.0f );
+}
+
+BENCHMARK_TEST_CASE( "local_door_transparency_refresh", "[vision][map_cache]" )
+{
+    clear_avatar();
+    clear_map();
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms original_position = you.pos_bub( here );
+    const time_point original_time = calendar::turn;
+    on_out_of_scope restore_player( [&]() {
+        you.setpos( here, original_position );
+        set_time( original_time );
+    } );
+    set_time( calendar::turn_zero + 12_hours );
+    const tripoint_bub_ms door( 60, 60, 0 );
+    const ter_id closed = ter_str_id( "t_door_c" ).id();
+    const ter_id open = ter_str_id( "t_door_o" ).id();
+    here.ter_set( door, closed );
+    you.setpos( here, tripoint_bub_ms( 58, 60, 0 ) );
+    here.build_map_cache( 0 );
+    bool opening = true;
+    BENCHMARK( "door change and full map cache refresh" ) {
+        here.ter_set( door, opening ? open : closed );
+        opening = !opening;
+        here.build_map_cache( 0 );
+    };
+
+}
+
 static int get_actual_light_level( const map_test_case::tile &t )
 {
     const map &here = get_map();
