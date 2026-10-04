@@ -2634,29 +2634,30 @@ void prompt_partial_construction( Character &you, tripoint_bub_ms const &examp )
             return;
         }
         const construction &built = pc->id.obj();
+        // windows.h defines IGNORE; use lower-case local enumerators.
         enum options {
-            RESUME,
-            CANCEL,
-            IGNORE,
+            resume,
+            cancel,
+            ignore,
         };
         uilist selectmenu;
         //~ $1 - task name, $2 - percentage complete
         selectmenu.text = string_format( _( "%1$s    %2$d%% complete" ),
                                          built.group->name(), pc->counter / 100000 );
-        selectmenu.addentry( RESUME, true, MENU_AUTOASSIGN,
+        selectmenu.addentry( resume, true, MENU_AUTOASSIGN,
                              _( "Resume %s" ), built.group->name() );
-        selectmenu.addentry( CANCEL, true, MENU_AUTOASSIGN,
+        selectmenu.addentry( cancel, true, MENU_AUTOASSIGN,
                              _( "Cancel %s" ), built.group->name() );
-        selectmenu.addentry( IGNORE, true, MENU_AUTOASSIGN, _( "Ignore" ) );
+        selectmenu.addentry( ignore, true, MENU_AUTOASSIGN, _( "Ignore" ) );
         selectmenu.query();
 
         switch( selectmenu.ret ) {
-            case RESUME: {
+            case resume: {
                 you.assign_activity( build_construction_activity_actor( here.get_abs( examp ) ) );
                 return;
             }
 
-            case CANCEL: {
+            case cancel: {
                 for( const item &it : pc->components ) {
                     here.add_item_or_charges( you.pos_bub(), it );
                 }
@@ -2664,7 +2665,7 @@ void prompt_partial_construction( Character &you, tripoint_bub_ms const &examp )
                 return;
             }
 
-            case IGNORE:
+            case ignore:
                 [[fallthrough]];
             default:
                 return;
