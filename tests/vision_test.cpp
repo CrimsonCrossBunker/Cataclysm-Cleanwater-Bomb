@@ -61,6 +61,10 @@ static const vproto_id vehicle_prototype_vehicle_camera_test( "vehicle_camera_te
 
 TEST_CASE( "monster_infrared_requires_unobstructed_path", "[vision]" )
 {
+    const bool nighttime = GENERATE( false, true );
+    CAPTURE( nighttime );
+    restore_on_out_of_scope restore_turn( calendar::turn );
+    set_time( calendar::turn_zero + ( nighttime ? 0_hours : 12_hours ) );
     clear_avatar();
     clear_map();
     map &here = get_map();
@@ -81,6 +85,12 @@ TEST_CASE( "monster_infrared_requires_unobstructed_path", "[vision]" )
     here.invalidate_map_cache( 1 );
     here.build_map_cache( 1 );
     CHECK_FALSE( observer->sees( here, you ) );
+
+    you.setpos( here, tripoint_bub_ms{ 62, 60, 0 } );
+    here.ter_set( tripoint_bub_ms{ 61, 60, 0 }, ter_t_floor );
+    here.invalidate_map_cache( 0 );
+    here.build_map_cache( 0 );
+    CHECK( observer->sees( here, you ) );
 }
 
 TEST_CASE( "seen_cache_observer_is_owned_by_each_map", "[vision][map][cache]" )
