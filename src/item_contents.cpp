@@ -18,6 +18,7 @@
 #include "cata_imgui.h"
 #include "character.h"
 #include "color.h"
+#include "coords_fwd.h"
 #include "debug.h"
 #include "enum_conversions.h"
 #include "enums.h"
@@ -38,9 +39,12 @@
 #include "localized_comparator.h"
 #include "map.h"
 #include "output.h"
+#include "pocket_type.h"
+#include "ret_val.h"
 #include "string_formatter.h"
 #include "translation.h"
 #include "translations.h"
+#include "type_id.h"
 #include "uilist.h"
 #include "units.h"
 
@@ -794,6 +798,8 @@ void item_contents::combine( item_contents &&read_input, const bool convert,
                 const ret_val<item *> inserted = current_pocket_iter->insert_item( std::move( it ),
                                                  into_bottom, restack_charges, ignore_contents );
                 if( !inserted.success() ) {
+                    // insert_item only moves the item after a successful containment check.
+                    // NOLINTNEXTLINE(bugprone-use-after-move)
                     uninserted_items.push_back( std::move( it ) );
                     DebugLog( DebugLevel::D_WARNING, DebugClass::D_GAME ) <<
                             "error: item " << uninserted_items.back().typeId().str() <<
@@ -822,6 +828,8 @@ void item_contents::combine( item_contents &&read_input, const bool convert,
             const ret_val<item *> inserted = insert_item( std::move( it ), mismatched_type,
                                              ignore_contents, false, restack_charges );
             if( !inserted.success() ) {
+                // Failed pocket lookup or containment leaves the item available for migration.
+                // NOLINTNEXTLINE(bugprone-use-after-move)
                 uninserted_items.push_back( std::move( it ) );
                 debugmsg( "error: item %s cannot fit into any pocket while loading: %s",
                           uninserted_items.back().typeId().str(), inserted.str() );

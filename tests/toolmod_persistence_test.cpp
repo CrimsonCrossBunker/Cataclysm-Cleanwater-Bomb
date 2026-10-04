@@ -1,4 +1,7 @@
+#include <functional>
+#include <list>
 #include <sstream>
+#include <string>
 #include <vector>
 
 #include "cata_catch.h"
@@ -6,7 +9,6 @@
 #include "flexbuffer_json.h"
 #include "inventory_ui.h"
 #include "item.h"
-#include "item_contents.h"
 #include "item_location.h"
 #include "item_pocket.h"
 #include "json.h"
@@ -15,6 +17,7 @@
 #include "map_helpers.h"
 #include "map_selector.h"
 #include "pocket_type.h"
+#include "point.h"
 #include "ret_val.h"
 #include "type_id.h"
 
