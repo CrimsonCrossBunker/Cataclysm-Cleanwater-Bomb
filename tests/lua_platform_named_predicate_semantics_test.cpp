@@ -1,4 +1,5 @@
 #include <string>
+#include <vector>
 
 #include "avatar.h"
 #include "cata_catch.h"
@@ -9,6 +10,8 @@
 #include "json_loader.h"
 #include "npc.h"
 #include "type_id.h"
+
+static const trait_id trait_QUICK( "QUICK" );
 
 TEST_CASE( "lua_migration_native_named_predicate_accepts_empty_name",
            "[lua][platform][named_predicates][semantic]" )
@@ -43,9 +46,8 @@ TEST_CASE( "lua_migration_native_named_predicate_uses_evaluating_beta",
     original_beta.normalize();
     npc new_beta;
     new_beta.normalize();
-    const trait_id quick( "QUICK" );
-    original_beta.unset_mutation( quick );
-    new_beta.set_mutation( quick );
+    original_beta.unset_mutation( trait_QUICK );
+    new_beta.set_mutation( trait_QUICK );
     dialogue original( get_talker_for( alpha ), get_talker_for( original_beta ) );
     talk_effect_t effect;
     effect.parse_sub_effect( json_loader::from_string(
