@@ -249,12 +249,12 @@ ambient_channel_names = {{
 sfx::channel ambient_channel_from_name( const std::string &name )
 {
     const auto *const found = std::find_if(
-                                  ambient_channel_names.begin(),
-                                  ambient_channel_names.end(),
+                                  ambient_channel_names.data(),
+                                  ambient_channel_names.data() + ambient_channel_names.size(),
     [&name]( const auto & entry ) {
         return entry.first == name;
     } );
-    if( found == ambient_channel_names.end() ) {
+    if( found == ambient_channel_names.data() + ambient_channel_names.size() ) {
         throw std::invalid_argument(
             "services.sound.play_ambient received unknown channel '" +
             name + "'" );
