@@ -1,5 +1,6 @@
 #include "mapgen_functions.h"
 
+#include <type_id.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -22,9 +23,9 @@
 #include "cuboid_rectangle.h"
 #include "flood_fill.h"
 #include "map.h"
-#include "mapdata.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
+#include "mapdata.h"
 #include "mapgen.h"
 #include "mapgendata.h"
 #include "mapgenformat.h"
@@ -41,6 +42,7 @@
 
 class Creature;
 
+static const oter_str_id oter_river_c_not_ne( "river_c_not_ne" );
 static const oter_str_id oter_river_c_not_nw( "river_c_not_nw" );
 static const oter_str_id oter_river_c_not_se( "river_c_not_se" );
 static const oter_str_id oter_river_c_not_sw( "river_c_not_sw" );
@@ -524,35 +526,26 @@ void mapgen_subway( mapgendata &dat )
     m->rotate( rot );
 }
 
-void mapgen_river_curved_not( mapgendata &dat )
+static void mapgen_river_curved_not_corner( map *const m, int corner )
 {
-    map *const m = &dat.m;
-    int rot = 0;
-
-    if( dat.terrain_type() == oter_river_c_not_se ) {
-        rot = 1;
-    } else if( dat.terrain_type() == oter_river_c_not_sw ) {
-        rot = 2;
-    } else if( dat.terrain_type() == oter_river_c_not_nw ) {
-        rot = 3;
-    }
-
-    // Rotate the map backwards so things can can be placed in their 'normal' orientation.
-    m->rotate( 4 - rot );
-
-    fill_background( m, ter_t_water_moving_dp );
-    // this is not_ne, so deep on all sides except ne corner, which is shallow
-    // shallow is 20,0, 23,4
-    int north_edge = rng( 16, 18 );
-    int east_edge = rng( 4, 8 );
+    // Rotate the map backwards so the corner to carve is the north-east one, where
+    // the carve below is laid out, and rotate the result back afterwards.
+    m->rotate( 4 - corner );
+    // Deep water everywhere except that corner: land right at the corner
+    // (circle_edge <= 8), a shallow water ring around it (<= 36) and occasionally
+    // clay or sand where the two meet (circle_edge == 9).
+    const int north_edge = rng( 16, 18 );
+    const int east_edge = rng( 4, 8 );
 
     for( int x = north_edge; x < SEEX * 2; x++ ) {
         for( int y = 0; y < east_edge; y++ ) {
-            int circle_edge = ( ( SEEX * 2 - x ) * ( SEEX * 2 - x ) ) + ( y * y );
+            const int circle_edge = ( ( SEEX * 2 - x ) * ( SEEX * 2 - x ) ) + ( y * y );
             if( circle_edge <= 8 ) {
                 m->ter_set( point_bub_ms( x, y ), grass_or_dirt() );
-            }
-            if( circle_edge == 9 && one_in( 25 ) ) {
+            } else if( circle_edge == 9 && one_in( 25 ) ) {
+                // Has to stay chained to the land branch above: as a standalone `if`
+                // it captured the `else` below, so every land tile of the corner was
+                // immediately overwritten with shallow water.
                 m->ter_set( point_bub_ms( x, y ), clay_or_sand() );
             } else if( circle_edge <= 36 ) {
                 m->ter_set( point_bub_ms( x, y ), ter_t_water_moving_sh );
@@ -560,8 +553,42 @@ void mapgen_river_curved_not( mapgendata &dat )
         }
     }
 
-    // finally, unrotate the map back to its normal orientation, resulting in the new addition being rotated.
-    m->rotate( rot );
+    m->rotate( corner );
+}
+
+void mapgen_river_curved_not( mapgendata &dat )
+{
+    map *const m = &dat.m;
+
+    // A narrow river can be pinched hard enough that the corners of both banks fall
+    // into the same overmap tile, but the tile's id only stands for one of them (see
+    // overmap::build_river_shores).  Carve the corner the id stands for, as before,
+    // and additionally every corner whose diagonal neighbour is land, so that neither
+    // bank loses its corner.  Corner order matches the rotation used below and
+    // overmap::build_river_shores: 0 = NE, 1 = SE, 2 = SW, 3 = NW.
+    // dat.t_nesw[4..7] are the NE/SE/SW/NW neighbours (see src/mapgendata.cpp).
+    int corners = 0;
+    if( dat.terrain_type() == oter_river_c_not_ne ) {
+        corners |= 1 << 0;
+    } else if( dat.terrain_type() == oter_river_c_not_se ) {
+        corners |= 1 << 1;
+    } else if( dat.terrain_type() == oter_river_c_not_sw ) {
+        corners |= 1 << 2;
+    } else if( dat.terrain_type() == oter_river_c_not_nw ) {
+        corners |= 1 << 3;
+    }
+    for( int i = 0; i < 4; i++ ) {
+        if( !is_water_body( dat.t_nesw[4 + i] ) ) {
+            corners |= 1 << i;
+        }
+    }
+
+    fill_background( m, ter_t_water_moving_dp );
+    for( int i = 0; i < 4; i++ ) {
+        if( corners & ( 1 << i ) ) {
+            mapgen_river_curved_not_corner( m, i );
+        }
+    }
 }
 
 void mapgen_river_straight( mapgendata &dat )
