@@ -1,9 +1,14 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <debug.h>
+#include <type_id.h>
 #include <array>
 #include <cstddef>
 #include <functional>
 #include <initializer_list>
+#include <memory>
+#include <optional>
+#include <random>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -13,9 +18,9 @@
 #include "calendar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
-#include "condition.h"
 #include "character.h"
 #include "character_id.h"
+#include "condition.h"
 #include "dialogue.h"
 #include "dialogue_helpers.h"
 #include "flexbuffer_json.h"
@@ -24,11 +29,19 @@
 #include "json_loader.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
+#include "lua_platform_runtime.h"
 #include "lua_platform_sol.h"
 #include "lua_platform_variables.h"
 #include "math_parser_diag_value.h"
 #include "npc.h"
+#include "rng.h"
+#include "translation.h"
 #include "weather.h"
+
+namespace cata::lua_platform
+{
+class runtime;
+}  // namespace cata::lua_platform
 
 TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
            "[lua][platform][strings][semantic]" )
@@ -302,6 +315,316 @@ TEST_CASE( "lua_platform_string_variable_owners_match_native_assignment",
 
 }
 
+TEST_CASE( "lua_platform_string_assignment_lazy_choices_match_native_rng_and_values",
+           "[lua][platform][strings][semantic]" )
+{
+    namespace platform = cata::lua_platform;
+    platform::clear_active_runtimes();
+    const cata_default_random_engine saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
+    const on_out_of_scope restore_rng( [&saved_rng]() {
+        rng_get_engine() = saved_rng;
+    } );
+    avatar player;
+    npc partner;
+    player.normalize();
+    partner.normalize();
+    player.setID( character_id( 4821 ), true );
+    partner.setID( character_id( 4822 ), true );
+    platform::register_npc_handle_identity( partner );
+    const on_out_of_scope retire_partner( [&]() {
+        platform::retire_npc_handle_identity( partner );
+    } );
+    dialogue conversation( get_talker_for( player ), get_talker_for( partner ) );
+    sol::state lua;
+    lua.open_libraries( sol::lib::base );
+    sol::table ccb = lua.create_table();
+    const auto runtime = platform::make_runtime( "string_assignment_values", 4823, lua );
+    const on_out_of_scope cleanup_runtime( []() {
+        platform::clear_active_runtimes();
+    } );
+    platform::install_runtime_api( runtime, lua, ccb );
+    platform::set_active_runtimes( { runtime } );
+    lua["ccb"] = ccb;
+    const bool translated = GENERATE( false, true );
+    const std::size_t choice_count = GENERATE( std::size_t( 1 ), std::size_t( 3 ), std::size_t( 65 ) );
+    const std::string target_scope = GENERATE( "u_val", "npc_val", "context_val" );
+    const std::string source_key( "assignment\0source", sizeof( "assignment\0source" ) - 1 );
+    const std::vector<std::string> target_keys = {
+        "", source_key, std::string( 10000, 'k' )
+    };
+    const sol::protected_function_result loaded = lua.safe_script( R"(
+local services=ccb.services
+local function value(result) assert(result.ok);return result.value end
+return function(actor,partner,data,key,target_scope,target_key,count,translated)
+ local function read(owner,fallback)
+  local result=value(services.variables.get_string(owner,key))
+  if result.exists==false then
+   if translated then return services.translate(fallback) end
+   return fallback
+  end
+  return result.value
+ end
+ local providers={}
+ for i=1,count do
+  local kind=(i-1)%3
+  if kind==0 then providers[i]=function() return read(actor,'Alpha fallback.') end
+  elseif kind==1 then providers[i]=function() return read(partner,'Beta fallback.') end
+  else providers[i]=function()
+   if translated then return services.translate('Literal candidate.') end
+   return 'Literal candidate.'
+  end end
+ end
+ local selected=providers[services.random.native_int(0,#providers-1)+1]()
+ if target_scope=='context_val' then data[target_key]=selected
+ else value(services.variables.set(target_scope=='u_val' and actor or partner,target_key,selected)) end
+ return selected
+end
+)", sol::script_pass_on_error );
+    REQUIRE( loaded.valid() );
+    const sol::protected_function assign = loaded.get<sol::protected_function>();
+    bool completed = false;
+    lua.set_function( "accept", [&]( const sol::table & ) {
+        const auto handle_for = [&]( Character &actor, const bool is_npc ) {
+            return platform::game_handle::from_creature(
+                       actor, { is_npc ? "npc" : "avatar", actor.getID().get_value(), 0, 0, 0, {} },
+                       platform::detail::runtime_handle_identity( runtime ), platform::runtime_world_generation() );
+        };
+        const platform::game_handle alpha_handle = handle_for( player, false );
+        const platform::game_handle beta_handle = handle_for( partner, true );
+        for( const std::string &target_key : target_keys ) {
+            std::ostringstream source;
+            {
+                JsonOut json( source );
+                json.start_object();
+                json.member( "set_string_var" );
+                json.start_array();
+                for( std::size_t index = 0; index < choice_count; ++index ) {
+                    if( index % 3 == 2 ) {
+                        json.write( "Literal candidate." );
+                    } else {
+                        json.start_object();
+                        json.member( index % 3 == 0 ? "u_val" : "npc_val", source_key );
+                        json.member( "default", index % 3 == 0 ? "Alpha fallback." : "Beta fallback." );
+                        json.end_object();
+                    }
+                }
+                json.end_array();
+                json.member( "i18n", translated );
+                json.member( "target_var" );
+                json.start_object();
+                json.member( target_scope, target_key );
+                json.end_object();
+                json.end_object();
+            }
+            talk_effect_t native_assignment;
+            native_assignment.parse_sub_effect( json_loader::from_string( source.str() ).get_object(),
+                                                "string_assignment_values" );
+            for( int state = 0; state < 4; ++state ) {
+                const auto reset_sources = [&]() {
+                    player.remove_value( source_key );
+                    partner.remove_value( source_key );
+                    if( state == 1 ) {
+                        player.set_value( source_key, std::string() );
+                        partner.set_value( source_key, std::string() );
+                    } else if( state == 2 ) {
+                        player.set_value( source_key, std::string( 10000, 'a' ) + '\0' + "alpha" );
+                        partner.set_value( source_key, std::string( 10000, 'b' ) + '\0' + "beta" );
+                    } else if( state == 3 ) {
+                        player.set_value( source_key, diag_value{} );
+                        partner.set_value( source_key, diag_value{} );
+                    }
+                };
+                for( const unsigned int seed : { 4824U, 4825U } ) {
+                    reset_sources();
+                    rng_set_engine_seed( seed );
+                    for( const talk_effect_fun_t &effect : native_assignment.effects ) {
+                        effect( conversation );
+                    }
+                    const std::string expected = target_scope == "context_val" ?
+                                                 conversation.get_value( target_key ).str() :
+                                                 ( target_scope == "u_val" ? player : static_cast<Character &>( partner ) ).get_value( target_key ).str();
+                    const cata_default_random_engine native_rng_after = rng_get_engine(); // NOLINT(cata-determinism)
+                    reset_sources();
+                    sol::table data = lua.create_table();
+                    rng_set_engine_seed( seed );
+                    const sol::protected_function_result result = assign(
+                                alpha_handle, beta_handle, data, source_key, target_scope, target_key,
+                                choice_count, translated );
+                    CAPTURE( target_scope, target_key.size(), choice_count, translated, state, seed );
+                    REQUIRE( result.valid() );
+                    CHECK( result.get<std::string>() == expected );
+                    CHECK( rng_get_engine() == native_rng_after );
+                    if( target_scope == "context_val" ) {
+                        CHECK( data.raw_get<std::string>( target_key ) == expected );
+                    } else {
+                        const Character &target = target_scope == "u_val" ? player : static_cast<Character &>( partner );
+                        CHECK( target.get_value( target_key ).str() == expected );
+                    }
+                }
+            }
+        }
+        completed = true;
+    } );
+    sol::protected_function_result registered = ccb["runtime"]["handler"]( "accept", lua["accept"] );
+    REQUIRE( registered.valid() );
+    registered = ccb["runtime"]["on"]( "world_ready", "accept" );
+    REQUIRE( registered.valid() );
+    platform::runtime_world_ready( true );
+    REQUIRE( completed );
+}
+
+TEST_CASE( "lua_platform_indirect_string_assignment_matches_native_targets_and_diagnostics",
+           "[lua][platform][strings][semantic]" )
+{
+    namespace platform = cata::lua_platform;
+    platform::clear_active_runtimes();
+    restore_on_out_of_scope restore_globals( get_globals().get_global_values() );
+    const cata_default_random_engine saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
+    const on_out_of_scope restore_rng( [&saved_rng]() {
+        rng_get_engine() = saved_rng;
+    } );
+    avatar alpha;
+    npc beta;
+    alpha.normalize();
+    beta.normalize();
+    alpha.setID( character_id( 4841 ), true );
+    beta.setID( character_id( 4842 ), true );
+    platform::register_npc_handle_identity( beta );
+    const on_out_of_scope retire_beta( [&]() {
+        platform::retire_npc_handle_identity( beta );
+    } );
+    dialogue conversation( get_talker_for( alpha ), get_talker_for( beta ) );
+    sol::state lua;
+    lua.open_libraries( sol::lib::base, sol::lib::string );
+    sol::table ccb = lua.create_table();
+    const auto runtime = platform::make_runtime( "indirect_string_assignment", 4843, lua );
+    const on_out_of_scope cleanup_runtime( []() {
+        platform::clear_active_runtimes();
+    } );
+    platform::install_runtime_api( runtime, lua, ccb );
+    platform::set_active_runtimes( { runtime } );
+    lua["ccb"] = ccb;
+    const sol::protected_function_result loaded = lua.safe_script( R"(
+local services=ccb.services
+local function value(result) assert(result.ok);return result.value end
+return function(alpha,beta,data,key,text)
+ services.random.native_int(0,0)
+ local result=value(services.variables.get_context_string(data,key))
+ local name=result.exists==false and '' or result.value
+ if string.sub(name,1,2)=='u_' then value(services.variables.set(alpha,string.sub(name,3),text))
+ elseif string.sub(name,1,2)=='n_' then value(services.variables.set(beta,string.sub(name,3),text))
+ elseif string.sub(name,1,1)=='_' then data[string.sub(name,2)]=text
+ else value(services.variables.set_global(name,text)) end
+end
+)", sol::script_pass_on_error );
+    REQUIRE( loaded.valid() );
+    const sol::protected_function assign = loaded.get<sol::protected_function>();
+    bool completed = false;
+    lua.set_function( "accept", [&]( const sol::table & ) {
+        const auto handle_for = [&]( Character &actor, const bool is_npc ) {
+            return platform::game_handle::from_creature(
+                       actor, { is_npc ? "npc" : "avatar", actor.getID().get_value(), 0, 0, 0, {} },
+                       platform::detail::runtime_handle_identity( runtime ), platform::runtime_world_generation() );
+        };
+        const platform::game_handle alpha_handle = handle_for( alpha, false );
+        const platform::game_handle beta_handle = handle_for( beta, true );
+        const std::string assigned = std::string( 10000, 'v' ) + '\0' + "u_not_followed";
+        const std::vector<std::string> keys = {
+            "", std::string( "pointer\0key", sizeof( "pointer\0key" ) - 1 ), std::string( 10000, 'k' )
+        };
+        const diag_array array_pointer( 5000, diag_value( std::string( "u_not_followed" ) ) );
+        for( const std::string &key : keys ) {
+            std::ostringstream source;
+            {
+                JsonOut json( source );
+                json.start_object();
+                json.member( "set_string_var", assigned );
+                json.member( "target_var" );
+                json.start_object();
+                json.member( "var_val", key );
+                json.end_object();
+                json.end_object();
+            }
+            talk_effect_t native_assignment;
+            native_assignment.parse_sub_effect( json_loader::from_string( source.str() ).get_object(),
+                                                "indirect_string_assignment" );
+            const std::vector<std::optional<diag_value>> pointers = {
+                std::nullopt, diag_value{}, diag_value( 42.0 ), diag_value( array_pointer ),
+                diag_value( std::string() ), diag_value( std::string( "u_" ) ), diag_value( std::string( "n_" ) ),
+                diag_value( std::string( "_" ) ), diag_value( "u_" + key ), diag_value( "n_" + key ),
+                diag_value( "_" + key ), diag_value( std::string( "var_u_not_followed" ) ),
+                diag_value( key ), diag_value( std::string( "global\0key", sizeof( "global\0key" ) - 1 ) )
+            };
+            for( const auto &pointer : pointers ) {
+                conversation.remove_value( key );
+                if( pointer ) {
+                    conversation.set_value( key, *pointer );
+                }
+                // Determine the expected destination without producing a
+                // second diagnostic from a wrong-type pointer.
+                const std::string pointer_text = pointer && pointer->is_str() ? pointer->str() : std::string();
+                const var_info target = process_variable( pointer_text );
+                rng_set_engine_seed( 4844 );
+                const std::string native_diagnostic = capture_debugmsg_during( [&]() {
+                    for( const talk_effect_fun_t &effect : native_assignment.effects ) {
+                        effect( conversation );
+                    }
+                } );
+                const cata_default_random_engine native_rng_after = rng_get_engine(); // NOLINT(cata-determinism)
+                const std::string native_value = target.type == var_type::context ? conversation.get_value( target.name ).str() :
+                                                 target.type == var_type::u ? alpha.get_value( target.name ).str() :
+                                                 target.type == var_type::npc ? beta.get_value( target.name ).str() :
+                                                 get_globals().get_global_value( target.name ).str();
+                REQUIRE( native_value == assigned );
+                sol::table data = lua.create_table();
+                if( pointer ) {
+                    if( pointer->is_str() ) {
+                        data.raw_set( key, pointer->str() );
+                    } else if( pointer->is_empty() ) {
+                        data.raw_set( key, ccb["services"]["types"]["null"].get<sol::object>() );
+                    } else if( pointer->is_dbl() ) {
+                        data.raw_set( key, 42.0 );
+                    } else {
+                        sol::table entries = lua.create_table();
+                        for( int index = 1; index <= 5000; ++index ) {
+                            entries[index] = "u_not_followed";
+                        }
+                        data.raw_set( key, entries );
+                    }
+                }
+                if( target.type == var_type::u ) {
+                    alpha.remove_value( target.name );
+                } else if( target.type == var_type::npc ) {
+                    beta.remove_value( target.name );
+                } else if( target.type == var_type::global ) {
+                    get_globals().remove_global_value( target.name );
+                }
+                rng_set_engine_seed( 4844 );
+                const std::string platform_diagnostic = capture_debugmsg_during( [&]() {
+                    const sol::protected_function_result result = assign(
+                                alpha_handle, beta_handle, data, key, assigned );
+                    REQUIRE( result.valid() );
+                } );
+                CAPTURE( key.size(), pointer_text.size(), target.name.size() );
+                CHECK( platform_diagnostic == native_diagnostic );
+                CHECK( rng_get_engine() == native_rng_after );
+                const std::string actual = target.type == var_type::context ? data.raw_get<std::string>( target.name ) :
+                                           target.type == var_type::u ? alpha.get_value( target.name ).str() :
+                                           target.type == var_type::npc ? beta.get_value( target.name ).str() :
+                                           get_globals().get_global_value( target.name ).str();
+                CHECK( actual == native_value );
+            }
+        }
+        completed = true;
+    } );
+    sol::protected_function_result registered = ccb["runtime"]["handler"]( "accept", lua["accept"] );
+    REQUIRE( registered.valid() );
+    registered = ccb["runtime"]["on"]( "world_ready", "accept" );
+    REQUIRE( registered.valid() );
+    platform::runtime_world_ready( true );
+    REQUIRE( completed );
+}
+
 TEST_CASE( "lua_platform_global_null_is_distinct_from_removal",
            "[lua][platform][strings][semantic]" )
 {
@@ -466,7 +789,8 @@ TEST_CASE( "lua_migration_indirect_string_native_pointer_baseline",
            "[lua][platform][strings][semantic]" )
 {
     restore_on_out_of_scope restore_globals( get_globals().get_global_values() );
-    get_globals().set_global_value( "", "empty-global" );
+    const std::string empty_global = std::string( "empty-global" ) + '\0' + "raw suffix";
+    get_globals().set_global_value( "", empty_global );
     for( const std::string &key : std::vector<std::string> {
     "", std::string( "pointer\0key", 11 ), "pointer\nkey", std::string( 9000, 'p' )
     } ) {
@@ -482,18 +806,24 @@ TEST_CASE( "lua_migration_indirect_string_native_pointer_baseline",
         writer.end_object();
         const JsonObject object = json_loader::from_string( input.str() ).get_object();
         const str_or_var native = get_str_or_var( object.get_member( "value" ), "value" );
+        const translation_or_var translated = get_translation_or_var(
+                object.get_member( "value" ), "value" );
         dialogue context;
         CHECK( native.evaluate( context ) == "fallback" );
+        CHECK( translated.evaluate( context ).translated() == to_translation( "fallback" ).translated() );
         context.set_value( key, diag_value{} );
-        CHECK( native.evaluate( context ) == "empty-global" );
+        CHECK( native.evaluate( context ) == empty_global );
+        CHECK( translated.evaluate( context ).translated() == empty_global );
         context.set_value( key, "" );
-        CHECK( native.evaluate( context ) == "empty-global" );
+        CHECK( native.evaluate( context ) == empty_global );
+        CHECK( translated.evaluate( context ).translated() == empty_global );
         for( const diag_value &pointer : {
                  diag_value( 42.0 ), diag_value( diag_array{ diag_value( "u_key" ) } )
              } ) {
             context.set_value( key, pointer );
             const std::string diagnostic = capture_debugmsg_during( [&]() {
-                CHECK( native.evaluate( context ) == "empty-global" );
+                CHECK( native.evaluate( context ) == empty_global );
+                CHECK( translated.evaluate( context ).translated() == empty_global );
             } );
             CHECK( diagnostic.find( "Type mismatch in diag_value" ) != std::string::npos );
         }
@@ -502,17 +832,29 @@ TEST_CASE( "lua_migration_indirect_string_native_pointer_baseline",
                  "u_key", "n_key"
              } ) {
             context.set_value( key, pointer );
-            CHECK( native.evaluate( context ) == "fallback" );
+            const std::string diagnostic = capture_debugmsg_during( [&]() {
+                CHECK( native.evaluate( context ) == "fallback" );
+                CHECK( translated.evaluate( context ).translated() == to_translation( "fallback" ).translated() );
+            } );
+            CHECK( diagnostic.find( pointer == "u_key" ?
+                                    "Tried to use an invalid alpha talker" :
+                                    "Tried to use an invalid beta talker" ) != std::string::npos );
         }
         // A referenced string that itself looks like a pointer is not followed.
         const std::string target = "native_indirect_target";
         context.set_value( target, "u_not_followed" );
         context.set_value( key, "_" + target );
         CHECK( native.evaluate( context ) == "u_not_followed" );
+        CHECK( translated.evaluate( context ).translated() == "u_not_followed" );
+        const std::string stored_raw = std::string( 10000, 'v' ) + '\0' + "u_not_followed";
+        context.set_value( target, stored_raw );
+        CHECK( translated.evaluate( context ).translated() == stored_raw );
         context.set_value( target, diag_value{} );
         CHECK( native.evaluate( context ).empty() );
+        CHECK( translated.evaluate( context ).translated().empty() );
         context.remove_value( target );
         CHECK( native.evaluate( context ) == "fallback" );
+        CHECK( translated.evaluate( context ).translated() == to_translation( "fallback" ).translated() );
         avatar alpha;
         npc beta;
         alpha.set_value( key, "alpha-value" );
@@ -520,11 +862,14 @@ TEST_CASE( "lua_migration_indirect_string_native_pointer_baseline",
         dialogue participants( get_talker_for( alpha ), get_talker_for( beta ) );
         participants.set_value( key, "u_" + key );
         CHECK( native.evaluate( participants ) == "alpha-value" );
+        CHECK( translated.evaluate( participants ).translated() == "alpha-value" );
         participants.set_value( key, "n_" + key );
         CHECK( native.evaluate( participants ) == "beta-value" );
+        CHECK( translated.evaluate( participants ).translated() == "beta-value" );
         get_globals().set_global_value( target, "global-value" );
         participants.set_value( key, target );
         CHECK( native.evaluate( participants ) == "global-value" );
+        CHECK( translated.evaluate( participants ).translated() == "global-value" );
     }
 }
 

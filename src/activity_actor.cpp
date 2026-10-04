@@ -2,6 +2,7 @@
 
 #include <activity_type.h>
 #include <clone_ptr.h>
+#include <monster_uid.h>
 
 #define MP_ENABLED
 #include <algorithm>
@@ -1739,17 +1740,34 @@ void bionic_operation_activity_actor::start( player_activity &act, Character & )
 
 void bionic_operation_activity_actor::do_turn( player_activity &act, Character &who )
 {
+    const safe_reference<Creature> character_reference = who.get_safe_reference();
+    std::uint64_t expected_activity_identity = act.identity_generation();
+    bool expected_activity_active = static_cast<bool>( act );
+    const auto activity_is_expected = [&]() {
+        return character_reference &&
+               act.identity_generation() == expected_activity_identity &&
+               static_cast<bool>( act ) == expected_activity_active;
+    };
+    const auto clear_activity = [&]() {
+        act.set_to_null();
+        expected_activity_identity = act.identity_generation();
+        expected_activity_active = static_cast<bool>( act );
+    };
+
     const map &here = get_map();
     const bionic_id bid = installed_bionic;
     const bool autodoc = operation_autodoc;
+    const bool is_installing = installing;
+    const int result = operation_success;
+    const int skill = operation_skill;
+    const int difficulty = operation_difficulty;
+    const bionic_uid removal_uid = uninstalled_bionic;
     Character &player_character = get_player_character();
-    const tripoint_bub_ms &actor_pos = who.pos_bub( here );
+    const tripoint_bub_ms actor_pos = who.pos_bub( here );
     const bool u_see = player_character.sees( here, actor_pos ) &&
                        ( !player_character.has_effect( effect_narcosis ) ||
                          player_character.has_bionic( bio_painkiller ) ||
                          player_character.has_flag( json_flag_PAIN_IMMUNE ) );
-
-    const int difficulty = operation_difficulty;
 
     const std::vector<bodypart_id> bps = get_occupied_bodyparts( bid );
 
@@ -1765,7 +1783,13 @@ void bionic_operation_activity_actor::do_turn( player_activity &act, Character &
         if( !here.has_flag_furn( ter_furn_flag::TFLAG_AUTODOC_COUCH, actor_pos ) ||
             autodocs.empty() ) {
             who.remove_effect( effect_under_operation );
-            act.set_to_null();
+            if( !activity_is_expected() ) {
+                return;
+            }
+            clear_activity();
+            if( !activity_is_expected() ) {
+                return;
+            }
 
             if( u_see ) {
                 add_msg( m_bad, _( "The Autodoc suffers a catastrophic failure." ) );
@@ -1777,7 +1801,13 @@ void bionic_operation_activity_actor::do_turn( player_activity &act, Character &
             if( !bps.empty() ) {
                 for( const bodypart_id &bp : bps ) {
                     who.add_effect( effect_bleed, 1_minutes * difficulty, bp, true, 1 );
+                    if( !activity_is_expected() ) {
+                        return;
+                    }
                     who.apply_damage( nullptr, bp, 20 * difficulty );
+                    if( !activity_is_expected() ) {
+                        return;
+                    }
 
                     if( u_see ) {
                         who.add_msg_player_or_npc( m_bad, _( "Your %s is ripped open." ),
@@ -1786,11 +1816,20 @@ void bionic_operation_activity_actor::do_turn( player_activity &act, Character &
 
                     if( bp == bodypart_id( "eyes" ) ) {
                         who.add_effect( effect_blind, 1_hours );
+                        if( !activity_is_expected() ) {
+                            return;
+                        }
                     }
                 }
             } else {
                 who.add_effect( effect_bleed, 1_minutes * difficulty, bodypart_str_id::NULL_ID(), true, 1 );
+                if( !activity_is_expected() ) {
+                    return;
+                }
                 who.apply_damage( nullptr, bodypart_id( "torso" ), 20 * difficulty );
+                if( !activity_is_expected() ) {
+                    return;
+                }
             }
         }
     }
@@ -1813,18 +1852,27 @@ void bionic_operation_activity_actor::do_turn( player_activity &act, Character &
             }
         }
     } else if( time_left == half_op_duration ) {
-        if( !installing ) {
+        if( !is_installing ) {
             if( u_see && autodoc ) {
                 add_msg( m_info, _( "The Autodoc attempts to carefully extract the bionic." ) );
             }
 
-            if( std::optional<bionic *> bio = who.find_bionic_by_uid( uninstalled_bionic ) ) {
-                who.perform_uninstall( **bio, operation_difficulty, operation_success, operation_skill );
+            if( std::optional<bionic *> bio = who.find_bionic_by_uid( removal_uid ) ) {
+                who.perform_uninstall( **bio, difficulty, result, skill );
+                if( !activity_is_expected() ) {
+                    return;
+                }
             } else {
                 debugmsg( _( "Tried to uninstall bionic with UID %u, but you don't have this bionic installed." ),
-                          uninstalled_bionic );
+                          removal_uid );
                 who.remove_effect( effect_under_operation );
-                act.set_to_null();
+                if( !activity_is_expected() ) {
+                    return;
+                }
+                clear_activity();
+                if( !activity_is_expected() ) {
+                    return;
+                }
             }
         } else {
             if( u_see && autodoc ) {
@@ -1839,15 +1887,24 @@ void bionic_operation_activity_actor::do_turn( player_activity &act, Character &
                     upbio_uid = ( *bio )->get_uid();
                 }
 
-                who.perform_install( bid, upbio_uid, operation_difficulty, operation_success, operation_skill,
+                who.perform_install( bid, upbio_uid, difficulty, result, skill,
                                      installer_name, bid->canceled_mutations, actor_pos, source_item );
+                if( !activity_is_expected() ) {
+                    return;
+                }
             } else {
                 debugmsg( _( "%s is not a valid bionic_id" ), bid.c_str() );
                 who.remove_effect( effect_under_operation );
-                act.set_to_null();
+                if( !activity_is_expected() ) {
+                    return;
+                }
+                clear_activity();
+                if( !activity_is_expected() ) {
+                    return;
+                }
             }
         }
-    } else if( operation_success > 0 ) {
+    } else if( result > 0 ) {
         if( !bps.empty() ) {
             for( const bodypart_id &bp : bps ) {
                 if( calendar::once_every( message_freq ) && u_see && autodoc ) {
@@ -1872,26 +1929,49 @@ void bionic_operation_activity_actor::do_turn( player_activity &act, Character &
         }
     }
 
+    if( !activity_is_expected() ) {
+        return;
+    }
     // Makes sure NPC is still under anesthesia
     if( who.has_effect( effect_narcosis ) ) {
         const time_duration remaining_time = who.get_effect_dur( effect_narcosis );
         if( remaining_time < time_left ) {
             const time_duration top_off_time = time_left - remaining_time;
             who.add_effect( effect_narcosis, top_off_time );
+            if( !activity_is_expected() ) {
+                return;
+            }
             who.add_effect( effect_sleep, top_off_time );
+            if( !activity_is_expected() ) {
+                return;
+            }
         }
     } else {
         who.add_effect( effect_narcosis, time_left );
+        if( !activity_is_expected() ) {
+            return;
+        }
         who.add_effect( effect_sleep, time_left );
+        if( !activity_is_expected() ) {
+            return;
+        }
     }
 }
 
 void bionic_operation_activity_actor::finish( player_activity &act, Character &who )
 {
+    const safe_reference<Creature> character_reference = who.get_safe_reference();
+    const std::uint64_t activity_identity = act.identity_generation();
+    const auto activity_is_original = [&]() {
+        return character_reference && act &&
+               act.identity_generation() == activity_identity;
+    };
+    const bool autodoc = operation_autodoc;
+    const int result = operation_success;
     map &here = get_map();
-    const tripoint_bub_ms &actor_pos = who.pos_bub( here );
-    if( operation_autodoc ) {
-        if( operation_success > 0 ) {
+    const tripoint_bub_ms actor_pos = who.pos_bub( here );
+    if( autodoc ) {
+        if( result > 0 ) {
             add_msg( m_good,
                      _( "The Autodoc returns to its resting position after successfully performing the operation." ) );
             const std::list<tripoint_bub_ms> autodocs = here.find_furnitures_with_flag_in_radius(
@@ -1911,7 +1991,7 @@ void bionic_operation_activity_actor::finish( player_activity &act, Character &w
                            "failure" );
         }
     } else {
-        if( operation_success > 0 ) {
+        if( result > 0 ) {
             add_msg( m_good,
                      _( "The operation is a success." ) );
         } else {
@@ -1920,6 +2000,9 @@ void bionic_operation_activity_actor::finish( player_activity &act, Character &w
         }
     }
     who.remove_effect( effect_under_operation );
+    if( !activity_is_original() ) {
+        return;
+    }
     act.set_to_null();
 }
 
@@ -14092,6 +14175,17 @@ std::unique_ptr<activity_actor> multi_butchery_activity_actor::deserialize( Json
     return actor.clone();
 }
 
+void find_mount_activity_actor::start( player_activity &, Character &who )
+{
+    if( target_monster_uid > 0 || who.is_avatar() ) {
+        return;
+    }
+    npc &guy = dynamic_cast<npc &>( who );
+    if( const shared_ptr_fast<monster> chosen_mount = guy.chosen_mount.lock() ) {
+        target_monster_uid = chosen_mount->uid().get_value();
+    }
+}
+
 void find_mount_activity_actor::do_turn( player_activity &act, Character &who )
 {
     //npc only activity
@@ -14100,16 +14194,38 @@ void find_mount_activity_actor::do_turn( player_activity &act, Character &who )
         return;
     }
     npc &guy = dynamic_cast<npc &>( who );
-    auto strong_monster = guy.chosen_mount.lock();
+    const shared_ptr_fast<npc> npc_lifetime = g->shared_from( guy );
+    if( !npc_lifetime ) {
+        act.set_to_null();
+        return;
+    }
+    const character_id npc_id = guy.getID();
+    const std::uint64_t activity_identity = act.identity_generation();
+    shared_ptr_fast<monster> strong_monster;
+    if( target_monster_uid > 0 ) {
+        strong_monster = get_creature_tracker().find_by_uid( target_monster_uid );
+    } else {
+        strong_monster = guy.chosen_mount.lock();
+        if( strong_monster ) {
+            target_monster_uid = strong_monster->uid().get_value();
+        }
+    }
     monster *mon = strong_monster.get();
     if( !mon ) {
         act.set_to_null();
         guy.revert_after_activity();
         return;
     }
+    guy.chosen_mount = strong_monster;
+    const std::int64_t selected_uid = strong_monster->uid().get_value();
     if( rl_dist( guy.pos_bub(), mon->pos_bub() ) <= 1 ) {
         if( mon->has_effect( effect_controlled ) ) {
             mon->remove_effect( effect_controlled );
+            if( g->find_npc( npc_id ) != &guy ||
+                act.identity_generation() != activity_identity ||
+                get_creature_tracker().find_by_uid( selected_uid ) != strong_monster ) {
+                return;
+            }
         }
         act.set_to_null();
         if( who.can_mount( *mon ) ) {
@@ -14122,7 +14238,7 @@ void find_mount_activity_actor::do_turn( player_activity &act, Character &who )
         }
     } else {
         const std::vector<tripoint_bub_ms> route =
-            route_adjacent( who, guy.chosen_mount.lock()->pos_bub() );
+            route_adjacent( who, mon->pos_bub() );
         if( route.empty() ) {
             act.set_to_null();
             guy.revert_after_activity();
@@ -14131,7 +14247,12 @@ void find_mount_activity_actor::do_turn( player_activity &act, Character &who )
         } else {
             who.activity = player_activity();
             mon->add_effect( effect_controlled, 40_turns );
-            who.set_destination( route, player_activity( find_mount_activity_actor() ) );
+            if( g->find_npc( npc_id ) != &guy || who.activity ||
+                get_creature_tracker().find_by_uid( selected_uid ) != strong_monster ) {
+                return;
+            }
+            who.set_destination( route,
+                                 player_activity( find_mount_activity_actor( selected_uid ) ) );
         }
     }
 }
@@ -14139,12 +14260,16 @@ void find_mount_activity_actor::do_turn( player_activity &act, Character &who )
 void find_mount_activity_actor::serialize( JsonOut &jsout ) const
 {
     jsout.start_object();
+    jsout.member( "target_monster_uid", target_monster_uid );
     jsout.end_object();
 }
 
-std::unique_ptr<activity_actor> find_mount_activity_actor::deserialize( JsonValue & )
+std::unique_ptr<activity_actor> find_mount_activity_actor::deserialize( JsonValue &jsin )
 {
-    return find_mount_activity_actor().clone();
+    find_mount_activity_actor actor;
+    JsonObject data = jsin.get_object();
+    data.read( "target_monster_uid", actor.target_monster_uid, false );
+    return actor.clone();
 }
 
 void wait_activity_actor::start( player_activity &act, Character & )

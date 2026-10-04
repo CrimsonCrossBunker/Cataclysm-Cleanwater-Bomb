@@ -3,7 +3,9 @@
 #include <algorithm>
 #include <cmath>
 #include <locale>
+#include <limits>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 
 #include "cata_assert.h"
@@ -96,6 +98,20 @@ tripoint tripoint::from_string( const std::string &s )
         return tripoint::zero;
     }
     return result;
+}
+
+tripoint tripoint::mirror_around( const tripoint &center ) const
+{
+    const auto reflected_axis = []( const int value, const int origin ) {
+        const std::int64_t reflected = static_cast<std::int64_t>( origin ) * 2 - value;
+        if( reflected < std::numeric_limits<int>::min() ||
+            reflected > std::numeric_limits<int>::max() ) {
+            throw std::overflow_error( "tripoint reflection exceeds the signed coordinate range" );
+        }
+        return static_cast<int>( reflected );
+    };
+    return tripoint( reflected_axis( x, center.x ), reflected_axis( y, center.y ),
+                     reflected_axis( z, center.z ) );
 }
 
 std::string tripoint::to_string() const

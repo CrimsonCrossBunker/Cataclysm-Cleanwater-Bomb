@@ -24,13 +24,38 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Hash shader build options
+      id: shader-config
+      shell: bash
+      env:
+        SHADER_DIR: ${{ inputs.shader-dir }}
+        SHADER_FORMATS: ${{ inputs.shader-formats }}
+        SHADER_STAMP: ${{ inputs.shader-stamp }}
+      run: |
+        config_hash=$(printf '%s\n' "$SHADER_DIR" "$SHADER_FORMATS" "$SHADER_STAMP" | sha256sum | cut -d ' ' -f1)
+        printf 'hash=%s\n' "$config_hash" >> "$GITHUB_OUTPUT"
+
+    - name: Reuse shader artifacts when inputs are unchanged
+      id: shader-cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ${{ inputs.shader-dir }}/*.spv
+          ${{ inputs.shader-dir }}/*.dxil
+          ${{ inputs.shader-dir }}/*.msl
+          ${{ inputs.shader-dir }}/build-*.stamp
+          ${{ inputs.shader-stamp }}
+        key: sdl3-shaders-${{ runner.os }}-${{ steps.shader-config.outputs.hash }}-${{ hashFiles(format('{0}/**', inputs.shader-dir), 'tools/build_shaders.py', '.github/actions/build-sdl3-shaders/action.yml') }}
+
     - name: Install shader build dependencies
+      if: ${{ steps.shader-cache.outputs.cache-hit != 'true' }}
       shell: bash
       run: |
         sudo apt-get update
         sudo apt-get install -y glslang-tools
 
     - name: Setup SDL3 for shadercross link
+      if: ${{ steps.shader-cache.outputs.cache-hit != 'true' }}
       id: sdl
       uses: libsdl-org/setup-sdl@4ebea449684c989388fe6bcea0460e300d13a5ae # main
       with:
@@ -39,6 +64,7 @@ runs:
         install-linux-dependencies: true
 
     - name: Build SDL_shadercross
+      if: ${{ steps.shader-cache.outputs.cache-hit != 'true' }}
       shell: bash
       run: |
         set -euxo pipefail
@@ -71,6 +97,7 @@ runs:
         sudo cmake --install build
 
     - name: Compile shaders for all backends
+      if: ${{ steps.shader-cache.outputs.cache-hit != 'true' }}
       shell: bash
       env:
         # shadercross dynamically links against SDL3 (built by setup-sdl) and

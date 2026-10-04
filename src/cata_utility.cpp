@@ -19,6 +19,7 @@
 #include "cata_path.h"
 #include "catacharset.h"
 #include "debug.h"
+#include "enums.h"
 #include "filesystem.h"
 #include "flexbuffer_json.h"
 #include "json.h"
@@ -914,6 +915,7 @@ std::optional<double> svtod( std::string_view token, bool debugmsg_on_fail )
     // strtod requires a null-terminated string; copy through std::string.
     std::string token_owned( token );
     char *pEnd = nullptr;
+    errno = 0;
     double const val = std::strtod( token_owned.c_str(), &pEnd );
     if( pEnd == token_owned.data() + token_owned.size() ) {
         return { val };

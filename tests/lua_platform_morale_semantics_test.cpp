@@ -1,5 +1,6 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <talker.h>
 #include <functional>
 #include <memory>
 #include <string>
@@ -12,6 +13,7 @@
 #include "character.h"
 #include "character_id.h"
 #include "dialogue.h"
+#include "debug.h"
 #include "dialogue_helpers.h"
 #include "flexbuffer_json.h"
 #include "json_loader.h"
@@ -22,12 +24,13 @@
 #include "npc.h"
 #include "type_id.h"
 
+static const morale_type morale_feeling_good( "morale_feeling_good" );
+
 namespace cata::lua_platform
 {
 class runtime;
 }  // namespace cata::lua_platform
 
-static const morale_type morale_feeling_good( "morale_feeling_good" );
 
 TEST_CASE( "lua_platform_morale_semantics_match_legacy_character_operations",
            "[lua][platform][morale][semantic]" )
@@ -134,6 +137,58 @@ TEST_CASE( "lua_platform_morale_semantics_match_legacy_character_operations",
             CHECK( new_target.has_morale( type ) == 0 );
             CHECK( old_target.has_morale( type ) == 0 );
             CHECK( untouched.has_morale( type ) == 0 );
+        }
+        if( !npc_target ) {
+            // Native mutable dialogue::actor(true) falls back to alpha when
+            // beta is absent.  Platform does not reproduce the native
+            // debugmsg; this compares only the resulting morale mutation.
+            dialogue no_beta_dialogue( get_talker_for( old_player ), nullptr );
+            talk_effect_t fallback_effect;
+            fallback_effect.parse_sub_effect(
+                json_loader::from_string(
+                    R"({"npc_add_morale": "morale_feeling_good", "bonus": -7, "max_bonus": -11})"
+                ).get_object(), "morale_semantics" );
+            const std::string fallback_effect_diagnostic = capture_debugmsg_during( [&]() {
+                for( const talk_effect_fun_t &effect : fallback_effect.effects ) {
+                    effect( no_beta_dialogue );
+                }
+            } );
+            CHECK( fallback_effect_diagnostic.find( "Tried to use an invalid beta talker" ) !=
+                   std::string::npos );
+            sol::protected_function fallback_add = services["morale"]["add"];
+            sol::protected_function_result fallback_call = fallback_add(
+                        handle, cata::lua_platform::script_game_id( "morale", type.str() ),
+                        -7, -11, lua.create_table() );
+            REQUIRE( fallback_call.valid() );
+            sol::table fallback_result = fallback_call;
+            REQUIRE( fallback_result["ok"].get<bool>() );
+            CHECK( old_player.has_morale( type ) == new_player.has_morale( type ) );
+            CHECK( old_player.has_morale( type ) != 0 );
+            CHECK( old_npc.has_morale( type ) == 0 );
+            CHECK( new_npc.has_morale( type ) == 0 );
+
+            // f_lose_morale also calls mutable dialogue::actor(true), even
+            // though its callback takes a const dialogue reference.
+            talk_effect_t fallback_remove_effect;
+            fallback_remove_effect.parse_sub_effect(
+                json_loader::from_string(
+                    R"({"npc_lose_morale": "morale_feeling_good"})"
+                ).get_object(), "morale_semantics" );
+            const std::string fallback_remove_effect_diagnostic = capture_debugmsg_during( [&]() {
+                for( const talk_effect_fun_t &effect : fallback_remove_effect.effects ) {
+                    effect( no_beta_dialogue );
+                }
+            } );
+            CHECK( fallback_remove_effect_diagnostic.find( "Tried to use an invalid beta talker" ) !=
+                   std::string::npos );
+            sol::protected_function fallback_remove = services["morale"]["remove"];
+            sol::protected_function_result remove_call = fallback_remove(
+                        handle, cata::lua_platform::script_game_id( "morale", type.str() ) );
+            REQUIRE( remove_call.valid() );
+            sol::table remove_result = remove_call;
+            REQUIRE( remove_result["ok"].get<bool>() );
+            CHECK( old_player.has_morale( type ) == 0 );
+            CHECK( new_player.has_morale( type ) == 0 );
         }
         completed = true;
     } );

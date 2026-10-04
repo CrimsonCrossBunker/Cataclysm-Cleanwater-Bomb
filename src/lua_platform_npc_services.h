@@ -15,10 +15,10 @@ class game_handle_runtime;
 // Add domain-shaped native NPC services without coupling them to EOC names.
 void install_npc_domain_services(
     sol::table &npcs,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write );
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write );
 
 } // namespace cata::lua_platform
 

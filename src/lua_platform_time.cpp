@@ -6,7 +6,6 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <limits>
 #include <list>
 #include <memory>
 #include <stdexcept>
@@ -338,12 +337,12 @@ sol::table advance(
         turn_number( calendar::turn );
     const std::int64_t delta =
         duration.turns();
-    if( ( delta > 0 &&
-          current >
-          std::numeric_limits<int>::max() -
-          delta ) ||
-        ( delta < 0 &&
-          current < -delta ) ) {
+    const std::int64_t minimum =
+        turn_number( calendar::turn_zero );
+    const std::int64_t maximum =
+        turn_number( calendar::turn_max );
+    if( delta > maximum - current ||
+        delta < minimum - current ) {
         throw std::invalid_argument(
             "services.time.advance would exceed "
             "turn_zero..turn_max" );
@@ -394,8 +393,8 @@ sol::table reschedule_events(
 
 void install_time_api(
     sol::table &services,
-    std::function<void()> require_read,
-    std::function<void()> require_write )
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write )
 {
     sol::table time =
         services["time"];

@@ -9,6 +9,7 @@
 #include <map>
 #include <memory>
 #include <numeric>
+#include <safe_reference.h>
 #include <string>
 #include <utility>
 
@@ -439,8 +440,18 @@ void damage_type::onhit_effects( Creature *source, Creature *target ) const
 void damage_instance::ondamage_effects( Creature *source, Creature *target,
                                         const damage_instance &premitigated, bodypart_str_id bp ) const
 {
+    const safe_reference<Creature> target_reference = target->get_safe_reference();
+    const bool source_was_present = source != nullptr;
+    safe_reference<Creature> source_reference;
+    if( source_was_present ) {
+        source_reference = source->get_safe_reference();
+    }
     std::set<damage_type_id> used_types;
     for( const damage_unit &du : damage_units ) {
+        if( target_reference.get() == nullptr ||
+            ( source_was_present && source_reference.get() == nullptr ) ) {
+            return;
+        }
         if( used_types.count( du.type ) > 0 ) {
             continue;
         }
@@ -458,6 +469,10 @@ void damage_instance::ondamage_effects( Creature *source, Creature *target,
         }
         if( !target->is_immune_damage( du.type ) ) {
             du.type->ondamage_effects( source, target, bp, premit, du.amount );
+            if( target_reference.get() == nullptr ||
+                ( source_was_present && source_reference.get() == nullptr ) ) {
+                return;
+            }
         }
     }
 }
@@ -465,7 +480,24 @@ void damage_instance::ondamage_effects( Creature *source, Creature *target,
 void damage_type::ondamage_effects( Creature *source, Creature *target, bodypart_str_id bp,
                                     double total_damage, double damage_taken ) const
 {
+    const bool target_was_present = target != nullptr;
+    safe_reference<Creature> target_reference;
+    if( target_was_present ) {
+        target_reference = target->get_safe_reference();
+    }
+    const bool source_was_present = source != nullptr;
+    safe_reference<Creature> source_reference;
+    if( source_was_present ) {
+        source_reference = source->get_safe_reference();
+    }
+    const auto participants_alive = [&]() {
+        return ( !target_was_present || target_reference.get() != nullptr ) &&
+               ( !source_was_present || source_reference.get() != nullptr );
+    };
     for( const effect_on_condition_id &eoc : ondamage_eocs ) {
+        if( !participants_alive() ) {
+            return;
+        }
         dialogue d( source == nullptr ? nullptr : get_talker_for( source ),
                     target == nullptr ? nullptr : get_talker_for( target ) );
 
@@ -475,9 +507,18 @@ void damage_type::ondamage_effects( Creature *source, Creature *target, bodypart
 
         eoc->activate_activation_only( d, "a damage type effect", "damage type effect being activated",
                                        "damage type" );
+        if( !participants_alive() ) {
+            return;
+        }
+    }
+    if( !participants_alive() ) {
+        return;
     }
     cata::lua_platform::invoke_damage_type_handler(
         id.str(), "on_damage", source, target, bp.str(), total_damage, damage_taken );
+    if( !participants_alive() ) {
+        return;
+    }
 }
 
 //This returns the damage from this damage_instance. The damage done to the target will be reduced by their armor.

@@ -10,6 +10,7 @@ extern "C" {
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <limits>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -99,39 +100,40 @@ sol::table typed_id_page(
 sol::table snapshot_effect(
     sol::state_view lua, const effect &entry )
 {
+    const effect snapshot = entry;
     sol::table result = lua.create_table();
     result["id"] = script_game_id(
-                       "effect", entry.get_id().str() );
-    result["name"] = entry.disp_name();
-    result["description"] = entry.disp_desc();
-    result["short_description"] = entry.disp_short_desc();
-    result["mod_source"] = entry.disp_mod_source_info();
+                       "effect", snapshot.get_id().str() );
+    result["name"] = snapshot.disp_name();
+    result["description"] = snapshot.disp_desc();
+    result["short_description"] = snapshot.disp_short_desc();
+    result["mod_source"] = snapshot.disp_mod_source_info();
     result["uses_body_part_description"] =
-        entry.use_part_descs();
+        snapshot.use_part_descs();
     result["duration"] = script_time_duration::from_native(
-                             entry.get_duration() );
+                             snapshot.get_duration() );
     result["maximum_duration"] =
         script_time_duration::from_native(
-            entry.get_max_duration() );
+            snapshot.get_max_duration() );
     result["start_time"] = script_time_point::from_native(
-                               entry.get_start_time() );
-    result["intensity"] = entry.get_intensity();
-    result["maximum_intensity"] = entry.get_max_intensity();
+                               snapshot.get_start_time() );
+    result["intensity"] = snapshot.get_intensity();
+    result["maximum_intensity"] = snapshot.get_max_intensity();
     result["maximum_effective_intensity"] =
-        entry.get_max_effective_intensity();
+        snapshot.get_max_effective_intensity();
     result["effective_intensity"] =
-        entry.get_effective_intensity();
-    result["permanent"] = entry.is_permanent();
-    result["impairs_movement"] = entry.impairs_movement();
-    result["harmful_cough"] = entry.get_harmful_cough();
+        snapshot.get_effective_intensity();
+    result["permanent"] = snapshot.is_permanent();
+    result["impairs_movement"] = snapshot.impairs_movement();
+    result["harmful_cough"] = snapshot.get_harmful_cough();
     result["duration_add_percent"] =
-        entry.get_dur_add_perc();
-    result["intensity_add"] = entry.get_int_add_val();
+        snapshot.get_dur_add_perc();
+    result["intensity_add"] = snapshot.get_int_add_val();
     result["intensity_duration"] =
         script_time_duration::from_native(
-            entry.get_int_dur_factor() );
+            snapshot.get_int_dur_factor() );
 
-    const bodypart_str_id body_part = entry.get_bp().id();
+    const bodypart_str_id body_part = snapshot.get_bp().id();
     if( body_part.is_null() ) {
         result["body_part"] = sol::nil;
     } else {
@@ -141,17 +143,17 @@ sol::table snapshot_effect(
 
     sol::table resisted_by = lua.create_table();
     resisted_by["mutations"] = typed_id_page(
-                                   lua, entry.get_resist_traits(),
+                                   lua, snapshot.get_resist_traits(),
                                    "mutation" );
     resisted_by["effects"] = typed_id_page(
-                                 lua, entry.get_resist_effects(),
+                                 lua, snapshot.get_resist_effects(),
                                  "effect" );
     result["resisted_by"] = std::move( resisted_by );
     result["removes_effects"] = typed_id_page(
-                                    lua, entry.get_removes_effects(),
+                                    lua, snapshot.get_removes_effects(),
                                     "effect" );
     result["blocks_effects"] = typed_id_page(
-                                   lua, entry.get_blocks_effects(),
+                                   lua, snapshot.get_blocks_effects(),
                                    "effect" );
     return result;
 }
@@ -201,21 +203,27 @@ sol::table list_effects(
     }
     const std::vector<std::reference_wrapper<const effect>> effects =
                 creature->get_effects();
+    const std::size_t total = effects.size();
     const std::size_t returned = std::min(
-                                     effects.size(),
+                                     total,
                                      static_cast<std::size_t>( limit ) );
+    std::vector<effect> snapshots;
+    snapshots.reserve( returned );
+    for( std::size_t index = 0; index < returned; ++index ) {
+        snapshots.push_back( effects[index].get() );
+    }
     sol::table items = state.create_table(
                            static_cast<int>( returned ), 0 );
     for( std::size_t index = 0; index < returned; ++index ) {
         items[index + 1] =
-            snapshot_effect( state, effects[index].get() );
+            snapshot_effect( state, snapshots[index] );
     }
     sol::table value = state.create_table();
     value["items"] = std::move( items );
-    value["total"] = effects.size();
+    value["total"] = total;
     value["returned"] = returned;
     value["limit"] = limit;
-    value["truncated"] = returned < effects.size();
+    value["truncated"] = returned < total;
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
@@ -335,10 +343,10 @@ effect_add_options read_add_options(
                     "services.effects.add intensity must be an integer" );
             }
             const lua_Integer intensity = value.as<lua_Integer>();
-            if( intensity < -maximum_effect_assignment_intensity ||
-                intensity > maximum_effect_assignment_intensity ) {
+            if( intensity < std::numeric_limits<int>::min() ||
+                intensity > std::numeric_limits<int>::max() ) {
                 throw std::invalid_argument(
-                    "services.effects.add intensity is outside its limit" );
+                    "services.effects.add intensity must fit a native int" );
             }
             result.intensity = static_cast<int>( intensity );
         } else if( key == "force" ) {
@@ -381,8 +389,14 @@ sol::table add_effect(
 {
     require_id_kind(
         requested_id, "effect", "services.effects.add" );
-    // TimeDuration already checks the native signed turn range. Preserve
-    // negative and long durations; Creature/effect owns expiry and clamping.
+    const std::int64_t duration_turns = duration.turns();
+    if( duration_turns < std::numeric_limits<int>::min() ||
+        duration_turns > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument(
+            "services.effects.add duration must fit native signed int turns" );
+    }
+    // Preserve negative and long durations within the native signed turn
+    // range; Creature/effect owns expiry and clamping.
     const effect_add_options options =
         read_add_options( requested_options );
     sol::state_view state( lua );
@@ -408,8 +422,13 @@ sol::table add_effect(
             id, duration.to_native(), options.permanent,
             options.intensity, options.force );
     }
+    const native_handle_result<Creature> after_add =
+        handle.resolve_creature( runtime_generation, world_generation );
+    if( !after_add ) {
+        return make_game_error_result( state, *after_add.error );
+    }
     const effect *entry = find_effect(
-                              *creature, id, body_part );
+                              *after_add.value, id, body_part );
     if( entry == nullptr ) {
         return make_game_error_result(
         state, {
@@ -479,37 +498,41 @@ sol::table adjust_effect_intensity(
             "services.effects.adjust_intensity" );
     const efftype_id id( requested_id.value() );
     effect *entry = find_effect( *creature, id, body_part );
-
-    sol::table value = state.create_table();
-    value["before"] = 0;
-    value["after"] = 0;
-    value["changed"] = false;
-    value["removed"] = false;
-    if( entry == nullptr ) {
-        return make_game_value_result(
-                   state, sol::make_object( state, std::move( value ) ) );
-    }
-
-    const int before = entry->get_intensity();
-    const std::int64_t requested_after =
-        static_cast<std::int64_t>( before ) + requested_delta;
-    value["before"] = before;
-    if( requested_after <= 0 ) {
-        const bodypart_id selected_body_part = entry->get_bp();
-        const bool removed = creature->remove_effect(
-                                 id, selected_body_part );
-        value["changed"] = removed;
-        value["removed"] = removed;
-    } else {
-        entry->set_intensity( static_cast<int>( requested_after ) );
-        const int after = entry->get_intensity();
-        value["after"] = after;
-        value["changed"] = after != before;
-        if( after != before ) {
-            creature->notify_effect_int_change(
-                entry->get_id(), after, entry->get_bp() );
+    int before = 0;
+    int after = 0;
+    bool changed = false;
+    bool removed = false;
+    if( entry != nullptr ) {
+        before = entry->get_intensity();
+        const std::int64_t requested_after =
+            static_cast<std::int64_t>( before ) + requested_delta;
+        if( requested_after <= 0 ) {
+            const bodypart_id selected_body_part = entry->get_bp();
+            removed = creature->remove_effect( id, selected_body_part );
+            changed = removed;
+        } else {
+            entry->set_intensity( static_cast<int>( requested_after ) );
+            after = entry->get_intensity();
+            changed = after != before;
+            if( changed ) {
+                const efftype_id changed_id = entry->get_id();
+                const bodypart_id changed_body_part = entry->get_bp();
+                creature->notify_effect_int_change(
+                    changed_id, after, changed_body_part );
+            }
+        }
+        creature = resolve_exact_creature(
+                       handle, runtime_generation,
+                       world_generation, error );
+        if( creature == nullptr ) {
+            return make_game_error_result( state, *error );
         }
     }
+    sol::table value = state.create_table();
+    value["before"] = before;
+    value["after"] = after;
+    value["changed"] = changed;
+    value["removed"] = removed;
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
@@ -611,6 +634,21 @@ sol::table update_effect(
         } );
     }
     sol::table before = snapshot_effect( state, *entry );
+    creature = resolve_exact_creature(
+                   handle, runtime_generation,
+                   world_generation, error );
+    if( creature == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    entry = find_effect(
+                *creature,
+                efftype_id( requested_id.value() ),
+                body_part );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, {
+            "not_found", "The effect was removed while its state was captured"
+        } );
+    }
     const int previous_intensity = entry->get_intensity();
     if( options.duration ) {
         entry->set_duration( options.duration->to_native() );
@@ -625,13 +663,33 @@ sol::table update_effect(
             entry->unpause_effect();
         }
     }
+    std::optional<effect> after_snapshot;
     if( entry->get_intensity() != previous_intensity ) {
+        const efftype_id changed_id = entry->get_id();
+        const bodypart_id changed_body_part = entry->get_bp();
+        const int changed_intensity = entry->get_intensity();
         creature->notify_effect_int_change(
-            entry->get_id(), entry->get_intensity(), entry->get_bp() );
+            changed_id, changed_intensity, changed_body_part );
+        creature = resolve_exact_creature(
+                       handle, runtime_generation,
+                       world_generation, error );
+        if( creature == nullptr ) {
+            return make_game_error_result( state, *error );
+        }
+        entry = find_effect(
+                    *creature, changed_id,
+                    std::optional<bodypart_id>( changed_body_part ) );
+    }
+    if( entry != nullptr ) {
+        after_snapshot = *entry;
     }
     sol::table value = state.create_table();
     value["before"] = std::move( before );
-    value["after"] = snapshot_effect( state, *entry );
+    if( after_snapshot ) {
+        value["after"] = snapshot_effect( state, *after_snapshot );
+    } else {
+        value["after"] = sol::nil;
+    }
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }

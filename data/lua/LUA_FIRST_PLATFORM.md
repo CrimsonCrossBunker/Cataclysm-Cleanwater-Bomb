@@ -19,6 +19,17 @@ Platform Lua 是 CCB 核心内容和 Mod 的原生创作模型。作者使用普
 领域对象、代际安全句柄、命名任务和持久化状态组合行为；公开操作围绕游戏领域设计，
 不暴露旧解析器的键名结构。
 
+Development prioritizes directly usable native capabilities. Automatic EOC
+translation and its dedicated tests are frozen maintenance tools, not prerequisites
+for Platform completion. The replacement ledger retains historical migration
+evidence; its selector counts do not define the development sprint. A requested
+source-only sprint writes implementation and necessary API declarations only;
+documentation, test expansion, builds, checks and acceptance are separate work.
+
+开发优先补齐普通 Lua 可直接使用的原生能力。自动 EOC 迁移器及其专用测试冻结为维护工具，
+不作为平台完成前提；替代账本保留历史证据，其条目数量不定义开发冲刺。明确的纯代码冲刺只修改
+实现和必要 API 声明，说明文档、测试扩展、编译、检查与运行验收另行安排。
+
 ## Authoring boundary / 创作边界
 
 For author-facing content, Lua is the only executable content language. All

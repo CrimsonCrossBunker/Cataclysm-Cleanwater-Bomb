@@ -2,6 +2,8 @@
 
 #include <line.h>
 #include <map_scale_constants.h>
+#include <memory_fast.h>
+#include <monster_uid.h>
 #include <string_formatter.h>
 #include <tileray.h>
 #include <type_id.h>
@@ -9,6 +11,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <initializer_list>
 #include <limits>
 #include <list>
 #include <map>
@@ -99,24 +102,17 @@ static const efftype_id effect_lying_down( "lying_down" );
 static const efftype_id effect_npc_suspend( "npc_suspend" );
 static const efftype_id effect_pet( "pet" );
 static const efftype_id effect_sleep( "sleep" );
-
 static const faction_id faction_no_faction( "no_faction" );
 static const faction_id faction_your_followers( "your_followers" );
-
 static const furn_str_id furn_f_counter( "f_counter" );
-
 static const json_character_flag json_flag_BIONIC_LIMB( "BIONIC_LIMB" );
 static const json_character_flag json_flag_PARTIAL_BIONIC_LIMB( "PARTIAL_BIONIC_LIMB" );
-
 static const mission_type_id mission_MISSION_REACH_SAFETY( "MISSION_REACH_SAFETY" );
-
 static const morale_type morale_haircut( "morale_haircut" );
 static const morale_type morale_shave( "morale_shave" );
-
 static const mtype_id mon_chicken( "mon_chicken" );
 static const mtype_id mon_cow( "mon_cow" );
 static const mtype_id mon_horse( "mon_horse" );
-
 static const zone_type_id zone_type_CAMP_FOOD( "CAMP_FOOD" );
 static const zone_type_id zone_type_CAMP_STORAGE( "CAMP_STORAGE" );
 static const zone_type_id zone_type_VEHICLE_SERVICE_OUTPUT( "VEHICLE_SERVICE_OUTPUT" );
@@ -378,12 +374,19 @@ void talk_function::dismount( npc &p )
 
 void talk_function::find_mount( npc &p )
 {
+    const shared_ptr_fast<npc> npc_lifetime = g->shared_from( p );
     // first find one nearby
     for( monster &critter : g->all_monsters() ) {
         if( p.can_mount( critter ) ) {
             // keep the horse still for some time, so that NPC can catch up to it and mount it.
-            p.assign_activity( find_mount_activity_actor() );
-            p.chosen_mount = g->shared_from( critter );
+            const shared_ptr_fast<monster> mount_lifetime =
+                g->shared_from( critter );
+            if( !npc_lifetime || !mount_lifetime ) {
+                return;
+            }
+            p.chosen_mount = mount_lifetime;
+            p.assign_activity(
+                find_mount_activity_actor( mount_lifetime->uid().get_value() ) );
             // we found one, that's all we need.
             return;
         }
@@ -2050,14 +2053,17 @@ void talk_function::player_weapon_away( npc &/*p*/ )
     player_character.i_add( player_character.remove_weapon() );
 }
 
-void talk_function::player_weapon_drop( npc &/*p*/ )
+void talk_function::drop_player_weapon( Character &player_character )
 {
     map &here = get_map();
-
-    Character &player_character = get_player_character();
     item weap = player_character.remove_weapon();
     drop_on_map( player_character, item_drop_reason::deliberate, {weap}, &here,
                  player_character.pos_bub( here ) );
+}
+
+void talk_function::player_weapon_drop( npc &/*p*/ )
+{
+    drop_player_weapon( get_player_character() );
 }
 
 void talk_function::lead_to_safety( npc &p )

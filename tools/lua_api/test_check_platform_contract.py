@@ -38,15 +38,10 @@ class PlatformContractCheckTest(unittest.TestCase):
         self.assertGreater(summary["export_roots"], 0)
 
     def test_matching_contract_is_accepted(self) -> None:
-        contract = build_contract(
-            declarations=parse_luals_declarations(DECLARATIONS),
-            native_inventory=NATIVE_INVENTORY,
-        )
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "contract.json"
             declarations = Path(directory) / "declarations.d.lua"
             inventory = Path(directory) / "inventory.json"
-            path.write_text(serialize_contract(contract), encoding="utf-8")
             declarations.write_text(DECLARATIONS, encoding="utf-8")
             inventory.write_text(
                 json.dumps(NATIVE_INVENTORY), encoding="utf-8"

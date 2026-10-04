@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import shutil
+import subprocess
+import tempfile
 import unittest
+from pathlib import Path
 
 try:
     from .check_cmake_contract import (
@@ -38,6 +42,67 @@ class CMakeContractTests(unittest.TestCase):
             ),
             [],
         )
+
+    @unittest.skipUnless(shutil.which("cmake") and shutil.which("make"),
+                         "native build tools unavailable")
+    def test_native_test_scopes_match_make_and_cmake(self) -> None:
+        root = ENGINE_CMAKE_PATH.parents[1]
+        support = (root / "tests/test_support_sources.txt").read_text()
+        sources = set(support.splitlines()) | {
+            "lua_platform_future_test.cpp", "unrelated_test.cpp"}
+        # Exercise the actual build files using tiny sources, without building
+        # the engine or running native game tests in this contract gate.
+        with tempfile.TemporaryDirectory() as directory:
+            fixture = Path(directory)
+            tests = fixture / "tests"
+            tests.mkdir()
+            for name in (
+                    "CMakeLists.txt", "Makefile", "test_support_sources.txt"):
+                shutil.copyfile(root / "tests" / name, tests / name)
+            for name in sources:
+                (tests / name).touch()
+            (fixture / "CMakeLists.txt").write_text('''
+cmake_minimum_required(VERSION 3.20)
+project(TestSelection LANGUAGES CXX)
+set(BUILD_TESTING ON)
+set(CURSES ON)
+add_library(cataclysm-common INTERFACE)
+add_subdirectory(tests)
+get_target_property(selected cata_test SOURCES)
+list(JOIN selected "\\n" selected)
+file(WRITE "${CMAKE_BINARY_DIR}/selected.txt" "${selected}")
+''', encoding="utf-8")
+            for scope, enabled, valid in (
+                    ("all", "ON", True), ("lua", "ON", True),
+                    ("lua", "OFF", False), ("unknown", "ON", False)):
+                with self.subTest(scope=scope, lua=enabled):
+                    cmake = subprocess.run([
+                        "cmake", "-S", str(fixture),
+                        "-B", str(fixture / "build"),
+                        "-DCATA_TEST_SUITE=" + scope,
+                        "-DCATA_ENABLE_LUA_PLATFORM=" + enabled,
+                    ], capture_output=True, text=True)
+                    make = subprocess.run([
+                        "make", "-s", "PCH=0", "CLANG=0", "ODIR=objects",
+                        "CATA_TEST_SUITE=" + scope,
+                        "CATA_ENABLE_LUA_PLATFORM=" +
+                        ("1" if enabled == "ON" else "0"),
+                        "--eval", r'print-sources:;@printf "%s\n" $(SOURCES)',
+                        "print-sources",
+                    ], cwd=tests, capture_output=True, text=True)
+                    if not valid:
+                        self.assertNotEqual(cmake.returncode, 0)
+                        self.assertNotEqual(make.returncode, 0)
+                        continue
+                    self.assertEqual(cmake.returncode, 0, cmake.stderr)
+                    self.assertEqual(make.returncode, 0, make.stderr)
+                    expected = (sources if scope == "all" else
+                                sources - {"unrelated_test.cpp"})
+                    self.assertEqual(set(make.stdout.splitlines()), expected)
+                    selected = (fixture / "build/selected.txt").read_text()
+                    self.assertEqual(
+                        {Path(name).name for name in selected.splitlines()},
+                        expected)
 
     def test_cpp_abi_for_bundled_lua_is_rejected(self) -> None:
         lua_source = self.lua_source.replace(

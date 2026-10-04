@@ -158,37 +158,38 @@
 #include "weather.h"
 #include "weighted_list.h"
 
-class recipe_subset;
-
 static const activity_id ACT_AIM( "ACT_AIM" );
 static const activity_id ACT_SOCIALIZE( "ACT_SOCIALIZE" );
 static const activity_id ACT_TARGET_PRACTICE( "ACT_TARGET_PRACTICE" );
 static const activity_id ACT_TRAIN( "ACT_TRAIN" );
 static const activity_id ACT_WAIT_NPC( "ACT_WAIT_NPC" );
-
 static const efftype_id effect_asked_to_train( "asked_to_train" );
 static const efftype_id effect_narcosis( "narcosis" );
 static const efftype_id effect_riding( "riding" );
 static const efftype_id effect_sleep( "sleep" );
 static const efftype_id effect_under_operation( "under_operation" );
-
 static const flag_id json_flag_NO_UNLOAD( "NO_UNLOAD" );
-
-static const itype_id fuel_type_animal( "animal" );
+static const itype_id itype_animal( "animal" );
 static const itype_id itype_foodperson_mask( "foodperson_mask" );
 static const itype_id itype_foodperson_mask_on( "foodperson_mask_on" );
-
 static const skill_id skill_firstaid( "firstaid" );
-
 static const skill_id skill_speech( "speech" );
-
 static const trait_id trait_DEBUG_MIND_CONTROL( "DEBUG_MIND_CONTROL" );
 static const trait_id trait_HALLUCINATION( "HALLUCINATION" );
 static const trait_id trait_PROF_CHURL( "PROF_CHURL" );
 static const trait_id trait_PROF_FOODP( "PROF_FOODP" );
-
 static const zone_type_id zone_type_NPC_INVESTIGATE_ONLY( "NPC_INVESTIGATE_ONLY" );
 static const zone_type_id zone_type_NPC_NO_INVESTIGATE( "NPC_NO_INVESTIGATE" );
+
+class recipe_subset;
+
+
+
+
+
+
+
+
 
 static std::map<std::string, json_talk_topic> json_talk_topics;
 
@@ -1011,7 +1012,7 @@ static void tell_veh_stop_following()
     Character &player_character = get_player_character();
     for( wrapped_vehicle &veh : get_map().get_vehicles() ) {
         vehicle *v = veh.v;
-        if( v->has_engine_type( fuel_type_animal, false ) && v->is_owned_by( player_character ) ) {
+        if( v->has_engine_type( itype_animal, false ) && v->is_owned_by( player_character ) ) {
             v->is_following = false;
             v->engine_on = false;
         }
@@ -1025,7 +1026,7 @@ static void assign_veh_to_follow()
     Character &player_character = get_player_character();
     for( wrapped_vehicle &veh : here.get_vehicles() ) {
         vehicle *v = veh.v;
-        if( v->has_engine_type( fuel_type_animal, false ) && v->is_owned_by( player_character ) ) {
+        if( v->has_engine_type( itype_animal, false ) && v->is_owned_by( player_character ) ) {
             v->activate_animal_follow( here );
         }
     }
@@ -1123,7 +1124,7 @@ void game::chat( const std::optional<tripoint_bub_ms> &p )
     std::vector<vehicle *> magic_following_vehicles;
     for( wrapped_vehicle &veh : here.get_vehicles() ) {
         vehicle *&v = veh.v;
-        if( v->has_engine_type( fuel_type_animal, false ) &&
+        if( v->has_engine_type( itype_animal, false ) &&
             v->is_owned_by( player_character ) ) {
             animal_vehicles.push_back( v );
             if( v->is_following ) {
@@ -3002,7 +3003,9 @@ talk_data talk_response::create_option_line( dialogue &d, const input_event &hot
         const bool is_computer )
 {
     std::string ftext;
-    text = ( truefalse_condition( d ) ? truetext : falsetext ).translated();
+    const bool use_true_text = deferred_text_condition ? deferred_text_condition( d ) :
+                               truefalse_condition( d );
+    text = ( use_true_text ? truetext : falsetext ).translated();
     if( trial.type == TALK_TRIAL_NONE || trial.type == TALK_TRIAL_CONDITION ) {
         // regular dialogue
         ftext = text;
@@ -5245,9 +5248,7 @@ talk_effect_fun_t::func f_mirror_coordinates( const JsonObject &jo, std::string_
         tripoint_abs_ms const center = read_var_value( center_var, d ).tripoint();
         tripoint_abs_ms const relative = read_var_value( relative_var, d ).tripoint();
 
-        tripoint_abs_ms const mirrored( center.x() * 2 - relative.x(),
-                                        center.y() * 2 - relative.y(),
-                                        center.z() * 2 - relative.z() );
+        tripoint_abs_ms const mirrored( relative.raw().mirror_around( center.raw() ) );
 
         write_var_value( output_var.type, output_var.name, &d, mirrored );
 
@@ -5281,7 +5282,7 @@ talk_effect_fun_t::func f_place_override( const JsonObject &jo, std::string_view
 
     return [new_place, dov_length, key]( dialogue & d ) {
         get_timed_events().add( timed_event_type::OVERRIDE_PLACE,
-                                calendar::turn + dov_length.evaluate( d ) + 1_seconds,
+                                timed_event_due_time( dov_length.evaluate( d ), 1_seconds ),
                                 //Timed events happen before the player turn and eocs are during so we add a second here to sync them up using the same variable
                                 -1, tripoint_abs_ms::zero, -1, new_place.evaluate( d ).translated(), key.evaluate( d ) );
     };
@@ -5380,7 +5381,7 @@ talk_effect_fun_t::func f_revert_location( const JsonObject &jo, std::string_vie
     return[target_var, dov_time_in_future, key]( dialogue & d ) {
         const tripoint_abs_ms abs_ms = read_var_value( target_var, d ).tripoint();
         tripoint_abs_omt omt_pos = project_to<coords::omt>( abs_ms );
-        time_point tif = calendar::turn + dov_time_in_future.evaluate( d ) + 1_seconds;
+        time_point tif = timed_event_due_time( dov_time_in_future.evaluate( d ), 1_seconds );
         // Timed events happen before the player turn and eocs are during so we add a second here to sync them up using the same variable
         // maptile is 4 submaps so queue up 4 submap reverts
         const tripoint_abs_sm revert_sm_base = project_to<coords::sm>( omt_pos );
@@ -5463,7 +5464,8 @@ talk_effect_fun_t::func f_copy_location( const JsonObject &jo, std::string_view 
         tripoint_abs_omt omt_pos = project_to<coords::omt>( abs_ms );
         tripoint_abs_omt omt_pos_new = project_to<coords::omt>( abs_ms_new );
 
-        time_point tif = calendar::turn + dov_time_in_future.evaluate( d ) + 1_seconds;
+        const time_point tif = timed_event_due_time(
+                                   dov_time_in_future.evaluate( d ), 1_seconds );
         // Timed events happen before the player turn and eocs are during so we add a second here to sync them up using the same variable
         // maptile is 4 submaps so queue up 4 submap reverts
         const tripoint_abs_sm revert_sm_base = project_to<coords::sm>( omt_pos );

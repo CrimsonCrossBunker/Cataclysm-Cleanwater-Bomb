@@ -1,5 +1,8 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
+#include <cstddef>
+
+#include <character.h>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -9,17 +12,16 @@
 
 #include "avatar.h"
 #include "cata_catch.h"
+#include "character_id.h"
 #include "computer.h"
 #include "coordinates.h"
+#include "lua_platform_handle.h"
 #include "lua_platform_runtime.h"
+#include "lua_platform_runtime_internal.h"
 #include "lua_platform_sol.h"
 #include "math_parser_diag_value.h"
+#include "npc.h"
 #include "point.h"
-
-namespace cata::lua_platform
-{
-class runtime;
-} // namespace cata::lua_platform
 
 namespace
 {
@@ -33,6 +35,7 @@ struct computer_value_fixture {
     std::shared_ptr<platform::runtime> owner;
 
     computer_value_fixture() {
+        player.normalize();
         platform::clear_active_runtimes();
         lua.open_libraries( sol::lib::base, sol::lib::string );
         sol::table ccb = lua.create_table();
@@ -47,15 +50,24 @@ struct computer_value_fixture {
         platform::clear_active_runtimes();
     }
 
-    void run( const std::string &body ) {
+    void register_handler( const std::string &body ) {
         const sol::protected_function_result registered = lua.safe_script(
                     "ccb.runtime.handler('access', function(context)\n" + body +
                     "\nreturn true\nend)", sol::script_pass_on_error );
         REQUIRE( registered.valid() );
-        platform::runtime_world_ready( true );
-        const std::optional<bool> accepted = platform::invoke_computer_access_handler( terminal, player );
+    }
+
+    void invoke( Character &actor ) {
+        const std::optional<bool> accepted =
+            platform::invoke_computer_access_handler( terminal, actor );
         REQUIRE( accepted.has_value() );
         REQUIRE( *accepted );
+    }
+
+    void run( const std::string &body ) {
+        register_handler( body );
+        platform::runtime_world_ready( true );
+        invoke( player );
     }
 };
 
@@ -194,6 +206,60 @@ TEST_CASE( "lua_platform_computer_values_keep_key_and_store_limits",
     CHECK( fixture.terminal.maybe_get_value( "key0" )->is_empty() );
     CHECK( fixture.terminal.maybe_get_value( "key1" ) == nullptr );
     CHECK( fixture.terminal.maybe_get_value( "overflow" ) == nullptr );
+}
+
+TEST_CASE( "lua_platform_computer_character_handles_preserve_native_subtype_and_context_lifetime",
+           "[lua][platform][semantic][computer][handles]" )
+{
+    computer_value_fixture fixture;
+    fixture.player.setID( character_id( 4901 ), true );
+    npc partner;
+    partner.normalize();
+    partner.setID( character_id( 4902 ), true );
+    fixture.register_handler( R"(
+        saved_context = context
+        saved_character = context.character
+    )" );
+
+    platform::runtime_world_ready( true );
+    const auto verify_actor_handle = [&]( Character & actor ) {
+        fixture.invoke( actor );
+        const platform::game_handle handle =
+            fixture.lua["saved_character"].get<platform::game_handle>();
+        REQUIRE( handle.kind() == platform::game_handle_kind::creature );
+        REQUIRE( handle.locator().stable_id == actor.getID().get_value() );
+
+        std::optional<platform::game_handle_error> error;
+        const platform::game_handle_runtime runtime = fixture.owner->handle_runtime();
+        const std::size_t world_generation = platform::runtime_world_generation();
+        if( actor.is_avatar() ) {
+            CHECK( handle.subtype_name() == "avatar" );
+            CHECK( platform::resolve_exact_avatar(
+                       handle, runtime, world_generation, error ) == actor.as_avatar() );
+            CHECK_FALSE( error );
+            CHECK( platform::resolve_exact_npc(
+                       handle, runtime, world_generation, error ) == nullptr );
+        } else {
+            REQUIRE( actor.is_npc() );
+            CHECK( handle.subtype_name() == "npc" );
+            CHECK( platform::resolve_exact_npc(
+                       handle, runtime, world_generation, error ) == actor.as_npc() );
+            CHECK_FALSE( error );
+            CHECK( platform::resolve_exact_avatar(
+                       handle, runtime, world_generation, error ) == nullptr );
+        }
+        REQUIRE( error );
+        CHECK( error->code == "wrong_subtype" );
+
+        const sol::protected_function_result stale_context = fixture.lua.safe_script( R"(
+            local ok, error = pcall(function() return saved_context.character end)
+            assert(not ok and string.find(tostring(error), "stale computer access context", 1, true))
+        )", sol::script_pass_on_error );
+        REQUIRE( stale_context.valid() );
+    };
+
+    verify_actor_handle( fixture.player );
+    verify_actor_handle( partner );
 }
 
 #endif

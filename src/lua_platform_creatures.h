@@ -4,13 +4,22 @@
 
 #include <cstddef>
 #include <functional>
+#include <string_view>
+#include <vector>
 
 #include "lua_platform_sol.h"
+#include "type_id.h"
 
 namespace cata::lua_platform
 {
 
 class game_handle_runtime;
+
+namespace detail
+{
+std::vector<matec_id> read_technique_blacklist( const sol::object &value,
+        std::string_view api_name );
+} // namespace detail
 
 // Install bounded creature queries and detached snapshots. Live game objects
 // cross the Lua boundary only through generation-checked GameHandle values;

@@ -1,4 +1,5 @@
 #include "lua_platform_values.h"
+#include <algorithm>
 #include <optional>
 #include <vector>
 #include "lua_platform_bindings_coords.h"
@@ -44,9 +45,11 @@ constexpr int maximum_diag_value_depth = 8;
 
 diag_value read_diag_value(
     const sol::object &value, const std::string &description,
-    const std::size_t maximum_array_entries, const int depth, std::size_t &nodes )
+    const std::size_t maximum_array_entries, const script_diag_value_read_policy policy,
+    const int depth, std::size_t &nodes, std::vector<const void *> &ancestors )
 {
-    if( ++nodes > maximum_diag_value_nodes || depth > maximum_diag_value_depth ) {
+    const bool bounded = policy == script_diag_value_read_policy::bounded;
+    if( bounded && ( ++nodes > maximum_diag_value_nodes || depth > maximum_diag_value_depth ) ) {
         throw std::invalid_argument( description + " exceeds its structural limits" );
     }
     if( value.get_type() == sol::type::nil || value.is<script_null_value>() ) {
@@ -57,14 +60,14 @@ diag_value read_diag_value(
     }
     if( value.get_type() == sol::type::number ) {
         const double number = value.as<double>();
-        if( !std::isfinite( number ) ) {
+        if( bounded && !std::isfinite( number ) ) {
             throw std::invalid_argument( description + " must be finite" );
         }
         return diag_value( number );
     }
     if( value.get_type() == sol::type::string ) {
         const std::string text = value.as<std::string>();
-        if( text.size() > maximum_diag_value_string_bytes ) {
+        if( bounded && text.size() > maximum_diag_value_string_bytes ) {
             throw std::invalid_argument( description + " exceeds 8192 bytes" );
         }
         return diag_value( text );
@@ -80,6 +83,18 @@ diag_value read_diag_value(
     }
     if( value.get_type() == sol::type::table ) {
         const sol::table table = value.as<sol::table>();
+        const void *identity = nullptr;
+        if( !bounded ) {
+            lua_State *const state = table.lua_state();
+            const int stack_top = lua_gettop( state );
+            table.push();
+            identity = lua_topointer( state, -1 );
+            lua_settop( state, stack_top );
+            if( std::find( ancestors.begin(), ancestors.end(), identity ) != ancestors.end() ) {
+                throw std::invalid_argument( description + " arrays must not contain cycles" );
+            }
+            ancestors.push_back( identity );
+        }
         std::size_t count = 0;
         for( const auto &entry : table ) {
             if( ++count > maximum_array_entries || entry.first.get_type() != sol::type::number ) {
@@ -98,7 +113,10 @@ diag_value read_diag_value(
                 throw std::invalid_argument( description + " arrays require explicit NullValue slots" );
             }
             result.push_back( read_diag_value(
-                                  element, description, maximum_array_entries, depth + 1, nodes ) );
+                                  element, description, maximum_array_entries, policy, depth + 1, nodes, ancestors ) );
+        }
+        if( !bounded ) {
+            ancestors.pop_back();
         }
         return diag_value( std::move( result ) );
     }
@@ -168,10 +186,11 @@ std::size_t value_storage_size( const script_persistent_value &value )
 
 diag_value script_diag_value_from_lua(
     const sol::object &value, const std::string &description,
-    const std::size_t maximum_array_entries )
+    const std::size_t maximum_array_entries, const script_diag_value_read_policy policy )
 {
     std::size_t nodes = 0;
-    return read_diag_value( value, description, maximum_array_entries, 0, nodes );
+    std::vector<const void *> ancestors;
+    return read_diag_value( value, description, maximum_array_entries, policy, 0, nodes, ancestors );
 }
 
 sol::object script_diag_value_to_lua(

@@ -4,6 +4,7 @@
 #include <coordinates.h>
 #include <global_vars.h>
 #include <math_parser_diag_value.h>
+#include <safe_reference.h>
 #include <type_id.h>
 #include <locale>
 #include <sstream>
@@ -83,6 +84,11 @@ computer::computer( const std::string &new_name, int new_security, tripoint_abs_
       access_denied( _( "ERROR!  Access denied!" ) )
 {
     loc = new_loc;
+}
+
+safe_reference<computer> computer::get_safe_reference()
+{
+    return safe_reference_anchor_.reference_to( this );
 }
 
 void computer::set_security( int Security )

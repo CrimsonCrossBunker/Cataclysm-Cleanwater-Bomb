@@ -1,15 +1,19 @@
+#include <map_iterator.h>
+#include <map_scale_constants.h>
+#include <map_selector.h>
+#include <safe_reference.h>
+
 #include "lua_platform_runtime.h"
 #include "lua_platform_runtime_internal.h"
 
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-#include "lua_platform_values.h"
-
 #include <character_id.h>
 #include <enums.h>
+#include <fmt/args.h>
+#include <fmt/printf.h>
 #include <item_uid.h>
 #include <math_parser_diag_value.h>
 #include <point.h>
-
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -17,23 +21,35 @@
 #include <cstdint>
 #include <filesystem>
 #include <functional>
-#include <fmt/args.h>
-#include <fmt/printf.h>
+
+#include "lua_platform_values.h"
+
 extern "C" {
 #include <lua.h>
 }
+#include <pimpl.h>
+#include <cstddef>
+#include <exception>
+#include <initializer_list>
+#include <iterator>
 #include <limits>
 #include <map>
+#include <memory>
+#include <optional>
 #include <random>
 #include <set>
 #include <sstream>
 #include <stdexcept>
+#include <string>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
 #include "achievement.h"
 #include "avatar.h"
+#include "bionics.h"
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_path.h"
@@ -51,8 +67,10 @@ extern "C" {
 #include "event_bus.h"
 #include "field.h"
 #include "game.h"
+#include "global_vars.h"
 #include "item.h"
 #include "item_location.h"
+#include "line.h"
 #include "lua_platform_achievements.h"
 #include "lua_platform_activities.h"
 #include "lua_platform_addictions.h"
@@ -81,6 +99,7 @@ extern "C" {
 #include "lua_platform_registry.h"
 #include "lua_platform_skills.h"
 #include "lua_platform_snapshots.h"
+#include "lua_platform_sol.h"
 #include "lua_platform_statistics.h"
 #include "lua_platform_time.h"
 #include "lua_platform_trade.h"
@@ -92,50 +111,39 @@ extern "C" {
 #include "lua_platform_world_info.h"
 #include "lua_platform_world_services.h"
 #include "lua_platform_zones.h"
+#include "magic.h"
 #include "map.h"
 #include "mapdata.h"
 #include "mapgen.h"
 #include "mapgen_functions.h"
 #include "mapgendata.h"
-#include "math_parser.h"
 #include "messages.h"
 #include "mod_id_compat.h"
 #include "mod_tileset.h"
+#include "mutation.h"
 #include "npc.h"
 #include "options.h"
 #include "path_info.h"
+#include "recipe.h"
 #include "recipe_dictionary.h"
+#include "rng.h"
 #include "sounds.h"
 #include "talker.h"
 #include "text_snippets.h"
 #include "translation.h"
 #include "type_id.h"
 #include "units.h"
-#include "worldfactory.h"
+#include "weighted_list.h"
 // Supplies enum_traits<cardinal_direction> for string_to_enum_optional.
 #include "widget.h" // IWYU pragma: keep
+#include "worldfactory.h"
 #include "wound.h"
-#include <pimpl.h>
-#include <cstddef>
-#include <exception>
-#include <initializer_list>
-#include <iterator>
-#include <memory>
-#include <optional>
-#include <string>
-#include <string_view>
-#include <vector>
-#include "lua_platform_sol.h"
-
-class recipe;
-struct bionic;
 
 static const efftype_id effect_sleep( "sleep" );
 
 namespace cata::lua_platform
 {
 
-struct script_null_value;
 
 using detail::callback_scope;
 using detail::dispatch_lifecycle;
@@ -155,6 +163,44 @@ void require_translation_text( const std::string_view text )
     }
 }
 
+game_message_type parse_platform_message_type( const std::string_view name,
+        const std::string_view api_name )
+{
+    if( name == "good" ) {
+        return m_good;
+    }
+    if( name == "bad" ) {
+        return m_bad;
+    }
+    if( name == "mixed" ) {
+        return m_mixed;
+    }
+    if( name == "warning" ) {
+        return m_warning;
+    }
+    if( name == "info" ) {
+        return m_info;
+    }
+    if( name == "neutral" ) {
+        return m_neutral;
+    }
+    if( name == "debug" ) {
+        return m_debug;
+    }
+    if( name == "headshot" ) {
+        return m_headshot;
+    }
+    if( name == "critical" ) {
+        return m_critical;
+    }
+    if( name == "grazing" ) {
+        return m_grazing;
+    }
+    throw std::invalid_argument(
+        std::string( api_name ) + " received unknown message type '" +
+        std::string( name ) + "'" );
+}
+
 std::size_t require_dense_array( const sol::table &values,
                                  const std::string_view description,
                                  const std::size_t minimum,
@@ -162,6 +208,129 @@ std::size_t require_dense_array( const sol::table &values,
 {
     return detail::checked_dense_array(
                values, description, minimum, maximum );
+}
+
+enum class progression_kind : int {
+    mutation,
+    spell,
+    recipe,
+    bionic
+};
+
+progression_kind parse_progression_kind( const std::string_view kind )
+{
+    if( kind == "mutation" ) {
+        return progression_kind::mutation;
+    }
+    if( kind == "spell" ) {
+        return progression_kind::spell;
+    }
+    if( kind == "recipe" ) {
+        return progression_kind::recipe;
+    }
+    if( kind == "bionic" ) {
+        return progression_kind::bionic;
+    }
+    throw std::invalid_argument(
+        "services.progression.grant_random_missing kind must be mutation, spell, recipe, or bionic" );
+}
+
+// Match f_roll_remainder through its talker facade. In particular, talker
+// has_recipe checks learned state; Character::has_recipe also considers books.
+bool progression_candidate_missing( talker &target, const progression_kind kind,
+                                    const std::string &id )
+{
+    switch( kind ) {
+        case progression_kind::mutation:
+            return !target.has_trait( trait_id( id ) );
+        case progression_kind::spell:
+            return target.get_spell_level( spell_id( id ) ) == -1;
+        case progression_kind::recipe:
+            return !target.has_recipe( recipe_id( id ) );
+        case progression_kind::bionic:
+            return !target.has_bionic( bionic_id( id ) );
+    }
+    return false;
+}
+
+std::string grant_progression_candidate( talker &target,
+        const progression_kind kind,
+        const std::string &id )
+{
+    switch( kind ) {
+        case progression_kind::mutation: {
+            const trait_id selected( id );
+            target.set_mutation( selected );
+            return selected->name();
+        }
+        case progression_kind::spell: {
+            const spell_id selected( id );
+            target.set_spell_level( selected, 1 );
+            return selected->name.translated();
+        }
+        case progression_kind::recipe: {
+            const recipe_id selected( id );
+            target.learn_recipe( selected );
+            return selected->result_name();
+        }
+        case progression_kind::bionic: {
+            const bionic_id selected( id );
+            target.add_bionic( selected );
+            return selected->name.translated();
+        }
+    }
+    throw std::invalid_argument( "services.progression received an unsupported kind" );
+}
+
+std::vector<int> platform_random_weights( const sol::table &weights )
+{
+    // The native weighted list has no row-count limit.  The selected row is
+    // returned as int64, so retain only that representational boundary.
+    constexpr std::size_t maximum_entries = static_cast<std::size_t>(
+            std::numeric_limits<std::int64_t>::max() );
+    const std::size_t count = require_dense_array(
+                                  weights, "services.random.weighted_index weights",
+                                  0, maximum_entries );
+    std::vector<int> result;
+    result.reserve( count );
+    std::int64_t total_weight = 0;
+    for( std::size_t index = 1; index <= count; ++index ) {
+        const sol::object raw_weight = weights.raw_get<sol::object>( index );
+        if( !raw_weight.is<lua_Integer>() ) {
+            throw std::invalid_argument(
+                "services.random.weighted_index weights must be native integers" );
+        }
+        const std::int64_t weight = raw_weight.as<std::int64_t>();
+        if( weight < std::numeric_limits<int>::min() ||
+            weight > std::numeric_limits<int>::max() ) {
+            throw std::invalid_argument(
+                "services.random.weighted_index weights exceed native integer bounds" );
+        }
+        if( weight > 0 ) {
+            if( total_weight > std::numeric_limits<int>::max() - weight ) {
+                throw std::invalid_argument(
+                    "services.random.weighted_index total exceeds native integer bounds" );
+            }
+            total_weight += weight;
+        }
+        result.push_back( static_cast<int>( weight ) );
+    }
+    return result;
+}
+
+sol::optional<std::int64_t> platform_random_weighted_index(
+    const std::vector<int> &weights )
+{
+    weighted_int_list<std::size_t> weighted_entries;
+    for( std::size_t index = 0; index < weights.size(); ++index ) {
+        // Keep the original 1-based row after the native list drops nonpositive weights.
+        weighted_entries.add( index + 1, weights[index] );
+    }
+    const std::size_t *picked = weighted_entries.pick();
+    if( picked == nullptr ) {
+        return sol::nullopt;
+    }
+    return static_cast<std::int64_t>( *picked );
 }
 
 std::uint64_t fnv1a( const std::string_view value,
@@ -189,61 +358,126 @@ struct use_context_data {
     use_context_data( use_context_data && ) = delete;
     use_context_data &operator=( use_context_data && ) = delete;
 
-    Character *character = nullptr;
-    item *used_item = nullptr;
+    std::optional<game_handle> character_reference;
+    game_handle item_reference;
+    item_location used_item_location;
     tripoint_bub_ms position;
     cata::lua_platform::game_handle_runtime handle_runtime;
     std::size_t world_generation = 0;
     bool active = true;
 
     void require_active() const {
-        if( !active || character == nullptr || used_item == nullptr ) {
+        if( !active || !handle_runtime.has_live_owner() ||
+            world_generation != detail::runtime_world_generation_storage() ) {
             throw std::runtime_error( "stale item-use context" );
         }
     }
 
-    void message( const std::string &value ) const {
+    Character *require_character() const {
         require_active();
-        character->add_msg_if_player( value );
+        if( !character_reference ) {
+            return nullptr;
+        }
+        const native_handle_result<Creature> resolved = character_reference->resolve_creature(
+                    handle_runtime, detail::runtime_world_generation_storage() );
+        Character *character = resolved ? resolved.value->as_character() : nullptr;
+        if( character == nullptr ) {
+            throw std::runtime_error( "stale item-use character" );
+        }
+        return character;
     }
 
-    std::string player_name() const {
+    item &require_item() const {
         require_active();
+        const native_handle_result<item> resolved = item_reference.resolve_item(
+                    handle_runtime, detail::runtime_world_generation_storage() );
+        if( !resolved ) {
+            throw std::runtime_error( "stale item-use item: " +
+                                      ( resolved.error ? resolved.error->code : "unknown" ) );
+        }
+        return *resolved.value;
+    }
+
+    void message( const std::string &value,
+                  const sol::optional<std::string> &type ) const {
+        Character *character = require_character();
+        if( character == nullptr ) {
+            return;
+        }
+        const game_message_params params( parse_platform_message_type(
+                                              type.value_or( "neutral" ), "ItemUseContext:message" ) );
+        character->add_msg_if_player( params, value );
+    }
+
+    sol::optional<std::string> player_name() const {
+        Character *character = require_character();
+        if( character == nullptr ) {
+            return {};
+        }
         return character->get_name();
     }
 
     std::string item_id() const {
-        require_active();
-        return used_item->typeId().str();
+        return require_item().typeId().str();
     }
 
     int charges() const {
-        require_active();
-        return used_item->charges;
+        return require_item().charges;
     }
 
     void set_charges( std::int64_t value ) const {
-        require_active();
+        item &used_item = require_item();
         if( value < 0 || value > std::numeric_limits<int>::max() ) {
             throw std::runtime_error( "item charges are outside the native range" );
         }
-        used_item->charges = static_cast<int>( value );
+        used_item.charges = static_cast<int>( value );
     }
 
-    cata::lua_platform::game_handle character_handle() const {
-        require_active();
+    sol::optional<cata::lua_platform::game_handle> character_handle() const {
+        Character *character = require_character();
+        if( character == nullptr ) {
+            return {};
+        }
         const tripoint_abs_ms absolute = character->pos_abs();
+        const std::string scope = character->is_avatar() ? "avatar" :
+                                  character->is_npc() ? "npc" : "character";
         return cata::lua_platform::game_handle::from_creature( *character, {
-            "platform_item_use_character", character->getID().get_value(),
+            scope, character->getID().get_value(),
             absolute.x(), absolute.y(), absolute.z(), {}
         }, handle_runtime, world_generation );
     }
 
     cata::lua_platform::game_handle item_handle() const {
-        require_active();
-        return cata::lua_platform::game_handle::from_item( *used_item, {
-            "platform_item_use_item", used_item->uid().get_value(), 0, 0, 0, {}
-        }, handle_runtime, world_generation );
+        item &used_item = require_item();
+        cata::lua_platform::game_handle_locator locator;
+        locator.scope = "platform_item_use_item";
+        locator.stable_id = used_item.uid().get_value();
+        if( used_item_location ) {
+            const tripoint_abs_ms absolute = used_item_location.pos_abs();
+            switch( used_item_location.where_recursive() ) {
+                case item_location::type::character: {
+                    Character *carrier = used_item_location.carrier();
+                    locator.scope = carrier != nullptr && carrier->is_avatar() ?
+                                    "avatar_item" : "character_item";
+                    break;
+                }
+                case item_location::type::map:
+                    locator.scope = "map_item";
+                    break;
+                case item_location::type::vehicle:
+                    locator.scope = "vehicle_item";
+                    break;
+                case item_location::type::container:
+                case item_location::type::invalid:
+                    locator.scope = "item";
+                    break;
+            }
+            locator.x = absolute.x();
+            locator.y = absolute.y();
+            locator.z = absolute.z();
+        }
+        return cata::lua_platform::game_handle::from_item( used_item, std::move( locator ),
+                handle_runtime, world_generation );
     }
 
     cata::lua_platform::script_tripoint_coord use_position() const {
@@ -274,119 +508,149 @@ struct computer_access_context {
     computer_access_context( computer_access_context && ) = delete;
     computer_access_context &operator=( computer_access_context && ) = delete;
 
-    computer *terminal = nullptr;
-    Character *character = nullptr;
+    safe_reference<computer> terminal_reference;
+    cata::lua_platform::game_handle character_reference;
     cata::lua_platform::game_handle_runtime handle_runtime;
     std::size_t world_generation = 0;
     bool active = true;
 
     void require_active() const {
-        if( !active || terminal == nullptr || character == nullptr ) {
+        if( !active || !terminal_reference || !handle_runtime.has_live_owner() ||
+            world_generation != detail::runtime_world_generation_storage() ) {
             throw std::runtime_error( "stale computer access context" );
         }
     }
 
-    void message( const std::string &value ) const {
+    computer &require_terminal() const {
         require_active();
-        character->add_msg_if_player( value );
+        computer *const terminal = terminal_reference.get();
+        if( terminal == nullptr ) {
+            throw std::runtime_error( "stale computer access terminal" );
+        }
+        return *terminal;
+    }
+
+    Character *resolve_character() const {
+        const cata::lua_platform::native_handle_result<Creature> resolved =
+            character_reference.resolve_creature(
+                handle_runtime, detail::runtime_world_generation_storage() );
+        return resolved ? resolved.value->as_character() : nullptr;
+    }
+
+    Character &require_character() const {
+        require_active();
+        Character *const character = resolve_character();
+        if( character == nullptr ) {
+            throw std::runtime_error( "stale computer access character" );
+        }
+        return *character;
+    }
+
+    bool is_live() const {
+        return active && terminal_reference.get() != nullptr &&
+               handle_runtime.has_live_owner() &&
+               world_generation == detail::runtime_world_generation_storage() &&
+               resolve_character() != nullptr;
+    }
+
+    void message( const std::string &value ) const {
+        require_character().add_msg_if_player( value );
     }
 
     std::string name() const {
-        require_active();
-        return terminal->name;
+        return require_terminal().name;
     }
 
     void set_name( const std::string &value ) const {
-        require_active();
+        computer &terminal = require_terminal();
         if( value.empty() || value.size() > 4096 ||
             value.find( '\0' ) != std::string::npos ) {
             throw std::invalid_argument(
                 "computer name must contain 1 to 4096 non-NUL bytes" );
         }
-        terminal->name = value;
+        terminal.name = value;
     }
 
     std::string access_denied() const {
-        require_active();
-        return terminal->access_denied;
+        return require_terminal().access_denied;
     }
 
     void set_access_denied( const std::string &value ) const {
-        require_active();
+        computer &terminal = require_terminal();
         if( value.size() > 4096 || value.find( '\0' ) != std::string::npos ) {
             throw std::invalid_argument(
                 "computer access-denied text exceeds its native limit" );
         }
-        terminal->set_access_denied_msg( value );
+        terminal.set_access_denied_msg( value );
     }
 
     int security() const {
-        require_active();
-        return terminal->security;
+        return require_terminal().security;
     }
 
     void set_security( const std::int64_t value ) const {
-        require_active();
+        computer &terminal = require_terminal();
         if( value < -1000000 || value > 1000000 ) {
             throw std::invalid_argument(
                 "computer security must be between -1000000 and 1000000" );
         }
-        terminal->set_security( static_cast<int>( value ) );
+        terminal.set_security( static_cast<int>( value ) );
     }
 
     int alerts() const {
-        require_active();
-        return terminal->alerts;
+        return require_terminal().alerts;
     }
 
     void set_alerts( const std::int64_t value ) const {
-        require_active();
+        computer &terminal = require_terminal();
         if( value < 0 || value > 1000000 ) {
             throw std::invalid_argument(
                 "computer alerts must be between 0 and 1000000" );
         }
-        terminal->alerts = static_cast<int>( value );
+        terminal.alerts = static_cast<int>( value );
     }
 
     int mission_id() const {
-        require_active();
-        return terminal->mission_id;
+        return require_terminal().mission_id;
     }
 
     void set_mission_id( const std::int64_t value ) const {
-        require_active();
+        computer &terminal = require_terminal();
         if( value < -1 || value > std::numeric_limits<int>::max() ) {
             throw std::invalid_argument(
                 "computer mission id is outside the native range" );
         }
-        terminal->set_mission( static_cast<int>( value ) );
+        terminal.set_mission( static_cast<int>( value ) );
     }
 
     cata::lua_platform::game_handle character_handle() const {
-        require_active();
-        const tripoint_abs_ms absolute = character->pos_abs();
-        return cata::lua_platform::game_handle::from_creature( *character, {
-            "platform_computer_character", character->getID().get_value(),
+        Character &character = require_character();
+        const tripoint_abs_ms absolute = character.pos_abs();
+        const char *subtype = character.is_avatar() ? "avatar" :
+                              character.is_npc() ? "npc" : "character";
+        return cata::lua_platform::game_handle::from_creature( character, {
+            subtype, character.getID().get_value(),
             absolute.x(), absolute.y(), absolute.z(), {}
         }, handle_runtime, world_generation );
     }
 
     cata::lua_platform::script_tripoint_coord position() const {
-        require_active();
+        computer &terminal = require_terminal();
         return cata::lua_platform::script_tripoint_coord::from_native(
                    coords::origin::abs, coords::scale::map_square,
-                   terminal->loc.raw() );
+                   terminal.loc.raw() );
     }
 
     sol::object get_value( sol::this_state state, const std::string &key ) const {
-        require_active();
+        const computer &terminal = require_terminal();
         require_computer_value_key( key );
-        const diag_value *stored = terminal->maybe_get_value( key );
+        const diag_value *stored = terminal.maybe_get_value( key );
         if( stored == nullptr ) {
             return sol::make_object( state, sol::lua_nil );
         }
+        const diag_value snapshot = *stored;
         return cata::lua_platform::script_diag_value_to_lua(
-                   sol::state_view( state ), *stored, "computer value",
+                   sol::state_view( state ), snapshot, "computer value",
                    maximum_computer_value_entries );
     }
 
@@ -394,23 +658,25 @@ struct computer_access_context {
         require_active();
         require_computer_value_key( key );
         if( value.get_type() == sol::type::nil ) {
-            terminal->remove_value( key );
+            require_terminal().remove_value( key );
             return;
         }
-        if( terminal->maybe_get_value( key ) == nullptr &&
-            terminal->values.size() >= maximum_computer_value_entries ) {
+        diag_value stored = cata::lua_platform::script_diag_value_from_lua(
+                                value, "computer value '" + key + "'", maximum_computer_value_entries );
+        computer &terminal = require_terminal();
+        if( terminal.maybe_get_value( key ) == nullptr &&
+            terminal.values.size() >= maximum_computer_value_entries ) {
             throw std::runtime_error(
                 "computer value store exceeds 256 entries" );
         }
-        terminal->set_value( key, cata::lua_platform::script_diag_value_from_lua(
-                                 value, "computer value '" + key + "'", maximum_computer_value_entries ) );
+        terminal.set_value( key, std::move( stored ) );
     }
 
     bool remove_value( const std::string &key ) const {
-        require_active();
+        computer &terminal = require_terminal();
         require_computer_value_key( key );
-        const bool existed = terminal->maybe_get_value( key ) != nullptr;
-        terminal->remove_value( key );
+        const bool existed = terminal.maybe_get_value( key ) != nullptr;
+        terminal.remove_value( key );
         return existed;
     }
 };
@@ -426,8 +692,10 @@ class computer_access_context_lease
 
         ~computer_access_context_lease() noexcept {
             context_.active = false;
-            context_.terminal = nullptr;
-            context_.character = nullptr;
+            context_.terminal_reference = {};
+            context_.character_reference = {};
+            context_.handle_runtime = {};
+            context_.world_generation = 0;
         }
 
     private:
@@ -444,45 +712,485 @@ class use_context_lease
 
         ~use_context_lease() noexcept {
             context_.active = false;
-            context_.character = nullptr;
-            context_.used_item = nullptr;
+            context_.character_reference.reset();
+            context_.item_reference = game_handle();
+            context_.used_item_location = item_location::nowhere;
         }
 
     private:
         use_context_data &context_;
 };
 
+std::optional<tripoint_range<tripoint_bub_ms>> clipped_area_range(
+            const map &here, const tripoint_bub_ms &center, const int radius )
+{
+    const std::int64_t radius_wide = radius;
+    // Wide coordinate calculations must retain all 64 bits before native conversion.
+    // NOLINTNEXTLINE(cata-combine-locals-into-point)
+    const std::int64_t max_x = static_cast<std::int64_t>( here.getmapsize() ) * SEEX - 1;
+    const std::int64_t max_y = static_cast<std::int64_t>( here.getmapsize() ) * SEEY - 1;
+    const std::int64_t min_x = std::max<std::int64_t>( 0,
+                               static_cast<std::int64_t>( center.x() ) - radius_wide );
+    const std::int64_t clipped_max_x = std::min( max_x,
+                                       static_cast<std::int64_t>( center.x() ) + radius_wide );
+    const std::int64_t min_y = std::max<std::int64_t>( 0,
+                               static_cast<std::int64_t>( center.y() ) - radius_wide );
+    const std::int64_t clipped_max_y = std::min( max_y,
+                                       static_cast<std::int64_t>( center.y() ) + radius_wide );
+    if( min_x > clipped_max_x || min_y > clipped_max_y ) {
+        return std::nullopt;
+    }
+
+    // tripoint_range advances x first, then y, then z. Clipping away only
+    // out-of-map XY candidates preserves the native order of every inbounds
+    // square. Keep the requested z so native non-zlevel storage semantics and
+    // loaded-submap checks remain with the map mutation operation.
+    return tripoint_range<tripoint_bub_ms>(
+               tripoint_bub_ms( static_cast<int>( min_x ), static_cast<int>( min_y ), center.z() ),
+               tripoint_bub_ms( static_cast<int>( clipped_max_x ), static_cast<int>( clipped_max_y ),
+                                center.z() ) );
+}
+
+int set_platform_furniture( const tripoint_abs_ms &absolute,
+                            const std::string &furniture_id,
+                            const double requested_radius, const bool square,
+                            const bool avoid_creatures )
+{
+    if( g == nullptr ) {
+        throw std::runtime_error(
+            "services.gameplay.environment.set_furniture requires an active game" );
+    }
+    if( furniture_id.empty() || furniture_id.size() > 256 ||
+        furniture_id.find( '\0' ) != std::string::npos ) {
+        throw std::invalid_argument(
+            "services.gameplay.environment.set_furniture requires a 1 to 256 byte furniture id" );
+    }
+    const furn_str_id source_furniture( furniture_id );
+    if( !source_furniture.is_valid() ) {
+        throw std::invalid_argument(
+            "services.gameplay.environment.set_furniture requires a registered furniture id" );
+    }
+    const furn_id target_furniture = source_furniture.id();
+
+    // The native EOC has no radius cap; 2 * 32767^2 remains below INT_MAX,
+    // keeping its int-based circle distance representable within this bound.
+    constexpr int maximum_safe_radius = 32767;
+    if( !std::isfinite( requested_radius ) ) {
+        throw std::invalid_argument(
+            "services.gameplay.environment.set_furniture radius must be finite" );
+    }
+    const double truncated_radius = std::trunc( requested_radius );
+    if( truncated_radius < 0 || truncated_radius > maximum_safe_radius ) {
+        throw std::invalid_argument(
+            "services.gameplay.environment.set_furniture radius must truncate to 0..32767 map squares" );
+    }
+    const int radius = static_cast<int>( truncated_radius );
+
+    map &here = get_map();
+    if( !here.inbounds_z( absolute.z() ) ) {
+        return 0;
+    }
+    const tripoint_abs_ms bubble_origin = here.get_abs( tripoint_bub_ms::zero );
+    // Wide coordinate calculations must retain all 64 bits before native conversion.
+    // NOLINTNEXTLINE(cata-combine-locals-into-point)
+    const std::int64_t local_x = static_cast<std::int64_t>( absolute.x() ) - bubble_origin.x();
+    const std::int64_t local_y = static_cast<std::int64_t>( absolute.y() ) - bubble_origin.y();
+    if( local_x < std::numeric_limits<int>::lowest() ||
+        local_x > std::numeric_limits<int>::max() ||
+        local_y < std::numeric_limits<int>::lowest() ||
+        local_y > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument(
+            "services.gameplay.environment.set_furniture position is outside native map coordinates" );
+    }
+    const tripoint_bub_ms center( static_cast<int>( local_x ),
+                                  static_cast<int>( local_y ), absolute.z() );
+    const float circle_radius = static_cast<float>( radius ) + 0.5f;
+    int accepted_tiles = 0;
+    const std::optional<tripoint_range<tripoint_bub_ms>> area =
+                clipped_area_range( here, center, radius );
+    if( !area ) {
+        return 0;
+    }
+    for( const tripoint_bub_ms &destination : *area ) {
+        if( !square && trig_dist( center, destination ) >= circle_radius ) {
+            continue;
+        }
+        if( here.furn_set( destination, target_furniture, false, avoid_creatures ) ) {
+            ++accepted_tiles;
+        }
+    }
+    return accepted_tiles;
+}
+
+int set_platform_terrain( const tripoint_abs_ms &absolute,
+                          const std::string &terrain_id,
+                          const double requested_radius, const bool square,
+                          const bool avoid_creatures )
+{
+    if( g == nullptr ) {
+        throw std::runtime_error(
+            "services.gameplay.environment.set_terrain requires an active game" );
+    }
+    if( terrain_id.empty() || terrain_id.size() > 256 ||
+        terrain_id.find( '\0' ) != std::string::npos ) {
+        throw std::invalid_argument(
+            "services.gameplay.environment.set_terrain requires a 1 to 256 byte terrain id" );
+    }
+    const ter_str_id source_terrain( terrain_id );
+    if( !source_terrain.is_valid() ) {
+        throw std::invalid_argument(
+            "services.gameplay.environment.set_terrain requires a registered terrain id" );
+    }
+    const ter_id target_terrain = source_terrain.id();
+
+    // This bound keeps the native trig_dist integer squares and their sum
+    // representable, while preventing pathological ranges from doing unbounded work.
+    constexpr int maximum_safe_radius = 32767;
+    if( !std::isfinite( requested_radius ) ) {
+        throw std::invalid_argument(
+            "services.gameplay.environment.set_terrain radius must be finite" );
+    }
+    const double truncated_radius = std::trunc( requested_radius );
+    if( truncated_radius < 0 || truncated_radius > maximum_safe_radius ) {
+        throw std::invalid_argument(
+            "services.gameplay.environment.set_terrain radius must truncate to 0..32767 map squares" );
+    }
+    const int radius = static_cast<int>( truncated_radius );
+
+    map &here = get_map();
+    if( !here.inbounds_z( absolute.z() ) ) {
+        return 0;
+    }
+    const tripoint_abs_ms bubble_origin = here.get_abs( tripoint_bub_ms::zero );
+    // Wide coordinate calculations must retain all 64 bits before native conversion.
+    // NOLINTNEXTLINE(cata-combine-locals-into-point)
+    const std::int64_t local_x = static_cast<std::int64_t>( absolute.x() ) - bubble_origin.x();
+    const std::int64_t local_y = static_cast<std::int64_t>( absolute.y() ) - bubble_origin.y();
+    if( local_x < std::numeric_limits<int>::lowest() ||
+        local_x > std::numeric_limits<int>::max() ||
+        local_y < std::numeric_limits<int>::lowest() ||
+        local_y > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument(
+            "services.gameplay.environment.set_terrain position is outside native map coordinates" );
+    }
+    const tripoint_bub_ms center( static_cast<int>( local_x ),
+                                  static_cast<int>( local_y ), absolute.z() );
+    const float circle_radius = static_cast<float>( radius ) + 0.5f;
+    int changed_tiles = 0;
+    const std::optional<tripoint_range<tripoint_bub_ms>> area =
+                clipped_area_range( here, center, radius );
+    if( !area ) {
+        return 0;
+    }
+    for( const tripoint_bub_ms &destination : *area ) {
+        if( !square && trig_dist( center, destination ) >= circle_radius ) {
+            continue;
+        }
+        if( here.ter_set( destination, target_terrain, avoid_creatures ) ) {
+            ++changed_tiles;
+        }
+    }
+    return changed_tiles;
+}
+
+int set_platform_trap_area( const tripoint_abs_ms &absolute,
+                            const std::string &trap_text,
+                            const double requested_radius, const bool square )
+{
+    constexpr std::string_view api_name = "services.gameplay.environment.set_trap_area";
+    if( g == nullptr ) {
+        throw std::runtime_error( std::string( api_name ) + " requires an active game" );
+    }
+    map &here = get_map();
+    const tripoint_abs_ms bubble_origin = here.get_abs( tripoint_bub_ms::zero );
+    // Wide coordinate calculations must retain all 64 bits before native conversion.
+    // NOLINTNEXTLINE(cata-combine-locals-into-point)
+    const std::int64_t local_x = static_cast<std::int64_t>( absolute.x() ) - bubble_origin.x();
+    const std::int64_t local_y = static_cast<std::int64_t>( absolute.y() ) - bubble_origin.y();
+    if( local_x < std::numeric_limits<int>::lowest() ||
+        local_x > std::numeric_limits<int>::max() ||
+        local_y < std::numeric_limits<int>::lowest() ||
+        local_y > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument( std::string( api_name ) +
+                                     " position is outside native map coordinates" );
+    }
+    const tripoint_bub_ms center( static_cast<int>( local_x ),
+                                  static_cast<int>( local_y ), absolute.z() );
+    if( !std::isfinite( requested_radius ) ) {
+        throw std::invalid_argument( std::string( api_name ) + " radius must be finite" );
+    }
+    const double truncated_radius = std::trunc( requested_radius );
+    if( truncated_radius < std::numeric_limits<int>::lowest() ||
+        truncated_radius > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument( std::string( api_name ) +
+                                     " radius must truncate to a native int" );
+    }
+    const int radius = static_cast<int>( truncated_radius );
+
+    // f_set_trap converts the string to trap_id before map::trap_set.  Keep
+    // the native unknown-ID diagnostic/null-ID fallback and accept the full
+    // std::string byte sequence, including long strings and embedded NULs.
+    const trap_id target_trap = trap_str_id( trap_text ).id();
+    if( !here.inbounds_z( absolute.z() ) ) {
+        return 0;
+    }
+
+    // points_in_radius forms center +/- radius in native ints, and its range
+    // iterator increments x/y after visiting the last point.  Every endpoint
+    // must be representable and each maximum must leave room for that step.
+    const std::int64_t min_x = static_cast<std::int64_t>( center.x() ) - radius;
+    // Wide coordinate calculations must retain all 64 bits before native conversion.
+    // NOLINTNEXTLINE(cata-combine-locals-into-point)
+    const std::int64_t max_x = static_cast<std::int64_t>( center.x() ) + radius;
+    const std::int64_t min_y = static_cast<std::int64_t>( center.y() ) - radius;
+    const std::int64_t max_y = static_cast<std::int64_t>( center.y() ) + radius;
+    constexpr std::int64_t iterator_min = std::numeric_limits<int>::lowest();
+    constexpr std::int64_t iterator_max = std::numeric_limits<int>::max() - 1;
+    if( min_x < iterator_min || min_x > iterator_max ||
+        max_x < iterator_min || max_x > iterator_max ||
+        min_y < iterator_min || min_y > iterator_max ||
+        max_y < iterator_min || max_y > iterator_max ) {
+        throw std::invalid_argument( std::string( api_name ) +
+                                     " radius would overflow native range coordinates" );
+    }
+    // trig_dist squares each int coordinate difference before converting to
+    // double.  46340^2 fits in int; 46341^2 does not.  Square ranges do not
+    // call trig_dist and keep their larger native-safe radius support.
+    if( !square && ( radius < -46340 || radius > 46340 ) ) {
+        throw std::invalid_argument( std::string( api_name ) +
+                                     " circle radius would overflow native trig_dist" );
+    }
+
+    if( radius < 0 ) {
+        // A negative square's native tripoint_range starts at center-radius,
+        // sees that one point, then advances directly to its end sentinel.
+        // The circle predicate rejects its first point for every negative
+        // radius, so it has no setter calls.
+        if( !square ) {
+            return 0;
+        }
+        const tripoint_bub_ms destination( static_cast<int>( min_x ),
+                                           static_cast<int>( min_y ), center.z() );
+        if( !here.inbounds( destination ) ) {
+            return 0;
+        }
+        here.trap_set( destination, target_trap );
+        return 1;
+    }
+
+    const float circle_radius = static_cast<float>( radius ) + 0.5f;
+    int attempted_squares = 0;
+    const std::optional<tripoint_range<tripoint_bub_ms>> area =
+                clipped_area_range( here, center, radius );
+    if( !area ) {
+        return 0;
+    }
+    for( const tripoint_bub_ms &destination : *area ) {
+        if( !square && trig_dist( center, destination ) >= circle_radius ) {
+            continue;
+        }
+        // map::trap_set is void: count each in-bounds setter call, including
+        // same-id resets and attempts refused by built-in terrain traps.
+        here.trap_set( destination, target_trap );
+        ++attempted_squares;
+    }
+    return attempted_squares;
+}
+
+int add_platform_field_area( const tripoint_abs_ms &absolute,
+                             const std::string &field_id,
+                             const sol::optional<sol::table> &requested_options )
+{
+    constexpr std::string_view api_name = "services.gameplay.environment.add_field_area";
+    if( g == nullptr ) {
+        throw std::runtime_error( std::string( api_name ) + " requires an active game" );
+    }
+    if( field_id.empty() || field_id.size() > 256 || field_id.find( '\0' ) != std::string::npos ) {
+        throw std::invalid_argument( std::string( api_name ) +
+                                     " requires a 1 to 256 byte field id" );
+    }
+
+    double requested_radius = 1.0;
+    double requested_intensity = 1.0;
+    time_duration age = 1_turns;
+    bool square = false;
+    bool outdoor_only = false;
+    bool indoor_only = false;
+    bool hit_player = true;
+    if( requested_options ) {
+        for( const auto &entry : *requested_options ) {
+            if( entry.first.get_type() != sol::type::string ) {
+                throw std::invalid_argument( std::string( api_name ) +
+                                             " option keys must be strings" );
+            }
+            const std::string key = entry.first.as<std::string>();
+            const sol::object value = entry.second;
+            if( key == "radius" || key == "intensity" ) {
+                if( !value.is<double>() ) {
+                    throw std::invalid_argument( std::string( api_name ) + " " + key +
+                                                 " must be numeric" );
+                }
+                if( key == "radius" ) {
+                    requested_radius = value.as<double>();
+                } else {
+                    requested_intensity = value.as<double>();
+                }
+            } else if( key == "age" ) {
+                if( !value.is<cata::lua_platform::script_time_duration>() ) {
+                    throw std::invalid_argument( std::string( api_name ) +
+                                                 " age must be a TimeDuration" );
+                }
+                age = value.as<cata::lua_platform::script_time_duration>().to_native();
+            } else if( key == "square" || key == "outdoor_only" ||
+                       key == "indoor_only" || key == "hit_player" ) {
+                if( !value.is<bool>() ) {
+                    throw std::invalid_argument( std::string( api_name ) + " " + key +
+                                                 " must be boolean" );
+                }
+                const bool enabled = value.as<bool>();
+                if( key == "square" ) {
+                    square = enabled;
+                } else if( key == "outdoor_only" ) {
+                    outdoor_only = enabled;
+                } else if( key == "indoor_only" ) {
+                    indoor_only = enabled;
+                } else {
+                    hit_player = enabled;
+                }
+            } else {
+                throw std::invalid_argument( std::string( api_name ) +
+                                             " received unknown option '" + key + "'" );
+            }
+        }
+    }
+
+    if( !std::isfinite( requested_radius ) ) {
+        throw std::invalid_argument( std::string( api_name ) + " radius must be finite" );
+    }
+    constexpr int maximum_safe_radius = 32767;
+    const double truncated_radius = std::trunc( requested_radius );
+    if( truncated_radius < 0 || truncated_radius > maximum_safe_radius ) {
+        throw std::invalid_argument( std::string( api_name ) +
+                                     " radius must truncate to 0..32767 map squares" );
+    }
+    const int radius = static_cast<int>( truncated_radius );
+
+    if( !std::isfinite( requested_intensity ) ) {
+        throw std::invalid_argument( std::string( api_name ) + " intensity must be finite" );
+    }
+    const double truncated_intensity = std::trunc( requested_intensity );
+    if( truncated_intensity < std::numeric_limits<int>::lowest() ||
+        truncated_intensity > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument( std::string( api_name ) +
+                                     " intensity must truncate to a native int" );
+    }
+    const int intensity = static_cast<int>( truncated_intensity );
+
+    const field_type_str_id source_field( field_id );
+    if( !source_field.is_valid() ) {
+        return 0;
+    }
+    map &here = get_map();
+    if( !here.inbounds_z( absolute.z() ) ) {
+        return 0;
+    }
+    const tripoint_abs_ms bubble_origin = here.get_abs( tripoint_bub_ms::zero );
+    // Wide coordinate calculations must retain all 64 bits before native conversion.
+    // NOLINTNEXTLINE(cata-combine-locals-into-point)
+    const std::int64_t local_x = static_cast<std::int64_t>( absolute.x() ) - bubble_origin.x();
+    const std::int64_t local_y = static_cast<std::int64_t>( absolute.y() ) - bubble_origin.y();
+    if( local_x < std::numeric_limits<int>::lowest() ||
+        local_x > std::numeric_limits<int>::max() ||
+        local_y < std::numeric_limits<int>::lowest() ||
+        local_y > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument( std::string( api_name ) +
+                                     " position is outside native map coordinates" );
+    }
+    const tripoint_bub_ms center( static_cast<int>( local_x ),
+                                  static_cast<int>( local_y ), absolute.z() );
+    const float circle_radius = static_cast<float>( radius ) + 0.5f;
+    int accepted_tiles = 0;
+    const std::optional<tripoint_range<tripoint_bub_ms>> area =
+                clipped_area_range( here, center, radius );
+    if( !area ) {
+        return 0;
+    }
+    for( const tripoint_bub_ms &destination : *area ) {
+        if( !square && trig_dist( center, destination ) >= circle_radius ) {
+            continue;
+        }
+        if( outdoor_only && !here.is_outside( destination ) ) {
+            continue;
+        }
+        if( indoor_only && here.is_outside( destination ) ) {
+            continue;
+        }
+        if( here.add_field( destination, source_field.id(), intensity, age, hit_player ) ) {
+            ++accepted_tiles;
+        }
+    }
+    return accepted_tiles;
+}
 
 } // namespace
 
 std::optional<int> invoke_use_handler( std::string_view mod_id,
                                        std::string_view handler_id,
                                        Character *character, item &used_item,
-                                       map *, const tripoint_bub_ms &position )
+                                       map *here, const tripoint_bub_ms &position )
 {
     const std::shared_ptr<runtime> owner = detail::find_active_runtime( mod_id );
-    if( character == nullptr ) {
-        DebugLog( D_ERROR, D_MAIN ) << "Lua-first item handler '" << mod_id << ':'
-                                    << handler_id << "' was invoked without a Character";
+    if( !owner || !owner->world_is_ready ) {
+        if( character != nullptr ) {
+            character->add_msg_if_player(
+                to_translation( "Lua-first Mod runtime is not ready." ).translated() );
+        } else {
+            DebugLog( D_ERROR, D_MAIN ) << "Lua-first item handler '" << mod_id << ':'
+                                        << handler_id << "' runtime is not ready";
+        }
         return std::nullopt;
     }
-    if( !owner || !owner->world_is_ready ) {
-        character->add_msg_if_player(
-            to_translation( "Lua-first Mod runtime is not ready." ).translated() );
+    if( owner->callback_depth >= 16 ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first item handler recursion limit reached for '"
+                                    << mod_id << ':' << handler_id << "'";
         return std::nullopt;
     }
     const auto handler = owner->handlers.find( std::string( handler_id ) );
     if( handler == owner->handlers.end() ) {
-        character->add_msg_if_player(
-            to_translation( "Lua-first item handler is no longer registered." ).translated() );
+        if( character != nullptr ) {
+            character->add_msg_if_player(
+                to_translation( "Lua-first item handler is no longer registered." ).translated() );
+        } else {
+            DebugLog( D_ERROR, D_MAIN ) << "Lua-first item handler '" << mod_id << ':'
+                                        << handler_id << "' is no longer registered";
+        }
+        return std::nullopt;
+    }
+    if( character == nullptr && here == nullptr ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first item handler '" << mod_id << ':'
+                                    << handler_id << "' has no native map context";
         return std::nullopt;
     }
     auto context = std::make_shared<use_context_data>();
-    context->character = character;
-    context->used_item = &used_item;
+    context->used_item_location = character != nullptr ?
+                                  item_location( *character->as_character(), &used_item ) :
+                                  item_location( map_cursor( here, position ), &used_item );
+    if( character == nullptr && !context->used_item_location ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first item handler '" << mod_id << ':'
+                                    << handler_id << "' has no native item location";
+        return std::nullopt;
+    }
     context->position = position;
     context->handle_runtime = owner->handle_runtime();
     context->world_generation = detail::runtime_world_generation_storage();
+    game_handle_locator item_locator;
+    item_locator.scope = "platform_item_use_item";
+    context->item_reference = game_handle::from_item(
+                                  used_item, std::move( item_locator ),
+                                  context->handle_runtime, context->world_generation );
+    if( character != nullptr ) {
+        context->character_reference = detail::platform_creature_handle( *owner, *character );
+    }
     use_context_lease context_lease( *context );
     sol::protected_function callback = handler->second.callback;
     callback_scope scope( *owner );
@@ -510,6 +1218,18 @@ std::optional<int> invoke_use_handler( std::string_view mod_id,
                    to_translation( "Lua-first item handler result is outside the native range." ).translated() );
         return std::nullopt;
     }
+    if( native_result != 0 ) {
+        if( !context->item_reference.resolve_item(
+                context->handle_runtime, detail::runtime_world_generation_storage() ) ) {
+            // The callback consumed, moved or replaced the Item itself. The native
+            // caller must not apply a returned charge count to its old pointer.
+            return 0;
+        }
+        if( context->character_reference && !context->character_reference->resolve_creature(
+                context->handle_runtime, detail::runtime_world_generation_storage() ) ) {
+            return 0;
+        }
+    }
     return static_cast<int>( native_result );
 }
 
@@ -519,35 +1239,32 @@ std::optional<bool> invoke_computer_access_handler(
     if( !terminal.has_platform_access_handler() ) {
         return std::nullopt;
     }
-    const std::shared_ptr<runtime> owner = detail::find_active_runtime(
-            terminal.platform_access_mod() );
+    const std::string mod_id = terminal.platform_access_mod();
+    const std::string handler_id = terminal.platform_access_handler();
+    const std::shared_ptr<runtime> owner = detail::find_active_runtime( mod_id );
     if( !owner || !owner->world_is_ready ) {
         DebugLog( D_ERROR, D_MAIN ) << "Lua-first computer runtime unavailable for '"
-                                    << terminal.platform_access_mod() << ':'
-                                    << terminal.platform_access_handler() << "'";
+                                    << mod_id << ':' << handler_id << "'";
         return false;
     }
-    const auto handler = owner->handlers.find(
-                             terminal.platform_access_handler() );
+    const auto handler = owner->handlers.find( handler_id );
     if( handler == owner->handlers.end() || owner->callback_depth >= 16 ) {
         DebugLog( D_ERROR, D_MAIN ) << "Lua-first computer handler unavailable for '"
-                                    << terminal.platform_access_mod() << ':'
-                                    << terminal.platform_access_handler() << "'";
+                                    << mod_id << ':' << handler_id << "'";
         return false;
     }
 
     auto context = std::make_shared<computer_access_context>();
-    context->terminal = &terminal;
-    context->character = &character;
     context->handle_runtime = owner->handle_runtime();
     context->world_generation = detail::runtime_world_generation_storage();
+    context->terminal_reference = terminal.get_safe_reference();
+    context->character_reference = detail::platform_creature_handle( *owner, character );
     computer_access_context_lease lease( *context );
     sol::protected_function callback = handler->second.callback;
     callback_scope scope( *owner );
     const sol::protected_function_result result = callback( context );
     if( !result.valid() ) {
-        report_callback_error(
-            *owner, terminal.platform_access_handler(), result );
+        report_callback_error( *owner, handler_id, result );
         return false;
     }
     if( result.return_count() == 0 || result.get_type() == sol::type::nil ) {
@@ -555,12 +1272,18 @@ std::optional<bool> invoke_computer_access_handler(
     }
     if( result.return_count() != 1 || result.get_type() != sol::type::boolean ) {
         DebugLog( D_ERROR, D_MAIN ) << "Lua-first computer handler '"
-                                    << terminal.platform_access_mod() << ':'
-                                    << terminal.platform_access_handler()
+                                    << mod_id << ':' << handler_id
                                     << "' must return nil or exactly one boolean";
         return false;
     }
-    return result.get<bool>();
+    const bool allowed = result.get<bool>();
+    if( !allowed ) {
+        return false;
+    }
+    if( !owner->world_is_ready || !context->is_live() ) {
+        return false;
+    }
+    return true;
 }
 
 namespace
@@ -1539,18 +2262,16 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     services.set_function( "translate", [weak]( const std::string & text,
     const sol::optional<std::string> &context ) -> std::string {
         require_live_runtime( weak, "services.translate" );
-        require_translation_text( text );
-        if( context )
+        if( !context )
         {
-            require_translation_text( *context );
+            // Match native translation objects, including empty text and
+            // embedded NUL. LOCALIZE's catalog lookup uses the C-string prefix;
+            // disabled localization preserves the complete source bytes.
+            return to_translation( text ).translated();
         }
-#if defined(LOCALIZE)
-        TranslationManager &manager = TranslationManager::GetInstance();
-        return context ? manager.TranslateWithContext( context->c_str(), text.c_str() ) :
-        manager.Translate( text );
-#else
-        return text;
-#endif
+        // Native contextual translation skips empty raw text and passes
+        // C-string prefixes to pgettext even with localization disabled.
+        return translation::to_translation( *context, text ).translated();
     } );
     services.set_function( "translate_plural", [weak]( const std::string & singular,
                            const std::string & plural, const std::int64_t count,
@@ -1584,12 +2305,26 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         }
         ::add_msg( message );
     } );
+    services.set_function( "diagnostic", [weak]( const std::string & message ) {
+        const std::shared_ptr<runtime> owner = weak.lock();
+        if( !owner || !owner->world_is_ready || owner->callback_depth <= 0 ) {
+            throw std::runtime_error( "services.diagnostic requires an active world callback" );
+        }
+        debugmsg( "%s", message );
+    } );
     services.set_function( "turn", [weak]() {
         const std::shared_ptr<runtime> owner = weak.lock();
         if( !owner || !owner->world_is_ready ) {
             throw std::runtime_error( "services are only available after world_ready" );
         }
         return to_turn<std::int64_t>( calendar::turn );
+    } );
+    services.set_function( "turn_native_int", [weak]() {
+        const std::shared_ptr<runtime> owner = weak.lock();
+        if( !owner || !owner->world_is_ready ) {
+            throw std::runtime_error( "services are only available after world_ready" );
+        }
+        return to_turn<int>( calendar::turn );
     } );
     sol::table mapgen = lua.create_table();
     const auto register_mapgen = [weak](
@@ -2037,6 +2772,114 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         return cata::lua_platform::make_game_value_result(
                    lua_state, sol::make_object( lua_state, std::move( value ) ) );
     } );
+    wounds.set_function( "add_unbounded", [require_write, runtime_generation, world_generation,
+                                                          make_wound_snapshot, same_wounds]( sol::this_state state,
+                                                   const cata::lua_platform::game_handle & handle,
+                                                   const cata::lua_platform::script_game_id & body_part_id,
+    const cata::lua_platform::script_game_id & wound_id ) {
+        require_write();
+        if( body_part_id.kind() != "body_part" || !body_part_id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.wounds.add_unbounded requires a valid GameId<body_part>" );
+        }
+        if( wound_id.kind() != "wound" || !wound_id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.wounds.add_unbounded requires a valid GameId<wound>" );
+        }
+        const bodypart_str_id native_body_part_id( body_part_id.value() );
+        if( !native_body_part_id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.wounds.add_unbounded requires a registered body part id" );
+        }
+        const wound_type_id native_wound_id( wound_id.value() );
+        if( !native_wound_id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.wounds.add_unbounded requires a registered wound id" );
+        }
+        sol::state_view lua_state( state );
+        const cata::lua_platform::native_handle_result<Creature> resolved =
+            handle.resolve_creature( runtime_generation(), world_generation() );
+        if( !resolved ) {
+            return cata::lua_platform::make_game_error_result( lua_state, *resolved.error );
+        }
+        Character *character = dynamic_cast<Character *>( resolved.value );
+        if( character == nullptr ) {
+            return cata::lua_platform::make_game_error_result( lua_state, {
+                "wrong_target", "services.wounds.add_unbounded requires a character handle"
+            } );
+        }
+        const bodypart_id native_part_id = native_body_part_id.id();
+        bodypart *part = character->get_part( native_part_id );
+        if( part == nullptr ) {
+            return cata::lua_platform::make_game_error_result( lua_state, {
+                "missing_part", "services.wounds.add_unbounded found no native next-best body part"
+            } );
+        }
+        const std::vector<wound> before_native = part->get_wounds();
+        sol::table before = make_wound_snapshot( lua_state, *part );
+        part->add_or_worsen_wound( native_wound_id );
+        sol::table after = make_wound_snapshot( lua_state, *part );
+        sol::table value = lua_state.create_table();
+        value["changed"] = !same_wounds( before_native, part->get_wounds() );
+        value["before"] = std::move( before );
+        value["after"] = std::move( after );
+        return cata::lua_platform::make_game_value_result(
+                   lua_state, sol::make_object( lua_state, std::move( value ) ) );
+    } );
+    wounds.set_function( "remove_all_direct", [require_write, runtime_generation, world_generation,
+                                        make_wound_snapshot]( sol::this_state state,
+                                 const cata::lua_platform::game_handle & handle,
+                                 const cata::lua_platform::script_game_id & body_part_id,
+    const cata::lua_platform::script_game_id & wound_id ) {
+        require_write();
+        if( body_part_id.kind() != "body_part" || !body_part_id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.wounds.remove_all_direct requires a valid GameId<body_part>" );
+        }
+        if( wound_id.kind() != "wound" || !wound_id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.wounds.remove_all_direct requires a valid GameId<wound>" );
+        }
+        const bodypart_str_id native_body_part_id( body_part_id.value() );
+        if( !native_body_part_id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.wounds.remove_all_direct requires a registered body part id" );
+        }
+        const wound_type_id native_wound_id( wound_id.value() );
+        if( !native_wound_id.is_valid() ) {
+            throw std::invalid_argument(
+                "services.wounds.remove_all_direct requires a registered wound id" );
+        }
+        sol::state_view lua_state( state );
+        const cata::lua_platform::native_handle_result<Creature> resolved =
+            handle.resolve_creature( runtime_generation(), world_generation() );
+        if( !resolved ) {
+            return cata::lua_platform::make_game_error_result( lua_state, *resolved.error );
+        }
+        Character *character = dynamic_cast<Character *>( resolved.value );
+        if( character == nullptr ) {
+            return cata::lua_platform::make_game_error_result( lua_state, {
+                "wrong_target", "services.wounds.remove_all_direct requires a character handle"
+            } );
+        }
+        const bodypart_id native_part_id = native_body_part_id.id();
+        bodypart *part = character->get_part( native_part_id );
+        if( part == nullptr ) {
+            return cata::lua_platform::make_game_error_result( lua_state, {
+                "missing_part", "services.wounds.remove_all_direct found no native next-best body part"
+            } );
+        }
+        sol::table before = make_wound_snapshot( lua_state, *part );
+        const std::size_t count_before = part->get_wounds().size();
+        part->remove_all_wounds_of_type( native_wound_id );
+        sol::table after = make_wound_snapshot( lua_state, *part );
+        sol::table value = lua_state.create_table();
+        value["changed"] = part->get_wounds().size() != count_before;
+        value["before"] = std::move( before );
+        value["after"] = std::move( after );
+        return cata::lua_platform::make_game_value_result(
+                   lua_state, sol::make_object( lua_state, std::move( value ) ) );
+    } );
     services["wounds"] = std::move( wounds );
     cata::lua_platform::install_mutation_api( services, runtime_generation, world_generation,
             require_read, require_write );
@@ -2052,7 +2895,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                                           require_read, require_write );
     cata::lua_platform::install_activity_api(
         services, runtime_generation, world_generation,
-        require_read, require_write );
+        require_read, require_write, has_callback );
     sol::table morale = lua.create_table();
     morale.set_function( "add", [require_write, runtime_generation, world_generation](
                              sol::this_state state, const cata::lua_platform::game_handle & handle,
@@ -2173,9 +3016,9 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                                    sol::this_state state, const cata::lua_platform::game_handle & handle,
     const cata::lua_platform::script_game_id & id ) {
         require_write();
-        if( id.kind() != "martial_art" || !id.is_valid() ) {
+        if( id.kind() != "martial_art" ) {
             throw std::invalid_argument(
-                "services.martial_arts.learn requires a valid GameId<martial_art>" );
+                "services.martial_arts.learn requires GameId<martial_art>" );
         }
         sol::state_view lua_state( state );
         const cata::lua_platform::native_handle_result<Creature> resolved =
@@ -2203,9 +3046,9 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                                    sol::this_state state, const cata::lua_platform::game_handle & handle,
     const cata::lua_platform::script_game_id & id ) {
         require_write();
-        if( id.kind() != "martial_art" || !id.is_valid() ) {
+        if( id.kind() != "martial_art" ) {
             throw std::invalid_argument(
-                "services.martial_arts.forget requires a valid GameId<martial_art>" );
+                "services.martial_arts.forget requires GameId<martial_art>" );
         }
         sol::state_view lua_state( state );
         const cata::lua_platform::native_handle_result<Creature> resolved =
@@ -2584,27 +3427,45 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     services["snippets"] = std::move( snippets );
 
     sol::table text_services = lua.create_table();
-    text_services.set_function( "expand_for", [require_read, next_snippet_seed,
-                                              runtime_generation, world_generation](
+    text_services.set_function( "expand_for", [require_read, runtime_generation,
+                                              world_generation](
                                     sol::this_state state, const std::string & text,
-                                    const cata::lua_platform::game_handle & speaker_handle,
-                                    const sol::optional<cata::lua_platform::game_handle> &interlocutor_handle,
-    const sol::optional<std::string> &item_id ) {
+                                    const sol::object & speaker_argument,
+                                    const sol::object & interlocutor_argument,
+                                    const sol::object & item_argument, const sol::object & context_argument,
+    const sol::optional<bool> &fallback_to_avatar ) {
         require_read();
-        if( text.size() > maximum_presentation_text_bytes ||
-            text.find( '\0' ) != std::string::npos ||
-            ( item_id && ( item_id->size() > 256 ||
-                           item_id->find( '\0' ) != std::string::npos ) ) ) {
-            throw std::invalid_argument(
-                "services.text.expand_for input exceeds its native string limit" );
-        }
         sol::state_view lua_state( state );
-        const cata::lua_platform::native_handle_result<Creature> speaker =
-            speaker_handle.resolve_creature(
-                runtime_generation(), world_generation() );
-        if( !speaker ) {
-            return cata::lua_platform::make_game_error_result(
-                       lua_state, *speaker.error );
+        sol::optional<cata::lua_platform::game_handle> interlocutor_handle;
+        if( interlocutor_argument.valid() && interlocutor_argument.get_type() != sol::type::nil ) {
+            if( !interlocutor_argument.is<cata::lua_platform::game_handle>() ) {
+                throw std::invalid_argument( "services.text.expand_for interlocutor must be a GameHandle or nil" );
+            }
+            interlocutor_handle = interlocutor_argument.as<cata::lua_platform::game_handle>();
+        }
+        sol::optional<std::string> item_id;
+        if( item_argument.valid() && item_argument.get_type() != sol::type::nil ) {
+            if( item_argument.get_type() != sol::type::string ) {
+                throw std::invalid_argument( "services.text.expand_for item ID must be a string or nil" );
+            }
+            item_id = item_argument.as<std::string>();
+        }
+        const sol::optional<sol::table> context = cata::lua_platform::read_optional_table(
+                    context_argument, "services.text.expand_for context" );
+        const bool use_avatar_fallback = fallback_to_avatar.value_or( false );
+        const Creature *speaker = nullptr;
+        if( speaker_argument.valid() && speaker_argument.get_type() != sol::type::nil ) {
+            if( !speaker_argument.is<cata::lua_platform::game_handle>() ) {
+                throw std::invalid_argument( "services.text.expand_for speaker must be a GameHandle or nil" );
+            }
+            const auto resolved = speaker_argument.as<cata::lua_platform::game_handle>().resolve_creature(
+                                      runtime_generation(), world_generation() );
+            if( !resolved ) {
+                return cata::lua_platform::make_game_error_result( lua_state, *resolved.error );
+            }
+            speaker = resolved.value;
+        } else if( !use_avatar_fallback ) {
+            throw std::invalid_argument( "services.text.expand_for nil speaker requires avatar fallback" );
         }
         const Creature *interlocutor = nullptr;
         if( interlocutor_handle ) {
@@ -2617,16 +3478,30 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
             }
             interlocutor = resolved.value;
         }
+        global_variables::impl_t context_values;
+        if( context ) {
+            for( const auto &entry : *context ) {
+                if( entry.first.get_type() != sol::type::string ) {
+                    throw std::invalid_argument( "services.text.expand_for context keys must be strings" );
+                }
+                const std::string key = entry.first.as<std::string>();
+                context_values.emplace( key, cata::lua_platform::script_diag_value_from_lua(
+                                            entry.second, "services.text.expand_for context value",
+                                            std::numeric_limits<std::size_t>::max(),
+                                            cata::lua_platform::script_diag_value_read_policy::native_range ) );
+            }
+        }
         const_dialogue dialogue_context(
-            get_const_talker_for( *speaker.value ),
-            interlocutor == nullptr ? nullptr : get_const_talker_for( *interlocutor ) );
-        const_talker empty_interlocutor;
-        std::string expanded = SNIPPET.expand(
-                                   text, next_snippet_seed() );
+            speaker == nullptr ? nullptr : get_const_talker_for( *speaker ),
+            interlocutor == nullptr ? nullptr : get_const_talker_for( *interlocutor ), {}, context_values );
+        const std::unique_ptr<const_talker> default_participant = use_avatar_fallback ?
+                get_const_talker_for( get_avatar() ) : std::make_unique<const_talker>();
+        std::string expanded = text;
         parse_tags(
-            expanded, *dialogue_context.const_actor( false ),
+            expanded, dialogue_context.has_alpha ?
+            *dialogue_context.const_actor( false ) : *default_participant,
             dialogue_context.has_beta ?
-            *dialogue_context.const_actor( true ) : empty_interlocutor,
+            *dialogue_context.const_actor( true ) : *default_participant,
             dialogue_context,
             item_id && !item_id->empty() ?
             itype_id( *item_id ) : itype_id::NULL_ID() );
@@ -2671,39 +3546,8 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     } );
     services["lore"] = std::move( lore );
 
-    const auto platform_message_type = []( const std::string & name ) {
-        if( name == "good" ) {
-            return m_good;
-        }
-        if( name == "bad" ) {
-            return m_bad;
-        }
-        if( name == "mixed" ) {
-            return m_mixed;
-        }
-        if( name == "warning" ) {
-            return m_warning;
-        }
-        if( name == "info" ) {
-            return m_info;
-        }
-        if( name == "neutral" ) {
-            return m_neutral;
-        }
-        if( name == "debug" ) {
-            return m_debug;
-        }
-        if( name == "headshot" ) {
-            return m_headshot;
-        }
-        if( name == "critical" ) {
-            return m_critical;
-        }
-        if( name == "grazing" ) {
-            return m_grazing;
-        }
-        throw std::invalid_argument(
-            "services.messages received unknown message type '" + name + "'" );
+    const auto platform_message_type = []( const std::string_view name ) {
+        return parse_platform_message_type( name, "services.messages" );
     };
     const auto add_audible_message = [weak, require_write,
                                             platform_message_type]( const std::string & message,
@@ -2792,6 +3636,30 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         return distribution( owner->random_engine );
     };
     random.set_function( "int", random_integer );
+    random.set_function( "native_int", [require_random_runtime]( const std::int64_t minimum,
+    const std::int64_t maximum ) {
+        if( minimum < std::numeric_limits<int>::min() ||
+            minimum > std::numeric_limits<int>::max() ||
+            maximum < std::numeric_limits<int>::min() ||
+            maximum > std::numeric_limits<int>::max() || minimum > maximum ) {
+            throw std::invalid_argument(
+                "services.random.native_int requires an ordered range within native integer bounds" );
+        }
+        static_cast<void>( require_random_runtime() );
+        return rng( static_cast<int>( minimum ), static_cast<int>( maximum ) );
+    } );
+    random.set_function( "native_float", [require_random_runtime]( const double minimum,
+    const double maximum ) {
+        static_cast<void>( require_random_runtime() );
+        // Reuse the native distribution, reversed-range handling, diagnostics
+        // and draw count instead of advancing the Mod's isolated stream.
+        return rng_float( minimum, maximum );
+    } );
+    random.set_function( "weighted_index", [require_random_runtime]( const sol::table & weights ) {
+        const std::vector<int> native_weights = platform_random_weights( weights );
+        static_cast<void>( require_random_runtime() );
+        return platform_random_weighted_index( native_weights );
+    } );
     random.set_function( "chance", [require_random_runtime]( const std::int64_t numerator,
     const std::int64_t denominator ) {
         const std::shared_ptr<runtime> owner = require_random_runtime();
@@ -2883,118 +3751,76 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     } );
     services["random"] = std::move( random );
 
-    sol::table gameplay = lua.create_table();
-    const auto make_math_dialogue = [runtime_generation, world_generation](
-                                        const sol::optional<cata::lua_platform::game_handle> &requested_actor,
-    const sol::optional<sol::table> &requested_context ) {
-        std::unique_ptr<talker> alpha;
-        if( requested_actor ) {
-            const cata::lua_platform::native_handle_result<Creature> resolved =
-                requested_actor->resolve_creature(
-                    runtime_generation(), world_generation() );
-            if( !resolved ) {
-                throw std::invalid_argument( resolved.error->message );
-            }
-            alpha = get_talker_for( *resolved.value );
-        } else {
-            alpha = get_talker_for( get_avatar() );
-        }
-        auto result = std::make_unique<::dialogue>( std::move( alpha ), nullptr );
-        if( requested_context ) {
-            for( const auto &entry : *requested_context ) {
-                if( !entry.first.is<std::string>() ) {
-                    throw std::invalid_argument(
-                        "services.gameplay.math context keys must be strings" );
-                }
-                const std::string key = entry.first.as<std::string>();
-                if( key.empty() || key.size() > 128 ||
-                std::any_of( key.begin(), key.end(), []( const unsigned char ch ) {
-                return ch < 0x20U || ch == 0x7fU;
-            } ) ) {
-                    throw std::invalid_argument(
-                        "services.gameplay.math context keys must be printable and bounded" );
-                }
-                const sol::object value = entry.second;
-                if( value.is<cata::lua_platform::script_null_value>() ) {
-                    result->set_value( key, diag_value{} );
-                } else if( value.is<bool>() ) {
-                    result->set_value( key, value.as<bool>() ? 1.0 : 0.0 );
-                } else if( value.get_type() == sol::type::number ) {
-                    const double number = value.as<double>();
-                    if( !std::isfinite( number ) ) {
-                        throw std::invalid_argument(
-                            "services.gameplay.math context numbers must be finite" );
-                    }
-                    result->set_value( key, number );
-                } else if( value.is<std::string>() ) {
-                    result->set_value( key, value.as<std::string>() );
-                } else if( value.is<cata::lua_platform::script_tripoint_coord>() ) {
-                    const cata::lua_platform::script_tripoint_coord position =
-                        value.as<cata::lua_platform::script_tripoint_coord>();
-                    if( position.native_origin() != coords::origin::abs ||
-                        position.native_scale() != coords::scale::map_square ) {
-                        throw std::invalid_argument(
-                            "services.gameplay.math context coordinates must be absolute map-square" );
-                    }
-                    result->set_value( key, tripoint_abs_ms( position.to_native() ) );
-                } else {
-                    throw std::invalid_argument(
-                        "services.gameplay.math context values must be scalar or Tripoint" );
-                }
-            }
-        }
-        return result;
-    };
-    sol::table math = lua.create_table();
-    math.set_function( "evaluate", [require_read, make_math_dialogue](
-                           sol::this_state state, std::string_view source,
-                           const sol::optional<cata::lua_platform::game_handle> &actor,
-    const sol::optional<sol::table> &context ) {
-        require_read();
-        if( source.empty() || source.size() > 8192 || source.find( '\0' ) != std::string::npos ) {
-            throw std::invalid_argument(
-                "services.gameplay.math.evaluate expression must be 1..8192 bytes" );
-        }
-        math_exp expression;
-        if( !expression.parse( source, true ) ) {
-            throw std::invalid_argument(
-                "services.gameplay.math.evaluate could not parse expression" );
-        }
-        std::unique_ptr<::dialogue> conversation = make_math_dialogue( actor, context );
-        const double result = expression.eval( *conversation );
-        if( !std::isfinite( result ) ) {
-            throw std::runtime_error(
-                "services.gameplay.math.evaluate produced a non-finite result" );
-        }
-        sol::state_view lua_state( state );
-        return cata::lua_platform::make_game_value_result(
-                   lua_state, sol::make_object( lua_state, result ) );
-    } );
-    math.set_function( "apply", [require_write, make_math_dialogue](
-                           sol::this_state state, std::string_view source,
-                           const sol::optional<cata::lua_platform::game_handle> &actor,
-    const sol::optional<sol::table> &context ) {
+    sol::table progression = lua.create_table();
+    progression.set_function( "grant_random_missing",
+                              [require_write, require_random_runtime, runtime_generation, world_generation](
+                                  sol::this_state state,
+                                  const cata::lua_platform::game_handle & handle,
+                                  const std::string & raw_kind,
+    const sol::table & ids ) {
         require_write();
-        if( source.empty() || source.size() > 8192 || source.find( '\0' ) != std::string::npos ) {
-            throw std::invalid_argument(
-                "services.gameplay.math.apply expression must be 1..8192 bytes" );
+        const progression_kind kind = parse_progression_kind( raw_kind );
+        const std::size_t count = require_dense_array(
+                                      ids, "services.progression.grant_random_missing ids", 1, 64 );
+        std::vector<std::string> candidates;
+        candidates.reserve( count );
+        for( std::size_t index = 1; index <= count; ++index ) {
+            const sol::object raw_id = ids.raw_get<sol::object>( index );
+            if( !raw_id.is<cata::lua_platform::script_game_id>() ) {
+                throw std::invalid_argument(
+                    "services.progression.grant_random_missing ids must be typed GameIds" );
+            }
+            const cata::lua_platform::script_game_id &id =
+                raw_id.as<cata::lua_platform::script_game_id>();
+            if( id.kind() != raw_kind || id.value().size() > 256 || !id.is_valid() ) {
+                throw std::invalid_argument(
+                    "services.progression.grant_random_missing ids must be valid same-kind GameIds no longer than 256 bytes" );
+            }
+            candidates.push_back( id.value() );
         }
-        math_exp expression;
-        if( !expression.parse( source, true ) ) {
-            throw std::invalid_argument(
-                "services.gameplay.math.apply could not parse expression" );
-        }
-        std::unique_ptr<::dialogue> conversation = make_math_dialogue( actor, context );
-        const double result = expression.eval( *conversation );
-        if( !std::isfinite( result ) ) {
-            throw std::runtime_error(
-                "services.gameplay.math.apply produced a non-finite result" );
-        }
+
         sol::state_view lua_state( state );
+        const cata::lua_platform::native_handle_result<Creature> resolved =
+            handle.resolve_creature( runtime_generation(), world_generation() );
+        if( !resolved ) {
+            return cata::lua_platform::make_game_error_result( lua_state, *resolved.error );
+        }
+        Character *character = dynamic_cast<Character *>( resolved.value );
+        if( character == nullptr ) {
+            return cata::lua_platform::make_game_error_result( lua_state, {
+                "wrong_target", "services.progression.grant_random_missing requires a character handle"
+            } );
+        }
+        const std::unique_ptr<talker> target = get_talker_for( *character );
+
+        std::vector<std::size_t> missing;
+        missing.reserve( candidates.size() );
+        for( std::size_t index = 0; index < candidates.size(); ++index ) {
+            if( progression_candidate_missing( *target, kind, candidates[index] ) ) {
+                // Preserve every source row, including duplicate IDs, as a separate
+                // equally weighted candidate, just as f_roll_remainder does.
+                missing.push_back( index );
+            }
+        }
+
+        sol::table result = lua_state.create_table();
+        result["granted"] = false;
+        if( !missing.empty() ) {
+            static_cast<void>( require_random_runtime() );
+            const std::size_t selected_index = static_cast<std::size_t>(
+                                                   rng( 0, static_cast<int>( missing.size() - 1 ) ) );
+            const std::string &selected_id = candidates[missing[selected_index]];
+            const std::string name = grant_progression_candidate( *target, kind, selected_id );
+            result["granted"] = true;
+            result["id"] = cata::lua_platform::script_game_id( raw_kind, selected_id );
+            result["name"] = name;
+        }
         return cata::lua_platform::make_game_value_result(
-                   lua_state, sol::make_object( lua_state, result ) );
+                   lua_state, sol::make_object( lua_state, std::move( result ) ) );
     } );
-    gameplay["math"] = std::move( math );
+    services["progression"] = std::move( progression );
+
+    sol::table gameplay = lua.create_table();
     sol::table strings = lua.create_table();
     strings.set_function( "any_equal", []( const sol::table & values ) {
         const std::size_t count = require_dense_array(
@@ -3052,6 +3878,19 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         const std::vector<mod_id> &order = world_generator->active_world->active_mod_order;
         return std::find( order.begin(), order.end(), requested ) != order.end();
     } );
+    mods.set_function( "is_active_in_world", [require_read]( const std::string & id ) {
+        require_read();
+        if( id.empty() || id.size() > 256 || id.find( '\0' ) != std::string::npos ) {
+            throw std::invalid_argument(
+                "services.gameplay.mods.is_active_in_world requires a bounded non-empty "
+                "Mod id" );
+        }
+        if( !world_generator || world_generator->active_world == nullptr ) {
+            return false;
+        }
+        return mod_id_is_in_active_order(
+                   mod_id( id ), world_generator->active_world->active_mod_order );
+    } );
     mods.set_function( "load_order", [require_read]( const std::string & id ) {
         require_read();
         if( id.empty() || id.size() > 256 || id.find( '\0' ) != std::string::npos ) {
@@ -3107,6 +3946,11 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         require_read();
         require_option_id( id );
         return get_options().has_option( id );
+    } );
+    gameplay_options.set_function(
+    "get_string", [require_read]( const std::string & id ) {
+        require_read();
+        return ::get_option<std::string>( id );
     } );
     gameplay_options.set_function(
         "get", [require_read, require_option_id, option_snapshot](
@@ -3190,42 +4034,51 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         require_read();
         return ::is_night( calendar::turn );
     } );
-    const auto require_environment_position = []( const cata::lua_platform::script_tripoint_coord &
-    position, const std::string & api_name ) {
+    const auto require_environment_absolute_position = [](
+                const cata::lua_platform::script_tripoint_coord & position,
+    const std::string & api_name ) {
         if( position.native_origin() != coords::origin::abs ||
             position.native_scale() != coords::scale::map_square ) {
             throw std::invalid_argument(
                 api_name + " requires an absolute map-square Tripoint" );
         }
-        map &here = get_map();
-        const tripoint_abs_ms absolute( position.to_native() );
-        if( !here.inbounds( absolute ) ) {
-            throw std::invalid_argument( api_name + " position is outside the active map" );
-        }
-        return here.get_bub( absolute );
+        return tripoint_abs_ms( position.to_native() );
     };
-    environment.set_function( "is_outside", [require_read, require_environment_position](
+    environment.set_function( "is_outside", [require_read,
+                              require_environment_absolute_position](
     const cata::lua_platform::script_tripoint_coord & position ) {
         require_read();
         map &here = get_map();
-        return here.is_outside( require_environment_position(
-                                    position, "services.gameplay.environment.is_outside" ) );
+        const tripoint_abs_ms absolute = require_environment_absolute_position(
+                                             position, "services.gameplay.environment.is_outside" );
+        if( !here.inbounds( absolute ) ) {
+            return true;
+        }
+        return here.is_outside( here.get_bub( absolute ) );
     } );
-    environment.set_function( "line_of_sight", [require_read, require_environment_position](
+    environment.set_function( "line_of_sight",
+                              [require_read, require_environment_absolute_position](
                                   const cata::lua_platform::script_tripoint_coord & from,
-                                  const cata::lua_platform::script_tripoint_coord & to, const std::int64_t range,
+                                  const cata::lua_platform::script_tripoint_coord & to,
+                                  const double range,
     const sol::optional<bool> &with_fields ) {
         require_read();
-        if( range < 0 || range > 100000 ) {
+        if( !std::isfinite( range ) ) {
             throw std::invalid_argument(
-                "services.gameplay.environment.line_of_sight range must be within 0..100000" );
+                "services.gameplay.environment.line_of_sight range must be finite" );
+        }
+        const double native_range = std::trunc( range );
+        if( native_range < static_cast<double>( std::numeric_limits<int>::lowest() ) ||
+            native_range > static_cast<double>( std::numeric_limits<int>::max() ) ) {
+            throw std::invalid_argument(
+                "services.gameplay.environment.line_of_sight range must truncate to a native int" );
         }
         map &here = get_map();
-        const tripoint_bub_ms first = require_environment_position(
-                                          from, "services.gameplay.environment.line_of_sight" );
-        const tripoint_bub_ms second = require_environment_position(
-                                           to, "services.gameplay.environment.line_of_sight" );
-        return here.sees( first, second, static_cast<int>( range ),
+        const tripoint_bub_ms first = here.get_bub( require_environment_absolute_position(
+                                          from, "services.gameplay.environment.line_of_sight" ) );
+        const tripoint_bub_ms second = here.get_bub( require_environment_absolute_position(
+                                           to, "services.gameplay.environment.line_of_sight" ) );
+        return here.sees( first, second, static_cast<int>( native_range ),
                           with_fields.value_or( true ) );
     } );
     environment.set_function( "furniture_has_flag", [require_read](
@@ -3270,6 +4123,58 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         map &here = get_map();
         const tripoint_abs_ms absolute( position.to_native() );
         return here.furn( here.get_bub( absolute ) ).id().str();
+    } );
+    environment.set_function( "set_furniture", [require_write,
+                              require_environment_absolute_position](
+                                  const cata::lua_platform::script_tripoint_coord & position,
+                                  const std::string & furniture_id,
+                                  const sol::optional<double> &requested_radius,
+                                  const sol::optional<bool> &requested_square,
+    const sol::optional<bool> &requested_avoid_creatures ) {
+        require_write();
+        const tripoint_abs_ms absolute = require_environment_absolute_position(
+                                             position, "services.gameplay.environment.set_furniture" );
+        return set_platform_furniture( absolute, furniture_id,
+                                       requested_radius.value_or( 1.0 ),
+                                       requested_square.value_or( false ),
+                                       requested_avoid_creatures.value_or( false ) );
+    } );
+    environment.set_function( "set_terrain", [require_write,
+                              require_environment_absolute_position](
+                                  const cata::lua_platform::script_tripoint_coord & position,
+                                  const std::string & terrain_id,
+                                  const sol::optional<double> &requested_radius,
+                                  const sol::optional<bool> &requested_square,
+    const sol::optional<bool> &requested_avoid_creatures ) {
+        require_write();
+        const tripoint_abs_ms absolute = require_environment_absolute_position(
+                                             position, "services.gameplay.environment.set_terrain" );
+        return set_platform_terrain( absolute, terrain_id,
+                                     requested_radius.value_or( 1.0 ),
+                                     requested_square.value_or( false ),
+                                     requested_avoid_creatures.value_or( false ) );
+    } );
+    environment.set_function( "set_trap_area", [require_write,
+                              require_environment_absolute_position](
+                                  const cata::lua_platform::script_tripoint_coord & position,
+                                  const std::string & trap_id,
+                                  const sol::optional<double> &requested_radius,
+    const sol::optional<bool> &requested_square ) {
+        require_write();
+        const tripoint_abs_ms absolute = require_environment_absolute_position(
+                                             position, "services.gameplay.environment.set_trap_area" );
+        return set_platform_trap_area( absolute, trap_id,
+                                       requested_radius.value_or( 1.0 ),
+                                       requested_square.value_or( false ) );
+    } );
+    environment.set_function( "add_field_area", [require_write,
+                              require_environment_absolute_position](
+                                  const cata::lua_platform::script_tripoint_coord & position,
+    const std::string & field_id, const sol::optional<sol::table> &options ) {
+        require_write();
+        const tripoint_abs_ms absolute = require_environment_absolute_position(
+                                             position, "services.gameplay.environment.add_field_area" );
+        return add_platform_field_area( absolute, field_id, options );
     } );
     environment.set_function( "field_exists", [require_read](
     const cata::lua_platform::script_tripoint_coord & position, const std::string & field_id ) {
@@ -3354,10 +4259,9 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         std::map<std::size_t, std::string> indexed_args;
         if( requested_args ) {
             for( const auto &entry : *requested_args ) {
-                if( !entry.first.is<lua_Integer>() ||
-                    !entry.second.is<std::string>() ) {
+                if( !entry.first.is<lua_Integer>() ) {
                     throw std::invalid_argument(
-                        "services.native_events.emit args must be a dense string array" );
+                        "services.native_events.emit args must be a dense array" );
                 }
                 const lua_Integer raw_index =
                     entry.first.as<lua_Integer>();
@@ -3365,11 +4269,21 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                     throw std::invalid_argument(
                         "services.native_events.emit arg index must be within 1..64" );
                 }
-                std::string value =
-                    entry.second.as<std::string>();
+                const sol::object value = entry.second;
+                // Legacy trigger_event serializes each diag_value with its
+                // native to_string() implementation.  Keep direct strings
+                // byte-exact (including long strings and NUL); route other
+                // supported Lua values through the shared diag_value bridge.
+                std::string serialized;
+                if( value.get_type() == sol::type::string ) {
+                    serialized = value.as<std::string>();
+                } else {
+                    serialized = script_diag_value_from_lua(
+                                     value, "services.native_events.emit argument" ).to_string();
+                }
                 indexed_args.emplace(
                     static_cast<std::size_t>( raw_index ),
-                    std::move( value ) );
+                    std::move( serialized ) );
             }
         }
         if( !indexed_args.empty() &&
@@ -3383,8 +4297,17 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
             static_cast<void>( index );
             args.push_back( std::move( value ) );
         }
-        get_event_bus().send(
-            cata::event::make_dyn( *type, args ) );
+        // make_dyn() logs and returns a null event on an arity mismatch.
+        // Check the native event spec first so callers can observe the same
+        // no-dispatch outcome without sending a malformed event to the bus.
+        if( cata::event::get_fields( *type ).size() != args.size() ) {
+            return false;
+        }
+        cata::event event = cata::event::make_dyn( *type, args );
+        if( event.type() == event_type::num_event_types ) {
+            return false;
+        }
+        get_event_bus().send( event );
         return true;
     } );
     services["native_events"] = std::move( native_events );
@@ -4547,9 +5470,6 @@ void seal_runtime_content( const std::shared_ptr<runtime> &value )
 
 void discard_runtime( const std::shared_ptr<runtime> &value )
 {
-    cata::lua_platform::reset_map_tile_tokens();
-    cata::lua_platform::reset_overmap_tile_tokens();
-    cata::lua_platform::reset_horde_tokens();
     if( value ) {
         value->game_handle_owner->retire();
         if( value->tileset_registry_generation ) {

@@ -16,16 +16,16 @@ class game_handle_runtime;
 // horde observation and mutation APIs.  Native horde_entity and mongroup
 // pointers never cross into Lua; live entries use generation-bound tokens.
 // Whole-buffer movement is intentionally not part of this public surface;
-// callers use the smaller signal, alert, and per-entry mutation operations.
+// callers use broadcast_signal, per-entity alert, and per-entry mutations.
 // Runtime/world lifecycle transitions call reset_horde_tokens() first.
 void reset_horde_tokens() noexcept;
 
 void install_horde_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write );
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write );
 
 } // namespace cata::lua_platform
 

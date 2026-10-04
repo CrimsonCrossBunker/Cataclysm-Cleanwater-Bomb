@@ -5,7 +5,10 @@
 #include <cstring>
 #include <istream>
 #include <limits>
+#include <memory>
 #include <optional>
+#include <stdexcept>
+#include <vector>
 
 #include "cata_unreachable.h"
 #include "filesystem.h"

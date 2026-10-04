@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import contextvars
 import functools
 import json
 import math
@@ -27,6 +28,11 @@ from pathlib import Path
 from typing import Any, Callable, Iterable
 
 from generate_builtin_mods import strip_jsonc_comments, strip_trailing_commas
+
+# Keep name resolution scoped to one migration, including nested calls and
+# exceptions. A bare Native custom-function name must never become a variable.
+_migration_math_function_ids: contextvars.ContextVar[frozenset[str] | None] = contextvars.ContextVar(
+    "migration_math_function_ids", default=None)
 
 try:
     from agent.migration_todo import (
@@ -84,6 +90,7 @@ COMMON_ITEM_FIELDS = {
     "material",
     "qualities",
     "flags",
+    "use_action",
 }
 COMMON_RECIPE_FIELDS = {
     "type",
@@ -103,6 +110,10 @@ COMMON_RECIPE_FIELDS = {
 }
 NATIVE_INT_MIN = -(1 << 31)
 NATIVE_INT_MAX = (1 << 31) - 1
+# time_duration::deserialize("infinite") uses calendar::INDEFINITELY_LONG
+# (calendar.cpp), not INDEFINITELY_LONG_DURATION's full signed-int maximum.
+NATIVE_JSON_INFINITE_DURATION_TURNS = NATIVE_INT_MAX // 100
+PLATFORM_CHARACTER_ADJUSTMENT_LIMIT = 1_000_000
 NATIVE_INT64_MAX = (1 << 63) - 1
 NATIVE_MASS_GRAMS_MAX = NATIVE_INT64_MAX // 1000
 NATIVE_FLOAT_MAX = float.fromhex("0x1.fffffep+127")
@@ -110,10 +121,8 @@ PLATFORM_ID_MAX_BYTES = 256
 WOUND_NAME_MAX_BYTES = 1024
 WOUND_DESCRIPTION_MAX_BYTES = 32768
 MAX_EFFECT_DURATION_TURNS = 365 * 24 * 60 * 60
-MAX_WORLD_CHANGE_DELAY_TURNS = 10000 * 24 * 60 * 60
-MAX_ACTIVITY_DURATION_TURNS = 2147483647 // 100
 MAX_RUN_EOC_ITERATIONS = 10000
-NATIVE_MAX_EFFECT_INTENSITY = 1000000
+MAX_TEST_EOC_INLINE_DEPTH = 32
 MAX_ITEM_CATEGORY_SPAWN_RATE_UPDATES = 256
 MAX_ITEM_CATEGORY_SPAWN_RATE = 1_000_000.0
 MAX_CHARACTER_DAMAGE = 1000000.0
@@ -121,9 +130,31 @@ MAX_CHARACTER_DAMAGE_MULTIPLIER = 1000.0
 MAX_CHARACTER_HIT_OPTION = 1000000
 MAX_CHARACTER_PART_TEMPERATURE = 1000000.0
 MAX_MUTATION_RANDOM_CHANCE = 1000000
+MAX_HORDE_BROADCAST_POWER = 10000
 NATIVE_MAX_SKILL = 10
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_GAME_START_SENDER_SITES = (("src/game.cpp", "send"),)
+NATIVE_MISSION_GOALS = frozenset({
+    "MGOAL_NULL",
+    "MGOAL_GO_TO",
+    "MGOAL_GO_TO_TYPE",
+    "MGOAL_FIND_ITEM",
+    "MGOAL_FIND_ANY_ITEM",
+    "MGOAL_FIND_ITEM_GROUP",
+    "MGOAL_FIND_MONSTER",
+    "MGOAL_FIND_NPC",
+    "MGOAL_ASSASSINATE",
+    "MGOAL_KILL_MONSTER",
+    "MGOAL_KILL_MONSTERS",
+    "MGOAL_KILL_MONSTER_TYPE",
+    "MGOAL_KILL_MONSTER_SPEC",
+    "MGOAL_KILL_NEMESIS",
+    "MGOAL_RECRUIT_NPC",
+    "MGOAL_RECRUIT_NPC_CLASS",
+    "MGOAL_COMPUTER_TOGGLE",
+    "MGOAL_TALK_TO_NPC",
+    "MGOAL_CONDITION",
+})
 # These native item-event contracts always name the legacy alpha/u Character
 # as `actors.character`.  An item talker is optional because ordinary event
 # sends do not carry the positional talker used by send_with_talker().  Keep
@@ -206,6 +237,13 @@ PROVEN_NPC_ACTOR_EVENTS = frozenset({
     "npc_becomes_hostile",
 })
 
+# The native EOC event dispatcher only chooses alpha from these event fields;
+# an arbitrary Character-valued payload field is not enough to prove u_ target
+# semantics. Keep this list aligned with effect_on_conditions::process_event.
+NATIVE_EOC_ALPHA_EVENT_FIELDS = frozenset({
+    "avatar_id", "character", "attacker", "killer", "npc",
+})
+
 # These event contracts are avatar-scoped even though they intentionally do
 # not carry a character_id field.  The event payload remains actor-free (the
 # runtime must not invent ``actors.avatar``), while an EOC subscribed to the
@@ -221,6 +259,12 @@ AVATAR_ACTOR_EVENTS = frozenset({
     "phase_move",
 })
 
+# Only this Avatar event is a sufficient writable-world liveness proof for
+# services.relocation.travel_to_dimension. Lifecycle and death events prove
+# identity but do not guarantee an active map/world for the native service.
+DIMENSION_TRAVEL_AVATAR_EVENTS = frozenset({"avatar_moves"})
+TELEPORT_AVATAR_EVENTS = frozenset({"avatar_moves"})
+
 # Talker-bearing events can carry a non-Character Creature in the alpha slot.
 # The Platform event bridge exposes that handle as ``context.actors.character``
 # even when the native event has no character_id field.  Keep this allowlist
@@ -230,9 +274,11 @@ CREATURE_ACTOR_EVENTS = frozenset({
     "monster_takes_damage",
 })
 
-# These event producers pass a second Creature talker through the event bus;
-# Lua receives it as ``context.actors.beta``.  It is optional at runtime, so
-# predicates guard it with ``has_beta`` instead of inventing an avatar/NPC.
+# These event producers pass two talkers through the event bus.  The Lua
+# bridge names the second handle ``interlocutor``; that does not prove it is a
+# Character/NPC or make it interchangeable with dialogue ``beta``.  Keep this
+# allowlist for event-shape classification only; per-service lowering needs
+# its own exact actor-kind proof.
 TALKER_ACTOR_EVENTS = frozenset({
     "character_kills_character",
     "character_kills_monster",
@@ -244,10 +290,26 @@ TALKER_ACTOR_EVENTS = frozenset({
     "monster_takes_damage",
 })
 
+# These audited event producers call event_bus::send with no beta talker.
+# EOC dialogue::actor(true) therefore falls back to the proven alpha.  Do not
+# infer this from absence in TALKER_ACTOR_EVENTS: other send_with_talker events
+# (for example character_wields_item) carry an item beta; native get_character
+# rejects it.
+NATIVE_EOC_ALPHA_FALLBACK_EVENTS = frozenset({
+    "game_start",
+    "npc_becomes_hostile",
+})
+
 VICTIM_CHARACTER_EVENTS = frozenset({
     "character_kills_character",
     "character_melee_attacks_character",
     "character_ranged_attacks_character",
+})
+
+MONSTER_BETA_EVENTS = frozenset({
+    "character_kills_monster",
+    "character_melee_attacks_monster",
+    "character_ranged_attacks_monster",
 })
 
 
@@ -308,9 +370,28 @@ def event_character_actor_fields() -> dict[str, str]:
     return result
 
 
-def game_start_avatar_actor_is_proven() -> bool:
-    """Fail closed if the reviewed canonical sender set ever changes."""
-    return game_start_sender_sites() == EXPECTED_GAME_START_SENDER_SITES
+def game_start_avatar_actor_is_proven(
+    game_start_event_emitted_by_eoc: bool,
+) -> bool:
+    """Require the reviewed native sender set and no in-corpus JSON replay.
+
+    This static corpus gate cannot observe trusted Lua calling
+    ``services.native_events.emit("game_start", ...)``.  It proves only that
+    no JSON-authored trigger can re-enter a game_start handler with another
+    dialogue actor.
+    """
+    return (
+        not game_start_event_emitted_by_eoc and
+        game_start_sender_sites() == EXPECTED_GAME_START_SENDER_SITES
+    )
+
+
+def native_eoc_required_event(value: dict[str, Any]) -> str | None:
+    """Return the trigger that the native loader actually registers."""
+    if value.get("eoc_type") != "EVENT":
+        return None
+    event = value.get("required_event")
+    return event if isinstance(event, str) and event else None
 
 
 def render_static_item_fault_effect(
@@ -470,26 +551,34 @@ def render_dynamic_item_transform_effect(
     ]
 
 
+def native_int_literal(value: Any) -> int | None:
+    """Truncate a finite literal as the native double-to-int conversion does."""
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value if NATIVE_INT_MIN <= value <= NATIVE_INT_MAX else None
+    if not isinstance(value, float) or not math.isfinite(value):
+        return None
+    # C++ truncates toward zero before checking whether the result fits int.
+    if value <= NATIVE_INT_MIN - 1 or value >= NATIVE_INT_MAX + 1:
+        return None
+    converted = math.trunc(value)
+    return converted if NATIVE_INT_MIN <= converted <= NATIVE_INT_MAX else None
+
+
 def render_static_light_override(effect: dict[str, Any]) -> list[str] | None:
-    """Render the finite literal custom-light timed-event shape."""
+    """Render a literal custom-light event with the native append semantics."""
     if set(effect) - {"custom_light_level", "length", "key"}:
         return None
-    if "length" not in effect:
+    level = native_int_literal(effect.get("custom_light_level"))
+    if level is None:
         return None
-    level = effect.get("custom_light_level")
-    if (
-        not isinstance(level, int) or isinstance(level, bool) or
-        not 0 <= level <= 125
-    ):
-        return None
-    duration = parse_turns(effect.get("length"))
-    if duration is None or not 0 <= duration <= MAX_WORLD_CHANGE_DELAY_TURNS:
+    duration = parse_turns(effect.get("length", 0))
+    if duration is None or not NATIVE_INT_MIN <= duration <= NATIVE_INT_MAX:
         return None
     key = effect.get("key", "")
-    if not bounded_utf8_string(key, PLATFORM_ID_MAX_BYTES, allow_empty=True):
+    if not isinstance(key, str):
         return None
     call = [
-        "    service_value(services.weather.override_light(",
+        "    service_value(services.weather.append_light_event(",
         f"        {level}, services.time.duration({duration}, \"turn\")",
     ]
     if key:
@@ -497,75 +586,6 @@ def render_static_light_override(effect: dict[str, Any]) -> list[str] | None:
     else:
         call[-1] += "))"
     return call
-
-
-def render_dynamic_light_override(
-    effect: dict[str, Any], actor_expression: str = "actor",
-) -> list[str] | None:
-    """Render context/variable-backed custom-light values."""
-    if set(effect) - {"custom_light_level", "length", "key"}:
-        return None
-    if "length" not in effect:
-        return None
-    level = render_eoc_numeric_expression(
-        effect.get("custom_light_level"), "0", actor_expression
-    )
-    duration = _duration_expression(
-        effect.get("length"), minimum=0, actor_expression=actor_expression
-    )
-    key = effect.get("key", "")
-    if level is None or duration is None or not bounded_utf8_string(
-        key, PLATFORM_ID_MAX_BYTES, allow_empty=True
-    ):
-        return None
-    return [
-        "    service_value(services.weather.override_light(",
-        (
-            f"        math.floor(({level}) + 0.5), {duration}, "
-            f"{lua_quote(key)}))" if key else "))"
-        ),
-    ]
-
-
-def render_static_goto_location_effect(
-    target_expression: str | None,
-) -> list[str] | None:
-    """Render the legacy no-argument NPC destination menu as Lua workflow.
-
-    ``goto_location`` discovers visible player camps and the player's route
-    destinations, asks Lua to present a choice, previews the typed path, and
-    commits the NPC's travelling goal only after confirmation.
-    """
-    if target_expression is None:
-        return None
-    return [
-        "    local destination_page = service_value(",
-        f"        services.npcs.destinations({target_expression}))",
-        "    local choices = {}",
-        "    for index, destination in ipairs(destination_page.items) do",
-        "        choices[index] = {",
-        "            id = destination.id,",
-        "            label = destination.label,",
-        "        }",
-        "    end",
-        '    local selected_id = ccb.presentation.choose("Select a destination", choices)',
-        "    if selected_id ~= nil then",
-        "        for _, destination in ipairs(destination_page.items) do",
-        "            if destination.id == selected_id then",
-        "                local plan = service_value(services.npcs.plan_travel(",
-        f"                    {target_expression}, destination.position))",
-        "                if plan.reachable and ccb.presentation.confirm(",
-        '                    "Accept this path and destination?" ) then',
-        "                    service_value(services.npcs.set_goal(",
-        f"                        {target_expression}, destination.position))",
-        "                elseif not plan.reachable then",
-        '                    ccb.presentation.notice("That is not a valid destination.")',
-        "                end",
-        "                break",
-        "            end",
-        "        end",
-        "    end",
-    ]
 
 
 def lua_boolean(value: bool) -> str:
@@ -729,6 +749,69 @@ def parse_turns(value: Any) -> int | None:
     )
 
 
+def parse_turn_cost_adjustment(value: Any) -> int | None:
+    """Convert a native literal duration within the Platform move-adjustment bound."""
+    turns = parse_native_duration_turns(value)
+    if turns is None:
+        return None
+    moves = turns * 100
+    if not NATIVE_INT_MIN <= moves <= NATIVE_INT_MAX:
+        return None
+    adjustment = -moves
+    if not (
+        -PLATFORM_CHARACTER_ADJUSTMENT_LIMIT <= adjustment <=
+        PLATFORM_CHARACTER_ADJUSTMENT_LIMIT
+    ):
+        return None
+    return adjustment
+
+
+def parse_native_duration_turns(value: Any) -> int | None:
+    """Parse only the integer syntax and units accepted by native time_duration."""
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value if NATIVE_INT_MIN <= value <= NATIVE_INT_MAX else None
+    if not isinstance(value, str):
+        return None
+    if value == "infinite":
+        return NATIVE_JSON_INFINITE_DURATION_TURNS
+    # Keep this list aligned with time_duration::units; parse_turns also accepts
+    # legacy spellings that the native JSON duration parser rejects.
+    units = {
+        "turns": 1,
+        "turn": 1,
+        "t": 1,
+        "seconds": 1,
+        "second": 1,
+        "s": 1,
+        "minutes": 60,
+        "minute": 60,
+        "m": 60,
+        "hours": 3600,
+        "hour": 3600,
+        "h": 3600,
+        "days": 86400,
+        "day": 86400,
+        "d": 86400,
+    }
+    unit_pattern = "|".join(
+        re.escape(unit) for unit in sorted(units, key=len, reverse=True)
+    )
+    token_pattern = rf"[+-]?[0-9]+ *({unit_pattern})"
+    if re.fullmatch(rf" *(?:{token_pattern} *)+", value) is None:
+        return None
+    total = 0
+    for number, unit in re.findall(
+        rf"([+-]?[0-9]+) *({unit_pattern})", value
+    ):
+        component = int(number) * units[unit]
+        if not NATIVE_INT_MIN <= component <= NATIVE_INT_MAX:
+            return None
+        total += component
+        if not NATIVE_INT_MIN <= total <= NATIVE_INT_MAX:
+            return None
+    return total
+
+
 def parse_vitamin_micrograms(value: Any) -> int | None:
     if not isinstance(value, str):
         return None
@@ -762,6 +845,261 @@ def safe_platform_id(value: Any) -> bool:
     )
 
 
+def safe_native_martial_art_id(value: Any) -> bool:
+    if not safe_platform_id(value):
+        return False
+    try:
+        encoded_length = len(value.encode("utf-8"))
+    except UnicodeEncodeError:
+        return False
+    return (
+        encoded_length <= 256 and
+        not any(ord(character) < 0x20 or ord(character) == 0x7f for character in value)
+    )
+
+
+def safe_native_recipe_id(value: Any) -> bool:
+    """Bound a static recipe id literal; registry membership remains a source precondition."""
+    if not safe_platform_id(value):
+        return False
+    try:
+        encoded_length = len(value.encode("utf-8"))
+    except UnicodeEncodeError:
+        return False
+    return (
+        encoded_length <= 256 and
+        not any(ord(character) < 0x20 or ord(character) == 0x7f for character in value)
+    )
+
+
+def safe_native_proficiency_id_literal(value: Any) -> bool:
+    """Preserve raw native proficiency text without requiring a registered ID."""
+    return lua_quotable_native_variable_string(value)
+
+
+def render_dialogue_variable_string_read(scope: str, key: str) -> str | None:
+    """Read a native callback frame without requiring converted actor handles."""
+    method = {
+        "context_val": "get_string", "u_val": "speaker_variable_string",
+        "npc_val": "interlocutor_variable_string",
+    }.get(scope)
+    if method is not None:
+        return f"dialogue_context:{method}({key})"
+    if scope == "global_val":
+        return (
+            '(function(result) if result.exists == false then return nil end; '
+            'return result.value end)(service_value(services.variables.get_global_string('
+            f'{key})))'
+        )
+    return None
+
+
+def render_proficiency_id_expression(
+    value: Any, *, alpha_owner: str | None = None,
+    beta_owner: str | None = None,
+    topic_item_expression: str | None = None,
+    variable_string_reader: Callable[[str, str], str | None] | None = None,
+    technique_sampler: str | None = None,
+    variable_default_expression: str | None = None,
+) -> str | None:
+    """Keep native ID text and resolve each variable from its proven talker."""
+    if safe_native_proficiency_id_literal(value):
+        return lua_quote(value)
+    if not isinstance(value, dict):
+        return None
+    # value_or_var tries var_info before string_mutator. Native var_info uses
+    # this fixed priority, irrespective of authored member order, and ignores
+    # shadowed sources/extra fields after a valid name has been read.
+    variable_scope = next((scope for scope in (
+        "u_val", "npc_val", "global_val", "var_val", "context_val",
+    ) if scope in value), None)
+    if variable_scope is not None and lua_quotable_native_variable_string(value[variable_scope]):
+        # Factory modifiers can emit diagnostics while loading default; keep
+        # them explicit until those load-time effects have a proven lowering.
+        if set(value) & {"relative", "proportional", "extend", "delete"}:
+            return None
+        default = value.get("default", "")
+        # optional<string> accepts null, and a failed non-string read resets
+        # the optional through optional(..., was_loaded=false). Neither is a
+        # stringified fallback. A valid string (including empty/NUL) stays raw.
+        value = {variable_scope: value[variable_scope],
+                 "default": default if isinstance(default, str) else ""}
+    if value.get("mutator") == "topic_item":
+        return topic_item_expression if set(value) == {"mutator"} else None
+    if value.get("mutator") == "valid_technique":
+        if (set(value) - {"mutator", "blacklist", "crit", "dodge_counter", "block_counter"} or
+                (technique_sampler is None and (alpha_owner is None or beta_owner is None))):
+            return None
+        options = []
+        flags = []
+        for source, name in (("crit", "critical"), ("dodge_counter", "dodge_counter"),
+                             ("block_counter", "block_counter")):
+            flag = value.get(source, False)
+            if not isinstance(flag, bool):
+                return None
+            flags.append("true" if flag else "false")
+            if flag:
+                options.append(f"{name} = true")
+        # Native has_array ignores an authored non-array blacklist entirely.
+        authored_blacklist = value.get("blacklist", [])
+        blacklist = authored_blacklist if isinstance(authored_blacklist, list) else []
+        entries = [render_proficiency_id_expression(
+            entry, alpha_owner=alpha_owner, beta_owner=beta_owner,
+            topic_item_expression=topic_item_expression,
+            variable_string_reader=variable_string_reader,
+            technique_sampler=technique_sampler,
+        ) for entry in blacklist]
+        if any(entry is None for entry in entries):
+            return None
+        # Lua list-field expressions are evaluated in native blacklist order
+        # before the shared native selection, including nested selections.
+        if entries:
+            options.append("blacklist = { " + ", ".join(entries) + " }")
+        if technique_sampler is not None:
+            return (technique_sampler + "(" + ", ".join(flags) +
+                    ", { " + ", ".join(entries) + " })")
+        return (
+            'service_value(services.characters.choose_technique('
+            f'{alpha_owner}, {beta_owner}, {{ ' + ", ".join(options) + ' })).technique.value'
+        )
+    if value.get("mutator") in {"ma_technique_name", "ma_technique_description"}:
+        if set(value) != {"mutator", "matec_id"}:
+            return None
+        identifier = render_proficiency_id_expression(
+            value["matec_id"], alpha_owner=alpha_owner, beta_owner=beta_owner,
+            topic_item_expression=topic_item_expression,
+            variable_string_reader=variable_string_reader,
+            technique_sampler=technique_sampler,
+        )
+        if identifier is None:
+            return None
+        method = "technique_name" if value["mutator"].endswith("name") else "technique_description"
+        return f"services.martial_arts.{method}({identifier})"
+    if value.get("mutator") == "mon_faction":
+        if set(value) != {"mutator", "mtype_id"}:
+            return None
+        identifier = render_proficiency_id_expression(
+            value["mtype_id"], alpha_owner=alpha_owner, beta_owner=beta_owner,
+            topic_item_expression=topic_item_expression,
+            variable_string_reader=variable_string_reader,
+            technique_sampler=technique_sampler,
+        )
+        if identifier is None:
+            return None
+        return f"services.registry.monster_default_faction({identifier})"
+    if value.get("mutator") == "game_option":
+        if set(value) != {"mutator", "option"}:
+            return None
+        option = render_proficiency_id_expression(
+            value["option"], alpha_owner=alpha_owner, beta_owner=beta_owner,
+            topic_item_expression=topic_item_expression,
+            variable_string_reader=variable_string_reader,
+            technique_sampler=technique_sampler,
+        )
+        if option is None:
+            return None
+        # Preserve value_as<string>(convert=false), including wrong-type and
+        # missing-option diagnostics. Snapshot.value formats other types and
+        # cannot replace this native string read.
+        return f"services.gameplay.options.get_string({option})"
+    if value.get("i18n") is True and "str" in value:
+        text = value["str"]
+        # Native string_mutator translates this authored string at evaluation
+        # time. Ordinary ID literals and stored/default values stay raw. The
+        # no-context service preserves native LOCALIZE-on/off NUL semantics.
+        if (set(value) - {"str", "i18n", "//~"} or
+                not lua_quotable_native_variable_string(text) or
+                ("//~" in value and not isinstance(value["//~"], str))):
+            return None
+        # translation::translated returns empty raw text without a lookup.
+        return f"services.translate({lua_quote(text)})" if text else lua_quote(text)
+    scopes = {"global_val", "context_val", "u_val", "npc_val", "var_val"} & set(value)
+    if len(scopes) != 1 or set(value) - scopes - {"default"}:
+        return None
+    scope = next(iter(scopes))
+    name = value[scope]
+    fallback = value.get("default", "")
+    if not (lua_quotable_native_variable_string(name) and
+            lua_quotable_native_variable_string(fallback)):
+        return None
+    fallback_expression = (variable_default_expression if variable_default_expression is not None
+                           else lua_quote(fallback))
+    if variable_string_reader is not None:
+        if scope == "var_val":
+            pointer = variable_string_reader("context_val", lua_quote(name))
+            targets = [variable_string_reader(source, key) for source, key in (
+                ("u_val", "string.sub(pointer, 3)"),
+                ("npc_val", "string.sub(pointer, 3)"),
+                ("context_val", "string.sub(pointer, 2)"),
+                ("global_val", "pointer"),
+            )]
+            if pointer is None or any(target is None for target in targets):
+                return None
+            return (
+                '(function(pointer) if pointer == nil then return ' + fallback_expression +
+                ' end; local value; if string.sub(pointer, 1, 2) == "u_" then '
+                f'value = {targets[0]}; elseif string.sub(pointer, 1, 2) == "n_" then '
+                f'value = {targets[1]}; elseif string.sub(pointer, 1, 1) == "_" then '
+                f'value = {targets[2]}; else value = {targets[3]}; end; '
+                'if value == nil then return ' + fallback_expression +
+                ' end; return value end)(' + pointer + ')'
+            )
+        read = variable_string_reader(scope, lua_quote(name))
+        if read is None:
+            return None
+        return (
+            '(function(value) if value == nil then return ' + fallback_expression +
+            ' end; return value end)(' + read + ')'
+        )
+    if scope == "var_val":
+        # Native process_variable resolves one context-held pointer to either
+        # alpha, beta, context or global storage.  A dynamic pointer must not
+        # invent an owner proof for either dialogue participant.
+        if alpha_owner is None or beta_owner is None:
+            return None
+        return (
+            '(function(pointer) if pointer.exists == false then return ' + fallback_expression +
+            ' end; local key = pointer.value; local result; '
+            'if string.sub(key, 1, 2) == "u_" then '
+            'result = service_value(services.variables.get_string(' + alpha_owner +
+            ', string.sub(key, 3))); '
+            'elseif string.sub(key, 1, 2) == "n_" then '
+            'result = service_value(services.variables.get_string(' + beta_owner +
+            ', string.sub(key, 3))); '
+            'elseif string.sub(key, 1, 1) == "_" then '
+            'result = service_value(services.variables.get_context_string('
+            'context and context.data, string.sub(key, 2))); '
+            'else result = service_value(services.variables.get_global_string(key)); end; '
+            'if result.exists == false then return ' + fallback_expression +
+            ' end; return result.value end)'
+            '(service_value(services.variables.get_context_string('
+            'context and context.data, ' + lua_quote(name) + ')))'
+        )
+    if scope == "context_val":
+        read = (
+            'service_value(services.variables.get_context_string('
+            'context and context.data, ' + lua_quote(name) + '))'
+        )
+    elif scope == "global_val":
+        read = (
+            'service_value(services.variables.get_global_string(' +
+            lua_quote(name) + '))'
+        )
+    else:
+        owner = alpha_owner if scope == "u_val" else beta_owner
+        if owner is None:
+            return None
+        read = (
+            'service_value(services.variables.get_string(' + owner + ', ' +
+            lua_quote(name) + '))'
+        )
+    return (
+        '(function(result) if result.exists == false then return ' + fallback_expression +
+        ' end; return type(result.value) == "string" and result.value or "" end)'
+        '(' + read + ')'
+    )
+
+
 def bounded_utf8_string(
     value: Any, maximum: int, *, allow_empty: bool = False
 ) -> bool:
@@ -791,10 +1129,7 @@ def lua_quotable_native_variable_string(value: Any) -> bool:
 
 def bounded_platform_context_variable_key(value: Any) -> bool:
     """Match the context/var key contract used by the Platform variable service."""
-    return (
-        bounded_utf8_string(value, 128) and
-        not any(ord(character) < 0x20 or ord(character) == 0x7F for character in value)
-    )
+    return lua_quotable_native_variable_string(value)
 
 
 def bounded_platform_id(value: Any) -> bool:
@@ -802,6 +1137,21 @@ def bounded_platform_id(value: Any) -> bool:
         safe_platform_id(value) and
         bounded_utf8_string(value, PLATFORM_ID_MAX_BYTES)
     )
+
+
+def bounded_overmap_condition_id(value: Any) -> bool:
+    """Match the terrain text accepted by native-condition query services."""
+    return (
+        bounded_platform_id(value) and
+        not any(ord(character) < 0x20 or ord(character) == 0x7F for character in value)
+    )
+
+
+def bounded_platform_body_part_id(value: Any) -> bool:
+    # `NULL` is not a body-part ID (the registered null ID is `bp_null`).
+    # Platform typed IDs reject it while native bodypart conversion falls
+    # back to the null part, so do not emit a service call for this shape.
+    return bounded_platform_id(value) and value != "NULL"
 
 
 def lua_function_name(identifier: str) -> str:
@@ -875,6 +1225,7 @@ def _inline_actor_kind(member: str) -> str:
 
 def normalize_inline_eocs(
     objects: list[SourceObject],
+    game_start_event_emitted_by_eoc: bool,
 ) -> tuple[
     list[SourceObject], frozenset[str], frozenset[str], frozenset[str], frozenset[str]
 ]:
@@ -1019,6 +1370,26 @@ def normalize_inline_eocs(
                 )
                 result[branch_name] = {"run_eocs": child_id}
 
+        roll_vector_actor_kind: str | None = None
+        if (
+            "u_roll_remainder" in result and
+            "npc_roll_remainder" not in result and
+            not _node_has_item_actor(result)
+        ):
+            # f_roll_remainder runs its vectors through run_eoc_vector(d),
+            # preserving the original dialogue alpha.  Its u_ form can pass
+            # that same Character alpha to callbacks only when this owner's
+            # source/inherited shape is Character-capable; it is not a global
+            # avatar lookup.  Leave item-shaped, unproven, and beta-oriented
+            # calls on the ordinary conservative member mapping.
+            owner_actor_kind = (
+                inherited_actor_kind
+                if inherited_actor_kind != "inherit"
+                else actor_kind_for(result)
+            )
+            if owner_actor_kind in {"avatar", "character"}:
+                roll_vector_actor_kind = "character"
+
         for member, raw in list(result.items()):
             # ``switch`` and nested ``if`` branches are effect containers, not
             # ordinary data tables.  Lower each branch to a private callback
@@ -1092,8 +1463,15 @@ def normalize_inline_eocs(
                 )
                 continue
             replacement: list[Any] = []
-            actor_kind = _inline_actor_kind(member)
-            if actor_kind == "inherit":
+            actor_kind = (
+                roll_vector_actor_kind
+                if member in {"true_eocs", "false_eocs"} and
+                roll_vector_actor_kind is not None else
+                _inline_actor_kind(member)
+            )
+            if inherited_actor_kind == "unproven":
+                actor_kind = "unproven"
+            elif actor_kind == "inherit":
                 actor_kind = inherited_actor_kind
             for index, entry in enumerate(raw):
                 if (
@@ -1139,15 +1517,20 @@ def normalize_inline_eocs(
 
     normalized: list[SourceObject] = []
     for source in objects:
-        required_event = source.value.get("required_event")
+        required_event = native_eoc_required_event(source.value)
         inherited_actor_kind = "inherit"
         if (
-            isinstance(required_event, str) and
-            (
-                required_event in AVATAR_ACTOR_EVENTS or
-                required_event == "game_start" and
-                game_start_avatar_actor_is_proven()
+            required_event == "game_start" and
+            not game_start_avatar_actor_is_proven(
+                game_start_event_emitted_by_eoc
             )
+        ):
+            # Do not let nested actor-shape inference recreate the source
+            # proof rejected by the corpus-level replay gate.
+            inherited_actor_kind = "unproven"
+        elif isinstance(required_event, str) and (
+            required_event in AVATAR_ACTOR_EVENTS or
+            required_event == "game_start"
         ):
             inherited_actor_kind = "avatar"
         value = walk(
@@ -1158,6 +1541,13 @@ def normalize_inline_eocs(
         )
         normalized.append(SourceObject(source.path, source.index, value))
     normalized.extend(synthetic)
+    # A shared EOC may be reached from both a roll-remainder dialogue and an
+    # item/creature/vehicle traversal.  The roll edge alone cannot globally
+    # change that callback's actor contract; keep the concrete non-Character
+    # source and let its Character-only effects fail closed.
+    character_override_ids.difference_update(
+        item_override_ids | creature_override_ids | vehicle_override_ids
+    )
     return (
         normalized,
         frozenset(character_override_ids),
@@ -1331,7 +1721,7 @@ def _node_has_item_actor(node: Any) -> bool:
 
 GENERIC_TALKER_TYPE_CONDITIONS = frozenset({
     "u_is_avatar", "u_is_npc", "u_is_character", "u_is_monster",
-    "u_is_item", "u_is_furniture", "u_is_vehicle",
+    "u_is_item", "u_is_vehicle",
 })
 
 
@@ -1375,6 +1765,7 @@ def _eoc_actor_requirements(
     item_override_ids: frozenset[str],
     creature_override_ids: frozenset[str],
     vehicle_override_ids: frozenset[str],
+    game_start_event_emitted_by_eoc: bool = False,
 ) -> dict[str, str]:
     """Classify the actor lifetime required by each normalized EOC."""
     result: dict[str, str] = {}
@@ -1383,14 +1774,37 @@ def _eoc_actor_requirements(
         if source.value.get("type") not in EOC_TYPES:
             continue
         identifier = stable_id(source.value, f"anonymous_{source.index}")
-        event = source.value.get("required_event")
+        event = native_eoc_required_event(source.value)
         if (
+            source.value.get("__inline_actor_kind") == "unproven" or
+            (
+                event == "game_start" and
+                not game_start_avatar_actor_is_proven(
+                    game_start_event_emitted_by_eoc
+                )
+            )
+        ):
+            # A JSON replay can invoke a named start handler through run_eocs,
+            # traversal, or a delayed task with a different alpha. Keep that
+            # uncertainty explicit instead of inferring avatar from the event
+            # name or an actor-shaped predicate.
+            requirement = "unproven"
+        elif (
             not event and source.value.get("__inline_eoc") is not True and
             _node_has_key(source.value, "u_message")
         ):
             # A named avatar-only callback cannot be made safe merely by a
             # traversal or run_eocs edge that happens to refer to it.
             requirement = "exact_avatar"
+        elif (
+            _node_has_key(source.value, "get_condition") or
+            _node_has_key(source.value, "set_condition")
+        ):
+            # A stored native conditional is invoked with the dialogue at the
+            # point of evaluation.  Generated closures likewise query their
+            # callback actor, so any statically referenced getter needs a
+            # caller that can provide a Character alpha.
+            requirement = "character"
         elif identifier in item_override_ids:
             requirement = "item"
         elif identifier in creature_override_ids:
@@ -1402,9 +1816,7 @@ def _eoc_actor_requirements(
         elif identifier in character_override_ids:
             requirement = "character"
         else:
-            if isinstance(event, str) and (
-                event == "game_start" or event in AVATAR_ACTOR_EVENTS
-            ):
+            if isinstance(event, str) and event in AVATAR_ACTOR_EVENTS:
                 requirement = "avatar"
             elif isinstance(event, str) and event in CREATURE_ACTOR_EVENTS:
                 requirement = "creature"
@@ -1423,10 +1835,9 @@ def _eoc_actor_requirements(
                 requirement = "none"
         result[identifier] = requirement
 
-    # A predicate-only wrapper has the same actor requirement as the
-    # ``test_eoc`` predicates it composes.  The native condition evaluator
-    # reuses the current dialogue for this call, so propagate that requirement
-    # instead of treating wrappers such as a recurrence guard as ambient.
+    # Native reuses the current dialogue for ``test_eoc``. An unproven
+    # dependency therefore overrides even a wrapper's own u_/npc_ shape;
+    # other actor requirements retain the existing propagation rules.
     condition_references: dict[str, set[str]] = {}
 
     def collect_test_eocs(node: Any, found: set[str]) -> None:
@@ -1454,9 +1865,14 @@ def _eoc_actor_requirements(
     while changed:
         changed = False
         for identifier, references in condition_references.items():
+            inherited = {result.get(reference, "none") for reference in references}
+            if "unproven" in inherited:
+                if result.get(identifier) != "unproven":
+                    result[identifier] = "unproven"
+                    changed = True
+                continue
             if result.get(identifier) != "none":
                 continue
-            inherited = {result.get(reference, "none") for reference in references}
             inherited.discard("none")
             if not inherited:
                 continue
@@ -1560,6 +1976,68 @@ def _collect_eoc_references(
     for source in objects:
         walk(source.value)
     return frozenset(references)
+
+
+def _has_dynamic_eoc_dispatch(objects: Iterable[SourceObject]) -> bool:
+    """Fail closed when EOC dispatch does not have a fixed target set.
+
+    Static references are collected separately.  A variable-backed EOC id can
+    name any generated function, so an event EOC may also be called as a child
+    with a different native actor than its event participant.  This covers
+    both immediate EOC calls and interactive selectors.
+    """
+    def fixed_reference(value: Any) -> bool:
+        if isinstance(value, str):
+            return True
+        if not isinstance(value, dict):
+            return False
+        if set(value) == {"id"} and isinstance(value.get("id"), str):
+            return True
+        return (
+            "str" in value and set(value) <= {"str", "i18n", "//~"} and
+            bounded_utf8_string(value.get("str"), 8192, allow_empty=True) and
+            value.get("i18n") is not True and
+            ("i18n" not in value or isinstance(value["i18n"], bool)) and
+            ("//~" not in value or isinstance(value["//~"], str))
+        )
+
+    def walk(value: Any) -> bool:
+        if isinstance(value, list):
+            return any(walk(entry) for entry in value)
+        if not isinstance(value, dict):
+            return False
+        for effect_key in ("run_eocs", "run_eoc_selector"):
+            if effect_key not in value:
+                continue
+            raw = value[effect_key]
+            references = [raw] if isinstance(raw, (str, dict)) else raw
+            if not isinstance(references, list) or any(
+                not fixed_reference(entry) for entry in references
+            ):
+                return True
+        return any(walk(entry) for entry in value.values())
+
+    return any(walk(source.value) for source in objects)
+
+
+def _has_static_event_emission(
+    objects: Iterable[SourceObject], event_name: str,
+) -> bool:
+    """Find any JSON-authored static trigger for a source-only event.
+
+    This guards same-corpus EOC lowering against static re-entry.  It cannot
+    observe trusted Lua that emits an event through the Platform native-event
+    service, so live-actor proofs using this gate remain bounded source claims.
+    """
+    def walk(value: Any) -> bool:
+        if isinstance(value, list):
+            return any(walk(entry) for entry in value)
+        if not isinstance(value, dict):
+            return False
+        if value.get("trigger_event") == event_name:
+            return True
+        return any(walk(entry) for entry in value.values())
+    return any(walk(source.value) for source in objects)
 
 
 def _content_callback_actor_provenance(
@@ -1679,6 +2157,79 @@ def _content_callback_actor_provenance(
     )
 
 
+def _npc_dialogue_mission_pair_provenance(
+    objects: Iterable[SourceObject],
+) -> frozenset[str]:
+    """Prove direct talk-topic callbacks have native dialogue mission state.
+
+    Generic alpha/beta provenance includes spell and monster callbacks, and
+    EOC reference closure can cross delayed or actor-rebinding edges.  Only
+    direct ``true_eocs``/``false_eocs`` callbacks from talk topics qualify;
+    every known alternate call site and independent trigger removes that
+    proof.
+    """
+    materialized = list(objects)
+    known_ids = {
+        stable_id(source.value, f"anonymous_{source.index}")
+        for source in materialized
+        if source.value.get("type") in EOC_TYPES
+    }
+    talk_topic_seeds: set[str] = set()
+    other_source_references: set[str] = set()
+    independent_eoc_triggers = {
+        "required_event", "eoc_type", "recurrence", "global"
+    }
+    unsafe_topic_edges = {
+        "delay", "time_in_future", "actor", "actor_override",
+        "alpha", "beta", "speaker", "interlocutor",
+        "run_eocs", "u_run_npc_eocs", "npc_run_npc_eocs",
+    }
+    unsafe_topic_references: set[str] = set()
+
+    def collect_topic_callbacks(
+        source: SourceObject, node: Any, unsafe: bool = False,
+    ) -> None:
+        if isinstance(node, list):
+            for entry in node:
+                collect_topic_callbacks(source, entry, unsafe)
+            return
+        if not isinstance(node, dict):
+            return
+        unsafe = unsafe or bool(unsafe_topic_edges.intersection(node))
+        for key, entry in node.items():
+            if key in EOC_REFERENCE_FIELDS:
+                references = _collect_eoc_references(
+                    [SourceObject(source.path, source.index, {key: entry})],
+                    known_ids,
+                )
+                if (
+                    key in {"true_eocs", "false_eocs"} and not unsafe
+                ):
+                    talk_topic_seeds.update(references)
+                else:
+                    unsafe_topic_references.update(references)
+            else:
+                collect_topic_callbacks(source, entry, unsafe)
+
+    for source in materialized:
+        kind = source.value.get("type")
+        references = set(_collect_eoc_references([source], known_ids))
+        if kind in EOC_TYPES:
+            identifier = stable_id(source.value, f"anonymous_{source.index}")
+            other_source_references.update(references - {identifier})
+            if any(key in source.value for key in independent_eoc_triggers):
+                other_source_references.add(identifier)
+        elif kind == "talk_topic":
+            collect_topic_callbacks(source, source.value)
+        else:
+            other_source_references.update(references)
+
+    # Do not propagate through EOC-to-EOC edges: the nested callback may be
+    # delayed, rebinding actors, or invoked by another non-dialogue caller.
+    other_source_references.update(unsafe_topic_references)
+    return frozenset(talk_topic_seeds - other_source_references)
+
+
 @dataclass(frozen=True)
 class SourceObject:
     path: Path
@@ -1688,6 +2239,247 @@ class SourceObject:
     @property
     def location(self) -> str:
         return f"{self.path.as_posix()}#{self.index}"
+
+
+@dataclass(frozen=True)
+class ItemUseActionPlan:
+    eoc_id: str | None
+    todo_category: TodoCategory | None = None
+    todo_message: str | None = None
+    handler_id: str | None = None
+    menu_text: str | None = None
+    message: str | None = None
+    message_type: str | None = None
+
+    @property
+    def migrated(self) -> bool:
+        return self.handler_id is not None
+
+
+def _item_use_comments(value: dict[str, Any]) -> set[str]:
+    return {
+        key for key in value
+        if isinstance(key, str) and key.startswith("//")
+    }
+
+
+def _item_use_has_other_eoc_reference(
+    objects: list[SourceObject], eoc_id: str, owner: SourceObject,
+) -> bool:
+    other_sources = [
+        source for source in objects
+        if (source.path, source.index) != (owner.path, owner.index) and not (
+            source.value.get("type") in EOC_TYPES and
+            source.value.get("__inline_eoc") is True and
+            stable_id(source.value, f"anonymous_{source.index}") == eoc_id
+        )
+    ]
+    # The owner can also reference the inline EOC outside its use action.
+    # Exclude only the attachment being classified, not the whole item.
+    owner_without_attachment = {
+        key: value for key, value in owner.value.items() if key != "use_action"
+    }
+    action = owner.value.get("use_action")
+    if isinstance(action, dict):
+        remaining_action = {
+            key: value for key, value in action.items()
+            if key != "effect_on_conditions"
+        }
+        if remaining_action:
+            owner_without_attachment["use_action"] = remaining_action
+    other_sources.append(
+        SourceObject(owner.path, owner.index, owner_without_attachment)
+    )
+    return eoc_id in _collect_eoc_references(other_sources, {eoc_id})
+
+
+def _location_variable_target_params(value: Any) -> list[Any]:
+    if isinstance(value, list):
+        return [
+            target
+            for entry in value
+            for target in _location_variable_target_params(entry)
+        ]
+    if not isinstance(value, dict):
+        return []
+    targets = []
+    if "u_location_variable" in value or "npc_location_variable" in value:
+        targets.append(value.get("target_params"))
+    targets.extend(
+        target
+        for entry in value.values()
+        for target in _location_variable_target_params(entry)
+    )
+    return targets
+
+
+def classify_item_use_actions(
+    objects: list[SourceObject],
+    eoc_definition_counts: Counter[str],
+) -> dict[tuple[Path, int], ItemUseActionPlan]:
+    """Classify only source-proven direct item EOCs for typed item callbacks."""
+    inline_eocs = {
+        stable_id(source.value, f"anonymous_{source.index}"): source
+        for source in objects
+        if source.value.get("type") in EOC_TYPES and
+        source.value.get("__inline_eoc") is True
+    }
+    item_id_counts = Counter(
+        source.value.get("id") for source in objects
+        if source.value.get("type") in ITEM_TYPES and
+        isinstance(source.value.get("id"), str)
+    )
+    plans: dict[tuple[Path, int], ItemUseActionPlan] = {}
+
+    def unsupported(
+        source: SourceObject, item_id: str, eoc_id: str | None,
+        reason: str,
+        category: TodoCategory = "manual_rewrite",
+    ) -> ItemUseActionPlan:
+        return ItemUseActionPlan(
+            eoc_id,
+            category,
+            f"{source.location}: item {item_id} use_action needs manual review: {reason}",
+        )
+
+    for source in objects:
+        value = source.value
+        if value.get("type") not in ITEM_TYPES or "use_action" not in value:
+            continue
+        item_id = stable_id(value, f"todo_item_{source.index}")
+        action = value.get("use_action")
+        action_fields = (
+            set(action) - _item_use_comments(action)
+            if isinstance(action, dict) else set()
+        )
+        eoc_ids = (
+            action.get("effect_on_conditions")
+            if isinstance(action, dict) else None
+        )
+        eoc_id = (
+            eoc_ids[0] if isinstance(eoc_ids, list) and len(eoc_ids) == 1 and
+            isinstance(eoc_ids[0], str) else None
+        )
+        if not isinstance(action, dict) or action.get("type") != "effect_on_conditions":
+            plan = unsupported(
+                source, item_id, None,
+                "this batch only covers effect_on_conditions use actions",
+            )
+        elif eoc_id is None or eoc_id not in inline_eocs:
+            plan = unsupported(
+                source, item_id, None,
+                "the action must own exactly one inline EOC definition; named/reused EOCs stay ordinary manual rewrites",
+            )
+        else:
+            eoc = inline_eocs[eoc_id].value
+            effect = eoc.get("effect")
+            eoc_keys = _nested_object_keys(eoc)
+            route_keys = {"u_location_variable", "reveal_map", "reveal_route"} & eoc_keys
+            has_condition_or_false_branch = (
+                "condition" in eoc or "false_effect" in eoc
+            )
+            if route_keys and has_condition_or_false_branch:
+                flow_keys = sorted(eoc_keys & (route_keys | {"u_message"}))
+                target_params = _location_variable_target_params(eoc.get("effect"))
+                omits_origin_npc = bool(target_params) and all(
+                    isinstance(params, dict) and "origin_npc" not in params
+                    for params in target_params
+                )
+                condition_flow = sorted(
+                    _nested_object_keys(eoc.get("condition"))
+                )
+                origin_note = (
+                    f"Every location-variable target_params entry ({len(target_params)}) "
+                    "omits origin_npc, so "
+                    "parse_mission_om_target leaves origin_u enabled and "
+                    "mission_util::get_om_terrain_pos searches from the player Avatar "
+                    "while EOC alpha remains the actual using Character. "
+                    if omits_origin_npc else
+                    "The target origin and fallback still need source-specific review "
+                    "against mission_util::get_om_terrain_pos while EOC alpha remains "
+                    "the actual using Character. "
+                )
+                plan = unsupported(
+                    source, item_id, eoc_id,
+                    f"inline EOC {eoc_id} branches through conditions/false_effect and "
+                    f"uses {', '.join(flow_keys)} "
+                    f"with condition fields {', '.join(condition_flow)}. "
+                    "Native alpha is the actual using Character (possibly an NPC) and beta is this item. "
+                    "A null Character still executes the native EOC, while Platform ItemUseContext fails closed before Lua. "
+                    "For non-null calls the typed callback preserves the actual Character and exact item. " + origin_note +
+                    "The migration still lacks ordered context writes, search-miss status/debug behavior, and distant-map loading. "
+                    "Keep this as a platform_gap TODO; do not replace alpha with services.characters.avatar().",
+                    "platform_gap",
+                )
+            else:
+                descriptor_fields = set(eoc) - _item_use_comments(eoc)
+                effect_fields = set(effect) - _item_use_comments(effect) if isinstance(effect, dict) else set()
+                message = effect.get("u_message") if isinstance(effect, dict) else None
+                message_type = effect.get("type") if isinstance(effect, dict) else None
+                valid_message = (
+                    bounded_utf8_string(message, 512) and bool(message.strip()) and
+                    not any(character in message for character in ("%", "<", ">", "\0"))
+                )
+                menu_text = action.get("menu_text")
+                raw_id = value.get("id")
+                handler_id = (
+                    f"migrated.item_use.{raw_id}"
+                    if isinstance(raw_id, str) else ""
+                )
+                valid_label = (
+                    isinstance(menu_text, str) and
+                    bounded_utf8_string(menu_text, 256) and bool(menu_text.strip())
+                )
+                simple_message = (
+                    value.get("type") in {"ITEM", "GENERIC"} and
+                    isinstance(raw_id, str) and bounded_platform_id(raw_id) and
+                    item_id_counts[raw_id] == 1 and
+                    bounded_utf8_string(handler_id, PLATFORM_ID_MAX_BYTES) and
+                    "copy-from" not in value and "abstract" not in value and
+                    "comestible" not in value and
+                    action_fields == {"type", "menu_text", "effect_on_conditions"} and
+                    valid_label and
+                    descriptor_fields <= {
+                        "type", "id", "effect", "eoc_type", "__inline_eoc", "__inline_actor_kind",
+                    } and
+                    eoc.get("__inline_actor_kind") == "item" and
+                    eoc.get("__inline_eoc") is True and
+                    eoc.get("eoc_type", "ACTIVATION") == "ACTIVATION" and
+                    "condition" not in eoc and "false_effect" not in eoc and
+                    eoc_definition_counts.get(eoc_id, 0) == 1 and
+                    isinstance(effect, dict) and
+                    effect_fields in ({"u_message"}, {"u_message", "type"}) and
+                    valid_message and message_type in {
+                        None, "neutral", "good", "bad", "mixed", "warning", "info",
+                        "debug", "headshot", "critical", "grazing",
+                    }
+                )
+                if simple_message:
+                    plan = ItemUseActionPlan(
+                        eoc_id=eoc_id,
+                        handler_id=handler_id,
+                        menu_text=menu_text,
+                        message=message,
+                        message_type=message_type or "neutral",
+                    )
+                else:
+                    plan = unsupported(
+                        source, item_id, eoc_id,
+                        f"inline EOC {eoc_id} needs manual review; this batch does not migrate non-message or branched item actions",
+                    )
+        plans[(source.path, source.index)] = plan
+    return plans
+
+
+def _nested_object_keys(value: Any) -> set[str]:
+    if isinstance(value, list):
+        return set().union(*(_nested_object_keys(entry) for entry in value)) if value else set()
+    if isinstance(value, dict):
+        result = {key for key in value if isinstance(key, str)}
+        for entry in value.values():
+            result.update(_nested_object_keys(entry))
+        return result
+    return set()
 
 
 @dataclass(frozen=True)
@@ -1889,6 +2681,184 @@ def load_objects(inputs: Iterable[Path]) -> list[SourceObject]:
     return objects
 
 
+@functools.lru_cache(maxsize=1)
+def core_mutation_catalog_ids() -> tuple[frozenset[str], frozenset[str]]:
+    """Read direct, concrete core mutation/category IDs from source data."""
+    source_root = REPOSITORY_ROOT / "data" / "json" / "mutations"
+    try:
+        objects = load_objects([source_root])
+    except ValueError:
+        # A missing or unreadable source catalog proves no IDs; callers then
+        # leave every mutation selector as a migration TODO.
+        return frozenset(), frozenset()
+    mutation_ids: set[str] = set()
+    category_ids: set[str] = set()
+    deleted_mutation_ids: set[str] = set()
+    deleted_category_ids: set[str] = set()
+    for source in objects:
+        value = source.value
+        kind = value.get("type")
+        identifier = value.get("id")
+        if (
+            kind not in {"mutation", "mutation_category"} or
+            not safe_platform_id(identifier)
+        ):
+            continue
+        if "delete" in value:
+            if kind == "mutation":
+                deleted_mutation_ids.add(identifier)
+            else:
+                deleted_category_ids.add(identifier)
+            continue
+        if (
+            "abstract" in value or
+            any(key in value for key in ("copy-from", "extend"))
+        ):
+            continue
+        if kind == "mutation":
+            mutation_ids.add(identifier)
+        else:
+            category_ids.add(identifier)
+    return (
+        frozenset(mutation_ids - deleted_mutation_ids),
+        frozenset(category_ids - deleted_category_ids),
+    )
+
+
+@functools.lru_cache(maxsize=1)
+def core_body_part_catalog_ids() -> frozenset[str]:
+    """Read concrete core body-part IDs used by native wound effects."""
+    source_paths = [
+        REPOSITORY_ROOT / "data" / "json" / "body_parts.json",
+        REPOSITORY_ROOT / "data" / "json" / "mutations",
+    ]
+    try:
+        objects = load_objects(source_paths)
+    except ValueError:
+        return frozenset()
+    identifiers = {
+        source.value["id"] for source in objects
+        if source.value.get("type") == "body_part" and
+        isinstance(source.value.get("id"), str) and
+        safe_platform_id(source.value["id"]) and
+        source.value.get("abstract") is not True and
+        "copy-from" not in source.value
+    }
+    return frozenset(identifiers)
+
+
+def _morale_type_catalog_parts(
+    objects: Iterable[SourceObject],
+) -> tuple[frozenset[str], frozenset[str]]:
+    identifiers: set[str] = set()
+    deleted: set[str] = set()
+    for source in objects:
+        value = source.value
+        identifier = value.get("id")
+        if value.get("type") != "morale_type" or not safe_platform_id(identifier):
+            continue
+        if "delete" in value:
+            deleted.add(identifier)
+        elif "abstract" not in value:
+            identifiers.add(identifier)
+    return frozenset(identifiers), frozenset(deleted)
+
+
+@functools.lru_cache(maxsize=1)
+def core_morale_type_catalog_ids() -> frozenset[str]:
+    """Read core registered morale IDs from the known core definition files."""
+    source_paths = (
+        REPOSITORY_ROOT / "data" / "json" / "morale_types.json",
+        REPOSITORY_ROOT / "data" / "json" / "effects_on_condition" /
+        "misc_effect_on_condition.json",
+        REPOSITORY_ROOT / "data" / "json" / "effects_on_condition" /
+        "nether_eocs" / "vitrification_effect_on_condition.json",
+    )
+    try:
+        objects = load_objects(source_paths)
+    except ValueError:
+        return frozenset()
+    identifiers, deleted = _morale_type_catalog_parts(objects)
+    return frozenset(identifiers - deleted)
+
+
+def known_morale_type_catalog_ids(
+    objects: Iterable[SourceObject],
+) -> frozenset[str]:
+    """Combine core and loaded morale types, honoring source deletions."""
+    source_ids, deleted = _morale_type_catalog_parts(objects)
+    return frozenset(
+        (core_morale_type_catalog_ids() | source_ids) - deleted
+    )
+
+
+def source_recipe_catalog_ids(objects: Iterable[SourceObject]) -> frozenset[str]:
+    """Collect only directly identifiable recipe IDs from loaded JSON sources."""
+    identifiers: set[str] = set()
+    for source in objects:
+        value = source.value
+        kind = value.get("type")
+        if (
+            kind not in {"recipe", "practice"} or
+            value.get("abstract") is True or
+            "abstract" in value or "copy-from" in value or "extend" in value or
+            value.get("obsolete") is True
+        ):
+            continue
+        if kind == "practice":
+            identifier = value.get("id")
+        else:
+            # Native recipe::load appends variant/id_suffix to the result ID;
+            # keep these shapes out until that exact construction is modeled.
+            if "variant" in value or "id_suffix" in value:
+                continue
+            identifier = value.get("result")
+        if safe_native_recipe_id(identifier):
+            identifiers.add(identifier)
+    return frozenset(identifiers)
+
+
+@functools.lru_cache(maxsize=1)
+def core_recipe_catalog_ids() -> frozenset[str]:
+    """Read concrete core recipe IDs for registry-checked EOC selectors."""
+    source_root = REPOSITORY_ROOT / "data" / "json" / "recipes"
+    try:
+        objects = load_objects([source_root])
+    except ValueError:
+        return frozenset()
+    return source_recipe_catalog_ids(objects)
+
+
+def source_wound_catalog_ids(objects: Iterable[SourceObject]) -> frozenset[str]:
+    """Accept only self-contained wound definitions from the input corpus."""
+    required = {"name", "description", "damage_types", "damage_required"}
+    identifiers: set[str] = set()
+    for source in objects:
+        value = source.value
+        identifier = value.get("id")
+        name = display_text(value.get("name"))
+        description = display_text(value.get("description"))
+        damage_types = string_ids(value.get("damage_types"))
+        damage_required = value.get("damage_required")
+        if (
+            value.get("type") == "wound" and
+            bounded_platform_id(identifier) and
+            value.get("abstract") is not True and "copy-from" not in value and
+            required <= value.keys() and
+            bounded_utf8_string(name, WOUND_NAME_MAX_BYTES) and
+            bounded_utf8_string(description, WOUND_DESCRIPTION_MAX_BYTES) and
+            damage_types and
+            all(bounded_platform_id(damage_type) for damage_type in damage_types) and
+            len(set(damage_types)) == len(damage_types) and
+            isinstance(damage_required, list) and len(damage_required) == 2 and
+            (minimum := native_integer(damage_required[0])) is not None and
+            (maximum := native_integer(damage_required[1])) is not None and
+            maximum >= minimum
+        ):
+            identifiers.add(identifier)
+    return frozenset(identifiers)
+
+
 def render_materials(
     lines: list[str], raw: Any,
     add_todo: Callable[[TodoCategory, str], None],
@@ -1944,7 +2914,11 @@ def render_pairs(
             )
 
 
-def render_item(source: SourceObject, result: MigrationResult) -> str | None:
+def render_item(
+    source: SourceObject,
+    result: MigrationResult,
+    item_use_plan: ItemUseActionPlan | None = None,
+) -> str | None:
     value = source.value
     item_id = stable_id(value, f"todo_item_{source.index}")
     if not isinstance(value.get("id"), str) or not value["id"]:
@@ -2062,6 +3036,22 @@ def render_item(source: SourceObject, result: MigrationResult) -> str | None:
             lines.append(f"definition:flag({lua_quote(flag_name)})")
     elif "flags" in value:
         result.add_todo("manual_rewrite", f"{source.location}: item {item_id} flags need manual conversion")
+    if "use_action" in value:
+        if item_use_plan is None:
+            result.add_todo(
+                "manual_rewrite",
+                f"{source.location}: item {item_id} use_action is outside the bounded typed item-use migration pass",
+            )
+        elif item_use_plan.migrated:
+            lines.append(
+                f"definition:on_use({lua_quote(item_use_plan.handler_id)}, "
+                f"content.text({lua_quote(item_use_plan.menu_text)}))"
+            )
+        else:
+            result.add_todo(
+                item_use_plan.todo_category,
+                item_use_plan.todo_message,
+            )
     unresolved = sorted(set(value) - COMMON_ITEM_FIELDS)
     if unresolved or forced_partial or len(result.todos) != todo_count:
         result.partial.append(f"{source.location}: item {item_id}")
@@ -2074,6 +3064,28 @@ def render_item(source: SourceObject, result: MigrationResult) -> str | None:
         result.converted.append(f"{source.location}: item {item_id}")
     lines.extend((content_submit_expression(), ""))
     return "\n".join(lines)
+
+
+def render_item_use_handler(plan: ItemUseActionPlan) -> str:
+    """Render the bounded literal-message item callback after native early returns."""
+    if (
+        not plan.migrated or plan.handler_id is None or
+        plan.message is None or plan.message_type is None
+    ):
+        raise ValueError("item-use callback plan is incomplete")
+    return "\n".join((
+        f"runtime.handler({lua_quote(plan.handler_id)}, function(context)",
+        "    local actor = context.character",
+        '    if actor == nil or actor.subtype == "npc" then',
+        "        return 0",
+        "    end",
+        "    context:message(",
+        f"        services.translate({lua_quote(plan.message)}),",
+        f"        {lua_quote(plan.message_type)})",
+        "    return 0",
+        "end)",
+        "",
+    ))
 
 
 def requirement_choices(raw: Any, *, tools: bool = False) -> list[tuple[str, int]] | None:
@@ -2726,19 +3738,182 @@ def _lua_literal(value: Any) -> str:
     raise TypeError(f"unsupported Lua literal {type(value).__name__}")
 
 
+def _legacy_trade_action_todo(key: str) -> str | None:
+    return {
+        "quote_npc_trade_item": (
+            "native quote_npc_trade_item only sets prefix_item_id/name/count/cost "
+            "from an item type, count, and NPC trading_price_for_order for its "
+            "alpha/beta participants; "
+            "services.trade.quote requires an exact held Item and holders, then "
+            "returns a QuoteToken instead of those variables"
+        ),
+        "u_buy_item": (
+            "native u_buy_item calls dialogue beta buy_from(cost), then creates "
+            "alpha's item or item-group reward and runs ordered false/true EOCs; "
+            "services.trade.pay reproduces only payment for an exact NPC and the "
+            "active avatar, while services.inventory.give/give_group do not preserve "
+            "receive_item(_group)'s i_add_or_drop drop/equip behavior, default-ammo "
+            "initialization, suppress_message-controlled popup, or all native "
+            "container/flags/count "
+            "semantics as one transaction"
+        ),
+        "u_sell_item": (
+            "native u_sell_item consumes alpha inventory by item type/count or "
+            "charges, assigns each fragment to beta's faction, then applies cost "
+            "and ordered EOCs. Lua lowering requires a source-proven participant "
+            "pair and action phase plus supported static arguments/conditions; "
+            "dynamic or fractional counts, nonzero cost, nested EOCs, unbound "
+            "phases, and unsupported response conditions remain TODO"
+        ),
+        "u_bulk_donate": (
+            "native u_bulk_donate selects by dialogue cur_item type, visits alpha "
+            "Character inventory, may ask the avatar to confirm, and transfers "
+            "matching items or containers up to the requested count; Platform trade "
+            "requires exact Item and holder handles"
+        ),
+        "npc_bulk_donate": (
+            "native npc_bulk_donate selects by dialogue cur_item type and transfers "
+            "matching beta-seller items or containers to alpha up to the requested "
+            "count; Platform trade requires exact participant, Item, and holder handles"
+        ),
+        "u_bulk_trade_accept": (
+            "native u_bulk_trade_accept selects by dialogue cur_item type, computes "
+            "price from the beta faction currency and NPC debt, and transfers all "
+            "matching items; Platform quote requires exact Item and holder handles"
+        ),
+        "npc_bulk_trade_accept": (
+            "native npc_bulk_trade_accept selects by dialogue cur_item type, computes "
+            "price from the beta NPC debt and faction currency, and transfers all "
+            "matching items; Platform quote requires exact Item and holder handles"
+        ),
+        "u_buy_monster": (
+            "native u_buy_monster pays the beta NPC before placing monsters around the "
+            "alpha avatar, applies permanent pet plus optional pacified/name state, "
+            "shows native messages, reports success after partial placement, and runs "
+            "true/false EOCs; typed trade and spawn services do not preserve that combined result"
+        ),
+        "u_spend_cash": (
+            "native u_spend_cash calls dialogue actor(true).buy_from and runs ordered "
+            "true/false EOCs in the original dialogue; only standalone direct TALK "
+            "responses with a nonnegative literal integer amount use the bounded "
+            "on_action lowering, while combined effects, event/EOC, dynamic, negative, "
+            "and callback-bearing shapes remain unsupported"
+        ),
+    }.get(key)
+
+
+def _legacy_trade_action_effect_todo(effect: Any) -> str | None:
+    if isinstance(effect, dict) and set(effect) == {"effect"}:
+        effect = effect["effect"]
+    selectors = {
+        "quote_npc_trade_item", "u_buy_item", "u_sell_item",
+        "u_bulk_donate", "npc_bulk_donate",
+        "u_bulk_trade_accept", "npc_bulk_trade_accept",
+        "u_buy_monster", "u_spend_cash",
+    }
+    if isinstance(effect, list):
+        for nested in effect:
+            reason = _legacy_trade_action_effect_todo(nested)
+            if reason is not None:
+                return reason
+        return None
+    if isinstance(effect, str):
+        return _legacy_trade_action_todo(effect) if effect in selectors else None
+    if isinstance(effect, dict):
+        keys = [key for key in selectors if key in effect]
+        if len(keys) == 1:
+            return _legacy_trade_action_todo(keys[0])
+    return None
+
+
+_CAMP_SELECTOR_TODOS: dict[str, tuple[TodoCategory, str]] = {
+    "start_camp": (
+        "platform_gap",
+        "native start_camp derives camp recipes from the current OMT and mapgen arguments, "
+        "opens a type picker, rejects camps within 3 OMT and mapgen collisions, then "
+        "creates the camp and initializes hidden_missions; services.camps.create requires "
+        "explicit owner, manager, position, name, and type and does not preserve that workflow",
+    ),
+    "assign_camp": (
+        "platform_gap",
+        "native assign_camp finds the camp under the NPC, resets NPC mission/attitude/guard/path "
+        "state, assigns the worker, and opens job_assignment_ui; services.camps.assign_worker "
+        "requires explicit camp/manager/worker handles and only changes the assignment",
+    ),
+    "return_to_camp_duties": (
+        "platform_gap",
+        "native return_to_camp_duties resets camp-resident mission, guards, goals, and travel path "
+        "while retaining the assigned camp; services.camps.recall_worker instead unassigns the "
+        "worker and no typed service restores this duty state",
+    ),
+    "abandon_camp": (
+        "platform_gap",
+        "native abandon_camp emergency-recalls companion missions, stops assigned workers' guards, "
+        "then removes the camp; services.camps.remove rejects assigned workers and active or "
+        "recoverable Platform tasks, so composing it would not preserve the native transaction",
+    ),
+    "basecamp_mission": (
+        "platform_gap",
+        "native basecamp_mission checks access, sets radio state, loads the camp map, forms storage "
+        "zones, builds and displays a live mission picker, runs the selected mission, then saves "
+        "and unloads the map; Platform camp tasks accept explicit resource_work, recipe_work, or "
+        "upgrade_work descriptors and do not replace that selector",
+    ),
+}
+
+
+def _camp_selector_todo(effect: Any) -> tuple[TodoCategory, str] | None:
+    """Describe camp selectors whose native workflows have no exact lowering."""
+    return _CAMP_SELECTOR_TODOS.get(effect) if isinstance(effect, str) else None
+
+
+def _distribute_food_auto_todo(effect: Any) -> str | None:
+    """Describe the native zone and food-inventory transaction we cannot lower."""
+    if not isinstance(effect, str) or effect != "distribute_food_auto":
+        return None
+    return (
+        "native distribute_food_auto emits debugmsg and returns if the NPC has no camp at its "
+        "current OMT or fails allowed_access_by, then adds enabled CAMP_FOOD and CAMP_STORAGE "
+        "zones over the NPC's 3x3 map-square area and runs distribute_food(false). That call "
+        "validates sort zones around the global avatar and may query_yn to open zone setup; "
+        "missing zones also produce an NPC-distribution debugmsg, while no suitable food "
+        "returns false quietly and the wrapper ignores the result. Successful distribution "
+        "consumes eligible ground and vehicle food with native nutrition and spoilage rules, "
+        "then credits the camp owner's faction. Cleanup removes every same-faction CAMP_FOOD "
+        "and CAMP_STORAGE zone, including pre-existing zones, rather than only the temporary "
+        "pair. Platform camps.food.add/consume mutate supply directly and services.zones only "
+        "manage zones; neither preserves this inventory transaction, diagnostics/UI behavior, "
+        "or destructive cleanup"
+    )
+
+
+def _camp_selector_object_todo(effect: Any) -> str | None:
+    """Reject object forms for camp selectors registered as native strings."""
+    if not isinstance(effect, dict):
+        return None
+    selectors = set(effect) & _CAMP_SELECTOR_TODOS.keys()
+    if (
+        not selectors and set(effect) == {"effect"} and
+        isinstance(effect["effect"], str) and effect["effect"] in _CAMP_SELECTOR_TODOS
+    ):
+        selectors = {effect["effect"]}
+    if not selectors:
+        return None
+    names = ", ".join(sorted(selectors))
+    return (
+        f"{names} is registered by native talk_effect_t as a string selector; "
+        "object-valued forms are not accepted by its sub-effect parser and need "
+        "the intended operation verified before choosing a Lua rewrite"
+    )
+
+
 def render_dialogue_trade_effect(
     effect: Any,
     result: MigrationResult,
     location: str,
     label: str,
 ) -> LuaRaw | None:
-    """Lower the bounded dialogue trade effects into Platform callbacks.
-
-    The native dialogue implementation uses the current topic item and the
-    alpha/beta talkers.  PlatformDialogueContext exposes those same semantic
-    values without exposing a borrowed ``dialogue`` pointer, while the trade
-    service preserves native ownership, debt, and currency settlement rules.
-    """
+    """Reject trade, purchase, and payment callbacks without native context."""
     if isinstance(effect, dict) and set(effect) == {"effect"}:
         effect = effect["effect"]
     if isinstance(effect, str):
@@ -2748,7 +3923,7 @@ def render_dialogue_trade_effect(
             name for name in (
                 "u_bulk_donate", "npc_bulk_donate",
                 "u_bulk_trade_accept", "npc_bulk_trade_accept",
-                "quote_npc_trade_item",
+                "quote_npc_trade_item", "u_buy_monster", "u_spend_cash",
             ) if name in effect
         ]
         if len(keys) != 1:
@@ -2758,9 +3933,9 @@ def render_dialogue_trade_effect(
         return None
 
     if key == "quote_npc_trade_item":
-        # The dialogue topic only carries a type id, not an exact item
-        # handle.  Do not search the holder or resurrect the old topic-item
-        # accessor in a Platform migration.
+        # Native quote effects set prefixed quote variables from an item type
+        # and NPC pricing.  services.trade.quote instead requires an exact
+        # held Item and returns a transaction token.
         return None
 
     if key in {
@@ -2775,11 +3950,12 @@ def render_dialogue_trade_effect(
     if key not in {
         "u_bulk_donate", "npc_bulk_donate",
         "u_bulk_trade_accept", "npc_bulk_trade_accept",
+        "u_buy_monster", "u_spend_cash",
     }:
         return None
-    # These dialogue forms derive the item from the current topic and then
-    # search by type.  Only the item-event path with an explicit handle is
-    # eligible for 6D1, so this remains a migration TODO.
+    # These native actions depend on current dialogue participants and state.
+    # Their selector arguments do not carry the exact transaction handles or
+    # callback context required by the Platform services.
     return None
 
 
@@ -2804,125 +3980,18 @@ def _validated_eoc_references(
 
 def _traversal_calls(
     references: list[str], eoc_function_names: dict[str, str], *,
-    item: bool = False, vehicle: bool = False, target: bool = True,
-    item_actor: str | None = None, owner_actor: str | None = None,
+    target: bool = True, owner_actor: str | None = None,
 ) -> list[str]:
     lines: list[str] = []
     for reference in references:
         function_name = eoc_function_names[reference]
-        if item:
-            owner = item_actor or "nil"
-            lines.extend([
-                "        local previous_item = context.actors.item",
-                "        context.actors.item = target_item",
-                f"        {function_name}(context, {owner})",
-                "        context.actors.item = previous_item",
-            ])
-        elif vehicle:
-            lines.extend([
-                "        local previous_vehicle = context.actors.vehicle",
-                "        context.actors.vehicle = target",
-                f"        {function_name}(context, target)",
-                "        context.actors.vehicle = previous_vehicle",
-            ])
-        elif target:
+        if target:
             lines.append(f"        {function_name}(context, target)")
         else:
             lines.append(
                 f"        {function_name}(context, {owner_actor or 'nil'})"
             )
     return lines
-
-
-def _item_search_condition(value: Any, depth: int = 0) -> dict[str, Any] | str | None:
-    """Lower the bounded item/talker condition subset used by ``search_data``."""
-    if depth > 8:
-        return None
-    if value == "has_ammo":
-        return value
-    if not isinstance(value, dict) or len(value) != 1:
-        return None
-    key, payload = next(iter(value.items()))
-    if key == "math":
-        parts = payload if isinstance(payload, list) else [payload]
-        if not 0 < len(parts) <= 16 or not all(
-            bounded_utf8_string(part, 8192, allow_empty=False)
-            for part in parts
-        ):
-            return None
-        return {"math": "".join(parts)}
-    if key in {"and", "or"}:
-        if not isinstance(payload, list) or not 0 < len(payload) <= 16:
-            return None
-        children = [_item_search_condition(child, depth + 1) for child in payload]
-        if any(child is None for child in children):
-            return None
-        return {
-            "all" if key == "and" else "any": children,
-        }
-    if key == "not":
-        child = _item_search_condition(payload, depth + 1)
-        return None if child is None else {"not": child}
-    return None
-
-
-def _item_search_descriptors(
-    value: Any, *, allow_condition: bool = False
-) -> str | None:
-    """Render the bounded ``item_search_data`` subset as Platform filters."""
-    if not isinstance(value, list) or len(value) > 128:
-        return None
-    allowed = {
-        "id", "id_blacklist", "category", "material", "flags",
-        "excluded_flags", "uses_energy", "is_chargeable", "worn_only",
-        "wielded_only", "held_only",
-    }
-    if allow_condition:
-        allowed.add("condition")
-    normalized: list[dict[str, Any]] = []
-    for entry in value:
-        if not isinstance(entry, dict) or set(entry) - allowed:
-            return None
-        output: dict[str, Any] = {}
-        for key in (
-            "id", "id_blacklist", "category", "material", "flags",
-            "excluded_flags",
-        ):
-            if key not in entry:
-                continue
-            raw = entry[key]
-            values = raw if isinstance(raw, list) else [raw]
-            if not values or len(values) > 128 or not all(
-                bounded_utf8_string(item, PLATFORM_ID_MAX_BYTES, allow_empty=False)
-                for item in values
-            ):
-                return None
-            output[key] = values if isinstance(raw, list) else values[0]
-        for key in (
-            "uses_energy", "is_chargeable", "worn_only", "wielded_only",
-            "held_only",
-        ):
-            if key in entry and not isinstance(entry[key], bool):
-                return None
-            if key in entry:
-                output[key] = entry[key]
-        if "condition" in entry and allow_condition:
-            condition = _item_search_condition(entry["condition"])
-            if condition is None:
-                return None
-            output["condition"] = condition
-        normalized.append(output)
-    return _lua_literal(normalized)
-
-
-def _render_traversal_false_calls(
-    references: list[str], eoc_function_names: dict[str, str],
-    indent: str = "        ",
-) -> list[str]:
-    return [
-        indent + f"{eoc_function_names[reference]}(context, nil)"
-        for reference in references
-    ]
 
 
 def _traversal_integer_expression(
@@ -2953,12 +4022,13 @@ def render_static_traversal(
     eoc_function_names: dict[str, str],
     eoc_actor_requirements: dict[str, str] | None = None,
 ) -> list[str] | None:
-    """Lower all bounded ``*_run_*_eocs`` selectors to Lua iteration.
+    """Lower bounded non-item ``*_run_*_eocs`` selectors to Lua iteration.
 
-    Each branch consumes detached pages and generation-safe handles from the
-    Platform domain services.  The generated code never calls an EOC runner or
-    passes a native pointer across Lua.  Inline EOC objects have already been
-    normalised to private function names by :func:`normalize_inline_eocs`.
+    Each supported branch consumes detached pages and generation-safe handles
+    from the Platform domain services.  The generated code never calls an EOC
+    runner or passes a native pointer across Lua.  Inline EOC objects have
+    already been normalised to private function names by
+    :func:`normalize_inline_eocs`.
     """
     # This branch is actor-owned.  Do not invent an avatar when the source
     # event did not provide a proven Character handle; the caller will retain
@@ -2967,23 +4037,45 @@ def render_static_traversal(
         return None
     if key not in effect:
         return None
-    if key in {
-        "u_run_inv_eocs", "npc_run_inv_eocs",
-        "u_map_run_item_eocs", "npc_map_run_item_eocs",
-    }:
-        references: list[str] = []
-    else:
-        raw_references = effect.get(key)
-        if isinstance(raw_references, str):
-            raw_references = [raw_references]
-        references = _validated_eoc_references(raw_references, eoc_function_names)
-        if references is None:
-            return None
-        if eoc_actor_requirements is not None and any(
-            eoc_actor_requirements.get(reference) == "exact_avatar"
-            for reference in references
-        ):
-            return None
+    if key in {"u_run_inv_eocs", "npc_run_inv_eocs"}:
+        # Native Character::all_items_loc() walks wielded and worn roots in
+        # recursive postorder and excludes ordinary carried inventory, while
+        # services.items.page does not expose the same set and order.
+        return None
+    if key in {"u_map_run_item_eocs", "npc_map_run_item_eocs"}:
+        # Native map selection preserves points_in_radius/item-stack order,
+        # evaluates search_data with the cloned owner and selected item talkers,
+        # and gives manual_mult false_eocs only when the candidate set is empty.
+        # The Platform map page sorts by position/UID and the generic
+        # multi-picker path cannot preserve those callback/false-branch semantics.
+        return None
+    if key in {"u_run_monster_eocs", "npc_run_monster_eocs"}:
+        # Native walks game::all_creatures() order and includes hallucination
+        # monsters.  services.creatures.nearby sorts by distance/type and
+        # defaults to excluding hallucinations.  Native also creates a
+        # fresh dialogue with the target monster as alpha for each callback;
+        # this ordinary Lua traversal cannot preserve that talker/context
+        # boundary.  The npc_* forms read mutable actor(true), which is beta
+        # and falls back to alpha with a debug diagnostic; an event alpha does
+        # not prove that beta slot.
+        return None
+    if key in {"u_run_vehicle_eocs", "npc_run_vehicle_eocs"}:
+        # Native walks map::get_vehicles() order, uses rl_dist, and creates a
+        # fresh dialogue with each vehicle as alpha.  services.world.vehicles
+        # sorts by position, while the former lowering used square_distance
+        # and a shared Lua callback context.
+        return None
+    raw_references = effect.get(key)
+    if isinstance(raw_references, str):
+        raw_references = [raw_references]
+    references = _validated_eoc_references(raw_references, eoc_function_names)
+    if references is None:
+        return None
+    if eoc_actor_requirements is not None and any(
+        eoc_actor_requirements.get(reference) in {"exact_avatar", "unproven"}
+        for reference in references
+    ):
+        return None
 
     if key in {"u_run_npc_eocs", "npc_run_npc_eocs"}:
         if actor_expression is None:
@@ -3136,144 +4228,6 @@ def render_static_traversal(
         ])
         return lines
 
-    if key in {"u_run_monster_eocs", "npc_run_monster_eocs"}:
-        if actor_expression is None:
-            return None
-        allowed = {key, "monster_range", "mtype_ids", "z_min", "z_max", "monster_must_see"}
-        if set(effect) - allowed:
-            return None
-        radius = effect.get("monster_range")
-        radius_expression = (
-            _traversal_integer_expression(
-                radius, 0, 1000, actor_expression
-            )
-            if radius is not None else "1000"
-        )
-        if radius_expression is None:
-            return None
-        ids = effect.get("mtype_ids", [])
-        id_expressions: list[str] = []
-        if not isinstance(ids, list) or len(ids) > 256:
-            return None
-        for value in ids:
-            expression = _traversal_string_expression(value, actor_expression)
-            if expression is None:
-                return None
-            id_expressions.append(expression)
-        z_expressions = {}
-        for name in ("z_min", "z_max"):
-            value = effect.get(name)
-            if value is not None:
-                expression = _traversal_integer_expression(
-                    value, -1000000, 1000000, actor_expression
-                )
-                if expression is None:
-                    return None
-                z_expressions[name] = expression
-        calls = _traversal_calls(references, eoc_function_names)
-        lines = [
-            f"    local monster_origin = service_value(services.characters.snapshot({actor_expression})).creature.position",
-            "    local monster_offset = 0",
-            "    while true do",
-            "        local monster_page = services.creatures.nearby(",
-            f"            {actor_expression}, {{",
-            "            origin = monster_origin,",
-            f"            radius = {radius_expression},",
-            "            kind = \"monster\",",
-            "            visible_only = false,",
-            "            include_avatar = false,",
-            "            include_hallucinations = false,",
-            "            offset = monster_offset,",
-            "            limit = 512,",
-            "        })",
-            "        for _, entry in ipairs(monster_page.items) do",
-            "            local target = entry.handle",
-            "            local target_z = entry.snapshot.position.z",
-            "            local target_type = entry.snapshot.type_id",
-        ]
-        if ids:
-            lines.extend([
-                "            local type_match = false",
-                "            for _, requested_type in ipairs({ " + ", ".join(id_expressions) + " }) do",
-                "                if target_type == requested_type then type_match = true; break end",
-                "            end",
-            ])
-        else:
-            lines.append("            local type_match = true")
-        lines.extend([
-            "            if type_match and (",
-            f"                {z_expressions['z_min']} <= target_z" if "z_min" in z_expressions else "                true",
-            ") and (",
-            f"                target_z <= {z_expressions['z_max']}" if "z_max" in z_expressions else "                true",
-            ") and (",
-            "                target_z == monster_origin.z" if radius is not None and "z_min" not in z_expressions and "z_max" not in z_expressions else "                true",
-            ") and (",
-            "                not " + lua_boolean(bool(effect.get("monster_must_see", False))) +
-            " or service_value(services.creatures.can_see(target, " + actor_expression + "))",
-            ") then",
-            *[line.replace("        ", "                ", 1) for line in calls],
-            "            end",
-            "        end",
-            "        if not monster_page.has_more or monster_page.returned == 0 then",
-            "            break",
-            "        end",
-            "        monster_offset = monster_offset + monster_page.returned",
-            "    end",
-        ])
-        return lines
-
-    if key in {"u_run_vehicle_eocs", "npc_run_vehicle_eocs"}:
-        if actor_expression is None:
-            return None
-        allowed = {key, "vehicle_range", "z_min", "z_max"}
-        if set(effect) - allowed:
-            return None
-        radius = effect.get("vehicle_range")
-        radius_expression = _traversal_integer_expression(
-            radius, 0, 1000000, actor_expression
-        )
-        if radius_expression is None:
-            return None
-        z_expressions = {}
-        for name in ("z_min", "z_max"):
-            value = effect.get(name)
-            if value is not None:
-                expression = _traversal_integer_expression(
-                    value, -1000000, 1000000, actor_expression
-                )
-                if expression is None:
-                    return None
-                z_expressions[name] = expression
-        calls = _traversal_calls(references, eoc_function_names, vehicle=True)
-        lines = [
-            "    context.actors = context.actors or {}",
-            f"    local vehicle_origin = service_value(services.characters.snapshot({actor_expression})).creature.position",
-            "    local vehicle_offset = 0",
-            "    while true do",
-            "        local vehicle_page = services.world.vehicles({ offset = vehicle_offset, limit = 256 })",
-            "        for _, entry in ipairs(vehicle_page.items) do",
-            "            local target = entry.handle",
-            "            local target_z = entry.position.z",
-            "            local distance = vehicle_origin:square_distance(entry.position)",
-            "            if distance <= " + radius_expression + " and (",
-            f"                {z_expressions['z_min']} <= target_z" if "z_min" in z_expressions else "                true",
-            ") and (",
-            f"                target_z <= {z_expressions['z_max']}" if "z_max" in z_expressions else "                true",
-            ") then",
-            "                local previous_character = context.actors.character",
-            f"                context.actors.character = {actor_expression}",
-            *[line.replace("        ", "                ", 1) for line in calls],
-            "                context.actors.character = previous_character",
-            "            end",
-            "        end",
-            "        if not vehicle_page.has_more or vehicle_page.returned == 0 then",
-            "            break",
-            "        end",
-            "        vehicle_offset = vehicle_offset + vehicle_page.returned",
-            "    end",
-        ]
-        return lines
-
     if key in {"u_run_fixed_zone_eocs", "npc_run_fixed_zone_eocs"}:
         if actor_expression is None:
             return None
@@ -3333,291 +4287,15 @@ def render_static_traversal(
         ])
         return lines
 
-    if key in {"u_run_inv_eocs", "npc_run_inv_eocs"}:
-        if actor_expression is None or effect.get(key) not in {
-            "all", "random", "manual", "manual_mult",
-        }:
-            return None
-        comment_keys = {
-            name for name in effect
-            if isinstance(name, str) and name.startswith("//")
-        }
-        allowed = {
-            key, "true_eocs", "false_eocs", "search_data", "title"
-        } | comment_keys
-        if set(effect) - allowed:
-            return None
-        true_refs = _validated_eoc_references(
-            effect.get("true_eocs", []), eoc_function_names,
-            allow_empty=True,
-        )
-        false_refs = _validated_eoc_references(
-            effect.get("false_eocs", []), eoc_function_names, allow_empty=True
-        )
-        if true_refs is None or false_refs is None:
-            return None
-        if eoc_actor_requirements is not None and any(
-            eoc_actor_requirements.get(reference) == "exact_avatar"
-            for reference in (*true_refs, *false_refs)
-        ):
-            return None
-        mode = effect[key]
-        search_data = effect.get("search_data", [])
-        filters = _item_search_descriptors(
-            search_data, allow_condition=True
-        )
-        if filters is None or search_data or mode != "all":
-            # Platform item pages deliberately do not accept a legacy filter
-            # tree or an unbounded candidate array.  Only the proven actor,
-            # literal holder, and bounded page/depth shape can lower here;
-            # filtered, random, and interactive selectors remain TODOs.
-            return None
-        calls = _traversal_calls(
-            true_refs, eoc_function_names, item=True, item_actor=actor_expression
-        )
-        indented_calls = [line.replace("        ", "            ", 1) for line in calls]
-        lines = [
-            "    context.actors = context.actors or {}",
-            f"    local inventory_holder = {{ kind = \"character\", character = {actor_expression}, slot = \"inventory\" }}",
-            "    local inventory_options = { recursive = true, max_depth = 64, page_size = 256 }",
-            "    local inventory_cursor = nil",
-            "    local inventory_seen = false",
-            "    while true do",
-            "        local inventory_page = service_value(services.items.page(inventory_holder, inventory_options, inventory_cursor))",
-            "        for _, inventory_entry in ipairs(inventory_page.items) do",
-            "            inventory_seen = true",
-            "            local target_item = inventory_entry.handle",
-            *indented_calls,
-            "        end",
-            "        if inventory_page.complete or inventory_page.continuation == nil or inventory_page.returned == 0 then",
-            "            break",
-            "        end",
-            "        inventory_cursor = inventory_page.continuation",
-            "    end",
-            "    if not inventory_seen then",
-            *_render_traversal_false_calls(false_refs, eoc_function_names),
-            "    end",
-        ]
-        return lines
-
     if key in {"u_map_run_eocs", "npc_map_run_eocs"}:
-        allowed = {key, "target_var", "range", "store_coordinates_in", "stop_at_first", "condition"}
-        if set(effect) - allowed:
-            return None
-        target = _context_coordinate_expression(effect.get("target_var"))
-        if target is None:
-            if actor_expression is None:
-                return None
-            target = f"service_value(services.characters.snapshot({actor_expression})).creature.position"
-        radius = effect.get("range", 1)
-        radius_expression = _traversal_integer_expression(
-            radius, 0, 1000000, actor_expression or "actor"
-        )
-        if radius_expression is None:
-            return None
-        output_key = effect.get("store_coordinates_in")
-        output_descriptor = None
-        if output_key is not None:
-            output_descriptor = (
-                {"context_val": output_key}
-                if isinstance(output_key, str) else output_key
-            )
-            if _coordinate_variable_descriptor(output_descriptor) is None:
-                return None
-            output_lines = _coordinate_output_lines(
-                output_descriptor, "point_entry.position",
-                key.startswith("u_") and actor_expression is not None,
-                key.startswith("npc_") and actor_expression is not None,
-            )
-            if output_lines is None:
-                return None
-            output_lines = [
-                line.replace("        ", "            ", 1)
-                for line in output_lines
-            ]
-        stop_at_first = effect.get("stop_at_first", True)
-        if not isinstance(stop_at_first, bool):
-            return None
-        calls = _traversal_calls(
-            references, eoc_function_names, target=False,
-            owner_actor=actor_expression,
-        )
-        condition_expression = effect.get("condition", True)
-        if condition_expression not in (True, False):
-            condition_expression = render_eoc_condition_expression(
-                condition_expression,
-                key.startswith("u_") and actor_expression is not None,
-                key.startswith("u_") and actor_expression is not None,
-                key.startswith("npc_") and actor_expression is not None,
-                False,
-            )
-            if condition_expression is None:
-                return None
-        lines = [
-            "    local point_offset = 0",
-            "    local point_done = false",
-            "    while true do",
-            f"        local point_page = services.world.points_nearby({target}, {{ min_radius = 0, max_radius = {radius_expression}, offset = point_offset, limit = 4096 }})",
-            "        for _, point_entry in ipairs(point_page.items) do",
-        ]
-        if output_key is not None:
-            lines.extend(output_lines)
-        if condition_expression is not True:
-            condition_lua = (
-                lua_boolean(condition_expression)
-                if isinstance(condition_expression, bool)
-                else condition_expression
-            )
-            lines.append(f"            if {condition_lua} then")
-            lines.extend(line.replace("        ", "                ", 1) for line in calls)
-            if stop_at_first and condition_expression is not False:
-                lines.extend([
-                    "                point_done = true",
-                    "                break",
-                ])
-            lines.append("            end")
-        elif condition_expression is True:
-            lines.extend(line.replace("        ", "            ", 1) for line in calls)
-            if stop_at_first:
-                lines.extend([
-                    "            point_done = true",
-                    "            break",
-                ])
-        lines.extend([
-            "        end",
-            "        if point_done or not point_page.has_more or point_page.returned == 0 then",
-            "            break",
-            "        end",
-            "        point_offset = point_offset + point_page.returned",
-            "    end",
-        ])
-        return lines
-
-    if key in {"u_map_run_item_eocs", "npc_map_run_item_eocs"}:
-        allowed = {key, "loc", "min_radius", "max_radius", "accessible", "true_eocs", "false_eocs", "search_data", "title"}
-        if set(effect) - allowed:
-            return None
-        mode = effect.get(key)
-        if mode not in {"all", "random", "manual", "manual_mult"}:
-            return None
-        true_refs = _validated_eoc_references(effect.get("true_eocs"), eoc_function_names)
-        false_refs = _validated_eoc_references(effect.get("false_eocs", []), eoc_function_names, allow_empty=True)
-        if true_refs is None or false_refs is None:
-            return None
-        filters = _item_search_descriptors(effect.get("search_data", []))
-        if filters is None:
-            return None
-        origin = _context_coordinate_expression(effect.get("loc"))
-        if origin is None:
-            if actor_expression is None:
-                return None
-            origin = f"service_value(services.characters.snapshot({actor_expression})).creature.position"
-        minimum = effect.get("min_radius", 0)
-        maximum = effect.get("max_radius", 0)
-        minimum_expression = _traversal_integer_expression(
-            minimum, 0, 1000000, actor_expression or "actor"
-        )
-        maximum_expression = _traversal_integer_expression(
-            maximum, 0, 1000000, actor_expression or "actor"
-        )
-        if minimum_expression is None or maximum_expression is None:
-            return None
-        accessible = effect.get("accessible", True)
-        if not isinstance(accessible, bool):
-            return None
-        calls_true = _traversal_calls(
-            true_refs, eoc_function_names, item=True, item_actor=actor_expression
-        )
-        indented_calls_true = [
-            line.replace("        ", "            ", 1)
-            for line in calls_true
-        ]
-        title = effect.get("title", "Select an item.")
-        if not bounded_utf8_string(title, 512, allow_empty=False):
-            return None
-        lines = [
-            "    context.actors = context.actors or {}",
-            "    local item_offset = 0",
-        ]
-        lines.extend([
-            "    local candidates = {}",
-            "    while true do",
-            f"        local item_page = services.world.items_nearby({origin}, {{ min_radius = {minimum_expression}, max_radius = {maximum_expression}, offset = item_offset, limit = 512, filters = {filters} }})",
-            "        for _, item_entry in ipairs(item_page.items) do",
-            "            candidates[#candidates + 1] = item_entry.handle",
-            "        end",
-            "        if not item_page.has_more or item_page.returned == 0 then",
-            "            break",
-            "        end",
-            "        item_offset = item_offset + item_page.returned",
-            "    end",
-        ])
-        if mode == "all":
-            lines.extend([
-                "    for _, target_item in ipairs(candidates) do",
-                *calls_true,
-                "    end",
-            ])
-            if false_refs:
-                lines.extend([
-                    "    if #candidates == 0 then",
-                    *_render_traversal_false_calls(false_refs, eoc_function_names),
-                    "    end",
-                ])
-            # The literal ``all`` selector accepts every item, so native
-            # false_eocs are unreachable.
-            return lines
-        if false_refs:
-            # False callbacks are evaluated only when no candidate exists or
-            # the interactive selector is cancelled; the map service keeps
-            # the candidate list detached and generation-safe.
-            pass
-        if mode == "random":
-            lines.extend([
-                "    if #candidates > 0 then",
-                "        local target_item = candidates[services.random.int(1, #candidates)]",
-                *calls_true,
-                "    end",
-            ])
-            lines.extend([
-                "    if #candidates == 0 then",
-                *_render_traversal_false_calls(false_refs, eoc_function_names),
-                "    end",
-            ])
-            return lines
-        lines.extend([
-            "    if #candidates > 0 then",
-        ])
-        options = "{ accessible = " + lua_boolean(accessible) + ", title = " + lua_quote(title) + " }"
-        if mode == "manual":
-            lines.extend([
-                "        local selection = service_value(services.inventory.choose_map(",
-                f"            {actor_expression}, candidates, {options}))",
-                "        if selection.item ~= nil then",
-                "            local target_item = selection.item",
-                *indented_calls_true,
-                "        elseif selection.cancelled then",
-                *_render_traversal_false_calls(false_refs, eoc_function_names, "            "),
-                "        end",
-            ])
-        else:
-            lines.extend([
-                "        local selection = service_value(services.inventory.choose_many_map(",
-                f"            {actor_expression}, candidates, {options}))",
-                "        for _, selected in ipairs(selection.items) do",
-                "            local target_item = selected.item",
-                *indented_calls_true,
-                "        end",
-                "        if #selection.items == 0 then",
-                *_render_traversal_false_calls(false_refs, eoc_function_names, "            "),
-                "        end",
-            ])
-        lines.extend([
-            "    else",
-            *_render_traversal_false_calls(false_refs, eoc_function_names),
-            "    end",
-        ])
-        return lines
+        # The position query has the same closest_points_first order as native,
+        # but that is not enough to preserve this callback. Native writes an
+        # optional var_info before every tile, reevaluates condition(d) before
+        # every EOC, and effect_on_condition::activate copies the dialogue and
+        # its context for each callback. A generated Lua loop shares one mutable
+        # context table, and this source does not prove typed coordinates or
+        # equivalent per-callback context-copy semantics.
+        return None
 
     return None
 
@@ -3641,19 +4319,38 @@ def render_static_set_condition(
     """Store one named predicate in the current ordinary Lua context."""
     if set(effect) != {"set_condition", "condition"}:
         return None
-    if actor_expression is None:
+    # Native evaluates this key as str_or_var<std::string>.  A runtime
+    # diag_value is converted with diag_value::str(), which is not proven to
+    # match Lua tostring for every possible value type.  Keep this callback
+    # registry limited to fixed keys until the conversion is modeled exactly.
+    if (
+        actor_expression is None or
+        not bounded_utf8_string(effect["set_condition"], 8192, allow_empty=True)
+    ):
         return None
-    actor = actor_expression
-    name = render_eoc_string_expression(effect["set_condition"], actor)
+    name = lua_quote(effect["set_condition"])
+    # The native stored std::function evaluates against the dialogue passed
+    # later to evaluate_conditional, which may have a different alpha/beta
+    # from the setter event.  Compile only generic runtime actor queries here;
+    # never bake the setter's avatar, weapon, or NPC proof into the closure.
+    # Getter call sites separately prove that their current alpha is a
+    # Character before invoking such a closure.
     predicate = render_eoc_condition_expression(
-        effect["condition"], avatar_actor_proven, weapon_actor_proven,
-        npc_actor_proven, creature_actor_proven, eoc_conditions,
-        npc_actor_expression=(
-            "stored_condition_beta"
-            if npc_actor_expression is not None or npc_actor_proven else None
-        ),
+        effect["condition"],
+        avatar_actor_proven=False,
+        weapon_actor_proven=False,
+        npc_actor_proven=False,
+        creature_actor_proven=True,
+        eoc_conditions=eoc_conditions,
+        generic_character_actor_proven=True,
     )
-    if name is None or predicate is None:
+    # Some legacy math predicates still fall back to the ambient avatar when
+    # no exact variable scope is modeled. A saved callback must use its later
+    # dialogue, so reject that generated fallback rather than capturing it.
+    if (
+        name is None or predicate is None or
+        "services.characters.avatar()" in predicate
+    ):
         return None
     return [
         "    context.conditions = context.conditions or {}",
@@ -3674,6 +4371,7 @@ def render_static_run_eocs(
     npc_actor_expression: str | None = None,
     global_eoc_ids: frozenset[str] = frozenset(),
     character_actor_proven: bool = False,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> list[str] | None:
     """Call named/normalised EOC functions immediately as ordinary Lua."""
     if "run_eocs" not in effect:
@@ -3709,11 +4407,35 @@ def render_static_run_eocs(
         value for kind, value in reference_entries if kind == "static"
     ]
     if eoc_actor_requirements is not None and any(
-        eoc_actor_requirements.get(reference) == "exact_avatar"
+        eoc_actor_requirements.get(reference) in {"exact_avatar", "unproven"}
         for reference in references
     ):
         return None
+    requires_current_character = (
+        eoc_actor_requirements is not None and any(
+            eoc_actor_requirements.get(reference) == "character"
+            for reference in references
+        )
+    )
+    if requires_current_character and not (
+        character_actor_proven or avatar_actor_proven
+    ):
+        return None
+    if requires_current_character and (
+        "alpha_talker" in effect or "alpha_loc" in effect
+    ):
+        # A child alpha override can select a different generic Creature
+        # talker.  This runner has no Character-kind proof for that override.
+        return None
     has_dynamic_references = len(references) != len(reference_entries)
+    if has_dynamic_references and eoc_actor_requirements is not None and any(
+        requirement == "unproven"
+        for requirement in eoc_actor_requirements.values()
+    ):
+        # A dynamic selector may resolve to a game_start EOC whose alpha is
+        # not proven after an in-corpus replay. Do not let the generic
+        # function table bypass the static-reference requirement check.
+        return None
     false_references = _validated_eoc_references(
         effect.get("false_eocs", []), eoc_function_names, allow_empty=True
     )
@@ -3932,7 +4654,8 @@ def render_static_run_eocs(
                     f'return snapshot.value end)(service_value({snapshot}))')
         rendered = render_eoc_value_expression(value, "nil", variable_actor)
         if rendered is None:
-            rendered = render_eoc_numeric_expression(value, "0", variable_actor)
+            rendered = render_eoc_numeric_expression(
+                value, "0", variable_actor, effect_actor_targets)
         if rendered is None:
             return None
         if not isinstance(value, dict) or not set(value).intersection({
@@ -3972,7 +4695,7 @@ def render_static_run_eocs(
                 rendered_bounds.append(str(parsed))
                 continue
             dynamic_bound = render_eoc_numeric_expression(
-                bound, "0", fallback_actor
+                bound, "0", fallback_actor, effect_actor_targets
             )
             if dynamic_bound is None:
                 return None
@@ -3989,7 +4712,7 @@ def render_static_run_eocs(
         # A context-backed delay is legal only when it is an integral value at
         # runtime.  tasks.after takes turns rather than a UnitValue.
         dynamic_delay = render_eoc_numeric_expression(
-            delay, "0", fallback_actor
+            delay, "0", fallback_actor, effect_actor_targets
         )
         if dynamic_delay is None:
             return None
@@ -4022,6 +4745,10 @@ def render_static_run_eocs(
         task_references = []
         for reference in references:
             requirement = eoc_actor_requirements.get(reference, "none")
+            if requirement == "unproven":
+                # Do not reinterpret a global callback as an avatar task when
+                # a JSON game_start replay can supply a different dialogue.
+                return None
             if requirement in {"none", "avatar", "character"}:
                 task_references.append(reference)
             elif reference in global_eoc_ids:
@@ -4094,7 +4821,7 @@ def render_static_run_eocs(
             loop_count_expression = str(iterations)
         else:
             dynamic_iterations = render_eoc_numeric_expression(
-                iterations, "0", fallback_actor
+                iterations, "0", fallback_actor, effect_actor_targets
             )
             if dynamic_iterations is None:
                 return None
@@ -4219,285 +4946,214 @@ def render_static_eoc_selector(
     eoc_function_names: dict[str, str],
     actor_expression: str | None,
 ) -> list[str] | None:
-    """Lower ``run_eoc_selector`` to a bounded Platform choice menu."""
-    if "run_eoc_selector" not in effect:
-        return None
-    if set(effect) - {
-        "run_eoc_selector", "allow_cancel", "names", "title", "descriptions",
-        "keys", "variables", "hide_failing", "hilight_disabled",
-    }:
-        return None
-    references = _validated_eoc_references(
-        effect.get("run_eoc_selector"), eoc_function_names
-    )
-    if references is None or not references or len(references) > 128:
-        return None
-    names = effect.get("names")
-    if names is None:
-        names = references
-    if (
-        not isinstance(names, list) or len(names) != len(references) or
-        not all(isinstance(name, str) and bounded_utf8_string(name, 512, allow_empty=False) for name in names)
-    ):
-        return None
-    descriptions = effect.get("descriptions", [""] * len(references))
-    if (
-        not isinstance(descriptions, list) or len(descriptions) != len(references) or
-        not all(isinstance(description, str) and bounded_utf8_string(description, 2048, allow_empty=True) for description in descriptions)
-    ):
-        return None
-    title = effect.get("title", "Select an action")
-    if not isinstance(title, str) or not bounded_utf8_string(title, 512, allow_empty=False):
-        return None
-    allow_cancel = effect.get("allow_cancel", True)
-    if not isinstance(allow_cancel, bool):
-        return None
-    for option in ("hide_failing", "hilight_disabled"):
-        if option in effect and not isinstance(effect[option], bool):
-            return None
-    keys = effect.get("keys")
-    if keys is not None and (
-        not isinstance(keys, list) or len(keys) != len(references) or
-        not all(isinstance(key, str) and len(key) == 1 for key in keys)
-    ):
-        return None
-    variable_contexts = effect.get("variables", [])
-    if variable_contexts is None:
-        variable_contexts = []
-    if (
-        not isinstance(variable_contexts, list) or
-        len(variable_contexts) not in {0, 1, len(references)}
-    ):
-        return None
-    for variable_context in variable_contexts:
-        if not isinstance(variable_context, dict) or len(variable_context) > 64:
-            return None
-        if any(
-            not isinstance(name, str) or not bounded_utf8_string(name, 256) or
-            lua_scalar_literal(value) is None and render_eoc_value_expression(value, "nil", actor_expression or "actor") is None
-            for name, value in variable_context.items()
-        ):
-            return None
-    lines = [
-        "    local selector_choices = {",
-    ]
-    for index, (name, description) in enumerate(zip(names, descriptions), 1):
-        lines.append(
-            f"        {{ id = {lua_quote(str(index))}, label = {lua_quote(name)}, "
-            f"description = {lua_quote(description)} }},"
-        )
-    lines.extend([
-        "    }",
-        f"    local selected_id = ccb.presentation.choose({lua_quote(title)}, selector_choices)",
-    ])
-    for index, reference in enumerate(references, 1):
-        prefix = "    if" if index == 1 else "    elseif"
-        lines.append(f"{prefix} selected_id == {lua_quote(str(index))} then")
-        if variable_contexts:
-            context_index = 0 if len(variable_contexts) == 1 else index - 1
-            variable_context = variable_contexts[context_index]
-            for name, value in variable_context.items():
-                rendered_value = lua_scalar_literal(value)
-                if rendered_value is None:
-                    rendered_value = render_eoc_value_expression(
-                        value, "nil", actor_expression or "actor"
-                    )
-                if rendered_value is None:
-                    return None
-                lines.append(
-                    f"        context.data[{lua_quote(name)}] = {rendered_value}"
-                )
-                # Native EOC math variables use the underscored context
-                # spelling while selector JSON uses the compact key (e.g.
-                # `{\"val\": 8}` is read as `_val`).  Publish both aliases
-                # so the typed callback preserves that established contract.
-                if not name.startswith("_"):
-                    lines.append(
-                        f"        context.data[{lua_quote('_' + name)}] = context.data[{lua_quote(name)}]"
-                    )
-        lines.append(
-            f"        {eoc_function_names[reference]}(context, {actor_expression or 'nil'})"
-        )
-    lines.append("    end")
-    return lines
+    """Keep selectors fail-closed until native menu and activation state match.
+
+    Native selectors filter each target EOC's condition, evaluate translated
+    and tag-expanded labels, apply selected context variables, have a distinct
+    test-mode path, then activate on a copied dialogue.  No Platform adapter
+    currently reproduces that combination.
+    """
+    del effect, eoc_function_names, actor_expression
+    return None
+
+
+_WEIGHTED_LIST_EOC_TODO = (
+    "weighted_list_eocs lowers only static named EOCs with literal scalar or "
+    "two-number range weights; dynamic dbl_or_var providers and inline EOC bodies "
+    "need an explicit ordinary-Lua rewrite, as do children requiring exact-avatar, "
+    "Item/Vehicle, or unproven actor lifetimes. Empty or all-nonpositive lists "
+    "dereference the native null pick, and signed-int total overflow is undefined; "
+    "those inputs are refused rather than assigned new behavior. The native "
+    "callback uses a copied Dialogue and activate() copies it again, so a selected "
+    "callback must preserve the caller context and its proven participants"
+)
 
 
 def render_static_weighted_list_eocs(
     effect: dict[str, Any],
     eoc_function_names: dict[str, str],
     actor_expression: str | None,
+    eoc_actor_requirements: dict[str, str] | None = None,
+    *,
+    character_actor_proven: bool = False,
+    avatar_actor_proven: bool = False,
+    creature_actor_proven: bool = False,
 ) -> list[str] | None:
-    if set(effect) != {"weighted_list_eocs"}:
+    """Lower static named weighted activations without inventing actor proof."""
+    if (
+        set(effect) - {"weighted_list_eocs", "//"} or
+        eoc_actor_requirements is None
+    ):
         return None
-    if actor_expression is None:
+    raw_entries = effect.get("weighted_list_eocs")
+    if not isinstance(raw_entries, list) or not raw_entries:
         return None
-    raw = effect.get("weighted_list_eocs")
-    if not isinstance(raw, list) or not raw or len(raw) > 256:
-        return None
-    entries: list[tuple[str, str]] = []
-    for entry in raw:
-        if not isinstance(entry, list) or len(entry) != 2:
+
+    entries: list[tuple[str, int | tuple[int, int]]] = []
+    guaranteed_positive = False
+    maximum_total = 0
+    for raw_entry in raw_entries:
+        if (
+            not isinstance(raw_entry, list) or len(raw_entry) != 2 or
+            not isinstance(raw_entry[0], str) or
+            raw_entry[0] not in eoc_function_names or
+            raw_entry[0] not in eoc_actor_requirements
+        ):
             return None
-        reference = entry[0]
-        if not isinstance(reference, str) or reference not in eoc_function_names:
+        reference = raw_entry[0]
+        requirement = eoc_actor_requirements[reference]
+        if requirement not in {"none", "avatar", "character", "creature"}:
             return None
-        weight = finite_number_literal(entry[1])
-        if weight is not None:
-            if weight <= 0 or weight != math.trunc(float(weight)):
+        if requirement == "avatar" and not (
+            (character_actor_proven or avatar_actor_proven) and
+            actor_expression is not None
+        ):
+            # ``avatar`` means a current Character alpha may be propagated; it
+            # does not prove that this alpha is the player's Avatar.
+            return None
+        if requirement == "character" and not (
+            (character_actor_proven or avatar_actor_proven) and
+            actor_expression is not None
+        ):
+            return None
+        if requirement == "creature" and not (
+            creature_actor_proven and actor_expression is not None
+        ):
+            return None
+
+        raw_weight = raw_entry[1]
+        if isinstance(raw_weight, list):
+            # Native value_or_var_pair::deserialize reads both array elements;
+            # zero/one-element arrays fail loading and >2 is explicitly rejected.
+            if len(raw_weight) != 2:
                 return None
-            weight_expression = str(int(weight))
+            converted: list[int] = []
+            for value in raw_weight:
+                literal = finite_number_literal(value)
+                if literal is None:
+                    return None
+                try:
+                    narrowed = math.trunc(float(literal))
+                except (OverflowError, ValueError):
+                    return None
+                if not NATIVE_INT_MIN <= narrowed <= NATIVE_INT_MAX:
+                    return None
+                converted.append(narrowed)
+            low, high = sorted(converted)
+            weight: int | tuple[int, int] = (low, high)
+            guaranteed_positive = guaranteed_positive or low > 0
+            maximum_total += max(0, high)
         else:
-            dynamic = render_eoc_numeric_expression(
-                entry[1], "1", actor_expression
-            )
-            if dynamic is None:
+            literal = finite_number_literal(raw_weight)
+            if literal is None:
                 return None
-            weight_expression = (
-                "math.max(1, math.min(1000000000, math.floor((" +
-                dynamic + ") + 0.5)))"
-            )
-        entries.append((reference, weight_expression))
-    total_expression = " + ".join(
-        f"({weight})" for _, weight in entries
-    )
-    all_literal_weights = all(weight.isdigit() for _, weight in entries)
-    if all_literal_weights:
-        total = sum(int(weight) for _, weight in entries)
-        if total <= 0 or total > NATIVE_INT_MAX:
+            try:
+                narrowed = math.trunc(float(literal))
+            except (OverflowError, ValueError):
+                return None
+            if not NATIVE_INT_MIN <= narrowed <= NATIVE_INT_MAX:
+                return None
+            weight = narrowed
+            guaranteed_positive = guaranteed_positive or narrowed > 0
+            maximum_total += max(0, narrowed)
+        if maximum_total > NATIVE_INT_MAX:
             return None
-        total_expression = str(total)
-    roll_maximum = (
-        total_expression if all_literal_weights else
-        "math.max(1, math.min(1000000000, math.floor((" +
-        total_expression + ") + 0.5)))"
-    )
+        entries.append((reference, weight))
+
+    # A variable numeric range is still a literal weight family, but its
+    # endpoints can draw independently.  Require every possible native draw
+    # to leave a nonempty list and a representable signed-int total.
+    if not guaranteed_positive:
+        return None
+
     lines = [
-        f"    local weighted_roll = services.random.int(1, {roll_maximum})",
-        "    local weighted_cursor = 0",
+        "    do",
+        "        local weighted_weights = {}",
     ]
-    callback_actor = actor_expression
-    for reference, weight in entries:
-        lines.extend([
-            f"    weighted_cursor = weighted_cursor + ({weight})",
-            "    if weighted_roll <= weighted_cursor then",
-            f"        {eoc_function_names[reference]}(context, {callback_actor})",
-            "        break",
-            "    end",
-        ])
+    for index, (_, weight) in enumerate(entries, 1):
+        if isinstance(weight, tuple):
+            low, high = weight
+            lines.append(
+                f"        weighted_weights[{index}] = "
+                f"services.random.native_int({low}, {high})"
+            )
+        else:
+            lines.append(f"        weighted_weights[{index}] = {weight}")
+    lines.extend([
+        "        local selected_weighted_row = "
+        "services.random.weighted_index(weighted_weights)",
+    ])
+    callback_actor = actor_expression or "nil"
+    for index, (reference, _) in enumerate(entries, 1):
+        callbacks = render_copied_eoc_callbacks(
+            reference, eoc_function_names, callback_actor,
+            alpha_actor_expression=actor_expression,
+        )
+        if callbacks is None:
+            return None
+        lines.append(
+            f"        {'if' if index == 1 else 'elseif'} "
+            f"selected_weighted_row == {index} then"
+        )
+        lines.extend("    " + line for line in callbacks)
+    lines.extend([
+        "        end",
+        "    end",
+    ])
     return lines
 
 
 def render_static_spawn_item_effect(
     effect: dict[str, Any], avatar_actor_proven: bool,
 ) -> list[str] | None:
-    """Give a bounded literal/dynamic item or item-group to the u actor."""
-    if not avatar_actor_proven or "u_spawn_item" not in effect:
-        return None
-    if set(effect) - {
-        "u_spawn_item", "count", "use_item_group", "force_equip",
-        "suppress_message", "container", "flags",
-    }:
-        return None
-    use_group = effect.get("use_item_group", False)
-    force_equip = effect.get("force_equip", False)
-    suppress_message = effect.get("suppress_message", False)
-    if not all(
-        isinstance(value, bool)
-        for value in (use_group, force_equip, suppress_message)
-    ):
-        return None
-    # ``force_equip`` has no exact Item handle or source/displacement holder.
-    # It must remain a migration TODO until the source supplies the complete
-    # services.equipment transaction descriptor.
-    if force_equip:
-        return None
-    kind = "item_group" if use_group else "item"
-    item_expression = _dynamic_id_expression(
-        effect.get("u_spawn_item"), kind, "actor"
+    """Keep EOC forms of native ``receive_item`` out of migration.
+
+    Direct TALK singleton responses have a callback-scoped operation that
+    retains native dialogue alpha/beta and response phase. EOC callbacks do not
+    carry that Dialogue; general inventory insertion also does not preserve
+    ``i_add_or_drop`` behavior, default ammo, spawn location, popup, or the
+    count/group/container/flags/force-equip branches. Keep all EOC shapes TODO.
+    """
+    del effect, avatar_actor_proven
+    return None
+
+
+def render_static_map_spawn_item_effect(
+    effect: dict[str, Any], live_avatar_actor_proven: bool,
+    actor_expression: str | None,
+) -> list[str] | None:
+    """Lower only direct map spawns at a source-proven loaded Avatar position.
+
+    Native ``map_spawn_item`` defaults to dialogue alpha's current absolute
+    map-square position.  The bounded caller proof is the unreferenced,
+    event-exclusive ``game_start`` Avatar: ``game::start_game`` loads the map
+    and places the player before ``on_world_ready`` and the event send.  It is
+    further restricted to the first EOC effect so prior Lua cannot relocate
+    the Avatar or unload the map.  The world service accepts only loaded
+    absolute map-square coordinates; off-screen tinymap writes, item groups,
+    containers, flags, dynamic ids, and dynamic quantities remain TODOs.
+    """
+    item_id = effect.get("map_spawn_item")
+    quantity = _literal_integer_or_none(
+        effect.get("count", 1), 1, 100
     )
-    raw_count = effect.get("count", 1)
-    if isinstance(raw_count, list):
-        if len(raw_count) != 2:
-            return None
-        count_bounds = [
-            render_eoc_numeric_expression(bound, "1", "actor")
-            for bound in raw_count
-        ]
-        if any(bound is None for bound in count_bounds):
-            return None
-        lower = (
-            "math.max(1, math.min(100, math.floor((" +
-            str(count_bounds[0]) + ") + 0.5)))"
-        )
-        upper = (
-            "math.max(1, math.min(100, math.floor((" +
-            str(count_bounds[1]) + ") + 0.5)))"
-        )
-        count_expression = (
-            "(function() local lower = " + lower +
-            "; local upper = " + upper +
-            "; return services.random.int(math.min(lower, upper), "
-            "math.max(lower, upper)) end)()"
-        )
-    elif (
-        isinstance(raw_count, int) and
-        not isinstance(raw_count, bool) and
-        1 <= raw_count <= 100
+    if (
+        not live_avatar_actor_proven or actor_expression != "actor" or
+        set(effect) - {"map_spawn_item", "count", "//~"} or
+        "loc" in effect or
+        "//~" in effect and not isinstance(effect["//~"], str) or
+        not bounded_utf8_string(item_id, PLATFORM_ID_MAX_BYTES) or
+        quantity is None
     ):
-        count_expression = str(raw_count)
-    else:
-        count_expression = render_eoc_numeric_expression(
-            raw_count, "1", "actor"
-        )
-    if item_expression is None or count_expression is None:
         return None
-    if not isinstance(raw_count, list) and not (
-        isinstance(raw_count, int) and
-        not isinstance(raw_count, bool) and
-        1 <= raw_count <= 100
-    ):
-        count_expression = (
-            "math.max(1, math.min(100, math.floor((" +
-            count_expression + ") + 0.5)))"
-        )
-    option_values: list[str] = []
-    if "container" in effect:
-        if use_group:
-            return None
-        container = _dynamic_id_expression(
-            effect["container"], "item", "actor"
-        )
-        if container is None:
-            return None
-        option_values.append(f"container = {container}")
-    if "flags" in effect:
-        flags = effect["flags"]
-        if (
-            not isinstance(flags, list) or len(flags) > 128 or
-            not all(bounded_platform_id(flag) for flag in flags)
-        ):
-            return None
-        option_values.append(
-            "flags = { " + ", ".join(
-                f"services.types.id(\"json_flag\", {lua_quote(flag)})"
-                for flag in flags
-            ) + " }"
-        )
-    options = "{ " + ", ".join(option_values) + " }"
-    if use_group:
-        suffix = f", {options}" if option_values else ""
-        return [
-            "    service_value(services.inventory.give_group(",
-            f"        actor, {item_expression}{suffix}))",
-        ]
-    if option_values:
-        return [
-            "    service_value(services.inventory.give(",
-            f"        actor, {item_expression}, {count_expression}, {options}))",
-        ]
+    position = (
+        "service_value(services.characters.snapshot(actor))"
+        ".creature.position"
+    )
     return [
-        "    service_value(services.inventory.give(",
-        f"        actor, {item_expression}, {count_expression}))",
+        "    service_value(services.world.spawn_item("
+        f"{position}, services.types.id(\"item\", {lua_quote(item_id)}), "
+        f"{quantity}))"
     ]
 
 
@@ -4520,12 +5176,7 @@ def render_participant_string(value: Any, target: str, alpha: str | None, beta: 
         option = render_participant_string(value["option"], target, alpha, beta)
         if option is None:
             return None
-        return (
-            '(function(option) if option == nil then error("unknown game option") end; '
-            'if option.type ~= "string_select" and option.type ~= "string_input" then '
-            'error("string game option required") end; return option.value end)'
-            f'(services.gameplay.options.get({option}))'
-        )
+        return f"services.gameplay.options.get_string({option})"
     if isinstance(value, dict) and value.get("mutator") in {
             "mon_faction", "ma_technique_name", "ma_technique_description"}:
         monster = value["mutator"] == "mon_faction"
@@ -4536,14 +5187,9 @@ def render_participant_string(value: Any, target: str, alpha: str | None, beta: 
         if identifier is None:
             return None
         if monster:
-            return (
-                '(function(definition) if definition == nil then '
-                'error("unknown monster definition") end; return definition.default_faction.value end)'
-                f'(services.registry.get("monster", {identifier}))'
-            )
-        field = "name" if value["mutator"] == "ma_technique_name" else "flavor_description"
-        return ('services.martial_arts.technique_definition('
-                f'services.types.id("martial_art_technique", {identifier})).{field}')
+            return f"services.registry.monster_default_faction({identifier})"
+        method = "technique_name" if value["mutator"].endswith("name") else "technique_description"
+        return f"services.martial_arts.{method}({identifier})"
     if isinstance(value, dict) and value.get("mutator") == "valid_technique":
         if (set(value) - {"mutator", "blacklist", "crit", "dodge_counter", "block_counter"} or
                 alpha is None or beta is None):
@@ -4659,17 +5305,31 @@ def render_static_sound_effect(effect: dict[str, Any]) -> list[str] | None:
     if (
         set(effect) - {"sound_effect", "id", "volume", "outdoor_event"} or
         not {"sound_effect", "id"} <= set(effect) or
-        not bounded_utf8_string(effect.get("id"), 256) or
-        not bounded_utf8_string(effect.get("sound_effect"), 256)
+        not bounded_utf8_string(effect.get("id"), 128) or
+        not bounded_utf8_string(effect.get("sound_effect"), 128)
     ):
         return None
-    volume = _literal_nonnegative_integer(effect.get("volume", 80), 128)
+    raw_volume = effect.get("volume", -1)
+    # Native f_sound_effect treats -1 (including its default) as the
+    # context-sensitive default: 80 indoors/on the surface and 80 * hearing
+    # underground for outdoor_event.  This bounded migration only covers the
+    # context-independent branch below, so lower the sentinel to 80 there.
+    volume = (
+        80 if raw_volume == -1 else
+        _literal_nonnegative_integer(raw_volume, 128)
+    )
     outdoor = effect.get("outdoor_event", False)
-    if volume is None or not isinstance(outdoor, bool):
+    # The existing generic Platform play_from_outdoors service uses a
+    # positive-depth attenuation policy, while native EOC code computes its
+    # probability from the signed absolute z level.  Keep that shape visible
+    # as a migration TODO until the public service contract is reconciled.
+    # For the supported indoor/default branch, the Platform service's random
+    # angle is audio-only but comes from the runtime RNG rather than native
+    # random_direction(); this is not exact native RNG-sequence parity.
+    if volume is None or not isinstance(outdoor, bool) or outdoor:
         return None
-    method = "play_from_outdoors" if outdoor else "play_if_audible"
     return [
-        f"    services.sound.{method}({lua_quote(effect['id'])}, "
+        f"    services.sound.play_if_audible({lua_quote(effect['id'])}, "
         f"{lua_quote(effect['sound_effect'])}, {volume})"
     ]
 
@@ -4689,8 +5349,11 @@ def render_static_remove_effects(
     effect: dict[str, Any], key: str, target_expression: str | None,
     *, avatar_expression: str | None = None, npc_expression: str | None = None,
     character_target_proven: bool | None = True,
+    target_kind: str | None = "character",
 ) -> list[str] | None:
-    if target_expression is None or key not in effect:
+    if target_expression is None or key not in effect or target_kind not in {
+        "character", "monster", "creature",
+    }:
         return None
     if set(effect) - {key, "target_part"}:
         return None
@@ -4780,6 +5443,7 @@ def render_static_remove_effects(
             {key: raw_ids, "target_part": "ALL"}, key, target_expression,
             avatar_expression=alpha, npc_expression=beta,
             character_target_proven=character_target_proven,
+            target_kind=target_kind,
         )
         assert all_lines is not None
         return (
@@ -4800,18 +5464,34 @@ def render_static_false_effect(
     eoc_conditions: dict[str, Any] | None = None,
     creature_actor_proven: bool = False,
     npc_actor_expression: str | None = None,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
+    character_effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
+    sell_item_pair_proven: bool = False,
+    wound_actor_targets: dict[str, str | None] | None = None,
+    known_body_part_ids: frozenset[str] = frozenset(),
+    known_wound_ids: frozenset[str] = frozenset(),
+    field_avatar_center_proven: bool = False,
+    character_actor_proven: bool = False,
+    weighted_actor_expression: str | None = None,
 ) -> list[str] | None:
-    """Render the small, branch-free false-effect subset inline.
+    """Render source-proven effects inside ordinary Lua control flow.
 
-    False branches are ordinary Lua control flow, not a second EOC handler.
-    Keep the accepted set deliberately narrow; unsupported branches remain a
-    visible migration TODO instead of being silently discarded.
+    Nested branches and loops retain their caller's participant proofs.
+    Unsupported shapes remain visible migration TODOs instead of being
+    silently discarded or routed through a second EOC handler.
     """
     if isinstance(effect, dict) and "foreach" in effect:
         return render_static_foreach(
             effect, avatar_actor_proven, npc_actor_proven,
             eoc_function_names, eoc_actor_requirements,
             actor_expression, eoc_conditions, npc_actor_expression,
+            effect_actor_targets, character_effect_actor_targets,
+            wound_actor_targets=wound_actor_targets,
+            known_body_part_ids=known_body_part_ids,
+            known_wound_ids=known_wound_ids,
+            field_avatar_center_proven=field_avatar_center_proven,
+            character_actor_proven=character_actor_proven,
+            weighted_actor_expression=weighted_actor_expression,
         )
     activation = render_mutation_action(
         effect, (actor_expression or "actor") if avatar_actor_proven else None,
@@ -4905,8 +5585,9 @@ def render_static_false_effect(
             return [line.replace("    ", "        ", 1) for line in rendered]
     if isinstance(effect, dict) and "u_sell_item" in effect:
         rendered = render_static_sell_item_effect(
-            effect, npc_actor_proven, npc_actor_expression,
-            avatar_actor_proven,
+            effect,
+            (actor_expression or "actor") if sell_item_pair_proven else None,
+            "context.actors.interlocutor" if sell_item_pair_proven else None,
         )
         if rendered is not None:
             return [line.replace("    ", "        ", 1) for line in rendered]
@@ -4931,7 +5612,7 @@ def render_static_false_effect(
             if "u_transform_radius" in effect else "npc_transform_radius"
         )
         rendered = render_static_transform_radius(
-            effect, key, avatar_actor_proven, npc_actor_proven
+            effect, key, event_exclusive_live_avatar_actor_proven=False
         )
         if rendered is not None:
             return [line.replace("    ", "        ", 1) for line in rendered]
@@ -4946,26 +5627,56 @@ def render_static_false_effect(
             "u_lose_effect" if "u_lose_effect" in effect
             else "npc_lose_effect"
         )
-        target = _eoc_actor_expression(
-            key, avatar_actor_proven, npc_actor_proven
+        target_map = character_effect_actor_targets or effect_actor_targets
+        target_kind: str | None = None
+        if target_map is None:
+            target = _eoc_actor_expression(
+                key, avatar_actor_proven, npc_actor_proven
+            )
+            if target is None and key == "u_lose_effect" and creature_actor_proven:
+                target = actor_expression or "actor"
+            target_kind = (
+                "monster" if creature_actor_proven and not avatar_actor_proven
+                else "character" if target is not None else None
+            )
+        else:
+            target_info = target_map["npc" if key.startswith("npc_") else "u"]
+            target = target_info[0] if target_info is not None else None
+            target_kind = target_info[1] if target_info is not None else None
+        alpha = (
+            target if key.startswith("u_") and target_map is not None else
+            (actor_expression or "actor") if avatar_actor_proven else None
         )
-        if target is None and key == "u_lose_effect" and creature_actor_proven:
-            target = actor_expression or "actor"
-        alpha = (actor_expression or "actor") if avatar_actor_proven else None
-        beta = npc_actor_expression or ("actor" if npc_actor_proven else None)
-        if key == "npc_lose_effect":
+        beta = (
+            target if key.startswith("npc_") and target_map is not None else
+            npc_actor_expression or ("actor" if npc_actor_proven else None)
+        )
+        if target_map is None and key == "npc_lose_effect":
             target = beta
-        elif alpha is not None:
+        elif target_map is None and alpha is not None:
             target = alpha
+        if target_map is None and target_kind is None and target is not None:
+            target_kind = (
+                "monster" if creature_actor_proven and not avatar_actor_proven
+                else "character"
+            )
         rendered = render_static_remove_effects(
             effect, key, target, avatar_expression=alpha, npc_expression=beta,
-            character_target_proven=avatar_actor_proven if key.startswith("u_") else (
-                True if npc_actor_proven else None))
+            character_target_proven=(
+                None if target_kind == "creature" else target_kind == "character"
+            ),
+            target_kind=target_kind,
+        )
         if rendered is not None:
             return [line.replace("    ", "        ", 1) for line in rendered]
     if isinstance(effect, dict) and "weighted_list_eocs" in effect:
         rendered = render_static_weighted_list_eocs(
-            effect, eoc_function_names, actor_expression
+            effect, eoc_function_names,
+            weighted_actor_expression or actor_expression,
+            eoc_actor_requirements,
+            character_actor_proven=character_actor_proven,
+            avatar_actor_proven=avatar_actor_proven,
+            creature_actor_proven=creature_actor_proven,
         )
         if rendered is None:
             return None
@@ -5063,7 +5774,7 @@ def render_static_false_effect(
     ):
         key = "u_make_sound" if "u_make_sound" in effect else "npc_make_sound"
         rendered = render_static_character_sound(
-            effect, key, avatar_actor_proven, npc_actor_proven
+            effect, key, avatar_actor_proven, effect_actor_targets,
         )
         if rendered is None:
             return None
@@ -5073,7 +5784,8 @@ def render_static_false_effect(
     ):
         key = "u_set_field" if "u_set_field" in effect else "npc_set_field"
         rendered = render_static_set_field(
-            effect, key, avatar_actor_proven, npc_actor_proven
+            effect, key, avatar_actor_proven, npc_actor_proven,
+            event_exclusive_live_avatar_center_proven=field_avatar_center_proven,
         )
         if rendered is None:
             return None
@@ -5163,8 +5875,6 @@ def render_static_false_effect(
         rendered = render_message_effect(effect, "u_message", target)
         if rendered is not None:
             return [line.replace("    ", "        ", 1) for line in rendered]
-    if isinstance(effect, dict) and set(effect) <= {"npc_message", "popup", "type", "snippet"} and "npc_message" in effect and isinstance(effect["npc_message"], str) and npc_actor_proven:
-        return []
     if isinstance(effect, dict) and "run_eocs" in effect:
         rendered = render_static_run_eocs(
             effect, eoc_function_names, eoc_actor_requirements,
@@ -5172,6 +5882,7 @@ def render_static_false_effect(
             character_actor_proven=(
                 avatar_actor_proven or npc_actor_proven
             ),
+            effect_actor_targets=effect_actor_targets,
         )
         if rendered is None:
             return None
@@ -5179,8 +5890,11 @@ def render_static_false_effect(
     if effect == "open_dialogue" or (
         isinstance(effect, dict) and "open_dialogue" in effect
     ):
-        # Legacy open_dialogue does not prove exact NPC and avatar handles
-        # together with an explicit topic.  Never invent either participant.
+        # The native explicit-topic path opens a topic-list talker without an
+        # NPC beta and runs its true_eocs after the UI; the no-topic path clones
+        # actor(true). Platform's NPC service instead requires an exact NPC,
+        # avatar, and topic and opens an NPC-bound conversation. Neither native
+        # shape can be replaced by that call or inherit its EOC context.
         return None
     if isinstance(effect, dict) and "transform_item" in effect:
         rendered = render_dynamic_item_transform_effect(effect, actor_expression)
@@ -5194,6 +5908,29 @@ def render_static_false_effect(
         if rendered is None:
             return None
         return [line.replace("    ", "        ", 1) for line in rendered]
+    if isinstance(effect, dict) and "revert_location" in effect:
+        rendered = render_static_location_revert(
+            effect, "revert_location", effect_actor_targets=effect_actor_targets)
+        if rendered is None:
+            return None
+        return [line.replace("    ", "        ", 1) for line in rendered]
+    if isinstance(effect, dict) and "copy_location" in effect:
+        rendered = render_static_location_copy(effect, effect_actor_targets)
+        if rendered is None:
+            return None
+        return [line.replace("    ", "        ", 1) for line in rendered]
+    if isinstance(effect, dict) and "location_variable_adjust" in effect:
+        rendered = render_static_location_variable_adjust(
+            effect, "location_variable_adjust", False, False, effect_actor_targets)
+        if rendered is None:
+            return None
+        return [line.replace("    ", "        ", 1) for line in rendered]
+    if isinstance(effect, dict) and "mirror_coordinates" in effect:
+        rendered = render_static_mirror_coordinates(
+            effect, False, False, effect_actor_targets)
+        if rendered is None:
+            return None
+        return [line.replace("    ", "        ", 1) for line in rendered]
     if isinstance(effect, dict) and "give_achievement" in effect:
         if (
             set(effect) != {"give_achievement"} or
@@ -5201,20 +5938,24 @@ def render_static_false_effect(
         ):
             return None
         return [
-            "        services.achievements.complete(",
-            "            services.types.id(\"achievement\", "
-            f"{lua_quote(effect['give_achievement'])}))",
+            "        do",
+            "            local achievement_id = services.types.id(\"achievement\", "
+            f"{lua_quote(effect['give_achievement'])})",
+            "            if achievement_id:is_valid() then",
+            "                services.achievements.complete(achievement_id)",
+            "            end",
+            "        end",
         ]
     if isinstance(effect, dict) and "copy_var" in effect:
         rendered = render_static_character_copy_var(
-            effect, avatar_actor_proven, npc_actor_proven, npc_actor_expression
+            effect, effect_actor_targets
         )
         if rendered is None:
             return None
         return [line.replace("    ", "        ", 1) for line in rendered]
     if isinstance(effect, dict) and "set_string_var" in effect:
         rendered = render_static_character_string_var(
-            effect, avatar_actor_proven, npc_actor_proven, npc_actor_expression
+            effect, effect_actor_targets,
         )
         if rendered is None:
             return None
@@ -5266,14 +6007,24 @@ def render_static_false_effect(
         return [line.replace("    ", "        ", 1) for line in rendered]
     if isinstance(effect, dict) and ("u_add_var" in effect or "npc_add_var" in effect):
         key = "u_add_var" if "u_add_var" in effect else "npc_add_var"
-        target = _eoc_actor_expression(key, avatar_actor_proven, npc_actor_proven)
+        target = (
+            _proven_character_variable_target(effect_actor_targets, key)
+            if key == "npc_add_var" else
+            _eoc_actor_expression(key, avatar_actor_proven, npc_actor_proven)
+        )
+        if key == "npc_add_var" and effect.get("time", False) is not True:
+            return None
         rendered = render_static_character_variable(effect, key, target)
         if rendered is None:
             return None
         return [line.replace("    ", "        ", 1) for line in rendered]
     if isinstance(effect, dict) and set(effect) in ({"u_lose_var"}, {"npc_lose_var"}):
         key = next(iter(effect))
-        target = _eoc_actor_expression(key, avatar_actor_proven, npc_actor_proven)
+        target = (
+            _proven_character_variable_target(effect_actor_targets, key)
+            if key == "npc_lose_var" else
+            _eoc_actor_expression(key, avatar_actor_proven, npc_actor_proven)
+        )
         name = effect[key]
         if target is not None and lua_quotable_native_variable_string(name):
             return [
@@ -5283,35 +6034,59 @@ def render_static_false_effect(
         key: str | None = next(
             (name for name in (
                 "u_add_effect", "npc_add_effect", "u_add_wound", "npc_add_wound",
-                "u_remove_wound", "npc_remove_wound", "u_add_morale", "npc_add_morale",
+                "u_remove_wound", "npc_remove_wound",
             ) if name in effect),
             None,
         )
         if key is not None:
-            target = _eoc_actor_expression(key, avatar_actor_proven, npc_actor_proven)
+            target_kind: str | None = None
+            effect_targets = character_effect_actor_targets or effect_actor_targets
+            if "effect" in key and effect_targets is not None:
+                target_info = effect_targets["npc" if key.startswith("npc_") else "u"]
+                target = target_info[0] if target_info is not None else None
+                target_kind = target_info[1] if target_info is not None else None
+            else:
+                target = _eoc_actor_expression(key, avatar_actor_proven, npc_actor_proven)
             if "effect" in key:
-                alpha = (actor_expression or "actor") if avatar_actor_proven else None
-                if key.startswith("npc_"):
+                alpha = (
+                    target if key.startswith("u_") and effect_targets is not None else
+                    (actor_expression or "actor") if avatar_actor_proven else None
+                )
+                beta = (
+                    target if key.startswith("npc_") and effect_targets is not None else
+                    npc_actor_expression or ("actor" if npc_actor_proven else None)
+                )
+                if effect_targets is None and key.startswith("npc_"):
                     target = npc_actor_expression or target
-                elif alpha is not None:
+                elif effect_targets is None and alpha is not None:
                     target = alpha
-                rendered = render_static_character_effect(effect, key, target)
+                if target_kind is None and target is not None and effect_targets is None:
+                    target_kind = (
+                        "monster" if creature_actor_proven and not avatar_actor_proven
+                        else "character"
+                    )
+                rendered = render_static_character_effect(
+                    effect, key, target, target_kind=target_kind
+                )
                 if rendered is None:
                     rendered = render_dynamic_character_effect(
                         effect, key, target, avatar_expression=alpha,
-                        npc_expression=npc_actor_expression or ("actor" if npc_actor_proven else None))
-            elif "wound" in key:
-                rendered = render_static_character_wound(
-                    effect, key, target, key.endswith("remove_wound")
-                )
-                if rendered is None:
-                    rendered = render_dynamic_character_wound(
-                        effect, key, target, key.endswith("remove_wound")
+                        npc_expression=beta,
+                        target_kind=target_kind,
+                        effect_actor_targets=effect_actor_targets,
                     )
-            else:
-                rendered = render_static_character_morale(effect, key, target)
-                if rendered is None:
-                    rendered = render_dynamic_character_morale(effect, key, target)
+            elif "wound" in key:
+                # The generic Character proof is weaker than the native wound
+                # target proof. Use the same actor and registered-ID evidence
+                # as the main effect, including inside ordinary Lua branches.
+                wound_target = (
+                    wound_actor_targets.get("npc" if key.startswith("npc_") else "u")
+                    if wound_actor_targets is not None else None
+                )
+                rendered = render_static_character_wound(
+                    effect, key, wound_target, key.endswith("remove_wound"),
+                    known_body_part_ids, known_wound_ids,
+                )
             if rendered is not None:
                 return [line.replace("    ", "        ", 1) for line in rendered]
         key = next(
@@ -5339,55 +6114,14 @@ def render_static_false_effect(
         # TODO marker.
         if "math" in effect:
             rendered = render_static_character_math(
-                effect, avatar_actor_proven, npc_actor_proven,
-                creature_actor_proven,
+                effect, effect_actor_targets,
             )
             if rendered is not None:
                 return [line.replace("    ", "        ", 1) for line in rendered]
-        for morale_key in ("u_lose_morale", "npc_lose_morale"):
-            if morale_key in effect and set(effect) == {morale_key}:
-                target = _eoc_actor_expression(
-                    morale_key, avatar_actor_proven, npc_actor_proven
-                )
-                if target is not None and safe_platform_id(effect[morale_key]):
-                    return [
-                        "        services.morale.remove(",
-                        f"            {target}, services.types.id(\"morale\", {lua_quote(effect[morale_key])}))",
-                    ]
-        for lose_key in ("u_lose_effect", "npc_lose_effect"):
-            if lose_key in effect:
-                target = _eoc_actor_expression(
-                    lose_key, avatar_actor_proven, npc_actor_proven
-                )
-                if (
-                    target is None and lose_key == "u_lose_effect" and
-                    creature_actor_proven
-                ):
-                    target = actor_expression or "actor"
-                if target is not None and set(effect) <= {lose_key, "target_part"}:
-                    effect_ids = effect.get(lose_key)
-                    effect_ids = (
-                        effect_ids if isinstance(effect_ids, list)
-                        else [effect_ids]
-                    )
-                    part = effect.get("target_part")
-                    if (
-                        0 < len(effect_ids) <= 64 and
-                        all(safe_platform_id(effect_id) for effect_id in effect_ids) and
-                        (part is None or safe_platform_id(part))
-                    ):
-                        rendered: list[str] = []
-                        for effect_id in effect_ids:
-                            rendered.extend([
-                                "        services.effects.remove(",
-                                f"            {target}, services.types.id(\"effect\", {lua_quote(effect_id)})" +
-                                (
-                                    ", services.types.id(\"body_part\", " +
-                                    lua_quote(part) + "))"
-                                    if part is not None else ")"
-                                ),
-                            ])
-                        return rendered
+        # Morale effects use the dialogue's mutable/const alpha-beta slots.
+        # This helper is also used for conditional/foreach child effects and
+        # receives broad actor facts rather than a source-specific dispatch
+        # proof, so those shapes deliberately remain TODO here.
         if effect == "u_prevent_death" and avatar_actor_proven:
             return ["        services.characters.prevent_death(actor)"]
         comment_keys = {
@@ -5399,15 +6133,11 @@ def render_static_false_effect(
             set(effect) - comment_keys == {"turn_cost"} and
             avatar_actor_proven
         ):
-            parsed_amount = parse_turns(effect["turn_cost"])
-            amount = (
-                str(parsed_amount) if parsed_amount is not None and parsed_amount >= 0
-                else render_eoc_numeric_expression(effect["turn_cost"], "0", "actor")
-            )
-            if amount is not None:
+            adjustment = parse_turn_cost_adjustment(effect["turn_cost"])
+            if adjustment is not None:
                 return [
-                    "        services.characters.adjust(actor, { moves = -math.max(0, "
-                    "math.min(2147483647, math.floor((" + amount + ") + 0.5))) })",
+                    "        services.characters.adjust(actor, "
+                    f"{{ moves = {adjustment} }})",
                 ]
         if "place_override" in effect:
             rendered = render_static_place_override(
@@ -5417,24 +6147,18 @@ def render_static_false_effect(
                 return [line.replace("    ", "        ", 1) for line in rendered]
         if "custom_light_level" in effect:
             rendered = render_static_light_override(effect)
-            if rendered is None:
-                rendered = render_dynamic_light_override(
-                    effect, "actor" if (avatar_actor_proven or npc_actor_proven) else "actor"
-                )
             if rendered is not None:
                 return [line.replace("    ", "        ", 1) for line in rendered]
-        for activity_key in ("u_assign_activity", "npc_assign_activity"):
-            if activity_key in effect:
-                target = _eoc_actor_expression(
-                    activity_key, avatar_actor_proven, npc_actor_proven
-                )
-                rendered = render_static_character_activity(effect, activity_key, target)
-                if rendered is not None:
-                    return [line.replace("    ", "        ", 1) for line in rendered]
+        # A false-effect callback does not prove an exact Character target for
+        # both participant slots.  Even the target-practice special case must
+        # stay explicit until that branch has a source-specific actor proof.
         if "u_sell_item" in effect:
             rendered = render_static_sell_item_effect(
-                effect, npc_actor_proven,
-                avatar_actor_proven=avatar_actor_proven,
+                effect,
+                (actor_expression or "actor")
+                if sell_item_pair_proven else None,
+                "context.actors.interlocutor"
+                if sell_item_pair_proven else None,
             )
             if rendered is not None:
                 return [line.replace("    ", "        ", 1) for line in rendered]
@@ -5443,6 +6167,15 @@ def render_static_false_effect(
                 effect, avatar_actor_proven, npc_actor_proven, False,
                 eoc_function_names, eoc_actor_requirements,
                 actor_expression, eoc_conditions,
+                npc_actor_expression=npc_actor_expression,
+                effect_actor_targets=effect_actor_targets,
+                character_effect_actor_targets=character_effect_actor_targets,
+                wound_actor_targets=wound_actor_targets,
+                known_body_part_ids=known_body_part_ids,
+                known_wound_ids=known_wound_ids,
+                field_avatar_center_proven=field_avatar_center_proven,
+                character_actor_proven=character_actor_proven,
+                weighted_actor_expression=weighted_actor_expression,
             )
             if rendered is not None:
                 return [line.replace("    ", "        ", 1) for line in rendered]
@@ -5450,7 +6183,15 @@ def render_static_false_effect(
             rendered = render_static_if_effect(
                 effect, avatar_actor_proven, npc_actor_proven, False,
                 eoc_function_names, eoc_actor_requirements, actor_expression,
-                eoc_conditions,
+                eoc_conditions, npc_actor_expression=npc_actor_expression,
+                effect_actor_targets=effect_actor_targets,
+                character_effect_actor_targets=character_effect_actor_targets,
+                wound_actor_targets=wound_actor_targets,
+                known_body_part_ids=known_body_part_ids,
+                known_wound_ids=known_wound_ids,
+                field_avatar_center_proven=field_avatar_center_proven,
+                character_actor_proven=character_actor_proven,
+                weighted_actor_expression=weighted_actor_expression,
             )
             if rendered is not None:
                 return [line.replace("    ", "        ", 1) for line in rendered]
@@ -5556,8 +6297,10 @@ def render_dynamic_combat_damage(
 
 def render_message_effect(
     effect: dict[str, Any], key: str, actor_expression: str,
+    dialogue_alpha_expression: str | None = None,
+    dialogue_beta_expression: str | None = None,
 ) -> list[str] | None:
-    """Render a message/snippet through the typed presentation services."""
+    """Render bounded static text with the native dialogue tag service."""
     comment_keys = {
         name for name in effect
         if isinstance(name, str) and name.startswith("//")
@@ -5587,12 +6330,22 @@ def render_message_effect(
         return None
     if (same_snippet or store_in_lore) and not snippet:
         return None
+    # The text service uses the real native dialogue parser, but the message
+    # migration deliberately leaves explicit tags/snippets and dynamic text
+    # manual until their RNG and variable semantics can be bounded.
+    if (sound and outdoor_only) or snippet:
+        return None
+    raw_literal = effect[key]
+    if (
+        not bounded_utf8_string(raw_literal, 8192, allow_empty=True) or
+        "<" in raw_literal or ">" in raw_literal or
+        dialogue_alpha_expression is None or
+        dialogue_beta_expression is None
+    ):
+        return None
     message_type = effect.get("type")
     if message_type is not None and not isinstance(message_type, str):
         return None
-    if message_type == "popup":
-        popup = True
-        message_type = None
     if message_type is not None and message_type not in {
         "good", "bad", "mixed", "warning", "info", "neutral", "debug",
         "headshot", "critical", "grazing",
@@ -5602,6 +6355,15 @@ def render_message_effect(
     if not isinstance(interrupt_type, str) or not bounded_utf8_string(
         interrupt_type, 128, allow_empty=False
     ):
+        return None
+    if popup_w_interrupt_query and interrupt_type != "portal_storm_popup":
+        # Native f_message only implements the portal-storm query.  Other
+        # values either produce a debug message or no query at all.
+        return None
+    if sound and (popup or popup_w_interrupt_query):
+        # Native sound gating happens before popup and interruption UI.  The
+        # Platform audibility helper emits a message, so it cannot guard UI
+        # operations without changing behavior.
         return None
     popup_flag = effect.get("popup_flag")
     popup_flag = {
@@ -5615,32 +6377,29 @@ def render_message_effect(
         "get_key", "on_top", "fullscreen",
     }:
         return None
-    raw_message = render_eoc_string_expression(effect[key], actor_expression)
-    if raw_message is None:
-        return None
-    lines: list[str] = []
-    if same_snippet or store_in_lore:
-        # ``random_named`` is the only bounded API that keeps the selected
-        # snippet id.  That lets us preserve same-snippet/lore behaviour while
-        # still expanding the selected text exactly once.
-        lines.extend([
-            f"    local selected_snippet = services.snippets.random_named({raw_message})",
-            "    if selected_snippet ~= nil then",
-        ])
-        if store_in_lore:
-            lines.append(
-                "        services.lore.remember_snippet(selected_snippet.id)"
-            )
-        lines.append(
-            "        local message = services.snippets.expand(selected_snippet.text)"
-        )
-        message = "message"
+    translated = (
+        f"services.translate({lua_quote(raw_literal)})"
+    )
+    expanded_message = (
+        "service_value(services.text.expand_for("
+        f"{translated}, {dialogue_alpha_expression}, "
+        f"{dialogue_beta_expression}))"
+    )
+    if key in {"u_message", "npc_message"}:
+        target = actor_expression.strip()
+        if not target:
+            return None
+        lines = [
+            f"    local message_target = {target}",
+            '    if message_target ~= nil and message_target.kind == "creature" and '
+            'message_target.subtype == "avatar" then',
+            f"        local message_text = {expanded_message}",
+        ]
         indent = "        "
     else:
-        message = raw_message
-        if snippet:
-            message = f"(services.snippets.random({message}) or {lua_quote('')})"
+        lines = [f"    local message_text = {expanded_message}"]
         indent = "    "
+    message = "message_text"
 
     if popup:
         popup_call = {
@@ -5650,23 +6409,14 @@ def render_message_effect(
             "fullscreen": "ccb.presentation.notice_large",
         }[popup_flag]
         lines.append(f"{indent}{popup_call}({message})")
+        lines.append(f"{indent}services.activities.offer_interruption(\"\")")
     if popup_w_interrupt_query:
-        if interrupt_type == "portal_storm_popup":
-            lines.append(
-                f"{indent}services.activities.offer_portal_storm_interruption({message})"
-            )
-        else:
-            lines.append(
-                f"{indent}services.activities.offer_interruption({message})"
-            )
-    elif not popup:
+        lines.append(
+            f"{indent}services.activities.offer_portal_storm_interruption({message})"
+        )
+    else:
         if sound:
-            add_call = (
-                "services.messages.add_from_outdoors"
-                if outdoor_only else "services.messages.add_if_audible"
-            )
-        elif outdoor_only:
-            add_call = "services.messages.add_from_outdoors"
+            add_call = "services.messages.add_if_audible"
         elif message_type in (None, "neutral"):
             lines.append(f"{indent}services.message({message})")
             add_call = None
@@ -5678,7 +6428,7 @@ def render_message_effect(
                 if message_type not in (None, "neutral") else ""
             )
             lines.append(f"{indent}{add_call}({message}{type_argument})")
-    if same_snippet or store_in_lore:
+    if key in {"u_message", "npc_message"}:
         lines.append("    end")
     return lines
 
@@ -5688,7 +6438,7 @@ def render_optional_npc_job(
 ) -> list[str]:
     """Native interactive jobs may return without assigning an activity."""
     return [
-        f'    if ({target}) ~= nil and ({target}).subtype == "npc" then',
+        f'    if ({target}) ~= nil and ({target}).kind == "creature" and ({target}).subtype == "npc" then',
         f"        local assignment = services.activities.assign_npc_job({target}, {lua_quote(job)})",
         f"        if not assignment.ok and assignment.error.code ~= {lua_quote(normal_return)} then",
         "            service_value(assignment)",
@@ -5706,6 +6456,14 @@ def render_static_foreach(
     actor_expression: str | None = None,
     eoc_conditions: dict[str, Any] | None = None,
     npc_actor_expression: str | None = None,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
+    character_effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
+    wound_actor_targets: dict[str, str | None] | None = None,
+    known_body_part_ids: frozenset[str] = frozenset(),
+    known_wound_ids: frozenset[str] = frozenset(),
+    field_avatar_center_proven: bool = False,
+    character_actor_proven: bool = False,
+    weighted_actor_expression: str | None = None,
 ) -> list[str] | None:
     """Lower the bounded registry/array ``foreach`` effect.
 
@@ -5754,6 +6512,14 @@ def render_static_foreach(
                 eoc_function_names, eoc_actor_requirements,
                 actor_expression, eoc_conditions,
                 npc_actor_expression=npc_actor_expression,
+                effect_actor_targets=effect_actor_targets,
+                character_effect_actor_targets=character_effect_actor_targets,
+                wound_actor_targets=wound_actor_targets,
+                known_body_part_ids=known_body_part_ids,
+                known_wound_ids=known_wound_ids,
+                field_avatar_center_proven=field_avatar_center_proven,
+                character_actor_proven=character_actor_proven,
+                weighted_actor_expression=weighted_actor_expression,
             )
             if rendered is None:
                 return False
@@ -5901,6 +6667,14 @@ def render_static_if_effect(
     actor_expression: str | None = None,
     eoc_conditions: dict[str, Any] | None = None,
     npc_actor_expression: str | None = None,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
+    character_effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
+    wound_actor_targets: dict[str, str | None] | None = None,
+    known_body_part_ids: frozenset[str] = frozenset(),
+    known_wound_ids: frozenset[str] = frozenset(),
+    field_avatar_center_proven: bool = False,
+    character_actor_proven: bool = False,
+    weighted_actor_expression: str | None = None,
 ) -> list[str] | None:
     """Lower an ``if/then/else`` made solely of simple Lua-native effects."""
     if (
@@ -5926,6 +6700,14 @@ def render_static_if_effect(
             value, avatar_actor_proven, npc_actor_proven, eoc_function_names,
             eoc_actor_requirements,
             actor_expression, eoc_conditions, creature_actor_proven,
+            effect_actor_targets=effect_actor_targets,
+            character_effect_actor_targets=character_effect_actor_targets,
+            wound_actor_targets=wound_actor_targets,
+            known_body_part_ids=known_body_part_ids,
+            known_wound_ids=known_wound_ids,
+            field_avatar_center_proven=field_avatar_center_proven,
+            character_actor_proven=character_actor_proven,
+            weighted_actor_expression=weighted_actor_expression,
         )
         if chunk is None:
             return None
@@ -5936,6 +6718,14 @@ def render_static_if_effect(
             value, avatar_actor_proven, npc_actor_proven, eoc_function_names,
             eoc_actor_requirements,
             actor_expression, eoc_conditions, creature_actor_proven,
+            effect_actor_targets=effect_actor_targets,
+            character_effect_actor_targets=character_effect_actor_targets,
+            wound_actor_targets=wound_actor_targets,
+            known_body_part_ids=known_body_part_ids,
+            known_wound_ids=known_wound_ids,
+            field_avatar_center_proven=field_avatar_center_proven,
+            character_actor_proven=character_actor_proven,
+            weighted_actor_expression=weighted_actor_expression,
         )
         if chunk is None:
             return None
@@ -5957,6 +6747,14 @@ def render_static_switch_effect(
     actor_expression: str | None = None,
     eoc_conditions: dict[str, Any] | None = None,
     npc_actor_expression: str | None = None,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
+    character_effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
+    wound_actor_targets: dict[str, str | None] | None = None,
+    known_body_part_ids: frozenset[str] = frozenset(),
+    known_wound_ids: frozenset[str] = frozenset(),
+    field_avatar_center_proven: bool = False,
+    character_actor_proven: bool = False,
+    weighted_actor_expression: str | None = None,
 ) -> list[str] | None:
     """Lower a legacy ``switch`` into ordinary Lua comparisons.
 
@@ -5981,7 +6779,7 @@ def render_static_switch_effect(
     switch_expression: str | None = None
     if isinstance(raw_switch, dict) and set(raw_switch) == {"math"}:
         switch_expression = render_eoc_numeric_expression(
-            raw_switch, "0", actor_expression or "actor"
+            raw_switch, "0", actor_expression or "actor", effect_actor_targets
         )
     elif (
         isinstance(raw_switch, dict) and
@@ -6034,7 +6832,7 @@ def render_static_switch_effect(
             return None
         case_value = case.get("case")
         case_expression = render_eoc_numeric_expression(
-            case_value, "0", actor_expression or "actor"
+            case_value, "0", actor_expression or "actor", effect_actor_targets
         )
         if case_expression is None:
             return None
@@ -6048,6 +6846,12 @@ def render_static_switch_effect(
                 branch_value, avatar_actor_proven, npc_actor_proven,
                 eoc_function_names, eoc_actor_requirements,
                 actor_expression, eoc_conditions, creature_actor_proven,
+                effect_actor_targets=effect_actor_targets,
+                character_effect_actor_targets=character_effect_actor_targets,
+                wound_actor_targets=wound_actor_targets,
+                known_body_part_ids=known_body_part_ids,
+                known_wound_ids=known_wound_ids,
+                field_avatar_center_proven=field_avatar_center_proven,
             )
             if chunk is None:
                 return None
@@ -6414,27 +7218,917 @@ def render_mod_tileset(source: SourceObject, result: MigrationResult) -> str | N
     return "\n".join(lines) + "\n"
 
 
-def _talk_text(value: Any) -> str | None:
+def _talk_text(value: Any) -> tuple[str | LuaRaw | None, str | None]:
     if isinstance(value, str):
-        return value
-    if isinstance(value, dict) and isinstance(value.get("concatenate"), list):
-        pieces = value["concatenate"]
-        if all(isinstance(piece, str) for piece in pieces):
-            return "".join(pieces)
+        return value, None
+    if isinstance(value, list):
+        return None, "dynamic_line random-choice arrays need a manual choice conversion"
+    if not isinstance(value, dict) or "concatenate" not in value:
+        return None, "dynamic_line needs a static string or flat concatenate"
+
+    extra_fields = sorted(
+        key for key in value
+        if key != "concatenate" and not (isinstance(key, str) and key.startswith("//"))
+    )
+    if extra_fields:
+        return None, (
+            "dynamic_line concatenate has unsupported fields: " +
+            ", ".join(extra_fields)
+        )
+    pieces = value["concatenate"]
+    if not isinstance(pieces, list):
+        return None, "dynamic_line concatenate must be an array"
+    if not pieces:
+        return None, "dynamic_line concatenate must contain at least one translation piece"
+
+    calls: list[str] = []
+    for index, piece in enumerate(pieces, start=1):
+        if isinstance(piece, str):
+            text = piece
+            context = None
+        elif isinstance(piece, list):
+            return None, (
+                f"dynamic_line concatenate entry {index} is a random-choice array; "
+                "only flat translation entries are supported"
+            )
+        elif isinstance(piece, dict):
+            extra_piece_fields = sorted(
+                key for key in piece
+                if key not in {"str", "ctxt"} and
+                not (isinstance(key, str) and key.startswith("//"))
+            )
+            text = piece.get("str")
+            context = piece.get("ctxt")
+            if extra_piece_fields or not isinstance(text, str) or (
+                "ctxt" in piece and not isinstance(context, str)
+            ):
+                return None, (
+                    f"dynamic_line concatenate entry {index} must be a string or "
+                    "a typed {str, ctxt} translation"
+                )
+        else:
+            return None, (
+                f"dynamic_line concatenate entry {index} must be a string or "
+                "a typed {str, ctxt} translation"
+            )
+        if "\0" in text or (context is not None and "\0" in context):
+            return None, f"dynamic_line concatenate entry {index} contains NUL text"
+        arguments = [lua_quote(text)]
+        if context is not None:
+            arguments.append(lua_quote(context))
+        calls.append(f"ccb.services.translate({', '.join(arguments)})")
+
+    callback = "\n".join((
+        "function(context)",
+        "        return " + "\n            .. ".join(calls),
+        "    end",
+    ))
+    # Native dynamic_line_t translates each piece when the line is generated.
+    # Keep each gettext key/context separate and defer those lookups to the
+    # Platform callback instead of joining the source strings during migration.
+    return LuaRaw(callback), None
+
+
+def _render_talk_topic_npc_state_condition(condition: Any) -> str | None:
+    """Render bounded beta Character snapshot predicates for a topic callback."""
+    if (
+        isinstance(condition, str) and
+        condition in NPC_BETA_CHARACTER_SNAPSHOT_FIELDS
+    ):
+        field = NPC_BETA_CHARACTER_SNAPSHOT_FIELDS[condition]
+        return f"state.{field} == true"
+    if isinstance(condition, dict):
+        if set(condition) == {"npc_has_activity"}:
+            # The native jarg::string parser ignores this member value.
+            if isinstance(condition["npc_has_activity"], str):
+                return "state.activity.active == true"
+            return None
     return None
 
 
-def render_talk_topic(source: SourceObject, result: MigrationResult) -> str | None:
+def render_talk_topic_response_condition(
+    condition: Any, _depth: int = 0,
+) -> LuaRaw | None:
+    """Render one source-proven response predicate against its live speaker.
+
+    Native ``u_has_intelligence`` reads ``const_actor(false)->int_cur()``.
+    Platform dialogue callbacks expose that same alpha participant as
+    ``PlatformDialogueContext:speaker()``. ``u_can_stow_weapon`` uses the
+    exact avatar and the matching read-only weapon-state query. Camp predicates
+    use the exact native global-player query or the live dialogue beta exposed
+    as ``interlocutor()``. Assigned-mission predicates read the active native
+    dialogue vector. NPC-prefixed mission predicates use the live beta and the
+    existing typed NPC mission services. Direct ``npc_*`` state conditions use
+    that live beta Character's typed snapshot. Safe-space conditions query the
+    callback-scoped native beta talker directly, preserving native talker
+    overrides without retaining an actor reference. Native unprefixed mission
+    aliases select beta. ``u_*`` alpha mission predicates remain fail-closed;
+    Boolean compositions require every child to have a supported lowering.
+    Training-offer predicates use the live alpha/beta pair and select the
+    teacher from the native parser's ``is_npc`` orientation.
+    ``mission_has_generic_rewards`` reads beta's selected mission; the typed
+    query preserves the native true result for an empty selection, while
+    non-NPC talkers inherit the native null selection.
+    """
+    if _depth > 16:
+        return None
+    if isinstance(condition, dict) and set(condition) in (
+            {"u_has_proficiency"}, {"npc_has_proficiency"}):
+        selector = next(iter(condition))
+        # Direct TALK uses the live frame. EOC activation's copied frame has
+        # different topic-item semantics. Do not invent variable owners or a
+        # context.data table for this callback-scoped dialogue object.
+        identifier = render_proficiency_id_expression(
+            condition[selector], topic_item_expression="dialogue_context:topic_item()",
+            variable_string_reader=render_dialogue_variable_string_read,
+            technique_sampler="dialogue_context:sample_technique",
+        )
+        if identifier is None:
+            return None
+        participant = "speaker" if selector == "u_has_proficiency" else "interlocutor"
+        return LuaRaw(
+            "function(dialogue_context)\n"
+            "            if not dialogue_context:valid() then return false end\n"
+            f"            local proficiency_id = {identifier}\n"
+            f"            local receiver = dialogue_context:{participant}()\n"
+            '            if receiver == nil or receiver.kind ~= "creature" or '
+            '(receiver.subtype ~= "avatar" and receiver.subtype ~= "character" '
+            'and receiver.subtype ~= "npc") then return false end\n'
+            "            if not receiver:is_valid() then return false end\n"
+            "            local result = services.proficiencies.has_id_text(receiver, proficiency_id)\n"
+            "            return result.ok and result.value\n"
+            "        end"
+        )
+    identity_condition = _render_talk_topic_participant_identity_condition(
+        condition
+    )
+    if identity_condition is not None:
+        return identity_condition
+    if isinstance(condition, dict) and set(condition) == {"math"}:
+        # Preserve Native u_skill's raw-ID lookup and dialogue-alpha scope.
+        # The typed level service does not reject an unregistered skill ID.
+        expressions = condition["math"]
+        if isinstance(expressions, list) and len(expressions) == 1 and isinstance(expressions[0], str):
+            skill_match = re.fullmatch(
+                r"u_skill\('social'\)\s*([<>])\s*([0-9]+)", expressions[0]
+            )
+            if skill_match is not None:
+                operator, threshold_text = skill_match.groups()
+                threshold = int(threshold_text)
+                if threshold <= NATIVE_INT_MAX:
+                    return LuaRaw(
+                        "function(dialogue_context)\n"
+                        "            if not dialogue_context:valid() then return false end\n"
+                        "            local alpha = dialogue_context:speaker()\n"
+                        "            if alpha == nil then return false end\n"
+                        "            local skill_level = 0\n"
+                        '            local is_character = alpha.kind == "creature" and '
+                        '(alpha.subtype == "avatar" or alpha.subtype == "character" '
+                        'or alpha.subtype == "npc")\n'
+                        "            if is_character then\n"
+                        "                if type(alpha.is_valid) ~= \"function\" or "
+                        "not alpha:is_valid() then return false end\n"
+                        '                local result = services.skills.level(alpha, "social")\n'
+                        "                if not result.ok then return false end\n"
+                        "                skill_level = result.value\n"
+                        "            elseif type(alpha.is_valid) == \"function\" and "
+                        "not alpha:is_valid() then\n"
+                        "                return false\n"
+                        "            end\n"
+                        "            if skill_level < 0 then\n"
+                        "                skill_level = math.ceil(skill_level)\n"
+                        "            else\n"
+                        "                skill_level = math.floor(skill_level)\n"
+                        "            end\n"
+                        f"            return skill_level {operator} {threshold}\n"
+                        "        end"
+                    )
+    if (
+        isinstance(condition, dict) and set(condition) == {"not"} and
+        condition["not"] == "is_by_radio"
+    ):
+        return LuaRaw(
+            "function(dialogue_context)\n"
+            "            if not dialogue_context:valid() then return false end\n"
+            "            return not dialogue_context:by_radio()\n"
+            "        end"
+        )
+    if isinstance(condition, dict) and len(condition) == 1:
+        if "not" in condition and isinstance(condition["not"], (str, dict)):
+            child = render_talk_topic_response_condition(
+                condition["not"], _depth + 1,
+            )
+            if child is not None:
+                return LuaRaw(
+                    "function(dialogue_context)\n"
+                    "            if not dialogue_context:valid() then return false end\n"
+                    f"            return not ({child.source})(dialogue_context)\n"
+                    "        end"
+                )
+        for operator, separator, empty_result in (
+            ("and", " and ", "true"), ("or", " or ", "false"),
+        ):
+            entries = condition.get(operator)
+            if not isinstance(entries, list) or len(entries) > 32:
+                continue
+            if not all(isinstance(entry, (str, dict)) for entry in entries):
+                return None
+            children = [
+                render_talk_topic_response_condition(entry, _depth + 1)
+                for entry in entries
+            ]
+            if any(child is None for child in children):
+                return None
+            expression = separator.join(
+                f"({child.source})(dialogue_context)"
+                for child in children if child is not None
+            ) or empty_result
+            return LuaRaw(
+                "function(dialogue_context)\n"
+                "            if not dialogue_context:valid() then return false end\n"
+                f"            return {expression}\n"
+                "        end"
+            )
+    if isinstance(condition, str) and condition in SAFE_SPACE_BETA_CONDITION_SELECTORS:
+        return LuaRaw(
+            "function(dialogue_context)\n"
+            "            if not dialogue_context:valid() then return false end\n"
+            "            return dialogue_context:interlocutor_at_safe_space()\n"
+            "        end"
+        )
+    if isinstance(condition, dict) and set(condition) == {"npc_has_effect"}:
+        effect_id = condition["npc_has_effect"]
+        if safe_platform_id(effect_id):
+            # Native f_has_effect uses dialogue.reason when bodypart is omitted.
+            # Keep that implicit target inside the native callback context.
+            return LuaRaw("\n".join([
+                "function(dialogue_context)",
+                "            if not dialogue_context:valid() then return false end",
+                "            return dialogue_context:has_interlocutor_effect(",
+                "                services.types.id(\"effect\", "
+                f"{lua_quote(effect_id)}))",
+                "        end",
+            ]))
+    if condition == "npc_friend":
+        # Native f_npc_friend(true) queries the beta talker against the global
+        # player Character. Only NPC talkers override the native default false;
+        # the Platform snapshot's friendly field uses the same NPC query.
+        return LuaRaw(
+            "function(dialogue_context)\n"
+            "            if not dialogue_context:valid() then return false end\n"
+            "            local beta = dialogue_context:interlocutor()\n"
+            '            if beta == nil or beta.kind ~= "creature" or beta.subtype ~= "npc" then return false end\n'
+            "            if not beta:is_valid() then return false end\n"
+            "            local snapshot = services.npcs.get(beta)\n"
+            "            return snapshot.ok and snapshot.value.friendly == true\n"
+            "        end"
+        )
+    npc_state_expression = _render_talk_topic_npc_state_condition(condition)
+    if npc_state_expression is not None:
+        return LuaRaw(
+            "function(dialogue_context)\n"
+            "            if not dialogue_context:valid() then return false end\n"
+            "            local beta = dialogue_context:interlocutor()\n"
+            '            if beta == nil or beta.kind ~= "creature" or '
+            '(beta.subtype ~= "avatar" and beta.subtype ~= "character" and '
+            'beta.subtype ~= "npc") then return false end\n'
+            "            if not beta:is_valid() then return false end\n"
+            "            local snapshot = services.characters.snapshot(beta)\n"
+            "            if not snapshot.ok then return false end\n"
+            "            local state = snapshot.value\n"
+            f"            return {npc_state_expression}\n"
+            "        end"
+        )
+    training_offer_counts = {
+        "u_train_skills": ("skill_count", "alpha", "beta"),
+        "npc_train_skills": ("skill_count", "beta", "alpha"),
+        "u_train_styles": ("style_count", "alpha", "beta"),
+        "npc_train_styles": ("style_count", "beta", "alpha"),
+        "u_train_spells": ("spell_count", "alpha", "beta"),
+        "npc_train_spells": ("spell_count", "beta", "alpha"),
+    }
+    if isinstance(condition, str) and condition in training_offer_counts:
+        count_field, teacher, student = training_offer_counts[condition]
+        return LuaRaw(
+            "function(dialogue_context)\n"
+            "            if not dialogue_context:valid() then return false end\n"
+            "            local alpha = dialogue_context:speaker()\n"
+            "            local beta = dialogue_context:interlocutor()\n"
+            "            if alpha == nil or beta == nil then return false end\n"
+            "            if not alpha:is_valid() or not beta:is_valid() then return false end\n"
+            "            local offers = services.characters.training_offers("
+            f"{teacher}, {student})\n"
+            f"            return offers.ok and offers.value.{count_field} > 0\n"
+            "        end"
+        )
+    if condition == "u_has_camp":
+        return LuaRaw(
+            "function(dialogue_context)\n"
+            "            if not dialogue_context:valid() then return false end\n"
+            "            local result = services.camps.has_player_owned_camp()\n"
+            "            return result.ok and result.value == true\n"
+            "        end"
+        )
+    if condition == "npc_has_assigned_camp":
+        return LuaRaw(
+            "function(dialogue_context)\n"
+            "            if not dialogue_context:valid() then return false end\n"
+            "            local beta = dialogue_context:interlocutor()\n"
+            '            if beta == nil or beta.kind ~= "creature" or beta.subtype ~= "npc" then return false end\n'
+            "            if not beta:is_valid() then return false end\n"
+            "            local result = services.npcs.get(beta)\n"
+            "            return result.ok and result.value.has_assigned_camp == true\n"
+            "        end"
+        )
+    if condition == "u_can_stow_weapon":
+        return LuaRaw(
+            "function(dialogue_context)\n"
+            "            if not dialogue_context:valid() then return false end\n"
+            "            local avatar = services.characters.avatar()\n"
+            "            if avatar == nil or not avatar:is_valid() then return false end\n"
+            "            local weapon = services.inventory.weapon_state(avatar)\n"
+            "            return weapon.ok and weapon.value.can_stow == true\n"
+            "        end"
+        )
+    if condition in ("u_has_stolen_item", "npc_has_stolen_item"):
+        # Native f_has_stolen_item ignores the selector's is_npc flag: alpha's
+        # inventory is checked against beta's old ownership in both cases.
+        return LuaRaw(
+            "function(dialogue_context)\n"
+            "            if not dialogue_context:valid() then return false end\n"
+            "            local holder = dialogue_context:speaker()\n"
+            "            local owner = dialogue_context:interlocutor()\n"
+            '            if holder == nil or holder.kind ~= "creature" then return false end\n'
+            '            if owner == nil or owner.kind ~= "creature" then return false end\n'
+            "            if not holder:is_valid() or not owner:is_valid() then return false end\n"
+            "            local result = services.inventory.has_stolen_from(holder, owner)\n"
+            "            return result.ok and result.value == true\n"
+            "        end"
+        )
+    mission_count_conditions = {
+        "has_no_assigned_mission": ("assigned", "== 0"),
+        "has_assigned_mission": ("assigned", "== 1"),
+        "has_many_assigned_missions": ("assigned", ">= 2"),
+        "u_has_no_available_mission": ("available", "== 0"),
+        "u_has_available_mission": ("available", "== 1"),
+        "u_has_many_available_missions": ("available", ">= 2"),
+        "npc_has_no_available_mission": ("available", "== 0"),
+        "npc_has_available_mission": ("available", "== 1"),
+        "npc_has_many_available_missions": ("available", ">= 2"),
+        "has_no_available_mission": ("available", "== 0"),
+        "has_available_mission": ("available", "== 1"),
+        "has_many_available_missions": ("available", ">= 2"),
+    }
+    # condition_parser's u_* spelling selects is_npc=false; both unprefixed
+    # and npc_* aliases select is_npc=true. The alpha forms query the exact
+    # speaker; NPC talkers expose the same raw chatbin list through the typed
+    # service, while other native talkers inherit the empty list.
+    if isinstance(condition, str) and condition in mission_count_conditions:
+        collection, comparison = mission_count_conditions[condition]
+        if collection == "available":
+            actor_accessor = "speaker" if condition.startswith("u_") else "interlocutor"
+            count_query = (
+                "            local count = 0\n"
+                f"            local actor = dialogue_context:{actor_accessor}()\n"
+                "            if actor == nil then return false end\n"
+                '            if actor.kind == "creature" and not actor:is_valid() then return false end\n'
+                '            if actor.kind == "creature" and actor.subtype == "npc" then\n'
+                "                local available = services.npcs.missions.available_count(actor)\n"
+                "                if not available.ok then return false end\n"
+                "                count = available.value\n"
+                "            end\n"
+            )
+        else:
+            count_query = (
+                "            local count = dialogue_context:assigned_mission_count()\n"
+            )
+        return LuaRaw(
+            "function(dialogue_context)\n"
+            "            if not dialogue_context:valid() then return false end\n" +
+            count_query +
+            f"            return count {comparison}\n"
+            "        end"
+        )
+    mission_status_conditions = {
+        "u_mission_complete": "complete",
+        "u_mission_incomplete": "incomplete",
+        "u_mission_failed": "failed",
+        "npc_mission_complete": "complete",
+        "npc_mission_incomplete": "incomplete",
+        "npc_mission_failed": "failed",
+        "mission_complete": "complete",
+        "mission_incomplete": "incomplete",
+        "mission_failed": "failed",
+    }
+    if isinstance(condition, str) and condition in mission_status_conditions:
+        # A native talker NPC stores its selected mission in chatbin. Other
+        # talkers inherit the native null selection and therefore return false.
+        predicate = mission_status_conditions[condition]
+        actor_accessor = "speaker" if condition.startswith("u_") else "interlocutor"
+        return LuaRaw(
+            "function(dialogue_context)\n"
+            "            if not dialogue_context:valid() then return false end\n"
+            f"            local actor = dialogue_context:{actor_accessor}()\n"
+            '            if actor == nil or actor.kind ~= "creature" or actor.subtype ~= "npc" then return false end\n'
+            "            if not actor:is_valid() then return false end\n"
+            "            local owner = services.characters.avatar()\n"
+            "            if owner == nil or not owner:is_valid() then return false end\n"
+            "            local selected = services.npcs.missions.selected_condition(actor, owner, "
+            f"{lua_quote(predicate)})\n"
+            "            return selected.ok and selected.value == true\n"
+            "        end"
+        )
+    if isinstance(condition, dict) and set(condition) in (
+        {"u_mission_goal"}, {"npc_mission_goal"}, {"mission_goal"}
+    ):
+        # Only NPC talkers override selected_mission(); the other native
+        # talker classes have the same false result as the selected query.
+        goal_key = next(iter(condition))
+        goal = condition[goal_key]
+        if not isinstance(goal, str) or goal not in NATIVE_MISSION_GOALS:
+            return None
+        actor_accessor = "speaker" if goal_key == "u_mission_goal" else "interlocutor"
+        return LuaRaw(
+            "function(dialogue_context)\n"
+            "            if not dialogue_context:valid() then return false end\n"
+            f"            local actor = dialogue_context:{actor_accessor}()\n"
+            '            if actor == nil or actor.kind ~= "creature" or actor.subtype ~= "npc" then return false end\n'
+            "            if not actor:is_valid() then return false end\n"
+            "            local selected = services.npcs.missions.selected_has_goal(actor, "
+            f"{lua_quote(goal)})\n"
+            "            return selected.ok and selected.value == true\n"
+            "        end"
+        )
+    if condition == "mission_has_generic_rewards":
+        return LuaRaw(
+            "function(dialogue_context)\n"
+            "            if not dialogue_context:valid() then return false end\n"
+            "            local beta = dialogue_context:interlocutor()\n"
+            "            if beta == nil or not beta:is_valid() then return false end\n"
+            '            if beta.kind ~= "creature" or beta.subtype ~= "npc" then return true end\n'
+            "            local selected = services.npcs.missions.selected_has_generic_rewards(beta)\n"
+            "            return selected.ok and selected.value == true\n"
+            "        end"
+        )
+    if not isinstance(condition, dict) or set(condition) != {"u_has_intelligence"}:
+        return None
+    threshold = finite_number_literal(condition["u_has_intelligence"])
+    if threshold is None or threshold <= 0:
+        return None
+    callback = (
+        "function(dialogue_context)\n"
+        "            if not dialogue_context:valid() then return false end\n"
+        "            local speaker = dialogue_context:speaker()\n"
+        '            if speaker == nil or speaker.kind ~= "creature" then return false end\n'
+        '            if speaker.subtype ~= "avatar" and speaker.subtype ~= "character" and '
+        'speaker.subtype ~= "npc" then return false end\n'
+        "            if not speaker:is_valid() then return false end\n"
+        "            local snapshot = services.characters.snapshot(speaker)\n"
+        "            if not snapshot.ok then return false end\n"
+        f"            return snapshot.value.stats.intelligence >= {lua_number(threshold)}\n"
+        "        end"
+    )
+    return LuaRaw(callback)
+
+
+def _talk_topic_effect_todo(effect: Any) -> tuple[str, str] | None:
+    if isinstance(effect, list):
+        if any(
+            isinstance(nested, dict) and "u_spawn_item" in nested
+            for nested in effect
+        ):
+            return (
+                "manual_rewrite",
+                "combined effects containing u_spawn_item are not lowered; only "
+                "a single direct TALK response with one literal item ID uses the "
+                "callback-scoped native dialogue grant",
+            )
+        for nested in effect:
+            mission_todo = _talk_topic_effect_todo(nested)
+            if mission_todo is not None and "mission" in mission_todo[1]:
+                return mission_todo
+    if isinstance(effect, dict):
+        if "u_spawn_item" in effect:
+            return (
+                "manual_rewrite",
+                "parameterized u_spawn_item forms remain TODO; only a direct TALK "
+                "response containing exactly one literal item ID is lowered; "
+                "count, group, container, flags, force_equip, loc, and dynamic "
+                "values require their native semantics",
+            )
+        selectors = set(effect) & {"npc_gets_item", "npc_gets_item_to_use"}
+        if not selectors and set(effect) == {"effect"}:
+            wrapped = effect["effect"]
+            if isinstance(wrapped, str) and wrapped in {
+                "npc_gets_item", "npc_gets_item_to_use",
+            }:
+                selectors = {wrapped}
+        if selectors:
+            return (
+                "semantic_choice",
+                "native item offers are registered as direct string selectors; "
+                "object-shaped forms are not lowered without an exact native parse",
+            )
+    if effect == "goto_location":
+        return (
+            "platform_gap",
+            "goto_location cannot preserve native camp ordering, the NPC's saved "
+            "first topic, or goal/path clearing after a declined or unreachable route "
+            "with current typed services",
+        )
+    if effect == "player_weapon_away":
+        return (
+            "manual_rewrite",
+            "native player_weapon_away can use the typed stow_current_weapon "
+            "service in Platform on_action before opinion and hostility handling; "
+            "the response still needs its condition, opinion, helpless "
+            "consequence, and translated text preserved together",
+        )
+    if isinstance(effect, str) and effect in {
+        "mission_success", "mission_failure", "clear_mission",
+    }:
+        if effect == "mission_success":
+            return (
+                "manual_rewrite",
+                "only a direct TALK mission_success response with a converted "
+                "condition and native switch/default ordering is lowered through "
+                "the callback-scoped beta operation; trial branches, opinion fields, "
+                "combined effects, and EOCs remain TODO",
+            )
+        if effect == "clear_mission":
+            return (
+                "manual_rewrite",
+                "only a standalone direct TALK response with static text/topic is "
+                "lowered through the callback-scoped native beta clear; conditions, "
+                "additional response fields, combined effects, and EOCs remain TODO",
+            )
+        return (
+            "manual_rewrite",
+            f"native WRAP {effect} executes inside talk_effect_t::apply before "
+            "opinion/hostility handling; Platform on_action can preserve that "
+            "phase, but the current typed services do not match this effect's "
+            "selected-mission and provider-side-effect semantics",
+        )
+    if effect == "mission_reward":
+        return (
+            "manual_rewrite",
+            "native mission_reward adds beta's selected mission value to NPC debt "
+            "before opening the localized Reward barter UI; only the bounded direct "
+            "TALK response with a converted condition is lowered, while EOCs and "
+            "responses with additional fields remain TODO",
+        )
+    if effect == "remove_active_mission":
+        return (
+            "semantic_choice",
+            "string-form remove_active_mission is not registered in the native "
+            "WRAP map; use the object form only in an EOC with a proven avatar",
+        )
+    if isinstance(effect, dict):
+        if "npc_lose_morale" in effect:
+            return (
+                "manual_rewrite",
+                "npc_lose_morale lowers only for a direct static-topic response "
+                "with one registered morale ID and no other response fields or actions",
+            )
+        for selector in ("goto_location", "player_weapon_away"):
+            if selector in effect:
+                return (
+                    "semantic_choice",
+                    f"native WRAP {selector} accepts only a string; this "
+                    "object-shaped form has no native effect semantics",
+                )
+        mission_selectors = {
+            "finish_mission", "remove_active_mission", "mission_success",
+            "mission_failure", "clear_mission",
+        }
+        if mission_selectors.intersection(effect):
+            return (
+                "manual_rewrite",
+                "native response mission effects execute inside talk_effect_t::apply "
+                "before opinion/hostility handling; Platform on_action can preserve "
+                "that phase, but the current typed services do not match the "
+                "selected-mission and provider-side-effect semantics",
+            )
+        if "mission_reward" in effect:
+            return (
+                "manual_rewrite",
+                "native mission_reward adds beta's selected mission value to NPC debt "
+                "before opening the localized Reward barter UI; this object-shaped "
+                "form is outside the bounded direct TALK string-effect lowering",
+            )
+    if not _node_has_key(effect, "run_eocs"):
+        if not (
+            _node_has_key(effect, "true_eocs") or
+            _node_has_key(effect, "false_eocs")
+        ):
+            return None
+        # These callbacks run within the enclosing native action before
+        # talk_effect_t applies opinion and hostility. Platform on_action has
+        # the matching phase, but this renderer cannot yet preserve the
+        # enclosing action's selected EOC branch.
+        return (
+            "manual_rewrite",
+            "native true_eocs/false_eocs run inside talk_effect_t::apply before "
+            "opinion and hostility handling; migrate the enclosing native "
+            "action and its success/failure branch together to preserve ordering",
+        )
+    # Native f_run_eocs executes synchronously inside talk_effect_t::apply,
+    # before talk_effect_t applies opinion and checks whether the NPC turned
+    # hostile. Platform on_action has this phase, but this renderer cannot yet
+    # preserve the enclosing action's selected EOC branch.
+    # The Platform on_action slot now runs in this native effect phase, but
+    # translating a nested run_eocs callback alone would lose its enclosing
+    # action and branch result.
+    return (
+        "manual_rewrite",
+        "native run_eocs executes inside talk_effect_t::apply before opinion and "
+        "hostility handling; migrate the enclosing native action and its "
+        "success/failure branch together to preserve ordering",
+    )
+
+
+def render_talk_topic_npc_lose_morale_action(
+    entry: Any, known_morale_ids: frozenset[str],
+) -> LuaRaw | None:
+    """Render the one direct response shape with native action-phase parity."""
+    if not isinstance(entry, dict) or set(entry) != {"text", "topic", "effect"}:
+        return None
+    if (
+        not isinstance(entry.get("text"), str) or
+        not isinstance(entry.get("topic"), str) or
+        not entry["topic"]
+    ):
+        return None
+    effect = entry.get("effect")
+    if (
+        not isinstance(effect, dict) or
+        set(effect) != {"npc_lose_morale"} or
+        not safe_platform_id(effect.get("npc_lose_morale")) or
+        effect["npc_lose_morale"] not in known_morale_ids
+    ):
+        return None
+    morale_id = effect["npc_lose_morale"]
+    return LuaRaw(
+        "function(context, _trial_success)\n"
+        "    local morale_target = context:interlocutor()\n"
+        "    if morale_target ~= nil and morale_target.kind == \"creature\" and "
+        "morale_target.subtype == \"npc\" and morale_target:is_valid() then\n"
+        "        service_value(services.morale.remove(morale_target, "
+        "services.types.id(\"morale\", " + lua_quote(morale_id) + ")))\n"
+        "    end\n"
+        "end"
+    )
+
+
+def render_talk_topic_mission_reward_action(
+    entry: Any, converted_condition: LuaRaw | None,
+) -> LuaRaw | None:
+    """Run native WRAP mission_reward for one exact, conditioned TALK response."""
+    if (
+        not isinstance(entry, dict) or
+        set(entry) != {"text", "topic", "condition", "effect"} or
+        not isinstance(entry.get("text"), str) or
+        not isinstance(entry.get("topic"), str) or
+        not safe_platform_id(entry["topic"]) or
+        converted_condition is None or
+        entry.get("effect") != "mission_reward"
+    ):
+        return None
+    # avatar::talk_to builds native alpha from the active avatar and beta from
+    # talk_with. The typed operation calls the original native function, which
+    # preserves debt-before-UI ordering, localization, and null-selection
+    # behavior. EOCs and responses with additional fields remain TODO.
+    return LuaRaw("\n".join([
+        "function(context, trial_success)",
+        "    if not trial_success or not context:valid() then return end",
+        "    local alpha = context:speaker()",
+        '    if alpha == nil or alpha.kind ~= "creature" or alpha.subtype ~= "avatar" then return end',
+        "    if not alpha:is_valid() then return end",
+        "    local beta = context:interlocutor()",
+        '    if beta == nil or beta.kind ~= "creature" or beta.subtype ~= "npc" then return end',
+        "    if not beta:is_valid() then return end",
+        "    service_value(services.npcs.missions.open_selected_reward_trade(beta, alpha))",
+        "end",
+    ]))
+
+
+def render_talk_topic_mission_success_action(
+    entry: Any, converted_condition: LuaRaw | None,
+) -> LuaRaw | None:
+    """Run the native beta mission-success operation for an exact switch response."""
+    required_fields = {"text", "topic", "condition", "switch", "effect"}
+    if (
+        not isinstance(entry, dict) or
+        set(entry) not in (required_fields, required_fields | {"default"}) or
+        not isinstance(entry.get("text"), str) or
+        not isinstance(entry.get("topic"), str) or
+        not safe_platform_id(entry["topic"]) or
+        converted_condition is None or
+        entry.get("switch") is not True or
+        ("default" in entry and entry["default"] is not True) or
+        entry.get("effect") != "mission_success"
+    ):
+        return None
+    # The real mission response table uses ordered switch responses. The
+    # Platform runtime implements the same switch/default evaluation order;
+    # the callback invokes the native beta operation only after selection.
+    # Trials, opinions, combined effects, and EOCs remain outside this shape.
+    return LuaRaw("\n".join([
+        "function(context, trial_success)",
+        "    if not trial_success or not context:valid() then return end",
+        "    context:succeed_selected_mission()",
+        "end",
+    ]))
+
+
+def render_talk_topic_clear_mission_action(entry: Any) -> LuaRaw | None:
+    """Lower one standalone direct TALK clear_mission response."""
+    if (
+        not isinstance(entry, dict) or
+        set(entry) != {"text", "topic", "effect"} or
+        not isinstance(entry.get("text"), str) or
+        not isinstance(entry.get("topic"), str) or
+        not safe_platform_id(entry["topic"]) or
+        entry.get("effect") != "clear_mission"
+    ):
+        return None
+    # TALK response actions execute in talk_effect_t::apply. The typed context
+    # delegates to talk_function::clear_mission on the live native beta NPC,
+    # preserving selected-pointer, follow-up, and ordering semantics without
+    # retaining a provider pointer. Conditions, added effects, and EOCs remain
+    # outside this shape.
+    return LuaRaw("\n".join([
+        "function(context, trial_success)",
+        "    if not trial_success or not context:valid() then return end",
+        "    context:clear_selected_mission()",
+        "end",
+    ]))
+
+
+def render_talk_topic_mission_failure_action(entry: Any) -> LuaRaw | None:
+    """Lower the Lighthouse mission-failure response's exact native sequence."""
+    if (
+        not isinstance(entry, dict) or
+        set(entry) != {"text", "topic", "effect"} or
+        not isinstance(entry.get("text"), str) or
+        entry.get("topic") != "TALK_DONE" or
+        entry.get("effect") != [
+            "mission_failure", "clear_mission", "end_conversation",
+        ]
+    ):
+        return None
+    # These are synchronous native TALK effects in this exact order. Each
+    # typed call resolves the live beta NPC in the writable response callback;
+    # trials, conditions, extra effects, and EOCs are deliberately excluded.
+    return LuaRaw("\n".join([
+        "function(context, trial_success)",
+        "    if not trial_success or not context:valid() then return end",
+        "    context:fail_selected_mission()",
+        "    context:clear_selected_mission()",
+        "    context:end_interlocutor_conversation()",
+        "end",
+    ]))
+
+
+def render_talk_topic_item_offer_effect(response: Any) -> LuaRaw | None:
+    """Lower an exact, condition-renderable native TALK item-offer response."""
+    if not isinstance(response, dict) or set(response) - {
+        "text", "topic", "condition", "effect",
+    }:
+        return None
+    if "topic" in response and (
+        not isinstance(response["topic"], str) or not response["topic"]
+    ):
+        return None
+    if "condition" in response and render_talk_topic_response_condition(
+        response["condition"]
+    ) is None:
+        return None
+    effect = response.get("effect")
+    if not isinstance(effect, str):
+        return None
+    if effect == "npc_gets_item":
+        use_item = "false"
+    elif effect == "npc_gets_item_to_use":
+        use_item = "true"
+    else:
+        return None
+    return LuaRaw(
+        "function(dialogue_context, trial_success) "
+        "if not trial_success then return end; "
+        f"dialogue_context:offer_item_to_interlocutor({use_item}) "
+        "end"
+    )
+
+
+def _talk_topic_item_offer_todo(response: Any) -> tuple[str, str] | None:
+    if not isinstance(response, dict):
+        return None
+    effect = response.get("effect")
+    if not isinstance(effect, str) or effect not in {
+        "npc_gets_item", "npc_gets_item_to_use",
+    }:
+        return None
+    return (
+        "manual_rewrite",
+        "native item offers lower only for direct string responses without a trial "
+        "or extra fields and with a precisely converted condition",
+    )
+
+
+def render_talk_topic_pet_purchase_action(response: Any) -> LuaRaw | None:
+    """Lower the two exact shelter responses using native purchase semantics."""
+    if (
+        not isinstance(response, dict) or
+        set(response) != {"text", "topic", "condition", "effect"} or
+        not isinstance(response.get("text"), str) or
+        response.get("topic") != "TALK_DONE" or
+        response.get("condition") != {"not": {"npc_has_effect": "sold_pet"}}
+    ):
+        return None
+    effects = response.get("effect")
+    if not isinstance(effects, list) or len(effects) != 2:
+        return None
+    purchase, mark_sold = effects
+    # These are the exact checked-in animal-shelter variants. Keep richer
+    # options, EOC tails, extra effects, and altered order as TODO until their
+    # native response-phase semantics have a separate proof.
+    if purchase not in (
+        {"u_buy_monster": "mon_dog", "cost": 5000, "pacified": True},
+        {"u_buy_monster": "mon_cat", "cost": 2500, "pacified": True},
+    ) or mark_sold != {"npc_add_effect": "sold_pet", "duration": "24 hours"}:
+        return None
+    monster_id = purchase["u_buy_monster"]
+    cost = purchase["cost"]
+    return LuaRaw("\n".join([
+        "function(context, trial_success)",
+        "    if not trial_success or not context:valid() then return end",
+        "    context:purchase_pet(services.types.id(\"monster\", "
+        f"{lua_quote(monster_id)}), {{ cost = {cost}, pacified = true }})",
+        "    local sold = services.effects.add(",
+        "        context:interlocutor(),",
+        "        services.types.id(\"effect\", \"sold_pet\"),",
+        "        services.time.duration(86400, \"turn\"))",
+        "    if not sold.ok then error(sold.error.code) end",
+        "end",
+    ]))
+
+
+def render_talk_topic_weapon_away_action(
+    response: Any, converted_condition: LuaRaw | None,
+) -> LuaRaw | None:
+    """Keep the exact native response action, opinion, and consequence order."""
+    if (
+        not isinstance(response, dict) or
+        set(response) != {"text", "topic", "condition", "effect", "opinion"} or
+        not isinstance(response.get("text"), str) or
+        not safe_platform_id(response.get("topic")) or
+        converted_condition is None or
+        response.get("effect") != "player_weapon_away"
+    ):
+        return None
+    opinion = response.get("opinion")
+    if (
+        not isinstance(opinion, dict) or not opinion or
+        set(opinion) - {"trust", "fear", "value", "anger", "owed", "sold"} or
+        any(type(value) is not int or not NATIVE_INT_MIN <= value <= NATIVE_INT_MAX
+            for value in opinion.values())
+    ):
+        return None
+    return LuaRaw("\n".join([
+        "function(context, trial_success)",
+        "    if not trial_success or not context:valid() then return end",
+        "    service_value(services.equipment.stow_current_weapon(",
+        "        services.characters.avatar()))",
+        "end",
+    ]))
+
+
+def render_talk_topic(
+    source: SourceObject,
+    result: MigrationResult,
+    known_morale_ids: frozenset[str] = frozenset(),
+) -> str | None:
     value = source.value
     topic_id = value.get("id")
+    if isinstance(topic_id, list) and len(topic_id) == 1:
+        # Native load_talk_topic registers each array entry independently. A
+        # singleton array therefore has the same registration semantics as a
+        # string ID; multiple aliases would require duplicate topic output.
+        topic_id = topic_id[0]
     if not safe_platform_id(topic_id):
         result.partial.append(f"{source.location}: talk topic <invalid id>")
         result.add_todo("manual_rewrite", f"{source.location}: talk topic needs a stable id")
         return None
     todo_count = len(result.todos)
-    dynamic_line = _talk_text(value.get("dynamic_line"))
+    raw_dynamic_line = value.get("dynamic_line")
+    dynamic_line, dynamic_line_issue = _talk_text(raw_dynamic_line)
     if dynamic_line is None:
-        result.add_todo("manual_rewrite", f"{source.location}: talk topic {topic_id} dynamic_line needs a static string")
+        result.add_todo(
+            "manual_rewrite",
+            f"{source.location}: talk topic {topic_id} "
+            f"{dynamic_line_issue or 'dynamic_line needs manual conversion'}",
+        )
         dynamic_line = "[Lua-first dialogue line requires manual conversion]"
     responses: list[dict[str, Any]] = []
     raw_responses = value.get("responses", [])
@@ -6442,26 +8136,203 @@ def render_talk_topic(source: SourceObject, result: MigrationResult) -> str | No
         result.add_todo("manual_rewrite", f"{source.location}: talk topic {topic_id} responses need review")
         raw_responses = []
     for entry in raw_responses:
-        if not isinstance(entry, dict) or not isinstance(entry.get("text"), str):
+        if not isinstance(entry, dict):
             result.add_todo("manual_rewrite", f"{source.location}: talk topic {topic_id} response needs a static text")
             continue
-        response: dict[str, Any] = {"text": entry["text"]}
-        if isinstance(entry.get("topic"), str) and entry["topic"]:
-            response["topic"] = entry["topic"]
-        if "effect" in entry:
-            callback = render_dialogue_trade_effect(
-                entry["effect"], result, source.location,
-                f"topic {topic_id} response",
-            )
-            if callback is None:
+        if "truefalsetext" in entry:
+            truefalse = entry["truefalsetext"]
+            if (
+                isinstance(truefalse, dict) and
+                set(truefalse) in (
+                    {"true", "false"}, {"true", "false", "condition"},
+                ) and
+                isinstance(truefalse["true"], str) and
+                isinstance(truefalse["false"], str)
+            ):
+                if "condition" in truefalse:
+                    text_condition = render_talk_topic_response_condition(
+                        truefalse["condition"]
+                    )
+                    if text_condition is None:
+                        result.add_todo(
+                            "manual_rewrite",
+                            f"{source.location}: talk topic {topic_id} truefalsetext "
+                            "condition needs Lua conversion; response skipped",
+                        )
+                        continue
+                else:
+                    # Native read_condition defaults a missing truefalsetext
+                    # condition to true.
+                    text_condition = LuaRaw("true")
+                response = {
+                    "text": truefalse["true"],
+                    "text_translation": {},
+                    "text_condition": text_condition,
+                    "false_text": truefalse["false"],
+                    "false_text_translation": {},
+                }
+            else:
                 result.add_todo(
                     "manual_rewrite",
-                    f"{source.location}: talk topic {topic_id} response effect needs a native callback"
+                    f"{source.location}: talk topic {topic_id} truefalsetext needs "
+                    "manual shape and translation review; response skipped",
+                )
+                continue
+        else:
+            if not isinstance(entry.get("text"), str):
+                result.add_todo("manual_rewrite", f"{source.location}: talk topic {topic_id} response needs a static text")
+                continue
+            response = {
+                "text": entry["text"],
+                # JSON talk_response::talk_response reads this as a translation;
+                # authored Lua strings remain literal unless marked explicitly.
+                "text_translation": {},
+            }
+        converted_condition = None
+        converted_opinion = False
+        if isinstance(entry.get("topic"), str) and entry["topic"]:
+            response["topic"] = entry["topic"]
+        if "condition" in entry:
+            condition = render_talk_topic_response_condition(entry["condition"])
+            converted_condition = condition
+            if condition is None:
+                # A TODO condition must not silently make the response
+                # unconditional in the declarative Platform topic.
+                response["condition"] = LuaRaw("false")
+                result.add_todo(
+                    "manual_rewrite",
+                    f"{source.location}: talk topic {topic_id} response condition needs Lua conversion"
                 )
             else:
-                response["on_select"] = callback
+                response["condition"] = condition
+        for switch_field in ("switch", "default"):
+            if isinstance(entry.get(switch_field), bool):
+                response[switch_field] = entry[switch_field]
+        if "effect" in entry:
+            action_callback = render_talk_topic_mission_failure_action(entry)
+            if action_callback is None:
+                action_callback = render_talk_topic_mission_success_action(
+                    entry, converted_condition,
+                )
+            if action_callback is None:
+                action_callback = render_talk_topic_mission_reward_action(
+                    entry, converted_condition,
+                )
+            if action_callback is None:
+                action_callback = render_talk_topic_clear_mission_action(entry)
+            if action_callback is None and set(entry) <= {"text", "topic", "effect"}:
+                action_callback = render_dialogue_mission_action_effect(
+                    entry["effect"]
+                )
+                if action_callback is None:
+                    action_callback = render_dialogue_spend_cash_action_effect(
+                        entry["effect"]
+                    )
+                if action_callback is None:
+                    action_callback = render_dialogue_item_grant_action_effect(
+                        entry["effect"]
+                    )
+                if action_callback is None:
+                    action_callback = render_dialogue_stolen_item_action_effect(
+                        entry["effect"]
+                    )
+            elif action_callback is None and (
+                set(entry) <= {"text", "topic", "condition", "effect"} and
+                converted_condition is not None
+            ):
+                # Native evaluates the response condition before selection;
+                # the grant runs in the response effect phase after selection.
+                action_callback = render_dialogue_item_grant_action_effect(
+                    entry["effect"]
+                )
+            elif (
+                set(entry) == {"text", "topic", "condition", "effect", "opinion"} and
+                converted_condition is not None and
+                isinstance(entry["opinion"], dict) and entry["opinion"] and
+                set(entry["opinion"]) <= {"trust", "fear", "value", "anger", "owed", "sold"} and
+                all(type(value) is int and NATIVE_INT_MIN <= value <= NATIVE_INT_MAX
+                    for value in entry["opinion"].values())
+            ):
+                # Native talk_effect_t::apply runs the effect vector first,
+                # then applies the response's opinion to dialogue beta.
+                action_callback = render_dialogue_stolen_item_action_effect(
+                    entry["effect"]
+                )
+                if action_callback is not None:
+                    response["success_opinion"] = entry["opinion"]
+                    converted_opinion = True
+            if action_callback is None:
+                action_callback = render_talk_topic_weapon_away_action(
+                    entry, converted_condition,
+                )
+                if action_callback is not None:
+                    response["success_opinion"] = entry["opinion"]
+                    response["success_consequence"] = "helpless"
+                    converted_opinion = True
+            if action_callback is None:
+                action_callback = render_talk_topic_npc_lose_morale_action(
+                    entry, known_morale_ids,
+                )
+            if action_callback is None:
+                action_callback = render_talk_topic_item_offer_effect(entry)
+            if action_callback is None:
+                action_callback = render_talk_topic_pet_purchase_action(entry)
+            if action_callback is None:
+                action_callback = render_dialogue_sell_item_action_effect(
+                    entry, converted_condition,
+                )
+                if action_callback is not None and "opinion" in entry:
+                    response["success_opinion"] = entry["opinion"]
+                    converted_opinion = True
+            if action_callback is not None:
+                response["on_action"] = action_callback
+            else:
+                callback = render_dialogue_trade_effect(
+                    entry["effect"], result, source.location,
+                    f"topic {topic_id} response",
+                )
+                if callback is not None:
+                    response["on_select"] = callback
+                else:
+                    trade_todo = _legacy_trade_action_effect_todo(entry["effect"])
+                    item_offer_todo = _talk_topic_item_offer_todo(entry)
+                    camp_todo = _camp_selector_todo(entry["effect"])
+                    camp_object_todo = _camp_selector_object_todo(entry["effect"])
+                    food_todo = _distribute_food_auto_todo(entry["effect"])
+                    response_effect_todo = _talk_topic_effect_todo(
+                        entry["effect"]
+                    )
+                    if item_offer_todo is not None:
+                        response_effect_category, response_effect_reason = item_offer_todo
+                    elif camp_todo is not None:
+                        response_effect_category, response_effect_reason = camp_todo
+                    elif camp_object_todo is not None:
+                        response_effect_category = "semantic_choice"
+                        response_effect_reason = camp_object_todo
+                    elif food_todo is not None:
+                        response_effect_category = "platform_gap"
+                        response_effect_reason = food_todo
+                    elif trade_todo is not None:
+                        response_effect_category = "manual_rewrite"
+                        response_effect_reason = trade_todo
+                    elif response_effect_todo is not None:
+                        response_effect_category, response_effect_reason = response_effect_todo
+                    else:
+                        response_effect_category = "manual_rewrite"
+                        response_effect_reason = "needs a native callback"
+                    result.add_todo(
+                        response_effect_category,
+                        f"{source.location}: talk topic {topic_id} response effect "
+                        f"{response_effect_reason}"
+                    )
         responses.append(response)
-        unsupported = set(entry) - {"text", "topic", "effect"}
+        supported_fields = {
+            "text", "topic", "condition", "effect", "switch", "default",
+            "truefalsetext",
+        }
+        if converted_opinion:
+            supported_fields.add("opinion")
+        unsupported = set(entry) - supported_fields
         if unsupported:
             result.add_todo(
                 "manual_rewrite",
@@ -6473,6 +8344,8 @@ def render_talk_topic(source: SourceObject, result: MigrationResult) -> str | No
         "dynamic_line": dynamic_line,
         "responses": responses,
     }
+    if isinstance(raw_dynamic_line, str):
+        descriptor["dynamic_line_translation"] = {}
     if isinstance(value.get("insert_before_standard_exits"), bool):
         descriptor["insert_before_standard_exits"] = value["insert_before_standard_exits"]
     if isinstance(value.get("replace_built_in_responses"), bool):
@@ -6488,6 +8361,7 @@ def render_talk_topic(source: SourceObject, result: MigrationResult) -> str | No
                         "item": entry["for_item"],
                         "response": {
                             "text": response["text"],
+                            "text_translation": {},
                             **({"topic": response["topic"]} if isinstance(response.get("topic"), str) else {}),
                         },
                     })
@@ -6506,9 +8380,19 @@ def render_talk_topic(source: SourceObject, result: MigrationResult) -> str | No
                 f"talk topic {topic_id} speaker_effect",
             )
             if callback is None:
+                trade_todo = _legacy_trade_action_effect_todo(raw_effect)
+                speaker_effect_value = raw_effect
+                if (
+                    isinstance(raw_effect, dict) and
+                    set(raw_effect) <= {"effect", "opinion", "mission_opinion"} and
+                    isinstance(raw_effect.get("effect"), str)
+                ):
+                    speaker_effect_value = raw_effect["effect"]
+                food_todo = _distribute_food_auto_todo(speaker_effect_value)
                 result.add_todo(
-                    "manual_rewrite",
-                    f"{source.location}: talk topic {topic_id} speaker_effect needs a native callback"
+                    "platform_gap" if food_todo is not None else "manual_rewrite",
+                    f"{source.location}: talk topic {topic_id} speaker_effect "
+                    f"{food_todo or trade_todo or 'needs a native callback'}"
                 )
             else:
                 callbacks.append(callback)
@@ -8995,6 +10879,25 @@ def render_generic_platform_content(
         value = resolved
         source = SourceObject(source.path, source.index, resolved)
     object_id = stable_id(value, f"anonymous_{source.index}")
+    if label == "mission_definition":
+        legacy_lifecycle = [
+            key for key in ("start", "end", "fail", "goal_condition", "deadline")
+            if key in value
+        ]
+        if legacy_lifecycle:
+            # content.Mission accepts Lua phase handler IDs, not the native
+            # mission_definition effect/condition objects. Its deadline table
+            # also differs from native duration/expression values. Passing
+            # these through the generic table loses behavior.
+            result.partial.append(f"{source.location}: {label} {object_id}")
+            result.add_todo(
+                "manual_rewrite",
+                f"{source.location}: {label} {object_id} legacy fields "
+                f"{', '.join(legacy_lifecycle)} cannot pass through "
+                "content.Mission: phase/goal objects need Lua handlers and "
+                "deadline values need a bounded conversion"
+            )
+            return None
     raw_id = value.get("id")
     if raw_id is None and isinstance(value.get("abstract"), str):
         # Abstract generic-factory parents are migration-time templates.  The
@@ -19014,6 +20917,193 @@ def render_eoc_value_expression(
     )
 
 
+@functools.lru_cache(maxsize=1)
+def registered_native_event_types() -> frozenset[str]:
+    """Return event names from the checked-in inventory generated from event.h."""
+    inventory_path = (
+        REPOSITORY_ROOT / "data" / "lua" / "reference" /
+        "ccb_platform_native_inventory.json"
+    )
+    try:
+        inventory = json.loads(inventory_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return frozenset()
+    entries = inventory.get("event_types") if isinstance(inventory, dict) else None
+    if not isinstance(entries, list):
+        return frozenset()
+    return frozenset(
+        entry["type"] for entry in entries
+        if isinstance(entry, dict) and isinstance(entry.get("type"), str) and
+        bounded_utf8_string(entry["type"], 128, allow_empty=False)
+    )
+
+
+def _render_static_trigger_event_value(
+    value: Any, depth: int, nodes: list[int]
+) -> str | None:
+    """Render bounded diag_value literals without Python/Lua coercion."""
+    nodes[0] += 1
+    if nodes[0] > 512 or depth > 8:
+        return None
+    if value is None:
+        return "services.types.null"
+    if isinstance(value, bool):
+        # Native diag_value JSON does not accept JSON booleans.
+        return None
+    if isinstance(value, str):
+        if depth > 0:
+            try:
+                if len(value.encode("utf-8")) > 8192:
+                    return None
+            except UnicodeEncodeError:
+                return None
+        return lua_quote(value)
+    if isinstance(value, int):
+        try:
+            number = float(value)
+        except OverflowError:
+            return None
+        return lua_number(number) if math.isfinite(number) else None
+    if isinstance(value, float):
+        return lua_number(value) if math.isfinite(value) else None
+    if isinstance(value, list):
+        if len(value) > 512:
+            return None
+        rendered = [
+            _render_static_trigger_event_value(entry, depth + 1, nodes)
+            for entry in value
+        ]
+        if any(entry is None for entry in rendered):
+            return None
+        return "{ " + ", ".join(rendered) + " }"
+    if not isinstance(value, dict):
+        return None
+    if set(value) == {"tripoint"}:
+        coordinates = value.get("tripoint")
+        if (
+            isinstance(coordinates, list) and len(coordinates) == 3 and
+            all(
+                isinstance(entry, int) and not isinstance(entry, bool) and
+                NATIVE_INT_MIN <= entry <= NATIVE_INT_MAX
+                for entry in coordinates
+            )
+        ):
+            return (
+                "services.coords.tripoint_abs_ms(" +
+                ", ".join(str(entry) for entry in coordinates) + ")"
+            )
+        return None
+    if (
+        "str" in value and set(value) <= {"str", "i18n", "//~"} and
+        bounded_utf8_string(value.get("str"), 8192, allow_empty=True) and
+        ("i18n" not in value or isinstance(value["i18n"], bool)) and
+        ("//~" not in value or isinstance(value["//~"], str))
+    ):
+        if value.get("i18n", False):
+            return f"services.translate({lua_quote(value['str'])})"
+        return lua_quote(value["str"])
+    if set(value) == {"dbl"} and isinstance(value.get("dbl"), str):
+        try:
+            number = float(value["dbl"])
+        except ValueError:
+            return None
+        return lua_number(number) if math.isfinite(number) else None
+    return None
+
+
+def _render_trigger_event_argument(
+    value: Any, *, actor_expression: str | None,
+    alpha_character_proven: bool, beta_expression: str | None,
+    depth: int = 0, nodes: list[int] | None = None,
+) -> str | None:
+    """Render one value_or_var argument to native_events.emit's typed input."""
+    if nodes is None:
+        nodes = [0]
+    static_value = _render_static_trigger_event_value(value, depth, nodes)
+    if static_value is not None:
+        return static_value
+    if not isinstance(value, dict):
+        return None
+    variable_keys = {
+        key for key in value
+        if key in {"context_val", "u_val", "npc_val", "global_val"}
+    }
+    if len(variable_keys) != 1 or set(value) - variable_keys - {"default"}:
+        return None
+    key = next(iter(variable_keys))
+    name = value.get(key)
+    if not lua_quotable_native_variable_string(name):
+        return None
+    if key == "u_val" and (not alpha_character_proven or actor_expression is None):
+        return None
+    if key == "npc_val" and beta_expression is None:
+        return None
+    if "default" in value:
+        default_expression = _render_static_trigger_event_value(
+            value["default"], depth + 1, nodes
+        )
+        if default_expression is None:
+            return None
+    else:
+        default_expression = "services.types.null"
+    scope = {
+        "context_val": "context",
+        "u_val": "u",
+        "npc_val": "npc",
+        "global_val": "global",
+    }[key]
+    owner = actor_expression if key in {"u_val", "npc_val"} else "nil"
+    participants = (
+        ", { beta = " + beta_expression + " }"
+        if key == "npc_val" and beta_expression is not None else ""
+    )
+    return (
+        "(function() local resolved = service_value(services.variables.resolve("
+        f"context.data, {owner}, {lua_quote(scope)}, {lua_quote(name)}{participants})); "
+        f"if not resolved.exists then return {default_expression} end; "
+        "if resolved.value == nil then return services.types.null end; "
+        "return resolved.value end)()"
+    )
+
+
+def render_static_trigger_event(
+    effect: dict[str, Any], *, actor_expression: str | None,
+    alpha_character_proven: bool,
+    beta_expression: str | None,
+) -> tuple[list[str] | None, str | None]:
+    """Lower the bounded native trigger_event value_or_var shape."""
+    if set(effect) != {"trigger_event", "args"}:
+        return None, "trigger_event requires only a registered event and an args array"
+    event_name = effect.get("trigger_event")
+    if (
+        not isinstance(event_name, str) or
+        not bounded_utf8_string(event_name, 128, allow_empty=False) or
+        event_name not in registered_native_event_types()
+    ):
+        return None, "trigger_event name is not present in the native event registry"
+    args = effect.get("args")
+    if not isinstance(args, list) or len(args) > 64:
+        return None, "trigger_event args must be a dense array with at most 64 entries"
+    rendered_args: list[str] = []
+    for entry in args:
+        rendered = _render_trigger_event_argument(
+            entry,
+            actor_expression=actor_expression,
+            alpha_character_proven=alpha_character_proven,
+            beta_expression=beta_expression,
+        )
+        if rendered is None:
+            return None, (
+                "trigger_event argument needs a bounded native diag_value or a "
+                "source-proven alpha/beta variable owner"
+            )
+        rendered_args.append(rendered)
+    return [
+        f"    services.native_events.emit({lua_quote(event_name)}, "
+        "{ " + ", ".join(rendered_args) + " })"
+    ], None
+
+
 def render_eoc_string_expression(
     value: Any, actor_expression: str = "actor"
 ) -> str | None:
@@ -19069,27 +21159,19 @@ def render_eoc_string_expression(
 
 
 def render_eoc_numeric_expression(
-    value: Any, missing_default: str, actor_expression: str = "actor"
+    value: Any, missing_default: str, actor_expression: str = "actor",
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> str | None:
     if isinstance(value, bool) or isinstance(value, str):
         return None
     if isinstance(value, (int, float)):
         return lua_scalar_literal(value)
-    # Delegate native EOC math syntax to the bounded Platform expression
-    # service.  This preserves the engine's variable/functions semantics for
-    # expressions such as ``u_health()`` and ``rand(10)`` without introducing
-    # a second parser in generated Lua.
+    # The mutation recipient is not necessarily Native alpha. Only explicit
+    # read-participant evidence may authorize u_/n_/v_ math variables. Compile
+    # supported numeric syntax to ordinary Lua; unknown domain functions and
+    # ambiguous effects remain migration TODOs instead of using a raw parser.
     if isinstance(value, dict) and set(value) == {"math"}:
-        expression = value.get("math")
-        if (
-            isinstance(expression, list) and len(expression) == 1 and
-            isinstance(expression[0], str) and
-            bounded_utf8_string(expression[0], 8192, allow_empty=False)
-        ):
-            return (
-                "service_value(services.gameplay.math.evaluate("
-                f"{lua_quote(expression[0])}, {actor_expression}, context.data))"
-            )
+        return render_native_number_expression(value, effect_actor_targets)
     if isinstance(value, dict) and "default" in value:
         variable_keys = {
             key for key in value
@@ -19109,42 +21191,39 @@ def render_eoc_numeric_expression(
     return None if rendered is None else f"tonumber(({rendered}) or {missing_default})"
 
 
-def render_mutation_id_expression(value: Any) -> str | None:
-    """Render a checked mutation GameId from a literal or proven variable."""
-    if safe_platform_id(value):
+def render_mutation_id_expression(
+    value: Any, known_mutation_ids: frozenset[str],
+) -> str | None:
+    """Render only a literal mutation ID found in source catalogs."""
+    if safe_platform_id(value) and value in known_mutation_ids:
         return (
             'services.types.id("mutation", '
             f"{lua_quote(value)})"
         )
-    if not isinstance(value, dict):
-        return None
-    rendered = render_eoc_string_expression(value)
-    if rendered is None:
-        return None
-    return f'services.types.id("mutation", {rendered})'
+    return None
 
 
-def render_mutation_category_expression(value: Any) -> str | None:
+def render_mutation_category_expression(
+    value: Any, known_category_ids: frozenset[str],
+) -> str | None:
     """Render a category GameId, using nil for the native ANY sentinel."""
-    if value is None:
-        return "nil"
-    if safe_platform_id(value):
+    if safe_platform_id(value) and value in known_category_ids:
         if value == "ANY":
             return "nil"
         return (
             'services.types.id("mutation_category", '
             f"{lua_quote(value)})"
         )
-    if not isinstance(value, dict):
-        return None
-    rendered = render_eoc_string_expression(value)
-    if rendered is None:
-        return None
-    return f'services.types.id("mutation_category", {rendered})'
+    return None
 
 
 def render_mutation_chance_expression(value: Any) -> str | None:
-    """Render the integral one-in chance accepted by Character::mutate."""
+    """Render only a static chance proven safe for the typed mutation API.
+
+    Native EOC mutation evaluates a double and passes it to an int parameter,
+    while the Platform API requires an integral value in its bounded range.
+    A dynamic EOC value cannot prove that contract at migration time.
+    """
     if isinstance(value, int) and not isinstance(value, bool):
         if 0 <= value <= MAX_MUTATION_RANDOM_CHANCE:
             return str(value)
@@ -19153,16 +21232,15 @@ def render_mutation_chance_expression(value: Any) -> str | None:
         if value.is_integer() and 0 <= value <= MAX_MUTATION_RANDOM_CHANCE:
             return str(int(value))
         return None
-    if not isinstance(value, dict):
-        return None
-    rendered = render_eoc_numeric_expression(value, "0")
-    return rendered
+    return None
 
 
 def render_static_mutation_effect(
     effect: dict[str, Any],
     key: str,
     target_expression: str | None,
+    known_mutation_ids: frozenset[str] = frozenset(),
+    known_category_ids: frozenset[str] = frozenset(),
 ) -> list[str] | None:
     """Render one bounded u_/npc_ mutation effect through typed services."""
     if target_expression is None or key not in effect:
@@ -19183,7 +21261,9 @@ def render_static_mutation_effect(
     if key in {"u_mutate_category", "npc_mutate_category"}:
         if set(effect) - {key, "use_vitamins", "true_random"}:
             return None
-        category = render_mutation_category_expression(effect[key])
+        category = render_mutation_category_expression(
+            effect[key], known_category_ids
+        )
         if category is None:
             return None
         use_vitamins = effect.get("use_vitamins", True)
@@ -19198,8 +21278,17 @@ def render_static_mutation_effect(
     if key in {"u_mutate_towards", "npc_mutate_towards"}:
         if set(effect) - {key, "category", "use_vitamins"}:
             return None
-        mutation = render_mutation_id_expression(effect[key])
-        category = render_mutation_category_expression(effect.get("category"))
+        # Native str_or_var's absent category evaluates to an empty ID. It is
+        # not the Platform API's nil/ANY sentinel, so only migrate an explicit
+        # valid category (including the explicit "ANY" sentinel).
+        if "category" not in effect or effect["category"] is None:
+            return None
+        mutation = render_mutation_id_expression(
+            effect[key], known_mutation_ids
+        )
+        category = render_mutation_category_expression(
+            effect["category"], known_category_ids
+        )
         if mutation is None or category is None:
             return None
         use_vitamins = effect.get("use_vitamins", True)
@@ -19215,22 +21304,54 @@ def render_static_mutation_effect(
 
 def _effect_duration_expression(
     value: Any, target: str = "actor", alpha: str | None = None, beta: str | None = None,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> str | None:
-    turns = parse_turns(value)
+    turns = parse_native_duration_turns(value)
     if turns is not None:
         if not NATIVE_INT_MIN <= turns <= NATIVE_INT_MAX:
             return None
         return f'services.time.duration({turns}, "turn")'
-    if isinstance(value, list):
-        value = [parse_turns(endpoint) if parse_turns(endpoint) is not None else endpoint for endpoint in value]
-    rendered = _effect_numeric_expression(value, target, alpha, beta)
+    value = _normalize_native_effect_duration(value)
+    if value is None:
+        return None
+    rendered = _effect_numeric_expression(value, target, alpha, beta, effect_actor_targets)
     if rendered is None:
         return None
-    # EOC duration conversion truncates toward zero. TimeDuration rejects
-    # overflow; do not turn negative/long values into zero or one year.
+    # Native time_duration stores signed int turns. The Platform TimeDuration
+    # wrapper uses a wider representation, so check before to_native narrows.
+    converted = _native_effect_integer_expression(rendered, "effect duration")
+    return f'services.time.duration({converted}, "turn")'
+
+
+def _normalize_native_effect_duration(value: Any) -> Any:
+    """Preserve time_duration JSON loader rules before evaluating providers."""
+    if isinstance(value, list):
+        if len(value) != 2 or any(isinstance(bound, list) for bound in value):
+            return None
+        bounds = [_normalize_native_effect_duration(bound) for bound in value]
+        return None if any(bound is None for bound in bounds) else bounds
+    if not isinstance(value, dict):
+        # A raw JSON float (even 1.0) is not a Native time_duration integer.
+        return parse_native_duration_turns(value)
+    provider = dict(value)
+    if "default" in provider:
+        default = parse_native_duration_turns(provider["default"])
+        if default is None:
+            return None
+        provider["default"] = default
+    return provider
+
+
+def _native_effect_integer_expression(expression: str, name: str) -> str:
+    """Convert defined Native double-to-int inputs without clamping them."""
     return (
-        'services.time.duration((function(value) return value < 0 and math.ceil(value) '
-        f'or math.floor(value) end)({rendered}), "turn")'
+        '(function(value) '
+        'assert(value == value and value ~= math.huge and value ~= -math.huge, '
+        f'{lua_quote(name + " must be finite")}); '
+        'local integer = value < 0 and math.ceil(value) or math.floor(value); '
+        f'assert(integer >= {NATIVE_INT_MIN} and integer <= {NATIVE_INT_MAX}, '
+        f'{lua_quote(name + " exceeds the signed engine range")}); '
+        f'return integer end)({expression})'
     )
 
 
@@ -19238,9 +21359,14 @@ def render_static_character_effect(
     effect: dict[str, Any],
     key: str,
     target_expression: str | None,
+    *,
+    target_kind: str | None = "character",
 ) -> list[str] | None:
     """Render one static u_/npc_add_effect without preserving EOC syntax."""
-    if target_expression is None or not safe_platform_id(effect.get(key)):
+    if (
+        target_expression is None or target_kind not in {"character", "monster", "creature"} or
+        not safe_platform_id(effect.get(key))
+    ):
         return None
     allowed_keys = {
         key, "duration", "intensity", "target_part", "force",
@@ -19253,6 +21379,19 @@ def render_static_character_effect(
     force = effect.get("force", False)
     if target_part is not None and not safe_platform_id(target_part):
         return None
+    if target_kind == "creature" and (
+        target_part == "RANDOM" or isinstance(target_part, dict)
+    ):
+        # NPC_DEATH beta is the killer when present. Its kind is a runtime
+        # Creature, and native add_effect treats RANDOM differently for a
+        # monster talker than for a Character talker.
+        return None
+    if target_kind == "monster" and (
+        target_part == "RANDOM" or isinstance(target_part, dict)
+    ):
+        # talker_monster::add_effect passes RANDOM through as a body-part ID;
+        # it does not sample the avatar's random part like Character talkers.
+        return None
     if not isinstance(force, bool):
         return None
     # Preserve zero duration: native application and later expiry are distinct.
@@ -19262,7 +21401,7 @@ def render_static_character_effect(
         return None
     if (
         not isinstance(intensity, int) or isinstance(intensity, bool) or
-        not -NATIVE_MAX_EFFECT_INTENSITY <= intensity <= NATIVE_MAX_EFFECT_INTENSITY
+        not NATIVE_INT_MIN <= intensity <= NATIVE_INT_MAX
     ):
         return None
     options: list[str] = []
@@ -19298,7 +21437,12 @@ def render_static_character_morale(
     key: str,
     target_expression: str | None,
 ) -> list[str] | None:
-    """Render one static u_/npc_add_morale without preserving EOC syntax."""
+    """Render one static morale addition with native integer/time bounds.
+
+    The source ID must name a registered morale type at runtime.  The shared
+    ``safe_platform_id`` check validates text shape only; unknown native morale
+    IDs are outside this lowering's equivalence claim.
+    """
     if target_expression is None or not safe_platform_id(effect.get(key)):
         return None
     allowed_keys = {
@@ -19355,83 +21499,36 @@ def render_static_character_morale(
     return result
 
 
-def render_dynamic_character_morale(
-    effect: dict[str, Any], key: str, target_expression: str | None,
-) -> list[str] | None:
-    """Render variable-backed morale id/amounts through services.morale."""
-    if target_expression is None or key not in effect:
-        return None
-    if set(effect) - {key, "bonus", "max_bonus", "duration", "decay_start", "capped"}:
-        return None
-    morale_id = _dynamic_id_expression(effect[key], "morale", target_expression)
-    bonus = render_eoc_numeric_expression(effect.get("bonus", 0), "0", target_expression)
-    maximum = render_eoc_numeric_expression(effect.get("max_bonus", 0), "0", target_expression)
-    if morale_id is None or bonus is None or maximum is None:
-        return None
-    options: list[str] = []
-    for name in ("duration", "decay_start"):
-        if name in effect:
-            duration = _duration_expression(effect[name], minimum=0, actor_expression=target_expression)
-            if duration is None:
-                return None
-            options.append(f"{name} = {duration}")
-    capped = effect.get("capped", False)
-    if not isinstance(capped, bool):
-        return None
-    if capped:
-        options.append("capped = true")
-    suffix = ", { " + ", ".join(options) + " }" if options else ""
-    return [
-        "    services.morale.add(",
-        f"        {target_expression}, {morale_id}, {bonus}, {maximum}{suffix})",
-    ]
-
-
 def _effect_numeric_expression(
     value: Any, target: str, alpha: str | None, beta: str | None,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> str | None:
-    if isinstance(value, list):
-        if len(value) != 2 or any(isinstance(endpoint, list) for endpoint in value):
-            return None
-        for endpoint in value:
-            literal = finite_number_literal(endpoint)
-            if literal is not None and not -2147483648 <= math.trunc(literal) <= 2147483647:
-                return None
-        endpoints = [_effect_numeric_expression(endpoint, target, alpha, beta) for endpoint in value]
-        if any(endpoint is None for endpoint in endpoints):
-            return None
-        # Native dbl_or_var calls integer rng: truncate toward zero before
-        # ordering the endpoints. Keep runtime errors outside the random API's
-        # supported bounds instead of silently clamping the distribution.
-        return (
-            '(function(lo, hi) lo = lo < 0 and math.ceil(lo) or math.floor(lo); '
-            'hi = hi < 0 and math.ceil(hi) or math.floor(hi); '
-            'return services.random.int(math.min(lo, hi), math.max(lo, hi)) end)('
-            f'{endpoints[0]}, {endpoints[1]})'
-        )
-    if not isinstance(value, dict) or set(value) == {"math"}:
-        return render_eoc_numeric_expression(value, "0", alpha or target)
-    descriptor = dict(value)
-    if "default" in descriptor:
-        default = finite_number_literal(descriptor["default"])
-        if default is None:
-            return None
-        descriptor["default"] = str(default)
-    raw = render_participant_string_expression(descriptor, target, alpha, beta)
-    return None if raw is None else f"(tonumber({raw}) or 0)"
+    # A mutation recipient is not evidence of Native alpha/beta ownership.
+    # Keep the call signature for existing domain callers, but let the shared
+    # Native provider enforce exact read roles, numeric type and shared RNG.
+    return render_native_number_expression(value, effect_actor_targets)
 
 
 def render_dynamic_character_effect(
     effect: dict[str, Any], key: str, target_expression: str | None,
     *, avatar_expression: str | None = None, npc_expression: str | None = None,
+    target_kind: str | None = "character",
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> list[str] | None:
     """Render variable-backed effect ids and durations."""
-    if target_expression is None or key not in effect or "duration" not in effect:
+    if (
+        target_expression is None or target_kind not in {"character", "monster", "creature"} or
+        key not in effect or "duration" not in effect
+    ):
         return None
     if set(effect) - {key, "duration", "intensity", "target_part", "force"}:
         return None
-    alpha = avatar_expression or (target_expression if key.startswith("u_") else None)
-    beta = npc_expression or (target_expression if key.startswith("npc_") else None)
+    if effect_actor_targets is not None:
+        alpha = _proven_native_variable_read_target(effect_actor_targets, "u")
+        beta = _proven_native_variable_read_target(effect_actor_targets, "npc")
+    else:
+        alpha = avatar_expression or (target_expression if key.startswith("u_") else None)
+        beta = npc_expression or (target_expression if key.startswith("npc_") else None)
 
     def identifier(value: Any, kind: str) -> str | None:
         if isinstance(value, dict):
@@ -19440,12 +21537,13 @@ def render_dynamic_character_effect(
         return _dynamic_id_expression(value, kind, target_expression)
 
     def numeric(value: Any) -> str | None:
-        return _effect_numeric_expression(value, target_expression, alpha, beta)
+        return _effect_numeric_expression(value, target_expression, alpha, beta, effect_actor_targets)
 
     effect_id = identifier(effect[key], "effect")
     permanent = effect.get("duration") == "PERMANENT"
     raw_duration = effect.get("duration", "1 turn")
-    duration = _effect_duration_expression(1 if permanent else raw_duration, target_expression, alpha, beta)
+    duration = _effect_duration_expression(
+        1 if permanent else raw_duration, target_expression, alpha, beta, effect_actor_targets)
     if effect_id is None or duration is None:
         return None
     intensity = numeric(effect.get("intensity", 0))
@@ -19456,10 +21554,32 @@ def render_dynamic_character_effect(
         isinstance(raw_intensity, (int, float)) and
         not isinstance(raw_intensity, bool) and
         (not math.isfinite(float(raw_intensity)) or
-         not -NATIVE_MAX_EFFECT_INTENSITY <= int(raw_intensity) <= NATIVE_MAX_EFFECT_INTENSITY)
+         not NATIVE_INT_MIN <= math.trunc(raw_intensity) <= NATIVE_INT_MAX)
     ):
         return None
+    duration_provider = _normalize_native_effect_duration(1 if permanent else raw_duration)
+    argument_effects = [_native_number_expression_effects(value, effect_actor_targets)
+                        for value in (duration_provider, raw_intensity)]
+    # Supported string mutators can also consume Native RNG. Their calls are
+    # sibling arguments in f_add_effect, unlike RANDOM body-part selection,
+    # which happens later inside the talker after all providers are evaluated.
+    argument_effects.extend(_NativeMathEffects(draws=True, random_dependent=True)
+                            for value in (effect[key], effect.get("target_part"))
+                            if _effect_string_provider_draws(value))
+    if any(value is None for value in argument_effects) or _native_math_random_order_conflict(argument_effects):
+        return None
     target_part = effect.get("target_part")
+    if target_kind == "creature" and (
+        target_part == "RANDOM" or isinstance(target_part, dict)
+    ):
+        # Preserve the native Monster-vs-Character distinction for RANDOM.
+        return None
+    if target_kind == "monster" and (
+        target_part == "RANDOM" or isinstance(target_part, dict)
+    ):
+        # A dynamic part can evaluate to RANDOM at runtime, whose native add
+        # behavior differs for Monster and Character talkers.
+        return None
     options: list[str] = []
     if target_part == "RANDOM":
         options.append("body_part = service_value(services.characters.random_body_part(services.characters.avatar(), true))")
@@ -19476,10 +21596,11 @@ def render_dynamic_character_effect(
     if permanent:
         options.append("permanent = true")
     if intensity != "0":
-        options.append(
-            "intensity = (function(value) return value < 0 and math.ceil(value) "
-            f"or math.floor(value) end)({intensity})"
-        )
+        # RANDOM is resolved inside the native talker, after all argument
+        # providers (including intensity) have run. Sequence those providers
+        # in statements before building options rather than relying on a
+        # table constructor's field-evaluation order.
+        options.insert(0, "intensity = effect_intensity")
     force = effect.get("force", False)
     if not isinstance(force, bool):
         return None
@@ -19487,9 +21608,60 @@ def render_dynamic_character_effect(
         options.append("force = true")
     suffix = ", { " + ", ".join(options) + " }" if options else ""
     return [
-        "    service_value(services.effects.add(",
-        f"        {target_expression}, {effect_id}, {duration}{suffix}))",
+        "    do",
+        f"        local effect_id = {effect_id}",
+        f"        local effect_duration = {duration}",
+        "        local effect_intensity = " + _native_effect_integer_expression(intensity, "effect intensity"),
+        "        service_value(services.effects.add(",
+        f"            {target_expression}, effect_id, effect_duration{suffix}))",
+        "    end",
     ]
+
+
+def _effect_string_provider_draws(value: Any) -> bool:
+    if isinstance(value, dict):
+        return value.get("mutator") == "valid_technique" or any(
+            _effect_string_provider_draws(nested) for nested in value.values())
+    if isinstance(value, list):
+        return any(_effect_string_provider_draws(nested) for nested in value)
+    return False
+
+
+def _effect_argument_order_choice(
+    effect: Any, effect_actor_targets: dict[str, tuple[str, str] | None] | None,
+    mutation_targets: dict[str, tuple[str, str] | None] | None = None,
+) -> str | None:
+    if not isinstance(effect, dict):
+        return None
+    keys = {"u_add_effect", "npc_add_effect"}.intersection(effect)
+    if len(keys) != 1:
+        return None
+    key = next(iter(keys))
+    raw_duration = effect.get("duration")
+    duration = _normalize_native_effect_duration(1 if raw_duration == "PERMANENT" else raw_duration)
+    effects = [_native_number_expression_effects(value, effect_actor_targets)
+               for value in (duration, effect.get("intensity", 0))]
+    effects.extend(_NativeMathEffects(draws=True, random_dependent=True)
+                   for value in (effect[key], effect.get("target_part"))
+                   if _effect_string_provider_draws(value))
+    if any(value is None for value in effects) or not _native_math_random_order_conflict(effects):
+        return None
+    # Prove that the remaining shape is supported; an owner or API gap must
+    # not be reclassified merely because an unrelated argument also draws.
+    target = (mutation_targets or effect_actor_targets or {}).get(
+        "npc" if key.startswith("npc_") else "u")
+    if target is None:
+        return None
+    probe = dict(effect, duration=1, intensity=0)
+    if render_dynamic_character_effect(
+        probe, key, target[0], target_kind=target[1],
+        avatar_expression=_proven_native_variable_read_target(effect_actor_targets, "u"),
+        npc_expression=_proven_native_variable_read_target(effect_actor_targets, "npc"),
+        effect_actor_targets=effect_actor_targets,
+    ) is None:
+        return None
+    return ("Native add_effect providers have compiler-dependent argument evaluation; "
+            "choose a Lua order for interacting random draws")
 
 
 def _static_character_variable_descriptor(
@@ -19559,6 +21731,7 @@ def _coordinate_numeric_expression(
     value: Any,
     avatar_actor_proven: bool,
     npc_actor_proven: bool,
+    require_integer: bool = False,
 ) -> str | None:
     """Render a bounded numeric coordinate adjustment with actor-correct vars."""
     actor_expression = "actor" if (avatar_actor_proven or npc_actor_proven) else "nil"
@@ -19566,7 +21739,7 @@ def _coordinate_numeric_expression(
         if len(value) != 2:
             return None
         bounds = [
-            _literal_integer_or_none(entry, -1000000, 1000000)
+            _literal_integer_or_none(entry, -2147483648, 2147483647)
             for entry in value
         ]
         if any(bound is None for bound in bounds):
@@ -19590,16 +21763,16 @@ def _coordinate_numeric_expression(
             if not (avatar_actor_proven or npc_actor_proven):
                 return None
             actor_expression = "actor"
+    if require_integer:
+        literal = _literal_integer_or_none(value, -2147483648, 2147483647)
+        return None if literal is None else str(literal)
     rendered = render_eoc_numeric_expression(value, "0", actor_expression)
     if rendered is None:
         return None
-    # Native dbl_or_var is converted to an integer Tripoint.  Clamp the
-    # dynamic form before conversion so malformed Mod state cannot overflow a
-    # native coordinate while still preserving ordinary values exactly.
-    return (
-        "math.max(-1000000, math.min(1000000, "
-        f"math.floor(({rendered}) + 0.5)))"
-    )
+    # Native dbl_or_var converts to int by truncating toward zero.  The
+    # parentheses keep Lua from forwarding math.modf's fractional result;
+    # the registered tripoint constructor rejects values outside native int.
+    return f"(math.modf(({rendered})))"
 
 
 def render_static_dimension_name(
@@ -19649,44 +21822,29 @@ def render_static_mirror_coordinates(
     effect: dict[str, Any],
     avatar_actor_proven: bool,
     npc_actor_proven: bool,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> list[str] | None:
-    """Mirror two stored typed coordinates around a third Character variable."""
-    if set(effect) != {"mirror_coordinates", "center_var", "relative_var"}:
+    """Reflect Native variable coordinates using real storage participants."""
+    del avatar_actor_proven, npc_actor_proven
+    if set(effect) - {"mirror_coordinates", "center_var", "relative_var"}:
         return None
-    output = _coordinate_variable_descriptor(effect["mirror_coordinates"])
-    center = _coordinate_variable_descriptor(effect["center_var"])
-    relative = _coordinate_variable_descriptor(effect["relative_var"])
-    if output is None or center is None or relative is None:
-        return None
-    if not (output[0] == center[0] == relative[0]):
-        return None
-    if output[0] == "context":
-        return [
-            f"    local center = context.data[{lua_quote(center[1])}]",
-            f"    local relative = context.data[{lua_quote(relative[1])}]",
-            "    if center ~= nil and relative ~= nil then",
-            f"        context.data[{lua_quote(output[1])}] = "
-            "center:scale_by(2):subtract(relative)",
-            "    end",
-        ]
-    if output[0] not in {"u", "npc"}:
-        return None
-    if output[0] == "u":
-        if not avatar_actor_proven:
+    inputs = []
+    for name in ("center_var", "relative_var"):
+        expression = (render_native_coordinate_variable_expression(effect[name], effect_actor_targets)
+                      if name in effect else "services.coords.tripoint_abs_ms(0, 0, 0)")
+        if expression is None:
             return None
-    elif not npc_actor_proven:
+        inputs.append(expression)
+    writes = render_native_coordinate_variable_write_lines(
+        effect.get("mirror_coordinates"), "mirrored", effect_actor_targets)
+    if writes is None:
         return None
     return [
-        "    local center_result = services.variables.get(",
-        f"        actor, {lua_quote(center[1])})",
-        "    local relative_result = services.variables.get(",
-        f"        actor, {lua_quote(relative[1])})",
-        "    if center_result.exists and relative_result.exists then",
-        "        local center = service_value(center_result)",
-        "        local relative = service_value(relative_result)",
-        "        services.variables.set(",
-        f"            actor, {lua_quote(output[1])}, "
-        "center:scale_by(2):subtract(relative))",
+        "    do",
+        f"        local mirror_center = {inputs[0]}",
+        f"        local mirror_relative = {inputs[1]}",
+        "        local mirrored = mirror_relative:mirror_around(mirror_center)",
+        *["    " + line for line in writes],
         "    end",
     ]
 
@@ -19741,50 +21899,21 @@ def render_static_teleport_effect(
     npc_actor_proven: bool = False,
     npc_actor_expression: str | None = None,
 ) -> list[str] | None:
-    """Render a proven Avatar/Monster/Vehicle/NPC teleport to an explicit abs_ms tile.
+    """Keep EOC teleport migration fail-closed without a proven target write.
 
-    All legacy teleport variants other than the exact actor-shaped forms
-    remain an explicit migration TODO.
+    Native ``u_teleport`` reads a legacy variable as a tripoint, defaulting a
+    missing value to the origin and allowing legacy conversions.  The typed
+    Lua resolver represents a missing value with ``exists = false`` instead,
+    so a global variable reference alone cannot be lowered equivalently.  A
+    future migration needs a source-proven write with an exact coordinate
+    type; the typed Platform service remains available to hand-written Lua.
     """
-    teleport_key = next(
-        (key for key in ("u_teleport", "npc_teleport") if key in effect),
-        None,
+    del (
+        effect,
+        monster_actor_proven, vehicle_actor_proven, npc_actor_proven,
+        npc_actor_expression, avatar_actor_proven,
     )
-    if teleport_key is None or set(effect) != {teleport_key}:
-        return None
-    if teleport_key == "u_teleport":
-        if not (
-            monster_actor_proven or avatar_actor_proven or vehicle_actor_proven
-        ):
-            return None
-        actor_expression = "actor"
-    else:
-        if not npc_actor_proven:
-            return None
-        actor_expression = npc_actor_expression or "actor"
-    coordinate_expression = _explicit_abs_ms_expression(effect[teleport_key])
-    if coordinate_expression is None:
-        coordinate_expression = _explicit_abs_omt_expression(
-            effect[teleport_key]
-        )
-        if (
-            coordinate_expression is None or
-            teleport_key != "u_teleport" or
-            not avatar_actor_proven
-        ):
-            return None
-        return [
-            "    local token = service_value(services.overmap.tile_token(",
-            f"        {coordinate_expression}))",
-            "    service_value(services.relocation.travel_to_omt(",
-            f"        {actor_expression}, token, {{ strict = true }}))",
-        ]
-    return [
-        "    local token = service_value(services.map.tile(",
-        f"        {coordinate_expression}))",
-        "    service_value(services.relocation.move(",
-        f"        {actor_expression}, token, {{ strict = true }}))",
-    ]
+    return None
 
 
 def render_static_npc_goal_effect(
@@ -19873,6 +22002,11 @@ def render_static_npc_goal_effect(
         if not isinstance(value, int) or isinstance(value, bool) or not -60 <= value <= 60:
             return None
         offsets.append(value)
+    if key == "u_set_goal":
+        # Native f_npc_goal resolves the alpha talker with get_npc().  In this
+        # proven-avatar context that returns null, so the bounded effect is a
+        # no-op.  Do not pass the avatar Character handle to an NPC service.
+        return []
     actor = "actor"
     visibility = ""
     if "must_see" in target:
@@ -19923,6 +22057,25 @@ def render_static_npc_guard_position_effect(
         return None
     if actor_scope == "npc" and not npc_actor_proven:
         return None
+    if actor_scope == "u":
+        # Native f_guard_pos resolves the alpha talker with get_npc().  In this
+        # proven-avatar context the native effect is a no-op; retain that
+        # behavior instead of passing a Character handle to an NPC service.
+        if unique_id:
+            descriptor = _coordinate_variable_descriptor(target)
+            if descriptor is None or descriptor[0] != "global":
+                return None
+        elif (
+            isinstance(target, dict) and
+            set(target) == {"context_val"} and
+            bounded_utf8_string(target.get("context_val"), 256)
+        ):
+            pass
+        else:
+            descriptor = _static_character_variable_descriptor(target)
+            if descriptor is None or descriptor[0] != "u":
+                return None
+        return []
     if unique_id:
         descriptor = _coordinate_variable_descriptor(target)
         if descriptor is None or descriptor[0] != "global":
@@ -19969,6 +22122,21 @@ def render_static_npc_guard_position_effect(
     return destination_lines
 
 
+def _contains_unproven_npc_variable_scope(value: Any) -> bool:
+    if isinstance(value, dict):
+        if "npc_val" in value or "var_val" in value:
+            return True
+        return any(
+            _contains_unproven_npc_variable_scope(nested)
+            for nested in value.values()
+        )
+    if isinstance(value, list):
+        return any(
+            _contains_unproven_npc_variable_scope(nested) for nested in value
+        )
+    return False
+
+
 def render_static_assign_mission_effect(
     effect: dict[str, Any], avatar_actor_proven: bool,
 ) -> list[str] | None:
@@ -19978,152 +22146,274 @@ def render_static_assign_mission_effect(
     if not avatar_actor_proven:
         return None
     avatar = "actor"
+    mission_value = effect.get("assign_mission")
+    if _contains_unproven_npc_variable_scope(mission_value):
+        return None
     mission_id = _dynamic_id_expression(
-        effect.get("assign_mission"), "mission", avatar
+        mission_value, "mission", avatar
     )
     if mission_id is None:
         return None
-    deadline = effect.get("deadline")
     deadline_expression: str | None = None
-    if deadline is not None:
-        deadline_number = finite_number_literal(deadline)
-        if deadline_number is not None:
-            if (
-                not math.isfinite(float(deadline_number)) or
-                float(deadline_number) < 0 or
-                float(deadline_number) > NATIVE_INT_MAX or
-                math.trunc(float(deadline_number)) != float(deadline_number)
-            ):
+    if "deadline" in effect:
+        deadline_number = finite_number_literal(effect["deadline"])
+        if deadline_number is None:
+            return None
+        if deadline_number != 0:
+            # Native time_duration::from_turns(double) narrows to int by
+            # truncating toward zero.  Check the converted value, since values
+            # between INT_MAX and INT_MAX + 1 (or INT_MIN - 1 and INT_MIN)
+            # still convert to a representable native int.
+            native_turns = math.trunc(float(deadline_number))
+            if not NATIVE_INT_MIN <= native_turns <= NATIVE_INT_MAX:
                 return None
-            deadline_expression = str(int(deadline_number))
-        else:
-            dynamic_deadline = render_eoc_numeric_expression(
-                deadline, "0", avatar
-            )
-            if dynamic_deadline is None:
-                return None
-            deadline_expression = (
-                "math.max(0, math.min(2147483647, "
-                f"math.floor(({dynamic_deadline}) + 0.5)))"
-            )
+            deadline_expression = str(native_turns)
     lines = [
         "    local reservation = service_value(services.missions.reserve(",
         f"        {mission_id}))",
         "    local token = reservation.token",
+        "    service_value(services.missions.assign(actor, token))",
     ]
     if deadline_expression is not None:
         lines.extend([
             "    service_value(services.missions.set_deadline(",
-            f"        token, services.time.point({deadline_expression}))",
+            f"        token, services.time.point({deadline_expression})))",
         ])
-    lines.extend([
-        "    service_value(services.missions.assign(actor, token))",
-    ])
     return lines
+
+
+def _render_static_active_mission_match(
+    mission_id: str, mutation: str,
+) -> list[str]:
+    """Scan every bounded native-order page and mutate only its first match."""
+    return [
+        "    do",
+        f"        local mission_id = {lua_quote(mission_id)}",
+        "        local mission_offset = 0",
+        "        local mission_done = false",
+        "        repeat",
+        "            local mission_page = services.missions.active(actor, {",
+        "                offset = mission_offset, limit = 256,",
+        "            })",
+        "            for _, mission_entry in ipairs(mission_page.items) do",
+        "                if not mission_done and mission_entry.id.value == mission_id then",
+        f"                    {mutation}",
+        "                    mission_done = true",
+        "                end",
+        "            end",
+        "            if not mission_done and mission_page.has_more and",
+        "               mission_offset + mission_page.returned >= 1000000 then",
+        '                error("active mission scan exceeded its bounded offset")',
+        "            end",
+        "            mission_offset = mission_offset + mission_page.returned",
+        "        until mission_done or not mission_page.has_more",
+        "    end",
+    ]
 
 
 def render_static_finish_mission_effect(
     effect: dict[str, Any], avatar_actor_proven: bool,
 ) -> list[str] | None:
-    """Apply a literal finish/fail/step operation to an avatar mission."""
-    if set(effect) - {
-        "finish_mission", "success", "step",
-    }:
+    """Apply one native-order literal mission mutation to the avatar."""
+    if (
+        "finish_mission" not in effect or
+        set(effect) - {"finish_mission", "success", "step"} or
+        not avatar_actor_proven
+    ):
         return None
-    if not avatar_actor_proven:
+    mission_id = effect["finish_mission"]
+    if not safe_platform_id(mission_id):
         return None
-    avatar = "actor"
-    mission_id = _dynamic_id_expression(
-        effect.get("finish_mission"), "mission", avatar
-    )
-    if mission_id is None:
-        return None
-    has_step = "step" in effect
-    has_success = "success" in effect
-    if has_step == has_success:
-        return None
-    if has_step:
+    if "step" in effect:
         step = effect["step"]
-        if isinstance(step, int) and not isinstance(step, bool):
-            if not 0 <= step <= 1000000:
-                return None
-            step_expression = str(step)
-        else:
-            dynamic_step = render_eoc_numeric_expression(step, "0", avatar)
-            if dynamic_step is None:
-                return None
-            step_expression = (
-                "math.max(0, math.min(1000000, "
-                f"math.floor(({dynamic_step}) + 0.5)))"
-            )
-    elif not isinstance(effect["success"], bool):
-        return None
-    action_lines = (
-        [
-            "                service_value(services.missions.step_complete(",
-            f"                    actor, entry.token, {step_expression}))",
-        ] if has_step else [
-            "                service_value(services.missions.complete(" if effect["success"] else
-            "                service_value(services.missions.fail(",
-            "                    actor, entry.token))",
-        ]
+        if (
+            not isinstance(step, int) or isinstance(step, bool) or
+            not 0 <= step <= 1000000
+        ):
+            return None
+        mutation = (
+            "service_value(services.missions.step_complete("
+            f"actor, mission_entry.token, {step}))"
+        )
+    else:
+        success = effect.get("success", False)
+        if not isinstance(success, bool):
+            return None
+        mutation = (
+            "service_value(services.missions.finish("
+            "actor, mission_entry.token))"
+            if success else
+            "service_value(services.missions.fail("
+            "actor, mission_entry.token))"
+        )
+    return _render_static_active_mission_match(
+        mission_id, mutation
     )
-    return [
-        "    local mission_offset = 0",
-        "    local mission_done = false",
-        "    while true do",
-        "        local active_missions = services.missions.list(actor, {",
-        '            status = "active", offset = mission_offset, limit = 256,',
-        "        })",
-        "        for _, entry in ipairs(active_missions.items) do",
-        f"            if entry.id == {mission_id} then",
-        *action_lines,
-        "                mission_done = true",
-        "                break",
-        "            end",
-        "        end",
-        "        if mission_done or not active_missions.has_more or active_missions.returned == 0 then",
-        "            break",
-        "        end",
-        "        mission_offset = mission_offset + active_missions.returned",
-        "    end",
-    ]
 
 
 def render_static_remove_active_mission_effect(
     effect: dict[str, Any], avatar_actor_proven: bool,
 ) -> list[str] | None:
-    """Remove one literal active avatar mission without a legacy runner."""
-    if set(effect) != {"remove_active_mission"}:
+    """Remove the first native-order active avatar mission of a literal type."""
+    if (
+        set(effect) != {"remove_active_mission"} or
+        not avatar_actor_proven
+    ):
         return None
-    if not avatar_actor_proven:
+    mission_id = effect["remove_active_mission"]
+    if not safe_platform_id(mission_id):
         return None
-    avatar = "actor"
-    mission_id = _dynamic_id_expression(
-        effect.get("remove_active_mission"), "mission", avatar
+    return _render_static_active_mission_match(
+        mission_id,
+        "service_value(services.missions.abandon("
+        "actor, mission_entry.token))",
     )
-    if mission_id is None:
+
+
+def render_dialogue_mission_action_effect(effect: Any) -> LuaRaw | None:
+    """Run a literal mission action in the native response effect phase."""
+    if not isinstance(effect, dict):
         return None
-    return [
-        "    local mission_offset = 0",
-        "    local mission_done = false",
-        "    while true do",
-        "        local active_missions = services.missions.list(actor, {",
-        '            status = "active", offset = mission_offset, limit = 256,',
-        "        })",
-        "        for _, entry in ipairs(active_missions.items) do",
-        f"            if entry.id == {mission_id} then",
-        "                service_value(services.missions.abandon(actor, entry.token))",
-        "                mission_done = true",
-        "                break",
-        "            end",
-        "        end",
-        "        if mission_done or not active_missions.has_more or active_missions.returned == 0 then",
-        "            break",
-        "        end",
-        "        mission_offset = mission_offset + active_missions.returned",
-        "    end",
-    ]
+    if "finish_mission" in effect:
+        action = render_static_finish_mission_effect(effect, True)
+    elif "remove_active_mission" in effect:
+        action = render_static_remove_active_mission_effect(effect, True)
+    else:
+        return None
+    if action is None:
+        return None
+    # Both native wrappers fetch get_avatar(), regardless of the current
+    # dialogue speaker.  The success response's effect vector runs inside
+    # talk_effect_t::apply; Platform on_action is inserted into that same
+    # vector, while on_select would run after opinion and hostility handling.
+    return LuaRaw("\n".join([
+        "function(context, trial_success)",
+        "    if not trial_success then return end",
+        "    local actor = services.characters.avatar()",
+        *action,
+        "end",
+    ]))
+
+
+def render_dialogue_item_grant_action_effect(effect: Any) -> LuaRaw | None:
+    """Grant one literal item through the active native TALK dialogue.
+
+    The callback-scoped context preserves dialogue alpha, the beta-dependent
+    popup, and the native response-effect phase. EOC callbacks and every
+    parameterized/group form remain TODO until they carry the same exact
+    dialogue and item-construction semantics.
+    """
+    if not isinstance(effect, dict) or set(effect) != {"u_spawn_item"}:
+        return None
+    item_id = effect["u_spawn_item"]
+    if not safe_platform_id(item_id) or not bounded_utf8_string(
+        item_id, PLATFORM_ID_MAX_BYTES, allow_empty=False
+    ):
+        return None
+    return LuaRaw("\n".join([
+        "function(context, trial_success)",
+        "    if not trial_success or not context:valid() then return end",
+        "    context:grant_item_to_speaker(services.types.id(",
+        f"        \"item\", {lua_quote(item_id)}))",
+        "end",
+    ]))
+
+
+def render_dialogue_stolen_item_action_effect(effect: Any) -> LuaRaw | None:
+    """Run a native stolen-item resolution for a direct TALK response.
+
+    The native string effects invoke their NPC functions on dialogue beta.
+    Returning stolen items searches the current player's inventory. A direct
+    response callback retains beta; EOC and compound response paths do not
+    establish the same invocation order and remain for manual conversion.
+    """
+    services = {
+        "drop_stolen_item": "drop_stolen_items",
+        "remove_stolen_status": "clear_stolen_item_claim",
+    }
+    service = services.get(effect) if isinstance(effect, str) else None
+    if service is None:
+        return None
+    return LuaRaw("\n".join([
+        "function(context, trial_success)",
+        "    if not trial_success or not context:valid() then return end",
+        "    local beta = context:interlocutor()",
+        '    if beta == nil or beta.kind ~= "creature" or beta.subtype ~= "npc" then return end',
+        "    if not beta:is_valid() then return end",
+        f"    service_value(services.npcs.{service}(beta))",
+        "end",
+    ]))
+
+
+def render_dialogue_spend_cash_action_effect(effect: Any) -> LuaRaw | None:
+    """Render an exact static beta-NPC payment in the native TALK action phase."""
+    if not isinstance(effect, dict) or set(effect) != {"u_spend_cash"}:
+        return None
+    amount = effect["u_spend_cash"]
+    if type(amount) is not int or amount < 0 or amount > NATIVE_INT_MAX:
+        return None
+    # Native TALK builds alpha from the active avatar and beta from talk_with.
+    # `u_spend_cash` calls beta.buy_from(int); the NPC implementation delegates
+    # to npc_trading::pay_npc, which is the same operation exposed by trade.pay.
+    return LuaRaw("\n".join([
+        "function(context, trial_success)",
+        "    if not trial_success or not context:valid() then return end",
+        "    local seller = context:interlocutor()",
+        '    if seller == nil or seller.kind ~= "creature" or seller.subtype ~= "npc" then return end',
+        "    if not seller:is_valid() then return end",
+        "    local buyer = services.characters.avatar()",
+        "    if buyer == nil or not buyer:is_valid() then return end",
+        f"    service_value(services.trade.pay(seller, buyer, {amount}))",
+        "end",
+    ]))
+
+
+def render_dialogue_sell_item_action_effect(
+    response: Any, converted_condition: LuaRaw | None,
+) -> LuaRaw | None:
+    """Transfer one bounded static item in the native direct-TALK action phase.
+
+    The typed transfer service preserves charge-first selection, beta faction
+    ownership, recipient insertion, and the native popup text. Keep EOC vectors,
+    nonzero debt, dynamic/fractional counts, unconverted conditions, and other
+    response fields for manual conversion because they need additional native
+    phase or actor context.
+    """
+    if not isinstance(response, dict):
+        return None
+    allowed_fields = {"text", "topic", "condition", "effect"}
+    opinion = response.get("opinion")
+    if "opinion" in response:
+        allowed_fields.add("opinion")
+        if (
+            not isinstance(opinion, dict) or not opinion or
+            set(opinion) - {"trust", "fear", "value", "anger", "owed", "sold"} or
+            any(type(value) is not int or not NATIVE_INT_MIN <= value <= NATIVE_INT_MAX
+                for value in opinion.values())
+        ):
+            return None
+    if (
+        set(response) - allowed_fields or
+        not isinstance(response.get("text"), str) or
+        "condition" in response and converted_condition is None
+    ):
+        return None
+    action = render_static_sell_item_effect(
+        response.get("effect"), "buyer", "seller",
+    )
+    if action is None:
+        return None
+    return LuaRaw("\n".join([
+        "function(context, trial_success)",
+        "    if not trial_success or not context:valid() then return end",
+        "    local seller = context:interlocutor()",
+        '    if seller == nil or seller.kind ~= "creature" or seller.subtype ~= "npc" then return end',
+        "    if not seller:is_valid() then return end",
+        "    local buyer = services.characters.avatar()",
+        "    if buyer == nil or not buyer:is_valid() then return end",
+        *action,
+        "end",
+    ]))
 
 
 def render_static_offer_mission_effect(
@@ -20173,56 +22463,6 @@ def render_static_add_mission_effect(
         "    service_value(services.npcs.missions.add_assigned(",
         f"        {npc_actor_expression}, actor, {mission_id}))",
     ]
-
-
-def render_static_selected_npc_mission_effect(
-    effect: str, npc_actor_proven: bool,
-    avatar_actor_proven: bool = False,
-    npc_actor_expression: str | None = None,
-) -> list[str] | None:
-    """Run a selected mission only with explicit provider and owner handles."""
-    if (
-        not npc_actor_proven or not avatar_actor_proven or
-        npc_actor_expression is None
-    ):
-        return None
-    action = {
-        "assign_mission": "assign_selected",
-        "mission_success": "succeed_selected",
-        "mission_failure": "fail_selected",
-        "clear_mission": "clear_selected",
-        # Dialogue's string-form ``remove_active_mission`` operates on the
-        # currently selected NPC mission, just like ``clear_mission``.  Keep
-        # the native selected-provider contract instead of treating it as an
-        # avatar mission-id mutation (the object form is handled separately).
-        "remove_active_mission": "clear_selected",
-        "mission_reward": "claim_selected_reward",
-    }.get(effect)
-    if action is None:
-        return None
-    call = f"services.npcs.missions.{action}({npc_actor_expression}, actor"
-    if action == "succeed_selected":
-        call += ", false"
-    call += ")"
-    return [f"    service_value({call})"]
-
-
-def render_static_camp_npc_effect(
-    effect: str, npc_actor_proven: bool,
-) -> list[str] | None:
-    """Reject legacy camp actions without all explicit camp participants.
-
-    No current JSON/EOC camp shape proves both a camp handle and an authorized
-    manager (and camp-food distribution also needs an exact storage holder),
-    so resource/food actions stay visible TODOs instead of using position or
-    actor inference.
-    """
-    # The legacy effect supplies at most an event actor.  It does not prove the
-    # camp handle, authorized manager, and exact worker required by Platform.
-    # Keep the shape as a visible TODO instead of selecting a camp by position
-    # or silently substituting the avatar/current worker.
-    del effect, npc_actor_proven
-    return None
 
 
 def render_static_camp_create_effect(
@@ -20941,6 +23181,7 @@ def render_static_give_equipment_effect(
     effect: dict[str, Any] | str, npc_actor_proven: bool,
     avatar_actor_proven: bool, *, npc_actor_expression: str | None = None,
     alpha_actor_expression: str | None = None,
+    require_beta_npc: bool = False,
 ) -> list[str] | None:
     """Compose allowance gifts from exact native offers and settlement.
 
@@ -20969,10 +23210,14 @@ def render_static_give_equipment_effect(
     else:
         return None
     selection = render_equipment_offer_selection("provider", "allowance")
+    provider_guard = (
+        'provider ~= nil and provider.kind == "creature" and provider.subtype == "npc"'
+        if require_beta_npc else 'provider ~= nil and provider.subtype == "npc"'
+    )
     return [
         "    do",
         f"        local provider = {target}",
-        '        if provider ~= nil and provider.subtype == "npc" then',
+        f"        if {provider_guard} then",
         f"            local allowance = {allowance_expression}",
         f"            local offer = {selection}",
         "            local provider_name = service_value(services.npcs.get(provider)).name",
@@ -21011,7 +23256,7 @@ def render_static_follower_service_effect(
         "bionic_remove_allies": "remove",
     }.get(effect)
     lines = [
-        f'    if {target} ~= nil and {target}.subtype == "npc" then',
+        f'    if {target} ~= nil and {target}.kind == "creature" and {target}.subtype == "npc" then',
         "        local followers = service_value(services.npcs.visible_allies())",
         "        local follower_choices = {}",
         "        local follower_handles = {}",
@@ -21043,26 +23288,10 @@ def render_static_follower_service_effect(
     return lines
 
 
-def render_static_npc_item_selection(
-    effect: str, npc_actor_proven: bool, avatar_actor_proven: bool,
-) -> list[str] | None:
-    """Reject the legacy arbitrary avatar-inventory item picker.
-
-    The old effect searches the avatar inventory and chooses an item instance.
-    A Platform migration may only operate on a source-proven handle, so this
-    shape stays an explicit TODO even when an NPC event is otherwise proven.
-    """
-    if not npc_actor_proven or not avatar_actor_proven or effect not in {
-        "npc_gets_item", "npc_gets_item_to_use",
-    }:
-        return None
-    return None
-
-
 def render_static_buy_monster_effect(
     effect: dict[str, Any], npc_actor_proven: bool,
 ) -> list[str] | None:
-    """Keep monster purchases as TODOs; no implicit buyer is trade-safe."""
+    """Keep purchases as TODOs until pay-before-spawn parity is available."""
     return None
 
 
@@ -21070,7 +23299,17 @@ def render_static_spend_cash_effect(
     effect: dict[str, Any], npc_actor_proven: bool,
     npc_actor_expression: str | None = None,
 ) -> list[str] | None:
-    """Keep standalone cash effects as TODOs without a QuoteToken."""
+    """Keep payments as TODOs until the beta NPC and callback state are exact."""
+    return None
+
+
+def render_static_quote_trade_effect(
+    effect: dict[str, Any], key: str,
+    avatar_actor_proven: bool, npc_actor_proven: bool,
+) -> list[str] | None:
+    # Native quote_npc_trade_item writes prefixed variables and performs no
+    # trade.  A Platform QuoteToken is a transaction snapshot for exact Items.
+    del effect, key, avatar_actor_proven, npc_actor_proven
     return None
 
 
@@ -21133,16 +23372,36 @@ def render_static_remove_item_with_effect(
     effect: dict[str, Any], key: str, actor_proven: bool,
     actor_expression: str | None = "actor",
 ) -> list[str] | None:
-    """Reject legacy same-id inventory selection unless a stable item exists.
+    """Lower a static type removal through the exact Character inventory API.
 
-    ``*_remove_item_with`` identifies an item type, not an item instance.  A
-    recursive page scan would select an arbitrary object after a transfer or
-    replacement, so this shape remains an explicit migration TODO until the
-    source supplies a generation-safe item handle.
+    Native ``Character::remove_items_with`` matches the type recursively in
+    inventory, worn items, and the wielded item.  A static item id and proven
+    actor preserve that operation; dynamic ``str_or_var`` values stay TODO.
+    Control bytes are excluded because ``services.types.id`` rejects them.
     """
-    if not actor_proven or actor_expression is None or set(effect) != {key}:
+    expected_actor_expressions = {
+        "u_remove_item_with": {"actor", "alpha"},
+        "npc_remove_item_with": {"beta"},
+    }
+    if (
+        key not in {"u_remove_item_with", "npc_remove_item_with"} or
+        not isinstance(effect, dict) or
+        not actor_proven or actor_expression is None or
+        actor_expression not in expected_actor_expressions[key] or
+        set(effect) != {key} or
+        not bounded_platform_id(effect.get(key))
+    ):
         return None
-    return None
+    item_type = effect[key]
+    if any(
+        ord(character) < 0x20 or ord(character) == 0x7F
+        for character in item_type
+    ):
+        return None
+    return [
+        "    service_value(services.inventory.remove_type(",
+        f'        {actor_expression}, services.types.id("item", {lua_quote(item_type)})))',
+    ]
 
 
 def render_static_equipment_effect(
@@ -21257,239 +23516,43 @@ def render_static_buy_item_effect(
     effect: dict[str, Any], npc_actor_proven: bool,
     avatar_actor_proven: bool,
 ) -> list[str] | None:
-    """Keep type-id purchases as TODOs until an exact Item/holder exists."""
+    """Keep purchases as TODOs until payment and native item creation are modeled."""
     return None
 
 
 def render_static_sell_item_effect(
-    effect: dict[str, Any], npc_actor_proven: bool,
-    npc_actor_expression: str | None = None,
-    avatar_actor_proven: bool = False,
+    effect: dict[str, Any], alpha_actor_expression: str | None,
+    beta_actor_expression: str | None,
 ) -> list[str] | None:
-    """Reject same-id sale selection until the source supplies an item handle."""
-    if not npc_actor_proven or not avatar_actor_proven or "u_sell_item" not in effect:
-        return None
-    if set(effect) - {"u_sell_item", "cost", "count"}:
-        return None
-    item_id = effect.get("u_sell_item")
-    if not safe_platform_id(item_id):
-        return None
-    cost = effect.get("cost", 0)
-    count = effect.get("count", 1)
+    """Transfer a bounded literal inventory amount between proven talkers."""
     if (
-        not isinstance(cost, int) or isinstance(cost, bool) or
-        not -1000000000 <= cost <= 1000000000 or
-        not isinstance(count, int) or isinstance(count, bool) or
-        not 1 <= count <= 1000000
+        alpha_actor_expression is None or beta_actor_expression is None or
+        not isinstance(effect, dict) or "u_sell_item" not in effect
     ):
         return None
-    # ``u_sell_item`` carries only a type id.  Calling transfer_matching here
-    # would search for an arbitrary same-id item and could cross a holder or
-    # generation boundary.  Keep the shape as a migration TODO.
-    return None
-
-
-def render_static_trade_commit_effect(
-    effect: Any, key: str,
-) -> list[str] | None:
-    """Lower one fully explicit trade shape into same-event quote then commit.
-
-    The descriptor is accepted only when it carries both participant handles,
-    exact Item handles, direction-matching Character holders, bounded literal
-    quantities, and the currently publishable ``npc_debt`` settlement.  The
-    generated QuoteToken is consumed immediately in this one EOC invocation;
-    no local token is presented as durable state for a later event or UI.
-    """
-    if not isinstance(effect, dict) or set(effect) != {key}:
-        return None
-    descriptor = effect.get(key)
-    if not isinstance(descriptor, dict):
-        return None
-    allowed = {
-        "seller_handle", "buyer_handle", "lines", "settlement",
-        "expiry_turns",
+    comment_keys = {
+        key for key in effect
+        if isinstance(key, str) and key.startswith("//")
     }
-    if set(descriptor) - allowed:
+    if set(effect) - comment_keys - {"u_sell_item", "count", "cost"}:
         return None
-
-    def explicit_context_handle(value: Any) -> tuple[str, str] | None:
-        if (
-            not isinstance(value, dict) or
-            set(value) != {"context_handle"} or
-            not bounded_utf8_string(value.get("context_handle"), 128)
-        ):
-            return None
-        handle_key = value["context_handle"]
-        return f"context.data[{lua_quote(handle_key)}]", handle_key
-
-    seller = explicit_context_handle(descriptor.get("seller_handle"))
-    buyer = explicit_context_handle(descriptor.get("buyer_handle"))
-    if seller is None or buyer is None or seller[1] == buyer[1]:
-        return None
-
-    settlement = descriptor.get("settlement")
+    item_type = effect.get("u_sell_item")
+    count = effect.get("count", 1)
+    cost = effect.get("cost", 0)
     if (
-        not isinstance(settlement, dict) or
-        set(settlement) != {"strategy", "currency"} or
-        settlement.get("strategy") != "npc_debt" or
-        settlement.get("currency") != "cash"
+        not bounded_platform_id(item_type) or
+        not isinstance(count, int) or isinstance(count, bool) or
+        not 1 <= count <= 1000000000 or
+        isinstance(cost, bool) or not isinstance(cost, (int, float)) or
+        not math.isfinite(float(cost)) or cost != 0
     ):
         return None
-
-    if "expiry_turns" in descriptor:
-        expiry_turns = descriptor["expiry_turns"]
-        if (
-            not isinstance(expiry_turns, int) or isinstance(expiry_turns, bool) or
-            not 1 <= expiry_turns <= 10000
-        ):
-            return None
-    else:
-        expiry_turns = None
-
-    raw_lines = descriptor.get("lines")
-    if not isinstance(raw_lines, list) or not raw_lines or len(raw_lines) > 256:
-        return None
-
-    def explicit_holder(value: Any) -> tuple[str, str, str] | None:
-        if (
-            not isinstance(value, dict) or
-            set(value) != {"character_handle", "slot"}
-        ):
-            return None
-        character = explicit_context_handle(value.get("character_handle"))
-        slot = value.get("slot")
-        if (
-            character is None or not isinstance(slot, str) or
-            slot not in {"inventory", "worn", "wielded"}
-        ):
-            return None
-        holder = (
-            "{ kind = \"character\", character = " + character[0] +
-            f", slot = {lua_quote(slot)} }}"
-        )
-        return holder, character[1], slot
-
-    rendered_lines: list[tuple[str, str, str, str, int]] = []
-    seen_items: set[str] = set()
-    for raw_line in raw_lines:
-        if (
-            not isinstance(raw_line, dict) or
-            set(raw_line) != {
-                "direction", "item_handle", "source_holder",
-                "destination_holder", "quantity",
-            }
-        ):
-            return None
-        direction = raw_line.get("direction")
-        item = explicit_context_handle(raw_line.get("item_handle"))
-        source = explicit_holder(raw_line.get("source_holder"))
-        destination = explicit_holder(raw_line.get("destination_holder"))
-        quantity = raw_line.get("quantity")
-        if (
-            direction not in {"seller_to_buyer", "buyer_to_seller"} or
-            item is None or source is None or destination is None or
-            not isinstance(quantity, int) or isinstance(quantity, bool) or
-            not 0 < quantity <= 1000000000 or item[1] in seen_items
-        ):
-            return None
-        seen_items.add(item[1])
-        expected_source, expected_destination = (
-            (seller[1], buyer[1]) if direction == "seller_to_buyer" else
-            (buyer[1], seller[1])
-        )
-        if (
-            source[1] != expected_source or
-            destination[1] != expected_destination or
-            destination[2] != "inventory"
-        ):
-            return None
-        rendered_lines.append(
-            (direction, item[0], source[0], destination[0], quantity)
-        )
-
-    lines = [
-        "    local trade_quote = service_value(services.trade.quote(",
-        f"        {seller[0]}, {buyer[0]}, {{",
-    ]
-    for direction, item, source, destination, quantity in rendered_lines:
-        lines.extend([
-            "            {",
-            f"                direction = {lua_quote(direction)},",
-            f"                item = {item},",
-            f"                quantity = {quantity},",
-            f"                source_holder = {source},",
-            f"                destination_holder = {destination},",
-            "            },",
-        ])
-    lines.extend([
-        "        }, {",
-        "            settlement = { strategy = \"npc_debt\", currency = \"cash\" },",
-    ])
-    if expiry_turns is not None:
-        lines.append(f"            expiry_turns = {expiry_turns},")
-    lines.extend([
-        "        }))",
-        "    if trade_quote ~= nil and trade_quote.token ~= nil then",
-        "        service_value(services.trade.commit(",
-        "            trade_quote.token, { strategy = \"npc_debt\", currency = \"cash\" }))",
-        "    end",
-    ])
-    return lines
-
-
-def render_static_bulk_trade_effect(
-    effect: Any, key: str, avatar_actor_proven: bool,
-    npc_actor_proven: bool, item_actor_proven: bool = False,
-) -> list[str] | None:
-    """Lower only a complete explicit descriptor; legacy trade stays TODO.
-
-    A proven actor or item actor alone does not prove the participant pair,
-    exact holder, or stable Item needed by the commit API.
-    """
-    return render_static_trade_commit_effect(effect, key)
-
-
-def render_static_quote_trade_effect(
-    effect: dict[str, Any], key: str,
-    avatar_actor_proven: bool, npc_actor_proven: bool,
-) -> list[str] | None:
-    # A legacy type-id quote cannot save a QuoteToken for a later UI event.
-    # Only a complete same-event descriptor can lower through quote -> commit.
-    return render_static_trade_commit_effect(effect, key)
-
-
-def render_static_vehicle_service_effect(
-    effect: Any, key: str, npc_actor_proven: bool,
-    vehicle_actor_proven: bool = False,
-) -> list[str] | None:
-    if key not in {
-        "quote_vehicle_full_repair", "select_vehicle_part_service",
-        "start_vehicle_full_repair",
-    } or not vehicle_actor_proven:
-        return None
-    if isinstance(effect, str):
-        payload: dict[str, Any] = {}
-    elif isinstance(effect, dict):
-        payload = effect
-    else:
-        return None
-    if payload and set(payload) - {key}:
-        return None
-    service = {
-        "quote_vehicle_full_repair": "quote_full_repair",
-        "select_vehicle_part_service": "open_part_service",
-        "start_vehicle_full_repair": "start_full_repair",
-    }[key]
-    vehicle_expression = (
-        "actor" if vehicle_actor_proven else "context.actors.vehicle"
-    )
-    mechanic_expression = "context.actors.character"
     return [
-        f"    local service_vehicle = {vehicle_expression}",
-        f"    local mechanic = {mechanic_expression}",
-        "    if service_vehicle ~= nil and service_vehicle:is_valid() "
-        "and mechanic ~= nil and mechanic:is_valid() then",
-        f"        service_value(services.vehicles.{service}(service_vehicle, mechanic))",
+        "    local transfer = service_value(services.inventory.transfer_by_type(",
+        f"        {alpha_actor_expression}, {beta_actor_expression}, ",
+        "services.types.id(\"item\", " + f"{lua_quote(item_type)}), {count}))",
+        "    if transfer.notice ~= nil and transfer.notice ~= \"\" then",
+        "        ccb.presentation.notice(transfer.notice)",
         "    end",
     ]
 
@@ -21553,211 +23616,184 @@ def render_static_roll_remainder_effect(
     effect: dict[str, Any], key: str,
     avatar_actor_proven: bool, npc_actor_proven: bool,
     eoc_function_names: dict[str, str] | None = None,
+    *, actor_expression: str | None = None,
+    dialogue_alpha_expression: str | None = None,
 ) -> list[str] | None:
-    """Render a literal remainder roll for mutations, spells, or recipes."""
-    actor_proven = (
-        avatar_actor_proven
-        if key == "u_roll_remainder" else npc_actor_proven
-    )
-    if not actor_proven or set(effect) - {
-        key, "type", "true_eocs", "false_eocs", "message"
+    """Lower literal grants only when the native effect has no side branches.
+
+    The progression service preserves the native missing-candidate selection
+    and setter semantics.  Static EOC vectors use separate dialogue copies;
+    plain JSON messages retain their native no_translation text.
+    """
+    del avatar_actor_proven, npc_actor_proven
+    if key not in {"u_roll_remainder", "npc_roll_remainder"}:
+        return None
+    if actor_expression is None or set(effect) - {
+        key, "type", "message", "true_eocs", "false_eocs"
+    } or "type" not in effect or key not in effect:
+        return None
+    kind = effect["type"]
+    ids = effect[key]
+    if not isinstance(kind, str) or kind not in {
+        "mutation", "spell", "recipe", "bionic"
     }:
         return None
-    message_expression = None
-    if "message" in effect:
-        message_expression = render_eoc_string_expression(
-            effect["message"], "actor",
-        )
-        if message_expression is None:
-            return None
-    callback_names = eoc_function_names or {}
-    true_refs = _validated_eoc_references(
-        effect.get("true_eocs", []), callback_names, allow_empty=True
-    )
-    false_refs = _validated_eoc_references(
-        effect.get("false_eocs", []), callback_names, allow_empty=True
-    )
-    if true_refs is None or false_refs is None:
-        return None
-    raw = effect.get(key)
-    kind = effect.get("type")
     if (
-        not isinstance(raw, list) or not raw or len(raw) > 64 or
-        not all(safe_platform_id(value) for value in raw) or
-        kind not in {"mutation", "spell", "recipe"}
+        not isinstance(ids, list) or not 1 <= len(ids) <= 64 or
+        not all(
+            safe_platform_id(identifier) and
+            bounded_utf8_string(identifier, 256) and
+            not any(ord(char) < 32 or ord(char) == 127 for char in identifier)
+            for identifier in ids
+        )
     ):
         return None
-    actor_expression = "actor"
-    type_name = {
-        "mutation": "mutation",
-        "spell": "spell",
-        "recipe": "recipe",
-    }[kind]
-    lines = [
-        "    local remainder_candidates = {}",
-    ]
-    for value in raw:
-        id_expression = (
-            "services.types.id(\"" + type_name + "\", " +
-            lua_quote(value) + ")"
-        )
-        query = {
-            "mutation": "services.mutations.has",
-            "spell": "services.spells.knows",
-            "recipe": "services.recipes.knows",
-        }[kind]
-        lines.extend([
-            "    if not service_value(" + query + "(" +
-            f"{actor_expression}, {id_expression})) then",
-            f"        remainder_candidates[#remainder_candidates + 1] = {id_expression}",
-            "    end",
-        ])
-    lines.extend([
-        "    if #remainder_candidates > 0 then",
-        "        local remainder = remainder_candidates[services.random.int(1, #remainder_candidates)]",
-    ])
-    if kind == "mutation":
-        lines.append(
-            f"        service_value(services.mutations.grant({actor_expression}, remainder))"
-        )
-    elif kind == "spell":
-        lines.append(
-            f"        service_value(services.spells.learn({actor_expression}, remainder, {{ force = true }}))"
-        )
+    message = effect.get("message", "")
+    if not bounded_utf8_string(message, 8192, allow_empty=True):
+        return None
+    typed_ids = ", ".join(
+        f'services.types.id({lua_quote(kind)}, {lua_quote(identifier)})'
+        for identifier in ids
+    )
+    grant_call = (
+        "services.progression.grant_random_missing("
+        f"{actor_expression}, {lua_quote(kind)}, {{ {typed_ids} }})"
+    )
+    if not message and not ("true_eocs" in effect or "false_eocs" in effect):
+        return [f"    service_value({grant_call})"]
+    vectors = render_ordered_copied_eoc_vectors(
+        effect.get("true_eocs", []), effect.get("false_eocs", []),
+        eoc_function_names or {},
+        dialogue_alpha_expression=dialogue_alpha_expression,
+    )
+    if vectors is None:
+        return None
+    true_lines, false_lines = vectors
+    if message:
+        true_lines = [
+            "        service_value(services.characters.add_msg_if_player("
+            f"{actor_expression}, {lua_quote(message)}, roll_result.name))",
+            *true_lines,
+        ]
+    if not true_lines and not false_lines:
+        return [f"    service_value({grant_call})"]
+    lines = [f"    local roll_result = service_value({grant_call})"]
+    if true_lines and false_lines:
+        lines.extend(["    if roll_result.granted then", *true_lines,
+                      "    else", *false_lines, "    end"])
+    elif true_lines:
+        lines.extend(["    if roll_result.granted then", *true_lines, "    end"])
     else:
-        lines.append(
-            f"        service_value(services.recipes.learn({actor_expression}, remainder, true))"
-        )
-    if message_expression is not None:
-        lines.extend([
-            "        local remainder_name = tostring(remainder)",
-        ])
-        definition_service = {
-            "mutation": "mutations",
-            "spell": "spells",
-        }.get(kind)
-        if definition_service is not None:
-            lines.extend([
-                f"        local remainder_definition = services.{definition_service}.definition(remainder)",
-                "        if remainder_definition ~= nil and remainder_definition.name ~= nil then",
-                "            remainder_name = remainder_definition.name",
-                "        end",
-            ])
-        lines.append(
-            f"        services.message(string.format({message_expression}, remainder_name))"
-        )
-    for reference in true_refs:
-        lines.append(
-            f"        {callback_names[reference]}(context, {actor_expression})"
-        )
-    if false_refs:
-        lines.append("    else")
-        for reference in false_refs:
-            lines.append(
-                f"        {callback_names[reference]}(context, {actor_expression})"
-            )
-    lines.append("    end")
+        lines.extend(["    if not roll_result.granted then", *false_lines, "    end"])
     return lines
 
 
 def render_static_dimension_travel_effect(
     effect: dict[str, Any],
-    avatar_actor_proven: bool,
+    avatar_dialogue_alpha_exclusive: bool,
 ) -> list[str] | None:
-    """Render literal avatar dimension travel through the native workflow.
+    """Lower only static dimension travel whose dialogue alpha is the Avatar.
 
-    Dimension travel is a world swap, so dynamic targets, message templates,
-    target-location variables, and unproven actors stay fail-closed.  The
-    bounded service mirrors the native radius/filter/vehicle options and
-    leaves ordinary Lua responsible for any follow-up state.
+    The native effect targets ``d.actor(false)`` while the typed Platform
+    operation is centered on the actual Avatar.  Exact actor provenance is
+    therefore a required precondition.  Dynamic dimension/message values,
+    target-location item collection, and radii outside the current typed
+    service range remain explicit migration work.
     """
-    if not avatar_actor_proven or "u_travel_to_dimension" not in effect:
+    if not avatar_dialogue_alpha_exclusive or "u_travel_to_dimension" not in effect:
         return None
-    target = effect.get("u_travel_to_dimension")
-    target_expression: str
-    if safe_platform_id(target):
-        target_expression = lua_quote(target)
-    else:
-        target_expression = render_eoc_string_expression(target, "actor")
-        if target_expression is None:
-            return None
     allowed = {
         "u_travel_to_dimension", "npc_travel_radius", "npc_travel_filter",
-        "item_travel_radius", "take_vehicle", "success_message", "fail_message",
+        "item_travel_radius", "take_vehicle", "success_message",
+        "fail_message", "region_type",
     }
     if set(effect) - allowed:
         return None
-    npc_radius = effect.get("npc_travel_radius", 0)
-    item_radius = effect.get("item_travel_radius", -1)
-    npc_filter = effect.get("npc_travel_filter", "all")
-    take_vehicle = effect.get("take_vehicle", False)
-    success = effect.get("success_message")
-    failure = effect.get("fail_message")
-    success_expression = (
-        render_eoc_string_expression(success, "actor")
-        if isinstance(success, dict) else
-        lua_quote(success) if isinstance(success, str) else None
-    )
-    failure_expression = (
-        render_eoc_string_expression(failure, "actor")
-        if isinstance(failure, dict) else
-        lua_quote(failure) if isinstance(failure, str) else None
-    )
-    if (success is not None and success_expression is None) or (
-        failure is not None and failure_expression is None
-    ):
-        return None
 
-    def radius_expression(value: Any, minimum: int, maximum: int) -> str | None:
-        literal = _literal_integer_or_none(value, minimum, maximum)
-        if literal is not None:
-            return str(literal)
-        dynamic = render_eoc_numeric_expression(value, str(minimum), "actor")
-        if dynamic is None:
-            return None
-        return f"math.max({minimum}, math.min({maximum}, math.floor(({dynamic}) + 0.5)))"
-
-    npc_radius_expression = radius_expression(npc_radius, 0, 60)
-    item_radius_expression = radius_expression(item_radius, -1, 60)
+    dimension = effect.get("u_travel_to_dimension")
     if (
-        npc_radius_expression is None or item_radius_expression is None or
-        not isinstance(npc_filter, str) or
-        npc_filter not in {"all", "follower", "enemy", "none"} or
-        not isinstance(take_vehicle, bool)
+        not safe_platform_id(dimension) or
+        not bounded_utf8_string(dimension, 256) or
+        any(ord(character) < 0x20 or ord(character) == 0x7f for character in dimension)
     ):
         return None
-    option_parts: list[str] = []
-    if npc_radius_expression != "0":
-        option_parts.append(f"npc_travel_radius = {npc_radius_expression}")
-    if npc_filter != "all":
-        option_parts.append(f"npc_travel_filter = {lua_quote(npc_filter)}")
-    if item_radius_expression != "-1":
-        option_parts.append(f"item_travel_radius = {item_radius_expression}")
-    if take_vehicle:
-        option_parts.append("take_vehicle = true")
-    if option_parts:
-        lines = [
-            "    local dimension_result = service_value(services.relocation.travel_to_dimension(",
-            f"        {target_expression}, {{ " + ", ".join(option_parts) + " }))",
-        ]
-    else:
-        lines = [
-            "    local dimension_result = service_value(services.relocation.travel_to_dimension(",
-            f"        {target_expression}))",
-        ]
-    if success_expression is not None:
-        lines.extend([
-            "    if dimension_result.changed then",
-            f"        services.message({success_expression})",
-            "    end",
-        ])
-    if failure_expression is not None:
-        lines.extend([
-            "    if not dimension_result.changed then",
-            f"        services.message({failure_expression})",
-            "    end",
-        ])
-    return lines
+
+    def native_radius(field: str, default: int, maximum: int, *, npc: bool) -> int | None:
+        value = effect.get(field, default)
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return None
+        if isinstance(value, float):
+            if not math.isfinite(value) or value < NATIVE_INT_MIN or value > NATIVE_INT_MAX:
+                return None
+            converted = math.trunc(value)
+        else:
+            converted = value
+            if converted < NATIVE_INT_MIN or converted > NATIVE_INT_MAX:
+                return None
+        if npc and converted < 0:
+            # Native code only gathers NPCs when the converted radius is > 0.
+            converted = 0
+        elif not npc and converted < 0:
+            # Any negative native item radius disables item collection.
+            converted = -1
+        if converted > maximum:
+            return None
+        return converted
+
+    npc_radius = native_radius("npc_travel_radius", 0, 60, npc=True)
+    item_radius = native_radius("item_travel_radius", -1, 60, npc=False)
+    if npc_radius is None or item_radius is None:
+        return None
+
+    travel_filter = effect.get("npc_travel_filter", "all")
+    if not bounded_utf8_string(travel_filter, 8192, allow_empty=True):
+        return None
+    if travel_filter not in {"all", "follower", "enemy", "none"}:
+        # The native predicate matches no NPC for every other filter string.
+        travel_filter = "none"
+
+    take_vehicle = effect.get("take_vehicle", False)
+    if not isinstance(take_vehicle, bool):
+        return None
+
+    def static_message(field: str) -> str | None:
+        value = effect.get(field, "")
+        if not bounded_utf8_string(value, 8192, allow_empty=True):
+            return None
+        if not value:
+            return '""'
+        return f"services.translate({lua_quote(value)})"
+
+    success_message = static_message("success_message")
+    fail_message = static_message("fail_message")
+    if success_message is None or fail_message is None:
+        return None
+
+    if "region_type" in effect and not bounded_utf8_string(
+            effect["region_type"], 8192, allow_empty=True):
+        return None
+
+    options = (
+        "{ npc_travel_radius = " + str(npc_radius) +
+        ", npc_travel_filter = " + lua_quote(travel_filter) +
+        ", item_travel_radius = " + str(item_radius) +
+        ", take_vehicle = " + ("true" if take_vehicle else "false") + " }"
+    )
+    return [
+        "    if actor ~= nil then",
+        "        local travel_result = services.relocation.travel_to_dimension(" +
+        f"{lua_quote(dimension)}, {options})",
+        "        if travel_result.ok and travel_result.value.accepted then",
+        f"            if {success_message} ~= \"\" then",
+        f"                services.message({success_message})",
+        "            end",
+        "        else",
+        f"            if {fail_message} ~= \"\" then",
+        f"                services.message({fail_message})",
+        "            end",
+        "        end",
+        "    end",
+    ]
 
 
 def render_static_clear_dimension_effect(
@@ -21765,34 +23801,9 @@ def render_static_clear_dimension_effect(
     avatar_actor_proven: bool,
     npc_actor_proven: bool,
 ) -> list[str] | None:
-    """Clear one saved dimension through the relocation service.
-
-    The native operation accepts a dimension id rather than an actor.  Literal,
-    context, and global values are therefore safe in any callback; ``u_val``
-    and ``npc_val`` retain their usual actor-proof requirement.
-    """
-    if "clear_dimension" not in effect or set(effect) != {"clear_dimension"}:
-        return None
-    raw = effect.get("clear_dimension")
-    actor_expression = "actor"
-    if isinstance(raw, dict) and len(raw) == 1:
-        scope = next(iter(raw))
-        if scope == "u_val" and not avatar_actor_proven:
-            return None
-        if scope == "npc_val" and not npc_actor_proven:
-            return None
-        if scope in {"global_val", "context_val", "var_val"}:
-            actor_expression = (
-                "actor" if (avatar_actor_proven or npc_actor_proven)
-                else "services.characters.avatar()"
-            )
-    expression = render_eoc_string_expression(raw, actor_expression)
-    if expression is None:
-        return None
-    return [
-        "    service_value(services.relocation.clear_dimension(",
-        f"        {expression}))",
-    ]
+    """Native file-query deletion is not the typed dimension deletion service."""
+    del effect, avatar_actor_proven, npc_actor_proven
+    return None
 
 
 def render_static_transform_line_effect(
@@ -21800,76 +23811,9 @@ def render_static_transform_line_effect(
     avatar_actor_proven: bool,
     npc_actor_proven: bool,
 ) -> list[str] | None:
-    """Render a bounded transform_line over two same-actor coordinates."""
-    if set(effect) != {"transform_line", "first", "second"}:
-        return None
-    transform = effect.get("transform_line")
-    if not safe_platform_id(transform):
-        return None
-    first = _coordinate_variable_descriptor(effect.get("first"))
-    second = _coordinate_variable_descriptor(effect.get("second"))
-    if first is None or second is None:
-        return None
-
-    def read_coordinate(
-        name: str, descriptor: tuple[str, str]
-    ) -> tuple[list[str], str, str] | None:
-        scope, variable = descriptor
-        if scope in {"u", "npc"}:
-            handle = _coordinate_variable_handle(
-                scope, avatar_actor_proven, npc_actor_proven
-            )
-            if handle is None:
-                return None
-            return (
-                [
-                    f"    local {name} = service_value(services.variables.get(",
-                    f"        {handle}, {lua_quote(variable)}))",
-                ],
-                f"{name}.value",
-                f"{name}.exists and {name}.value ~= nil",
-            )
-        if scope == "global":
-            return (
-                [
-                    f"    local {name} = service_value(services.variables.get_global(",
-                    f"        {lua_quote(variable)}))",
-                ],
-                f"{name}.value",
-                f"{name}.exists and {name}.value ~= nil",
-            )
-        if scope == "context":
-            return (
-                [f"    local {name} = context.data[{lua_quote(variable)}]"],
-                name,
-                f"{name} ~= nil",
-            )
-        if not (avatar_actor_proven or npc_actor_proven):
-            return None
-        return (
-            [
-                f"    local {name} = service_value(services.variables.resolve(",
-                f"        context.data, actor, \"var\", {lua_quote(variable)}))",
-            ],
-            f"{name}.value",
-            f"{name}.exists and {name}.value ~= nil",
-        )
-
-    first_read = read_coordinate("first", first)
-    second_read = read_coordinate("second", second)
-    if first_read is None or second_read is None:
-        return None
-    first_lines, first_value, first_condition = first_read
-    second_lines, second_value, second_condition = second_read
-    return [
-        *first_lines,
-        *second_lines,
-        f"    if {first_condition} and {second_condition} then",
-        "        services.world.transform_line(",
-        f"            {first_value}, {second_value}, services.types.id(\"ter_furn_transform\", "
-        f"{lua_quote(transform)}))",
-        "    end",
-    ]
+    """Keep transform_line fail-closed until the Platform can load distant maps."""
+    del effect, avatar_actor_proven, npc_actor_proven
+    return None
 
 
 def _combat_actor_expression(
@@ -21931,6 +23875,66 @@ def _combat_number_expression(
         f"math.max({minimum:g}, math.min({maximum:g}, ({rendered})))"
     )
     return bounded
+
+
+@functools.lru_cache(maxsize=1)
+def _native_npc_ai_rule_catalog() -> dict[str, frozenset[str]] | None:
+    """Read the authoritative NPC rule names used by native talker setters."""
+    try:
+        source = (REPOSITORY_ROOT / "src" / "npc.h").read_text(encoding="utf-8")
+    except OSError:
+        return None
+
+    symbols = {
+        "allies": "ally_rule_strs",
+        "aim": "aim_rule_strs",
+        "engagement": "combat_engagement_strs",
+        "cbm_recharge": "cbm_recharge_strs",
+        "cbm_reserve": "cbm_reserve_strs",
+    }
+    catalog: dict[str, frozenset[str]] = {}
+    for family, symbol in symbols.items():
+        declaration = re.search(
+            rf"const\s+std::unordered_map\s*<\s*std::string\s*,"
+            rf"[^;]*?>\s*{symbol}\s*=\s*\{{\s*\{{(.*?)\n\s*\}}\s*\}};",
+            source,
+            re.DOTALL,
+        )
+        if declaration is None:
+            return None
+        names = frozenset(re.findall(r'\{\s*"([^"]+)"\s*,', declaration.group(1)))
+        if not names:
+            return None
+        catalog[family] = names
+    return catalog
+
+
+def render_static_npc_ai_rule_update(
+    family: str, rule: str, enabled: str | None = None
+) -> list[str] | None:
+    """Render only rule setters proven against the native NPC rule catalog."""
+    catalog = _native_npc_ai_rule_catalog()
+    if catalog is None or family not in catalog:
+        return None
+    if rule not in catalog[family]:
+        return [
+            "    -- Unknown native NPC rule preserves the EOC no-op."
+        ]
+    if family == "allies":
+        if enabled is None:
+            return None
+        return [
+            '    if actor ~= nil and actor.kind == "creature" and actor.subtype == "npc" then',
+            "        services.npcs.set_ally_rule(actor, "
+            f"{lua_quote(rule)}, {enabled})",
+            "    end",
+        ]
+    return [
+        '    if actor ~= nil and actor.kind == "creature" and actor.subtype == "npc" then',
+        "        services.npcs.set_ai_policy(actor, "
+        f"{lua_quote(family)}, {lua_quote(rule)})",
+        "    end",
+    ]
 
 
 def render_static_combat_attack(
@@ -22035,34 +24039,42 @@ def render_static_combat_ranged_attack(
     key: str,
     avatar_actor_proven: bool,
     npc_event_character_actor_proven: bool,
-    npc_actor_expression: str | None = None,
     creature_actor_proven: bool = False,
+    character_actor_proven: bool = False,
+    npc_dialogue_mission_pair_proven: bool = False,
 ) -> list[str] | None:
     if effect != key or key not in {"u_ranged_attack", "npc_ranged_attack"}:
         return None
     if key == "npc_ranged_attack":
-        if not (npc_event_character_actor_proven and avatar_actor_proven):
-            return None
-        return [
-            "    services.characters.ranged_attack(",
-            "        actor, services.characters.avatar())",
-        ]
+        if npc_event_character_actor_proven and avatar_actor_proven:
+            return [
+                "    services.characters.ranged_attack(",
+                "        actor, services.characters.avatar())",
+            ]
+        if (
+            npc_dialogue_mission_pair_proven and character_actor_proven and
+            not creature_actor_proven
+        ):
+            return [
+                "    services.characters.ranged_attack(",
+                "        context.actors.beta, actor)",
+            ]
+        return None
     if npc_event_character_actor_proven and avatar_actor_proven:
         return [
             "    services.characters.ranged_attack(",
             "        services.characters.avatar(), actor)",
         ]
     if (
-        (avatar_actor_proven or creature_actor_proven) and
-        npc_actor_expression is not None
+        npc_dialogue_mission_pair_proven and character_actor_proven and
+        not creature_actor_proven
     ):
         return [
-            f"    local ranged_target = {npc_actor_expression}",
-            "    if ranged_target ~= nil then",
-            "        services.characters.ranged_attack(actor, ranged_target)",
-            "    end",
+            "    services.characters.ranged_attack(",
+            "        actor, context.actors.beta)",
         ]
-    # game_start proves only the avatar, not a target.
+    # A generic Creature callback can prove alpha/beta handles without proving
+    # that the attacker accepted by this Character-only service is a Character.
     return None
 
 
@@ -22144,18 +24156,36 @@ def render_static_combat_explosion(
         return None
     explosion = effect[key]
     allowed_inner = {
-        "power", "distance_factor", "max_noise", "fire", "shrapnel"
+        "power", "distance_factor", "max_noise", "fire", "shrapnel",
+        "casing_mass",
     }
     if set(explosion) - allowed_inner:
         return None
-    power = _combat_number_expression(
-        explosion.get("power", 0), actor, -1000000, 1000000
+
+    def literal_number(
+        value: Any, minimum: float, maximum: float, *, integer: bool = False,
+    ) -> str | None:
+        parsed = _combat_literal_number(
+            value, minimum, maximum, integer=integer
+        )
+        if parsed is None:
+            return None
+        # Python's shortest round-trip representation parses back to the same
+        # native double while avoiding an unnecessarily long decimal.
+        return str(parsed)
+
+    # The native dbl_or_var values are not range-clamped. A context/global
+    # variable can therefore exceed the Platform service bounds; clamping it
+    # here would change the blast. Only translate literal values whose native
+    # conversions fit the bounded service contract.
+    power = literal_number(
+        explosion.get("power", 0), -1000000, 1000000
     )
-    distance_factor = _combat_number_expression(
-        explosion.get("distance_factor", 0.75), actor, 0, 1000
+    distance_factor = literal_number(
+        explosion.get("distance_factor", 0.75), 0, 1000
     )
-    max_noise = _combat_number_expression(
-        explosion.get("max_noise", 90000000), actor, 0, 1000000000,
+    max_noise = literal_number(
+        explosion.get("max_noise", 90000000), 0, 1000000000,
         integer=True,
     )
     fire = _combat_literal_bool(explosion.get("fire"), False)
@@ -22171,18 +24201,15 @@ def render_static_combat_explosion(
     if fire:
         options.append("fire = true")
     if "target_var" in effect:
-        target = _coordinate_source_expression(
-            effect["target_var"], avatar_actor_proven,
-            npc_event_character_actor_proven,
-        )
-        if target is None:
-            return None
-        options.append(f"target = {target}")
+        # Native reads var_info and coerces its value to absolute map-square
+        # tripoint; a descriptor does not prove that the value is a typed
+        # absolute-map-square TripointCoord required by Platform.
+        return None
     if "shrapnel" in explosion:
         shrapnel = explosion["shrapnel"]
-        if isinstance(shrapnel, (int, float)) and not isinstance(shrapnel, bool):
-            casing_mass = _combat_number_expression(
-                shrapnel, actor, 0, 1000000000, integer=True
+        if isinstance(shrapnel, int) and not isinstance(shrapnel, bool):
+            casing_mass = literal_number(
+                explosion.get("casing_mass"), 0, 1000000000, integer=True
             )
             if casing_mass is None:
                 return None
@@ -22190,19 +24217,21 @@ def render_static_combat_explosion(
         elif isinstance(shrapnel, dict):
             if set(shrapnel) - {"casing_mass", "fragment_mass", "recovery", "drop"}:
                 return None
-            casing_mass = _combat_number_expression(
-                shrapnel.get("casing_mass"), actor, 0, 1000000000, integer=True
+            casing_mass = literal_number(
+                shrapnel.get("casing_mass"), 0, 1000000000, integer=True
             )
-            fragment_mass = _combat_number_expression(
-                shrapnel.get("fragment_mass", 0.005), actor, 0, 1000
+            fragment_mass = literal_number(
+                shrapnel.get("fragment_mass", 0.08), 0, 1000
             )
-            recovery = _combat_number_expression(
-                shrapnel.get("recovery", 0), actor, 0, 100, integer=True
+            recovery = literal_number(
+                shrapnel.get("recovery", 0), 0, 100, integer=True
             )
             drop = shrapnel.get("drop", "null")
             if (
                 casing_mass is None or fragment_mass is None or recovery is None or
-                not bounded_utf8_string(drop, PLATFORM_ID_MAX_BYTES, allow_empty=False)
+                # The service validates item IDs while native itype_id keeps
+                # arbitrary strings; without catalog proof only null is safe.
+                drop != "null"
             ):
                 return None
             shrapnel_options = [f"casing_mass = {casing_mass}"]
@@ -22226,8 +24255,8 @@ def render_static_combat_explosion(
     immune = _combat_literal_bool(
         effect.get("flashbang_avatar_is_immune"), False
     )
-    radius = _combat_number_expression(
-        effect.get("flashbang_radius", 8), actor, 0, 1000, integer=True
+    radius = literal_number(
+        effect.get("flashbang_radius", 8), 0, 1000, integer=True
     )
     if immune is None or radius is None:
         return None
@@ -22308,7 +24337,7 @@ def render_static_combat_cast_spell(
         return None
     spell = effect[key]
     allowed_spell = {
-        "id", "hit_self", "min_level", "max_level", "message", "npc_message"
+        "id", "hit_self", "min_level", "max_level"
     }
     if set(spell) - allowed_spell:
         return None
@@ -22323,6 +24352,20 @@ def render_static_combat_cast_spell(
         spell.get("max_level", -1), actor, -1, 1000, integer=True
     )
     if hit_self is None or min_level is None or max_level is None:
+        return None
+    if (
+        "max_level" in spell and spell.get("max_level") != -1 and
+        (
+            _combat_literal_number(
+                spell.get("min_level", 0), 0, 1000, integer=True
+            ) is None or
+            _combat_literal_number(
+                spell.get("max_level"), -1, 1000, integer=True
+            ) is None
+        )
+    ):
+        # Platform rejects max < min, while native fake_spell clamps or returns
+        # a default spell. A dynamic bound cannot prove their native ordering.
         return None
     literal_min_level = _combat_literal_number(
         spell.get("min_level", 0), 0, 1000, integer=True
@@ -22344,27 +24387,14 @@ def render_static_combat_cast_spell(
         options.append(f"min_level = {min_level}")
     if max_level != "-1":
         options.append(f"max_level = {max_level}")
-    for name in ("message", "npc_message"):
-        if name in spell:
-            message = spell[name]
-            message_expression = render_eoc_string_expression(message, actor)
-            if message_expression is None:
-                return None
-            options.append(f"{name} = {message_expression}")
-    target = None
     if "loc" in effect:
-        if targeted:
-            return None
-        target = _coordinate_source_expression(
-            effect["loc"], avatar_actor_proven,
-            npc_event_character_actor_proven,
-        )
-        if target is None:
-            return None
+        # Native read_var_value(...).tripoint() accepts an absent or malformed
+        # value as the origin after a debug message. Platform requires a typed
+        # absolute-map-square TripointCoord and throws for those values. A
+        # var_info descriptor alone does not prove that runtime type.
+        return None
     if targeted:
         options.append("targeted = true")
-    elif target is not None:
-        options.append(f"target = {target}")
     option_expression = "nil" if not options else "{ " + ", ".join(options) + " }"
     return [
         f"    services.characters.cast_spell({actor}, "
@@ -22392,23 +24422,22 @@ def render_static_combat_die(
     ):
         return None
     options_value = effect[key]
+    # Native f_die_advanced reads only `supress_message`; accept the correctly
+    # spelled field solely to preserve its native no-op, never to emit it.
     if set(options_value) - {"remove_corpse", "supress_message", "suppress_message"}:
         return None
     remove_corpse = _combat_literal_bool(options_value.get("remove_corpse"), False)
     suppress_legacy = _combat_literal_bool(options_value.get("supress_message"), False)
-    suppress_modern = _combat_literal_bool(options_value.get("suppress_message"), False)
-    suppress = suppress_modern if "suppress_message" in options_value else suppress_legacy
     if (
         ("remove_corpse" in options_value and remove_corpse is None) or
-        ("supress_message" in options_value and suppress_legacy is None) or
-        ("suppress_message" in options_value and suppress_modern is None)
+        ("supress_message" in options_value and suppress_legacy is None)
     ):
         return None
     options: list[str] = []
     if "remove_corpse" in options_value:
         options.append(f"remove_corpse = {lua_boolean(remove_corpse)}")
-    if "supress_message" in options_value or "suppress_message" in options_value:
-        options.append(f"suppress_message = {lua_boolean(suppress)}")
+    if "supress_message" in options_value:
+        options.append(f"suppress_message = {lua_boolean(suppress_legacy)}")
     if not options:
         return [f"    services.characters.die({actor})"]
     return [
@@ -22455,6 +24484,17 @@ def _context_coordinate_expression(value: Any) -> str | None:
     ):
         return None
     return f"context.data[{lua_quote(value['context_val'])}]"
+
+
+def _context_val_key(value: Any) -> str | None:
+    """Return a bounded context_val key without implying it stores a coordinate."""
+    if (
+        not isinstance(value, dict) or
+        set(value) != {"context_val"} or
+        not bounded_utf8_string(value.get("context_val"), 1024)
+    ):
+        return None
+    return value["context_val"]
 
 
 def _static_coordinate_variable_descriptor(
@@ -22517,125 +24557,83 @@ def render_static_location_variable_adjust(
     key: str,
     avatar_actor_proven: bool,
     npc_actor_proven: bool,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> list[str] | None:
-    """Lower same-scope literal coordinate arithmetic without random search."""
-    comment_keys = {
-        name for name in effect
-        if isinstance(name, str) and name.startswith("//")
-    }
+    """Adjust typed Native coordinates using proven read and write storage."""
+    del avatar_actor_proven, npc_actor_proven
+    comment_keys = {name for name in effect if isinstance(name, str) and name.startswith("//")}
     if key not in effect or set(effect) - comment_keys - {
-        key, "x_adjust", "y_adjust", "z_adjust", "z_override", "overmap_tile",
-        "output_var",
+        key, "x_adjust", "y_adjust", "z_adjust", "z_override", "overmap_tile", "output_var",
     }:
         return None
-    source = _coordinate_variable_descriptor(effect[key])
-    if source is None:
-        return None
-    output = source
-    if "output_var" in effect:
-        output = _coordinate_variable_descriptor(effect["output_var"])
-        if output is None or output[0] != source[0]:
-            return None
-    x_adjust = _coordinate_numeric_expression(
-        effect.get("x_adjust", 0), avatar_actor_proven, npc_actor_proven
-    )
-    y_adjust = _coordinate_numeric_expression(
-        effect.get("y_adjust", 0), avatar_actor_proven, npc_actor_proven
-    )
-    z_adjust = _coordinate_numeric_expression(
-        effect.get("z_adjust", 0), avatar_actor_proven, npc_actor_proven
-    )
-    if x_adjust is None or y_adjust is None or z_adjust is None:
-        return None
+    source = render_native_coordinate_variable_expression(effect[key], effect_actor_targets)
     z_override = effect.get("z_override", False)
     overmap_tile = effect.get("overmap_tile", False)
-    if not isinstance(z_override, bool) or not isinstance(overmap_tile, bool):
+    if source is None or not isinstance(z_override, bool) or not isinstance(overmap_tile, bool):
         return None
-    offset = (
-        f"services.coords.tripoint_omt_ms({x_adjust}, {y_adjust}, 0)"
-        if overmap_tile else
-        f"services.coords.tripoint_rel_ms({x_adjust}, {y_adjust}, 0)"
-    )
-    if source[0] in {"u", "npc"}:
-        source_handle = _coordinate_variable_handle(
-            source[0], avatar_actor_proven, npc_actor_proven
-        )
-        if source_handle is None:
-            return None
-        read = (
-            "service_value(services.variables.get("
-            f"{source_handle}, {lua_quote(source[1])}))"
-        )
-        source_value = "location_result.value"
-        lines = [
-            f"    local location_result = {read}",
-            "    if location_result.exists and location_result.value ~= nil then",
-        ]
-    elif source[0] == "global":
-        lines = [
-            "    local location_result = service_value(services.variables.get_global("
-            f"{lua_quote(source[1])}))",
-            "    if location_result.exists and location_result.value ~= nil then",
-        ]
-        source_value = "location_result.value"
-    elif source[0] == "context":
-        lines = [
-            f"    local location = context.data[{lua_quote(source[1])}]",
-            "    if location ~= nil then",
-        ]
-        source_value = "location"
-    else:
-        variable_actor = (
-            "actor" if (avatar_actor_proven or npc_actor_proven)
-            else "services.characters.avatar()"
-        )
-        lines = [
-            "    local location_result = service_value(services.variables.resolve(",
-            f"        context.data, {variable_actor}, \"var\", {lua_quote(source[1])}))",
-            "    if location_result.exists and location_result.value ~= nil then",
-        ]
-        source_value = "location_result.value"
-    lines.append(f"        local location = {source_value}:add({offset})")
+    # Native evaluates x/y inside one constructor call. Include RNG math and
+    # bound providers, not just authored range arrays, when proving order.
+    xy_effects = [_native_number_expression_effects(effect.get(name, 0), effect_actor_targets)
+                  for name in ("x_adjust", "y_adjust")]
+    if any(value is None for value in xy_effects) or _native_math_random_order_conflict(xy_effects):
+        return None
+    adjustments = [render_native_number_expression(effect.get(name, 0), effect_actor_targets)
+                   for name in ("x_adjust", "y_adjust", "z_adjust")]
+    if any(expression is None for expression in adjustments):
+        return None
+    writes = render_native_coordinate_variable_write_lines(
+        effect.get("output_var", effect[key]), "location", effect_actor_targets)
+    if writes is None:
+        return None
+    factor = " * map_squares_per_omt" if overmap_tile else ""
+    lines = [
+        "    do",
+        *(['        local map_squares_per_omt = services.coords.tripoint_rel_omt(1, 0, 0):to("ms").x']
+          if overmap_tile else []),
+        "        local function truncate_axis(value)",
+        "            assert(value == value and value ~= math.huge and value ~= -math.huge,",
+        '                "coordinate adjustment must be finite")',
+        "            local axis = math.modf(value)",
+        "            assert(axis >= -2147483648 and axis <= 2147483647,",
+        '                "coordinate adjustment exceeds the signed engine range")',
+        "            return axis",
+        "        end",
+        f"        local location = {source}",
+        f"        local x_adjust = truncate_axis(({adjustments[0]}){factor})",
+        f"        local y_adjust = truncate_axis(({adjustments[1]}){factor})",
+        "        location = location:add(services.coords.tripoint_rel_ms(x_adjust, y_adjust, 0))",
+        f"        local z_adjust = truncate_axis({adjustments[2]})",
+    ]
     if z_override:
-        lines.append(
-            "        location = services.coords.tripoint_abs_ms("
-            f"location.x, location.y, {z_adjust})"
-        )
-    elif z_adjust != "0":
-        lines.append(
-            "        location = location:add(services.coords.tripoint_rel_ms(0, 0, "
-            f"{z_adjust}))"
-        )
-    if output[0] in {"u", "npc"}:
-        output_handle = _coordinate_variable_handle(
-            output[0], avatar_actor_proven, npc_actor_proven
-        )
-        if output_handle is None:
-            return None
-        lines.extend([
-            "        services.variables.set(",
-            f"            {output_handle}, {lua_quote(output[1])}, location)",
-        ])
-    elif output[0] == "global":
-        lines.extend([
-            "        services.variables.set_global(",
-            f"            {lua_quote(output[1])}, location)",
-        ])
-    elif output[0] == "context":
-        lines.append(
-            f"        context.data[{lua_quote(output[1])}] = location"
-        )
+        lines.append("        location = services.coords.tripoint_abs_ms(location.x, location.y, z_adjust)")
     else:
-        variable_actor = (
-            "actor" if (avatar_actor_proven or npc_actor_proven)
-            else "services.characters.avatar()"
-        )
-        lines.extend([
-            "        service_value(services.variables.set_resolved(",
-            f"            context.data, {variable_actor}, \"var\", {lua_quote(output[1])}, location))",
-        ])
+        lines.append("        location = location:add(services.coords.tripoint_rel_ms(0, 0, z_adjust))")
+    lines.extend("    " + line for line in writes)
     lines.append("    end")
     return lines
+
+
+def _location_adjust_random_order_choice(
+    effect: Any, effect_actor_targets: dict[str, tuple[str, str] | None] | None,
+) -> str | None:
+    if not isinstance(effect, dict) or "location_variable_adjust" not in effect:
+        return None
+    xy_effects = [_native_number_expression_effects(effect.get(name, 0), effect_actor_targets)
+                  for name in ("x_adjust", "y_adjust")]
+    if any(value is None for value in xy_effects) or not _native_math_random_order_conflict(xy_effects):
+        return None
+    # Classify only when the remaining shape and its storage owners can be
+    # lowered. Do not conceal unsupported bounds or absent participants.
+    if render_native_number_expression(effect["y_adjust"], effect_actor_targets) is None:
+        return None
+    probe = dict(effect)
+    probe["y_adjust"] = 0
+    if render_static_location_variable_adjust(
+            probe, "location_variable_adjust", False, False, effect_actor_targets) is None:
+        return None
+    return ("Native X/Y random evaluation order is compiler-dependent; choose an intentional "
+            "Lua draw order. Z is evaluated after the XY offset. Existing coordinate, variable "
+            "and shared RNG services suffice; no additional Platform API is required")
 
 
 def _coordinate_source_expression(
@@ -22782,6 +24780,17 @@ def render_dynamic_location_variable_search(
             for reference in references
         ]
     target_params = effect.get("target_params")
+    if (
+        key == "u_location_variable" and
+        isinstance(target_params, dict) and
+        "om_terrain" in target_params
+    ):
+        # mission_util logs a debugmsg when a nonempty terrain search misses,
+        # then returns the Avatar OMT origin.  find_target currently returns
+        # only that coordinate, so generated code cannot preserve the native
+        # miss diagnostic.  Route an explicit empty terrain through the
+        # static no-search lowering below as well; do not treat it as a query.
+        return None
     selector_names = [
         name for name in ("terrain", "furniture", "field", "monster", "npc", "species", "trap", "zone")
         if name in effect
@@ -22818,6 +24827,20 @@ def render_dynamic_location_variable_search(
             f"math.floor(({dynamic}) + 0.5)))"
         )
 
+    def coordinate_integer_expression(
+        value: Any, minimum: int, maximum: int
+    ) -> str | None:
+        literal = _literal_integer_or_none(value, -2147483648, 2147483647)
+        if literal is not None:
+            return str(literal)
+        dynamic = render_eoc_numeric_expression(value, str(minimum), actor)
+        if dynamic is None:
+            return None
+        # Native coordinate construction converts dbl_or_var to int, which
+        # truncates toward zero.  Typed coordinate operations reject values
+        # outside the native int range instead of silently clamping them.
+        return f"(math.modf(({dynamic})))"
+
     origin = (
         "service_value(services.characters.snapshot(" + actor + ")).creature.position"
     )
@@ -22828,9 +24851,15 @@ def render_dynamic_location_variable_search(
         )
         if source_position is None:
             return None
-        x_adjust = integer_expression(effect.get("x_adjust", 0), -1000, 1000)
-        y_adjust = integer_expression(effect.get("y_adjust", 0), -1000, 1000)
-        z_adjust = integer_expression(effect.get("z_adjust", 0), -20, 20)
+        x_adjust = coordinate_integer_expression(
+            effect.get("x_adjust", 0), -1000, 1000
+        )
+        y_adjust = coordinate_integer_expression(
+            effect.get("y_adjust", 0), -1000, 1000
+        )
+        z_adjust = coordinate_integer_expression(
+            effect.get("z_adjust", 0), -20, 20
+        )
         if x_adjust is None or y_adjust is None or z_adjust is None:
             return None
         lines.append(
@@ -22840,8 +24869,7 @@ def render_dynamic_location_variable_search(
         if x_adjust != "0" or y_adjust != "0":
             lines.append(
                 "    location = location:add(services.coords.tripoint_rel_ms("
-                f"math.floor(({x_adjust}) + 0.5), "
-                f"math.floor(({y_adjust}) + 0.5), 0))"
+                f"{x_adjust}, {y_adjust}, 0))"
             )
         z_override = effect.get("z_override", False)
         if not isinstance(z_override, bool):
@@ -22849,12 +24877,12 @@ def render_dynamic_location_variable_search(
         if z_override:
             lines.append(
                 "    location = services.coords.tripoint_abs_ms("
-                f"location.x, location.y, math.floor(({z_adjust}) + 0.5))"
+                f"location.x, location.y, {z_adjust})"
             )
         elif z_adjust != "0":
             lines.append(
                 "    location = location:add(services.coords.tripoint_rel_ms("
-                f"0, 0, math.floor(({z_adjust}) + 0.5)))"
+                f"0, 0, {z_adjust}))"
             )
         output_lines = _coordinate_output_lines(
             effect[key], "location", avatar_actor_proven, npc_actor_proven
@@ -23094,22 +25122,9 @@ def render_dynamic_location_variable_search(
                 return None
             if value:
                 options.append(f"{name} = true")
-        x_adjust = integer_expression(effect.get("x_adjust", 0), -1000, 1000)
-        y_adjust = integer_expression(effect.get("y_adjust", 0), -1000, 1000)
-        z_adjust = integer_expression(effect.get("z_adjust", 0), -20, 20)
-        if x_adjust is None or y_adjust is None or z_adjust is None:
-            return None
-        if x_adjust != "0":
-            options.append(f"x_adjust = {x_adjust}")
-        if y_adjust != "0":
-            options.append(f"y_adjust = {y_adjust}")
-        if z_adjust != "0":
-            options.append(f"z_adjust = {z_adjust}")
         z_override = effect.get("z_override", False)
         if not isinstance(z_override, bool):
             return None
-        if z_override:
-            options.append("z_override = true")
         lines.extend([
             f"    local selected = services.world.find_location({origin}, {selector_expression}, "
             f"{{ {', '.join(options)} }})",
@@ -23118,9 +25133,15 @@ def render_dynamic_location_variable_search(
         ])
 
     adjustment_indent = "        "
-    x_adjust = integer_expression(effect.get("x_adjust", 0), -1000, 1000)
-    y_adjust = integer_expression(effect.get("y_adjust", 0), -1000, 1000)
-    z_adjust = integer_expression(effect.get("z_adjust", 0), -20, 20)
+    x_adjust = coordinate_integer_expression(
+        effect.get("x_adjust", 0), -1000, 1000
+    )
+    y_adjust = coordinate_integer_expression(
+        effect.get("y_adjust", 0), -1000, 1000
+    )
+    z_adjust = coordinate_integer_expression(
+        effect.get("z_adjust", 0), -20, 20
+    )
     if x_adjust is None or y_adjust is None or z_adjust is None:
         return None
     z_override = effect.get("z_override", False)
@@ -23129,17 +25150,17 @@ def render_dynamic_location_variable_search(
     if x_adjust != "0" or y_adjust != "0":
         lines.append(
             f"{adjustment_indent}location = location:add(services.coords.tripoint_rel_ms("
-            f"math.floor(({x_adjust}) + 0.5), math.floor(({y_adjust}) + 0.5), 0))"
+            f"{x_adjust}, {y_adjust}, 0))"
         )
     if z_override:
         lines.append(
             f"{adjustment_indent}location = services.coords.tripoint_abs_ms("
-            f"location.x, location.y, math.floor(({z_adjust}) + 0.5))"
+            f"location.x, location.y, {z_adjust})"
         )
     elif z_adjust != "0":
         lines.append(
             f"{adjustment_indent}location = location:add(services.coords.tripoint_rel_ms("
-            f"0, 0, math.floor(({z_adjust}) + 0.5)))"
+            f"0, 0, {z_adjust}))"
         )
     output_lines = _coordinate_output_lines(
         effect[key], "location", avatar_actor_proven, npc_actor_proven
@@ -23179,6 +25200,14 @@ def render_static_location_variable(
         if not npc_actor_proven and npc_actor_expression is None:
             return None
         output_scope = "npc"
+    if (
+        effect.get("target_params") is not None and
+        (key != "u_location_variable" or not avatar_actor_proven)
+    ):
+        # get_mission_om_origin uses the player Avatar when target_params is
+        # present for either native location-variable effect.  Only a proven
+        # Avatar alpha may stand in for that origin; NPC alpha is not equivalent.
+        return None
     # Location variables may target any of the native EOC scopes (u/npc,
     # global, context, or var).  The search path remains actor-proven, but
     # the destination itself is not limited to a Character field.
@@ -23194,9 +25223,41 @@ def render_static_location_variable(
         return None
     if any(
         effect.get(name, False) is not False
-        for name in ("target_params", "true_eocs", "false_eocs")
+        for name in ("true_eocs", "false_eocs")
     ):
         return None
+    target_params = effect.get("target_params")
+    target_options: list[str] = []
+    if target_params is not None:
+        if not isinstance(target_params, dict):
+            return None
+        if set(target_params) - {
+            "om_terrain", "z", "offset_x", "offset_y", "offset_z",
+        }:
+            return None
+        terrain = target_params.get("om_terrain", "")
+        if not isinstance(terrain, str) or terrain != "":
+            return None
+        if "z" in target_params:
+            target_z = _literal_integer_or_none(
+                target_params["z"], -2147483648, 2147483647
+            )
+            if target_z is None:
+                return None
+            target_options.append(f"z = {target_z}")
+        offsets: list[int] = []
+        for name in ("offset_x", "offset_y", "offset_z"):
+            value = _literal_integer_or_none(
+                target_params.get(name, 0), -2147483648, 2147483647
+            )
+            if value is None:
+                return None
+            offsets.append(value)
+        if any(offsets):
+            target_options.append(
+                "offset = services.coords.tripoint_rel_omt("
+                f"{offsets[0]}, {offsets[1]}, {offsets[2]})"
+            )
     for name in ("outdoor_only", "passable_only"):
         if not isinstance(effect.get(name, False), bool):
             return None
@@ -23232,24 +25293,40 @@ def render_static_location_variable(
     )
     if actor is None or output is not None and output[0] in {"u", "npc"} and output_handle is None:
         return None
-    lines = [
-        "    local location = service_value(services.characters.snapshot(",
-        f"        {actor})).creature.position",
-    ]
+    if target_params is None:
+        lines = [
+            "    local location = service_value(services.characters.snapshot(",
+            f"        {actor})).creature.position",
+        ]
+    else:
+        lines = [
+            "    local target_origin = service_value(services.characters.snapshot(",
+            f"        {actor})).creature.position",
+            "    local target_omt = services.overmap.find_target(",
+            '        target_origin:project_to("overmap_terrain"), "", { '
+            f"{', '.join(target_options)} }})",
+            '    local location = target_omt:project_to("map_square")',
+            # f_location_variable loads the map containing its pre-adjustment
+            # target even when no local selector is requested.  The returned
+            # search status must not gate the legacy coordinate write: native
+            # writes the requested target even when a detached map is not in
+            # bounds after loading.
+            "    services.world.find_location(location, nil)",
+        ]
     if x_adjust != "0" or y_adjust != "0":
         lines.append(
             "    location = location:add(services.coords.tripoint_rel_ms("
-            f"math.floor(({x_adjust}) + 0.5), math.floor(({y_adjust}) + 0.5), 0))"
+            f"(math.modf(({x_adjust}))), (math.modf(({y_adjust}))), 0))"
         )
     if z_override:
         lines.append(
             "    location = services.coords.tripoint_abs_ms("
-            f"location.x, location.y, math.floor(({z_adjust}) + 0.5))"
+            f"location.x, location.y, (math.modf(({z_adjust}))))"
         )
     elif z_adjust != "0":
         lines.append(
             "    location = location:add(services.coords.tripoint_rel_ms("
-            f"0, 0, math.floor(({z_adjust}) + 0.5)))"
+            f"0, 0, (math.modf(({z_adjust}))))"
         )
     if output_context is not None:
         lines.append(f"    context.data[{lua_quote(effect[key]['context_val'])}] = location")
@@ -23267,6 +25344,124 @@ def render_static_location_variable(
     return lines
 
 
+def render_static_reveal_route(
+    effect: dict[str, Any],
+    previous_effects: list[Any],
+    avatar_actor_proven: bool,
+    event_exclusive_source_proven: bool,
+) -> list[str] | None:
+    """Lower only route endpoints written as typed context coordinates in order."""
+    if (
+        not event_exclusive_source_proven or not avatar_actor_proven or
+        set(effect) - {"reveal_route", "target_var", "radius", "road_only"} or
+        "reveal_route" not in effect or "target_var" not in effect
+    ):
+        return None
+    start_key = _context_val_key(effect["reveal_route"])
+    end_key = _context_val_key(effect["target_var"])
+    if start_key is None or end_key is None:
+        return None
+
+    raw_radius = finite_number_literal(effect.get("radius", 0))
+    if raw_radius is None:
+        return None
+    # Native passes dbl_or_var through a double-to-int conversion.  Truncate
+    # static literals toward zero, and only emit values accepted by the typed
+    # service.  Dynamic, negative-after-truncation, and >30 shapes stay TODO.
+    radius = math.trunc(raw_radius)
+    if radius < 0 or radius > 30:
+        return None
+    road_only = effect.get("road_only", False)
+    if not isinstance(road_only, bool):
+        return None
+
+    endpoint_keys = tuple(dict.fromkeys((start_key, end_key)))
+    if len(previous_effects) < len(endpoint_keys):
+        return None
+    writers = previous_effects[-len(endpoint_keys):]
+    written_keys: set[str] = set()
+    for writer in writers:
+        if (
+            not isinstance(writer, dict) or
+            set(writer) - {
+                "u_location_variable", "x_adjust", "y_adjust", "z_adjust",
+                "z_override",
+            } or
+            "u_location_variable" not in writer
+        ):
+            return None
+        context_key = _context_val_key(writer["u_location_variable"])
+        if context_key not in endpoint_keys or context_key in written_keys:
+            return None
+        if render_static_location_variable(
+            writer, "u_location_variable", avatar_actor_proven, False,
+        ) is None:
+            return None
+        written_keys.add(context_key)
+    if written_keys != set(endpoint_keys):
+        return None
+
+    return [
+        "    services.overmap.reveal_route(",
+        f"        context.data[{lua_quote(start_key)}]:project_to(\"overmap_terrain\"),",
+        f"        context.data[{lua_quote(end_key)}]:project_to(\"overmap_terrain\"),",
+        f"        {radius}, {str(road_only).lower()}",
+        "    )",
+    ]
+
+
+def render_static_horde_signal_broadcast(
+    effect: dict[str, Any],
+    previous_effect: Any,
+    avatar_actor_proven: bool,
+    npc_actor_proven: bool,
+) -> list[str] | None:
+    """Lower only a signal with a proven typed context position and power."""
+    if set(effect) != {"signal_hordes", "signal_power"}:
+        return None
+    target = effect.get("signal_hordes")
+    target_expression = _context_coordinate_expression(target)
+    if target_expression is None:
+        return None
+    numeric_power = finite_number_literal(effect.get("signal_power"))
+    if numeric_power is None:
+        return None
+    # Native f_signal_hordes passes a double to an int parameter, truncating
+    # toward zero.  Do that here only after the literal and bounded result are
+    # both proven, so dynamic values cannot bypass the typed service limit.
+    signal_power = math.trunc(float(numeric_power))
+    if signal_power < 0 or signal_power > MAX_HORDE_BROADCAST_POWER:
+        return None
+    if not isinstance(previous_effect, dict):
+        return None
+    for key in ("u_location_variable", "npc_location_variable"):
+        if (
+            set(previous_effect) != {key} or
+            previous_effect.get(key) != target
+        ):
+            continue
+        if render_static_location_variable(
+            previous_effect, key,
+            avatar_actor_proven, npc_actor_proven,
+        ) is None:
+            continue
+        return [
+            "    services.hordes.broadcast_signal(",
+            f"        {target_expression}, {signal_power}",
+            "    )",
+        ]
+    return None
+
+
+def _signal_hordes_has_native_var_info_target(value: Any) -> bool:
+    if not isinstance(value, dict):
+        return False
+    for scope in ("u_val", "npc_val", "global_val", "var_val", "context_val"):
+        if scope in value:
+            return lua_quotable_native_variable_string(value[scope])
+    return False
+
+
 def render_static_query_tile(
     effect: dict[str, Any],
     key: str,
@@ -23281,7 +25476,7 @@ def render_static_query_tile(
     if query_type not in {"anywhere", "line_of_sight"}:
         return None
     message = effect.get("message", "")
-    if not isinstance(message, str) or not bounded_utf8_string(message, 8192, allow_empty=True):
+    if not isinstance(message, str) or not bounded_utf8_string(message, 1024, allow_empty=True):
         return None
     z_level = effect.get("z_level", False)
     if not isinstance(z_level, bool):
@@ -23289,30 +25484,29 @@ def render_static_query_tile(
     output = effect.get("target_var")
     if output is None:
         return None
-    center = None
+    # Anywhere selection maps this absolute variable to bubble coordinates
+    # without a loaded-map check; choose_map_square requires an in-bounds
+    # absolute point. The LOS path reads but ignores center_var, so keep both
+    # source shapes unlowered rather than dropping a lookup on one branch.
     if "center_var" in effect:
-        center = _coordinate_source_expression(
-            effect["center_var"], avatar_actor_proven, False
-        )
-        if center is None:
-            return None
+        return None
     lines: list[str]
     if query_type == "anywhere":
-        call = f"services.targeting.choose_map_square({lua_quote(message)}"
-        if center is not None:
-            call += f", {center}"
-        else:
-            call += ", nil"
+        if "range" in effect and finite_number_literal(effect["range"]) != 0:
+            # Native accepts a dbl_or_var here only to emit a debug message
+            # when it is nonzero.  Do not silently discard that input.
+            return None
+        # The native effect centers anywhere-selection on actor.pos_bub.
+        # Passing nil would instead use the targeting API's avatar view
+        # offset, which is a different point when the map is panned.
+        center = "service_value(services.characters.snapshot(actor)).creature.position"
+        call = f"services.targeting.choose_map_square({lua_quote(message)}, {center}"
         call += f", {lua_boolean(z_level)})"
     else:
-        distance = _combat_number_expression(
-            effect.get("range", 0), "actor", 0, 1000, integer=True
-        )
+        # Native converts dbl_or_var to the targeting API's int range by
+        # truncation; dynamic rounding/clamping would change the prompt.
+        distance = _literal_integer_or_none(effect.get("range", 0), 0, 1000)
         if distance is None:
-            return None
-        if center is not None:
-            # The legacy line-of-sight selector always uses the avatar as the
-            # viewpoint; a non-default center would change that contract.
             return None
         call = f"services.targeting.choose_visible_map_square({lua_quote(message)}, {distance})"
     lines = [f"    local selected = {call}", "    if selected ~= nil then"]
@@ -23381,13 +25575,15 @@ def render_static_query_omt(
 
 def render_copied_eoc_callbacks(
     value: Any, function_names: dict[str, str], actor_expression: str = "actor",
+    *, alpha_actor_expression: str | None = None,
 ) -> list[str] | None:
     references = _validated_eoc_references(value, function_names, allow_empty=True)
     if references is None:
         return None
     if not references:
         return []
-    # run_eoc_vector copies the dialogue once, then shares it across callbacks.
+    # run_eoc_vector snapshots the dialogue once; each activate() then copies
+    # that snapshot again, so dialogue-local writes do not leak across EOCs.
     lines = [
         "        local function copy_data(value)",
         "            if type(value) ~= \"table\" then return value end",
@@ -23395,16 +25591,71 @@ def render_copied_eoc_callbacks(
         "            for key, entry in pairs(value) do result[key] = copy_data(entry) end",
         "            return result",
         "        end",
-        "        local failure_context = {}",
-        "        for key, value in pairs(context) do failure_context[key] = value end",
-        "        failure_context.data = copy_data(context.data or {})",
-        "        failure_context.conditions = copy_data(context.conditions or {})",
-        "        failure_context.actors = {}",
-        "        for key, value in pairs(context.actors or {}) do failure_context.actors[key] = value end",
+        "        local function copy_context(source)",
+        "            local result = {}",
+        "            for key, value in pairs(source) do result[key] = value end",
+        "            result.data = copy_data(source.data or {})",
+        "            result.conditions = copy_data(source.conditions or {})",
+        "            result.actors = {}",
+        "            for key, value in pairs(source.actors or {}) do result.actors[key] = value end",
+        "            return result",
+        "        end",
+        "        local vector_context = copy_context(context)",
     ]
-    lines.extend(f"        {function_names[reference]}(failure_context, {actor_expression})"
-                 for reference in references)
+    if alpha_actor_expression is not None:
+        # Character-recurring EOCs receive their dialogue alpha as the
+        # explicit callback actor, while the Platform task context starts
+        # without an actors table. Add that proven alpha only to the copied
+        # native-dialogue snapshot; never mutate the caller's context.
+        lines.append(
+            "        vector_context.actors.alpha = "
+            f"vector_context.actors.alpha or {alpha_actor_expression}"
+        )
+    for reference in references:
+        lines.extend([
+            "        local failure_context = copy_context(vector_context)",
+            f"        {function_names[reference]}(failure_context, {actor_expression})",
+        ])
     return lines
+
+
+def render_ordered_copied_eoc_vectors(
+    true_value: Any, false_value: Any, function_names: dict[str, str], *,
+    dialogue_alpha_expression: str | None,
+) -> tuple[list[str], list[str]] | None:
+    """Render static true/false callback vectors for one native dialogue copy.
+
+    The caller selects exactly one returned branch after its native-equivalent
+    operation. Each non-empty vector copies the dialogue callback context once,
+    preserves its alpha/beta actor handles, and invokes named migrated Lua
+    functions in JSON order. ``dialogue_alpha_expression`` must name the
+    original native dialogue alpha; a selected beta/target is not a substitute.
+    Every callback receives its own copy of the vector snapshot, matching the
+    copy made by native ``effect_on_condition::activate``. This emits ordinary
+    calls to private migrated functions, never an EOC runner or public selector
+    API.
+    """
+    true_references = _validated_eoc_references(
+        true_value, function_names, allow_empty=True
+    )
+    false_references = _validated_eoc_references(
+        false_value, function_names, allow_empty=True
+    )
+    if true_references is None or false_references is None:
+        return None
+    if not true_references and not false_references:
+        return [], []
+    if not isinstance(dialogue_alpha_expression, str) or not dialogue_alpha_expression:
+        return None
+    true_lines = render_copied_eoc_callbacks(
+        true_references, function_names, dialogue_alpha_expression
+    )
+    false_lines = render_copied_eoc_callbacks(
+        false_references, function_names, dialogue_alpha_expression
+    )
+    if true_lines is None or false_lines is None:
+        return None
+    return true_lines, false_lines
 
 
 def render_static_choose_adjacent_highlight(
@@ -23424,6 +25675,10 @@ def render_static_choose_adjacent_highlight(
         "allow_autoselect", "condition", "false_eocs",
     }:
         return None
+    # The native effect accepts arbitrary absolute coordinates, while the
+    # Platform picker requires its center to be inside the active map.
+    if "target_var" in effect:
+        return None
     output = effect[key]
     if _coordinate_variable_descriptor(output) is None and _context_coordinate_expression(output) is None:
         return None
@@ -23441,6 +25696,11 @@ def render_static_choose_adjacent_highlight(
         not bounded_utf8_string(failure_message, 8192, allow_empty=True)
     ):
         return None
+    # Native translation_or_var resolves these strings through gettext at
+    # runtime.  Lua literals would lose localization and translated lengths
+    # can exceed the bounded targeting prompt contract.
+    if message or failure_message:
+        return None
     allow_vertical = effect.get("allow_vertical", False)
     allow_autoselect = effect.get("allow_autoselect", True)
     if not isinstance(allow_vertical, bool) or not isinstance(allow_autoselect, bool):
@@ -23448,16 +25708,7 @@ def render_static_choose_adjacent_highlight(
     condition = effect.get("condition", True)
     if "condition" in effect and not isinstance(condition, (str, dict)):
         return None
-    center = (
-        _coordinate_source_expression(
-            effect["target_var"], avatar_actor_proven,
-            npc_actor_proven, npc_actor_expression,
-        )
-        if "target_var" in effect else
-        "service_value(services.characters.snapshot(actor)).creature.position"
-    )
-    if center is None:
-        return None
+    center = "service_value(services.characters.snapshot(actor)).creature.position"
     predicate = "true"
     if condition is not True:
         predicate = render_eoc_condition_expression(
@@ -23531,6 +25782,10 @@ def render_static_npc_choose_adjacent_highlight(
         "allow_autoselect", "condition", "false_eocs",
     }:
         return None
+    # The native effect accepts arbitrary absolute coordinates, while the
+    # Platform picker requires its center to be inside the active map.
+    if "target_var" in effect:
+        return None
     output_value = effect[key]
     if (
         _coordinate_variable_descriptor(output_value) is None and
@@ -23563,6 +25818,11 @@ def render_static_npc_choose_adjacent_highlight(
         not bounded_utf8_string(failure_message, 8192, allow_empty=True)
     ):
         return None
+    # Native translation_or_var resolves these strings through gettext at
+    # runtime.  Lua literals would lose localization and translated lengths
+    # can exceed the bounded targeting prompt contract.
+    if message or failure_message:
+        return None
     allow_vertical = effect.get("allow_vertical", False)
     allow_autoselect = effect.get("allow_autoselect", True)
     if not isinstance(allow_vertical, bool) or not isinstance(allow_autoselect, bool):
@@ -23577,15 +25837,10 @@ def render_static_npc_choose_adjacent_highlight(
         f"{x}, {y}, {z}))"
         for x, y, z in offsets
     )
+    center_actor = npc_actor_expression or "actor"
     center_expression = (
-        _coordinate_source_expression(
-            effect["target_var"], avatar_actor_proven, npc_actor_proven, npc_actor_expression
-        ) if "target_var" in effect else
-        "service_value(services.characters.snapshot(" +
-        (npc_actor_expression or "actor") + ")).creature.position"
+        f"service_value(services.characters.snapshot({center_actor})).creature.position"
     )
-    if center_expression is None:
-        return None
     lines = [
         f"    local center = {center_expression}",
         "    local candidate_points = {",
@@ -23630,6 +25885,79 @@ def _literal_nonnegative_integer(
     ):
         return None
     return int(literal)
+
+
+def render_native_duration_expression(
+    value: Any,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
+) -> str | None:
+    """Preserve native numeric duration reads and RNG without invented clamps."""
+    if isinstance(value, list):
+        if len(value) != 2:
+            return None
+        # Native pair members are single value_or_var instances, not pairs.
+        if any(isinstance(bound, list) for bound in value):
+            return None
+        bounds = [render_native_duration_expression(bound, effect_actor_targets) for bound in value]
+        if any(bound is None for bound in bounds):
+            return None
+        # Do not collapse equal ranges: Native rng still consumes its stream.
+        return ('(function(lower, upper) return services.time.duration('
+                'services.random.native_int(math.min(lower.turns, upper.turns), '
+                'math.max(lower.turns, upper.turns)), "turn") end)(' +
+                ", ".join(bounds) + ')')
+    turns = parse_native_duration_turns(value)
+    if turns is not None:
+        return f'services.time.duration({turns}, "turn")'
+    if not isinstance(value, dict):
+        return None
+    if set(value) & {"relative", "proportional", "extend", "delete"}:
+        return None
+    scope = next((candidate for candidate in (
+        "u_val", "npc_val", "global_val", "var_val", "context_val",
+    ) if candidate in value), None)
+    if scope is None:
+        return None
+    key = value[scope]
+    if not lua_quotable_native_variable_string(key):
+        return None
+    default = parse_native_duration_turns(value.get("default", 0))
+    if default is None:
+        # Preserve loader errors/diagnostics explicitly rather than guessing
+        # a numeric fallback from unsupported default syntax.
+        return None
+    alpha = _proven_native_variable_read_target(effect_actor_targets, "u")
+    beta = _proven_native_variable_read_target(effect_actor_targets, "npc")
+    if scope == "var_val":
+        # Native parses one context pointer, then reads one concrete scope.
+        # Mutation fallback is not a read-owner proof: const_actor(true) does
+        # not substitute alpha when beta is missing.
+        pointer = _render_native_variable_string_snapshot(
+            "context_val", lua_quote(key), alpha, beta)
+        reads = [_render_native_variable_number_snapshot(source, name, alpha, beta)
+                 for source, name in (
+                     ("u_val", "string.sub(pointer.value, 3)"),
+                     ("npc_val", "string.sub(pointer.value, 3)"),
+                     ("context_val", "string.sub(pointer.value, 2)"),
+                     ("global_val", "pointer.value"),
+        )]
+        if any(read is None for read in reads):
+            return None
+        read = (
+            '(function(pointer) if pointer.exists == false then return pointer end; '
+            'if string.sub(pointer.value, 1, 2) == "u_" then return ' + reads[0] +
+            ' elseif string.sub(pointer.value, 1, 2) == "n_" then return ' + reads[1] +
+            ' elseif string.sub(pointer.value, 1, 1) == "_" then return ' + reads[2] +
+            ' else return ' + reads[3] + ' end end)(' + pointer + ')'
+        )
+    else:
+        read = _render_native_variable_number_snapshot(scope, lua_quote(key), alpha, beta)
+        if read is None:
+            return None
+    return ('(function(result) if result.exists == false then return '
+            f'services.time.duration({default}, "turn") end; '
+            'return services.time.duration_from_turns(result.value) end)('
+            f'{read})')
 
 
 def _duration_expression(
@@ -23859,6 +26187,112 @@ def _render_explicit_map_edit(
     return lines
 
 
+def set_trap_migration_todo(effect: dict[str, Any]) -> tuple[str, str]:
+    """Classify only set_trap shapes that lack a proven direct translation."""
+    comment_keys = {
+        name for name in effect
+        if isinstance(name, str) and name.startswith("//")
+    }
+    if set(effect) - comment_keys - {"set_trap", "location", "radius", "square"}:
+        return (
+            "manual_rewrite",
+            "set_trap has options outside the typed native area operation",
+        )
+    if not lua_quotable_native_variable_string(effect.get("set_trap")):
+        return (
+            "manual_rewrite",
+            "set_trap needs a literal Lua-quotable trap id or an explicit typed Lua lookup",
+        )
+    if _coordinate_variable_descriptor(effect.get("location")) is None:
+        return (
+            "manual_rewrite",
+            "set_trap location must use a native var_info variable; literal abs_ms "
+            "is not valid native EOC location syntax",
+        )
+    square = effect.get("square", False)
+    if not isinstance(square, bool):
+        return (
+            "manual_rewrite",
+            "set_trap square must be a literal boolean",
+        )
+    radius_literal = finite_number_literal(effect.get("radius", 1))
+    if radius_literal is None:
+        return (
+            "manual_rewrite",
+            "set_trap radius needs a finite numeric literal whose truncation fits a native int",
+        )
+    radius = math.trunc(float(radius_literal))
+    if radius < NATIVE_INT_MIN or radius > NATIVE_INT_MAX:
+        return (
+            "manual_rewrite",
+            "set_trap radius truncates outside the native int range",
+        )
+    if not square and abs(radius) > 46340:
+        return (
+            "manual_rewrite",
+            "set_trap circle radius exceeds the defined int-square range of native trig_dist",
+        )
+    return (
+        "manual_rewrite",
+        "set_trap location needs an immediately preceding proven u_location_variable "
+        "and a live loaded avatar map position",
+    )
+
+
+def render_static_set_trap(
+    effect: dict[str, Any],
+    previous_effect: Any,
+    live_loaded_avatar_actor_proven: bool,
+) -> list[str] | None:
+    """Lower a literal trap write only after its direct avatar position writer."""
+    comment_keys = {
+        name for name in effect
+        if isinstance(name, str) and name.startswith("//")
+    }
+    if set(effect) - comment_keys - {"set_trap", "location", "radius", "square"}:
+        return None
+    trap_id = effect.get("set_trap")
+    if not lua_quotable_native_variable_string(trap_id):
+        return None
+    location = effect.get("location")
+    location_descriptor = _coordinate_variable_descriptor(location)
+    if location_descriptor is None:
+        return None
+    square = effect.get("square", False)
+    if not isinstance(square, bool):
+        return None
+    radius_literal = finite_number_literal(effect.get("radius", 1))
+    if radius_literal is None:
+        return None
+    radius = math.trunc(float(radius_literal))
+    if radius < NATIVE_INT_MIN or radius > NATIVE_INT_MAX:
+        return None
+    if not square and abs(radius) > 46340:
+        # Circle predicates square native int coordinate deltas.  Square
+        # endpoint safety depends on the runtime position and is checked by
+        # set_trap_area itself.
+        return None
+    if (
+        not live_loaded_avatar_actor_proven or
+        not isinstance(previous_effect, dict) or
+        set(previous_effect) != {"u_location_variable"} or
+        _coordinate_variable_descriptor(
+            previous_effect["u_location_variable"]
+        ) != location_descriptor or
+        render_static_location_variable(
+            previous_effect, "u_location_variable", True, False
+        ) is None
+    ):
+        return None
+    position = _coordinate_source_expression(location, True, False)
+    if position is None:
+        return None
+    return [
+        "    services.gameplay.environment.set_trap_area(",
+        f"        {position}, {lua_quote(trap_id)}, {radius}, {str(square).lower()})",
+    ]
+
+
 def _map_mutation_todo() -> str:
     """Return the stable fail-closed diagnostic for unresolved map frames."""
     return (
@@ -23874,36 +26308,52 @@ def render_static_inventory_consume(
     npc_event_character_actor_proven: bool,
     npc_actor_expression: str | None = None,
 ) -> list[str] | None:
-    # The legacy operation searches the holder for an arbitrary matching item
-    # type.  6D1 only lowers an already proven Item handle; keep this shape a
-    # visible TODO instead of selecting a same-id instance.
+    allowed = {key, "popup", "count", "charges"}
+    if key not in {"u_consume_item", "npc_consume_item"} or set(effect) - allowed:
+        return None
+    item_type = effect.get(key)
     if (
-        key == "u_consume_item" and avatar_actor_proven and
-        npc_actor_expression is not None and effect.get("popup") is True and
-        set(effect) <= {key, "popup", "count", "charges"} and
-        bounded_platform_id(effect.get(key))
+        not bounded_platform_id(item_type) or
+        any(ord(character) < 0x20 or ord(character) == 0x7F for character in item_type)
     ):
-        count = effect.get("count", 1)
-        charges = effect.get("charges", 0)
-        if (
-            not isinstance(count, int) or isinstance(count, bool) or
-            not isinstance(charges, int) or isinstance(charges, bool) or
-            count < 0 or charges < 0 or
-            count > NATIVE_INT_MAX or charges > NATIVE_INT_MAX
-        ):
+        return None
+
+    popup = effect.get("popup", False)
+    if not isinstance(popup, bool):
+        return None
+    if key == "u_consume_item":
+        # Native u_consume_item with popup=true presents the give message
+        # before attempting consumption.  The service opens only the later
+        # native missing-item popup, so it cannot preserve that ordered notice.
+        if not avatar_actor_proven or popup:
             return None
-        return [
-            f"    local hand_in_recipient = {npc_actor_expression}",
-            "    if hand_in_recipient ~= nil then",
-            "        local hand_in = service_value(services.inventory.hand_in(",
-            "            actor, hand_in_recipient, services.types.id(\"item\", " +
-            f"{lua_quote(effect[key])}), {count}, {charges}))",
-            "        if hand_in.notice ~= nil and hand_in.notice ~= \"\" then",
-            "            ccb.presentation.notice(hand_in.notice)",
-            "        end",
-            "    end",
-        ]
-    return None
+        target = "actor"
+    else:
+        # actor(true) is the event's primary Character only when the event
+        # bridge proves that exact NPC actor.  A dialogue beta or a generic
+        # callback actor is not interchangeable with it.
+        if not npc_event_character_actor_proven or npc_actor_expression != "actor":
+            return None
+        target = "actor"
+
+    raw_charges = effect.get("charges", 0)
+    if not isinstance(raw_charges, int) or isinstance(raw_charges, bool):
+        return None
+    default_count = 0 if "charges" in effect else 1
+    count = effect.get("count", default_count)
+    charges = raw_charges
+    if (
+        not isinstance(count, int) or isinstance(count, bool) or
+        not NATIVE_INT_MIN <= count <= NATIVE_INT_MAX or
+        not NATIVE_INT_MIN <= charges <= NATIVE_INT_MAX
+    ):
+        return None
+
+    return [
+        "    service_value(services.inventory.consume_by_type(",
+        f"        {target}, services.types.id(\"item\", {lua_quote(item_type)}),",
+        f"        {count}, {charges}))",
+    ]
 
 
 def render_static_pickup_items(
@@ -23912,47 +26362,110 @@ def render_static_pickup_items(
     avatar_actor_proven: bool,
     npc_event_character_actor_proven: bool,
 ) -> list[str] | None:
-    """Lower one fully explicit map-square pickup through map/item services.
+    """Keep legacy pickup out of migration until its runtime target is typed.
 
-    The only accepted coordinate shape is ``{"abs_ms": [x, y, z]}`` (or its
-    keyed equivalent).  A token is created once and the same holder descriptor
-    is used for both the page and every transfer.  The page is deliberately
-    bounded and must be complete before mutation starts: a continuation is
-    invalidated by the first successful transfer, so retrying a partial page
-    would not be an atomic or deterministic migration.
+    Native ``u_`` and ``npc_`` select the exact alpha and beta Character
+    talkers. The ``var_info`` target is a runtime variable lookup and does not
+    encode the absolute map-square coordinate required by
+    ``services.activities.pickup_at``. Native pickup limits default to zero
+    extra moves and unlimited volume/mass; when ``max_mass`` is present, the
+    native parser currently passes ``has_float("max_mass")`` as the gram
+    value, so forwarding its numeric value would change behavior.
     """
-    if (
-        key not in effect or set(effect) != {key} or
-        (key == "u_pickup_items" and not avatar_actor_proven) or
-        (key == "npc_pickup_items" and not npc_event_character_actor_proven)
-    ):
-        return None
-    holder_lines = render_explicit_map_tile_holder(effect[key])
-    if holder_lines is None:
-        return None
-    return holder_lines + [
-        "    local destination_holder = { kind = \"character\", character = actor, slot = \"inventory\" }",
-        "    local map_page = service_value(services.items.page(map_holder, {",
-        "        page_size = 256, max_depth = 0, recursive = false,",
-        "    }))",
-        "    if map_page.complete then",
-        "        for _, map_entry in ipairs(map_page.items) do",
-        "            service_value(services.items.transfer(",
-        "                map_entry.handle, map_holder, destination_holder))",
-        "        end",
-        "    end",
-    ]
+    del effect, key, avatar_actor_proven, npc_event_character_actor_proven
+    return None
 
 
 def render_static_inventory_consume_sum(
     effect: dict[str, Any],
     key: str,
-    avatar_actor_proven: bool,
-    npc_event_character_actor_proven: bool,
+    event_exclusive_live_avatar_alpha_proven: bool,
+    event_exclusive_npc_alpha_fallback_proven: bool,
 ) -> list[str] | None:
-    # Weighted consumption is also a same-id inventory search.  It needs an
-    # explicit item-handle migration before it can enter Platform code.
-    return None
+    """Lower bounded inventory mutations only for event-exclusive actor sources.
+
+    This preserves item mutations, but does not reproduce the native debug
+    diagnostic emitted when mutable dialogue beta falls back to alpha.
+    """
+    if (
+        key not in {"u_consume_item_sum", "npc_consume_item_sum"} or
+        set(effect) != {key}
+    ):
+        return None
+    requested = effect.get(key)
+    if not isinstance(requested, list) or len(requested) > 128:
+        return None
+
+    entries: list[tuple[str, int | float]] = []
+    for row in requested:
+        if (
+            not isinstance(row, dict) or "item" not in row or
+            set(row) - {"item", "amount"}
+        ):
+            return None
+        item_id = row.get("item")
+        amount = finite_number_literal(row.get("amount", 1))
+        if (
+            not bounded_platform_id(item_id) or amount is None or
+            not 0 < amount <= 1000000000
+        ):
+            return None
+        entries.append((item_id, amount))
+
+    if key == "u_consume_item_sum":
+        if not event_exclusive_live_avatar_alpha_proven:
+            return None
+        participant = "alpha"
+        alpha_expression = "actor"
+        beta_expression = "nil"
+        expected_subtype = "avatar"
+    else:
+        if not event_exclusive_npc_alpha_fallback_proven:
+            return None
+        # npc_becomes_hostile constructs a one-Character dialogue with the
+        # live event NPC as alpha. Native mutable actor(true) falls back to
+        # alpha when beta is absent on this exact producer. Its debug
+        # diagnostic is not mirrored by the Platform mutation service. Direct
+        # topic callbacks remain TODO until the generated runtime adapter
+        # exposes their actual alpha/beta talkers.
+        alpha_expression = "actor"
+        beta_expression = "nil"
+        participant = "beta"
+        expected_subtype = "npc"
+
+    lines = [
+        "    do",
+        f"        local consume_alpha = {alpha_expression}",
+        f"        local consume_beta = {beta_expression}",
+        "        local function is_character(value)",
+        "            return value ~= nil and value.kind == \"creature\" and",
+        "                (value.subtype == \"avatar\" or value.subtype == \"character\" or",
+        "                 value.subtype == \"npc\")",
+        "        end",
+        f"        local target = "
+        f"{('consume_alpha' if participant == 'alpha' else 'consume_beta')} "
+        f"or {('consume_beta' if participant == 'alpha' else 'consume_alpha')}",
+        f"        if is_character(target) and target.subtype == {lua_quote(expected_subtype)} then",
+        "            service_value(services.inventory.consume_dialogue_sum(",
+        f"                consume_alpha, consume_beta, {lua_quote(participant)}, {{",
+    ]
+    if participant == "beta":
+        lines.insert(
+            1,
+            "        -- Native missing-beta fallback debug logging is not mirrored.",
+        )
+    lines.extend(
+        "                    { item = services.types.id(\"item\", "
+        f"{lua_quote(item_id)}), amount = {lua_number(amount)} }}" +
+        ("," if index + 1 < len(entries) else "")
+        for index, (item_id, amount) in enumerate(entries)
+    )
+    lines.extend([
+        "                }))",
+        "        end",
+        "    end",
+    ])
+    return lines
 
 
 def render_static_set_field(
@@ -23960,12 +26473,62 @@ def render_static_set_field(
     key: str,
     avatar_actor_proven: bool,
     npc_event_character_actor_proven: bool,
+    event_exclusive_live_avatar_center_proven: bool = False,
 ) -> list[str] | None:
-    if key not in effect:
+    """Render only bounded static u_set_field with a source-proven avatar center.
+
+    Native f_field evaluates radius, intensity, and age at call time; intensity
+    and age are evaluated per eligible destination. Dynamic expressions would
+    therefore change both evaluation count and RNG behavior when moved into a
+    single Platform call. NPC beta and var_info target_var shapes also remain
+    TODO until their invocation/frame can be proved.
+    """
+    del npc_event_character_actor_proven
+    if (
+        key != "u_set_field" or key not in effect or
+        not avatar_actor_proven or not event_exclusive_live_avatar_center_proven
+    ):
         return None
-    return _render_static_map_state_edit(
-        effect, avatar_actor_proven, npc_event_character_actor_proven
-    )
+    comment_keys = {
+        name for name in effect
+        if isinstance(name, str) and name.startswith("//")
+    }
+    if set(effect) - comment_keys - {
+        key, "radius", "intensity", "age", "square", "outdoor_only",
+        "indoor_only", "hit_player",
+    }:
+        return None
+    field_id = effect.get(key)
+    if not bounded_platform_id(field_id):
+        return None
+    radius = native_int_literal(effect.get("radius", 1))
+    if radius is None or not 0 <= radius <= 32767:
+        return None
+    intensity = native_int_literal(effect.get("intensity", 1))
+    if intensity is None:
+        return None
+    age = parse_native_duration_turns(effect.get("age", 1))
+    if age is None or not 0 <= age <= MAX_EFFECT_DURATION_TURNS:
+        return None
+    options = {
+        name: effect.get(name, default)
+        for name, default in (
+            ("square", False), ("outdoor_only", False),
+            ("indoor_only", False), ("hit_player", True),
+        )
+    }
+    if any(not isinstance(value, bool) for value in options.values()):
+        return None
+    return [
+        "    services.gameplay.environment.add_field_area(",
+        "        service_value(services.characters.snapshot(actor)).creature.position,",
+        f"        {lua_quote(field_id)}, {{ radius = {radius}, intensity = {intensity},",
+        f"            age = services.time.duration({age}, \"turn\"),",
+        "            square = " + lua_boolean(options["square"]) + ", " +
+        "outdoor_only = " + lua_boolean(options["outdoor_only"]) + ",",
+        "            indoor_only = " + lua_boolean(options["indoor_only"]) + ", " +
+        "hit_player = " + lua_boolean(options["hit_player"]) + " })",
+    ]
 
 
 def _render_static_map_state_edit(
@@ -23973,124 +26536,31 @@ def _render_static_map_state_edit(
     avatar_actor_proven: bool,
     npc_event_character_actor_proven: bool,
 ) -> list[str] | None:
-    """Render one atomic map.edit for a statically typed abs_ms target.
+    """Keep EOC map-state writes as TODO until their native var_info is proven.
 
-    This helper accepts a deliberately small legacy shape.  Multiple map-state
-    members in one descriptor are collected into one changes table, so a
-    terrain/furniture/trap/field update for the same tile has one revision
-    check and one native atomic edit.
+    Native set_terrain.location and set_field.target_var are parsed as
+    ``var_info`` (u/npc/global/var/context_val), not literal coordinates.
+    An ``abs_ms`` object is therefore not legal input to these EOC fields, and
+    there is no source-proven preceding write here that yields a typed Lua
+    coordinate. Direct Lua callers can still use the typed map services.
     """
     del avatar_actor_proven, npc_event_character_actor_proven
-    if not isinstance(effect, dict):
-        return None
-    mutation_keys = (
-        "set_terrain", "set_furniture", "set_trap",
-        "u_set_field", "npc_set_field",
-    )
-    present = [key for key in mutation_keys if key in effect]
-    if not present:
-        return None
-    comment_keys = {
-        name for name in effect
-        if isinstance(name, str) and name.startswith("//")
-    }
-    allowed = comment_keys | {
-        "set_terrain", "set_furniture", "set_trap", "u_set_field",
-        "npc_set_field", "location", "loc", "target_var", "radius",
-        "avoid_creatures", "square", "intensity", "age", "outdoor_only",
-        "indoor_only", "hit_player",
-    }
-    if set(effect) - allowed:
-        return None
-
-    coordinate_values: list[Any] = []
-    if any(key in present for key in ("set_terrain", "set_furniture")):
-        if "location" not in effect:
-            return None
-        coordinate_values.append(effect["location"])
-    if "set_trap" in present:
-        location_key = "loc" if "loc" in effect else "location"
-        if location_key not in effect:
-            return None
-        coordinate_values.append(effect[location_key])
-    if any(key in present for key in ("u_set_field", "npc_set_field")):
-        if "target_var" not in effect:
-            return None
-        coordinate_values.append(effect["target_var"])
-    coordinates = [_explicit_abs_ms_expression(value) for value in coordinate_values]
-    if not coordinates or any(value is None for value in coordinates):
-        return None
-    if any(value != coordinates[0] for value in coordinates[1:]):
-        return None
-
-    radius_default = 1 if any(
-        key in present for key in ("set_terrain", "set_furniture",
-                                   "u_set_field", "npc_set_field")
-    ) else 0
-    radius = _literal_nonnegative_integer(effect.get("radius", radius_default), 0)
-    if radius != 0:
-        return None
-    if any(key in present for key in ("set_terrain", "set_furniture")):
-        if effect.get("avoid_creatures", False) is not False:
-            return None
-    if effect.get("square", False) is not False:
-        return None
-    for name in ("avoid_creatures", "outdoor_only", "indoor_only"):
-        if name in effect and not isinstance(effect[name], bool):
-            return None
-    if effect.get("outdoor_only", False) or effect.get("indoor_only", False):
-        return None
-
-    changes: list[str] = []
-    if "set_terrain" in present:
-        if not bounded_platform_id(effect["set_terrain"]):
-            return None
-        changes.append(
-            "terrain = services.types.id(\"terrain\", " +
-            lua_quote(effect["set_terrain"]) + "),"
-        )
-    if "set_furniture" in present:
-        if not bounded_platform_id(effect["set_furniture"]):
-            return None
-        changes.append(
-            "furniture = services.types.id(\"furniture\", " +
-            lua_quote(effect["set_furniture"]) + "),"
-        )
-    if "set_trap" in present:
-        if not bounded_platform_id(effect["set_trap"]):
-            return None
-        changes.append(
-            "trap = services.types.id(\"trap\", " +
-            lua_quote(effect["set_trap"]) + "),"
-        )
-    field_keys = [key for key in ("u_set_field", "npc_set_field") if key in effect]
-    if len(field_keys) > 1:
-        return None
-    if field_keys:
-        field_key = field_keys[0]
-        if not bounded_platform_id(effect[field_key]):
-            return None
-        hit_player = effect.get("hit_player", True)
-        if hit_player is not False:
-            return None
-        intensity = _literal_nonnegative_integer(effect.get("intensity", 1), 100)
-        if intensity is None or intensity < 1:
-            return None
-        age = _duration_expression(effect.get("age", "1 turn"))
-        if age is None:
-            return None
-        changes.append(
-            "field = { id = services.types.id(\"field\", " +
-            lua_quote(effect[field_key]) + f"), intensity = {intensity}, " +
-            f"age = {age}, hit_player = false }},"
-        )
-    return _render_explicit_map_edit(coordinate_values[0], changes)
+    del effect
+    return None
 
 
 def render_static_set_terrain_or_furniture(
     effect: dict[str, Any], key: str,
 ) -> list[str] | None:
     if key not in effect:
+        return None
+    # The native legacy effects parse location as var_info.  A tagged abs_ms
+    # literal belongs to the typed Platform API and is not a valid var_info
+    # value, so it cannot prove a native EOC target for an atomic map edit.
+    if any(
+        _explicit_abs_ms_expression(effect.get(name)) is not None
+        for name in ("location", "target_var")
+    ):
         return None
     return _render_static_map_state_edit(effect, False, False)
 
@@ -24100,245 +26570,297 @@ def render_static_mapgen_update(
     avatar_actor_proven: bool = False,
     npc_actor_proven: bool = False,
 ) -> list[str] | None:
-    allowed_keys = {
-        "mapgen_update", "target_var", "cancel_on_collision",
-        "mirror_horizontal", "mirror_vertical", "rotation",
-        "offset_x", "offset_y", "offset_z",
-    }
-    if (
-        not isinstance(effect, dict) or
-        "mapgen_update" not in effect or
-        {"time_in_future", "delay", "mission", "key"}.intersection(effect) or
-        set(effect) - allowed_keys
-    ):
-        return None
-    if "target_var" not in effect:
-        return None
-    raw_updates = effect["mapgen_update"]
-    update_values = raw_updates if isinstance(raw_updates, list) else [raw_updates]
-    if not update_values or len(update_values) > 64:
-        return None
-    for update_id in update_values:
-        if not bounded_platform_id(update_id):
-            return None
-    target = _explicit_abs_omt_expression(effect["target_var"])
-    if target is None:
-        return None
-    cancel_on_collision = effect.get("cancel_on_collision", True)
-    if cancel_on_collision is not True:
-        return None
-    options: list[str] = ["cancel_on_collision = true"]
-    for option in ("mirror_horizontal", "mirror_vertical"):
-        value = effect.get(option, False)
-        if not isinstance(value, bool) or value:
-            return None
-    rotation = effect.get("rotation", 0)
-    if (
-        not isinstance(rotation, int) or isinstance(rotation, bool) or
-        rotation != 0
-    ):
-        return None
-    offsets: list[int] = []
-    for name in ("offset_x", "offset_y", "offset_z"):
-        offset = _literal_integer_or_none(
-            effect.get(name, 0), -1000, 1000
-        )
-        if offset is None:
-            return None
-        offsets.append(offset)
-    lines = [
-        f"    local abs_omt = {target}",
-    ]
-    if any(offsets):
-        lines.append(
-            "    abs_omt = abs_omt:add(services.coords.tripoint_rel_omt("
-            f"{offsets[0]}, {offsets[1]}, {offsets[2]}))"
-        )
-    lines.extend([
-        "    local target_token = service_value(services.overmap.tile_token(",
-        "        abs_omt))",
-    ])
-    for index, update_id in enumerate(update_values, start=1):
-        update_token = "update_token" if index == 1 else f"update_token_{index}"
-        lines.extend([
-            f"    local {update_token} = service_value(services.mapgen.update_token(",
-            f"        services.types.id(\"update_mapgen\", {lua_quote(update_id)})))",
-            "    service_value(services.mapgen.apply(",
-            f"        target_token, {update_token}, {{ {', '.join(options)} }}))",
-        ])
-    return lines
+    # Native target_var is a var_info lookup yielding an absolute map-square
+    # tripoint, while the other branch performs a mission target search.  The
+    # typed Platform run_update/schedule_update cover explicit OMT targets,
+    # but no true corpus EOC currently proves a complete target and
+    # mission-independent update path.  Source-specific delayed key/time
+    # semantics remain unrepresented by the migrator.
+    del effect, avatar_actor_proven, npc_actor_proven
+    return None
 
 
 def render_static_reveal_map(
     effect: dict[str, Any],
-    avatar_actor_proven: bool = False,
-    npc_actor_proven: bool = False,
+    previous_effect: Any,
+    live_loaded_avatar_actor_proven: bool,
 ) -> list[str] | None:
-    if "reveal_map" not in effect or set(effect) - {"reveal_map", "radius"}:
+    """Lower a reveal only after a supported effect wrote its typed position."""
+    comment_keys = {
+        name for name in effect
+        if isinstance(name, str) and name.startswith("//")
+    }
+    if set(effect) - comment_keys - {"reveal_map", "radius"}:
         return None
-    target = _context_coordinate_expression(effect["reveal_map"])
-    if target is None:
-        target = _coordinate_source_expression(
-            effect["reveal_map"], avatar_actor_proven, npc_actor_proven
-        )
-    raw_radius = effect.get("radius", 0)
-    radius = _literal_nonnegative_integer(raw_radius, 30)
-    if radius is not None:
-        radius_expression = str(radius)
-    else:
-        dynamic_radius = render_eoc_numeric_expression(
-            raw_radius, "0", "actor" if (avatar_actor_proven or npc_actor_proven) else "actor"
-        )
-        if dynamic_radius is None:
+
+    target = effect.get("reveal_map")
+    target_descriptor = _coordinate_variable_descriptor(target)
+    if (
+        target_descriptor is None or target_descriptor[0] not in {"context", "u"} or
+        not live_loaded_avatar_actor_proven
+    ):
+        return None
+
+    # f_location_variable loads the map at its resolved target even with no
+    # target_params. Only the direct event-exclusive avatar_moves alpha and
+    # its unadjusted u_location_variable default are guaranteed to point at
+    # the already-loaded Avatar map. NPC, item-use, offset, and searched forms
+    # can load other map data and stay fail-closed here.
+    if (
+        not isinstance(previous_effect, dict) or
+        set(previous_effect) != {"u_location_variable"} or
+        _coordinate_variable_descriptor(
+            previous_effect["u_location_variable"]
+        ) != target_descriptor or
+        render_static_location_variable(
+            previous_effect, "u_location_variable", True, False
+        ) is None
+    ):
+        return None
+
+    target_abs_ms = _coordinate_source_expression(
+        target, True, False,
+    )
+    if target_abs_ms is None:
+        return None
+
+    # f_reveal_map evaluates a double and passes it to an int parameter, which
+    # truncates toward zero. Keep only finite, nonnegative literals whose
+    # converted value fits the typed service's native 0..36 bound.
+    raw_radius = finite_number_literal(effect.get("radius", 0))
+    if raw_radius is None or raw_radius < 0:
+        return None
+    try:
+        native_radius = math.trunc(float(raw_radius))
+    except (OverflowError, ValueError):
+        return None
+    if native_radius < 0 or native_radius > 36:
+        return None
+
+    return [
+        "    services.overmap.reveal_native("
+        f"({target_abs_ms}):project_to(\"omt\"), {native_radius})"
+    ]
+
+
+def render_native_coordinate_variable_expression(
+    value: Any,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
+) -> str | None:
+    """Read Native var_info as abs-ms, not an arbitrary Lua value snapshot."""
+    scopes = ("u_val", "npc_val", "global_val", "var_val", "context_val")
+    if not isinstance(value, dict) or set(value) - set(scopes) - {"default"}:
+        return None
+    scope = next((candidate for candidate in scopes if candidate in value), None)
+    if scope is None or not lua_quotable_native_variable_string(value[scope]):
+        return None
+    # var_info acknowledges but does not evaluate default. read_var_value's
+    # missing storage is a monostate whose tripoint() is the zero coordinate.
+    alpha = _proven_native_variable_read_target(effect_actor_targets, "u")
+    beta = _proven_native_variable_read_target(effect_actor_targets, "npc")
+
+    def read(storage: str, name: str) -> str | None:
+        if storage == "global_val":
+            call = f"services.variables.get_global_tripoint({name})"
+        elif storage == "context_val":
+            call = f"services.variables.get_context_tripoint(context and context.data, {name})"
+        else:
+            owner = alpha if storage == "u_val" else beta
+            if owner is None:
+                return None
+            call = f"services.variables.get_tripoint({owner}, {name})"
+        return f"service_value({call})"
+
+    if scope == "var_val":
+        pointer = _render_native_variable_string_snapshot(
+            "context_val", lua_quote(value[scope]), alpha, beta)
+        targets = [read(storage, name) for storage, name in (
+            ("u_val", "string.sub(pointer.value, 3)"),
+            ("npc_val", "string.sub(pointer.value, 3)"),
+            ("context_val", "string.sub(pointer.value, 2)"),
+            ("global_val", "pointer.value"),
+        )]
+        if any(target is None for target in targets):
             return None
-        radius_expression = (
-            "math.max(0, math.min(30, "
-            f"math.floor(({dynamic_radius}) + 0.5)))"
+        snapshot = (
+            '(function(pointer) if pointer.exists == false then return pointer end; '
+            'if string.sub(pointer.value, 1, 2) == "u_" then return ' + targets[0] +
+            ' elseif string.sub(pointer.value, 1, 2) == "n_" then return ' + targets[1] +
+            ' elseif string.sub(pointer.value, 1, 1) == "_" then return ' + targets[2] +
+            ' else return ' + targets[3] + ' end end)(' + pointer + ')'
         )
-    if target is None:
+    else:
+        snapshot = read(scope, lua_quote(value[scope]))
+        if snapshot is None:
+            return None
+    return ('(function(result) if result.exists == false then return '
+            'services.coords.tripoint_abs_ms(0, 0, 0) end; return result.value end)(' +
+            snapshot + ')')
+
+
+def render_native_coordinate_variable_write_lines(
+    value: Any, expression: str,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
+) -> list[str] | None:
+    """Write a coordinate without snapshotting unrelated previous values."""
+    scopes = ("u_val", "npc_val", "global_val", "var_val", "context_val")
+    if not isinstance(value, dict) or set(value) - set(scopes) - {"default"}:
         return None
-    return [f"    services.overmap.reveal({target}, {radius_expression})"]
+    scope = next((candidate for candidate in scopes if candidate in value), None)
+    if scope is None or not lua_quotable_native_variable_string(value[scope]):
+        return None
+    key = lua_quote(value[scope])
+    if scope == "context_val":
+        return [f"    context.data[{key}] = {expression}"]
+    if scope == "global_val":
+        return [f"    service_value(services.variables.set_global({key}, {expression}, "
+                "{ include_before = false }))"]
+    if scope in {"u_val", "npc_val"}:
+        owner = _proven_native_variable_write_target(
+            effect_actor_targets, "u" if scope == "u_val" else "npc")
+        if owner is None:
+            return None
+        return [f"    service_value(services.variables.set({owner}, {key}, {expression}, "
+                "{ include_before = false }))"]
+    alpha = _proven_native_variable_write_target(effect_actor_targets, "u")
+    beta = _proven_native_variable_write_target(effect_actor_targets, "npc")
+    if alpha is None or beta is None:
+        return None
+    return [
+        "    do",
+        "        local pointer = service_value(services.variables.get_context_string(",
+        f"            context and context.data, {key}))",
+        '        local target = pointer.exists == false and "" or pointer.value',
+        '        if string.sub(target, 1, 2) == "u_" then',
+        f"            service_value(services.variables.set({alpha}, string.sub(target, 3), {expression}, "
+        "{ include_before = false }))",
+        '        elseif string.sub(target, 1, 2) == "n_" then',
+        f"            service_value(services.variables.set({beta}, string.sub(target, 3), {expression}, "
+        "{ include_before = false }))",
+        '        elseif string.sub(target, 1, 1) == "_" then',
+        f"            context.data[string.sub(target, 2)] = {expression}",
+        "        else",
+        f"            service_value(services.variables.set_global(target, {expression}, "
+        "{ include_before = false }))",
+        "        end",
+        "    end",
+    ]
 
 
-def render_static_location_revert_or_copy(
+def _render_native_location_event_key(
+    value: Any, effect_actor_targets: dict[str, tuple[str, str] | None] | None,
+) -> str | None:
+    if lua_quotable_native_variable_string(value):
+        return lua_quote(value)
+    if not isinstance(value, dict):
+        return None
+    expression = _render_assignment_string_value(value, False, effect_actor_targets)
+    # Preserve repeated Native reads after map generation, not an eager key.
+    return f"function() return {expression} end" if expression is not None else None
+
+
+def render_static_location_copy(
+    effect: dict[str, Any],
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
+) -> list[str] | None:
+    if set(effect) - {"copy_location", "new_loc", "time_in_future", "key"}:
+        return None
+    source = render_native_coordinate_variable_expression(effect.get("copy_location"), effect_actor_targets)
+    destination = render_native_coordinate_variable_expression(effect.get("new_loc"), effect_actor_targets)
+    delay = render_native_duration_expression(effect.get("time_in_future"), effect_actor_targets)
+    key = _render_native_location_event_key(effect.get("key", ""), effect_actor_targets)
+    if source is None or destination is None or delay is None or key is None:
+        return None
+    return [
+        "    do",
+        f"        local copy_source = {source}",
+        f"        local copy_destination = {destination}",
+        f"        local copy_delay = {delay}",
+        "        service_value(services.world.schedule_location_copy(",
+        '            copy_source:project_to("omt"), copy_destination:project_to("omt"),',
+        f"            copy_delay, {key}))",
+        "    end",
+    ]
+
+
+def render_static_location_revert(
     effect: dict[str, Any], key: str,
     avatar_actor_proven: bool = False,
     npc_actor_proven: bool = False,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> list[str] | None:
-    if key not in effect:
+    del avatar_actor_proven, npc_actor_proven
+    if key != "revert_location" or key not in effect:
         return None
     allowed = {key, "time_in_future", "key"}
-    if key == "copy_location":
-        allowed.add("new_loc")
     if set(effect) - allowed:
         return None
-    target = _coordinate_source_expression(
-        effect[key], avatar_actor_proven, npc_actor_proven
-    )
-    actor_expression = (
-        "actor" if (avatar_actor_proven or npc_actor_proven)
-        else "services.characters.avatar()"
-    )
-    raw_delay = effect.get("time_in_future")
-    if raw_delay == "infinite":
-        delay = (
-            "services.time.duration("
-            f"{MAX_WORLD_CHANGE_DELAY_TURNS}, \"turn\")"
-        )
-    else:
-        delay = _duration_expression(
-            raw_delay, minimum=1,
-            actor_expression=actor_expression,
-        )
-    event_key = effect.get("key", "")
-    if isinstance(event_key, str):
-        if not bounded_utf8_string(event_key, PLATFORM_ID_MAX_BYTES, allow_empty=True):
-            return None
-        event_key_expression = lua_quote(event_key)
-    else:
-        event_key_expression = render_eoc_string_expression(
-            event_key, actor_expression
-        )
+    target = render_native_coordinate_variable_expression(effect[key], effect_actor_targets)
+    delay = render_native_duration_expression(effect.get("time_in_future"), effect_actor_targets)
+    event_key_expression = _render_native_location_event_key(effect.get("key", ""), effect_actor_targets)
     if target is None or delay is None or event_key_expression is None:
         return None
-    if key == "revert_location":
-        return [
-            "    services.world.schedule_location_revert(",
-            f"        {target}, {delay}, {event_key_expression})",
-        ]
-    source = _coordinate_source_expression(
-        effect.get("new_loc"), avatar_actor_proven, npc_actor_proven
-    )
-    if source is None:
-        return None
+    target_omt = f"({target}):project_to(\"omt\")"
     return [
-        "    services.world.schedule_location_copy(",
-        f"        {source}, {target}, {delay}, {event_key_expression})",
+        "    services.world.schedule_location_revert(",
+        f"        {target_omt}, {delay}, {event_key_expression})",
     ]
 
 
 def render_static_place_override(
     effect: dict[str, Any], actor_expression: str | None = None,
 ) -> list[str] | None:
-    """Render a temporary world place-name override with variable support."""
-    if "place_override" not in effect or set(effect) - {
-        "place_override", "default", "length", "key",
-    }:
+    """Queue literal translated text with native JSON duration and raw key."""
+    del actor_expression
+    if set(effect) - {"place_override", "length", "key"} or "length" not in effect:
         return None
-    actor = actor_expression or "actor"
-    name = effect.get("place_override")
-    if isinstance(name, str):
-        name_expression = lua_quote(name)
-    else:
-        name_expression = render_eoc_string_expression(name, actor)
-        if name_expression is None:
-            return None
-    default = effect.get("default", "")
-    if not isinstance(default, str) or not bounded_utf8_string(default, 8192, allow_empty=True):
-        return None
-    if not isinstance(name, str):
-        name_expression = f"({name_expression} or {lua_quote(default)})"
-    raw_length = effect.get("length", 0)
-    length = (
-        f"services.time.duration({MAX_WORLD_CHANGE_DELAY_TURNS}, \"turn\")"
-        if raw_length == "infinite" else
-        _duration_expression(raw_length, actor_expression=actor)
-    )
-    if length is None:
-        return None
+    name = _render_assignment_translation_literal(effect.get("place_override"))
+    duration = parse_native_duration_turns(effect["length"])
     key = effect.get("key", "")
-    if not bounded_utf8_string(key, PLATFORM_ID_MAX_BYTES, allow_empty=True):
+    if name is None or duration is None or not lua_quotable_native_variable_string(key):
         return None
     return [
-        "    services.world.override_place_name(",
-        f"        {name_expression}, {length}, {lua_quote(key)})",
+        "    service_value(services.world.override_place_name(",
+        f"        {name}, services.time.duration({duration}, \"turn\"), {lua_quote(key)}))",
     ]
 
 
 def render_static_transform_radius(
     effect: dict[str, Any],
     key: str,
-    avatar_actor_proven: bool,
-    npc_event_character_actor_proven: bool,
+    event_exclusive_live_avatar_actor_proven: bool,
 ) -> list[str] | None:
+    """Lower only actor-centered U transforms with a live exclusive alpha."""
+    # Only the event-exclusive live game_start alpha has a supported U-side
+    # actor proof. The current NPC event has no beta; native actor(true) falls
+    # back to alpha after logging a diagnostic, which Platform does not mirror.
+    if key != "u_transform_radius" or not event_exclusive_live_avatar_actor_proven:
+        return None
     if key not in effect or set(effect) - {
-        key, "ter_furn_transform", "target_var", "time_in_future", "key",
+        key, "ter_furn_transform", "time_in_future", "key",
     }:
         return None
-    actor = _eoc_actor_expression(
-        key, avatar_actor_proven, npc_event_character_actor_proven
-    )
+    actor = "actor"
     transform = effect.get("ter_furn_transform")
     radius = _literal_nonnegative_integer(effect[key], 60)
     radius_expression = str(radius) if radius is not None else None
-    if radius_expression is None:
-        dynamic_radius = render_eoc_numeric_expression(
-            effect[key], "0", actor or "actor"
-        )
-        if dynamic_radius is not None:
-            radius_expression = (
-                "math.max(0, math.min(60, math.floor((" +
-                dynamic_radius + ") + 0.5)))"
-            )
-    delay = _duration_expression(
-        effect.get("time_in_future", 0), actor_expression=actor or "actor"
+    raw_delay = effect.get("time_in_future", 0)
+    parsed_delay = parse_turns(raw_delay)
+    delay = (
+        _duration_expression(raw_delay, actor_expression=actor or "actor")
+        if parsed_delay is not None and
+        0 <= parsed_delay <= MAX_EFFECT_DURATION_TURNS else None
     )
     event_key = effect.get("key", "")
     if not bounded_platform_id(transform) or radius_expression is None or delay is None:
         return None
     if not bounded_utf8_string(event_key, PLATFORM_ID_MAX_BYTES, allow_empty=True):
         return None
-    if "target_var" in effect:
-        target = _coordinate_source_expression(
-            effect["target_var"], avatar_actor_proven,
-            npc_event_character_actor_proven,
-        )
-    elif actor is not None:
-        target = "service_value(services.characters.snapshot(" + actor + ")).creature.position"
-    else:
-        target = None
-    if target is None:
-        return None
+    # With target_var omitted, snapshot position is already a typed absolute
+    # map-square coordinate and the Platform implementation calls the same
+    # transform_radius/timed-event paths as the native handler. Static ID text
+    # is shape-checked here; registration remains a runtime content precondition.
+    target = "service_value(services.characters.snapshot(actor)).creature.position"
     return [
         "    services.world.transform_radius(",
         f"        {target}, {radius_expression}, services.types.id(\"terrain_furniture_transform\", {lua_quote(transform)}),",
@@ -24350,44 +26872,31 @@ def render_static_character_sound(
     effect: dict[str, Any],
     key: str,
     avatar_actor_proven: bool,
-    npc_event_character_actor_proven: bool,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> list[str] | None:
     if key not in effect or set(effect) - {
         key, "volume", "type", "ambient", "target_var", "snippet", "same_snippet",
     }:
         return None
-    actor = _eoc_actor_expression(
-        key, avatar_actor_proven, npc_event_character_actor_proven
-    )
-    # Global/activation EOCs receive the avatar as their native `u` talker
-    # even when no event-specific actor proof is available.  Keep NPC-shaped
-    # callbacks fail-closed, but preserve that native avatar fallback for
-    # `u_make_sound` (including false branches and delayed callbacks).
-    if actor is None and key == "u_make_sound" and not npc_event_character_actor_proven:
-        actor = "services.characters.avatar()"
     message = effect[key]
-    if actor is None:
+    # Native f_make_sound accepts translation_or_var text, translates it, and
+    # passes it straight to sounds::sound; it does not parse talker tags.
+    if not bounded_utf8_string(message, 4096, allow_empty=True):
         return None
     snippet = effect.get("snippet", False)
     same_snippet = effect.get("same_snippet", False)
-    if not isinstance(snippet, bool) or not isinstance(same_snippet, bool):
+    if (
+        not isinstance(snippet, bool) or snippet or
+        not isinstance(same_snippet, bool) or same_snippet or
+        "target_var" in effect
+    ):
         return None
-    message_expression = render_eoc_string_expression(message, actor)
-    if message_expression is None:
+    volume = _literal_nonnegative_integer(effect.get("volume", 0), 1000)
+    if volume is None:
         return None
-    volume = _literal_nonnegative_integer(effect.get("volume"), 1000)
-    volume_expression = str(volume) if volume is not None else None
-    if volume_expression is None:
-        dynamic_volume = render_eoc_numeric_expression(effect.get("volume"), "100", actor)
-        if dynamic_volume is None:
-            return None
-        volume_expression = (
-            "math.max(0, math.min(1000, math.floor((" +
-            dynamic_volume + ") + 0.5)))"
-        )
     category = effect.get("type", "background")
     categories = {
-        "background", "weather", "sensory", "music", "movement", "speech",
+        "background", "weather", "music", "movement", "speech",
         "electronic_speech", "activity", "destructive_activity", "alarm",
         "combat", "alert", "order",
     }
@@ -24396,33 +26905,31 @@ def render_static_character_sound(
     ambient = effect.get("ambient", False)
     if not isinstance(ambient, bool):
         return None
-    if "target_var" in effect:
-        position = _coordinate_source_expression(
-            effect["target_var"], avatar_actor_proven,
-            npc_event_character_actor_proven,
-        )
+
+    target_info = (
+        effect_actor_targets.get("npc" if key == "npc_make_sound" else "u")
+        if effect_actor_targets is not None else None
+    )
+    if target_info is not None:
+        target, target_kind = target_info
+        if target_kind != "character":
+            return None
+    elif (
+        effect_actor_targets is None and key == "u_make_sound" and
+        avatar_actor_proven
+    ):
+        # Some global activation callbacks intentionally reacquire the avatar
+        # instead of receiving a generation-safe alpha handle.
+        target = "services.characters.avatar()"
     else:
-        position = (
-            "service_value(services.characters.snapshot(" + actor + ")).creature.position"
-        )
-    if position is None:
         return None
-    if snippet:
-        category_expression = message_expression
-        if same_snippet:
-            return [
-                f"    local selected_sound_snippet = services.snippets.random_named({category_expression})",
-                "    if selected_sound_snippet ~= nil then",
-                "        services.sound.emit(",
-                f"            {position}, {volume_expression}, {lua_quote(category)}, "
-                "services.snippets.expand(selected_sound_snippet.text), "
-                f"{'true' if ambient else 'false'})",
-                "    end",
-            ]
-        message_expression = f"(services.snippets.random({category_expression}) or \"\")"
+    position = (
+        "service_value(services.characters.snapshot(" + target + ")).creature.position"
+    )
     return [
         "    services.sound.emit(",
-        f"        {position}, {volume_expression}, {lua_quote(category)}, {message_expression}, "
+        f"        {position}, {volume}, {lua_quote(category)}, "
+        f"services.translate({lua_quote(message)}), "
         f"{'true' if ambient else 'false'})",
     ]
 
@@ -24920,7 +27427,7 @@ def render_static_character_variable(
     ):
         return None
     if time_value:
-        value_expression = "tostring(services.turn())"
+        value_expression = "tostring(services.turn_native_int())"
         lines = [
             "    services.variables.set(",
             f"        {target_expression}, {lua_quote(effect[key])}, "
@@ -24933,6 +27440,11 @@ def render_static_character_variable(
                 "    end",
             ]
         return lines
+    if key == "npc_add_var":
+        # Native calls global rng(0, N) even for one value.  Platform's
+        # runtime-local RNG cannot preserve that side effect, so only the
+        # non-random time branch is migrated for beta variables.
+        return None
     # Native variable storage and its event preserve the complete Lua string.
     if values:
         if (
@@ -24983,31 +27495,54 @@ def render_static_character_variable(
     return None
 
 
+def _proven_character_variable_target(
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None,
+    selector: str,
+) -> str | None:
+    """Return only an exact Character target proven for a variable selector."""
+    if effect_actor_targets is None:
+        return None
+    role = "npc" if selector.startswith("npc_") else "u"
+    target_info = effect_actor_targets.get(role)
+    if (
+        not isinstance(target_info, tuple) or len(target_info) != 2 or
+        target_info[1] != "character" or
+        not isinstance(target_info[0], str) or not target_info[0]
+    ):
+        return None
+    return target_info[0]
+
+
 def render_static_character_wound(
     effect: dict[str, Any],
     key: str,
     target_expression: str | None,
     remove: bool,
+    known_body_part_ids: frozenset[str],
+    known_wound_ids: frozenset[str],
 ) -> list[str] | None:
-    """Render literal body-part wound changes through the typed wound service."""
-    if target_expression is None or not safe_platform_id(effect.get(key)):
+    """Render only catalog-proven native direct body-part wound operations."""
+    body_part = effect.get(key)
+    if (
+        target_expression is None or not isinstance(body_part, str) or
+        body_part not in known_body_part_ids
+    ):
         return None
     if set(effect) - {key, "wound_id"}:
         return None
-    body_part = effect[key]
     wound_ids = effect.get("wound_id")
     if remove:
         if (
             not isinstance(wound_ids, list) or not wound_ids or len(wound_ids) > 64 or
-            not all(safe_platform_id(value) for value in wound_ids)
+            not all(isinstance(value, str) and value in known_wound_ids for value in wound_ids)
         ):
             return None
-    elif not safe_platform_id(wound_ids):
+    elif not isinstance(wound_ids, str) or wound_ids not in known_wound_ids:
         return None
     values = wound_ids if remove else [wound_ids]
     lines: list[str] = []
     for wound_id in values:
-        service_name = "remove" if remove else "add"
+        service_name = "remove_all_direct" if remove else "add_unbounded"
         lines.extend(
             [
                 f"    services.wounds.{service_name}(",
@@ -25016,35 +27551,6 @@ def render_static_character_wound(
                 f"        services.types.id(\"wound\", {lua_quote(wound_id)}))",
             ]
         )
-    return lines
-
-
-def render_dynamic_character_wound(
-    effect: dict[str, Any], key: str, target_expression: str | None,
-    remove: bool,
-) -> list[str] | None:
-    """Render variable-backed wound/body-part ids."""
-    if target_expression is None or key not in effect:
-        return None
-    allowed = {key, "wound_id"}
-    if set(effect) - allowed:
-        return None
-    body_part = _dynamic_id_expression(effect[key], "body_part", target_expression)
-    if body_part is None:
-        return None
-    raw = effect.get("wound_id")
-    values = raw if remove and isinstance(raw, list) else [raw]
-    if not values or len(values) > 64:
-        return None
-    rendered = [_dynamic_id_expression(value, "wound", target_expression) for value in values]
-    if any(value is None for value in rendered):
-        return None
-    lines: list[str] = []
-    for wound in rendered:
-        lines.extend([
-            f"    services.wounds.{'remove' if remove else 'add'}(",
-            f"        {target_expression}, {body_part}, {wound})",
-        ])
     return lines
 
 
@@ -25083,14 +27589,9 @@ def render_participant_string_expression(
             native_string_values)
         if option is None:
             return None
-        # Native get_option<string> reads the stored string, not the formatted
-        # value of a numeric/bool option. Keep invalid types explicit.
-        return (
-            '(function(option) if option == nil then error("unknown game option") end; '
-            'if option.type ~= "string_select" and '
-            'option.type ~= "string_input" then error("string game option required") end; '
-            f'return option.value end)(services.gameplay.options.get({option}))'
-        )
+        # Delegate the raw string slot and native diagnostics rather than
+        # formatting the value or replacing native diagnostics with exceptions.
+        return f"services.gameplay.options.get_string({option})"
     if isinstance(value, dict) and value.get("mutator") in {
         "ma_technique_name", "ma_technique_description", "mon_faction",
     }:
@@ -25104,15 +27605,9 @@ def render_participant_string_expression(
         if identifier is None:
             return None
         if monster:
-            return (
-                '(function(definition) if definition == nil then error("unknown monster definition") end; '
-                f'return definition.default_faction.value end)(services.registry.get("monster", {identifier}))'
-            )
-        field = "name" if value["mutator"].endswith("name") else "flavor_description"
-        return (
-            'services.martial_arts.technique_definition(services.types.id("martial_art_technique", '
-            f'{identifier})).{field}'
-        )
+            return f"services.registry.monster_default_faction({identifier})"
+        method = "technique_name" if value["mutator"].endswith("name") else "technique_description"
+        return f"services.martial_arts.{method}({identifier})"
     if isinstance(value, dict) and value.get("mutator") == "valid_technique":
         if (set(value) - {"mutator", "blacklist", "crit", "dodge_counter", "block_counter"} or
                 avatar_expression is None or npc_expression is None):
@@ -25252,10 +27747,6 @@ def render_dynamic_simple_character_effect(
         "npc_add_bionic": ("bionics.grant", "bionic"),
         "u_lose_bionic": ("bionics.remove_type", "bionic"),
         "npc_lose_bionic": ("bionics.remove_type", "bionic"),
-        "u_learn_recipe": ("recipes.learn", "recipe"),
-        "npc_learn_recipe": ("recipes.learn", "recipe"),
-        "u_forget_recipe": ("recipes.forget", "recipe"),
-        "npc_forget_recipe": ("recipes.forget", "recipe"),
         "u_learn_martial_art": ("martial_arts.learn", "martial_art"),
         "npc_learn_martial_art": ("martial_arts.learn", "martial_art"),
         "u_forget_martial_art": ("martial_arts.forget", "martial_art"),
@@ -25294,7 +27785,9 @@ def render_static_character_pick_bodypart(
     shapes require explicit ``pick_random=true``; NPC shapes already select
     randomly in the native handler.  Only the wounded filter is lowered here;
     flag/type filters remain explicit TODOs until their definition metadata is
-    exposed as a typed service.
+    exposed as a typed service.  The hostile-NPC event path preserves the
+    native alpha fallback's target choice when beta is absent, but does not
+    reproduce its missing-beta debug message.
     """
     if key not in {"u_pick_bodypart", "npc_pick_bodypart"}:
         return None
@@ -25322,14 +27815,13 @@ def render_static_character_pick_bodypart(
     options = ""
     if wounded is not None:
         options = "{ wounded = " + ("true" if wounded else "false") + " }"
-    call = (
-        "service_value(services.characters.pick_body_part(actor, " +
-        (options if options else "{}") + "))"
-    )
     return [
-        f"    local picked = {call}",
-        "    if picked ~= nil then",
-        f"        services.variables.set(actor, {lua_quote(target[1])}, picked.body_part.value)",
+        "    local picked_result = services.characters.pick_body_part(actor, " +
+        (options if options else "{}") + ")",
+        "    if picked_result.ok then",
+        f"        services.variables.set(actor, {lua_quote(target[1])}, picked_result.value.body_part.value)",
+        '    elseif picked_result.error.code ~= "no_match" then',
+        "        error(picked_result.error.message)",
         "    end",
     ]
 
@@ -25339,7 +27831,7 @@ def render_static_character_activity(
     key: str,
     target_expression: str | None,
 ) -> list[str] | None:
-    """Render a plain time-based u_/npc_assign_activity shape."""
+    """Render only the native target-practice actor with a proven Character."""
     if target_expression is None or not safe_platform_id(effect.get(key)):
         return None
     comment_keys = {
@@ -25348,27 +27840,11 @@ def render_static_character_activity(
     }
     if set(effect) - {key, "duration"} - comment_keys:
         return None
-    if effect[key] == "ACT_TARGET_PRACTICE":
-        if "duration" in effect:
-            return None
-        return [
-            f"    services.activities.target_practice({target_expression})"
-        ]
-    duration = parse_turns(effect.get("duration"))
-    duration_expression = (
-        f"services.time.duration({duration}, \"turn\")"
-        if duration is not None and 1 <= duration <= MAX_ACTIVITY_DURATION_TURNS
-        else _duration_expression(
-            effect.get("duration"), minimum=1, actor_expression=target_expression
-        )
-    )
-    if duration_expression is None:
+    # Native parses duration but does not evaluate it on this special branch.
+    if effect[key] != "ACT_TARGET_PRACTICE":
         return None
     return [
-        "    services.activities.assign_timed(",
-        f"        {target_expression}, services.types.id(\"activity\", "
-        f"{lua_quote(effect[key])}),",
-        f"        {duration_expression})",
+        f"    services.activities.target_practice({target_expression})"
     ]
 
 
@@ -25385,143 +27861,388 @@ def render_named_character_activity(
 
 def render_static_character_math(
     effect: dict[str, Any],
-    avatar_actor_proven: bool,
-    npc_actor_proven: bool,
-    creature_actor_proven: bool = False,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> list[str] | None:
-    """Render only finite numeric assignments to a proven actor variable."""
+    """Render Native variable assignments without an EOC expression runtime."""
     raw = effect.get("math")
     if not isinstance(raw, list) or not raw or not all(isinstance(part, str) for part in raw):
         return None
-    raw = ["".join(raw)]
-    match = re.fullmatch(
-        r"(u|npc)_([A-Za-z_][A-Za-z0-9_]*)\s*"
-        r"(\+\+|--|\+=|-=|\*=|/=|=)\s*"
-        r"([+-]?(?:\d+(?:\.\d*)?|\.\d+))?",
-        raw[0].strip(),
-    )
-    if match is None:
-        expression = raw[0].strip()
-        if not expression or len(expression) > 8192 or "\0" in expression:
+    comment_keys = {
+        key for key in effect
+        if isinstance(key, str) and key.startswith("//")
+    }
+    if set(effect) - {"math"} - comment_keys:
+        return None
+    assignment = _parse_native_math_variable_assignment(raw)
+    if assignment is None:
+        return None
+    token, operator, rhs = assignment
+    custom_functions = _migration_math_function_ids.get()
+    if custom_functions is None:
+        return None
+
+    # Match math_exp_impl::new_var scope parsing exactly. Indirect v_ targets
+    # parse a stored pointer once, after the assignment value is evaluated.
+    if len(token) > 2 and token[1] == "_":
+        prefix = token[0]
+        if prefix not in {"u", "n", "v"}:
             return None
-        if not (
-            avatar_actor_proven or npc_actor_proven or creature_actor_proven
-        ) and re.search(
-            r"\b(?:u_|npc_|n_|u_val\s*\(|npc_val\s*\(|n_val\s*\()", expression
-        ):
-            return None
-        actor_expression = (
-            "actor" if (
-                avatar_actor_proven or npc_actor_proven or
-                creature_actor_proven
-            )
-            else "services.characters.avatar()"
-        )
-        return [
-            "    service_value(services.gameplay.math.apply(",
-            f"        {lua_quote(expression)}, {actor_expression}, context.data))",
-        ]
-    prefix, name, operator, literal_text = match.groups()
-    if (prefix == "u" and not avatar_actor_proven) or (
-        prefix == "npc" and not npc_actor_proven
+        scope = {"u": "u", "n": "n", "v": "var"}[prefix]
+        name = token[2:]
+    elif len(token) > 1 and token[0] == "_":
+        scope = "context"
+        name = token[1:]
+    else:
+        scope = "global"
+        name = token
+
+    common_functions, dialogue_functions = native_math_nonvariable_names()
+    scoped_name = token[2:] if len(token) > 2 and token[1] == "_" else token
+    if (
+        token in common_functions or token in custom_functions or
+        scoped_name in dialogue_functions
     ):
         return None
-    try:
-        number = float(literal_text) if literal_text is not None else 1.0
-    except ValueError:
+    # get_constant() runs before new_var() for unscoped math identifiers.
+    if scope == "global" and token in {"π", "pi", "e", "true", "false"}:
         return None
-    if not math.isfinite(number) or abs(number) > 1000000000:
-        return None
-    if operator in {"++", "--"}:
-        number = number if operator == "++" else -number
-        operator = "+="
-    if operator == "=" and literal_text is None:
-        return None
-    if operator == "/=" and number == 0:
-        return None
-    actor_expression = "actor"
-    if operator == "=":
+
+    quoted_name = lua_quote(name)
+    target = None
+    indirect_alpha = None
+    indirect_beta = None
+    if scope == "var":
+        indirect_alpha = _proven_native_variable_write_target(effect_actor_targets, "u")
+        indirect_beta = _proven_native_variable_write_target(effect_actor_targets, "npc")
+        if indirect_alpha is None or indirect_beta is None:
+            return None
+    if scope in {"u", "n"}:
+        role = "u" if scope == "u" else "npc"
+        target = _proven_native_variable_write_target(effect_actor_targets, role)
+        if target is None:
+            return None
+
+    def write(value: str) -> list[str]:
+        if scope == "var":
+            return _render_native_math_indirect_variable_write(
+                quoted_name, value, indirect_alpha, indirect_beta)
+        if scope == "context":
+            return [f"    context.data[{quoted_name}] = {value}"]
+        if scope == "global":
+            return [
+                "    service_value(services.variables.set_global(",
+                f"        {quoted_name}, {value}, {{ include_before = false }}))",
+            ]
         return [
-            "    services.variables.set(",
-            f"        {actor_expression}, {lua_quote(name)}, {lua_number(number)})",
+            "    service_value(services.variables.set(",
+            f"        {target}, {quoted_name}, {value}, {{ include_before = false }}))",
         ]
-    operation = {
-        "+=": "+",
-        "-=": "-",
-        "*=": "*",
-        "/=": "/",
-    }.get(operator)
-    if operation is None:
+
+    # Keep the compact literal path and its Native 0.0 + RHS operation. All
+    # other assignments use the same compiler as read-only math, but a type
+    # failure must skip the write rather than turn into a successful zero.
+    if operator == "=" and re.fullmatch(
+        r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?", rhs,
+    ):
+        try:
+            number = float(rhs)
+        except ValueError:
+            return None
+        mantissa = re.split(r"[eE]", rhs, maxsplit=1)[0]
+        if not math.isfinite(number) or (
+            any(character in "123456789" for character in mantissa) and
+            abs(number) < sys.float_info.min
+        ):
+            return None
+        return write(f"0.0 + ({lua_number(number)})")
+
+    compiled = _compile_native_math_variable_assignment(raw, effect_actor_targets)
+    if compiled is None or compiled.choices:
         return None
     return [
-        f"    local current = service_value(services.variables.get({actor_expression}, "
-        f"{lua_quote(name)}))",
-        "    current = tonumber(current.value) or 0",
-        "    services.variables.set(",
-        f"        {actor_expression}, {lua_quote(name)}, "
-        f"current {operation} {lua_number(number)})",
+        "    do",
+        f"        local assigned_value = {compiled.expression}",
+        "        if assigned_value ~= nil then",
+        *["        " + line for line in write("assigned_value")],
+        "        end",
+        "    end",
+    ]
+
+
+def _parse_native_math_variable_assignment(value: Any) -> tuple[str, str, str] | None:
+    """Extract a top-level assignment to a bare or parenthesized variable."""
+    if not isinstance(value, list) or not value or not all(isinstance(part, str) for part in value):
+        return None
+    source = "".join(value).strip()
+    match = re.fullmatch(
+        r"((?:\(\s*)*[A-Za-z_][A-Za-z0-9_]*(?:\s*\))*)\s*"
+        r"(\+\+|--|\+=|-=|\*=|/=|%=|=(?!=))\s*(.*?)", source, re.DOTALL,
+    )
+    if match is None:
+        return None
+    left, operator, rhs = match.groups()
+    if left.count("(") != left.count(")"):
+        return None
+    token = left.replace("(", "").replace(")", "").strip()
+    if operator in {"++", "--"}:
+        if rhs:
+            return None
+        rhs = "1.0"
+    elif not rhs:
+        return None
+    return token, operator, rhs
+
+
+def _compile_native_math_variable_assignment(
+    value: Any, effect_actor_targets: dict[str, tuple[str, str] | None] | None,
+) -> _NativeMathCompilation | None:
+    assignment = _parse_native_math_variable_assignment(value)
+    if assignment is None:
+        return None
+    token, operator, rhs = assignment
+    # Validate the destination as a numeric variable, including its namespace
+    # and exact read owner; '=' must not evaluate this read at runtime.
+    functions = _migration_math_function_ids.get()
+    if functions is None or token in functions or token in {"pi", "e", "true", "false"}:
+        return None
+    if render_native_math_variable_read(token, effect_actor_targets) is None:
+        return None
+    left = "0.0" if operator == "=" else token
+    arithmetic = {"=": "+", "+=": "+", "-=": "-", "*=": "*", "/=": "/",
+                  "%=": "%", "++": "+", "--": "-"}[operator]
+    return _compile_native_numeric_math(
+        [f"({left}) {arithmetic} ({rhs})"],
+        lambda name: render_native_math_variable_read(name, effect_actor_targets),
+        lambda name, argument: _render_native_math_domain_query(name, argument, effect_actor_targets),
+        failure_value="nil",
+    )
+
+
+def _math_assignment_order_choice(
+    value: Any, effect_actor_targets: dict[str, tuple[str, str] | None] | None,
+) -> str | None:
+    if isinstance(value, dict) and "math" in value:
+        compiled = _compile_native_math_variable_assignment(value["math"], effect_actor_targets)
+        if compiled is not None and compiled.choices:
+            return "; ".join(compiled.choices)
+    return None
+
+
+def _render_native_math_indirect_variable_write(
+    quoted_key: str, value: str, alpha: str, beta: str,
+) -> list[str]:
+    """Mirror write_var_value's one-pass pointer read, after RHS evaluation."""
+    # The read and write contracts differ on a missing pointer: math reads
+    # return zero without a target lookup, but writes use the empty string
+    # sentinel and consequently write the empty global key.
+    pointer = _render_native_variable_string_snapshot("context_val", quoted_key, alpha, beta)
+    return [
+        "    do",
+        "        local target_name = (function(pointer) "
+        'if pointer.exists == false then return "" end; '
+        f"return pointer.value end)({pointer})",
+        '        if string.sub(target_name, 1, 2) == "u_" then',
+        "            service_value(services.variables.set(",
+        f"                {alpha}, string.sub(target_name, 3), {value}, {{ include_before = false }}))",
+        '        elseif string.sub(target_name, 1, 2) == "n_" then',
+        "            service_value(services.variables.set(",
+        f"                {beta}, string.sub(target_name, 3), {value}, {{ include_before = false }}))",
+        '        elseif string.sub(target_name, 1, 1) == "_" then',
+        f"            context.data[string.sub(target_name, 2)] = {value}",
+        "        else",
+        "            service_value(services.variables.set_global(",
+        f"                target_name, {value}, {{ include_before = false }}))",
+        "        end",
+        "    end",
     ]
 
 
 def render_static_character_copy_var(
     effect: dict[str, Any],
-    avatar_actor_proven: bool,
-    npc_actor_proven: bool,
-    npc_actor_expression: str | None = None,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None,
 ) -> list[str] | None:
     if set(effect) != {"copy_var", "target_var"}:
         return None
-    source = _static_string_variable_descriptor(effect["copy_var"])
-    target = _static_string_variable_descriptor(effect["target_var"])
+
+    def copy_descriptor(value: Any) -> tuple[str, str] | None:
+        if not isinstance(value, dict) or len(value) != 1:
+            return None
+        key, name = next(iter(value.items()))
+        scopes = {
+            "u_val": "u",
+            "npc_val": "npc",
+            "global_val": "global",
+            "context_val": "context",
+            "var_val": "var",
+        }
+        if (
+            key not in scopes or
+            not bounded_utf8_string(name, 256, allow_empty=True)
+        ):
+            return None
+        if any(
+            ord(character) < 0x20 or ord(character) == 0x7F
+            for character in name
+        ):
+            return None
+        return scopes[key], name
+
+    source = copy_descriptor(effect["copy_var"])
+    target = copy_descriptor(effect["target_var"])
     if source is None or target is None:
         return None
-    alpha = "actor" if avatar_actor_proven else None
-    beta = npc_actor_expression or ("actor" if npc_actor_proven else None)
-    for scope, _ in (source, target):
-        if (scope == "u" and alpha is None or scope == "npc" and beta is None or
-                scope == "var" and (alpha is None or beta is None)):
+    # Context values and var_val indirection currently pass through Lua in the
+    # Platform resolver.  Native copy_var copies diag_value directly, so keep
+    # those scopes partial until a value-preserving resolver exists.
+    if (
+        source[0] not in {"u", "npc", "global"} or
+        target[0] not in {"u", "npc", "global"}
+    ):
+        return None
+    source_owner = ("nil" if source[0] == "global" else
+                    _proven_native_variable_read_target(effect_actor_targets, source[0]))
+    target_owner = ("nil" if target[0] == "global" else
+                    _proven_native_variable_write_target(effect_actor_targets, target[0]))
+    if source_owner is None or target_owner is None:
+        return None
+    return [
+        "    service_value(services.variables.copy(",
+        f"        {source_owner}, {lua_quote(source[1])},",
+        f"        {target_owner}, {lua_quote(target[1])}))",
+    ]
+
+
+def _proven_copy_variable_target(
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None,
+    role: str,
+) -> str | None:
+    """Return a proven talker target that exposes native variable storage."""
+    if effect_actor_targets is None:
+        return None
+    target_info = effect_actor_targets.get(role)
+    if (
+        not isinstance(target_info, tuple) or len(target_info) != 2 or
+        target_info[1] not in {"character", "monster"} or
+        not isinstance(target_info[0], str) or not target_info[0]
+    ):
+        return None
+    return target_info[0]
+
+
+def _proven_native_variable_read_target(
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None,
+    role: str,
+) -> str | None:
+    """Resolve const_actor storage separately from actor mutation fallback."""
+    if effect_actor_targets is None:
+        return None
+    read_role = "read_" + role
+    return _proven_copy_variable_target(
+        effect_actor_targets, read_role if read_role in effect_actor_targets else role)
+
+
+def _native_math_query_actor_target(
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None,
+    role: str,
+) -> tuple[str, str] | None:
+    """Return only a proven read participant and its concrete Native kind."""
+    if effect_actor_targets is None:
+        return None
+    read_role = "read_" + role
+    target_info = effect_actor_targets.get(
+        read_role if read_role in effect_actor_targets else role)
+    if (
+        not isinstance(target_info, tuple) or len(target_info) != 2 or
+        target_info[1] not in {"character", "monster"} or
+        not isinstance(target_info[0], str) or not target_info[0]
+    ):
+        return None
+    return target_info
+
+
+def _render_native_math_domain_query(
+    token: str,
+    string_argument: str | None,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None,
+) -> str | None:
+    """Lower a few typed Native dialogue queries without evaluating math text."""
+    function_ids = _migration_math_function_ids.get()
+    if function_ids is None or token in function_ids:
+        return None
+
+    if token in {"u_health", "n_health", "u_spell_level", "n_spell_level",
+                 "u_skill", "n_skill"}:
+        role = "u" if token[0] == "u" else "npc"
+        target = _native_math_query_actor_target(effect_actor_targets, role)
+        if target is None:
             return None
+        expression, actor_kind = target
+        if actor_kind == "monster":
+            # talker defaults these Character-only queries to zero for Monsters.
+            return "0.0"
+        if token.endswith("_skill") and string_argument is not None:
+            return (
+                "(function(value) "
+                "assert(value == value and value ~= math.huge and value ~= -math.huge, "
+                "\"Native skill() float-to-int conversion requires a finite value\"); "
+                "local truncated = math.modf(value); "
+                "assert(truncated >= -2147483648 and truncated <= 2147483647, "
+                "\"Native skill() float-to-int conversion exceeds the native int range\"); "
+                "if truncated == 0.0 then truncated = 0.0 end; "
+                f"return truncated + 0.0 end)(service_value(services.skills.level({expression}, "
+                f"{lua_quote(string_argument)})))"
+            )
+        if token.endswith("_health") and string_argument is None:
+            return f"(service_value(services.needs.get({expression})).lifestyle + 0.0)"
+        if token.endswith("_spell_level") and string_argument is not None:
+            return ("(service_value(services.spells.effective_level("
+                    f"{expression}, {lua_quote(string_argument)})) + 0.0)")
+        return None
 
-    def address(descriptor: tuple[str, str], prefix: str) -> list[str]:
-        scope, key = descriptor
-        owner = {"u": alpha, "npc": beta}.get(scope) or "nil"
-        if scope != "var":
-            return [f"    local {prefix}_scope, {prefix}_owner, {prefix}_key = "
-                    f"{lua_quote(scope)}, {owner}, {lua_quote(key)}"]
-        return [
-            f"    local {prefix}_scope, {prefix}_owner = \"global\", nil",
-            f"    local {prefix}_key = context.data[{lua_quote(key)}]",
-            f"    if {prefix}_key ~= nil then",
-            f'        if {prefix}_key:sub(1, 2) == "u_" then',
-            f'            {prefix}_scope, {prefix}_owner, {prefix}_key = "u", {alpha}, {prefix}_key:sub(3)',
-            f'        elseif {prefix}_key:sub(1, 2) == "n_" then',
-            f'            {prefix}_scope, {prefix}_owner, {prefix}_key = "npc", {beta}, {prefix}_key:sub(3)',
-            f'        elseif {prefix}_key:sub(1, 1) == "_" then',
-            f'            {prefix}_scope, {prefix}_key = "context", {prefix}_key:sub(2)',
-            '        end',
-            '    end',
-        ]
+    if token == "time_until" and string_argument == "sunrise":
+        return (
+            "(function(now) local turns = (now:sunrise() - now).turns; "
+            "if turns < 0 then turns = turns + services.time.duration(1, \"day\").turns end; "
+            "return turns + 0.0 end)(services.time.now())"
+        )
 
-    lines = address(source, "copy_source")
-    lines.extend(address(target, "copy_target"))
-    lines.extend([
-        '    if copy_target_key == nil then error("missing target variable") end',
-        '    if copy_source_key ~= nil and copy_source_scope ~= "context" and copy_target_scope ~= "context" then',
-        '        service_value(services.variables.copy(',
-        '            copy_source_owner, copy_source_key, copy_target_owner, copy_target_key))',
-        '    else',
-        '        local copied = { exists = false }',
-        '        if copy_source_key ~= nil then',
-        '            copied = service_value(services.variables.resolve(',
-        '                context.data, copy_source_owner, copy_source_scope, copy_source_key))',
-        '        end',
-        '        local copied_value = copied.value',
-        '        if copied_value == nil then copied_value = services.types.null end',
-        '        service_value(services.variables.set_resolved(',
-        '            context.data, copy_target_owner, copy_target_scope, copy_target_key, copied_value))',
-        '    end',
-    ])
-    return lines
+    if token == "time" and string_argument == "now":
+        return "((services.time.now() - services.time.turn_zero()).turns + 0.0)"
+
+    if token == "time" and string_argument is not None:
+        match = re.fullmatch(
+            r"\s*([+-]?[0-9]+)\s*(turns?|t|seconds?|s|minutes?|m|hours?|h|days?|d)\s*",
+            string_argument,
+        )
+        if match is None:
+            return None
+        try:
+            amount = int(match.group(1))
+        except ValueError:
+            return None
+        unit_aliases = {
+            "t": ("second", 1), "turn": ("second", 1), "turns": ("second", 1),
+            "s": ("second", 1), "second": ("second", 1), "seconds": ("second", 1),
+            "m": ("minute", 60), "minute": ("minute", 60), "minutes": ("minute", 60),
+            "h": ("hour", 3600), "hour": ("hour", 3600), "hours": ("hour", 3600),
+            "d": ("day", 86400), "day": ("day", 86400), "days": ("day", 86400),
+        }
+        unit, turns_per_unit = unit_aliases[match.group(2)]
+        turns = amount * turns_per_unit
+        if not NATIVE_INT_MIN <= turns <= NATIVE_INT_MAX:
+            return None
+        return f"(services.time.duration({amount}, {lua_quote(unit)}).turns + 0.0)"
+    return None
+
+
+def _proven_native_variable_write_target(
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None,
+    role: str,
+) -> str | None:
+    """write_var_value checks has_alpha/has_beta before calling actor()."""
+    # Unlike a raw dialogue::actor(true) mutation, this writer does not fall
+    # back to alpha when beta is absent. Its storage owner must actually exist.
+    return _proven_native_variable_read_target(effect_actor_targets, role)
 
 
 def render_participant_translation_expression(
@@ -25531,184 +28252,1038 @@ def render_participant_translation_expression(
     """Translate authored literals; stored dialogue values are already translated."""
     if isinstance(value, str) or (
             isinstance(value, dict) and ("str" in value or "str_sp" in value)):
-        literal = value if isinstance(value, str) else value.get("str_sp", value.get("str"))
-        translation_context = value.get("ctxt") if isinstance(value, dict) else None
-        if not bounded_utf8_string(literal, 8192, allow_empty=True):
-            return None
-        if translation_context is not None and not bounded_utf8_string(
-                translation_context, 8192, allow_empty=True):
-            return None
-        arguments = lua_quote(literal)
-        if translation_context is not None:
-            arguments += ", " + lua_quote(translation_context)
-        return f"services.translate({arguments})"
-    if isinstance(value, dict) and "default" in value:
-        # A translated fallback must run only when the variable is absent.
-        # Keep unsupported indirect fallback shapes explicit for now.
+        if isinstance(value, dict) and value.get("i18n") is True:
+            # Native str_or_var's translation mutator deserializes only its
+            # str member. The caller has already proved this mutator shape;
+            # don't interpret sibling context as a translation-object context.
+            if set(value) - {"str", "i18n", "//~"}:
+                return None
+            value = {key: member for key, member in value.items() if key != "i18n"}
+        # Share the native singular contract and empty-source fast path with
+        # assignments. str_sp produces a singular-loader diagnostic and stays
+        # TODO rather than being silently treated as str.
+        return _render_assignment_translation_literal(value)
+    if isinstance(value, dict) and set(value).intersection({
+            "u_val", "npc_val", "context_val", "global_val", "var_val"}):
+        # Native translation_or_var wraps diag_value::str as no_translation.
+        # A general snapshot plus tostring would translate numeric/array
+        # mismatches into strings and impose unrelated snapshot/key limits.
         keys = set(value) - {"default"}
         if len(keys) != 1:
             return None
-        key = next(iter(keys))
-        owner = {"u_val": avatar_expression, "npc_val": npc_expression}.get(key)
-        if key not in {"u_val", "npc_val", "context_val", "global_val"} or (
-                key in {"u_val", "npc_val"} and owner is None):
+        scope = next(iter(keys))
+        if not lua_quotable_native_variable_string(value[scope]):
             return None
-        default = value["default"]
-        if not (isinstance(default, str) or isinstance(default, dict) and (
-                "str" in default or "str_sp" in default)):
+        fallback = lua_quote("")
+        if "default" in value:
+            fallback = _render_assignment_translation_literal(value["default"])
+        if fallback is None:
             return None
-        fallback = render_participant_translation_expression(
-            value["default"], target_expression, avatar_expression, npc_expression)
-        raw = render_direct_variable_snapshot({key: value[key]}, owner or target_expression)
-        if fallback is None or raw is None:
+        if scope == "var_val":
+            # Reuse the audited one-pass Native pointer parser. Every possible
+            # participant owner must be proven; absent pointer and absent
+            # target select the translated default independently.
+            def read(source: str, key: str) -> str | None:
+                snapshot = _render_native_variable_string_snapshot(
+                    source, key, avatar_expression, npc_expression)
+                if snapshot is None:
+                    return None
+                return ('(function(result) if result.exists == false then return nil end; '
+                        f'return result.value end)({snapshot})')
+
+            return render_proficiency_id_expression(
+                value, variable_string_reader=read, variable_default_expression=fallback)
+        raw = _render_native_variable_string_snapshot(
+            scope, lua_quote(value[scope]), avatar_expression, npc_expression)
+        if raw is None:
             return None
-        return ('(function(result) if result.exists ~= false then return tostring(result.value or \"\") end; '
+        return ('(function(result) if result.exists ~= false then return result.value end; '
                 f'return {fallback} end)({raw})')
     return render_participant_string_expression(
         value, target_expression, avatar_expression, npc_expression)
 
 
+def _render_assignment_translation_literal(value: Any) -> str | None:
+    """A singular translation constant, evaluated only after choice/missing read."""
+    if isinstance(value, str):
+        text, translation_context = value, None
+    elif isinstance(value, dict) and set(value) <= {"str", "ctxt", "//~"}:
+        text, translation_context = value.get("str"), value.get("ctxt")
+        if "ctxt" in value and not isinstance(translation_context, str):
+            return None
+        if "//~" in value and not isinstance(value["//~"], str):
+            return None
+    else:
+        return None
+    if not lua_quotable_native_variable_string(text):
+        return None
+    if translation_context is not None and not lua_quotable_native_variable_string(
+            translation_context):
+        return None
+    # Native translation::translated never consults the catalog for empty raw.
+    if not text:
+        return lua_quote("")
+    arguments = lua_quote(text)
+    if translation_context is not None:
+        arguments += ", " + lua_quote(translation_context)
+    return f"services.translate({arguments})"
+
+
+def _render_native_variable_number_snapshot(
+    scope: str, quoted_key: str, alpha: str | None, beta: str | None,
+) -> str | None:
+    """Read Native numeric type and presence using an exact storage owner."""
+    if scope == "global_val":
+        call = f"services.variables.get_global_number({quoted_key})"
+    elif scope == "context_val":
+        call = f"services.variables.get_context_number(context and context.data, {quoted_key})"
+    elif scope in {"u_val", "npc_val"}:
+        owner = alpha if scope == "u_val" else beta
+        if owner is None:
+            return None
+        call = f"services.variables.get_number({owner}, {quoted_key})"
+    else:
+        return None
+    return f"service_value({call})"
+
+
+@functools.lru_cache(maxsize=1)
+def native_math_nonvariable_names() -> tuple[frozenset[str], frozenset[str]]:
+    common = (REPOSITORY_ROOT / "src/math_parser_func.h").read_text(encoding="utf-8")
+    dialogue = (REPOSITORY_ROOT / "src/math_parser_diag.cpp").read_text(encoding="utf-8")
+    registry = dialogue.split("dialogue_funcs{", 1)[1].split("\n};", 1)[0]
+    return (frozenset(re.findall(r'math_func\{\s*"([^"]+)"', common)),
+            frozenset(re.findall(r'^\s*\{\s*"([^"]+)"', registry, re.MULTILINE)))
+
+
+@functools.lru_cache(maxsize=1)
+def native_core_math_function_ids() -> frozenset[str]:
+    # These are the two core function catalogs, not a whole-corpus audit.
+    sources = load_objects([REPOSITORY_ROOT / "data/json/jmath.json",
+                            REPOSITORY_ROOT / "data/json/mutations/mutation_jmath.json"])
+    return frozenset(source.value["id"] for source in sources
+                     if source.value.get("type") == "jmath_function" and
+                     isinstance(source.value.get("id"), str))
+
+
+def render_native_math_variable_read(
+    token: str, effect_actor_targets: dict[str, tuple[str, str] | None] | None,
+) -> str | None:
+    """Return a checked numeric Result for an actual Native variable name."""
+    if _migration_math_function_ids.get() is None or not re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]*", token):
+        return None
+    common, dialogue = native_math_nonvariable_names()
+    scoped = token[2:] if len(token) > 2 and token[1] == "_" else token
+    if token in common or scoped in dialogue:
+        return None
+    if len(token) > 2 and token[1] == "_":
+        scope = {"u": "u_val", "n": "npc_val", "v": "var_val"}.get(token[0])
+        if scope is None:
+            return None
+        key = token[2:]
+    elif len(token) > 1 and token[0] == "_":
+        scope, key = "context_val", token[1:]
+    else:
+        scope, key = "global_val", token
+    alpha = _proven_native_variable_read_target(effect_actor_targets, "u")
+    beta = _proven_native_variable_read_target(effect_actor_targets, "npc")
+
+    def read(source: str, name: str) -> str | None:
+        if source == "global_val":
+            return f"services.variables.get_global_number({name}, {{strict=true}})"
+        if source == "context_val":
+            return f"services.variables.get_context_number(context and context.data, {name}, {{strict=true}})"
+        owner = alpha if source == "u_val" else beta
+        return None if owner is None else f"services.variables.get_number({owner}, {name}, {{strict=true}})"
+
+    if scope != "var_val":
+        return read(scope, lua_quote(key))
+    # process_variable is applied once to a permissive Native string read.
+    # Every possible dynamic target owner must actually be present.
+    reads = [read(source, name) for source, name in (
+        ("u_val", "string.sub(pointer.value,3)"), ("npc_val", "string.sub(pointer.value,3)"),
+        ("context_val", "string.sub(pointer.value,2)"), ("global_val", "pointer.value"))]
+    if any(value is None for value in reads):
+        return None
+    pointer = _render_native_variable_string_snapshot("context_val", lua_quote(key), alpha, beta)
+    return ('(function(pointer) if pointer.exists == false then '
+            'return {ok=true,value={exists=false}} end; '
+            'if string.sub(pointer.value,1,2)=="u_" then return ' + reads[0] +
+            ' elseif string.sub(pointer.value,1,2)=="n_" then return ' + reads[1] +
+            ' elseif string.sub(pointer.value,1,1)=="_" then return ' + reads[2] +
+            ' else return ' + reads[3] + ' end end)(' + pointer + ')')
+
+
+@dataclass(frozen=True)
+class _NativeMathEffects:
+    draws: bool = False
+    random_dependent: bool = False
+    may_abort: bool = False
+    constant: float | None = None
+    singleton_kind: str | None = None
+
+
+@dataclass(frozen=True)
+class _NativeMathCompilation:
+    expression: str
+    effects: _NativeMathEffects
+    choices: tuple[str, ...] = ()
+
+
+def _merge_native_math_effects(effects: list[_NativeMathEffects]) -> _NativeMathEffects:
+    drawing = [effect for effect in effects if effect.draws]
+    kind = drawing[0].singleton_kind if drawing else None
+    if any(effect.singleton_kind != kind for effect in drawing):
+        kind = None
+    return _NativeMathEffects(
+        draws=any(effect.draws for effect in effects),
+        random_dependent=any(effect.random_dependent for effect in effects),
+        may_abort=any(effect.may_abort for effect in effects),
+        singleton_kind=kind,
+    )
+
+
+def _native_math_random_order_conflict(effects: list[_NativeMathEffects]) -> bool:
+    drawing = [effect for effect in effects if effect.draws]
+    if len(drawing) > 1 and (any(effect.random_dependent for effect in drawing) or
+                             drawing[0].singleton_kind is None or
+                             any(effect.singleton_kind != drawing[0].singleton_kind for effect in drawing)):
+        return True
+    drawing_indices = [index for index, effect in enumerate(effects) if effect.draws]
+    aborting_indices = [index for index, effect in enumerate(effects) if effect.may_abort]
+    return any(draw != abort for draw in drawing_indices for abort in aborting_indices)
+
+
+def render_literal_native_arithmetic(
+    value: Any, variable_reader: Callable[[str], str | None] | None = None,
+) -> str | None:
+    compiled = _compile_native_numeric_math(value, variable_reader)
+    return compiled.expression if compiled is not None and not compiled.choices else None
+
+
+def _compile_native_numeric_math(
+    value: Any, variable_reader: Callable[[str], str | None] | None = None,
+    query_reader: Callable[[str, str | None], str | None] | None = None,
+    *, failure_value: str = "0.0",
+) -> _NativeMathCompilation | None:
+    """Compile read-only Native numeric expressions to ordinary Lua."""
+    assert failure_value in {"0.0", "nil"}
+    if not isinstance(value, list) or not value or not all(isinstance(part, str) for part in value):
+        return None
+    source = "".join(value)  # eoc_math::from_json concatenates chunks without inserting spaces.
+    token_pattern = re.compile(
+        r"'(?:\\[\s\S]|[^'])*'|"
+        r"(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?|"
+        r"[A-Za-z_][A-Za-z_0-9]*|π|==|!=|<=|>=|[(),+*/%^<>!?:\-]"
+    )
+    operators: list[str] = []
+    operands: list[int] = []
+    frames: list[tuple[int, int, str | None]] = []
+    string_arguments: dict[int, str] = {}
+    # condition, operand base, branch statement start, middle result, middle code
+    ternaries: list[tuple[int, int, int, int | None, list[str] | None]] = []
+    statements = ["local values = {}"]
+    node_effects: dict[int, _NativeMathEffects] = {}
+    node_choices: dict[int, tuple[str, ...]] = {}
+    count = 0
+    uses_native_float = False
+    uses_variable_result = False
+    need_operand = True
+    allows_prefix_unary = True
+    precedence = {"?": 0, ":": 0, "+": 2, "-": 2, "*": 3, "/": 3, "%": 3, "^": 4}
+    comparisons = {"==", "!=", "<", "<=", ">", ">="}
+    precedence.update({operator: 1 for operator in comparisons})
+    constants = {"pi": math.pi, "π": math.pi, "e": math.e, "true": 1.0, "false": 0.0}
+    functions = {name: 1 for name in ("abs", "floor", "ceil", "trunc", "round",
+                                      "sqrt", "log", "sin", "cos", "tan")}
+    functions.update({"min": -1, "max": -1, "_test_": 0})
+    functions["clamp"] = 3
+    functions.update({"rand": 1, "rng": 2})
+    functions.update({name: 1 for name in ("celsius", "fahrenheit", "from_celsius", "from_fahrenheit")})
+    functions.update({
+        "u_health": 0, "n_health": 0,
+        "u_spell_level": 1, "n_spell_level": 1,
+        "u_skill": 1, "n_skill": 1,
+        "time": 1, "time_until": 1,
+    })
+    native_query_functions = {
+        "u_health", "n_health", "u_spell_level", "n_spell_level",
+        "u_skill", "n_skill", "time", "time_until",
+    }
+    native_string_query_functions = {
+        "u_spell_level", "n_spell_level", "u_skill", "n_skill", "time", "time_until",
+    }
+
+    def emit(expression: str, effects: _NativeMathEffects | None = None) -> None:
+        nonlocal count
+        count += 1
+        statements.append(f"values[{count}] = {expression}")
+        operands.append(count)
+        node_effects[count] = effects or _NativeMathEffects()
+        node_choices[count] = ()
+
+    def emit_round(argument: str) -> None:
+        # std::round is ties away from zero; adding 0.5 loses precision at
+        # halfway neighbours and large values. Keep its signed-zero result.
+        emit(f"math.floor(math.abs({argument})) + 0.0")
+        result = count
+        statements.append(f"if math.abs({argument}) - values[{result}] >= 0.5 then "
+                          f"values[{result}] = values[{result}] + 1.0 end")
+        statements.append(f"if {argument} < 0.0 or 1.0 / {argument} < 0.0 then "
+                          f"values[{result}] = -values[{result}] end")
+
+    def apply_function(name: str, arguments: list[int]) -> bool:
+        nonlocal uses_native_float
+        if name in native_query_functions:
+            if query_reader is None:
+                return False
+            if functions[name] == 0:
+                if arguments:
+                    return False
+                string_argument = None
+            else:
+                if len(arguments) != 1 or arguments[0] not in string_arguments:
+                    return False
+                string_argument = string_arguments[arguments[0]]
+            expression = query_reader(name, string_argument)
+            if expression is None:
+                return False
+            # These exact literal queries have no Native math::exception path.
+            # A Platform lifetime Result can still propagate at runtime, but it
+            # is not a Native numeric fallback/type failure for draw ordering.
+            emit(expression)
+            return True
+        expected = functions[name]
+        if expected >= 0 and len(arguments) != expected:
+            return False
+        effects = [node_effects[argument] for argument in arguments]
+        result_effects = _merge_native_math_effects(effects)
+        choices = [choice for argument in arguments for choice in node_choices[argument]]
+        if _native_math_random_order_conflict(effects):
+            choices.append(f"Native function {name} uses std::transform for parameter evaluation; "
+                           "choose a Lua order for interacting random draws or failures")
+        if name == "_test_":
+            emit("42.0")
+        elif name == "rng":
+            emit(f"services.random.native_float(values[{arguments[0]}], values[{arguments[1]}])")
+            lower, upper = (effect.constant for effect in effects)
+            singleton = lower is not None and lower == upper
+            own_effects = _NativeMathEffects(
+                True, not singleton, False, lower if singleton else None,
+                "float" if singleton else None)
+            combined = _merge_native_math_effects([*effects, own_effects])
+            result_effects = _NativeMathEffects(
+                combined.draws, combined.random_dependent, combined.may_abort,
+                own_effects.constant, combined.singleton_kind)
+        elif name == "rand":
+            known = effects[0].constant
+            rounded = None
+            if known is not None:
+                rounded = float(math.floor(abs(known)))
+                if abs(known) - rounded >= 0.5:
+                    rounded += 1.0
+                rounded = math.copysign(rounded, known)
+                if not NATIVE_INT_MIN <= rounded <= NATIVE_INT_MAX:
+                    choices.append("Native rand would perform undefined signed integer conversion; "
+                                   "choose a representable rounded bound")
+            emit_round(f"values[{arguments[0]}]")
+            bound = f"values[{operands.pop()}]"
+            statements.append(f"assert({bound} == {bound} and {bound} >= -2147483648 "
+                              f"and {bound} <= 2147483647, "
+                              '"rand rounded bound is outside the native signed integer range")')
+            emit(f"services.random.native_int(math.tointeger(math.min(0.0,{bound})), math.tointeger(math.max(0.0,{bound}))) + 0.0")
+            singleton = rounded == 0.0
+            own_effects = _NativeMathEffects(
+                True, not singleton, rounded is None or not NATIVE_INT_MIN <= rounded <= NATIVE_INT_MAX,
+                0.0 if singleton else None, "int" if singleton else None)
+            combined = _merge_native_math_effects([*effects, own_effects])
+            result_effects = _NativeMathEffects(
+                combined.draws, combined.random_dependent, combined.may_abort,
+                own_effects.constant, combined.singleton_kind)
+        elif name == "clamp":
+            value, lower, upper = (f"values[{argument}]" for argument in arguments)
+            emit(value)
+            result = f"values[{count}]"
+            statements.append(f"if {upper} < {lower} then "
+                              'services.diagnostic(string.format("clamp called with hi < lo (%f < %f)", '
+                              f"{upper}, {lower})); "
+                              f"elseif {value} < {lower} then {result} = {lower}; "
+                              f"elseif {upper} < {value} then {result} = {upper} end")
+        elif name in {"min", "max"}:
+            # std::min/max_element keep the first equal/unordered operand.
+            # Folding avoids Lua's argument/register limit for Native variadics.
+            emit(f"values[{arguments[0]}]" if arguments else "0.0")
+            result = count
+            comparison = "<" if name == "min" else ">"
+            for argument in arguments[1:]:
+                statements.append(f"if values[{argument}] {comparison} values[{result}] then "
+                                  f"values[{result}] = values[{argument}] end")
+        elif name in {"celsius", "fahrenheit", "from_celsius", "from_fahrenheit"}:
+            # units::temperature stores native float. Match each conversion
+            # and float intermediate in units.h, using Lua's native C float
+            # packing rather than changing the ordinary double author API.
+            if not uses_native_float:
+                uses_native_float = True
+            argument = f"values[{arguments[0]}]"
+            if name == "celsius":
+                emit(f"native_float(native_float({argument}) - native_float(273.150))")
+            elif name == "fahrenheit":
+                emit(f"native_float(native_float(native_float({argument}) * native_float(1.8)) - native_float(459.67))")
+            elif name == "from_celsius":
+                emit(f"native_float({argument} + native_float(273.150))")
+            else:
+                emit(f"native_float(({argument} + native_float(459.67)) / native_float(1.8))")
+        else:
+            argument = f"values[{arguments[0]}]"
+            if name == "round":
+                emit_round(argument)
+            else:
+                method = "modf" if name == "trunc" else name
+                # Lua floor/ceil/modf can return integers; Native math always
+                # returns doubles. Preserve IEEE rounding in later arithmetic.
+                emit(f"math.{method}({argument})" +
+                     (" + 0.0" if name in {"floor", "ceil", "trunc"} else ""))
+                if name in {"floor", "ceil", "trunc"}:
+                    statements.append(f"if values[{count}] == 0.0 and 1.0 / {argument} < 0.0 then "
+                                      f"values[{count}] = -0.0 end")
+        node_effects[count] = result_effects
+        node_choices[count] = tuple(dict.fromkeys(choices))
+        return True
+
+    def apply_operator(operator: str) -> bool:
+        if operator == ":":
+            if not ternaries:
+                return False
+            condition, base, start, middle, middle_code = ternaries.pop()
+            if middle is None or middle_code is None or len(operands) != base + 1:
+                return False
+            right = operands.pop()
+            if middle in string_arguments or right in string_arguments:
+                return False
+            right_code = statements[start:]
+            del statements[start:]
+            known = node_effects[condition].constant
+            selected = [middle, right] if known is None else [middle if known > 0.0 else right]
+            inputs = [condition, *selected]
+            effects = _merge_native_math_effects([node_effects[node] for node in inputs])
+            if known is not None:
+                effects = _NativeMathEffects(
+                    effects.draws, effects.random_dependent, effects.may_abort,
+                    node_effects[selected[0]].constant, effects.singleton_kind)
+            emit("0.0", effects)
+            result = count
+            node_choices[result] = tuple(dict.fromkeys(
+                choice for node in inputs for choice in node_choices[node]))
+            # Native ternary truth is >0 (not !=0) and only one arm is
+            # evaluated. Flat labels avoid Lua's nested-block depth limit;
+            # all shared locals are hoisted outside these branch regions.
+            statements.extend([
+                f"if values[{condition}] > 0.0 then goto math_true_{result} end",
+                f"goto math_false_{result}", f"::math_true_{result}::",
+                *middle_code, f"values[{result}] = values[{middle}]",
+                f"goto math_end_{result}", f"::math_false_{result}::",
+                *right_code, f"values[{result}] = values[{right}]",
+                f"::math_end_{result}::",
+            ])
+            return True
+        if operator == "?":
+            return False  # Native rejects a ternary without its colon/right arm.
+        if operator in {"u+", "u-", "u!"}:
+            if not operands:
+                return False
+            operand = operands.pop()
+            if operand in string_arguments:
+                return False
+            if operator == "u!":
+                # math_opers::b_neg uses float_equals(value,0), including its
+                # two rounded additions. Lua truth and exact ==0 both differ.
+                epsilon = repr(sys.float_info.epsilon * 100)
+                effects = node_effects[operand]
+                known = effects.constant
+                constant = None if known is None else float(
+                    known + sys.float_info.epsilon * 100 >= 0.0 and sys.float_info.epsilon * 100 >= known)
+                emit(f"(values[{operand}] + {epsilon} >= 0.0 and "
+                     f"{epsilon} >= values[{operand}]) and 1.0 or 0.0",
+                     _NativeMathEffects(effects.draws, effects.random_dependent, effects.may_abort,
+                                        constant, effects.singleton_kind))
+            else:
+                effects = node_effects[operand]
+                constant = effects.constant
+                if operator == "u-" and constant is not None:
+                    constant = -constant
+                emit(f"values[{operand}]" if operator == "u+" else f"-(values[{operand}])",
+                     _NativeMathEffects(effects.draws, effects.random_dependent, effects.may_abort,
+                                        constant, effects.singleton_kind))
+            node_choices[count] = node_choices[operand]
+            return True
+        if len(operands) < 2:
+            return False
+        right, left = operands.pop(), operands.pop()
+        if left in string_arguments or right in string_arguments:
+            return False
+        effects = [node_effects[left], node_effects[right]]
+        choices = [*node_choices[left], *node_choices[right]]
+        if _native_math_random_order_conflict(effects):
+            choices.append(f"Native binary operator {operator} has compiler-dependent operand evaluation; "
+                           "choose a Lua order for interacting random draws or failures")
+        if operator in comparisons:
+            lua_operator = "~=" if operator == "!=" else operator
+            emit(f"(values[{left}] {lua_operator} values[{right}]) and 1.0 or 0.0",
+                 _merge_native_math_effects(effects))
+        else:
+            emit(f"math.fmod(values[{left}], values[{right}])" if operator == "%" else
+                 f"values[{left}] {operator} values[{right}]", _merge_native_math_effects(effects))
+        node_choices[count] = tuple(dict.fromkeys(choices))
+        return True
+
+    position = 0
+    while position < len(source):
+        if source[position] in " \t\r\n\v\f":
+            position += 1
+            continue
+        match = token_pattern.match(source, position)
+        if match is None:
+            return None
+        token = match.group()
+        position = match.end()
+        custom_functions = _migration_math_function_ids.get()
+        if custom_functions is not None and token in custom_functions and token not in functions:
+            return None
+        if token.startswith("'") and token.endswith("'"):
+            if not need_operand or not frames:
+                return None
+            base, commas, function = frames[-1]
+            if (
+                function not in native_string_query_functions or commas != 0 or
+                len(operands) != base
+            ):
+                return None
+            # Native math::parse_string removes every backslash after lexing;
+            # mirror that behavior for the narrowly supported typed queries.
+            string_argument = token[1:-1].replace("\\", "")
+            string_key = -(len(string_arguments) + 1)
+            string_arguments[string_key] = string_argument
+            operands.append(string_key)
+            need_operand = False
+            allows_prefix_unary = False
+        elif token[0] in "0123456789.":
+            if not need_operand:
+                return None
+            number = float(token)
+            significand = token.lower().split("e", 1)[0]
+            if not math.isfinite(number) or (any(digit in "123456789" for digit in significand) and
+                                             abs(number) < sys.float_info.min):
+                return None  # Native classic-locale stream conversion can reject underflow.
+            text = format(number, ".17g")
+            emit(text if "." in text or "e" in text else text + ".0", _NativeMathEffects(constant=number))
+            need_operand = False
+        elif token == "(":
+            if not need_operand:
+                return None
+            function = operators[-1][2:] if operators and operators[-1].startswith("f:") else None
+            frames.append((len(operands), 0, function))
+            operators.append(token)
+            allows_prefix_unary = True
+        elif token == ")":
+            if not frames:
+                return None
+            base, commas, function = frames.pop()
+            empty = need_operand and function is not None and commas == 0 and len(operands) == base and operators[-1] == "("
+            if need_operand and not empty:
+                return None
+            while operators and operators[-1] != "(":
+                if not apply_operator(operators.pop()):
+                    return None
+            if not operators:
+                return None
+            operators.pop()
+            if function is None:
+                if len(operands) != base + 1:
+                    return None
+            else:
+                arguments = operands[base:]
+                if len(arguments) != (0 if empty else commas + 1):
+                    return None
+                del operands[base:]
+                operators.pop()  # function marker
+                if not apply_function(function, arguments):
+                    return None
+            need_operand = False
+        elif token == ",":
+            if need_operand or not frames or frames[-1][2] is None:
+                return None
+            while operators and operators[-1] != "(":
+                if not apply_operator(operators.pop()):
+                    return None
+            base, commas, function = frames[-1]
+            if len(operands) != base + commas + 1:
+                return None
+            frames[-1] = (base, commas + 1, function)
+            need_operand = True
+            allows_prefix_unary = True
+        elif token == "!":
+            if not need_operand or not allows_prefix_unary:
+                return None
+            operators.append("u!")
+            allows_prefix_unary = False
+        elif token == "?":
+            if need_operand:
+                return None
+            while operators and operators[-1] != "(" and (
+                    operators[-1].startswith("u") or precedence[operators[-1]] > 0):
+                if not apply_operator(operators.pop()):
+                    return None
+            if not operands or operands[-1] in string_arguments:
+                return None
+            condition = operands.pop()
+            ternaries.append((condition, len(operands), len(statements), None, None))
+            operators.append("?")
+            need_operand = True
+            allows_prefix_unary = True
+        elif token == ":":
+            if need_operand:
+                return None
+            while operators and operators[-1] not in {"?", "("}:
+                if not apply_operator(operators.pop()):
+                    return None
+            if not operators or operators[-1] != "?" or not ternaries:
+                return None
+            condition, base, start, middle, middle_code = ternaries[-1]
+            if middle is not None or len(operands) != base + 1:
+                return None
+            middle = operands.pop()
+            if middle in string_arguments:
+                return None
+            middle_code = statements[start:]
+            del statements[start:]
+            ternaries[-1] = (condition, base, len(statements), middle, middle_code)
+            operators[-1] = ":"
+            need_operand = True
+            allows_prefix_unary = True
+        elif token in constants:
+            if not need_operand:
+                return None
+            emit(repr(constants[token]), _NativeMathEffects(constant=constants[token]))
+            need_operand = False
+        elif token in functions:
+            if not need_operand or not source[position:].lstrip(" \t\r\n\v\f").startswith("("):
+                return None
+            operators.append("f:" + token)
+        elif token not in precedence:
+            if not need_operand or variable_reader is None:
+                return None
+            read = variable_reader(token)
+            if read is None:
+                return None
+            if not uses_variable_result:
+                uses_variable_result = True
+            statements.append(f"variable_result = {read}")
+            # A type failure aborts the entire expression, not one operand.
+            # Preserve lifetime/contract errors instead of disguising them as zero.
+            statements.append('if variable_result.ok == false and variable_result.error and '
+                              'variable_result.error.code == "variable_type_mismatch" then '
+                              f'services.diagnostic({lua_quote("Math variable " + token + ": ")} '
+                              f'.. variable_result.error.message); return {failure_value} end')
+            emit('(function(result) if result.exists == false then return 0.0 end; '
+                 'return result.value end)(service_value(variable_result))', _NativeMathEffects(may_abort=True))
+            need_operand = False
+        elif need_operand:
+            if token not in {"+", "-"} or not allows_prefix_unary:
+                return None
+            operators.append("u" + token)
+            allows_prefix_unary = False
+        else:
+            # Match math_parser_impl.h's actual pop rule: the PREVIOUS
+            # operator's associativity controls equal-precedence popping.
+            # Native unary signs pop before all binary operators, including ^.
+            while operators and operators[-1] != "(":
+                previous = operators[-1]
+                if not (previous.startswith("u") or precedence[previous] > precedence[token] or
+                        (precedence[previous] == precedence[token] and previous not in {"%", "^", "?", ":"})):
+                    break
+                if not apply_operator(operators.pop()):
+                    return None
+            operators.append(token)
+            need_operand = True
+            allows_prefix_unary = True
+    if need_operand:
+        return None
+    while operators:
+        operator = operators.pop()
+        if operator == "(" or operator.startswith("f:") or not apply_operator(operator):
+            return None
+    if len(operands) != 1 or ternaries:
+        return None
+    if uses_native_float:
+        statements.insert(1, "local native_float = function(value) "
+                          'return (string.unpack("f", string.pack("f", value))) end')
+    if uses_variable_result:
+        statements.insert(1, "local variable_result")
+    expression = "(function() " + "; ".join(statements) + f"; return values[{operands[0]}] end)()"
+    return _NativeMathCompilation(expression, node_effects[operands[0]], node_choices[operands[0]])
+
+
+def render_native_number_expression(
+    value: Any, effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
+) -> str | None:
+    """Read a Native double or draw one scalar-bound Native integer range."""
+    def double_literal(candidate: Any) -> str | None:
+        literal = finite_number_literal(candidate)
+        if literal is None:
+            return None
+        text = format(float(literal), ".17g")
+        # Native JSON numeric values are doubles, including authored integers.
+        return text if "." in text or "e" in text else text + ".0"
+
+    literal = double_literal(value)
+    if literal is not None:
+        return literal
+    if isinstance(value, dict) and set(value) == {"math"}:
+        compiled = _compile_native_numeric_math(
+            value["math"],
+            lambda token: render_native_math_variable_read(token, effect_actor_targets),
+            lambda token, argument: _render_native_math_domain_query(
+                token, argument, effect_actor_targets),
+        )
+        return compiled.expression if compiled is not None and not compiled.choices else None
+    if isinstance(value, list):
+        if len(value) != 2:
+            return None
+        if any(isinstance(bound, list) for bound in value):
+            return None
+        bounds = [finite_number_literal(bound) for bound in value]
+        if any(bound is None for bound in bounds):
+            effects = [_native_number_expression_effects(bound, effect_actor_targets) for bound in value]
+            if any(effect is None for effect in effects) or _native_math_random_order_conflict(effects):
+                return None
+            expressions = [render_native_number_expression(bound, effect_actor_targets) for bound in value]
+            if any(expression is None for expression in expressions):
+                return None
+            # Native evaluates bounds inside one rng call. Admit only math
+            # draws whose relative order cannot change values or stream state.
+            return ('(function(lower, upper) '
+                    'local function integer(number) '
+                    'assert(number == number and number ~= math.huge and number ~= -math.huge, '
+                    '"random range bound must be finite"); '
+                    'local result = math.modf(number); '
+                    'assert(result >= -2147483648 and result <= 2147483647, '
+                    '"random range bound exceeds the signed engine range"); return result end; '
+                    'lower = integer(lower); upper = integer(upper); '
+                    'return services.random.native_int(math.min(lower, upper), math.max(lower, upper)) end)(' +
+                    ', '.join(expressions) + ')')
+        # value_or_var_pair<double> calls rng(int, int), not rng_float.
+        # Each bound converts from Native double toward zero BEFORE sorting.
+        integer_bounds = [math.trunc(float(bound)) for bound in bounds]
+        if any(bound < NATIVE_INT_MIN or bound > NATIVE_INT_MAX for bound in integer_bounds):
+            return None
+        lower, upper = sorted(integer_bounds)
+        # Even a singleton advances Native RNG; never fold it to a constant.
+        return f"services.random.native_int({lower}, {upper})"
+    scopes = ("u_val", "npc_val", "global_val", "var_val", "context_val")
+    if not isinstance(value, dict) or set(value) - set(scopes) - {"default"}:
+        return None
+    scope = next((candidate for candidate in scopes if candidate in value), None)
+    if scope is None or not lua_quotable_native_variable_string(value[scope]):
+        return None
+    default = double_literal(value.get("default", 0))
+    if default is None:
+        return None
+    alpha = _proven_native_variable_read_target(effect_actor_targets, "u")
+    beta = _proven_native_variable_read_target(effect_actor_targets, "npc")
+    if scope == "var_val":
+        pointer = _render_native_variable_string_snapshot("context_val", lua_quote(value[scope]), alpha, beta)
+        reads = [_render_native_variable_number_snapshot(source, name, alpha, beta)
+                 for source, name in (("u_val", "string.sub(pointer.value, 3)"),
+                                      ("npc_val", "string.sub(pointer.value, 3)"),
+                                      ("context_val", "string.sub(pointer.value, 2)"),
+                                      ("global_val", "pointer.value"))]
+        if any(read is None for read in reads):
+            return None
+        read = ('(function(pointer) if pointer.exists == false then return pointer end; '
+                'if string.sub(pointer.value, 1, 2) == "u_" then return ' + reads[0] +
+                ' elseif string.sub(pointer.value, 1, 2) == "n_" then return ' + reads[1] +
+                ' elseif string.sub(pointer.value, 1, 1) == "_" then return ' + reads[2] +
+                ' else return ' + reads[3] + ' end end)(' + pointer + ')')
+    else:
+        read = _render_native_variable_number_snapshot(scope, lua_quote(value[scope]), alpha, beta)
+        if read is None:
+            return None
+    return ('(function(result) if result.exists == false then return ' + default +
+            ' end; return result.value end)(' + read + ')')
+
+
+def _native_number_expression_effects(
+    value: Any, effect_actor_targets: dict[str, tuple[str, str] | None] | None,
+) -> _NativeMathEffects | None:
+    literal = finite_number_literal(value)
+    if literal is not None:
+        return _NativeMathEffects(constant=float(literal))
+    if isinstance(value, dict) and set(value) == {"math"}:
+        compiled = _compile_native_numeric_math(
+            value["math"],
+            lambda name: render_native_math_variable_read(name, effect_actor_targets),
+            lambda name, argument: _render_native_math_domain_query(
+                name, argument, effect_actor_targets),
+        )
+        if compiled is None or compiled.choices:
+            return None
+        effects = compiled.effects
+        # eoc_math catches its type failure and returns zero at this boundary.
+        # The enclosing value_or_var call is not aborted by that failure.
+        return _NativeMathEffects(effects.draws, effects.random_dependent, False,
+                                  effects.constant, effects.singleton_kind)
+    if isinstance(value, list):
+        if len(value) != 2 or any(isinstance(bound, list) for bound in value):
+            return None
+        effects = [_native_number_expression_effects(bound, effect_actor_targets) for bound in value]
+        if any(effect is None for effect in effects) or _native_math_random_order_conflict(effects):
+            return None
+        constants = [effect.constant for effect in effects]
+        singleton = (all(bound is not None and math.isfinite(bound) for bound in constants) and
+                     math.trunc(constants[0]) == math.trunc(constants[1]) and
+                     NATIVE_INT_MIN <= math.trunc(constants[0]) <= NATIVE_INT_MAX)
+        own = _NativeMathEffects(True, not singleton, False,
+                                 float(math.trunc(constants[0])) if singleton else None,
+                                 "int" if singleton else None)
+        merged = _merge_native_math_effects([*effects, own])
+        return _NativeMathEffects(merged.draws, merged.random_dependent, False,
+                                  own.constant, merged.singleton_kind)
+    return _NativeMathEffects() if render_native_number_expression(value, effect_actor_targets) is not None else None
+
+
+def _math_random_order_choice(
+    value: Any, effect_actor_targets: dict[str, tuple[str, str] | None] | None,
+) -> str | None:
+    if isinstance(value, dict):
+        if set(value) == {"math"}:
+            compiled = _compile_native_numeric_math(
+                value["math"],
+                lambda name: render_native_math_variable_read(name, effect_actor_targets),
+                lambda name, argument: _render_native_math_domain_query(
+                    name, argument, effect_actor_targets))
+            if compiled is not None and compiled.choices:
+                return "; ".join(compiled.choices)
+        for nested in value.values():
+            choice = _math_random_order_choice(nested, effect_actor_targets)
+            if choice is not None:
+                return choice
+    elif isinstance(value, list):
+        if len(value) == 2 and not any(isinstance(bound, list) for bound in value):
+            effects = [_native_number_expression_effects(bound, effect_actor_targets) for bound in value]
+            if all(effect is not None for effect in effects) and _native_math_random_order_conflict(effects):
+                return ("Native numeric range bounds have compiler-dependent evaluation order; "
+                        "choose a Lua order for interacting random draws")
+        for nested in value:
+            choice = _math_random_order_choice(nested, effect_actor_targets)
+            if choice is not None:
+                return choice
+    return None
+
+
+def _render_native_variable_string_snapshot(
+    scope: str, quoted_key: str, alpha: str | None, beta: str | None,
+) -> str | None:
+    """Read Native string type and presence without snapshotting other types."""
+    if scope == "global_val":
+        call = f"services.variables.get_global_string({quoted_key})"
+    elif scope == "context_val":
+        call = f"services.variables.get_context_string(context and context.data, {quoted_key})"
+    elif scope in {"u_val", "npc_val"}:
+        owner = alpha if scope == "u_val" else beta
+        if owner is None:
+            return None
+        call = f"services.variables.get_string({owner}, {quoted_key})"
+    else:
+        return None
+    return f"service_value({call})"
+
+
+def _render_assignment_string_value(
+    value: Any, i18n: bool,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None,
+) -> str | None:
+    alpha = _proven_native_variable_read_target(effect_actor_targets, "u")
+    beta = _proven_native_variable_read_target(effect_actor_targets, "npc")
+
+    def read(scope: str, key: str) -> str | None:
+        snapshot = _render_native_variable_string_snapshot(scope, key, alpha, beta)
+        if snapshot is None:
+            return None
+        return ('(function(result) if result.exists == false then return nil end; '
+                f'return result.value end)({snapshot})')
+
+    fallback = None
+    if i18n:
+        # translation_or_var attempts a translation constant BEFORE var_info.
+        # Stored variable strings and string-valued mutators remain raw.
+        if isinstance(value, str) or isinstance(value, dict) and "str" in value:
+            return _render_assignment_translation_literal(value)
+        if isinstance(value, dict):
+            variable_keys = set(value).intersection({
+                "u_val", "npc_val", "global_val", "context_val", "var_val"})
+            if (len(variable_keys) == 1 and set(value) <= variable_keys | {"default"} and
+                    ("default" not in value or
+                     _render_assignment_translation_literal(value["default"]) is not None)):
+                # Shared lowering is used by real assignment/input providers,
+                # not just standalone helper expressions. More complex loader
+                # priority/invalid-default shapes keep their existing path.
+                return render_participant_translation_expression(
+                    value, "actor", alpha, beta)
+        if isinstance(value, dict) and "default" in value:
+            default = value["default"]
+            fallback = _render_assignment_translation_literal(default)
+            if fallback is None:
+                # Native invalid translation defaults clear the optional;
+                # Translation objects with unsupported loader shapes or
+                # diagnostics must remain an explicit gap.
+                if isinstance(default, str) or isinstance(default, dict) and (
+                        "str" in default or "str_sp" in default):
+                    return None
+                fallback = lua_quote("")
+    targets = effect_actor_targets or {}
+    alpha_info = targets.get("read_u", targets.get("u"))
+    technique_alpha = alpha if alpha is not None and alpha_info[1] == "character" else None
+    return render_proficiency_id_expression(
+        value, alpha_owner=technique_alpha, beta_owner=beta,
+        variable_string_reader=read, variable_default_expression=fallback,
+    )
+
+
 def render_static_character_string_var(
     effect: dict[str, Any],
-    avatar_actor_proven: bool,
-    npc_actor_proven: bool,
-    npc_actor_expression: str | None = None,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None,
 ) -> list[str] | None:
-    if "set_string_var" not in effect or "target_var" not in effect:
+    """Render lazy native string providers with native RNG and exact owners."""
+    if (
+        not isinstance(effect, dict) or
+        not {"set_string_var", "target_var"}.issubset(effect) or
+        set(effect) - {"set_string_var", "target_var", "parse_tags", "i18n", "string_input"}
+    ):
         return None
-    if set(effect) - {
-        "set_string_var", "target_var", "parse_tags", "i18n", "string_input",
-    }:
+    target_descriptor = effect["target_var"]
+    if not isinstance(target_descriptor, dict) or len(target_descriptor) != 1:
         return None
-    target = _static_string_variable_descriptor(effect["target_var"])
+    target_key, target_name = next(iter(target_descriptor.items()))
+    target_scope = {"u_val": "u", "npc_val": "npc", "global_val": "global",
+                    "context_val": "context", "var_val": "var"}.get(target_key)
+    target = ((target_scope, target_name) if target_scope is not None and
+              lua_quotable_native_variable_string(target_name) else None)
     if target is None:
         return None
-    if target[0] == "npc" and not npc_actor_proven:
-        return None
-    if target[0] == "var" and not (avatar_actor_proven and npc_actor_proven):
-        return None
     parse_tags = effect.get("parse_tags", False)
+    if not isinstance(parse_tags, bool):
+        return None
     i18n = effect.get("i18n", False)
-    if not isinstance(parse_tags, bool) or not isinstance(i18n, bool):
+    if not isinstance(i18n, bool):
         return None
     values = effect["set_string_var"]
-    if isinstance(values, (str, dict)):
+    if not isinstance(values, list):
         values = [values]
-    if not isinstance(values, list) or not values or len(values) > 64:
-        return None
-    if any(
-        isinstance(value, str) and not bounded_utf8_string(value, 8192, allow_empty=True)
-        for value in values
+    if (
+        not values or len(values) > NATIVE_INT_MAX + 1
     ):
         return None
 
-    actor_expression = (
-        "actor" if (avatar_actor_proven or npc_actor_proven)
-        else "services.characters.avatar()"
-    )
-    if target[0] in {"u", "npc"}:
-        if target[0] == "u" and not avatar_actor_proven:
-            actor_expression = "services.characters.avatar()"
-        elif target[0] == "npc":
-            if npc_actor_expression is not None:
-                actor_expression = npc_actor_expression
-            elif not npc_actor_proven:
-                return None
-            else:
-                actor_expression = "actor"
-        else:
-            actor_expression = "actor"
+    owner: str | None = None
+    if target[0] == "u":
+        owner = _proven_native_variable_write_target(effect_actor_targets, "u")
+    elif target[0] == "npc":
+        owner = _proven_native_variable_write_target(effect_actor_targets, "npc")
+    if target[0] in {"u", "npc"} and owner is None:
+        return None
+    indirect_alpha = _proven_native_variable_write_target(effect_actor_targets, "u")
+    indirect_beta = _proven_native_variable_write_target(effect_actor_targets, "npc")
+    if target[0] == "var" and (indirect_alpha is None or indirect_beta is None):
+        # Runtime pointer text may name either participant. Do not invent a
+        # live actor or silently skip native invalid-participant diagnostics.
+        return None
+    tag_targets = {
+        scope: (effect_actor_targets or {}).get(
+            "text_" + scope, (effect_actor_targets or {}).get(scope)
+        ) for scope in ("u", "npc")
+    }
+    tag_alpha = ("nil" if tag_targets["u"] == ("nil", "absent") else
+                 _proven_copy_variable_target(tag_targets, "u"))
+    tag_beta = ("nil" if tag_targets["npc"] == ("nil", "absent") else
+                _proven_copy_variable_target(tag_targets, "npc"))
+    if parse_tags and (tag_alpha is None or tag_beta is None):
+        # Unknown is not absent. Only explicit source proof can request the
+        # native Avatar tag fallback without changing dialogue presence.
+        return None
 
-    def render_value(value: Any) -> str | None:
-        renderer = render_participant_translation_expression if i18n else render_participant_string_expression
-        return renderer(
-            value, actor_expression,
-            "actor" if avatar_actor_proven else None,
-            npc_actor_expression or ("actor" if npc_actor_proven else None),
-        )
-
-    rendered_values = [render_value(value) for value in values]
+    rendered_values = [_render_assignment_string_value(value, i18n, effect_actor_targets)
+                       for value in values]
     if any(value is None for value in rendered_values):
         return None
-    expressions = [value for value in rendered_values if value is not None]
-    lines: list[str] = []
-    if len(expressions) == 1:
-        value_expression = expressions[0]
-    else:
-        choices = [f"function() return {expression} end" for expression in expressions]
-        lines.append(f"    local values = {{ {', '.join(choices)} }}")
-        value_expression = "values[services.random.int(1, #values)]()"
-
-    input_options = effect.get("string_input")
-    if input_options is not None:
-        if not isinstance(input_options, dict) or set(input_options) - {
-            "title", "description", "default_text", "identifier",
-        }:
+    input_values: dict[str, str] | None = None
+    if "string_input" in effect:
+        requested_input = effect["string_input"]
+        if not isinstance(requested_input, dict) or set(requested_input) - {
+                "title", "default_text", "description", "identifier"}:
             return None
-        alpha = "actor" if avatar_actor_proven else None
-        beta = npc_actor_expression or ("actor" if npc_actor_proven else None)
-        translated_options = [render_participant_translation_expression(
-            input_options[key], actor_expression, alpha, beta) if key in input_options else '""'
-            for key in ("title", "default_text", "description")]
-        identifier = render_participant_string_expression(
-            input_options["identifier"], actor_expression, alpha, beta) if "identifier" in input_options else '""'
-        if any(option is None for option in translated_options) or identifier is None:
-            return None
-        title, initial, description = translated_options
+        input_values = {}
+        for input_field in ("title", "default_text", "description", "identifier"):
+            rendered_input = _render_assignment_string_value(
+                requested_input.get(input_field, ""),
+                input_field != "identifier", effect_actor_targets
+            )
+            if rendered_input is None:
+                return None
+            input_values[input_field] = rendered_input
+    lines = [
+        "    local string_values = { " + ", ".join(
+            f"function() return {value} end" for value in rendered_values
+        ) + " }",
+        "    local assigned_value = string_values[",
+        "        services.random.native_int(0, #string_values - 1) + 1]()",
+    ]
+    if input_values is not None:
         lines.extend([
-            f"    local value = {value_expression}",
-            f"    local input_label_width = #{title}",
-            f"    local input_default = {initial}",
-            f"    local input_title = {title}",
-            f"    local input_description = {description}",
-            f"    local input_identifier = {identifier}",
-            "    local input = services.interaction.input_text(",
-            "        input_title, { default = input_default, description = input_description,",
-            "        identifier = input_identifier, width = 40 + input_label_width })",
-            "    if input.accepted then",
-            "        value = input.value",
+            f"    local input_width_label = {input_values['title']}",
+            f"    local input_default = {input_values['default_text']}",
+            "    local input_result = services.interaction.input_text(",
+            f"        function() return {input_values['title']} end, {{",
+            "            width = 40, width_text = input_width_label, default = input_default,",
+            f"            description = function() return {input_values['description']} end,",
+            f"            identifier = function() return {input_values['identifier']} end,",
+            "        })",
+            "    if input_result.accepted then assigned_value = input_result.value end",
+        ])
+    if parse_tags:
+        lines.extend([
+            "    assigned_value = service_value(services.text.expand_for(",
+            f"        assigned_value, {tag_alpha}, {tag_beta}, nil, context and context.data, true))",
+        ])
+    if target[0] == "var":
+        lines.extend([
+            "    local target_pointer = service_value(services.variables.get_context_string(",
+            f"        context and context.data, {lua_quote(target[1])}))",
+            '    local target_name = target_pointer.exists == false and "" or target_pointer.value',
+            '    if string.sub(target_name, 1, 2) == "u_" then',
+            "        service_value(services.variables.set(",
+            f"            {indirect_alpha}, string.sub(target_name, 3), assigned_value))",
+            '    elseif string.sub(target_name, 1, 2) == "n_" then',
+            "        service_value(services.variables.set(",
+            f"            {indirect_beta}, string.sub(target_name, 3), assigned_value))",
+            '    elseif string.sub(target_name, 1, 1) == "_" then',
+            "        context.data[string.sub(target_name, 2)] = assigned_value",
+            "    else",
+            "        service_value(services.variables.set_global(target_name, assigned_value))",
             "    end",
         ])
-        value_expression = "value"
-
-    if parse_tags:
-        alpha = "actor" if avatar_actor_proven else "services.characters.avatar()"
-        beta = npc_actor_expression or (
-            "actor" if npc_actor_proven else "services.characters.avatar()")
-        value_expression = (
-            "service_value(services.text.expand_for("
-            f"{value_expression}, {alpha}, {beta}))")
-
-    if target[0] == "context":
+    elif target[0] == "context":
         lines.append(
-            f"    context.data[{lua_quote(target[1])}] = {value_expression}"
+            f"    context.data[{lua_quote(target[1])}] = assigned_value"
         )
     elif target[0] == "global":
         lines.extend([
-            "    services.variables.set_global(",
-            f"        {lua_quote(target[1])}, {value_expression})",
-        ])
-    elif target[0] in {"u", "npc"}:
-        lines.extend([
-            "    services.variables.set(",
-            f"        {actor_expression}, {lua_quote(target[1])}, {value_expression})",
+            "    service_value(services.variables.set_global(",
+            f"        {lua_quote(target[1])}, assigned_value))",
         ])
     else:
-        beta = npc_actor_expression or "actor"
         lines.extend([
-            f"    local assigned_value = {value_expression}",
-            f"    local target_name = context.data[{lua_quote(target[1])}]",
-            '    if target_name == nil or target_name == "" then error("missing target variable") end',
-            '    local target_scope, target_owner = "global", nil',
-            '    if target_name:sub(1, 2) == "u_" then',
-            '        target_scope, target_owner, target_name = "u", actor, target_name:sub(3)',
-            '    elseif target_name:sub(1, 2) == "n_" then',
-            f'        target_scope, target_owner, target_name = "npc", {beta}, target_name:sub(3)',
-            '    elseif target_name:sub(1, 1) == "_" then',
-            '        target_scope, target_name = "context", target_name:sub(2)',
-            '    end',
-            '    service_value(services.variables.set_resolved(',
-            '        context.data, target_owner, target_scope, target_name, assigned_value))',
+            "    service_value(services.variables.set(",
+            f"        {owner}, {lua_quote(target[1])}, assigned_value))",
         ])
     return lines
 
@@ -25716,15 +29291,14 @@ def render_static_character_string_var(
 def render_static_sample_range(
     effect: dict[str, Any],
     avatar_actor_proven: bool,
-    npc_actor_proven: bool,
 ) -> list[str] | None:
     """Render bounded literal sample_range assignments.
 
-    The legacy handler rounds its numeric inputs, clamps the sample count to
-    both the population (when sampling without replacement) and the number of
-    target variables, then writes one integer to each selected variable.  This
-    slice keeps those rules explicit and uses the isolated Platform RNG rather
-    than inventing a generic EOC evaluator.
+    The legacy handler rounds its numeric inputs and reports before clamping a
+    sample count that exceeds the population or target variables.  Keep those
+    diagnostic cases manual.  For counts that need no clamp, the emitted
+    bounded Fisher-Yates loop uses ``native_int`` with the same inclusive
+    bounds as native RNG calls, preserving draw order and state.
     """
     if set(effect) != {"sample_range"}:
         return None
@@ -25741,11 +29315,12 @@ def render_static_sample_range(
 
     def rounded_integer(value: int | float) -> int | None:
         numeric = float(value)
-        rounded = (
-            math.floor(numeric + 0.5)
-            if numeric >= 0
-            else math.ceil(numeric - 0.5)
-        )
+        fraction, integral = math.modf(numeric)
+        rounded = math.trunc(integral)
+        if fraction >= 0.5:
+            rounded += 1
+        elif fraction <= -0.5:
+            rounded -= 1
         if not math.isfinite(float(rounded)) or abs(rounded) > 1000000000:
             return None
         return int(rounded)
@@ -25768,13 +29343,7 @@ def render_static_sample_range(
         return None
 
     def target_expression(scope: str) -> str | None:
-        if scope == "u":
-            if avatar_actor_proven:
-                return "actor"
-            if npc_actor_proven:
-                return "services.characters.avatar()"
-            return None
-        if npc_actor_proven:
+        if scope == "u" and avatar_actor_proven:
             return "actor"
         return None
 
@@ -25785,14 +29354,34 @@ def render_static_sample_range(
     if any(handle is None for handle, _ in targets):
         return None
     population = maximum - minimum + 1
-    effective_count = min(count, len(targets))
-    if not replace:
-        effective_count = min(effective_count, population)
-    rendered = [
-        "    local samples = services.random.sample_integers("
-        f"{minimum}, {maximum}, {effective_count}, "
-        f"{'true' if replace else 'false'})"
-    ]
+    # Native allocates a full values vector for no-replacement sampling.
+    # Keep generated Lua within a reviewable memory bound as well.
+    if not replace and population > 65536:
+        return None
+    if count > len(targets) or (not replace and count > population):
+        return None
+    effective_count = count
+    if replace:
+        rendered = [
+            "    local samples = {}",
+            f"    for index = 1, {effective_count} do",
+            f"        samples[index] = services.random.native_int({minimum}, {maximum})",
+            "    end",
+        ]
+    else:
+        rendered = [
+            "    local values = {}",
+            f"    for value = {minimum}, {maximum} do",
+            "        values[#values + 1] = value",
+            "    end",
+            "    local samples = {}",
+            f"    for index = 1, {effective_count} do",
+            "        local swap_index = services.random.native_int(",
+            "            index - 1, #values - 1) + 1",
+            "        values[index], values[swap_index] = values[swap_index], values[index]",
+            "        samples[index] = values[index]",
+            "    end",
+        ]
     for index, (handle, name) in enumerate(targets[:effective_count], start=1):
         rendered.extend(
             [
@@ -25803,108 +29392,27 @@ def render_static_sample_range(
     return rendered
 
 
-def render_dynamic_sample_range(
-    effect: dict[str, Any],
-    avatar_actor_proven: bool,
-    npc_actor_proven: bool,
-) -> list[str] | None:
-    """Render variable-backed sample_range bounds with native-size clamps."""
-    if set(effect) != {"sample_range"}:
-        return None
-    sample = effect.get("sample_range")
-    if not isinstance(sample, dict) or set(sample) - {
-        "count", "min", "max", "replace", "target_vars",
-    }:
-        return None
-    replace = sample.get("replace", False)
-    if not isinstance(replace, bool):
-        return None
-    target_vars = sample.get("target_vars")
-    if not isinstance(target_vars, list) or not target_vars or len(target_vars) > 64:
-        return None
-    descriptors = [_static_character_variable_descriptor(value) for value in target_vars]
-    if any(descriptor is None for descriptor in descriptors):
-        return None
-    actor_expression = (
-        "actor" if (avatar_actor_proven or npc_actor_proven)
-        else "services.characters.avatar()"
-    )
-
-    def bounded_expression(value: Any, minimum: int, maximum: int) -> str | None:
-        expression = _traversal_integer_expression(
-            value, minimum, maximum, actor_expression
-        )
-        if expression is None:
-            return None
-        if finite_number_literal(value) is None:
-            return (
-                f"math.max({minimum}, math.min({maximum}, ({expression})))"
-            )
-        return expression
-
-    count = bounded_expression(sample.get("count"), 0, 1000000000)
-    minimum = bounded_expression(sample.get("min"), -1000000000, 1000000000)
-    maximum = bounded_expression(sample.get("max"), -1000000000, 1000000000)
-    if count is None or minimum is None or maximum is None:
-        return None
-
-    def target_expression(scope: str) -> str | None:
-        if scope == "u":
-            if avatar_actor_proven:
-                return "actor"
-            if npc_actor_proven:
-                return "services.characters.avatar()"
-            return None
-        if npc_actor_proven:
-            return "actor"
-        return None
-
-    targets = [
-        (target_expression(descriptor[0]), descriptor[1])
-        for descriptor in descriptors
-    ]
-    if any(handle is None for handle, _ in targets):
-        return None
-    target_literal = ", ".join(
-        "{ handle = " + handle + ", name = " + lua_quote(name) + " }"
-        for handle, name in targets
-    )
-    options = "true" if replace else "false"
-    return [
-        f"    local sample_count = {count}",
-        f"    local sample_minimum = {minimum}",
-        f"    local sample_maximum = {maximum}",
-        "    if sample_minimum <= sample_maximum then",
-        f"        local sample_targets = {{ {target_literal} }}",
-        "        local effective_count = math.min(sample_count, #sample_targets)",
-        "        if not " + options + " then",
-        "            effective_count = math.min(",
-        "                effective_count, sample_maximum - sample_minimum + 1)",
-        "        end",
-        "        local samples = services.random.sample_integers(",
-        f"            sample_minimum, sample_maximum, effective_count, {options})",
-        "        for index = 1, effective_count do",
-        "            services.variables.set(",
-        "                sample_targets[index].handle, sample_targets[index].name, samples[index])",
-        "        end",
-        "    end",
-    ]
-
-
 def render_static_timed_event_reschedule(
     effect: dict[str, Any],
 ) -> list[str] | None:
-    """Render a literal keyed timed-event reschedule through Platform time."""
+    """Render a literal keyed timed-event retime through the world service."""
     if set(effect) - {"alter_timed_events", "time_in_future"}:
         return None
     key = effect.get("alter_timed_events")
-    if not bounded_utf8_string(key, PLATFORM_ID_MAX_BYTES, allow_empty=True):
+    if not isinstance(key, str):
         return None
-    duration = parse_turns(effect.get("time_in_future", 0))
-    if duration is None or not -31536000 <= duration <= 31536000:
+    try:
+        key.encode("utf-8")
+    except UnicodeEncodeError:
+        return None
+    raw_delay = effect.get("time_in_future", 0)
+    minimum_delay = -(1 << 31)
+    maximum_delay = (1 << 31) - 1
+    duration = parse_native_duration_turns(raw_delay)
+    if duration is None or not minimum_delay <= duration <= maximum_delay:
         return None
     return [
-        "    services.time.reschedule(",
+        "    services.world.reschedule_events(",
         f"        {lua_quote(key)}, services.time.duration({duration}, \"turn\"))",
     ]
 
@@ -25924,46 +29432,45 @@ FACTION_RELATIONSHIP_NAMES = frozenset({
 def render_static_faction_trust(
     effect: dict[str, Any], target_expression: str | None
 ) -> list[str] | None:
-    """Render a bounded NPC-faction trust delta."""
+    """Render an integral literal trust delta for a proven NPC alpha fallback."""
     if target_expression is None or set(effect) != {"u_add_faction_trust"}:
         return None
-    raw_amount = effect["u_add_faction_trust"]
-    amount = _traversal_integer_expression(
-        raw_amount, -1000000, 1000000, target_expression,
-    )
-    if amount is None:
+    literal = finite_number_literal(effect["u_add_faction_trust"])
+    if (
+        literal is None or literal != math.trunc(literal) or
+        not -1000000 <= literal <= 1000000
+    ):
         return None
-    if finite_number_literal(raw_amount) is None:
-        amount = (
-            "math.max(-1000000, math.min(1000000, "
-            f"({amount})))"
-        )
+    amount = math.trunc(literal)
     return [
-        "    services.characters.add_faction_trust(",
-        f"        {target_expression}, {amount})",
+        "    -- npc_becomes_hostile supplies a live NPC alpha with no beta;",
+        "    -- native actor(true) falls back to alpha (its debugmsg is omitted).",
+        "    service_value(services.characters.add_faction_trust(",
+        f"        {target_expression}, {amount}))",
     ]
 
 
 def render_static_faction_rep(
     effect: dict[str, Any], npc_actor_proven: bool,
 ) -> list[str] | None:
-    """Render a bounded provider-faction reputation delta."""
+    """Render a bounded literal provider-faction delta with native int truncation."""
     if not npc_actor_proven or set(effect) != {"u_faction_rep"}:
         return None
-    raw_amount = effect.get("u_faction_rep")
-    amount = _traversal_integer_expression(
-        raw_amount, -1000000, 1000000, "actor"
-    )
-    if amount is None:
+    literal = finite_number_literal(effect.get("u_faction_rep"))
+    if literal is None:
         return None
-    if finite_number_literal(raw_amount) is None:
-        amount = (
-            "math.max(-1000000, math.min(1000000, "
-            f"({amount})))"
-        )
+    amount = math.trunc(literal)
+    if not -1000000 <= amount <= 1000000:
+        return None
     return [
-        "    service_value(services.npcs.add_faction_rep(",
-        f"        actor, {int(amount)}))",
+        "    -- npc_becomes_hostile supplies a live NPC alpha with no beta;",
+        "    -- native actor(true) falls back to alpha (its debugmsg is omitted).",
+        "    -- Both paths leave lone-wolf faction reputation unchanged.",
+        "    if actor ~= nil and",
+        '        service_value(services.creatures.snapshot(actor)).kind == "npc" then',
+        "        service_value(services.npcs.add_faction_rep(",
+        f"            actor, {amount}))",
+        "    end",
     ]
 
 
@@ -25992,109 +29499,224 @@ def render_static_faction_relationship(
 
 
 def render_static_context_presence_condition(condition: dict[str, Any]) -> str | None:
-    """Render literal event-context presence checks without EOC variables."""
+    """Render literal context-key checks; missing-key debugmsg is not mirrored."""
     if set(condition) != {"expects_vars"}:
         return None
     values = condition.get("expects_vars")
     if (
-        not isinstance(values, list) or not values or len(values) > 64 or
+        not isinstance(values, list) or len(values) > 64 or
         not all(bounded_utf8_string(value, 256) for value in values)
     ):
         return None
+    if not values:
+        # Native f_expects_vars captures an empty vector and returns true.
+        return "true"
     return " and ".join(
         f"context.data[{lua_quote(value)}] ~= nil" for value in values
     )
 
 
 def render_static_condition_math(
-    condition: dict[str, Any], actor_proven: bool = False
+    condition: dict[str, Any],
+    math_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> str | None:
-    """Render only finite numeric comparisons from the legacy math condition."""
+    """Compile pure numeric conditions and preserve Native double-to-bool truth."""
     if set(condition) != {"math"}:
         return None
-    raw = condition.get("math")
-    if not isinstance(raw, list) or not raw or not all(isinstance(part, str) for part in raw):
-        return None
-    raw = ["".join(raw)]
-    match = re.fullmatch(
-        r"\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*"
-        r"(==|!=|<=|>=|<|>)\s*"
-        r"([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*",
-        raw[0],
-    )
-    if match is None:
-        expression = raw[0].strip()
-        if not expression or len(expression) > 8192 or "\0" in expression:
-            return None
-        if not actor_proven and re.search(
-            r"\b(?:u_|npc_|n_|u_val\s*\(|npc_val\s*\(|n_val\s*\()", expression
-        ):
-            return None
-        actor_expression = (
-            "actor" if actor_proven else "services.characters.avatar()"
-        )
-        return (
-            "service_value(services.gameplay.math.evaluate("
-            f"{lua_quote(expression)}, {actor_expression}, context.data)) ~= 0"
-        )
-    try:
-        left = float(match.group(1))
-        right = float(match.group(3))
-    except ValueError:
-        return None
-    if not math.isfinite(left) or not math.isfinite(right):
-        return None
-    return f"{lua_number(left)} {match.group(2)} {lua_number(right)}"
+    expression = render_literal_native_arithmetic(
+        condition.get("math"), lambda token: render_native_math_variable_read(token, math_actor_targets))
+    return None if expression is None else f"({expression} ~= 0.0)"
 
 
 def render_static_line_of_sight_condition(
     condition: dict[str, Any],
 ) -> str | None:
-    """Render a literal line-of-sight check against context coordinates.
+    """Keep EOC LOS shapes partial until dynamic endpoint types are proven.
 
-    The native condition accepts dynamic variables and arbitrary numeric
-    expressions.  Migration only emits the typed environment query when both
-    endpoints are explicit context values and the range is a finite integer
-    inside the Platform service bound; all other shapes remain TODOs.
+    Native ``loc_1`` and ``loc_2`` are ``var_info`` lookups converted through
+    ``diag_value.tripoint()``; missing and legacy-string values therefore have
+    native conversion behavior that an untyped Platform variable read cannot
+    safely assume. Two-ended ``dbl_or_var`` ranges also call native ``rng``.
     """
-    if not {"line_of_sight", "loc_1", "loc_2"} <= set(condition):
-        return None
-    if set(condition) - {"line_of_sight", "loc_1", "loc_2", "with_fields"}:
-        return None
-    raw_range = finite_number_literal(condition.get("line_of_sight"))
-    if (
-        raw_range is None or
-        math.trunc(float(raw_range)) != float(raw_range) or
-        raw_range < 0 or raw_range > 100000
-    ):
-        return None
+    return None
 
-    def context_location(value: Any) -> str | None:
-        if (
-            not isinstance(value, dict) or
-            set(value) != {"context_val"} or
-            not bounded_utf8_string(value.get("context_val"), 256)
-        ):
-            return None
-        return f"context.data[{lua_quote(value['context_val'])}]"
 
-    first = context_location(condition.get("loc_1"))
-    second = context_location(condition.get("loc_2"))
-    if first is None or second is None:
+def contains_line_of_sight_condition(condition: Any) -> bool:
+    if isinstance(condition, dict):
+        if "line_of_sight" in condition:
+            return True
+        return any(
+            contains_line_of_sight_condition(condition[key])
+            for key in ("and", "or", "not")
+            if key in condition
+        )
+    if isinstance(condition, list):
+        return any(contains_line_of_sight_condition(entry) for entry in condition)
+    return False
+
+
+TRAINING_OFFER_CONDITION_SELECTORS = frozenset({
+    "u_train_styles", "npc_train_styles",
+    "u_train_spells", "npc_train_spells",
+})
+
+NPC_PROFICIENCY_CONDITION_SELECTORS = frozenset({"npc_has_proficiency"})
+
+
+def contains_training_offer_condition(condition: Any) -> bool:
+    if isinstance(condition, str):
+        return condition in TRAINING_OFFER_CONDITION_SELECTORS
+    if isinstance(condition, dict):
+        if TRAINING_OFFER_CONDITION_SELECTORS.intersection(condition):
+            return True
+        return any(
+            contains_training_offer_condition(condition[key])
+            for key in ("and", "or", "not") if key in condition
+        )
+    if isinstance(condition, list):
+        return any(contains_training_offer_condition(entry) for entry in condition)
+    return False
+
+
+def contains_npc_proficiency_condition(condition: Any) -> bool:
+    if isinstance(condition, dict):
+        if NPC_PROFICIENCY_CONDITION_SELECTORS.intersection(condition):
+            return True
+        return any(
+            contains_npc_proficiency_condition(condition[key])
+            for key in ("and", "or", "not", "test_eoc") if key in condition
+        )
+    if isinstance(condition, list):
+        return any(contains_npc_proficiency_condition(entry) for entry in condition)
+    return False
+
+
+SAFE_SPACE_BETA_CONDITION_SELECTORS = frozenset({
+    "at_safe_space", "npc_at_safe_space",
+})
+SAFE_SPACE_ALPHA_CONDITION_SELECTORS = frozenset({"u_at_safe_space"})
+NPC_BETA_CHARACTER_SNAPSHOT_FIELDS = {
+    "npc_has_activity": "activity.active",
+    "npc_is_travelling": "travel.has_path",
+    "npc_controlling_vehicle": "movement.controlling_vehicle",
+    "npc_driving": "movement.driving",
+    "npc_following": "npc_state.following",
+}
+NPC_BETA_CHARACTER_STATE_CONDITION_SELECTORS = frozenset(
+    NPC_BETA_CHARACTER_SNAPSHOT_FIELDS
+)
+
+TALK_TOPIC_PARTICIPANT_KIND_CONDITIONS = {
+    "avatar": ("creature", ("avatar",)),
+    "npc": ("creature", ("npc",)),
+    "character": ("creature", ("avatar", "character", "npc")),
+    "monster": ("creature", ("monster",)),
+    "item": ("item", ()),
+    "furniture": ("computer", ()),
+    "vehicle": ("vehicle", ()),
+}
+TALK_TOPIC_PARTICIPANT_PRESENCE_CONDITIONS = {
+    "u_exists": "has_speaker",
+    "has_alpha": "has_speaker",
+    "npc_exists": "has_interlocutor",
+    "has_beta": "has_interlocutor",
+}
+
+
+def _render_talk_topic_participant_identity_condition(
+    condition: Any,
+) -> LuaRaw | None:
+    """Render only kind and presence checks backed by the native dialogue slots."""
+    if not isinstance(condition, str):
         return None
-    with_fields = condition.get("with_fields", True)
-    if not isinstance(with_fields, bool):
+    presence_method = TALK_TOPIC_PARTICIPANT_PRESENCE_CONDITIONS.get(condition)
+    if presence_method is not None:
+        return LuaRaw(
+            "function(dialogue_context)\n"
+            "            if not dialogue_context:valid() then return false end\n"
+            f"            return dialogue_context:{presence_method}()\n"
+            "        end"
+        )
+
+    if condition.startswith("u_is_"):
+        actor_accessor = "speaker"
+        kind_name = condition.removeprefix("u_is_")
+    elif condition.startswith("npc_is_"):
+        actor_accessor = "interlocutor"
+        kind_name = condition.removeprefix("npc_is_")
+    else:
         return None
-    return (
-        "services.gameplay.environment.line_of_sight("
-        f"{first}, {second}, {int(raw_range)}, "
-        f"{'true' if with_fields else 'false'})"
+    expected = TALK_TOPIC_PARTICIPANT_KIND_CONDITIONS.get(kind_name)
+    if expected is None:
+        return None
+    actor_kind, actor_subtypes = expected
+    predicate = f'actor.kind == {lua_quote(actor_kind)}'
+    if actor_subtypes:
+        predicate += " and (" + " or ".join(
+            f"actor.subtype == {lua_quote(subtype)}"
+            for subtype in actor_subtypes
+        ) + ")"
+    return LuaRaw(
+        "function(dialogue_context)\n"
+        "            if not dialogue_context:valid() then return false end\n"
+        f"            local actor = dialogue_context:{actor_accessor}()\n"
+        f"            return actor ~= nil and {predicate}\n"
+        "        end"
     )
+
+
+def contains_safe_space_beta_condition(condition: Any) -> bool:
+    if isinstance(condition, str):
+        return condition in SAFE_SPACE_BETA_CONDITION_SELECTORS
+    if isinstance(condition, dict):
+        if SAFE_SPACE_BETA_CONDITION_SELECTORS.intersection(condition):
+            return True
+        return any(
+            contains_safe_space_beta_condition(condition[key])
+            for key in ("and", "or", "not") if key in condition
+        )
+    if isinstance(condition, list):
+        return any(contains_safe_space_beta_condition(entry) for entry in condition)
+    return False
+
+
+def contains_safe_space_alpha_condition(condition: Any) -> bool:
+    if isinstance(condition, str):
+        return condition in SAFE_SPACE_ALPHA_CONDITION_SELECTORS
+    if isinstance(condition, dict):
+        if SAFE_SPACE_ALPHA_CONDITION_SELECTORS.intersection(condition):
+            return True
+        return any(
+            contains_safe_space_alpha_condition(condition[key])
+            for key in ("and", "or", "not") if key in condition
+        )
+    if isinstance(condition, list):
+        return any(contains_safe_space_alpha_condition(entry) for entry in condition)
+    return False
+
+
+def contains_npc_beta_character_state_condition(condition: Any) -> bool:
+    if isinstance(condition, str):
+        return condition in NPC_BETA_CHARACTER_STATE_CONDITION_SELECTORS
+    if isinstance(condition, dict):
+        if NPC_BETA_CHARACTER_STATE_CONDITION_SELECTORS.intersection(condition):
+            return True
+        return any(
+            contains_npc_beta_character_state_condition(condition[key])
+            for key in ("and", "or", "not") if key in condition
+        )
+    if isinstance(condition, list):
+        return any(
+            contains_npc_beta_character_state_condition(entry)
+            for entry in condition
+        )
+    return False
 
 
 def render_static_perception_condition(
     condition: dict[str, Any], avatar_actor_proven: bool,
     npc_actor_proven: bool,
+    npc_actor_expression: str | None = None,
 ) -> str | None:
     """Render the finite, non-interactive perception condition shapes.
 
@@ -26120,20 +29742,22 @@ def render_static_perception_condition(
     if (
         avatar_actor_proven and
         npc_actor_proven and
+        npc_actor_expression is not None and
         set(condition) == {"u_see_npc_loc"}
     ):
         return (
             "service_value(services.creatures.has_line_of_sight("
-            "services.characters.avatar(), actor))"
+            f"services.characters.avatar(), {npc_actor_expression}))"
         )
     if (
         avatar_actor_proven and
         npc_actor_proven and
+        npc_actor_expression is not None and
         set(condition) == {"npc_see_u_loc"}
     ):
         return (
             "service_value(services.creatures.has_line_of_sight("
-            "actor, services.characters.avatar()))"
+            f"{npc_actor_expression}, services.characters.avatar()))"
         )
     if (
         npc_actor_proven and
@@ -26188,8 +29812,115 @@ def _dynamic_id_expression(
     return f'services.types.id("{kind}", {rendered})'
 
 
+def render_inventory_flag_condition(
+    condition: dict[str, Any],
+    avatar_actor_proven: bool,
+    weapon_actor_proven: bool,
+    generic_character_actor_proven: bool,
+    creature_actor_proven: bool,
+    npc_dialogue_pair_proven: bool,
+    npc_actor_expression: str | None,
+) -> str | None:
+    """Lower worn/wielded flag checks for their exact native talker slots."""
+    selectors = {
+        "u_has_worn_with_flag": ("u", True),
+        "npc_has_worn_with_flag": ("npc", True),
+        "u_has_wielded_with_flag": ("u", False),
+        "npc_has_wielded_with_flag": ("npc", False),
+    }
+    keys = selectors.keys() & condition.keys()
+    if len(keys) != 1:
+        return None
+    key = next(iter(keys))
+    scope, worn = selectors[key]
+    if set(condition) != ({key, "bodypart"} if worn else {key}):
+        return None
+    if worn and not bounded_platform_body_part_id(condition.get("bodypart")):
+        # Native omitted bodypart inherits d.reason. The Platform event context
+        # does not prove that reason, so only an explicit registered part is safe.
+        return None
+
+    alpha = (
+        "actor" if (
+            avatar_actor_proven or weapon_actor_proven or
+            generic_character_actor_proven or creature_actor_proven
+        ) else None
+    )
+    beta_proven = (
+        npc_dialogue_pair_proven and
+        npc_actor_expression == "context.actors.beta"
+    )
+    beta = "context.actors.beta" if beta_proven else None
+    if scope == "u":
+        # Inventory methods resolve an exact Character. A generic Creature
+        # proof alone can also be a monster, which this API cannot query.
+        if not (
+            avatar_actor_proven or weapon_actor_proven or
+            generic_character_actor_proven
+        ):
+            return None
+        target = "actor"
+        service_target = target
+    else:
+        # The npc_ selector reads const_actor(true), not an NPC event's alpha.
+        # Exact direct-pair provenance proves beta; the runtime guard narrows
+        # that Creature to the Character types accepted by inventory services.
+        if not beta_proven:
+            return None
+        target = beta
+        service_target = "beta"
+
+    raw_flag = condition[key]
+    if isinstance(raw_flag, str) and not bounded_platform_id(raw_flag):
+        return None
+    if (
+        isinstance(raw_flag, dict) and raw_flag.get("i18n") is True and
+        not bounded_platform_id(raw_flag.get("str"))
+    ):
+        return None
+    flag_expression = render_participant_string_expression(
+        raw_flag, target, alpha, beta,
+    )
+    if flag_expression is None:
+        return None
+
+    lines = ["(function()"]
+    if scope == "npc":
+        lines.extend([
+            "    local beta = context and context.actors and context.actors.beta",
+            '    if beta == nil or beta.kind ~= "creature" or ',
+            '       (beta.subtype ~= "avatar" and beta.subtype ~= "character" and ',
+            '        beta.subtype ~= "npc") then return false end',
+        ])
+    lines.extend([
+        "    local function resolve_id(kind, value)",
+        "        local ok, id = pcall(services.types.id, kind, value)",
+        "        if not ok or not id:is_valid() then return nil end",
+        "        return id",
+        "    end",
+    ])
+    if worn:
+        lines.extend([
+            '    local bodypart = resolve_id("body_part", '
+            f'{lua_quote(condition["bodypart"])})',
+            "    if bodypart == nil then return false end",
+        ])
+    lines.extend([
+        f'    local flag = resolve_id("json_flag", {flag_expression})',
+        "    if flag == nil then return false end",
+        (
+            f"    return service_value(services.inventory.has_worn_flag({service_target}, flag, bodypart))"
+            if worn else
+            f"    return service_value(services.inventory.wielded_matches({service_target}, flag))"
+        ),
+        "end)()",
+    ])
+    return "\n".join(lines)
+
+
 def render_effect_condition(
     condition: dict[str, Any], alpha: str | None, beta: str | None,
+    effect_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> str | None:
     selectors = {prefix + name for prefix in ("u_", "npc_")
                  for name in ("has_effect", "has_any_effect")}
@@ -26199,58 +29930,87 @@ def render_effect_condition(
     key = next(iter(keys))
     if set(condition) - {key, "bodypart", "intensity"}:
         return None
+    # Native EOC conditions inherit an omitted part from dialogue reason.
+    # The migration has no proven reason channel, so require a non-empty
+    # literal part; a dynamic part can still evaluate empty and inherit reason.
+    if not bounded_platform_body_part_id(condition.get("bodypart")):
+        return None
+    values = condition[key] if key.endswith("any_effect") else [condition[key]]
+    if not isinstance(values, list):
+        return None
     target = beta if key.startswith("npc_") else alpha
     if target is None:
         return None
+    # Native has_any_effect never resolves an actor, effect id, or intensity
+    # when its list is empty.  The body-part expression above is the only
+    # other potentially evaluated input, and it is already bounded to a
+    # literal.  Still require a proven actor before taking this shortcut so
+    # this renderer cannot bypass the EOC source-provenance gate.
+    if not values:
+        return "false"
+    beta_context_target = (
+        key.startswith("npc_") and target == "context.actors.beta"
+    )
+    service_target = "beta" if beta_context_target else target
 
-    def identifier(value: Any, kind: str) -> str | None:
-        if isinstance(value, dict):
-            raw = render_participant_string_expression(value, target, alpha, beta)
-            return None if raw is None else f'services.types.id("{kind}", {raw})'
-        return _dynamic_id_expression(value, kind, target)
+    def raw_identifier(value: Any) -> str | None:
+        return render_participant_string_expression(value, target, alpha, beta)
 
-    bodypart = "nil"
-    if "bodypart" in condition:
-        bodypart = identifier(condition["bodypart"], "body_part")
-        if bodypart is None:
-            return None
-    values = condition[key] if key.endswith("any_effect") else [condition[key]]
-    if not isinstance(values, list):
+    raw_effects = [raw_identifier(value) for value in values]
+    if any(value is None for value in raw_effects):
         return None
     raw_intensity = condition.get("intensity", -1)
     literal = finite_number_literal(raw_intensity)
     if literal is not None:
         intensity = lua_number(literal)
     else:
-        intensity = _effect_numeric_expression(raw_intensity, target, alpha, beta)
+        intensity = _effect_numeric_expression(raw_intensity, target, alpha, beta, effect_actor_targets)
         if intensity is None:
             return None
-    if not values:
-        return "false"
-    queries = []
-    for value in values:
-        effect = identifier(value, "effect")
-        if effect is None:
-            return None
-        if literal is not None and -1000000 <= literal <= 1000000:
-            queries.append(
-                f"service_value(services.effects.has({target}, {effect}, {bodypart}, {intensity}))")
-        else:
-            # Native EOC evaluates intensity only when this effect exists.
-            # Snapshot comparison also preserves thresholds outside has()'s
-            # bounded optional argument without clamping their meaning.
-            queries.append(
-                f"(function() local result = services.effects.get({target}, {effect}, {bodypart}); "
-                'if not result.ok then if result.error.code == "not_found" then return false end; '
-                'service_value(result) end; '
-                f'return result.value.intensity >= ({intensity}) end)()')
-    if len(queries) <= 64:
-        return " or ".join(queries)
-    # A long flat chain of `or` expressions can hit Lua parser nesting limits.
-    # Sequential branches retain lazy reads with no arbitrary list-size cap.
-    return "(function() " + " ".join(
-        f"if {query} then return true end;" for query in queries
-    ) + " return false end)()"
+    query = (
+        f"return service_value(services.effects.has({service_target}, effect, bodypart, {intensity}))"
+        if literal is not None and -1000000 <= literal <= 1000000 else
+        # Native EOC evaluates intensity only when this effect exists.
+        # Snapshot comparison also preserves thresholds outside has()'s
+        # bounded optional argument without clamping their meaning.
+        f"local result = services.effects.get({service_target}, effect, bodypart); "
+        'if not result.ok then if result.error.code == "not_found" then return false end; '
+        'service_value(result) end; '
+        f'return result.value.intensity >= ({intensity})'
+    )
+    lines = ["(function()"]
+    if beta_context_target:
+        lines.extend([
+            "    local beta = context and context.actors and context.actors.beta",
+            '    if beta == nil or beta.kind ~= "creature" then return false end',
+        ])
+    lines.extend([
+        "    local function resolve_id(kind, value)",
+        "        local ok, id = pcall(services.types.id, kind, value)",
+        "        if not ok or not id:is_valid() then return nil end",
+        "        return id",
+        "    end",
+        f'    local bodypart = resolve_id("body_part", {lua_quote(condition["bodypart"])})',
+        "    if bodypart == nil then return false end",
+        "    local function has_effect(raw_id)",
+        '        local effect = resolve_id("effect", raw_id)',
+        "        if effect == nil then return false end",
+        f"        {query}",
+        "    end",
+    ])
+    if len(raw_effects) <= 64:
+        lines.append(
+            "    return " + " or ".join(
+                f"has_effect({effect})" for effect in raw_effects
+            )
+        )
+    else:
+        # Keep long source arrays sequential without a deep Lua `or` chain.
+        for effect in raw_effects:
+            lines.append(f"    if has_effect({effect}) then return true end")
+        lines.append("    return false")
+    lines.append("end)()")
+    return "\n".join(lines)
 
 
 def render_dynamic_character_condition(
@@ -26259,6 +30019,7 @@ def render_dynamic_character_condition(
     npc_actor_proven: bool,
     weapon_actor_proven: bool,
     npc_actor_expression: str = "actor",
+    math_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> str | None:
     """Lower variable-backed Character/NPC predicates through typed services.
 
@@ -26281,11 +30042,20 @@ def render_dynamic_character_condition(
     effect_selectors = {prefix + name for prefix in ("u_", "npc_")
                         for name in ("has_effect", "has_any_effect")}
     if effect_selectors.intersection(condition):
-        return render_effect_condition(
-            condition,
-            actor_specs["u"][1] if actor_specs["u"][0] else None,
-            actor_specs["npc"][1] if actor_specs["npc"][0] else None,
-        )
+        # Effect predicates need their own alpha/beta source proof.  In
+        # particular, the npc_ prefix selects dialogue::const_actor(true),
+        # not the NPC event's alpha actor.  The provenance-aware lowerers
+        # handle these selectors before this generic Character fallback.
+        return None
+    inventory_flag_selectors = {
+        "u_has_worn_with_flag", "npc_has_worn_with_flag",
+        "u_has_wielded_with_flag", "npc_has_wielded_with_flag",
+    }
+    if inventory_flag_selectors.intersection(condition):
+        # Worn flags depend on the dialogue reason when bodypart is omitted;
+        # npc_ flags read beta rather than an NPC event's alpha. The dedicated
+        # lowerer handles these only with an explicit part and exact slot proof.
+        return None
 
     # Simple single-id queries share the same shape across Character domains.
     simple_id_queries: tuple[tuple[str, str, str], ...] = (
@@ -26296,8 +30066,6 @@ def render_dynamic_character_condition(
         ("u_has_martial_art", "martial_arts.get", "martial_art"),
         ("npc_using_martial_art", "martial_arts.get", "martial_art"),
         ("u_using_martial_art", "martial_arts.get", "martial_art"),
-        ("npc_has_proficiency", "proficiencies.get", "proficiency"),
-        ("u_has_proficiency", "proficiencies.get", "proficiency"),
     )
     for key, service, kind in simple_id_queries:
         if set(condition) != {key}:
@@ -26331,15 +30099,12 @@ def render_dynamic_character_condition(
             call += ".selected" if "using_" in key else ".known"
         return call
 
-    # Inventory and weapon predicates are all represented by typed GameId
-    # arguments.  Dynamic values therefore need no compatibility adapter.
+    # Remaining inventory and weapon predicates use typed GameIds directly.
+    # Categories and item-type flags have separate static lowerers because
+    # their native count and flag semantics are narrower than the generic APIs.
     for key, scope, kind, service in (
         ("u_has_item", "u", "item", "inventory.resources"),
         ("npc_has_item", "npc", "item", "inventory.resources"),
-        ("u_has_item_category", "u", "item_category", "inventory.category_count"),
-        ("npc_has_item_category", "npc", "item_category", "inventory.category_count"),
-        ("u_has_item_with_flag", "u", "json_flag", "inventory.has_item_flag"),
-        ("npc_has_item_with_flag", "npc", "json_flag", "inventory.has_item_flag"),
         ("u_has_worn_with_flag", "u", "json_flag", "inventory.has_worn_flag"),
         ("npc_has_worn_with_flag", "npc", "json_flag", "inventory.has_worn_flag"),
         ("u_has_wielded_with_flag", "u", "json_flag", "inventory.wielded_matches"),
@@ -26358,6 +30123,33 @@ def render_dynamic_character_condition(
         proven, actor = actor_specs[scope]
         if not proven:
             return None
+        if service.endswith("has_worn_flag"):
+            if (
+                set(condition) != {key, "bodypart"} or
+                not bounded_platform_body_part_id(condition.get("bodypart"))
+            ):
+                return None
+            flag_value = render_participant_string_expression(
+                condition[key], actor,
+                "actor" if avatar_actor_proven else None,
+                actor_specs["npc"][1] if npc_actor_proven else None,
+            )
+            if flag_value is None:
+                return None
+            return (
+                "(function() "
+                "local function resolve_id(kind, value) "
+                "local ok, id = pcall(services.types.id, kind, value); "
+                "if not ok or not id:is_valid() then return nil end; "
+                "return id end; "
+                "local bodypart = resolve_id(\"body_part\", "
+                f"{lua_quote(condition['bodypart'])}); "
+                "if bodypart == nil then return false end; "
+                f"local flag = resolve_id(\"json_flag\", {flag_value}); "
+                "if flag == nil then return false end; "
+                f"return service_value(services.inventory.has_worn_flag({actor}, flag, bodypart)) "
+                "end)()"
+            )
         identifier = _dynamic_id_expression(condition[key], kind, actor)
         if identifier is None:
             return None
@@ -26367,18 +30159,11 @@ def render_dynamic_character_condition(
                 f"service_value(services.{service}({actor}, {identifier}, 1)).has_charges)"
             )
         if service.endswith("category_count"):
-            count = render_eoc_numeric_expression(condition.get("count", 1), "1", actor)
+            count = render_eoc_numeric_expression(
+                condition.get("count", 1), "1", actor, math_actor_targets)
             if count is None:
                 return None
             return f"service_value(services.{service}({actor}, {identifier})) >= ({count})"
-        if service.endswith("has_worn_flag"):
-            bodypart = ""
-            if "bodypart" in condition:
-                bodypart_id = _dynamic_id_expression(condition["bodypart"], "body_part", actor)
-                if bodypart_id is None:
-                    return None
-                bodypart = ", " + bodypart_id
-            return f"service_value(services.{service}({actor}, {identifier}{bodypart}))"
         return f"service_value(services.{service}({actor}, {identifier}))"
 
     for key, scope in (
@@ -26443,7 +30228,7 @@ def render_dynamic_character_condition(
         proven, actor = actor_specs[scope]
         if not proven:
             return None
-        amount = render_eoc_numeric_expression(condition[key], "0", actor)
+        amount = render_eoc_numeric_expression(condition[key], "0", actor, math_actor_targets)
         if amount is None:
             return None
         return f"service_value(services.characters.snapshot({actor})).{('stats.' + field_name) if field_name != 'cash' else field_name} >= ({amount})"
@@ -26467,6 +30252,14 @@ def render_trait_condition(
     target = beta if selector.startswith("npc_") else alpha
     if target is None:
         return None
+    if selector.startswith("npc_") and target in {
+        "actor", "context.actors.item",
+        "(context.actors and context.actors.beta) or actor",
+    }:
+        # Native npc_* conditions read const_actor(true), which is beta.  A
+        # primary EOC actor or fallback-to-alpha expression is not proof of
+        # that participant and must not be queried as though it were beta.
+        return None
     observer = alpha if selector.startswith("npc_") else beta
     method = "is_visible_to" if selector.endswith("has_visible_trait") else (
         "is_purifiable" if selector.endswith("is_trait_purifiable") else "has")
@@ -26474,6 +30267,55 @@ def render_trait_condition(
         return None
 
     def query(identifier: Any) -> str | None:
+        if selector in {
+            "u_has_trait", "npc_has_trait",
+            "u_has_any_trait", "npc_has_any_trait",
+            "u_is_trait_purifiable", "npc_is_trait_purifiable",
+        }:
+            if (
+                selector in {
+                    "u_has_any_trait", "npc_has_any_trait",
+                    "u_is_trait_purifiable", "npc_is_trait_purifiable",
+                } and
+                isinstance(identifier, dict) and "mutator" in identifier
+            ):
+                # Some native str_or_var mutators consume RNG or depend on
+                # both dialogue actors.  Do not replace their callback
+                # semantics without parity proof.
+                return None
+            if isinstance(identifier, dict):
+                raw_id = render_participant_string_expression(
+                    identifier, target, alpha, beta,
+                    native_string_values=True,
+                )
+            elif lua_quotable_native_variable_string(identifier):
+                raw_id = lua_quote(identifier)
+            else:
+                return None
+            if raw_id is None:
+                return None
+            # Do not run the variable resolver until the selected actor is a
+            # live-shaped Character handle.  This matters for npc_*: beta is
+            # allowed to be absent, and native const_actor(true) never falls
+            # back to alpha.
+            character_expression = (
+                "context and context.actors and context.actors.beta"
+                if target == "context.actors.beta" else target
+            )
+            query_method = (
+                "is_purifiable_id_text"
+                if selector.endswith("is_trait_purifiable") else "has_id_text"
+            )
+            return (
+                "(function(character) "
+                'if character == nil or character.kind ~= "creature" then return false end; '
+                'if character.subtype ~= "avatar" and character.subtype ~= "character" '
+                'and character.subtype ~= "npc" then return false end; '
+                f"local raw = {raw_id}; "
+                'if type(raw) ~= "string" then return false end; '
+                f"return service_value(services.mutations.{query_method}(character, raw)) "
+                f"end)({character_expression})"
+            )
         if isinstance(identifier, dict):
             raw_id = render_participant_string_expression(identifier, target, alpha, beta)
             value = None if raw_id is None else f'services.types.id("mutation", {raw_id})'
@@ -26496,6 +30338,244 @@ def render_trait_condition(
     return query(raw)
 
 
+def render_npc_selected_generic_rewards_condition(
+    condition: str, npc_dialogue_pair_proven: bool,
+    npc_actor_expression: str | None,
+) -> str | None:
+    """Preserve the predicate result for a proven beta; native debugmsg is omitted."""
+    if (
+        condition != "mission_has_generic_rewards" or
+        not npc_dialogue_pair_proven or
+        npc_actor_expression != "context.actors.beta"
+    ):
+        return None
+    return (
+        "(function() "
+        "local beta = context and context.actors and context.actors.beta; "
+        "if beta == nil or beta.kind ~= \"creature\" or "
+        "beta.subtype ~= \"npc\" then return false end; "
+        "return service_value(services.npcs.missions."
+        "selected_has_generic_rewards(beta)) "
+        "end)()"
+    )
+
+
+def render_static_item_requirements_condition(
+    condition: dict[str, Any], avatar_actor_proven: bool,
+    alpha_character_actor_proven: bool, npc_dialogue_pair_proven: bool,
+) -> str | None:
+    """Lower static legacy item requirements with exact native actor roles."""
+    selector = next(iter(condition), None)
+    if selector not in {"u_has_items", "npc_has_items"} or \
+            set(condition) != {selector}:
+        return None
+    requested = condition[selector]
+    # Native item::count_by_charges("any") plus Character::has_amount gives
+    # "any" wildcard semantics that the typed inventory service does not expose.
+    if (
+        not isinstance(requested, dict) or
+        set(requested) - {"item", "count", "charges"} or
+        not bounded_platform_id(requested.get("item")) or
+        requested.get("item") == "any" or
+        not ({"count", "charges"} & set(requested))
+    ):
+        return None
+
+    quantities: dict[str, int] = {}
+    for key in ("count", "charges"):
+        value = finite_number_literal(requested.get(key, 0))
+        if (
+            value is None or value != math.trunc(float(value)) or
+            not 0 <= value <= 1000000000
+        ):
+            return None
+        quantities[key] = int(value)
+
+    if selector == "u_has_items":
+        if npc_dialogue_pair_proven:
+            target = "context and context.actors and context.actors.alpha"
+            local_name = "alpha"
+        elif avatar_actor_proven or alpha_character_actor_proven:
+            target = "actor"
+            local_name = "alpha"
+        else:
+            return None
+    else:
+        if not npc_dialogue_pair_proven:
+            return None
+        target = "context and context.actors and context.actors.beta"
+        local_name = "beta"
+
+    character_guard = (
+        f'{local_name}.kind ~= "creature" or '
+        f'({local_name}.subtype ~= "avatar" and '
+        f'{local_name}.subtype ~= "character" and '
+        f'{local_name}.subtype ~= "npc")'
+    )
+    # Unknown non-wildcard IDs match the native zero-count empty result.
+    return (
+        "(function() "
+        f"local {local_name} = {target}; "
+        f"if {local_name} == nil or {character_guard} then return false end; "
+        'local item_type = services.types.id("item", ' +
+        lua_quote(requested["item"]) + "); "
+        f"if not item_type:is_valid() then return {quantities['count']} == 0 "
+        f"and {quantities['charges']} == 0 end; "
+        f"return service_value(services.inventory.has_items({local_name}, item_type, " +
+        str(quantities["count"]) + ", " + str(quantities["charges"]) +
+        ")) end)()"
+    )
+
+
+def render_static_items_sum_condition(
+    condition: dict[str, Any], avatar_actor_proven: bool,
+    npc_dialogue_pair_proven: bool,
+) -> str | None:
+    """Lower bounded static weighted sums with exact native actor roles."""
+    selector = next(iter(condition), None)
+    if selector not in {"u_has_items_sum", "npc_has_items_sum"} or \
+            set(condition) != {selector}:
+        return None
+    requested = condition[selector]
+    if not isinstance(requested, list) or not 1 <= len(requested) <= 128:
+        return None
+
+    entries: list[str] = []
+    for row in requested:
+        if (
+            not isinstance(row, dict) or
+            set(row) - {"item", "amount"} or
+            not bounded_platform_id(row.get("item"))
+        ):
+            return None
+        desired = finite_number_literal(row.get("amount", 1))
+        if desired is None or not 0 < desired <= 1000000000:
+            return None
+        entries.append(
+            "{ item = services.types.id(\"item\", " +
+            lua_quote(row["item"]) + "), amount = " + lua_number(desired) + " }"
+        )
+
+    if selector == "u_has_items_sum":
+        if npc_dialogue_pair_proven:
+            target = "context and context.actors and context.actors.alpha"
+            local_name = "alpha"
+        elif avatar_actor_proven:
+            target = "actor"
+            local_name = "alpha"
+        else:
+            return None
+    else:
+        if not npc_dialogue_pair_proven:
+            return None
+        target = "context and context.actors and context.actors.beta"
+        local_name = "beta"
+
+    character_guard = (
+        f'{local_name}.kind ~= "creature" or '
+        f'({local_name}.subtype ~= "avatar" and '
+        f'{local_name}.subtype ~= "character" and '
+        f'{local_name}.subtype ~= "npc")'
+    )
+    rendered_entries = ",\n".join(
+        f"            {entry}" for entry in entries
+    )
+    return (
+        "(function()\n"
+        f"    local {local_name} = {target}\n"
+        f"    if {local_name} == nil or {character_guard} then return false end\n"
+        "    return service_value(services.inventory.has_items_sum(\n"
+        f"        {local_name}, {{\n{rendered_entries}\n        }}))\n"
+        "end)()"
+    )
+
+
+def render_static_item_category_or_flag_condition(
+    condition: dict[str, Any], avatar_actor_proven: bool,
+    npc_dialogue_pair_proven: bool,
+) -> str | None:
+    """Lower static item-category and item-type-flag predicates with exact roles."""
+    category_selectors = {"u_has_item_category", "npc_has_item_category"}
+    flag_selectors = {"u_has_item_with_flag", "npc_has_item_with_flag"}
+    present_selectors = (category_selectors | flag_selectors).intersection(condition)
+    if len(present_selectors) != 1:
+        return None
+    selector = next(iter(present_selectors))
+    if selector in category_selectors:
+        if set(condition) - {selector, "count"}:
+            return None
+        native_count = condition.get("count", 1)
+        if (
+            not isinstance(native_count, int) or isinstance(native_count, bool) or
+            not NATIVE_INT_MIN <= native_count <= NATIVE_INT_MAX
+        ):
+            return None
+        # Native f_has_item_category only honors counts strictly between 1
+        # and INT_MAX; every other int leaves its initialized threshold at 1.
+        count = native_count if 1 < native_count < NATIVE_INT_MAX else 1
+        kind = "item_category"
+    elif selector in flag_selectors:
+        if set(condition) != {selector}:
+            return None
+        count = 1
+        kind = "json_flag"
+    else:
+        return None
+
+    raw_id = condition.get(selector)
+    if (
+        not bounded_platform_id(raw_id) or
+        any(ord(character) < 0x20 or ord(character) == 0x7F for character in raw_id)
+    ):
+        return None
+
+    if selector.startswith("u_"):
+        if npc_dialogue_pair_proven:
+            target = "context and context.actors and context.actors.alpha"
+        elif avatar_actor_proven:
+            target = "actor"
+        else:
+            return None
+        local_name = "alpha"
+    else:
+        # npc_* selects beta. An event's ordinary actor is alpha and cannot
+        # prove beta; only direct talk-topic response callbacks establish it.
+        if not npc_dialogue_pair_proven:
+            return None
+        target = "context and context.actors and context.actors.beta"
+        local_name = "beta"
+
+    character_guard = (
+        f'{local_name}.kind ~= "creature" or '
+        f'({local_name}.subtype ~= "avatar" and '
+        f'{local_name}.subtype ~= "character" and '
+        f'{local_name}.subtype ~= "npc")'
+    )
+    if kind == "item_category":
+        return (
+            "(function() "
+            f"local {local_name} = {target}; "
+            f"if {local_name} == nil or {character_guard} then return false end; "
+            'local category = services.types.id("item_category", ' +
+            lua_quote(raw_id) + "); "
+            "if not category:is_valid() then return false end; "
+            f"return service_value(services.inventory.category_count({local_name}, category)) >= {count} "
+            "end)()"
+        )
+
+    return (
+        "(function() "
+        f"local {local_name} = {target}; "
+        f"if {local_name} == nil or {character_guard} then return false end; "
+        'local flag = services.types.id("json_flag", ' +
+        lua_quote(raw_id) + "); "
+        # Do not guard on flag validity: native cache_has_item_with(flag_id)
+        # treats an invalid ID as an unfiltered item-presence query.
+        f"return service_value(services.inventory.has_item_type_flag({local_name}, flag)) "
+        "end)()"
+    )
+
+
 def render_eoc_condition_expression(
     condition: Any, avatar_actor_proven: bool = False,
     weapon_actor_proven: bool = False,
@@ -26505,28 +30585,274 @@ def render_eoc_condition_expression(
     _test_eoc_stack: frozenset[str] = frozenset(),
     npc_actor_expression: str | None = None,
     generic_character_actor_proven: bool = False,
+    training_pair_proven: bool = False,
+    npc_dialogue_pair_proven: bool = False,
+    event_beta_presence_proven: bool = False,
+    proficiency_alpha_actor_proven: bool = False,
+    npc_melee_beta_actor_proven: bool = False,
+    safe_space_character_beta_actor_proven: bool = False,
+    named_condition_alpha_actor_proven: bool = False,
+    proficiency_character_alpha_actor_proven: bool = False,
+    math_actor_targets: dict[str, tuple[str, str] | None] | None = None,
 ) -> str | None:
     """Translate bounded legacy predicates into ordinary Lua composition."""
+    # The proof bit certifies an exact Character handle.  The expression only
+    # selects which proven handle to query; a non-empty expression alone does
+    # not authorize Character/NPC services.
     character_actor_proven = avatar_actor_proven or weapon_actor_proven or \
         npc_actor_proven or generic_character_actor_proven
-    npc_query_actor = npc_actor_expression or (
-        "actor" if npc_actor_proven else None
+    primary_character_actor_proven = (
+        avatar_actor_proven or weapon_actor_proven or
+        generic_character_actor_proven
     )
+    proficiency_alpha_variable_owner = (
+        "actor" if (
+            proficiency_alpha_actor_proven or
+            proficiency_character_alpha_actor_proven or
+            npc_melee_beta_actor_proven
+        ) else None
+    )
+    proficiency_beta_variable_owner = (
+        "context.actors.interlocutor" if npc_melee_beta_actor_proven else None
+    )
+    npc_query_actor = (
+        (npc_actor_expression or "actor") if npc_actor_proven else None
+    )
+    if condition == "u_has_camp":
+        # Native f_u_has_camp ignores dialogue alpha and reads the global
+        # player's recorded camp coordinates and current faction ownership.
+        return "service_value(services.camps.has_player_owned_camp())"
+    if condition == "npc_has_assigned_camp":
+        # Native f_npc_has_assigned_camp reads const_actor(true).  Only the
+        # event-exclusive melee proof supplies that live beta to this EOC.
+        if not npc_melee_beta_actor_proven:
+            return None
+        return (
+            "(function() "
+            "local beta = context and context.actors and context.actors.interlocutor; "
+            "if beta == nil or beta.kind ~= \"creature\" or "
+            "beta.subtype ~= \"npc\" or not beta:is_valid() then return false end; "
+            "local result = services.npcs.get(beta); "
+            "return result.ok and result.value.has_assigned_camp == true "
+            "end)()"
+        )
+    if condition in (
+        "u_train_styles", "npc_train_styles",
+        "u_train_spells", "npc_train_spells",
+    ):
+        # Native predicates compare training offers between both const_dialogue
+        # talkers.  The current topic adapter does not invoke response EOCs or
+        # pass a live alpha/beta pair to generated EOC functions, so content
+        # provenance alone cannot authorize either training service here.
+        return None
+    if (
+        isinstance(condition, str) and
+        condition in SAFE_SPACE_BETA_CONDITION_SELECTORS
+    ):
+        # Only the direct, event-exclusive character-melee callback supplies
+        # the exact native beta as a live Character interlocutor.  Do not pass
+        # this proof through test_eoc, nested Boolean shapes, or child EOCs.
+        if not safe_space_character_beta_actor_proven:
+            return None
+        return (
+            "(function() "
+            "local beta = context and context.actors and context.actors.interlocutor; "
+            "if beta == nil or beta.kind ~= \"creature\" or "
+            "(beta.subtype ~= \"avatar\" and beta.subtype ~= \"character\" and "
+            "beta.subtype ~= \"npc\") or not beta:is_valid() then return false end; "
+            "local snapshot = services.characters.snapshot(beta); "
+            "return snapshot.ok and snapshot.value.environment.safe_space == true "
+            "end)()"
+        )
+    # npc_has_assigned_camp reads const_actor(true).  A callable EOC needs an
+    # event-exclusive beta proof; a single Character or inferred topic pair
+    # cannot stand in for that slot.
     if condition in ("u_train_skills", "npc_train_skills"):
-        if not avatar_actor_proven or npc_actor_expression is None:
+        if not avatar_actor_proven or not npc_actor_proven or npc_query_actor is None:
             return None
         teacher, student = (
-            ("actor", npc_actor_expression) if condition == "u_train_skills"
-            else (npc_actor_expression, "actor")
+            ("actor", npc_query_actor) if condition == "u_train_skills"
+            else (npc_query_actor, "actor")
         )
         return f"service_value(services.skills.offered({teacher}, {student})).total > 0"
+    if condition == "player_see_u" and (
+        avatar_actor_proven or weapon_actor_proven or
+        generic_character_actor_proven or creature_actor_proven
+    ):
+        return (
+            'actor ~= nil and actor.kind == "creature" and '
+            "service_value(services.creatures.player_can_see(actor))"
+        )
+    if condition == "npc_see_u":
+        # Native f_see_opposite(true) reads the live beta Creature and asks
+        # whether it sees the alpha Creature.  Only the pre-damage melee
+        # event pair currently reaches generated EOCs with that exact beta;
+        # topic callbacks do not wire their beta through render_talk_topic.
+        if not npc_melee_beta_actor_proven:
+            return None
+        return (
+            "(function() "
+            "local alpha = actor; "
+            "local beta = context and context.actors and context.actors.interlocutor; "
+            "if alpha == nil or alpha.kind ~= \"creature\" or "
+            "beta == nil or beta.kind ~= \"creature\" then return false end; "
+            "return service_value(services.creatures.can_see(beta, alpha)) "
+            "end)()"
+        )
+    opposite_visibility_conditions = {
+        "u_see_npc", "u_see_npc_loc", "npc_see_u_loc",
+    }
+    if isinstance(condition, str) and (
+        condition == "player_see_npc" or condition in opposite_visibility_conditions
+    ):
+        # These native predicates read const_actor(true), which is the
+        # dialogue beta.  A Character proof or a single NPC event actor does
+        # not establish that role; require the narrow dialogue-pair proof and
+        # its exact beta expression before querying it.
+        if (
+            not npc_dialogue_pair_proven or
+            npc_actor_expression != "context.actors.beta"
+        ):
+            return None
+        beta_guard = (
+            "context ~= nil and context.actors ~= nil and "
+            "context.actors.beta ~= nil and "
+            'context.actors.beta.kind == "creature" and '
+        )
+        if condition == "player_see_npc":
+            return (
+                beta_guard +
+                "service_value(services.creatures.player_can_see(context.actors.beta))"
+            )
+        alpha_guard = 'actor ~= nil and actor.kind == "creature" and '
+        if condition == "u_see_npc":
+            query = "services.creatures.can_see(actor, context.actors.beta)"
+        elif condition == "u_see_npc_loc":
+            query = (
+                "services.creatures.has_line_of_sight(actor, "
+                "context.actors.beta)"
+            )
+        else:
+            query = (
+                "services.creatures.has_line_of_sight(context.actors.beta, actor)"
+            )
+        return beta_guard + alpha_guard + f"service_value({query})"
+    if condition in ("u_has_stolen_item", "npc_has_stolen_item"):
+        # Both native aliases ignore their is_npc parameter and query
+        # const_actor(false) as the inventory holder and const_actor(true) as
+        # the owner. A direct topic pair or an event-exclusive pre-damage
+        # Character melee pair proves both roles. A single event actor does not.
+        if npc_dialogue_pair_proven and npc_actor_expression == "context.actors.beta":
+            beta_field = "beta"
+        elif safe_space_character_beta_actor_proven and generic_character_actor_proven:
+            beta_field = "interlocutor"
+        else:
+            return None
+        return (
+            "(function() "
+            "local alpha = actor; "
+            f"local beta = context and context.actors and context.actors.{beta_field}; "
+            "local function is_character(value) "
+            "return value ~= nil and value.kind == \"creature\" and "
+            "(value.subtype == \"avatar\" or "
+            "value.subtype == \"character\" or value.subtype == \"npc\") "
+            "end; "
+            "if not is_character(alpha) or not is_character(beta) then "
+            "return false end; "
+            "return service_value(services.inventory.has_stolen_from(alpha, beta)) "
+            "end)()"
+        )
+    npc_beta_snapshot_condition = None
+    if isinstance(condition, str) and condition in NPC_BETA_CHARACTER_SNAPSHOT_FIELDS:
+        npc_beta_snapshot_condition = condition
+    elif (
+        isinstance(condition, dict) and
+        set(condition) == {"npc_has_activity"} and
+        isinstance(condition["npc_has_activity"], str)
+    ):
+        npc_beta_snapshot_condition = "npc_has_activity"
+    if npc_beta_snapshot_condition is not None:
+        # Every selector reads native const_actor(true). Only a direct
+        # true_eocs/false_eocs topic callback proves that beta exists at this
+        # exact slot; an event alpha or nested/re-entered callback is not a
+        # substitute. The Character snapshot matches the native talker
+        # activity/travel/following checks. For vehicle checks, map::veh_at
+        # converts absolute coordinates through get_bub; Character::is_driving
+        # uses the same bubble square and additionally requires a moving
+        # vehicle, while controlling_vehicle does not.
+        if (
+            not npc_dialogue_pair_proven or
+            npc_actor_expression != "context.actors.beta"
+        ):
+            return None
+        field = NPC_BETA_CHARACTER_SNAPSHOT_FIELDS[
+            npc_beta_snapshot_condition
+        ]
+        result = f"state.{field}"
+        result += " == true"
+        return (
+            "(function() "
+            "local beta = context and context.actors and context.actors.beta; "
+            "if beta == nil or beta.kind ~= \"creature\" or "
+            "(beta.subtype ~= \"avatar\" and beta.subtype ~= \"character\" "
+            "and beta.subtype ~= \"npc\") then return false end; "
+            "if not beta:is_valid() then return false end; "
+            "local snapshot = services.characters.snapshot(beta); "
+            "if not snapshot.ok then return false end; "
+            "local state = snapshot.value; "
+            f"return {result} "
+            "end)()"
+        )
+    if condition == "u_can_stow_weapon":
+        if not character_actor_proven:
+            return None
+        return (
+            'actor ~= nil and actor.kind == "creature" and '
+            '(actor.subtype == "avatar" or actor.subtype == "character" '
+            'or actor.subtype == "npc") and '
+            "service_value(services.inventory.weapon_state(actor)).can_stow"
+        )
+    if condition == "npc_can_stow_weapon":
+        if (
+            not npc_dialogue_pair_proven or
+            npc_actor_expression != "context.actors.beta"
+        ):
+            return None
+        return (
+            "(function() "
+            "local beta = context and context.actors and context.actors.beta; "
+            "if beta == nil or beta.kind ~= \"creature\" or "
+            "(beta.subtype ~= \"avatar\" and beta.subtype ~= \"character\" "
+            "and beta.subtype ~= \"npc\") then return false end; "
+            "return service_value(services.inventory.weapon_state(beta)).can_stow "
+            "end)()"
+        )
+    if condition == "u_is_in_vehicle":
+        if not character_actor_proven:
+            return None
+        return (
+            'actor ~= nil and actor.kind == "creature" and '
+            '(actor.subtype == "avatar" or actor.subtype == "character" '
+            'or actor.subtype == "npc") and '
+            "service_value(services.characters.is_in_vehicle(actor))"
+        )
+    if condition == "npc_is_in_vehicle":
+        if (
+            not npc_dialogue_pair_proven or
+            npc_actor_expression != "context.actors.beta"
+        ):
+            return None
+        return (
+            "(function() "
+            "local beta = context and context.actors and context.actors.beta; "
+            "if beta == nil or beta.kind ~= \"creature\" or "
+            "(beta.subtype ~= \"avatar\" and beta.subtype ~= \"character\" "
+            "and beta.subtype ~= \"npc\") then return false end; "
+            "return service_value(services.characters.is_in_vehicle(beta)) "
+            "end)()"
+        )
     if creature_actor_proven:
         if isinstance(condition, str):
-            if condition == "player_see_u":
-                return (
-                    "service_value(services.creatures.can_see("
-                    "services.characters.avatar(), actor))"
-                )
             if condition == "u_is_alive":
                 return (
                     "actor ~= nil and actor.kind == \"creature\" and not "
@@ -26556,18 +30882,8 @@ def render_eoc_condition_expression(
                 return "actor ~= nil and actor.kind == \"item\""
             if condition == "u_is_vehicle":
                 return "actor ~= nil and actor.kind == \"vehicle\""
-            if condition == "u_is_furniture":
-                return (
-                    "context.data ~= nil and "
-                    "context.data[\"__ccb_talker_kind\"] == \"furniture\""
-                )
-        if isinstance(condition, dict) and set(condition) == {"u_has_effect"}:
-            effect_id = condition.get("u_has_effect")
-            if safe_platform_id(effect_id):
-                return (
-                    "service_value(services.effects.has(actor, services.types.id(\"effect\", "
-                    f"{lua_quote(effect_id)})))"
-                )
+        if isinstance(condition, dict) and "u_has_effect" in condition:
+            return render_effect_condition(condition, "actor", None, math_actor_targets)
         if isinstance(condition, dict) and set(condition) == {"u_has_species"}:
             species = _dynamic_id_expression(
                 condition["u_has_species"], "species", "actor"
@@ -26577,31 +30893,124 @@ def render_eoc_condition_expression(
                     "service_value(services.creatures.has_species(actor, " +
                     species + "))"
                 )
-        if isinstance(condition, dict) and set(condition) == {"u_has_any_effect"}:
-            effect_ids = condition.get("u_has_any_effect")
-            if isinstance(effect_ids, list) and effect_ids and len(effect_ids) <= 64 and all(
-                safe_platform_id(value) for value in effect_ids
-            ):
-                return " or ".join(
-                    "service_value(services.effects.has(actor, services.types.id(\"effect\", "
-                    f"{lua_quote(value)})))"
-                    for value in effect_ids
-                )
-        if condition == "has_beta":
-            return (
-                "context.actors ~= nil and context.actors.beta ~= nil"
-            )
+        if isinstance(condition, dict) and "u_has_any_effect" in condition:
+            return render_effect_condition(condition, "actor", None, math_actor_targets)
     if condition is None:
         return "true"
     if isinstance(condition, bool):
         return "true" if condition else "false"
     if isinstance(condition, str):
-        if condition == "has_beta" and npc_actor_expression is not None:
+        # Native has_effect(..., bp_null) and Platform effects.has without a
+        # part both search every target part.  Only a proven dialogue beta
+        # establishes the actor used by npc_available.
+        if condition == "u_available":
+            return None
+        if condition == "npc_available":
+            if (
+                not npc_dialogue_pair_proven or
+                npc_actor_expression != "context.actors.beta"
+            ):
+                return None
             return (
-                "context.actors ~= nil and context.actors.beta ~= nil"
+                "(function() "
+                "local beta = context and context.actors and context.actors.beta; "
+                "if beta == nil or beta.kind ~= \"creature\" or "
+                "beta.subtype ~= \"npc\" then return false end; "
+                'local busy = services.types.id("effect", "currently_busy"); '
+                "if not busy:is_valid() then return true end; "
+                "return not service_value(services.effects.has(beta, busy)) "
+                "end)()"
             )
+        if condition in {"has_beta", "npc_exists"} and event_beta_presence_proven:
+            # conditional_t::f_has_beta/f_exists(true) read only d.has_beta.
+            # For an event-exclusive EOC, event_bus passes the same optional
+            # second talker to the native subscriber and Platform event bridge;
+            # event_to_lua exposes it as actors.interlocutor. This checks
+            # presence only and does not claim the talker is an NPC.
+            return (
+                "context ~= nil and "
+                "context.__ccb_event_beta_presence_proven == true and "
+                "context.actors ~= nil and "
+                "context.actors.interlocutor ~= nil"
+            )
+        if condition in {"has_beta", "npc_exists"}:
+            # Outside a required_event callback, actor provenance does not
+            # establish the native dialogue beta slot.
+            return None
         if condition == "is_day":
             return "not services.gameplay.environment.is_night()"
+        if condition in {
+            "has_assigned_mission", "has_many_assigned_missions",
+            "has_no_assigned_mission",
+        }:
+            # These three predicates read dialogue::missions_assigned, which
+            # avatar::talk_to initializes after the beta talker's
+            # check_missions() and filters to the alpha avatar.
+            # render_talk_topic only lowers a direct static positive
+            # u_has_intelligence response condition; it does not expose the
+            # native dialogue mission vector to this predicate.
+            return None
+        if condition in {
+            "has_available_mission", "has_many_available_missions",
+            "has_no_available_mission", "npc_has_available_mission",
+            "npc_has_many_available_missions",
+            "npc_has_no_available_mission",
+        }:
+            # Native beta aliases read const_actor(true)->available_missions().
+            # NPC providers expose chatbin.missions, but the bounded response
+            # condition callback does not implement mission-state queries.
+            # Action true_eocs remain disconnected. A subtype guard would
+            # also change has_no_available_mission for a non-NPC beta, whose
+            # base talker returns an empty list.
+            return None
+        if condition in {
+            "mission_complete", "mission_failed", "mission_incomplete",
+            "npc_mission_complete", "npc_mission_failed",
+            "npc_mission_incomplete",
+        }:
+            # These predicates inspect beta's selected mission. Even a
+            # direct topic pair has no executable mission-state callback:
+            # response conditions currently lower only static positive
+            # u_has_intelligence, and action true_eocs remain disconnected.
+            return None
+        if condition == "u_friend":
+            # Native u_friend reads alpha and asks whether that exact actor is
+            # friendly to the global avatar.  The NPC snapshot exposes the
+            # same query.  Avatar talkers use the base implementation, whose
+            # answer is always false; an unproven or non-NPC Character stays
+            # guarded rather than being confused with dialogue beta.
+            if avatar_actor_proven:
+                return "false"
+            if (
+                weapon_actor_proven or generic_character_actor_proven or
+                (
+                    npc_actor_proven and
+                    npc_actor_expression in (None, "actor")
+                )
+            ):
+                return (
+                    'actor ~= nil and actor.kind == "creature" and '
+                    'actor.subtype == "npc" and '
+                    "service_value(services.npcs.get(actor)).friendly"
+                )
+        if condition in ("npc_friend", "npc_hostile"):
+            # These native aliases call const_actor(true); an NPC-shaped
+            # alpha/event actor or a statically inferred talk-topic pair is
+            # not a beta handle connected to this generated runtime.  The
+            # caller grants this proof only to event-exclusive melee EOCs,
+            # whose native and Platform bridges both carry the live target as
+            # actors.interlocutor before damage is applied.
+            if not npc_melee_beta_actor_proven:
+                return None
+            field = "friendly" if condition == "npc_friend" else "enemy"
+            return (
+                "(function() "
+                "local beta = context and context.actors and context.actors.interlocutor; "
+                "if beta == nil or beta.kind ~= \"creature\" then return false end; "
+                "if beta.subtype ~= \"npc\" then return false end; "
+                f"return service_value(services.npcs.get(beta)).{field} "
+                "end)()"
+            )
         if npc_query_actor is not None:
             if condition == "npc_is_alive":
                 return (
@@ -26615,94 +31024,58 @@ def render_eoc_condition_expression(
                 )
             if condition == "npc_is_outside":
                 return (
-                    "services.gameplay.environment.is_outside("
                     "service_value(services.creatures.snapshot(" +
-                    npc_query_actor + ")).position)"
-                )
-            if condition in {"player_see_npc", "u_see_npc"}:
-                return (
-                    "service_value(services.creatures.can_see("
-                    "services.characters.avatar(), " +
-                    npc_query_actor + "))"
-                )
-            if condition == "npc_see_u":
-                return (
-                    "service_value(services.creatures.can_see(" +
-                    npc_query_actor +
-                    ", services.characters.avatar()))"
+                    npc_query_actor + ")).outside"
                 )
         if weapon_actor_proven and condition == "has_ammo":
             return (
-                "context.actors.item ~= nil and "
-                "service_value(services.items.ammo_sufficient(context.actors.item, actor))"
+                "(function() "
+                "local item_handle = context and context.actors and context.actors.item; "
+                "local character = actor; "
+                "if item_handle == nil or item_handle.kind ~= \"item\" or "
+                "not item_handle:is_valid() or character == nil or "
+                "character.kind ~= \"creature\" or "
+                "(character.subtype ~= \"avatar\" and "
+                "character.subtype ~= \"character\" and "
+                "character.subtype ~= \"npc\") then return false end; "
+                "return service_value(services.items.has_ammo(item_handle, character)) "
+                "end)()"
             )
         if weapon_actor_proven and condition == "is_rotten":
             return (
                 "context.actors.item ~= nil and "
                 "service_value(services.items.snapshot(context.actors.item)).relative_rot > 1"
             )
-        # These legacy predicates need a dedicated native query with explicit
-        # location/mission/item semantics.  Do not emit a made-up generic
-        # service call: returning ``None`` makes render_eoc record a visible
-        # TODO and keeps the generated Lua executable against the declared API.
-        if condition == "u_has_camp":
-            return None
-        if condition in ("u_has_activity", "npc_has_activity"):
+        # Other legacy predicates need dedicated native queries with explicit
+        # location/mission/item semantics; keep them as visible TODOs.
+        if avatar_actor_proven and condition == "u_has_activity":
             return "service_value(services.activities.snapshot(actor)).active"
         if weapon_actor_proven and condition == "u_has_weapon":
             return "character_has_weapon(actor)"
-        if npc_actor_proven and condition == "npc_has_weapon":
-            return "character_has_weapon(actor)"
+        if npc_query_actor is not None and condition == "npc_has_weapon":
+            return f"character_has_weapon({npc_query_actor})"
         if weapon_actor_proven and condition == "u_can_drop_weapon":
             return "character_can_drop_weapon(actor)"
-        if npc_actor_proven and condition == "npc_can_drop_weapon":
-            return "character_can_drop_weapon(actor)"
+        if npc_query_actor is not None and condition == "npc_can_drop_weapon":
+            return f"character_can_drop_weapon({npc_query_actor})"
         if character_actor_proven and condition == "u_is_travelling":
             return "character_travel_has_path(actor)"
-        if npc_actor_proven and condition == "npc_is_travelling":
-            return "character_travel_has_path(actor)"
-        if character_actor_proven and condition == "u_at_safe_space":
-            return "character_at_safe_space(actor)"
-        if npc_actor_proven and condition == "at_safe_space":
-            return "character_at_safe_space(actor)"
-        if npc_actor_proven and condition == "npc_at_safe_space":
+        if proficiency_alpha_actor_proven and condition == "u_at_safe_space":
             return "character_at_safe_space(actor)"
         if character_actor_proven and condition == "u_has_pickup_list":
             return "character_has_pickup_whitelist(actor)"
-        if npc_actor_proven and condition == "has_pickup_list":
-            return "character_has_pickup_whitelist(actor)"
-        if npc_actor_proven and condition == "npc_has_pickup_list":
-            return "character_has_pickup_whitelist(actor)"
-        if weapon_actor_proven and condition == "player_see_u":
-            return ("service_value(services.creatures.can_see("
-                    "services.creatures.avatar(), actor))")
-        if npc_actor_proven and condition == "player_see_npc":
-            return ("service_value(services.creatures.can_see("
-                    "services.creatures.avatar(), actor))")
-        if npc_actor_proven and condition == "npc_see_u":
-            return ("service_value(services.creatures.can_see("
-                    "actor, services.characters.avatar()))")
-        if npc_actor_proven and condition == "u_see_npc":
-            return ("service_value(services.creatures.can_see("
-                    "services.characters.avatar(), actor))")
-        if npc_actor_proven and condition == "u_see_npc_loc":
-            return (
-                "service_value(services.creatures.has_line_of_sight("
-                "services.characters.avatar(), actor))"
-            )
-        if npc_actor_proven and condition == "npc_see_u_loc":
-            return (
-                "service_value(services.creatures.has_line_of_sight("
-                "actor, services.characters.avatar()))"
-            )
+        if npc_query_actor is not None and condition == "has_pickup_list":
+            return f"character_has_pickup_whitelist({npc_query_actor})"
+        if npc_query_actor is not None and condition == "npc_has_pickup_list":
+            return f"character_has_pickup_whitelist({npc_query_actor})"
         if (
             (avatar_actor_proven or generic_character_actor_proven) and
             condition == "u_is_warm"
         ):
             return ("service_value(services.characters.snapshot(actor))"
                     ".creature.warm")
-        if npc_actor_proven and condition == "npc_is_warm":
-            return ("service_value(services.characters.snapshot(actor))"
+        if npc_query_actor is not None and condition == "npc_is_warm":
+            return (f"service_value(services.characters.snapshot({npc_query_actor}))"
                     ".creature.warm")
         if (
             (avatar_actor_proven or generic_character_actor_proven) and
@@ -26710,27 +31083,24 @@ def render_eoc_condition_expression(
         ):
             return ("service_value(services.characters.snapshot(actor))"
                     ".senses.deaf")
-        if npc_actor_proven and condition == "npc_is_deaf":
-            return ("service_value(services.characters.snapshot(actor))"
+        if npc_query_actor is not None and condition == "npc_is_deaf":
+            return (f"service_value(services.characters.snapshot({npc_query_actor}))"
                     ".senses.deaf")
         if (
             (avatar_actor_proven or generic_character_actor_proven) and
             condition == "u_is_underwater"
         ):
             return "service_value(services.characters.is_underwater(actor))"
-        if npc_actor_proven and condition == "npc_is_underwater":
-            return "service_value(services.characters.is_underwater(actor))"
+        if npc_query_actor is not None and condition == "npc_is_underwater":
+            return f"service_value(services.characters.is_underwater({npc_query_actor}))"
         if (
             (avatar_actor_proven or generic_character_actor_proven) and
             condition == "u_is_alive"
         ):
             return "service_value(services.characters.is_alive(actor))"
-        if npc_actor_proven and condition == "npc_is_alive":
-            return "service_value(services.characters.is_alive(actor))"
-        if (
-            (avatar_actor_proven or generic_character_actor_proven) and
-            condition == "u_is_avatar"
-        ):
+        if npc_query_actor is not None and condition == "npc_is_alive":
+            return f"service_value(services.characters.is_alive({npc_query_actor}))"
+        if primary_character_actor_proven and condition == "u_is_avatar":
             # Actor provenance proves a Character handle, not that the
             # callback is necessarily running for the avatar.  Keep the
             # legacy predicate as a runtime kind check so an unbound EOC can
@@ -26745,28 +31115,32 @@ def render_eoc_condition_expression(
         ):
             return ("service_value(services.characters.snapshot(actor))"
                     ".male")
-        if npc_actor_proven and condition == "npc_male":
-            return ("service_value(services.characters.snapshot(actor))"
+        if npc_query_actor is not None and condition == "npc_male":
+            return (f"service_value(services.characters.snapshot({npc_query_actor}))"
                     ".male")
-        if npc_actor_proven and condition == "npc_female":
-            return ("not service_value(services.characters.snapshot(actor))"
+        if npc_query_actor is not None and condition == "npc_female":
+            return (f"not service_value(services.characters.snapshot({npc_query_actor}))"
                     ".male")
-        if (
-            (avatar_actor_proven or generic_character_actor_proven) and
-            condition == "u_is_character"
-        ):
+        if primary_character_actor_proven and condition == "u_is_npc":
+            return (
+                "service_value(services.creatures.snapshot(actor)).kind == "
+                "\"npc\""
+            )
+        if primary_character_actor_proven and condition == "u_is_character":
             return (
                 "service_value(services.creatures.snapshot(actor)).kind ~= "
                 "\"monster\""
             )
-        if npc_actor_proven and condition == "npc_is_character":
-            return "true"
-        if npc_actor_proven and condition == "npc_is_npc":
-            return "true"
-        if npc_actor_proven and npc_actor_expression is not None and condition == "npc_is_avatar":
+        if primary_character_actor_proven and condition in (
+            "u_is_monster", "u_is_item", "u_is_vehicle",
+        ):
+            return "false"
+        if avatar_actor_proven and condition == "u_is_furniture":
+            return "false"
+        if npc_query_actor is not None and condition == "npc_is_avatar":
             return (
                 "service_value(services.creatures.snapshot("
-                f"{npc_actor_expression})).kind == \"avatar\""
+                f"{npc_query_actor})).kind == \"avatar\""
             )
         if (
             (avatar_actor_proven or generic_character_actor_proven) and
@@ -26779,75 +31153,33 @@ def render_eoc_condition_expression(
             condition == "u_is_outside"
         ):
             return (
-                "services.gameplay.environment.is_outside("
                 "service_value(services.characters.snapshot(actor))"
-                ".creature.position)"
+                ".environment.outside"
             )
-        if npc_actor_proven and condition == "npc_is_outside":
+        if npc_query_actor is not None and condition == "npc_is_outside":
             return (
-                "services.gameplay.environment.is_outside("
-                "service_value(services.characters.snapshot(actor))"
-                ".creature.position)"
+                "service_value(services.characters.snapshot(" +
+                npc_query_actor + ")).environment.outside"
             )
-        if condition == "npc_has_activity":
-            return "(services.characters.snapshot(actor).activity ~= nil)"
         if isinstance(condition, dict) and "expects_vars" in condition:
             return None
         if isinstance(condition, dict) and "math" in condition:
             return None
-        if avatar_actor_proven and condition in (
-            "u_is_npc", "u_is_monster", "u_is_item", "u_is_furniture",
-            "u_is_vehicle", "u_hostile", "u_is_in_vehicle",
-            "u_controlling_vehicle", "u_driving", "u_is_riding",
-            "u_is_avatar_passenger", "u_is_driven", "u_is_remote_controlled",
-            "u_is_on_rails", "u_is_falling", "u_is_floating", "u_is_flying",
-            "u_is_sinking", "u_is_skidding", "u_can_float", "u_can_fly",
-            "u_following", "u_vehicle_owned_by_avatar", "has_beta",
-            "is_by_radio", "has_reason", "has_assigned_mission",
-            "has_many_assigned_missions", "has_available_mission",
-            "has_many_available_missions", "u_mission_complete",
-            "u_mission_failed", "u_mission_incomplete",
-            "mission_complete", "mission_failed", "mission_incomplete",
-            "u_has_available_mission", "u_has_many_available_missions",
-        ):
-            return "false"
-        if avatar_actor_proven and condition in (
-            "u_exists", "has_alpha", "u_friend", "u_available",
-            "has_no_assigned_mission", "has_no_available_mission",
-            "u_has_no_available_mission",
-        ):
-            return "true"
-        if npc_actor_proven and condition in (
-            "npc_is_avatar", "npc_is_monster", "npc_is_item",
-            "npc_is_furniture", "npc_is_vehicle", "npc_friend",
-            "npc_is_falling", "npc_is_floating", "npc_is_flying",
-            "npc_is_sinking", "npc_is_skidding", "npc_can_float", "npc_can_fly",
-            "npc_is_in_vehicle", "npc_controlling_vehicle", "npc_driving",
-            "npc_is_riding", "npc_is_avatar_passenger", "npc_is_driven",
-            "npc_is_remote_controlled", "npc_is_on_rails",
-            "npc_vehicle_owned_by_avatar", "npc_following",
-            "npc_has_assigned_camp", "has_beta",
-            "npc_has_available_mission", "npc_has_many_available_missions",
-            "npc_mission_complete", "npc_mission_failed", "npc_mission_incomplete",
-        ):
-            return "false"
-        if npc_actor_proven and condition in (
-            "npc_exists", "npc_hostile", "npc_available",
-            "npc_has_no_available_mission",
+        if primary_character_actor_proven and condition in (
+            "u_exists", "has_alpha",
         ):
             return "true"
         if avatar_actor_proven and condition == "u_can_see":
-            return "not (service_value(services.characters.snapshot(actor)).senses.blind)"
-        if npc_actor_proven and condition == "npc_can_see":
-            return "not (service_value(services.characters.snapshot(actor)).senses.blind)"
+            return "service_value(services.characters.snapshot(actor)).senses.can_see"
+        if npc_query_actor is not None and condition == "npc_can_see":
+            return f"service_value(services.characters.snapshot({npc_query_actor})).senses.can_see"
         if avatar_actor_proven and condition in {
-            "u_driving", "u_is_driving", "u_is_in_vehicle",
+            "u_driving", "u_is_driving",
             "u_controlling_vehicle", "u_is_riding", "u_mounted",
         }:
             field = {
                 "u_driving": "driving",
                 "u_is_driving": "driving",
-                "u_is_in_vehicle": "in_vehicle",
                 "u_controlling_vehicle": "controlling_vehicle",
                 "u_is_riding": "mounted",
                 "u_mounted": "mounted",
@@ -26856,60 +31188,88 @@ def render_eoc_condition_expression(
                 "service_value(services.characters.snapshot(actor))"
                 f".movement.{field}"
             )
-        if npc_actor_proven and condition in {
-            "npc_driving", "npc_is_driving", "npc_is_in_vehicle",
-            "npc_controlling_vehicle", "npc_is_riding", "npc_mounted",
+        if npc_query_actor is not None and condition in {
+            "npc_is_driving", "npc_is_riding", "npc_mounted",
         }:
             field = {
-                "npc_driving": "driving",
                 "npc_is_driving": "driving",
-                "npc_is_in_vehicle": "in_vehicle",
-                "npc_controlling_vehicle": "controlling_vehicle",
                 "npc_is_riding": "mounted",
                 "npc_mounted": "mounted",
             }[condition]
             return (
-                "service_value(services.characters.snapshot(actor))"
+                f"service_value(services.characters.snapshot({npc_query_actor}))"
                 f".movement.{field}"
             )
         if avatar_actor_proven and condition == "u_following":
             return "service_value(services.characters.snapshot(actor)).npc_state.following"
-        if npc_actor_proven and condition == "npc_following":
-            return "service_value(services.characters.snapshot(actor)).npc_state.following"
-        if avatar_actor_proven and condition in (
-            "u_has_stolen_item", "u_can_stow_weapon", "u_are_owed",
-            "u_train_spells", "u_train_styles",
-        ):
-            return "false"
-        if npc_actor_proven and condition in (
-            "npc_train_spells", "npc_train_styles",
-            "npc_has_stolen_item", "npc_can_stow_weapon",
-        ):
-            return "false"
         return None
     if not isinstance(condition, dict):
         return None
+    if set(condition) == {"npc_service"}:
+        # Native checks beta's currently_busy effect at bp_null (which means
+        # any body part) and compares alpha Character cash against a
+        # dbl_or_var.  The pre-damage melee events provide exactly those live
+        # alpha/beta Creatures; restrict this bounded lowering to numeric
+        # literals so RNG and dialogue-variable evaluation remain TODO.
+        if not npc_melee_beta_actor_proven:
+            return None
+        threshold = finite_number_literal(condition.get("npc_service"))
+        threshold_expression = (
+            lua_scalar_literal(threshold) if threshold is not None else None
+        )
+        if threshold_expression is None:
+            return None
+        return (
+            "(function() "
+            "local alpha = actor; "
+            "local beta = context and context.actors and context.actors.interlocutor; "
+            "if alpha == nil or alpha.kind ~= \"creature\" or "
+            "(alpha.subtype ~= \"avatar\" and alpha.subtype ~= \"character\" and "
+            "alpha.subtype ~= \"npc\") or beta == nil or "
+            "beta.kind ~= \"creature\" then return false end; "
+            "local busy = service_value(services.effects.has(beta, "
+            "services.types.id(\"effect\", \"currently_busy\"))); "
+            "if busy then return false end; "
+            "return service_value(services.characters.snapshot(alpha)).cash >= "
+            f"{threshold_expression} end)()"
+        )
+    # `u_service` and every unproven `npc_service` call need native beta and
+    # alpha actors; a topic proof is not wired into generated EOC callbacks.
+    if set(condition) & {"u_service", "npc_service"}:
+        return None
     if set(condition) & TRAIT_QUERY_SELECTORS:
+        trait_beta = npc_query_actor
+        if (
+            trait_beta is None and
+            npc_actor_expression == "context.actors.beta"
+        ):
+            # The content callback provenance identifies beta even when it
+            # does not establish that beta is always a Character.  The trait
+            # renderer performs the runtime Character-kind guard.
+            trait_beta = npc_actor_expression
         return render_trait_condition(
             condition, "actor" if avatar_actor_proven or (
                 generic_character_actor_proven and not npc_actor_proven) else None,
-            npc_query_actor,
+            trait_beta,
         )
 
     if set(condition) == {"test_eoc"} and eoc_conditions is not None:
         referenced = condition.get("test_eoc")
         if (
             isinstance(referenced, str) and referenced in eoc_conditions and
-            referenced not in _test_eoc_stack
+            referenced not in _test_eoc_stack and
+            len(_test_eoc_stack) < MAX_TEST_EOC_INLINE_DEPTH
         ):
             nested = eoc_conditions[referenced]
             if isinstance(nested, dict):
-                # An omitted native EOC condition is unconditional, but an
-                # explicit null/bool/number is rejected by read_condition.
-                if "condition" in nested and not isinstance(nested["condition"], (str, dict)):
+                # f_test_eoc directly calls condition(d); it does not use the
+                # target EOC's unconditional has_condition fallback.  Only an
+                # explicit, parser-valid native predicate can be inlined.
+                nested_condition = nested.get("condition")
+                if not isinstance(nested_condition, (str, dict)):
                     return None
                 return render_eoc_condition_expression(
-                    nested.get("condition", True),
+                    nested_condition,
                     avatar_actor_proven,
                     weapon_actor_proven,
                     npc_actor_proven,
@@ -26918,21 +31278,33 @@ def render_eoc_condition_expression(
                     _test_eoc_stack | {referenced},
                     npc_actor_expression,
                     generic_character_actor_proven,
+                    training_pair_proven,
+                    npc_dialogue_pair_proven,
+                    event_beta_presence_proven,
+                    proficiency_alpha_actor_proven=proficiency_alpha_actor_proven,
+                    npc_melee_beta_actor_proven=npc_melee_beta_actor_proven,
+                    named_condition_alpha_actor_proven=named_condition_alpha_actor_proven,
+                    proficiency_character_alpha_actor_proven=(
+                        proficiency_character_alpha_actor_proven
+                    ),
+                    math_actor_targets=math_actor_targets,
                 )
 
     if set(condition) == {"get_condition"}:
-        actor = (
-            "actor" if character_actor_proven or creature_actor_proven
-            else "services.characters.avatar()"
-        )
-        name = render_eoc_string_expression(
-            condition["get_condition"], actor
-        )
-        if name is not None:
+        # evaluate_conditional passes the current native dialogue to the
+        # stored closure.  A global avatar fallback would silently change its
+        # alpha when the callback has no proven actor, and dynamic key
+        # conversion uses diag_value::str() natively rather than generic Lua
+        # tostring.  Lower only a fixed key and a source-proven current alpha.
+        actor = "actor"
+        name = condition.get("get_condition")
+        if (
+            named_condition_alpha_actor_proven and
+            bounded_utf8_string(name, 8192, allow_empty=True)
+        ):
             return (
-                "(function() local stored_condition_name = tostring((" + name +
-                ") or \"\"); local stored_condition = context.conditions and "
-                "context.conditions[stored_condition_name]; return stored_condition "
+                "(function() local stored_condition = context.conditions and "
+                "context.conditions[" + lua_quote(name) + "]; return stored_condition "
                 "~= nil and stored_condition(context, " + actor + ", " +
                 (npc_query_actor or "nil") + ") or false end)()"
             )
@@ -26986,16 +31358,15 @@ def render_eoc_condition_expression(
     rendered_presence = render_static_context_presence_condition(condition)
     if rendered_presence is not None:
         return rendered_presence
-    rendered_math = render_static_condition_math(
-        condition, avatar_actor_proven or weapon_actor_proven or npc_actor_proven
-    )
+    rendered_math = render_static_condition_math(condition, math_actor_targets)
     if rendered_math is not None:
         return rendered_math
     rendered_line_of_sight = render_static_line_of_sight_condition(condition)
     if rendered_line_of_sight is not None:
         return rendered_line_of_sight
     rendered_perception = render_static_perception_condition(
-        condition, avatar_actor_proven, npc_actor_proven
+        condition, avatar_actor_proven, npc_actor_proven,
+        npc_query_actor,
     )
     if rendered_perception is not None:
         return rendered_perception
@@ -27031,6 +31402,16 @@ def render_eoc_condition_expression(
                 _test_eoc_stack,
                 npc_actor_expression,
                 generic_character_actor_proven,
+                training_pair_proven,
+                npc_dialogue_pair_proven,
+                event_beta_presence_proven,
+                proficiency_alpha_actor_proven,
+                npc_melee_beta_actor_proven=npc_melee_beta_actor_proven,
+                named_condition_alpha_actor_proven=named_condition_alpha_actor_proven,
+                proficiency_character_alpha_actor_proven=(
+                    proficiency_character_alpha_actor_proven
+                ),
+                math_actor_targets=math_actor_targets,
             )
             for entry in entries
         ]
@@ -27046,6 +31427,16 @@ def render_eoc_condition_expression(
             _test_eoc_stack,
             npc_actor_expression,
             generic_character_actor_proven,
+            training_pair_proven,
+            npc_dialogue_pair_proven,
+            event_beta_presence_proven,
+            proficiency_alpha_actor_proven,
+            npc_melee_beta_actor_proven=npc_melee_beta_actor_proven,
+            named_condition_alpha_actor_proven=named_condition_alpha_actor_proven,
+            proficiency_character_alpha_actor_proven=(
+                proficiency_character_alpha_actor_proven
+            ),
+            math_actor_targets=math_actor_targets,
         )
         return None if rendered is None else f"not ({rendered})"
 
@@ -27063,94 +31454,78 @@ def render_eoc_condition_expression(
                     f"services.npcs.count_allies({'true' if global_scope else 'false'}) "
                     f">= {int(threshold)}"
                 )
-    for service_key, actor_proven in (
-        ("u_service", avatar_actor_proven or npc_actor_proven),
-        ("npc_service", npc_actor_proven),
+    if (
+        (proficiency_alpha_actor_proven or npc_melee_beta_actor_proven) and
+        set(condition) <= {"npc_role_nearby", "range"} and
+        bounded_utf8_string(condition.get("npc_role_nearby"), 256) and
+        ("range" not in condition or condition.get("range") == 48)
     ):
+        # This service scans global NPCs from alpha's live position.  Do not
+        # use generic/avatar proof bits that also include dead or re-entered
+        # callbacks; only the live game_start avatar and pre-damage melee
+        # attacker proofs authorize the generation-checked Creature handle.
+        return (
+            "service_value(services.npcs.has_role_nearby(actor, "
+            f"{lua_quote(condition['npc_role_nearby'])}, 48))"
+        )
+    # This service accepts Creature handles, but `creature_actor_proven` also
+    # covers generic talkers such as items, furniture, and vehicles.  Only
+    # lower when the source independently proves a Character-shaped alpha.
+    alpha_location_actor_proven = (
+        avatar_actor_proven or
+        (weapon_actor_proven and not creature_actor_proven)
+    )
+    if (
+        alpha_location_actor_proven and
+        set(condition) <= {"u_near_om_location", "range"} and
+        "u_near_om_location" in condition
+    ):
+        raw_location = condition.get("u_near_om_location")
+        raw_range = condition.get("range", 1)
+        radius = native_int_literal(raw_range)
+        # Native converts the evaluated dbl_or_var to int, then visits a
+        # closed x/y square at the actor's OMT z-level.  The bounded native
+        # Platform query preserves its candidate order and per-candidate
+        # origin mapgen-argument lookup.
         if (
-            actor_proven and set(condition) == {service_key} and
-            finite_number_literal(condition[service_key]) is not None
+            radius is not None and 0 <= radius <= 30 and
+            bounded_overmap_condition_id(raw_location)
         ):
-            amount = finite_number_literal(condition[service_key])
-            if amount is None or amount < -1000000 or amount > 1000000:
-                continue
-            actor = (
-                "actor" if service_key.startswith("npc_") or avatar_actor_proven
-                else "services.characters.avatar()"
+            position = (
+                "services.coords.project_to("
+                "service_value(services.creatures.snapshot(actor)).position, "
+                "\"omt\")"
             )
-            avatar = "services.characters.avatar()"
             return (
-                "not service_value(services.characters.snapshot(" + actor + ")).activity.active "
-                "and service_value(services.characters.snapshot(" + avatar + ")).cash >= "
-                f"{lua_number(amount)}"
+                f"services.overmap.matches_location_near({position}, "
+                f"{lua_quote(raw_location)}, {radius})"
             )
     if (
-        npc_actor_proven and
-        set(condition) <= {"npc_role_nearby", "range"} and
-        bounded_utf8_string(condition.get("npc_role_nearby"), 256)
+        npc_melee_beta_actor_proven and
+        set(condition) <= {"npc_near_om_location", "range"} and
+        "npc_near_om_location" in condition
     ):
-        radius = _literal_nonnegative_integer(condition.get("range", 48), 1000)
-        if radius is not None:
-            return (
-                "service_value(services.npcs.has_role_nearby(actor, "
-                f"{lua_quote(condition['npc_role_nearby'])}, {radius}))"
-            )
-    for location_key, actor_proven in (
-        ("u_near_om_location", avatar_actor_proven or npc_actor_proven),
-        ("npc_near_om_location", npc_actor_proven),
-    ):
-        if not (
-            actor_proven and set(condition) <= {location_key, "range"}
-        ):
-            continue
-        raw_location = condition.get(location_key)
-        faction_camp = raw_location == "FACTION_CAMP_ANY"
+        raw_location = condition.get("npc_near_om_location")
+        raw_range = condition.get("range", 1)
+        radius = native_int_literal(raw_range)
+        # The supported melee-event interlocutor is the native beta talker.
+        # These native predicates use its position without an NPC type check;
+        # the bridge may therefore supply a Character or monster Creature.
         if (
-            isinstance(raw_location, str) and
-            raw_location.startswith("FACTION_CAMP_") and
-            not faction_camp
+            radius is not None and 0 <= radius <= 30 and
+            bounded_overmap_condition_id(raw_location)
         ):
-            continue
-        if faction_camp:
-            # FACTION_CAMP_ANY is an ambient nearest/location scan.  The
-            # Platform API requires an exact camp handle, so this legacy
-            # predicate remains an explicit migration TODO.
-            continue
-        elif bounded_platform_id(raw_location):
-            location_expression = lua_quote(raw_location)
-        else:
-            location_expression = render_eoc_string_expression(
-                raw_location, "actor"
+            return (
+                "(function() "
+                "local beta = context and context.actors and context.actors.interlocutor; "
+                "if beta == nil or beta.kind ~= \"creature\" then return false end; "
+                "local position = services.coords.project_to("
+                "service_value(services.creatures.snapshot(beta)).position, "
+                "\"omt\"); "
+                "return services.overmap.matches_location_near(position, "
+                f"{lua_quote(raw_location)}, {radius}) "
+                "end)()"
             )
-            if location_expression is None:
-                continue
-        radius = _literal_nonnegative_integer(condition.get("range", 1), 60)
-        if radius is None:
-            dynamic_radius = render_eoc_numeric_expression(
-                condition.get("range", 1), "1", "actor"
-            )
-            if dynamic_radius is None:
-                continue
-            radius_expression = (
-                "math.max(0, math.min(60, math.floor((" +
-                dynamic_radius + ") + 0.5)))"
-            )
-        else:
-            radius_expression = str(radius)
-        actor = (
-            "actor" if location_key.startswith("npc_") or avatar_actor_proven
-            else "services.characters.avatar()"
-        )
-        position = (
-            "services.coords.project_to("
-            "service_value(services.characters.snapshot(" + actor + ")).creature.position, "
-            "\"omt\")"
-        )
-        return (
-            "services.overmap.search("
-            f"{position}, {{ types = {{ {location_expression} }}, "
-            f"radius = {radius_expression}, limit = 1 }}).returned > 0"
-        )
 
     # Inventory predicates are lowered only for a proven avatar/NPC actor and
     # literal GameIds.  The normal resources/category/wielded APIs preserve
@@ -27160,131 +31535,35 @@ def render_eoc_condition_expression(
         ("npc_has_item", npc_actor_proven),
     ):
         if actor_proven and set(condition) == {item_key} and bounded_platform_id(condition.get(item_key)):
+            actor = npc_query_actor if item_key.startswith("npc_") else "actor"
+            if actor is None:
+                continue
             return (
-                "(service_value(services.inventory.resources(actor, "
+                f"(service_value(services.inventory.resources({actor}, "
                 "services.types.id(\"item\", "
                 f"{lua_quote(condition[item_key])}), 1)).has_amount or "
-                "service_value(services.inventory.resources(actor, "
+                f"service_value(services.inventory.resources({actor}, "
                 "services.types.id(\"item\", "
                 f"{lua_quote(condition[item_key])}), 1)).has_charges)"
             )
-    for item_key, actor_proven in (
-        ("u_has_items", avatar_actor_proven),
-        ("npc_has_items", npc_actor_proven),
-    ):
-        raw = condition.get(item_key)
-        if not actor_proven or set(condition) != {item_key} or not isinstance(raw, dict):
-            continue
-        if not bounded_platform_id(raw.get("item")):
-            continue
-        if set(raw) - {"item", "count", "charges"}:
-            continue
-
-        def quantity_expression(value: Any) -> tuple[str, float | None] | None:
-            literal = finite_number_literal(value)
-            if literal is not None:
-                if (
-                    literal < 0 or literal != math.trunc(float(literal)) or
-                    literal > NATIVE_INT_MAX
-                ):
-                    return None
-                return str(int(literal)), literal
-            rendered = render_eoc_numeric_expression(value, "0", "actor")
-            if rendered is None:
-                return None
-            return (
-                "math.max(0, math.min(2147483647, math.floor((" +
-                rendered + ") + 0.5)))",
-                None,
-            )
-        count_result = quantity_expression(raw.get("count", 0))
-        charges_result = quantity_expression(raw.get("charges", 0))
-        if count_result is None or charges_result is None:
-            continue
-        count_expression, count_number = count_result
-        charges_expression, charges_number = charges_result
-        if count_number == 0 and charges_number == 0:
-            continue
-        item_expr = (
-            "services.types.id(\"item\", " + lua_quote(raw["item"]) + ")"
+    if "u_has_items" in condition or "npc_has_items" in condition:
+        rendered_item_requirements = render_static_item_requirements_condition(
+            condition, avatar_actor_proven, weapon_actor_proven,
+            npc_dialogue_pair_proven,
         )
-        checks: list[str] = []
-        if count_number != 0 or raw.get("count", 0) != 0:
-            checks.append(
-                "service_value(services.inventory.resources(actor, "
-                f"{item_expr}, {count_expression})).has_amount"
-            )
-        if charges_number != 0 or raw.get("charges", 0) != 0:
-            checks.append(
-                "service_value(services.inventory.resources(actor, "
-                f"{item_expr}, {charges_expression})).has_charges"
-            )
-        if not checks:
-            return None
-        return " and ".join(f"({check})" for check in checks)
-    for item_key, actor_proven in (
-        ("u_has_items_sum", avatar_actor_proven or npc_actor_proven),
-        ("npc_has_items_sum", npc_actor_proven),
-    ):
-        entries = condition.get(item_key)
-        if (
-            not actor_proven or set(condition) != {item_key} or
-            not isinstance(entries, list) or not entries or len(entries) > 128
-        ):
-            continue
-        rendered_entries: list[str] = []
-        valid = True
-        for entry in entries:
-            if not isinstance(entry, dict) or set(entry) != {"item", "amount"}:
-                valid = False
-                break
-            amount = finite_number_literal(entry["amount"])
-            if (
-                not bounded_platform_id(entry["item"]) or amount is None or
-                amount <= 0 or amount > 1000000000
-            ):
-                valid = False
-                break
-            rendered_entries.append(
-                "{ item = services.types.id(\"item\", " +
-                f"{lua_quote(entry['item'])}), amount = {lua_number(amount)} }}"
-            )
-        if valid:
-            actor = (
-                "actor" if item_key.startswith("npc_") or avatar_actor_proven
-                else "services.characters.avatar()"
-            )
-            return (
-                f"service_value(services.inventory.has_items_sum({actor}, {{ " +
-                ", ".join(rendered_entries) + " }))"
-            )
-    for item_key, actor_proven in (
-        ("u_has_item_with_flag", avatar_actor_proven),
-        ("npc_has_item_with_flag", npc_actor_proven),
-    ):
-        if actor_proven and set(condition) == {item_key} and safe_platform_id(condition.get(item_key)):
-            return (
-                "service_value(services.inventory.has_item_flag(actor, "
-                "services.types.id(\"json_flag\", "
-                f"{lua_quote(condition[item_key])}))"
-            )
-    for item_key, actor_proven in (
-        ("u_has_item_category", avatar_actor_proven),
-        ("npc_has_item_category", npc_actor_proven),
-    ):
-        if (
-            actor_proven and item_key in condition and
-            set(condition) <= {item_key, "count"} and
-            bounded_platform_id(condition.get(item_key)) and
-            isinstance(condition.get("count", 1), int) and
-            not isinstance(condition.get("count", 1), bool) and
-            1 <= condition.get("count", 1) <= 1000000000
-        ):
-            return (
-                "service_value(services.inventory.category_count(actor, "
-                "services.types.id(\"item_category\", "
-                f"{lua_quote(condition[item_key])}))) >= {condition.get('count', 1)}"
-            )
+        if rendered_item_requirements is not None:
+            return rendered_item_requirements
+    if "u_has_items_sum" in condition or "npc_has_items_sum" in condition:
+        return render_static_items_sum_condition(
+            condition, avatar_actor_proven, npc_dialogue_pair_proven,
+        )
+    if {
+        "u_has_item_category", "npc_has_item_category",
+        "u_has_item_with_flag", "npc_has_item_with_flag",
+    }.intersection(condition):
+        return render_static_item_category_or_flag_condition(
+            condition, avatar_actor_proven, npc_dialogue_pair_proven,
+        )
     for item_key, actor_proven in (
         ("u_has_software", avatar_actor_proven),
         ("npc_has_software", npc_actor_proven),
@@ -27308,31 +31587,15 @@ def render_eoc_condition_expression(
                 "services.types.id(\"item\", " + lua_quote(device) + ")"
                 if "device" in raw else "nil"
             )
+            actor = npc_query_actor if item_key.startswith("npc_") else "actor"
+            if actor is None:
+                continue
             return (
-                "service_value(services.inventory.has_software(actor, "
+                f"service_value(services.inventory.has_software({actor}, "
                 "services.types.id(\"item\", "
                 f"{lua_quote(raw['item'])}), {lua_number(raw.get('charges', 0))}, {device_expr}))"
             )
-    for item_key, actor_proven in (
-        ("u_has_worn_with_flag", avatar_actor_proven),
-        ("npc_has_worn_with_flag", npc_actor_proven),
-    ):
-        if actor_proven and set(condition) <= {item_key, "bodypart"} and bounded_platform_id(condition.get(item_key)):
-            bodypart = condition.get("bodypart")
-            if "bodypart" in condition and not bounded_platform_id(bodypart):
-                continue
-            bodypart_expr = (
-                ", services.types.id(\"body_part\", " + lua_quote(bodypart) + ")"
-                if "bodypart" in condition else ""
-            )
-            return (
-                "service_value(services.inventory.has_worn_flag(actor, "
-                "services.types.id(\"json_flag\", "
-                f"{lua_quote(condition[item_key])}){bodypart_expr})"
-            )
     for item_key, actor_proven, kind in (
-        ("u_has_wielded_with_flag", avatar_actor_proven, "json_flag"),
-        ("npc_has_wielded_with_flag", npc_actor_proven, "json_flag"),
         ("u_has_wielded_with_weapon_category", avatar_actor_proven, "weapon_category"),
         ("npc_has_wielded_with_weapon_category", npc_actor_proven, "weapon_category"),
         ("u_has_wielded_with_skill", avatar_actor_proven, "skill"),
@@ -27340,9 +31603,20 @@ def render_eoc_condition_expression(
         ("u_has_wielded_with_ammotype", avatar_actor_proven, "ammunition"),
         ("npc_has_wielded_with_ammotype", npc_actor_proven, "ammunition"),
     ):
-        if actor_proven and set(condition) == {item_key} and bounded_platform_id(condition.get(item_key)):
+        actor = (
+            npc_actor_expression if item_key.startswith("npc_") else "actor"
+        )
+        actor_available = (
+            actor_proven if not item_key.startswith("npc_") else
+            actor_proven and actor is not None
+        )
+        if (
+            actor_available and actor is not None and
+            set(condition) == {item_key} and
+            bounded_platform_id(condition.get(item_key))
+        ):
             return (
-                "service_value(services.inventory.wielded_matches(actor, "
+                f"service_value(services.inventory.wielded_matches({actor}, "
                 f"services.types.id(\"{kind}\", {lua_quote(condition[item_key])})))"
             )
 
@@ -27352,7 +31626,8 @@ def render_eoc_condition_expression(
             if not isinstance(values, list) or all_equal and not values:
                 return None
             rendered = [render_participant_string_expression(
-                value, "actor", "actor" if character_actor_proven else None, npc_query_actor)
+                value, "actor", "actor" if character_actor_proven else None,
+                npc_query_actor, native_string_values=True)
                 for value in values]
             if any(value is None for value in rendered):
                 return None
@@ -27373,7 +31648,7 @@ def render_eoc_condition_expression(
             return None
         denominator = _effect_numeric_expression(
             condition["one_in_chance"], "actor",
-            "actor" if character_actor_proven else None, npc_query_actor)
+            "actor" if character_actor_proven else None, npc_query_actor, math_actor_targets)
         if denominator is None:
             return None
         return f"services.random.one_in({denominator})"
@@ -27391,7 +31666,8 @@ def render_eoc_condition_expression(
         if numerator is not None and denominator is not None and numerator > denominator:
             return None
         expressions = [_effect_numeric_expression(
-            chance[key], "actor", "actor" if character_actor_proven else None, npc_query_actor)
+            chance[key], "actor", "actor" if character_actor_proven else None,
+            npc_query_actor, math_actor_targets)
             for key in ("x", "y")]
         if any(expression is None for expression in expressions):
             return None
@@ -27406,44 +31682,30 @@ def render_eoc_condition_expression(
     } <= set(condition):
         check = finite_number_literal(condition["roll_contested"])
         difficulty = finite_number_literal(condition["difficulty"])
-        raw_die_size = condition.get("die_size", 10)
-        die_size = (
-            raw_die_size
-            if isinstance(raw_die_size, int) and
-            not isinstance(raw_die_size, bool)
-            else None
-        )
-        check_expression = (
-            lua_number(check) if check is not None else
-            render_eoc_numeric_expression(condition["roll_contested"], "0", "actor")
-        )
-        difficulty_expression = (
-            lua_number(difficulty) if difficulty is not None else
-            render_eoc_numeric_expression(condition["difficulty"], "0", "actor")
-        )
-        die_expression = (
-            str(die_size) if die_size is not None else
-            render_eoc_numeric_expression(raw_die_size, "10", "actor")
-        )
-        if check_expression is None or difficulty_expression is None or die_expression is None:
+        die_size_literal = finite_number_literal(condition.get("die_size", 10))
+        if check is None or difficulty is None or die_size_literal is None:
             return None
-        if die_size is not None and (die_size <= 0 or die_size > 1000000000):
+        # Native casts the evaluated double to int (truncating toward zero),
+        # then rng(1, die_size) swaps its endpoints when die_size < 1. Restrict
+        # this lowering to finite literal inputs whose conversion is defined;
+        # dynamic doubles can be non-finite or fail native value conversion.
+        die_size = math.trunc(die_size_literal)
+        if not NATIVE_INT_MIN <= die_size <= NATIVE_INT_MAX:
             return None
-        if die_size is None:
-            die_expression = (
-                "math.max(1, math.min(1000000000, math.floor((" +
-                die_expression + ") + 0.5)))"
-            )
+        minimum, maximum = sorted((1, die_size))
+        # `rng` uses the shared native game RNG. `services.random.contested`
+        # deliberately uses an isolated per-Mod stream, so native_int is the
+        # matching bounded draw. Force double arithmetic like C++ int + double.
         return (
-            "services.random.contested("
-            f"{check_expression}, {difficulty_expression}, {die_expression})"
+            f"(services.random.native_int({minimum}, {maximum}) + "
+            f"(0.0 + {lua_number(check)})) > (0.0 + {lua_number(difficulty)})"
         )
 
-    if set(condition) == {"mod_is_loaded"} and isinstance(
-        condition["mod_is_loaded"], str
+    if set(condition) == {"mod_is_loaded"} and bounded_utf8_string(
+        condition["mod_is_loaded"], 256
     ):
         return (
-            "services.gameplay.mods.is_loaded("
+            "services.gameplay.mods.is_active_in_world("
             f"{lua_quote(condition['mod_is_loaded'])})"
         )
     if set(condition) == {"current_dimension"} and isinstance(
@@ -27574,59 +31836,65 @@ def render_eoc_condition_expression(
                     f"{loc_expression}) == "
                     f"{id_expression}"
                 )
-    for location_key, actor_proven in (
-        ("u_at_om_location", avatar_actor_proven or npc_actor_proven),
-        ("npc_at_om_location", npc_actor_proven),
-    ):
-        if (
-            actor_proven and set(condition) == {location_key} and
-            render_eoc_string_expression(condition.get(location_key)) is not None
-        ):
-            actor = (
-                "actor" if location_key.startswith("npc_") or avatar_actor_proven
-                else "services.characters.avatar()"
-            )
-            position = (
-                "services.coords.project_to("
-                "service_value(services.characters.snapshot(" + actor + ")).creature.position, "
-                "\"omt\")"
-            )
-            target_expression = render_eoc_string_expression(
-                condition[location_key], actor
-            )
-            if target_expression is None:
-                continue
-            return (
-                f"services.overmap.matches({position}, "
-                f"{target_expression})"
-            )
     if (
-        set(condition) == {"overmap_at_point", "point"} and
-        render_eoc_string_expression(condition.get("overmap_at_point")) is not None
+        alpha_location_actor_proven and
+        set(condition) == {"u_at_om_location"} and
+        bounded_overmap_condition_id(condition.get("u_at_om_location"))
     ):
-        point = _coordinate_source_expression(
-            condition["point"], avatar_actor_proven, npc_actor_proven
+        position = (
+            "services.coords.project_to("
+            "service_value(services.creatures.snapshot(actor)).position, "
+            "\"omt\")"
         )
-        if point is not None:
-            position = f"services.coords.project_to({point}, \"omt\")"
-            target_expression = render_eoc_string_expression(
-                condition["overmap_at_point"]
-            )
-            if target_expression is None:
-                return None
-            return (
-                f"services.overmap.matches({position}, "
-                f"{target_expression})"
-            )
+        return (
+            f"services.overmap.matches_location({position}, "
+            f"{lua_quote(condition['u_at_om_location'])})"
+        )
+    if (
+        npc_melee_beta_actor_proven and
+        set(condition) == {"npc_at_om_location"} and
+        bounded_overmap_condition_id(condition.get("npc_at_om_location"))
+    ):
+        return (
+            "(function() "
+            "local beta = context and context.actors and context.actors.interlocutor; "
+            "if beta == nil or beta.kind ~= \"creature\" then return false end; "
+            "local position = services.coords.project_to("
+            "service_value(services.creatures.snapshot(beta)).position, "
+            "\"omt\"); "
+            "return services.overmap.matches_location(position, "
+            f"{lua_quote(condition['npc_at_om_location'])}) "
+            "end)()"
+        )
+    if (
+        avatar_actor_proven and
+        set(condition) == {"overmap_at_point"} and
+        bounded_overmap_condition_id(condition.get("overmap_at_point"))
+    ):
+        # With no explicit point var, native f_overmap_at_point uses alpha's
+        # absolute position.  Arbitrary point variables remain TODO because
+        # their dynamic type/default conversion is not proven by source.
+        position = (
+            "services.coords.project_to("
+            "service_value(services.characters.snapshot(actor)).creature.position, "
+            "\"omt\")"
+        )
+        return (
+            f"services.overmap.matches_terrain({position}, "
+            f"{lua_quote(condition['overmap_at_point'])})"
+        )
     for location_key, actor_proven in (
         ("u_can_see_location", avatar_actor_proven or npc_actor_proven),
         ("npc_can_see_location", npc_actor_proven),
     ):
         if actor_proven and set(condition) == {location_key}:
             actor = (
-                "actor" if location_key.startswith("npc_") or avatar_actor_proven
+                npc_query_actor if location_key.startswith("npc_") else
+                "actor" if avatar_actor_proven
                 else "services.characters.avatar()"
             )
+            if actor is None:
+                continue
             target = render_eoc_value_expression(
                 condition[location_key], lua_quote(""), actor
             )
@@ -27652,14 +31920,17 @@ def render_eoc_condition_expression(
             avatar_actor_proven if condition_key.startswith("u_") else
             npc_actor_proven
         )
+        actor = (
+            npc_query_actor if condition_key.startswith("npc_") else "actor"
+        )
         if (
-            actor_proven and
+            actor_proven and actor is not None and
             set(condition) == {condition_key} and
             bounded_utf8_string(condition.get(condition_key), 256) and
             safe_platform_id(condition.get(condition_key))
         ):
             position = (
-                "service_value(services.characters.snapshot(actor))"
+                f"service_value(services.characters.snapshot({actor}))"
                 ".creature.position"
             )
             return (
@@ -27672,26 +31943,66 @@ def render_eoc_condition_expression(
             )
     if (
         set(condition) == {"u_has_mission"} and
-        avatar_actor_proven and
         isinstance(condition.get("u_has_mission"), str) and
-        safe_platform_id(condition.get("u_has_mission"))
+        safe_platform_id(condition.get("u_has_mission")) and
+        bounded_utf8_string(condition.get("u_has_mission"), 256) and
+        not any(
+            ord(character) < 0x20 or ord(character) == 0x7f
+            for character in condition["u_has_mission"]
+        )
     ):
+        # The native condition always queries get_avatar(), independently of
+        # the EOC actor.  GameId validity also requires a registered mission
+        # definition, while the native string_id comparison returns false for
+        # an unknown static id; guard that case before calling the typed API.
         return (
-            "service_value(services.missions.has_active(actor, "
-            "services.types.id(\"mission\", "
-            f"{lua_quote(condition['u_has_mission'])})))"
+            "(function() "
+            "local mission_id = services.types.id(\"mission\", "
+            f"{lua_quote(condition['u_has_mission'])}); "
+            "if not mission_id:is_valid() then return false end; "
+            "local avatar = services.characters.avatar(); "
+            "if not avatar:is_valid() then return false end; "
+            "return service_value(services.missions.has_active("
+            "avatar, mission_id)) "
+            "end)()"
         )
 
     if (
-        set(condition) == {"u_has_faction_trust"} and
-        avatar_actor_proven and
-        finite_number_literal(condition.get("u_has_faction_trust")) is not None
+        isinstance(condition, dict) and
+        set(condition) == {"u_are_owed"} and
+        npc_dialogue_pair_proven and
+        npc_actor_expression == "context.actors.beta"
     ):
-        trust = finite_number_literal(condition["u_has_faction_trust"])
-        return (
-            "service_value(services.factions.for_character(actor)).reputation.trusts >= "
-            f"{lua_number(trust)}"
-        )
+        owed = finite_number_literal(condition.get("u_are_owed"))
+        if owed is not None:
+            return (
+                "(function() "
+                "local beta = context and context.actors and context.actors.beta; "
+                "if beta == nil or beta.kind ~= \"creature\" or "
+                "beta.subtype ~= \"npc\" then return false end; "
+                "return service_value(services.npcs.get(beta)).opinion.owed >= "
+                f"{lua_number(owed)} "
+                "end)()"
+            )
+
+    if (
+        isinstance(condition, dict) and
+        set(condition) == {"u_has_faction_trust"} and
+        npc_dialogue_pair_proven and
+        npc_actor_expression == "context.actors.beta"
+    ):
+        trust = finite_number_literal(condition.get("u_has_faction_trust"))
+        if trust is not None:
+            return (
+                "(function() "
+                "local beta = context and context.actors and context.actors.beta; "
+                "if beta == nil or beta.kind ~= \"creature\" or "
+                "beta.subtype ~= \"npc\" then return false end; "
+                "return service_value(services.factions.for_character(beta))"
+                ".reputation.trusts >= "
+                f"{lua_number(trust)} "
+                "end)()"
+            )
 
     # The legacy body-part temperature predicate defaults its body part from
     # dialogue reason when `bodypart` is omitted.  A Platform handler has no
@@ -27701,8 +32012,11 @@ def render_eoc_condition_expression(
         ("u_has_part_temp", avatar_actor_proven),
         ("npc_has_part_temp", npc_actor_proven),
     ):
+        actor = (
+            npc_query_actor if temperature_key.startswith("npc_") else "actor"
+        )
         if (
-            actor_proven and
+            actor_proven and actor is not None and
             set(condition) == {temperature_key, "bodypart"} and
             safe_platform_id(condition.get("bodypart"))
         ):
@@ -27714,52 +32028,91 @@ def render_eoc_condition_expression(
             ):
                 return (
                     "service_value(services.characters.has_part_temp("
-                    "actor, services.types.id(\"body_part\", "
+                    f"{actor}, services.types.id(\"body_part\", "
                     f"{lua_quote(condition['bodypart'])}), "
                     f"{lua_number(threshold)}))"
                 )
 
-    # Effect predicates are safe only for a proven character actor and a
-    # finite literal effect id.  Keep the query in the normal Platform service
-    # surface; dynamic/context-valued ids and unproven actors remain TODOs.
+    inventory_flag_condition = render_inventory_flag_condition(
+        condition,
+        avatar_actor_proven,
+        weapon_actor_proven,
+        generic_character_actor_proven,
+        creature_actor_proven,
+        npc_dialogue_pair_proven,
+        npc_actor_expression,
+    )
+    if inventory_flag_condition is not None:
+        return inventory_flag_condition
+
+    # Effect predicates are safe only for a proven actor and explicit part.
+    # Let the shared renderer validate typed IDs before calling Platform so
+    # unknown native IDs remain false instead of becoming service errors.
     for effect_key, actor_proven in (
         (
             "u_has_effect",
-            avatar_actor_proven or generic_character_actor_proven,
+            avatar_actor_proven or generic_character_actor_proven or
+            creature_actor_proven,
         ),
-        ("npc_has_effect", npc_actor_proven),
+        (
+            "npc_has_effect",
+            npc_dialogue_pair_proven and
+            npc_actor_expression == "context.actors.beta",
+        ),
     ):
         if (
             actor_proven and
-            set(condition) == {effect_key} and
-            safe_platform_id(condition.get(effect_key))
+            set(condition) in (
+                {effect_key, "bodypart"},
+                {effect_key, "bodypart", "intensity"},
+            ) and
+            bounded_platform_body_part_id(condition.get("bodypart"))
         ):
-            return (
-                "service_value(services.effects.has(actor, "
-                "services.types.id(\"effect\", "
-                f"{lua_quote(condition[effect_key])})))"
+            return render_effect_condition(
+                condition,
+                "actor" if (
+                    avatar_actor_proven or generic_character_actor_proven or
+                    creature_actor_proven
+                ) else None,
+                "context.actors.beta" if (
+                    npc_dialogue_pair_proven and
+                    npc_actor_expression == "context.actors.beta"
+                ) else npc_query_actor,
+                math_actor_targets,
             )
     for effect_key, actor_proven in (
         (
             "u_has_any_effect",
-            avatar_actor_proven or generic_character_actor_proven,
+            avatar_actor_proven or generic_character_actor_proven or
+            creature_actor_proven,
         ),
-        ("npc_has_any_effect", npc_actor_proven),
+        (
+            "npc_has_any_effect",
+            npc_dialogue_pair_proven and
+            npc_actor_expression == "context.actors.beta",
+        ),
     ):
         if (
             actor_proven and
-            set(condition) == {effect_key} and
-            isinstance(condition.get(effect_key), list) and
-            0 < len(condition[effect_key]) <= 64 and
-            all(safe_platform_id(value) for value in condition[effect_key])
+            set(condition) in (
+                {effect_key, "bodypart"},
+                {effect_key, "bodypart", "intensity"},
+            ) and
+            bounded_platform_body_part_id(condition.get("bodypart")) and
+            isinstance(condition.get(effect_key), list)
         ):
-            queries = [
-                "service_value(services.effects.has(actor, "
-                "services.types.id(\"effect\", "
-                f"{lua_quote(value)})))"
-                for value in condition[effect_key]
-            ]
-            return " or ".join(f"({query})" for query in queries)
+            return render_effect_condition(
+                condition,
+                "actor" if (
+                    avatar_actor_proven or generic_character_actor_proven or
+                    creature_actor_proven
+                ) else None,
+                "context.actors.beta" if (
+                    npc_dialogue_pair_proven and
+                    npc_actor_expression == "context.actors.beta"
+                ) else npc_query_actor,
+                math_actor_targets,
+            )
 
     if (
         set(condition) == {"u_safe_mode_trigger"} and
@@ -27775,12 +32128,30 @@ def render_eoc_condition_expression(
             f"{lua_quote(condition['u_safe_mode_trigger'])})"
         )
     if (
-        (avatar_actor_proven and set(condition) in ({"u_mission_goal"}, {"mission_goal"})) or
-        (npc_actor_proven and set(condition) == {"npc_mission_goal"})
-    ) and isinstance(list(condition.values())[0], str):
+        avatar_actor_proven and set(condition) == {"u_mission_goal"} and
+        isinstance(condition.get("u_mission_goal"), str)
+    ):
         # The actor talker has no selected mission, so the legacy handler
         # compares a null mission regardless of the goal value.
         return "false"
+    if set(condition) in ({"mission_goal"}, {"npc_mission_goal"}):
+        # Both beta spellings query the selected mission, but the response
+        # condition callback only supports static positive
+        # u_has_intelligence and action true_eocs are not emitted. The native
+        # parameter is also str_or_var, so static IDs alone do not establish
+        # a reachable invocation path.
+        return None
+    selected_mission_generic_rewards = (
+        render_npc_selected_generic_rewards_condition(
+            condition, npc_dialogue_pair_proven, npc_actor_expression,
+        ) if isinstance(condition, str) else None
+    )
+    if selected_mission_generic_rewards is not None:
+        return selected_mission_generic_rewards
+    if condition == "mission_has_generic_rewards":
+        # The native condition reads beta's raw selected pointer and has a
+        # special true result only when that selection is actually null.
+        return None
     if (
         avatar_actor_proven and
         set(condition) == {"follower_present"} and
@@ -27801,12 +32172,36 @@ def render_eoc_condition_expression(
             # const_talker implementation returns false for every rule.
             return "false"
     for rule_key in ("npc_rule", "npc_override"):
-        if (
-            npc_actor_proven and
-            set(condition) == {rule_key} and
-            isinstance(condition.get(rule_key), str)
-        ):
-            return "false"
+        if set(condition) == {rule_key}:
+            # Native str_or_var resolves through dialogue beta, and
+            # const_talker::has_ai_rule is false for non-NPC talkers.  Match
+            # both details and treat unknown rule names as absent, as native
+            # ally_rule_strs lookup does.
+            if not npc_melee_beta_actor_proven:
+                return None
+            requested_rule = render_eoc_string_expression(
+                condition[rule_key], "beta"
+            )
+            if requested_rule is None:
+                return None
+            if rule_key == "npc_rule":
+                query = (
+                    "for _, active_rule in ipairs(ai_rules.allies) do "
+                    "if active_rule == requested_rule then return true end end; "
+                    "return false"
+                )
+            else:
+                query = "return ai_rules.overrides[requested_rule] ~= nil"
+            return (
+                "(function() "
+                "local beta = context and context.actors and context.actors.interlocutor; "
+                "if beta == nil or beta.kind ~= \"creature\" or "
+                "beta.subtype ~= \"npc\" then return false end; "
+                f"local requested_rule = {requested_rule}; "
+                "local ai_rules = service_value(services.npcs.ai_rules(beta)); "
+                f"{query} "
+                "end)()"
+            )
     for bodytype_key, actor_proven in (
         ("u_bodytype", avatar_actor_proven),
         ("npc_bodytype", npc_actor_proven),
@@ -27847,12 +32242,12 @@ def render_eoc_condition_expression(
         # talker returns false for the avatar regardless of the class id.
         return "false"
     if (
-        npc_actor_proven and
+        npc_query_actor is not None and
         set(condition) == {"npc_has_class"} and
         safe_platform_id(condition.get("npc_has_class"))
     ):
         return (
-            "service_value(services.npcs.get(actor)).class.value == "
+            f"service_value(services.npcs.get({npc_query_actor})).class.value == "
             f"{lua_quote(condition['npc_has_class'])}"
         )
     sleepiness_levels = {
@@ -27865,8 +32260,9 @@ def render_eoc_condition_expression(
         ("u_need", avatar_actor_proven),
         ("npc_need", npc_actor_proven),
     ):
+        actor = npc_query_actor if need_key.startswith("npc_") else "actor"
         if (
-            actor_proven and
+            actor_proven and actor is not None and
             isinstance(condition, dict) and
             set(condition) <= {need_key, "amount", "level"} and
             condition.get(need_key) in ("hunger", "thirst", "sleepiness")
@@ -27878,7 +32274,7 @@ def render_eoc_condition_expression(
                 NATIVE_INT_MIN <= condition["amount"] <= NATIVE_INT_MAX
             ):
                 return (
-                    "service_value(services.characters.snapshot(actor))"
+                    f"service_value(services.characters.snapshot({actor}))"
                     f".needs.{condition[need_key]} > {condition['amount']}"
                 )
             if (
@@ -27887,13 +32283,13 @@ def render_eoc_condition_expression(
                 condition.get("level") in sleepiness_levels
             ):
                 return (
-                    "service_value(services.characters.snapshot(actor))"
+                    f"service_value(services.characters.snapshot({actor}))"
                     f".needs.sleepiness > "
                     f"{sleepiness_levels[condition['level']]}"
                 )
             if set(condition) == {need_key}:
                 return (
-                    "service_value(services.characters.snapshot(actor))"
+                    f"service_value(services.characters.snapshot({actor}))"
                     f".needs.{condition[need_key]} > 0"
                 )
     if (
@@ -27918,21 +32314,67 @@ def render_eoc_condition_expression(
             "services.types.id(\"martial_art\", "
             f"{lua_quote(condition['u_using_martial_art'])}))).selected"
         )
-    if (
-        avatar_actor_proven and
-        set(condition) == {"u_has_proficiency"} and
-        safe_platform_id(condition.get("u_has_proficiency"))
-    ):
-        return (
-            "service_value(services.proficiencies.get("
-            "actor, "
-            "services.types.id(\"proficiency\", "
-            f"{lua_quote(condition['u_has_proficiency'])}))).known"
+    if set(condition) == {"u_has_proficiency"}:
+        raw_id = condition.get("u_has_proficiency")
+        proficiency_id = render_proficiency_id_expression(
+            raw_id, alpha_owner=proficiency_alpha_variable_owner,
+            beta_owner=proficiency_beta_variable_owner,
+            # This renderer executes inside activate's copied EOC frame.
+            topic_item_expression=lua_quote(""),
         )
+        if (
+            (proficiency_alpha_actor_proven or
+             proficiency_character_alpha_actor_proven or
+             npc_melee_beta_actor_proven) and
+            proficiency_id is not None
+        ):
+            # Native checks raw proficiency_id text against the learned set;
+            # it does not require a registered definition. ID variable owners
+            # are proved independently from this alpha receiver. The narrow
+            # melee event proves both alpha (attacker) and beta (interlocutor).
+            return (
+                "service_value(services.proficiencies.has_id_text("
+                f"actor, {proficiency_id}))"
+            )
+    if isinstance(condition, dict) and "npc_has_proficiency" in condition:
+        raw_id = condition.get("npc_has_proficiency")
+        proficiency_id = render_proficiency_id_expression(
+            raw_id, alpha_owner=proficiency_alpha_variable_owner,
+            beta_owner=proficiency_beta_variable_owner,
+            topic_item_expression=lua_quote(""),
+        )
+        if (
+            npc_melee_beta_actor_proven and
+            set(condition) == {"npc_has_proficiency"} and
+            proficiency_id is not None
+        ):
+            # Native calls knows_proficiency on const_actor(true). The narrow
+            # melee event bridge exposes that same live Creature as
+            # interlocutor; non-Character talkers (including monsters) use
+            # the native base false result and must not reach the Character
+            # only service. Native evaluates the ID even when the receiver's
+            # base knows_proficiency implementation will return false.
+            evaluate_id = (
+                f"local proficiency_id = {proficiency_id}; "
+                if isinstance(raw_id, dict) else ""
+            )
+            query_id = "proficiency_id" if isinstance(raw_id, dict) else proficiency_id
+            return (
+                "(function() "
+                f"{evaluate_id}"
+                "local beta = context and context.actors and context.actors.interlocutor; "
+                "if beta == nil or beta.kind ~= \"creature\" or "
+                "(beta.subtype ~= \"avatar\" and beta.subtype ~= \"character\" "
+                "and beta.subtype ~= \"npc\") then return false end; "
+                "if not beta:is_valid() then return false end; "
+                "return service_value(services.proficiencies.has_id_text(beta, "
+                f"{query_id})) "
+                "end)()"
+            )
+        return None
     for npc_key, u_key in (
         ("npc_has_martial_art", "u_has_martial_art"),
         ("npc_using_martial_art", "u_using_martial_art"),
-        ("npc_has_proficiency", "u_has_proficiency"),
     ):
         if (
             npc_actor_proven and
@@ -27946,8 +32388,6 @@ def render_eoc_condition_expression(
                     "services.martial_arts.get", "martial_art", ".known"),
                 "u_using_martial_art": (
                     "services.martial_arts.get", "martial_art", ".selected"),
-                "u_has_proficiency": (
-                    "services.proficiencies.get", "proficiency", ".known"),
             }[u_key]
             return (
                 f"service_value({native_surface}("
@@ -28092,17 +32532,6 @@ def render_eoc_condition_expression(
             f"{lua_quote(condition['npc_has_move_mode'])}"
         )
     if (
-        weapon_actor_proven and
-        set(condition) == {"u_has_wielded_with_flag"} and
-        safe_platform_id(condition.get("u_has_wielded_with_flag")) and
-        len(condition["u_has_wielded_with_flag"].encode("utf-8")) <= 256
-    ):
-        return (
-            "service_value(services.inventory.wielded_matches(actor, "
-            "services.types.id(\"json_flag\", "
-            f"{lua_quote(condition['u_has_wielded_with_flag'])})))"
-        )
-    if (
         avatar_actor_proven and
         set(condition) == {"u_has_cash"} and
         isinstance(condition.get("u_has_cash"), int) and
@@ -28158,26 +32587,13 @@ def render_eoc_condition_expression(
                 f"service_value(services.npcs.ai_rules(actor)).{field_name} == "
                 f"{lua_quote(condition[rule_key])}"
             )
-    if (
-        avatar_actor_proven and
-        isinstance(condition, dict) and
-        set(condition) == {"u_has_species"} and
-        isinstance(condition.get("u_has_species"), str)
-    ):
-        return "true" if condition["u_has_species"].lower() == "human" else "false"
-    if (
-        npc_actor_proven and
-        isinstance(condition, dict) and
-        set(condition) == {"npc_has_species"} and
-        isinstance(condition.get("npc_has_species"), str)
-    ):
-        return "true" if condition["npc_has_species"].lower() == "human" else "false"
     dynamic_character = render_dynamic_character_condition(
         condition,
         avatar_actor_proven,
-        npc_actor_proven or npc_actor_expression is not None,
+        npc_actor_proven,
         weapon_actor_proven,
-        npc_actor_expression or "actor",
+        npc_query_actor or "",
+        math_actor_targets,
     )
     if dynamic_character is not None:
         return dynamic_character
@@ -28211,6 +32627,62 @@ def missing_test_eoc_definitions(
     return tuple(sorted(missing))
 
 
+def render_static_wrapped_beta_npc_call(
+    method: str, *additional_arguments: str,
+) -> list[str]:
+    """Guard a static WRAP lowering with the exact beta NPC shape."""
+    arguments = ", ".join(("wrapped_beta_npc", *additional_arguments))
+    return [
+        "    do",
+        "        local wrapped_beta_npc = context and context.actors and context.actors.beta",
+        '        if wrapped_beta_npc ~= nil and wrapped_beta_npc.kind == "creature" and wrapped_beta_npc.subtype == "npc" then',
+        f"            service_value(services.npcs.{method}({arguments}))",
+        "        end",
+        "    end",
+    ]
+
+
+def _render_native_eoc_event_context_normalization() -> list[str]:
+    """Copy a native event into the value shapes used by EOC diag_value."""
+    return [
+        "    context = context or {}",
+        '    if type(context) == "table" and type(context.data_types) == "table" then',
+        "        local normalized_context = {}",
+        "        for key, value in pairs(context) do",
+        "            normalized_context[key] = value",
+        "        end",
+        "        local normalized_data = {}",
+        '        local event_data = type(context.data) == "table" and context.data or {}',
+        "        for key, value in pairs(event_data) do",
+        "            local data_type = context.data_types[key]",
+        '            if data_type == "bool" then',
+        '                if type(value) ~= "boolean" then',
+        '                    error("native EOC boolean payload is not a boolean", 0)',
+        "                end",
+        "                normalized_data[key] = value and 1.0 or 0.0",
+        '            elseif data_type == "character_id" or data_type == "chrono_seconds" then',
+        "                normalized_data[key] = tostring(value)",
+        '            elseif data_type == "tripoint" then',
+        '                if type(value) ~= "string" then',
+        '                    error("native EOC tripoint payload is not a string", 0)',
+        "                end",
+        '                local x, y, z = value:match("^%((%-?%d+),(%-?%d+),(%-?%d+)%)$")',
+        '                if x == nil then',
+        '                    error("native EOC tripoint payload is malformed", 0)',
+        "                end",
+        "                normalized_data[key] = services.coords.tripoint_abs_ms(",
+        "                    tonumber(x), tonumber(y), tonumber(z))",
+        "            else",
+        "                normalized_data[key] = value",
+        "            end",
+        "        end",
+        "        normalized_context.data = normalized_data",
+        "        normalized_context.data_types = nil",
+        "        context = normalized_context",
+        "    end",
+    ]
+
+
 def render_eoc(
     source: SourceObject,
     result: MigrationResult,
@@ -28225,20 +32697,37 @@ def render_eoc(
     global_eoc_ids: frozenset[str] = frozenset(),
     talker_pair_ids: frozenset[str] = frozenset(),
     content_primary_actor_ids: frozenset[str] = frozenset(),
+    npc_dialogue_mission_pair_ids: frozenset[str] = frozenset(),
+    known_mutation_ids: frozenset[str] = frozenset(),
+    known_mutation_category_ids: frozenset[str] = frozenset(),
+    dynamic_eoc_dispatch_present: bool = False,
+    known_body_part_ids: frozenset[str] = frozenset(),
+    known_wound_ids: frozenset[str] = frozenset(),
+    game_start_event_emitted_by_eoc: bool = False,
+    known_recipe_ids: frozenset[str] = frozenset(),
+    character_melee_event_emitted_by_eoc: bool = True,
+    npc_becomes_hostile_event_emitted_by_eoc: bool = False,
+    known_morale_ids: frozenset[str] = frozenset(),
 ) -> str:
     # Unlowered EOC effects and predicates are manual rewrites unless the
     # branch explicitly presents a content-owner choice (for example an
     # avatar/talker or trigger selection).  No unsupported branch is promoted
     # to a Platform gap without independent typed-service evidence.
     value = source.value
+    # One source-level gate governs every live game_start avatar proof below.
+    # The migration entry point computes this from the full JSON corpus before
+    # inline EOCs are normalized or any handler is rendered.
+    game_start_avatar_source_proven = game_start_avatar_actor_is_proven(
+        game_start_event_emitted_by_eoc
+    )
     eoc_id = stable_id(value, f"anonymous_{source.index}")
     function_name = (eoc_function_names or {}).get(
         eoc_id, lua_function_name(eoc_id)
     )
     stable_handler = isinstance(value.get("id"), str) and bool(value["id"])
     handler_id = f"migrated.{eoc_id}"
-    required_event = value.get("required_event")
-    has_event_trigger = isinstance(required_event, str) and bool(required_event)
+    required_event = native_eoc_required_event(value)
+    has_event_trigger = required_event is not None
     recurrence_value = value.get("recurrence")
     recurrence_expression = (
         render_recurrence_turns_expression(recurrence_value, "actor")
@@ -28276,6 +32765,9 @@ def render_eoc(
         value.get("__inline_actor_kind") == "monster"
     )
     talker_pair_override = eoc_id in talker_pair_ids
+    npc_dialogue_mission_pair_proven = (
+        eoc_id in npc_dialogue_mission_pair_ids
+    )
     content_primary_actor_override = eoc_id in content_primary_actor_ids
     generic_talker_actor_override = _node_has_generic_talker_type_condition(value)
     vehicle_actor_override = (
@@ -28313,7 +32805,7 @@ def render_eoc(
         isinstance(required_event, str) and required_event in AVATAR_ACTOR_EVENTS or
         (
             required_event == "game_start" and
-            game_start_avatar_actor_is_proven()
+            game_start_avatar_source_proven
         ) or
         global_recurrence or
         value.get("__inline_actor_kind") == "avatar"
@@ -28323,12 +32815,32 @@ def render_eoc(
         isinstance(required_event, str) and required_event in PROVEN_NPC_ACTOR_EVENTS or
         value.get("__inline_actor_kind") == "npc"
     )
+    # Native u_travel_to_dimension follows the active dialogue alpha. An EOC
+    # registered for an Avatar event can still be called by run_eocs or a
+    # dynamic dispatcher with another alpha. The typed service also requires
+    # a live world/map, which avatar_moves proves while lifecycle/death hooks
+    # do not.
+    dimension_travel_avatar_actor_proven = (
+        required_event in DIMENSION_TRAVEL_AVATAR_EVENTS and
+        eoc_id not in eoc_referenced_ids and
+        not dynamic_eoc_dispatch_present
+    )
+    # Native u_teleport follows the EOC alpha. Restrict the typed Platform
+    # service to an exclusive live avatar_moves handler: lifecycle callbacks,
+    # recurrence, run_eocs references, and dynamic dispatch do not prove the
+    # same Avatar actor and active-map state.
+    teleport_avatar_actor_proven = (
+        stable_handler and value.get("eoc_type") == "EVENT" and
+        required_event in TELEPORT_AVATAR_EVENTS and
+        eoc_id not in eoc_referenced_ids and
+        not dynamic_eoc_dispatch_present
+    )
     avatar_actor_proven = (
         avatar_fatal_hook or avatar_death_hook or
         isinstance(required_event, str) and required_event in AVATAR_ACTOR_EVENTS or
         (
             required_event == "game_start" and
-            game_start_avatar_actor_is_proven()
+            game_start_avatar_source_proven
         )
     )
     # Recurrence supplies the actor even though it has no required_event:
@@ -28338,6 +32850,16 @@ def render_eoc(
     # the same real actor instead of being rejected as ambient/unproven.
     avatar_actor_proven = (
         avatar_actor_proven or global_recurrence
+    )
+    # The martial-art effect service requires a live avatar handle. Keep this
+    # selector to game_start, whose native EOC alpha is the avatar before
+    # gameplay begins; death, generic, and recurrence callbacks do not provide
+    # the same liveness proof for this generation-checked service.
+    martial_art_avatar_actor_proven = (
+        required_event == "game_start" and
+        game_start_avatar_source_proven and
+        eoc_id not in eoc_referenced_ids and
+        not dynamic_eoc_dispatch_present
     )
     item_event_character_actor_proven = (
         isinstance(required_event, str) and
@@ -28367,6 +32889,7 @@ def render_eoc(
         # through actor_override instead of fabricating an ambient avatar.
         nested_character_override = True
         callback_character_actor_proven = True
+    exact_callback_character_actor_proven = callback_character_actor_proven
     character_actor_proven = (
         avatar_actor_proven or item_event_character_actor_proven or
         npc_event_character_actor_proven or event_character_actor_proven or
@@ -28397,41 +32920,26 @@ def render_eoc(
     )
     shape_actor_override = (
         not required_event and not avatar_fatal_hook and not avatar_death_hook and
+        value.get("__inline_actor_kind") != "unproven" and
         (shape_has_u_actor != shape_has_npc_actor)
     )
     if shape_actor_override:
         callback_character_actor_proven = (
             callback_character_actor_proven or shape_has_u_actor
         )
-        npc_event_character_actor_proven = (
-            npc_event_character_actor_proven or shape_has_npc_actor
-        )
-        npc_actor_proven = npc_event_character_actor_proven
     if unbound_condition_actor_contract:
         callback_character_actor_proven = (
             callback_character_actor_proven or condition_has_u_actor
         )
-        npc_event_character_actor_proven = (
-            npc_event_character_actor_proven or condition_has_npc_actor
-        )
-        npc_actor_proven = npc_event_character_actor_proven
     if unbound_mixed_talker_contract:
         # A named, untriggered mixed u_/npc_ function has no safe ambient
-        # fallback.  Keep it fully translatable as an explicit two-talker
-        # callback: callers must supply alpha through actor_override and beta
-        # through context.actors.beta.  The unattached handler still receives
-        # the ordinary missing-Platform-trigger diagnostic.
+        # fallback.  An actor_override can preserve alpha for a nested caller,
+        # but the source shape does not prove a second beta/NPC handle.
         callback_character_actor_proven = True
-        npc_event_character_actor_proven = True
-        npc_actor_proven = True
     if nested_character_override:
-        # An NPC traversal supplies a generation-safe Character handle.  The
-        # native nested dialogue treats that selected target as its actor for
-        # both legacy prefixes; no ambient avatar or alpha/beta fallback is
-        # inferred when the callback is invoked without an override.
+        # A nested Character callback preserves one exact actor.  It does not
+        # prove that the actor is a distinct beta/NPC talker.
         callback_character_actor_proven = True
-        npc_event_character_actor_proven = True
-        npc_actor_proven = True
     character_actor_proven = (
         avatar_actor_proven or item_event_character_actor_proven or
         npc_event_character_actor_proven or event_character_actor_proven or
@@ -28443,28 +32951,33 @@ def render_eoc(
         generic_talker_actor_override
     )
     npc_actor_expression = None
-    if talker_pair_override:
-        npc_actor_expression = "context.actors.beta"
-    elif unbound_mixed_talker_contract:
+    if talker_pair_override or npc_dialogue_mission_pair_proven:
         npc_actor_expression = "context.actors.beta"
     elif isinstance(required_event, str):
         if required_event in PROVEN_ITEM_ACTOR_EVENTS:
             npc_actor_expression = "context.actors.item"
-        elif required_event in VICTIM_CHARACTER_EVENTS:
-            npc_actor_expression = (
-                "(context.actors and "
-                "(context.actors.beta or context.actors.victim))"
-            )
         elif required_event in TALKER_ACTOR_EVENTS:
-            npc_actor_expression = "context.actors.beta"
+            # The second talker is exposed as ``interlocutor``, but the
+            # generic event contract does not prove a Character/NPC handle.
+            # Leave NPC-prefixed service lowering to a separately guarded map.
+            pass
         elif npc_event_character_actor_proven:
             npc_actor_expression = "actor"
     actor_expression = (
         "actor" if (character_actor_proven or creature_actor_proven) else None
     )
+    # Character recurrence supplies the current EOC alpha through its
+    # ``actor_override`` parameter.  Keep this proof local to weighted child
+    # activation so a selected static ID never upgrades the caller's actor.
+    weighted_actor_expression = actor_expression or (
+        "actor_override" if character_recurrence else None
+    )
+    weighted_character_actor_proven = (
+        character_actor_proven or character_recurrence
+    )
     # Mutation ``u_`` selectors consume alpha, not any Character from the
-    # event.  The NPC event field is beta; only promote event fields that the
-    # native event bridge defines as alpha's primary Character.
+    # event.  Only promote event fields that the native event bridge defines
+    # as alpha's primary Character.
     mutation_alpha_actor_proven = (
         avatar_actor_proven or item_event_character_actor_proven or
         (not has_event_trigger and callback_character_actor_proven) or
@@ -28476,6 +32989,216 @@ def render_eoc(
         # while retaining the selected actor as the safe fallback for ordinary
         # NPC traversal callbacks that have no talker pair.
         npc_actor_expression = "(context.actors and context.actors.beta) or actor"
+    # Static talk-effect WRAP entries invoke their C++ function only when
+    # dialogue::actor(true)->get_npc() succeeds.  A single event Character is
+    # alpha evidence, not proof of that beta handle.  A direct topic response
+    # callback runs in avatar::talk_to's dialogue, which has alpha and a
+    # non-null interlocutor; only this path can justify the beta handle.  The
+    # native actor(true) alpha fallback applies to other no-beta dialogues,
+    # which are deliberately not inferred from event or generic-pair proof.
+    # Preserve the native no-op for a present beta that is not an NPC.
+    static_wrapped_beta_npc = (
+        npc_dialogue_mission_pair_proven and
+        npc_actor_expression == "context.actors.beta"
+    )
+    # Training-offer selectors require both native dialogue Characters.
+    # Prove the second talker only for content callbacks whose source supplies
+    # the alpha/beta pair, never from a single-role event or selector spelling.
+    training_pair_proven = (
+        not has_event_trigger and talker_pair_override and
+        character_actor_proven and
+        npc_actor_expression == "context.actors.beta"
+    )
+    # These two non-WRAP string effects use dialogue::actor(true), which
+    # falls back to alpha when beta is absent. Keep their provider proof
+    # separate from static WRAP's beta-only proof: a direct topic callback
+    # selects beta; the sole PROVEN_NPC_ACTOR_EVENTS member,
+    # npc_becomes_hostile, is sent without talkers and eoc_events::notify
+    # builds an NPC alpha with no beta, so actor is the native fallback. Do
+    # not generalize that event proof to NPC_DEATH: npc::die builds alpha=npc
+    # and beta=killer when present. Generic event fields and pair closures do
+    # not establish which talker actor(true) selected and remain manual until
+    # that invocation path is proven.
+    npc_talker_ui_actor_expression = None
+    if npc_dialogue_mission_pair_proven:
+        npc_talker_ui_actor_expression = "context.actors.beta"
+    elif required_event == "npc_becomes_hostile" and not talker_pair_override:
+        npc_talker_ui_actor_expression = "actor"
+    # These native setters call dialogue::actor(true).  The only bounded
+    # migrated caller we can execute with that selection today is the direct,
+    # unreferenced npc_becomes_hostile event: native event dispatch builds an
+    # NPC alpha with no beta, and Platform exposes that event Character as
+    # context.actors.npc.  A static or dynamic child call can supply another
+    # dialogue, while action-level EOC callbacks are not emitted by
+    # render_talk_topic (its bounded response condition is not an EOC
+    # context), so neither source proves actor(true) for this branch. A
+    # same-corpus trigger_event for npc_becomes_hostile can reenter this
+    # listener with a different event payload, so it also disables the proof.
+    # Native emits a debug message on the alpha fallback; this lowering
+    # preserves the rule-state mutation and no-op target selection only.
+    npc_ai_rule_mutation_actor_proven = (
+        has_event_trigger and
+        required_event == "npc_becomes_hostile" and
+        npc_event_character_actor_proven and
+        npc_talker_ui_actor_expression == "actor" and
+        not talker_pair_override and
+        not npc_becomes_hostile_event_emitted_by_eoc and
+        eoc_id not in eoc_referenced_ids and
+        not dynamic_eoc_dispatch_present
+    )
+    # First-topic mutation and the bare open_dialogue no-op additionally need
+    # a live NPC alpha: npc_becomes_hostile provides one, while NPC_DEATH's
+    # actor may already be dead and cannot back generation-checked services.
+    npc_alpha_fallback_event_actor_proven = (
+        npc_ai_rule_mutation_actor_proven and not npc_fatal_hook
+    )
+    raw_effect = value.get("effect")
+    single_take_control_menu_effect = (
+        (isinstance(raw_effect, str) and raw_effect == "take_control_menu") or
+        (isinstance(raw_effect, list) and raw_effect == ["take_control_menu"])
+    )
+    # The Platform menu service calls the same avatar::control_npc_menu UI,
+    # but it takes a generation-checked live Avatar handle and invalidates it
+    # if the menu swaps the controlled character.  Only a standalone,
+    # event-exclusive game_start EOC with this terminal effect has a proven
+    # live Avatar and no later effects/conditions that could use stale handles.
+    # Static JSON trigger_event emitters are screened by the shared live-avatar
+    # proof. Trusted Lua can still emit game_start through Platform, so this is
+    # bounded source support rather than full runtime proof.
+    take_control_menu_live_terminal_proven = (
+        has_event_trigger and required_event == "game_start" and
+        game_start_avatar_source_proven and stable_handler and
+        not inline_eoc and not avatar_fatal_hook and not avatar_death_hook and
+        not npc_fatal_hook and eoc_id not in eoc_referenced_ids and
+        not dynamic_eoc_dispatch_present and
+        single_take_control_menu_effect and
+        value.get("condition") is None and value.get("false_effect") is None and
+        value.get("deactivate_condition") is None and recurrence_value is None and
+        value.get("global") is not True
+    )
+    exact_alpha_effect_kind: str | None = None
+    alpha_effect_kinds: set[str] = set()
+    if (
+        exact_avatar_actor_proven or exact_npc_actor_proven or
+        event_character_actor_proven and
+        event_actor_field in NATIVE_EOC_ALPHA_EVENT_FIELDS or
+        required_event in PROVEN_ITEM_ACTOR_EVENTS or
+        exact_callback_character_actor_proven or
+        character_recurrence or eoc_id in character_override_ids or
+        value.get("__inline_actor_kind") == "character"
+    ):
+        alpha_effect_kinds.add("character")
+    if monster_actor_proven:
+        alpha_effect_kinds.add("monster")
+    if len(alpha_effect_kinds) == 1:
+        exact_alpha_effect_kind = next(iter(alpha_effect_kinds))
+    if exact_alpha_effect_kind is not None:
+        alpha_effect_target: tuple[str, str] | None = (
+            (
+                "context.actors.speaker"
+                if exact_alpha_effect_kind == "monster" and
+                required_event in CREATURE_ACTOR_EVENTS else "actor"
+            ),
+            exact_alpha_effect_kind,
+        )
+    else:
+        alpha_effect_target = None
+
+    if required_event in VICTIM_CHARACTER_EVENTS:
+        if required_event == "character_kills_character":
+            # This event uses send(), so dialogue::actor(true) has no beta and
+            # falls back to alpha.  Its victim payload field is not a talker.
+            beta_effect_target = alpha_effect_target
+        else:
+            # Melee/ranged character events use send_with_talker(alpha, victim).
+            beta_effect_target = ("context.actors.interlocutor", "character")
+    elif required_event in MONSTER_BETA_EVENTS:
+        # These event producers attach the monster as the second talker; the
+        # Platform event bridge names that handle "interlocutor".
+        beta_effect_target = ("context.actors.interlocutor", "monster")
+    elif training_pair_proven:
+        # Nested content callbacks retain the exact dialogue alpha/beta pair.
+        beta_effect_target = ("context.actors.beta", "character")
+    elif exact_npc_actor_proven:
+        beta_effect_target = ("actor", "character")
+    else:
+        beta_effect_target = None
+    # Text expansion resolves native handles, so only keep message paths whose
+    # dialogue participants are both alive at event dispatch.  Fatal/death and
+    # kill hooks run after the affected Character or monster is already dead;
+    # ranged attacks dispatch after projectile damage.  Native no-beta EOCs
+    # also pass a default avatar to parse_tags while retaining has_beta=false;
+    # the text service needs explicit absence proof and its avatar fallback
+    # option for that shape, rather than a fabricated alpha/beta pair.
+    message_dialogue_pair: tuple[str, str] | None = None
+    if (
+        required_event == "character_melee_attacks_character" and
+        alpha_effect_target is not None and beta_effect_target is not None and
+        beta_effect_target[1] == "character"
+    ):
+        message_dialogue_pair = (
+            alpha_effect_target[0], beta_effect_target[0]
+        )
+    elif (
+        required_event == "character_melee_attacks_monster" and
+        alpha_effect_target is not None and beta_effect_target is not None and
+        beta_effect_target[1] == "monster"
+    ):
+        message_dialogue_pair = (
+            alpha_effect_target[0], beta_effect_target[0]
+        )
+    # These event contracts provide a live Character alpha, but the attacker
+    # may be an NPC.  A runtime Avatar guard preserves native u_message's
+    # add_msg_if_player behavior without inventing an avatar proof.
+    u_message_avatar_guarded_pair = (
+        required_event in {
+            "character_melee_attacks_character",
+            "character_melee_attacks_monster",
+        } and message_dialogue_pair is not None
+    )
+    effect_actor_targets = {
+        "u": alpha_effect_target,
+        "npc": beta_effect_target,
+    }
+    # Variable actor(true) may fall back to alpha when beta is absent, but
+    # parse_tags uses the Avatar for the missing beta instead. Keep those
+    # two source proofs separate, especially for an NPC alpha.
+    if (
+        required_event == "character_kills_character" or
+        exact_npc_actor_proven and required_event not in VICTIM_CHARACTER_EVENTS and
+        required_event not in MONSTER_BETA_EVENTS and not training_pair_proven
+    ):
+        effect_actor_targets["text_npc"] = None
+    native_beta_absent_proven = (
+        has_event_trigger and not talker_pair_override and
+        eoc_id not in eoc_referenced_ids and not dynamic_eoc_dispatch_present and
+        (
+            required_event == "game_start" and game_start_avatar_source_proven or
+            npc_alpha_fallback_event_actor_proven
+        )
+    )
+    if native_beta_absent_proven:
+        effect_actor_targets["text_npc"] = ("nil", "absent")
+    effect_actor_targets["read_u"] = alpha_effect_target
+    effect_actor_targets["read_npc"] = beta_effect_target
+    if (
+        native_beta_absent_proven or npc_fatal_hook or
+        required_event == "character_kills_character" or
+        exact_npc_actor_proven and required_event not in VICTIM_CHARACTER_EVENTS and
+        required_event not in MONSTER_BETA_EVENTS and not training_pair_proven
+    ):
+        # Native reads use const_actor, which has no mutation alpha fallback.
+        # Fatal-hook killer lifetime and missing-beta diagnostics are not a
+        # proven readable storage owner; retain those shapes for manual review.
+        effect_actor_targets["read_npc"] = None
+    # Keep the general EOC participant map intact for unrelated npc_* APIs.
+    # The native effect callbacks use dialogue::actor(true), which in NPC_DEATH
+    # selects the killer when present and alpha-falls back to the dead NPC.
+    character_effect_actor_targets = dict(effect_actor_targets)
+    if npc_fatal_hook:
+        character_effect_actor_targets["npc"] = (
+            "(context.killer or actor)", "creature"
+        )
     lines = [
         f"-- Extracted from {source.location}; review every TODO before enabling.",
         # Function declarations are assigned to a predeclared local in the
@@ -28493,6 +33216,12 @@ def render_eoc(
     elif generic_talker_actor_override and not (
         avatar_fatal_hook or npc_fatal_hook
     ):
+        lines.extend([
+            "    context = context or {}",
+            "    context.data = context.data or {}",
+            "    context.actors = context.actors or {}",
+        ])
+    elif static_wrapped_beta_npc:
         lines.extend([
             "    context = context or {}",
             "    context.data = context.data or {}",
@@ -28594,15 +33323,220 @@ def render_eoc(
         lines.append("    local actor = actor_override or services.characters.avatar()")
     if avatar_fatal_hook or npc_fatal_hook:
         lines.append("    local prevent_death = false")
+    # Keep the general beta-Character proof disabled; event presence alone
+    # does not establish a live NPC beta or authorize other npc_* selectors.
+    npc_condition_beta_actor_proven = False
+    # Most event EOCs do not prove a usable native beta: an event's alpha
+    # Character is not interchangeable with const_actor(true), and direct
+    # talk-topic EOC callbacks are not connected by render_talk_topic. The
+    # two melee attack events are a narrow exception: src/melee.cpp calls
+    # send_with_talker(alpha, target) before damage, and the Platform bridge
+    # exposes that same live target as actors.interlocutor.  Require an
+    # event-exclusive EOC so run_eocs, run_eoc_selector, and test_eoc cannot
+    # re-enter it with another pair.
+    # Native EOC loading defaults a missing eoc_type to ACTIVATION and only
+    # reads required_event for EVENT, so event-shaped JSON alone is not proof.
+    npc_melee_beta_actor_proven = (
+        has_event_trigger and value.get("eoc_type") == "EVENT" and
+        required_event in {
+            "character_melee_attacks_character",
+            "character_melee_attacks_monster",
+        } and not inline_eoc and eoc_id not in eoc_referenced_ids and
+        not dynamic_eoc_dispatch_present
+    )
+    # Only the character-victim melee event proves a Character beta. The
+    # monster-victim sibling has the same callback slot but cannot use the
+    # Character snapshot that matches native at_safe_space for a Character.
+    safe_space_character_beta_actor_proven = (
+        npc_melee_beta_actor_proven and
+        required_event == "character_melee_attacks_character" and
+        not character_melee_event_emitted_by_eoc
+    )
+    # Native required_event is only loaded for eoc_type EVENT.  A JSON shape
+    # that merely carries the field (or can recur) does not prove the live
+    # melee dialogue pair used by these static WRAP effects.
+    wrapped_npc_melee_pair_proven = (
+        safe_space_character_beta_actor_proven and
+        value.get("eoc_type") == "EVENT" and
+        value.get("global") is not True and
+        "recurrence" not in value
+    )
+    wrapped_npc_beta_expression = (
+        "context.actors.interlocutor" if wrapped_npc_melee_pair_proven
+        else "context.actors.beta" if npc_dialogue_mission_pair_proven
+        else None
+    )
+    # A narrowly migratable u_sell_item callback needs the actual runtime
+    # EOC bridge to carry both native dialogue Characters.  The melee-to-
+    # Character sender supplies alpha and its live target as interlocutor;
+    # legacy mission end.effect references are not Platform finish_with
+    # handlers and therefore cannot use mission source pair provenance alone.
+    sell_item_pair_proven = (
+        npc_melee_beta_actor_proven and
+        required_event == "character_melee_attacks_character" and
+        event_actor_field == "attacker" and
+        not character_melee_event_emitted_by_eoc and
+        value.get("eoc_type", "EVENT") == "EVENT" and
+        value.get("global") is not True and "recurrence" not in value
+    )
+    raw_eoc_effects = value.get("effect", [])
+    if isinstance(raw_eoc_effects, (dict, str)):
+        raw_eoc_effects = [raw_eoc_effects]
+    npc_recipe_melee_beta_proven = (
+        npc_melee_beta_actor_proven and
+        required_event == "character_melee_attacks_character" and
+        not character_melee_event_emitted_by_eoc and
+        value.get("eoc_type", "EVENT") == "EVENT" and
+        set(value) <= {
+            "type", "id", "eoc_type", "required_event", "effect", "//",
+        } and
+        isinstance(raw_eoc_effects, list) and len(raw_eoc_effects) == 1 and
+        isinstance(raw_eoc_effects[0], dict)
+    )
+    # A referenced EOC is also callable by run_eocs, run_eoc_selector, or
+    # test_eoc and can receive a different child context. Dynamic dispatch in
+    # either run_eocs or run_eoc_selector can target any generated EOC, so
+    # disable this proof corpus-wide when one is present.
+    # Only an event-exclusive function in a corpus without dynamic dispatch
+    # may use its event bridge's interlocutor as native beta-presence evidence.
+    event_exclusive_source_proven = (
+        has_event_trigger and eoc_id not in eoc_referenced_ids and
+        not dynamic_eoc_dispatch_present
+    )
+    # Targeting UI needs the talker selected by this EOC's current dialogue.
+    # A callable child inherits its caller's actors, so an event name alone
+    # cannot prove that an event-specific avatar remains alpha at that call.
+    # Restrict these pickers to direct, statically event-bound functions.
+    targeting_avatar_actor_proven = (
+        event_exclusive_source_proven and not inline_eoc and
+        avatar_actor_proven
+    )
+    # npc_choose_adjacent_highlight selects dialogue::actor(true).  The only
+    # supported alpha fallback is the direct npc_becomes_hostile event, whose
+    # dialogue has no beta.  That native fallback also emits a debug message;
+    # Platform preserves the selected NPC but does not mirror that diagnostic.
+    targeting_npc_actor_proven = npc_alpha_fallback_event_actor_proven
+    # The morale adapters require a live Character handle and native morale
+    # effects read dialogue alpha/beta rather than an ambient global actor.
+    # Limit avatar mutations to the live game_start alpha and npc morale
+    # mutations to the one no-beta hostile event whose mutable actor(true)
+    # falls back to that event's NPC alpha. This preserves mutation only;
+    # native also emits a debug diagnostic for the missing beta talker.
+    morale_avatar_actor_proven = (
+        event_exclusive_source_proven and not inline_eoc and
+        required_event == "game_start" and game_start_avatar_source_proven and
+        not avatar_fatal_hook and not avatar_death_hook
+    )
+    morale_npc_fallback_actor_proven = (
+        event_exclusive_source_proven and not inline_eoc and
+        required_event == "npc_becomes_hostile" and
+        npc_event_character_actor_proven and not npc_fatal_hook and
+        npc_talker_ui_actor_expression == "actor" and not talker_pair_override
+    )
+    # Mutation effects read mutable dialogue alpha/beta. game_start supplies a
+    # live avatar alpha. npc_becomes_hostile is the only native event path here
+    # that constructs an NPC alpha without beta; mutable actor(true) falls back
+    # to that alpha after emitting a debug message. Both proofs require an
+    # event-exclusive EOC, since a referenced callback or dynamic dispatcher
+    # can invoke the body with a different actor pair. The Platform lowering
+    # preserves mutation state on the hostile event path, but not that native
+    # missing-beta diagnostic.
+    mutation_avatar_actor_proven = (
+        event_exclusive_source_proven and not inline_eoc and
+        required_event == "game_start" and game_start_avatar_source_proven and
+        not avatar_fatal_hook and not avatar_death_hook and
+        not talker_pair_override
+    )
+    mutation_npc_alpha_fallback_proven = (
+        event_exclusive_source_proven and not inline_eoc and
+        required_event == "npc_becomes_hostile" and
+        npc_event_character_actor_proven and not npc_fatal_hook and
+        npc_talker_ui_actor_expression == "actor" and not talker_pair_override
+    )
+    # Native event EOCs select alpha from the Character ID carried by
+    # character_wields_item, character_wears_item, character_takeoff_item, and
+    # character_armor_destroyed; the Platform bridge resolves that same ID to
+    # actors.character.  Each event producer is a live Character operation.
+    # Keep the proof event-exclusive so child callbacks cannot replace alpha.
+    # npc_becomes_hostile is separately supported only as alpha with no beta;
+    # native actor(true) emits a missing-beta debug message before falling back,
+    # which Platform does not mirror, so only the wound-state mutation matches.
+    wound_alpha_actor_proven = (
+        event_exclusive_source_proven and not inline_eoc and
+        not avatar_fatal_hook and not avatar_death_hook and not npc_fatal_hook and
+        not talker_pair_override and (
+            required_event == "game_start" and game_start_avatar_source_proven or
+            required_event in PROVEN_ITEM_ACTOR_EVENTS
+        )
+    )
+    wound_actor_targets = {
+        "u": "actor" if wound_alpha_actor_proven else None,
+        "npc": "actor" if mutation_npc_alpha_fallback_proven else None,
+    }
+    field_avatar_center_proven = (
+        stable_handler and not inline_eoc and
+        eoc_id not in eoc_referenced_ids and
+        not dynamic_eoc_dispatch_present and avatar_actor_proven and
+        (
+            global_recurrence or
+            (
+                event_exclusive_source_proven and
+                required_event == "game_start" and
+                game_start_avatar_source_proven
+            )
+        )
+    )
+    # Retain the existing game_start Avatar proof for its other consumers.
+    # Those predicates and mutations do not gain an arbitrary Character
+    # proof merely because the proficiency query accepts one. Stored effect
+    # closures and re-entered EOCs cannot inherit this event-exclusive proof.
+    proficiency_alpha_actor_proven = (
+        required_event == "game_start" and
+        game_start_avatar_source_proven and not inline_eoc and
+        eoc_id not in eoc_referenced_ids and
+        not dynamic_eoc_dispatch_present
+    )
+    # The read-only proficiency query accepts any exact live Character, not
+    # only an Avatar. Keep this proof separate from the older game_start bit,
+    # which also authorizes Avatar-only predicates and sample_range mutation.
+    proficiency_character_alpha_actor_proven = (
+        wound_alpha_actor_proven or field_avatar_center_proven
+    )
+    # sample_range writes Character variables and consumes the native global
+    # RNG. Its bounded conversion requires the same event-exclusive live alpha
+    # as the proficiency service; the shared source proof already excludes
+    # content-authored game_start replay.
+    sample_range_alpha_actor_proven = (
+        proficiency_alpha_actor_proven
+    )
+    event_beta_presence_proven = event_exclusive_source_proven
+    # A named getter evaluates its closure against the current dialogue's
+    # alpha.  Its call-site proof is safe for direct/static EOCs only when no
+    # dynamic dispatcher can invoke that generated function with a generic
+    # monster, item, or vehicle as alpha.
+    named_condition_alpha_actor_proven = (
+        character_actor_proven and not dynamic_eoc_dispatch_present
+    )
     deactivate_condition = value.get("deactivate_condition")
     deactivate_expression: str | None = None
     if isinstance(deactivate_condition, (str, dict)):
         deactivate_expression = render_eoc_condition_expression(
             deactivate_condition, exact_avatar_actor_proven,
             weapon_actor_proven,
-            npc_event_character_actor_proven, creature_actor_proven,
+            npc_condition_beta_actor_proven, creature_actor_proven,
             eoc_conditions, npc_actor_expression=npc_actor_expression,
             generic_character_actor_proven=character_actor_proven,
+            training_pair_proven=training_pair_proven,
+            npc_dialogue_pair_proven=npc_dialogue_mission_pair_proven,
+            event_beta_presence_proven=event_beta_presence_proven,
+            proficiency_alpha_actor_proven=proficiency_alpha_actor_proven,
+            npc_melee_beta_actor_proven=npc_melee_beta_actor_proven,
+            safe_space_character_beta_actor_proven=safe_space_character_beta_actor_proven,
+            named_condition_alpha_actor_proven=named_condition_alpha_actor_proven,
+            proficiency_character_alpha_actor_proven=(
+                proficiency_character_alpha_actor_proven
+            ),
+            math_actor_targets=effect_actor_targets,
         )
         if deactivate_expression is not None:
             lines.extend([
@@ -28610,6 +33544,15 @@ def render_eoc(
                 "        return false",
                 "    end",
             ])
+    if "deactivate_condition" in value and deactivate_expression is None:
+        lines.extend([
+            "    -- TODO: translate deactivate_condition before running effects.",
+            "    do return false end",
+        ])
+        result.add_todo(
+            "manual_rewrite",
+            f"{source.location}: EOC {eoc_id} deactivate_condition needs Lua conversion"
+        )
     raw_condition = value.get("condition", True)
     empty_math_condition = (
         isinstance(raw_condition, dict) and
@@ -28641,32 +33584,155 @@ def render_eoc(
         condition_expression = render_eoc_condition_expression(
             raw_condition, exact_avatar_actor_proven,
             weapon_actor_proven,
-            npc_event_character_actor_proven, creature_actor_proven,
+            npc_condition_beta_actor_proven, creature_actor_proven,
             eoc_conditions, npc_actor_expression=npc_actor_expression,
             generic_character_actor_proven=character_actor_proven,
+            training_pair_proven=training_pair_proven,
+            npc_dialogue_pair_proven=npc_dialogue_mission_pair_proven,
+            event_beta_presence_proven=event_beta_presence_proven,
+            proficiency_alpha_actor_proven=proficiency_alpha_actor_proven,
+            npc_melee_beta_actor_proven=npc_melee_beta_actor_proven,
+            safe_space_character_beta_actor_proven=safe_space_character_beta_actor_proven,
+            named_condition_alpha_actor_proven=named_condition_alpha_actor_proven,
+            proficiency_character_alpha_actor_proven=(
+                proficiency_character_alpha_actor_proven
+            ),
+            math_actor_targets=effect_actor_targets,
         )
         condition_converted = condition_expression is not None
     false_effect_converted = True
     if condition_expression is None:
         condition_todo = "translate the legacy condition into a Lua predicate"
-        if raw_condition == "u_has_camp":
+        if isinstance(raw_condition, dict) and set(raw_condition) == {"math"}:
             condition_todo = (
-                "translate u_has_camp only with an explicit camp handle and "
-                "authorized manager handle"
+                "translate math only for pure numeric arithmetic, functions and comparisons; "
+                "lazy ternaries and checked variable reads also require proven owners and "
+                "a known function namespace. This expression still contains an unsupported "
+                "identifier, owner, scoped function, RNG, assignment or literal shape. "
+                "Native and real-corpus semantic acceptance remains pending"
+            )
+        elif isinstance(raw_condition, str) and raw_condition in {
+            "mission_complete", "mission_failed", "mission_incomplete",
+            "npc_mission_complete", "npc_mission_failed",
+            "npc_mission_incomplete",
+        }:
+            condition_todo = (
+                "translate beta selected-mission status only after a "
+                "reachable topic callback supplies beta's selection; "
+                "complete/incomplete also need the current avatar owner"
+            )
+        elif isinstance(raw_condition, dict) and set(raw_condition) in (
+            {"mission_goal"}, {"npc_mission_goal"}
+        ):
+            condition_todo = (
+                "translate beta mission_goal only after talk-topic response "
+                "EOC callbacks are wired; preserve native str_or_var "
+                "evaluation and enum conversion"
+            )
+        elif contains_training_offer_condition(raw_condition):
+            condition_todo = (
+                "translate train_styles/train_spells only after a supported "
+                "EOC callback supplies the native alpha and beta as live "
+                "Character handles; talk-topic response EOC callbacks are "
+                "not yet wired"
+            )
+        elif contains_npc_proficiency_condition(raw_condition):
+            condition_todo = (
+                "translate npc_has_proficiency only for an event-exclusive "
+                "pre-damage melee EOC with its live interlocutor and raw literal "
+                "or global/context variable ID; preserve the native false result for "
+                "monster/base talkers, and leave other variable owners/mutators, other "
+                "beta sources, and re-entered EOCs as TODO"
+            )
+        elif isinstance(raw_condition, str) and raw_condition in {
+            "has_available_mission", "has_many_available_missions",
+            "has_no_available_mission", "npc_has_available_mission",
+            "npc_has_many_available_missions",
+            "npc_has_no_available_mission",
+        }:
+            condition_todo = (
+                "translate beta available-mission counts only after "
+                "talk-topic response EOC callbacks are wired; preserve the "
+                "native empty-list result for a non-NPC beta"
+            )
+        elif contains_safe_space_alpha_condition(raw_condition):
+            condition_todo = (
+                "translate u_at_safe_space only for an event-exclusive live "
+                "avatar source; current bounded proof is an unreferenced "
+                "game_start EOC without dynamic dispatch"
+            )
+        elif contains_npc_beta_character_state_condition(raw_condition):
+            condition_todo = (
+                "translate npc_* activity, travel, following, and vehicle "
+                "snapshot conditions only when a direct talk-topic "
+                "true_eocs/false_eocs callback proves native beta as a live "
+                "Character; event NPC actors are alpha, and the "
+                "npc_has_activity member string is ignored"
+            )
+        elif contains_safe_space_beta_condition(raw_condition):
+            condition_todo = (
+                "translate at_safe_space/npc_at_safe_space only for a direct, "
+                "event-exclusive character_melee_attacks_character EOC whose "
+                "native beta is the live Character victim; monster-victim, "
+                "other-event, nested, and callable EOCs remain TODO"
+            )
+        elif contains_line_of_sight_condition(raw_condition):
+            condition_todo = (
+                "translate line_of_sight only after loc_1 and loc_2 are proven "
+                "absolute map-square Tripoint values and dbl_or_var range/RNG "
+                "semantics are preserved"
+            )
+        elif isinstance(raw_condition, dict) and (
+            "npc_at_om_location" in raw_condition or
+            "npc_near_om_location" in raw_condition
+        ):
+            condition_todo = (
+                "translate npc_*_om_location only for an event-exclusive "
+                "character_melee_attacks_character or "
+                "character_melee_attacks_monster EOC with its live "
+                "Creature interlocutor and bounded literal location/radius; "
+                "other event actors prove alpha only, and direct talk-topic "
+                "response EOC callbacks are not wired"
             )
         elif (
             isinstance(raw_condition, dict) and
-            raw_condition.get("u_near_om_location", raw_condition.get(
-                "npc_near_om_location"
-            )) == "FACTION_CAMP_ANY"
+            "u_near_om_location" in raw_condition
         ):
             condition_todo = (
-                "translate FACTION_CAMP_ANY only with an explicit camp handle; "
-                "nearest/location scanning is not supported"
+                "rewrite u_near_om_location only when this callback proves "
+                "its actual Character alpha and a bounded literal location ID "
+                "and 0..30 radius after native int truncation; "
+                "services.overmap.matches_location_near already preserves "
+                "the square, camp, mapgen-argument, and lazy overmap lookup "
+                "semantics, so do not assume the Avatar or invent an origin"
             )
+        elif (
+            isinstance(raw_condition, dict) and
+            "overmap_at_point" in raw_condition and
+            "point" in raw_condition
+        ):
+            condition_todo = (
+                "translate overmap_at_point only with a proven typed point "
+                "source and native lazy overmap lookup"
+            )
+        elif (
+            isinstance(raw_condition, dict) and
+            "u_at_om_location" in raw_condition and
+            not exact_avatar_actor_proven
+        ):
+            condition_todo = (
+                "translate u_at_om_location only with a proven alpha "
+                "Character handle and native lazy overmap lookup"
+            )
+        condition_order_choice = _math_random_order_choice(raw_condition, effect_actor_targets)
+        if condition_order_choice is not None:
+            condition_todo = condition_order_choice
         lines.append(f"    -- TODO: {condition_todo}.")
+        # Unknown truth cannot choose either native branch. Keep the generated
+        # callback inert even when later effect statements were rendered.
+        lines.append("    do return false end")
         result.add_todo(
-            "manual_rewrite",
+            "semantic_choice" if condition_order_choice else "manual_rewrite",
             f"{source.location}: EOC {eoc_id} condition TODO: {condition_todo}"
         )
     elif condition_expression != "true":
@@ -28688,10 +33754,23 @@ def render_eoc(
                     actor_expression,
                     eoc_conditions, creature_actor_proven,
                     npc_actor_expression,
+                    effect_actor_targets,
+                    character_effect_actor_targets,
+                    sell_item_pair_proven=sell_item_pair_proven,
+                    wound_actor_targets=wound_actor_targets,
+                    known_body_part_ids=known_body_part_ids,
+                    known_wound_ids=known_wound_ids,
+                    field_avatar_center_proven=field_avatar_center_proven,
+                    character_actor_proven=weighted_character_actor_proven,
+                    weighted_actor_expression=weighted_actor_expression,
                 )
                 if rendered_false is None:
                     false_todo = "translate the false_effect branch through typed Lua services"
-                    if isinstance(false_value, dict) and any(
+                    false_todo_category = "manual_rewrite"
+                    trade_todo = _legacy_trade_action_effect_todo(false_value)
+                    if trade_todo is not None:
+                        false_todo = trade_todo
+                    elif isinstance(false_value, dict) and any(
                         key in false_value for key in (
                             "u_remove_item_with", "npc_remove_item_with",
                         )
@@ -28709,20 +33788,65 @@ def render_eoc(
                             "translate the inventory consumption through the typed "
                             "inventory service"
                         )
+                    elif isinstance(false_value, dict) and "u_spawn_item" in false_value:
+                        false_todo = (
+                            "EOC u_spawn_item remains TODO because false-effect EOC "
+                            "callbacks do not carry the active native Dialogue; only "
+                            "a single literal direct TALK response is lowered, and "
+                            "count/group/container/flags/force_equip/loc/dynamic "
+                            "forms remain unsupported"
+                        )
+                    elif isinstance(false_value, dict) and "map_spawn_item" in false_value:
+                        false_todo = (
+                            "map_spawn_item false branches are not lowered yet; the "
+                            "bounded world-service path requires a live Avatar at an "
+                            "implicit loaded position, a direct item id, and a static "
+                            "count from 1..100; loc, groups, containers, flags, and "
+                            "dynamic values remain TODO"
+                        )
                     elif isinstance(false_value, dict) and any(
                         key in false_value for key in (
                             "u_set_field", "npc_set_field",
                         )
                     ):
-                        false_todo = "translate " + _map_mutation_todo()
-                    semantic_choice = mutation_migration_gap(false_value)
+                        false_todo = (
+                            "field branch requires a source-proven live Avatar center "
+                            "and bounded static parameters; target_var, NPC, and "
+                            "dynamic radius/intensity/age remain TODO"
+                        )
+                    elif isinstance(false_value, dict) and "copy_var" in false_value:
+                        false_todo = (
+                            "translate copy_var only for bounded literal u/npc/global "
+                            "scopes; context_val and var_val need a value-preserving "
+                            "copy path, and actor scopes need exact handles"
+                        )
+                    elif isinstance(false_value, dict) and "set_string_var" in false_value:
+                        false_todo = (
+                            "translate set_string_var only for native string providers "
+                            "with native RNG and exact participant handles; "
+                            "unsupported input/translation shapes, unproven "
+                            "source/target owners remain TODO"
+                        )
+                    if (
+                        isinstance(false_value, dict) and
+                        "weighted_list_eocs" in false_value
+                    ):
+                        false_todo = _WEIGHTED_LIST_EOC_TODO
+                        false_todo_category = "manual_rewrite"
+                    semantic_choice = (mutation_migration_gap(false_value) or
+                                       _effect_argument_order_choice(false_value, effect_actor_targets,
+                                                                     character_effect_actor_targets) or
+                                       _location_adjust_random_order_choice(false_value, effect_actor_targets) or
+                                       _math_assignment_order_choice(false_value, effect_actor_targets) or
+                                       _math_random_order_choice(false_value, effect_actor_targets))
                     if semantic_choice is not None:
                         false_todo = semantic_choice
+                        false_todo_category = "semantic_choice"
                     lines.append(
                         f"        -- TODO: {false_todo}."
                     )
                     result.add_todo(
-                        "manual_rewrite",
+                        false_todo_category,
                         f"{source.location}: EOC {eoc_id} false_effect "
                         f"#{false_index} TODO: {false_todo}"
                     )
@@ -28772,20 +33896,21 @@ def render_eoc(
                 rendered = render_static_weighted_list_eocs(
                     effect,
                     eoc_function_names or {},
-                    actor_expression,
+                    weighted_actor_expression,
+                    eoc_actor_requirements,
+                    character_actor_proven=weighted_character_actor_proven,
+                    avatar_actor_proven=avatar_actor_proven,
+                    creature_actor_proven=creature_actor_proven,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
-                    lines.append(
-                        "    -- TODO: translate weighted EOC selection into "
-                        "ordinary Lua random control flow."
-                    )
+                    lines.append(f"    -- TODO: {_WEIGHTED_LIST_EOC_TODO}.")
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs weighted-callback conversion"
+                        f"{_WEIGHTED_LIST_EOC_TODO}"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "switch" in effect:
@@ -28798,6 +33923,14 @@ def render_eoc(
                     eoc_actor_requirements,
                     actor_expression,
                     eoc_conditions, npc_actor_expression,
+                    effect_actor_targets,
+                    character_effect_actor_targets,
+                    wound_actor_targets=wound_actor_targets,
+                    known_body_part_ids=known_body_part_ids,
+                    known_wound_ids=known_wound_ids,
+                    field_avatar_center_proven=field_avatar_center_proven,
+                    character_actor_proven=weighted_character_actor_proven,
+                    weighted_actor_expression=weighted_actor_expression,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -28822,6 +33955,14 @@ def render_eoc(
                     eoc_actor_requirements,
                     actor_expression,
                     eoc_conditions, npc_actor_expression,
+                    effect_actor_targets,
+                    character_effect_actor_targets,
+                    wound_actor_targets=wound_actor_targets,
+                    known_body_part_ids=known_body_part_ids,
+                    known_wound_ids=known_wound_ids,
+                    field_avatar_center_proven=field_avatar_center_proven,
+                    character_actor_proven=weighted_character_actor_proven,
+                    weighted_actor_expression=weighted_actor_expression,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -28832,8 +33973,8 @@ def render_eoc(
                     )
                     if retains_open_dialogue:
                         lines.append(
-                            "    -- TODO: conditional open_dialogue requires "
-                            "exact NPC and avatar handles plus an explicit topic."
+                            "    -- TODO: conditional open_dialogue's native topic "
+                            "talker/beta clone and post-UI EOCs are not represented."
                         )
                     else:
                         lines.append(
@@ -28847,8 +33988,8 @@ def render_eoc(
                         result.add_todo(
                             "semantic_choice",
                             f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                            "needs an explicit dialogue participant conversion with "
-                            "exact NPC/avatar handles and topic"
+                            "needs native topic-talker or beta-clone dialogue plus "
+                            "post-UI true_eocs/false_eocs semantics"
                         )
                     elif missing_predicates:
                         result.add_todo(
@@ -28869,11 +34010,15 @@ def render_eoc(
                     effect,
                     avatar_actor_proven,
                     weapon_actor_proven,
-                    npc_event_character_actor_proven,
+                    # Native npc_* predicates read const_dialogue beta.  An
+                    # EOC's proven event actor is alpha even when it is an
+                    # NPC; the direct topic response callback that would prove
+                    # a beta is not wired into the Platform runtime.
+                    npc_condition_beta_actor_proven,
                     creature_actor_proven,
                     eoc_conditions,
                     actor_expression,
-                    npc_actor_expression,
+                    npc_actor_expression if npc_condition_beta_actor_proven else None,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -28897,6 +34042,7 @@ def render_eoc(
                     npc_event_character_actor_proven,
                     eoc_conditions, npc_actor_expression, global_eoc_ids,
                     character_actor_proven,
+                    effect_actor_targets,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -28945,13 +34091,17 @@ def render_eoc(
                         )
                     else:
                         lines.append(
-                            "    -- TODO: translate delayed or context-bound run_eocs "
-                            "through Platform callbacks."
+                            "    -- TODO: preserve native run_eocs talker clones, "
+                            "copied dialogue context, and per-activation Dialogue "
+                            "copies before translating through Platform callbacks."
                         )
                         result.add_todo(
                             "manual_rewrite",
                             f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                            "needs a typed callback/task conversion"
+                            "needs a typed callback/task conversion preserving "
+                            "get_talker() alpha/beta clones, copied dialogue "
+                            "context/conditionals, and each EOC activation's "
+                            "fresh Dialogue copy"
                         )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "run_eoc_selector" in effect:
@@ -28964,13 +34114,17 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate run_eoc_selector through the "
-                        "typed presentation service."
+                        "    -- TODO: run_eoc_selector needs native condition "
+                        "filtering, translated/tag-expanded menu text, context "
+                        "variables, test-mode behavior, and copied-dialogue "
+                        "activation."
                     )
                     result.add_todo(
-                        "manual_rewrite",
+                        "platform_gap",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs typed selector presentation conversion"
+                        "run_eoc_selector needs native condition filtering, "
+                        "translated/tag-expanded menu text, context variables, "
+                        "test-mode behavior, and copied-dialogue activation"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "foreach" in effect:
@@ -28979,6 +34133,14 @@ def render_eoc(
                     eoc_function_names or {}, eoc_actor_requirements,
                     actor_expression,
                     eoc_conditions, npc_actor_expression,
+                    effect_actor_targets,
+                    character_effect_actor_targets,
+                    wound_actor_targets=wound_actor_targets,
+                    known_body_part_ids=known_body_part_ids,
+                    known_wound_ids=known_wound_ids,
+                    field_avatar_center_proven=field_avatar_center_proven,
+                    character_actor_proven=weighted_character_actor_proven,
+                    weighted_actor_expression=weighted_actor_expression,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -29007,15 +34169,17 @@ def render_eoc(
                 key = "u_add_var" if "u_add_var" in effect else "npc_add_var"
                 target_expression = (
                     "actor" if key == "u_add_var" and character_actor_proven
-                    else (npc_actor_expression or "actor")
-                    if key == "npc_add_var" and (
-                        npc_event_character_actor_proven or
-                        npc_actor_expression is not None
-                    )
+                    else _proven_character_variable_target(
+                        effect_actor_targets, key
+                    ) if key == "npc_add_var"
                     else None
                 )
-                rendered = render_static_character_variable(
-                    effect, key, target_expression
+                rendered = (
+                    None if key == "npc_add_var" and
+                    effect.get("time", False) is not True else
+                    render_static_character_variable(
+                        effect, key, target_expression
+                    )
                 )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -29043,13 +34207,19 @@ def render_eoc(
                 )
                 converted_effect = True
             elif (
-                npc_actor_proven and
                 isinstance(effect, dict) and
                 set(effect) == {"npc_lose_var"} and
+                _proven_character_variable_target(
+                    effect_actor_targets, "npc_lose_var"
+                ) is not None and
                 lua_quotable_native_variable_string(effect.get("npc_lose_var"))
             ):
+                npc_target = _proven_character_variable_target(
+                    effect_actor_targets, "npc_lose_var"
+                )
+                assert npc_target is not None
                 lines.append(
-                    "    services.variables.remove(actor, "
+                    f"    services.variables.remove({npc_target}, "
                     f"{lua_quote(effect['npc_lose_var'])}, {{ include_before = false }})"
                 )
                 converted_effect = True
@@ -29059,24 +34229,21 @@ def render_eoc(
             ):
                 key = "u_add_wound" if "u_add_wound" in effect else "npc_add_wound"
                 target_expression = (
-                    "actor" if key == "u_add_wound" and character_actor_proven
-                    else "actor" if key == "npc_add_wound" and npc_event_character_actor_proven
+                    "actor" if key == "u_add_wound" and wound_alpha_actor_proven
+                    else "actor" if key == "npc_add_wound" and mutation_npc_alpha_fallback_proven
                     else None
                 )
                 rendered = render_static_character_wound(
-                    effect, key, target_expression, False
+                    effect, key, target_expression, False,
+                    known_body_part_ids, known_wound_ids,
                 )
-                if rendered is None:
-                    rendered = render_dynamic_character_wound(
-                        effect, key, target_expression, False
-                    )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate the wound target or id into "
-                        "bounded Lua values."
+                        "    -- TODO: prove the live native wound target and "
+                        "registered static ids for direct wound semantics."
                     )
                     result.add_todo(
                         "manual_rewrite",
@@ -29090,24 +34257,21 @@ def render_eoc(
             ):
                 key = "u_remove_wound" if "u_remove_wound" in effect else "npc_remove_wound"
                 target_expression = (
-                    "actor" if key == "u_remove_wound" and character_actor_proven
-                    else "actor" if key == "npc_remove_wound" and npc_event_character_actor_proven
+                    "actor" if key == "u_remove_wound" and wound_alpha_actor_proven
+                    else "actor" if key == "npc_remove_wound" and mutation_npc_alpha_fallback_proven
                     else None
                 )
                 rendered = render_static_character_wound(
-                    effect, key, target_expression, True
+                    effect, key, target_expression, True,
+                    known_body_part_ids, known_wound_ids,
                 )
-                if rendered is None:
-                    rendered = render_dynamic_character_wound(
-                        effect, key, target_expression, True
-                    )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate the wound target or ids into "
-                        "bounded Lua values."
+                        "    -- TODO: prove the live native wound target and "
+                        "registered static ids for direct wound semantics."
                     )
                     result.add_todo(
                         "manual_rewrite",
@@ -29127,13 +34291,20 @@ def render_eoc(
                     "popup_flag", "sound", "outdoor_only",
                 }
             ):
-                rendered = render_message_effect(effect, "message", "actor")
+                rendered = (
+                    render_message_effect(
+                        effect, "message", "actor",
+                        message_dialogue_pair[0], message_dialogue_pair[1],
+                    )
+                    if message_dialogue_pair is not None else None
+                )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate message presentation options through a typed service."
+                        "    -- TODO: translate message through a typed service only "
+                        "with bounded text and proven dialogue participants."
                     )
                     result.add_todo(
                         "manual_rewrite",
@@ -29154,8 +34325,13 @@ def render_eoc(
                 }
             ):
                 # The avatar target is the player, so the u_ spelling is the
-                # same player message as the bare `message` effect.
-                if not exact_avatar_actor_proven:
+                # same player message as the bare `message` effect.  Melee
+                # events retain their exact live alpha/beta pair and receive
+                # a runtime Avatar guard because the attacker may be an NPC.
+                if (
+                    not exact_avatar_actor_proven and
+                    not u_message_avatar_guarded_pair
+                ):
                     lines.append(
                         "    -- TODO: translate u_message only with an exact "
                         "avatar participant supplied by the Platform trigger."
@@ -29166,9 +34342,21 @@ def render_eoc(
                         "requires an exact avatar participant for u_message"
                     )
                     all_effects_converted = False
+                elif message_dialogue_pair is None:
+                    lines.append(
+                        "    -- TODO: translate u_message only with exact dialogue participants."
+                    )
+                    result.add_todo(
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        "requires exact dialogue participants for u_message"
+                    )
+                    all_effects_converted = False
                 else:
                     rendered = render_message_effect(
-                        effect, "u_message", "actor"
+                        effect, "u_message",
+                        "actor",
+                        message_dialogue_pair[0], message_dialogue_pair[1],
                     )
                     if rendered is not None:
                         lines.extend(rendered)
@@ -29184,24 +34372,56 @@ def render_eoc(
                             "needs domain-service conversion"
                         )
                         all_effects_converted = False
-            elif (
-                npc_actor_proven and
-                isinstance(effect, dict) and
-                "npc_message" in effect
-            ):
-                # The legacy handler returns early for an NPC target, so the
-                # effect is a deliberate no-op under npc_becomes_hostile.
-                converted_effect = True
+            elif isinstance(effect, dict) and "npc_message" in effect:
+                # f_message selects dialogue beta for npc_message.  Require a
+                # live, explicit Character pair; no-beta alpha fallback and
+                # death paths remain manual until text expansion can preserve
+                # their native lifecycle and dialogue state.
+                npc_message_target = (
+                    beta_effect_target[0]
+                    if beta_effect_target is not None and
+                    beta_effect_target[1] == "character" else None
+                )
+                rendered = (
+                    render_message_effect(
+                        effect, "npc_message", npc_message_target,
+                        message_dialogue_pair[0], message_dialogue_pair[1],
+                    )
+                    if (
+                        npc_message_target is not None and
+                        message_dialogue_pair is not None
+                    ) else None
+                )
+                if rendered is not None:
+                    lines.extend(rendered)
+                    converted_effect = True
+                else:
+                    lines.append(
+                        "    -- TODO: translate npc_message only with an exact beta "
+                        "Character and bounded static text."
+                    )
+                    result.add_todo(
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        "requires an exact beta Character for npc_message"
+                    )
+                    all_effects_converted = False
             elif (
                 isinstance(effect, dict) and
                 set(effect) == {"give_achievement"} and
                 safe_platform_id(effect.get("give_achievement"))
             ):
-                lines.append("    services.achievements.complete(")
+                lines.append("    do")
                 lines.append(
-                    "        services.types.id(\"achievement\", "
-                    f"{lua_quote(effect['give_achievement'])}))"
+                    "        local achievement_id = services.types.id(\"achievement\", "
+                    f"{lua_quote(effect['give_achievement'])})"
                 )
+                lines.append("        if achievement_id:is_valid() then")
+                lines.append(
+                    "            services.achievements.complete(achievement_id)"
+                )
+                lines.append("        end")
+                lines.append("    end")
                 converted_effect = True
             elif (
                 avatar_actor_proven and
@@ -29230,11 +34450,16 @@ def render_eoc(
                 )
                 converted_effect = True
             elif (
-                avatar_actor_proven and
+                event_exclusive_source_proven and
+                required_event == "game_start" and
+                game_start_avatar_source_proven and
                 isinstance(effect, dict) and
                 set(effect) == {"u_learn_recipe"} and
-                safe_platform_id(effect.get("u_learn_recipe"))
+                safe_native_recipe_id(effect.get("u_learn_recipe"))
             ):
+                # Native recipe talkers dereference recipe_id; this textual
+                # bound does not validate registry membership, which remains
+                # a precondition of the source content.
                 lines.append("    services.recipes.learn(")
                 lines.append("        actor,")
                 lines.append(
@@ -29243,41 +34468,20 @@ def render_eoc(
                 )
                 converted_effect = True
             elif (
-                avatar_actor_proven and
+                event_exclusive_source_proven and
+                required_event == "game_start" and
+                game_start_avatar_source_proven and
                 isinstance(effect, dict) and
-                set(effect) in (
-                    {"u_forget_recipe", "category"},
-                    {"u_forget_recipe", "subcategory"},
-                    {"u_forget_recipe", "category", "subcategory"},
-                ) and
-                safe_platform_id(effect.get("u_forget_recipe")) and
                 (
-                    effect.get("category") is True or
-                    "subcategory" in effect
-                ) and
-                (
-                    "subcategory" not in effect or
-                    safe_platform_id(effect.get("subcategory"))
-                )
-            ):
-                lines.append("    services.recipes.forget_category(")
-                lines.append("        actor,")
-                category_suffix = "," if "subcategory" in effect else ")"
-                lines.append(
-                    "        services.types.id(\"crafting_category\", "
-                    f"{lua_quote(effect['u_forget_recipe'])}){category_suffix}"
-                )
-                if "subcategory" in effect:
-                    lines.append(
-                        f"        {lua_quote(effect['subcategory'])})"
+                    set(effect) == {"u_forget_recipe"} or
+                    (
+                        set(effect) == {"u_forget_recipe", "category"} and
+                        effect.get("category") is False
                     )
-                converted_effect = True
-            elif (
-                avatar_actor_proven and
-                isinstance(effect, dict) and
-                set(effect) == {"u_forget_recipe"} and
-                safe_platform_id(effect.get("u_forget_recipe"))
+                ) and
+                safe_native_recipe_id(effect.get("u_forget_recipe"))
             ):
+                # As above, the source literal must resolve to a registered recipe.
                 lines.append("    services.recipes.forget(")
                 lines.append("        actor,")
                 lines.append(
@@ -29286,10 +34490,55 @@ def render_eoc(
                 )
                 converted_effect = True
             elif (
-                avatar_actor_proven and
+                npc_recipe_melee_beta_proven and
+                isinstance(effect, dict) and
+                (
+                    set(effect) == {"npc_learn_recipe"} or
+                    set(effect) == {"npc_forget_recipe"} or
+                    (
+                        set(effect) == {"npc_forget_recipe", "category"} and
+                        effect.get("category") is False
+                    )
+                ) and
+                (recipe_literal := effect.get(
+                    "npc_learn_recipe", effect.get("npc_forget_recipe")
+                )) and
+                safe_native_recipe_id(recipe_literal) and
+                recipe_literal in known_recipe_ids
+            ):
+                # Native melee events carry send_with_talker(alpha, Character beta)
+                # before damage. Static JSON trigger_event emitters are gated above;
+                # external Lua native_events.emit remains outside that corpus proof.
+                # Do not infer a missing interlocutor from alpha: native actor(true)
+                # diagnoses and falls back to alpha, a behavior this bounded service
+                # path intentionally leaves unsupported.
+                method = (
+                    "learn" if "npc_learn_recipe" in effect else "forget"
+                )
+                lines.extend([
+                    "    do",
+                    "        -- External native_events.emit may omit beta; that shape stays TODO.",
+                    "        local recipe_target =",
+                    "            context and context.actors and context.actors.interlocutor",
+                    '        if recipe_target ~= nil and recipe_target.kind == "creature" and',
+                    '            (recipe_target.subtype == "avatar" or',
+                    '             recipe_target.subtype == "character" or recipe_target.subtype == "npc") and',
+                    "            recipe_target:is_valid() then",
+                    "            local recipe_id = services.types.id(",
+                    f'                "recipe", {lua_quote(recipe_literal)})',
+                    "            if recipe_id:is_valid() then",
+                    f"                service_value(services.recipes.{method}(",
+                    "                    recipe_target, recipe_id))",
+                    "            end",
+                    "        end",
+                    "    end",
+                ])
+                converted_effect = True
+            elif (
+                martial_art_avatar_actor_proven and
                 isinstance(effect, dict) and
                 set(effect) == {"u_learn_martial_art"} and
-                safe_platform_id(effect.get("u_learn_martial_art"))
+                safe_native_martial_art_id(effect.get("u_learn_martial_art"))
             ):
                 lines.append("    services.martial_arts.learn(")
                 lines.append("        actor,")
@@ -29299,10 +34548,10 @@ def render_eoc(
                 )
                 converted_effect = True
             elif (
-                avatar_actor_proven and
+                martial_art_avatar_actor_proven and
                 isinstance(effect, dict) and
                 set(effect) == {"u_forget_martial_art"} and
-                safe_platform_id(effect.get("u_forget_martial_art"))
+                safe_native_martial_art_id(effect.get("u_forget_martial_art"))
             ):
                 lines.append("    services.martial_arts.forget(")
                 lines.append("        actor,")
@@ -29338,58 +34587,6 @@ def render_eoc(
                 )
                 converted_effect = True
             elif (
-                npc_actor_proven and
-                isinstance(effect, dict) and
-                set(effect) == {"npc_learn_recipe"} and
-                safe_platform_id(effect.get("npc_learn_recipe"))
-            ):
-                lines.append("    services.recipes.learn(")
-                lines.append("        actor,")
-                lines.append(
-                    "        services.types.id(\"recipe\", "
-                    f"{lua_quote(effect['npc_learn_recipe'])}))"
-                )
-                converted_effect = True
-            elif (
-                npc_actor_proven and
-                isinstance(effect, dict) and
-                set(effect) == {"npc_forget_recipe"} and
-                safe_platform_id(effect.get("npc_forget_recipe"))
-            ):
-                lines.append("    services.recipes.forget(")
-                lines.append("        actor,")
-                lines.append(
-                    "        services.types.id(\"recipe\", "
-                    f"{lua_quote(effect['npc_forget_recipe'])}))"
-                )
-                converted_effect = True
-            elif (
-                npc_actor_proven and
-                isinstance(effect, dict) and
-                set(effect) == {"npc_learn_martial_art"} and
-                safe_platform_id(effect.get("npc_learn_martial_art"))
-            ):
-                lines.append("    services.martial_arts.learn(")
-                lines.append("        actor,")
-                lines.append(
-                    "        services.types.id(\"martial_art\", "
-                    f"{lua_quote(effect['npc_learn_martial_art'])}))"
-                )
-                converted_effect = True
-            elif (
-                npc_actor_proven and
-                isinstance(effect, dict) and
-                set(effect) == {"npc_forget_martial_art"} and
-                safe_platform_id(effect.get("npc_forget_martial_art"))
-            ):
-                lines.append("    services.martial_arts.forget(")
-                lines.append("        actor,")
-                lines.append(
-                    "        services.types.id(\"martial_art\", "
-                    f"{lua_quote(effect['npc_forget_martial_art'])}))"
-                )
-                converted_effect = True
-            elif (
                 isinstance(effect, dict) and
                 any(key in effect for key in (
                     "u_add_bionic", "npc_add_bionic", "u_lose_bionic",
@@ -29408,29 +34605,111 @@ def render_eoc(
                 ) if key in effect)
                 target = (
                     "actor" if key.startswith("npc_") and npc_event_character_actor_proven
-                    else "actor" if key.startswith("u_") and avatar_actor_proven
-                    else "services.characters.avatar()"
-                    if key.startswith("u_") and npc_event_character_actor_proven else None
+                    else "actor" if key.startswith("u_") and (
+                        avatar_actor_proven or exact_npc_actor_proven
+                    ) else None
                 )
-                rendered = render_dynamic_simple_character_effect(
-                    effect, key, target,
-                    avatar_expression=(
-                        "actor" if avatar_actor_proven else
-                        "services.characters.avatar()" if npc_event_character_actor_proven else None
-                    ),
-                    npc_expression="actor" if npc_event_character_actor_proven else None,
+                unresolved_beta_variable = (
+                    key.startswith("u_") and exact_npc_actor_proven and
+                    _node_has_key(effect.get(key), "npc_val")
+                )
+                # Martial-art effects use a generation-checked Character
+                # handle. Their bounded static lowering above proves a live
+                # game_start avatar alpha and a native-safe literal ID. Do not
+                # let this generic helper widen that proof to dead or
+                # non-avatar event actors, control-byte IDs, or npc_* selectors.
+                unproven_martial_art_effect = key in {
+                    "u_learn_martial_art", "npc_learn_martial_art",
+                    "u_forget_martial_art", "npc_forget_martial_art",
+                }
+                unproven_recipe_effect = key in {
+                    "u_learn_recipe", "npc_learn_recipe",
+                    "u_forget_recipe", "npc_forget_recipe",
+                }
+                unproven_recipe_category_effect = (
+                    key in {"u_forget_recipe", "npc_forget_recipe"} and
+                    (effect.get("category") is True or "subcategory" in effect)
+                )
+                rendered = None if (
+                    unresolved_beta_variable or unproven_martial_art_effect or
+                    unproven_recipe_effect
+                ) else (
+                    render_dynamic_simple_character_effect(
+                        effect, key, target,
+                        avatar_expression=(
+                            "actor" if avatar_actor_proven or exact_npc_actor_proven
+                            else None
+                        ),
+                        npc_expression=(
+                            "actor" if npc_event_character_actor_proven else None
+                        ),
+                    )
                 )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
-                    lines.append(
-                        "    -- TODO: translate dynamic character id through typed services."
-                    )
+                    if unproven_recipe_effect:
+                        recipe_todo_reasons: list[str] = []
+                        if key.startswith("npc_"):
+                            if not npc_recipe_melee_beta_proven:
+                                if character_melee_event_emitted_by_eoc:
+                                    recipe_todo_reasons.append(
+                                        "npc_ recipe mutation needs an event-exclusive "
+                                        "character_melee_attacks_character EOC with one "
+                                        "effect and no corpus trigger_event emitter for "
+                                        "that event; other event actors, generic callbacks, "
+                                        "monster beta, and NPC_DEATH remain TODO"
+                                    )
+                                else:
+                                    recipe_todo_reasons.append(
+                                        "npc_ recipe mutation needs an event-exclusive "
+                                        "character_melee_attacks_character EOC with one "
+                                        "effect; other event actors, generic callbacks, "
+                                        "monster beta, and NPC_DEATH remain TODO"
+                                    )
+                        elif not (
+                            event_exclusive_source_proven and
+                            required_event == "game_start" and
+                            game_start_avatar_source_proven
+                        ):
+                            recipe_todo_reasons.append(
+                                "u_ recipe mutation needs an event-exclusive game_start avatar"
+                            )
+                        if unproven_recipe_category_effect:
+                            recipe_todo_reasons.append(
+                                "category recipe forget needs a proven registered crafting "
+                                "category and a subcategory of at most 256 UTF-8 bytes; "
+                                "unknown category IDs remain TODO"
+                            )
+                        else:
+                            if key.startswith("npc_") and npc_recipe_melee_beta_proven:
+                                recipe_todo_reasons.append(
+                                    "direct npc_ recipe mutation needs a static ID in the "
+                                    "core or input recipe catalog; dynamic, variant, "
+                                    "and suffix IDs remain TODO"
+                                )
+                            else:
+                                recipe_todo_reasons.append(
+                                    "direct recipe mutation needs a static recipe ID literal; "
+                                    "registered recipe IDs remain a source-content precondition"
+                                )
+                        recipe_todo = "; ".join(recipe_todo_reasons)
+                        lines.append(
+                            "    -- TODO: " + recipe_todo + "."
+                        )
+                    else:
+                        lines.append(
+                            "    -- TODO: translate dynamic character id through typed services."
+                        )
                     result.add_todo(
                         "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} " +
+                        (
+                            recipe_todo
+                            if unproven_recipe_effect else
+                            "needs domain-service conversion"
+                        )
                     )
                     all_effects_converted = False
             elif (
@@ -29456,20 +34735,22 @@ def render_eoc(
                 )
                 target_expression = (
                     "actor" if mutation_key.startswith("u_") and
-                    avatar_actor_proven
+                    mutation_avatar_actor_proven
                     else "actor" if mutation_key.startswith("npc_") and
-                    npc_event_character_actor_proven
+                    mutation_npc_alpha_fallback_proven
                     else None
                 )
                 rendered = render_static_mutation_effect(
-                    effect, mutation_key, target_expression
+                    effect, mutation_key, target_expression,
+                    known_mutation_ids, known_mutation_category_ids,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate the mutation target, category, "
+                        "    -- TODO: prove the mutation actor source and translate its "
+                        "target, category, "
                         "chance, or options into bounded Lua values."
                     )
                     result.add_todo(
@@ -29483,37 +34764,39 @@ def render_eoc(
                 ("u_add_effect" in effect or "npc_add_effect" in effect)
             ):
                 key = "u_add_effect" if "u_add_effect" in effect else "npc_add_effect"
-                target_expression = (
-                    (npc_actor_expression or "actor")
-                    if key == "npc_add_effect" and (
-                        npc_event_character_actor_proven or
-                        npc_actor_expression is not None
-                    )
-                    else "actor" if key == "u_add_effect" and (
-                        character_actor_proven or creature_actor_proven
-                    )
-                    else None
+                target_info = character_effect_actor_targets["npc" if key.startswith("npc_") else "u"]
+                target_expression = target_info[0] if target_info is not None else None
+                target_kind = target_info[1] if target_info is not None else None
+                rendered = render_static_character_effect(
+                    effect, key, target_expression, target_kind=target_kind
                 )
-                rendered = render_static_character_effect(effect, key, target_expression)
                 if rendered is None:
                     rendered = render_dynamic_character_effect(
                         effect, key, target_expression,
-                        avatar_expression="actor" if character_actor_proven else None,
-                        npc_expression=npc_actor_expression or (
-                            "actor" if npc_event_character_actor_proven else None),
+                        avatar_expression=(
+                            target_expression if key.startswith("u_") else
+                            "actor" if character_actor_proven else None
+                        ),
+                        npc_expression=(
+                            target_expression if key.startswith("npc_") else
+                            npc_actor_expression or (
+                                "actor" if npc_event_character_actor_proven else None)
+                        ),
+                        target_kind=target_kind,
+                        effect_actor_targets=effect_actor_targets,
                     )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
-                    lines.append(
-                        "    -- TODO: translate the effect amount, target, or "
-                        "options into bounded Lua values."
-                    )
+                    order_choice = _effect_argument_order_choice(
+                        effect, effect_actor_targets, character_effect_actor_targets)
+                    lines.append("    -- TODO: " + (order_choice or
+                                 "translate the effect amount, target, or options into bounded Lua values") + ".")
                     result.add_todo(
-                        "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        "semantic_choice" if order_choice else "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} " +
+                        (order_choice or "needs domain-service conversion")
                     )
                     all_effects_converted = False
             elif (
@@ -29524,25 +34807,24 @@ def render_eoc(
                     "u_lose_effect" if "u_lose_effect" in effect
                     else "npc_lose_effect"
                 )
-                target_expression = (
-                    "actor"
-                    if key == "u_lose_effect" and
-                    (character_actor_proven or creature_actor_proven)
-                    else (npc_actor_expression or "actor")
-                    if key == "npc_lose_effect" and (
-                        npc_event_character_actor_proven or
-                        npc_actor_expression is not None
-                    )
-                    else None
-                )
+                target_info = character_effect_actor_targets["npc" if key.startswith("npc_") else "u"]
+                target_expression = target_info[0] if target_info is not None else None
+                target_kind = target_info[1] if target_info is not None else None
                 rendered = render_static_remove_effects(
                     effect, key, target_expression,
-                    avatar_expression="actor" if character_actor_proven else None,
-                    npc_expression=npc_actor_expression or (
-                        "actor" if npc_event_character_actor_proven else None),
-                    character_target_proven=character_actor_proven if key.startswith("u_") else (
-                        True if npc_event_character_actor_proven or required_event in VICTIM_CHARACTER_EVENTS
-                        else None),
+                    avatar_expression=(
+                        target_expression if key.startswith("u_") else
+                        "actor" if character_actor_proven else None
+                    ),
+                    npc_expression=(
+                        target_expression if key.startswith("npc_") else
+                        npc_actor_expression or (
+                            "actor" if npc_event_character_actor_proven else None)
+                    ),
+                    character_target_proven=(
+                        None if target_kind == "creature" else target_kind == "character"
+                    ),
+                    target_kind=target_kind,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -29595,7 +34877,7 @@ def render_eoc(
                         ])
                 converted_effect = True
             elif (
-                npc_event_character_actor_proven and
+                npc_event_character_actor_proven and not npc_fatal_hook and
                 isinstance(effect, dict) and
                 set(effect) <= {"npc_lose_effect", "target_part"} and
                 (
@@ -29638,9 +34920,12 @@ def render_eoc(
                     "u_lose_mutation_type" if "u_lose_mutation_type" in effect
                     else "npc_lose_mutation_type"
                 )
-                target = _eoc_actor_expression(
-                    key, avatar_actor_proven,
-                    npc_event_character_actor_proven,
+                target = (
+                    "actor" if key == "u_lose_mutation_type" and
+                    mutation_avatar_actor_proven
+                    else "actor" if key == "npc_lose_mutation_type" and
+                    mutation_npc_alpha_fallback_proven
+                    else None
                 )
                 if (
                     target is not None and set(effect) == {key} and
@@ -29653,7 +34938,7 @@ def render_eoc(
                     converted_effect = True
                 else:
                     reason = (
-                        "mutation-type removal requires a proven Character actor "
+                        "mutation-type removal requires an event-exclusive live Character source "
                         "and one literal type of 1..256 bytes without NUL"
                     )
                     lines.append(f"    -- TODO: {reason}.")
@@ -29667,86 +34952,140 @@ def render_eoc(
                 ("u_lose_category" in effect or "npc_lose_category" in effect)
             ):
                 key = "u_lose_category" if "u_lose_category" in effect else "npc_lose_category"
-                target = _eoc_actor_expression(
-                    key, avatar_actor_proven,
-                    npc_event_character_actor_proven,
+                target = (
+                    "actor" if key == "u_lose_category" and
+                    mutation_avatar_actor_proven
+                    else "actor" if key == "npc_lose_category" and
+                    mutation_npc_alpha_fallback_proven
+                    else None
                 )
+                category = effect.get(key)
                 if (
                     target is not None and set(effect) == {key} and
-                    bounded_platform_id(effect[key])
+                    bounded_platform_id(category) and
+                    category in known_mutation_category_ids
                 ):
                     lines.append(
                         "    services.mutations.remove_category("
                         f"{target}, services.types.id(\"mutation_category\", "
-                        f"{lua_quote(effect[key])}))"
+                        f"{lua_quote(category)}))"
                     )
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate mutation-category removal through "
-                        "the typed mutation service."
+                        "    -- TODO: remove a category only with an event-exclusive "
+                        "live Character source and a core-catalog category ID registered at runtime."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        "needs a proven Character source and a runtime-registered core category ID"
                     )
                     all_effects_converted = False
-            elif (
-                avatar_actor_proven and
-                isinstance(effect, dict) and
-                set(effect) == {"u_add_wet"} and
-                isinstance(effect.get("u_add_wet"), int) and
-                not isinstance(effect.get("u_add_wet"), bool) and
-                -1000000 <= effect["u_add_wet"] <= 1000000
-            ):
-                lines.append(
-                    f"    services.characters.add_wet(actor, "
-                    f"{effect['u_add_wet']})"
-                )
-                converted_effect = True
-            elif (
-                npc_event_character_actor_proven and
-                isinstance(effect, dict) and
-                set(effect) == {"npc_add_wet"} and
-                isinstance(effect.get("npc_add_wet"), int) and
-                not isinstance(effect.get("npc_add_wet"), bool) and
-                -1000000 <= effect["npc_add_wet"] <= 1000000
-            ):
-                lines.append(
-                    f"    services.characters.add_wet(actor, "
-                    f"{effect['npc_add_wet']})"
-                )
-                converted_effect = True
             elif (
                 isinstance(effect, dict) and
                 ("u_add_wet" in effect or "npc_add_wet" in effect)
             ):
                 key = "u_add_wet" if "u_add_wet" in effect else "npc_add_wet"
-                target = (
-                    "actor" if key == "npc_add_wet" and npc_event_character_actor_proven
-                    else "actor" if key == "u_add_wet" and avatar_actor_proven
-                    else "services.characters.avatar()"
-                    if key == "u_add_wet" and npc_event_character_actor_proven else None
+                raw_amount = finite_number_literal(effect.get(key))
+                amount = int(raw_amount) if raw_amount is not None else None
+                bounded_native_amount = (
+                    amount is not None and -1000000 <= amount <= 1000000
                 )
-                amount = render_eoc_numeric_expression(effect.get(key), "0", target or "actor")
-                raw_amount = effect.get(key)
                 if (
-                    isinstance(raw_amount, (int, float)) and
-                    not isinstance(raw_amount, bool) and
-                    (not math.isfinite(float(raw_amount)) or
-                     int(raw_amount) != raw_amount or
-                     not -1000000 <= int(raw_amount) <= 1000000)
+                    set(effect) == {key} and bounded_native_amount and
+                    key == "u_add_wet" and alpha_effect_target is not None and
+                    alpha_effect_target[1] == "character"
                 ):
-                    amount = None
-                if target is not None and set(effect) == {key} and amount is not None:
+                    # f_add_wet consumes dialogue alpha and truncates its
+                    # dbl_or_var to int at wet_character's call boundary.
                     lines.append(
-                        f"    services.characters.add_wet({target}, math.floor(({amount}) + 0.5))"
+                        f"    services.characters.add_wet(actor, {amount})"
+                    )
+                    converted_effect = True
+                elif (
+                    set(effect) == {key} and bounded_native_amount and
+                    key == "npc_add_wet" and npc_fatal_hook
+                ):
+                    lines.extend([
+                        "    do",
+                        "        local wet_target = context.killer or actor",
+                        '        if wet_target ~= nil and wet_target.kind == "creature" and '
+                        '(wet_target.subtype == "avatar" or '
+                        'wet_target.subtype == "character" or '
+                        'wet_target.subtype == "npc") then',
+                        f"            services.characters.add_wet(wet_target, {amount})",
+                        "        end",
+                        "    end",
+                    ])
+                    converted_effect = True
+                elif (
+                    set(effect) == {key} and bounded_native_amount and
+                    key == "npc_add_wet" and
+                    npc_dialogue_mission_pair_proven and
+                    npc_actor_expression == "context.actors.beta"
+                ):
+                    lines.extend([
+                        "    do",
+                        "        local wet_target = context.actors.beta",
+                        '        if wet_target ~= nil and wet_target.kind == "creature" and '
+                        '(wet_target.subtype == "avatar" or '
+                        'wet_target.subtype == "character" or '
+                        'wet_target.subtype == "npc") then',
+                        f"            services.characters.add_wet(wet_target, {amount})",
+                        "        end",
+                        "    end",
+                    ])
+                    converted_effect = True
+                elif (
+                    set(effect) == {key} and bounded_native_amount and
+                    key == "npc_add_wet" and beta_effect_target is not None and
+                    beta_effect_target[1] == "character" and
+                    required_event == "character_kills_character" and
+                    beta_effect_target == alpha_effect_target
+                ):
+                    # This event uses event_bus::send, not send_with_talker;
+                    # its native dialogue beta lookup therefore alpha-falls
+                    # back even though the payload also names the victim.
+                    lines.append(
+                        f"    services.characters.add_wet(actor, {amount})"
+                    )
+                    converted_effect = True
+                elif (
+                    set(effect) == {key} and bounded_native_amount and
+                    key == "npc_add_wet" and beta_effect_target is not None and
+                    beta_effect_target[1] == "character"
+                ):
+                    target = beta_effect_target[0]
+                    lines.extend([
+                        "    do",
+                        f"        local wet_target = {target}",
+                        '        if wet_target ~= nil and wet_target.kind == "creature" and '
+                        '(wet_target.subtype == "avatar" or '
+                        'wet_target.subtype == "character" or '
+                        'wet_target.subtype == "npc") then',
+                        f"            services.characters.add_wet(wet_target, {amount})",
+                        "        end",
+                        "    end",
+                    ])
+                    converted_effect = True
+                elif (
+                    set(effect) == {key} and bounded_native_amount and
+                    key == "npc_add_wet" and
+                    required_event in NATIVE_EOC_ALPHA_FALLBACK_EVENTS and
+                    alpha_effect_target is not None and
+                    alpha_effect_target[1] == "character"
+                ):
+                    # These source-audited events have no native beta talker,
+                    # so actor(true) takes the native alpha fallback.
+                    lines.append(
+                        f"    services.characters.add_wet(actor, {amount})"
                     )
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate wetness amount through typed character services."
+                        "    -- TODO: preserve the native Character target and "
+                        "bounded dbl_or_var-to-int conversion through typed wetness services."
                     )
                     result.add_todo(
                         "manual_rewrite",
@@ -29760,24 +35099,20 @@ def render_eoc(
             ):
                 key = "u_add_morale" if "u_add_morale" in effect else "npc_add_morale"
                 target_expression = (
-                    "actor" if key == "npc_add_morale" and npc_event_character_actor_proven
-                    else "actor" if key == "u_add_morale" and avatar_actor_proven
+                    "actor" if key == "npc_add_morale" and morale_npc_fallback_actor_proven
+                    else "actor" if key == "u_add_morale" and morale_avatar_actor_proven
                     else None
                 )
                 rendered = render_static_character_morale(
                     effect, key, target_expression
                 )
-                if rendered is None:
-                    rendered = render_dynamic_character_morale(
-                        effect, key, target_expression
-                    )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate the morale amount, target, or "
-                        "options into bounded Lua values."
+                        "    -- TODO: preserve the native morale alpha/beta "
+                        "target and bounded integer/time parameters."
                     )
                     result.add_todo(
                         "manual_rewrite",
@@ -29786,53 +35121,39 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif (
-                avatar_actor_proven and
                 isinstance(effect, dict) and
-                set(effect) == {"u_lose_morale"} and
-                safe_platform_id(effect.get("u_lose_morale"))
+                (
+                    (set(effect) == {"u_lose_morale"} and morale_avatar_actor_proven) or
+                    (set(effect) == {"npc_lose_morale"} and morale_npc_fallback_actor_proven)
+                ) and
+                safe_platform_id(effect.get(
+                    "u_lose_morale", effect.get("npc_lose_morale")
+                )) and
+                effect.get("u_lose_morale", effect.get("npc_lose_morale")) in known_morale_ids
             ):
+                morale_id = effect.get("u_lose_morale", effect.get("npc_lose_morale"))
                 lines.append("    services.morale.remove(")
                 lines.append("        actor,")
                 lines.append(
                     "        services.types.id(\"morale\", "
-                    f"{lua_quote(effect['u_lose_morale'])}))"
+                    f"{lua_quote(morale_id)}))"
                 )
                 converted_effect = True
             elif (
-                npc_actor_proven and
                 isinstance(effect, dict) and
-                set(effect) == {"npc_add_morale", "bonus", "max_bonus"} and
-                safe_platform_id(effect.get("npc_add_morale")) and
-                isinstance(effect.get("bonus"), int) and
-                not isinstance(effect.get("bonus"), bool) and
-                NATIVE_INT_MIN <= effect["bonus"] <= NATIVE_INT_MAX and
-                isinstance(effect.get("max_bonus"), int) and
-                not isinstance(effect.get("max_bonus"), bool) and
-                NATIVE_INT_MIN <= effect["max_bonus"] <= NATIVE_INT_MAX
+                ("u_lose_morale" in effect or "npc_lose_morale" in effect)
             ):
-                lines.append("    services.morale.add(")
-                lines.append("        actor,")
                 lines.append(
-                    "        services.types.id(\"morale\", "
-                    f"{lua_quote(effect['npc_add_morale'])}),"
+                    "    -- TODO: preserve native alpha/beta selection and a "
+                    "registered morale ID; npc_lose_morale falls back to alpha "
+                    "only when native beta is absent."
                 )
-                lines.append(
-                    f"        {effect['bonus']}, {effect['max_bonus']})"
+                result.add_todo(
+                    "manual_rewrite",
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                    "needs exact native morale actor and registered-ID proof"
                 )
-                converted_effect = True
-            elif (
-                npc_actor_proven and
-                isinstance(effect, dict) and
-                set(effect) == {"npc_lose_morale"} and
-                safe_platform_id(effect.get("npc_lose_morale"))
-            ):
-                lines.append("    services.morale.remove(")
-                lines.append("        actor,")
-                lines.append(
-                    "        services.types.id(\"morale\", "
-                    f"{lua_quote(effect['npc_lose_morale'])}))"
-                )
-                converted_effect = True
+                all_effects_converted = False
             elif (
                 item_event_character_actor_proven and
                 isinstance(effect, dict) and
@@ -29865,6 +35186,23 @@ def render_eoc(
                 )
                 lines.append("    end")
                 converted_effect = True
+            elif (
+                isinstance(effect, dict) and
+                (set(effect) == {"u_set_flag"} or
+                 set(effect) == {"u_unset_flag"})
+            ):
+                lines.append(
+                    "    -- TODO: native u_*_flag targets alpha's exact item talker; "
+                    "context.actors.item is not proof of alpha. Native flag arguments "
+                    "accept str_or_var, but this lowering requires a literal json_flag."
+                )
+                result.add_todo(
+                    "manual_rewrite",
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                    "requires a proven native alpha item talker and a literal "
+                    "json_flag representation of the native str_or_var"
+                )
+                all_effects_converted = False
             elif (
                 item_event_character_actor_proven and
                 isinstance(effect, dict) and
@@ -29962,43 +35300,28 @@ def render_eoc(
                         "needs domain-service conversion"
                     )
                     all_effects_converted = False
-            elif (
-                isinstance(effect, dict) and
-                set(effect) <= {"sound_effect", "id", "volume", "outdoor_event"} and
-                {"sound_effect", "id"} <= set(effect) and
-                isinstance(effect.get("id"), str) and
-                isinstance(effect.get("sound_effect"), str) and
-                bool(effect["id"]) and
-                bool(effect["sound_effect"]) and
-                (
-                    "volume" not in effect or
-                    (
-                        isinstance(effect.get("volume"), int) and
-                        not isinstance(effect.get("volume"), bool) and
-                        0 <= effect["volume"] <= 128
+            elif isinstance(effect, dict) and "sound_effect" in effect:
+                rendered = render_static_sound_effect(effect)
+                if rendered is not None:
+                    lines.extend(rendered)
+                    converted_effect = True
+                else:
+                    lines.append(
+                        "    -- TODO: preserve the native sound-effect context and options."
                     )
-                ) and
-                isinstance(effect.get("outdoor_event", False), bool)
-            ):
-                volume = effect.get("volume", 80)
-                sound_method = (
-                    "play_from_outdoors" if effect.get("outdoor_event", False)
-                    else "play_if_audible"
-                )
-                lines.append(
-                    f"    services.sound.{sound_method}("
-                    f"{lua_quote(effect['id'])}, "
-                    f"{lua_quote(effect['sound_effect'])}, {volume})"
-                )
-                converted_effect = True
+                    result.add_todo(
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        "needs domain-service conversion"
+                    )
+                    all_effects_converted = False
             elif (
                 isinstance(effect, dict) and
                 ("u_make_sound" in effect or "npc_make_sound" in effect)
             ):
                 key = "u_make_sound" if "u_make_sound" in effect else "npc_make_sound"
                 rendered = render_static_character_sound(
-                    effect, key, avatar_actor_proven,
-                    npc_event_character_actor_proven,
+                    effect, key, avatar_actor_proven, effect_actor_targets,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -30063,31 +35386,36 @@ def render_eoc(
                     if "u_set_trait_purifiability" in effect
                     else "npc_set_trait_purifiability"
                 )
-                target = _eoc_actor_expression(
-                    key, avatar_actor_proven,
-                    npc_event_character_actor_proven,
+                target = (
+                    "actor" if key == "u_set_trait_purifiability" and
+                    mutation_avatar_actor_proven
+                    else "actor" if key == "npc_set_trait_purifiability" and
+                    mutation_npc_alpha_fallback_proven
+                    else None
                 )
                 purifiable = effect.get("purifiable", True)
+                mutation = render_mutation_id_expression(
+                    effect.get(key), known_mutation_ids
+                )
                 if (
                     target is not None and set(effect) <= {key, "purifiable"} and
-                    bounded_platform_id(effect[key]) and
+                    mutation is not None and
                     isinstance(purifiable, bool)
                 ):
                     lines.append(
                         "    services.mutations.set_purifiable("
-                        f"{target}, services.types.id(\"mutation\", "
-                        f"{lua_quote(effect[key])}), {'true' if purifiable else 'false'})"
+                        f"{target}, {mutation}, {'true' if purifiable else 'false'})"
                     )
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate mutation purifiability through "
-                        "the typed mutation service."
+                        "    -- TODO: change purifiability only with an event-exclusive "
+                        "live Character source and a core-catalog mutation ID registered at runtime."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        "needs a proven Character source and a runtime-registered core mutation ID"
                     )
                     all_effects_converted = False
             elif (
@@ -30124,16 +35452,20 @@ def render_eoc(
                         "needs domain-service conversion"
                     )
                     all_effects_converted = False
-            elif npc_actor_proven and effect == "npc_wants_to_talk":
-                target = npc_actor_expression or "actor"
-                if callback_character_actor_proven or talker_pair_override or unbound_mixed_talker_contract:
-                    lines.extend([
-                        f'    if ({target}).subtype == "npc" then',
-                        f"        service_value(services.npcs.request_talk({target}))",
-                        "    end",
-                    ])
-                else:
-                    lines.append(f"    service_value(services.npcs.request_talk({target}))")
+            elif (
+                npc_talker_ui_actor_expression is not None and
+                effect == "npc_wants_to_talk"
+            ):
+                # Native f_wants_to_talk(true) returns without mutation when
+                # actor(true)->get_npc() is null; request_talk requires an
+                # exact NPC handle, so preserve that no-op with a typed guard.
+                target = npc_talker_ui_actor_expression
+                lines.extend([
+                    f'    if ({target}) ~= nil and ({target}).kind == "creature" and '
+                    f'({target}).subtype == "npc" then',
+                    f"        service_value(services.npcs.request_talk({target}))",
+                    "    end",
+                ])
                 converted_effect = True
             elif effect == "u_wants_to_talk" and (
                 callback_character_actor_proven or talker_pair_override or unbound_mixed_talker_contract
@@ -30155,22 +35487,55 @@ def render_eoc(
                     "services.characters.avatar(), true))"
                 )
                 converted_effect = True
-            elif npc_actor_proven and effect == "npc_thankful":
-                lines.append(f"    service_value(services.npcs.make_thankful({npc_actor_expression or 'actor'}))")
+            elif static_wrapped_beta_npc and effect == "npc_thankful":
+                lines.extend(render_static_wrapped_beta_npc_call("make_thankful"))
                 converted_effect = True
-            elif npc_actor_proven and effect == "hostile":
-                lines.append(f"    service_value(services.npcs.become_hostile({npc_actor_expression or 'actor'}))")
+            elif static_wrapped_beta_npc and effect == "hostile":
+                lines.extend(render_static_wrapped_beta_npc_call("become_hostile"))
                 converted_effect = True
-            elif npc_actor_proven and effect == "flee":
-                lines.append(f"    service_value(services.npcs.start_fleeing({npc_actor_expression or 'actor'}))")
+            elif static_wrapped_beta_npc and effect == "flee":
+                lines.extend(render_static_wrapped_beta_npc_call("start_fleeing"))
                 converted_effect = True
-            elif npc_actor_proven and isinstance(effect, dict) and len(effect) == 1 and next(iter(effect)) in {
-                "npc_change_class", "npc_change_faction", "npc_first_topic",
-            }:
+            elif (
+                isinstance(effect, dict) and set(effect) == {"npc_first_topic"} and
+                not npc_alpha_fallback_event_actor_proven
+            ):
+                lines.append(
+                    "    -- TODO: npc_first_topic needs the standalone "
+                    "npc_becomes_hostile alpha fallback; event alpha does not "
+                    "prove dialogue beta or a callable child's talkers."
+                )
+                result.add_todo(
+                    "semantic_choice",
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                    "npc_first_topic needs the event-exclusive live NPC alpha "
+                    "fallback from npc_becomes_hostile"
+                )
+                all_effects_converted = False
+            elif (
+                npc_actor_proven and isinstance(effect, dict) and
+                len(effect) == 1 and next(iter(effect)) in {
+                    "npc_change_class", "npc_change_faction", "npc_first_topic",
+                }
+            ):
                 key = next(iter(effect))
                 target = npc_actor_expression or "actor"
-                requested = render_participant_string_expression(
-                    effect[key], target, "actor" if avatar_actor_proven else None, target)
+                topic_value = effect[key]
+                topic_is_bounded_literal = (
+                    key != "npc_first_topic" or
+                    isinstance(topic_value, str) and
+                    bounded_utf8_string(topic_value, 256, allow_empty=False) and
+                    not any(
+                        ord(character) < 0x20 or ord(character) == 0x7F
+                        for character in topic_value
+                    )
+                )
+                requested = (
+                    render_participant_string_expression(
+                        topic_value, target,
+                        "actor" if avatar_actor_proven else None, target)
+                    if topic_is_bounded_literal else None
+                )
                 if requested is not None:
                     if key == "npc_first_topic":
                         call = f"services.npcs.set_first_topic({target}, {requested})"
@@ -30189,7 +35554,7 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif (
-                npc_actor_proven and isinstance(effect, dict) and
+                npc_ai_rule_mutation_actor_proven and isinstance(effect, dict) and
                 len(effect) == 1 and
                 next(iter(effect)) in {
                     "set_npc_rule", "clear_npc_rule", "toggle_npc_rule"
@@ -30202,13 +35567,25 @@ def render_eoc(
                     "clear_npc_rule": "false",
                     "toggle_npc_rule": "nil",
                 }[key]
-                lines.append(
-                    "    services.npcs.set_ally_rule(actor, "
-                    f"{lua_quote(effect[key])}, {enabled})"
+                rendered = render_static_npc_ai_rule_update(
+                    "allies", effect[key], enabled
                 )
-                converted_effect = True
+                if rendered is None:
+                    lines.append(
+                        "    -- TODO: NPC ally-rule catalog is unavailable for "
+                        "safe migration."
+                    )
+                    result.add_todo(
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        "cannot verify the native NPC ally-rule catalog"
+                    )
+                    all_effects_converted = False
+                else:
+                    lines.extend(rendered)
+                    converted_effect = True
             elif (
-                npc_actor_proven and isinstance(effect, dict) and
+                npc_ai_rule_mutation_actor_proven and isinstance(effect, dict) and
                 len(effect) == 1 and
                 next(iter(effect)) in {
                     "set_npc_aim_rule", "set_npc_engagement_rule",
@@ -30223,11 +35600,23 @@ def render_eoc(
                     "set_npc_cbm_recharge_rule": "cbm_recharge",
                     "set_npc_cbm_reserve_rule": "cbm_reserve",
                 }[key]
-                lines.append(
-                    "    services.npcs.set_ai_policy(actor, "
-                    f"{lua_quote(family)}, {lua_quote(effect[key])})"
+                rendered = render_static_npc_ai_rule_update(
+                    family, effect[key]
                 )
-                converted_effect = True
+                if rendered is None:
+                    lines.append(
+                        "    -- TODO: NPC AI-policy catalog is unavailable for "
+                        "safe migration."
+                    )
+                    result.add_todo(
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        f"cannot verify the native {family} rule catalog"
+                    )
+                    all_effects_converted = False
+                else:
+                    lines.extend(rendered)
+                    converted_effect = True
             elif (
                 isinstance(effect, dict) and len(effect) == 1 and
                 next(iter(effect)) in {
@@ -30299,231 +35688,271 @@ def render_eoc(
                 # Deliberate no-op.
                 converted_effect = True
             elif isinstance(effect, dict) and "u_spawn_item" in effect:
-                rendered = render_static_spawn_item_effect(
-                    effect, avatar_actor_proven
+                spawn_gap = (
+                    "EOC u_spawn_item remains TODO: EOC callbacks do not carry the "
+                    "active native Dialogue needed for exact alpha/beta selection and "
+                    "popup ordering, while inventory give APIs do not preserve native "
+                    "i_add_or_drop; only a single literal direct TALK response is "
+                    "lowered, and count/group/container/flags/force_equip/loc/dynamic "
+                    "forms remain unsupported"
                 )
-                if rendered is not None:
-                    lines.extend(rendered)
+                lines.append(f"    -- TODO: {spawn_gap}.")
+                result.add_todo(
+                    "manual_rewrite",
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} {spawn_gap}"
+                )
+                all_effects_converted = False
+            elif isinstance(effect, dict) and "map_spawn_item" in effect:
+                loaded_avatar_position_proven = (
+                    mutation_avatar_actor_proven and effect_index == 0
+                )
+                rendered_map_spawn = render_static_map_spawn_item_effect(
+                    effect, loaded_avatar_position_proven, actor_expression
+                )
+                if rendered_map_spawn is not None:
+                    lines.extend(rendered_map_spawn)
+                    converted_effect = True
+                else:
+                    if "loc" in effect:
+                        map_gap = (
+                            "loc is a legacy var_info lookup and does not prove a "
+                            "typed absolute map-square position; native map_add_item "
+                            "may load off-screen tinymaps while services.world.spawn_item "
+                            "requires a loaded position"
+                        )
+                    elif not mutation_avatar_actor_proven:
+                        map_gap = (
+                            "native map_spawn_item defaults to dialogue alpha's runtime "
+                            "position, but this source does not prove the event-exclusive "
+                            "live Avatar required by the loaded-position world service"
+                        )
+                    elif effect_index != 0:
+                        map_gap = (
+                            "an earlier EOC effect may relocate the Avatar or unload the "
+                            "map; the loaded-position world service is lowered only for "
+                            "the first game_start effect"
+                        )
+                    else:
+                        map_gap = (
+                            "only a literal direct item id and integral count from 1..100 "
+                            "are lowered; dynamic ids/counts, item groups, containers, "
+                            "flags, and other options retain native semantics not covered "
+                            "by this bounded service call"
+                        )
+                    lines.append(f"    -- TODO: {map_gap}.")
+                    result.add_todo(
+                        "manual_rewrite" if not mutation_avatar_actor_proven else "platform_gap",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} {map_gap}"
+                    )
+                    all_effects_converted = False
+            elif effect == "player_weapon_away":
+                # EOC and TALK both load this string through talk_effect_t.
+                # Its native static wrapper first requires dialogue beta to
+                # be an NPC, then acts on the global player Character.  Never
+                # infer that beta from a game_start or NPC event actor.
+                if wrapped_npc_beta_expression is not None:
+                    lines.extend([
+                        "    do",
+                        "        local beta = context and context.actors and "
+                        f"{wrapped_npc_beta_expression}",
+                        '        if beta ~= nil and beta.kind == "creature" and beta.subtype == "npc" then',
+                        "            service_value(services.equipment.stow_current_weapon(services.characters.avatar()))",
+                        "        end",
+                        "    end",
+                    ])
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate the bounded item spawn through "
-                        "the typed inventory service."
+                        "    -- TODO: player_weapon_away's native wrapper requires a "
+                        "dialogue beta NPC; this EOC has no proven live beta pair."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        "player_weapon_away needs a proven live beta NPC pair"
                     )
                     all_effects_converted = False
-            elif (
-                avatar_actor_proven and
-                isinstance(effect, dict) and
-                set(effect) <= {
-                    "u_spawn_item", "count", "use_item_group", "force_equip",
-                    "suppress_message",
-                } and
-                "u_spawn_item" in effect and
-                safe_platform_id(effect.get("u_spawn_item")) and
-                not effect.get("force_equip", False) and
-                (
-                    "count" not in effect or
-                    (
-                        isinstance(effect.get("count"), int) and
-                        not isinstance(effect.get("count"), bool) and
-                        1 <= effect["count"] <= 100
-                    )
-                ) and (
-                    "use_item_group" not in effect or
-                    isinstance(effect.get("use_item_group"), bool)
-                ) and (
-                    "force_equip" not in effect or
-                    isinstance(effect.get("force_equip"), bool)
-                ) and (
-                    "suppress_message" not in effect or
-                    isinstance(effect.get("suppress_message"), bool)
+            elif isinstance(effect, dict) and "player_weapon_away" in effect:
+                reason = (
+                    "native WRAP player_weapon_away accepts only a string; this "
+                    "object-shaped form has no native effect semantics"
                 )
-            ):
-                count = effect.get("count", 1)
-                if effect.get("use_item_group", False):
-                    lines.append(
-                        "    service_value(services.inventory.give_group(actor, "
-                        f"services.types.id(\"item_group\", {lua_quote(effect['u_spawn_item'])}), "
-                        "))"
-                    )
-                else:
-                    lines.append(
-                        "    service_value(services.inventory.give(actor, "
-                        f"services.types.id(\"item\", {lua_quote(effect['u_spawn_item'])}), "
-                        f"{count}))"
-                    )
-                converted_effect = True
-            elif (
-                isinstance(effect, dict) and
-                set(effect) <= {"map_spawn_item", "count", "loc"} and
-                "map_spawn_item" in effect and
-                safe_platform_id(effect.get("map_spawn_item")) and
-                (
-                    "count" not in effect or
-                    (
-                        isinstance(effect.get("count"), int) and
-                        not isinstance(effect.get("count"), bool) and
-                        1 <= effect["count"] <= 100
-                    )
-                ) and
-                (
-                    (
-                        isinstance(effect.get("loc"), dict) and
-                        set(effect["loc"]) == {"context_val"} and
-                        isinstance(effect["loc"].get("context_val"), str) and
-                        safe_platform_id(effect["loc"]["context_val"])
-                    ) or
-                    (
-                        "loc" not in effect and
-                        avatar_actor_proven
-                    )
-                )
-            ):
-                count = effect.get("count", 1)
-                if "loc" in effect:
-                    loc_expr = f"context.data[{lua_quote(effect['loc']['context_val'])}]"
-                else:
-                    loc_expr = "service_value(services.characters.snapshot(actor)).creature.position"
-                lines.append(
-                    f"    services.world.spawn_item({loc_expr}, "
-                    f"services.types.id(\"item\", {lua_quote(effect['map_spawn_item'])}), {count})"
-                )
-                converted_effect = True
-            elif isinstance(effect, dict) and "map_spawn_item" in effect:
-                if set(effect) <= {"map_spawn_item", "count", "loc"}:
-                    item_expression = _dynamic_id_expression(
-                        effect.get("map_spawn_item"), "item", "actor"
-                    )
-                    count_expression = render_eoc_numeric_expression(
-                        effect.get("count", 1), "1", "actor"
-                    )
-                    location = (
-                        _coordinate_source_expression(
-                            effect.get("loc"), avatar_actor_proven,
-                            npc_event_character_actor_proven,
-                        )
-                        if "loc" in effect else
-                        "service_value(services.characters.snapshot(actor)).creature.position"
-                        if avatar_actor_proven else None
-                    )
-                    if item_expression is not None and count_expression is not None and location is not None:
-                        count_expression = (
-                            "math.max(1, math.min(100, math.floor("
-                            f"({count_expression}) + 0.5)))"
-                        )
-                        lines.append(
-                            f"    services.world.spawn_item({location}, "
-                            f"{item_expression}, {count_expression})"
-                        )
-                        converted_effect = True
-            elif (
-                avatar_actor_proven and isinstance(effect, dict) and
-                "u_spawn_item" in effect and
-                not effect.get("force_equip", False)
-            ):
-                allowed = {
-                    "u_spawn_item", "count", "use_item_group", "force_equip",
-                    "suppress_message",
-                }
-                if set(effect) <= allowed:
-                    use_group = effect.get("use_item_group", False)
-                    force_equip = effect.get("force_equip", False)
-                    suppress_message = effect.get("suppress_message", False)
-                    if (
-                        isinstance(use_group, bool) and
-                        isinstance(force_equip, bool) and
-                        isinstance(suppress_message, bool)
-                    ):
-                        kind = "item_group" if use_group else "item"
-                        item_expression = _dynamic_id_expression(
-                            effect.get("u_spawn_item"), kind, "actor"
-                        )
-                        count_value = effect.get("count", 1)
-                        count_expression = render_eoc_numeric_expression(
-                            count_value, "1", "actor"
-                        )
-                        if item_expression is not None and count_expression is not None:
-                            count_expression = (
-                                "math.max(1, math.min(100, math.floor("
-                                f"({count_expression}) + 0.5)))"
-                            )
-                            if use_group:
-                                lines.append(
-                                    "    service_value(services.inventory.give_group("
-                                    f"actor, {item_expression}))"
-                                )
-                            else:
-                                lines.append(
-                                    "    service_value(services.inventory.give("
-                                    f"actor, {item_expression}, {count_expression}, "
-                                    f"))"
-                                )
-                            converted_effect = True
-            elif avatar_actor_proven and effect == "player_weapon_away":
-                lines.append(
-                    "    -- TODO: player_weapon_away needs the exact wielded Item "
-                    "handle plus explicit source and destination holders."
-                )
+                lines.append(f"    -- TODO: {reason}.")
                 result.add_todo(
-                    "manual_rewrite",
-                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                    "player_weapon_away needs a complete equipment transaction descriptor"
+                    "semantic_choice",
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} {reason}"
                 )
                 all_effects_converted = False
             elif (
                 isinstance(effect, dict) and "set_trap" in effect
             ):
-                rendered = _render_static_map_state_edit(
-                    effect, avatar_actor_proven,
-                    npc_event_character_actor_proven,
+                rendered_trap = render_static_set_trap(
+                    effect,
+                    effects[effect_index - 1] if effect_index else None,
+                    teleport_avatar_actor_proven,
                 )
-                if rendered is not None:
-                    lines.extend(rendered)
+                if rendered_trap is not None:
+                    lines.extend(rendered_trap)
                     converted_effect = True
                 else:
-                    lines.append(
-                        "    -- TODO: " + _map_mutation_todo() + "."
-                    )
+                    todo_category, trap_gap = set_trap_migration_todo(effect)
+                    lines.append(f"    -- TODO: {trap_gap}.")
                     result.add_todo(
-                        "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} " +
-                        _map_mutation_todo()
+                        todo_category,
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} {trap_gap}"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "signal_hordes" in effect:
-                lines.append(
-                    "    -- TODO: signal_hordes has no transactional Platform API; "
-                    "preserve this legacy effect for manual conversion."
+                rendered_signal = render_static_horde_signal_broadcast(
+                    effect,
+                    effects[effect_index - 1] if effect_index else None,
+                    avatar_actor_proven,
+                    npc_event_character_actor_proven,
                 )
-                result.add_todo(
-                    "manual_rewrite",
-                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                    "signal_hordes has no transactional Platform API"
-                )
-                all_effects_converted = False
+                if rendered_signal is not None:
+                    lines.extend(rendered_signal)
+                    converted_effect = True
+                elif _signal_hordes_has_native_var_info_target(
+                    effect.get("signal_hordes")
+                ):
+                    category = "manual_rewrite"
+                    reason = (
+                        "signal_hordes needs an immediately preceding proven "
+                        "context location and a finite static signal_power that "
+                        "truncates into 0..10000"
+                    )
+                else:
+                    category = "semantic_choice"
+                    reason = (
+                        "native signal_hordes requires an object var_info target "
+                        "with a variable scope; "
+                        "this shape has no native effect semantics"
+                    )
+                if rendered_signal is None:
+                    lines.append(f"    -- TODO: {reason}.")
+                    result.add_todo(
+                        category,
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} {reason}"
+                    )
+                    all_effects_converted = False
             elif isinstance(effect, dict) and "reveal_route" in effect:
-                lines.append(
-                    "    -- TODO: reveal_route has no transactional Platform API; "
-                    "preserve this legacy effect for manual conversion."
+                reveal_route_avatar_move_source_proven = (
+                    event_exclusive_source_proven and stable_handler and
+                    value.get("eoc_type") == "EVENT" and
+                    required_event == "avatar_moves" and not inline_eoc and
+                    value.get("global") is not True and recurrence_value is None
                 )
-                result.add_todo(
-                    "manual_rewrite",
-                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                    "reveal_route has no transactional Platform API"
+                rendered_route = render_static_reveal_route(
+                    effect,
+                    effects[:effect_index],
+                    avatar_actor_proven,
+                    reveal_route_avatar_move_source_proven,
                 )
-                all_effects_converted = False
+                if rendered_route is not None:
+                    lines.extend(rendered_route)
+                    converted_effect = True
+                else:
+                    endpoint_keys = (
+                        _context_val_key(effect.get("reveal_route")),
+                        _context_val_key(effect.get("target_var")),
+                    )
+                    preceding_location_writes: set[str] = set()
+                    for prior_effect in effects[:effect_index]:
+                        if not isinstance(prior_effect, dict):
+                            continue
+                        for location_key in ("u_location_variable", "npc_location_variable"):
+                            context_key = _context_val_key(prior_effect.get(location_key))
+                            target_params = prior_effect.get("target_params")
+                            if (
+                                context_key is not None and
+                                set(prior_effect) == {location_key, "target_params"} and
+                                isinstance(target_params, dict) and
+                                isinstance(target_params.get("om_terrain"), str) and
+                                set(target_params) <= {
+                                    "om_terrain", "z", "random", "search_range",
+                                }
+                            ):
+                                preceding_location_writes.add(context_key)
+                    endpoint_writers_proven = (
+                        all(endpoint_key is not None for endpoint_key in endpoint_keys) and
+                        all(
+                            endpoint_key in preceding_location_writes
+                            for endpoint_key in endpoint_keys
+                        )
+                    )
+                    route_radius = effect.get("radius", 0)
+                    route_road_only = effect.get("road_only", False)
+                    numeric_route_radius = finite_number_literal(route_radius)
+                    truncated_route_radius = (
+                        math.trunc(numeric_route_radius)
+                        if numeric_route_radius is not None else None
+                    )
+                    route_options_note = (
+                        f"Its static radius={route_radius} truncates toward zero to "
+                        f"{truncated_route_radius} and road_only="
+                        f"{str(route_road_only).lower()} fit the typed route service"
+                        if truncated_route_radius is not None and
+                        0 <= truncated_route_radius <= 30 and
+                        isinstance(route_road_only, bool) else
+                        "Its radius must be a finite static number that truncates "
+                        "toward zero into the typed service's 0..30 range, and "
+                        "road_only must be a boolean"
+                    )
+                    if endpoint_writers_proven:
+                        reveal_route_gap = (
+                            "Both context_val route endpoints have preceding "
+                            "target_params-based u/npc_location_variable writes, so "
+                            "the native missing-variable default is not the blocker. "
+                            "services.overmap.find_target covers the static "
+                            "mission_util::get_om_terrain_pos terrain selection, "
+                            "generation retry, and Avatar OMT fallback, but it "
+                            "does not return a match status. On a miss the native "
+                            "helper also emits debugmsg before writing that fallback, "
+                            "so the renderer must keep nonempty terrain searches "
+                            "fail-closed until both outcomes can be preserved. "
+                            "This source is an item use_action EOC and does not "
+                            "prove the exact live alpha selected by native "
+                            "dialogue::actor(false) for u_location_variable. "
+                            "The renderer must also preserve "
+                            "the native off-screen map-load step, typed context "
+                            "writes, and complete enclosing effect order before it "
+                            "can generate this route. "
+                            f"{route_options_note} Keep preceding reveal_map and "
+                            "u_message effects in source order"
+                        )
+                        reveal_route_category = "manual_rewrite"
+                    else:
+                        reveal_route_gap = (
+                            "native reveal_route resolves two var_info abs_ms endpoints "
+                            "and projects them to OMT; services.overmap.reveal_route "
+                            "preserves native connection guessing, the greedy search "
+                            "within a four-overmap radius, road_only filtering, and "
+                            "CIRCLEDIST reveal around each path node once given "
+                            "explicit typed abs_omt endpoints. Bounded lowering is "
+                            "limited to context_val endpoints written by immediately "
+                            "preceding, translatable u_location_variable effects in "
+                            "an event-exclusive Avatar handler. The renderer does "
+                            "not yet prove other var_info scopes, missing-variable "
+                            "default coordinates, or enclosing context order. "
+                            f"{route_options_note}"
+                        )
+                        reveal_route_category = "manual_rewrite"
+                    lines.append(
+                        "    -- TODO: " + reveal_route_gap + "."
+                    )
+                    result.add_todo(
+                        reveal_route_category,
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} " +
+                        reveal_route_gap
+                    )
+                    all_effects_converted = False
             elif (
                 isinstance(effect, dict) and
                 ("u_consume_item" in effect or "npc_consume_item" in effect)
             ):
                 key = "u_consume_item" if "u_consume_item" in effect else "npc_consume_item"
                 rendered = render_static_inventory_consume(
-                    effect, key, character_actor_proven,
+                    effect, key, avatar_actor_proven,
                     npc_event_character_actor_proven,
                     npc_actor_expression,
                 )
@@ -30532,14 +35961,15 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate the inventory consumption "
-                        "through the typed inventory service."
+                        "    -- TODO: this item ID, numeric, actor, or popup "
+                        "shape is outside the proven consume_by_type lowering."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs inventory consumption through the typed "
-                        "inventory service"
+                        "consume_item needs a proven static item/count/charges "
+                        "shape and exact actor; u_consume_item popup=true also "
+                        "needs its ordered give notice"
                     )
                     all_effects_converted = False
             elif (
@@ -30552,22 +35982,37 @@ def render_eoc(
                     else "npc_consume_item_sum"
                 )
                 rendered = render_static_inventory_consume_sum(
-                    effect, key, avatar_actor_proven,
-                    npc_event_character_actor_proven,
+                    effect, key,
+                    (
+                        event_exclusive_source_proven and
+                        required_event == "game_start" and avatar_actor_proven
+                    ),
+                    (
+                        event_exclusive_source_proven and
+                        required_event == "npc_becomes_hostile" and
+                        npc_event_character_actor_proven and
+                        npc_actor_expression == "actor" and
+                        npc_talker_ui_actor_expression == "actor"
+                    ),
                 )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate the weighted inventory "
-                        "consumption through the typed inventory service."
+                        "    -- TODO: consume_item_sum needs a static bounded row list "
+                        "and an event-exclusive live native alpha/beta Character source; "
+                        "referenced or dynamically dispatched EOCs and direct dialogue "
+                        "callbacks remain unproven Platform talker contexts."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs weighted inventory consumption through the "
-                        "typed inventory service"
+                        "consume_item_sum requires at most 128 static item rows with "
+                        "finite positive literal amounts <= 1000000000 and a live "
+                        "event-exclusive native actor source; only unreferenced, "
+                        "non-dynamic game_start alpha-avatar and npc_becomes_hostile "
+                        "beta-to-alpha fallback are currently proven"
                     )
                     all_effects_converted = False
             elif (
@@ -30587,16 +36032,26 @@ def render_eoc(
                     lines.extend(rendered)
                     converted_effect = True
                 else:
+                    pickup_actor = "alpha" if key == "u_pickup_items" else "beta"
+                    pickup_gap = (
+                        f"native {key} targets the {pickup_actor} Character; "
+                        "target_var is a legacy var_info lookup and does not prove an "
+                        "absolute map-square value; bind that Character handle and "
+                        "convert the target to a typed absolute-map-square TripointCoord "
+                        "before calling "
+                        "services.activities.pickup_at, then review legacy limit semantics"
+                    )
+                    if "max_mass" in effect:
+                        pickup_gap += (
+                            "; native max_mass currently passes has_float('max_mass') "
+                            "as its gram value, so that field needs manual review"
+                        )
                     lines.append(
-                        "    -- TODO: map holder requires one explicitly typed "
-                        "abs_ms coordinate; current/u/alpha/local/omt/mixed-frame "
-                        "pickup locations remain TODO."
+                        f"    -- TODO: {pickup_gap}."
                     )
                     result.add_todo(
                         "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "map holder requires an explicitly typed abs_ms coordinate; "
-                        "current/u/alpha/local/omt/mixed-frame pickup locations remain TODO"
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} {pickup_gap}"
                     )
                     all_effects_converted = False
             elif (
@@ -30607,18 +36062,23 @@ def render_eoc(
                 rendered = render_static_set_field(
                     effect, key, avatar_actor_proven,
                     npc_event_character_actor_proven,
+                    event_exclusive_live_avatar_center_proven=field_avatar_center_proven,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: " + _map_mutation_todo() + "."
+                        "    -- TODO: field placement only migrates for a proven live "
+                        "Avatar center with bounded static parameters; target_var, "
+                        "npc_set_field, and dynamic radius/intensity/age remain TODO."
                     )
                     result.add_todo(
                         "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} " +
-                        _map_mutation_todo()
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        "field placement needs a source-proven live Avatar center and "
+                        "bounded static parameters; target_var, npc_set_field, and "
+                        "dynamic radius/intensity/age remain TODO"
                     )
                     all_effects_converted = False
             elif (
@@ -30627,20 +36087,22 @@ def render_eoc(
             ):
                 rendered = render_static_location_variable_adjust(
                     effect, "location_variable_adjust", avatar_actor_proven,
-                    npc_event_character_actor_proven,
+                    npc_event_character_actor_proven, effect_actor_targets,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
+                    order_choice = (_location_adjust_random_order_choice(effect, effect_actor_targets) or
+                                    _math_random_order_choice(effect, effect_actor_targets))
                     lines.append(
-                        "    -- TODO: translate location-variable arithmetic "
-                        "through typed coordinate variables."
+                        "    -- TODO: " + (order_choice or "translate location-variable arithmetic "
+                                           "through typed coordinate variables") + "."
                     )
                     result.add_todo(
-                        "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        "semantic_choice" if order_choice else "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} " +
+                        (order_choice or "needs domain-service conversion")
                     )
                     all_effects_converted = False
             elif (
@@ -30670,11 +36132,44 @@ def render_eoc(
                         "    -- TODO: translate location-variable search "
                         "through a typed coordinate service."
                     )
-                    result.add_todo(
-                        "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                    target_params = effect.get("target_params")
+                    has_static_terrain_search = (
+                        key == "u_location_variable" and
+                        isinstance(target_params, dict) and
+                        isinstance(target_params.get("om_terrain"), str) and
+                        bool(target_params.get("om_terrain"))
                     )
+                    if has_static_terrain_search:
+                        search_gap = (
+                            "static nonempty target_params terrain search needs "
+                            "a match status to preserve mission_util::get_om_terrain_pos "
+                            "debugmsg and Avatar OMT fallback; "
+                            "services.overmap.find_target currently returns only "
+                            "the coordinate"
+                        )
+                        lines[-1] = "    -- TODO: " + search_gap + "."
+                        result.add_todo(
+                            "platform_gap",
+                            f"{source.location}: EOC {eoc_id} effect #{effect_index} " +
+                            search_gap,
+                        )
+                        if not avatar_actor_proven:
+                            actor_gap = (
+                                "u_location_variable needs the exact live alpha "
+                                "selected by native dialogue::actor(false); an item "
+                                "use_action EOC does not prove that actor"
+                            )
+                            result.add_todo(
+                                "manual_rewrite",
+                                f"{source.location}: EOC {eoc_id} effect #{effect_index} " +
+                                actor_gap,
+                            )
+                    else:
+                        result.add_todo(
+                            "manual_rewrite",
+                            f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                            "needs domain-service conversion"
+                        )
                     all_effects_converted = False
             elif (
                 isinstance(effect, dict) and
@@ -30691,7 +36186,7 @@ def render_eoc(
                     npc_event_character_actor_proven and
                     isinstance(effect.get(key), str)
                     else render_static_query_tile(
-                        effect, key, avatar_actor_proven,
+                        effect, key, targeting_avatar_actor_proven,
                     )
                 )
                 if rendered is not None:
@@ -30751,14 +36246,15 @@ def render_eoc(
                 )
                 rendered = (
                     render_static_choose_adjacent_highlight(
-                        effect, key, avatar_actor_proven,
+                        effect, key, targeting_avatar_actor_proven,
                         npc_event_character_actor_proven,
                         eoc_conditions, npc_actor_expression, eoc_function_names,
                     )
                     if key == "u_choose_adjacent_highlight" else
                     render_static_npc_choose_adjacent_highlight(
-                        effect, key, npc_event_character_actor_proven,
-                        npc_actor_expression, avatar_actor_proven, eoc_conditions, eoc_function_names,
+                        effect, key, targeting_npc_actor_proven,
+                        "actor" if targeting_npc_actor_proven else None,
+                        targeting_avatar_actor_proven, eoc_conditions, eoc_function_names,
                     )
                 )
                 if rendered is not None:
@@ -30784,6 +36280,22 @@ def render_eoc(
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
+                elif "set_furniture" in effect:
+                    furniture_gap = (
+                        "set_furniture uses the native radius neighborhood "
+                        "(default radius=1, circular unless square=true) and "
+                        "calls furn_set(dest, id, false, avoid_creatures); its loaded/bounds, "
+                        "avoid_creatures, and failed-placement behavior differs "
+                        "from map.edit's loaded MapTileToken and transactional "
+                        "validation"
+                    )
+                    lines.append(f"    -- TODO: {furniture_gap}.")
+                    result.add_todo(
+                        "platform_gap",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        f"{furniture_gap}"
+                    )
+                    all_effects_converted = False
                 else:
                     lines.append(
                         "    -- TODO: " + _map_mutation_todo() + "."
@@ -30802,32 +36314,70 @@ def render_eoc(
                     lines.extend(rendered)
                     converted_effect = True
                 else:
-                    lines.append(
-                        "    -- TODO: Platform-only mapgen_update lowering "
-                        "requires static absolute OMT -> OvermapTileToken, "
-                        "static update_mapgen ID -> MapgenUpdateToken, and "
-                        "immediate transaction apply; dynamic IDs/coordinates, "
-                        "delay/mission/key, or collision=false must be rewritten "
-                        "by the author; unsupported mirror/rotation transforms "
-                        "must also be rewritten by the author."
+                    mapgen_gap = (
+                        "mapgen_update needs a proven native target (var_info abs_ms "
+                        "or mission search) and typed OMT token; var_info abs_ms "
+                        "lookup or mission target search remains unrepresented. "
+                        "No complete real-source callsite currently proves an "
+                        "immediate target and mission-independent update. "
+                        "mission_util terrain searches, selected-mission mapgen targets "
+                        "(the native path passes the selected mission to updates, which "
+                        "this adapter cannot), and source-specific delayed key/time/target "
+                        "provenance remain unrepresented"
                     )
+                    lines.append(f"    -- TODO: {mapgen_gap}.")
                     result.add_todo(
                         "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} {mapgen_gap}"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "reveal_map" in effect:
-                rendered = render_static_reveal_map(
-                    effect, avatar_actor_proven, npc_event_character_actor_proven
+                rendered_reveal = render_static_reveal_map(
+                    effect,
+                    effects[effect_index - 1] if effect_index else None,
+                    teleport_avatar_actor_proven,
+                )
+                if rendered_reveal is not None:
+                    lines.extend(rendered_reveal)
+                    converted_effect = True
+                else:
+                    reveal_gap = (
+                        "native reveal_map reads var_info as abs_ms (a missing "
+                        "value becomes (0,0,0), and var_info.default is ignored), "
+                        "then projects to OMT; optional dbl_or_var radius defaults "
+                        "to 0 and truncates toward zero when passed to int. "
+                        "overmapbuffer::reveal honors CIRCLEDIST and may load or "
+                        "create missing overmap data, including at radius 0. "
+                        "services.overmap.reveal_native preserves those effects "
+                        "for a typed abs_omt and integer radius 0..36. Auto-migration "
+                        "requires the same-scope typed coordinate from an immediately "
+                        "preceding unadjusted u_location_variable in an exclusive "
+                        "avatar_moves callback (the target map is already loaded) and a "
+                        "finite nonnegative static radius truncating into 0..36; "
+                        "NPC, item-use, search, and unproven writers remain TODO. "
+                        "This source does not prove both. services.overmap.reveal "
+                        "is a square helper that skips missing overmaps"
+                    )
+                    lines.append(f"    -- TODO: {reveal_gap}.")
+                    result.add_todo(
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} {reveal_gap}"
+                    )
+                    all_effects_converted = False
+            elif isinstance(effect, dict) and "revert_location" in effect:
+                rendered = render_static_location_revert(
+                    effect, "revert_location", effect_actor_targets=effect_actor_targets
                 )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate the reveal-map target "
-                        "through the typed overmap service."
+                        "    -- TODO: location revert requires a proven typed coordinate, "
+                        "a native duration or two-bound range, and a raw string key; "
+                        "participant/indirect reads require exact const_actor owners. "
+                        "Math-backed durations and absent-owner diagnostics still "
+                        "need exact source proofs."
                     )
                     result.add_todo(
                         "manual_rewrite",
@@ -30835,24 +36385,23 @@ def render_eoc(
                         "needs domain-service conversion"
                     )
                     all_effects_converted = False
-            elif (
-                isinstance(effect, dict) and
-                ("revert_location" in effect or "copy_location" in effect)
-            ):
-                key = "revert_location" if "revert_location" in effect else "copy_location"
-                rendered = render_static_location_revert_or_copy(effect, key)
+            elif isinstance(effect, dict) and "copy_location" in effect:
+                rendered = render_static_location_copy(effect, effect_actor_targets)
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
-                    lines.append(
-                        "    -- TODO: translate the scheduled location "
-                        "change through the typed world service."
+                    copy_gap = (
+                        "copy_location needs Native coordinate variable reads with "
+                        "proven const_actor owners, a Native duration and raw string key. "
+                        "Missing source submaps are not generated; Native null source "
+                        "dereference has no defined parity outcome. Math durations, "
+                        "unproven participants and unsupported loaders need manual review"
                     )
+                    lines.append(f"    -- TODO: {copy_gap}.")
                     result.add_todo(
                         "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} {copy_gap}"
                     )
                     all_effects_converted = False
             elif (
@@ -30865,35 +36414,40 @@ def render_eoc(
                     else "npc_transform_radius"
                 )
                 rendered = render_static_transform_radius(
-                    effect, key, avatar_actor_proven,
-                    npc_event_character_actor_proven,
+                    effect, key, mutation_avatar_actor_proven,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
-                    lines.append(
-                        "    -- TODO: translate the radius transformation "
-                        "through the typed world service."
+                    transform_gap = (
+                        "native npc_transform_radius reads mutable beta, but the "
+                        "supported hostile-event path has only alpha and native "
+                        "actor(true) emits a missing-beta diagnostic before fallback"
+                        if key == "npc_transform_radius" else
+                        "only an event-exclusive live game_start alpha with no "
+                        "target_var and static in-range radius, transform ID, delay, "
+                        "and key is proven for the matching Platform transform path"
                     )
+                    lines.append(f"    -- TODO: {transform_gap}.")
                     result.add_todo(
                         "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} {transform_gap}"
                     )
                     all_effects_converted = False
-            elif npc_actor_proven and effect == "follow":
-                lines.append(
-                    f"    service_value(services.npcs.join_player({npc_actor_expression or 'actor'}, services.characters.avatar()))")
+            elif static_wrapped_beta_npc and effect == "follow":
+                lines.extend(render_static_wrapped_beta_npc_call(
+                    "join_player", "services.characters.avatar()"
+                ))
                 converted_effect = True
-            elif npc_actor_proven and effect == "stop_following":
-                lines.append(f"    service_value(services.npcs.stop_temporary_following({npc_actor_expression or 'actor'}))")
+            elif static_wrapped_beta_npc and effect == "stop_following":
+                lines.extend(render_static_wrapped_beta_npc_call("stop_temporary_following"))
                 converted_effect = True
-            elif npc_actor_proven and effect == "stranger_neutral":
-                lines.append(f"    service_value(services.npcs.make_neutral({npc_actor_expression or 'actor'}))")
+            elif static_wrapped_beta_npc and effect == "stranger_neutral":
+                lines.extend(render_static_wrapped_beta_npc_call("make_neutral"))
                 converted_effect = True
-            elif npc_actor_proven and effect == "end_conversation":
-                lines.append(f"    service_value(services.npcs.dialogue.finish({npc_actor_expression or 'actor'}))")
+            elif static_wrapped_beta_npc and effect == "end_conversation":
+                lines.extend(render_static_wrapped_beta_npc_call("dialogue.finish"))
                 converted_effect = True
             elif (
                 avatar_actor_proven and
@@ -30905,102 +36459,90 @@ def render_eoc(
                 } == {"turn_cost"}
             ):
                 raw_turn_cost = effect.get("turn_cost")
-                if (
-                    isinstance(raw_turn_cost, int) and
-                    not isinstance(raw_turn_cost, bool) and raw_turn_cost >= 0
-                ):
+                adjustment = parse_turn_cost_adjustment(raw_turn_cost)
+                if adjustment is not None:
                     lines.append(
-                        f"    services.characters.adjust(actor, {{ moves = -{raw_turn_cost} }})"
+                        "    services.characters.adjust(actor, "
+                        f"{{ moves = {adjustment} }})"
                     )
                     converted_effect = True
                 else:
-                    parsed_turn_cost = parse_turns(raw_turn_cost)
-                    turn_cost = (
-                        str(parsed_turn_cost)
-                        if parsed_turn_cost is not None and parsed_turn_cost >= 0
-                        else render_eoc_numeric_expression(raw_turn_cost, "0", "actor")
+                    all_effects_converted = False
+                    result.add_todo(
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        "needs domain-service conversion"
                     )
-                    if turn_cost is None:
-                        all_effects_converted = False
-                        result.add_todo(
-                            "manual_rewrite",
-                            f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                            "needs domain-service conversion"
-                        )
-                    else:
-                        lines.append(
-                            "    services.characters.adjust(actor, { moves = -math.max(0, "
-                            "math.min(2147483647, math.floor((" + turn_cost + ") + 0.5))) })"
-                        )
-                        converted_effect = True
-            elif npc_actor_proven and isinstance(effect, str) and effect in {
+            elif static_wrapped_beta_npc and isinstance(effect, str) and effect in {
                 "wake_up", "dismount", "clear_overrides", "lead_to_safety"
             }:
                 order = {"wake_up": "wake", "dismount": "dismount",
                          "clear_overrides": "clear_temporary_rules",
                          "lead_to_safety": "lead_to_safety"}[effect]
-                lines.append(
-                    f"    service_value(services.npcs.orders.run({npc_actor_expression or 'actor'}, {lua_quote(order)}))")
+                lines.extend(render_static_wrapped_beta_npc_call(
+                    "orders.run", lua_quote(order)
+                ))
                 converted_effect = True
-            elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
+            elif static_wrapped_beta_npc and isinstance(effect, str) and effect in {
                 "reveal_stats", "pick_style",
             }:
                 method = "open_character_sheet" if effect == "reveal_stats" else "choose_combat_style"
-                target = npc_actor_expression or "actor"
-                lines.extend([
-                    f'    if ({target}) ~= nil and ({target}).subtype == "npc" then',
-                    f"        service_value(services.npcs.orders.{method}({target}))",
-                    "    end",
-                ])
+                lines.extend(render_static_wrapped_beta_npc_call(
+                    f"orders.{method}"
+                ))
                 converted_effect = True
-            elif npc_actor_proven and effect == "insult_combat":
-                lines.append(f"    service_value(services.npcs.dialogue.provoke_combat({npc_actor_expression or 'actor'}))")
+            elif static_wrapped_beta_npc and effect == "insult_combat":
+                lines.extend(render_static_wrapped_beta_npc_call("dialogue.provoke_combat"))
                 converted_effect = True
-            elif npc_actor_proven and effect == "leave":
-                lines.append(f"    service_value(services.npcs.leave_player({npc_actor_expression or 'actor'}, services.characters.avatar()))")
+            elif static_wrapped_beta_npc and effect == "leave":
+                lines.extend(render_static_wrapped_beta_npc_call(
+                    "leave_player", "services.characters.avatar()"
+                ))
                 converted_effect = True
-            elif npc_actor_proven and effect == "follow_only":
-                lines.append(f"    service_value(services.npcs.follow_temporarily({npc_actor_expression or 'actor'}))")
+            elif static_wrapped_beta_npc and effect == "follow_only":
+                lines.extend(render_static_wrapped_beta_npc_call("follow_temporarily"))
                 converted_effect = True
-            elif npc_actor_proven and isinstance(effect, str) and effect in {
+            elif static_wrapped_beta_npc and isinstance(effect, str) and effect in {
                 "deny_follow", "deny_lead", "deny_equipment", "deny_train", "deny_personal_info",
             }:
                 request = "training" if effect == "deny_train" else effect.removeprefix("deny_")
-                lines.append(
-                    f"    service_value(services.npcs.record_refusal({npc_actor_expression or 'actor'}, {lua_quote(request)}))"
-                )
+                lines.extend(render_static_wrapped_beta_npc_call(
+                    "record_refusal", lua_quote(request)
+                ))
                 converted_effect = True
-            elif npc_actor_proven and effect == "player_leaving":
-                lines.append(f"    service_value(services.npcs.warn_player_departure({npc_actor_expression or 'actor'}))")
+            elif static_wrapped_beta_npc and effect == "player_leaving":
+                lines.extend(render_static_wrapped_beta_npc_call("warn_player_departure"))
                 converted_effect = True
-            elif npc_actor_proven and effect == "start_mugging":
-                lines.append(f"    service_value(services.npcs.start_mugging({npc_actor_expression or 'actor'}))")
+            elif static_wrapped_beta_npc and effect == "start_mugging":
+                lines.extend(render_static_wrapped_beta_npc_call("start_mugging"))
                 converted_effect = True
-            elif npc_actor_proven and effect == "remove_stolen_status":
-                lines.append(f"    service_value(services.npcs.clear_stolen_item_claim({npc_actor_expression or 'actor'}))")
+            elif static_wrapped_beta_npc and effect == "remove_stolen_status":
+                lines.extend(render_static_wrapped_beta_npc_call("clear_stolen_item_claim"))
                 converted_effect = True
-            elif npc_actor_proven and effect == "assign_guard":
-                lines.append(f"    service_value(services.npcs.set_guarding({npc_actor_expression or 'actor'}, true))")
+            elif static_wrapped_beta_npc and effect == "assign_guard":
+                lines.extend(render_static_wrapped_beta_npc_call("set_guarding", "true"))
                 converted_effect = True
-            elif npc_actor_proven and effect == "stop_guard":
-                lines.append(f"    service_value(services.npcs.set_guarding({npc_actor_expression or 'actor'}, false))")
+            elif static_wrapped_beta_npc and effect == "stop_guard":
+                lines.extend(render_static_wrapped_beta_npc_call("set_guarding", "false"))
                 converted_effect = True
-            elif npc_actor_proven and isinstance(effect, str) and effect in {
+            elif static_wrapped_beta_npc and isinstance(effect, str) and effect in {
                 "buy_chicken", "buy_horse", "buy_cow",
             }:
                 animal = "mon_" + effect.removeprefix("buy_")
-                target = npc_actor_expression or "actor"
                 lines.extend([
                     "    do",
-                    f"        local purchase = services.spawns.monster(services.types.id(\"monster\", {lua_quote(animal)}), "
-                    f"service_value(services.characters.snapshot({target})).creature.position, 1, false)",
-                    "        if purchase.ok then",
-                    "            local pet = purchase.value.handle",
-                    "            service_value(services.monsters.set_friendly(pet, true))",
-                    "            service_value(services.effects.add(pet, services.types.id(\"effect\", \"pet\"), "
+                    "        local wrapped_beta_npc = context and context.actors and context.actors.beta",
+                    '        if wrapped_beta_npc ~= nil and wrapped_beta_npc.kind == "creature" and wrapped_beta_npc.subtype == "npc" then',
+                    f"            local purchase = services.spawns.monster(services.types.id(\"monster\", {lua_quote(animal)}), "
+                    "service_value(services.characters.snapshot(wrapped_beta_npc)).creature.position, 1, false)",
+                    "            if purchase.ok then",
+                    "                local pet = purchase.value.handle",
+                    "                service_value(services.monsters.set_friendly(pet, true))",
+                    "                service_value(services.effects.add(pet, services.types.id(\"effect\", \"pet\"), "
                     "services.time.duration(1, \"turn\"), { permanent = true }))",
-                    "        elseif purchase.error.code ~= \"blocked\" then",
-                    "            service_value(purchase)",
+                    "            elseif purchase.error.code ~= \"blocked\" then",
+                    "                service_value(purchase)",
+                    "            end",
                     "        end",
                     "    end",
                 ])
@@ -31019,39 +36561,22 @@ def render_eoc(
             ):
                 if isinstance(effect, str):
                     trade_key = effect
-                    trade_effect: Any = {trade_key: -1}
                 else:
                     trade_key = next(key for key in (
                         "u_bulk_donate", "npc_bulk_donate",
                         "u_bulk_trade_accept", "npc_bulk_trade_accept",
                         "quote_npc_trade_item",
                     ) if key in effect)
-                    trade_effect = effect
-                rendered = (
-                    render_static_quote_trade_effect(
-                        trade_effect, trade_key,
-                        avatar_actor_proven, npc_event_character_actor_proven,
-                    ) if trade_key == "quote_npc_trade_item" else
-                    render_static_bulk_trade_effect(
-                        trade_effect, trade_key,
-                        avatar_actor_proven, npc_event_character_actor_proven,
-                        item_event_character_actor_proven or inline_item_actor,
-                    )
+                message = _legacy_trade_action_todo(trade_key) or (
+                    "native trade effect needs exact participants and selected Items"
                 )
-                if rendered is not None:
-                    lines.extend(rendered)
-                    converted_effect = True
-                else:
-                    lines.append(
-                        "    -- TODO: translate the trade operation through typed "
-                        "actor and item services."
-                    )
-                    result.add_todo(
-                        "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs trade actor/item conversion"
-                    )
-                    all_effects_converted = False
+                lines.append(f"    -- TODO: {message}.")
+                result.add_todo(
+                    "manual_rewrite",
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                    f"{message}"
+                )
+                all_effects_converted = False
             elif (
                 isinstance(effect, dict) and any(key in effect for key in (
                     "quote_vehicle_full_repair", "select_vehicle_part_service",
@@ -31063,34 +36588,56 @@ def render_eoc(
                     "start_vehicle_full_repair",
                 }
             ):
+                todo_category = "manual_rewrite"
                 if isinstance(effect, str):
                     vehicle_key = effect
-                    vehicle_effect: Any = effect
+                    if not static_wrapped_beta_npc:
+                        reason = (
+                            "needs direct talk-topic beta NPC proof; the native WRAP "
+                            "vehicle/order flow also differs from the Platform service"
+                        )
+                    elif not vehicle_actor_override:
+                        reason = (
+                            "needs an exact vehicle handle; the native WRAP vehicle/order "
+                            "flow differs from the Platform service"
+                        )
+                    else:
+                        reason = {
+                            "quote_vehicle_full_repair": (
+                                "native quote uses the existing marked vehicle and repair "
+                                "multiplier, while the Platform service marks a vehicle "
+                                "and changes the multiplier"
+                            ),
+                            "select_vehicle_part_service": (
+                                "native selection uses existing marked vehicle state, "
+                                "while the Platform service marks a vehicle and applies "
+                                "a multiplier"
+                            ),
+                            "start_vehicle_full_repair": (
+                                "native start begins the existing paid order, while the "
+                                "Platform service requotes and charges the mechanic"
+                            ),
+                        }[vehicle_key]
                 else:
                     vehicle_key = next(key for key in (
                         "quote_vehicle_full_repair", "select_vehicle_part_service",
                         "start_vehicle_full_repair",
                     ) if key in effect)
-                    vehicle_effect = effect
-                rendered = render_static_vehicle_service_effect(
-                    vehicle_effect, vehicle_key, npc_event_character_actor_proven,
-                    vehicle_actor_override,
+                    todo_category = "semantic_choice"
+                    reason = (
+                        f"native WRAP {vehicle_key} accepts only a string effect; "
+                        "this object-shaped form has no native effect semantics"
+                    )
+                lines.append(
+                    f"    -- TODO: preserve native {vehicle_key}: {reason}."
                 )
-                if rendered is not None:
-                    lines.extend(rendered)
-                    converted_effect = True
-                else:
-                    lines.append(
-                        "    -- TODO: translate the vehicle service through typed "
-                        "vehicle and mechanic handles."
-                    )
-                    result.add_todo(
-                        "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs vehicle service conversion"
-                    )
-                    all_effects_converted = False
-            elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
+                result.add_todo(
+                    todo_category,
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                    f"{reason}"
+                )
+                all_effects_converted = False
+            elif static_wrapped_beta_npc and isinstance(effect, str) and effect in {
                 "barber_hair", "barber_beard", "buy_haircut", "buy_shave"
             }:
                 method, choice = {
@@ -31102,24 +36649,24 @@ def render_eoc(
                 lines.extend([
                     "    do",
                     f"        local provider = {npc_actor_expression or 'actor'}",
-                    '        if provider ~= nil and provider.subtype == "npc" then',
+                    '        if provider ~= nil and provider.kind == "creature" and provider.subtype == "npc" then',
                     f"            service_value(services.npcs.grooming.{method}("
                     f"provider, services.characters.avatar(), {lua_quote(choice)}))",
                     "        end",
                     "    end",
                 ])
                 converted_effect = True
-            elif (npc_actor_proven or npc_actor_expression is not None) and effect == "start_trade":
+            elif static_wrapped_beta_npc and effect == "start_trade":
                 lines.extend([
                     "    do",
                     f"        local provider = {npc_actor_expression or 'actor'}",
-                    '        if provider ~= nil and provider.subtype == "npc" then',
+                    '        if provider ~= nil and provider.kind == "creature" and provider.subtype == "npc" then',
                     '            service_value(services.trade.open(provider, services.characters.avatar(), 0, services.translate("Trade"), true))',
                     "        end",
                     "    end",
                 ])
                 converted_effect = True
-            elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
+            elif static_wrapped_beta_npc and isinstance(effect, str) and effect in {
                 "revert_activity", "morale_chat_activity",
             }:
                 partner = npc_actor_expression or "actor"
@@ -31129,12 +36676,12 @@ def render_eoc(
                     call = ("services.activities.socialize(services.characters.avatar(), "
                             f'{partner}, services.time.duration(600, "turn"))')
                 lines.extend([
-                    f'    if ({partner}) ~= nil and ({partner}).subtype == "npc" then',
+                    f'    if ({partner}) ~= nil and ({partner}).kind == "creature" and ({partner}).subtype == "npc" then',
                     f"        service_value({call})",
                     "    end",
                 ])
                 converted_effect = True
-            elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
+            elif static_wrapped_beta_npc and isinstance(effect, str) and effect in {
                 "do_butcher", "do_chop_plank", "do_chop_trees", "do_construction",
                 "do_farming", "do_fishing", "do_mining", "do_mopping",
                 "do_read_repeatedly", "do_study", "sort_loot", "do_disassembly", "do_vehicle_deconstruct", "do_vehicle_repair",
@@ -31153,12 +36700,12 @@ def render_eoc(
                 }[effect]
                 worker = npc_actor_expression or "actor"
                 lines.extend([
-                    f'    if ({worker}) ~= nil and ({worker}).subtype == "npc" then',
+                    f'    if ({worker}) ~= nil and ({worker}).kind == "creature" and ({worker}).subtype == "npc" then',
                     f'        service_value(services.activities.assign_npc_job({worker}, {lua_quote(job)}))',
                     "    end",
                 ])
                 converted_effect = True
-            elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
+            elif static_wrapped_beta_npc and isinstance(effect, str) and effect in {
                 "do_read", "do_eread", "do_craft", "find_mount",
             }:
                 job = {"do_read": "read", "do_eread": "read_ebook",
@@ -31167,42 +36714,35 @@ def render_eoc(
                 lines.extend(render_optional_npc_job(
                     npc_actor_expression or "actor", job, normal_return))
                 converted_effect = True
-            elif (npc_actor_proven or npc_actor_expression is not None) and effect == "drop_items_in_place":
+            elif static_wrapped_beta_npc and effect == "drop_items_in_place":
                 worker = npc_actor_expression or "actor"
                 lines.extend([
-                    f'    if ({worker}) ~= nil and ({worker}).subtype == "npc" then',
+                    f'    if ({worker}) ~= nil and ({worker}).kind == "creature" and ({worker}).subtype == "npc" then',
                     f'        service_value(services.npcs.orders.run({worker}, "drop_carried_items"))',
                     "    end",
                 ])
                 converted_effect = True
-            elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
+            elif static_wrapped_beta_npc and isinstance(effect, str) and effect in {
                 "start_training", "start_training_npc", "start_training_seminar",
             }:
                 mode = {"start_training": "player", "start_training_npc": "npc",
                         "start_training_seminar": "seminar"}[effect]
                 provider = npc_actor_expression or "actor"
                 lines.extend([
-                    f'    if ({provider}) ~= nil and ({provider}).subtype == "npc" then',
+                    f'    if ({provider}) ~= nil and ({provider}).kind == "creature" and ({provider}).subtype == "npc" then',
                     f'        service_value(services.npcs.training.start_selected({provider}, '
                     f'services.characters.avatar(), {lua_quote(mode)}))',
                     "    end",
                 ])
                 converted_effect = True
             elif effect == "distribute_food_auto":
-                # This legacy operation discovers a camp from the NPC's
-                # position and then enters the old camp-food workflow.  The
-                # Platform food API requires an explicit camp and manager,
-                # while the storage side requires an exact holder.  No
-                # source-backed participant is available here, so do not
-                # lower it to an activity or silently select a camp.
-                lines.append(
-                    "    -- TODO: distribute_food_auto requires explicit camp, "
-                    "manager, and storage holder handles."
-                )
+                food_todo = _distribute_food_auto_todo(effect)
+                assert food_todo is not None
+                lines.append(f"    -- TODO: {food_todo}.")
                 result.add_todo(
-                    "manual_rewrite",
+                    "platform_gap",
                     f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                    "needs explicit camp, manager, and storage holder handles"
+                    f"{food_todo}"
                 )
                 all_effects_converted = False
             elif effect == "lightning":
@@ -31247,8 +36787,9 @@ def render_eoc(
             }:
                 if effect == "take_control":
                     reason = (
-                        "control transfer requires original dialogue participants, "
-                        "callback branches and refreshed handles after avatar replacement"
+                        "native take_control requires an avatar alpha and may swap an NPC beta, "
+                        "then runs true_eocs or false_eocs with the original talkers; "
+                        "Platform transfer invalidates those handles"
                     )
                     category = "manual_rewrite"
                 else:
@@ -31260,35 +36801,49 @@ def render_eoc(
                     f"{source.location}: EOC {eoc_id} effect #{effect_index} {reason}"
                 )
                 all_effects_converted = False
-            elif (
-                isinstance(effect, str) and
-                effect in {
-                    "start_camp", "assign_camp", "return_to_camp_duties",
-                    "abandon_camp",
-                }
-            ):
-                rendered = render_static_camp_npc_effect(
-                    effect, npc_event_character_actor_proven
+            elif isinstance(effect, dict) and "take_control" in effect:
+                reason = (
+                    "native take_control branches on avatar alpha and NPC beta, then runs "
+                    "true_eocs or false_eocs against the original dialogue after a possible "
+                    "identity swap; Platform transfer invalidates those handles"
+                )
+                lines.append(f"    -- TODO: {reason}.")
+                result.add_todo(
+                    "manual_rewrite",
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} {reason}"
+                )
+                all_effects_converted = False
+            elif (camp_selector_todo := _camp_selector_todo(effect)) is not None:
+                category, reason = camp_selector_todo
+                lines.append(f"    -- TODO: {reason}.")
+                result.add_todo(
+                    category,
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} {reason}"
+                )
+                all_effects_converted = False
+            elif isinstance(effect, dict) and "trigger_event" in effect:
+                rendered, reason = render_static_trigger_event(
+                    effect,
+                    actor_expression=actor_expression,
+                    alpha_character_proven=character_actor_proven,
+                    beta_expression=(
+                        "context.actors.beta"
+                        if isinstance(required_event, str) and
+                        required_event in TALKER_ACTOR_EVENTS else None
+                    ),
                 )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
-                    lines.append(
-                        "    -- TODO: translate the camp-worker action only with "
-                        "explicit camp, manager, and worker handles."
-                    )
+                    reason = reason or "trigger_event needs an explicit native argument conversion"
+                    lines.append(f"    -- TODO: {reason}.")
                     result.add_todo(
-                        "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs proven camp, manager, and worker handles"
+                        "semantic_choice"
+                        if "native event registry" in reason else "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} {reason}"
                     )
                     all_effects_converted = False
-            elif isinstance(effect, dict) and "trigger_event" in effect:
-                event_name = effect.get("trigger_event")
-                if isinstance(event_name, str):
-                    lines.append(f"    runtime.trigger({lua_quote('game:' + event_name)})")
-                    converted_effect = True
             elif isinstance(effect, dict) and ("u_deal_damage" in effect or "npc_deal_damage" in effect):
                 key = "u_deal_damage" if "u_deal_damage" in effect else "npc_deal_damage"
                 damage_type = effect.get(key)
@@ -31408,7 +36963,7 @@ def render_eoc(
                 rendered = render_static_teleport_effect(
                     effect,
                     monster_actor_proven=monster_actor_proven,
-                    avatar_actor_proven=exact_avatar_actor_proven,
+                    avatar_actor_proven=teleport_avatar_actor_proven,
                     vehicle_actor_proven=exact_vehicle_actor_proven,
                     npc_actor_proven=exact_npc_actor_proven,
                     npc_actor_expression=npc_actor_expression,
@@ -31418,13 +36973,21 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate teleport through a typed "
-                        "creature-relocation service."
+                        "    -- TODO: preserve native teleport_to_point map "
+                        "loading/recentering and target default/conversion; require a "
+                        "source-proven global coordinate write, and retain "
+                        "NPC/Item/Vehicle/Zone dispatch, other target scopes, and "
+                        "translated messages."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        "teleport needs native teleport_to_point map loading/recentering "
+                        "and target default/conversion; a global_val target needs a "
+                        "source-proven write with exact coordinate type because missing "
+                        "native values default to the origin while Lua resolve skips them. "
+                        "NPC/Item/Vehicle/Zone dispatch, other target scopes, and "
+                        "translated success/failure messages remain unsupported"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and ("u_set_goal" in effect or "npc_set_goal" in effect):
@@ -31448,26 +37011,98 @@ def render_eoc(
                     )
                     all_effects_converted = False
             elif effect == "drop_stolen_item":
-                lines.append(
-                    "    -- TODO: drop_stolen_item needs explicit Item handles, "
-                    "source holders, and a destination transaction."
-                )
-                result.add_todo(
-                    "manual_rewrite",
-                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                    "drop_stolen_item needs explicit equipment/trade holders"
-                )
-                all_effects_converted = False
+                # The native static WRAP selects dialogue beta and no-ops when
+                # beta is not an NPC.  Preserve that exact participant
+                # requirement; only a direct pair or pre-damage melee pair
+                # proves this role in the current migration.
+                if wrapped_npc_beta_expression is not None:
+                    lines.extend([
+                        "    do",
+                        "        local beta = context and context.actors and "
+                        f"{wrapped_npc_beta_expression}",
+                        '        if beta ~= nil and beta.kind == "creature" and beta.subtype == "npc" then',
+                        "            service_value(services.npcs.drop_stolen_items(beta))",
+                        "        end",
+                        "    end",
+                    ])
+                    converted_effect = True
+                else:
+                    lines.append(
+                        "    -- TODO: drop_stolen_item's native wrapper requires a "
+                        "dialogue beta NPC; this EOC has no proven live beta pair."
+                    )
+                    result.add_todo(
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        "drop_stolen_item needs a proven live beta NPC pair"
+                    )
+                    all_effects_converted = False
+            elif effect == "player_weapon_drop":
+                # The static WRAP still requires talk_effect_fun_t's beta NPC
+                # before it invokes player_weapon_drop, even though the native
+                # function itself targets the global player Character.  Only
+                # direct topic or pre-damage melee pair proves that beta; the
+                # runtime subtype guard preserves the wrapper's no-op for a
+                # non-NPC beta.
+                if wrapped_npc_beta_expression is not None:
+                    lines.extend([
+                        "    do",
+                        "        local beta = context and context.actors and "
+                        f"{wrapped_npc_beta_expression}",
+                        '        if beta ~= nil and beta.kind == "creature" and beta.subtype == "npc" then',
+                        "            service_value(services.characters.drop_weapon(services.characters.avatar()))",
+                        "        end",
+                        "    end",
+                    ])
+                    converted_effect = True
+                else:
+                    lines.append(
+                        "    -- TODO: player_weapon_drop's native wrapper requires a "
+                        "dialogue beta NPC; this EOC has no proven live beta pair."
+                    )
+                    result.add_todo(
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        "player_weapon_drop needs a proven live beta NPC pair"
+                    )
+                    all_effects_converted = False
+            elif effect == "drop_weapon":
+                # The native static WRAP passes dialogue beta to
+                # talk_effect_fun_t, so alpha-only event actors cannot be
+                # substituted here.  Preserve its get_npc() no-op for any
+                # beta that is not an exact NPC GameHandle.
+                if wrapped_npc_beta_expression is not None:
+                    lines.extend([
+                        "    do",
+                        "        local beta = context and context.actors and "
+                        f"{wrapped_npc_beta_expression}",
+                        '        if beta ~= nil and beta.kind == "creature" and beta.subtype == "npc" then',
+                        "            service_value(services.npcs.drop_weapon(beta))",
+                        "        end",
+                        "    end",
+                    ])
+                    converted_effect = True
+                else:
+                    lines.append(
+                        "    -- TODO: drop_weapon targets native dialogue beta, "
+                        "which is not proven as an NPC for this EOC."
+                    )
+                    result.add_todo(
+                        "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                        "drop_weapon needs a proven live beta NPC pair"
+                    )
+                    all_effects_converted = False
             elif isinstance(effect, str) and effect in {
                 "give_aid", "lesser_give_aid", "give_all_aid", "lesser_give_all_aid",
             }:
-                if npc_actor_proven or npc_actor_expression is not None:
+                if static_wrapped_beta_npc:
                     level = "basic" if effect.startswith("lesser_") else "advanced"
                     include_allies = "true" if "all_aid" in effect else "false"
                     lines.extend([
                         "    do",
                         f"        local provider = {npc_actor_expression or 'actor'}",
-                        '        if provider ~= nil and provider.subtype == "npc" then',
+                        '        if provider ~= nil and provider.kind == "creature" and provider.subtype == "npc" then',
                         "            service_value(services.npcs.medical.provide_aid("
                         "provider, services.characters.avatar(), "
                         f"{lua_quote(level)}, {include_allies}))",
@@ -31617,50 +37252,30 @@ def render_eoc(
                     "blueprint/holders and static Item requests"
                 )
                 all_effects_converted = False
-            elif effect == "basecamp_mission":
-                lines.append(
-                    "    -- TODO: translate basecamp_mission only with explicit "
-                    "camp, manager, and worker handles."
-                )
-                lines.append(
-                    "    -- TODO: Camp_Upgrade/UI and other implicit upgrade shapes also "
-                    "need explicit target, blueprint, and source/destination holder Item handles."
-                )
+            elif (camp_object_todo := _camp_selector_object_todo(effect)) is not None:
+                lines.append(f"    -- TODO: {camp_object_todo}.")
                 result.add_todo(
-                    "manual_rewrite",
-                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                    "needs proven camp, manager, and worker handles; upgrade-shaped "
-                    "Camp_Upgrade/UI inputs also need explicit target, blueprint, and holders"
+                    "semantic_choice",
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} {camp_object_todo}"
                 )
                 all_effects_converted = False
-            elif isinstance(effect, dict) and "basecamp_mission" in effect:
-                lines.append(
-                    "    -- TODO: translate basecamp_mission only with explicit "
-                    "camp, manager, and worker handles."
-                )
-                result.add_todo(
-                    "manual_rewrite",
-                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                    "needs proven camp, manager, and worker handles"
-                )
-                all_effects_converted = False
-            elif isinstance(effect, str) and effect in {"bionic_install", "bionic_remove"} and npc_actor_expression is not None:
+            elif isinstance(effect, str) and effect in {"bionic_install", "bionic_remove"} and static_wrapped_beta_npc:
                 operation = "install" if effect == "bionic_install" else "remove"
                 lines.extend([
                     "    do",
                     f"        local provider = {npc_actor_expression}",
-                    '        if provider ~= nil and provider.subtype == "npc" then',
+                    '        if provider ~= nil and provider.kind == "creature" and provider.subtype == "npc" then',
                     "            service_value(services.npcs.medical.open_bionic_service("
                     f"provider, {lua_quote(operation)}, services.characters.avatar()))",
                     "        end",
                     "    end",
                 ])
                 converted_effect = True
-            elif effect == "repair_bionic_limbs" and npc_actor_expression is not None:
+            elif effect == "repair_bionic_limbs" and static_wrapped_beta_npc:
                 lines.extend([
                     "    do",
                     f"        local provider = {npc_actor_expression}",
-                    '        if provider ~= nil and provider.subtype == "npc" then',
+                    '        if provider ~= nil and provider.kind == "creature" and provider.subtype == "npc" then',
                     "            service_value(services.npcs.medical.repair_bionic_limbs("
                     "provider, services.characters.avatar()))",
                     "        end",
@@ -31694,40 +37309,104 @@ def render_eoc(
                     if "u_remove_item_with" in effect
                     else "npc_remove_item_with"
                 )
-                actor_proven = (
-                    avatar_actor_proven or npc_event_character_actor_proven
-                    if key == "u_remove_item_with"
-                    else npc_event_character_actor_proven
-                )
-                actor_expression = (
-                    "actor"
-                    if key == "npc_remove_item_with" or avatar_actor_proven
-                    else "services.characters.avatar()"
-                )
+                # The native selectors target dialogue alpha and beta,
+                # respectively.  The event dispatcher promotes only its
+                # designated Character field to alpha; an NPC event actor is
+                # not beta.  Direct dialogue callbacks retain both roles, but
+                # beta still needs a runtime Character guard before invoking
+                # the Character inventory API.
+                direct_talk_topic_pair_proven = npc_dialogue_mission_pair_proven
+                if key == "u_remove_item_with":
+                    event_alpha_proven = (
+                        event_character_actor_proven and
+                        event_actor_field in NATIVE_EOC_ALPHA_EVENT_FIELDS
+                    )
+                    actor_proven = (
+                        avatar_actor_proven or event_alpha_proven or
+                        direct_talk_topic_pair_proven
+                    )
+                    actor_expression = (
+                        "actor" if avatar_actor_proven or event_alpha_proven else
+                        "alpha" if direct_talk_topic_pair_proven else None
+                    )
+                else:
+                    actor_proven = direct_talk_topic_pair_proven
+                    actor_expression = "beta" if actor_proven else None
                 rendered = render_static_remove_item_with_effect(
                     effect, key, actor_proven, actor_expression
                 )
                 if rendered is not None:
-                    lines.extend(rendered)
+                    if actor_expression == "beta":
+                        # This proof only admits direct talk-topic response
+                        # callbacks, whose native dialogue carries both
+                        # participants. The nil guard fails closed on malformed
+                        # Platform context;
+                        # event-only EOCs remain TODO because mutable
+                        # dialogue::actor(true) would otherwise fall back to
+                        # alpha when beta is absent.
+                        lines.extend([
+                            "    do",
+                            "        local beta = context and context.actors and context.actors.beta",
+                            (
+                                '        if beta ~= nil and beta.kind == "creature" and '
+                                '(beta.subtype == "avatar" or beta.subtype == "character" '
+                                'or beta.subtype == "npc") then'
+                            ),
+                            *[f"    {line}" for line in rendered],
+                            "        end",
+                            "    end",
+                        ])
+                    elif actor_expression == "alpha":
+                        lines.extend([
+                            "    do",
+                            "        local alpha = context and context.actors and context.actors.alpha",
+                            (
+                                '        if alpha ~= nil and alpha.kind == "creature" and '
+                                '(alpha.subtype == "avatar" or alpha.subtype == "character" '
+                                'or alpha.subtype == "npc") then'
+                            ),
+                            *[f"    {line}" for line in rendered],
+                            "        end",
+                            "    end",
+                        ])
+                    else:
+                        lines.extend(rendered)
                     converted_effect = True
                 else:
+                    required_role = (
+                        "a proven dialogue alpha Character"
+                        if key == "u_remove_item_with" else
+                        "a direct talk-topic beta Character proof"
+                    )
                     lines.append(
-                        "    -- TODO: translate item removal through the "
-                        "typed inventory traversal service."
+                        "    -- TODO: translate item removal with a static "
+                        "item ID and its proven native dialogue role."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs a bounded inventory-removal conversion"
+                        "needs a static item ID accepted by services.types.id and "
+                        f"{required_role}"
                     )
                     all_effects_converted = False
             elif (isinstance(effect, dict) and "give_equipment" in effect) or effect == "give_equipment":
+                require_beta_npc = (
+                    effect == "give_equipment" or
+                    isinstance(effect, dict) and "give_equipment" in effect
+                )
                 rendered = render_static_give_equipment_effect(
-                    effect, npc_actor_proven, avatar_actor_proven,
-                    npc_actor_expression=npc_actor_expression,
+                    effect,
+                    static_wrapped_beta_npc if require_beta_npc else npc_actor_proven,
+                    avatar_actor_proven,
+                    npc_actor_expression=(
+                        npc_actor_expression
+                        if not require_beta_npc or static_wrapped_beta_npc else None
+                    ),
                     alpha_actor_expression="actor" if (
-                        talker_pair_override or unbound_mixed_talker_contract
+                        talker_pair_override or unbound_mixed_talker_contract or
+                        require_beta_npc and npc_dialogue_mission_pair_proven
                     ) else None,
+                    require_beta_npc=require_beta_npc,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -31751,14 +37430,12 @@ def render_eoc(
                     lines.extend(rendered)
                     converted_effect = True
                 else:
-                    lines.append(
-                        "    -- TODO: translate the monster purchase through "
-                        "the typed trade service."
-                    )
+                    message = _legacy_trade_action_todo("u_buy_monster")
+                    lines.append(f"    -- TODO: {message}.")
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs a bounded monster-purchase conversion"
+                        f"{message}"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "u_spend_cash" in effect:
@@ -31770,14 +37447,12 @@ def render_eoc(
                     lines.extend(rendered)
                     converted_effect = True
                 else:
-                    lines.append(
-                        "    -- TODO: translate the cash payment through "
-                        "the typed trade service."
-                    )
+                    message = _legacy_trade_action_todo("u_spend_cash")
+                    lines.append(f"    -- TODO: {message}.")
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs a bounded cash-payment conversion"
+                        f"{message}"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "u_buy_item" in effect:
@@ -31789,34 +37464,31 @@ def render_eoc(
                     lines.extend(rendered)
                     converted_effect = True
                 else:
-                    lines.append(
-                        "    -- TODO: translate the item purchase through "
-                        "the typed inventory/trade services."
-                    )
+                    trade_todo = _legacy_trade_action_todo("u_buy_item")
+                    lines.append(f"    -- TODO: {trade_todo}.")
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs a bounded item-purchase conversion"
+                        f"{trade_todo}"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "u_sell_item" in effect:
                 rendered = render_static_sell_item_effect(
-                    effect, npc_event_character_actor_proven,
-                    npc_actor_expression,
-                    avatar_actor_proven,
+                    effect,
+                    actor_expression if sell_item_pair_proven else None,
+                    "context.actors.interlocutor"
+                    if sell_item_pair_proven else None,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
-                    lines.append(
-                        "    -- TODO: translate the item sale through "
-                        "the typed inventory/trade services."
-                    )
+                    trade_todo = _legacy_trade_action_todo("u_sell_item")
+                    lines.append(f"    -- TODO: {trade_todo}.")
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs a bounded item-sale conversion"
+                        f"{trade_todo}"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and (
@@ -31859,19 +37531,32 @@ def render_eoc(
                     effect, key, avatar_actor_proven,
                     npc_event_character_actor_proven,
                     eoc_function_names or {},
+                    actor_expression=(
+                        alpha_effect_target[0] if key.startswith("u_") and
+                        alpha_effect_target is not None and
+                        alpha_effect_target[1] == "character" else
+                        beta_effect_target[0] if key.startswith("npc_") and
+                        beta_effect_target is not None and
+                        beta_effect_target[1] == "character" else None
+                    ),
+                    dialogue_alpha_expression=(
+                        alpha_effect_target[0] if key.startswith("u_") and
+                        alpha_effect_target is not None and
+                        alpha_effect_target[1] == "character" else None
+                    ),
                 )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate remainder selection through "
-                        "typed mutation/spell/recipe services."
+                        "    -- TODO: remainder roll needs a proven Character, "
+                        "bounded literal parameters, and resolvable callbacks."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs a bounded remainder-roll conversion"
+                        "needs a proven actor or exact literal remainder parameters and callbacks"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and ("u_set_guard_pos" in effect or "npc_set_guard_pos" in effect):
@@ -31894,47 +37579,48 @@ def render_eoc(
                         "needs a bounded guard-variable conversion"
                     )
                     all_effects_converted = False
-            elif (
-                effect == "goto_location" or
-                (
-                    isinstance(effect, dict) and
-                    set(effect) == {"goto_location"} and
-                    effect.get("goto_location") in ({}, None)
-                )
-            ):
-                rendered = render_static_goto_location_effect(
-                    "actor" if npc_actor_proven else None
-                )
-                if rendered is not None:
-                    lines.extend(rendered)
-                    converted_effect = True
+            elif effect == "goto_location":
+                if npc_actor_proven:
+                    category = "platform_gap"
+                    reason = (
+                        "goto_location cannot preserve native camp ordering, the "
+                        "NPC's saved first topic, or goal/path clearing after a "
+                        "declined or unreachable route with current typed services"
+                    )
                 else:
-                    lines.append(
-                        "    -- TODO: translate goto_location through a typed "
-                        "overmap navigation service."
-                    )
-                    result.add_todo(
-                        "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs a proven NPC dialogue actor"
-                    )
-                    all_effects_converted = False
+                    category = "manual_rewrite"
+                    reason = "goto_location needs a proven NPC dialogue actor"
+                lines.append(f"    -- TODO: {reason}.")
+                result.add_todo(
+                    category,
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} {reason}"
+                )
+                all_effects_converted = False
+            elif isinstance(effect, dict) and "goto_location" in effect:
+                reason = (
+                    "native WRAP goto_location accepts only a string; this "
+                    "object-shaped form has no native effect semantics"
+                )
+                lines.append(f"    -- TODO: {reason}.")
+                result.add_todo(
+                    "semantic_choice",
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} {reason}"
+                )
+                all_effects_converted = False
             elif isinstance(effect, dict) and "custom_light_level" in effect:
                 rendered = render_static_light_override(effect)
-                if rendered is None:
-                    rendered = render_dynamic_light_override(effect)
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate custom_light_level through an "
-                        "explicit world-light service."
+                        "    -- TODO: manually translate dynamic or non-native-range "
+                        "custom_light_level values."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        "needs proven static native-int and duration values"
                     )
                     all_effects_converted = False
             elif (
@@ -32107,31 +37793,40 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate transform_line through an explicit "
-                        "world transformation service."
+                        "    -- TODO: native transform_line loads a temporary map "
+                        "from the line origin and can transform off-screen tiles; "
+                        "services.world.transform_line requires both endpoints in "
+                        "the currently loaded map."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        "transform_line can load a distant map, while the Platform "
+                        "operation only accepts loaded-map endpoints"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "u_travel_to_dimension" in effect:
                 rendered = render_static_dimension_travel_effect(
-                    effect, avatar_actor_proven
+                    effect, dimension_travel_avatar_actor_proven
                 )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate u_travel_to_dimension with an explicit "
-                        "dimension target and relocation policy."
+                        "    -- TODO: native u_travel_to_dimension follows dialogue alpha, "
+                        "but the typed service is Avatar-centered. This call needs an "
+                        "event-exclusive exact Avatar proof, a static dimension ID, "
+                        "service-bounded options, and static non-format messages; "
+                        "target_location and broader values remain unsupported."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        "u_travel_to_dimension needs an event-exclusive exact "
+                        "dialogue-alpha Avatar proof; "
+                        "dynamic dimension/messages, target_location, and radii outside "
+                        "the typed service range remain unsupported"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "clear_dimension" in effect:
@@ -32144,27 +37839,35 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate clear_dimension through the "
-                        "typed relocation service."
+                        "    -- TODO: native clear_dimension queries saved directories "
+                        "by filename match, then deletes a raw path; the typed service "
+                        "requires a registered, inactive dimension ID."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        "needs native directory-query/deletion semantics or a "
+                        "deliberate content rewrite"
                     )
                     all_effects_converted = False
+            elif effect == "open_dialogue" and npc_alpha_fallback_event_actor_proven:
+                # This exact event has a live NPC as alpha, so native
+                # f_open_dialogue returns before opening UI; bare string form
+                # has no false_eocs and is a no-op. Do not infer this for
+                # avatar, NPC_DEATH, callable, or topic-object shapes.
+                converted_effect = True
             elif effect == "open_dialogue" or (
                 isinstance(effect, dict) and "open_dialogue" in effect
             ):
                 lines.append(
-                    "    -- TODO: translate open_dialogue only when exact NPC "
-                    "and avatar handles plus an explicit topic are available."
+                    "    -- TODO: open_dialogue's topic-only UI/no-topic beta clone "
+                    "and post-UI EOCs do not match services.npcs.open_dialogue."
                 )
                 result.add_todo(
                     "semantic_choice",
                     f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                    "needs an explicit dialogue participant conversion with "
-                    "exact NPC/avatar handles and topic"
+                    "needs native topic-talker or beta-clone dialogue plus "
+                    "post-UI true_eocs/false_eocs semantics"
                 )
                 all_effects_converted = False
             elif isinstance(effect, dict) and "place_override" in effect:
@@ -32176,12 +37879,13 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate place_override through the typed world service."
+                        "    -- TODO: place_override needs supported translation "
+                        "loading and source-proven dynamic text/duration/key providers."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        "needs translation-loader or dynamic-provider semantics"
                     )
                     all_effects_converted = False
             elif (
@@ -32205,40 +37909,44 @@ def render_eoc(
                     lines.extend(rendered)
                     converted_effect = True
                 else:
+                    actor_unproven = target_expression is None
                     lines.append(
-                        "    -- TODO: translate the activity id and duration into "
-                        "a plain typed activity service."
+                        "    -- TODO: activity assignment needs a source-proven "
+                        "Character and the native activity actor, handlers, "
+                        "EOC policy, and duration semantics."
                     )
                     result.add_todo(
-                        "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        "manual_rewrite" if actor_unproven else "platform_gap",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} " +
+                        (
+                            "needs source-proven Character activity target"
+                            if actor_unproven else
+                            "needs native activity assignment semantics for this id"
+                        )
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "math" in effect:
                 rendered = render_static_character_math(
-                    effect, character_actor_proven,
-                    npc_event_character_actor_proven,
-                    creature_actor_proven,
+                    effect, effect_actor_targets,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
+                    order_choice = _math_assignment_order_choice(effect, effect_actor_targets)
                     lines.append(
-                        "    -- TODO: translate this math expression into "
-                        "ordinary Lua and typed variable services."
+                        "    -- TODO: " + (order_choice or "translate this math expression into ordinary Lua "
+                                           "only after proving native scope, RNG, and context semantics") + "."
                     )
                     result.add_todo(
-                        "manual_rewrite",
-                        f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        "semantic_choice" if order_choice else "manual_rewrite",
+                        f"{source.location}: EOC {eoc_id} effect #{effect_index} " +
+                        (order_choice or "needs domain-service conversion")
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "copy_var" in effect:
                 rendered = render_static_character_copy_var(
-                    effect, character_actor_proven, npc_event_character_actor_proven,
-                    npc_actor_expression,
+                    effect, effect_actor_targets,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -32246,7 +37954,9 @@ def render_eoc(
                 else:
                     lines.append(
                         "    -- TODO: translate copy_var into typed variable "
-                        "services."
+                        "services only for bounded literal u/npc/global scopes "
+                        "with exact handles; "
+                        "context_val and var_val need a value-preserving copy path."
                     )
                     result.add_todo(
                         "manual_rewrite",
@@ -32274,40 +37984,35 @@ def render_eoc(
                     all_effects_converted = False
             elif isinstance(effect, dict) and "sample_range" in effect:
                 rendered = render_static_sample_range(
-                    effect, avatar_actor_proven, npc_event_character_actor_proven
+                    effect, sample_range_alpha_actor_proven
                 )
-                if rendered is None:
-                    rendered = render_dynamic_sample_range(
-                        effect, avatar_actor_proven,
-                        npc_event_character_actor_proven,
-                    )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate sample_range into bounded "
-                        "random and variable services."
+                        "    -- TODO: sample_range needs a live alpha, static "
+                        "numeric inputs, bounded population, and native RNG order."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        "needs a bounded live-alpha native sample_range conversion"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "set_string_var" in effect:
                 rendered = render_static_character_string_var(
-                    effect, character_actor_proven,
-                    npc_event_character_actor_proven,
-                    npc_actor_expression,
+                    effect, effect_actor_targets,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate set_string_var into typed "
-                        "variable services."
+                        "    -- TODO: translate set_string_var only for native string "
+                        "providers with native RNG and exact participant handles; "
+                        "unsupported input/translation shapes, "
+                        "unproven source/target owners remain TODO."
                     )
                     result.add_todo(
                         "manual_rewrite",
@@ -32317,20 +38022,22 @@ def render_eoc(
                     all_effects_converted = False
             elif isinstance(effect, dict) and "mirror_coordinates" in effect:
                 rendered = render_static_mirror_coordinates(
-                    effect, character_actor_proven, npc_event_character_actor_proven
+                    effect, character_actor_proven, npc_event_character_actor_proven,
+                    effect_actor_targets,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate mirror_coordinates through "
-                        "typed coordinate and variable services."
+                        "    -- TODO: mirror_coordinates requires valid Native coordinate "
+                        "variable descriptors and proven present storage owners. Missing "
+                        "participants and unsupported loaders need explicit diagnostics."
                     )
                     result.add_todo(
-                        "manual_rewrite",
+                        "platform_gap",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        "needs exact input/output storage presence and loader semantics"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "dimension_name" in effect:
@@ -32358,13 +38065,13 @@ def render_eoc(
                     converted_effect = True
                 else:
                     lines.append(
-                        "    -- TODO: translate alter_timed_events through a "
-                        "bounded timed-event service."
+                        "    -- TODO: manually resolve the variable-backed key "
+                        "or unsupported delay before retiming native events."
                     )
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs domain-service conversion"
+                        "needs manual key-scope or delay-shape resolution"
                     )
                     all_effects_converted = False
             elif (
@@ -32372,7 +38079,7 @@ def render_eoc(
                 "u_faction_rep" in effect
             ):
                 rendered = render_static_faction_rep(
-                    effect, npc_event_character_actor_proven
+                    effect, npc_alpha_fallback_event_actor_proven
                 )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -32392,9 +38099,16 @@ def render_eoc(
                 isinstance(effect, dict) and
                 "u_add_faction_trust" in effect
             ):
+                # Both native faction mutations call dialogue::actor(true).
+                # Only the event-exclusive npc_becomes_hostile path proves its
+                # missing-beta alpha fallback is the same live NPC handle.
+                trust_target = (
+                    "actor"
+                    if npc_alpha_fallback_event_actor_proven and
+                    npc_actor_expression == "actor" else None
+                )
                 rendered = render_static_faction_trust(
-                    effect,
-                    "actor" if avatar_actor_proven else None,
+                    effect, trust_target,
                 )
                 if rendered is not None:
                     lines.extend(rendered)
@@ -32546,8 +38260,9 @@ def render_eoc(
                     rendered = render_static_combat_ranged_attack(
                         effect, effect, avatar_actor_proven,
                         npc_event_character_actor_proven,
-                        npc_actor_expression,
                         creature_actor_proven,
+                        character_actor_proven,
+                        npc_dialogue_mission_pair_proven,
                     )
                 elif effect in {"u_prevent_death", "npc_prevent_death"}:
                     # The fatal avatar hook has a separate cancellable contract
@@ -32605,30 +38320,56 @@ def render_eoc(
                 )
             ):
                 rendered = None
-                if "assign_mission" in effect:
-                    rendered = render_static_assign_mission_effect(
-                        effect, avatar_actor_proven
+                mission_effect_count = sum(
+                    key in effect for key in (
+                        "assign_mission", "finish_mission",
+                        "remove_active_mission",
                     )
-                elif "finish_mission" in effect:
-                    rendered = render_static_finish_mission_effect(
-                        effect, avatar_actor_proven
-                    )
-                else:
-                    rendered = render_static_remove_active_mission_effect(
-                        effect, avatar_actor_proven
-                    )
+                )
+                if mission_effect_count == 1:
+                    if "assign_mission" in effect:
+                        rendered = render_static_assign_mission_effect(
+                            effect, avatar_actor_proven
+                        )
+                    elif "finish_mission" in effect:
+                        rendered = render_static_finish_mission_effect(
+                            effect, avatar_actor_proven
+                        )
+                    else:
+                        rendered = render_static_remove_active_mission_effect(
+                            effect, avatar_actor_proven
+                        )
                 if rendered is not None:
                     lines.extend(rendered)
                     converted_effect = True
                 else:
-                    lines.append(
-                        "    -- TODO: translate the mission lifecycle shape "
-                        "through typed mission services."
-                    )
+                    if mission_effect_count != 1:
+                        mission_gap = (
+                            "one object combines multiple mission effects; lower each "
+                            "native effect separately to preserve ordering"
+                        )
+                    elif "finish_mission" in effect:
+                        mission_gap = (
+                            "finish_mission needs a proven avatar, a literal mission ID, "
+                            "and either an omitted/boolean success or a bounded integer "
+                            "step; the native-order page scan fails closed past offset 1000000"
+                        )
+                    elif "remove_active_mission" in effect:
+                        mission_gap = (
+                            "object-form remove_active_mission needs a proven avatar and "
+                            "a literal mission ID; the native-order page scan fails closed "
+                            "past offset 1000000"
+                        )
+                    elif "assign_mission" in effect:
+                        mission_gap = (
+                            "assign_mission needs a proven avatar and a statically "
+                            "supported mission definition"
+                        )
+                    lines.append(f"    -- TODO: {mission_gap}.")
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs a bounded mission lifecycle conversion"
+                        f"{mission_gap}"
                     )
                     all_effects_converted = False
             elif isinstance(effect, dict) and "add_mission" in effect:
@@ -32669,54 +38410,99 @@ def render_eoc(
                         "needs a bounded NPC mission-provider conversion"
                     )
                     all_effects_converted = False
-            elif (
-                isinstance(effect, str) and
-                effect in {
-                    "assign_mission", "mission_success", "mission_failure",
-                    "clear_mission", "remove_active_mission", "mission_reward",
-                }
-            ):
-                rendered = render_static_selected_npc_mission_effect(
-                    effect, exact_npc_actor_proven,
-                    exact_avatar_actor_proven, npc_actor_expression
-                )
-                if rendered is not None:
-                    lines.extend(rendered)
+            elif isinstance(effect, str) and effect in {
+                "assign_mission", "mission_success", "mission_failure",
+                "clear_mission", "mission_reward",
+            }:
+                if static_wrapped_beta_npc and effect == "assign_mission":
+                    # This lowering is bounded to a live dialogue selection.
+                    # The Platform service additionally validates provider
+                    # ownership and unique available-list membership; native
+                    # assign_mission assumes those chatbin invariants.
+                    lines.extend(render_static_wrapped_beta_npc_call(
+                        "missions.assign_selected", "services.characters.avatar()"
+                    ))
                     converted_effect = True
                 else:
-                    lines.append(
-                        "    -- TODO: translate the selected NPC mission "
-                        "action through a typed provider service."
-                    )
+                    if static_wrapped_beta_npc:
+                        reason = {
+                            "mission_success": (
+                                "native wraps any non-null selection and adjusts "
+                                "provider/faction state; Platform also requires an "
+                                "assigned live selection and a complete goal unless force=true"
+                            ),
+                            "mission_failure": (
+                                "native fails any non-null selection and adjusts "
+                                "provider opinion; Platform requires a unique live "
+                                "NPC-provided, owner-assigned active mission"
+                            ),
+                            "clear_mission": (
+                                "native removes an assigned selection even while "
+                                "in progress; Platform only clears finished selections"
+                            ),
+                            "mission_reward": (
+                                "native adds owed value and opens reward trade; Platform "
+                                "only claims an unclaimed generic reward on a successful mission"
+                            ),
+                        }.get(effect, "the selected mission action is not equivalent")
+                        todo = f"TODO: preserve native {effect}: {reason}."
+                        detail = (
+                            f"native {effect} cannot be represented by the current "
+                            "Platform selected-mission service"
+                        )
+                    else:
+                        todo = (
+                            "TODO: translate the selected NPC mission action through "
+                            "a direct dialogue beta NPC."
+                        )
+                        detail = (
+                            "needs a direct talk-topic beta NPC for the selected "
+                            "mission action"
+                        )
+                    lines.append(f"    -- {todo}")
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        "needs an exact NPC provider, avatar owner, and selected mission shape"
+                        f"{detail}"
                     )
                     all_effects_converted = False
-            elif (
-                (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and
-                effect in {
-                    "npc_rules_menu", "set_npc_pickup",
-                }
-            ):
-                # These legacy effects open native NPC service surfaces.  The
-                # Platform contract exposes the same bounded services without
-                # retaining an EOC runner or raw dialogue object.
+            elif effect == "remove_active_mission":
+                invalid_shape = (
+                    "string-form remove_active_mission is not registered in the native "
+                    "WRAP map; use the object form with a mission type ID"
+                )
+                lines.append(f"    -- TODO: {invalid_shape}.")
+                result.add_todo(
+                    "manual_rewrite",
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                    f"{invalid_shape}"
+                )
+                all_effects_converted = False
+            elif static_wrapped_beta_npc and effect == "set_npc_pickup":
+                # This WRAP effect opens the native pickup-rules service.
                 provider = npc_actor_expression or "actor"
-                native_call = {
-                    "npc_rules_menu": f"services.npcs.open_rules({provider})",
-                    "set_npc_pickup": (
-                        f"services.npcs.orders.open_pickup_rules({provider})"
-                    ),
-                }[effect]
                 lines.extend([
-                    f'    if ({provider}) ~= nil and ({provider}).subtype == "npc" then',
-                    f"        service_value({native_call})",
+                    f'    if ({provider}) ~= nil and ({provider}).kind == "creature" and ({provider}).subtype == "npc" then',
+                    f"        service_value(services.npcs.orders.open_pickup_rules({provider}))",
                     "    end",
                 ])
                 converted_effect = True
-            elif (npc_actor_proven or npc_actor_expression is not None) and isinstance(effect, str) and effect in {
+            elif (
+                npc_talker_ui_actor_expression is not None and
+                effect == "npc_rules_menu"
+            ):
+                # Native passes get_npc() to the rules UI; a null NPC logs and
+                # exits without changing rules. open_rules requires an exact
+                # NPC handle, so skip that no-state-change case.
+                provider = npc_talker_ui_actor_expression
+                lines.extend([
+                    f'    if ({provider}) ~= nil and ({provider}).kind == "creature" and '
+                    f'({provider}).subtype == "npc" then',
+                    f"        service_value(services.npcs.open_rules({provider}))",
+                    "    end",
+                ])
+                converted_effect = True
+            elif static_wrapped_beta_npc and isinstance(effect, str) and effect in {
                 "bionic_install_allies", "bionic_remove_allies", "copy_npc_rules",
             }:
                 rendered = render_static_follower_service_effect(
@@ -32727,21 +38513,72 @@ def render_eoc(
                     converted_effect = True
                 else:
                     all_effects_converted = False
-            elif npc_actor_proven and isinstance(effect, str) and effect in {
+            elif isinstance(effect, str) and effect in {
                 "npc_gets_item", "npc_gets_item_to_use",
             }:
-                rendered = render_static_npc_item_selection(
-                    effect, npc_actor_proven, avatar_actor_proven
-                )
-                if rendered is not None:
-                    lines.extend(rendered)
-                    converted_effect = True
+                if has_event_trigger:
+                    item_picker_todo = (
+                        f"native EOC {effect} calls dialogue::actor(true)->give_item_to; "
+                        "scheduled event processing constructs an alpha-only dialogue, "
+                        "so the missing-beta diagnostic is logged and the call falls "
+                        "back to alpha (an NPC alpha opens the global avatar item picker); "
+                        "this is not an active two-party TALK response action, and "
+                        "services.npcs.offer_item needs the exact selected ItemHandle"
+                    )
                 else:
-                    all_effects_converted = False
-            elif effect == "take_control_menu":
-                reason = (
-                    "control menu requires refreshed participant handles after avatar replacement"
+                    item_picker_todo = (
+                        f"native EOC {effect} calls dialogue::actor(true)->give_item_to; "
+                        "nested EOCs may inherit two talkers from their caller, but a "
+                        "generic EOC handler cannot prove the active TALK response "
+                        "action or preserve the native alpha fallback; "
+                        "services.npcs.offer_item also needs the exact selected ItemHandle"
+                    )
+                lines.append(f"    -- TODO: {item_picker_todo}.")
+                result.add_todo(
+                    "manual_rewrite",
+                    f"{source.location}: EOC {eoc_id} effect #{effect_index} "
+                    f"{item_picker_todo}"
                 )
+                all_effects_converted = False
+            elif effect == "take_control_menu" and take_control_menu_live_terminal_proven:
+                # open_control_menu calls the same native Avatar menu entry.
+                # This EOC has no later operation or callback that can observe
+                # the handles invalidated if the player chooses a follower.
+                lines.append(
+                    "    -- Bounded source support: static JSON event emitters were "
+                    "screened; trusted Lua may still emit game_start."
+                )
+                lines.append(
+                    "    service_value(services.npcs.open_control_menu("
+                    "services.characters.avatar()))"
+                )
+                converted_effect = True
+            elif effect == "take_control_menu":
+                if avatar_fatal_hook or avatar_death_hook:
+                    reason = (
+                        "native death-hook control menu runs with a dead Avatar, but "
+                        "Platform GameHandle validation rejects dead creatures"
+                    )
+                elif inline_eoc or eoc_id in eoc_referenced_ids or dynamic_eoc_dispatch_present:
+                    reason = (
+                        "reentrant EOC calls can leave the live game_start actor context; "
+                        "the menu's Avatar handle must be proven at its call site"
+                    )
+                elif required_event == "game_start" and game_start_event_emitted_by_eoc:
+                    reason = (
+                        "another static JSON EOC can emit game_start and re-enter this "
+                        "handler outside the native live-start lifecycle"
+                    )
+                elif required_event == "game_start":
+                    reason = (
+                        "only a condition-free terminal menu action avoids later work with "
+                        "handles invalidated by an avatar identity swap"
+                    )
+                else:
+                    reason = (
+                        "native menu uses the current Avatar, but this source does not prove "
+                        "an event-exclusive live game_start Avatar handle"
+                    )
                 lines.append(f"    -- TODO: {reason}.")
                 result.add_todo(
                     "manual_rewrite",
@@ -32784,22 +38621,121 @@ def render_eoc(
                     lines.extend(rendered)
                     converted_effect = True
                 else:
-                    traversal_kind = (
-                        "inventory" if "_run_inv_eocs" in key else
-                        "monster" if "_run_monster_eocs" in key else
-                        "vehicle" if "_run_vehicle_eocs" in key else
-                        "fixed-zone" if "_run_fixed_zone_eocs" in key else
-                        "map" if "_map_run_" in key else
-                        "NPC"
-                    )
-                    lines.append(
-                        f"    -- TODO: translate {traversal_kind} traversal "
-                        "through ordinary Lua callbacks."
-                    )
+                    specific_traversal_todo = {
+                        "u_run_inv_eocs": (
+                            "native u_run_inv_eocs uses Character::all_items_loc "
+                            "(wielded and worn roots recursively in postorder, not "
+                            "carried inventory) and evaluates search_data with the "
+                            "owner/item talker context; services.items.page does not "
+                            "expose that exact set and order"
+                        ),
+                        "npc_run_inv_eocs": (
+                            "native npc_run_inv_eocs uses Character::all_items_loc "
+                            "(wielded and worn roots recursively in postorder, not "
+                            "carried inventory) and evaluates search_data with the "
+                            "owner/item talker context; services.items.page does not "
+                            "expose that exact set and order"
+                        ),
+                        "u_map_run_item_eocs": (
+                            "native u_map_run_item_eocs preserves points_in_radius "
+                            "and tile item order, cloning the alpha/beta owner talker "
+                            "and binding the selected item talker for search_data and "
+                            "callbacks; "
+                            "services.world.items_nearby sorts by position/UID, and "
+                            "manual_mult false_eocs only run when the candidate set is empty"
+                        ),
+                        "npc_map_run_item_eocs": (
+                            "native npc_map_run_item_eocs preserves points_in_radius "
+                            "and tile item order, cloning the alpha/beta owner talker "
+                            "and binding the selected item talker for search_data and "
+                            "callbacks; "
+                            "services.world.items_nearby sorts by position/UID, and "
+                            "manual_mult false_eocs only run when the candidate set is empty"
+                        ),
+                        "u_map_run_eocs": (
+                            "native u_map_run_eocs uses closest_points_first order "
+                            "and dbl_or_var range, writes optional var_info "
+                            "coordinates before each tile, reevaluates condition "
+                            "before each EOC, and calls effect_on_condition::activate "
+                            "with a copied dialogue/context; activation also evaluates the "
+                            "referenced EOC's own condition/false_effect and may fan "
+                            "out through global run_for_npcs. Callback metadata only "
+                            "proves actor class, not complete activation parity, and "
+                            "typed abs_ms target/read/write scope remains unproven"
+                        ),
+                        "npc_map_run_eocs": (
+                            "native npc_map_run_eocs uses mutable actor(true), which "
+                            "falls back to alpha with a debug diagnostic when beta is "
+                            "absent, then uses closest_points_first order, optional "
+                            "var_info writes, per-EOC condition checks, and "
+                            "effect_on_condition::activate with a copied dialogue/context. "
+                            "Activation also evaluates the referenced EOC's own "
+                            "condition/false_effect and may fan out through global "
+                            "run_for_npcs. Callback metadata only proves actor class, "
+                            "not complete activation parity, and typed abs_ms "
+                            "target/read/write scope remains unproven"
+                        ),
+                        "u_run_monster_eocs": (
+                            "native u_run_monster_eocs walks game::all_creatures() order "
+                            "and includes hallucination monsters; monster_range is an "
+                            "integer-only optional filter whose absence means unbounded. "
+                            "services.creatures.nearby has a finite radius, sorts by "
+                            "distance/type, and defaults to excluding hallucinations; "
+                            "native z_min/z_max double values convert to int by truncation. "
+                            "Native creates a fresh dialogue with each monster as alpha, "
+                            "so target talker and per-callback context semantics also differ"
+                        ),
+                        "npc_run_monster_eocs": (
+                            "native npc_run_monster_eocs reads mutable actor(true) beta "
+                            "(falling back to alpha with a debug diagnostic if absent), "
+                            "then walks game::all_creatures() order and includes hallucination "
+                            "monsters; monster_range is an integer-only optional filter whose "
+                            "absence means unbounded. services.creatures.nearby has a finite "
+                            "radius, sorts by distance/type, and defaults to excluding "
+                            "hallucinations; native z_min/z_max double values convert to int "
+                            "by truncation. Native creates a fresh dialogue with each monster "
+                            "as alpha and copies its context"
+                        ),
+                        "u_run_vehicle_eocs": (
+                            "native u_run_vehicle_eocs walks map::get_vehicles() order and "
+                            "uses rl_dist; vehicle_range is an integer-only optional filter "
+                            "whose absence means unbounded. services.world.vehicles sorts by "
+                            "position and the former lowering used square_distance. Native "
+                            "z_min/z_max double values convert to int by truncation. It "
+                            "creates a fresh dialogue with each vehicle as alpha, which "
+                            "ordinary handle callbacks and a shared Lua context do not preserve"
+                        ),
+                        "npc_run_vehicle_eocs": (
+                            "native npc_run_vehicle_eocs reads mutable actor(true) beta "
+                            "(falling back to alpha with a debug diagnostic if absent), "
+                            "then walks map::get_vehicles() order and uses rl_dist; "
+                            "vehicle_range is an integer-only optional filter whose absence "
+                            "means unbounded. services.world.vehicles sorts by position and "
+                            "the former lowering used square_distance. Native creates a fresh "
+                            "dialogue with each vehicle as alpha and copies its context; "
+                            "native z_min/z_max double values convert to int by truncation"
+                        ),
+                    }.get(key)
+                    if specific_traversal_todo is not None:
+                        traversal_todo = specific_traversal_todo
+                    else:
+                        traversal_kind = (
+                            "inventory" if "_run_inv_eocs" in key else
+                            "monster" if "_run_monster_eocs" in key else
+                            "vehicle" if "_run_vehicle_eocs" in key else
+                            "fixed-zone" if "_run_fixed_zone_eocs" in key else
+                            "map" if "_map_run_" in key else
+                            "NPC"
+                        )
+                        traversal_todo = (
+                            f"translate {traversal_kind} traversal through ordinary "
+                            "Lua callbacks"
+                        )
+                    lines.append(f"    -- TODO: {traversal_todo}.")
                     result.add_todo(
                         "manual_rewrite",
                         f"{source.location}: EOC {eoc_id} effect #{effect_index} "
-                        f"needs a complete {traversal_kind} traversal conversion"
+                        f"{traversal_todo}"
                     )
                     all_effects_converted = False
             elif (
@@ -32917,9 +38853,21 @@ def render_eoc(
         not avatar_death_hook and not nested_only
     )
     if not inline_eoc and not nested_only:
-        lines.extend((
+        handler_lines = [
             "",
             f"runtime.handler({lua_quote(handler_id)}, function(context)",
+        ]
+        if has_event_trigger:
+            handler_lines.extend(
+                _render_native_eoc_event_context_normalization()
+            )
+        elif event_beta_presence_proven:
+            handler_lines.append("    context = context or {}")
+        if event_beta_presence_proven:
+            handler_lines.append(
+                "    context.__ccb_event_beta_presence_proven = true"
+            )
+        handler_lines.extend([
             f"    return {function_name}(context, nil)",
             "end)",
             f"runtime.handler({lua_quote('migrated-task.' + eoc_id)}, function(context)",
@@ -32929,7 +38877,8 @@ def render_eoc(
             f"    return {function_name}(task_context, task_actor)",
             "end)",
             "",
-        ))
+        ])
+        lines.extend(handler_lines)
     global_recurrence = global_recurrence and not nested_only
     character_recurrence = character_recurrence and not nested_only
     periodic_trigger = global_recurrence or character_recurrence
@@ -33074,13 +39023,16 @@ def render_eoc(
             f"{source.location}: EOC {eoc_id} unresolved fields: {', '.join(unresolved)}"
         )
     if (
-        generic_talker_actor_override and
+        not exact_avatar_actor_proven and
         _node_contains_string(value, "u_is_furniture")
     ):
         result.add_todo(
             "manual_rewrite",
             f"{source.location}: EOC {eoc_id} furniture talker introspection "
-            "requires callback context __ccb_talker_kind=furniture"
+            "requires an exact native alpha talker kind at this EOC call site; "
+            "direct TALK condition callbacks have callback-scoped participant "
+            "snapshots, but standalone EOC context does not prove that "
+            "const_actor(false) is a computer"
         )
     if (
         stable_handler and
@@ -33158,7 +39110,6 @@ def classify_non_actionable_boundaries(result: MigrationResult) -> None:
         "has an invalid empty math condition and was rejected",
         "false_effect is unreachable under a literal true condition",
         "unresolved fields: copy-from",
-        "furniture talker introspection requires callback context",
         "require non-finite values rejected by the Platform safety contract",
         "references missing test_eoc definitions",
     )
@@ -33421,6 +39372,18 @@ CATALOGS: dict[str, CatalogSpec] = {
 
 def migrate(objects: list[SourceObject], mod_id: str,
             exclude_types: frozenset[str] = frozenset()) -> MigrationResult:
+    custom_functions = native_core_math_function_ids() | frozenset(
+        source.value["id"] for source in objects
+        if source.value.get("type") == "jmath_function" and isinstance(source.value.get("id"), str))
+    token = _migration_math_function_ids.set(custom_functions)
+    try:
+        return _migrate_with_math_namespace(objects, mod_id, exclude_types)
+    finally:
+        _migration_math_function_ids.reset(token)
+
+
+def _migrate_with_math_namespace(objects: list[SourceObject], mod_id: str,
+                                 exclude_types: frozenset[str]) -> MigrationResult:
     result = MigrationResult()
     raw_eoc_ids = {
         stable_id(source.value, f"anonymous_{source.index}")
@@ -33431,13 +39394,29 @@ def migrate(objects: list[SourceObject], mod_id: str,
     raw_referenced_eoc_ids = _collect_eoc_references(
         objects, raw_eoc_ids
     )
+    game_start_event_emitted_by_eoc = _has_static_event_emission(
+        objects, "game_start"
+    )
+    npc_becomes_hostile_event_emitted_by_eoc = _has_static_event_emission(
+        objects, "npc_becomes_hostile"
+    )
+    character_melee_event_emitted_by_eoc = _has_static_event_emission(
+        objects, "character_melee_attacks_character"
+    )
     (
         objects,
         character_override_ids,
         item_override_ids,
         creature_override_ids,
         vehicle_override_ids,
-    ) = normalize_inline_eocs(objects)
+    ) = normalize_inline_eocs(
+        objects, game_start_event_emitted_by_eoc
+    )
+    known_mutation_ids, known_mutation_category_ids = core_mutation_catalog_ids()
+    known_body_part_ids = core_body_part_catalog_ids()
+    known_wound_ids = source_wound_catalog_ids(objects)
+    known_recipe_ids = core_recipe_catalog_ids() | source_recipe_catalog_ids(objects)
+    known_morale_ids = known_morale_type_catalog_ids(objects)
     (
         content_primary_actor_ids,
         content_character_actor_ids,
@@ -33445,6 +39424,9 @@ def migrate(objects: list[SourceObject], mod_id: str,
     ) = (
         _content_callback_actor_provenance(objects)
     )
+    npc_dialogue_mission_pair_ids = \
+        _npc_dialogue_mission_pair_provenance(objects)
+    dynamic_eoc_dispatch_present = _has_dynamic_eoc_dispatch(objects)
     character_override_ids = frozenset(
         set(character_override_ids) | set(content_character_actor_ids)
     )
@@ -33454,6 +39436,7 @@ def migrate(objects: list[SourceObject], mod_id: str,
         item_override_ids,
         creature_override_ids,
         vehicle_override_ids,
+        game_start_event_emitted_by_eoc,
     )
     eoc_conditions = {
         stable_id(source.value, f"anonymous_{source.index}"): source.value
@@ -33488,6 +39471,29 @@ def migrate(objects: list[SourceObject], mod_id: str,
         {identifier for identifier, count in eoc_definition_counts.items()
          if count > 1}
     )
+    item_use_plans = classify_item_use_actions(
+        objects, eoc_definition_counts
+    )
+    source_by_key = {
+        (source.path, source.index): source for source in objects
+        if source.value.get("type") in ITEM_TYPES and
+        "use_action" in source.value
+    }
+    item_use_eoc_ids: set[str] = set()
+    for key, plan in item_use_plans.items():
+        eoc_id = plan.eoc_id
+        if eoc_id is None:
+            continue
+        source = source_by_key[key]
+        if (
+            eoc_definition_counts.get(eoc_id, 0) == 1 and
+            not _item_use_has_other_eoc_reference(objects, eoc_id, source)
+        ):
+            item_use_eoc_ids.add(eoc_id)
+    migrated_item_use_eoc_ids = {
+        plan.eoc_id for plan in item_use_plans.values()
+        if plan.migrated and plan.eoc_id in item_use_eoc_ids
+    }
     global_eoc_ids = frozenset(
         stable_id(source.value, f"anonymous_{source.index}")
         for source in objects
@@ -33566,14 +39572,33 @@ def migrate(objects: list[SourceObject], mod_id: str,
                 f"{source.location}: additional MOD_INFO cannot be represented by one Platform ModDefinition"
             )
         elif kind in ITEM_TYPES:
-            rendered = render_item(source, result)
+            item_use_plan = item_use_plans.get((source.path, source.index))
+            rendered = render_item(
+                source, result,
+                item_use_plan,
+            )
             if rendered:
                 item_chunks.append(rendered)
+                if item_use_plan is not None and item_use_plan.migrated:
+                    behaviour_chunks.append(render_item_use_handler(item_use_plan))
         elif kind in RECIPE_TYPES:
             rendered = render_recipe(source, result)
             if rendered:
                 recipe_chunks.append(rendered)
         elif kind in EOC_TYPES:
+            eoc_id = stable_id(source.value, f"anonymous_{source.index}")
+            if eoc_id in item_use_eoc_ids:
+                if eoc_id in migrated_item_use_eoc_ids:
+                    result.converted.append(
+                        f"{source.location}: inline item-use EOC {eoc_id} "
+                        "is lowered to its typed item callback"
+                    )
+                else:
+                    result.partial.append(
+                        f"{source.location}: inline item-use EOC {eoc_id} "
+                        "is retained as a source-level item-use TODO"
+                    )
+                continue
             behaviour_chunks.append(
                 render_eoc(
                     source,
@@ -33589,6 +39614,17 @@ def migrate(objects: list[SourceObject], mod_id: str,
                     global_eoc_ids,
                     talker_pair_ids,
                     content_primary_actor_ids,
+                    npc_dialogue_mission_pair_ids,
+                    known_mutation_ids,
+                    known_mutation_category_ids,
+                    dynamic_eoc_dispatch_present,
+                    known_body_part_ids,
+                    known_wound_ids,
+                    game_start_event_emitted_by_eoc,
+                    known_recipe_ids,
+                    character_melee_event_emitted_by_eoc,
+                    npc_becomes_hostile_event_emitted_by_eoc,
+                    known_morale_ids,
                 )
             )
         elif kind in CATALOGS and CATALOGS[kind].renderer is not None:
@@ -33666,6 +39702,93 @@ def migrate(objects: list[SourceObject], mod_id: str,
             rendered = render_gate(
                 source, result,
                 inheritance_corpus=inheritance_corpora.get("gate"),
+            )
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "fault":
+            rendered = render_fault(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "fault_fix":
+            rendered = render_fault_fix(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "dream":
+            rendered = render_dream(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind in ("achievement", "conduct"):
+            rendered = render_achievement(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind in ("ITEM_BLACKLIST", "TRAIT_BLACKLIST", "MONSTER_BLACKLIST",
+                      "MONSTER_WHITELIST", "SCENARIO_BLACKLIST",
+                      "profession_blacklist", "charge_removal_blacklist",
+                      "temperature_removal_blacklist"):
+            rendered = render_blacklist(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "map_extra":
+            rendered = render_map_extra(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "weather_generator":
+            rendered = render_weather_generator(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "monster_adjustment":
+            rendered = render_monster_adjustment(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "trait_group":
+            rendered = render_weighted_catalog(
+                source,
+                result,
+                builder="TraitGroup",
+                label="trait group",
+                source_field="traits",
+                method="trait",
+            )
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind in ("shopkeeper_blacklist", "shopkeeper_whitelist",
+                      "shopkeeper_consumption_rates"):
+            rendered = render_shopkeeper(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind in ("bionic_migration", "effect_migration",
+                      "field_type_migration", "oter_id_migration",
+                      "overmap_special_migration", "proficiency_migration",
+                      "ter_furn_migration", "trap_migration",
+                      "var_migration", "vehicle_part_migration",
+                      "MIGRATION", "TRAIT_MIGRATION", "spell_migration",
+                      "camp_migration", "mod_migration"):
+            rendered = render_migration(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "event_transformation":
+            rendered = render_event_transformation(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "event_statistic":
+            rendered = render_event_statistic(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "mapgen":
+            rendered = render_mapgen(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "palette":
+            rendered = render_palette(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "mod_tileset":
+            rendered = render_mod_tileset(source, result)
+            if rendered:
+                catalog_chunks[kind].append(rendered)
+        elif kind == "talk_topic":
+            rendered = render_talk_topic(
+                source, result, known_morale_ids=known_morale_ids,
             )
             if rendered:
                 catalog_chunks[kind].append(rendered)
@@ -33755,7 +39878,8 @@ def migrate(objects: list[SourceObject], mod_id: str,
         needs_character_has_any_bionic_or_capacity or
         needs_character_weapon_helpers or
         needs_character_has_profession or
-        any("service_value(" in chunk for chunk in behaviour_chunks)
+        any("service_value(" in chunk for chunk in behaviour_chunks) or
+        any("service_value(" in chunk for chunk in catalog_chunks["talk_topic"])
     ):
         main.extend(
             (
@@ -33859,10 +39983,7 @@ def migrate(objects: list[SourceObject], mod_id: str,
                 "",
                 "local function character_at_safe_space(character)",
                 "    local snapshot = service_value(services.characters.snapshot(character))",
-                "    local position = services.coords.project_to(",
-                "        snapshot.creature.position, \"omt\")",
-                "    return services.overmap.is_safe(position) and",
-                "        service_value(services.characters.is_safe(character))",
+                "    return snapshot.environment.safe_space",
                 "end",
             )
         )

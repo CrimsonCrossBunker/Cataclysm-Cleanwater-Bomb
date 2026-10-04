@@ -7,6 +7,7 @@ extern "C" {
 #include <lua.h>
 }
 #endif
+#include <translation.h>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -21,6 +22,11 @@ extern "C" {
 #include "lua_platform_handle.h"
 #include "lua_platform_hooks.h"
 #include "lua_platform_sol.h"
+
+namespace cata::lua_platform
+{
+class script_game_id;
+} // namespace cata::lua_platform
 
 namespace cata::lua_platform::dialogue
 {
@@ -111,7 +117,8 @@ class context
                  actor_converter convert_actor,
                  dialogue_session_ptr session = {},
                  game_handle_runtime runtime_identity = {},
-                 std::size_t world_generation = 0 );
+                 std::size_t world_generation = 0,
+                 bool response_action_phase = false );
 
         bool valid() const noexcept;
         std::optional<game_handle_error> validation_error() const;
@@ -119,11 +126,24 @@ class context
         std::uint64_t generation() const;
         std::string topic() const;
         std::string topic_item() const;
+        std::string sample_technique( bool critical, bool dodge_counter, bool block_counter,
+                                      const sol::object &blacklist ) const;
         bool has_speaker() const;
         bool has_interlocutor() const;
+        bool interlocutor_at_safe_space() const;
+        std::size_t assigned_mission_count() const;
+        void clear_selected_mission() const;
+        void succeed_selected_mission() const;
+        void fail_selected_mission() const;
+        void end_interlocutor_conversation() const;
+        void grant_item_to_speaker( const script_game_id &item_type ) const;
+        bool purchase_pet( const script_game_id &monster_type,
+                           const sol::optional<sol::table> &options ) const;
+        bool has_interlocutor_effect( const script_game_id &effect_type ) const;
         bool by_radio() const;
         bool has_reason() const;
         std::string reason() const;
+        std::string offer_item_to_interlocutor( bool use_item ) const;
         int trial_chance( const std::string &kind, int difficulty,
                           const std::string &skill_id = {} ) const;
         bool roll_trial( const std::string &kind, int difficulty,
@@ -133,6 +153,9 @@ class context
         sol::object speaker() const;
         sol::object interlocutor() const;
         sol::object get( const std::string &key ) const;
+        sol::object get_string( const std::string &key ) const;
+        sol::object speaker_variable_string( const std::string &key ) const;
+        sol::object interlocutor_variable_string( const std::string &key ) const;
         void set( const std::string &key, const sol::object &value ) const;
         void remove( const std::string &key ) const;
 
@@ -141,12 +164,13 @@ class context
 
         state &require_state() const;
         state &require_write_state() const;
+        state &require_action_write_state() const;
 
         std::shared_ptr<state> state_;
 };
 
-bool valid_topic_id( const std::string &value );
-void require_text( const std::string &value, std::string_view api_name,
+bool valid_topic_id( std::string_view value );
+void require_text( std::string_view value, std::string_view api_name,
                    std::string_view field );
 
 enum class response_callback_origin : int {
@@ -155,14 +179,20 @@ enum class response_callback_origin : int {
 
 using response_callback = std::function<talk_topic( ::dialogue &,
                           const talk_topic &, bool )>;
+using response_action_callback = std::function<void( ::dialogue &, bool )>;
 
 std::uint64_t register_response_callback( response_callback_origin origin,
         response_callback callback, dialogue_session_ptr session = {},
+        std::string topic = {} );
+std::uint64_t register_response_action_callback( response_callback_origin origin,
+        response_action_callback callback, dialogue_session_ptr session = {},
         std::string topic = {} );
 void clear_response_callbacks();
 void clear_response_callbacks( response_callback_origin origin );
 talk_topic apply_response_callback( ::dialogue &d, std::uint64_t response_id,
                                     const talk_topic &fallback, bool trial_success );
+void apply_response_action_callback( ::dialogue &d, std::uint64_t response_id,
+                                     bool trial_success );
 
 struct response_descriptor_options {
     std::string_view api_name;
@@ -174,6 +204,10 @@ struct response_descriptor_options {
     std::function<std::uint64_t( sol::protected_function )> register_on_select;
     std::set<std::string> additional_fields;
 };
+
+translation deferred_translation_from_descriptor(
+    const sol::table &descriptor, std::string_view field_name,
+    const std::string &text, std::string_view api_name );
 
 talk_response response_from_table( const sol::table &descriptor,
                                    const response_descriptor_options &options );

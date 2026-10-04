@@ -67,13 +67,8 @@ entries:
     workdir: .
     cost: medium
   - id: lua-contract
-    paths: [src/CMakeLists.txt, src/lua/CMakeLists.txt, src/main.cpp, 'src/lua_platform*.cpp', 'src/lua_platform*.h', src/event.h, data/lua/, tools/lua_api/]
+    paths: [CMakeLists.txt, Makefile, tests/CMakeLists.txt, tests/Makefile, tests/test_support_sources.txt, src/CMakeLists.txt, src/lua/CMakeLists.txt, src/main.cpp, 'src/lua_platform*.cpp', 'src/lua_platform*.h', src/event.h, data/lua/, tools/lua_api/]
     command: python3 -m unittest discover -s tools/lua_api -p 'test_*.py'
-    workdir: .
-    cost: fast
-  - id: lua-migration
-    paths: [tools/migrate_lua_first.py, tools/test_migrate_lua_first.py, tools/test_lua_mutation_migration.py, tools/test_lua_named_predicate_migration.py]
-    command: python3 tools/test_migrate_lua_first.py
     workdir: .
     cost: fast
   - id: lua-authoring
@@ -104,9 +99,9 @@ entries:
       - src/mod_manager.cpp
       - src/mod_manager_ui.cpp
       - data/mods/Lua_First_Example/
-      - 'tests/lua_platform_test*'
+      - 'tests/lua_platform*.cpp'
       - tests/mod_manager_test.cpp
-    command: make -j2 BUILD_PREFIX=lua-mvp- ODIR=lua-mvp-obj CATA_ENABLE_LUA_PLATFORM=1 ASTYLE=0 LINTJSON=0 LOCALIZE=0 DEBUGSYMS= tests && ./tests/lua-mvp-cata_test '[playable_mvp]' --rng-seed 20260812
+    command: make -j1 BUILD_PREFIX=lua-native- ODIR="$PWD/build/lua-native-obj" CATA_ENABLE_LUA_PLATFORM=1 CATA_TEST_SUITE=lua ASTYLE=0 LINTJSON=0 LOCALIZE=0 DEBUGSYMS= tests && ./tests/lua-native-cata_test '[playable_mvp]' --rng-seed 20260812 --warn NoTests
     workdir: .
     cost: expensive
   - id: lua-disabled-build

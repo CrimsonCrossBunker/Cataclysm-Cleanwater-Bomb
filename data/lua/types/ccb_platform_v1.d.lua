@@ -42,7 +42,7 @@
 ---@field project_to fun(self: PointCoord, scale: string): PointCoord
 ---@field project_remain fun(self: PointCoord, scale: string): PointCoord
 ---@field project_combine fun(self: PointCoord, remainder: PointCoord): PointCoord
----@field to fun(self: PointCoord, origin: string, scale: string): PointCoord
+---@field to fun(self: PointCoord, scale: string): PointCoord
 ---@operator add(PointCoord): PointCoord
 ---@operator sub(PointCoord): PointCoord
 ---@operator mul(integer): PointCoord
@@ -54,11 +54,46 @@
 ---@field xy fun(self: TripointCoord): PointCoord
 ---@field add fun(self: TripointCoord, other: TripointCoord): TripointCoord
 ---@field subtract fun(self: TripointCoord, other: TripointCoord): TripointCoord
+---Reflects self around center (2 * center - self), retaining matching origin and scale.
+---Uses wide intermediates; rejects mixed coordinate frames and out-of-range final axes.
+---@field mirror_around fun(self: TripointCoord, center: TripointCoord): TripointCoord
 ---@field scale_by fun(self: TripointCoord, factor: integer): TripointCoord
 ---@field project_to fun(self: TripointCoord, scale: string): TripointCoord
 ---@field project_remain fun(self: TripointCoord, scale: string): TripointCoord
 ---@field project_combine fun(self: TripointCoord, remainder: TripointCoord): TripointCoord
----@field to fun(self: TripointCoord, origin: string, scale: string): TripointCoord
+---@field to fun(self: TripointCoord, scale: string): TripointCoord
+
+---@class CcbCoordsApi
+local CcbCoordsApi = {}
+
+---@param x integer
+---@param y integer
+---@param z integer
+---@return TripointCoord Absolute map-square coordinate.
+function CcbCoordsApi.tripoint_abs_ms(x, y, z) end
+
+---@param x integer
+---@param y integer
+---@param z integer
+---@return TripointCoord Relative map-square offset.
+function CcbCoordsApi.tripoint_rel_ms(x, y, z) end
+
+---@param x integer
+---@param y integer
+---@param z integer
+---@return TripointCoord Absolute overmap-terrain coordinate.
+function CcbCoordsApi.tripoint_abs_omt(x, y, z) end
+
+---@param x integer
+---@param y integer
+---@param z integer
+---@return TripointCoord Relative overmap-terrain offset.
+function CcbCoordsApi.tripoint_rel_omt(x, y, z) end
+
+---@param value PointCoord|TripointCoord
+---@param scale string Target coordinate scale.
+---@return PointCoord|TripointCoord
+function CcbCoordsApi.project_to(value, scale) end
 
 ---@class TimeDuration
 ---@field turns integer
@@ -92,6 +127,33 @@
 ---@operator add(TimeDuration): TimePoint
 ---@operator sub(TimePoint|TimeDuration): TimeDuration|TimePoint
 ---@operator eq(TimePoint): boolean
+
+---@class CcbTimeApi
+local CcbTimeApi = {}
+
+---@param value integer Whole units within the native signed-int turn range after conversion.
+---@param unit string Supported native time unit.
+---@return TimeDuration
+function CcbTimeApi.duration(value, unit) end
+
+---Convert fractional turns using native truncation toward zero; zero and negative values are preserved.
+---Reject nonfinite values or a truncated result outside native signed-int bounds.
+---@param turns number
+---@return TimeDuration
+function CcbTimeApi.duration_from_turns(turns) end
+
+---@param turn integer Native signed-int turn.
+---@return TimePoint
+function CcbTimeApi.point(turn) end
+
+---@return TimePoint Current native calendar time.
+function CcbTimeApi.now() end
+
+---@return TimePoint Native turn zero.
+function CcbTimeApi.turn_zero() end
+
+---@return TimePoint Native before-time-starts sentinel.
+function CcbTimeApi.before_time_starts() end
 
 ---@class UnitValue
 ---@field kind string Native unit kind.
@@ -130,6 +192,10 @@
 ---@field offset? integer
 ---@field limit? integer
 ---@field status? string
+
+---@class CcbMissionActiveOptions
+---@field offset? integer Starting index from 0 through 1000000.
+---@field limit? integer Page size from 1 through 256.
 
 ---@class CcbFactionQueryOptions
 ---@field offset? integer
@@ -244,6 +310,182 @@ function CcbMapApi.snapshot(tile, options) end
 ---@return CcbResult result `value` is the committed CcbMapTileSnapshot.
 function CcbMapApi.edit(tile, expected_revision, changes) end
 
+---@param tile MapTileToken Exact token for a currently loaded map tile.
+---@param expected_revision integer Map revision captured by a prior snapshot.
+---@param trap GameId GameId<trap> Native trap id to apply through `map::trap_set`.
+---Calls the native setter even when the same trap id is already present; built-in terrain traps keep native no-op behavior.
+---@return CcbResult result `value` is the resulting CcbMapTileSnapshot.
+function CcbMapApi.trap_set(tile, expected_revision, trap) end
+
+---@class CcbWorldPointsNearbyOptions
+---@field min_radius? integer Nonnegative map-square radius; native maximum is 1000.
+---@field max_radius? integer Nonnegative map-square radius; native maximum is 1000.
+---@field offset? integer Nonnegative page offset; native maximum is 1,000,000.
+---@field limit? integer Nonnegative page size; native maximum is 1024.
+
+---@class CcbWorldNearbyPoint
+---@field position TripointCoord Absolute map-square position.
+---@field distance integer Chebyshev distance from the requested origin.
+
+---@class CcbWorldNearbyPointsPage
+---@field items CcbWorldNearbyPoint[] Dense one-based page of points.
+---@field origin TripointCoord Absolute map-square origin.
+---@field min_radius integer Effective minimum radius.
+---@field max_radius integer Effective maximum radius.
+---@field offset integer Effective page offset.
+---@field limit integer Effective page size.
+---@field total integer Total matching points before paging.
+---@field returned integer Number of points in this page.
+---@field has_more boolean Whether another page is available.
+
+---@class CcbWorldLocationRevertResult
+---@field position TripointCoord Absolute overmap-terrain position whose four submaps were snapshotted.
+---@field when TimePoint Scheduled event time.
+---@field key? string Constant event key; omitted when a provider is supplied.
+---@field keys string[] Four event keys in submap x-then-y order.
+---@field events integer Number of scheduled submap events; currently four.
+
+---@class CcbWorldLocationCopyResult
+---@field source TripointCoord Absolute overmap-terrain snapshot source.
+---@field destination TripointCoord Absolute overmap-terrain copy destination.
+---@field when TimePoint Scheduled event time.
+---@field key? string Constant event key; omitted when a provider is supplied.
+---@field keys string[] Four event keys in submap x-then-y order.
+---@field events integer Number of scheduled submap events; currently four.
+
+---@class CcbWorldApi
+local CcbWorldApi = {}
+
+---@param position TripointCoord Reality-bubble map-square or submap position.
+---@return TripointCoord position Absolute position with the same scale.
+function CcbWorldApi.to_absolute(position) end
+
+---@param position TripointCoord Absolute map-square or submap position.
+---@return TripointCoord position Reality-bubble position with the same scale.
+function CcbWorldApi.to_bubble(position) end
+
+---@class CcbWorldSpawnedItem
+---@field handle GameHandle Generation-bound handle for the spawned map item.
+---@field uid integer Native item instance uid.
+---@field id GameId GameId<item> for the spawned item.
+---@field name string Localized native item name.
+---@field charges integer Native charge count reported for the spawned instance.
+
+---@class CcbWorldSpawnItemResult
+---@field id GameId GameId<item> requested for spawning.
+---@field requested integer Requested charge count or instance count.
+---@field added integer Charges or item instances added to the map.
+---@field rejected integer Requested quantity not added.
+---@field count_by_charges boolean Whether the item is counted by charges.
+---@field instances integer Number of item handles returned.
+---@field items CcbWorldSpawnedItem[] Dense one-based handles for added map items.
+
+---@param position TripointCoord Explicit absolute map-square coordinate in the loaded map.
+---@param id GameId GameId<item> identifying the item to create.
+---@param quantity integer Positive quantity up to 1,000,000; non-charge items are limited to 100 instances per call.
+--- Non-charge items receive native default ammo, and items with PRESERVE_SPAWN_LOC retain this position.
+---@return CcbResult result `value` is a CcbWorldSpawnItemResult.
+function CcbWorldApi.spawn_item(position, id, quantity) end
+
+---@param origin TripointCoord Explicit absolute map-square coordinate.
+---@param options? CcbWorldPointsNearbyOptions Bounded result page options.
+---@return CcbWorldNearbyPointsPage
+function CcbWorldApi.points_nearby(origin, options) end
+
+---@class CcbWorldLocationSelector
+---@field kind string Native selector kind: terrain, furniture, field, trap, monster, species, npc, or zone.
+---@field id? GameId Optional id whose kind must match `kind`.
+
+---@class CcbWorldFindLocationOptions
+---@field min_radius? integer Nonnegative random-placement radius; native maximum is 1000.
+---@field max_radius? integer Nonnegative random-placement radius; native maximum is 1000.
+---@field target_min_radius? integer Nonnegative minimum selector distance; native maximum is 1000.
+---@field target_max_radius? integer Nonnegative maximum selector distance; native maximum is 1000.
+---@field outdoor_only? boolean Require an outdoor random-placement result.
+---@field passable_only? boolean Require a passable random-placement result.
+
+---@class CcbWorldFindLocationResult
+---@field found boolean Whether a location was found.
+---@field selector string Effective selector kind.
+---@field distant_map boolean Whether the lookup loaded a detached map.
+---@field origin TripointCoord Requested absolute map-square origin.
+---@field reason? string Failure reason when found is false.
+---@field anchor? TripointCoord Selected selector anchor before random placement.
+---@field position? TripointCoord Final absolute map-square position; present when found is true.
+---@field distance_from_origin? integer Chebyshev distance from the requested origin.
+
+---@param origin TripointCoord Explicit absolute map-square origin.
+---@param selector? CcbWorldLocationSelector Typed selector and optional matching GameId. Nil skips selector lookup while preserving native detached map loading.
+---@param options? CcbWorldFindLocationOptions Bounded search and random-placement options.
+---@return CcbWorldFindLocationResult
+function CcbWorldApi.find_location(origin, selector, options) end
+
+---@class CcbWorldTransformRadiusOptions
+---@field delay? TimeDuration Non-negative delay up to 10000 days; zero applies immediately.
+---@field key? string Optional timed-event key, at most 256 UTF-8 bytes.
+
+---@class CcbWorldTransformRadiusResult
+---@field position TripointCoord Explicit absolute map-square center supplied to the operation.
+---@field radius integer Integer trig-distance radius from 0 through 60.
+---@field transform GameId GameId<terrain_furniture_transform> used by the native transform.
+---@field scheduled boolean Whether the operation was queued as a timed event.
+---@field when? TimePoint Scheduled time when `scheduled` is true.
+---@field key? string Timed-event key when `scheduled` is true.
+
+---@param position TripointCoord Explicit absolute map-square center; actor selection is the caller's responsibility.
+---@param radius integer Integer native radius from 0 through 60.
+---@param transform GameId Valid GameId<terrain_furniture_transform>.
+---@param options? CcbWorldTransformRadiusOptions Optional native delay and timed-event key.
+--- Applies the registered native terrain/furniture transform across the radius. Weighted transform outcomes use the native RNG; the Platform call preserves that behavior.
+---@return CcbResult result `value` is a CcbWorldTransformRadiusResult.
+function CcbWorldApi.transform_radius(position, radius, transform, options) end
+
+---@param position TripointCoord Explicit absolute overmap-terrain coordinate.
+---@param delay TimeDuration Full native signed-int turn range, including zero and negative delays.
+---@param key? string|fun():string Raw event key (nil means empty), or synchronous provider called once for each of four submaps.
+--- Fixes the due time before loading/generating the OMT: current time plus delay plus one second, saturated at native time-point limits.
+--- Takes each submap snapshot before calling its provider in x-then-y order; providers are never retained.
+--- Native recovery restores terrain, furniture, traps, ground items, growth timestamps, finite liquid charges and cosmetics; pending snapshots persist in world data.
+--- A failing or non-string provider can leave events already queued by earlier calls; this operation is not transactional.
+---@return CcbResult result `value` is a CcbWorldLocationRevertResult.
+function CcbWorldApi.schedule_location_revert(position, delay, key) end
+
+---@param source TripointCoord Explicit absolute overmap-terrain snapshot source.
+--- Its four submaps must already exist or be loadable; missing source submaps are not generated.
+---@param destination TripointCoord Explicit absolute overmap-terrain copy destination.
+---@param delay TimeDuration Any native signed-int turn delay, including zero, negative, and `INDEFINITELY_LONG_DURATION`.
+--- Fixes due time before destination generation, including the native one-second offset and saturation at `time_point` limits.
+---@param key? string|fun():string Raw key (nil means empty), or synchronous provider evaluated separately for each submap.
+--- Generates the destination first; owns and relocates each source snapshot before calling its provider in x-then-y order.
+--- Providers are never retained. Their errors or non-string results can leave earlier events queued; the operation is not transactional.
+--- On success copies the translocator and invalidates the destination map cache after all four events are queued.
+---@return CcbResult result `value` is a CcbWorldLocationCopyResult.
+function CcbWorldApi.schedule_location_copy(source, destination, delay, key) end
+
+---@class CcbWorldPlaceNameOverrideResult
+---@field name string Queued display name, preserving all source bytes.
+---@field when TimePoint Native due time for the queued override.
+---@field key string Native event key.
+
+---Queue a native place-name override. Translate authored text before calling if needed.
+---@param name string Display text; empty, NUL and arbitrary-length strings are valid.
+---@param duration TimeDuration Any native signed-int duration, including zero and negative values.
+---Due time includes the native one-second offset and saturates only beyond the time_point range.
+---@param key? string Native event key; empty, NUL and arbitrary-length strings are valid.
+---@return CcbResult result `value` is a CcbWorldPlaceNameOverrideResult.
+function CcbWorldApi.override_place_name(name, duration, key) end
+
+---@class CcbWorldRescheduleEventsResult
+---@field key string Native event key that was matched.
+---@field matched integer Number of queued timed events with this exact key.
+---@field when TimePoint Due time assigned to matching events, also returned when none matched.
+
+---@param key string Exact native timed-event key; empty and arbitrary-length keys are valid.
+---@param delay TimeDuration Any native signed-int turn delay, including zero, negative, and `INDEFINITELY_LONG_DURATION`.
+--- Due time uses the native unoffset retime formula and saturates only beyond the `time_point` range.
+---@return CcbResult result `value` is a CcbWorldRescheduleEventsResult.
+function CcbWorldApi.reschedule_events(key, delay) end
+
 ---@class CcbOvermapTileSnapshot
 ---@field position TripointCoord Explicit absolute overmap-terrain (`abs_omt`) position.
 ---@field exists boolean Whether the overmap tile currently exists in the loaded buffer.
@@ -315,6 +557,68 @@ function CcbOvermapApi.snapshot(token) end
 ---@return CcbResult result `value` is a CcbOvermapEditResult.
 function CcbOvermapApi.edit(token, expected_revision, changes) end
 
+---@class CcbOvermapTargetSelector
+---@field terrain string|GameId Static overmap terrain text or GameId<overmap_terrain>; the empty string skips searching.
+---@field match? GameEnum GameEnum<OtMatchType>; defaults to the native mission target match type, `type`.
+
+---@class CcbOvermapTargetOptions
+---@field random? boolean Use native random selection instead of closest selection; defaults to false.
+---@field search_range? number Raw native search range; defaults to three OMAPX. Values truncate toward zero. Zero uses the native mode-specific default.
+---@field min_distance? number Native minimum distance; defaults to zero. Values truncate toward zero.
+---@field z? number Replace the search origin z before searching; native matching still considers every legal overmap z level. Values truncate toward zero.
+---@field offset? TripointCoord Relative overmap-terrain offset applied after selection, including when no match returns the origin.
+
+---@param origin TripointCoord Explicit absolute overmap-terrain (`abs_omt`) search origin.
+---@param selector CcbOvermapTargetSelector|string|GameId Static terrain selector; string and GameId forms default to native match type `type`.
+---@param options? CcbOvermapTargetOptions
+---@return TripointCoord Selected absolute OMT, or the search origin when no terrain matched, with `offset` applied. The retry may generate overmaps and needs an active runtime callback after the existing-overmap search misses.
+function CcbOvermapApi.find_target(origin, selector, options) end
+
+---@class CcbOvermapRevealResult
+---@field scanned integer Number of positions inspected inside the square radius.
+---@field existing integer Number of existing overmap tiles found.
+---@field changed integer Number of tiles whose vision level changed.
+---@field radius integer Accepted radius in the native 0..30 range.
+---@field vision GameEnum GameEnum<OmVisionLevel> set on existing tiles.
+---@field existing_only boolean True; missing overmap tiles are not generated.
+
+---@param center TripointCoord Explicit absolute overmap-terrain center.
+---@param radius integer Nonnegative square reveal radius from 0 through 30.
+---@return CcbResult result `value` is a CcbOvermapRevealResult.
+function CcbOvermapApi.reveal(center, radius) end
+
+---@param center TripointCoord Explicit absolute overmap-terrain center.
+---@param radius integer Nonnegative native reveal radius, bounded to 0..36. Uses native CIRCLEDIST-aware geometry and may lazily create missing overmaps.
+---@return boolean True when native overmap_buffer.reveal changes at least one tile's vision level.
+function CcbOvermapApi.reveal_native(center, radius) end
+
+---@param start_abs_omt TripointCoord Explicit absolute overmap-terrain route start; local, map-square, and raw coordinates are rejected.
+---@param end_abs_omt TripointCoord Explicit absolute overmap-terrain route destination; native routing uses its x/y and stays on the start z-level.
+---@param radius integer Per-path-node radius passed to native reveal (CIRCLEDIST-aware), bounded to 0..30.
+---@param road_only boolean When true, reject terrain outside the connection guessed at the start; when false, penalize off-connection terrain and reject rivers.
+---@return boolean True when native route search found a path, even if its tiles were already fully revealed; false when the source has no connection or no route was found. Search may lazily load or generate overmap terrain.
+function CcbOvermapApi.reveal_route(start_abs_omt, end_abs_omt, radius, road_only) end
+
+---@param position TripointCoord Explicit absolute overmap-terrain position.
+---@param terrain_id string Native terrain text (1..256 UTF-8 bytes, without control characters) compared with `oter_no_dir_or_connections`; this query may lazily load or create/populate its overmap.
+---@return boolean True when the normalized native terrain id equals `terrain_id`.
+function CcbOvermapApi.matches_terrain(position, terrain_id) end
+
+---@param position TripointCoord Explicit absolute overmap-terrain position.
+---@param location_id string Native location text (1..256 UTF-8 bytes, without control characters), `FACTION_CAMP_ANY`, or `FACTION_CAMP_START`; this query may lazily load or create/populate its overmap.
+---@return boolean Exact-tile location match used by native at-location conditions.
+function CcbOvermapApi.matches_location(position, location_id) end
+
+---@param origin TripointCoord Explicit absolute overmap-terrain origin.
+---@param location_id string Native location text (1..256 UTF-8 bytes, without control characters), `FACTION_CAMP_ANY`, or `FACTION_CAMP_START`.
+---@param radius integer Nonnegative square radius from 0 through 30.
+---@return boolean Native `u_near_om_location` / `npc_near_om_location` result, preserving candidate order and origin mapgen-argument lookups.
+function CcbOvermapApi.matches_location_near(origin, location_id, radius) end
+
+---@param position TripointCoord Explicit absolute overmap-terrain (`abs_omt`) coordinate.
+---@return boolean True when every monster group at this overmap tile is safe.
+function CcbOvermapApi.is_safe(position) end
+
 ---@class CcbHandlesApi
 local CcbHandlesApi = {}
 
@@ -356,8 +660,8 @@ local ModDefinition = {}
 ---@field y integer Absolute map-square y coordinate.
 ---@field z integer Absolute map-square z coordinate.
 
----Immutable deferred translation value for Item text and Skill/SkillDisplay text.
----Create with content.text or content.plural_text; ordinary strings remain untranslated.
+---Immutable deferred translation value for native text fields declared to accept it.
+---Create with content.text or content.plural_text; each field declaration determines whether plural text is accepted. Plain strings retain that field's existing behavior.
 ---@class LocalizedText
 
 ---@class ItemDefinitionOptions
@@ -455,7 +759,7 @@ function ItemDefinition:vitamin(vitamin_id, amount) end
 function ItemDefinition:book(options) end
 
 ---@param handler_id string
----@param label? string
+---@param label? string|LocalizedText Action menu label; content.text stays dynamically translated, plain strings remain literal, and omission defaults to handler_id.
 ---@return ItemDefinition self
 function ItemDefinition:on_use(handler_id, label) end
 
@@ -560,8 +864,8 @@ function RecipeDefinition:on_complete(handler_id) end
 
 ---@class NestedRecipeCategoryDefinitionOptions
 ---@field id string Stable nested-category recipe id.
----@field name string Player-facing nested category name.
----@field description? string Player-facing category description.
+---@field name string|LocalizedText Player-facing nested category name; plural text is rejected.
+---@field description? string|LocalizedText Player-facing category description; plural text is rejected.
 ---@field category string Native crafting category id.
 ---@field subcategory string Native crafting subcategory id.
 ---@field activity_level? number Positive exertion multiplier; defaults to no exercise.
@@ -576,7 +880,7 @@ function NestedRecipeCategoryDefinition:recipe(recipe_id) end
 
 ---@class RequirementDefinitionOptions
 ---@field id string Stable reusable requirement id.
----@field name? string Optional player-facing name.
+---@field name? string|LocalizedText Optional player-facing name; plural text is rejected.
 
 ---@class RequirementAlternative
 ---@field id string Item type id.
@@ -637,7 +941,7 @@ function RequirementDefinition:quality_any(choices) end
 local RecipeGroupDefinition = {}
 
 ---@param recipe_id string
----@param description string Player-facing action description.
+---@param description string|LocalizedText Player-facing action description; plural text is rejected.
 ---@return RecipeGroupDefinition self
 function RecipeGroupDefinition:recipe(recipe_id, description) end
 
@@ -680,7 +984,7 @@ function ButcheryRequirementDefinition:requirement(speed, size, butcher, require
 
 ---@class ItemActionDefinitionOptions
 ---@field id string Stable item-action id.
----@field name? string Display name; defaults to the id.
+---@field name? string|LocalizedText Display name; defaults to the id. Plural text is rejected.
 
 ---@class ItemActionDefinition
 ---@field id string
@@ -915,12 +1219,12 @@ function MonsterAttackDefinition:policy(handler_id) end
 
 ---@class EffectTypeDefinitionOptions
 ---@field id string Stable native effect-type id.
----@field name? string First intensity name; additional intensities use name().
----@field description? string First intensity description; additional intensities use description().
----@field remove_message? string Player-facing removal message.
+---@field name? string|LocalizedText First intensity name; additional intensities use name().
+---@field description? string|LocalizedText First intensity description; additional intensities use description().
+---@field remove_message? string|LocalizedText Player-facing removal message.
 ---@field apply_memorial_log? string Memorial text recorded when applied.
 ---@field remove_memorial_log? string Memorial text recorded when removed.
----@field blood_analysis_description? string Player-facing blood-analysis description.
+---@field blood_analysis_description? string|LocalizedText Player-facing blood-analysis description.
 ---@field maximum_intensity? integer Positive native maximum intensity; defaults to one.
 ---@field maximum_duration_turns? integer Non-negative maximum duration.
 ---@field intensity_duration_turns? integer Non-negative duration represented by one intensity.
@@ -938,13 +1242,13 @@ function MonsterAttackDefinition:policy(handler_id) end
 ---@field id string
 local EffectTypeDefinition = {}
 
----@param text string
+---@param text string|LocalizedText
 ---@return EffectTypeDefinition self
 function EffectTypeDefinition:name(text) end
----@param text string
+---@param text string|LocalizedText
 ---@return EffectTypeDefinition self
 function EffectTypeDefinition:description(text) end
----@param text string
+---@param text string|LocalizedText
 ---@return EffectTypeDefinition self
 function EffectTypeDefinition:reduced_description(text) end
 ---@param id string
@@ -975,7 +1279,7 @@ function EffectTypeDefinition:enchantment(id) end
 
 ---@class WeakpointDefinitionOptions
 ---@field id string Unique weakpoint id within its set.
----@field name? string Player-facing weakpoint name.
+---@field name? string|LocalizedText Player-facing weakpoint name.
 ---@field coverage? number Finite non-negative selection weight; defaults to 100.
 ---@field good? boolean Whether hitting the point is beneficial to the attacker.
 ---@field head? boolean Whether this is a head weakpoint.
@@ -990,7 +1294,7 @@ function EffectTypeDefinition:enchantment(id) end
 ---@field intensity_max? integer Maximum intensity no lower than the minimum.
 ---@field damage_required_min? number Minimum damage percentage from zero through 100.
 ---@field damage_required_max? number Maximum damage percentage no lower than the minimum.
----@field message? string Player-facing application message.
+---@field message? string|LocalizedText Player-facing application message.
 
 ---@class WeakpointSetDefinitionOptions
 ---@field id string Stable native weakpoint-set id.
@@ -1028,7 +1332,7 @@ function WeakpointSetDefinition:critical_multiplier(weakpoint_id, damage_type, v
 function WeakpointSetDefinition:effect(weakpoint_id, options) end
 
 ---@class FieldIntensityOptions
----@field name string Player-facing intensity name.
+---@field name string|LocalizedText Player-facing intensity name.
 ---@field symbol? string Exactly one display-cell glyph.
 ---@field color? string Native color name.
 ---@field dangerous? boolean
@@ -1050,8 +1354,8 @@ function WeakpointSetDefinition:effect(weakpoint_id, options) end
 ---@field intensity? integer Positive effect intensity.
 ---@field body_part? string Existing or same-transaction BodyPart id.
 ---@field environmental? boolean
----@field message? string
----@field npc_message? string
+---@field message? string|LocalizedText
+---@field npc_message? string|LocalizedText
 
 ---@class FieldTypeDefinitionOptions
 ---@field id string Stable native field-type id.
@@ -1130,8 +1434,8 @@ function ItemGroupDefinition:entry(options) end
 
 ---@class SubBodyPartDefinitionOptions
 ---@field id string Stable native sub-body-part id.
----@field name string Player-facing singular name.
----@field plural_name? string Pair/plural name; defaults to name.
+---@field name string|LocalizedText Player-facing singular name.
+---@field plural_name? string|LocalizedText Pair/plural name; defaults to name.
 ---@field parent string Existing or same-transaction BodyPart id.
 ---@field opposite? string Existing or same-transaction SubBodyPart id; defaults to self.
 ---@field side? 'left'|'right'|'both'
@@ -1141,6 +1445,8 @@ function ItemGroupDefinition:entry(options) end
 
 ---@class SubBodyPartDefinition
 ---@field id string
+---@field name fun(self:SubBodyPartDefinition, text:string|LocalizedText):SubBodyPartDefinition
+---@field plural_name fun(self:SubBodyPartDefinition, text:string|LocalizedText):SubBodyPartDefinition
 local SubBodyPartDefinition = {}
 ---@param sub_body_part_id string Existing or same-transaction lower location.
 ---@return SubBodyPartDefinition self
@@ -1152,9 +1458,9 @@ function SubBodyPartDefinition:unarmed_damage(damage_type, amount) end
 
 ---@class WoundDefinitionOptions
 ---@field id string Stable native wound-type id.
----@field name? string Player-facing singular name; defaults to id.
+---@field name? string|LocalizedText Counted name; defaults to id.
 ---@field plural_name? string Player-facing plural name; defaults to name.
----@field description string Non-empty player-facing description.
+---@field description string|LocalizedText Non-empty player-facing description.
 ---@field pain_min? integer Minimum pain rolled when the wound is created; defaults to zero.
 ---@field pain_max? integer Maximum pain no lower than pain_min; defaults to zero.
 ---@field healing_min_turns? integer Positive minimum healing duration in turns; defaults to one.
@@ -1168,6 +1474,9 @@ function SubBodyPartDefinition:unarmed_damage(damage_type, amount) end
 
 ---@class WoundDefinition
 ---@field id string
+---@field name fun(self:WoundDefinition, text:string|LocalizedText):WoundDefinition
+---@field plural_name fun(self:WoundDefinition, text:string):WoundDefinition
+---@field description fun(self:WoundDefinition, text:string|LocalizedText):WoundDefinition
 local WoundDefinition = {}
 ---@param id string Existing or same-transaction DamageType id; each id may be added once and at least one is required.
 ---@return WoundDefinition self
@@ -1191,14 +1500,14 @@ function WoundDefinition:forbid_body_part_type(kind) end
 
 ---@class BodyPartDefinitionOptions
 ---@field id string Stable native body-part id.
----@field name string Player-facing singular name.
----@field plural_name? string Pair/plural name.
----@field accusative? string Accusative singular name.
----@field plural_accusative? string Accusative pair/plural name.
----@field heading? string UI heading.
----@field plural_heading? string UI pair/plural heading.
----@field encumbrance_text? string Encumbrance UI label.
----@field hp_bar_text? string HP-bar UI label.
+---@field name string|LocalizedText Player-facing singular name.
+---@field plural_name? string|LocalizedText Pair/plural name.
+---@field accusative? string|LocalizedText Accusative singular name.
+---@field plural_accusative? string|LocalizedText Accusative pair/plural name.
+---@field heading? string|LocalizedText UI heading.
+---@field plural_heading? string|LocalizedText UI pair/plural heading.
+---@field encumbrance_text? string|LocalizedText Encumbrance UI label.
+---@field hp_bar_text? string|LocalizedText HP-bar UI label.
 ---@field main_part? string Existing or same-transaction main BodyPart; defaults to self.
 ---@field connected_to? string Existing or same-transaction connected BodyPart.
 ---@field opposite? string Existing or same-transaction opposite BodyPart; defaults to self.
@@ -1212,6 +1521,14 @@ function WoundDefinition:forbid_body_part_type(kind) end
 
 ---@class BodyPartDefinition
 ---@field id string
+---@field name fun(self:BodyPartDefinition, text:string|LocalizedText):BodyPartDefinition
+---@field plural_name fun(self:BodyPartDefinition, text:string|LocalizedText):BodyPartDefinition
+---@field accusative fun(self:BodyPartDefinition, text:string|LocalizedText):BodyPartDefinition
+---@field plural_accusative fun(self:BodyPartDefinition, text:string|LocalizedText):BodyPartDefinition
+---@field heading fun(self:BodyPartDefinition, text:string|LocalizedText):BodyPartDefinition
+---@field plural_heading fun(self:BodyPartDefinition, text:string|LocalizedText):BodyPartDefinition
+---@field encumbrance_text fun(self:BodyPartDefinition, text:string|LocalizedText):BodyPartDefinition
+---@field hp_bar_text fun(self:BodyPartDefinition, text:string|LocalizedText):BodyPartDefinition
 local BodyPartDefinition = {}
 ---@param id string Existing or same-transaction SubBodyPart id.
 ---@return BodyPartDefinition self
@@ -1244,14 +1561,17 @@ function BodyPartDefinition:quality(quality_id, level, disable_fraction) end
 
 ---@class WoundFixDefinitionOptions
 ---@field id string Stable native wound-fix id.
----@field name? string Player-facing action name; defaults to id.
----@field description string Non-empty player-facing treatment description.
----@field success_message? string Player-facing successful-treatment message.
+---@field name? string|LocalizedText Player-facing action name; defaults to id.
+---@field description string|LocalizedText Non-empty player-facing treatment description.
+---@field success_message? string|LocalizedText Player-facing successful-treatment message.
 ---@field duration_turns? integer Non-negative base duration whose move cost fits the native integer range.
 ---@field health_delta? integer Signed body-part HP change applied by the treatment.
 
 ---@class WoundFixDefinition
 ---@field id string
+---@field name fun(self:WoundFixDefinition, text:string|LocalizedText):WoundFixDefinition
+---@field description fun(self:WoundFixDefinition, text:string|LocalizedText):WoundFixDefinition
+---@field success_message fun(self:WoundFixDefinition, text:string|LocalizedText):WoundFixDefinition
 local WoundFixDefinition = {}
 ---@param id string Existing or same-transaction Skill id.
 ---@param level integer Required level from zero through the native skill maximum.
@@ -1309,9 +1629,9 @@ function BodyGraphDefinition:part(symbol, options) end
 
 ---@class MonsterDefinitionOptions
 ---@field id string Stable native monster id.
----@field name string Player-facing singular name.
+---@field name string|LocalizedText Counted name; LocalizedText may carry its plural.
 ---@field plural_name? string Player-facing plural name.
----@field description? string Player-facing description.
+---@field description? string|LocalizedText Player-facing description.
 ---@field symbol? string Exactly one display-cell glyph.
 ---@field color? string Native color name.
 ---@field looks_like? string Tileset fallback id.
@@ -1349,6 +1669,9 @@ function BodyGraphDefinition:part(symbol, options) end
 
 ---@class MonsterDefinition
 ---@field id string
+---@field name fun(self:MonsterDefinition, text:string|LocalizedText):MonsterDefinition
+---@field plural_name fun(self:MonsterDefinition, text:string):MonsterDefinition
+---@field description fun(self:MonsterDefinition, text:string|LocalizedText):MonsterDefinition
 local MonsterDefinition = {}
 ---@param material_id string Existing or same-transaction Material id.
 ---@param portions? integer Positive material portions.
@@ -1418,11 +1741,12 @@ function MonsterDefinition:on_death(handler_id) end
 
 ---@class MoraleTypeDefinitionOptions
 ---@field id string Stable morale-type id.
----@field text string Player-facing description; may contain one `%s` item-name placeholder.
+---@field text string|LocalizedText Player-facing description; may contain one `%s` item-name placeholder.
 ---@field permanent? boolean Whether morale instances of this type are permanent.
 
 ---@class MoraleTypeDefinition
 ---@field id string
+---@field text fun(self:MoraleTypeDefinition, text:string|LocalizedText):MoraleTypeDefinition
 local MoraleTypeDefinition = {}
 
 ---@class DiseaseTypeDefinitionOptions
@@ -1451,12 +1775,14 @@ local MonsterFlagDefinition = {}
 
 ---@class SpeciesDefinitionOptions
 ---@field id string Stable monster-species id.
----@field description? string Player-facing species description.
----@field footsteps? string Player-facing footstep description; defaults to `footsteps.`.
+---@field description? string|LocalizedText Player-facing species description.
+---@field footsteps? string|LocalizedText Player-facing footstep description; defaults to `footsteps.`.
 ---@field bleeds? string Native field-type id produced by bleeding; defaults to `fd_null`.
 
 ---@class SpeciesDefinition
 ---@field id string
+---@field description fun(self:SpeciesDefinition, text:string|LocalizedText):SpeciesDefinition
+---@field footsteps fun(self:SpeciesDefinition, text:string|LocalizedText):SpeciesDefinition
 local SpeciesDefinition = {}
 
 ---@param flag_id string Native MonsterFlag id inherited by every monster in the species.
@@ -1530,9 +1856,9 @@ local ConnectGroupDefinition = {}
 
 ---@class MutationCategoryDefinitionOptions
 ---@field id string Stable mutation-category id.
----@field name? string Player-facing category name; defaults to id.
+---@field name? string|LocalizedText Player-facing category name; defaults to id.
 ---@field threshold_mutation? string Native Mutation id granted at the threshold.
----@field mutagen_message string Player-facing message after consuming category mutagen.
+---@field mutagen_message string|LocalizedText Player-facing message after consuming category mutagen.
 ---@field memorial_message? string Memorial text after crossing the threshold.
 ---@field vitamin? string Native Vitamin id used as category mutagen; defaults to `null`.
 ---@field threshold_minimum? integer Non-negative vitamin amount required for a threshold attempt.
@@ -1543,6 +1869,8 @@ local ConnectGroupDefinition = {}
 
 ---@class MutationCategoryDefinition
 ---@field id string
+---@field name fun(self:MutationCategoryDefinition, text:string|LocalizedText):MutationCategoryDefinition
+---@field mutagen_message fun(self:MutationCategoryDefinition, text:string|LocalizedText):MutationCategoryDefinition
 local MutationCategoryDefinition = {}
 
 ---@class ConstructionCategoryDefinitionOptions
@@ -2152,7 +2480,7 @@ function WeatherTypeDefinition:condition(handler_id) end
 ---@class ScoreDefinitionOptions
 ---@field id string Stable score id.
 ---@field statistic string Native event-statistic id whose value is displayed.
----@field description? string Optional format string receiving the statistic value.
+---@field description? string|LocalizedText Optional format string receiving the statistic value; plural text is rejected.
 
 ---@class ScoreDefinition
 ---@field id string
@@ -2169,8 +2497,8 @@ function OverlayOrderDefinition:mutation(mutation_id, order) end
 
 ---@class ZoneTypeDefinitionOptions
 ---@field id string Stable native zone-type id.
----@field name string Player-facing zone name.
----@field description? string Player-facing explanation shown by zone UIs.
+---@field name string|LocalizedText Player-facing zone name; plural text is rejected.
+---@field description? string|LocalizedText Player-facing explanation shown by zone UIs; plural text is rejected.
 ---@field display_field string Native field type used to display marked tiles.
 ---@field can_be_personal? boolean Whether a character may own a personal instance.
 ---@field hidden? boolean Whether ordinary zone-type selection hides this definition.
@@ -2186,7 +2514,7 @@ local ZoneTypeDefinition = {}
 ---@field id string
 local SpeechPoolDefinition = {}
 
----@param sound string Player-facing speech text or sound description.
+---@param sound string|LocalizedText Player-facing speech text or sound description; plural text is rejected.
 ---@param volume integer Signed native sound volume.
 ---@return SpeechPoolDefinition self
 function SpeechPoolDefinition:line(sound, volume) end
@@ -2217,7 +2545,7 @@ function EndScreenDefinition:condition(handler_id) end
 
 ---@class ActivityTypeDefinitionOptions
 ---@field id string Stable native activity id.
----@field verb string Player-facing progressive verb used by activity UI.
+---@field verb string|LocalizedText Player-facing progressive verb used by activity UI; plural text is rejected.
 ---@field rooted? boolean Whether the character is rooted while the activity runs.
 ---@field interruptable? boolean Whether gameplay may interrupt the activity; defaults to true.
 ---@field interruptable_with_keyboard? boolean Whether keyboard input may interrupt it; defaults to true.
@@ -2265,14 +2593,14 @@ function ActivityTypeDefinition:on_finish(handler_id) end
 
 ---@class HelpTopicDefinitionOptions
 ---@field id string Stable Lua-first help-topic id.
----@field title string Player-facing topic title.
+---@field title string|LocalizedText Player-facing topic title; plural text is rejected.
 ---@field order? integer Optional global display order; omitted topics append in deterministic Mod load order.
 
 ---@class HelpTopicDefinition
 ---@field id string
 local HelpTopicDefinition = {}
 
----@param text string Player-facing paragraph; native help tokens remain available in text.
+---@param text string|LocalizedText Player-facing paragraph; native help tokens remain available and plural text is rejected.
 ---@return HelpTopicDefinition self
 function HelpTopicDefinition:paragraph(text) end
 
@@ -2281,8 +2609,8 @@ function HelpTopicDefinition:paragraph(text) end
 
 ---@class SnippetEntryOptions
 ---@field id string Stable snippet id.
----@field text string Player-facing snippet text.
----@field name? string Optional player-facing short name.
+---@field text string|LocalizedText Player-facing snippet text; plural text is rejected.
+---@field name? string|LocalizedText Optional player-facing short name; plural text is rejected.
 ---@field weight? integer Positive selection weight; defaults to 1.
 ---@field on_examine? string Named callback registered with ccb.runtime.handler; no EOC is stored.
 
@@ -2296,7 +2624,7 @@ function HelpTopicDefinition:paragraph(text) end
 ---@field id string
 local SnippetCategoryDefinition = {}
 
----@param text string Player-facing anonymous snippet text.
+---@param text string|LocalizedText Player-facing anonymous snippet text; plural text is rejected.
 ---@param weight? integer Positive selection weight; defaults to 1.
 ---@return SnippetCategoryDefinition self
 function SnippetCategoryDefinition:text(text, weight) end
@@ -2376,10 +2704,10 @@ function AttackVectorDefinition:forbids_flag(flag_id) end
 
 ---@class TechniqueDefinitionOptions
 ---@field id string Stable technique id.
----@field name string Player-facing technique name.
----@field description? string Technique description.
----@field avatar_message? string Message shown to the avatar on use.
----@field npc_message? string Message shown to NPC observers on use.
+---@field name string|LocalizedText Player-facing technique name; plural text is rejected.
+---@field description? string|LocalizedText Technique description; plural text is rejected.
+---@field avatar_message? string|LocalizedText Message shown to the avatar on use; plural text is rejected.
+---@field npc_message? string|LocalizedText Message shown to NPC observers on use; plural text is rejected.
 ---@field crit_tec? boolean Critical-only technique.
 ---@field crit_ok? boolean Usable on critical hits.
 ---@field wall_adjacent? boolean Only works near a wall.
@@ -2430,10 +2758,10 @@ function TechniqueDefinition:on_apply(handler_id) end
 
 ---@class MartialArtDefinitionOptions
 ---@field id string Stable martial-art style id.
----@field name string Player-facing style name.
----@field description? string Style description.
----@field initiate_avatar? string Message shown when the avatar starts the style.
----@field initiate_npc? string Message shown when an NPC starts the style.
+---@field name string|LocalizedText Player-facing style name; plural text is rejected.
+---@field description? string|LocalizedText Style description; plural text is rejected.
+---@field initiate_avatar? string|LocalizedText Message shown when the avatar starts the style; plural text is rejected.
+---@field initiate_npc? string|LocalizedText Message shown when an NPC starts the style; plural text is rejected.
 ---@field priority? integer Style selection priority; defaults to 0.
 ---@field primary_skill? string Primary skill id; empty means unarmed.
 ---@field learn_difficulty? integer Non-negative learning difficulty.
@@ -2881,7 +3209,7 @@ function MagicTypeDefinition:on_failure(handler_id) end
 
 ---@class MovementModeDefinitionOptions
 ---@field id string Stable movement-mode id.
----@field name? string Player-facing mode name; defaults to id.
+---@field name? string|LocalizedText Player-facing mode name; defaults to id. Plural text is rejected.
 ---@field kind? 'prone'|'crouching'|'walking'|'running' Native posture/movement category.
 ---@field character_symbol string Exactly one Unicode codepoint used in character state.
 ---@field panel_symbol string Exactly one Unicode codepoint used by the movement panel.
@@ -2897,9 +3225,9 @@ function MagicTypeDefinition:on_failure(handler_id) end
 ---@field stop_hauling? boolean Whether entering the mode stops hauling.
 
 ---@class MovementModeMessageOptions
----@field prepare string Message shown while preparing to change mode.
----@field success string Message shown after a successful change.
----@field failure? string Message shown after a failed change.
+---@field prepare string|LocalizedText Message shown while preparing to change mode; plural text is rejected.
+---@field success string|LocalizedText Message shown after a successful change; plural text is rejected.
+---@field failure? string|LocalizedText Message shown after a failed change; plural text is rejected.
 
 ---@class MovementModeDefinition
 ---@field id string
@@ -3723,33 +4051,33 @@ function CityDefinition:pos(x, y) end
 
 ---@class FactionMissionDefinitionOptions
 ---@field id string Stable faction mission id.
----@field name string Name.
----@field desc string Description.
----@field description? string Description alias.
+---@field name string|LocalizedText Name; plural text is rejected.
+---@field desc string|LocalizedText Description; plural text is rejected.
+---@field description? string|LocalizedText Description alias; plural text is rejected.
 ---@field skill? string Required skill id.
 ---@field difficulty? string Difficulty enum name.
 ---@field risk? string Risk enum name.
 ---@field activity? string Activity level name.
----@field time? string Time estimate description.
+---@field time? string|LocalizedText Time estimate description; plural text is rejected.
 ---@field positions? integer Number of positions (0-65535).
----@field items_label? string Items label.
----@field items_possibilities? string[] Items possibilities.
----@field effects? string[] Mission effects descriptions.
----@field footer? string Footer text.
+---@field items_label? string|LocalizedText Items label; plural text is rejected.
+---@field items_possibilities? (string|LocalizedText)[] Items possibilities; plural text is rejected.
+---@field effects? (string|LocalizedText)[] Mission effects descriptions; plural text is rejected.
+---@field footer? string|LocalizedText Footer text; plural text is rejected.
 
 ---@class FactionMissionDefinition
 ---@field id string
 local FactionMissionDefinition = {}
 
----@param value string
+---@param value string|LocalizedText
 ---@return FactionMissionDefinition self
 function FactionMissionDefinition:name(value) end
 
----@param value string
+---@param value string|LocalizedText
 ---@return FactionMissionDefinition self
 function FactionMissionDefinition:desc(value) end
 
----@param value string
+---@param value string|LocalizedText
 ---@return FactionMissionDefinition self
 function FactionMissionDefinition:description(value) end
 
@@ -3769,7 +4097,7 @@ function FactionMissionDefinition:risk(value) end
 ---@return FactionMissionDefinition self
 function FactionMissionDefinition:activity(value) end
 
----@param value string
+---@param value string|LocalizedText
 ---@return FactionMissionDefinition self
 function FactionMissionDefinition:time(value) end
 
@@ -3777,35 +4105,35 @@ function FactionMissionDefinition:time(value) end
 ---@return FactionMissionDefinition self
 function FactionMissionDefinition:positions(value) end
 
----@param value string
+---@param value string|LocalizedText
 ---@return FactionMissionDefinition self
 function FactionMissionDefinition:items_label(value) end
 
----@param value string
+---@param value string|LocalizedText
 ---@return FactionMissionDefinition self
 function FactionMissionDefinition:items_possibility(value) end
 
----@param value string
+---@param value string|LocalizedText
 ---@return FactionMissionDefinition self
 function FactionMissionDefinition:add_items_possibility(value) end
 
----@param table string[]
+---@param table (string|LocalizedText)[]
 ---@return FactionMissionDefinition self
 function FactionMissionDefinition:items_possibilities(table) end
 
----@param value string
+---@param value string|LocalizedText
 ---@return FactionMissionDefinition self
 function FactionMissionDefinition:effect(value) end
 
----@param value string
+---@param value string|LocalizedText
 ---@return FactionMissionDefinition self
 function FactionMissionDefinition:add_effect(value) end
 
----@param table string[]
+---@param table (string|LocalizedText)[]
 ---@return FactionMissionDefinition self
 function FactionMissionDefinition:effects(table) end
 
----@param value string
+---@param value string|LocalizedText
 ---@return FactionMissionDefinition self
 function FactionMissionDefinition:footer(value) end
 
@@ -3980,7 +4308,7 @@ function ForestBiomeMapgenDefinition:add_terrain_furniture(ter_id, chance, furni
 
 ---@class ToolQualityDefinitionOptions
 ---@field id string Stable tool-quality id.
----@field name? string Display name; defaults to id.
+---@field name? string|LocalizedText Display name; defaults to id. Plural text is rejected.
 
 ---@class ToolQualityDefinition
 ---@field id string
@@ -4056,7 +4384,7 @@ function SkillDefinition:companion_rank_factors(combat, survival, industry) end
 
 ---@class VitaminDefinitionOptions
 ---@field id string Stable vitamin id.
----@field name? string Display name; defaults to id.
+---@field name? string|LocalizedText Display name; defaults to id. Plural text is rejected.
 ---@field kind? 'vitamin'|'toxin'|'drug'|'counter'
 ---@field deficiency? string Effect id used for deficiency.
 ---@field excess? string Effect id used for excess.
@@ -4093,11 +4421,11 @@ function VitaminDefinition:flag(flag) end
 
 ---@class JsonFlagDefinitionOptions
 ---@field id string Stable flag id.
----@field info? string Informative UI text.
----@field restriction? string Restriction phrase.
----@field name? string Player-facing name.
----@field item_prefix? string Item-name prefix.
----@field item_suffix? string Item-name suffix.
+---@field info? string|LocalizedText Informative UI text; plural text is rejected.
+---@field restriction? string|LocalizedText Restriction phrase; plural text is rejected.
+---@field name? string|LocalizedText Player-facing name; plural text is rejected.
+---@field item_prefix? string|LocalizedText Item-name prefix; plural text is rejected.
+---@field item_suffix? string|LocalizedText Item-name suffix; plural text is rejected.
 ---@field requires_flag? string Required companion flag id.
 ---@field taste_modifier? integer Comestible fun modifier.
 ---@field inherit? boolean Whether attached items pass the flag to their base item.
@@ -4113,7 +4441,7 @@ function JsonFlagDefinition:conflicts_with(flag_id) end
 
 ---@class DamageTypeDefinitionOptions
 ---@field id string Stable damage-type id.
----@field name? string Display name; defaults to id.
+---@field name? string|LocalizedText Display name; defaults to id. Plural text is rejected.
 ---@field skill? string Associated Skill id.
 ---@field magic_color? string Native color name.
 ---@field bash_conversion_factor? number Non-negative conversion factor.
@@ -4165,11 +4493,11 @@ function DamageTypeDefinition:on_damage(handler_id) end
 
 ---@class MaterialDefinitionOptions
 ---@field id string Stable material id.
----@field name? string Display name; defaults to id.
+---@field name? string|LocalizedText Display name; defaults to id. Plural text is rejected.
 ---@field salvaged_into? string Item id produced by salvage.
 ---@field repaired_with? string Repair item id.
----@field bash_damage_verb? string
----@field cut_damage_verb? string
+---@field bash_damage_verb? string|LocalizedText Bash damage verb; plural text is rejected.
+---@field cut_damage_verb? string|LocalizedText Cut damage verb; plural text is rejected.
 ---@field chip_resistance? integer Non-negative native resistance.
 ---@field breathability? integer Native breathability rank from zero through five.
 ---@field repair_difficulty? integer Native skill difficulty.
@@ -4200,7 +4528,7 @@ function MaterialDefinition:resistance(damage_type_id, amount) end
 function MaterialDefinition:vitamin(vitamin_id, amount) end
 
 ---@param level integer One-based damage adjective level.
----@param text string
+---@param text string|LocalizedText Damage adjective; plural text is rejected.
 ---@return MaterialDefinition self
 function MaterialDefinition:damage_adjective(level, text) end
 
@@ -4234,7 +4562,7 @@ function MaterialDefinition:fuel_explosion(chance_hot, chance_cold, factor, fier
 
 ---@class AmmunitionTypeDefinitionOptions
 ---@field id string Stable ammunition-family id.
----@field name? string Display name; defaults to id.
+---@field name? string|LocalizedText Display name; defaults to id. Plural text is rejected.
 ---@field default_item? string Default ammunition item id.
 
 ---@class AmmunitionTypeDefinition
@@ -4243,8 +4571,8 @@ local AmmunitionTypeDefinition = {}
 
 ---@class ItemCategoryDefinitionOptions
 ---@field id string Stable inventory category id.
----@field header? string Inventory header; defaults to id.
----@field noun? string Noun used in descriptive text; defaults to header.
+---@field header? string|LocalizedText Inventory header; defaults to id. Plural text is rejected.
+---@field noun? string|LocalizedText Noun used in descriptive text; defaults to header. Plural text is rejected.
 ---@field sort_rank? integer Lower ranks sort first.
 ---@field spawn_rate? number Non-negative item spawn multiplier.
 ---@field zone? string Default zone id.
@@ -4276,8 +4604,8 @@ function RecipeCategoryDefinition:subcategory(id) end
 
 ---@class ProficiencyCategoryDefinitionOptions
 ---@field id string Stable proficiency category id.
----@field name? string Display name; defaults to id.
----@field description string Player-facing description.
+---@field name? string|LocalizedText Display name; defaults to id. Plural text is rejected.
+---@field description string|LocalizedText Player-facing description; plural text is rejected.
 
 ---@class ProficiencyCategoryDefinition
 ---@field id string
@@ -4285,8 +4613,8 @@ local ProficiencyCategoryDefinition = {}
 
 ---@class ProficiencyDefinitionOptions
 ---@field id string Stable proficiency id.
----@field name? string Display name; defaults to id.
----@field description string Player-facing description.
+---@field name? string|LocalizedText Display name; defaults to id. Plural text is rejected.
+---@field description string|LocalizedText Player-facing description; plural text is rejected.
 ---@field category string ProficiencyCategory id.
 ---@field time_to_learn_turns? integer Positive training time in game turns.
 ---@field time_multiplier? number Non-negative default crafting time multiplier.
@@ -4313,7 +4641,7 @@ function ProficiencyDefinition:bonus(category, attribute, value) end
 
 ---@class WeaponCategoryDefinitionOptions
 ---@field id string Stable weapon category id.
----@field name? string Display name; defaults to id.
+---@field name? string|LocalizedText Display name; defaults to id. Plural text is rejected.
 
 ---@class WeaponCategoryDefinition
 ---@field id string
@@ -4323,24 +4651,44 @@ local WeaponCategoryDefinition = {}
 ---@return WeaponCategoryDefinition self
 function WeaponCategoryDefinition:proficiency(proficiency_id) end
 
+---@alias CcbPlatformMessageType
+---| 'neutral'
+---| 'good'
+---| 'bad'
+---| 'mixed'
+---| 'warning'
+---| 'info'
+---| 'debug'
+---| 'headshot'
+---| 'critical'
+---| 'grazing'
 ---Non-copyable borrowed callback context. Every member becomes stale after the
 ---item-use handler returns or fails; saving the userdata does not extend its lease.
+---The native bridge invokes the handler synchronously with the actual using
+---Character when present, and with the exact item instance at its native
+---location. If native code invokes the action without a Character and the native
+---map context is available, the handler still runs with `character` and
+---`player_name` set to nil; no avatar is substituted. Without that map context,
+---the action fails closed before the Lua callback.
 ---@class ItemUseContext
----@field player_name string
+---@field player_name? string Name of the actual using Character; nil when native code supplies no Character.
 ---@field item_id string
----@field character GameHandle Runtime-owner- and generation-safe handle for the using character.
----@field item GameHandle Runtime-owner- and generation-safe handle for the used item instance.
+---@field character? GameHandle Runtime-owner- and generation-safe handle for the actual using Character (alpha), or nil when native code supplies no Character; NPCs are preserved.
+---@field item GameHandle Runtime-owner- and generation-safe handle for this exact used item instance (beta), retaining its native location hint.
 ---@field position TripointCoord Reality-bubble map-square (`bub`/`ms`) position of use.
 ---@field charges integer
 local ItemUseContext = {}
 
 ---@param text string
-function ItemUseContext:message(text) end
+---@param type? CcbPlatformMessageType Optional native severity; defaults to neutral.
+---The message uses the actual using Character's add_msg_if_player path; with no
+---native Character, the call is a no-op before severity parsing.
+function ItemUseContext:message(text, type) end
 
 ---@class FactionDefinitionOptions
 ---@field id string Stable faction id.
 ---@field name? string Player-facing name; defaults to id.
----@field description? string Player-facing description.
+---@field description? string|LocalizedText Player-facing description; plural text is rejected.
 ---@field likes? integer Initial player like score.
 ---@field respects? integer Initial player respect score.
 ---@field trusts? integer Initial player trust score.
@@ -4356,6 +4704,7 @@ function ItemUseContext:message(text) end
 ---@field currency? string Existing item id used as faction currency.
 ---@field monster_faction? string Existing monster-faction id; defaults to human.
 ---@field relations? table<string, string[]> Relation flags keyed by target faction id.
+---@field price_rules? NpcPriceRuleOptions[] Faction trading rules; rule messages are singular text.
 
 ---@class FactionDefinition
 ---@field id string
@@ -4372,6 +4721,7 @@ local FactionDefinition = {}
 ---@field trust? integer Minimum trust.
 ---@field strict? boolean Native strict matching flag.
 ---@field rigid? boolean Native rigid restock flag.
+---@field refusal? string|LocalizedText Refusal message; plural text is rejected.
 ---@field condition_handler? string Optional Platform handler used to evaluate this group.
 
 ---@class NpcPriceRuleOptions
@@ -4382,12 +4732,13 @@ local FactionDefinition = {}
 ---@field premium? number Purchase premium; defaults to one.
 ---@field fixed_adjustment? number Optional fixed adjustment.
 ---@field price? integer Optional fixed price in cents.
+---@field message? string|LocalizedText Player-facing price-rule message; plural text is rejected.
 ---@field condition_handler? string Optional Platform handler used to evaluate this rule.
 
 ---@class NpcClassDefinitionOptions
 ---@field id string Stable NPC-class id.
----@field name? string Player-facing class name; defaults to id.
----@field job_description? string Player-facing job description.
+---@field name? string|LocalizedText Player-facing class name; defaults to id. Plural text is rejected.
+---@field job_description? string|LocalizedText Player-facing job description; plural text is rejected.
 ---@field common? boolean Whether random NPC generation may select the class.
 ---@field sells_belongings? boolean Whether the NPC sells personal belongings.
 ---@field worn? string Existing starting worn item-group id.
@@ -4410,9 +4761,9 @@ local NpcClassDefinition = {}
 
 ---@class NpcDefinitionOptions
 ---@field id string Stable NPC-template id.
----@field unique_name? string Fixed personal name.
----@field suffix? string Display-name suffix.
----@field temporary_suffix? string Temporary display-name suffix.
+---@field unique_name? string|LocalizedText Fixed personal name; plural text is rejected.
+---@field suffix? string|LocalizedText Display-name suffix; plural text is rejected.
+---@field temporary_suffix? string|LocalizedText Temporary display-name suffix; plural text is rejected.
 ---@field gender? 'male'|'female'|'random'
 ---@field class string Existing or same-transaction NPC-class id.
 ---@field faction? string Existing or same-transaction faction id.
@@ -4420,6 +4771,7 @@ local NpcClassDefinition = {}
 ---@field mission? string Native NPC-mission enum name.
 ---@field chat? string Initial dialogue topic id.
 ---@field stole_item_chat? string Stolen-item dialogue topic id.
+---@field snippets? table<string, string|LocalizedText> Snippet slot ids mapped to singular player-facing text.
 ---@field age? integer Fixed generated age.
 ---@field height? integer Fixed generated height in centimeters.
 ---@field on_death? string Platform handler invoked when the NPC dies.
@@ -4430,7 +4782,7 @@ local NpcDefinition = {}
 
 ---@class OvermapTerrainDefinitionOptions
 ---@field id string Stable overmap-terrain type id.
----@field name? string Player-facing name; defaults to id.
+---@field name? string|LocalizedText Player-facing name; defaults to id. Plural text is rejected.
 ---@field symbol? string Single display symbol.
 ---@field color? string Native color id.
 ---@field see_cost? string Native overmap see-cost enum name.
@@ -4450,7 +4802,17 @@ local OvermapTerrainDefinition = {}
 ---@field point integer[] Three-element relative overmap-terrain coordinate.
 ---@field terrain? string Concrete overmap-terrain id; empty marks a location-only footprint tile.
 ---@field locations? string[] Allowed overmap-location ids for this tile.
+---@field camp? string Native camp owner id.
+---@field camp_name? string|LocalizedText Player-facing camp name; plural text is rejected.
 ---@field flags? string[] Native special-terrain flags.
+
+---@class MutableOvermapSpecialTerrainOptions
+---@field terrain? string Concrete overmap-terrain id.
+---@field overmap? string Alias for terrain.
+---@field locations? string[] Allowed overmap-location ids.
+---@field camp? string Native camp owner id.
+---@field camp_name? string|LocalizedText Player-facing camp name; plural text is rejected.
+---@field [string] any Other accepted mutable-overmap descriptor fields.
 
 ---@class OvermapSpecialConnectionOptions
 ---@field point integer[] Three-element relative overmap-terrain coordinate.
@@ -4464,6 +4826,8 @@ local OvermapTerrainDefinition = {}
 ---@field condition_handler? string Optional Platform placement-condition handler.
 ---@field on_place? string Platform handler invoked when the special is placed.
 ---@field terrains? OvermapSpecialTerrainOptions[]
+---@field mutable_overmaps? table<string, MutableOvermapSpecialTerrainOptions> Mutable terrain descriptors keyed by overmap id.
+---@field overmaps? table<string, MutableOvermapSpecialTerrainOptions> Alias for mutable_overmaps.
 ---@field connections? OvermapSpecialConnectionOptions[]
 ---@field locations? string[] Default overmap-location ids.
 ---@field flags? string[] Native overmap-special flags.
@@ -4511,8 +4875,8 @@ local OvermapSpecialDefinition = {}
 ---@class VehiclePartDefinitionOptions
 ---@field id string Stable vehicle-part id.
 ---@field copy_from? string Existing vehicle-part id used as the patch base.
----@field name? string Player-facing name.
----@field description? string Player-facing description.
+---@field name? string|LocalizedText Player-facing name; plural text is rejected.
+---@field description? string|LocalizedText Player-facing description; plural text is rejected.
 ---@field item? string Existing or same-transaction base item id.
 ---@field location? string Existing vehicle-part-location id.
 ---@field looks_like? string Existing vehicle-part id used for presentation.
@@ -4580,7 +4944,7 @@ local VehiclePartDefinition = {}
 ---@class VehicleDefinitionOptions
 ---@field id string Stable vehicle prototype id.
 ---@field copy_from? string Existing or same-transaction vehicle id used as the patch base.
----@field name string Player-facing vehicle name.
+---@field name? string|LocalizedText Player-facing vehicle name; plural text is rejected. Omitted names inherit from copy_from or default to id.
 ---@field color_palette? string Existing vehicle-color-palette id.
 ---@field parts VehiclePartPlacementOptions[]
 ---@field items? VehicleItemPlacementOptions[]
@@ -4596,7 +4960,7 @@ local VehiclePartDefinition = {}
 local VehicleDefinition = {}
 
 ---@class BionicDefinition
----@field activation_spell any
+---@field activation_spell fun(self:BionicDefinition, options:CcbFakeSpellOptions):BionicDefinition
 ---@field armor any
 ---@field auto_deactivate any
 ---@field available_upgrade any
@@ -4620,34 +4984,34 @@ local VehicleDefinition = {}
 ---@field toggled_item any
 local BionicDefinition = {}
 ---@class ComputerAccessContext
----@field access_denied any
----@field alerts any
----@field character any
----@field message any
----@field mission_id any
----@field name any
----@field position any
----@field security any
+---@field access_denied string
+---@field alerts integer
+---@field character GameHandle Exact Character handle; concrete Avatar/NPC subtypes are preserved.
+---@field mission_id integer
+---@field name string
+---@field position TripointCoord
+---@field security integer
 local ComputerAccessContext = {}
+---@param text string
+function ComputerAccessContext:message(text) end
 ---@param key string
 ---@return any Detached snapshot; nested empty slots use services.types.null; top-level empty or missing values return nil.
-function ComputerAccessContext.get_value(key) end
+function ComputerAccessContext:get_value(key) end
 ---@param key string
----@return any
-function ComputerAccessContext.remove_value(key) end
+---@return boolean
+function ComputerAccessContext:remove_value(key) end
 ---@param key string
 ---@param value any Nil deletes the key; services.types.null stores an explicit empty value, including inside arrays.
----@return any Invalid values fail before mutation; existing value, array, nesting, string, key, and store limits apply.
-function ComputerAccessContext.set_value(key, value) end
+function ComputerAccessContext:set_value(key, value) end
 ---@class EnchantmentDefinition
 ---@field active_when any
 ---@field bodypart_change any
 ---@field custom any
 ---@field effect any
 ---@field encumbrance any
----@field every any
----@field hit_me any
----@field hit_you any
+---@field every fun(self:EnchantmentDefinition, turns:integer, options:CcbFakeSpellOptions):EnchantmentDefinition
+---@field hit_me fun(self:EnchantmentDefinition, options:CcbFakeSpellOptions):EnchantmentDefinition
+---@field hit_you fun(self:EnchantmentDefinition, options:CcbFakeSpellOptions):EnchantmentDefinition
 ---@field id any
 ---@field incoming_damage any
 ---@field limb_score any
@@ -4657,7 +5021,7 @@ function ComputerAccessContext.set_value(key, value) end
 ---@field post_armor_damage any
 ---@field skill any
 ---@field value any
----@field vision any
+---@field vision fun(self:EnchantmentDefinition, options:CcbEnchantmentVisionOptions):EnchantmentDefinition
 local EnchantmentDefinition = {}
 ---@class EventStatisticDefinition
 ---@field id any
@@ -4693,17 +5057,20 @@ local MathFunctionDefinition = {}
 ---@field start_with any
 local MissionDefinition = {}
 ---@class MutationDefinition
+---@field name fun(self:MutationDefinition, text:string|LocalizedText):MutationDefinition
+---@field description fun(self:MutationDefinition, text:string|LocalizedText):MutationDefinition
+---@field activation_message fun(self:MutationDefinition, text:string|LocalizedText):MutationDefinition
 ---@field armor any
----@field attack any
----@field comfort any
+---@field attack fun(self:MutationDefinition, options:CcbMutationAttackOptions):MutationDefinition
+---@field comfort fun(self:MutationDefinition, options:CcbMutationComfortOptions):MutationDefinition
 ---@field decimal_value any
 ---@field id any
 ---@field integer_value any
 ---@field personality any
----@field reflex any
+---@field reflex fun(self:MutationDefinition, options:CcbMutationReflexOptions|CcbMutationReflexCondition[]):MutationDefinition
 ---@field relationship any
----@field transform any
----@field variant any
+---@field transform fun(self:MutationDefinition, options:CcbMutationTransformOptions):MutationDefinition
+---@field variant fun(self:MutationDefinition, options:CcbMutationVariantOptions):MutationDefinition
 ---@field vitamin_absorption any
 ---@field wet_protection any
 local MutationDefinition = {}
@@ -4756,9 +5123,9 @@ local ProfessionItemSubstitutionDefinition = {}
 local RelicProcgenDefinition = {}
 ---@class SpellDefinition
 ---@field bodypart any
----@field caster_when any
+---@field caster_when fun(self:SpellDefinition, handler:string, failure_message:string|LocalizedText):SpellDefinition
 ---@field dynamic_stat any
----@field extra_spell any
+---@field extra_spell fun(self:SpellDefinition, options:CcbFakeSpellOptions):SpellDefinition
 ---@field flag any
 ---@field id any
 ---@field ignore_species any
@@ -4769,7 +5136,7 @@ local RelicProcgenDefinition = {}
 ---@field target any
 ---@field target_monster any
 ---@field target_species any
----@field target_when any
+---@field target_when fun(self:SpellDefinition, handler:string, failure_message:string|LocalizedText):SpellDefinition
 local SpellDefinition = {}
 ---@class TerrainTransformDefinition
 ---@field field any
@@ -4787,6 +5154,12 @@ local VehiclePlacementDefinition = {}
 ---@field id any
 ---@field vehicle any
 local VehicleSpawnDefinition = {}
+---@class WidgetDefinitionOptions
+---@field id string Stable widget id.
+---@field label? string|LocalizedText Player-facing label; plural text is rejected.
+---@field description? string Native widget description.
+---@field [string] any Other accepted native widget options.
+
 ---@class WidgetDefinition
 ---@field bodypart any
 ---@field break_at any
@@ -4798,11 +5171,41 @@ local VehicleSpawnDefinition = {}
 ---@field flag any
 ---@field id any
 local WidgetDefinition = {}
----@param options CcbLuaValue
----@return any
+---@class BionicDefinitionOptions
+---@field id string
+---@field name string|LocalizedText
+---@field description string|LocalizedText
+---@field cant_remove_reason? string|LocalizedText
+---@field activation_spell? CcbFakeSpellOptions
+---@field [string] any
+
+---@param options BionicDefinitionOptions
+---@return BionicDefinition
 function CcbPlatformContent.Bionic(options) end
----@param options CcbLuaValue
----@return any
+
+---@class EnchantmentDefinitionOptions
+---@field id string
+---@field name? string|LocalizedText
+---@field description? string|LocalizedText
+---@field [string] any
+
+---@class CcbEnchantmentVisionDescription
+---@field text string|LocalizedText
+---@field [string] any
+
+---@class CcbFakeSpellOptions
+---@field id? string
+---@field spell? string
+---@field trigger_message? string|LocalizedText
+---@field npc_trigger_message? string|LocalizedText
+---@field [string] any
+
+---@class CcbEnchantmentVisionOptions
+---@field descriptions? CcbEnchantmentVisionDescription[]
+---@field [string] any
+
+---@param options EnchantmentDefinitionOptions
+---@return EnchantmentDefinition
 function CcbPlatformContent.Enchantment(options) end
 ---@param options CcbLuaValue
 ---@return any
@@ -4813,11 +5216,63 @@ function CcbPlatformContent.EventTransformation(options) end
 ---@param options CcbLuaValue
 ---@return any
 function CcbPlatformContent.MathFunction(options) end
----@param options CcbLuaValue
----@return any
+
+---@class MissionDefinitionOptions
+---@field id string
+---@field name string|LocalizedText
+---@field description? string|LocalizedText
+---@field [string] any
+
+---@param options MissionDefinitionOptions
+---@return MissionDefinition
 function CcbPlatformContent.Mission(options) end
----@param options CcbLuaValue
----@return any
+
+---@class MutationDefinitionOptions
+---@field id string
+---@field name string|LocalizedText
+---@field description string|LocalizedText
+---@field activation_message? string|LocalizedText
+---@field spawn_item_message? string|LocalizedText
+---@field ranged_mutation_message? string|LocalizedText
+---@field [string] any
+
+---@class CcbMutationVariantOptions
+---@field id string
+---@field name string|LocalizedText
+---@field description string|LocalizedText
+---@field [string] any
+
+---@class CcbMutationTransformOptions
+---@field target string
+---@field message? string|LocalizedText
+---@field msg_transform? string|LocalizedText
+---@field [string] any
+
+---@class CcbMutationAttackOptions
+---@field player_message? string|LocalizedText
+---@field attack_text_u? string|LocalizedText
+---@field npc_message? string|LocalizedText
+---@field attack_text_npc? string|LocalizedText
+---@field [string] any
+
+---@class CcbMutationReflexCondition
+---@field message_on? string|LocalizedText
+---@field msg_on? string|LocalizedText
+---@field message_off? string|LocalizedText
+---@field msg_off? string|LocalizedText
+---@field [string] any
+
+---@class CcbMutationComfortOptions
+---@field try_message? string|LocalizedText
+---@field hint_message? string|LocalizedText
+---@field sleep_message? string|LocalizedText
+---@field [string] any
+
+---@class CcbMutationReflexOptions
+---@field conditions CcbMutationReflexCondition[]
+
+---@param options MutationDefinitionOptions
+---@return MutationDefinition
 function CcbPlatformContent.Mutation(options) end
 ---@param options CcbLuaValue
 ---@return any
@@ -4825,8 +5280,19 @@ function CcbPlatformContent.PlantLifecycle(options) end
 ---@param options CcbLuaValue
 ---@return any
 function CcbPlatformContent.PostProcessGenerator(options) end
----@param options CcbLuaValue
----@return any
+
+---@class ProfessionDefinitionOptions
+---@field id string
+---@field name? string|LocalizedText
+---@field name_male? string|LocalizedText
+---@field name_female? string|LocalizedText
+---@field description? string|LocalizedText
+---@field description_male? string|LocalizedText
+---@field description_female? string|LocalizedText
+---@field [string] any
+
+---@param options ProfessionDefinitionOptions
+---@return ProfessionDefinition
 function CcbPlatformContent.Profession(options) end
 ---@param options CcbLuaValue
 ---@return any
@@ -4837,8 +5303,18 @@ function CcbPlatformContent.ProfessionItemSubstitution(options) end
 ---@param options CcbLuaValue
 ---@return any
 function CcbPlatformContent.RelicProcgen(options) end
----@param options CcbLuaValue
----@return any
+---@class SpellDefinitionOptions
+---@field id string
+---@field name string|LocalizedText
+---@field description string|LocalizedText
+---@field message? string|LocalizedText
+---@field sound_description? string|LocalizedText
+---@field caster_condition_fail_message? string|LocalizedText
+---@field target_condition_fail_message? string|LocalizedText
+---@field [string] any
+
+---@param options SpellDefinitionOptions
+---@return SpellDefinition
 function CcbPlatformContent.Spell(options) end
 ---@param options CcbLuaValue
 ---@return any
@@ -4849,8 +5325,8 @@ function CcbPlatformContent.VehiclePlacement(options) end
 ---@param options CcbLuaValue
 ---@return any
 function CcbPlatformContent.VehicleSpawn(options) end
----@param options CcbLuaValue
----@return any
+---@param options WidgetDefinitionOptions
+---@return WidgetDefinition
 function CcbPlatformContent.Widget(options) end
 ---@param id string
 ---@return any
@@ -4923,6 +5399,9 @@ local CcbPlatformGameplayOptionsApi = {}
 ---@param id string Existing or unknown bounded native option name.
 ---@return CcbGameplayOptionSnapshot? Nil when the option is unknown.
 function CcbPlatformGameplayOptionsApi.get(id) end
+---@param id string Raw native option name passed through without validation.
+---@return string Native string slot; unknown names and non-string types retain native diagnostics.
+function CcbPlatformGameplayOptionsApi.get_string(id) end
 ---@param id string
 ---@return boolean
 function CcbPlatformGameplayOptionsApi.has(id) end
@@ -4942,37 +5421,67 @@ function CcbPlatformLoreApi.remember_snippet(id) end
 ---@class CcbPlatformNativeEventsApi
 local CcbPlatformNativeEventsApi = {}
 ---@param type_name string Registered native event type name, 1..128 bytes.
----@param requested_args? string[] Dense 1-based strings matching the event field count; at most 64 entries.
----Full byte sequences, including NUL, are forwarded.
----@return boolean True after dispatch.
+---@param requested_args? any[] Dense 1-based values; at most 64 entries. Use services.types.null for an explicit empty value.
+---Strings pass through byte-for-byte; other values use native diag_value serialization:
+---finite numbers, booleans (1/0), absolute map-square TripointCoord, and dense arrays
+---bounded to 512 nodes, 8 nested levels and 8192 bytes per nested string.
+---The entry count must match the registered event's native field count.
+---@return boolean True after dispatch, false when the native event arity does not match.
 function CcbPlatformNativeEventsApi.emit(type_name, requested_args) end
 ---@class CcbPlatformMessagesApi
 local CcbPlatformMessagesApi = {}
 ---@param message string
----@param type? string One of the native message severity names.
+---@param type? CcbPlatformMessageType One of the native message severity names; defaults to neutral.
 ---@return boolean
 function CcbPlatformMessagesApi.add(message, type) end
 ---@param message string
----@param type? string
+---@param type? CcbPlatformMessageType
 ---@return any
 function CcbPlatformMessagesApi.add_from_outdoors(message, type) end
 ---@param message string
----@param type? string
+---@param type? CcbPlatformMessageType
 ---@return any
 function CcbPlatformMessagesApi.add_if_audible(message, type) end
 
+---@alias CcbPlatformSoundCategory
+---| 'background'
+---| 'weather'
+---| 'sensory'
+---| 'music'
+---| 'movement'
+---| 'speech'
+---| 'electronic_speech'
+---| 'activity'
+---| 'destructive_activity'
+---| 'alarm'
+---| 'combat'
+---| 'alert'
+---| 'order'
 ---@class CcbPlatformSoundApi
 local CcbPlatformSoundApi = {}
----@param id string
----@param variant string
----@param volume? integer
----@return any
+---@param id string Native sound-effect id, 1..128 bytes.
+---@param variant string Native variant id, 1..128 bytes.
+---@param volume? integer Playback volume, 0..128; omission uses 80.
+---Below-surface playback uses the Platform positive-depth probability gate.
+---The audio-only random direction uses this Platform runtime's RNG and does not preserve the native RNG sequence.
+---@return boolean Whether playback passed the service gates; this does not confirm backend audio output.
 function CcbPlatformSoundApi.play_from_outdoors(id, variant, volume) end
----@param id string
----@param variant string
----@param volume? integer
----@return any
+---@param id string Native sound-effect id, 1..128 bytes.
+---@param variant string Native variant id, 1..128 bytes.
+---@param volume? integer Playback volume, 0..128; omission uses 80.
+---The audio-only random direction uses this Platform runtime's RNG and does not preserve the native RNG sequence.
+---@return boolean Whether playback passed the player's hearing gate; this does not confirm backend audio output.
 function CcbPlatformSoundApi.play_if_audible(id, variant, volume) end
+---@param position TripointCoord Loaded absolute map-square position.
+---@param volume integer Native gameplay sound volume, 0..1000.
+---@param category CcbPlatformSoundCategory Native gameplay sound category.
+---@param description string Already localized caption; non-NUL and at most 4096 bytes.
+---Talker tags are not interpolated by this service.
+---@param ambient? boolean Whether the sound is ambient; defaults to false.
+---@param id? string Optional native sound-effect id, 1..128 bytes.
+---@param variant? string Optional native variant id, 1..128 bytes.
+---@return nil
+function CcbPlatformSoundApi.emit(position, volume, category, description, ambient, id, variant) end
 ---@class CcbPlatformSnippetsApi
 local CcbPlatformSnippetsApi = {}
 ---@param text string
@@ -4995,12 +5504,14 @@ function CcbPlatformSnippetsApi.random(category) end
 function CcbPlatformSnippetsApi.random_named(category) end
 ---@class CcbPlatformTextApi
 local CcbPlatformTextApi = {}
----@param text string
----@param speaker_handle GameHandle
----@param interlocutor_handle? GameHandle Optional interlocutor; nil is not replaced by the avatar.
----@param item_id? string
----@return any
-function CcbPlatformTextApi.expand_for(text, speaker_handle, interlocutor_handle, item_id) end
+---@param text string Raw native text to expand through snippet and dialogue tags; empty, long and embedded-NUL strings are preserved without an extra byte limit.
+---@param speaker_handle? GameHandle Exact native dialogue alpha/speaker; nil requires fallback_to_avatar=true.
+---@param interlocutor_handle? GameHandle Exact native dialogue beta/interlocutor; nil means no beta.
+---@param item_id? string Raw native item ID for item tags; omitted or empty means the native null ID. Registration and diagnostics remain with the native parser.
+---@param context? table<string,any> Copied dialogue variables: raw string keys; strings, numbers, booleans as native 1/0, NullValue, absolute map-square TripointCoord, and dense arrays. Arrays may share children but cannot contain cycles. No extra text/tree byte, node or depth quota is imposed; input is not mutated.
+---@param fallback_to_avatar? boolean Default false; true expands tags for missing participants through the current avatar while keeping them absent in the copied dialogue. Present invalid handles still fail and are never replaced by the avatar.
+---@return CcbResult result `value` is expanded text; snippets and dialogue tags use the native text parser once with the shared native RNG.
+function CcbPlatformTextApi.expand_for(text, speaker_handle, interlocutor_handle, item_id, context, fallback_to_avatar) end
 ---@class CcbPlatformTilesetApi
 local CcbPlatformTilesetApi = {}
 ---@return any
@@ -6119,14 +6630,92 @@ function PlatformDialogueContext:generation() end
 ---@return string Native dialogue topic currently being rendered or selected.
 function PlatformDialogueContext:topic() end
 
+---Read raw current-item ID text from this live dialogue frame, without ID validation.
+---An activated EOC uses its own copied frame and does not inherit the source frame's current item.
 ---@return string
 function PlatformDialogueContext:topic_item() end
+
+---Sample a native technique for the live speaker against its Creature interlocutor.
+---Available in read callbacks. Advances the shared native RNG without executing an attack;
+---retains native tec_none/empty fallback text and requires this context to remain valid.
+---@param critical boolean
+---@param dodge_counter boolean
+---@param block_counter boolean
+---@param blacklist? (string|GameId)[] Raw technique IDs; duplicates/order preserved, typed entries use martial_art_technique kind.
+---@return string technique Native ID text, including the no-selection fallback.
+function PlatformDialogueContext:sample_technique(critical, dodge_counter, block_counter, blacklist) end
 
 ---@return boolean
 function PlatformDialogueContext:has_speaker() end
 
 ---@return boolean
 function PlatformDialogueContext:has_interlocutor() end
+
+---Query the current native beta talker using the native safe-space check.
+---Available only during the callback; returns false without beta and retains no actor
+---reference.
+---@return boolean
+function PlatformDialogueContext:interlocutor_at_safe_space() end
+
+---Return the native dialogue's assigned-mission list size, filtered for its alpha owner.
+---This reads the live dialogue list and is available only during its callback session.
+---@return integer
+function PlatformDialogueContext:assigned_mission_count() end
+
+---Clear the current native NPC interlocutor's selected mission using the
+---native TALK `clear_mission` behavior, including its follow-up and selection
+---ordering. Only available during a writable `on_action` callback; non-NPC
+---interlocutors and missing/unassigned selections keep the native no-op behavior.
+function PlatformDialogueContext:clear_selected_mission() end
+
+---Apply the native TALK mission-success operation to the current NPC interlocutor's
+---selected mission. This preserves native mission wrap-up, NPC opinion, and faction
+---reputation changes. Only available during a writable `on_action` callback; a
+---non-NPC interlocutor or missing selection keeps the native no-op behavior.
+function PlatformDialogueContext:succeed_selected_mission() end
+
+---Apply the native TALK mission-failure operation to the current NPC
+---interlocutor's selected mission. This preserves its opinion penalty and
+---native mission failure processing. Only available during a writable
+---`on_action` callback; a non-NPC interlocutor or missing selection keeps
+---the native no-op behavior.
+function PlatformDialogueContext:fail_selected_mission() end
+
+---Apply the native TALK end-conversation operation to the current NPC
+---interlocutor, including its message and `TALK_DONE` first topic. Only
+---available during a writable `on_action` callback; non-NPC interlocutors
+---keep the native no-op behavior.
+function PlatformDialogueContext:end_interlocutor_conversation() end
+
+---Grant one native-default item to the current native dialogue alpha.
+---Only available in a writable `on_action` callback. Preserves native
+---i_add_or_drop behavior, default ammunition, one charge for charge-counted
+---items, PRESERVE_SPAWN_LOC, and the beta-dependent native popup. This API
+---accepts only a typed item ID; it does not model item groups or EOC selectors.
+---@param item_type GameId GameId<item>
+function PlatformDialogueContext:grant_item_to_speaker(item_type) end
+
+---@class PlatformPurchasePetOptions
+---@field cost? number Payment amount; defaults to 0 and follows native truncation to integer.
+---@field count? number Number to place; defaults to 1 and follows native truncation to integer.
+---@field pacified? boolean Whether each placed pet receives the native pacified effect.
+---@field name? string Plain, already translated display name; omitted or empty uses native unnamed-pet feedback.
+
+---Buy a pet through the native dialogue alpha and beta talkers. Native payment,
+---placement, pet/pacified state, naming, and feedback are preserved. A false
+---result means the native buyer rejected the purchase; partial placement still
+---uses the native success result. Only available in writable `on_action`.
+---@param monster_type GameId GameId<monster>
+---@param options? PlatformPurchasePetOptions
+---@return boolean native_result
+function PlatformDialogueContext:purchase_pet(monster_type, options) end
+
+---Query the current native dialogue interlocutor for an effect. With no
+---explicit body-part parameter, this preserves TALK's implicit lookup using
+---the current dialogue reason when it names a valid body part.
+---@param effect_type GameId GameId<effect>
+---@return boolean
+function PlatformDialogueContext:has_interlocutor_effect(effect_type) end
 
 ---@return boolean
 function PlatformDialogueContext:by_radio() end
@@ -6136,6 +6725,15 @@ function PlatformDialogueContext:has_reason() end
 
 ---@return string
 function PlatformDialogueContext:reason() end
+
+---Open the native Avatar item-offer menu for the current interlocutor.
+---Only available in a writable `on_action` callback. The interlocutor's native
+---`give_item_to` result (including cancellation or refusal text) is stored in
+---the dialogue reason and returned unchanged. Non-NPC talkers use their native
+---override; the base talker returns "Nope.".
+---@param use_item boolean True asks the interlocutor to use, consume, or equip the offered item; false asks it to carry the item.
+---@return string native_reason
+function PlatformDialogueContext:offer_item_to_interlocutor(use_item) end
 
 ---@param kind string
 ---@param difficulty integer
@@ -6149,8 +6747,9 @@ function PlatformDialogueContext:trial_chance(kind, difficulty, skill) end
 ---@return boolean
 function PlatformDialogueContext:roll_trial(kind, difficulty, skill) end
 
----@param text string
----@param item_id? string
+---@param text string Raw native text; empty, long and embedded-NUL bytes are passed to the native parser without an extra byte limit.
+---@param item_id? string Raw native item ID; omitted or empty means the native null ID. Native registration and diagnostic behavior is retained.
+---Expands snippets and tags once against this live dialogue, including its context variables, using the shared native RNG. Requires a valid context; does not write dialogue variables.
 ---@return string
 function PlatformDialogueContext:expand_text(text, item_id) end
 
@@ -6164,6 +6763,24 @@ function PlatformDialogueContext:interlocutor() end
 ---@return boolean|number|string|NullValue|nil value
 function PlatformDialogueContext:get(key) end
 
+---Read this live frame's native string slot; missing is nil, present Null/type mismatch is empty.
+---Preserves native type diagnostics without serializing arrays; usable only while this context is valid.
+---@param key string Raw native variable key, including empty, NUL-containing and long text.
+---@return string|nil value
+function PlatformDialogueContext:get_string(key) end
+
+---Read the live native speaker's variable string slot, independently of its converted handle kind.
+---Missing is nil; present Null is empty, and other type mismatches preserve native diagnostics.
+---@param key string Raw native variable key, including empty, NUL-containing and long text.
+---@return string|nil value
+function PlatformDialogueContext:speaker_variable_string(key) end
+
+---Read the live native interlocutor's variable string slot, independently of its converted handle kind.
+---Missing is nil; present Null is empty, and other type mismatches preserve native diagnostics.
+---@param key string Raw native variable key, including empty, NUL-containing and long text.
+---@return string|nil value
+function PlatformDialogueContext:interlocutor_variable_string(key) end
+
 ---@param key string
 ---@param value boolean|number|string|NullValue|nil
 function PlatformDialogueContext:set(key, value) end
@@ -6171,16 +6788,32 @@ function PlatformDialogueContext:set(key, value) end
 ---@param key string
 function PlatformDialogueContext:remove(key) end
 
+---@class CcbPlatformDialogueDeferredTranslation
+---@field context? string Optional GNU gettext context for the source text.
+
 ---@class CcbPlatformDialogueResponseDescriptor
 ---@field text string Player response displayed by the native dialogue window.
+---@field text_translation? CcbPlatformDialogueDeferredTranslation Explicitly defer translation of `text`; an empty table means no context. Without this field, `text` stays literal.
 ---@field topic? string Next native or Lua-owned topic; defaults to `TALK_NONE`.
+---@field condition? boolean|fun(context: PlatformDialogueContext): boolean Evaluated while generating the response; false hides it unless failure UI is configured.
+---@field text_condition? boolean|fun(context: PlatformDialogueContext): boolean Evaluated during option-line creation after
+---response generation and speaker effects; false displays `false_text`.
+---@field false_text? string Alternate response text; requires `text_condition` and stays literal unless `false_text_translation` is provided.
+---@field false_text_translation? CcbPlatformDialogueDeferredTranslation Explicitly defer translation of `false_text`; requires `false_text` and `text_condition`.
+---@field success_consequence? 'none'|'hostile'|'helpless'|'action' Native success consequence applied by the response effect.
+---@field switch? boolean Stop later switch responses after this response matches.
+---@field default? boolean This switch response is the fallback when no earlier switch response matched.
+---@field on_action? fun(context: PlatformDialogueContext, trial_success: boolean): nil Runs in the selected native success/failure effect stage before opinion and hostility checks; return values are ignored.
+---@field success_opinion? table<string, integer> Native success opinion deltas (`trust`, `fear`, `value`, `anger`, `owed`, `sold`), applied after `on_action`.
 ---@field on_select? fun(context: PlatformDialogueContext): string|{ topic?: string }|nil Runs after the native response effect and may override its next topic.
 
 ---@alias CcbPlatformDialogueResponses CcbPlatformDialogueResponseDescriptor[]|fun(context: PlatformDialogueContext): CcbPlatformDialogueResponseDescriptor[]
 
 ---@class CcbPlatformDialogueTopicDescriptor
 ---@field id string Native dialogue topic id.
+---The callback runs when the line is generated. Translate each source fragment with `ccb.services.translate` inside it, then compose the returned strings with Lua's `..` operator to preserve separate gettext keys and contexts.
 ---@field dynamic_line string|fun(context: PlatformDialogueContext): string
+---@field dynamic_line_translation? CcbPlatformDialogueDeferredTranslation Explicitly defer translation of a static `dynamic_line`; without this field, static lines and callback results stay literal.
 ---@field responses CcbPlatformDialogueResponses
 
 ---@class CcbPlatformDialogueExtensionDescriptor
@@ -6448,20 +7081,45 @@ function CcbPlatformPresentation.choose(prompt, entries) end
 ---@return string|nil text
 function CcbPlatformPresentation.input_text(prompt, options) end
 
+---@class CcbTargetingApi
+local CcbTargetingApi = {}
+
+---@param message string Prompt text, at most 1024 UTF-8 bytes; may be empty.
+---@param center? TripointCoord Optional absolute map-square center inside the active map.
+---@param allow_vertical? boolean Whether the map picker may change z-level; defaults to false.
+---@return TripointCoord|nil selected Absolute map-square selection, or nil when cancelled.
+function CcbTargetingApi.choose_map_square(message, center, allow_vertical) end
+
+---@param message string Prompt text, at most 1024 UTF-8 bytes; may be empty.
+---@param range integer Targeting range from 0 through 1000.
+---@return TripointCoord|nil selected Absolute map-square selection, or nil when cancelled.
+function CcbTargetingApi.choose_visible_map_square(message, range) end
+
+---@param center TripointCoord Absolute map-square center inside the active map.
+---@param message string Prompt text, at most 1024 UTF-8 bytes; may be empty.
+---@param failure_message string Failure text, at most 1024 UTF-8 bytes; may be empty.
+---@param candidates TripointCoord[] Dense candidate positions, each within one map square of center.
+---@param allow_vertical? boolean Whether the picker may change z-level; defaults to false.
+---@param allow_autoselect? boolean Whether to auto-select one valid candidate; defaults to true.
+---@return TripointCoord|nil selected Absolute map-square selection, or nil on failure/cancel.
+function CcbTargetingApi.choose_adjacent_where_at(center, message, failure_message,
+        candidates, allow_vertical, allow_autoselect) end
+
 ---@class CcbPlatformInteractionApi
 local CcbPlatformInteractionApi = {}
 
 ---@class CcbPlatformInteractionChoice
----@field id string
----@field label string
----@field description? string
+---@field id string Unique Lua result ID; empty, long and embedded-NUL strings are allowed.
+---@field label string Native menu text; empty, long and embedded-NUL strings are preserved.
+---@field description? string Native menu description; no additional byte-length limit.
 ---@field enabled? boolean
----@field hotkey? string One ASCII letter or digit.
+---@field hotkey? string Exactly one native char byte. Omission uses native automatic assignment; space and NUL disable the hotkey. Other bytes retain native key-mode behavior.
 
 ---@class CcbPlatformInteractionChoiceOptions
----@field title? string
+---@field title? string Defaults to 'Select an option.'; supplied empty, long and embedded-NUL text is preserved.
 ---@field allow_cancel? boolean
 ---@field highlight_disabled? boolean
+---@field show_descriptions? boolean Explicitly show or hide the native description pane, even when every description is empty. Defaults to whether any description is nonempty.
 
 ---@class CcbPlatformInteractionChoiceResult
 ---@field accepted boolean
@@ -6474,18 +7132,20 @@ local CcbPlatformInteractionApi = {}
 function CcbPlatformInteractionApi.confirm(message) end
 
 ---@class PlatformInteractionTextInputOptions
----@field default? string Initial editable value, at most 4096 bytes.
----@field description? string Help text, at most 4096 bytes.
----@field identifier? string Input history identifier, at most 128 bytes.
----@field width? integer Input width, 10..240; defaults to 40.
+---@field default? string Raw initial editable value; defaults to empty. No extra byte or NUL restriction is imposed.
+---@field description? string|fun():string Raw help text or a provider evaluated after the popup label.
+---@field identifier? string|fun():string Raw history identifier or a provider evaluated after help text.
+---@field width? integer Native signed-int width; defaults to 40. The native popup handles layout.
+---@field width_text? string Add this raw text's byte length to width using the native popup's integer conversion; defaults to empty. It need not equal the displayed label.
 
 ---@class PlatformInteractionTextInputResult
 ---@field accepted boolean
 ---@field cancelled boolean
 ---@field value string Entered text when accepted; default text when cancelled.
 
----@param title string
+---@param title string|fun():string Raw label or a provider evaluated once after popup construction. Empty, long and embedded-NUL strings pass through to native UI without an extra limit.
 ---@param options? PlatformInteractionTextInputOptions
+---Requires an active writable callback. Providers run synchronously in label/help/identifier order and are not retained. Input length uses the native popup default, without an additional Platform quota.
 ---@return PlatformInteractionTextInputResult result
 function CcbPlatformInteractionApi.input_text(title, options) end
 
@@ -6494,7 +7154,7 @@ function CcbPlatformInteractionApi.input_text(title, options) end
 ---@return integer|nil value
 function CcbPlatformInteractionApi.input_number(description, default_value) end
 
----@param entries CcbPlatformInteractionChoice[]
+---@param entries CcbPlatformInteractionChoice[] Nonempty dense array, limited only by native int row indices.
 ---@param options? CcbPlatformInteractionChoiceOptions
 ---@return CcbPlatformInteractionChoiceResult
 function CcbPlatformInteractionApi.choose(entries, options) end
@@ -6889,6 +7549,27 @@ function CcbMapgenApi.update_token(id) end
 ---@param options? CcbMapgenApplyOptions Optional strict transactional mapgen options.
 ---@return CcbMapgenTransactionResult result `ok=true` only when `value.state` is `'committed'`; `rejected`, `rolled_back`, and `rollback_failed` are reported in `error`.
 function CcbMapgenApi.apply(target, update, options) end
+
+---Run one registered update through the native immediate mapgen path at an explicit OMT.
+---Unlike `apply`, this operation does not use transactional preflight or rollback;
+---external NPC, vehicle, and zone effects may be published even when the native
+---runner reports failure. The selected mission is nil. The native result is
+---reported in `value`, while token/argument errors use the CcbResult error.
+---@param target OvermapTileToken Exact target absolute OMT token.
+---@param update MapgenUpdateToken Exact value-only update-mapgen token.
+---@return CcbResult result `value` is the native runner's success boolean.
+function CcbMapgenApi.run_update(target, update) end
+
+---Queue one registered update through the native UPDATE_MAPGEN timed-event path.
+---The delay must be positive. Native processing occurs one second after the
+---requested delay, matching the EOC update_mapgen delayed branch. The selected
+---mission is nil when the event runs. The optional key identifies the event.
+---@param target OvermapTileToken Exact target absolute OMT token.
+---@param update MapgenUpdateToken Exact value-only update-mapgen token.
+---@param delay TimeDuration Positive delay from the current game turn.
+---@param key? string Native timed-event key.
+---@return CcbResult result `value` is the scheduled TimePoint.
+function CcbMapgenApi.schedule_update(target, update, delay, key) end
 
 ---Register a primary OMT generator invoked before native missing-mapgen fallback.
 ---@param handler_id string Registered Platform handler receiving `{ context = ScriptMapgenContext }`.
@@ -7378,6 +8059,9 @@ function CcbCampsApi.remove(camp, manager) end
 ---@return CcbResult result `value` is a bounded CcbCampListPage.
 function CcbCampsApi.list(center, options) end
 
+---@return CcbResult result `value` is a boolean from the native global player camp-list and current-faction ownership query.
+function CcbCampsApi.has_player_owned_camp() end
+
 ---@param camp GameHandle Exact live camp handle.
 ---@param manager GameHandle Exact live avatar or NPC Character authorized for the camp.
 ---@return CcbResult result `value` is a detached CcbCampSnapshot.
@@ -7425,10 +8109,10 @@ function CcbCampsApi.recall_worker(camp, manager, worker) end
 ---@field critical? boolean Defaults to false.
 ---@field dodge_counter? boolean Defaults to false.
 ---@field block_counter? boolean Defaults to false.
----@field blacklist? (string|GameId)[] Technique IDs; typed entries use martial_art_technique kind.
+---@field blacklist? (string|GameId)[] Raw technique IDs, including empty, unknown, NUL-containing and long text; typed entries use martial_art_technique kind. Order and duplicates are preserved.
 
 ---@class CcbTechniqueChoice
----@field found boolean Whether native selection produced a technique.
+---@field found boolean Whether native selection produced a technique other than its tec_none fallback.
 ---@field accepted boolean Same selection outcome as found.
 ---@field technique GameId GameId<martial_art_technique>; inspect found before applying it.
 ---@field attack_vector GameId GameId<attack_vector>.
@@ -7439,8 +8123,121 @@ function CcbCampsApi.recall_worker(camp, manager, worker) end
 ---@class CcbTechniqueChoiceResult: CcbResult
 ---@field value CcbTechniqueChoice|nil Present on success.
 
+---@class CcbCharacterTrainingOffers
+---@field skills GameId[] Up to 256 offered skill IDs in native order.
+---@field proficiencies GameId[] Up to 256 offered proficiency IDs in native order.
+---@field styles GameId[] Up to 256 offered martial-art style IDs in native order.
+---@field spells GameId[] Up to 256 offered spell IDs in native order.
+---@field skill_count integer Complete number of offered skills.
+---@field proficiency_count integer Complete number of offered proficiencies.
+---@field style_count integer Complete number of offered styles.
+---@field spell_count integer Complete number of offered spells; remains exact when the returned list is truncated.
+---@field truncated boolean True if any returned list exceeded its 256-entry cap.
+
+---@class CcbCharacterTrainingOffersResult: CcbResult
+---@field value? CcbCharacterTrainingOffers Present on success.
+
+---@class CcbCharacterMutableState
+---@field moves integer Current moves.
+---@field pain integer Current pain.
+---@field stamina integer Current stamina.
+---@field hunger integer Current hunger.
+---@field thirst integer Current thirst.
+---@field sleepiness integer Current sleepiness.
+---@field focus integer Current focus.
+---@field radiation integer Current radiation.
+---@field painkiller integer Current painkiller level.
+---@field stored_kcal integer Current stored calories.
+
+---Only the listed fields are accepted; each supplied integer must be within
+---[-1000000, 1000000].
+---@class CcbCharacterAdjustments
+---@field moves? integer Move delta.
+---@field pain? integer Pain delta.
+---@field stamina? integer Stamina delta.
+---@field hunger? integer Hunger delta.
+---@field thirst? integer Thirst delta.
+---@field sleepiness? integer Sleepiness delta.
+---@field focus? integer Focus delta.
+---@field radiation? integer Radiation delta.
+---@field painkiller? integer Painkiller delta.
+---@field stored_kcal? integer Stored-calorie delta.
+
+---@class CcbCharacterAdjustmentValue
+---@field before CcbCharacterMutableState State before changes.
+---@field after CcbCharacterMutableState State after changes.
+
+---@class CcbCharacterAdjustmentResult: CcbResult
+---@field value? CcbCharacterAdjustmentValue Present on success.
+
 ---@class CcbCharactersApi
 local CcbCharactersApi = {}
+
+---@class CcbCharacterDamageOptions
+---@field body_part? GameId GameId<body_part>; omitted selects through native hit rules.
+---@field armor_penetration? number -1000000..1000000; defaults to 0.
+---@field armor_penetration_multiplier? number -1000..1000; defaults to 1.
+---@field damage_multiplier? number -1000..1000; defaults to 1.
+---@field min_hit? integer -1..1000000; defaults to -1.
+---@field max_hit? integer -1..1000000; defaults to -1, otherwise at least min_hit.
+---@field hit_roll? integer -1000000..1000000; defaults to 0.
+---@field can_attack_high? boolean Defaults to true.
+
+---@class CcbCreatureDamageOptions: CcbCharacterDamageOptions
+---@field source? GameHandle Exact Creature source; omitted means no source.
+
+---@class CcbDamageValue
+---@field damage_type GameId GameId<damage_type>
+---@field body_part GameId GameId<body_part>
+---@field requested number
+---@field before integer
+---@field after integer
+---@field dealt integer
+---@field total_dealt integer
+---@field changed boolean
+---@field source? GameHandle Present only for an explicit creatures.damage source.
+
+---@class CcbDamageResult: CcbResult
+---@field value? CcbDamageValue
+
+---@class CcbHealingValue
+---@field body_part GameId GameId<body_part>
+---@field requested integer
+---@field before integer
+---@field after integer
+---@field maximum integer
+---@field healed integer
+
+---@class CcbHealingResult: CcbResult
+---@field value? CcbHealingValue
+
+---@param character GameHandle Exact live Character; native damage source is the Character itself.
+---@param damage_type GameId GameId<damage_type>
+---@param amount number Finite -1000000..1000000.
+---@param options? CcbCharacterDamageOptions
+---@return CcbDamageResult
+function CcbCharactersApi.damage(character, damage_type, amount, options) end
+
+---@param character GameHandle Exact live Character.
+---@param body_part GameId GameId<body_part> present on the Character.
+---@param amount integer 1..10000.
+---@return CcbHealingResult
+function CcbCharactersApi.heal(character, body_part, amount) end
+
+---@class CcbCharacterBodyPartPickOptions
+---@field wounded? boolean If set, only select parts whose wound state matches this value.
+---@field types? string[] Keep parts matching at least one native body-part type.
+---@field exclude_types? string[] Exclude parts matching any native body-part type.
+---@field flags? string[] Require every listed JSON character flag.
+---@field exclude_flags? string[] Exclude parts with any listed JSON character flag.
+---@field title? string Accepted but ignored by the non-interactive picker.
+---@field allow_cancel? boolean Accepted but ignored by the non-interactive picker.
+
+---Select a uniform random main body part without opening a UI; an empty candidate set returns `no_match`.
+---@param character GameHandle Exact live Character handle.
+---@param options? CcbCharacterBodyPartPickOptions
+---@return CcbResult result `value` contains accepted, cancelled, body_part, candidates, interactive and optional wounded.
+function CcbCharactersApi.pick_body_part(character, options) end
 
 ---Select through native combat rules in an active write callback; does not execute the attack.
 ---@param attacker GameHandle Exact live Character.
@@ -7453,6 +8250,47 @@ function CcbCharactersApi.choose_technique(attacker, target, options) end
 --- Return the actual game avatar, independently of dialogue participants.
 ---@return GameHandle player Generation-checked player handle.
 function CcbCharactersApi.avatar() end
+---Send one string argument through the exact Character's native player-only message hook.
+---The format string must already be translated and follows native add_msg_if_player(format, argument) semantics.
+---NPC hooks are no-ops; messages are not broadcast through the global messages service.
+---@param character GameHandle Exact live Character handle.
+---@param translated_format string Already translated format string, at most 8192 UTF-8 bytes.
+---@param argument string Single string formatting argument, at most 8192 UTF-8 bytes.
+---@return CcbResult result value is true when the exact Character accepted the native call.
+function CcbCharactersApi.add_msg_if_player(character, translated_format, argument) end
+---Immediately drop this exact avatar's wielded item with the native deliberate-drop behavior.
+---@param character GameHandle Exact avatar Character handle.
+---@return CcbResult result `value.dropped` is true when a physical wielded item was present.
+function CcbCharactersApi.drop_weapon(character) end
+
+---Apply bounded integer deltas to an exact live Character.
+---@param character GameHandle Exact live Character handle.
+---@param adjustments CcbCharacterAdjustments
+---@return CcbCharacterAdjustmentResult result
+function CcbCharactersApi.adjust(character, adjustments) end
+
+---Query vehicle occupancy at the Character's current map square, matching the native vehicle-at-position lookup.
+---This may differ from snapshot movement.in_vehicle, which is a cached passenger flag.
+---@param character GameHandle Exact live Character handle.
+---@return CcbResult result `value` is true when a vehicle occupies character.pos_bub().
+function CcbCharactersApi.is_in_vehicle(character) end
+---Apply native wetness rules, including rain protection and periodic checks.
+---@param character GameHandle Exact live Character handle; monsters are rejected.
+---@param amount integer Native int amount after dbl_or_var truncation; service range is -1000000..1000000.
+---@return CcbResult result `value` is true when the native wetness routine ran.
+function CcbCharactersApi.add_wet(character, amount) end
+
+---Add an integer trust delta to the exact Character's faction.
+---@param character GameHandle Exact live Character handle with a faction.
+---@param amount integer Integer delta in -1000000..1000000.
+---@return CcbResult
+function CcbCharactersApi.add_faction_trust(character, amount) end
+
+---Query native offers between two exact Character handles; counts are complete even if lists are truncated.
+---@param trainer GameHandle Exact live trainer Character handle.
+---@param student GameHandle Exact live student Character handle.
+---@return CcbCharacterTrainingOffersResult
+function CcbCharactersApi.training_offers(trainer, student) end
 
 --- Return a detached complete list without sorting or truncation; the unqualified part is not included.
 ---@param character GameHandle Exact live Character handle.
@@ -7472,8 +8310,12 @@ function CcbCharactersApi.intimidation(character) end
 
 ---@param character GameHandle Exact live Character handle; subtype and lifecycle are checked before access.
 ---@param body_part_limit? integer
----@return CcbResult result `value` is a detached Character snapshot.
+---@return CcbResult result `value` is a detached CcbCharacterSnapshot.
 function CcbCharactersApi.snapshot(character, body_part_limit) end
+
+---@param character GameHandle Exact live Character handle.
+---@return CcbResult result `value` is the NPC danger-cache safety result; non-NPC Characters return true.
+function CcbCharactersApi.is_safe(character) end
 
 ---@param observer GameHandle Exact live Character observer handle.
 ---@param options? CcbCharacterNearbyOptions
@@ -7527,6 +8369,16 @@ function CcbCharactersApi.prevent_death(character) end
 ---@return CcbResult
 function CcbCharactersApi.recalculate_enchantments(character) end
 
+---@class CcbSpellsApi
+local CcbSpellsApi = {}
+
+---Read the Native math spell_level() result for an exact Character. The
+---Native null id selects the highest known level; unknown ids return -1.
+---@param character GameHandle Exact live Character handle; no avatar fallback.
+---@param raw_spell_id string Raw Native spell id text.
+---@return CcbResult result `value` is the Native effective level.
+function CcbSpellsApi.effective_level(character, raw_spell_id) end
+
 ---@class CcbRelocationMoveOptions
 ---@field strict? true Strict mode; when supplied it must be `true`. This is the only accepted option; force and fallback policies are unsupported.
 
@@ -7541,8 +8393,50 @@ function CcbCharactersApi.recalculate_enchantments(character) end
 ---@field value? CcbRelocationMoveValue Present only when the typed relocation succeeds.
 ---@field error? CcbPlatformResultError Present when the exact handle, target token, or strict relocation precondition is rejected.
 
+---@class CcbRelocationDimensionTravelOptions
+---@field npc_travel_radius? integer Radius from the Avatar for NPC selection, in 0..60; 0 selects none.
+---@field npc_travel_filter? 'all'|'follower'|'enemy'|'none' NPC selection predicate; default is `all`.
+---@field item_travel_radius? integer Radius from the Avatar for item selection, in -1..60; -1 disables item travel.
+---@field take_vehicle? boolean Include the vehicle at the Avatar's current tile; absence returns `no_vehicle`.
+
+---@class CcbRelocationDimensionTravelValue
+---@field accepted boolean Native game transition result.
+---@field changed boolean True when the active dimension changed.
+---@field before string Previous active dimension id.
+---@field after string Current active dimension id.
+---@field npc_travellers? integer Number of NPC handles selected for travel; absent when already in the requested dimension.
+---@field items? integer Number of item handles selected for travel; absent when already in the requested dimension.
+---@field vehicle? boolean Whether a vehicle was selected for travel; absent when already in the requested dimension.
+---@field reason? string Present as `already_there` when the requested dimension is already active.
+
+---@class CcbRelocationDimensionTravelResult: CcbResult
+---@field value? CcbRelocationDimensionTravelValue Present for valid dimensions, including already-there no-ops.
+---@field error? CcbPlatformResultError Present when the dimension id is invalid or a requested vehicle is missing; malformed options raise a Lua error.
+
+---@class CcbAvatarTeleportOptions
+---@field force? boolean Native `force` policy: select a nearby passable tile for solid destinations and allow telefrag damage.
+---@field force_safe? boolean Native `force_safe` policy: select nearby passable/unoccupied destinations instead of telefragging.
+
+---@class CcbAvatarTeleportValue
+---@field accepted boolean Native `teleport_to_point` return value; false means the teleport was not accepted, though native prechecks can still unboard the Avatar.
+---@field changed boolean True when native accepted the operation or the Avatar position/vehicle-boarded state changed; force fallback can end at the source square.
+---@field scope 'avatar'
+---@field handle GameHandle Current exact Avatar handle after the attempt.
+---@field position TripointCoord Current absolute map-square position after the attempt.
+---@field overmap_terrain TripointCoord Absolute overmap-terrain position derived from the current map-square position.
+
+---@class CcbAvatarTeleportResult: CcbResult
+---@field value? CcbAvatarTeleportValue Present when the request was well-formed and the exact Avatar handle resolved.
+---@field error? CcbPlatformResultError Present for unsupported/invalid handles; malformed options or non-absolute coordinates raise a Lua error.
+
 ---@class CcbRelocationApi
 local CcbRelocationApi = {}
+
+---@param avatar GameHandle Exact live Avatar handle; NPCs, Monsters, generic Characters, Vehicles, Items, and Zones are unsupported.
+---@param position TripointCoord Absolute map-square target; local, relative, and overmap coordinates are rejected.
+---@param options? CcbAvatarTeleportOptions Optional native `force`/`force_safe` policy; omitted means both false.
+---@return CcbAvatarTeleportResult result Uses native `teleport_to_point` with safe=true, no teleglow, and no internal messages. It may load/recenter the active map; requires an active Platform write callback.
+function CcbRelocationApi.teleport_avatar(avatar, position, options) end
 
 ---@param entity GameHandle Exact live Monster, Avatar, NPC, or Vehicle GameHandle; generic Character and other unsupported subtypes return `unsupported`.
 ---@param target MapTileToken Exact token for the target map square; raw coordinates and implicit/fallback target lookup are unsupported.
@@ -7555,6 +8449,11 @@ function CcbRelocationApi.move(entity, target, options) end
 ---@param options? CcbRelocationMoveOptions Optional strict-only policy; omitted means strict mode. No force or fallback policy is supported.
 ---@return CcbRelocationMoveResult result `value` is a CcbRelocationMoveValue; failures return the typed error envelope.
 function CcbRelocationApi.travel_to_omt(avatar, target, options) end
+
+---@param dimension string Registered dimension id.
+---@param options? CcbRelocationDimensionTravelOptions Optional Avatar-centered NPC/item/vehicle selection options.
+---@return CcbRelocationDimensionTravelResult result Requires an active map and a write callback; malformed options raise a Lua error. This operation may load/save worlds and change the active dimension.
+function CcbRelocationApi.travel_to_dimension(dimension, options) end
 
 ---@class CcbWeatherTypeIdPage
 ---@field items GameId[] Bounded weather-type ids.
@@ -7703,10 +8602,10 @@ function CcbRelocationApi.travel_to_omt(avatar, target, options) end
 ---@field maximum_wind_speed_mph integer Maximum wind-speed override.
 ---@field maximum_wind_direction_degrees integer Maximum wind-direction override.
 ---@field maximum_temperature_kelvin number Maximum temperature override in kelvins.
----@field maximum_custom_light_level integer Maximum custom-light level.
----@field maximum_custom_light_duration TimeDuration Maximum custom-light duration.
----@field maximum_custom_light_key_bytes integer Maximum custom-light key length in bytes.
----@field maximum_pending_custom_light_events integer Maximum pending custom-light events.
+---@field maximum_custom_light_level integer Maximum level accepted by override_light; append_light_event accepts the native signed integer range.
+---@field maximum_custom_light_duration TimeDuration Maximum duration accepted by override_light; append_light_event accepts signed engine durations.
+---@field maximum_custom_light_key_bytes integer Maximum key length accepted by override_light; append_light_event preserves native keys without this limit.
+---@field maximum_pending_custom_light_events integer Maximum pending events accepted by override_light; append_light_event appends without this limit.
 
 ---@class CcbWeatherApi
 local CcbWeatherApi = {}
@@ -7744,7 +8643,7 @@ function CcbWeatherApi.limits() end
 ---@field expires_at TimePoint Custom-light expiration time.
 ---@field key string Custom-light coordination key, or an empty string.
 ---@field accepted boolean Whether the custom-light override was accepted.
----@field replaced boolean Whether an existing keyed custom-light event was replaced.
+---@field replaced boolean Whether an existing keyed event was replaced; append_light_event always returns false.
 
 ---@param id GameId GameId<weather_type>
 ---@return CcbResult result `value` is a CcbWeatherCurrentSnapshot.
@@ -7778,6 +8677,12 @@ function CcbWeatherApi.activate_lightning() end
 ---@param key? string
 ---@return CcbResult result `value` is a CcbWeatherLightOverrideResult.
 function CcbWeatherApi.override_light(level, duration, key) end
+
+---@param level integer Native signed timed-event strength.
+---@param duration TimeDuration Signed duration before the native one-second expiry offset.
+---@param key? string Native timed-event key; every call appends, including duplicate keys.
+---@return CcbResult result `value` is a CcbWeatherLightOverrideResult with `replaced` always false.
+function CcbWeatherApi.append_light_event(level, duration, key) end
 
 ---@class ZoneToken
 ---@field faction GameId GameId<faction> Faction owning the zone.
@@ -7944,6 +8849,7 @@ function CcbZonesApi.remove(token) end
 ---@field maximum_limit integer Maximum number of horde results per query.
 ---@field maximum_offset integer Maximum horde query offset.
 ---@field maximum_tracking_intensity integer Maximum supported horde tracking intensity.
+---@field maximum_signal_power integer Maximum supported broadcast signal power.
 ---@field maximum_legacy_population integer Maximum supported legacy horde population.
 ---@field flavors string[] Supported horde flavors.
 ---@field existing_only boolean Whether live horde entities/groups are restricted to existing overmaps.
@@ -8108,6 +9014,11 @@ function CcbZonesApi.remove(token) end
 ---@field status "committed" Status of the single removal commit.
 ---@field removed boolean Always true when returned as a successful value; the token is stale afterward.
 
+---@class CcbHordeSignalResult
+---@field status "broadcast" Status of the completed signal broadcast.
+---@field center TripointCoord Absolute map-square origin after native submap normalization.
+---@field signal_power integer Broadcast signal power.
+
 ---@class CcbHordeLegacyGroupRemoveResult: CcbHordeLegacyGroupSnapshot
 ---@field status "committed" Status of the single removal commit.
 ---@field removed boolean Always true when returned as a successful value; the token is stale afterward.
@@ -8236,6 +9147,11 @@ function CcbHordesApi.spawn_entity(position, monster) end
 ---@return CcbResult result `value` is a CcbHordeAlertResult; the token remains valid after commit.
 function CcbHordesApi.alert_entity(token, destination, intensity) end
 
+---@param center TripointCoord Absolute map-square signal source; native behavior normalizes through absolute submap coordinates.
+---@param signal_power integer Signal power from 0 through CcbHordeLimits.maximum_signal_power.
+---@return CcbResult result `value` is a CcbHordeSignalResult.
+function CcbHordesApi.broadcast_signal(center, signal_power) end
+
 ---@param token HordeEntityToken Exact generation-bound entity token.
 ---@return CcbResult result `value` is a CcbHordeEntityRemoveResult; the token is stale after commit.
 function CcbHordesApi.remove_entity(token) end
@@ -8290,6 +9206,7 @@ function CcbHordesApi.remove_legacy_group(token) end
 ---@field npcs CcbNpcsApi
 ---@field overmap CcbOvermapApi
 ---@field proficiencies CcbProficienciesApi
+---@field progression CcbPlatformProgressionApi
 ---@field random CcbPlatformRandomApi
 ---@field recipes CcbPlatformRecipesApi
 ---@field relocation CcbRelocationApi
@@ -8349,6 +9266,11 @@ function CcbPlatformActivitiesApi.offer_portal_storm_interruption(message) end
 ---@param autopickup? boolean
 ---@return CcbResult result `value` is a CcbItemActivityResult; the input handle is retired before scheduling.
 function CcbPlatformActivitiesApi.pickup_item(character_handle, item_handle, quantity, autopickup) end
+---@param character_handle GameHandle Exact avatar or NPC whose activity receives the selected batch.
+---@param target TripointCoord Absolute map-square target passed to the native pickup selector.
+---@param options? CcbPickupAtOptions
+---@return CcbResult result `value` is a CcbPickupAtResult. Requires a write phase and active callback; the native picker presents map and vehicle items at the target, then schedules one pickup activity with the selected quantities. Options constrain the picker only; the activity receives the same default pick_info as native f_pickup_items. An empty or cancelled selection leaves the character activity unchanged.
+function CcbPlatformActivitiesApi.pickup_at(character_handle, target, options) end
 ---@param character_handle GameHandle
 ---@param book_handle GameHandle
 ---@param duration TimeDuration
@@ -8629,6 +9551,15 @@ function CcbVehiclesApi.open_part_service(vehicle, mechanic, repair_multiplier, 
 ---@field owner GameHandle Exact avatar owner used for the query.
 ---@field status 'all'|'reserved'|'active'|'success'|'failure'
 
+---@class CcbMissionActivePage
+---@field items CcbMissionSnapshot[] Active missions in the owner's native active-vector order.
+---@field total integer Total active missions for this owner before pagination.
+---@field offset integer Starting native-vector index, bounded to 1000000.
+---@field limit integer Page size, bounded to 256.
+---@field returned integer Number of snapshots in this page.
+---@field has_more boolean Whether a later native-vector page exists; callers must continue while true to inspect every mission.
+---@field owner GameHandle Exact avatar owner used for the query.
+
 ---@class CcbMissionMutation
 ---@field before? CcbMissionSnapshot
 ---@field after? CcbMissionSnapshot
@@ -8653,6 +9584,10 @@ function CcbMissionsApi.definition(id) end
 ---@param options? CcbMissionQueryOptions `offset`, `limit`, and `status`.
 ---@return CcbMissionPage
 function CcbMissionsApi.list(owner, options) end
+---@param owner GameHandle Exact avatar owner; results preserve native active-vector order.
+---@param options? CcbMissionActiveOptions `offset` and `limit`; continue through `has_more` to inspect every instance.
+---@return CcbMissionActivePage
+function CcbMissionsApi.active(owner, options) end
 ---@param token MissionToken Exact mission-instance token.
 ---@return CcbResult result `value` is a CcbMissionSnapshot.
 function CcbMissionsApi.get(token) end
@@ -8707,6 +9642,10 @@ function CcbMissionsApi.fail(owner, token) end
 ---@param force? boolean Explicit completion override.
 ---@return CcbResult result `value` is a CcbMissionMutation.
 function CcbMissionsApi.complete(owner, token, force) end
+---@param owner GameHandle Exact avatar owner.
+---@param token MissionToken Exact active mission instance.
+---@return CcbResult result `value` is a CcbMissionMutation; wraps up without querying goal completion, like native finish_mission success.
+function CcbMissionsApi.finish(owner, token) end
 ---@param token MissionToken Exact unassigned mission-instance token.
 ---@return CcbResult result `value` is a CcbMissionMutation.
 function CcbMissionsApi.cancel(token) end
@@ -8896,6 +9835,16 @@ function CcbFactionsApi.set_relationship(id, target, options) end
 ---@field input_handle_retired boolean The scheduled operation retires the input handle before it runs.
 ---@field activity table<string, any> Detached activity snapshot.
 
+---@class CcbPickupAtOptions
+---@field extra_moves_per_item? integer Native pickup extra-moves integer; negative values are passed through.
+---@field max_volume_ml? number Truncated toward zero to the native integer milliliter volume; values outside the native int range are rejected, and negative values are passed through.
+---@field max_mass_g? number Converted to integer milligrams by truncation toward zero; values outside native mass range are rejected, and negative values are passed through. This is the manual API's numeric limit, not a claim that legacy EOC max_mass migrates equivalently.
+
+---@class CcbPickupAtResult
+---@field scheduled boolean True when the native picker returned at least one selection and the character received one pickup activity.
+---@field selected_count integer Number of selected drop locations returned by the native picker.
+---@field activity table<string, any> Detached activity snapshot after selection; unchanged when scheduled is false.
+
 ---@class CcbItemTransferResult
 ---@field accepted boolean True only after destination insertion and exact source removal/charge mutation commit.
 ---@field changed boolean
@@ -8950,7 +9899,7 @@ local CcbItemsApi = {}
 ---@param item_handle GameHandle Exact live source Item handle; no same-id lookup.
 ---@param source_holder CcbItemHolder Exact current holder descriptor for the source.
 ---@param destination_holder CcbItemHolder Explicit destination holder descriptor.
----@param quantity? integer Whole item count or bounded charge count; defaults to the complete source item.
+---@param quantity? integer Whole item count or bounded charge count; defaults to the complete source item. Partial transfer of a container stack with contents returns unsupported_transfer.
 ---@return CcbResult result `value` is a CcbItemTransferResult; destination rejection leaves the source unchanged.
 function CcbItemsApi.transfer(item_handle, source_holder, destination_holder, quantity) end
 ---@param holder CcbItemHolder Explicit Character, map-tile, container-pocket, or vehicle-cargo root.
@@ -9009,6 +9958,10 @@ function CcbItemsApi.erase_var(handle, key) end
 ---@param flag GameId GameId<json_flag>
 ---@return CcbResult
 function CcbItemsApi.has_flag(handle, flag) end
+---@param item_handle GameHandle Exact live item talker handle; may be outside the Character's inventory.
+---@param character GameHandle Exact live alpha Character; queried as the carrier for native has_ammo semantics.
+---@return CcbResult boolean matching the native has_ammo condition.
+function CcbItemsApi.has_ammo(item_handle, character) end
 ---@param item_handle GameHandle Exact live item handle.
 ---@param character GameHandle Exact live Character holder; no avatar fallback.
 ---@param method? string
@@ -9061,6 +10014,27 @@ function CcbItemsApi.clear_old_owner(item_handle) end
 ---@class CcbInventoryApi
 local CcbInventoryApi = {}
 
+---@class CcbInventoryConsumeSumEntry
+---@field item GameId GameId<item> Static item type ID. Unknown IDs are accepted and match no items, as in native itype_id lookup.
+---@field amount number Finite positive value no greater than 1000000000.
+
+---@class CcbInventoryConsumeDialogueSumValue
+---@field coverage number Shared native weighted coverage; it may exceed 1 after the final row.
+---@field fulfilled boolean Whether shared coverage reached at least 1.
+---@field changed boolean Whether any item or charge stack changed.
+---@field removed_items integer Number of whole item locations removed.
+---@field modified_charge_stacks integer Number of charge stacks partially modified.
+
+---@alias CcbInventoryDialogueParticipant 'alpha'|'beta'
+
+---@class CcbInventoryWeaponState
+---@field armed boolean True when the Character has a wielded item selected for attacks.
+---@field can_stow boolean Native stow result, including weapon-bionic deactivation and current storage capacity.
+---@field can_drop boolean Whether the armed Character's wielded item can be dropped.
+---The native NO_UNWIELD flag prevents dropping; an unarmed Character returns false.
+---@field id? GameId Wielded item type id, when an item is wielded.
+---@field uid? integer Wielded item UID, when an item is wielded.
+
 ---@param character GameHandle Exact live Character handle.
 ---@param candidates GameHandle[] Exact item handles belonging to character.
 ---@param title? string
@@ -9087,7 +10061,17 @@ function CcbInventoryApi.choose_many_map(character, candidates, options) end
 ---@return CcbResult
 function CcbInventoryApi.resources(character, item_type, quantity) end
 ---@param character GameHandle Exact live Character handle.
----@param entries table
+---@param item_type GameId Valid GameId<item> queried with native u_has_items/npc_has_items count and charge rules.
+---@param count integer Non-negative requested item count, at most 1000000000.
+---@param charges integer Non-negative requested charge count, at most 1000000000.
+---@return CcbResult boolean native-style item requirement result.
+function CcbInventoryApi.has_items(character, item_type, count, charges) end
+---@class CcbInventorySumEntry
+---@field item GameId GameId<item> queried by native item type id.
+---@field amount number Finite desired quantity in (0, 1000000000].
+
+---@param character GameHandle Exact live Character handle; counts its crafting inventory and all cargo of loaded vehicles owned by its faction.
+---@param entries CcbInventorySumEntry[] Dense array of 1..128 weighted item entries.
 ---@return CcbResult
 function CcbInventoryApi.has_items_sum(character, entries) end
 ---@param character GameHandle Exact live Character handle.
@@ -9109,6 +10093,13 @@ function CcbInventoryApi.is_wearing(character, item_type) end
 ---@param flag GameId GameId<json_flag>
 ---@return CcbResult
 function CcbInventoryApi.has_item_flag(character, flag) end
+---Test item type flags as native u_has_item_with_flag/npc_has_item_with_flag conditions do.
+---This checks flags declared on item types, not per-instance flags. An unknown but well-formed
+---flag ID keeps the native cache behavior.
+---@param character GameHandle Exact live Character handle.
+---@param flag GameId GameId<json_flag>
+---@return CcbResult
+function CcbInventoryApi.has_item_type_flag(character, flag) end
 ---@param character GameHandle Exact live Character handle.
 ---@param category GameId GameId<item_category>
 ---@return CcbResult
@@ -9122,12 +10113,17 @@ function CcbInventoryApi.item_radiation(character, flag, aggregate) end
 ---@param criterion GameId
 ---@return CcbResult
 function CcbInventoryApi.wielded_matches(character, criterion) end
----@param holder GameHandle Exact live Character handle.
----@param owner GameHandle Exact live Character handle.
----@return CcbResult
+---Search the holder's native inventory dump and test each item with
+---`item:is_old_owner(owner, true)`, matching the legacy stolen-item condition.
+---An item with no old-owner faction therefore matches, as it does natively.
+---@param holder GameHandle Exact live Character whose inventory is searched.
+---@param owner GameHandle Exact live Character compared with each item's old owner.
+---@return CcbResult result `value` is a boolean.
 function CcbInventoryApi.has_stolen_from(holder, owner) end
+---Read native weapon state without changing equipment.
+---`can_stow` is false when the Character has no selected wielded weapon.
 ---@param character GameHandle Exact live Character handle.
----@return CcbResult
+---@return CcbResult result `value` is a detached CcbInventoryWeaponState.
 function CcbInventoryApi.weapon_state(character) end
 ---@param character GameHandle Exact live Character handle.
 ---@param item_type GameId GameId<item>
@@ -9146,6 +10142,23 @@ function CcbInventoryApi.give_group(character, group, options) end
 ---@param charges? integer
 ---@return CcbResult
 function CcbInventoryApi.consume(character, item_type, count, charges) end
+---@class CcbInventoryConsumeByTypeResult
+---@field id GameId GameId<item> that was requested.
+---@field count integer Effective native item count after count-by-charges conversion.
+---@field charges integer Effective native charge count after count-by-charges conversion.
+---@field matched boolean Whether the native amount-or-charge branch matched; zero-count requests can match without changing items.
+---@param character GameHandle Exact live Character handle.
+---@param item_type GameId GameId<item> whose type is consumed.
+---@param count integer Native signed-int item count; negative and zero values retain native behavior.
+---@param charges integer Native signed-int charge count; matching charges may come from tools.
+---@return CcbResult result `value` is a CcbInventoryConsumeByTypeResult.
+---Uses the native Character search, including tool charges. Unknown IDs follow the native undefined-item and missing-popup path. Insufficient charges can still fall through to the amount branch; an unmatched request opens the native missing-item popup.
+function CcbInventoryApi.consume_by_type(character, item_type, count, charges) end
+---@param character GameHandle Exact live Character handle.
+---@param item_type GameId GameId<item>
+---@return CcbResult result `value` contains the item id and matching-item removal count.
+---Removes matching items from inventory, worn equipment, wielded item, and nested contents.
+function CcbInventoryApi.remove_type(character, item_type) end
 ---@param character GameHandle Exact live Character handle.
 ---@param recipient GameHandle Exact live Character handle.
 ---@param item_type GameId GameId<item>
@@ -9153,12 +10166,38 @@ function CcbInventoryApi.consume(character, item_type, count, charges) end
 ---@param charges? integer
 ---@return CcbResult
 function CcbInventoryApi.hand_in(character, recipient, item_type, count, charges) end
+---@class CcbInventoryTransferByTypeResult
+---@field id GameId GameId<item> whose type was transferred.
+---@field count integer Native positive item count, interpreted as charges for charge-counted types when enough charges are available.
+---@field matched boolean Whether the native charge-first/amount-fallback inventory search found enough stock.
+---@field kind "charges"|"items"|"none" Which native inventory branch supplied the transferred fragments.
+---@field fragments integer Number of item fragments returned by the native inventory operation.
+---@field notice string Native success or missing-item popup text.
+---@param character GameHandle Exact live Character inventory source.
+---@param recipient GameHandle Exact live Character recipient; transferred fragments receive this Character's faction as owner.
+---@param item_type GameId GameId<item>
+---@param count integer Positive quantity within 1..1000000000; charge-counted items transfer matching charges first, then native item-count fallback.
+---@return CcbResult result `value` is a CcbInventoryTransferByTypeResult. An insufficient-stock request is a successful service call with `matched = false` and no inventory mutation.
+function CcbInventoryApi.transfer_by_type(character, recipient, item_type, count) end
 ---@param character GameHandle Exact live Character handle.
 ---@param entries table
 ---@return CcbResult
 function CcbInventoryApi.consume_sum(character, entries) end
+---Apply native u_consume_item_sum/npc_consume_item_sum inventory mutations to the selected Character.
+---Scans owned recursive inventory, nearby map items, and loaded vehicle cargo as one unordered candidate set.
+---Rows are processed in order with shared fractional coverage. Whole-item removal spills contents; charge stacks may be decremented in place. Mutation is incremental and has no rollback.
+---Accepts an empty array or up to 128 dense rows with finite positive amounts <= 1000000000. Unknown item IDs are native no-match values.
+---When the requested alpha/beta participant is absent, use the other provided participant, matching mutable dialogue::actor fallback.
+---Native debug logging for the missing-beta fallback is not reproduced.
+---@param alpha GameHandle|nil Exact live dialogue alpha Character, when proven by the caller.
+---@param beta GameHandle|nil Exact live dialogue beta Character, when proven by the caller.
+---@param participant CcbInventoryDialogueParticipant Native role requested by the effect.
+---@param entries CcbInventoryConsumeSumEntry[] Ordered dense weighted item rows.
+---@return CcbResult
+function CcbInventoryApi.consume_dialogue_sum(alpha, beta, participant, entries) end
 
 ---@alias CcbEquipmentOperation 'wield'|'wear'|'unequip'
+---@alias CcbEquipmentStowPath 'weapon_bionic'|'remove_weapon_i_add'
 
 ---@alias CcbEquipmentErrorCode
 ---| 'stale_runtime'
@@ -9215,6 +10254,15 @@ function CcbInventoryApi.consume_sum(character, entries) end
 ---@field value? CcbEquipmentValue Present only after the atomic equipment transaction commits.
 ---@field error? CcbEquipmentError Present when preflight, operation, or rollback rejects the request.
 
+---@class CcbEquipmentStowValue
+---@field invoked true True when the native stow branch was invoked; i_add may discard the physical Item when no pocket accepts it.
+---@field path CcbEquipmentStowPath 'weapon_bionic' deactivates the selected weapon bionic; 'remove_weapon_i_add' force-runs the native physical-item path.
+---@field bionic_deactivated? boolean Native deactivate_bionic result; false does not fall through to inventory stowing.
+
+---@class CcbEquipmentStowResult: CcbResult
+---@field value? CcbEquipmentStowValue Present when the native operation was invoked.
+---@field error? CcbEquipmentError Present when the exact actor handle is rejected.
+
 ---@class CcbEquipmentApi
 local CcbEquipmentApi = {}
 
@@ -9238,6 +10286,10 @@ function CcbEquipmentApi.wear(actor, item, source_holder, displaced_destination)
 ---@return CcbEquipmentResult result `value` is published only after the complete unequip transaction commits; `error` preserves equipment/destination on rejection.
 function CcbEquipmentApi.unequip(actor, item, destination_holder) end
 
+---@param actor GameHandle Exact live avatar, Character, or NPC actor handle; never inferred.
+---@return CcbEquipmentStowResult result Mirrors native branch order and does not preflight with inventory.weapon_state.can_stow. Native i_add does not report whether the physical Item was stored; invoked only means that native code ran.
+function CcbEquipmentApi.stow_current_weapon(actor) end
+
 ---@class CcbNpcOpinion
 ---@field trust integer
 ---@field fear integer
@@ -9245,6 +10297,16 @@ function CcbEquipmentApi.unequip(actor, item, destination_holder) end
 ---@field anger integer
 ---@field owed integer
 ---@field sold integer
+
+---@class CcbNpcAiRulesSnapshot
+---@field aim string Current native aim policy name.
+---@field engagement string Current native engagement policy name.
+---@field cbm_recharge string Current native CBM recharge policy name.
+---@field cbm_reserve string Current native CBM reserve policy name.
+---@field allies string[] Effective enabled native ally rules in native catalog order.
+---@field base_allies string[] Base enabled native ally rules, before overrides.
+---@field overrides table<string, boolean> Values for ally rules with an enabled override.
+---@field pickup_whitelist boolean Whether the native pickup whitelist is nonempty.
 
 ---@class CcbNpcSnapshot
 ---@field handle GameHandle Exact live NPC handle.
@@ -9259,13 +10321,55 @@ function CcbEquipmentApi.unequip(actor, item, destination_holder) end
 ---@field faction GameId|nil GameId<faction> when present.
 ---@field attitude GameId
 ---@field attitude_name string
+---@field has_assigned_camp boolean
 ---@field dead boolean
+---@field enemy boolean Native NPC enemy state (KILL or FLEE attitude).
+---@field friendly boolean Native is_friendly result against the global avatar.
+---@field following boolean Native FOLLOW or WAIT attitude.
+---@field leader boolean Native LEAD attitude.
 ---@field player_ally boolean
 ---@field first_topic string
 ---@field opinion CcbNpcOpinion Stored opinion; no avatar lookup is performed.
----@field ai_rules table<string, any>
+---@field ai_rules CcbNpcAiRulesSnapshot
+---@field dialogue_missions CcbNpcDialogueMissions
+
+---@class CcbNpcDialogueMissions
+---@field available_count integer
+---@field assigned_count integer
+---@field selected? CcbNpcSelectedMissionSnapshot
+---@field selected_stale boolean
+
+---@class CcbNpcSelectedMissionSnapshot
+---@field token MissionToken
+---@field uid integer
+---@field id GameId GameId<mission>
+---@field assigned boolean
+---@field in_progress boolean
+---@field failed boolean
+---@field has_generic_rewards boolean
 
 ---@alias CcbNpcMissionStatus 'available'|'active'|'success'|'failure'
+---@alias CcbNpcSelectedMissionPredicate 'complete'|'incomplete'|'failed'
+---@alias CcbNpcMissionGoal
+---| 'MGOAL_NULL'
+---| 'MGOAL_GO_TO'
+---| 'MGOAL_GO_TO_TYPE'
+---| 'MGOAL_FIND_ITEM'
+---| 'MGOAL_FIND_ANY_ITEM'
+---| 'MGOAL_FIND_ITEM_GROUP'
+---| 'MGOAL_FIND_MONSTER'
+---| 'MGOAL_FIND_NPC'
+---| 'MGOAL_ASSASSINATE'
+---| 'MGOAL_KILL_MONSTER'
+---| 'MGOAL_KILL_MONSTERS'
+---| 'MGOAL_KILL_MONSTER_TYPE'
+---| 'MGOAL_KILL_MONSTER_SPEC'
+---| 'MGOAL_KILL_NEMESIS'
+---| 'MGOAL_RECRUIT_NPC'
+---| 'MGOAL_RECRUIT_NPC_CLASS'
+---| 'MGOAL_COMPUTER_TOGGLE'
+---| 'MGOAL_TALK_TO_NPC'
+---| 'MGOAL_CONDITION'
 
 ---@class CcbNpcMissionSnapshot
 ---@field token MissionToken Exact mission-instance token bound to this runtime and world.
@@ -9289,8 +10393,8 @@ function CcbEquipmentApi.unequip(actor, item, destination_holder) end
 ---@class CcbNpcMissionsState
 ---@field provider_id integer Exact NPC provider id.
 ---@field available CcbNpcMissionPage Missions currently offered by the provider.
----@field assigned CcbNpcMissionPage Missions assigned through the provider.
----@field selected? CcbNpcMissionSnapshot Provider-selected mission, when live.
+---@field assigned CcbNpcMissionPage All missions assigned through this provider.
+---@field selected? CcbNpcMissionSnapshot Provider-selected mission, when live; selection is provider-scoped and is not owner-filtered.
 ---@field selected_stale? boolean True when the provider's selected mission is no longer live.
 ---@field selected_invalid? boolean True when a live selected mission is not uniquely owned by this provider.
 
@@ -9312,6 +10416,15 @@ function CcbEquipmentApi.unequip(actor, item, destination_holder) end
 ---@field attitude integer Native NPC attitude enum value.
 ---@field busy_turns integer Remaining `currently_busy` duration in turns.
 ---@field current_activity string Native current-activity description.
+
+---@alias CcbNpcRefusalRequest 'follow'|'lead'|'equipment'|'training'|'personal_info'
+
+---@class CcbNpcRefusalResult
+---@field request CcbNpcRefusalRequest Request recorded for this NPC.
+---@field effect GameId Native refusal effect applied.
+---@field duration TimeDuration Native duration in hours: follow/lead/training 6, equipment 1, personal_info 3.
+---@field already_active boolean Whether the refusal effect was active before the call.
+---@field active boolean Whether the refusal effect is active after the call.
 
 ---@class CcbNpcMissionsStateResult
 ---@field before CcbNpcMissionsState State before selecting a mission.
@@ -9344,6 +10457,25 @@ local CcbNpcMissionsApi = {}
 ---@return CcbResult result `value` is a CcbNpcMissionsState.
 function CcbNpcMissionsApi.state(provider) end
 ---@param provider GameHandle Exact live NPC provider handle.
+---@param owner GameHandle Exact live avatar dialogue-partner handle.
+---@return CcbResult result `value` is the owner's assigned CcbNpcMissionPage, matching native dialogue mission ownership.
+function CcbNpcMissionsApi.assigned_for_owner(provider, owner) end
+---@param provider GameHandle Exact live NPC provider handle.
+---@return CcbResult result `value` is raw NPC chatbin.missions length, including entries omitted from the filtered live page.
+function CcbNpcMissionsApi.available_count(provider) end
+---@param provider GameHandle Exact live NPC provider handle.
+---@param owner GameHandle Exact live avatar used by native mission goal completion checks.
+---@param predicate CcbNpcSelectedMissionPredicate Native selected-mission predicate to evaluate.
+---@return CcbResult result `value` is boolean; missing or stale selections return false. Live selected pointers are evaluated even if they are not in this provider's mission collections.
+function CcbNpcMissionsApi.selected_condition(provider, owner, predicate) end
+---@param provider GameHandle Exact live NPC provider handle.
+---@param goal CcbNpcMissionGoal Native mission goal enum name.
+---@return CcbResult result `value` is boolean; a missing or stale selection returns false.
+function CcbNpcMissionsApi.selected_has_goal(provider, goal) end
+---@param provider GameHandle Exact live NPC provider handle.
+---@return CcbResult result Boolean matches the native condition; an empty selection returns true, stale nonempty selection errors, and native debugmsg logging is omitted.
+function CcbNpcMissionsApi.selected_has_generic_rewards(provider) end
+---@param provider GameHandle Exact live NPC provider handle.
 ---@param token MissionToken Exact mission-instance token offered or assigned by this provider.
 ---@return CcbResult result `value` is a CcbNpcMissionsStateResult.
 function CcbNpcMissionsApi.select(provider, token) end
@@ -9373,6 +10505,10 @@ function CcbNpcMissionsApi.fail_selected(provider, owner) end
 ---@param owner GameHandle Exact avatar owner handle; no ambient avatar is selected.
 ---@return CcbResult result `value` is a CcbNpcMissionActionResult.
 function CcbNpcMissionsApi.clear_selected(provider, owner) end
+---@param provider GameHandle Exact live NPC provider handle used as native dialogue beta.
+---@param owner GameHandle Exact active avatar handle used as native dialogue alpha.
+---@return CcbResult result `value` is true when the native mission reward effect was invoked; native behavior adds the selected mission value to NPC debt before opening the localized Reward barter UI. A missing selection follows the native debug-message/no-op path. The trade acceptance result is not returned.
+function CcbNpcMissionsApi.open_selected_reward_trade(provider, owner) end
 ---@param provider GameHandle Exact live NPC provider handle.
 ---@param owner GameHandle Exact avatar owner handle; no ambient avatar is selected.
 ---@return CcbResult result `value` is a CcbNpcMissionActionResult; `error.code` is `no_generic_reward`, `already_claimed`, `not_successful`, or `reward_overflow` when claim preflight rejects.
@@ -9409,11 +10545,24 @@ function CcbNpcGroomingApi.open_style(provider, client, area) end
 ---@return CcbResult
 function CcbNpcGroomingApi.provide(provider, client, service) end
 
+---@class CcbNpcTrainingOfferings
+---@field teacher GameHandle Exact teacher Character.
+---@field student GameHandle Exact student Character.
+---@field skills GameId[] Complete skill offers in native order.
+---@field proficiencies GameId[] Complete proficiency offers in native order.
+---@field styles GameId[] Complete teachable martial-art style offers in native order.
+---@field spells GameId[] Complete teachable spell offers in native order.
+---@field skill_count integer Number of offered skills.
+---@field proficiency_count integer Number of offered proficiencies.
+---@field style_count integer Number of offered teachable martial-art styles.
+---@field spell_count integer Number of offered teachable spells.
+---@field has_any boolean Whether any of the four offer lists is non-empty.
+
 ---@class CcbNpcTrainingApi
 local CcbNpcTrainingApi = {}
 ---@param teacher GameHandle Exact Character/NPC teacher handle.
 ---@param student GameHandle Exact Character student handle.
----@return CcbResult
+---@return CcbResult result `value` is a detached CcbNpcTrainingOfferings snapshot.
 function CcbNpcTrainingApi.offerings(teacher, student) end
 ---@param teacher GameHandle Exact Character/NPC teacher handle.
 ---@param students GameHandle[] Exact student handles.
@@ -9461,6 +10610,10 @@ function CcbNpcOrdersApi.open_character_sheet(handle) end
 ---@class CcbNpcsApi
 ---@field orders CcbNpcOrdersApi
 local CcbNpcsApi = {}
+---Run the native talk-effect drop on this NPC; hallucinations are ignored and even an unarmed call passes its null weapon to the map-drop path.
+---@param handle GameHandle Exact NPC handle.
+---@return CcbResult result `value.dropped` is true only when a physical wielded item was dropped.
+function CcbNpcsApi.drop_weapon(handle) end
 ---@param options? CcbNpcQueryOptions
 ---@return CcbResult result `value` is a bounded NPC-class page.
 function CcbNpcsApi.classes(options) end
@@ -9484,8 +10637,8 @@ function CcbNpcsApi.find_unique(unique_id) end
 ---@return integer
 function CcbNpcsApi.count_allies(global) end
 ---@param origin GameHandle Exact observer/Character/Creature handle.
----@param role string
----@param radius? integer
+---@param role string Role ID of at most 256 bytes; embedded NUL is rejected.
+---@param radius? integer Same-z rl_dist radius; defaults to 48 and must be within 0..1000.
 ---@return CcbResult
 function CcbNpcsApi.has_role_nearby(origin, role, radius) end
 ---@param origin GameHandle Exact observer/Character/Creature handle.
@@ -9533,13 +10686,13 @@ function CcbNpcsApi.set_radio_representative(handle, avatar, enabled) end
 ---@return table
 function CcbNpcsApi.ai_rule_catalog() end
 ---@param handle GameHandle Exact NPC handle.
----@param family string
----@param rule string
+---@param family 'aim'|'engagement'|'cbm_recharge'|'cbm_reserve'
+---@param rule string Native rule id from the selected family's ai_rule_catalog() entry.
 ---@return CcbResult
 function CcbNpcsApi.set_ai_policy(handle, family, rule) end
 ---@param handle GameHandle Exact NPC handle.
----@param rule string
----@param enabled? boolean
+---@param rule string Native ally rule id from ai_rule_catalog().allies.
+---@param enabled? boolean When omitted, toggle according to the effective rule (including overrides); before/after report the base flag.
 ---@return CcbResult
 function CcbNpcsApi.set_ally_rule(handle, rule, enabled) end
 ---@param handle GameHandle Exact NPC handle.
@@ -9556,8 +10709,8 @@ function CcbNpcsApi.copy_ai_rules(target, source) end
 ---@return CcbResult
 function CcbNpcsApi.make_thankful(handle) end
 ---@param handle GameHandle Exact NPC handle.
----@param request string
----@return CcbResult
+---@param request CcbNpcRefusalRequest Exact legacy refusal category; applies the same native effect and duration as its talk effect.
+---@return CcbResult result `value` is a CcbNpcRefusalResult; unsupported request strings are rejected.
 function CcbNpcsApi.record_refusal(handle, request) end
 ---@param handle GameHandle Exact NPC handle.
 ---@return CcbResult
@@ -9585,6 +10738,9 @@ function CcbNpcsApi.request_talk(handle) end
 
 function CcbNpcsApi.warn_player_departure(handle) end
 function CcbNpcsApi.clear_stolen_item_claim(handle) end
+---@param handle GameHandle Exact dialogue beta NPC whose faction owns the stolen items.
+---@return CcbResult result Value.dropped reports whether any matching items were returned; matching items are recursively removed from the active avatar's inventory and placed at their current tile by the native operation.
+function CcbNpcsApi.drop_stolen_items(handle) end
 ---@param handle GameHandle Exact NPC handle.
 function CcbNpcsApi.destinations(handle) end
 ---@param handle GameHandle Exact NPC handle.
@@ -9615,7 +10771,7 @@ function CcbNpcsApi.open_control_menu(avatar) end
 ---@param avatar GameHandle Exact avatar owner handle; required, no global-player fallback.
 function CcbNpcsApi.take_control(handle, avatar) end
 ---@param handle GameHandle Exact NPC handle.
----@return CcbResult
+---@return CcbResult result `value` is a CcbNpcAiRulesSnapshot.
 function CcbNpcsApi.ai_rules(handle) end
 ---@field medical CcbNpcMedicalApi
 ---@field grooming CcbNpcGroomingApi
@@ -9914,16 +11070,24 @@ function CcbPlatformAchievementsApi.complete(id) end
 ---@field resumable boolean
 ---@field progress number Clamped progress from zero through one when the move budget permits it.
 
+---@class CcbPlatformCharacterActivitySnapshot: CcbPlatformActivitySnapshot
+---@field backlog_size integer Total number of suspended native activities.
+---@field backlog CcbPlatformActivitySnapshot[] Detached snapshots of the first 128 suspended activities, in native order.
+---@field backlog_truncated boolean True when backlog_size exceeds the returned backlog length.
+
 ---@class CcbPlatformActivityMutation
 ---@field changed boolean
 ---@field activity CcbPlatformActivitySnapshot Resulting current activity.
+
+---@class CcbPlatformActivityCancellation: CcbPlatformActivityMutation
+---@field activity CcbPlatformCharacterActivitySnapshot Resulting current activity and backlog.
 
 ---@class CcbPlatformActivitiesApi
 local CcbPlatformActivitiesApi = {}
 
 ---Read a detached snapshot of one Character's current native activity.
 ---@param character GameHandle Character handle.
----@return CcbResult result `value` is a CcbPlatformActivitySnapshot.
+---@return CcbResult result `value` is a CcbPlatformCharacterActivitySnapshot.
 function CcbPlatformActivitiesApi.snapshot(character) end
 
 ---Assign a plain time-based activity through native Character assignment rules.
@@ -9937,7 +11101,7 @@ function CcbPlatformActivitiesApi.assign_timed(character, id, duration) end
 
 ---Cancel the current activity through native cleanup, backlog, and resumption rules.
 ---@param character GameHandle Character handle.
----@return CcbResult result `value` is a CcbPlatformActivityMutation.
+---@return CcbResult result `value` is a CcbPlatformActivityCancellation.
 function CcbPlatformActivitiesApi.cancel(character) end
 
 ---@class CcbPlatformWoundSnapshot
@@ -9986,6 +11150,25 @@ function CcbPlatformWoundsApi.add(character, body_part, wound) end
 ---@return CcbResult result `value` has detached native-order before/after arrays; absent instances produce `changed = false`.
 function CcbPlatformWoundsApi.remove(character, body_part, wound) end
 
+---Apply the native direct wound operation to the native next-best body part; runtime-callback write only.
+---This intentionally bypasses Wound per-part limits and does not call Character::apply_wound,
+---so it does not trigger that method's perceived-pain resynchronization.
+---Wrong GameId kinds or unknown ids raise invalid_argument before mutation.
+---@param character GameHandle Character handle.
+---@param body_part GameId GameId<body_part>; native next-best body-part fallback is used.
+---@param wound GameId GameId<wound>
+---@return CcbResult result `value` is a CcbPlatformWoundMutation with detached native-order before/after arrays.
+function CcbPlatformWoundsApi.add_unbounded(character, body_part, wound) end
+
+---Remove every matching wound directly from the native next-best body part; runtime-callback write only.
+---This intentionally does not call Character::on_stat_change or resynchronize perceived pain.
+---Wrong GameId kinds or unknown ids raise invalid_argument before mutation.
+---@param character GameHandle Character handle.
+---@param body_part GameId GameId<body_part>; native next-best body-part fallback is used.
+---@param wound GameId GameId<wound>
+---@return CcbResult result `value` has detached native-order before/after arrays.
+function CcbPlatformWoundsApi.remove_all_direct(character, body_part, wound) end
+
 ---@class CcbMutationTypeRemoval
 ---@field type string Requested mutation type (a mutation's `types` membership, not its category).
 ---@field removed GameId[] Detached GameId<mutation> array; ordering is unspecified.
@@ -9994,7 +11177,9 @@ function CcbPlatformWoundsApi.remove(character, body_part, wound) end
 ---@class CcbEffectAddOptions
 ---@field body_part? GameId Registered GameId<body_part>; native effects may refer to parts outside the current anatomy.
 ---@field permanent? boolean Defaults to false.
----@field intensity? integer Native intensity input, -1000000 through 1000000; defaults to zero. Nonpositive values use native default/stacking rules, not a signed delta.
+---@field intensity? integer Native signed int range (-2147483648 through
+---2147483647); defaults to zero. Nonpositive values use native default/stacking
+---rules, not a signed delta.
 ---@field force? boolean Bypass native immunity checks; defaults to false.
 
 ---@class CcbMoraleAddOptions
@@ -10010,6 +11195,14 @@ function CcbPlatformWoundsApi.remove(character, body_part, wound) end
 
 ---@class CcbSkillsApi
 local CcbSkillsApi = {}
+
+---Return the Character's effective skill level for an exact live Character handle.
+---The raw ID is passed to the native getter without registry validation or an extra byte limit;
+---unregistered IDs retain native zero-base-level and modifier behavior.
+---@param character GameHandle Exact live Character handle; never inferred from the avatar.
+---@param id string Raw skill ID text; empty, embedded NUL and long strings follow native ID lookup.
+---@return CcbResult result `value` is the effective numeric level from Character:get_skill_level.
+function CcbSkillsApi.level(character, id) end
 
 ---Skills the teacher can teach this student, using the student's knowledge level.
 ---@param teacher GameHandle Character handle.
@@ -10035,8 +11228,17 @@ function CcbMoraleApi.add(character, morale, bonus, max_bonus, options) end
 ---@return CcbResult result `value` contains before, after and changed.
 function CcbMoraleApi.remove(character, morale) end
 
+---Bionic definition field shape confirmed by current migration sources.
+---Other snapshot fields are not declared here until their Lua contract is audited.
+---@class CcbBionicDefinition
+---@field name string Localized display name.
+
 ---@class CcbBionicsApi
 local CcbBionicsApi = {}
+
+---@param bionic GameId GameId<bionic>.
+---@return CcbBionicDefinition detached definition snapshot.
+function CcbBionicsApi.definition(bionic) end
 
 ---Inspect native installed count, stored power, maximum power and capacity independently.
 ---@param character GameHandle Exact avatar or NPC handle.
@@ -10090,6 +11292,7 @@ function CcbTypesApi.id_kinds() end
 
 ---@class CcbVariablesApi
 ---Native-backed actor/item/vehicle/global storage preserves full byte sequences for top-level strings, including NUL.
+---Top-level numeric writes preserve native IEEE doubles, including signed zero, infinity and NaN.
 ---Nested array strings and callback-context writes retain bounded diag-value conversion; native copy stays direct.
 local CcbVariablesApi = {}
 
@@ -10121,6 +11324,7 @@ function CcbVariablesApi.get(character, key) end
 ---@param key string Native actor/item/vehicle storage key; callback-context key limits do not apply.
 ---@param value boolean|number|string|TripointCoord|NullValue|any[]|nil
 ---Top-level native strings preserve all bytes; strings in arrays remain bounded.
+---Top-level numbers preserve IEEE double values, including infinity and NaN.
 ---@param options CcbVariableMutationOptions?
 ---@return CcbResult result `value` contains existed and after; before is present by default and omitted when include_before=false.
 function CcbVariablesApi.set(character, key, value, options) end
@@ -10135,9 +11339,104 @@ function CcbVariablesApi.remove(character, key, options) end
 ---@return CcbVariableReadResult
 function CcbVariablesApi.get_global(key) end
 
+---@class CcbVariableStringReadValue
+---@field exists boolean Whether the selected storage key is present.
+---@field value? string Native string value; stored empty or incompatible values return the native empty string, while missing keys return nil.
+
+---@class CcbVariableStringReadResult: CcbResult
+---@field value? CcbVariableStringReadValue
+
+---Read the native string type directly without converting the full stored value through Lua.
+---Preserves native legacy-string conversion and type-mismatch diagnostics; array snapshot limits do not apply.
+---@param key string Native global storage key; full byte sequences are preserved.
+---@return CcbVariableStringReadResult
+function CcbVariablesApi.get_global_string(key) end
+
+---Read the string type of a callback data slot, preserving missing versus explicit NullValue.
+---Strings retain all bytes. Numbers/booleans, arrays and absolute map-square coordinates emit the
+---same native diag_value string-type diagnostic and return an empty string; NullValue is empty without a diagnostic.
+---Only the outer storage type is queried: Lua tables are array-typed here, and their contents are not copied or validated.
+---@param context table<string, any>|nil Callback data; nil means all keys are missing.
+---@param key string Raw storage key; empty, long, control and embedded-NUL bytes are allowed.
+---@return CcbVariableStringReadResult
+function CcbVariablesApi.get_context_string(context, key) end
+
+---Read an actor, item, or vehicle variable as the native string type without converting the full stored value through Lua.
+---Preserves native legacy-string conversion and type-mismatch diagnostics; array snapshot limits do not apply.
+---@param owner GameHandle Creature, item, or vehicle variable owner.
+---@param key string Native storage key; full byte sequences are preserved.
+---@return CcbVariableStringReadResult
+function CcbVariablesApi.get_string(owner, key) end
+
+---@class CcbVariableNumberReadValue
+---@field exists boolean Whether the selected native storage key is present.
+---@field value? number Native numeric read; explicit empty values yield zero, missing keys yield nil.
+
+---@class CcbVariableNumberReadResult: CcbResult
+---@field value? CcbVariableNumberReadValue
+
+---@class CcbVariableNumberReadOptions
+---@field strict? boolean Default false. True returns a variable_type_mismatch error for incompatible stored types, preserving valid zero and missing keys.
+
+---Read the native numeric type directly, including legacy conversion and type diagnostics.
+---A stored incompatible type emits its native diagnostic and yields zero; no array snapshot limits apply.
+---With strict=true, incompatible types return a structured error instead of emitting a type diagnostic and yielding zero.
+---Legacy conversion retains native caching and diagnostics in either mode.
+---@param key string Raw native global key.
+---@param options? CcbVariableNumberReadOptions
+---@return CcbVariableNumberReadResult
+function CcbVariablesApi.get_global_number(key, options) end
+
+---Read the numeric type of a callback slot. Boolean values use native numeric storage (1 or 0).
+---NullValue yields zero without a diagnostic; strings, arrays and absolute map-square coordinates
+---emit the native type diagnostic and yield zero. Array contents are not traversed.
+---With strict=true, incompatible types return variable_type_mismatch without traversing array contents or emitting a type diagnostic.
+---@param context table<string, any>|nil
+---@param key string Raw key, including empty, long and embedded-NUL bytes.
+---@param options? CcbVariableNumberReadOptions
+---@return CcbVariableNumberReadResult
+function CcbVariablesApi.get_context_number(context, key, options) end
+
+---Read an actor, item or vehicle variable directly as a native number, retaining handle validation.
+---Strict reads distinguish type errors from zero/missing; handle errors remain their original error codes.
+---@param owner GameHandle
+---@param key string Raw native storage key.
+---@param options? CcbVariableNumberReadOptions
+---@return CcbVariableNumberReadResult
+function CcbVariablesApi.get_number(owner, key, options) end
+
+---@class CcbVariableTripointReadValue
+---@field exists boolean Whether the selected native storage key is present.
+---@field value? TripointCoord Native absolute map-square coordinate; missing keys yield nil.
+
+---@class CcbVariableTripointReadResult: CcbResult
+---@field value? CcbVariableTripointReadValue
+
+---Read a stored Native coordinate, retaining legacy-string conversion and type-mismatch diagnostics.
+---Explicit empty values yield the native zero coordinate; incompatible values yield zero with their native diagnostic.
+---Ordinary strings are not parsed as legacy coordinates; unrelated arrays are not traversed or snapshotted.
+---@param owner GameHandle Creature, item or vehicle variable owner; retains handle lifetime checks.
+---@param key string Raw native key; empty, long and embedded-NUL bytes are supported.
+---@return CcbVariableTripointReadResult
+function CcbVariablesApi.get_tripoint(owner, key) end
+
+---Read a Native global coordinate with the same conversion, presence and diagnostics as get_tripoint.
+---@param key string Raw native global storage key.
+---@return CcbVariableTripointReadResult
+function CcbVariablesApi.get_global_tripoint(key) end
+
+---Read only the coordinate type of a callback slot; accepted coordinates must be absolute map squares.
+---NullValue yields zero without a diagnostic. Numeric/boolean, string and table values emit the Native type diagnostic
+---and yield zero. Tables are queried as the Native array type without traversing their contents.
+---@param context table<string, any>|nil Nil means all keys are missing.
+---@param key string Raw callback storage key.
+---@return CcbVariableTripointReadResult
+function CcbVariablesApi.get_context_tripoint(context, key) end
+
 ---@param key string Native global storage key; callback-context key limits do not apply.
 ---@param value boolean|number|string|TripointCoord|NullValue|any[]|nil
 ---Top-level native strings preserve all bytes; strings in arrays remain bounded.
+---Top-level numbers preserve IEEE double values, including infinity and NaN.
 ---@param options CcbVariableMutationOptions?
 ---@return CcbResult result `value` contains existed and after; before is present by default and omitted when include_before=false.
 function CcbVariablesApi.set_global(key, value, options) end
@@ -10150,13 +11449,12 @@ function CcbVariablesApi.remove_global(key, options) end
 ---For u/npc scope the supplied actor is the owner; scope does not select a dialogue participant.
 ---Optional participants select alpha for u and beta for npc, including indirect references.
 ---When supplied, an absent participant means missing; otherwise actor remains the explicit owner.
----Context and var lookup keys must be 1..128 bytes without ASCII controls or NUL. Native GameHandle/global keys,
----including targets reached through var indirection, use native storage key semantics. A var target that
----resolves to callback context remains subject to the context-key limit.
+---All lookup keys, including callback context and var references, use raw native string semantics.
+---Empty, long, ASCII-control and embedded-NUL keys are allowed, including indirect targets.
 ---@param context table<string, any>|nil Callback data for context/var references.
 ---@param actor GameHandle|nil Explicit owner for actor references.
 ---@param scope 'u'|'npc'|'global'|'context'|'var'
----@param key string Native GameHandle/global key, or a bounded callback-context lookup key by scope.
+---@param key string Raw native storage key for the selected scope.
 ---@return CcbVariableReadResult
 ---@param participants {alpha: GameHandle?, beta: GameHandle?}?
 function CcbVariablesApi.resolve(context, actor, scope, key, participants) end
@@ -10165,14 +11463,13 @@ function CcbVariablesApi.resolve(context, actor, scope, key, participants) end
 ---resolve returns exists=true,value=nil for that explicit empty value.
 ---Native u/npc/global targets, including var-indirection targets ending there, preserve top-level string bytes.
 ---Context writes and nested array strings retain the existing bounded diag-value conversion.
----Context and var lookup keys must be 1..128 bytes without ASCII controls or NUL. Native GameHandle/global keys,
----including targets reached through var indirection, use native storage key semantics. A var target that
----resolves to callback context remains subject to the context-key limit.
+---All lookup keys, including callback context and var references, use raw native string semantics.
+---Empty, long, ASCII-control and embedded-NUL keys are allowed, including indirect targets.
 ---When include_before is false, the prior snapshot is omitted for every scope, including context.
 ---@param context table<string, any>|nil
 ---@param actor GameHandle|nil Explicit owner, including indirect actor references.
 ---@param scope 'u'|'npc'|'global'|'context'|'var'
----@param key string Native GameHandle/global key, or a bounded callback-context lookup key by scope.
+---@param key string Raw native storage key for the selected scope.
 ---@param value boolean|number|string|TripointCoord|NullValue|any[]|nil
 ---@return CcbResult result `value` contains existed and after; before is present by default and omitted when include_before=false.
 ---@param participants {alpha: GameHandle?, beta: GameHandle?}? Same participant selection as resolve.
@@ -10221,34 +11518,45 @@ local CcbEffectsApi = {}
 
 ---Apply an effect through native Creature rules. Nonpositive duration is preserved;
 ---it still applies immediately and expires when native effect processing runs.
----@param character GameHandle
+---@param creature GameHandle Exact live Creature handle; Character or monster.
 ---@param effect GameId
----@param duration TimeDuration Native signed turn range; the effect definition applies its own maximum duration.
+---@param duration TimeDuration Native signed int turn range
+---(-2147483648 through 2147483647); effect definition applies its own maximum duration.
 ---@param options? CcbEffectAddOptions
 ---@return CcbResult
-function CcbEffectsApi.add(character, effect, duration, options) end
+function CcbEffectsApi.add(creature, effect, duration, options) end
 
 ---Inspect one effect on the explicit Creature; compose any-of queries with Lua `or`.
----@param character GameHandle
+---@param creature GameHandle Exact live Creature handle; Character or monster.
 ---@param effect GameId
----@param body_part? GameId Registered part ID; current anatomy membership is not required. Omit for native unqualified lookup.
+---@param body_part? GameId Registered part ID; current anatomy membership is not required. Omit to use native bp_null lookup, which matches effects on any body part.
 ---@param intensity? number Finite minimum intensity from -1000000 through 1000000.
 ---@return CcbResult result `value` is boolean.
-function CcbEffectsApi.has(character, effect, body_part, intensity) end
+function CcbEffectsApi.has(creature, effect, body_part, intensity) end
 
 ---Read a detached effect snapshot. Absence returns not_found; other failures must not be treated as absence.
----@param character GameHandle Exact live Creature handle.
+---@param creature GameHandle Exact live Creature handle; Character or monster.
 ---@param effect GameId GameId<effect>.
 ---@param body_part? GameId Registered part ID; current anatomy membership is not required. Omit for native unqualified lookup.
 ---@return CcbEffectSnapshotResult
-function CcbEffectsApi.get(character, effect, body_part) end
+function CcbEffectsApi.get(creature, effect, body_part) end
 
----Remove an effect, optionally restricted to one body part; repeat removal is harmless.
----@param character GameHandle
+---Remove an effect by native body-part semantics; bp_null removes all instances.
+---@param creature GameHandle Exact live Creature handle; Character or monster.
 ---@param effect GameId
----@param body_part? GameId Registered part ID; current anatomy membership is not required. Omit to remove all instances.
+---@param body_part? GameId Registered part ID; need not match current anatomy. Omit to use native bp_null, which removes all instances.
 ---@return CcbResult result `value` is whether any instance was removed.
-function CcbEffectsApi.remove(character, effect, body_part) end
+function CcbEffectsApi.remove(creature, effect, body_part) end
+
+---@class CcbProficienciesApi
+local CcbProficienciesApi = {}
+
+---Read whether an exact Character knows a proficiency using native ID-text lookup.
+---Unknown IDs return false, matching Character::has_proficiency; no registry lookup is required.
+---@param character GameHandle Exact live Character handle.
+---@param id_text string Raw native proficiency ID text without GameId validation.
+---@return CcbResult result `value` is boolean.
+function CcbProficienciesApi.has_id_text(character, id_text) end
 
 ---@class CcbMutationsApi
 local CcbMutationsApi = {}
@@ -10269,6 +11577,15 @@ function CcbMutationsApi.definitions(options) end
 ---@return CcbResult result `value` is boolean.
 function CcbMutationsApi.has(character, mutation) end
 
+---Read a Character's mutation cache by the exact native ID text used by
+---native `has_trait` and `has_any_trait` predicates.
+---Unknown text returns false like Character::has_trait.
+---Long and control-containing text is passed through unchanged.
+---@param character GameHandle Exact avatar or NPC handle.
+---@param id_text string Raw native mutation ID text; no GameId length or character validation is applied.
+---@return CcbResult result `value` is boolean.
+function CcbMutationsApi.has_id_text(character, id_text) end
+
 ---Check a mutation's visibility to the explicit observer, including the native visibility threshold.
 ---@param observed GameHandle Character whose mutation is inspected.
 ---@param observer GameHandle Character performing the observation.
@@ -10282,6 +11599,14 @@ function CcbMutationsApi.is_visible_to(observed, observer, mutation) end
 ---@param mutation GameId GameId<mutation>.
 ---@return CcbResult result `value` is boolean; stale handles return an error envelope.
 function CcbMutationsApi.is_purifiable(character, mutation) end
+
+---Read purifiability with the exact native ID text used by EOC conditions.
+---Unknown text returns false; long and control-containing text passes through unchanged.
+---This includes the definition flag and the Character's intrinsic override.
+---@param character GameHandle Exact avatar or NPC handle.
+---@param id_text string Raw native mutation ID text, without GameId validation.
+---@return CcbResult result `value` is boolean; stale handles return an error envelope.
+function CcbMutationsApi.is_purifiable_id_text(character, id_text) end
 
 ---Set a present mutation's intrinsic purifiability override; runtime-callback write only.
 ---Absent mutations are unchanged. The definition's own non-purifiable flag still applies.
@@ -10344,6 +11669,13 @@ function CcbMutationsApi.set_active(character, mutation, active, retrigger) end
 ---@return CcbResult result `value` contains category, removed GameId<mutation>[] and removed_count.
 function CcbMutationsApi.remove_category(character, category) end
 
+---Invoke native random mutation selection for the explicit Character.
+---@param character GameHandle Exact avatar or NPC handle; runtime-callback write only.
+---@param true_random_chance? integer Non-negative chance from 0 through 1000000; defaults to 0.
+---@param use_vitamins? boolean Defaults to true.
+---@return CcbResult result `value` contains changed, before_count and after_count.
+function CcbMutationsApi.mutate(character, true_random_chance, use_vitamins) end
+
 ---Invoke native category mutation selection for the explicit Character.
 ---@param character GameHandle Exact avatar or NPC handle; runtime-callback write only.
 ---@param category? GameId GameId<mutation_category>; nil selects any category.
@@ -10351,6 +11683,14 @@ function CcbMutationsApi.remove_category(character, category) end
 ---@param true_random? boolean Defaults to false.
 ---@return CcbResult result `value` contains changed, before_count and after_count.
 function CcbMutationsApi.mutate_category(character, category, use_vitamins, true_random) end
+
+---Mutate the explicit Character toward a permanent mutation using native rules.
+---@param character GameHandle Exact avatar or NPC handle; runtime-callback write only.
+---@param mutation GameId Valid GameId<mutation>.
+---@param category? GameId Optional GameId<mutation_category>; nil uses native default category selection.
+---@param use_vitamins? boolean Defaults to true.
+---@return CcbResult result `value` contains changed, before_count, after_count and accepted.
+function CcbMutationsApi.mutate_towards(character, mutation, category, use_vitamins) end
 
 ---Remove all mutations of a type from the explicit avatar or NPC; runtime-callback write only.
 ---Uses native unset semantics, without purifier downgrades or restoring prerequisites.
@@ -10414,6 +11754,26 @@ function CcbPlatformBionicsApi.remove_type(character, id) end
 
 ---@class CcbRecipesApi
 local CcbRecipesApi = {}
+
+---@class CcbCraftingStartValue
+---@field recipe GameId GameId<recipe>
+---@field batch integer
+---@field continue_while_possible boolean
+---@field craft_activity_active boolean
+---@field activity? GameId GameId<activity>
+
+---@class CcbCraftingStartResult: CcbResult
+---@field value? CcbCraftingStartValue
+
+---@class CcbCraftingApi
+local CcbCraftingApi = {}
+
+---@param character GameHandle Exact avatar; NPC crafting uses activities.assign_npc_job.
+---@param recipe GameId GameId<recipe> currently available to the avatar.
+---@param batch? integer 1..1000; defaults to 1.
+---@param continue_while_possible? boolean Defaults to false.
+---@return CcbCraftingStartResult result Native component selection may open prompts or be cancelled; the value reports the resulting activity.
+function CcbCraftingApi.start(character, recipe, batch, continue_while_possible) end
 
 ---@class CcbRequirementsApi
 local CcbRequirementsApi = {}
@@ -10548,6 +11908,14 @@ function CcbPlatformRecipesApi.forget_category(character, category, subcategory)
 ---@field attack_vectors CcbTechniqueIdPage GameId<attack_vector> entries.
 ---@field eocs CcbTechniqueIdPage Native attached condition identifiers; not a Lua authoring interface.
 
+---@class CcbMartialArtsApi
+local CcbMartialArtsApi = {}
+
+---Read the selected native style, including the force-unarmed rule used by weapon predicates.
+---@param character GameHandle Character handle.
+---@return CcbResult result `value.force_unarmed` is the selected style's native value.
+function CcbMartialArtsApi.current(character) end
+
 ---@class CcbPlatformMartialArtsApi: CcbMartialArtsApi
 local CcbPlatformMartialArtsApi = {}
 
@@ -10556,14 +11924,28 @@ local CcbPlatformMartialArtsApi = {}
 ---@return CcbTechniqueDefinitionSnapshot
 function CcbPlatformMartialArtsApi.technique_definition(id) end
 
+---Read the native technique name, translated at each call.
+---Unknown IDs retain the native factory diagnostic and fallback definition.
+---@param id string Raw technique ID; empty, NUL-containing and long IDs are not prevalidated.
+---@return string name Localized authored name.
+function CcbPlatformMartialArtsApi.technique_name(id) end
+
+---Read the native authored short description, translated at each call.
+---Unknown IDs retain the native factory diagnostic and fallback definition.
+---@param id string Raw technique ID; empty, NUL-containing and long IDs are not prevalidated.
+---@return string description Localized authored short text, without generated rule text.
+function CcbPlatformMartialArtsApi.technique_description(id) end
+
 
 ---Learn one martial-art style without coupling the mutation to presentation.
+---Uses the native effect's typed-id storage semantics; registry presence is not checked.
 ---@param character GameHandle Character handle.
 ---@param id GameId GameId<martial_art>
 ---@return CcbResult result `value.changed` reports whether known state changed; `value.known` is the resulting state.
 function CcbPlatformMartialArtsApi.learn(character, id) end
 
 ---Forget one martial-art style through the character's native style collection.
+---Uses the native effect's typed-id matching semantics; registry presence is not checked.
 ---@param character GameHandle Character handle.
 ---@param id GameId GameId<martial_art>
 ---@return CcbResult result `value.changed` reports whether known state changed; `value.known` is the resulting state.
@@ -10595,10 +11977,53 @@ function CcbPlatformMoraleApi.remove(character, id) end
 ---@class CcbPlatformRandomApi: CcbRandomApi
 local CcbPlatformRandomApi = {}
 
+---@alias CcbProgressionKind 'mutation'|'spell'|'recipe'|'bionic'
+
+---@class CcbProgressionGrantMissingResult
+---@field granted boolean True when one missing candidate was selected and its native setter was invoked.
+---@field id? GameId Selected typed id; present only when granted is true.
+---@field name? string Native display name for the selected candidate; present only when granted is true.
+
+---@class CcbPlatformProgressionApi
+local CcbPlatformProgressionApi = {}
+
+---Select one missing progression entry with the native global game RNG and invoke its native setter.
+---Filtering follows native talker has_* checks; for recipes this means learned recipes, not recipes merely available from books/groups.
+---The input must be a dense ordered list of 1..64 valid GameIds of the requested kind, each at most 256 UTF-8 bytes.
+---Duplicate IDs remain separate weighted rows. If every candidate is already present, returns granted=false without drawing.
+---Otherwise consumes exactly one native rng(0, n-1) draw, including when only one missing row remains.
+---@param character GameHandle Live Character handle.
+---@param kind CcbProgressionKind
+---@param ids GameId[] Dense ordered list of same-kind typed IDs; duplicate rows contribute duplicate weight.
+---@return CcbResult result `value` is a CcbProgressionGrantMissingResult; `id` and `name` are set when `granted` is true.
+function CcbPlatformProgressionApi.grant_random_missing(character, kind, ids) end
+
 ---@param minimum integer Inclusive lower bound in native signed integer range -2147483648..2147483647.
 ---@param maximum integer Inclusive upper bound in native signed integer range -2147483648..2147483647.
 ---@return integer
 function CcbPlatformRandomApi.int(minimum, maximum) end
+
+---Draw through the native global game RNG. This advances the shared game random sequence.
+---@param minimum integer Inclusive lower bound in native signed integer range -2147483648..2147483647.
+---@param maximum integer Inclusive upper bound in native signed integer range -2147483648..2147483647.
+---@return integer
+function CcbPlatformRandomApi.native_int(minimum, maximum) end
+
+---Draw through native rng_float on the shared game RNG during an active world callback.
+---Reversed bounds are swapped. Equal finite bounds still consume a native draw.
+---A NaN or infinite bound emits a native diagnostic and returns zero without drawing.
+---@param minimum number Native floating-point range endpoint.
+---@param maximum number Native floating-point range endpoint.
+---@return number
+function CcbPlatformRandomApi.native_float(minimum, maximum) end
+
+---Pick an original 1-based row using native weighted_int_list semantics and the shared game RNG.
+---Rows with nonpositive weights are ignored. Dense rows are limited only by the
+---native Lua integer index range, and the positive total must not exceed 2147483647.
+---A zero-total list returns nil after one global RNG draw; a single positive row also consumes one draw.
+---@param weights integer[] Dense ordered array of native signed integers.
+---@return integer|nil index Original 1-based row selected, or nil when no row has positive weight.
+function CcbPlatformRandomApi.weighted_index(weights) end
 
 ---@param numerator integer
 ---@param denominator integer Positive denominator up to 1000000000.
@@ -10621,9 +12046,10 @@ function CcbPlatformRandomApi.probability(numerator, denominator) end
 ---@return integer[] values Dense sampled values; unique unless replacement was requested.
 function CcbPlatformRandomApi.sample_integers(minimum, maximum, count, with_replacement) end
 
----@param check number
----@param difficulty number
----@param die_size? integer Defaults to 10.
+---Roll on this Mod's isolated deterministic stream; unlike native_int, this does not advance the shared game RNG.
+---@param check number Finite check value.
+---@param difficulty number Finite difficulty value.
+---@param die_size? integer Inclusive upper bound in 1..1000000000; defaults to 10.
 ---@return boolean success True when `random(1, die_size) + check > difficulty`.
 function CcbPlatformRandomApi.contested(check, difficulty, die_size) end
 
@@ -10644,6 +12070,9 @@ local CcbPlatformModQueries = {}
 ---@param mod_id string
 ---@return boolean loaded Includes active Lua-first Platform Mods and the world's active Mod order.
 function CcbPlatformModQueries.is_loaded(mod_id) end
+---@param mod_id string Bounded non-empty native Mod id; `dda` is treated as the `ccb` core alias.
+---@return boolean True only when the canonical ID appears in the world's active Mod order.
+function CcbPlatformModQueries.is_active_in_world(mod_id) end
 
 ---@class CcbPlatformEnvironmentQueries
 local CcbPlatformEnvironmentQueries = {}
@@ -10655,14 +12084,14 @@ function CcbPlatformEnvironmentQueries.dimension() end
 --- the legacy EOC "is_day" state); ordinary Lua code may negate it directly.
 function CcbPlatformEnvironmentQueries.is_night() end
 
----@param position TripointCoord Absolute map-square coordinate inside the active map.
+---@param position TripointCoord Absolute map-square coordinate; out-of-bounds positions return true, matching map::is_outside.
 ---@return boolean
 function CcbPlatformEnvironmentQueries.is_outside(position) end
 
----@param from TripointCoord Absolute map-square coordinate inside the active map.
----@param to TripointCoord Absolute map-square coordinate inside the active map.
----@param range integer Non-negative maximum range.
----@param with_fields? boolean Defaults to true.
+---@param from TripointCoord Absolute map-square coordinate; the source may be outside the active map.
+---@param to TripointCoord Absolute map-square coordinate; map::sees returns false when the target is outside the active map.
+---@param range number Finite value whose truncation toward zero fits native int. A negative native range disables the distance limit.
+---@param with_fields? boolean Defaults to true; false ignores fields when checking transparency.
 ---@return boolean visible
 function CcbPlatformEnvironmentQueries.line_of_sight(from, to, range, with_fields) end
 
@@ -10683,6 +12112,48 @@ function CcbPlatformEnvironmentQueries.terrain_id(position) end
 --- null furniture id).
 ---@return string
 function CcbPlatformEnvironmentQueries.furniture_id(position) end
+
+---@param position TripointCoord Absolute map-square center with z inside native map bounds; out-of-bounds z returns 0. set_terrain never infers a position from an EOC alpha/beta talker.
+---@param terrain_id string Registered terrain id.
+---@param radius? number Defaults to 1. Finite value truncated toward zero; the result must be in 0..32767 map squares. Larger radii can overflow native integer distance calculations.
+---@param square? boolean Defaults to false; false uses the native circle rule trig_dist < radius + 0.5, true uses a square.
+---@param avoid_creatures? boolean Defaults to false; true skips squares containing a creature, matching map::ter_set.
+---@return integer changed_squares Number of current-map squares whose terrain changed.
+--- Only squares on the requested z-level are considered. Without z-level support, native map setters resolve legal non-current z writes against the active map storage. The call does not load maps or generate map data.
+function CcbPlatformEnvironmentQueries.set_terrain(position, terrain_id, radius, square, avoid_creatures) end
+
+---@param position TripointCoord Absolute map-square center with z inside native map bounds; out-of-bounds z returns 0. set_furniture never infers a position from an EOC alpha/beta talker.
+---@param furniture_id string Registered furniture id; use f_null to clear furniture.
+---@param radius? number Defaults to 1. Finite value truncated toward zero; the result must be in 0..32767 map squares. The native EOC parser has no explicit upper bound, but larger circles can overflow its integer distance calculation.
+---@param square? boolean Defaults to false; false uses the native circle rule trig_dist < radius + 0.5, true uses a square.
+---@param avoid_creatures? boolean Defaults to false; true skips squares containing a creature, matching map::furn_set.
+---@return integer accepted_squares Number of current-map squares whose furn_set call succeeded, including unchanged furniture.
+--- Only squares on the requested z-level are considered. Without z-level support, native map setters resolve legal non-current z writes against the active map storage. The call does not load maps or generate map data.
+function CcbPlatformEnvironmentQueries.set_furniture(position, furniture_id, radius, square, avoid_creatures) end
+
+---@param position TripointCoord Absolute map-square center; out-of-bounds z returns 0.
+---@param trap_id string Native trap-id string. tr_null clears a placed trap; unknown byte strings retain native invalid-ID diagnostics and null-id fallback.
+---@param radius? number Defaults to 1 and truncates toward zero like the native double-to-int conversion. The truncated value must fit a native int and center +/- radius must remain within native iterator arithmetic. Circle mode supports -46340..46340 because native trig_dist squares int coordinate differences; square mode may use larger native-safe radii.
+---@param square? boolean Defaults to false; false uses native trig_dist < radius + 0.5, true uses a square. A negative square radius visits only center - radius; a negative circle radius visits no squares.
+---@return integer attempted_squares Number of in-map map::trap_set calls, including same-id resets and attempts refused by built-in terrain traps.
+--- The call uses only active-map coordinates and never loads maps or submaps. It preserves the requested z-level and native setter behavior; out-of-map XY candidates are skipped because map::trap_set silently ignores them. The string is not length-limited or NUL-filtered.
+function CcbPlatformEnvironmentQueries.set_trap_area(position, trap_id, radius, square) end
+
+---@class CcbPlatformFieldAreaOptions
+---@field radius? number Defaults to 1; finite input truncated toward zero to 0..32767 map squares.
+---@field intensity? number Defaults to 1; finite input truncated toward zero to a native int and clamped by the field type.
+---@field age? TimeDuration Defaults to one turn; native field lifetime passed to map::add_field.
+---@field square? boolean Defaults to false; false uses native trig_dist < radius + 0.5 circle, true uses a square.
+---@field outdoor_only? boolean Defaults to false; only tiles map::is_outside reports outdoors are visited.
+---@field indoor_only? boolean Defaults to false; only tiles map::is_outside reports indoors are visited.
+---@field hit_player? boolean Defaults to true; preserves map::add_field's player contact behavior.
+
+---@param position TripointCoord Absolute map-square center; native field placement considers exactly this z-level.
+---@param field_id string Field type id; unknown ids return 0 without placement.
+---@param options? CcbPlatformFieldAreaOptions
+---@return integer accepted_squares Number of current-map squares whose native map::add_field call succeeded.
+--- Placement uses only the active map's existing submaps and does not load maps or z-levels. Radius is capped at 32767 for bounded integer distance; larger legacy radii remain TODO.
+function CcbPlatformEnvironmentQueries.add_field_area(position, field_id, options) end
 
 ---@param position TripointCoord Absolute map-square coordinate.
 ---@param field_id string Bounded non-empty field type id.
@@ -10707,31 +12178,29 @@ function CcbPlatformEnvironmentQueries.safe_mode_dangerous(direction) end
 ---@class CcbPlatformGameplayApi
 ---@field strings CcbPlatformStringPredicates
 ---@field mods CcbPlatformModQueries
----@field math CcbPlatformMathApi
 ---@field environment CcbPlatformEnvironmentQueries
 ---@field options CcbPlatformGameplayOptionsApi
 local CcbPlatformGameplayApi = {}
 
----@class CcbPlatformMathApi
-local CcbPlatformMathApi = {}
+---@class CcbCharacterSensesSnapshot
+---@field can_see boolean Native Character visibility state: not blind and either awake or flagged SEESLEEP.
 
----Evaluate a native gameplay expression against the supplied actor and
----detached callback context.  This is a domain expression service, not an EOC
----runner; it returns a finite number and follows native variable semantics.
----@param expression string Native math expression, at most 8192 bytes.
----@param actor? GameHandle Character/creature used for u_/npc_ variables.
----@param context? table<string, boolean|number|string|TripointCoord|NullValue>
----@return CcbResult result `value` is the finite numeric result.
-function CcbPlatformMathApi.evaluate(expression, actor, context) end
+---@class CcbCharacterMovementSnapshot
+---@field driving boolean Native absolute-position vehicle query converted to the Character's map square; true only when that vehicle is moving and the Character controls it.
+---@field controlling_vehicle boolean Native bubble-position vehicle query; true when the Character controls the vehicle at its map square, whether or not it is moving.
 
----Evaluate and apply a native assignment expression against an active callback.
----@param expression string Native math assignment/expression, at most 8192 bytes.
----@param actor? GameHandle Character/creature used for u_/npc_ variables.
----@param context? table<string, boolean|number|string|TripointCoord|NullValue>
----@return CcbResult result `value` is the finite numeric result.
-function CcbPlatformMathApi.apply(expression, actor, context) end
+---@class CcbCharacterNpcStateSnapshot
+---@field present boolean Whether the Character is an NPC.
+---@field following? boolean Present for NPCs; native FOLLOW or WAIT attitude.
 
----@param text string
+---@class CcbCharacterActivityStateSnapshot
+---@field active boolean Whether the current native player_activity is non-null.
+---@field id? GameId GameId<activity> for the current activity, when present.
+---@field level_index integer Native Character activity level index.
+
+---@class CcbCharacterTravelSnapshot
+---@field has_path boolean Whether the native overmap travel path is non-empty.
+
 ---@class CcbCharacterSnapshot
 ---@field name string
 ---@field x integer
@@ -10746,6 +12215,31 @@ function CcbPlatformMathApi.apply(expression, actor, context) end
 ---@field hunger integer
 ---@field thirst integer
 ---@field sleepiness integer
+---@field stats CcbCharacterAttributesSnapshot
+---@field senses CcbCharacterSensesSnapshot
+---@field environment CcbCharacterEnvironmentSnapshot
+---@field movement CcbCharacterMovementSnapshot
+---@field npc_state CcbCharacterNpcStateSnapshot
+---@field activity CcbCharacterActivityStateSnapshot
+---@field travel CcbCharacterTravelSnapshot
+
+---@class CcbCharacterAttributesSnapshot
+---@field strength integer Current native strength.
+---@field dexterity integer Current native dexterity.
+---@field perception integer Current native perception.
+---@field intelligence integer Current native intelligence; matches Character::get_int()/talker int_cur().
+---@field strength_base integer Native base strength.
+---@field dexterity_base integer Native base dexterity.
+---@field perception_base integer Native base perception.
+---@field intelligence_base integer Native base intelligence.
+---@field strength_bonus integer Native strength bonus.
+---@field dexterity_bonus integer Native dexterity bonus.
+---@field perception_bonus integer Native perception bonus.
+---@field intelligence_bonus integer Native intelligence bonus.
+
+---@class CcbCharacterEnvironmentSnapshot
+---@field outside boolean Native is_creature_outside result, including its surface-z check.
+---@field safe_space boolean Native overmap safe-state combined with NPC danger-cache safety.
 
 ---@class CcbMovementModesSnapshot
 ---@field items table
@@ -10765,6 +12259,7 @@ function CcbPlatformMathApi.apply(expression, actor, context) end
 ---@field name string
 ---@field display_name string
 ---@field position TripointCoord
+---@field outside boolean Native is_creature_outside result, including its surface-z check.
 ---@field visible? boolean Present only when a separate observer was supplied.
 ---@field distance? integer Present only when a separate observer was supplied.
 ---@field attitude? string Present only when a separate observer was supplied.
@@ -10775,6 +12270,22 @@ function CcbPlatformMathApi.apply(expression, actor, context) end
 ---@class CcbCreaturesApi
 local CcbCreaturesApi = {}
 
+---@param target GameHandle Exact live avatar, NPC or monster.
+---@param damage_type GameId GameId<damage_type>
+---@param amount number Finite -1000000..1000000.
+---@param options? CcbCreatureDamageOptions
+---@return CcbDamageResult result Uses native damage and virtual HP; monsters have aggregate HP.
+function CcbCreaturesApi.damage(target, damage_type, amount, options) end
+
+---@param target GameHandle Exact live avatar, NPC or monster.
+---@param body_part GameId GameId<body_part> present on the target.
+---@param amount integer 1..10000.
+---@return CcbHealingResult result Uses native healing; monster healing affects aggregate HP.
+function CcbCreaturesApi.heal(target, body_part, amount) end
+
+---@return GameHandle Exact handle for the active avatar.
+function CcbCreaturesApi.avatar() end
+
 ---@param handle GameHandle Exact live Creature handle.
 ---@return CcbResult result `value` is a detached CcbCreatureSnapshot; stale or dead handles fail closed.
 function CcbCreaturesApi.snapshot(handle) end
@@ -10784,9 +12295,30 @@ function CcbCreaturesApi.snapshot(handle) end
 ---@return CcbResult result
 function CcbCreaturesApi.nearby(observer, options) end
 
+---@class CcbVisibleMonsterSummary
+---@field direction string Native cardinal direction id.
+---@field count integer Total visible monsters counted in the direction.
+---@field type_count integer Number of distinct visible monster types in the direction.
+---@field present boolean Whether at least one visible monster type exists in the direction.
+---@field dangerous boolean Native safe-mode danger state in the direction.
+
+---@param observer GameHandle Exact live Creature observer handle.
+---@param target GameHandle Exact live Creature target handle.
+---@return CcbResult result `value` is boolean, using Creature::sees.
+function CcbCreaturesApi.can_see(observer, target) end
+
+---@param target GameHandle Exact live Creature target handle.
+---@return CcbResult result `value` is boolean from the active player view; this can differ from an avatar Creature's own vision.
+function CcbCreaturesApi.player_can_see(target) end
+
+---@param observer GameHandle Exact live Creature observer handle.
+---@param target GameHandle Exact live Creature target handle.
+---@return CcbResult result `value` is boolean from coordinate-only map::sees at MAX_VIEW_DISTANCE.
+function CcbCreaturesApi.has_line_of_sight(observer, target) end
+
 ---@param observer GameHandle Exact live avatar handle; NPC/monster/other Character handles fail closed.
 ---@param direction string One of N/NE/E/SE/S/SW/W/NW/L.
----@return CcbResult result
+---@return CcbVisibleMonsterSummary
 function CcbCreaturesApi.visible_monsters(observer, direction) end
 
 ---@class CcbTimeSnapshot
@@ -10803,6 +12335,11 @@ function CcbCreaturesApi.visible_monsters(observer, direction) end
 
 function CcbPlatformServices.message(text) end
 
+---Report an explicit developer diagnostic through the native debug-message facility.
+---Requires an active world callback; does not evaluate an expression or change gameplay state.
+---@param text string Diagnostic text, with no additional byte limit.
+function CcbPlatformServices.diagnostic(text) end
+
 ---Format text with the game's native printf syntax, including positional %1$s arguments.
 ---Available after world_ready. Pass translated text from translate/translate_plural when needed.
 ---Arguments are a dense array; NUL text/strings, unsupported values and format mismatches raise errors.
@@ -10812,7 +12349,11 @@ function CcbPlatformServices.message(text) end
 function CcbPlatformServices.format(text, arguments) end
 
 ---Translate runtime text using the current game language. Available after world_ready.
----Missing translations return the source text. Text/context must not contain NUL.
+---Uses native translation-object semantics: empty text stays empty without a catalog lookup.
+---Text and context accept embedded NUL and have no imposed byte limit. Context lookup uses
+---C-string prefixes; without context, disabled localization preserves all source bytes.
+---Missing translations return the native source text (or its C-string prefix).
+---The lookup runs when called, so dialogue callbacks can compose separately translated fragments.
 ---@param text string Literal source text for extraction.
 ---@param context? string Literal disambiguation context.
 ---@return string
@@ -10830,6 +12371,10 @@ function CcbPlatformServices.translate_plural(singular, plural, count, context) 
 
 ---@return integer
 function CcbPlatformServices.turn() end
+
+---Return the current turn using the native int conversion used by legacy effects.
+---@return integer
+function CcbPlatformServices.turn_native_int() end
 
 ---@param character GameHandle Exact live Character handle; no implicit avatar is selected.
 ---@return CcbResult result `value` is a detached CcbCharacterSnapshot.
@@ -10953,6 +12498,12 @@ local CcbRegistryApi = {}
 ---@param options? CcbRegistryQuery
 ---@return table page
 function CcbRegistryApi.list(kind, options) end
+
+---Read the native monster definition's default faction as raw text.
+---Unknown IDs retain the native factory diagnostic and fallback definition.
+---@param id string Raw monster ID, including empty, NUL-containing and long names; no snapshot ID validation.
+---@return string faction Native default faction ID text.
+function CcbRegistryApi.monster_default_faction(id) end
 
 ---@class CcbSpawnsApi
 local CcbSpawnsApi = {}

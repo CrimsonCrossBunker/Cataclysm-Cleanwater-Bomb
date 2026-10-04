@@ -82,11 +82,13 @@ class MutationMigrationTest(unittest.TestCase):
                 expression = migration.render_eoc_condition_expression(
                     condition,
                     avatar_actor_proven=True,
+                    npc_actor_proven=True,
                     npc_actor_expression="partner",
                 )
                 self.assertIsNotNone(expression)
                 script = """
-local actor, partner = {}, {}
+local actor = {kind='creature', subtype='avatar'}
+local partner = {kind='creature', subtype='npc'}
 local context = {data={trait='FELINE_EARS'}}
 local function service_value(result) assert(result.ok); return result.value end
 local services = {types={}, mutations={}, variables={}}
@@ -94,7 +96,8 @@ services.types.id = function(kind, id)
  assert(kind == 'mutation' and id ~= ''); return id
 end
 services.variables.resolve = function(data, owner, scope, key)
- assert(owner == (scope == 'u' and actor or partner))
+ if scope == 'context' then assert(owner == nil)
+ else assert(owner == (scope == 'u' and actor or partner)) end
  return {ok=true,value={value='FELINE_EARS'}}
 end
 """
@@ -107,11 +110,11 @@ end
                 script += f"local match_quick = {match_quick}\n"
                 if target is not None:
                     script += f"""
-services.mutations.has = function(owner, id)
+services.mutations.has_id_text = function(owner, id)
  assert(owner == {target});
  return {{ok=true,value=id == 'FELINE_EARS' or match_quick}}
 end
-services.mutations.is_purifiable = function(owner, id)
+services.mutations.is_purifiable_id_text = function(owner, id)
  assert(owner == {target} and id == 'FELINE_EARS');
  return {{ok=true,value=true}}
 end
@@ -164,10 +167,18 @@ end
                     expression = migration.render_eoc_condition_expression(
                         condition,
                         avatar_actor_proven=True,
+                        npc_actor_proven=selector.startswith("npc_"),
                         npc_actor_expression="partner",
                     )
                     self.assertIsNotNone(expression, condition)
                     self.assertIn("services.mutations.", expression)
+                    if selector in {"u_has_trait", "u_has_any_trait"}:
+                        self.assertIn(
+                            "services.mutations.has_id_text", expression
+                        )
+                        self.assertNotIn(
+                            'services.types.id("mutation"', expression
+                        )
                 if selector == "npc_has_visible_trait":
                     self.assertIn("is_visible_to(partner, actor,", expression)
                 if "gracken" in filename:
@@ -180,16 +191,43 @@ end
                     expression = migration.render_eoc_condition_expression(
                         dynamic[0], avatar_actor_proven=True
                     )
-                    self.assertIn('context.data["mutation_id"]', expression)
+                    self.assertIn(
+                        'services.variables.resolve(context.data, nil, '
+                        '"context", "mutation_id")', expression
+                    )
+
+    def test_real_purifiable_mutation_uses_raw_native_query(self):
+        root = Path(__file__).resolve().parents[1]
+        definitions = json.loads(
+            (root / "data/json/mutations/mutations.json").read_text()
+        )
+        mutation = next(
+            item
+            for item in definitions
+            if item.get("id") == "INTERSTICE_RESONANCE_2"
+        )
+        self.assertTrue(mutation["purifiable"])
+        for selector in ("u_is_trait_purifiable", "npc_is_trait_purifiable"):
+            with self.subTest(selector=selector):
+                expression = migration.render_eoc_condition_expression(
+                    {selector: mutation["id"]},
+                    avatar_actor_proven=True,
+                    npc_actor_proven=selector.startswith("npc_"),
+                    npc_actor_expression="partner",
+                )
+                self.assertIsNotNone(expression)
+                self.assertIn(
+                    "services.mutations.is_purifiable_id_text", expression
+                )
+                self.assertIn('"INTERSTICE_RESONANCE_2"', expression)
+                self.assertNotIn('services.types.id("mutation"', expression)
 
     def test_mutation_replacement_uses_native_action(self):
         for prefix, event in (
             ("u_", "game_start"),
             ("npc_", "npc_becomes_hostile"),
         ):
-            for operation in (
-                "add_trait",
-            ):
+            for operation in ("add_trait",):
                 for trait in ("VULNERABLECHILL", {"context_val": "mutation"}):
                     with self.subTest(
                         prefix=prefix, operation=operation, trait=trait
@@ -293,7 +331,8 @@ assert(calls == 1)
         for eoc_id, mutation_id, variant in (
             ("topic_item_mutation_id", {"mutator": "topic_item"}, "red"),
             (
-                "topic_item_mutation_variant", "QUICK",
+                "topic_item_mutation_variant",
+                "QUICK",
                 {"mutator": "topic_item"},
             ),
         ):
@@ -373,7 +412,8 @@ assert(calls[1].id == 'QUICK' and calls[1].variant == '')
     ):
         sources = (
             (
-                "character_event_mutation", "character_takes_damage",
+                "character_event_mutation",
+                "character_takes_damage",
                 "u_add_trait",
             ),
             ("item_event_mutation", "character_wields_item", "u_add_trait"),
@@ -387,6 +427,7 @@ assert(calls[1].id == 'QUICK' and calls[1].variant == '')
                 {
                     "type": "effect_on_condition",
                     "id": eoc_id,
+                    "eoc_type": "EVENT",
                     "required_event": event,
                     "effect": {selector: "QUICK"},
                 },
@@ -405,7 +446,8 @@ assert(calls[1].id == 'QUICK' and calls[1].variant == '')
             0,
             {
                 "type": "effect_on_condition",
-                "id": "npc_event_does_not_prove_u_alpha",
+                "id": "activation_event_name_does_not_prove_alpha",
+                "eoc_type": "ACTIVATION",
                 "required_event": "npc_becomes_hostile",
                 "effect": {"u_add_trait": "QUICK"},
             },
@@ -413,10 +455,9 @@ assert(calls[1].id == 'QUICK' and calls[1].variant == '')
         unproven = migration.render_eoc(
             unproven_source, migration.MigrationResult()
         )
-        self.assertIn(
-            "TODO: resolve an exact Character target", unproven
-        )
-        self.assertNotIn("services.mutations.replace(", unproven)
+        self.assertIn("local actor = actor_override", unproven)
+        self.assertNotIn('runtime.on("game:npc_becomes_hostile"', unproven)
+        rendered_functions.append(unproven)
 
         script = r"""
 local primary = {role='primary'}
@@ -448,6 +489,9 @@ assert(#calls == 3)
 assert(calls[1].target == primary and calls[1].id == 'QUICK')
 assert(calls[2].target == primary and calls[2].id == 'QUICK')
 assert(calls[3].target == beta and calls[3].id == 'QUICK')
+assert(migrated_eoc_functions.activation_event_name_does_not_prove_alpha(
+  {actors={npc=beta}}, nil) == false)
+assert(#calls == 3)
 """.replace("BODY", "\n".join(rendered_functions))
         completed = subprocess.run(
             [shutil.which("lua"), "-"],
@@ -463,14 +507,16 @@ assert(calls[3].target == beta and calls[3].id == 'QUICK')
             ("u_", "game_start"),
             ("npc_", "npc_becomes_hostile"),
         ):
-            for operation in (
-                "add_trait",
-            ):
+            for operation in ("add_trait",):
                 with self.subTest(prefix=prefix, operation=operation):
                     result = self.migrate_effect(
                         event,
                         "nothing",
-                        condition={prefix + "has_trait": "QUICK"},
+                        # Event alpha is the avatar/NPC; npc_has_trait reads
+                        # const_actor(true) and cannot query a missing beta.
+                        # npc_add_trait instead uses actor(true)'s alpha
+                        # fallback.
+                        condition={"u_has_trait": "QUICK"},
                         false_effect={prefix + operation: "VULNERABLECHILL"},
                     )
                     self.assertEqual(len(result.converted), 1)
@@ -480,8 +526,10 @@ assert(calls[3].target == beta and calls[3].id == 'QUICK')
                             for todo in result.todos
                         )
                     )
-                    self.assertIn("services.mutations.replace(",
-                                  result.files[Path("main.lua")])
+                    self.assertIn(
+                        "services.mutations.replace(",
+                        result.files[Path("main.lua")],
+                    )
                     for method in ("grant", "remove", "set_active"):
                         self.assertNotIn(
                             "services.mutations." + method + "(",
@@ -535,7 +583,8 @@ assert(calls[3].target == beta and calls[3].id == 'QUICK')
                 )
                 self.assertNotIn("resolve an exact Character target", report)
                 self.assertNotIn(
-                    "choose mutation conflict replacement", report)
+                    "choose mutation conflict replacement", report
+                )
                 for method in ("grant", "remove", "set_active"):
                     self.assertNotIn(
                         "services.mutations." + method + "(",
@@ -550,6 +599,7 @@ assert(calls[3].target == beta and calls[3].id == 'QUICK')
                     {
                         "type": "effect_on_condition",
                         "id": "mutation_effect",
+                        "eoc_type": "EVENT",
                         "required_event": event,
                         "effect": effect,
                         **extra,
@@ -560,6 +610,30 @@ assert(calls[3].target == beta and calls[3].id == 'QUICK')
             return migration.migrate(
                 migration.load_objects([source]), "mutation_mod"
             )
+
+    def test_required_event_alone_does_not_prove_mutation_callback_actor(self):
+        # effect_on_condition::load/notify registers only EVENT EOCs.
+        # A required_event field on an ACTIVATION EOC is not an event trigger.
+        for prefix, event in (
+            ("u_", "game_start"),
+            ("npc_", "npc_becomes_hostile"),
+        ):
+            with self.subTest(prefix=prefix):
+                result = self.migrate_effect(
+                    event,
+                    {prefix + "add_trait": "VULNERABLECHILL"},
+                    eoc_type="ACTIVATION",
+                )
+                self.assertEqual(result.converted, [])
+                self.assertTrue(
+                    any(
+                        ("needs an explicit Platform trigger") in todo.message
+                        for todo in result.todos
+                    )
+                )
+                self.assertNotIn(
+                    'runtime.on("game:' + event, result.files[Path("main.lua")]
+                )
 
     def test_mutation_type_removal_lowers_only_proven_literal_targets(self):
         for selector, event in (
@@ -603,7 +677,10 @@ assert(calls[3].target == beta and calls[3].id == 'QUICK')
                     result.files[Path("main.lua")],
                 )
                 self.assertIn(
-                    "mutation-type removal requires a proven Character actor",
+                    (
+                        "mutation-type removal requires an event-exclusive liv"
+                        "e Character source"
+                    ),
                     result.files[Path("MIGRATION_REPORT.md")],
                 )
 
@@ -618,14 +695,23 @@ assert(calls[3].target == beta and calls[3].id == 'QUICK')
                 if prefix == "u"
                 else "npc_actor_proven": True
             }
+            if prefix == "npc":
+                proof["npc_actor_expression"] = "partner"
+            self.assertIsNone(
+                migration.render_eoc_condition_expression(
+                    {selector: {
+                        "npc_val" if prefix == "u" else "u_val": "trait"
+                    }},
+                    **proof,
+                )
+            )
             for value in (
-                {"npc_val" if prefix == "u" else "u_val": "trait"},
                 "",
                 "x" * 257,
                 "trait\0ignored",
             ):
                 with self.subTest(selector=selector, value=value):
-                    self.assertIsNone(
+                    self.assertIsNotNone(
                         migration.render_eoc_condition_expression(
                             {selector: value}, **proof
                         )
@@ -645,7 +731,7 @@ assert(calls[3].target == beta and calls[3].id == 'QUICK')
             ),
             (
                 {"npc_is_trait_purifiable": "VULNERABLECHILL"},
-                {"npc_actor_proven": True},
+                {"npc_actor_proven": True, "npc_actor_expression": "partner"},
             ),
             (
                 {"npc_is_trait_purifiable": "VULNERABLECHILL"},
@@ -656,6 +742,11 @@ assert(calls[3].target == beta and calls[3].id == 'QUICK')
                 expression = migration.render_eoc_condition_expression(
                     condition, **proof
                 )
+                if "npc_actor_expression" in proof and not proof.get(
+                    "npc_actor_proven"
+                ):
+                    self.assertIsNone(expression)
+                    continue
                 self.assertIsNotNone(expression)
                 target = (
                     "partner" if "npc_actor_expression" in proof else "actor"
@@ -663,8 +754,8 @@ assert(calls[3].target == beta and calls[3].id == 'QUICK')
                 # The static definition is deliberately always true. Runtime
                 # Each call must consult the independently changing state.
                 script = """
-local actor = { purifiable = true }
-local partner = { purifiable = true }
+local actor = {kind='creature', subtype='avatar', purifiable=true}
+local partner = {kind='creature', subtype='npc', purifiable=true}
 local calls = 0
 local services = {
   types = { id = function(kind, id)
@@ -674,7 +765,7 @@ local services = {
     definition = function()
       return { availability = { purifiable = true } }
     end,
-    is_purifiable = function(character, id)
+    is_purifiable_id_text = function(character, id)
       calls = calls + 1
       assert(character == EXPECTED_TARGET)
       assert(id == 'VULNERABLECHILL')

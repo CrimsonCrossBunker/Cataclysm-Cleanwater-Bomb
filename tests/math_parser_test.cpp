@@ -1,3 +1,5 @@
+#include <enums.h>
+#include <stomach.h>
 #include <algorithm>
 #include <clocale>
 #include <cmath>
@@ -11,9 +13,9 @@
 #include <utility>
 
 #include "avatar.h"
-#include "bodypart.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
+#include "cata_variant.h"
 #include "coordinates.h"
 #include "debug.h"
 #include "dialogue.h"
@@ -27,18 +29,31 @@
 #include "talker.h"
 #include "type_id.h"
 
+static const limb_score_id limb_score_balance( "balance" );
+static const vitamin_id vitamin_vitC( "vitC" );
+
 TEST_CASE( "math_parser_limb_score_optional_type", "[math_parser][eoc]" )
 {
     avatar &u = get_avatar();
     dialogue d( get_talker_for( u ), std::make_unique<talker>() );
     math_exp expression;
-    const limb_score_id balance( "balance" );
 
     REQUIRE( expression.parse( "u_limb_score('balance')" ) );
-    CHECK( expression.eval( d ) == Approx( u.get_limb_score( balance ) ) );
+    CHECK( expression.eval( d ) == Approx( u.get_limb_score( limb_score_balance ) ) );
 
     REQUIRE( expression.parse( "u_limb_score('balance', 'type': 'leg')" ) );
-    CHECK( expression.eval( d ) == Approx( u.get_limb_score( balance, bp_type::leg ) ) );
+    CHECK( expression.eval( d ) == Approx( u.get_limb_score( limb_score_balance, bp_type::leg ) ) );
+}
+
+TEST_CASE( "diag_value_cata_variant_boolean_is_numeric", "[math_parser][nogame]" )
+{
+    const diag_value true_value( cata_variant( true ) );
+    const diag_value false_value( cata_variant( false ) );
+
+    CHECK( true_value.is_dbl() );
+    CHECK( true_value.dbl() == 1.0 );
+    CHECK( false_value.is_dbl() );
+    CHECK( false_value.dbl() == 0.0 );
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity): false positive
@@ -394,11 +409,10 @@ TEST_CASE( "math_parser_dialogue_integration", "[math_parser]" )
     CHECK( testexp.parse( "u_val('stamina')" ) );
     CHECK( testexp.eval( d ) == get_avatar().get_stamina() );
 
-    const vitamin_id vit_c( "vitC" );
     const int original_avatar_gut_calories = get_avatar().guts.get_calories();
     const int original_npc_gut_calories = dude.guts.get_calories();
-    const int original_avatar_gut_vitamin = get_avatar().guts.get_vitamin( vit_c );
-    const int original_npc_gut_vitamin = dude.guts.get_vitamin( vit_c );
+    const int original_avatar_gut_vitamin = get_avatar().guts.get_vitamin( vitamin_vitC );
+    const int original_npc_gut_vitamin = dude.guts.get_vitamin( vitamin_vitC );
     CHECK( testexp.parse( "u_gut_calories() = 100" ) );
     testexp.eval( d );
     CHECK( get_avatar().guts.get_calories() == 100 );
@@ -412,17 +426,17 @@ TEST_CASE( "math_parser_dialogue_integration", "[math_parser]" )
     CHECK( dude.guts.get_calories() == 200 );
     CHECK( testexp.parse( "u_gut_vitamin('vitC') = 12" ) );
     testexp.eval( d );
-    CHECK( get_avatar().guts.get_vitamin( vit_c ) == 12 );
+    CHECK( get_avatar().guts.get_vitamin( vitamin_vitC ) == 12 );
     CHECK( testexp.parse( "u_gut_vitamin('vitC')" ) );
     CHECK( testexp.eval( d ) == Approx( 12 ) );
     CHECK( testexp.parse( "n_gut_vitamin('vitC') = 24" ) );
     testexp.eval( d );
-    CHECK( dude.guts.get_vitamin( vit_c ) == 24 );
+    CHECK( dude.guts.get_vitamin( vitamin_vitC ) == 24 );
     get_avatar().guts.mod_calories( original_avatar_gut_calories -
                                     std::numeric_limits<int>::max() );
     dude.guts.mod_calories( original_npc_gut_calories - 200 );
-    get_avatar().guts.set_vitamin( vit_c, original_avatar_gut_vitamin );
-    dude.guts.set_vitamin( vit_c, original_npc_gut_vitamin );
+    get_avatar().guts.set_vitamin( vitamin_vitC, original_avatar_gut_vitamin );
+    dude.guts.set_vitamin( vitamin_vitC, original_npc_gut_vitamin );
 
     // units test
     CHECK( testexp.parse( "time('1 m')" ) );

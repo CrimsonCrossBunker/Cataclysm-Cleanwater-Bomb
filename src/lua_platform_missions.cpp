@@ -3,6 +3,8 @@
 #include "lua_platform_missions.h"
 
 #include <coordinates.h>
+#include <dialogue_chatbin.h>
+
 extern "C" {
 #include <lua.h>
 }
@@ -10,7 +12,9 @@ extern "C" {
 #include <translation.h>
 #include <algorithm>
 #include <cstddef>
+#include <exception>
 #include <map>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -21,12 +25,13 @@ extern "C" {
 #include "calendar.h"
 #include "character_id.h"
 #include "dialogue_helpers.h"
-#include "enum_conversions.h"
+#include "game.h"
 #include "lua_platform_bindings_coords.h"
 #include "lua_platform_bindings_enums.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
 #include "mission.h"
+#include "npc.h"
 #include "type_id.h"
 
 namespace cata::lua_platform
@@ -448,6 +453,8 @@ sol::table list_definitions(
     std::sort(
         definitions.begin(), definitions.end(),
     []( const mission_type * lhs, const mission_type * rhs ) {
+        // IDs retain byte order independently of the UI locale.
+        // NOLINTNEXTLINE(cata-use-localized-sorting)
         return lhs->id.str() < rhs->id.str();
     } );
     const std::size_t offset = std::min(
@@ -503,11 +510,14 @@ std::string mission_status_name( const mission &entry )
 }
 
 sol::table snapshot_instance(
-    sol::state_view lua, const mission &entry,
+    sol::state_view lua, const mission &source,
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation,
     const std::optional<character_id> &selected_owner = std::nullopt )
 {
+    // Lua allocations may run a finalizer that cancels the native mission.
+    // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
+    const mission entry = source;
     sol::table result = lua.create_table();
     result["token"] = mission_token(
                           entry.get_id(),
@@ -646,6 +656,106 @@ instance_options read_instance_options(
                 key + "'" );
         }
     }
+    return result;
+}
+
+page_options read_active_instance_options(
+    const sol::optional<sol::table> &requested )
+{
+    page_options result;
+    result.limit = default_instance_limit;
+    if( !requested ) {
+        return result;
+    }
+    for( const auto &entry : *requested ) {
+        const sol::object key_object = entry.first;
+        if( key_object.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                "services.missions.active option keys must be strings" );
+        }
+        const std::string key = key_object.as<std::string>();
+        const sol::object value = entry.second;
+        if( !value.is<lua_Integer>() ) {
+            throw std::invalid_argument(
+                "services.missions.active pagination options must be integers" );
+        }
+        const lua_Integer number = value.as<lua_Integer>();
+        if( number < 0 ) {
+            throw std::invalid_argument(
+                "services.missions.active pagination options cannot be negative" );
+        }
+        if( key == "offset" ) {
+            if( number > static_cast<lua_Integer>( maximum_offset ) ) {
+                throw std::invalid_argument(
+                    "services.missions.active offset exceeds its bounded range" );
+            }
+            result.offset = static_cast<std::size_t>( number );
+        } else if( key == "limit" ) {
+            if( number == 0 ) {
+                throw std::invalid_argument(
+                    "services.missions.active limit must be positive" );
+            }
+            result.limit = static_cast<int>(
+                               std::min<lua_Integer>(
+                                   number,
+                                   maximum_instance_limit ) );
+        } else {
+            throw std::invalid_argument(
+                "services.missions.active received unknown option '" +
+                key + "'" );
+        }
+    }
+    return result;
+}
+
+sol::table active_instances(
+    sol::this_state lua,
+    const game_handle &owner_handle,
+    const sol::optional<sol::table> &requested_options,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    const page_options options =
+        read_active_instance_options( requested_options );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    avatar *owner = resolve_exact_avatar(
+                        owner_handle, runtime_generation,
+                        world_generation, error );
+    if( owner == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    // Native dialogue effects iterate this vector directly. Preserve its
+    // order so callers can reproduce first-match behavior even when mission
+    // UIDs have a different ordering.
+    const std::vector<mission *> entries =
+        owner->get_active_missions();
+    const std::size_t offset = std::min(
+                                   options.offset, entries.size() );
+    const std::size_t returned = std::min(
+                                     entries.size() - offset,
+                                     static_cast<std::size_t>(
+                                         options.limit ) );
+    sol::table items = state.create_table(
+                           static_cast<int>( returned ), 0 );
+    for( std::size_t index = 0; index < returned; ++index ) {
+        items[index + 1] = snapshot_instance(
+                               state,
+                               *entries[offset + index],
+                               runtime_generation,
+                               world_generation,
+                               owner->getID() );
+    }
+    sol::table result = state.create_table();
+    result["items"] = std::move( items );
+    result["total"] = entries.size();
+    result["offset"] = offset;
+    result["limit"] = options.limit;
+    result["returned"] = returned;
+    result["has_more"] =
+        offset + returned < entries.size();
+    result["owner"] = owner_handle;
     return result;
 }
 
@@ -1236,6 +1346,53 @@ sol::table complete_instance(
                sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table finish_instance(
+    sol::this_state lua, const game_handle &owner_handle,
+    const mission_token &token,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    avatar *owner = resolve_exact_avatar(
+                        owner_handle, runtime_generation,
+                        world_generation, error );
+    if( owner == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    mission *entry = resolve_mission(
+                         token, runtime_generation,
+                         world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    if( !assigned_to_owner( *entry, *owner ) ||
+        !entry->in_progress() ) {
+        return make_game_error_result(
+        state, game_handle_error{
+            "not_active",
+            "Only an active avatar mission can be finished"
+        } );
+    }
+    sol::table before = snapshot_instance(
+                            state, *entry,
+                            runtime_generation,
+                            world_generation );
+    // Unlike complete(), native finish_mission wraps the selected active
+    // instance without evaluating its goal first.
+    entry->wrap_up( *owner );
+    sol::table value = state.create_table();
+    value["before"] = std::move( before );
+    value["after"] = snapshot_instance(
+                         state, *entry,
+                         runtime_generation,
+                         world_generation,
+                         owner->getID() );
+    return make_game_value_result(
+               state,
+               sol::make_object( state, std::move( value ) ) );
+}
+
 sol::table cancel_reserved_instance(
     sol::this_state lua, const mission_token &token,
     const game_handle_runtime &runtime_generation,
@@ -1260,8 +1417,60 @@ sol::table cancel_reserved_instance(
                             state, *entry,
                             runtime_generation,
                             world_generation );
+
+    entry = resolve_mission( token, runtime_generation, world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    if( entry->is_assigned() ) {
+        return make_game_error_result( state, {
+            "assigned",
+            "Assigned missions must be abandoned instead of cancelled"
+        } );
+    }
+
+    npc *provider = nullptr;
+    std::vector<mission *> available_after;
+    std::vector<mission *> assigned_after;
+    bool clear_selected = false;
+    const character_id provider_id = entry->get_npc_id();
+    if( provider_id.is_valid() ) {
+        if( g == nullptr ) {
+            return make_game_error_result( state, {
+                "unavailable",
+                "The NPC mission owner cannot be resolved without an active game"
+            } );
+        }
+        provider = g->find_npc( provider_id );
+        if( provider != nullptr ) {
+            try {
+                available_after = provider->chatbin.missions;
+                available_after.erase(
+                    std::remove( available_after.begin(), available_after.end(), entry ),
+                    available_after.end() );
+                assigned_after = provider->chatbin.missions_assigned;
+                assigned_after.erase(
+                    std::remove( assigned_after.begin(), assigned_after.end(), entry ),
+                    assigned_after.end() );
+            } catch( const std::exception & ) {
+                return make_game_error_result( state, {
+                    "rejected",
+                    "The NPC mission cancellation could not be staged"
+                } );
+            }
+            clear_selected = provider->chatbin.mission_selected == entry;
+        }
+    }
+
     const bool removed =
         mission::remove_unassigned( token.uid() );
+    if( removed && provider != nullptr ) {
+        provider->chatbin.missions.swap( available_after );
+        provider->chatbin.missions_assigned.swap( assigned_after );
+        if( clear_selected ) {
+            provider->chatbin.mission_selected = nullptr;
+        }
+    }
     sol::table value = state.create_table();
     value["cancelled"] = std::move( before );
     value["removed"] = removed;
@@ -1359,10 +1568,10 @@ std::string mission_token::to_string() const
 
 void install_mission_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write )
 {
     sol::state_view lua( services.lua_state() );
     lua.new_usertype<mission_token>(
@@ -1414,6 +1623,18 @@ void install_mission_api(
     const sol::optional<sol::table> &options ) {
         require_read();
         return list_instances(
+                   lua_state, owner, options,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    missions.set_function(
+        "active",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state,
+            const game_handle & owner,
+    const sol::optional<sol::table> &options ) {
+        require_read();
+        return active_instances(
                    lua_state, owner, options,
                    current_runtime_generation(),
                    current_world_generation() );
@@ -1560,6 +1781,17 @@ void install_mission_api(
         require_write();
         return complete_instance(
                    lua_state, owner, token, force,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    missions.set_function(
+        "finish",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & owner,
+    const mission_token & token ) {
+        require_write();
+        return finish_instance(
+                   lua_state, owner, token,
                    current_runtime_generation(),
                    current_world_generation() );
     } );

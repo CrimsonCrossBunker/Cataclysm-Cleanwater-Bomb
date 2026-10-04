@@ -1,7 +1,28 @@
 #include "lua_platform_content_creatures.h"
 
+#include <catacharset.h>
+#include <coords_fwd.h>
+#include <dialogue_helpers.h>
+#include <enum_bitset.h>
+#include <enums.h>
+#include <flat_set.h>
+#include <game_constants.h>
+#include <iexamine.h>
+#include <init.h>
+#include <lua_platform_content.h>
+#include <mapdata.h>
+#include <monster.h>
+#include <sleep.h>
+#include <value_ptr.h>
+#include <exception>
+#include <tuple>
+
+#include "lua_platform_content_text.h"
 #include "lua_platform_runtime.h"
 #include "lua_platform_runtime_internal.h"
+
+class Creature;
+struct const_dialogue;
 
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
@@ -32,30 +53,24 @@ extern "C" {
 #include "bodygraph.h"
 #include "bodypart.h"
 #include "calendar.h"
-#include "magic_enchantment.h"
 #include "color.h"
 #include "damage.h"
-#include "dialogue.h"
 #include "disease.h"
 #include "effect.h"
 #include "emit.h"
 #include "enum_conversions.h"
 #include "field_type.h"
-#include "game.h"
 #include "generic_factory.h"
-#include "magic_type.h"
-#include "mtype.h"
 #include "mattack_actors.h"
 #include "mattack_common.h"
 #include "mondefense.h"
 #include "monfaction.h"
 #include "monstergenerator.h"
 #include "morale_types.h"
+#include "mtype.h"
 #include "mutation.h"
 #include "npc.h"
 #include "point.h"
-#include "profession.h"
-#include "rng.h"
 #include "subbodypart.h"
 #include "translation.h"
 #include "type_id.h"
@@ -63,11 +78,74 @@ extern "C" {
 #include "weakpoint.h"
 #include "wound.h"
 
+static const material_id material_flesh( "flesh" );
+
 namespace cata::lua_platform
 {
 
 namespace
 {
+
+using detail::authored_text;
+using detail::localized_text;
+using detail::read_singular_text;
+
+authored_text read_text_option( const sol::table &options, const char *key,
+                                const authored_text &fallback, const std::string &field )
+{
+    const sol::object value = options[key];
+    if( !value.valid() || value.get_type() == sol::type::nil ) {
+        return fallback;
+    }
+    return read_singular_text( value, fallback.raw, field );
+}
+
+authored_text read_text_option_with_alias( const sol::table &options, const char *key,
+        const char *alias, const authored_text &fallback, const std::string &field )
+{
+    const sol::object value = options[key];
+    if( value.valid() && value.get_type() != sol::type::nil ) {
+        return read_singular_text( value, fallback.raw, field );
+    }
+    return read_text_option( options, alias, fallback, field );
+}
+
+authored_text read_counted_name_option( const sol::table &options, const char *name_key,
+                                        const char *plural_key,
+                                        const authored_text &fallback_name,
+                                        const std::string &fallback_plural,
+                                        std::string &plural, const std::string &field )
+{
+    const sol::object name_value = options[name_key];
+    if( !name_value.valid() || name_value.get_type() == sol::type::nil ) {
+        plural = options.get_or( plural_key, fallback_plural );
+        return fallback_name;
+    }
+    authored_text name;
+    if( name_value.is<localized_text>() ) {
+        const localized_text &localized = name_value.as<const localized_text &>();
+        name = { localized.singular, localized };
+        const sol::object plural_value = options[plural_key];
+        if( plural_value.valid() && plural_value.get_type() != sol::type::nil ) {
+            plural = plural_value.as<std::string>();
+            if( localized.plural && plural != *localized.plural ) {
+                throw std::runtime_error( field + " plural conflicts with plural_name" );
+            }
+        } else {
+            plural = localized.plural.value_or( localized.singular );
+        }
+        name.translated->plural = plural;
+        return name;
+    }
+    name = read_singular_text( name_value, fallback_name.raw, field );
+    plural = options.get_or( plural_key, name.raw );
+    return name;
+}
+
+translation native_counted_name( const authored_text &name, const std::string &plural )
+{
+    return name.translated ? name.native() : pl_translation( name.raw, plural );
+}
 
 enum class definition_operation : int { add, replace, edit };
 enum class handle_lifecycle : int { building, committed, discarded };
@@ -140,6 +218,60 @@ void require_readable_handle( const std::shared_ptr<owner_token> &token,
 }
 
 template<typename Definition>
+void set_authored_text( const std::shared_ptr<owner_token> &token,
+                        const Definition &definition, authored_text &target,
+                        const sol::object &value, const std::string &field,
+                        const std::string_view kind )
+{
+    require_building_handle( token, definition, kind );
+    authored_text parsed = detail::read_singular_text_or( value, target, field );
+    target = std::move( parsed );
+}
+
+template<typename Definition>
+void set_counted_name( const std::shared_ptr<owner_token> &token,
+                       const Definition &definition, authored_text &name,
+                       std::string &plural, const sol::object &value,
+                       const std::string &field, const std::string_view kind )
+{
+    require_building_handle( token, definition, kind );
+    if( !value.valid() || value.get_type() == sol::type::nil ) {
+        return;
+    }
+    authored_text parsed;
+    if( value.is<localized_text>() ) {
+        const localized_text &localized = value.as<const localized_text &>();
+        parsed = { localized.singular, localized };
+    } else {
+        parsed = read_singular_text( value, name.raw, field );
+    }
+    std::string next_plural = plural;
+    if( parsed.translated && parsed.translated->plural ) {
+        next_plural = *parsed.translated->plural;
+    } else if( plural == name.raw ) {
+        next_plural = parsed.raw;
+    }
+    if( parsed.translated ) {
+        parsed.translated->plural = next_plural;
+    }
+    name = std::move( parsed );
+    plural = std::move( next_plural );
+}
+
+template<typename Definition>
+void set_counted_plural( const std::shared_ptr<owner_token> &token,
+                         const Definition &definition, authored_text &name,
+                         std::string &plural, const std::string &value,
+                         const std::string_view kind )
+{
+    require_building_handle( token, definition, kind );
+    if( name.translated ) {
+        name.translated->plural = value;
+    }
+    plural = value;
+}
+
+template<typename Definition>
 bool defines_registration( const std::vector<std::pair<definition_operation,
                            std::shared_ptr<Definition>>> &entries,
                            const std::string_view id )
@@ -190,6 +322,22 @@ void hash_part( std::uint64_t &state, const std::string_view value )
     append( ";" );
 }
 
+void hash_part( std::uint64_t &state, const authored_text &text )
+{
+    hash_part( state, text.raw );
+    hash_part( state, text.translated ? "localized" : "literal" );
+    if( text.translated ) {
+        hash_part( state, text.translated->plural ? "plural" : "singular" );
+        if( text.translated->plural ) {
+            hash_part( state, *text.translated->plural );
+        }
+        hash_part( state, text.translated->context ? "context" : "no_context" );
+        if( text.translated->context ) {
+            hash_part( state, *text.translated->context );
+        }
+    }
+}
+
 template<typename Registration>
 bool registration_id_exists( const std::vector<Registration> &entries,
                              const std::string_view id )
@@ -198,8 +346,6 @@ bool registration_id_exists( const std::vector<Registration> &entries,
         return entry.definition->id == id;
     } );
 }
-
-} // namespace
 
 // Original runtime definition block 1
 struct behavior_condition_definition_data {
@@ -227,13 +373,13 @@ struct behavior_definition_data {
 
 struct effect_type_definition_data {
     std::string id;
-    std::vector<std::string> names;
-    std::vector<std::string> descriptions;
-    std::vector<std::string> reduced_descriptions;
-    std::string remove_message;
+    std::vector<authored_text> names;
+    std::vector<authored_text> descriptions;
+    std::vector<authored_text> reduced_descriptions;
+    authored_text remove_message;
     std::string apply_memorial_log;
     std::string remove_memorial_log;
-    std::string blood_analysis_description;
+    authored_text blood_analysis_description;
     std::int64_t maximum_intensity = 1;
     std::int64_t maximum_duration_turns = 31536000;
     std::int64_t intensity_duration_turns = 0;
@@ -274,13 +420,13 @@ struct weakpoint_effect_definition_data {
     std::int64_t intensity_max = 1;
     double damage_required_min = 0.0;
     double damage_required_max = 100.0;
-    std::string message;
+    authored_text message;
     std::string handler;
 };
 
 struct weakpoint_definition_data {
     std::string id;
-    std::string name;
+    authored_text name;
     double coverage = 100.0;
     bool good = true;
     bool head = false;
@@ -304,12 +450,12 @@ struct field_effect_definition_data {
     std::int64_t intensity = 1;
     std::string body_part;
     bool environmental = true;
-    std::string message;
-    std::string npc_message;
+    authored_text message;
+    authored_text npc_message;
 };
 
 struct field_intensity_definition_data {
-    std::string name;
+    authored_text name;
     std::string symbol = "%";
     std::string color = "white";
     bool dangerous = false;
@@ -363,8 +509,8 @@ struct field_type_definition_data {
 // Original runtime definition block 2
 struct sub_body_part_definition_data {
     std::string id;
-    std::string name;
-    std::string plural_name;
+    authored_text name;
+    authored_text plural_name;
     std::string parent;
     std::string opposite;
     std::string side = "both";
@@ -390,14 +536,14 @@ struct body_part_quality_definition_data {
 
 struct body_part_definition_data {
     std::string id;
-    std::string name;
-    std::string plural_name;
-    std::string accusative;
-    std::string plural_accusative;
-    std::string heading;
-    std::string plural_heading;
-    std::string encumbrance_text;
-    std::string hp_bar_text;
+    authored_text name;
+    authored_text plural_name;
+    authored_text accusative;
+    authored_text plural_accusative;
+    authored_text heading;
+    authored_text plural_heading;
+    authored_text encumbrance_text;
+    authored_text hp_bar_text;
     std::string main_part;
     std::string connected_to;
     std::string opposite;
@@ -430,9 +576,9 @@ struct wound_progression_definition_data {
 
 struct wound_type_definition_data {
     std::string id;
-    std::string name;
+    authored_text name;
     std::string plural_name;
-    std::string description;
+    authored_text description;
     std::int64_t pain_min = 0;
     std::int64_t pain_max = 0;
     std::int64_t healing_min_turns = 1;
@@ -464,9 +610,9 @@ struct wound_fix_requirement_definition_data {
 
 struct wound_fix_definition_data {
     std::string id;
-    std::string name;
-    std::string description;
-    std::string success_message;
+    authored_text name;
+    authored_text description;
+    authored_text success_message;
     std::int64_t duration_turns = 0;
     std::int64_t health_delta = 0;
     std::map<std::string, std::int64_t> skills;
@@ -517,9 +663,9 @@ struct monster_attack_reference_definition_data {
 
 struct monster_definition_data {
     std::string id;
-    std::string name;
+    authored_text name;
     std::string plural_name;
-    std::string description;
+    authored_text description;
     std::string symbol = "?";
     std::string color = "white";
     std::string looks_like;
@@ -581,7 +727,7 @@ class lua_platform_examine_actor final : public iexamine_actor
     public:
         lua_platform_examine_actor( std::string target_kind, std::string target_id,
                                     std::string owner, std::string handler,
-                                    std::string label ) :
+                                    const std::string &label ) :
             iexamine_actor( "lua_platform" ), target_kind_( std::move( target_kind ) ),
             target_id_( std::move( target_id ) ), owner_( std::move( owner ) ),
             handler_( std::move( handler ) ) {
@@ -611,7 +757,7 @@ class lua_platform_examine_actor final : public iexamine_actor
 class lua_monster_attack_actor final : public mattack_actor
 {
     public:
-        lua_monster_attack_actor( std::string id_value, const double cooldown_value,
+        lua_monster_attack_actor( const std::string &id_value, const double cooldown_value,
                                   std::string owner_value, std::string handler_value ) :
             mattack_actor( id_value ), owner_( std::move( owner_value ) ),
             handler_( std::move( handler_value ) ) {
@@ -674,7 +820,7 @@ class lua_monster_attack_result_actor final : public mattack_actor
 
 struct morale_type_definition_data {
     std::string id;
-    std::string text;
+    authored_text text;
     bool permanent = false;
     bool registered = false;
 };
@@ -698,8 +844,8 @@ struct monster_flag_definition_data {
 
 struct species_definition_data {
     std::string id;
-    std::string description;
-    std::string footsteps = "footsteps.";
+    authored_text description;
+    authored_text footsteps = { "footsteps.", std::nullopt };
     std::string bleeds = "fd_null";
     std::set<std::string> flags;
     std::set<std::string> anger;
@@ -737,9 +883,9 @@ struct connect_group_definition_data {
 
 struct mutation_category_definition_data {
     std::string id;
-    std::string name;
+    authored_text name;
     std::string threshold_mutation;
-    std::string mutagen_message;
+    authored_text mutagen_message;
     std::string memorial_message = "Crossed a threshold";
     std::string vitamin = "null";
     std::int64_t threshold_minimum = 2200;
@@ -753,15 +899,15 @@ struct mutation_category_definition_data {
 // Original runtime definition block 3
 struct mutation_variant_definition_data {
     std::string id;
-    std::string name;
-    std::string description;
+    authored_text name;
+    authored_text description;
     bool append_description = false;
     std::int64_t weight = 0;
 };
 
 struct mutation_transform_definition_data {
     std::string target;
-    std::string message;
+    authored_text message;
     bool active = false;
     bool safe = false;
     std::int64_t moves = 0;
@@ -802,8 +948,8 @@ struct mutation_damage_definition_data {
 };
 
 struct mutation_attack_definition_data {
-    std::string player_message;
-    std::string npc_message;
+    authored_text player_message;
+    authored_text npc_message;
     std::vector<std::string> required_mutations;
     std::vector<std::string> blocker_mutations;
     std::string bodypart;
@@ -815,9 +961,9 @@ struct mutation_attack_definition_data {
 
 struct mutation_reflex_definition_data {
     std::string handler;
-    std::string message_on;
+    authored_text message_on;
     std::string message_on_type = "neutral";
-    std::string message_off;
+    authored_text message_off;
     std::string message_off_type = "neutral";
 };
 
@@ -837,18 +983,18 @@ struct mutation_comfort_definition_data {
     bool add_human_comfort = false;
     bool use_better_comfort = false;
     bool add_sleep_aids = false;
-    std::string try_message;
+    authored_text try_message;
     std::string try_message_type = "neutral";
-    std::string hint_message;
+    authored_text hint_message;
     std::string hint_message_type = "neutral";
-    std::string sleep_message;
+    authored_text sleep_message;
     std::string sleep_message_type = "neutral";
 };
 
 struct mutation_definition_data {
     std::string id;
-    std::string name;
-    std::string description;
+    authored_text name;
+    authored_text description;
     std::int64_t points = 0;
     std::int64_t vitamin_cost = 100;
     std::int64_t visibility = 0;
@@ -887,12 +1033,12 @@ struct mutation_definition_data {
     std::optional<bool> hide_on_deactivated;
     std::optional<mutation_transform_definition_data> transform;
     std::optional<mutation_personality_definition_data> personality;
-    std::string activation_message;
+    authored_text activation_message;
     std::string scent_type;
     std::string spawn_item;
-    std::string spawn_item_message;
+    authored_text spawn_item_message;
     std::string ranged_mutation;
-    std::string ranged_mutation_message;
+    authored_text ranged_mutation_message;
     std::string override_look_id;
     std::string override_look_category;
     std::vector<mutation_variant_definition_data> variants;
@@ -1015,15 +1161,15 @@ struct effect_type_definition_handle {
         std::shared_ptr<effect_type_definition_data> definition;
         std::shared_ptr<owner_token> token;
 
-        effect_type_definition_handle &name( const std::string &text ) {
+        effect_type_definition_handle &name( const sol::object &text ) {
             return append_text( definition->names, text, "effect name" );
         }
 
-        effect_type_definition_handle &description( const std::string &text ) {
+        effect_type_definition_handle &description( const sol::object &text ) {
             return append_text( definition->descriptions, text, "effect description" );
         }
 
-        effect_type_definition_handle &reduced_description( const std::string &text ) {
+        effect_type_definition_handle &reduced_description( const sol::object &text ) {
             return append_text( definition->reduced_descriptions, text,
                                 "reduced effect description" );
         }
@@ -1068,13 +1214,14 @@ struct effect_type_definition_handle {
         }
 
     private:
-        effect_type_definition_handle &append_text( std::vector<std::string> &target,
-                const std::string &text, const std::string_view label ) {
+        effect_type_definition_handle &append_text( std::vector<authored_text> &target,
+                const sol::object &text, const std::string &label ) {
             require_building_handle( token, *definition, "effect type" );
-            if( text.empty() ) {
-                throw std::runtime_error( std::string( label ) + " cannot be empty" );
+            authored_text parsed = read_singular_text( text, {}, label );
+            if( parsed.empty() ) {
+                throw std::runtime_error( label + " cannot be empty" );
             }
-            target.push_back( text );
+            target.push_back( std::move( parsed ) );
             return *this;
         }
 
@@ -1118,7 +1265,7 @@ struct weakpoint_set_definition_handle {
             require_building_handle( token, *definition, "weakpoint set" );
             weakpoint_definition_data value;
             value.id = options.get_or( "id", std::string() );
-            value.name = options.get_or( "name", std::string() );
+            value.name = read_text_option( options, "name", {}, "weakpoint name" );
             value.coverage = options.get_or( "coverage", 100.0 );
             value.good = options.get_or( "good", true );
             value.head = options.get_or( "head", false );
@@ -1186,7 +1333,8 @@ struct weakpoint_set_definition_handle {
             value.damage_required_min = options.get_or( "damage_required_min", 0.0 );
             value.damage_required_max = options.get_or(
                                             "damage_required_max", 100.0 );
-            value.message = options.get_or( "message", std::string() );
+            value.message = read_text_option( options, "message", {},
+                                              "weakpoint effect message" );
             value.handler = options.get_or(
                                 "on_apply",
                                 options.get_or( "handler", std::string() ) );
@@ -1231,6 +1379,18 @@ struct sub_body_part_definition_handle {
     std::shared_ptr<sub_body_part_definition_data> definition;
     std::shared_ptr<owner_token> token;
 
+    sub_body_part_definition_handle &name( const sol::object &value ) {
+        set_authored_text( token, *definition, definition->name, value,
+                           "sub-body-part name", "sub body part" );
+        return *this;
+    }
+
+    sub_body_part_definition_handle &plural_name( const sol::object &value ) {
+        set_authored_text( token, *definition, definition->plural_name, value,
+                           "sub-body-part plural name", "sub body part" );
+        return *this;
+    }
+
     sub_body_part_definition_handle &location_under( const std::string &id ) {
         require_building_handle( token, *definition, "sub body part" );
         if( id.empty() ) {
@@ -1259,6 +1419,54 @@ struct sub_body_part_definition_handle {
 struct body_part_definition_handle {
         std::shared_ptr<body_part_definition_data> definition;
         std::shared_ptr<owner_token> token;
+
+        body_part_definition_handle &name( const sol::object &value ) {
+            set_authored_text( token, *definition, definition->name, value,
+                               "body-part name", "body part" );
+            return *this;
+        }
+
+        body_part_definition_handle &plural_name( const sol::object &value ) {
+            set_authored_text( token, *definition, definition->plural_name, value,
+                               "body-part plural name", "body part" );
+            return *this;
+        }
+
+        body_part_definition_handle &accusative( const sol::object &value ) {
+            set_authored_text( token, *definition, definition->accusative, value,
+                               "body-part accusative", "body part" );
+            return *this;
+        }
+
+        body_part_definition_handle &plural_accusative( const sol::object &value ) {
+            set_authored_text( token, *definition, definition->plural_accusative, value,
+                               "body-part plural accusative", "body part" );
+            return *this;
+        }
+
+        body_part_definition_handle &heading( const sol::object &value ) {
+            set_authored_text( token, *definition, definition->heading, value,
+                               "body-part heading", "body part" );
+            return *this;
+        }
+
+        body_part_definition_handle &plural_heading( const sol::object &value ) {
+            set_authored_text( token, *definition, definition->plural_heading, value,
+                               "body-part plural heading", "body part" );
+            return *this;
+        }
+
+        body_part_definition_handle &encumbrance_text( const sol::object &value ) {
+            set_authored_text( token, *definition, definition->encumbrance_text, value,
+                               "body-part encumbrance text", "body part" );
+            return *this;
+        }
+
+        body_part_definition_handle &hp_bar_text( const sol::object &value ) {
+            set_authored_text( token, *definition, definition->hp_bar_text, value,
+                               "body-part HP bar text", "body part" );
+            return *this;
+        }
 
         body_part_definition_handle &sub_part( const std::string &id ) {
             require_building_handle( token, *definition, "body part" );
@@ -1344,6 +1552,24 @@ struct wound_type_definition_handle {
         std::shared_ptr<wound_type_definition_data> definition;
         std::shared_ptr<owner_token> token;
 
+        wound_type_definition_handle &name( const sol::object &value ) {
+            set_counted_name( token, *definition, definition->name, definition->plural_name,
+                              value, "wound name", "wound" );
+            return *this;
+        }
+
+        wound_type_definition_handle &plural_name( const std::string &value ) {
+            set_counted_plural( token, *definition, definition->name, definition->plural_name,
+                                value, "wound" );
+            return *this;
+        }
+
+        wound_type_definition_handle &description( const sol::object &value ) {
+            set_authored_text( token, *definition, definition->description, value,
+                               "wound description", "wound" );
+            return *this;
+        }
+
         wound_type_definition_handle &damage_type( const std::string &id ) {
             require_building_handle( token, *definition, "wound" );
             require_reference( id, "damage type" );
@@ -1401,7 +1627,7 @@ struct wound_type_definition_handle {
         }
 
     private:
-        static void require_reference( const std::string &id, const char *kind ) {
+        static void require_reference( const std::string_view id, const char *kind ) {
             if( id.empty() || id.size() > 256 || id.find( '\0' ) != std::string::npos ) {
                 throw std::runtime_error( std::string( "wound " ) + kind +
                                           " id is invalid" );
@@ -1437,6 +1663,24 @@ struct wound_type_definition_handle {
 struct wound_fix_definition_handle {
         std::shared_ptr<wound_fix_definition_data> definition;
         std::shared_ptr<owner_token> token;
+
+        wound_fix_definition_handle &name( const sol::object &value ) {
+            set_authored_text( token, *definition, definition->name, value,
+                               "wound-fix name", "wound fix" );
+            return *this;
+        }
+
+        wound_fix_definition_handle &description( const sol::object &value ) {
+            set_authored_text( token, *definition, definition->description, value,
+                               "wound-fix description", "wound fix" );
+            return *this;
+        }
+
+        wound_fix_definition_handle &success_message( const sol::object &value ) {
+            set_authored_text( token, *definition, definition->success_message, value,
+                               "wound-fix success message", "wound fix" );
+            return *this;
+        }
 
         wound_fix_definition_handle &skill( const std::string &id,
                                             const std::int64_t level ) {
@@ -1498,7 +1742,7 @@ struct wound_fix_definition_handle {
         }
 
     private:
-        static void require_reference( const std::string &id, const char *kind ) {
+        static void require_reference( const std::string_view id, const char *kind ) {
             if( id.empty() || id.size() > 256 || id.find( '\0' ) != std::string::npos ) {
                 throw std::runtime_error( std::string( "wound-fix " ) + kind +
                                           " id is invalid" );
@@ -1621,6 +1865,24 @@ struct body_graph_definition_handle {
 struct monster_definition_handle {
         std::shared_ptr<monster_definition_data> definition;
         std::shared_ptr<owner_token> token;
+
+        monster_definition_handle &name( const sol::object &value ) {
+            set_counted_name( token, *definition, definition->name, definition->plural_name,
+                              value, "monster name", "monster" );
+            return *this;
+        }
+
+        monster_definition_handle &plural_name( const std::string &value ) {
+            set_counted_plural( token, *definition, definition->name, definition->plural_name,
+                                value, "monster" );
+            return *this;
+        }
+
+        monster_definition_handle &description( const sol::object &value ) {
+            set_authored_text( token, *definition, definition->description, value,
+                               "monster description", "monster" );
+            return *this;
+        }
 
         monster_definition_handle &material( const std::string &id,
                                              const sol::optional<std::int64_t> &portions ) {
@@ -1807,7 +2069,7 @@ struct field_type_definition_handle {
         field_type_definition_handle &intensity( const sol::table &options ) {
             require_building_handle( token, *definition, "field type" );
             field_intensity_definition_data value;
-            value.name = options.get_or( "name", std::string() );
+            value.name = read_text_option( options, "name", {}, "field intensity name" );
             value.symbol = options.get_or( "symbol", std::string( "%" ) );
             value.color = options.get_or( "color", std::string( "white" ) );
             value.dangerous = options.get_or( "dangerous", false );
@@ -1845,8 +2107,9 @@ struct field_type_definition_handle {
             value.intensity = options.get_or<std::int64_t>( "intensity", 1 );
             value.body_part = options.get_or( "body_part", std::string() );
             value.environmental = options.get_or( "environmental", true );
-            value.message = options.get_or( "message", std::string() );
-            value.npc_message = options.get_or( "npc_message", std::string() );
+            value.message = read_text_option( options, "message", {}, "field effect message" );
+            value.npc_message = read_text_option( options, "npc_message", {},
+                                                  "field effect NPC message" );
             definition->intensity_levels[static_cast<std::size_t>( intensity_index - 1 )].
             effects.push_back( std::move( value ) );
             return *this;
@@ -1880,6 +2143,12 @@ struct field_type_definition_handle {
 struct morale_type_definition_handle {
     std::shared_ptr<morale_type_definition_data> definition;
     std::shared_ptr<owner_token> token;
+
+    morale_type_definition_handle &text( const sol::object &value ) {
+        set_authored_text( token, *definition, definition->text, value,
+                           "morale type text", "morale type" );
+        return *this;
+    }
 
     std::string id() const {
         require_readable_handle( token, *definition, "morale type" );
@@ -1919,6 +2188,18 @@ struct monster_flag_definition_handle {
 struct species_definition_handle {
     std::shared_ptr<species_definition_data> definition;
     std::shared_ptr<owner_token> token;
+
+    species_definition_handle &description( const sol::object &value ) {
+        set_authored_text( token, *definition, definition->description, value,
+                           "species description", "species" );
+        return *this;
+    }
+
+    species_definition_handle &footsteps( const sol::object &value ) {
+        set_authored_text( token, *definition, definition->footsteps, value,
+                           "species footsteps", "species" );
+        return *this;
+    }
 
     species_definition_handle &flag( const std::string &id ) {
         require_building_handle( token, *definition, "species" );
@@ -2029,6 +2310,18 @@ struct mutation_category_definition_handle {
     std::shared_ptr<mutation_category_definition_data> definition;
     std::shared_ptr<owner_token> token;
 
+    mutation_category_definition_handle &name( const sol::object &value ) {
+        set_authored_text( token, *definition, definition->name, value,
+                           "mutation-category name", "mutation category" );
+        return *this;
+    }
+
+    mutation_category_definition_handle &mutagen_message( const sol::object &value ) {
+        set_authored_text( token, *definition, definition->mutagen_message, value,
+                           "mutation-category mutagen message", "mutation category" );
+        return *this;
+    }
+
     std::string id() const {
         require_readable_handle( token, *definition, "mutation category" );
         return definition->id;
@@ -2042,12 +2335,31 @@ struct mutation_definition_handle {
     std::shared_ptr<mutation_definition_data> definition;
     std::shared_ptr<owner_token> token;
 
+    mutation_definition_handle &name( const sol::object &value ) {
+        set_authored_text( token, *definition, definition->name, value,
+                           "mutation name", "mutation" );
+        return *this;
+    }
+
+    mutation_definition_handle &description( const sol::object &value ) {
+        set_authored_text( token, *definition, definition->description, value,
+                           "mutation description", "mutation" );
+        return *this;
+    }
+
+    mutation_definition_handle &activation_message( const sol::object &value ) {
+        set_authored_text( token, *definition, definition->activation_message, value,
+                           "mutation activation message", "mutation" );
+        return *this;
+    }
+
     mutation_definition_handle &variant( const sol::table &options ) {
         require_building_handle( token, *definition, "mutation" );
         mutation_variant_definition_data value;
         value.id = options.get_or( "id", std::string() );
-        value.name = options.get_or( "name", std::string() );
-        value.description = options.get_or( "description", std::string() );
+        value.name = read_text_option( options, "name", {}, "mutation variant name" );
+        value.description = read_text_option( options, "description", {},
+                                              "mutation variant description" );
         value.append_description = options.get_or(
                                        "append_description", options.get_or( "append_desc", false ) );
         value.weight = options.get_or<std::int64_t>( "weight", 0 );
@@ -2059,8 +2371,11 @@ struct mutation_definition_handle {
         require_building_handle( token, *definition, "mutation" );
         mutation_transform_definition_data value;
         value.target = options.get_or( "target", std::string() );
-        value.message = options.get_or(
-                            "message", options.get_or( "msg_transform", std::string() ) );
+        const sol::object message = options["message"];
+        value.message = message.valid() && message.get_type() != sol::type::nil ?
+                        read_singular_text( message, {}, "mutation transform message" ) :
+                        read_text_option( options, "msg_transform", {},
+                                          "mutation transform message" );
         value.active = options.get_or( "active", false );
         value.safe = options.get_or( "safe", false );
         value.moves = options.get_or<std::int64_t>( "moves", 0 );
@@ -2213,10 +2528,10 @@ struct mutation_definition_handle {
     mutation_definition_handle &attack( const sol::table &options ) {
         require_building_handle( token, *definition, "mutation" );
         mutation_attack_definition_data attack;
-        attack.player_message = options.get_or(
-                                    "player_message", options.get_or( "attack_text_u", std::string() ) );
-        attack.npc_message = options.get_or(
-                                 "npc_message", options.get_or( "attack_text_npc", std::string() ) );
+        attack.player_message = read_text_option_with_alias( options, "player_message",
+                                "attack_text_u", {}, "mutation attack player message" );
+        attack.npc_message = read_text_option_with_alias( options, "npc_message",
+                             "attack_text_npc", {}, "mutation attack NPC message" );
         attack.bodypart = options.get_or(
                               "bodypart", options.get_or( "body_part", std::string() ) );
         attack.chance = options.get_or<std::int64_t>( "chance", 0 );
@@ -2281,12 +2596,12 @@ struct mutation_definition_handle {
             mutation_reflex_definition_data condition;
             condition.handler = entry.get_or(
                                     "handler", entry.get_or( "condition", std::string() ) );
-            condition.message_on = entry.get_or( "message_on", entry.get_or(
-                    "msg_on", std::string() ) );
+            condition.message_on = read_text_option_with_alias( entry, "message_on", "msg_on", {},
+                                   "mutation reflex activation message" );
             condition.message_on_type = entry.get_or(
                                             "message_on_type", entry.get_or( "msg_on_type", std::string( "neutral" ) ) );
-            condition.message_off = entry.get_or( "message_off", entry.get_or(
-                    "msg_off", std::string() ) );
+            condition.message_off = read_text_option_with_alias( entry, "message_off", "msg_off", {},
+                                    "mutation reflex deactivation message" );
             condition.message_off_type = entry.get_or(
                                              "message_off_type", entry.get_or( "msg_off_type", std::string( "neutral" ) ) );
             group.push_back( std::move( condition ) );
@@ -2303,11 +2618,14 @@ struct mutation_definition_handle {
         value.add_human_comfort = options.get_or( "add_human_comfort", false );
         value.use_better_comfort = options.get_or( "use_better_comfort", false );
         value.add_sleep_aids = options.get_or( "add_sleep_aids", false );
-        value.try_message = options.get_or( "try_message", std::string() );
+        value.try_message = read_text_option( options, "try_message", {},
+                                              "mutation comfort try message" );
         value.try_message_type = options.get_or( "try_message_type", std::string( "neutral" ) );
-        value.hint_message = options.get_or( "hint_message", std::string() );
+        value.hint_message = read_text_option( options, "hint_message", {},
+                                               "mutation comfort hint message" );
         value.hint_message_type = options.get_or( "hint_message_type", std::string( "neutral" ) );
-        value.sleep_message = options.get_or( "sleep_message", std::string() );
+        value.sleep_message = read_text_option( options, "sleep_message", {},
+                                                "mutation comfort sleep message" );
         value.sleep_message_type = options.get_or( "sleep_message_type", std::string( "neutral" ) );
         if( const sol::optional<sol::table> conditions =
                 options.get<sol::optional<sol::table>>( "conditions" ) ) {
@@ -2361,6 +2679,8 @@ using mutation_type_registration = catalog_registration<mutation_type_definition
 using connect_group_registration = catalog_registration<connect_group_definition_data>;
 using mutation_category_registration = catalog_registration<mutation_category_definition_data>;
 using mutation_registration = catalog_registration<mutation_definition_data>;
+
+} // namespace
 
 struct creatures_content_transaction::impl {
     impl( std::string owner_id, const std::size_t owner_generation ) :
@@ -2425,6 +2745,24 @@ struct creatures_content_transaction::impl {
     mutation_category_undo;
     std::vector<std::pair<trait_id, std::optional<mutation_branch>>> mutation_undo;
 
+    void apply_foundations();
+    void apply_behavior();
+    void apply_effect_type();
+    void apply_sub_body_part();
+    void apply_wound_type();
+    void apply_body_part();
+    void apply_anatomy();
+    void apply_body_graph();
+    void apply_field_type();
+    void apply_monster_attack();
+    void apply_weakpoint_set();
+    void apply_morale_type();
+    void apply_disease_type();
+    void apply_wound_fix();
+    void apply_monster();
+    void apply_mutation();
+    void apply_finalize();
+
     creatures_content_apply_phase next_apply_phase =
         creatures_content_apply_phase::foundations;
     mutable bool finalization_validated = false;
@@ -2488,11 +2826,16 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     ccb.new_usertype<sub_body_part_definition_handle>(
         "SubBodyPartDefinition", sol::no_constructor,
         "id", sol::property( &sub_body_part_definition_handle::id ),
+        "name", &sub_body_part_definition_handle::name,
+        "plural_name", &sub_body_part_definition_handle::plural_name,
         "location_under", &sub_body_part_definition_handle::location_under,
         "unarmed_damage", &sub_body_part_definition_handle::unarmed_damage );
     ccb.new_usertype<wound_type_definition_handle>(
         "WoundDefinition", sol::no_constructor,
         "id", sol::property( &wound_type_definition_handle::id ),
+        "name", &wound_type_definition_handle::name,
+        "plural_name", &wound_type_definition_handle::plural_name,
+        "description", &wound_type_definition_handle::description,
         "damage_type", &wound_type_definition_handle::damage_type,
         "limb_score", &wound_type_definition_handle::limb_score,
         "progression", &wound_type_definition_handle::progression,
@@ -2501,6 +2844,14 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     ccb.new_usertype<body_part_definition_handle>(
         "BodyPartDefinition", sol::no_constructor,
         "id", sol::property( &body_part_definition_handle::id ),
+        "name", &body_part_definition_handle::name,
+        "plural_name", &body_part_definition_handle::plural_name,
+        "accusative", &body_part_definition_handle::accusative,
+        "plural_accusative", &body_part_definition_handle::plural_accusative,
+        "heading", &body_part_definition_handle::heading,
+        "plural_heading", &body_part_definition_handle::plural_heading,
+        "encumbrance_text", &body_part_definition_handle::encumbrance_text,
+        "hp_bar_text", &body_part_definition_handle::hp_bar_text,
         "sub_part", &body_part_definition_handle::sub_part,
         "limb_type", &body_part_definition_handle::limb_type,
         "armor", &body_part_definition_handle::armor,
@@ -2511,6 +2862,9 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     ccb.new_usertype<wound_fix_definition_handle>(
         "WoundFixDefinition", sol::no_constructor,
         "id", sol::property( &wound_fix_definition_handle::id ),
+        "name", &wound_fix_definition_handle::name,
+        "description", &wound_fix_definition_handle::description,
+        "success_message", &wound_fix_definition_handle::success_message,
         "skill", &wound_fix_definition_handle::skill,
         "proficiency", &wound_fix_definition_handle::proficiency,
         "removes", &wound_fix_definition_handle::removes,
@@ -2528,6 +2882,9 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     ccb.new_usertype<monster_definition_handle>(
         "MonsterDefinition", sol::no_constructor,
         "id", sol::property( &monster_definition_handle::id ),
+        "name", &monster_definition_handle::name,
+        "plural_name", &monster_definition_handle::plural_name,
+        "description", &monster_definition_handle::description,
         "material", &monster_definition_handle::material,
         "species", &monster_definition_handle::species,
         "category", &monster_definition_handle::category,
@@ -2549,7 +2906,8 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         "on_death", &monster_definition_handle::on_death );
     ccb.new_usertype<morale_type_definition_handle>(
         "MoraleTypeDefinition", sol::no_constructor,
-        "id", sol::property( &morale_type_definition_handle::id ) );
+        "id", sol::property( &morale_type_definition_handle::id ),
+        "text", &morale_type_definition_handle::text );
     ccb.new_usertype<disease_type_definition_handle>(
         "DiseaseTypeDefinition", sol::no_constructor,
         "id", sol::property( &disease_type_definition_handle::id ),
@@ -2560,6 +2918,8 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     ccb.new_usertype<species_definition_handle>(
         "SpeciesDefinition", sol::no_constructor,
         "id", sol::property( &species_definition_handle::id ),
+        "description", &species_definition_handle::description,
+        "footsteps", &species_definition_handle::footsteps,
         "flag", &species_definition_handle::flag,
         "anger", &species_definition_handle::anger,
         "fear", &species_definition_handle::fear,
@@ -2580,10 +2940,15 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         "id", sol::property( &connect_group_definition_handle::id ) );
     ccb.new_usertype<mutation_category_definition_handle>(
         "MutationCategoryDefinition", sol::no_constructor,
-        "id", sol::property( &mutation_category_definition_handle::id ) );
+        "id", sol::property( &mutation_category_definition_handle::id ),
+        "name", &mutation_category_definition_handle::name,
+        "mutagen_message", &mutation_category_definition_handle::mutagen_message );
     ccb.new_usertype<mutation_definition_handle>(
         "MutationDefinition", sol::no_constructor,
         "id", sol::property( &mutation_definition_handle::id ),
+        "name", &mutation_definition_handle::name,
+        "description", &mutation_definition_handle::description,
+        "activation_message", &mutation_definition_handle::activation_message,
         "variant", &mutation_definition_handle::variant,
         "transform", &mutation_definition_handle::transform,
         "personality", &mutation_definition_handle::personality,
@@ -2643,18 +3008,21 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     content.set_function( "EffectType", [this]( const sol::table & options ) {
         auto definition = std::make_shared<effect_type_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        if( const std::string value = options.get_or( "name", std::string() ); !value.empty() ) {
-            definition->names.push_back( value );
-        }
-        if( const std::string value = options.get_or( "description", std::string() );
+        if( authored_text value = read_text_option( options, "name", {}, "effect name" );
             !value.empty() ) {
-            definition->descriptions.push_back( value );
+            definition->names.push_back( std::move( value ) );
         }
-        definition->remove_message = options.get_or( "remove_message", std::string() );
+        if( authored_text value = read_text_option( options, "description", {},
+                                  "effect description" );
+            !value.empty() ) {
+            definition->descriptions.push_back( std::move( value ) );
+        }
+        definition->remove_message = read_text_option( options, "remove_message", {},
+                                     "effect remove message" );
         definition->apply_memorial_log = options.get_or( "apply_memorial_log", std::string() );
         definition->remove_memorial_log = options.get_or( "remove_memorial_log", std::string() );
-        definition->blood_analysis_description = options.get_or(
-                    "blood_analysis_description", std::string() );
+        definition->blood_analysis_description = read_text_option( options,
+                "blood_analysis_description", {}, "effect blood analysis description" );
         definition->maximum_intensity = options.get_or<std::int64_t>(
                                             "maximum_intensity", 1 );
         definition->maximum_duration_turns = options.get_or<std::int64_t>(
@@ -2727,8 +3095,9 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     content.set_function( "SubBodyPart", [this]( const sol::table & options ) {
         auto definition = std::make_shared<sub_body_part_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", std::string() );
-        definition->plural_name = options.get_or( "plural_name", std::string() );
+        definition->name = read_text_option( options, "name", {}, "sub-body-part name" );
+        definition->plural_name = read_text_option( options, "plural_name", definition->name,
+                                  "sub-body-part plural name" );
         definition->parent = options.get_or( "parent", std::string() );
         definition->opposite = options.get_or( "opposite", definition->id );
         definition->side = options.get_or( "side", std::string( "both" ) );
@@ -2741,9 +3110,11 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     content.set_function( "Wound", [this]( const sol::table & options ) {
         auto definition = std::make_shared<wound_type_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", definition->id );
-        definition->plural_name = options.get_or( "plural_name", definition->name );
-        definition->description = options.get_or( "description", std::string() );
+        definition->name = read_counted_name_option( options, "name", "plural_name",
+        { definition->id, std::nullopt }, definition->id,
+        definition->plural_name, "wound name" );
+        definition->description = read_text_option( options, "description", {},
+                                  "wound description" );
         definition->pain_min = options.get_or<std::int64_t>( "pain_min", 0 );
         definition->pain_max = options.get_or<std::int64_t>( "pain_max", 0 );
         definition->healing_min_turns = options.get_or<std::int64_t>(
@@ -2763,9 +3134,12 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     content.set_function( "WoundFix", [this]( const sol::table & options ) {
         auto definition = std::make_shared<wound_fix_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", definition->id );
-        definition->description = options.get_or( "description", std::string() );
-        definition->success_message = options.get_or( "success_message", std::string() );
+        definition->name = read_text_option( options, "name", { definition->id, std::nullopt },
+                                             "wound-fix name" );
+        definition->description = read_text_option( options, "description", {},
+                                  "wound-fix description" );
+        definition->success_message = read_text_option( options, "success_message", {},
+                                      "wound-fix success message" );
         definition->duration_turns = options.get_or<std::int64_t>( "duration_turns", 0 );
         definition->health_delta = options.get_or<std::int64_t>( "health_delta", 0 );
         return wound_fix_definition_handle{ std::move( definition ), pimpl_->token };
@@ -2773,17 +3147,21 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     content.set_function( "BodyPart", [this]( const sol::table & options ) {
         auto definition = std::make_shared<body_part_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", std::string() );
-        definition->plural_name = options.get_or( "plural_name", definition->name );
-        definition->accusative = options.get_or( "accusative", definition->name );
-        definition->plural_accusative = options.get_or(
-                                            "plural_accusative", definition->plural_name );
-        definition->heading = options.get_or( "heading", definition->name );
-        definition->plural_heading = options.get_or(
-                                         "plural_heading", definition->plural_name );
-        definition->encumbrance_text = options.get_or(
-                                           "encumbrance_text", definition->name );
-        definition->hp_bar_text = options.get_or( "hp_bar_text", definition->name );
+        definition->name = read_text_option( options, "name", {}, "body-part name" );
+        definition->plural_name = read_text_option( options, "plural_name", definition->name,
+                                  "body-part plural name" );
+        definition->accusative = read_text_option( options, "accusative", definition->name,
+                                 "body-part accusative" );
+        definition->plural_accusative = read_text_option( options, "plural_accusative",
+                                        definition->plural_name, "body-part plural accusative" );
+        definition->heading = read_text_option( options, "heading", definition->name,
+                                                "body-part heading" );
+        definition->plural_heading = read_text_option( options, "plural_heading",
+                                     definition->plural_name, "body-part plural heading" );
+        definition->encumbrance_text = read_text_option( options, "encumbrance_text",
+                                       definition->name, "body-part encumbrance text" );
+        definition->hp_bar_text = read_text_option( options, "hp_bar_text", definition->name,
+                                  "body-part HP bar text" );
         definition->main_part = options.get_or( "main_part", definition->id );
         definition->connected_to = options.get_or(
                                        "connected_to", definition->main_part );
@@ -2817,9 +3195,10 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     content.set_function( "Monster", [this]( const sol::table & options ) {
         auto definition = std::make_shared<monster_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", std::string() );
-        definition->plural_name = options.get_or( "plural_name", definition->name );
-        definition->description = options.get_or( "description", std::string() );
+        definition->name = read_counted_name_option( options, "name", "plural_name",
+                           {}, {}, definition->plural_name, "monster name" );
+        definition->description = read_text_option( options, "description", {},
+                                  "monster description" );
         definition->symbol = options.get_or( "symbol", std::string( "?" ) );
         definition->color = options.get_or( "color", std::string( "white" ) );
         definition->looks_like = options.get_or( "looks_like", std::string() );
@@ -2869,7 +3248,7 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     content.set_function( "MoraleType", [this]( const sol::table & options ) {
         auto definition = std::make_shared<morale_type_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->text = options.get_or( "text", std::string() );
+        definition->text = read_text_option( options, "text", {}, "morale type text" );
         definition->permanent = options.get_or( "permanent", false );
         return morale_type_definition_handle{ std::move( definition ), pimpl_->token };
     } );
@@ -2899,8 +3278,10 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     content.set_function( "Species", [this]( const sol::table & options ) {
         auto definition = std::make_shared<species_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->description = options.get_or( "description", std::string() );
-        definition->footsteps = options.get_or( "footsteps", std::string( "footsteps." ) );
+        definition->description = read_text_option( options, "description", {},
+                                  "species description" );
+        definition->footsteps = read_text_option( options, "footsteps",
+        { "footsteps.", std::nullopt }, "species footsteps" );
         definition->bleeds = options.get_or( "bleeds", std::string( "fd_null" ) );
         return species_definition_handle{ std::move( definition ), pimpl_->token };
     } );
@@ -2934,11 +3315,12 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     content.set_function( "MutationCategory", [this]( const sol::table & options ) {
         auto definition = std::make_shared<mutation_category_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", definition->id );
+        definition->name = read_text_option( options, "name", { definition->id, std::nullopt },
+                                             "mutation-category name" );
         definition->threshold_mutation = options.get_or(
                                              "threshold_mutation", std::string() );
-        definition->mutagen_message = options.get_or(
-                                          "mutagen_message", std::string() );
+        definition->mutagen_message = read_text_option( options, "mutagen_message", {},
+                                      "mutation-category mutagen message" );
         definition->memorial_message = options.get_or(
                                            "memorial_message", std::string( "Crossed a threshold" ) );
         definition->vitamin = options.get_or( "vitamin", std::string( "null" ) );
@@ -2957,8 +3339,9 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     const sol::table & options ) {
         auto definition = std::make_shared<mutation_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", std::string() );
-        definition->description = options.get_or( "description", std::string() );
+        definition->name = read_text_option( options, "name", {}, "mutation name" );
+        definition->description = read_text_option( options, "description", {},
+                                  "mutation description" );
         definition->points = options.get_or<std::int64_t>( "points", 0 );
         definition->vitamin_cost = options.get_or<std::int64_t>( "vitamin_cost", 100 );
         definition->visibility = options.get_or<std::int64_t>( "visibility", 0 );
@@ -2990,15 +3373,16 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         definition->player_display = options.get_or( "player_display", true );
         definition->vanity = options.get_or( "vanity", false );
         definition->dummy = options.get_or( "dummy", false );
-        definition->activation_message = options.get_or(
-                                             "activation_message", std::string() );
+        definition->activation_message = read_text_option( options, "activation_message", {},
+                                         "mutation activation message" );
         definition->scent_type = options.get_or( "scent_type", std::string() );
         definition->spawn_item = options.get_or( "spawn_item", std::string() );
-        definition->spawn_item_message = options.get_or(
-                                             "spawn_item_message", std::string() );
+        definition->spawn_item_message = read_text_option( options, "spawn_item_message", {},
+                                         "mutation spawn item message" );
         definition->ranged_mutation = options.get_or( "ranged_mutation", std::string() );
-        definition->ranged_mutation_message = options.get_or(
-                "ranged_mutation_message", std::string() );
+        definition->ranged_mutation_message = read_text_option( options,
+                                              "ranged_mutation_message", {},
+                                              "mutation ranged message" );
         definition->override_look_id = options.get_or( "override_look_id", std::string() );
         definition->override_look_category = options.get_or(
                 "override_look_category", std::string() );
@@ -3098,7 +3482,8 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     };
 #define CATA_CREATURES_EDIT( lua_name, handle_type, member, kind ) \
     content.set_function( lua_name, [this, edit_catalog]( const std::string &id ) { \
-        return handle_type{ edit_catalog( id, pimpl_->member, kind ), pimpl_->token }; \
+        using edited_handle = handle_type; \
+        return edited_handle{ edit_catalog( id, pimpl_->member, kind ), pimpl_->token }; \
     } )
     CATA_CREATURES_EDIT( "edit_behavior", behavior_definition_handle, behaviors, "behavior" );
     CATA_CREATURES_EDIT( "edit_effect_type", effect_type_definition_handle, effect_types,
@@ -3357,71 +3742,71 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
         };
         const auto item_exists = [&index, check_engine_state]( const std::string & id ) {
             return !id.empty() && ( !check_engine_state ||
-                                   ( index.defines_item && index.defines_item( id ) ) ||
-                                   itype_id( id ).is_valid() );
+                                    ( index.defines_item && index.defines_item( id ) ) ||
+                                    itype_id( id ).is_valid() );
         };
         const auto material_exists = [&index, check_engine_state]( const std::string & id ) {
             return !id.empty() && ( !check_engine_state ||
-                                   ( index.defines_material && index.defines_material( id ) ) ||
-                                   material_id( id ).is_valid() );
+                                    ( index.defines_material && index.defines_material( id ) ) ||
+                                    material_id( id ).is_valid() );
         };
         const auto damage_exists = [&index, check_engine_state]( const std::string & id ) {
             return !id.empty() && ( !check_engine_state ||
-                                   ( index.defines_damage_type && index.defines_damage_type( id ) ) ||
-                                   damage_type_id( id ).is_valid() );
+                                    ( index.defines_damage_type && index.defines_damage_type( id ) ) ||
+                                    damage_type_id( id ).is_valid() );
         };
         const auto skill_exists = [&index, check_engine_state]( const std::string & id ) {
             return !id.empty() && ( !check_engine_state ||
-                                   ( index.defines_skill && index.defines_skill( id ) ) ||
-                                   skill_id( id ).is_valid() );
+                                    ( index.defines_skill && index.defines_skill( id ) ) ||
+                                    skill_id( id ).is_valid() );
         };
         const auto proficiency_exists = [&index, check_engine_state]( const std::string & id ) {
             return !id.empty() && ( !check_engine_state ||
-                                   ( index.defines_proficiency && index.defines_proficiency( id ) ) ||
-                                   proficiency_id( id ).is_valid() );
+                                    ( index.defines_proficiency && index.defines_proficiency( id ) ) ||
+                                    proficiency_id( id ).is_valid() );
         };
         const auto vitamin_exists = [&index, check_engine_state]( const std::string & id ) {
             return !id.empty() && ( !check_engine_state ||
-                                   ( index.defines_vitamin && index.defines_vitamin( id ) ) ||
-                                   vitamin_id( id ).is_valid() );
+                                    ( index.defines_vitamin && index.defines_vitamin( id ) ) ||
+                                    vitamin_id( id ).is_valid() );
         };
-        const auto behavior_exists = [&]( const std::string & id ) {
+        const auto behavior_exists = [&]( const std::string_view id ) {
             return staged( pimpl_->behaviors, id, native_behavior );
         };
-        const auto effect_exists = [&]( const std::string & id ) {
+        const auto effect_exists = [&]( const std::string_view id ) {
             return staged( pimpl_->effect_types, id, native_effect );
         };
-        const auto field_exists = [&]( const std::string & id ) {
+        const auto field_exists = [&]( const std::string_view id ) {
             return staged( pimpl_->field_types, id, native_field );
         };
-        const auto body_exists = [&]( const std::string & id ) {
+        const auto body_exists = [&]( const std::string_view id ) {
             return staged( pimpl_->body_parts, id, native_body );
         };
-        const auto sub_body_exists = [&]( const std::string & id ) {
+        const auto sub_body_exists = [&]( const std::string_view id ) {
             return staged( pimpl_->sub_body_parts, id, native_sub_body );
         };
-        const auto graph_exists = [&]( const std::string & id ) {
+        const auto graph_exists = [&]( const std::string_view id ) {
             return staged( pimpl_->body_graphs, id, native_graph );
         };
-        const auto wound_exists = [&]( const std::string & id ) {
+        const auto wound_exists = [&]( const std::string_view id ) {
             return staged( pimpl_->wound_types, id, native_wound );
         };
-        const auto monster_exists = [&]( const std::string & id ) {
+        const auto monster_exists = [&]( const std::string_view id ) {
             return staged( pimpl_->monsters, id, native_monster );
         };
-        const auto species_exists = [&]( const std::string & id ) {
+        const auto species_exists = [&]( const std::string_view id ) {
             return staged( pimpl_->species, id, native_species );
         };
-        const auto emission_exists = [&]( const std::string & id ) {
+        const auto emission_exists = [&]( const std::string_view id ) {
             return staged( pimpl_->emissions, id, native_emission );
         };
-        const auto attack_exists = [&]( const std::string & id ) {
+        const auto attack_exists = [&]( const std::string_view id ) {
             return staged( pimpl_->monster_attacks, id, native_attack );
         };
-        const auto weakpoint_exists = [&]( const std::string & id ) {
+        const auto weakpoint_exists = [&]( const std::string_view id ) {
             return staged( pimpl_->weakpoint_sets, id, native_weakpoint );
         };
-        const auto mutation_exists = [&]( const std::string & id ) {
+        const auto mutation_exists = [&]( const std::string_view id ) {
             return staged( pimpl_->mutations, id, native_mutation );
         };
 
@@ -3436,7 +3821,8 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
                                               "' references unknown child '" + child + "'" );
                 }
             }
-            for( const auto &condition : definition.conditions ) {
+            for( const cata::lua_platform::behavior_condition_definition_data &condition :
+                 definition.conditions ) {
                 if( condition.policy.empty() ||
                     ( !condition.native && owner_runtime.handlers.count( condition.policy ) == 0 ) ) {
                     throw std::runtime_error( "behavior '" + definition.id +
@@ -3495,13 +3881,13 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
         for( const auto &entry : pimpl_->weakpoint_sets ) {
             const auto &definition = *entry.definition;
             std::set<std::string> ids;
-            for( const auto &point : definition.weakpoints ) {
+            for( const cata::lua_platform::weakpoint_definition_data &point : definition.weakpoints ) {
                 if( point.id.empty() || !ids.insert( point.id ).second ||
                     !std::isfinite( point.coverage ) || point.coverage < 0.0 ) {
                     throw std::runtime_error( "weakpoint set '" + definition.id +
                                               "' has invalid weakpoint metadata" );
                 }
-                for( const auto &effect : point.effects ) {
+                for( const cata::lua_platform::weakpoint_effect_definition_data &effect : point.effects ) {
                     if( !effect.effect.empty() && !effect_exists( effect.effect ) ) {
                         throw std::runtime_error( "weakpoint '" + point.id +
                                                   "' references unknown effect '" + effect.effect + "'" );
@@ -3523,8 +3909,9 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "field type '" + definition.id +
                                           "' references unknown wandering field" );
             }
-            for( const auto &level : definition.intensity_levels ) {
-                for( const auto &effect : level.effects ) {
+            for( const cata::lua_platform::field_intensity_definition_data &level :
+                 definition.intensity_levels ) {
+                for( const cata::lua_platform::field_effect_definition_data &effect : level.effects ) {
                     if( !effect.effect.empty() && !effect_exists( effect.effect ) ) {
                         throw std::runtime_error( "field type '" + definition.id +
                                                   "' references unknown effect '" + effect.effect + "'" );
@@ -3616,7 +4003,8 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
                                               "' references unknown damage type '" + id + "'" );
                 }
             }
-            for( const auto &progression : definition.progressions ) {
+            for( const cata::lua_platform::wound_progression_definition_data &progression :
+                 definition.progressions ) {
                 if( !wound_exists( progression.id ) ) {
                     throw std::runtime_error( "wound '" + definition.id +
                                               "' references unknown progression '" + progression.id + "'" );
@@ -3631,7 +4019,8 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
                                               "' has an invalid skill" );
                 }
             }
-            for( const auto &proficiency : definition.proficiencies ) {
+            for( const cata::lua_platform::wound_fix_proficiency_definition_data &proficiency :
+                 definition.proficiencies ) {
                 if( !proficiency_exists( proficiency.id ) ||
                     !std::isfinite( proficiency.multiplier ) || proficiency.multiplier < 0.0 ) {
                     throw std::runtime_error( "wound fix '" + definition.id +
@@ -3682,7 +4071,7 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "body graph '" + definition.id +
                                           "' references unknown mirror graph" );
             }
-            for( const auto &part : definition.parts ) {
+            for( const cata::lua_platform::body_graph_part_definition_data &part : definition.parts ) {
                 if( !part.nested_graph.empty() && !graph_exists( part.nested_graph ) ) {
                     throw std::runtime_error( "body graph '" + definition.id +
                                               "' references unknown nested graph" );
@@ -3734,7 +4123,8 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
                                               "' has invalid armor for damage type '" + id + "'" );
                 }
             }
-            for( const auto &attack : definition.attacks ) {
+            for( const cata::lua_platform::monster_attack_reference_definition_data &attack :
+                 definition.attacks ) {
                 if( !attack_exists( attack.id ) ||
                     ( attack.cooldown && ( !std::isfinite( *attack.cooldown ) || *attack.cooldown < 0.0 ) ) ) {
                     throw std::runtime_error( "monster '" + definition.id +
@@ -3868,14 +4258,14 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
                                               "' has an invalid quality" );
                 }
             }
-            for( const auto &armor : definition.armor ) {
+            for( const cata::lua_platform::mutation_armor_definition_data &armor : definition.armor ) {
                 if( !body_exists( armor.bodypart ) || !damage_exists( armor.damage_type ) ||
                     !std::isfinite( armor.amount ) ) {
                     throw std::runtime_error( "mutation '" + definition.id +
                                               "' has invalid armor" );
                 }
             }
-            for( const auto &attack : definition.attacks ) {
+            for( const cata::lua_platform::mutation_attack_definition_data &attack : definition.attacks ) {
                 for( const std::string &id : attack.required_mutations ) {
                     if( !mutation_exists( id ) ) {
                         throw std::runtime_error( "mutation '" + definition.id +
@@ -3888,13 +4278,13 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
                                                   "' has unknown attack blocker" );
                     }
                 }
-                for( const auto &damage : attack.base_damage ) {
+                for( const cata::lua_platform::mutation_damage_definition_data &damage : attack.base_damage ) {
                     if( !damage_exists( damage.damage_type ) ) {
                         throw std::runtime_error( "mutation '" + definition.id +
                                                   "' has unknown attack damage type" );
                     }
                 }
-                for( const auto &damage : attack.strength_damage ) {
+                for( const cata::lua_platform::mutation_damage_definition_data &damage : attack.strength_damage ) {
                     if( !damage_exists( damage.damage_type ) ) {
                         throw std::runtime_error( "mutation '" + definition.id +
                                                   "' has unknown strength damage type" );
@@ -3902,7 +4292,7 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
                 }
             }
             for( const auto &group : definition.reflex_triggers ) {
-                for( const auto &trigger : group ) {
+                for( const cata::lua_platform::mutation_reflex_definition_data &trigger : group ) {
                     if( !trigger.handler.empty() && owner_runtime.handlers.count( trigger.handler ) == 0 ) {
                         throw std::runtime_error( "mutation '" + definition.id +
                                                   "' references missing reflex handler" );
@@ -3918,6 +4308,1369 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
     }
 }
 
+void creatures_content_transaction::impl::apply_foundations()
+{
+    for( const monster_flag_registration &entry : this->monster_flags ) {
+        const mon_flag_str_id id( entry.definition->id );
+        this->monster_flag_undo.emplace_back(
+            id, id.is_valid() ? std::optional<mon_flag>( id.obj() ) : std::nullopt );
+        mon_flag native;
+        native.id = id;
+        native.was_loaded = true;
+        detail::monster_flag_registry().insert( native );
+    }
+    if( !this->monster_flags.empty() ) {
+        detail::monster_flag_registry().finalize();
+    }
+
+    for( const species_registration &entry : this->species ) {
+        const species_id id( entry.definition->id );
+        this->species_undo.emplace_back(
+            id, id.is_valid() ? std::optional<species_type>( id.obj() ) : std::nullopt );
+        const species_definition_data &source = *entry.definition;
+        species_type native;
+        native.id = id;
+        native.src.emplace_back( id, mod_id( this->owner ) );
+        native.was_loaded = true;
+        native.description = source.description.native();
+        native.footsteps = source.footsteps.native();
+        native.bleeds = field_type_str_id( source.bleeds );
+        for( const std::string &flag : source.flags ) {
+            native.flags.insert( mon_flag_str_id( flag ) );
+        }
+        for( const std::string &trigger : source.anger ) {
+            native.anger.set( io::string_to_enum<mon_trigger>( trigger ) );
+        }
+        for( const std::string &trigger : source.fear ) {
+            native.fear.set( io::string_to_enum<mon_trigger>( trigger ) );
+        }
+        for( const std::string &trigger : source.placate ) {
+            native.placate.set( io::string_to_enum<mon_trigger>( trigger ) );
+        }
+        detail::species_registry().insert( native );
+    }
+    if( !this->species.empty() ) {
+        detail::species_registry().finalize();
+    }
+
+    for( const emission_registration &entry : this->emissions ) {
+        const std::string &id = entry.definition->id;
+        const emit *const previous = detail::emission_registry_find( id );
+        this->emission_undo.emplace_back(
+            id, previous == nullptr ? std::optional<emit>() :
+            std::optional<emit>( *previous ) );
+        const emission_definition_data &source = *entry.definition;
+        emit native;
+        native.id_ = emit_id( id );
+        native.native_profile_ = emit::native_profile{
+            field_type_str_id( source.field ),
+            static_cast<int>( source.intensity ),
+            static_cast<int>( source.quantity ),
+            static_cast<int>( source.chance )
+        };
+        detail::emission_registry_set( native );
+    }
+
+    for( const monster_faction_registration &entry : this->monster_factions ) {
+        const mfaction_str_id id( entry.definition->id );
+        this->monster_faction_undo.emplace_back(
+            id, id.is_valid() ? std::optional<monfaction>( id.obj() ) : std::nullopt );
+        const monster_faction_definition_data &source = *entry.definition;
+        monfaction native;
+        native.id = id;
+        native.src.emplace_back( id, mod_id( this->owner ) );
+        native.was_loaded = true;
+        native.base_faction = mfaction_str_id( source.base );
+        for( const auto &[target, attitude] : source.attitudes ) {
+            const mfaction_str_id target_id( target );
+            if( attitude == "by_mood" ) {
+                native._att_by_mood.insert( target_id );
+            } else if( attitude == "neutral" ) {
+                native._att_neutral.insert( target_id );
+            } else if( attitude == "friendly" ) {
+                native._att_friendly.insert( target_id );
+            } else {
+                native._att_hate.insert( target_id );
+            }
+        }
+        native.rebuild_attitude_map();
+        detail::monster_faction_registry().insert( native );
+    }
+    if( !this->monster_factions.empty() ) {
+        monfactions::finalize();
+    }
+
+    for( const mutation_type_registration &entry : this->mutation_types ) {
+        const std::string &id = entry.definition->id;
+        this->mutation_type_undo.emplace_back(
+            id, detail::mutation_type_registry_contains( id ) );
+        detail::mutation_type_registry_set( id );
+    }
+
+    for( const connect_group_registration &entry : this->connect_groups ) {
+        const std::string &id = entry.definition->id;
+        const connect_group *const previous = detail::connect_group_registry_find( id );
+        this->connect_group_undo.emplace_back(
+            id, previous == nullptr ? std::optional<connect_group>() :
+            std::optional<connect_group>( *previous ) );
+        connect_group native;
+        native.id = connect_group_id( id );
+        native.index = 0;
+        detail::connect_group_registry_set( native );
+    }
+
+    for( const mutation_category_registration &entry : this->mutation_categories ) {
+        const std::string &id = entry.definition->id;
+        const mutation_category_trait *const previous =
+            detail::mutation_category_registry_find( id );
+        this->mutation_category_undo.emplace_back(
+            id, previous == nullptr ? std::optional<mutation_category_trait>() :
+            std::optional<mutation_category_trait>( *previous ) );
+        const mutation_category_definition_data &source = *entry.definition;
+        mutation_category_trait native;
+        native.id = mutation_category_id( id );
+        native.raw_name = source.name.native();
+        native.raw_mutagen_message = source.mutagen_message.native();
+        native.raw_memorial_message = source.memorial_message;
+        native.threshold_mut = trait_id( source.threshold_mutation );
+        native.vitamin = vitamin_id( source.vitamin );
+        native.threshold_min = static_cast<int>( source.threshold_minimum );
+        native.base_removal_chance = static_cast<int>( source.base_removal_chance );
+        native.base_removal_cost_mul = static_cast<float>(
+                                           source.base_removal_cost_multiplier );
+        native.wip = source.work_in_progress;
+        native.skip_test = source.skip_consistency_test;
+        detail::mutation_category_registry_set( native );
+    }
+    this->next_apply_phase = creatures_content_apply_phase::mutation;
+}
+
+void creatures_content_transaction::impl::apply_behavior()
+{
+
+    for( const behavior_registration &entry : this->behaviors ) {
+        const string_id<behavior::node_t> id( entry.definition->id );
+        this->behavior_undo.emplace_back(
+            id, id.is_valid() ? std::optional<behavior::node_t>( id.obj() ) : std::nullopt );
+        const behavior_definition_data &source = *entry.definition;
+        behavior::node_t native;
+        native.id = id;
+        native.src.emplace_back( id, mod_id( this->owner ) );
+        native.was_loaded = true;
+        if( !source.strategy.empty() ) {
+            native.set_strategy( behavior::strategy_map.at( source.strategy ) );
+        }
+        if( !source.goal.empty() ) {
+            native.set_goal( source.goal );
+        }
+        for( const std::string &child : source.children ) {
+            native.add_child_id( child );
+        }
+        for( const behavior_condition_definition_data &condition : source.conditions ) {
+            if( condition.native ) {
+                native.add_predicate( behavior::predicate_map.at( condition.policy ),
+                                      condition.argument, condition.inverted );
+            } else {
+                const std::string owner = this->owner;
+                const std::string behavior_id = source.id;
+                const std::string handler_id = condition.policy;
+                native.add_predicate(
+                    [owner, behavior_id, handler_id]( const behavior::oracle_t *oracle,
+                const std::string_view argument ) {
+                    const Creature *subject = oracle == nullptr ? nullptr : oracle->get_subject();
+                    const std::optional<bool> result = invoke_behavior_condition_handler(
+                                                           owner, behavior_id, handler_id, subject, argument );
+                    return result.value_or( false ) ? behavior::status_t::running :
+                           behavior::status_t::failure;
+                }, condition.argument, condition.inverted );
+            }
+        }
+        if( source.score ) {
+            const behavior_score_definition_data &score = *source.score;
+            if( score.native ) {
+                native.set_score_function( behavior::score_predicate_map.at( score.policy ),
+                                           score.argument );
+            } else {
+                const std::string owner = this->owner;
+                const std::string behavior_id = source.id;
+                const std::string handler_id = score.policy;
+                native.set_score_function(
+                    [owner, behavior_id, handler_id]( const behavior::oracle_t *oracle,
+                const std::string_view argument ) {
+                    const Creature *subject = oracle == nullptr ? nullptr : oracle->get_subject();
+                    return static_cast<float>( invoke_behavior_score_handler(
+                                                   owner, behavior_id, handler_id, subject, argument ).value_or( 0.0 ) );
+                }, score.argument );
+            }
+        }
+        detail::behavior_registry().insert( native );
+    }
+    if( !this->behaviors.empty() ) {
+        behavior::finalize();
+    }
+    this->next_apply_phase = creatures_content_apply_phase::effect_type;
+}
+
+void creatures_content_transaction::impl::apply_effect_type()
+{
+
+    for( const effect_type_registration &entry : this->effect_types ) {
+        const effect_type_definition_data &source = *entry.definition;
+        const effect_type *const previous = detail::effect_type_registry_find( source.id );
+        this->effect_type_undo.emplace_back(
+            source.id, previous == nullptr ? std::optional<effect_type>() :
+            std::optional<effect_type>( *previous ) );
+        effect_type native;
+        native.id = efftype_id( source.id );
+        native.src.emplace_back( native.id, mod_id( this->owner ) );
+        for( const authored_text &value : source.names ) {
+            native.name.push_back( value.native() );
+        }
+        for( const authored_text &value : source.descriptions ) {
+            native.desc.push_back( value.native() );
+        }
+        if( source.reduced_descriptions.empty() ) {
+            native.reduced_desc = native.desc;
+        } else {
+            for( const authored_text &value : source.reduced_descriptions ) {
+                native.reduced_desc.push_back( value.native() );
+            }
+        }
+        native.remove_message = source.remove_message.empty() ? translation() :
+                                source.remove_message.native();
+        native.apply_memorial_log = source.apply_memorial_log;
+        native.remove_memorial_log = source.remove_memorial_log;
+        native.blood_analysis_description = source.blood_analysis_description.empty() ?
+                                            translation() : source.blood_analysis_description.native();
+        native.max_intensity = static_cast<int>( source.maximum_intensity );
+        native.max_duration = time_duration::from_turns(
+                                  static_cast<int>( source.maximum_duration_turns ) );
+        native.int_dur_factor = time_duration::from_turns(
+                                    static_cast<int>( source.intensity_duration_turns ) );
+        native.dur_add_perc = static_cast<int>( source.duration_add_percent );
+        native.int_add_val = static_cast<int>( source.intensity_add_value );
+        native.int_decay_step = static_cast<int>( source.intensity_decay_step );
+        native.int_decay_tick = static_cast<int>( source.intensity_decay_tick );
+        native.int_decay_remove = source.intensity_decay_removes;
+        native.main_parts_only = source.main_parts_only;
+        native.show_in_info = source.show_in_info;
+        native.show_intensity = source.show_intensity;
+        native.part_descs = source.part_descriptions;
+        for( const std::string &id : source.flags ) {
+            native.flags.emplace( id );
+        }
+        for( const std::string &id : source.immune_character_flags ) {
+            native.immune_flags.insert( json_character_flag( id ) );
+        }
+        for( const std::string &id : source.immune_bodypart_flags ) {
+            native.immune_bp_flags.insert( json_character_flag( id ) );
+        }
+        for( const std::string &id : source.resist_traits ) {
+            native.resist_traits.emplace_back( id );
+        }
+        for( const std::string &id : source.resist_effects ) {
+            native.resist_effects.emplace_back( id );
+        }
+        for( const std::string &id : source.removes_effects ) {
+            native.removes_effects.emplace_back( id );
+        }
+        for( const std::string &id : source.blocks_effects ) {
+            native.blocks_effects.emplace_back( id );
+        }
+        for( const std::string &id : source.enchantments ) {
+            native.enchantments.emplace_back( id );
+        }
+        detail::effect_type_registry_set( native );
+    }
+    this->next_apply_phase = creatures_content_apply_phase::sub_body_part;
+}
+
+void creatures_content_transaction::impl::apply_sub_body_part()
+{
+    static const std::map<std::string, side> platform_body_sides = {
+        { "left", side::LEFT }, { "right", side::RIGHT }, { "both", side::BOTH }
+    };
+    for( const sub_body_part_registration &entry : this->sub_body_parts ) {
+        const sub_bodypart_str_id id( entry.definition->id );
+        this->sub_body_part_undo.emplace_back(
+            id, id.is_valid() ? std::optional<sub_body_part_type>( id.obj() ) :
+            std::nullopt );
+        const sub_body_part_definition_data &source = *entry.definition;
+        sub_body_part_type native;
+        native.id = id;
+        native.src.emplace_back( id, mod_id( this->owner ) );
+        native.opposite = sub_bodypart_str_id( source.opposite );
+        native.was_loaded = true;
+        native.name = source.name.native();
+        native.name_multiple = source.plural_name.native();
+        native.part_side = platform_body_sides.at( source.side );
+        native.parent = bodypart_str_id( source.parent );
+        native.secondary = source.secondary;
+        native.max_coverage = static_cast<int>( source.maximum_coverage );
+        if( source.locations_under.empty() ) {
+            native.locations_under.push_back( id );
+        } else {
+            for( const std::string &location : source.locations_under ) {
+                native.locations_under.emplace_back( location );
+            }
+        }
+        if( !source.similar_body_part.empty() ) {
+            native.similar_bodypart = sub_bodypart_str_id( source.similar_body_part );
+        }
+        for( const auto &[damage_id, amount] : source.unarmed_damage ) {
+            native.unarmed_damage.add_damage( damage_type_id( damage_id ),
+                                              static_cast<float>( amount ) );
+        }
+        detail::sub_body_part_registry().insert( native ).finalize();
+    }
+    if( !this->sub_body_parts.empty() ) {
+        detail::refresh_sub_body_part_similarity_cache();
+    }
+    this->next_apply_phase = creatures_content_apply_phase::wound_type;
+}
+
+void creatures_content_transaction::impl::apply_wound_type()
+{
+    for( const wound_type_registration &entry : this->wound_types ) {
+        const wound_type_id id( entry.definition->id );
+        this->wound_type_undo.emplace_back(
+            id, id.is_valid() ? std::optional<wound_type>( id.obj() ) : std::nullopt );
+        const wound_type_definition_data &source = *entry.definition;
+        wound_type native;
+        native.id = id;
+        native.was_loaded = true;
+        native.name_ = native_counted_name( source.name, source.plural_name );
+        native.description_ = source.description.native();
+        native.pain_ = { static_cast<int>( source.pain_min ),
+                         static_cast<int>( source.pain_max )
+                       };
+        native.healing_time_ = {
+            time_duration::from_turns( static_cast<int>( source.healing_min_turns ) ),
+            time_duration::from_turns( static_cast<int>( source.healing_max_turns ) )
+        };
+        native.damage_required = { static_cast<int>( source.damage_min ),
+                                   static_cast<int>( source.damage_max )
+                                 };
+        native.weight = static_cast<int>( source.weight );
+        native.limit = static_cast<unsigned int>( source.per_part_limit );
+        if( !source.required_body_part_flag.empty() ) {
+            native.whitelist_bp_with_flag = json_character_flag(
+                                                source.required_body_part_flag );
+        }
+        if( !source.forbidden_body_part_flag.empty() ) {
+            native.blacklist_bp_with_flag = json_character_flag(
+                                                source.forbidden_body_part_flag );
+        }
+        for( const std::string &damage_id : source.damage_types ) {
+            native.damage_types.emplace_back( damage_id );
+        }
+        for( const wound_limb_score_definition_data &score : source.limb_scores ) {
+            native.limb_scores.push_back( { limb_score_id( score.id ),
+                                            static_cast<float>( score.penalty ) } );
+        }
+        for( const wound_progression_definition_data &progression : source.progressions ) {
+            native.wound_progression.push_back( {
+                wound_type_id( progression.id ), static_cast<int>( progression.chance )
+            } );
+        }
+        for( const std::string &kind : source.required_body_part_types ) {
+            native.whitelist_body_part_types.push_back( io::string_to_enum<bp_type>( kind ) );
+        }
+        for( const std::string &kind : source.forbidden_body_part_types ) {
+            native.blacklist_body_part_types.push_back( io::string_to_enum<bp_type>( kind ) );
+        }
+        detail::wound_type_registry().insert( native ).finalize();
+    }
+    if( !this->wound_types.empty() ) {
+        detail::refresh_body_part_wound_cache();
+    }
+    this->next_apply_phase = creatures_content_apply_phase::body_part;
+}
+
+void creatures_content_transaction::impl::apply_body_part()
+{
+
+    static const std::map<std::string, side> platform_body_sides = {
+        { "left", side::LEFT }, { "right", side::RIGHT }, { "both", side::BOTH }
+    };
+    static const std::map<std::string, bp_type> platform_body_part_types = {
+        { "head", bp_type::head }, { "torso", bp_type::torso },
+        { "sensor", bp_type::sensor }, { "mouth", bp_type::mouth },
+        { "arm", bp_type::arm }, { "hand", bp_type::hand },
+        { "leg", bp_type::leg }, { "foot", bp_type::foot },
+        { "wing", bp_type::wing }, { "tail", bp_type::tail },
+        { "other", bp_type::other }
+    };
+    for( const body_part_registration &entry : this->body_parts ) {
+        const bodypart_str_id id( entry.definition->id );
+        this->body_part_undo.emplace_back(
+            id, id.is_valid() ? std::optional<body_part_type>( id.obj() ) :
+            std::nullopt );
+        const body_part_definition_data &source = *entry.definition;
+        body_part_type native;
+        native.id = id;
+        native.src.emplace_back( id, mod_id( this->owner ) );
+        native.was_loaded = true;
+        native.legacy_id = "BP_NULL";
+        native.token = num_bp;
+        native.name = source.name.native();
+        native.name_multiple = source.plural_name.native();
+        native.accusative = source.accusative.native();
+        native.accusative_multiple = source.plural_accusative.native();
+        native.name_as_heading = source.heading.native();
+        native.name_as_heading_multiple = source.plural_heading.native();
+        native.encumb_text = source.encumbrance_text.native();
+        native.hp_bar_ui_text = source.hp_bar_text.native();
+        native.main_part = bodypart_str_id( source.main_part );
+        native.connected_to = bodypart_str_id( source.connected_to );
+        native.opposite_part = bodypart_str_id( source.opposite );
+        native.part_side = platform_body_sides.at( source.side );
+        native.hit_size = static_cast<float>( source.hit_size );
+        native.hit_difficulty = static_cast<float>( source.hit_difficulty );
+        native.base_hp = static_cast<int>( source.base_health );
+        native.drench_max = static_cast<int>( source.drench_capacity );
+        native.is_limb = source.limb;
+        native.is_vital = source.vital;
+        for( const std::string &sub_part : source.sub_parts ) {
+            native.sub_parts.emplace_back( sub_part );
+        }
+        double highest_weight = -1.0;
+        for( const auto &[kind, weight] : source.limb_types ) {
+            const bp_type type = platform_body_part_types.at( kind );
+            native.limbtypes[type] = static_cast<float>( weight );
+            if( weight > highest_weight ) {
+                highest_weight = weight;
+                native._primary_limb_type = type;
+            }
+        }
+        for( const auto &[damage_id, amount] : source.armor ) {
+            native.armor.set_resist( damage_type_id( damage_id ),
+                                     static_cast<float>( amount ) );
+        }
+        for( const auto &[damage_id, amount] : source.unarmed_damage ) {
+            native.damage.add_damage( damage_type_id( damage_id ),
+                                      static_cast<float>( amount ) );
+        }
+        for( const std::string &flag : source.flags ) {
+            native.flags.insert( json_character_flag( flag ) );
+        }
+        for( const auto &[score_id, score] : source.limb_scores ) {
+            native.limb_scores[limb_score_id( score_id )] = {
+                static_cast<float>( score.score ), static_cast<float>( score.maximum )
+            };
+        }
+        for( const body_part_quality_definition_data &quality : source.qualities ) {
+            native.qualities.push_back( {
+                quality_id( quality.id ), static_cast<int>( quality.level ),
+                static_cast<float>( quality.disable_fraction )
+            } );
+        }
+        detail::body_part_registry().insert( native ).finalize();
+    }
+    if( !this->body_parts.empty() ) {
+        detail::refresh_body_part_similarity_cache();
+    }
+    this->next_apply_phase = creatures_content_apply_phase::anatomy;
+}
+
+void creatures_content_transaction::impl::apply_anatomy()
+{
+
+    for( const anatomy_registration &entry : this->anatomies ) {
+        const anatomy_id id( entry.definition->id );
+        this->anatomy_undo.emplace_back(
+            id, id.is_valid() ? std::optional<anatomy>( id.obj() ) : std::nullopt );
+        anatomy native;
+        native.id = id;
+        native.src.emplace_back( id, mod_id( this->owner ) );
+        native.was_loaded = true;
+        for( const std::string &part : entry.definition->parts ) {
+            native.unloaded_bps.emplace_back( part );
+        }
+        detail::anatomy_registry().insert( native ).finalize();
+    }
+    this->next_apply_phase = creatures_content_apply_phase::body_graph;
+}
+
+void creatures_content_transaction::impl::apply_body_graph()
+{
+
+    for( const body_graph_registration &entry : this->body_graphs ) {
+        const bodygraph_id id( entry.definition->id );
+        this->body_graph_undo.emplace_back(
+            id, id.is_valid() ? std::optional<bodygraph>( id.obj() ) : std::nullopt );
+        const body_graph_definition_data &source = *entry.definition;
+        bodygraph native;
+        native.id = id;
+        native.was_loaded = true;
+        if( !source.parent_body_part.empty() ) {
+            native.parent_bp = bodypart_str_id( source.parent_body_part ).id();
+        }
+        if( !source.mirror.empty() ) {
+            native.mirror = bodygraph_id( source.mirror );
+        }
+        for( const std::string &row : source.rows ) {
+            native.rows.push_back( utf8_display_split( row ) );
+        }
+        for( const std::string &row : source.fill_rows ) {
+            native.fill_rows.push_back( utf8_display_split( row ) );
+        }
+        native.label_fill = source.label_fill;
+        native.fill_sym = source.fill_symbol;
+        native.fill_color = color_from_string( source.fill_color,
+                                               report_color_error::no );
+        for( const body_graph_part_definition_data &source_part : source.parts ) {
+            bodygraph_part part;
+            for( const std::string &body_part : source_part.body_parts ) {
+                part.bodyparts.push_back( bodypart_str_id( body_part ).id() );
+            }
+            for( const std::string &sub_part : source_part.sub_body_parts ) {
+                part.sub_bodyparts.push_back( sub_bodypart_str_id( sub_part ).id() );
+            }
+            part.nested_graph = source_part.nested_graph.empty() ?
+                                bodygraph_id::NULL_ID() : bodygraph_id( source_part.nested_graph );
+            part.sel_color = color_from_string( source_part.selected_color,
+                                                report_color_error::no );
+            part.sym = source_part.display_symbol.empty() ?
+                       native.fill_sym : source_part.display_symbol;
+            native.parts.emplace( source_part.symbol, std::move( part ) );
+        }
+        detail::bodygraph_registry().insert( native ).finalize();
+    }
+    this->next_apply_phase = creatures_content_apply_phase::field_type;
+}
+
+void creatures_content_transaction::impl::apply_field_type()
+{
+    for( const field_type_registration &entry : this->field_types ) {
+        const field_type_str_id id( entry.definition->id );
+        this->field_type_undo.emplace_back(
+            id, id.is_valid() ? std::optional<field_type>( id.obj() ) : std::nullopt );
+        const field_type_definition_data &source = *entry.definition;
+        field_type native;
+        native.id = id;
+        native.src.emplace_back( id, mod_id( this->owner ) );
+        native.was_loaded = true;
+        for( const field_intensity_definition_data &source_level :
+             source.intensity_levels ) {
+            field_intensity_level level;
+            level.name = source_level.name.native();
+            level.symbol = UTF8_getch( source_level.symbol );
+            level.color = color_from_string( source_level.color,
+                                             report_color_error::no );
+            level.dangerous = source_level.dangerous;
+            level.transparent = source_level.transparent;
+            level.move_cost = static_cast<int>( source_level.move_cost );
+            level.intensity_upgrade_chance = static_cast<int>(
+                                                 source_level.upgrade_chance );
+            level.intensity_upgrade_duration = time_duration::from_turns(
+                                                   static_cast<int>( source_level.upgrade_duration_turns ) );
+            level.light_emitted = static_cast<float>( source_level.light_emitted );
+            level.local_light_override = static_cast<float>(
+                                             source_level.local_light_override );
+            level.translucency = static_cast<float>( source_level.translucency );
+            level.concentration = static_cast<int>( source_level.concentration );
+            level.convection_temperature_mod = static_cast<int>(
+                                                   source_level.convection_temperature_modifier );
+            level.scent_neutralization = static_cast<int>(
+                                             source_level.scent_neutralization );
+            for( const field_effect_definition_data &source_effect :
+                 source_level.effects ) {
+                field_effect effect;
+                effect.id = efftype_id( source_effect.effect );
+                effect.src.emplace_back( effect.id, mod_id( this->owner ) );
+                effect.min_duration = time_duration::from_turns(
+                                          static_cast<int>( source_effect.duration_min_turns ) );
+                effect.max_duration = time_duration::from_turns(
+                                          static_cast<int>( source_effect.duration_max_turns ) );
+                effect.intensity = static_cast<int>( source_effect.intensity );
+                effect.bp = source_effect.body_part.empty() ?
+                            bodypart_str_id::NULL_ID() :
+                            bodypart_str_id( source_effect.body_part );
+                effect.is_environmental = source_effect.environmental;
+                effect.message = source_effect.message.empty() ? translation() :
+                                 source_effect.message.native();
+                effect.message_npc = source_effect.npc_message.empty() ? translation() :
+                                     source_effect.npc_message.native();
+                level.field_effects.push_back( std::move( effect ) );
+            }
+            native.intensity_levels.push_back( std::move( level ) );
+        }
+        native.underwater_age_speedup = time_duration::from_turns(
+                                            static_cast<int>( source.underwater_age_speedup_turns ) );
+        native.outdoor_age_speedup = time_duration::from_turns(
+                                         static_cast<int>( source.outdoor_age_speedup_turns ) );
+        native.decay_amount_factor = static_cast<int>( source.decay_amount_factor );
+        native.percent_spread = static_cast<int>( source.percent_spread );
+        native.gas_absorption_factor = time_duration::from_turns(
+                                           static_cast<int>( source.gas_absorption_turns ) );
+        native.priority = static_cast<int>( source.priority );
+        native.half_life = time_duration::from_turns(
+                               static_cast<int>( source.half_life_turns ) );
+        static const std::map<std::string, phase_id> phases = {
+            { "null", phase_id::PNULL }, { "solid", phase_id::SOLID },
+            { "liquid", phase_id::LIQUID }, { "gas", phase_id::GAS },
+            { "plasma", phase_id::PLASMA }
+        };
+        static const std::map<std::string, description_affix> affixes = {
+            { "in", description_affix::DESCRIPTION_AFFIX_IN },
+            { "covered_in", description_affix::DESCRIPTION_AFFIX_COVERED_IN },
+            { "on", description_affix::DESCRIPTION_AFFIX_ON },
+            { "under", description_affix::DESCRIPTION_AFFIX_UNDER },
+            { "illuminated_by", description_affix::DESCRIPTION_AFFIX_ILLUMINATED_BY }
+        };
+        native.phase = phases.at( source.phase );
+        native.desc_affix = affixes.at( source.description_affix );
+        native.wandering_field = source.wandering_field.empty() ?
+                                 field_type_str_id::NULL_ID() :
+                                 field_type_str_id( source.wandering_field );
+        native.looks_like = source.looks_like;
+        native.is_splattering = source.splattering;
+        native.has_fire = source.has_fire;
+        native.has_acid = source.has_acid;
+        native.has_elec = source.has_electricity;
+        native.has_fume = source.has_fume;
+        native.moppable = source.moppable;
+        native.accelerated_decay = source.accelerated_decay;
+        native.display_items = source.display_items;
+        native.display_field = source.display_field;
+        native.linear_half_life = source.linear_half_life;
+        native.indestructible = source.indestructible;
+        native.mopsafe = source.mopsafe;
+        native.decrease_intensity_on_contact = source.decrease_intensity_on_contact;
+        for( const std::string &monster_id : source.immune_monsters ) {
+            native.immune_mtypes.emplace( monster_id );
+        }
+        for( const std::string &monster_id : source.blocked_monsters ) {
+            native.block_mtypes.emplace( monster_id );
+        }
+        get_all_field_types().insert( native );
+    }
+    if( !this->field_types.empty() ) {
+        get_all_field_types().finalize();
+    }
+    this->next_apply_phase = creatures_content_apply_phase::monster_attack;
+}
+
+void creatures_content_transaction::impl::apply_monster_attack()
+{
+
+    for( const monster_attack_registration &entry : this->monster_attacks ) {
+        const monster_attack_definition_data &source = *entry.definition;
+        const mtype_special_attack *previous =
+            detail::monster_attack_registry_find( source.id );
+        this->monster_attack_undo.emplace_back(
+            source.id, previous == nullptr ? std::optional<mtype_special_attack>() :
+            std::optional<mtype_special_attack>( *previous ) );
+        auto actor = std::make_unique<lua_monster_attack_actor>(
+                         source.id, source.cooldown, this->owner, source.handler );
+        detail::monster_attack_registry_set( mtype_special_attack( std::move( actor ) ) );
+    }
+    this->next_apply_phase = creatures_content_apply_phase::weakpoint_set;
+}
+
+void creatures_content_transaction::impl::apply_weakpoint_set()
+{
+
+    for( const weakpoint_set_registration &entry : this->weakpoint_sets ) {
+        const weakpoints_id id( entry.definition->id );
+        this->weakpoint_set_undo.emplace_back(
+            id, id.is_valid() ? std::optional<weakpoints>( id.obj() ) : std::nullopt );
+        weakpoints native;
+        native.id = id;
+        native.src.emplace_back( id, mod_id( this->owner ) );
+        native.was_loaded = true;
+        for( const weakpoint_definition_data &source_point :
+             entry.definition->weakpoints ) {
+            weakpoint point;
+            point.id = source_point.id;
+            point.name = source_point.name.empty() ? translation() :
+                         source_point.name.native();
+            point.coverage = static_cast<float>( source_point.coverage );
+            point.is_good = source_point.good;
+            point.is_head = source_point.head;
+            const auto copy_damage_map = []( const std::map<std::string, double> &source,
+            std::unordered_map<damage_type_id, float> &target ) {
+                for( const auto &[damage_id, value] : source ) {
+                    target[damage_type_id( damage_id )] = static_cast<float>( value );
+                }
+            };
+            copy_damage_map( source_point.armor_multipliers, point.armor_mult );
+            copy_damage_map( source_point.armor_penalties, point.armor_penalty );
+            copy_damage_map( source_point.damage_multipliers, point.damage_mult );
+            copy_damage_map( source_point.critical_multipliers, point.crit_mult );
+            for( const weakpoint_effect_definition_data &source_effect :
+                 source_point.effects ) {
+                weakpoint_effect effect;
+                effect.effect = efftype_id( source_effect.effect );
+                effect.chance = static_cast<float>( source_effect.chance );
+                effect.permanent = source_effect.permanent;
+                effect.duration = {
+                    time_duration::from_turns(
+                        static_cast<int>( source_effect.duration_min_turns ) ),
+                    time_duration::from_turns(
+                        static_cast<int>( source_effect.duration_max_turns ) )
+                };
+                effect.intensity = {
+                    static_cast<int>( source_effect.intensity_min ),
+                    static_cast<int>( source_effect.intensity_max )
+                };
+                effect.damage_required = {
+                    static_cast<float>( source_effect.damage_required_min ),
+                    static_cast<float>( source_effect.damage_required_max )
+                };
+                effect.message = source_effect.message.empty() ? translation() :
+                                 source_effect.message.native();
+                effect.lua_platform_mod = this->owner;
+                effect.lua_platform_handler = source_effect.handler;
+                effect.lua_platform_set_id = entry.definition->id;
+                effect.lua_platform_weakpoint_id = source_point.id;
+                point.effects.push_back( std::move( effect ) );
+            }
+            native.weakpoint_list.push_back( std::move( point ) );
+        }
+        std::sort( native.weakpoint_list.begin(), native.weakpoint_list.end(),
+        []( const weakpoint & lhs, const weakpoint & rhs ) {
+            return lhs.coverage < rhs.coverage;
+        } );
+        detail::weakpoint_set_registry().insert( native ).finalize();
+    }
+    this->next_apply_phase = creatures_content_apply_phase::morale_type;
+}
+
+void creatures_content_transaction::impl::apply_morale_type()
+{
+    for( const morale_type_registration &entry : this->morale_types ) {
+        const morale_type id( entry.definition->id );
+        this->morale_type_undo.emplace_back(
+            id, id.is_valid() ? std::optional<morale_type_data>( id.obj() ) :
+            std::nullopt );
+        morale_type_data native;
+        native.id = id;
+        native.was_loaded = true;
+        native.src.emplace_back( id, mod_id( this->owner ) );
+        native.text = entry.definition->text.native();
+        native.permanent = entry.definition->permanent;
+        detail::morale_type_registry().insert( native );
+    }
+    if( !this->morale_types.empty() ) {
+        detail::morale_type_registry().finalize();
+    }
+    this->next_apply_phase = creatures_content_apply_phase::disease_type;
+}
+
+void creatures_content_transaction::impl::apply_disease_type()
+{
+
+    for( const disease_type_registration &entry : this->disease_types ) {
+        const diseasetype_id id( entry.definition->id );
+        this->disease_type_undo.emplace_back(
+            id, id.is_valid() ? std::optional<disease_type>( id.obj() ) :
+            std::nullopt );
+        const disease_type_definition_data &source = *entry.definition;
+        disease_type native;
+        native.id = id;
+        native.was_loaded = true;
+        native.src.emplace_back( id, mod_id( this->owner ) );
+        native.min_duration = time_duration::from_turns(
+                                  static_cast<int>( source.minimum_duration_turns ) );
+        native.max_duration = time_duration::from_turns(
+                                  static_cast<int>( source.maximum_duration_turns ) );
+        native.min_intensity = static_cast<int>( source.minimum_intensity );
+        native.max_intensity = static_cast<int>( source.maximum_intensity );
+        native.symptoms = efftype_id( source.symptoms );
+        if( source.health_threshold ) {
+            native.health_threshold = static_cast<int>( *source.health_threshold );
+        }
+        for( const std::string &body_part : source.affected_body_parts ) {
+            native.affected_bodyparts.insert( bodypart_str_id( body_part ) );
+        }
+        detail::disease_type_registry().insert( native );
+    }
+    this->next_apply_phase = creatures_content_apply_phase::wound_fix;
+}
+
+void creatures_content_transaction::impl::apply_wound_fix()
+{
+
+    for( const wound_fix_registration &entry : this->wound_fixes ) {
+        const wound_fix_id id( entry.definition->id );
+        this->wound_fix_undo.emplace_back(
+            id, id.is_valid() ? std::optional<wound_fix>( id.obj() ) : std::nullopt );
+        const wound_fix_definition_data &source = *entry.definition;
+        wound_fix native;
+        native.id = id;
+        native.was_loaded = true;
+        native.name = source.name.native();
+        native.description = source.description.native();
+        native.success_msg = source.success_message.native();
+        native.time = time_duration::from_turns( static_cast<int>( source.duration_turns ) );
+        native.mod_hp = static_cast<int>( source.health_delta );
+        for( const auto &[skill, level] : source.skills ) {
+            native.skills.emplace( skill_id( skill ), static_cast<int>( level ) );
+        }
+        for( const wound_fix_proficiency_definition_data &proficiency :
+             source.proficiencies ) {
+            native.proficiencies.push_back( {
+                proficiency_id( proficiency.id ),
+                static_cast<float>( proficiency.multiplier ), proficiency.mandatory
+            } );
+        }
+        for( const std::string &wound_id : source.wounds_removed ) {
+            native.wounds_removed.emplace( wound_id );
+        }
+        for( const std::string &wound_id : source.wounds_added ) {
+            native.wounds_added.emplace( wound_id );
+        }
+        for( const wound_fix_requirement_definition_data &requirement :
+             source.requirements ) {
+            native.requirement_refs.emplace_back(
+                requirement_id( requirement.id ), static_cast<int>( requirement.count ) );
+        }
+        detail::wound_fix_registry().insert( native ).finalize();
+    }
+    this->next_apply_phase = creatures_content_apply_phase::monster;
+
+}
+
+void creatures_content_transaction::impl::apply_monster()
+{
+    static const std::map<std::string, phase_id> monster_phases = {
+        { "null", phase_id::PNULL }, { "solid", phase_id::SOLID },
+        { "liquid", phase_id::LIQUID }, { "gas", phase_id::GAS },
+        { "plasma", phase_id::PLASMA }
+    };
+    static const std::map<std::string, mon_trigger> monster_triggers = {
+        { "STALK", mon_trigger::STALK },
+        { "PLAYER_WEAK", mon_trigger::HOSTILE_WEAK },
+        { "PLAYER_CLOSE", mon_trigger::HOSTILE_CLOSE },
+        { "HOSTILE_SEEN", mon_trigger::HOSTILE_SEEN },
+        { "HURT", mon_trigger::HURT }, { "FIRE", mon_trigger::FIRE },
+        { "FRIEND_DIED", mon_trigger::FRIEND_DIED },
+        { "FRIEND_ATTACKED", mon_trigger::FRIEND_ATTACKED },
+        { "SOUND", mon_trigger::SOUND },
+        { "PLAYER_NEAR_BABY", mon_trigger::PLAYER_NEAR_BABY },
+        { "MATING_SEASON", mon_trigger::MATING_SEASON },
+        { "BRIGHT_LIGHT", mon_trigger::BRIGHT_LIGHT }
+    };
+    for( const monster_registration &entry : this->monsters ) {
+        const mtype_id id( entry.definition->id );
+        this->monster_undo.emplace_back(
+            id, id.is_valid() ? std::optional<mtype>( id.obj() ) : std::nullopt );
+        const monster_definition_data &source = *entry.definition;
+        mtype native;
+        native.id = id;
+        native.src.emplace_back( id, mod_id( this->owner ) );
+        native.was_loaded = true;
+        native.name = native_counted_name( source.name, source.plural_name );
+        native.description = source.description.empty() ? translation() :
+                             source.description.native();
+        native.sym = source.symbol;
+        native.color = color_from_string( source.color, report_color_error::no );
+        native.looks_like = source.looks_like;
+        native.bodytype = source.body_type;
+        native.default_faction = mfaction_str_id( source.default_faction );
+        native.harvest = harvest_id( source.harvest );
+        native.dissect = source.dissect.empty() ? harvest_id::NULL_ID() :
+                         harvest_id( source.dissect );
+        native.decay = source.decay.empty() ? harvest_id::NULL_ID() :
+                       harvest_id( source.decay );
+        native.speed_desc = speed_description_id( source.speed_description );
+        native.death_drops = source.death_drops.empty() ? item_group_id::NULL_ID() :
+                             item_group_id( source.death_drops );
+        native.volume = units::from_milliliter<std::int64_t>( source.volume_ml );
+        native.weight = units::from_gram<std::int64_t>( source.weight_grams );
+        native.phase = monster_phases.at( source.phase );
+        native.difficulty_adjustment = static_cast<int>( source.difficulty_adjustment );
+        native.hp = static_cast<int>( source.hp );
+        native.speed = static_cast<int>( source.speed );
+        native.agro = static_cast<int>( source.aggression );
+        native.morale = static_cast<int>( source.morale );
+        native.tracking_distance = static_cast<int>( source.tracking_distance );
+        native.attack_cost = static_cast<int>( source.attack_cost );
+        native.melee_skill = static_cast<int>( source.melee_skill );
+        native.melee_dice = static_cast<int>( source.melee_dice );
+        native.melee_sides = static_cast<int>( source.melee_sides );
+        native.melee_dice_ap = static_cast<int>( source.melee_armor_penetration );
+        native.sk_dodge = static_cast<int>( source.dodge );
+        native.vision_day = static_cast<int>( source.vision_day );
+        native.vision_night = static_cast<int>( source.vision_night );
+        native.regenerates = static_cast<int>( source.regenerates );
+        native.bleed_rate = static_cast<int>( source.bleed_rate );
+        native.status_chance_multiplier = static_cast<float>(
+                                              source.status_chance_multiplier );
+        native.luminance = static_cast<float>( source.luminance );
+        native.regenerates_in_dark = source.regenerates_in_dark;
+        native.regen_morale = source.regenerates_morale;
+        native.aggro_character = source.aggressive_to_characters;
+        native.sp_defense = &mdefense::none;
+        native.mdeath_effect.lua_platform_mod = this->owner;
+        native.mdeath_effect.lua_platform_handler = source.death_handler;
+        native.mat.clear();
+        native.mat_portion_total = 0;
+        if( source.materials.empty() ) {
+            native.mat.emplace( material_flesh, 1 );
+            native.mat_portion_total = 1;
+        } else {
+            for( const auto &[material, portions] : source.materials ) {
+                native.mat.emplace( material_id( material ), static_cast<int>( portions ) );
+                native.mat_portion_total += static_cast<int>( portions );
+            }
+        }
+        for( const std::string &species : source.species ) {
+            native.species.emplace( species );
+        }
+        native.categories = source.categories;
+        native.pre_flags_.clear();
+        for( const std::string &flag : source.flags ) {
+            native.pre_flags_.emplace( flag );
+        }
+        for( const auto &[damage_id, value] : source.armor ) {
+            native.armor.set_resist( damage_type_id( damage_id ),
+                                     static_cast<float>( value ) );
+        }
+        for( const auto &[damage_id, value] : source.melee_damage ) {
+            native.melee_damage.add_damage( damage_type_id( damage_id ),
+                                            static_cast<float>( value.amount ),
+                                            static_cast<float>( value.armor_penetration ) );
+        }
+        for( const monster_attack_reference_definition_data &source_attack :
+             source.attacks ) {
+            const mtype_special_attack *prototype =
+                detail::monster_attack_registry_find( source_attack.id );
+            std::unique_ptr<mattack_actor> actor = prototype->get()->clone();
+            if( source_attack.cooldown ) {
+                actor->cooldown = *source_attack.cooldown;
+            }
+            const auto callback = source.attack_handlers.find( source_attack.id );
+            if( callback != source.attack_handlers.end() &&
+                dynamic_cast<melee_actor *>( actor.get() ) == nullptr ) {
+                actor = std::make_unique<lua_monster_attack_result_actor>(
+                            std::move( actor ), source.id, this->owner,
+                            callback->second );
+            }
+            native.special_attacks.emplace( source_attack.id,
+                                            mtype_special_attack( std::move( actor ) ) );
+            native.special_attacks_names.push_back( source_attack.id );
+        }
+        native.lua_platform_attack_mod = this->owner;
+        native.lua_platform_attack_handlers = source.attack_handlers;
+        for( const std::string &set : source.weakpoint_sets ) {
+            native.weakpoints_deferred.emplace_back( set );
+        }
+        for( const auto &[emission, interval_turns] : source.emissions ) {
+            native.emit_fields.emplace( emit_id( emission ),
+                                        time_duration::from_turns( static_cast<int>( interval_turns ) ) );
+        }
+        for( const auto &[item_id, amount] : source.starting_ammo ) {
+            native.starting_ammo.emplace( itype_id( item_id ),
+                                          static_cast<int>( amount ) );
+        }
+        for( const std::string &scent : source.tracked_scents ) {
+            native.scents_tracked.emplace( scent );
+        }
+        for( const std::string &scent : source.ignored_scents ) {
+            native.scents_ignored.emplace( scent );
+        }
+        for( const auto &[effect, amount] : source.regeneration_modifiers ) {
+            native.regeneration_modifiers.emplace( efftype_id( effect ),
+                                                   static_cast<int>( amount ) );
+        }
+        for( const std::string &goal : source.goals ) {
+            native.add_goal( goal );
+        }
+        for( const std::string &trigger : source.anger_triggers ) {
+            native.anger.set( monster_triggers.at( trigger ) );
+        }
+        for( const std::string &trigger : source.fear_triggers ) {
+            native.fear.set( monster_triggers.at( trigger ) );
+        }
+        for( const std::string &trigger : source.placate_triggers ) {
+            native.placate.set( monster_triggers.at( trigger ) );
+        }
+        mtype &inserted = detail::monster_type_registry().insert( native );
+        MonsterGenerator::generator().finalize_lua_first_mtype_if_ready(
+            inserted, DynamicDataLoader::get_instance().is_data_finalized() );
+    }
+    if( !this->monsters.empty() ) {
+        MonsterGenerator::generator().refresh_hallucination_monsters();
+    }
+    this->next_apply_phase = creatures_content_apply_phase::finalize;
+}
+
+void creatures_content_transaction::impl::apply_mutation()
+{
+    for( const mutation_registration &entry : this->mutations ) {
+        const trait_id id( entry.definition->id );
+        this->mutation_undo.emplace_back(
+            id, id.is_valid() ? std::optional<mutation_branch>( id.obj() ) : std::nullopt );
+        const mutation_definition_data &source = *entry.definition;
+        mutation_branch native;
+        native.id = id;
+        native.src.emplace_back( id, mod_id( this->owner ) );
+        native.was_loaded = true;
+        native.set_platform_text( source.name.native(), source.description.native() );
+        native.points = static_cast<int>( source.points );
+        native.vitamin_cost = static_cast<int>( source.vitamin_cost );
+        native.visibility = static_cast<int>( source.visibility );
+        native.ugliness = static_cast<int>( source.ugliness );
+        native.cost = static_cast<int>( source.activation_cost );
+        native.cooldown = time_duration::from_turns( source.cooldown_turns );
+        native.bodytemp_min = units::from_legacy_bodypart_temp_delta(
+                                  static_cast<int>( source.bodytemp_min ) );
+        native.bodytemp_max = units::from_legacy_bodypart_temp_delta(
+                                  static_cast<int>( source.bodytemp_max ) );
+        if( source.scent_intensity ) {
+            native.scent_intensity = static_cast<int>( *source.scent_intensity );
+        }
+        native.social_mods.lie = static_cast<int>( source.social_lie );
+        native.social_mods.persuade = static_cast<int>( source.social_persuade );
+        native.social_mods.intimidate = static_cast<int>( source.social_intimidate );
+        native.startingtrait = source.starting_trait;
+        native.chargen_allow_npc = source.chargen_allow_npc;
+        native.random_start_allowed = source.random_start_allowed;
+        native.mixed_effect = source.mixed_effect;
+        native.activated = source.active;
+        native.starts_active = source.starts_active;
+        native.destroys_gear = source.destroys_gear;
+        native.allow_soft_gear = source.allow_soft_gear;
+        native.hunger = source.consumes_kcal;
+        native.thirst = source.consumes_thirst;
+        native.sleepiness = source.consumes_sleepiness;
+        native.mana = source.consumes_mana;
+        native.stamina = source.consumes_stamina;
+        native.valid = source.valid;
+        native.purifiable = source.purifiable;
+        native.threshold = source.threshold;
+        native.strict_threshreq = source.strict_threshold_requirement;
+        native.profession = source.profession;
+        native.debug = source.debug;
+        native.player_display = source.player_display;
+        native.vanity = source.vanity;
+        native.dummy = source.dummy;
+        native.hide_on_activated = source.hide_on_activated;
+        native.hide_on_deactivated = source.hide_on_deactivated;
+        native.activation_msg = source.activation_message.empty() ?
+                                no_translation( "You activate your %s." ) :
+                                source.activation_message.native();
+        if( !source.scent_type.empty() ) {
+            native.scent_typeid = scenttype_id( source.scent_type );
+        }
+        if( !source.spawn_item.empty() ) {
+            native.set_platform_spawn_item(
+                source.spawn_item, source.spawn_item_message.native() );
+        }
+        if( !source.ranged_mutation.empty() ) {
+            native.set_platform_ranged_mutation(
+                source.ranged_mutation, source.ranged_mutation_message.native() );
+        }
+        if( !source.override_look_id.empty() ) {
+            native.override_look.emplace(
+                source.override_look_id, source.override_look_category );
+        }
+        if( source.transform ) {
+            native.transform = cata::make_value<mut_transform>();
+            native.transform->target = trait_id( source.transform->target );
+            native.transform->msg_transform = source.transform->message.native();
+            native.transform->active = source.transform->active;
+            native.transform->safe = source.transform->safe;
+            native.transform->moves = static_cast<int>( source.transform->moves );
+        }
+        if( source.personality ) {
+            native.personality_score = cata::make_value<mut_personality_score>();
+            native.personality_score->min_aggression = static_cast<int>(
+                        source.personality->min_aggression );
+            native.personality_score->max_aggression = static_cast<int>(
+                        source.personality->max_aggression );
+            native.personality_score->min_bravery = static_cast<int>(
+                    source.personality->min_bravery );
+            native.personality_score->max_bravery = static_cast<int>(
+                    source.personality->max_bravery );
+            native.personality_score->min_collector = static_cast<int>(
+                        source.personality->min_collector );
+            native.personality_score->max_collector = static_cast<int>(
+                        source.personality->max_collector );
+            native.personality_score->min_altruism = static_cast<int>(
+                        source.personality->min_altruism );
+            native.personality_score->max_altruism = static_cast<int>(
+                        source.personality->max_altruism );
+        }
+        for( const mutation_variant_definition_data &variant : source.variants ) {
+            mutation_variant value;
+            value.id = variant.id;
+            value.alt_name = variant.name.native();
+            value.alt_description = variant.description.native();
+            value.append_desc = variant.append_description;
+            value.weight = static_cast<int>( variant.weight );
+            value.parent = id;
+            native.variants.emplace( value.id, std::move( value ) );
+        }
+        for( const std::string &value : source.initial_martial_arts ) {
+            native.initial_ma_styles.emplace_back( value );
+        }
+        for( const std::string &value : source.threshold_substitutes ) {
+            native.threshold_substitutes.emplace_back( value );
+        }
+        for( const auto &[vitamin, turns] : source.vitamin_rates ) {
+            native.vitamin_rates.emplace(
+                vitamin_id( vitamin ), time_duration::from_turns( turns ) );
+        }
+        for( const auto &[material, vitamin, multiplier] : source.vitamin_absorption ) {
+            native.vitamin_absorb_multi[material_id( material )].emplace(
+                vitamin_id( vitamin ), multiplier );
+        }
+        for( const auto &[quality, amount] : source.provided_qualities ) {
+            native.provided_qualities.emplace(
+                quality_id( quality ), static_cast<int>( amount ) );
+        }
+        for( const std::string &value : source.ignored_by ) {
+            native.ignored_by.emplace_back( value );
+        }
+        for( const std::string &value : source.empathize_with ) {
+            native.empathize_with.emplace_back( value );
+        }
+        for( const std::string &value : source.no_empathize_with ) {
+            native.no_empathize_with.emplace_back( value );
+        }
+        for( const std::string &value : source.can_only_eat ) {
+            native.can_only_eat.emplace( value );
+        }
+        for( const std::string &value : source.can_only_heal_with ) {
+            native.can_only_heal_with.emplace( value );
+        }
+        for( const std::string &value : source.can_heal_with ) {
+            native.can_heal_with.emplace( value );
+        }
+        for( const std::string &value : source.allowed_categories ) {
+            native.allowed_category.emplace( value );
+        }
+        for( const std::string &value : source.prereqs ) {
+            native.prereqs.emplace_back( value );
+        }
+        for( const std::string &value : source.prereqs2 ) {
+            native.prereqs2.emplace_back( value );
+        }
+        for( const std::string &value : source.threshold_requirements ) {
+            native.threshreq.emplace_back( value );
+        }
+        for( const std::string &value : source.cancels ) {
+            native.cancels.emplace_back( value );
+        }
+        for( const std::string &value : source.replacements ) {
+            native.replacements.emplace_back( value );
+        }
+        for( const std::string &value : source.additions ) {
+            native.additions.emplace_back( value );
+        }
+        native.types.insert( source.types.begin(), source.types.end() );
+        for( const std::string &value : source.categories ) {
+            native.category.emplace_back( value );
+        }
+        for( const std::string &value : source.flags ) {
+            native.flags.emplace( value );
+        }
+        for( const std::string &value : source.active_flags ) {
+            native.active_flags.emplace( value );
+        }
+        for( const std::string &value : source.inactive_flags ) {
+            native.inactive_flags.emplace( value );
+        }
+        for( const auto &[monster, amount] : source.monster_cameras ) {
+            native.moncams.emplace( mtype_id( monster ), static_cast<int>( amount ) );
+        }
+        for( const std::string &value : source.enchantments ) {
+            native.enchantments.emplace_back( value );
+        }
+        for( const std::string &value : source.no_cbm_bodyparts ) {
+            native.no_cbm_on_bp.emplace( value );
+        }
+        for( const auto &[spell, level] : source.learned_spells ) {
+            native.spells_learned.emplace( spell_id( spell ), static_cast<int>( level ) );
+        }
+        for( const auto &[skill, amount] : source.craft_skill_bonuses ) {
+            native.craft_skill_bonus.emplace( skill_id( skill ), static_cast<int>( amount ) );
+        }
+        for( const auto &[bodypart, amount] : source.lumination ) {
+            native.lumination.emplace( bodypart_str_id( bodypart ), static_cast<float>( amount ) );
+        }
+        for( const auto &[species, amount] : source.anger_relations ) {
+            native.anger_relations.emplace( species_id( species ), static_cast<int>( amount ) );
+        }
+        for( const mutation_wet_protection_definition_data &value :
+             source.wet_protection ) {
+            native.protection.emplace(
+                bodypart_str_id( value.bodypart ),
+                tripoint( static_cast<int>( value.ignored ),
+                          static_cast<int>( value.neutral ),
+                          static_cast<int>( value.good ) ) );
+        }
+        for( const auto &[bodypart, amount] : source.encumbrance_always ) {
+            native.encumbrance_always.emplace(
+                bodypart_str_id( bodypart ), static_cast<int>( amount ) );
+        }
+        for( const auto &[bodypart, amount] : source.encumbrance_covered ) {
+            native.encumbrance_covered.emplace(
+                bodypart_str_id( bodypart ), static_cast<int>( amount ) );
+        }
+        for( const auto &[bodypart, amount] : source.encumbrance_multipliers ) {
+            native.encumbrance_multiplier_always.emplace(
+                bodypart_str_id( bodypart ), static_cast<float>( amount ) );
+        }
+        for( const std::string &value : source.restricts_gear ) {
+            if( bodypart_str_id( value ).is_valid() ) {
+                native.restricts_gear.emplace( value );
+            } else {
+                native.restricts_gear_subparts.emplace( value );
+            }
+        }
+        for( const std::string &value : source.remove_rigid ) {
+            if( bodypart_str_id( value ).is_valid() ) {
+                native.remove_rigid.emplace( value );
+            } else {
+                native.remove_rigid_subparts.emplace( value );
+            }
+        }
+        for( const std::string &value : source.allowed_item_flags ) {
+            native.allowed_items.emplace( value );
+        }
+        for( const mutation_armor_definition_data &value : source.armor ) {
+            native.armor[bodypart_str_id( value.bodypart )].set_resist(
+                damage_type_id( value.damage_type ), static_cast<float>( value.amount ) );
+        }
+        for( const std::string &value : source.integrated_armor ) {
+            native.integrated_armor.emplace_back( value );
+        }
+        for( const auto &[bodypart, amount] : source.bionic_slot_bonuses ) {
+            native.set_platform_bionic_slot_bonus(
+                bodypart_str_id( bodypart ), static_cast<int>( amount ) );
+        }
+        const auto add_damage = []( damage_instance & target,
+        const mutation_damage_definition_data & value ) {
+            target.add_damage(
+                damage_type_id( value.damage_type ), static_cast<float>( value.amount ),
+                static_cast<float>( value.armor_penetration ),
+                static_cast<float>( value.armor_penetration_multiplier ),
+                static_cast<float>( value.damage_multiplier ),
+                static_cast<float>( value.unconditional_armor_penetration_multiplier ),
+                static_cast<float>( value.unconditional_damage_multiplier ) );
+        };
+        for( const mutation_attack_definition_data &value : source.attacks ) {
+            mut_attack attack;
+            attack.attack_text_u = value.player_message.native();
+            attack.attack_text_npc = value.npc_message.native();
+            for( const std::string &required : value.required_mutations ) {
+                attack.required_mutations.emplace( required );
+            }
+            for( const std::string &blocker : value.blocker_mutations ) {
+                attack.blocker_mutations.emplace( blocker );
+            }
+            if( !value.bodypart.empty() ) {
+                attack.bp = bodypart_str_id( value.bodypart );
+            }
+            attack.chance = static_cast<int>( value.chance );
+            attack.hardcoded_effect = value.hardcoded;
+            for( const mutation_damage_definition_data &damage : value.base_damage ) {
+                add_damage( attack.base_damage, damage );
+            }
+            for( const mutation_damage_definition_data &damage : value.strength_damage ) {
+                add_damage( attack.strength_damage, damage );
+            }
+            native.attacks_granted.push_back( std::move( attack ) );
+        }
+        for( const std::vector<mutation_reflex_definition_data> &group :
+             source.reflex_triggers ) {
+            std::vector<reflex_activation_data> native_group;
+            native_group.reserve( group.size() );
+            for( const mutation_reflex_definition_data &value : group ) {
+                reflex_activation_data trigger;
+                const std::string owner = this->owner;
+                const std::string mutation_id = source.id;
+                const std::string handler = value.handler;
+                trigger.trigger = [owner, mutation_id, handler](
+                const const_dialogue & dialogue ) {
+                    return detail::invoke_mutation_condition_handler(
+                               owner, mutation_id, handler, dialogue ).value_or( false );
+                };
+                trigger.msg_on = {
+                    value.message_on.native(),
+                    *io::string_to_enum_optional<game_message_type>( value.message_on_type )
+                };
+                trigger.msg_off = {
+                    value.message_off.native(),
+                    *io::string_to_enum_optional<game_message_type>( value.message_off_type )
+                };
+                trigger.was_loaded = true;
+                native_group.push_back( std::move( trigger ) );
+            }
+            native.trigger_list.push_back( std::move( native_group ) );
+        }
+        for( const mutation_comfort_definition_data &value : source.comfort ) {
+            comfort_data comfort;
+            comfort.conditions_or = value.conditions_or;
+            comfort.base_comfort = static_cast<int>( value.base_comfort );
+            comfort.add_human_comfort = value.add_human_comfort;
+            comfort.use_better_comfort = value.use_better_comfort;
+            comfort.add_sleep_aids = value.add_sleep_aids;
+            comfort.msg_try.text = value.try_message.native();
+            comfort.msg_try.type = *io::string_to_enum_optional<game_message_type>(
+                                       value.try_message_type );
+            comfort.msg_hint.text = value.hint_message.native();
+            comfort.msg_hint.type = *io::string_to_enum_optional<game_message_type>(
+                                        value.hint_message_type );
+            comfort.msg_sleep.text = value.sleep_message.native();
+            comfort.msg_sleep.type = *io::string_to_enum_optional<game_message_type>(
+                                         value.sleep_message_type );
+            for( const mutation_comfort_condition_definition_data &condition :
+                 value.conditions ) {
+                comfort_data::condition native_condition;
+                native_condition.ccategory =
+                    *io::string_to_enum_optional<comfort_data::category>( condition.type );
+                native_condition.id = condition.id;
+                native_condition.flag = condition.flag;
+                native_condition.intensity = static_cast<int>( condition.intensity );
+                native_condition.active = condition.active;
+                native_condition.invert = condition.invert;
+                comfort.conditions.push_back( std::move( native_condition ) );
+            }
+            comfort.was_loaded = true;
+            native.comfort.push_back( std::move( comfort ) );
+        }
+        detail::mutation_registry().insert( native );
+    }
+
+    if( !this->mutations.empty() ) {
+        detail::mutation_registry().finalize();
+        detail::refresh_mutation_registry_cache();
+    }
+    this->next_apply_phase = creatures_content_apply_phase::behavior;
+}
+
+void creatures_content_transaction::impl::apply_finalize()
+{
+    for( const field_type_registration &entry : this->field_types ) {
+        field_type &native = const_cast<field_type &>(
+                                 field_type_str_id( entry.definition->id ).obj() );
+        native.finalize();
+    }
+    if( !this->wound_fixes.empty() ) {
+        detail::wound_fix_registry().finalize();
+        for( const wound_fix_registration &entry : this->wound_fixes ) {
+            const wound_fix &native = wound_fix_id( entry.definition->id ).obj();
+            if( native.requirement_refs.size() != entry.definition->requirements.size() ) {
+                throw std::runtime_error( "wound fix '" + entry.definition->id +
+                                          "' changed its requirement references while applying" );
+            }
+        }
+    }
+    if( !this->wound_types.empty() || !this->wound_fixes.empty() ||
+        !this->body_parts.empty() ) {
+        detail::refresh_wound_fix_links();
+        detail::refresh_body_part_wound_cache();
+    }
+    this->applied = true;
+    this->next_apply_phase = creatures_content_apply_phase::finalize;
+}
+
 bool creatures_content_transaction::apply_phase( const creatures_content_apply_phase phase,
         std::string &error )
 {
@@ -3931,1317 +5684,39 @@ bool creatures_content_transaction::apply_phase( const creatures_content_apply_p
     }
     try {
         if( phase == creatures_content_apply_phase::foundations ) {
-            for( const monster_flag_registration &entry : pimpl_->monster_flags ) {
-                const mon_flag_str_id id( entry.definition->id );
-                pimpl_->monster_flag_undo.emplace_back(
-                    id, id.is_valid() ? std::optional<mon_flag>( id.obj() ) : std::nullopt );
-                mon_flag native;
-                native.id = id;
-                native.was_loaded = true;
-                detail::monster_flag_registry().insert( native );
-            }
-            if( !pimpl_->monster_flags.empty() ) {
-                detail::monster_flag_registry().finalize();
-            }
-
-            for( const species_registration &entry : pimpl_->species ) {
-                const species_id id( entry.definition->id );
-                pimpl_->species_undo.emplace_back(
-                    id, id.is_valid() ? std::optional<species_type>( id.obj() ) : std::nullopt );
-                const species_definition_data &source = *entry.definition;
-                species_type native;
-                native.id = id;
-                native.src.emplace_back( id, mod_id( pimpl_->owner ) );
-                native.was_loaded = true;
-                native.description = no_translation( source.description );
-                native.footsteps = no_translation( source.footsteps );
-                native.bleeds = field_type_str_id( source.bleeds );
-                for( const std::string &flag : source.flags ) {
-                    native.flags.insert( mon_flag_str_id( flag ) );
-                }
-                for( const std::string &trigger : source.anger ) {
-                    native.anger.set( io::string_to_enum<mon_trigger>( trigger ) );
-                }
-                for( const std::string &trigger : source.fear ) {
-                    native.fear.set( io::string_to_enum<mon_trigger>( trigger ) );
-                }
-                for( const std::string &trigger : source.placate ) {
-                    native.placate.set( io::string_to_enum<mon_trigger>( trigger ) );
-                }
-                detail::species_registry().insert( native );
-            }
-            if( !pimpl_->species.empty() ) {
-                detail::species_registry().finalize();
-            }
-
-            for( const emission_registration &entry : pimpl_->emissions ) {
-                const std::string &id = entry.definition->id;
-                const emit *const previous = detail::emission_registry_find( id );
-                pimpl_->emission_undo.emplace_back(
-                    id, previous == nullptr ? std::optional<emit>() :
-                    std::optional<emit>( *previous ) );
-                const emission_definition_data &source = *entry.definition;
-                emit native;
-                native.id_ = emit_id( id );
-                native.native_profile_ = emit::native_profile{
-                    field_type_str_id( source.field ),
-                    static_cast<int>( source.intensity ),
-                    static_cast<int>( source.quantity ),
-                    static_cast<int>( source.chance )
-                };
-                detail::emission_registry_set( native );
-            }
-
-            for( const monster_faction_registration &entry : pimpl_->monster_factions ) {
-                const mfaction_str_id id( entry.definition->id );
-                pimpl_->monster_faction_undo.emplace_back(
-                    id, id.is_valid() ? std::optional<monfaction>( id.obj() ) : std::nullopt );
-                const monster_faction_definition_data &source = *entry.definition;
-                monfaction native;
-                native.id = id;
-                native.src.emplace_back( id, mod_id( pimpl_->owner ) );
-                native.was_loaded = true;
-                native.base_faction = mfaction_str_id( source.base );
-                for( const auto &[target, attitude] : source.attitudes ) {
-                    const mfaction_str_id target_id( target );
-                    if( attitude == "by_mood" ) {
-                        native._att_by_mood.insert( target_id );
-                    } else if( attitude == "neutral" ) {
-                        native._att_neutral.insert( target_id );
-                    } else if( attitude == "friendly" ) {
-                        native._att_friendly.insert( target_id );
-                    } else {
-                        native._att_hate.insert( target_id );
-                    }
-                }
-                native.rebuild_attitude_map();
-                detail::monster_faction_registry().insert( native );
-            }
-            if( !pimpl_->monster_factions.empty() ) {
-                monfactions::finalize();
-            }
-
-            for( const mutation_type_registration &entry : pimpl_->mutation_types ) {
-                const std::string &id = entry.definition->id;
-                pimpl_->mutation_type_undo.emplace_back(
-                    id, detail::mutation_type_registry_contains( id ) );
-                detail::mutation_type_registry_set( id );
-            }
-
-            for( const connect_group_registration &entry : pimpl_->connect_groups ) {
-                const std::string &id = entry.definition->id;
-                const connect_group *const previous = detail::connect_group_registry_find( id );
-                pimpl_->connect_group_undo.emplace_back(
-                    id, previous == nullptr ? std::optional<connect_group>() :
-                    std::optional<connect_group>( *previous ) );
-                connect_group native;
-                native.id = connect_group_id( id );
-                native.index = 0;
-                detail::connect_group_registry_set( native );
-            }
-
-            for( const mutation_category_registration &entry : pimpl_->mutation_categories ) {
-                const std::string &id = entry.definition->id;
-                const mutation_category_trait *const previous =
-                    detail::mutation_category_registry_find( id );
-                pimpl_->mutation_category_undo.emplace_back(
-                    id, previous == nullptr ? std::optional<mutation_category_trait>() :
-                    std::optional<mutation_category_trait>( *previous ) );
-                const mutation_category_definition_data &source = *entry.definition;
-                mutation_category_trait native;
-                native.id = mutation_category_id( id );
-                native.raw_name = no_translation( source.name );
-                native.raw_mutagen_message = no_translation( source.mutagen_message );
-                native.raw_memorial_message = source.memorial_message;
-                native.threshold_mut = trait_id( source.threshold_mutation );
-                native.vitamin = vitamin_id( source.vitamin );
-                native.threshold_min = static_cast<int>( source.threshold_minimum );
-                native.base_removal_chance = static_cast<int>( source.base_removal_chance );
-                native.base_removal_cost_mul = static_cast<float>(
-                                                   source.base_removal_cost_multiplier );
-                native.wip = source.work_in_progress;
-                native.skip_test = source.skip_consistency_test;
-                detail::mutation_category_registry_set( native );
-            }
-            pimpl_->next_apply_phase = creatures_content_apply_phase::mutation;
+            pimpl_->apply_foundations();
         } else if( phase == creatures_content_apply_phase::behavior ) {
-
-            for( const behavior_registration &entry : pimpl_->behaviors ) {
-                const string_id<behavior::node_t> id( entry.definition->id );
-                pimpl_->behavior_undo.emplace_back(
-                    id, id.is_valid() ? std::optional<behavior::node_t>( id.obj() ) : std::nullopt );
-                const behavior_definition_data &source = *entry.definition;
-                behavior::node_t native;
-                native.id = id;
-                native.src.emplace_back( id, mod_id( pimpl_->owner ) );
-                native.was_loaded = true;
-                if( !source.strategy.empty() ) {
-                    native.set_strategy( behavior::strategy_map.at( source.strategy ) );
-                }
-                if( !source.goal.empty() ) {
-                    native.set_goal( source.goal );
-                }
-                for( const std::string &child : source.children ) {
-                    native.add_child_id( child );
-                }
-                for( const behavior_condition_definition_data &condition : source.conditions ) {
-                    if( condition.native ) {
-                        native.add_predicate( behavior::predicate_map.at( condition.policy ),
-                                              condition.argument, condition.inverted );
-                    } else {
-                        const std::string owner = pimpl_->owner;
-                        const std::string behavior_id = source.id;
-                        const std::string handler_id = condition.policy;
-                        native.add_predicate(
-                            [owner, behavior_id, handler_id]( const behavior::oracle_t *oracle,
-                        const std::string & argument ) {
-                            const Creature *subject = oracle == nullptr ? nullptr : oracle->get_subject();
-                            const std::optional<bool> result = invoke_behavior_condition_handler(
-                                                                   owner, behavior_id, handler_id, subject, argument );
-                            return result.value_or( false ) ? behavior::status_t::running :
-                                   behavior::status_t::failure;
-                        }, condition.argument, condition.inverted );
-                    }
-                }
-                if( source.score ) {
-                    const behavior_score_definition_data &score = *source.score;
-                    if( score.native ) {
-                        native.set_score_function( behavior::score_predicate_map.at( score.policy ),
-                                                   score.argument );
-                    } else {
-                        const std::string owner = pimpl_->owner;
-                        const std::string behavior_id = source.id;
-                        const std::string handler_id = score.policy;
-                        native.set_score_function(
-                            [owner, behavior_id, handler_id]( const behavior::oracle_t *oracle,
-                        const std::string_view argument ) {
-                            const Creature *subject = oracle == nullptr ? nullptr : oracle->get_subject();
-                            return static_cast<float>( invoke_behavior_score_handler(
-                                                           owner, behavior_id, handler_id, subject, argument ).value_or( 0.0 ) );
-                        }, score.argument );
-                    }
-                }
-                detail::behavior_registry().insert( native );
-            }
-            if( !pimpl_->behaviors.empty() ) {
-                behavior::finalize();
-            }
-            pimpl_->next_apply_phase = creatures_content_apply_phase::effect_type;
+            pimpl_->apply_behavior();
         } else if( phase == creatures_content_apply_phase::effect_type ) {
-
-            for( const effect_type_registration &entry : pimpl_->effect_types ) {
-                const effect_type_definition_data &source = *entry.definition;
-                const effect_type *const previous = detail::effect_type_registry_find( source.id );
-                pimpl_->effect_type_undo.emplace_back(
-                    source.id, previous == nullptr ? std::optional<effect_type>() :
-                    std::optional<effect_type>( *previous ) );
-                effect_type native;
-                native.id = efftype_id( source.id );
-                native.src.emplace_back( native.id, mod_id( pimpl_->owner ) );
-                for( const std::string &value : source.names ) {
-                    native.name.push_back( no_translation( value ) );
-                }
-                for( const std::string &value : source.descriptions ) {
-                    native.desc.push_back( no_translation( value ) );
-                }
-                if( source.reduced_descriptions.empty() ) {
-                    native.reduced_desc = native.desc;
-                } else {
-                    for( const std::string &value : source.reduced_descriptions ) {
-                        native.reduced_desc.push_back( no_translation( value ) );
-                    }
-                }
-                native.remove_message = source.remove_message.empty() ? translation() :
-                                        no_translation( source.remove_message );
-                native.apply_memorial_log = source.apply_memorial_log;
-                native.remove_memorial_log = source.remove_memorial_log;
-                native.blood_analysis_description = source.blood_analysis_description.empty() ?
-                                                    translation() : no_translation( source.blood_analysis_description );
-                native.max_intensity = static_cast<int>( source.maximum_intensity );
-                native.max_duration = time_duration::from_turns(
-                                          static_cast<int>( source.maximum_duration_turns ) );
-                native.int_dur_factor = time_duration::from_turns(
-                                            static_cast<int>( source.intensity_duration_turns ) );
-                native.dur_add_perc = static_cast<int>( source.duration_add_percent );
-                native.int_add_val = static_cast<int>( source.intensity_add_value );
-                native.int_decay_step = static_cast<int>( source.intensity_decay_step );
-                native.int_decay_tick = static_cast<int>( source.intensity_decay_tick );
-                native.int_decay_remove = source.intensity_decay_removes;
-                native.main_parts_only = source.main_parts_only;
-                native.show_in_info = source.show_in_info;
-                native.show_intensity = source.show_intensity;
-                native.part_descs = source.part_descriptions;
-                for( const std::string &id : source.flags ) {
-                    native.flags.emplace( id );
-                }
-                for( const std::string &id : source.immune_character_flags ) {
-                    native.immune_flags.insert( json_character_flag( id ) );
-                }
-                for( const std::string &id : source.immune_bodypart_flags ) {
-                    native.immune_bp_flags.insert( json_character_flag( id ) );
-                }
-                for( const std::string &id : source.resist_traits ) {
-                    native.resist_traits.emplace_back( id );
-                }
-                for( const std::string &id : source.resist_effects ) {
-                    native.resist_effects.emplace_back( id );
-                }
-                for( const std::string &id : source.removes_effects ) {
-                    native.removes_effects.emplace_back( id );
-                }
-                for( const std::string &id : source.blocks_effects ) {
-                    native.blocks_effects.emplace_back( id );
-                }
-                for( const std::string &id : source.enchantments ) {
-                    native.enchantments.emplace_back( id );
-                }
-                detail::effect_type_registry_set( native );
-            }
-            pimpl_->next_apply_phase = creatures_content_apply_phase::sub_body_part;
+            pimpl_->apply_effect_type();
         } else if( phase == creatures_content_apply_phase::sub_body_part ) {
-            static const std::map<std::string, side> platform_body_sides = {
-                { "left", side::LEFT }, { "right", side::RIGHT }, { "both", side::BOTH }
-            };
-            for( const sub_body_part_registration &entry : pimpl_->sub_body_parts ) {
-                const sub_bodypart_str_id id( entry.definition->id );
-                pimpl_->sub_body_part_undo.emplace_back(
-                    id, id.is_valid() ? std::optional<sub_body_part_type>( id.obj() ) :
-                    std::nullopt );
-                const sub_body_part_definition_data &source = *entry.definition;
-                sub_body_part_type native;
-                native.id = id;
-                native.src.emplace_back( id, mod_id( pimpl_->owner ) );
-                native.opposite = sub_bodypart_str_id( source.opposite );
-                native.was_loaded = true;
-                native.name = no_translation( source.name );
-                native.name_multiple = no_translation( source.plural_name );
-                native.part_side = platform_body_sides.at( source.side );
-                native.parent = bodypart_str_id( source.parent );
-                native.secondary = source.secondary;
-                native.max_coverage = static_cast<int>( source.maximum_coverage );
-                if( source.locations_under.empty() ) {
-                    native.locations_under.push_back( id );
-                } else {
-                    for( const std::string &location : source.locations_under ) {
-                        native.locations_under.emplace_back( location );
-                    }
-                }
-                if( !source.similar_body_part.empty() ) {
-                    native.similar_bodypart = sub_bodypart_str_id( source.similar_body_part );
-                }
-                for( const auto &[damage_id, amount] : source.unarmed_damage ) {
-                    native.unarmed_damage.add_damage( damage_type_id( damage_id ),
-                                                      static_cast<float>( amount ) );
-                }
-                detail::sub_body_part_registry().insert( native ).finalize();
-            }
-            if( !pimpl_->sub_body_parts.empty() ) {
-                detail::refresh_sub_body_part_similarity_cache();
-            }
-            pimpl_->next_apply_phase = creatures_content_apply_phase::wound_type;
+            pimpl_->apply_sub_body_part();
         } else if( phase == creatures_content_apply_phase::wound_type ) {
-            for( const wound_type_registration &entry : pimpl_->wound_types ) {
-                const wound_type_id id( entry.definition->id );
-                pimpl_->wound_type_undo.emplace_back(
-                    id, id.is_valid() ? std::optional<wound_type>( id.obj() ) : std::nullopt );
-                const wound_type_definition_data &source = *entry.definition;
-                wound_type native;
-                native.id = id;
-                native.was_loaded = true;
-                native.name_ = pl_translation( source.name, source.plural_name );
-                native.description_ = no_translation( source.description );
-                native.pain_ = { static_cast<int>( source.pain_min ),
-                                 static_cast<int>( source.pain_max )
-                               };
-                native.healing_time_ = {
-                    time_duration::from_turns( static_cast<int>( source.healing_min_turns ) ),
-                    time_duration::from_turns( static_cast<int>( source.healing_max_turns ) )
-                };
-                native.damage_required = { static_cast<int>( source.damage_min ),
-                                           static_cast<int>( source.damage_max )
-                                         };
-                native.weight = static_cast<int>( source.weight );
-                native.limit = static_cast<unsigned int>( source.per_part_limit );
-                if( !source.required_body_part_flag.empty() ) {
-                    native.whitelist_bp_with_flag = json_character_flag(
-                                                        source.required_body_part_flag );
-                }
-                if( !source.forbidden_body_part_flag.empty() ) {
-                    native.blacklist_bp_with_flag = json_character_flag(
-                                                        source.forbidden_body_part_flag );
-                }
-                for( const std::string &damage_id : source.damage_types ) {
-                    native.damage_types.emplace_back( damage_id );
-                }
-                for( const wound_limb_score_definition_data &score : source.limb_scores ) {
-                    native.limb_scores.push_back( { limb_score_id( score.id ),
-                                                    static_cast<float>( score.penalty ) } );
-                }
-                for( const wound_progression_definition_data &progression : source.progressions ) {
-                    native.wound_progression.push_back( {
-                        wound_type_id( progression.id ), static_cast<int>( progression.chance )
-                    } );
-                }
-                for( const std::string &kind : source.required_body_part_types ) {
-                    native.whitelist_body_part_types.push_back( io::string_to_enum<bp_type>( kind ) );
-                }
-                for( const std::string &kind : source.forbidden_body_part_types ) {
-                    native.blacklist_body_part_types.push_back( io::string_to_enum<bp_type>( kind ) );
-                }
-                detail::wound_type_registry().insert( native ).finalize();
-            }
-            if( !pimpl_->wound_types.empty() ) {
-                detail::refresh_body_part_wound_cache();
-            }
-            pimpl_->next_apply_phase = creatures_content_apply_phase::body_part;
+            pimpl_->apply_wound_type();
         } else if( phase == creatures_content_apply_phase::body_part ) {
-
-            static const std::map<std::string, side> platform_body_sides = {
-                { "left", side::LEFT }, { "right", side::RIGHT }, { "both", side::BOTH }
-            };
-            static const std::map<std::string, bp_type> platform_body_part_types = {
-                { "head", bp_type::head }, { "torso", bp_type::torso },
-                { "sensor", bp_type::sensor }, { "mouth", bp_type::mouth },
-                { "arm", bp_type::arm }, { "hand", bp_type::hand },
-                { "leg", bp_type::leg }, { "foot", bp_type::foot },
-                { "wing", bp_type::wing }, { "tail", bp_type::tail },
-                { "other", bp_type::other }
-            };
-            for( const body_part_registration &entry : pimpl_->body_parts ) {
-                const bodypart_str_id id( entry.definition->id );
-                pimpl_->body_part_undo.emplace_back(
-                    id, id.is_valid() ? std::optional<body_part_type>( id.obj() ) :
-                    std::nullopt );
-                const body_part_definition_data &source = *entry.definition;
-                body_part_type native;
-                native.id = id;
-                native.src.emplace_back( id, mod_id( pimpl_->owner ) );
-                native.was_loaded = true;
-                native.legacy_id = "BP_NULL";
-                native.token = num_bp;
-                native.name = no_translation( source.name );
-                native.name_multiple = no_translation( source.plural_name );
-                native.accusative = no_translation( source.accusative );
-                native.accusative_multiple = no_translation( source.plural_accusative );
-                native.name_as_heading = no_translation( source.heading );
-                native.name_as_heading_multiple = no_translation( source.plural_heading );
-                native.encumb_text = no_translation( source.encumbrance_text );
-                native.hp_bar_ui_text = no_translation( source.hp_bar_text );
-                native.main_part = bodypart_str_id( source.main_part );
-                native.connected_to = bodypart_str_id( source.connected_to );
-                native.opposite_part = bodypart_str_id( source.opposite );
-                native.part_side = platform_body_sides.at( source.side );
-                native.hit_size = static_cast<float>( source.hit_size );
-                native.hit_difficulty = static_cast<float>( source.hit_difficulty );
-                native.base_hp = static_cast<int>( source.base_health );
-                native.drench_max = static_cast<int>( source.drench_capacity );
-                native.is_limb = source.limb;
-                native.is_vital = source.vital;
-                for( const std::string &sub_part : source.sub_parts ) {
-                    native.sub_parts.emplace_back( sub_part );
-                }
-                double highest_weight = -1.0;
-                for( const auto &[kind, weight] : source.limb_types ) {
-                    const bp_type type = platform_body_part_types.at( kind );
-                    native.limbtypes[type] = static_cast<float>( weight );
-                    if( weight > highest_weight ) {
-                        highest_weight = weight;
-                        native._primary_limb_type = type;
-                    }
-                }
-                for( const auto &[damage_id, amount] : source.armor ) {
-                    native.armor.set_resist( damage_type_id( damage_id ),
-                                             static_cast<float>( amount ) );
-                }
-                for( const auto &[damage_id, amount] : source.unarmed_damage ) {
-                    native.damage.add_damage( damage_type_id( damage_id ),
-                                              static_cast<float>( amount ) );
-                }
-                for( const std::string &flag : source.flags ) {
-                    native.flags.insert( json_character_flag( flag ) );
-                }
-                for( const auto &[score_id, score] : source.limb_scores ) {
-                    native.limb_scores[limb_score_id( score_id )] = {
-                        static_cast<float>( score.score ), static_cast<float>( score.maximum )
-                    };
-                }
-                for( const body_part_quality_definition_data &quality : source.qualities ) {
-                    native.qualities.push_back( {
-                        quality_id( quality.id ), static_cast<int>( quality.level ),
-                        static_cast<float>( quality.disable_fraction )
-                    } );
-                }
-                detail::body_part_registry().insert( native ).finalize();
-            }
-            if( !pimpl_->body_parts.empty() ) {
-                detail::refresh_body_part_similarity_cache();
-            }
-            pimpl_->next_apply_phase = creatures_content_apply_phase::anatomy;
+            pimpl_->apply_body_part();
         } else if( phase == creatures_content_apply_phase::anatomy ) {
-
-            for( const anatomy_registration &entry : pimpl_->anatomies ) {
-                const anatomy_id id( entry.definition->id );
-                pimpl_->anatomy_undo.emplace_back(
-                    id, id.is_valid() ? std::optional<anatomy>( id.obj() ) : std::nullopt );
-                anatomy native;
-                native.id = id;
-                native.src.emplace_back( id, mod_id( pimpl_->owner ) );
-                native.was_loaded = true;
-                for( const std::string &part : entry.definition->parts ) {
-                    native.unloaded_bps.emplace_back( part );
-                }
-                detail::anatomy_registry().insert( native ).finalize();
-            }
-            pimpl_->next_apply_phase = creatures_content_apply_phase::body_graph;
+            pimpl_->apply_anatomy();
         } else if( phase == creatures_content_apply_phase::body_graph ) {
-
-            for( const body_graph_registration &entry : pimpl_->body_graphs ) {
-                const bodygraph_id id( entry.definition->id );
-                pimpl_->body_graph_undo.emplace_back(
-                    id, id.is_valid() ? std::optional<bodygraph>( id.obj() ) : std::nullopt );
-                const body_graph_definition_data &source = *entry.definition;
-                bodygraph native;
-                native.id = id;
-                native.was_loaded = true;
-                if( !source.parent_body_part.empty() ) {
-                    native.parent_bp = bodypart_str_id( source.parent_body_part ).id();
-                }
-                if( !source.mirror.empty() ) {
-                    native.mirror = bodygraph_id( source.mirror );
-                }
-                for( const std::string &row : source.rows ) {
-                    native.rows.push_back( utf8_display_split( row ) );
-                }
-                for( const std::string &row : source.fill_rows ) {
-                    native.fill_rows.push_back( utf8_display_split( row ) );
-                }
-                native.label_fill = source.label_fill;
-                native.fill_sym = source.fill_symbol;
-                native.fill_color = color_from_string( source.fill_color,
-                                                       report_color_error::no );
-                for( const body_graph_part_definition_data &source_part : source.parts ) {
-                    bodygraph_part part;
-                    for( const std::string &body_part : source_part.body_parts ) {
-                        part.bodyparts.push_back( bodypart_str_id( body_part ).id() );
-                    }
-                    for( const std::string &sub_part : source_part.sub_body_parts ) {
-                        part.sub_bodyparts.push_back( sub_bodypart_str_id( sub_part ).id() );
-                    }
-                    part.nested_graph = source_part.nested_graph.empty() ?
-                                        bodygraph_id::NULL_ID() : bodygraph_id( source_part.nested_graph );
-                    part.sel_color = color_from_string( source_part.selected_color,
-                                                        report_color_error::no );
-                    part.sym = source_part.display_symbol.empty() ?
-                               native.fill_sym : source_part.display_symbol;
-                    native.parts.emplace( source_part.symbol, std::move( part ) );
-                }
-                detail::bodygraph_registry().insert( native ).finalize();
-            }
-            pimpl_->next_apply_phase = creatures_content_apply_phase::field_type;
+            pimpl_->apply_body_graph();
         } else if( phase == creatures_content_apply_phase::field_type ) {
-            for( const field_type_registration &entry : pimpl_->field_types ) {
-                const field_type_str_id id( entry.definition->id );
-                pimpl_->field_type_undo.emplace_back(
-                    id, id.is_valid() ? std::optional<field_type>( id.obj() ) : std::nullopt );
-                const field_type_definition_data &source = *entry.definition;
-                field_type native;
-                native.id = id;
-                native.src.emplace_back( id, mod_id( pimpl_->owner ) );
-                native.was_loaded = true;
-                for( const field_intensity_definition_data &source_level :
-                     source.intensity_levels ) {
-                    field_intensity_level level;
-                    level.name = no_translation( source_level.name );
-                    level.symbol = UTF8_getch( source_level.symbol );
-                    level.color = color_from_string( source_level.color,
-                                                     report_color_error::no );
-                    level.dangerous = source_level.dangerous;
-                    level.transparent = source_level.transparent;
-                    level.move_cost = static_cast<int>( source_level.move_cost );
-                    level.intensity_upgrade_chance = static_cast<int>(
-                                                         source_level.upgrade_chance );
-                    level.intensity_upgrade_duration = time_duration::from_turns(
-                                                           static_cast<int>( source_level.upgrade_duration_turns ) );
-                    level.light_emitted = static_cast<float>( source_level.light_emitted );
-                    level.local_light_override = static_cast<float>(
-                                                     source_level.local_light_override );
-                    level.translucency = static_cast<float>( source_level.translucency );
-                    level.concentration = static_cast<int>( source_level.concentration );
-                    level.convection_temperature_mod = static_cast<int>(
-                                                           source_level.convection_temperature_modifier );
-                    level.scent_neutralization = static_cast<int>(
-                                                     source_level.scent_neutralization );
-                    for( const field_effect_definition_data &source_effect :
-                         source_level.effects ) {
-                        field_effect effect;
-                        effect.id = efftype_id( source_effect.effect );
-                        effect.src.emplace_back( effect.id, mod_id( pimpl_->owner ) );
-                        effect.min_duration = time_duration::from_turns(
-                                                  static_cast<int>( source_effect.duration_min_turns ) );
-                        effect.max_duration = time_duration::from_turns(
-                                                  static_cast<int>( source_effect.duration_max_turns ) );
-                        effect.intensity = static_cast<int>( source_effect.intensity );
-                        effect.bp = source_effect.body_part.empty() ?
-                                    bodypart_str_id::NULL_ID() :
-                                    bodypart_str_id( source_effect.body_part );
-                        effect.is_environmental = source_effect.environmental;
-                        effect.message = source_effect.message.empty() ? translation() :
-                                         no_translation( source_effect.message );
-                        effect.message_npc = source_effect.npc_message.empty() ? translation() :
-                                             no_translation( source_effect.npc_message );
-                        level.field_effects.push_back( std::move( effect ) );
-                    }
-                    native.intensity_levels.push_back( std::move( level ) );
-                }
-                native.underwater_age_speedup = time_duration::from_turns(
-                                                    static_cast<int>( source.underwater_age_speedup_turns ) );
-                native.outdoor_age_speedup = time_duration::from_turns(
-                                                 static_cast<int>( source.outdoor_age_speedup_turns ) );
-                native.decay_amount_factor = static_cast<int>( source.decay_amount_factor );
-                native.percent_spread = static_cast<int>( source.percent_spread );
-                native.gas_absorption_factor = time_duration::from_turns(
-                                                   static_cast<int>( source.gas_absorption_turns ) );
-                native.priority = static_cast<int>( source.priority );
-                native.half_life = time_duration::from_turns(
-                                       static_cast<int>( source.half_life_turns ) );
-                static const std::map<std::string, phase_id> phases = {
-                    { "null", phase_id::PNULL }, { "solid", phase_id::SOLID },
-                    { "liquid", phase_id::LIQUID }, { "gas", phase_id::GAS },
-                    { "plasma", phase_id::PLASMA }
-                };
-                static const std::map<std::string, description_affix> affixes = {
-                    { "in", description_affix::DESCRIPTION_AFFIX_IN },
-                    { "covered_in", description_affix::DESCRIPTION_AFFIX_COVERED_IN },
-                    { "on", description_affix::DESCRIPTION_AFFIX_ON },
-                    { "under", description_affix::DESCRIPTION_AFFIX_UNDER },
-                    { "illuminated_by", description_affix::DESCRIPTION_AFFIX_ILLUMINATED_BY }
-                };
-                native.phase = phases.at( source.phase );
-                native.desc_affix = affixes.at( source.description_affix );
-                native.wandering_field = source.wandering_field.empty() ?
-                                         field_type_str_id::NULL_ID() :
-                                         field_type_str_id( source.wandering_field );
-                native.looks_like = source.looks_like;
-                native.is_splattering = source.splattering;
-                native.has_fire = source.has_fire;
-                native.has_acid = source.has_acid;
-                native.has_elec = source.has_electricity;
-                native.has_fume = source.has_fume;
-                native.moppable = source.moppable;
-                native.accelerated_decay = source.accelerated_decay;
-                native.display_items = source.display_items;
-                native.display_field = source.display_field;
-                native.linear_half_life = source.linear_half_life;
-                native.indestructible = source.indestructible;
-                native.mopsafe = source.mopsafe;
-                native.decrease_intensity_on_contact = source.decrease_intensity_on_contact;
-                for( const std::string &monster_id : source.immune_monsters ) {
-                    native.immune_mtypes.emplace( monster_id );
-                }
-                for( const std::string &monster_id : source.blocked_monsters ) {
-                    native.block_mtypes.emplace( monster_id );
-                }
-                get_all_field_types().insert( native );
-            }
-            if( !pimpl_->field_types.empty() ) {
-                get_all_field_types().finalize();
-            }
-            pimpl_->next_apply_phase = creatures_content_apply_phase::monster_attack;
+            pimpl_->apply_field_type();
         } else if( phase == creatures_content_apply_phase::monster_attack ) {
-
-            for( const monster_attack_registration &entry : pimpl_->monster_attacks ) {
-                const monster_attack_definition_data &source = *entry.definition;
-                const mtype_special_attack *previous =
-                    detail::monster_attack_registry_find( source.id );
-                pimpl_->monster_attack_undo.emplace_back(
-                    source.id, previous == nullptr ? std::optional<mtype_special_attack>() :
-                    std::optional<mtype_special_attack>( *previous ) );
-                auto actor = std::make_unique<lua_monster_attack_actor>(
-                                 source.id, source.cooldown, pimpl_->owner, source.handler );
-                detail::monster_attack_registry_set( mtype_special_attack( std::move( actor ) ) );
-            }
-            pimpl_->next_apply_phase = creatures_content_apply_phase::weakpoint_set;
+            pimpl_->apply_monster_attack();
         } else if( phase == creatures_content_apply_phase::weakpoint_set ) {
-
-            for( const weakpoint_set_registration &entry : pimpl_->weakpoint_sets ) {
-                const weakpoints_id id( entry.definition->id );
-                pimpl_->weakpoint_set_undo.emplace_back(
-                    id, id.is_valid() ? std::optional<weakpoints>( id.obj() ) : std::nullopt );
-                weakpoints native;
-                native.id = id;
-                native.src.emplace_back( id, mod_id( pimpl_->owner ) );
-                native.was_loaded = true;
-                for( const weakpoint_definition_data &source_point :
-                     entry.definition->weakpoints ) {
-                    weakpoint point;
-                    point.id = source_point.id;
-                    point.name = source_point.name.empty() ? translation() :
-                                 no_translation( source_point.name );
-                    point.coverage = static_cast<float>( source_point.coverage );
-                    point.is_good = source_point.good;
-                    point.is_head = source_point.head;
-                    const auto copy_damage_map = []( const std::map<std::string, double> &source,
-                    std::unordered_map<damage_type_id, float> &target ) {
-                        for( const auto &[damage_id, value] : source ) {
-                            target[damage_type_id( damage_id )] = static_cast<float>( value );
-                        }
-                    };
-                    copy_damage_map( source_point.armor_multipliers, point.armor_mult );
-                    copy_damage_map( source_point.armor_penalties, point.armor_penalty );
-                    copy_damage_map( source_point.damage_multipliers, point.damage_mult );
-                    copy_damage_map( source_point.critical_multipliers, point.crit_mult );
-                    for( const weakpoint_effect_definition_data &source_effect :
-                         source_point.effects ) {
-                        weakpoint_effect effect;
-                        effect.effect = efftype_id( source_effect.effect );
-                        effect.chance = static_cast<float>( source_effect.chance );
-                        effect.permanent = source_effect.permanent;
-                        effect.duration = {
-                            time_duration::from_turns(
-                                static_cast<int>( source_effect.duration_min_turns ) ),
-                            time_duration::from_turns(
-                                static_cast<int>( source_effect.duration_max_turns ) )
-                        };
-                        effect.intensity = {
-                            static_cast<int>( source_effect.intensity_min ),
-                            static_cast<int>( source_effect.intensity_max )
-                        };
-                        effect.damage_required = {
-                            static_cast<float>( source_effect.damage_required_min ),
-                            static_cast<float>( source_effect.damage_required_max )
-                        };
-                        effect.message = source_effect.message.empty() ? translation() :
-                                         no_translation( source_effect.message );
-                        effect.lua_platform_mod = pimpl_->owner;
-                        effect.lua_platform_handler = source_effect.handler;
-                        effect.lua_platform_set_id = entry.definition->id;
-                        effect.lua_platform_weakpoint_id = source_point.id;
-                        point.effects.push_back( std::move( effect ) );
-                    }
-                    native.weakpoint_list.push_back( std::move( point ) );
-                }
-                std::sort( native.weakpoint_list.begin(), native.weakpoint_list.end(),
-                []( const weakpoint & lhs, const weakpoint & rhs ) {
-                    return lhs.coverage < rhs.coverage;
-                } );
-                detail::weakpoint_set_registry().insert( native ).finalize();
-            }
-            pimpl_->next_apply_phase = creatures_content_apply_phase::morale_type;
+            pimpl_->apply_weakpoint_set();
         } else if( phase == creatures_content_apply_phase::morale_type ) {
-            for( const morale_type_registration &entry : pimpl_->morale_types ) {
-                const morale_type id( entry.definition->id );
-                pimpl_->morale_type_undo.emplace_back(
-                    id, id.is_valid() ? std::optional<morale_type_data>( id.obj() ) :
-                    std::nullopt );
-                morale_type_data native;
-                native.id = id;
-                native.was_loaded = true;
-                native.src.emplace_back( id, mod_id( pimpl_->owner ) );
-                native.text = no_translation( entry.definition->text );
-                native.permanent = entry.definition->permanent;
-                detail::morale_type_registry().insert( native );
-            }
-            if( !pimpl_->morale_types.empty() ) {
-                detail::morale_type_registry().finalize();
-            }
-            pimpl_->next_apply_phase = creatures_content_apply_phase::disease_type;
+            pimpl_->apply_morale_type();
         } else if( phase == creatures_content_apply_phase::disease_type ) {
-
-            for( const disease_type_registration &entry : pimpl_->disease_types ) {
-                const diseasetype_id id( entry.definition->id );
-                pimpl_->disease_type_undo.emplace_back(
-                    id, id.is_valid() ? std::optional<disease_type>( id.obj() ) :
-                    std::nullopt );
-                const disease_type_definition_data &source = *entry.definition;
-                disease_type native;
-                native.id = id;
-                native.was_loaded = true;
-                native.src.emplace_back( id, mod_id( pimpl_->owner ) );
-                native.min_duration = time_duration::from_turns(
-                                          static_cast<int>( source.minimum_duration_turns ) );
-                native.max_duration = time_duration::from_turns(
-                                          static_cast<int>( source.maximum_duration_turns ) );
-                native.min_intensity = static_cast<int>( source.minimum_intensity );
-                native.max_intensity = static_cast<int>( source.maximum_intensity );
-                native.symptoms = efftype_id( source.symptoms );
-                if( source.health_threshold ) {
-                    native.health_threshold = static_cast<int>( *source.health_threshold );
-                }
-                for( const std::string &body_part : source.affected_body_parts ) {
-                    native.affected_bodyparts.insert( bodypart_str_id( body_part ) );
-                }
-                detail::disease_type_registry().insert( native );
-            }
-            pimpl_->next_apply_phase = creatures_content_apply_phase::wound_fix;
+            pimpl_->apply_disease_type();
         } else if( phase == creatures_content_apply_phase::wound_fix ) {
-
-            for( const wound_fix_registration &entry : pimpl_->wound_fixes ) {
-                const wound_fix_id id( entry.definition->id );
-                pimpl_->wound_fix_undo.emplace_back(
-                    id, id.is_valid() ? std::optional<wound_fix>( id.obj() ) : std::nullopt );
-                const wound_fix_definition_data &source = *entry.definition;
-                wound_fix native;
-                native.id = id;
-                native.was_loaded = true;
-                native.name = no_translation( source.name );
-                native.description = no_translation( source.description );
-                native.success_msg = no_translation( source.success_message );
-                native.time = time_duration::from_turns( static_cast<int>( source.duration_turns ) );
-                native.mod_hp = static_cast<int>( source.health_delta );
-                for( const auto &[skill, level] : source.skills ) {
-                    native.skills.emplace( skill_id( skill ), static_cast<int>( level ) );
-                }
-                for( const wound_fix_proficiency_definition_data &proficiency :
-                     source.proficiencies ) {
-                    native.proficiencies.push_back( {
-                        proficiency_id( proficiency.id ),
-                        static_cast<float>( proficiency.multiplier ), proficiency.mandatory
-                    } );
-                }
-                for( const std::string &wound_id : source.wounds_removed ) {
-                    native.wounds_removed.emplace( wound_id );
-                }
-                for( const std::string &wound_id : source.wounds_added ) {
-                    native.wounds_added.emplace( wound_id );
-                }
-                for( const wound_fix_requirement_definition_data &requirement :
-                     source.requirements ) {
-                    native.requirement_refs.emplace_back(
-                        requirement_id( requirement.id ), static_cast<int>( requirement.count ) );
-                }
-                detail::wound_fix_registry().insert( native ).finalize();
-            }
-            pimpl_->next_apply_phase = creatures_content_apply_phase::monster;
-
+            pimpl_->apply_wound_fix();
         } else if( phase == creatures_content_apply_phase::monster ) {
-            static const std::map<std::string, phase_id> monster_phases = {
-                { "null", phase_id::PNULL }, { "solid", phase_id::SOLID },
-                { "liquid", phase_id::LIQUID }, { "gas", phase_id::GAS },
-                { "plasma", phase_id::PLASMA }
-            };
-            static const std::map<std::string, mon_trigger> monster_triggers = {
-                { "STALK", mon_trigger::STALK },
-                { "PLAYER_WEAK", mon_trigger::HOSTILE_WEAK },
-                { "PLAYER_CLOSE", mon_trigger::HOSTILE_CLOSE },
-                { "HOSTILE_SEEN", mon_trigger::HOSTILE_SEEN },
-                { "HURT", mon_trigger::HURT }, { "FIRE", mon_trigger::FIRE },
-                { "FRIEND_DIED", mon_trigger::FRIEND_DIED },
-                { "FRIEND_ATTACKED", mon_trigger::FRIEND_ATTACKED },
-                { "SOUND", mon_trigger::SOUND },
-                { "PLAYER_NEAR_BABY", mon_trigger::PLAYER_NEAR_BABY },
-                { "MATING_SEASON", mon_trigger::MATING_SEASON },
-                { "BRIGHT_LIGHT", mon_trigger::BRIGHT_LIGHT }
-            };
-            for( const monster_registration &entry : pimpl_->monsters ) {
-                const mtype_id id( entry.definition->id );
-                pimpl_->monster_undo.emplace_back(
-                    id, id.is_valid() ? std::optional<mtype>( id.obj() ) : std::nullopt );
-                const monster_definition_data &source = *entry.definition;
-                mtype native;
-                native.id = id;
-                native.src.emplace_back( id, mod_id( pimpl_->owner ) );
-                native.was_loaded = true;
-                native.name = pl_translation( source.name, source.plural_name );
-                native.description = source.description.empty() ? translation() :
-                                     no_translation( source.description );
-                native.sym = source.symbol;
-                native.color = color_from_string( source.color, report_color_error::no );
-                native.looks_like = source.looks_like;
-                native.bodytype = source.body_type;
-                native.default_faction = mfaction_str_id( source.default_faction );
-                native.harvest = harvest_id( source.harvest );
-                native.dissect = source.dissect.empty() ? harvest_id::NULL_ID() :
-                                 harvest_id( source.dissect );
-                native.decay = source.decay.empty() ? harvest_id::NULL_ID() :
-                               harvest_id( source.decay );
-                native.speed_desc = speed_description_id( source.speed_description );
-                native.death_drops = source.death_drops.empty() ? item_group_id::NULL_ID() :
-                                     item_group_id( source.death_drops );
-                native.volume = units::from_milliliter<std::int64_t>( source.volume_ml );
-                native.weight = units::from_gram<std::int64_t>( source.weight_grams );
-                native.phase = monster_phases.at( source.phase );
-                native.difficulty_adjustment = static_cast<int>( source.difficulty_adjustment );
-                native.hp = static_cast<int>( source.hp );
-                native.speed = static_cast<int>( source.speed );
-                native.agro = static_cast<int>( source.aggression );
-                native.morale = static_cast<int>( source.morale );
-                native.tracking_distance = static_cast<int>( source.tracking_distance );
-                native.attack_cost = static_cast<int>( source.attack_cost );
-                native.melee_skill = static_cast<int>( source.melee_skill );
-                native.melee_dice = static_cast<int>( source.melee_dice );
-                native.melee_sides = static_cast<int>( source.melee_sides );
-                native.melee_dice_ap = static_cast<int>( source.melee_armor_penetration );
-                native.sk_dodge = static_cast<int>( source.dodge );
-                native.vision_day = static_cast<int>( source.vision_day );
-                native.vision_night = static_cast<int>( source.vision_night );
-                native.regenerates = static_cast<int>( source.regenerates );
-                native.bleed_rate = static_cast<int>( source.bleed_rate );
-                native.status_chance_multiplier = static_cast<float>(
-                                                      source.status_chance_multiplier );
-                native.luminance = static_cast<float>( source.luminance );
-                native.regenerates_in_dark = source.regenerates_in_dark;
-                native.regen_morale = source.regenerates_morale;
-                native.aggro_character = source.aggressive_to_characters;
-                native.sp_defense = &mdefense::none;
-                native.mdeath_effect.lua_platform_mod = pimpl_->owner;
-                native.mdeath_effect.lua_platform_handler = source.death_handler;
-                native.mat.clear();
-                native.mat_portion_total = 0;
-                if( source.materials.empty() ) {
-                    native.mat.emplace( material_id( "flesh" ), 1 );
-                    native.mat_portion_total = 1;
-                } else {
-                    for( const auto &[material, portions] : source.materials ) {
-                        native.mat.emplace( material_id( material ), static_cast<int>( portions ) );
-                        native.mat_portion_total += static_cast<int>( portions );
-                    }
-                }
-                for( const std::string &species : source.species ) {
-                    native.species.emplace( species_id( species ) );
-                }
-                native.categories = source.categories;
-                native.pre_flags_.clear();
-                for( const std::string &flag : source.flags ) {
-                    native.pre_flags_.emplace( flag );
-                }
-                for( const auto &[damage_id, value] : source.armor ) {
-                    native.armor.set_resist( damage_type_id( damage_id ),
-                                             static_cast<float>( value ) );
-                }
-                for( const auto &[damage_id, value] : source.melee_damage ) {
-                    native.melee_damage.add_damage( damage_type_id( damage_id ),
-                                                    static_cast<float>( value.amount ),
-                                                    static_cast<float>( value.armor_penetration ) );
-                }
-                for( const monster_attack_reference_definition_data &source_attack :
-                     source.attacks ) {
-                    const mtype_special_attack *prototype =
-                        detail::monster_attack_registry_find( source_attack.id );
-                    std::unique_ptr<mattack_actor> actor = prototype->get()->clone();
-                    if( source_attack.cooldown ) {
-                        actor->cooldown = *source_attack.cooldown;
-                    }
-                    const auto callback = source.attack_handlers.find( source_attack.id );
-                    if( callback != source.attack_handlers.end() &&
-                        dynamic_cast<melee_actor *>( actor.get() ) == nullptr ) {
-                        actor = std::make_unique<lua_monster_attack_result_actor>(
-                                    std::move( actor ), source.id, pimpl_->owner,
-                                    callback->second );
-                    }
-                    native.special_attacks.emplace( source_attack.id,
-                                                    mtype_special_attack( std::move( actor ) ) );
-                    native.special_attacks_names.push_back( source_attack.id );
-                }
-                native.lua_platform_attack_mod = pimpl_->owner;
-                native.lua_platform_attack_handlers = source.attack_handlers;
-                for( const std::string &set : source.weakpoint_sets ) {
-                    native.weakpoints_deferred.emplace_back( set );
-                }
-                for( const auto &[emission, interval_turns] : source.emissions ) {
-                    native.emit_fields.emplace( emit_id( emission ),
-                                                time_duration::from_turns( static_cast<int>( interval_turns ) ) );
-                }
-                for( const auto &[item_id, amount] : source.starting_ammo ) {
-                    native.starting_ammo.emplace( itype_id( item_id ),
-                                                  static_cast<int>( amount ) );
-                }
-                for( const std::string &scent : source.tracked_scents ) {
-                    native.scents_tracked.emplace( scent );
-                }
-                for( const std::string &scent : source.ignored_scents ) {
-                    native.scents_ignored.emplace( scent );
-                }
-                for( const auto &[effect, amount] : source.regeneration_modifiers ) {
-                    native.regeneration_modifiers.emplace( efftype_id( effect ),
-                                                           static_cast<int>( amount ) );
-                }
-                for( const std::string &goal : source.goals ) {
-                    native.add_goal( goal );
-                }
-                for( const std::string &trigger : source.anger_triggers ) {
-                    native.anger.set( monster_triggers.at( trigger ) );
-                }
-                for( const std::string &trigger : source.fear_triggers ) {
-                    native.fear.set( monster_triggers.at( trigger ) );
-                }
-                for( const std::string &trigger : source.placate_triggers ) {
-                    native.placate.set( monster_triggers.at( trigger ) );
-                }
-                mtype &inserted = detail::monster_type_registry().insert( native );
-                MonsterGenerator::generator().finalize_lua_first_mtype_if_ready(
-                    inserted, DynamicDataLoader::get_instance().is_data_finalized() );
-            }
-            if( !pimpl_->monsters.empty() ) {
-                MonsterGenerator::generator().refresh_hallucination_monsters();
-            }
-            pimpl_->next_apply_phase = creatures_content_apply_phase::finalize;
+            pimpl_->apply_monster();
         } else if( phase == creatures_content_apply_phase::mutation ) {
-            for( const mutation_registration &entry : pimpl_->mutations ) {
-                const trait_id id( entry.definition->id );
-                pimpl_->mutation_undo.emplace_back(
-                    id, id.is_valid() ? std::optional<mutation_branch>( id.obj() ) : std::nullopt );
-                const mutation_definition_data &source = *entry.definition;
-                mutation_branch native;
-                native.id = id;
-                native.src.emplace_back( id, mod_id( pimpl_->owner ) );
-                native.was_loaded = true;
-                native.set_platform_text( source.name, source.description );
-                native.points = static_cast<int>( source.points );
-                native.vitamin_cost = static_cast<int>( source.vitamin_cost );
-                native.visibility = static_cast<int>( source.visibility );
-                native.ugliness = static_cast<int>( source.ugliness );
-                native.cost = static_cast<int>( source.activation_cost );
-                native.cooldown = time_duration::from_turns( source.cooldown_turns );
-                native.bodytemp_min = units::from_legacy_bodypart_temp_delta(
-                                          static_cast<int>( source.bodytemp_min ) );
-                native.bodytemp_max = units::from_legacy_bodypart_temp_delta(
-                                          static_cast<int>( source.bodytemp_max ) );
-                if( source.scent_intensity ) {
-                    native.scent_intensity = static_cast<int>( *source.scent_intensity );
-                }
-                native.social_mods.lie = static_cast<int>( source.social_lie );
-                native.social_mods.persuade = static_cast<int>( source.social_persuade );
-                native.social_mods.intimidate = static_cast<int>( source.social_intimidate );
-                native.startingtrait = source.starting_trait;
-                native.chargen_allow_npc = source.chargen_allow_npc;
-                native.random_start_allowed = source.random_start_allowed;
-                native.mixed_effect = source.mixed_effect;
-                native.activated = source.active;
-                native.starts_active = source.starts_active;
-                native.destroys_gear = source.destroys_gear;
-                native.allow_soft_gear = source.allow_soft_gear;
-                native.hunger = source.consumes_kcal;
-                native.thirst = source.consumes_thirst;
-                native.sleepiness = source.consumes_sleepiness;
-                native.mana = source.consumes_mana;
-                native.stamina = source.consumes_stamina;
-                native.valid = source.valid;
-                native.purifiable = source.purifiable;
-                native.threshold = source.threshold;
-                native.strict_threshreq = source.strict_threshold_requirement;
-                native.profession = source.profession;
-                native.debug = source.debug;
-                native.player_display = source.player_display;
-                native.vanity = source.vanity;
-                native.dummy = source.dummy;
-                native.hide_on_activated = source.hide_on_activated;
-                native.hide_on_deactivated = source.hide_on_deactivated;
-                native.activation_msg = no_translation(
-                                            source.activation_message.empty() ?
-                                            "You activate your %s." : source.activation_message );
-                if( !source.scent_type.empty() ) {
-                    native.scent_typeid = scenttype_id( source.scent_type );
-                }
-                if( !source.spawn_item.empty() ) {
-                    native.set_platform_spawn_item(
-                        source.spawn_item, source.spawn_item_message );
-                }
-                if( !source.ranged_mutation.empty() ) {
-                    native.set_platform_ranged_mutation(
-                        source.ranged_mutation, source.ranged_mutation_message );
-                }
-                if( !source.override_look_id.empty() ) {
-                    native.override_look.emplace(
-                        source.override_look_id, source.override_look_category );
-                }
-                if( source.transform ) {
-                    native.transform = cata::make_value<mut_transform>();
-                    native.transform->target = trait_id( source.transform->target );
-                    native.transform->msg_transform = no_translation( source.transform->message );
-                    native.transform->active = source.transform->active;
-                    native.transform->safe = source.transform->safe;
-                    native.transform->moves = static_cast<int>( source.transform->moves );
-                }
-                if( source.personality ) {
-                    native.personality_score = cata::make_value<mut_personality_score>();
-                    native.personality_score->min_aggression = static_cast<int>(
-                                source.personality->min_aggression );
-                    native.personality_score->max_aggression = static_cast<int>(
-                                source.personality->max_aggression );
-                    native.personality_score->min_bravery = static_cast<int>(
-                            source.personality->min_bravery );
-                    native.personality_score->max_bravery = static_cast<int>(
-                            source.personality->max_bravery );
-                    native.personality_score->min_collector = static_cast<int>(
-                                source.personality->min_collector );
-                    native.personality_score->max_collector = static_cast<int>(
-                                source.personality->max_collector );
-                    native.personality_score->min_altruism = static_cast<int>(
-                                source.personality->min_altruism );
-                    native.personality_score->max_altruism = static_cast<int>(
-                                source.personality->max_altruism );
-                }
-                for( const mutation_variant_definition_data &variant : source.variants ) {
-                    mutation_variant value;
-                    value.id = variant.id;
-                    value.alt_name = no_translation( variant.name );
-                    value.alt_description = no_translation( variant.description );
-                    value.append_desc = variant.append_description;
-                    value.weight = static_cast<int>( variant.weight );
-                    value.parent = id;
-                    native.variants.emplace( value.id, std::move( value ) );
-                }
-                for( const std::string &value : source.initial_martial_arts ) {
-                    native.initial_ma_styles.emplace_back( value );
-                }
-                for( const std::string &value : source.threshold_substitutes ) {
-                    native.threshold_substitutes.emplace_back( value );
-                }
-                for( const auto &[vitamin, turns] : source.vitamin_rates ) {
-                    native.vitamin_rates.emplace(
-                        vitamin_id( vitamin ), time_duration::from_turns( turns ) );
-                }
-                for( const auto &[material, vitamin, multiplier] : source.vitamin_absorption ) {
-                    native.vitamin_absorb_multi[material_id( material )].emplace(
-                        vitamin_id( vitamin ), multiplier );
-                }
-                for( const auto &[quality, amount] : source.provided_qualities ) {
-                    native.provided_qualities.emplace(
-                        quality_id( quality ), static_cast<int>( amount ) );
-                }
-                for( const std::string &value : source.ignored_by ) {
-                    native.ignored_by.emplace_back( value );
-                }
-                for( const std::string &value : source.empathize_with ) {
-                    native.empathize_with.emplace_back( value );
-                }
-                for( const std::string &value : source.no_empathize_with ) {
-                    native.no_empathize_with.emplace_back( value );
-                }
-                for( const std::string &value : source.can_only_eat ) {
-                    native.can_only_eat.emplace( value );
-                }
-                for( const std::string &value : source.can_only_heal_with ) {
-                    native.can_only_heal_with.emplace( value );
-                }
-                for( const std::string &value : source.can_heal_with ) {
-                    native.can_heal_with.emplace( value );
-                }
-                for( const std::string &value : source.allowed_categories ) {
-                    native.allowed_category.emplace( value );
-                }
-                for( const std::string &value : source.prereqs ) {
-                    native.prereqs.emplace_back( value );
-                }
-                for( const std::string &value : source.prereqs2 ) {
-                    native.prereqs2.emplace_back( value );
-                }
-                for( const std::string &value : source.threshold_requirements ) {
-                    native.threshreq.emplace_back( value );
-                }
-                for( const std::string &value : source.cancels ) {
-                    native.cancels.emplace_back( value );
-                }
-                for( const std::string &value : source.replacements ) {
-                    native.replacements.emplace_back( value );
-                }
-                for( const std::string &value : source.additions ) {
-                    native.additions.emplace_back( value );
-                }
-                native.types.insert( source.types.begin(), source.types.end() );
-                for( const std::string &value : source.categories ) {
-                    native.category.emplace_back( value );
-                }
-                for( const std::string &value : source.flags ) {
-                    native.flags.emplace( value );
-                }
-                for( const std::string &value : source.active_flags ) {
-                    native.active_flags.emplace( value );
-                }
-                for( const std::string &value : source.inactive_flags ) {
-                    native.inactive_flags.emplace( value );
-                }
-                for( const auto &[monster, amount] : source.monster_cameras ) {
-                    native.moncams.emplace( mtype_id( monster ), static_cast<int>( amount ) );
-                }
-                for( const std::string &value : source.enchantments ) {
-                    native.enchantments.emplace_back( value );
-                }
-                for( const std::string &value : source.no_cbm_bodyparts ) {
-                    native.no_cbm_on_bp.emplace( value );
-                }
-                for( const auto &[spell, level] : source.learned_spells ) {
-                    native.spells_learned.emplace( spell_id( spell ), static_cast<int>( level ) );
-                }
-                for( const auto &[skill, amount] : source.craft_skill_bonuses ) {
-                    native.craft_skill_bonus.emplace( skill_id( skill ), static_cast<int>( amount ) );
-                }
-                for( const auto &[bodypart, amount] : source.lumination ) {
-                    native.lumination.emplace( bodypart_str_id( bodypart ), static_cast<float>( amount ) );
-                }
-                for( const auto &[species, amount] : source.anger_relations ) {
-                    native.anger_relations.emplace( species_id( species ), static_cast<int>( amount ) );
-                }
-                for( const mutation_wet_protection_definition_data &value :
-                     source.wet_protection ) {
-                    native.protection.emplace(
-                        bodypart_str_id( value.bodypart ),
-                        tripoint( static_cast<int>( value.ignored ),
-                                  static_cast<int>( value.neutral ),
-                                  static_cast<int>( value.good ) ) );
-                }
-                for( const auto &[bodypart, amount] : source.encumbrance_always ) {
-                    native.encumbrance_always.emplace(
-                        bodypart_str_id( bodypart ), static_cast<int>( amount ) );
-                }
-                for( const auto &[bodypart, amount] : source.encumbrance_covered ) {
-                    native.encumbrance_covered.emplace(
-                        bodypart_str_id( bodypart ), static_cast<int>( amount ) );
-                }
-                for( const auto &[bodypart, amount] : source.encumbrance_multipliers ) {
-                    native.encumbrance_multiplier_always.emplace(
-                        bodypart_str_id( bodypart ), static_cast<float>( amount ) );
-                }
-                for( const std::string &value : source.restricts_gear ) {
-                    if( bodypart_str_id( value ).is_valid() ) {
-                        native.restricts_gear.emplace( value );
-                    } else {
-                        native.restricts_gear_subparts.emplace( value );
-                    }
-                }
-                for( const std::string &value : source.remove_rigid ) {
-                    if( bodypart_str_id( value ).is_valid() ) {
-                        native.remove_rigid.emplace( value );
-                    } else {
-                        native.remove_rigid_subparts.emplace( value );
-                    }
-                }
-                for( const std::string &value : source.allowed_item_flags ) {
-                    native.allowed_items.emplace( value );
-                }
-                for( const mutation_armor_definition_data &value : source.armor ) {
-                    native.armor[bodypart_str_id( value.bodypart )].set_resist(
-                        damage_type_id( value.damage_type ), static_cast<float>( value.amount ) );
-                }
-                for( const std::string &value : source.integrated_armor ) {
-                    native.integrated_armor.emplace_back( value );
-                }
-                for( const auto &[bodypart, amount] : source.bionic_slot_bonuses ) {
-                    native.set_platform_bionic_slot_bonus(
-                        bodypart_str_id( bodypart ), static_cast<int>( amount ) );
-                }
-                const auto add_damage = []( damage_instance & target,
-                const mutation_damage_definition_data & value ) {
-                    target.add_damage(
-                        damage_type_id( value.damage_type ), static_cast<float>( value.amount ),
-                        static_cast<float>( value.armor_penetration ),
-                        static_cast<float>( value.armor_penetration_multiplier ),
-                        static_cast<float>( value.damage_multiplier ),
-                        static_cast<float>( value.unconditional_armor_penetration_multiplier ),
-                        static_cast<float>( value.unconditional_damage_multiplier ) );
-                };
-                for( const mutation_attack_definition_data &value : source.attacks ) {
-                    mut_attack attack;
-                    attack.attack_text_u = no_translation( value.player_message );
-                    attack.attack_text_npc = no_translation( value.npc_message );
-                    for( const std::string &required : value.required_mutations ) {
-                        attack.required_mutations.emplace( required );
-                    }
-                    for( const std::string &blocker : value.blocker_mutations ) {
-                        attack.blocker_mutations.emplace( blocker );
-                    }
-                    if( !value.bodypart.empty() ) {
-                        attack.bp = bodypart_str_id( value.bodypart );
-                    }
-                    attack.chance = static_cast<int>( value.chance );
-                    attack.hardcoded_effect = value.hardcoded;
-                    for( const mutation_damage_definition_data &damage : value.base_damage ) {
-                        add_damage( attack.base_damage, damage );
-                    }
-                    for( const mutation_damage_definition_data &damage : value.strength_damage ) {
-                        add_damage( attack.strength_damage, damage );
-                    }
-                    native.attacks_granted.push_back( std::move( attack ) );
-                }
-                for( const std::vector<mutation_reflex_definition_data> &group :
-                     source.reflex_triggers ) {
-                    std::vector<reflex_activation_data> native_group;
-                    native_group.reserve( group.size() );
-                    for( const mutation_reflex_definition_data &value : group ) {
-                        reflex_activation_data trigger;
-                        const std::string owner = pimpl_->owner;
-                        const std::string mutation_id = source.id;
-                        const std::string handler = value.handler;
-                        trigger.trigger = [owner, mutation_id, handler](
-                        const const_dialogue & dialogue ) {
-                            return detail::invoke_mutation_condition_handler(
-                                       owner, mutation_id, handler, dialogue ).value_or( false );
-                        };
-                        trigger.msg_on = {
-                            no_translation( value.message_on ),
-                            *io::string_to_enum_optional<game_message_type>( value.message_on_type )
-                        };
-                        trigger.msg_off = {
-                            no_translation( value.message_off ),
-                            *io::string_to_enum_optional<game_message_type>( value.message_off_type )
-                        };
-                        trigger.was_loaded = true;
-                        native_group.push_back( std::move( trigger ) );
-                    }
-                    native.trigger_list.push_back( std::move( native_group ) );
-                }
-                for( const mutation_comfort_definition_data &value : source.comfort ) {
-                    comfort_data comfort;
-                    comfort.conditions_or = value.conditions_or;
-                    comfort.base_comfort = static_cast<int>( value.base_comfort );
-                    comfort.add_human_comfort = value.add_human_comfort;
-                    comfort.use_better_comfort = value.use_better_comfort;
-                    comfort.add_sleep_aids = value.add_sleep_aids;
-                    comfort.msg_try.text = no_translation( value.try_message );
-                    comfort.msg_try.type = *io::string_to_enum_optional<game_message_type>(
-                                               value.try_message_type );
-                    comfort.msg_hint.text = no_translation( value.hint_message );
-                    comfort.msg_hint.type = *io::string_to_enum_optional<game_message_type>(
-                                                value.hint_message_type );
-                    comfort.msg_sleep.text = no_translation( value.sleep_message );
-                    comfort.msg_sleep.type = *io::string_to_enum_optional<game_message_type>(
-                                                 value.sleep_message_type );
-                    for( const mutation_comfort_condition_definition_data &condition :
-                         value.conditions ) {
-                        comfort_data::condition native_condition;
-                        native_condition.ccategory =
-                            *io::string_to_enum_optional<comfort_data::category>( condition.type );
-                        native_condition.id = condition.id;
-                        native_condition.flag = condition.flag;
-                        native_condition.intensity = static_cast<int>( condition.intensity );
-                        native_condition.active = condition.active;
-                        native_condition.invert = condition.invert;
-                        comfort.conditions.push_back( std::move( native_condition ) );
-                    }
-                    comfort.was_loaded = true;
-                    native.comfort.push_back( std::move( comfort ) );
-                }
-                detail::mutation_registry().insert( native );
-            }
-
-            if( !pimpl_->mutations.empty() ) {
-                detail::mutation_registry().finalize();
-                detail::refresh_mutation_registry_cache();
-            }
-            pimpl_->next_apply_phase = creatures_content_apply_phase::behavior;
+            pimpl_->apply_mutation();
         } else if( phase == creatures_content_apply_phase::finalize ) {
-            for( const field_type_registration &entry : pimpl_->field_types ) {
-                field_type &native = const_cast<field_type &>(
-                                         field_type_str_id( entry.definition->id ).obj() );
-                native.finalize();
-            }
-            if( !pimpl_->wound_fixes.empty() ) {
-                detail::wound_fix_registry().finalize();
-                for( const wound_fix_registration &entry : pimpl_->wound_fixes ) {
-                    const wound_fix &native = wound_fix_id( entry.definition->id ).obj();
-                    if( native.requirement_refs.size() != entry.definition->requirements.size() ) {
-                        throw std::runtime_error( "wound fix '" + entry.definition->id +
-                                                  "' changed its requirement references while applying" );
-                    }
-                }
-            }
-            if( !pimpl_->wound_types.empty() || !pimpl_->wound_fixes.empty() ||
-                !pimpl_->body_parts.empty() ) {
-                detail::refresh_wound_fix_links();
-                detail::refresh_body_part_wound_cache();
-            }
-            pimpl_->applied = true;
-            pimpl_->next_apply_phase = creatures_content_apply_phase::finalize;
+            pimpl_->apply_finalize();
         }
         error.clear();
         return true;
@@ -5794,15 +6269,15 @@ void creatures_content_transaction::append_fingerprint(
             hash_part( state, operation_name( entry.operation ) );
             const effect_type_definition_data &value = *entry.definition;
             hash_part( state, value.id );
-            for( const std::string &text : value.names ) {
+            for( const authored_text &text : value.names ) {
                 hash_part( state, "name" );
                 hash_part( state, text );
             }
-            for( const std::string &text : value.descriptions ) {
+            for( const authored_text &text : value.descriptions ) {
                 hash_part( state, "description" );
                 hash_part( state, text );
             }
-            for( const std::string &text : value.reduced_descriptions ) {
+            for( const authored_text &text : value.reduced_descriptions ) {
                 hash_part( state, "reduced_description" );
                 hash_part( state, text );
             }
@@ -6187,7 +6662,7 @@ void creatures_content_transaction::append_fingerprint(
             hash_part( state, operation_name( entry.operation ) );
             const weakpoint_set_definition_data &value = *entry.definition;
             hash_part( state, value.id );
-            for( const auto &point : value.weakpoints ) {
+            for( const cata::lua_platform::weakpoint_definition_data &point : value.weakpoints ) {
                 hash_part( state, point.id );
                 hash_part( state, point.name );
                 hash_part( state, std::to_string( point.coverage ) );
@@ -6289,6 +6764,21 @@ void creatures_content_transaction::append_fingerprint(
             hash_part( state, value.id );
             hash_part( state, value.name );
             hash_part( state, value.description );
+            hash_part( state, "activation_message" );
+            hash_part( state, value.activation_message );
+            if( value.transform ) {
+                hash_part( state, "transform_message" );
+                hash_part( state, value.transform->message );
+            } else {
+                hash_part( state, "no_transform" );
+            }
+            for( const mutation_variant_definition_data &variant : value.variants ) {
+                hash_part( state, "variant_name" );
+                hash_part( state, variant.id );
+                hash_part( state, variant.name );
+                hash_part( state, "variant_description" );
+                hash_part( state, variant.description );
+            }
             hash_number( value.points );
             hash_number( value.vitamin_cost );
             hash_number( value.visibility );
@@ -6321,13 +6811,29 @@ void creatures_content_transaction::append_fingerprint(
                 hash_part( state, id );
                 hash_number( amount );
             }
-            for( const auto &attack : value.attacks ) {
+            for( const cata::lua_platform::mutation_attack_definition_data &attack : value.attacks ) {
                 hash_part( state, attack.player_message );
                 hash_part( state, attack.npc_message );
                 hash_strings( attack.required_mutations );
                 hash_strings( attack.blocker_mutations );
                 hash_part( state, attack.bodypart );
                 hash_number( attack.chance );
+            }
+            for( const auto &group : value.reflex_triggers ) {
+                for( const mutation_reflex_definition_data &trigger : group ) {
+                    hash_part( state, "reflex_message_on" );
+                    hash_part( state, trigger.message_on );
+                    hash_part( state, "reflex_message_off" );
+                    hash_part( state, trigger.message_off );
+                }
+            }
+            for( const mutation_comfort_definition_data &comfort : value.comfort ) {
+                hash_part( state, "comfort_try_message" );
+                hash_part( state, comfort.try_message );
+                hash_part( state, "comfort_hint_message" );
+                hash_part( state, comfort.hint_message );
+                hash_part( state, "comfort_sleep_message" );
+                hash_part( state, comfort.sleep_message );
             }
         }
     }
@@ -6387,7 +6893,8 @@ bool creatures_content_transaction::find_behavior_handler( const std::string_vie
             return true;
         }
         if( phase == "condition" ) {
-            for( const auto &condition : it->definition->conditions ) {
+            for( cata::lua_platform::behavior_condition_definition_data const &condition :
+                 it->definition->conditions ) {
                 if( !condition.native ) {
                     handler_id = condition.policy;
                     return true;

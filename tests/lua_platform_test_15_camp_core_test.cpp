@@ -1,10 +1,46 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+#include <avatar.h>
+#include <basecamp.h>
+#include <calendar.h>
+#include <cata_scope_helpers.h>
+#include <character_id.h>
+#include <coordinates.h>
+#include <dialogue.h>
+#include <faction.h>
+#include <lua_platform_camps.h>
+#include <lua_platform_handle.h>
+#include <memory_fast.h>
+#include <monster.h>
+#include <npc.h>
+#include <point.h>
+#include <stomach.h>
+#include <type_id.h>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <limits>
+#include <map>
+#include <memory>
+#include <optional>
+#include <set>
+#include <string>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
+#include "cata_catch.h"
+#include "condition.h"
+#include "lua_platform_sol.h"
 #include "lua_platform_test_support.h"
+
+static const itype_id itype_battery( "battery" );
+static const itype_id itype_water( "water" );
 
 TEST_CASE( "lua_platform_camp_handles_reject_replacement_and_removal",
            "[lua][platform][camp]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 61 );
     basecamp original( "Platform Camp", tripoint_abs_omt{ 10, 10, 0 } );
     cata::lua_platform::register_camp_handle_identity( original );
@@ -37,8 +73,10 @@ TEST_CASE( "lua_platform_camp_handles_reject_replacement_and_removal",
 TEST_CASE( "lua_platform_camp_handles_bind_runtime_and_world_generation",
            "[lua][platform][camp]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
-    const auto other_owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr other_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 62 );
     const cata::lua_platform::game_handle_runtime other_runtime( other_owner, 62 );
     const cata::lua_platform::game_handle_runtime newer_runtime( owner, 63 );
@@ -95,7 +133,8 @@ TEST_CASE( "lua_platform_camp_assignment_preflight_is_exact_and_atomic",
 TEST_CASE( "lua_platform_camp_api_requires_explicit_manager_and_handles",
            "[lua][platform][camp]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 64 );
     basecamp camp( "API Camp", tripoint_abs_omt{ 13, 13, 0 } );
     cata::lua_platform::register_camp_handle_identity( camp );
@@ -110,15 +149,24 @@ TEST_CASE( "lua_platform_camp_api_requires_explicit_manager_and_handles",
     sol::state lua;
     sol::table services = lua.create_table();
     cata::lua_platform::install_game_handle_api(
-        lua, services, [runtime]() { return runtime; }, []() { return std::size_t( 15 ); },
-        []() {} );
+    lua, services, [runtime]() {
+        return runtime;
+    }, []() {
+        return std::size_t( 15 );
+    },
+    []() {} );
     cata::lua_platform::install_camp_api(
-        services, [runtime]() { return runtime; }, []() { return std::size_t( 15 ); },
+    services, [runtime]() {
+        return runtime;
+    }, []() {
+        return std::size_t( 15 );
+    },
     []() {}, []() {} );
     const sol::table camps = services["camps"];
     CHECK( camps["get"].valid() );
     CHECK( camps["assign_worker"].valid() );
     CHECK( camps["recall_worker"].valid() );
+    CHECK( camps["has_player_owned_camp"].valid() );
     CHECK_FALSE( camps["near"].valid() );
     CHECK_FALSE( camps["player_has_camp"].valid() );
     CHECK_FALSE( camps["start_with"].valid() );
@@ -133,10 +181,71 @@ TEST_CASE( "lua_platform_camp_api_requires_explicit_manager_and_handles",
            "wrong_subtype" );
 }
 
+TEST_CASE( "lua_platform_player_owned_camp_query_matches_native_condition",
+           "[lua][platform][camp][conditions][semantic]" )
+{
+    avatar &player = get_avatar();
+    REQUIRE( player.get_faction() != nullptr );
+    const auto previous_camps = player.camps;
+    const on_out_of_scope restore_camps( [&player, previous_camps]() {
+        player.camps = previous_camps;
+    } );
+    player.camps.clear();
+
+    const tripoint_abs_omt camp_position{ 17, 19, 0 };
+    platform_test_camp_scope camp_scope(
+        "Native Camp Condition", camp_position, faction_id::NULL_ID() );
+    REQUIRE( camp_scope.camp != nullptr );
+
+    const cata::lua_platform::game_handle_runtime_owner_ptr runtime_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime runtime( runtime_owner, 66 );
+    sol::state lua;
+    sol::table services = lua.create_table();
+    cata::lua_platform::install_game_handle_api(
+    lua, services, [runtime]() {
+        return runtime;
+    }, []() {
+        return std::size_t( 17 );
+    },
+    []() {} );
+    cata::lua_platform::install_camp_api(
+    services, [runtime]() {
+        return runtime;
+    }, []() {
+        return std::size_t( 17 );
+    },
+    []() {}, []() {} );
+
+    const conditional_t native_condition( "u_has_camp" );
+    const dialogue conversation( get_talker_for( player ), get_talker_for( player ) );
+    const sol::protected_function query = services["camps"]["has_player_owned_camp"];
+    const auto compare_with_native = [&]() {
+        const bool native_result = native_condition( conversation );
+        const sol::protected_function_result platform_call = query();
+        REQUIRE( platform_call.valid() );
+        const sol::table result = platform_call;
+        REQUIRE( result["ok"].get<bool>() );
+        CHECK( result["value"].get<bool>() == native_result );
+        return native_result;
+    };
+
+    player.camps.insert( tripoint_abs_omt{ 900, 900, 0 } );
+    CHECK_FALSE( compare_with_native() );
+    player.camps.clear();
+    player.camps.insert( camp_position );
+    CHECK_FALSE( compare_with_native() );
+    camp_scope.camp->set_owner( player.get_faction()->id );
+    CHECK( compare_with_native() );
+    player.camps.clear();
+    CHECK_FALSE( compare_with_native() );
+}
+
 TEST_CASE( "lua_platform_camp_write_gate_precedes_camp_resolution",
            "[lua][platform][camp]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 65 );
     basecamp camp( "Write Gate Camp", tripoint_abs_omt{ 14, 14, 0 } );
     cata::lua_platform::register_camp_handle_identity( camp );
@@ -146,17 +255,25 @@ TEST_CASE( "lua_platform_camp_write_gate_precedes_camp_resolution",
     sol::state lua;
     sol::table services = lua.create_table();
     cata::lua_platform::install_game_handle_api(
-        lua, services, [runtime]() { return runtime; }, []() { return std::size_t( 16 ); },
-        []() {} );
+    lua, services, [runtime]() {
+        return runtime;
+    }, []() {
+        return std::size_t( 16 );
+    },
+    []() {} );
     cata::lua_platform::install_camp_api(
-        services, [runtime]() { return runtime; }, []() { return std::size_t( 16 ); },
+    services, [runtime]() {
+        return runtime;
+    }, []() {
+        return std::size_t( 16 );
+    },
     []() {}, [&]() {
         write_gate_called = true;
         owner->retire();
     } );
     const sol::protected_function rename = services["camps"]["rename"];
     const sol::protected_function_result result = rename(
-            camp_handle, cata::lua_platform::game_handle{}, "New Name" );
+                camp_handle, cata::lua_platform::game_handle{}, "New Name" );
     REQUIRE( result.valid() );
     CHECK( write_gate_called );
     const sol::table envelope = result.get<sol::table>();
@@ -168,11 +285,9 @@ TEST_CASE( "lua_platform_camp_write_gate_precedes_camp_resolution",
 TEST_CASE( "lua_platform_camp_resource_keys_reject_ambiguous_duplicates",
            "[lua][platform][camp][resources]" )
 {
-    const itype_id resource_id( "water" );
-    const itype_id charge_id( "battery" );
     basecamp_resource first;
-    first.fake_id = resource_id;
-    first.ammo_id = charge_id;
+    first.fake_id = itype_water;
+    first.ammo_id = itype_battery;
     first.available = 4;
     first.consumed = 1;
     basecamp_resource equivalent = first;
@@ -182,30 +297,30 @@ TEST_CASE( "lua_platform_camp_resource_keys_reject_ambiguous_duplicates",
     std::vector<basecamp_resource> normalized;
     std::string error;
     REQUIRE( basecamp::platform_normalize_resources(
-                 { first, equivalent }, normalized, error ) );
+    { first, equivalent }, normalized, error ) );
     REQUIRE( normalized.size() == 1 );
-    CHECK( normalized.front().fake_id == resource_id );
+    CHECK( normalized.front().fake_id == itype_water );
     CHECK( normalized.front().available == 10 );
     CHECK( normalized.front().consumed == 3 );
 
     basecamp_resource conflicting = equivalent;
     conflicting.ammo_id = itype_id();
     CHECK_FALSE( basecamp::platform_normalize_resources(
-                     { first, conflicting }, normalized, error ) );
+    { first, conflicting }, normalized, error ) );
     CHECK( normalized.empty() );
     CHECK( error.find( "conflicting ammo" ) != std::string::npos );
 
     basecamp_resource overflowing = first;
     overflowing.available = std::numeric_limits<int>::max();
     CHECK_FALSE( basecamp::platform_normalize_resources(
-                     { overflowing, overflowing }, normalized, error ) );
+    { overflowing, overflowing }, normalized, error ) );
     CHECK( normalized.empty() );
     CHECK( error.find( "overflow" ) != std::string::npos );
 
     basecamp_resource negative = first;
     negative.available = -1;
     CHECK_FALSE( basecamp::platform_normalize_resources(
-                     { negative }, normalized, error ) );
+    { negative }, normalized, error ) );
     CHECK( normalized.empty() );
     CHECK( error.find( "negative" ) != std::string::npos );
 }
@@ -219,8 +334,8 @@ TEST_CASE( "lua_platform_camp_resource_batch_preflight_is_atomic",
     REQUIRE( camp.platform_resource_snapshot( before, error ) );
 
     const std::vector<basecamp_platform_resource_change> changes = {
-        { itype_id( "water" ), 1 },
-        { itype_id( "battery" ), -1 },
+        { itype_water, 1 },
+        { itype_battery, -1 },
     };
     CHECK_FALSE( camp.platform_adjust_resources( changes, error ) );
     const std::string failure_error = error;
@@ -260,7 +375,8 @@ TEST_CASE( "lua_platform_camp_food_balance_is_owner_scoped_and_bounded",
 TEST_CASE( "lua_platform_camp_inventory_exposes_only_explicit_storage_holders",
            "[lua][platform][camp][inventory]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 66 );
     basecamp camp( "Storage Camp", tripoint_abs_omt{ 16, 16, 0 } );
     cata::lua_platform::register_camp_handle_identity( camp );
@@ -271,10 +387,18 @@ TEST_CASE( "lua_platform_camp_inventory_exposes_only_explicit_storage_holders",
     sol::state lua;
     sol::table services = lua.create_table();
     cata::lua_platform::install_game_handle_api(
-        lua, services, [runtime]() { return runtime; }, []() { return std::size_t( 17 ); },
-        []() {} );
+    lua, services, [runtime]() {
+        return runtime;
+    }, []() {
+        return std::size_t( 17 );
+    },
+    []() {} );
     cata::lua_platform::install_camp_api(
-        services, [runtime]() { return runtime; }, []() { return std::size_t( 17 ); },
+    services, [runtime]() {
+        return runtime;
+    }, []() {
+        return std::size_t( 17 );
+    },
     []() {}, []() {} );
     const sol::table camps = services["camps"];
     CHECK( camps["inventory"]["storage_tiles"].valid() );
@@ -287,7 +411,8 @@ TEST_CASE( "lua_platform_camp_inventory_exposes_only_explicit_storage_holders",
 TEST_CASE( "lua_platform_camp_food_mutations_enter_the_write_gate_first",
            "[lua][platform][camp][food]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 67 );
     basecamp camp( "Food Camp", tripoint_abs_omt{ 17, 17, 0 } );
     cata::lua_platform::register_camp_handle_identity( camp );
@@ -297,10 +422,18 @@ TEST_CASE( "lua_platform_camp_food_mutations_enter_the_write_gate_first",
     sol::state lua;
     sol::table services = lua.create_table();
     cata::lua_platform::install_game_handle_api(
-        lua, services, [runtime]() { return runtime; }, []() { return std::size_t( 18 ); },
-        []() {} );
+    lua, services, [runtime]() {
+        return runtime;
+    }, []() {
+        return std::size_t( 18 );
+    },
+    []() {} );
     cata::lua_platform::install_camp_api(
-        services, [runtime]() { return runtime; }, []() { return std::size_t( 18 ); },
+    services, [runtime]() {
+        return runtime;
+    }, []() {
+        return std::size_t( 18 );
+    },
     []() {}, [&]() {
         write_gate_called = true;
         owner->retire();
@@ -308,7 +441,7 @@ TEST_CASE( "lua_platform_camp_food_mutations_enter_the_write_gate_first",
 
     const sol::protected_function add_food = services["camps"]["food"]["add"];
     const sol::protected_function_result result = add_food(
-        camp_handle, cata::lua_platform::game_handle{}, 1 );
+                camp_handle, cata::lua_platform::game_handle{}, 1 );
     REQUIRE( result.valid() );
     CHECK( write_gate_called );
     const sol::table envelope = result.get<sol::table>();

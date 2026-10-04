@@ -10,6 +10,7 @@ extern "C" {
 #include <map_iterator.h>
 #include <map_selector.h>
 #include <memory_fast.h>
+#include <map_scale_constants.h>
 #include <monster_uid.h>
 #include <player_activity.h>
 #include <veh_type.h>
@@ -20,6 +21,7 @@ extern "C" {
 #include <cstdint>
 #include <exception>
 #include <filesystem>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <set>
@@ -62,6 +64,17 @@ extern "C" {
 #include "vehicle.h"
 #include "visitable.h"
 
+static const efftype_id effect_controlled( "controlled" );
+static const efftype_id effect_grabbed( "grabbed" );
+static const efftype_id effect_grabbing( "grabbing" );
+static const efftype_id effect_leashed( "leashed" );
+static const efftype_id effect_pacified( "pacified" );
+static const efftype_id effect_pet( "pet" );
+static const efftype_id effect_ridden( "ridden" );
+static const efftype_id effect_riding( "riding" );
+static const itype_id itype_power_cord( "power_cord" );
+static const trait_id trait_HALLUCINATION( "HALLUCINATION" );
+
 namespace cata::lua_platform
 {
 
@@ -76,8 +89,6 @@ constexpr std::size_t maximum_npc_spawn_traits = 128;
 constexpr std::size_t maximum_npc_unique_id_bytes = 256;
 constexpr std::size_t maximum_monster_unique_name_bytes = 256;
 
-const efftype_id effect_pacified( "pacified" );
-const efftype_id effect_pet( "pet" );
 
 void require_active_callback(
     const std::function<bool()> &has_active_callback,
@@ -129,18 +140,133 @@ tripoint_abs_ms require_absolute_ms(
     return tripoint_abs_ms( position.to_native() );
 }
 
+std::optional<tripoint_bub_ms> map_bubble_position_if_representable(
+    const map &here, const tripoint_abs_ms &absolute )
+{
+    const tripoint_abs_ms origin =
+        here.get_abs( tripoint_bub_ms( 0, 0, 0 ) );
+    // Wide coordinate calculations must retain all 64 bits before native conversion.
+    // NOLINTNEXTLINE(cata-combine-locals-into-point)
+    const std::int64_t x = static_cast<std::int64_t>( absolute.x() ) - origin.x();
+    const std::int64_t y = static_cast<std::int64_t>( absolute.y() ) - origin.y();
+    if( x < std::numeric_limits<int>::min() ||
+        x > std::numeric_limits<int>::max() ||
+        y < std::numeric_limits<int>::min() ||
+        y > std::numeric_limits<int>::max() ) {
+        return std::nullopt;
+    }
+    return tripoint_bub_ms( static_cast<int>( x ), static_cast<int>( y ), absolute.z() );
+}
+
+tripoint_rel_ms checked_world_coordinate_offset(
+    const tripoint_abs_ms &destination, const tripoint_abs_ms &source,
+    const std::string_view api_name )
+{
+    // Wide coordinate calculations must retain all 64 bits before native conversion.
+    // NOLINTNEXTLINE(cata-combine-locals-into-point)
+    const std::int64_t x = static_cast<std::int64_t>( destination.x() ) - source.x();
+    const std::int64_t y = static_cast<std::int64_t>( destination.y() ) - source.y();
+    const std::int64_t z = static_cast<std::int64_t>( destination.z() ) - source.z();
+    if( x < std::numeric_limits<int>::min() || x > std::numeric_limits<int>::max() ||
+        y < std::numeric_limits<int>::min() || y > std::numeric_limits<int>::max() ||
+        z < std::numeric_limits<int>::min() || z > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " source and destination exceed the native coordinate delta range" );
+    }
+    return tripoint_rel_ms( static_cast<int>( x ), static_cast<int>( y ),
+                            static_cast<int>( z ) );
+}
+
+void require_native_map_axis_range(
+    const std::int64_t map_square_origin, const int maximum_offset,
+    const std::string_view api_name )
+{
+    const std::int64_t map_square_end = map_square_origin + maximum_offset;
+    if( map_square_origin < std::numeric_limits<int>::min() ||
+        map_square_end > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " destination cannot be represented across the native map footprint" );
+    }
+}
+
+void require_native_omt_map_load_range(
+    const tripoint_abs_omt &destination, const int map_size_submaps,
+    const std::string_view api_name )
+{
+    const int omt_to_sm = coords::map_squares_per( coords::scale::overmap_terrain ) /
+                          coords::map_squares_per( coords::scale::submap );
+    const int sm_to_ms = coords::map_squares_per( coords::scale::submap );
+    const std::int64_t submap_max_offset = map_size_submaps - 1;
+    const auto require_axis = [ = ]( const int coordinate ) {
+        const std::int64_t submap_origin =
+            static_cast<std::int64_t>( coordinate ) * omt_to_sm;
+        if( submap_origin < std::numeric_limits<int>::min() ||
+            submap_origin + submap_max_offset > std::numeric_limits<int>::max() ) {
+            throw std::invalid_argument(
+                std::string( api_name ) +
+                " destination cannot be represented across the native submap footprint" );
+        }
+        const std::int64_t map_square_origin = submap_origin * sm_to_ms;
+        const std::int64_t map_square_max_offset =
+            static_cast<std::int64_t>( map_size_submaps ) * sm_to_ms - 1;
+        require_native_map_axis_range(
+            map_square_origin, static_cast<int>( map_square_max_offset ), api_name );
+    };
+    require_axis( destination.x() );
+    require_axis( destination.y() );
+}
+
+void require_avatar_overmap_load_range(
+    const tripoint_abs_ms &destination, const std::string_view api_name )
+{
+    const tripoint_abs_omt center = project_to<coords::omt>( destination );
+    const int omt_to_sm = coords::map_squares_per( coords::scale::overmap_terrain ) /
+                          coords::map_squares_per( coords::scale::submap );
+    const int sm_to_ms = coords::map_squares_per( coords::scale::submap );
+    // Wide coordinate calculations must retain all 64 bits before native conversion.
+    // NOLINTNEXTLINE(cata-combine-locals-into-point)
+    const std::int64_t projected_x = static_cast<std::int64_t>( center.x() ) * omt_to_sm;
+    const std::int64_t projected_y = static_cast<std::int64_t>( center.y() ) * omt_to_sm;
+    if( projected_x < std::numeric_limits<int>::min() ||
+        projected_x > std::numeric_limits<int>::max() ||
+        projected_y < std::numeric_limits<int>::min() ||
+        projected_y > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " destination cannot be represented in native submap coordinates" );
+    }
+    const std::int64_t base_x = projected_x - HALF_MAPSIZE;
+    const std::int64_t base_y = projected_y - HALF_MAPSIZE;
+    if( base_x < std::numeric_limits<int>::min() ||
+        base_x + MAPSIZE - 1 > std::numeric_limits<int>::max() ||
+        base_y < std::numeric_limits<int>::min() ||
+        base_y + MAPSIZE - 1 > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " destination cannot be represented across the native submap footprint" );
+    }
+    require_native_map_axis_range(
+        base_x * sm_to_ms, MAPSIZE_X - 1, api_name );
+    require_native_map_axis_range(
+        base_y * sm_to_ms, MAPSIZE_Y - 1, api_name );
+}
+
 tripoint_bub_ms require_loaded_position(
     map &here, const script_tripoint_coord &position,
     const std::string_view api_name )
 {
     const tripoint_abs_ms absolute =
         require_absolute_ms( position, api_name );
-    if( !here.inbounds( absolute ) ) {
+    const std::optional<tripoint_bub_ms> local =
+        map_bubble_position_if_representable( here, absolute );
+    if( !local || !here.inbounds( *local ) ) {
         throw std::invalid_argument(
             std::string( api_name ) +
             " position is outside the active map" );
     }
-    return here.get_bub( absolute );
+    return *local;
 }
 
 std::string creature_scope( const Creature &creature )
@@ -600,7 +726,7 @@ npc_spawn_options read_npc_spawn_options(
                     throw std::invalid_argument(
                         "services.spawns.npc traits must be a dense GameId array" );
                 }
-                const script_game_id trait =
+                const script_game_id &trait =
                     trait_object.as<script_game_id>();
                 require_game_id(
                     trait, "mutation", "services.spawns.npc" );
@@ -621,11 +747,10 @@ npc_spawn_options read_npc_spawn_options(
             "services.spawns.npc cannot be both indoor_only and outdoor_only" );
     }
     if( result.hallucination ) {
-        const trait_id hallucination( "HALLUCINATION" );
         if( std::find(
                 result.traits.begin(), result.traits.end(),
-                hallucination ) == result.traits.end() ) {
-            result.traits.push_back( hallucination );
+                trait_HALLUCINATION ) == result.traits.end() ) {
+            result.traits.push_back( trait_HALLUCINATION );
         }
         result.unique_id.clear();
     }
@@ -978,6 +1103,46 @@ struct relocation_move_options {
     bool strict = true;
 };
 
+struct avatar_teleport_options {
+    bool force = false;
+    bool force_safe = false;
+};
+
+avatar_teleport_options read_avatar_teleport_options(
+    const sol::optional<sol::table> &requested_options )
+{
+    avatar_teleport_options result;
+    if( !requested_options ) {
+        return result;
+    }
+
+    for( const auto &[key_object, value_object] : *requested_options ) {
+        if( !key_object.is<std::string>() ) {
+            throw std::invalid_argument(
+                "services.relocation.teleport_avatar option names must be strings" );
+        }
+        const std::string key = key_object.as<std::string>();
+        if( key == "force" ) {
+            if( !value_object.is<bool>() ) {
+                throw std::invalid_argument(
+                    "services.relocation.teleport_avatar force must be a boolean" );
+            }
+            result.force = value_object.as<bool>();
+        } else if( key == "force_safe" ) {
+            if( !value_object.is<bool>() ) {
+                throw std::invalid_argument(
+                    "services.relocation.teleport_avatar force_safe must be a boolean" );
+            }
+            result.force_safe = value_object.as<bool>();
+        } else {
+            throw std::invalid_argument(
+                "services.relocation.teleport_avatar received unsupported option '" +
+                key + "'" );
+        }
+    }
+    return result;
+}
+
 relocation_move_options read_relocation_move_options(
     const sol::optional<sol::table> &requested )
 {
@@ -1016,11 +1181,6 @@ relocation_move_options read_relocation_move_options(
 std::optional<game_handle_error> monster_relocation_state_error(
     monster &value )
 {
-    static const efftype_id effect_controlled( "controlled" );
-    static const efftype_id effect_grabbed( "grabbed" );
-    static const efftype_id effect_grabbing( "grabbing" );
-    static const efftype_id effect_leashed( "leashed" );
-    static const efftype_id effect_ridden( "ridden" );
 
     if( value.has_effect( effect_ridden ) || value.mounted_player != nullptr ||
         value.mounted_player_id.is_valid() ) {
@@ -1063,6 +1223,31 @@ void translate_relocated_linked_items(
             entry->link().t_abs_pos += offset;
             entry->link().s_bub_pos = tripoint_bub_ms::invalid;
             entry->set_var( std::string( cable_turn_key ), -1 );
+        }
+        return VisitResponse::NEXT;
+    } );
+}
+
+void require_relocated_linked_item_targets_fit(
+    visitable &items, const tripoint_rel_ms &offset,
+    const std::string_view api_name )
+{
+    items.visit_items( [&]( item * entry, item * ) {
+        if( entry->has_link_data() && !entry->has_no_links() &&
+            entry->link().t_abs_pos != tripoint_abs_ms::invalid ) {
+            const tripoint_abs_ms &target = entry->link().t_abs_pos;
+            // Wide coordinate calculations must retain all 64 bits before native conversion.
+            // NOLINTNEXTLINE(cata-combine-locals-into-point)
+            const std::int64_t x = static_cast<std::int64_t>( target.x() ) + offset.x();
+            const std::int64_t y = static_cast<std::int64_t>( target.y() ) + offset.y();
+            const std::int64_t z = static_cast<std::int64_t>( target.z() ) + offset.z();
+            if( x < std::numeric_limits<int>::min() || x > std::numeric_limits<int>::max() ||
+                y < std::numeric_limits<int>::min() || y > std::numeric_limits<int>::max() ||
+                z < std::numeric_limits<int>::min() || z > std::numeric_limits<int>::max() ) {
+                throw std::invalid_argument(
+                    std::string( api_name ) +
+                    " linked item target exceeds the native map-square coordinate range" );
+            }
         }
         return VisitResponse::NEXT;
     } );
@@ -1659,6 +1844,88 @@ sol::table travel_avatar_to_omt(
     return result;
 }
 
+sol::table teleport_avatar_to_position(
+    sol::this_state lua, const game_handle &handle,
+    const script_tripoint_coord &requested_position,
+    const sol::optional<sol::table> &requested_options,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    constexpr std::string_view api_name =
+        "services.relocation.teleport_avatar";
+    sol::state_view state( lua );
+    const avatar_teleport_options options =
+        read_avatar_teleport_options( requested_options );
+    const tripoint_abs_ms destination = require_absolute_ms(
+                                            requested_position, api_name );
+
+    if( handle.kind() != game_handle_kind::creature ||
+        handle.subtype_name() != "avatar" ) {
+        return make_game_error_result( state, {
+            "unsupported",
+            "services.relocation.teleport_avatar supports only an exact Avatar handle"
+        } );
+    }
+
+    std::optional<game_handle_error> error;
+    avatar *value = resolve_exact_avatar(
+                        handle, runtime_generation, world_generation, error );
+    if( value == nullptr ) {
+        if( error && ( error->code == "wrong_subtype" ||
+                       error->code == "wrong_kind" ) ) {
+            return make_game_error_result( state, {
+                "unsupported",
+                "services.relocation.teleport_avatar supports only an exact Avatar handle"
+            } );
+        }
+        return make_game_error_result( state, error.value_or( game_handle_error{
+            "invalid_handle",
+            "services.relocation.teleport_avatar could not resolve the Avatar handle"
+        } ) );
+    }
+
+    map &here = require_active_map( api_name );
+    const std::optional<tripoint_bub_ms> target_local =
+        map_bubble_position_if_representable( here, destination );
+    if( !target_local ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " destination exceeds the native map-square delta range" );
+    }
+    if( !here.inbounds( *target_local ) ) {
+        require_avatar_overmap_load_range( destination, api_name );
+    }
+    const tripoint_abs_ms before = value->pos_abs();
+    const bool was_in_vehicle = value->in_vehicle;
+    const bool accepted = teleport::teleport_to_point(
+                              *value, *target_local, true,
+                              false, false, options.force, options.force_safe );
+    const tripoint_abs_ms after = value->pos_abs();
+    if( accepted ) {
+        translate_relocated_linked_items( *value, after - before );
+    }
+
+    const bool changed = accepted || before != after ||
+                         ( was_in_vehicle && !value->in_vehicle );
+    if( changed ) {
+        bump_map_mutation_epoch();
+    }
+
+    sol::table result = state.create_table();
+    result["accepted"] = accepted;
+    result["changed"] = changed;
+    result["scope"] = "avatar";
+    result["handle"] = make_creature_handle(
+                           *value, runtime_generation, world_generation );
+    result["position"] = absolute_position( *value );
+    result["overmap_terrain"] = script_tripoint_coord::from_native(
+                                    coords::origin::abs,
+                                    coords::scale::overmap_terrain,
+                                    project_to<coords::omt>( after ).raw() );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( result ) ) );
+}
+
 sol::table relocate_npc(
     sol::this_state lua, const game_handle &handle,
     const map_tile_token &target_token,
@@ -1779,7 +2046,6 @@ sol::table relocate_npc(
         } );
     }
 
-    static const efftype_id effect_riding( "riding" );
     if( value->is_mounted() || value->mounted_creature != nullptr ||
         value->has_effect( effect_riding ) ) {
         return make_game_error_result( state, {
@@ -1840,7 +2106,7 @@ sol::table relocate_vehicle_move(
     const map_tile_token &target_token,
     const sol::optional<sol::table> &requested_options,
     const game_handle_runtime &runtime_generation,
-    const std::size_t world_generation );
+    std::size_t world_generation );
 
 sol::table relocate_entity_move(
     sol::this_state lua, const game_handle &handle,
@@ -1953,7 +2219,6 @@ sol::table relocate_vehicle_move(
     }
 
     static const std::string flag_wiring( "WIRING" );
-    static const itype_id power_cord( "power_cord" );
 
     for( const vpart_reference &part : entry.get_all_parts_with_fakes( true ) ) {
         const tripoint_rel_ms relative =
@@ -2039,7 +2304,7 @@ sol::table relocate_vehicle_move(
             } );
         }
         if( part.info().has_flag( flag_wiring ) ||
-            part.info().base_item == power_cord ) {
+            part.info().base_item == itype_power_cord ) {
             continue;
         }
         const veh_collision collision = entry.part_collision(
@@ -2095,9 +2360,16 @@ sol::table relocate_item(
     }
 
     const tripoint_abs_ms before = source->pos_abs();
+    const tripoint_rel_ms relocation_offset =
+        checked_world_coordinate_offset( destination, before, api_name );
+    const std::optional<tripoint_bub_ms> target_local =
+        map_bubble_position_if_representable( here, destination );
+    const bool target_is_loaded = target_local && here.inbounds( *target_local );
     item moved = **source;
+    require_relocated_linked_item_targets_fit(
+        moved, relocation_offset, api_name );
     translate_relocated_linked_items(
-        moved, destination - before );
+        moved, relocation_offset );
 
     sol::table value = state.create_table();
     const script_tripoint_coord before_value =
@@ -2108,9 +2380,9 @@ sol::table relocate_item(
     value["before"] = before_value;
     value["requested"] = requested_position;
 
-    if( here.inbounds( destination ) ) {
+    if( target_is_loaded ) {
         item &placed = here.add_item(
-                           here.get_bub( destination ),
+                           *target_local,
                            std::move( moved ) );
         if( placed.is_null() ) {
             value["accepted"] = false;
@@ -2139,8 +2411,10 @@ sol::table relocate_item(
     bool placed = false;
     {
         tinymap target_bay;
-        target_bay.load(
-            project_to<coords::omt>( destination ), false );
+        const tripoint_abs_omt target_omt = project_to<coords::omt>( destination );
+        require_native_omt_map_load_range(
+            target_omt, target_bay.cast_to_map()->getmapsize(), api_name );
+        target_bay.load( target_omt, false );
         swap_map swap( *target_bay.cast_to_map() );
         item &remote_item = target_bay.add_item(
                                 target_bay.get_omt( destination ),
@@ -2382,12 +2656,28 @@ sol::table relocate_local(
 
 void install_relocation_move_api(
     sol::table &relocation,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_write,
-    std::function<void()> require_dangerous_relocation,
-    std::function<bool()> has_active_callback )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_write,
+    const std::function<void()> &require_dangerous_relocation,
+    const std::function<bool()> &has_active_callback )
 {
+    relocation.set_function(
+        "teleport_avatar",
+        [current_runtime_generation, current_world_generation,
+                                     require_write, require_dangerous_relocation, has_active_callback](
+            sol::this_state lua, const game_handle & handle,
+            const script_tripoint_coord & position,
+    const sol::optional<sol::table> &options ) {
+        require_write();
+        require_dangerous_relocation();
+        require_active_callback(
+            has_active_callback, "services.relocation.teleport_avatar" );
+        return teleport_avatar_to_position(
+                   lua, handle, position, options,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
     relocation.set_function(
         "move",
         [current_runtime_generation, current_world_generation,
@@ -2408,12 +2698,12 @@ void install_relocation_move_api(
 
 void install_game_world_service_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write,
-    std::function<void()> require_dangerous_relocation,
-    std::function<bool()> has_active_callback )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write,
+    const std::function<void()> &require_dangerous_relocation,
+    const std::function<bool()> &has_active_callback )
 {
     sol::state_view state( services.lua_state() );
 

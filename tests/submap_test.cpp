@@ -1,3 +1,7 @@
+#include <string>
+#include <vector>
+
+#include "calendar.h"
 #include "cata_catch.h"
 #include "coordinates.h"
 #include "map_scale_constants.h"
@@ -114,4 +118,25 @@ TEST_CASE( "submap_rotation2", "[submap]" )
             CHECK( sm.get_radiation( p_after_rotation ) == sm_copy.get_radiation( p ) );
         }
     }
+}
+
+TEST_CASE( "submap_uniform_revert_clears_nonuniform_snapshot_state", "[submap][revert]" )
+{
+    const point_sm_ms sample( 2, 3 );
+    submap snapshot;
+    snapshot.set_all_ter( ter_id( 1 ), true );
+    REQUIRE( snapshot.is_uniform() );
+    submap changed;
+    changed.set_all_ter( ter_id( 2 ) );
+    changed.set_graffiti( sample, "written after the snapshot" );
+    changed.set_terrain_growth( sample, { calendar::turn_zero } );
+    changed.set_finite_liquid( sample, 23 );
+    REQUIRE_FALSE( changed.is_uniform() );
+    changed.revert_submap( snapshot );
+    CHECK( changed.is_uniform() );
+    CHECK( changed.get_ter( sample ) == ter_id( 1 ) );
+    CHECK( changed.cosmetics.empty() );
+    CHECK_FALSE( changed.has_graffiti( sample ) );
+    CHECK( changed.get_terrain_growth( sample ) == nullptr );
+    CHECK_FALSE( changed.has_finite_liquid( sample ) );
 }

@@ -120,6 +120,7 @@ void remove_stolen_status( npc & );
 void drop_weapon( npc & );
 void player_weapon_away( npc & );
 void player_weapon_drop( npc & );
+void drop_player_weapon( Character &player_character );
 void drop_stolen_item( npc & );
 
 void lead_to_safety( npc & );
