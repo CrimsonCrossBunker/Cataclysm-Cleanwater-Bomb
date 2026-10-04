@@ -827,7 +827,7 @@ TEST_CASE( "lua_platform_variable_numeric_ranges_match_native_presence_types_and
         int value = 0;
         actual_diagnostics.push_back( capture_debugmsg_during( [&]() {
             const sol::protected_function_result call = draw();
-            INFO( ( call.valid() ? "" : sol::error( call ).what() ) );
+            INFO( ( call.valid() ? "" : call.get<sol::error>().what() ) );
             REQUIRE( call.valid() );
             value = call.get<int>();
         } ) );
