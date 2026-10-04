@@ -34,6 +34,7 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "character.h"
 #include "character_id.h"
 #include "condition.h"
@@ -1208,9 +1209,10 @@ TEST_CASE( "lua_platform_pickup_at_empty_native_selection_keeps_activity",
         clear_avatar();
     } );
     player.assign_activity( wait_activity_actor( 100_turns ) );
-    const auto player_handle = cata::lua_platform::game_handle::from_creature(
-                                   player, { "avatar", player.getID().get_value(), 0, 0, 0, {} },
-                                   fixture.runtime, fixture.world );
+    const cata::lua_platform::game_handle player_handle =
+        cata::lua_platform::game_handle::from_creature(
+            player, { "avatar", player.getID().get_value(), 0, 0, 0, {} },
+            fixture.runtime, fixture.world );
     const std::string previous_activity = player.activity.id().str();
     const int previous_moves = player.activity.moves_total;
     const tripoint_bub_ms local( 60, 60, 0 );
@@ -1270,9 +1272,9 @@ TEST_CASE( "lua_platform_pickup_at_schedules_native_batch_for_exact_character",
         avatar &player = get_avatar();
         Character &selected_actor = npc_target ? static_cast<Character &>( *owned_npc.target ) : player;
         Character &other = npc_target ? player : static_cast<Character &>( *owned_npc.target );
-        const auto actor_handle = cata::lua_platform::game_handle::from_creature(
-                                      selected_actor, { npc_target ? "npc" : "avatar", selected_actor.getID().get_value(), 0, 0, 0, {} },
-                                      fixture.runtime, fixture.world );
+        const cata::lua_platform::game_handle actor_handle = cata::lua_platform::game_handle::from_creature(
+                    selected_actor, { npc_target ? "npc" : "avatar", selected_actor.getID().get_value(), 0, 0, 0, {} },
+                    fixture.runtime, fixture.world );
         const on_out_of_scope cleanup( [&player]() {
             player.cancel_activity();
         } );
@@ -1339,8 +1341,12 @@ TEST_CASE( "lua_platform_pickup_at_schedules_native_batch_for_exact_character",
         selected_actor.activity.serialize( output );
         JsonValue activity_value = json_loader::from_string( serialized.str() );
         const JsonObject activity = activity_value.get_object();
+        // Inspect selected actor fields; this is not a full activity deserialization.
+        activity.allow_omitted_members();
         const JsonObject actor_wrapper = activity.get_object( "actor" );
+        actor_wrapper.allow_omitted_members();
         const JsonObject actor = actor_wrapper.get_object( "actor_data" );
+        actor.allow_omitted_members();
         std::vector<int> quantities;
         actor.read( "quantities", quantities );
         CHECK( quantities == std::vector<int> { 1, 1 } );

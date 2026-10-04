@@ -41,7 +41,6 @@ TEST_CASE( "lua_platform_direct_wound_services_match_native_effects",
 {
     wound_type::load_wounds(
         json_loader::from_string( R"({
-            "type": "wound",
             "id": "wound_platform_effect_test",
             "name": "test wound",
             "description": "A wound used to compare direct native effects.",

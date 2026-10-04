@@ -637,7 +637,6 @@ TEST_CASE( "lua_platform_task_failure_message_identifies_the_scheduled_instance"
            "[lua][platform][runtime][tasks]" )
 {
     cata::lua_platform::clear_active_runtimes();
-    debug_reset_error_observed();
     Messages::clear_messages();
     sol::state lua;
     sol::table ccb = lua.create_table();

@@ -255,8 +255,9 @@ ccb.runtime.on("world_ready", "check_progression")
 
     const sol::table no_missing_result = value_for( "no_missing_result" );
     CHECK_FALSE( no_missing_result["value"]["granted"].get<bool>() );
-    CHECK( no_missing_result["value"]["id"].get_type() == sol::type::nil );
-    CHECK( no_missing_result["value"]["name"].get_type() == sol::type::nil );
+    const sol::table no_missing_value = no_missing_result["value"];
+    CHECK( no_missing_value.get<sol::object>( "id" ).get_type() == sol::type::nil );
+    CHECK( no_missing_value.get<sol::object>( "name" ).get_type() == sol::type::nil );
     CHECK( lua["no_missing_following_draw"].get<int>() == native_no_missing_following_draw );
 
     const sol::table spell_result = value_for( "spell_result" );
