@@ -2320,6 +2320,9 @@ class map
         mutable lru_cache_t skew_vision_cache;
         mutable lru_cache_t skew_vision_wo_fields_cache;
 
+        // The observer belongs to this map's seen cache, not to the process.
+        std::optional<std::pair<tripoint_abs_ms, int>> previous_visibility_observer;
+
         // Note: no bounds check
         level_cache &get_cache( int zlev ) const {
             std::unique_ptr<level_cache, level_cache_free> &cache = caches[zlev + OVERMAP_DEPTH];

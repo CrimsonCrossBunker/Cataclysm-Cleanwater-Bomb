@@ -10,6 +10,7 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "character.h"
 #include "coordinates.h"
 #include "creature.h"
@@ -80,6 +81,55 @@ TEST_CASE( "monster_infrared_requires_unobstructed_path", "[vision]" )
     here.invalidate_map_cache( 1 );
     here.build_map_cache( 1 );
     CHECK_FALSE( observer->sees( here, you ) );
+}
+
+TEST_CASE( "seen_cache_observer_is_owned_by_each_map", "[vision][map][cache]" )
+{
+    clear_avatar();
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms original_position = you.pos_bub( here );
+    on_out_of_scope restore_position( [&]() {
+        you.setpos( here, original_position );
+    } );
+
+    fake_map first_storage( ter_t_floor.id() );
+    fake_map second_storage( ter_t_floor.id() );
+    map &first = *first_storage.cast_to_map();
+    map &second = *second_storage.cast_to_map();
+    const int z = fake_map::fake_map_z;
+    const tripoint_bub_ms left( 4, 12, z );
+    const tripoint_bub_ms right( 18, 12, z );
+    for( map *candidate : {
+             &first, &second
+         } ) {
+        for( int y = 0; y < SEEY * 2; ++y ) {
+            candidate->ter_set( tripoint_bub_ms( SEEX, y, z ), ter_t_brick_wall );
+        }
+    }
+
+    you.setpos( first, left );
+    first.set_seen_cache_dirty( z );
+    first.build_map_cache( z, true );
+    REQUIRE( first.get_cache_ref( z ).seen_cache[left.x()][left.y()] > 0.0f );
+    REQUIRE( first.get_cache_ref( z ).seen_cache[right.x()][right.y()] == 0.0f );
+
+    you.setpos( second, right );
+    second.set_seen_cache_dirty( z );
+    second.build_map_cache( z, true );
+    REQUIRE( second.get_cache_ref( z ).seen_cache[right.x()][right.y()] > 0.0f );
+
+    // The second map must not consume the first map's observer change.
+    first.build_map_cache( z, true );
+    CHECK( first.get_cache_ref( z ).seen_cache[right.x()][right.y()] > 0.0f );
+    CHECK( first.get_cache_ref( z ).seen_cache[left.x()][left.y()] == 0.0f );
+
+    // Switching back must independently invalidate the second map, too.
+    you.setpos( first, left );
+    first.build_map_cache( z, true );
+    second.build_map_cache( z, true );
+    CHECK( second.get_cache_ref( z ).seen_cache[left.x()][left.y()] > 0.0f );
+    CHECK( second.get_cache_ref( z ).seen_cache[right.x()][right.y()] == 0.0f );
 }
 
 static int get_actual_light_level( const map_test_case::tile &t )

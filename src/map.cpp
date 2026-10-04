@@ -12084,18 +12084,16 @@ void map::build_map_cache( const int zlev, bool skip_lightmap )
     std::set_symmetric_difference( u.moncam_cache.begin(), u.moncam_cache.end(), mcache.begin(),
                                    mcache.end(), std::inserter( diff, diff.end() ) );
     camera_cache_dirty |= !diff.empty();
-    // Initial value is illegal player position.
     const tripoint_abs_ms p = get_player_character().pos_abs();
     int const sr = u.unimpaired_range();
-    static tripoint_abs_ms player_prev_pos;
-    static int player_prev_range( 0 );
-    seen_cache_dirty |= player_prev_pos != p || sr != player_prev_range || camera_cache_dirty;
+    const auto observer = std::make_pair( p, sr );
+    seen_cache_dirty |= !previous_visibility_observer ||
+                        *previous_visibility_observer != observer || camera_cache_dirty;
     if( seen_cache_dirty ) {
         if( inbounds( p ) ) {
             build_seen_cache( get_bub( p ), zlev, sr );
         }
-        player_prev_pos = p;
-        player_prev_range = sr;
+        previous_visibility_observer = observer;
         camera_cache_dirty = true;
 #if defined(TILES)
         if( !test_mode ) {
