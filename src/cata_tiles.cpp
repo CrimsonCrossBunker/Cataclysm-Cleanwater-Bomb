@@ -1,5 +1,6 @@
 #if defined(TILES)
 #include "cata_tiles.h"
+#include "tile_lookup.h"
 #include "tileset_loader.h"
 #include "uistate.h"
 
@@ -631,6 +632,10 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
     // by the elapsed wall-clock time before drawing so every sprite
     // reflects the current frame.
     advance_all_transient_effects();
+
+    tile_lookup_frame lookup( tileset_ptr, season_of_year( calendar::turn ) );
+    restore_on_out_of_scope restore_lookup( lookup_frame_ );
+    lookup_frame_ = &lookup;
 
     {
         //set clipping to prevent drawing over stuff we shouldn't
@@ -2676,18 +2681,6 @@ cata_tiles::find_tile_with_season( const std::string &id ) const
     return tileset_ptr->find_tile_type_by_season( id, season );
 }
 
-template<typename T>
-std::optional<tile_lookup_res>
-cata_tiles::find_tile_looks_like_by_string_id( std::string_view id, TILE_CATEGORY category,
-        const int looks_like_jumps_limit ) const
-{
-    const string_id<T> s_id( id );
-    if( !s_id.is_valid() ) {
-        return std::nullopt;
-    }
-    const T &obj = s_id.obj();
-    return find_tile_looks_like( obj.looks_like, category, "", looks_like_jumps_limit - 1 );
-}
 
 std::string cata_tiles::find_bullet_sprite_id( const std::string &id, TILE_CATEGORY category )
 {
@@ -2697,140 +2690,15 @@ std::string cata_tiles::find_bullet_sprite_id( const std::string &id, TILE_CATEG
 
 std::optional<tile_lookup_res>
 cata_tiles::find_tile_looks_like( const std::string &id, TILE_CATEGORY category,
-                                  const std::string &variant,
-                                  const int looks_like_jumps_limit ) const
+                                  const std::string &variant, const int looks_like_jumps_limit ) const
 {
-    if( id.empty() || looks_like_jumps_limit <= 0 ) {
-        return std::nullopt;
+    if( lookup_frame_ ) {
+        return lookup_frame_->find( id, category, variant, looks_like_jumps_limit );
     }
-
-    /*
-    *  Note on memory management:
-    *  This method must returns pointers to the objects (std::string *id  and tile_type * tile)
-    *  that are valid when this method returns. Ideally they should have the lifetime
-    *  that is equal or exceeds lifetime of `this` or `this::tileset_ptr`.
-    *  For example, `id` argument may have shorter lifetime and thus should not be returned!
-    *  The result of `find_tile_with_season` is OK to be returned, because it's guaranteed to
-    *  return pointers to the keys and values that are stored inside the `tileset_ptr`.
-    */
-    // Try the variant first
-    if( !variant.empty() ) {
-        if( category != TILE_CATEGORY::VEHICLE_PART ) {
-            //indicates a sprite suffix
-            if( variant[0] == '_' ) {
-                if( auto ret = find_tile_with_season( id + variant ) ) {
-                    return ret; // with variant
-                }
-            } else if( auto ret = find_tile_with_season( id + "_var_" + variant ) ) {
-                return ret; // with variant
-            }
-        } else {
-            std::string_view variant_chunk = variant;
-            while( !variant_chunk.empty() ) {
-                if( auto ret = find_tile_with_season( id + "_" + std::string( variant_chunk ) ) ) {
-                    return ret; // with variant, but vehicle parts have weird variant suffixes
-                }
-                const size_t next_start = variant_chunk.rfind( '_' );
-                if( next_start != std::string::npos ) {
-                    variant_chunk = variant_chunk.substr( 0, next_start );
-                } else {
-                    variant_chunk = variant_chunk.substr( 0, 0 );
-                }
-            }
-        }
-    }
-    if( auto ret = find_tile_with_season( id ) ) {
-        return ret; // no variant
-    }
-
-    // Then do looks_like
-    switch( category ) {
-        case TILE_CATEGORY::FURNITURE:
-            return find_tile_looks_like_by_string_id<furn_t>( id, category,
-                    looks_like_jumps_limit );
-        case TILE_CATEGORY::TERRAIN:
-            return find_tile_looks_like_by_string_id<ter_t>( id, category, looks_like_jumps_limit );
-        case TILE_CATEGORY::FIELD:
-            return find_tile_looks_like_by_string_id<field_type>( id, category,
-                    looks_like_jumps_limit );
-        case TILE_CATEGORY::MONSTER:
-            return find_tile_looks_like_by_string_id<mtype>( id, category, looks_like_jumps_limit );
-        case TILE_CATEGORY::OVERMAP_VISION_LEVEL: {
-            size_t id_end = id.find( '$' );
-            om_vision_level level = io::string_to_enum<om_vision_level>( id.substr( id_end + 1 ) );
-            oter_vision_id vision_id( id.substr( 0, id_end ) );
-            // This shouldn't fail, but better safe than sorry
-            const oter_vision::level *viewed = vision_id->viewed( level );
-            if( viewed != nullptr && !viewed->looks_like.empty() ) {
-                return find_tile_looks_like( viewed->looks_like, TILE_CATEGORY::OVERMAP_TERRAIN, variant,
-                                             looks_like_jumps_limit - 1 );
-            }
-            return std::nullopt;
-        }
-        case TILE_CATEGORY::OVERMAP_TERRAIN: {
-            std::optional<tile_lookup_res> ret;
-            const oter_type_str_id type_tmp( id );
-            if( !type_tmp.is_valid() ) {
-                return ret;
-            }
-
-            int jump_limit = looks_like_jumps_limit;
-            for( const std::string &looks_like : type_tmp.obj().looks_like ) {
-
-                ret = find_tile_looks_like( looks_like, category, "", jump_limit - 1 );
-                if( ret.has_value() ) {
-                    return ret;
-                }
-
-                jump_limit--;
-                if( jump_limit <= 0 ) {
-                    return ret;
-                }
-            }
-
-            return ret;
-        }
-
-        case TILE_CATEGORY::VEHICLE_PART: {
-            const int lljl = looks_like_jumps_limit - 1;
-            // vehicle parts start with vp_ for their tiles, but not their IDs
-            const vpart_id vpid( id.substr( 3 ) );
-            if( !vpid.is_valid() ) {
-                return std::nullopt;
-            }
-            const std::string &looks_like = vpid->looks_like;
-            if( looks_like.empty() ) {
-                return std::nullopt;
-            }
-            if( auto ret = find_tile_looks_like( "vp_" + looks_like, category, variant, lljl ) ) {
-                return ret;
-            }
-            if( auto ret = find_tile_looks_like( looks_like, category, variant, lljl ) ) {
-                return ret;
-            }
-            if( auto ret = find_tile_looks_like( looks_like, TILE_CATEGORY::FURNITURE, variant, lljl ) ) {
-                return ret;
-            }
-            return std::nullopt;
-        }
-
-        case TILE_CATEGORY::ITEM: {
-            if( !item::type_is_defined( itype_id( id ) ) ) {
-                if( string_starts_with( id, "corpse_" ) ) {
-                    return find_tile_looks_like(
-                               "corpse", category, "", looks_like_jumps_limit - 1
-                           );
-                }
-                return std::nullopt;
-            }
-            const itype *new_it = item::find_type( itype_id( id ) );
-            return find_tile_looks_like( new_it->looks_like.str(), category, "",
-                                         looks_like_jumps_limit - 1 );
-        }
-
-        default:
-            return std::nullopt;
-    }
+    // Bullet, overlay and overmap queries outside a terrain frame observe the
+    // current bundle/season and never inherit a previous frame's cached miss.
+    tile_lookup_frame query( tileset_ptr, season_of_year( calendar::turn ), false );
+    return query.find( id, category, variant, looks_like_jumps_limit );
 }
 
 bool cata_tiles::find_overlay_looks_like( const bool male, const std::string &overlay,

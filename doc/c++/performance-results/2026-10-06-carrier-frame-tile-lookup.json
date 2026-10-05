@@ -1,0 +1,321 @@
+{
+  "schema": 1,
+  "batch": "frame-tile-lookup",
+  "saved_utc": "2026-10-05T20:54:08.651226+00:00",
+  "baseline_commit": "b8e22cd7cdd2c6bd35cf69099bf4b16c341b1374",
+  "purpose": "Extract tileset query and native looks_like fallback responsibility from the SDL renderer; pin the loaded bundle and season and retain successful/negative results only for one terrain frame.",
+  "implementation": {
+    "module": "src/tile_lookup.h + src/tile_lookup.cpp",
+    "ownership": "Terrain draw owns a stack tile_lookup_frame; renderer borrows it through a restored scope pointer. Results expose const metadata and borrow from the pinned bundle.",
+    "cache_key": "Owned raw id plus category, variant, fallback depth. Bundle/season are fixed for that frame. Recursive insertions reacquire map entries; first entry is inline.",
+    "other_queries": "Effects and overmap queries outside a terrain frame retain uncached resolution.",
+    "fallback_parity": "Original fallback body equal after method renames and comments; same variant, season, vehicle suffix, category and depth rules.",
+    "threading_boundary": "Production lookups remain on the owner thread. Native fallback reads loaded registries. Test workers use only two independent CPU-only metadata bundles; this is not live-world worker acceptance.",
+    "remaining_coupling": "Metadata types are still declared in cata_tiles.h; this batch separates query implementation without claiming a backend-independent render pipeline."
+  },
+  "speedup_claim": {
+    "whole_game": false,
+    "stable_overall_render_improvement_proven": false,
+    "classification": "Structural refactoring with frame query reuse; small observed render difference needs more repetitions before a stable latency claim.",
+    "fresh_control_mean_draw_ms": 57.6424360625,
+    "candidate_mean_draw_ms": 56.85975195,
+    "observed_mean_draw_reduction_percent": 1.3578262231168647,
+    "observed_median_draw_reduction_percent": 0.9126760680703283,
+    "initial_comparison_reduction_percent": 9.316580236864802,
+    "initial_estimate_policy": "Superseded for the benefit conclusion by the fresh old-binary control. One candidate capture and two old-binary captures do not establish statistical confidence."
+  },
+  "fixture": {
+    "world": "Damon",
+    "scenario": "Aircraft carrier",
+    "player": "Mitchel Rice",
+    "tileset": "UndeadPeople",
+    "backend": "SDL2 Tiles + sound, x11, hardware OpenGL AMD Radeon renoir",
+    "fullscreen_pixels": [
+      2880,
+      1800
+    ],
+    "tile_zoom": 4,
+    "safe_mode": false,
+    "debug_speed": 1100,
+    "seed": "CCB-carrier-20261005",
+    "initial_active_monsters": 759,
+    "final_active_monsters": 832,
+    "final_turn": 5212818,
+    "final_player_location": [
+      5495,
+      7454,
+      2
+    ],
+    "normal_keys": "88888888888888888888222222222222222222228888888888888888888822222222222222222222",
+    "expected_actions": 80,
+    "cadence_s": 0.12,
+    "isolation": "Fresh immutable origin copy for each accepted run; user source world unchanged.",
+    "origin": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/frame-tile-lookup-20261006/origin/user"
+  },
+  "binaries": {
+    "baseline-coalesced": "7b616ceda23bd5a94efca8b8af78b7dcc89b22dbb374766b72fecd9c749128f6",
+    "frame-lookup": "fb498ab7ec1ede89685625698cfb00d43cc6f7269d3950c9b700897fed90e5b4"
+  },
+  "validation": {
+    "tiles_build": {
+      "command": [
+        "cmake",
+        "--build",
+        "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/out/build/ccb-tracy-tiles",
+        "--config",
+        "Release",
+        "--target",
+        "cataclysm-tiles",
+        "--parallel",
+        "2"
+      ],
+      "exit": 0,
+      "elapsed_s": 1563.8842707170115
+    },
+    "focused_native_build": {
+      "command": [
+        "python3",
+        "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/frame-tile-lookup-20261006/build-focused-tests.py"
+      ],
+      "exit": 0,
+      "elapsed_s": 45.349298139015445
+    },
+    "focused_native_tests": {
+      "command": [
+        "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/frame-tile-lookup-20261006/lookup-cata_test-tiles",
+        "[tile_lookup],[map_memory]~[benchmark],[vision][map][cache]",
+        "--rng-seed",
+        "20261006",
+        "--warn",
+        "NoTests",
+        "--user-dir",
+        "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/frame-tile-lookup-20261006/test-user/"
+      ],
+      "env": {
+        "SDL_VIDEODRIVER": "dummy",
+        "SDL_AUDIODRIVER": "dummy"
+      },
+      "exit": 0,
+      "elapsed_s": 23.861597226990853,
+      "cases": 26,
+      "assertions": 1756
+    },
+    "profiling_disabled_syntax": [
+      {
+        "source": "tile_lookup.cpp",
+        "tiles": true,
+        "exit": 0,
+        "elapsed_s": 5.523088273010217
+      },
+      {
+        "source": "cata_tiles.cpp",
+        "tiles": true,
+        "exit": 0,
+        "elapsed_s": 8.62726799500524
+      },
+      {
+        "source": "tile_lookup.cpp",
+        "tiles": false,
+        "exit": 0,
+        "elapsed_s": 0.02013349998742342
+      }
+    ],
+    "cpp_format": {
+      "command": [
+        "astyle",
+        "--options=.astylerc",
+        "--dry-run",
+        "src/tile_lookup.h",
+        "src/tile_lookup.cpp",
+        "tests/tile_lookup_test.cpp"
+      ],
+      "exit": 0,
+      "formatted": 0,
+      "unchanged": 3,
+      "scope": "Latest actual new source files; unchanged modified renderer snippets reuse prepared format-result.json."
+    },
+    "fallback_body_parity": {
+      "baseline": "b8e22cd7cdd2c6bd35cf69099bf4b16c341b1374",
+      "fallback_body_equal_after_method_renames_and_comments": true,
+      "before_normalized_chars": 2607,
+      "after_normalized_chars": 2607
+    },
+    "build_metadata_classifier_cases": 4,
+    "reused_action_phase_parser_tests": {
+      "cases": 12,
+      "source_change": false,
+      "evidence": "Prior accepted batch19; actual eight-family current captures validated once each."
+    },
+    "skipped": "Full CI, cross-platform builds, terminal gameplay, multiplayer sessions, and normal-speed AI acceptance are outside this render/query batch."
+  },
+  "tracy": {
+    "collectors": "Separate 30s Tracy-only runs; no compilation or perf during collection. Eight unwrapped families validate the fixed80 action sequence and complete presentation tail.",
+    "fresh_control": {
+      "action_count": 80,
+      "window_ms": 9633.046561,
+      "zones": {
+        "tiles.draw": {
+          "calls": 80,
+          "total_ms": 4611.394885,
+          "max": 68.984622,
+          "mean": 57.6424360625,
+          "median": 57.1432755,
+          "p95": 62.974303
+        },
+        "tiles.layer_loop": {
+          "calls": 80,
+          "total_ms": 3192.404589,
+          "max": 48.391001,
+          "mean": 39.905057362499996,
+          "median": 39.604623,
+          "p95": 42.729197
+        },
+        "tiles.draw_cache_rebuild": {
+          "calls": 80,
+          "total_ms": 1061.082139,
+          "max": 17.86182,
+          "mean": 13.263526737500001,
+          "median": 13.002282,
+          "p95": 15.066479
+        }
+      }
+    },
+    "candidate": {
+      "action_count": 80,
+      "window_ms": 9625.168177,
+      "zones": {
+        "tiles.draw": {
+          "calls": 80,
+          "total_ms": 4548.780156,
+          "max": 64.532654,
+          "mean": 56.85975195,
+          "median": 56.6217425,
+          "p95": 61.208489
+        },
+        "tiles.layer_loop": {
+          "calls": 80,
+          "total_ms": 3086.087343,
+          "max": 45.490772,
+          "mean": 38.576091787500005,
+          "median": 38.40814,
+          "p95": 41.542869
+        },
+        "tiles.draw_cache_rebuild": {
+          "calls": 80,
+          "total_ms": 1103.144249,
+          "max": 17.061427,
+          "mean": 13.7893031125,
+          "median": 13.708143,
+          "p95": 15.271389
+        }
+      }
+    },
+    "original_baseline_mean_draw_ms": 62.701375950000006,
+    "query_reuse": {
+      "accepted_complete_frames": 80,
+      "requests": 9659526,
+      "cache_hits": 9652545,
+      "hit_ratio": 0.999277293730562,
+      "median_ids_per_frame": 77.0,
+      "max_ids_per_frame": 79,
+      "counter_scope": "Includes recursive native fallback queries; cached misses count as hits."
+    },
+    "limits": "Per-frame counters include recursive fallback requests and cached misses. Nested elapsed zones overlap; input cadence sets a 9.6s floor and neither phase totals nor input-window time are whole-game FPS."
+  },
+  "perf": {
+    "settings": "All process threads; cycles:u,99Hz,64 pages,32KiB DWARF. Record33s/stat35s; active input acknowledgements plus0.25s tail analyzed separately from idle collector tail.",
+    "before": {
+      "all_record_samples": 1300,
+      "active_window_samples": 729,
+      "input_duration_s": 9.656327730976045,
+      "sampled_cycle_period": 14959520231,
+      "unresolved_leaf_cycle_percent": 32.844610750404755,
+      "chain_reached_main_cycle_percent": 94.30679539952688,
+      "tracked_inclusive_percent": {
+        "cata_tiles::draw": 63.54046692154241,
+        "cata_tiles::draw_from_id_string_internal": 34.440685492863516,
+        "pixel_minimap::render": 10.481954854077433,
+        "monmove": 0.7508409779562268,
+        "map::update_visibility_cache": 4.936122526642278,
+        "map::update_map_memory": 6.625291116931409
+      }
+    },
+    "after": {
+      "all_record_samples": 1213,
+      "active_window_samples": 638,
+      "input_duration_s": 9.65137814701302,
+      "sampled_cycle_period": 15223615683,
+      "unresolved_leaf_cycle_percent": 26.432379631689628,
+      "chain_reached_main_cycle_percent": 93.37030603625229,
+      "tracked_inclusive_percent": {
+        "cata_tiles::draw": 62.281221494495604,
+        "cata_tiles::draw_from_id_string_internal": 27.232683321279296,
+        "pixel_minimap::render": 7.659246701176724,
+        "monmove": 1.063822960145072,
+        "map::update_visibility_cache": 7.0459363881460115,
+        "map::update_map_memory": 7.036461273757708
+      }
+    },
+    "query_inclusive_weighted_percent_before": 5.350306865733601,
+    "query_inclusive_weighted_percent_after": 2.4385510888491075,
+    "main_thread_cycle_percent_before": 96.324568097708,
+    "main_thread_cycle_percent_after": 94.81681283585515,
+    "record_script_sample_counts_match": true,
+    "loss_warning_observed": false,
+    "limits": "Function proportions overlap and have incomplete symbol/unwind coverage. They are not absolute speedup; total sampled cycle period did not decrease. Zero sampled resolver rows do not mean zero work."
+  },
+  "native_save_comparison": {
+    "runs": {
+      "accepted-tracy": {
+        "accepted": true,
+        "world_files": 48,
+        "byte_identical_files": 46,
+        "classified_differences": "Player save: real wall time and unordered learned recipes; .pt matches actual wall time. Exact build-version lifecycle provenance also classified only for old/new version comparison."
+      },
+      "accepted-perf": {
+        "accepted": true,
+        "world_files": 48,
+        "byte_identical_files": 46,
+        "classified_differences": "Player save: real wall time and unordered learned recipes; .pt matches actual wall time. Exact build-version lifecycle provenance also classified only for old/new version comparison."
+      },
+      "accepted-control-tracy": {
+        "accepted": true,
+        "world_files": 48,
+        "byte_identical_files": 46,
+        "classified_differences": "Player save: real wall time and unordered learned recipes; .pt matches actual wall time. Exact build-version lifecycle provenance also classified only for old/new version comparison."
+      }
+    },
+    "final_turn": 5212818,
+    "final_monsters": 832,
+    "final_location": [
+      5495,
+      7454,
+      2
+    ],
+    "comparison": "Active native zzip footer and compressed payload checksums verified; map/map-memory files byte-identical, object order ignored only where defined and arrays strict.",
+    "build_metadata": "Only exact 2026-10-05 to2026-10-06 getVersionString fields in game_begin/game_load classified, with unchanged event counts and simulation times; counts/time/unknown version negative cases rejected. Two candidate runs and old-control/old-baseline required no version exception.",
+    "origin_and_user_source_world": {
+      "origin": {
+        "unchanged_manifest_files": 48
+      },
+      "source_userdir": {
+        "unchanged_manifest_files": 48
+      }
+    }
+  },
+  "sources_sha256": {
+    "src/cata_tiles.cpp": "3048afa5bdeb3cdd99c88517eeb8d2c644b89f4e3426f86aa9e0d0cf0baeb948",
+    "src/cata_tiles.h": "396ac8bfd8a8e4d1952c2527285ade1906e1cee79dfc2ec000e23d1f389161ee",
+    "src/tile_lookup.h": "171452c2f06e68c54e627b31f8894d30a614345c9f50d9bba1db490e5644601d",
+    "src/tile_lookup.cpp": "112fc72fba822d667ab20dad65357ed026de3aba69be01a6be3e6bd6e409525e",
+    "tests/tile_lookup_test.cpp": "81d16ac1009491abd2101bf8adbe2fdd5665d2dec7e511b21dc8c801f67b0409"
+  },
+  "evidence_root": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/frame-tile-lookup-20261006",
+  "evidence_manifest": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/frame-tile-lookup-20261006/evidence-sha256.json",
+  "documentation_impact": "Developer performance record and source ownership comments; no player or Lua authoring contract changes.",
+  "related_ccb_docs_pr": null,
+  "affected_documentation_ids": [],
+  "generated_reference_impact": "None",
+  "next_exact_search": "rg -n 'do_turn|simulate_turn_suffix|monmove|debug_speed' src/do_turn.cpp src/monmove.cpp .ccb-performance-tiles-evidence/frame-tile-lookup-20261006/measure-carrier.py",
+  "next_exact_action": "Use a new isolated carrier clone to establish a short wait/normal-turn cost fixture with exact completed turn count and safe stop on menus/death. Separate perf and Tracy to profile monster perception/pathfinding and map work; choose a read-only computation boundary for any worker change rather than inferring AI needs from the debug-speed1100 render fixture."
+}
