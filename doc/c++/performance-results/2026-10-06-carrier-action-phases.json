@@ -1,0 +1,435 @@
+{
+  "schema": 1,
+  "batch": "carrier-action-simulation-presentation-boundaries",
+  "saved_utc": "2026-10-05T16:56:09.820963+00:00",
+  "baseline_commit": "5a88cbca9b2e0d5d2b2fc5ca4b9bacd2f5b0c63e",
+  "purpose": "Observe existing simulation and presentation boundaries for a fixed gameplay workload before changing rendering ownership.",
+  "implementation": {
+    "sources": [
+      "src/handle_action.cpp",
+      "src/do_turn.cpp",
+      "tools/perf/analyze_action_phases.py",
+      "tools/perf/test_analyze_action_phases.py"
+    ],
+    "profiling_zones": [
+      "input.acquire",
+      "game.action_execute",
+      "game.mid_step"
+    ],
+    "action_metadata": "resolved action text and enum plot after non-action input is rejected",
+    "simulation_logic_changed": false,
+    "workers_added": 0
+  },
+  "speedup_claim": {
+    "proven": false,
+    "percent": null,
+    "reason": "Observability and analysis batch; no performance optimization or matched-settings before-after speed claim."
+  },
+  "fixture": {
+    "world": "Damon",
+    "scenario": "Aircraft carrier",
+    "player": "Mitchel Rice",
+    "tileset": "UndeadPeople",
+    "backend": "SDL2 Tiles + sound, x11, hardware OpenGL AMD Radeon renoir",
+    "fullscreen_pixels": [
+      2880,
+      1800
+    ],
+    "tile_zoom": 4,
+    "safe_mode": false,
+    "debug_speed": 1100,
+    "seed": "CCB-carrier-20261005",
+    "initial_active_monsters": 759,
+    "final_active_monsters": 832,
+    "final_turn": 5212818,
+    "final_player_location": [
+      5495,
+      7454,
+      2
+    ],
+    "normal_keys": "88888888888888888888222222222222222222228888888888888888888822222222222222222222",
+    "expected_actions": 80,
+    "cadence_s": 0.12,
+    "isolation": "Fresh immutable origin copy for each accepted run; user source world unchanged."
+  },
+  "binaries": {
+    "baseline": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/melee-scheduling-20261005/binaries/melee-scheduling",
+    "after": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/carrier-phases-20261005/binaries/action-phases",
+    "after_sha256": "2c64df9e7e81f4be13e1e38107748b28d6fb95858a686e4e9433611a020b620e",
+    "baseline_sha256": "160a617581b72b5c33c7eeec7708aeba889ae6ca6d877f1d48d6e7bb3b6770c1"
+  },
+  "validation": {
+    "tiles_build": {
+      "command": [
+        "cmake",
+        "--build",
+        "out/build/ccb-tracy-tiles",
+        "--config",
+        "Release",
+        "--target",
+        "cataclysm-tiles",
+        "--parallel",
+        "2"
+      ],
+      "exit": 0,
+      "elapsed_s": 22.138177633285522
+    },
+    "tracy_disabled_syntax": [
+      {
+        "source": "handle_action.cpp",
+        "exit": 0,
+        "elapsed_s": 9.728480696998304
+      },
+      {
+        "source": "do_turn.cpp",
+        "exit": 0,
+        "elapsed_s": 7.349046383984387
+      }
+    ],
+    "cpp_format": {
+      "command": [
+        "astyle",
+        "--options=.astylerc",
+        "--dry-run",
+        ".ccb-performance-tiles-evidence/carrier-phases-20261005/input-style.cpp",
+        ".ccb-performance-tiles-evidence/carrier-phases-20261005/action-style.cpp",
+        ".ccb-performance-tiles-evidence/carrier-phases-20261005/mid-step-style.cpp"
+      ],
+      "exit": 0,
+      "scope": "modified profiling blocks only, not whole-file formatting or broad CI"
+    },
+    "python_tests": {
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tools/perf",
+        "-p",
+        "test_*.py"
+      ],
+      "cases": 9,
+      "exit": 0,
+      "scope": "Parser, exact sequence selection, complete presentation tail, workers, partial intervals and overlapping scopes."
+    },
+    "synthetic_cli": {
+      "exit": 0,
+      "actions": 2,
+      "window_ns": [
+        1000,
+        1065
+      ]
+    },
+    "reuse_policy": "Build, disabled syntax, format and tool-test evidence reused after verifying all four relevant source SHA256 values are unchanged.",
+    "actual_gameplay": [
+      {
+        "trial": "phase-tracy-only",
+        "acknowledged_actions": 80,
+        "collector_exit": 0
+      },
+      {
+        "trial": "phase-after-acceptance",
+        "acknowledged_actions": 80,
+        "collector_exit": 0
+      },
+      {
+        "trial": "phase-after-perf",
+        "acknowledged_actions": 80,
+        "collector_exit": 0
+      },
+      {
+        "trial": "phase-after-perf-safe",
+        "acknowledged_actions": 80,
+        "collector_exit": 0
+      }
+    ],
+    "skipped": [
+      "Broad native suite and full CI: no simulation statements or contracts changed; real gameplay save comparisons and focused tool tests exercised this batch.",
+      "Full Tracy-disabled linked build: two affected translation units checked with matching flags and profiling disabled.",
+      "SDL3, Windows and multiplayer timing acceptance.",
+      "GPU frame timings, FPS, off-CPU waiting and audible gameplay sound acceptance."
+    ],
+    "documented_real_csv_cli": {
+      "exit": 0,
+      "result_matches_accepted_analysis": true,
+      "actions": 80
+    }
+  },
+  "tracy": {
+    "version": "0.14.1",
+    "collector": "Tracy alone; separate from perf",
+    "accepted_after_trial": "phase-after-acceptance",
+    "capture_seconds": 30,
+    "analysis": {
+      "action_count": 80,
+      "action_family": [
+        "DOWN",
+        "UP"
+      ],
+      "limits": [
+        "Elapsed scope time includes scheduler delays; this is not CPU utilization or FPS.",
+        "Input acquisition includes input waiting, animations, redraws and multiplayer polling.",
+        "Action execution can include menus; the fixed action sequence defines this report's scope.",
+        "Nested draw/layer/cache/monster rows overlap parent phases; do not add their totals.",
+        "Startup and idle tail are excluded; partial boundary scopes are clipped.",
+        "Tracy thread identifiers are not operating-system thread identifiers."
+      ],
+      "outside_named_phases_elapsed_ns": 69528812,
+      "phase_covered_elapsed_ns": 13053219180,
+      "phase_overlap_ns": 0,
+      "tiles_draw_inside_phase_ns": {
+        "game.action_execute": 0,
+        "game.mid_step": 4421480483,
+        "input.acquire": 4495544811,
+        "simulate_turn_suffix": 0
+      },
+      "tiles_draw_outside_named_phases_ns": 0,
+      "tracy_thread_id": "2",
+      "window_elapsed_ms": 13122.747992,
+      "window_ns": [
+        549189884789,
+        562312632781
+      ],
+      "window_policy": "first selected action start through first completed mid-step after last action",
+      "zones": {
+        "game.action_execute": {
+          "complete_call_ms": {
+            "max": 151.392272,
+            "mean": 3.368661875,
+            "median": 0.3959515,
+            "p95": 0.695052
+          },
+          "complete_calls": 80,
+          "overlapping_calls": 80,
+          "union_elapsed_ns": 269492950
+        },
+        "game.mid_step": {
+          "complete_call_ms": {
+            "max": 101.884292,
+            "mean": 81.56030995,
+            "median": 84.875516,
+            "p95": 96.539992
+          },
+          "complete_calls": 80,
+          "overlapping_calls": 80,
+          "union_elapsed_ns": 6524824796
+        },
+        "input.acquire": {
+          "complete_call_ms": {
+            "max": 85.615898,
+            "mean": 75.81285759493672,
+            "median": 75.763522,
+            "p95": 82.240765
+          },
+          "complete_calls": 79,
+          "overlapping_calls": 79,
+          "union_elapsed_ns": 5989215750
+        },
+        "monmove": {
+          "complete_call_ms": {
+            "max": 42.727589,
+            "mean": 14.522843285714286,
+            "median": 9.797864,
+            "p95": 13.72467
+          },
+          "complete_calls": 7,
+          "overlapping_calls": 7,
+          "union_elapsed_ns": 101659903
+        },
+        "simulate_turn_suffix": {
+          "complete_call_ms": {
+            "max": 58.251909,
+            "mean": 38.52652628571428,
+            "median": 45.174863,
+            "p95": 57.189189
+          },
+          "complete_calls": 7,
+          "overlapping_calls": 7,
+          "union_elapsed_ns": 269685684
+        },
+        "tiles.draw": {
+          "complete_call_ms": {
+            "max": 68.273121,
+            "mean": 56.08192008805031,
+            "median": 56.770184,
+            "p95": 63.176614
+          },
+          "complete_calls": 159,
+          "overlapping_calls": 159,
+          "union_elapsed_ns": 8917025294
+        },
+        "tiles.draw_cache_rebuild": {
+          "complete_call_ms": {
+            "max": 17.153072,
+            "mean": 13.699526865248227,
+            "median": 13.551244,
+            "p95": 15.743651
+          },
+          "complete_calls": 141,
+          "overlapping_calls": 141,
+          "union_elapsed_ns": 1931633288
+        },
+        "tiles.layer_loop": {
+          "complete_call_ms": {
+            "max": 47.900148,
+            "mean": 39.4851254654088,
+            "median": 39.120842,
+            "p95": 43.462836
+          },
+          "complete_calls": 159,
+          "overlapping_calls": 159,
+          "union_elapsed_ns": 6278134949
+        }
+      }
+    },
+    "command": [
+      "python3",
+      "tools/perf/analyze_action_phases.py",
+      "--actions",
+      "UP,DOWN",
+      "--sequence",
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/carrier-phases-20261005/expected-actions.json",
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/carrier-phases-20261005/accepted-tracy/execute.csv",
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/carrier-phases-20261005/accepted-tracy/input.csv",
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/carrier-phases-20261005/accepted-tracy/mid-step.csv",
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/carrier-phases-20261005/accepted-tracy/suffix.csv",
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/carrier-phases-20261005/accepted-tracy/tiles.csv",
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/carrier-phases-20261005/accepted-tracy/layers.csv",
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/carrier-phases-20261005/accepted-tracy/monsters.csv"
+    ],
+    "command_note": "Seven unwrapped CPU-zone exports. The tiles.draw filter also captures tiles.draw_cache_rebuild. zones.csv is an aggregate diagnostic and is excluded from the analyzer."
+  },
+  "perf": {
+    "accepted_trial": "phase-after-perf-safe",
+    "collector": "perf stat plus perf record, no Tracy capture process",
+    "frequency_hz": 99,
+    "dwarf_stack_bytes": 32768,
+    "mmap_pages": 64,
+    "seconds": 35,
+    "record_seconds": 33,
+    "scope": "Process attachment with -p: all OS threads; per-TID attribution is verified against export headers.",
+    "lost_event_warning": false,
+    "all_samples": 1552,
+    "active_window_samples": 1041,
+    "input_duration_s": 12.203995632997248,
+    "window_policy": "from input start through last acknowledgement plus 0.25s action tail; excludes startup and long idle collector tail",
+    "main_thread_weighted_cycle_percent": 93.69451621723788,
+    "tracked_inclusive_percent": {
+      "prepare_sprite_geometry": 1.114289756550278,
+      "cata_tiles::draw": 66.82032072363691,
+      "cata_tiles::draw_terrain": 14.147788134795785,
+      "cata_tiles::draw_from_id_string_internal": 36.20306441809294,
+      "cata_tiles::draw_sprite_at": 25.901864452517774,
+      "pixel_minimap::render": 8.266164006554197,
+      "monmove": 0.3807308671845181,
+      "monster::plan": 0.0,
+      "creature_tracker::precompute_all_zones": 0.0,
+      "creature_tracker::flood_fill_zone": 0.562198994870812,
+      "creature_tracker::rebuild_passability_bitmap": 0.0,
+      "game::update_map": 1.8463705331268494,
+      "map::shift": 1.6733074817249742,
+      "map::loadn": 0.8778334485976022,
+      "mapbuffer::lookup_submap": 0.0,
+      "map::generate": 0.6978772726270237,
+      "map::build_map_cache": 5.120595621033206,
+      "map::generate_lightmap": 0.8225599146049213,
+      "map::update_visibility_cache": 2.633334447281814,
+      "map::update_map_memory": 0.9400045861174235,
+      "map::build_sunlight_cache": 0.11922162010725496,
+      "map::process_items": 0.0,
+      "map::process_fields": 0.0,
+      "game::simulate_turn_suffix": 0.7973727687080556,
+      "game::do_avatar_action_loop": 92.01574451922951,
+      "game::handle_action": 43.83608779474236
+    },
+    "unresolved_leaf_cycle_percent": 37.86213213447853,
+    "scope_limits": [
+      "Percentages are sampled cycle weights within the active input window, not CPU utilization or FPS.",
+      "Inclusive call paths overlap and cannot be summed; zero or missing rows do not prove zero cost.",
+      "Input acknowledgement is not frame completion; the perf window uses a 0.25s tail. Tracy uses the actual completed mid-step boundary.",
+      "About38percent of leaf cycle weight lacks a resolved symbol; native renderer ancestry still appears in sampled call chains.",
+      "User-only context-switch and migration counters reporting zero do not establish absence of scheduling.",
+      "Hardware counters were multiplexed; aggregate35s totals include idle rendering and are not a speed comparison."
+    ]
+  },
+  "native_save_comparison": {
+    "before": "phase-tracy-only",
+    "accepted_after": [
+      "phase-after-acceptance",
+      "phase-after-perf",
+      "phase-after-perf-safe"
+    ],
+    "player_semantic_equal": true,
+    "normalizations": [
+      "Known unordered learned_recipes membership compared as a1127-element multiset.",
+      "Only time_since_load and total_time_played save-event wall-time fields excluded; .pt independently matches total_time_played."
+    ],
+    "world_files": 48,
+    "tracy_after": {
+      "byte_identical_files": 37,
+      "different_files": 11,
+      "map_archives_with_byte_differences": 7,
+      "all138active_map_entries_json_equal": true,
+      "dictionary_sha256": "46bf73b3f5d7e95ba965a8aba0fca8d1f6c4777e20556f560679d1a71fd326cb",
+      "checksums": "Every changed archive footer and each active compressed payload XXH64 verified.",
+      "comparison": "JSON object member order ignored; all map arrays strict. Annotation and uistate JSON also equal."
+    },
+    "perf_after": {
+      "byte_identical_files": 46,
+      "different_files": 2,
+      "differences": "Player wall-time event fields and .pt only."
+    },
+    "original_integrity": {
+      "source_userdir": {
+        "files_checked": 48,
+        "changed_files": []
+      },
+      "origin": {
+        "files_checked": 48,
+        "changed_files": []
+      }
+    }
+  },
+  "failed_or_diagnostic_attempts": [
+    {
+      "trial": "phase-before",
+      "reason": "Combined perf/Tracy capture CSV reader did not complete; EOF/decompression worker diagnosis recorded locally; file not accepted for zone timing. Root corruption cause unproven.",
+      "workaround": "Separate collector runs; official CSV exporter completes in under one second for accepted captures."
+    },
+    {
+      "trial": "phase-after",
+      "reason": "Startup-only instance stopped during permission-service timeouts; no fixed workload; excluded."
+    },
+    {
+      "trial": "phase-after-perf",
+      "reason": "397Hz with64-page ring lost3samples during the active window; retained as diagnostic, not final baseline."
+    },
+    {
+      "trial": "phase-after-perf-buffered",
+      "reason": "8MiB ring allocation rejected by perf locked-memory limit; one movement was received before detection. Copy stopped without save; excluded.",
+      "workaround": "Fresh fixture at99Hz with permitted64-page ring; no kernel settings changed."
+    }
+  ],
+  "observations": {
+    "draws_per80actions": 159,
+    "cache_rebuilds_per80actions": 141,
+    "elapsed_draw_ms": 8917.025294,
+    "elapsed_suffix_ms": 269.685684,
+    "action_execute_median_ms": 0.3959515,
+    "draw_inside_input_ms": 4495.544811,
+    "draw_inside_mid_step_ms": 4421.480483,
+    "interpretation": "This fixed zoomed-out carrier workload is dominated by repeated tile presentation. Inspect input and mid-step draw scheduling and cache invalidation before introducing simulation workers.",
+    "boundary": "Elapsed draw/cache/layer/monster rows are nested; do not add their totals to phase totals."
+  },
+  "sources_sha256": {
+    "src/handle_action.cpp": "b161b90a56fc49a4d5afeac6478ffd8979762963bc8428d2a81ca3fc059a6e6d",
+    "src/do_turn.cpp": "5f9b3468f345807e9df2ab8c0930678948d038e8af3176162778b397a68f5faf",
+    "tools/perf/analyze_action_phases.py": "a7b903ce275ff6c025ef12341f53e763fde95543db7e91812fe8977326764f35",
+    "tools/perf/test_analyze_action_phases.py": "05a759aa2fcd66054f8924142635a1bb9f873b3dacc333aeba87017d9ab9b23b"
+  },
+  "evidence_root": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/carrier-phases-20261005",
+  "evidence_manifest": "accepted-evidence-manifest.json",
+  "next_exact_search": "rg -n 'get_player_input|set_draw_cache_dirty|render_mid_step|redraw_invalidated|ui_manager::redraw' src/handle_action.cpp src/do_turn.cpp src/cata_tiles.cpp src/ui_manager.cpp",
+  "next_exact_action": "Audit the authoritative input and mid-step redraw lifecycle plus draw-cache invalidation callers. Establish which second draw/cache rebuild can be skipped without losing animations, weather, visibility/map memory, menus or multiplayer polling; add a focused regression at that ownership boundary before changing it."
+}

@@ -1201,6 +1201,8 @@ void game::present_turn()
 
 void game::render_mid_step( avatar &u, map &m, tripoint_bub_ms &last_memorized_pos )
 {
+    // Includes visibility and map-memory maintenance as well as optional drawing.
+    CATA_PROFILE_SCOPE_NAMED( "game.mid_step" );
     // Visibility cache must stay fresh even when the render is skipped:
     // it is consumed by update_map_memory to decide which tiles were seen.
     m.update_visibility_cache( u.posz() );
