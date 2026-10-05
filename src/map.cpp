@@ -69,6 +69,7 @@
 #include "magic_ter_furn_transform.h"
 #include "map_accessories.h"
 #include "map_iterator.h"
+#include "map_visibility.h"
 #include "map_memory.h"
 #include "map_selector.h"
 #include "mapbuffer.h"
@@ -8768,19 +8769,8 @@ void map::update_visibility_cache( const int zlev )
     if( rebuild_level ) {
         cata::mdarray<int, point_bub_sm> sm_squares_seen = {};
 
-        auto &visibility_cache = get_cache( zlev ).visibility_cache;
-
-        tripoint_bub_ms p;
-        p.z() = zlev;
-        int &x = p.x();
-        int &y = p.y();
-        for( x = 0; x < MAPSIZE_X; x++ ) {
-            for( y = 0; y < MAPSIZE_Y; y++ ) {
-                lit_level ll = apparent_light_at( p, visibility_variables_cache );
-                visibility_cache[x][y] = ll;
-                sm_squares_seen[ x / SEEX ][ y / SEEY ] += ( ll == lit_level::BRIGHT || ll == lit_level::LIT );
-            }
-        }
+        rebuild_visibility_cache_grid( *this, get_cache( zlev ), zlev,
+                                       visibility_variables_cache, sm_squares_seen );
 
         for( int gridx = 0; gridx < my_MAPSIZE; gridx++ ) {
             for( int gridy = 0; gridy < my_MAPSIZE; gridy++ ) {

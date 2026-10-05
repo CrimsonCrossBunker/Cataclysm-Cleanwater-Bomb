@@ -16,6 +16,7 @@
 #include "creature.h"
 #include "enums.h"
 #include "game.h"
+#include "game_constants.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
@@ -528,6 +529,87 @@ TEST_CASE( "visibility_cache_refreshes_each_requested_level", "[vision][map][cac
     }
     CHECK( you.pos_bub( here ) == observer );
     CHECK_FALSE( here.get_visibility_variables_cache().visibility_cache_dirty );
+}
+
+TEST_CASE( "visibility_grid_refresh_uses_current_observer", "[vision][map][cache]" )
+{
+    clear_avatar();
+    clear_map();
+    scoped_weather_override weather_clear( WEATHER_CLEAR );
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms old_pos = you.pos_bub( here );
+    const time_point old_time = calendar::turn;
+    on_out_of_scope restore_player( [&]() {
+        you.remove_effect( efftype_id( "blind" ) );
+        you.last_target_pos.reset();
+        you.recoil = MAX_RECOIL;
+        you.aim_cache_dirty = true;
+        you.setpos( here, old_pos );
+        set_time( old_time );
+    } );
+    set_time( calendar::turn_zero + 12_hours );
+    const tripoint_bub_ms target( 64, 60, 0 );
+    for( int y = 0; y < MAPSIZE_Y; ++y ) {
+        here.ter_set( tripoint_bub_ms( 62, y, 0 ), ter_t_brick_wall );
+    }
+    const bool aiming = GENERATE( false, true );
+    const bool blind = GENERATE( false, true );
+    CAPTURE( aiming, blind );
+    if( blind ) {
+        you.add_effect( efftype_id( "blind" ), 1_turns );
+        you.recalc_sight_limits();
+    }
+    if( aiming ) {
+        you.last_target_pos = here.get_abs( target );
+        you.recoil = 0;
+    }
+    // A clairvoyant field must override the wall, blindness and aiming alike.
+    REQUIRE( here.add_field( target, field_type_str_id( "fd_clairvoyant" ) ) );
+    for( const tripoint_bub_ms pos : {
+             tripoint_bub_ms( 60, 60, 0 ),
+             tripoint_bub_ms( 66, 60, 0 ),
+             tripoint_bub_ms( 60, 64, 0 )
+         } ) {
+        you.setpos( here, pos );
+        you.aim_cache_dirty = true;
+        here.build_map_cache( 0 );
+        here.invalidate_visibility_cache();
+        here.update_visibility_cache( 0 );
+        const auto &grid = here.get_cache_ref( 0 ).visibility_cache;
+        CHECK( grid[target.x()][target.y()] == lit_level::BRIGHT );
+        for( int x = 59; x <= 67; ++x ) {
+            for( int y = 59; y <= 65; ++y ) {
+                const tripoint_bub_ms p( x, y, 0 );
+                CAPTURE( pos, p );
+                CHECK( grid[x][y] == here.apparent_light_at( p,
+                        here.get_visibility_variables_cache() ) );
+            }
+        }
+    }
+}
+
+BENCHMARK_TEST_CASE( "invalidated_map_visibility_refresh", "[vision][map_cache]" )
+{
+    clear_avatar();
+    clear_map();
+    scoped_weather_override weather_clear( WEATHER_CLEAR );
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms old_pos = you.pos_bub( here );
+    const time_point old_time = calendar::turn;
+    on_out_of_scope restore_player( [&]() {
+        you.setpos( here, old_pos );
+        set_time( old_time );
+    } );
+    set_time( calendar::turn_zero + 12_hours );
+    you.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
+    here.build_map_cache( 0 );
+    here.update_visibility_cache( 0 );
+    BENCHMARK( "invalidated visibility grid with fixed map and observer" ) {
+        here.invalidate_visibility_cache();
+        here.update_visibility_cache( 0 );
+    };
 }
 
 BENCHMARK_TEST_CASE( "unchanged_map_visibility_refresh", "[vision][map_cache]" )
