@@ -85,6 +85,7 @@
 #include "type_id.h"
 #include "ui_manager.h"
 #include "uilist.h"
+#include "uistate.h"
 #include "units.h"
 #include "vehicle.h"
 #include "vpart_position.h"
@@ -1209,7 +1210,19 @@ void game::render_mid_step( avatar &u, map &m, tripoint_bub_ms &last_memorized_p
 
     if( !skip_mid_step_render ) {
         wait_popup_reset();
-        ui_manager::redraw();
+        // Animated single-player input redraws after binding its overlay
+        // callback.  Request that frame here instead of drawing the same view
+        // twice.  Routes, resumed menus, screenshots and other input paths keep
+        // their immediate frame.
+        const bool input_owns_redraw = get_option<bool>( "ANIMATIONS" ) &&
+                                       !u.has_destination() && !u.has_destination_activity() &&
+                                       !uistate.open_menu && !cata_mp::is_hosting() &&
+                                       !cata_mp::is_client_mode();
+        if( input_owns_redraw && !queue_screenshot ) {
+            invalidate_main_ui_adaptor();
+        } else {
+            ui_manager::redraw();
+        }
     }
 
     // A single turn can span several steps (roads, speed effects,

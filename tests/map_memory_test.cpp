@@ -24,6 +24,7 @@
 #include "player_helpers.h"
 #include "point.h"
 #include "type_id.h"
+#include "uistate.h"
 #include "weather_type.h"
 
 #if defined(TILES)
@@ -456,6 +457,36 @@ TEST_CASE( "ascii_map_memory_survives_simulation_and_decoration_updates",
         check_grass_memory();
     }
 
+    SECTION( "mid_step_memorizes_before_the_next_input_frame" ) {
+        restore_on_out_of_scope restore_screenshot( g->queue_screenshot );
+        restore_on_out_of_scope restore_menu( uistate.open_menu );
+        uistate.open_menu.reset();
+        const bool screenshot_pending = GENERATE( false, true );
+        const bool animations_enabled = GENERATE( false, true );
+        override_option animation_option( "ANIMATIONS", animations_enabled ? "true" : "false" );
+        g->queue_screenshot = screenshot_pending;
+        INFO( "immediate screenshot frame: " << screenshot_pending );
+        INFO( "input animations enabled: " << animations_enabled );
+        REQUIRE_FALSE( you.has_destination() );
+        REQUIRE_FALSE( you.has_destination_activity() );
+
+        tripoint_bub_ms last_memorized_pos = p - tripoint::east;
+        REQUIRE( you.get_memorized_tile( abs_p ).symbol == 0 );
+        g->render_mid_step( you, here, last_memorized_pos );
+        CHECK( last_memorized_pos == p );
+        check_grass_memory();
+
+        // No input or rendered frame may be required to retain the grass from
+        // an intermediate step that is already hidden at the next position.
+        you.setpos( here, p + tripoint::east * 20, false );
+        g->render_mid_step( you, here, last_memorized_pos );
+        CHECK( last_memorized_pos == you.pos_bub( here ) );
+        const level_cache &cache = here.access_cache( p.z() );
+        REQUIRE( here.get_visibility( cache.visibility_cache[p.x()][p.y()],
+                                      here.get_visibility_variables_cache() ) != visibility_type::CLEAR );
+        check_grass_memory();
+    }
+
 #if defined(TILES) || defined(HEADLESS)
     SECTION( "render_then_sim_then_render_keeps_newly_seen_grass" ) {
         // These test backends can create windows without a real terminal.
@@ -469,7 +500,7 @@ TEST_CASE( "ascii_map_memory_survives_simulation_and_decoration_updates",
         if( had_terrain_memory ) {
             you.memorize_terrain( abs_p, ter_t_grass.str(), 0, 0 );
         }
-        // render_mid_step redraws before calling update_map_memory.
+        // An immediate screenshot or route frame can draw before map-memory maintenance.
         memorize_ascii();
         REQUIRE( you.get_memorized_tile( abs_p ).symbol == grass_symbol );
         REQUIRE_FALSE( here.memory_cache_ter_is_dirty( p ) );

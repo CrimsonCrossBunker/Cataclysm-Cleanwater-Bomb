@@ -103,11 +103,13 @@ def summarize(events, expected, action_labels):
     if any(a.end > b.start for a, b in zip(actions, actions[1:])):
         raise ValueError("selected action scopes overlap")
     last_end = actions[-1].end
-    tail = min((e for e in events if e.name == "game.mid_step"
-                and e.thread == thread and e.start >= last_end),
+    draws = [e for e in events if e.name == "tiles.draw" and e.thread == thread]
+    tail = min((e for e in events if e.name in ("game.mid_step", "game.input_redraw")
+                and e.thread == thread and e.start >= last_end
+                and any(e.start <= draw.start and draw.end <= e.end for draw in draws)),
                key=lambda e: e.start, default=None)
     if tail is None:
-        raise ValueError("no completed mid-step follows the final action; incomplete capture")
+        raise ValueError("no completed presentation follows the final action; incomplete capture")
     lo, hi = actions[0].start, tail.end
     ordered = sorted((e for e in events if e.name == "game.action_execute"
                       and e.thread == thread and lo <= e.start < hi),
@@ -117,7 +119,7 @@ def summarize(events, expected, action_labels):
     main = [e for e in events if e.thread == thread and e.start < hi and e.end > lo]
     names = ("game.action_execute", "input.acquire", "game.mid_step",
              "simulate_turn_suffix", "tiles.draw", "tiles.layer_loop",
-             "tiles.draw_cache_rebuild", "monmove")
+             "tiles.draw_cache_rebuild", "monmove", "game.input_redraw")
     intervals = {}
     summaries = {}
     for name in names:
@@ -143,7 +145,8 @@ def summarize(events, expected, action_labels):
     return {
         "action_count": len(actions), "action_family": sorted(labels), "tracy_thread_id": thread,
         "window_ns": [lo, hi], "window_elapsed_ms": (hi - lo) / 1e6,
-        "window_policy": "first selected action start through first completed mid-step after last action",
+        "window_policy": "first selected action start through first completed mid-step or input redraw containing a tile draw after last action",
+        "presentation_tail": {"zone": tail.name, "start_ns": tail.start, "end_ns": tail.end},
         "zones": summaries, "phase_covered_elapsed_ns": covered,
         "phase_overlap_ns": sum(span(intervals[n]) for n in phases) - covered,
         "outside_named_phases_elapsed_ns": hi - lo - covered,

@@ -72,6 +72,29 @@ class ActionPhaseTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "incomplete capture"):
             summarize(events, ["UP", "DOWN"], ["UP", "DOWN"])
 
+    def test_deferred_frame_extends_window_past_undrawn_mid_step(self):
+        events = [e for e in self.fixture() if not (e.name == "tiles.draw" and e.start == 1060)]
+        events += [Event("game.input_redraw", 1066, 8, "2"),
+                   Event("tiles.draw", 1068, 4, "2")]
+        result = summarize(events, ["UP", "DOWN"], ["UP", "DOWN"])
+        self.assertEqual(result["window_ns"], [1000, 1074])
+        self.assertEqual(result["presentation_tail"]["zone"], "game.input_redraw")
+        self.assertEqual(result["zones"]["input.acquire"]["overlapping_calls"], 2)
+        self.assertEqual(result["zones"]["input.acquire"]["complete_calls"], 1)
+        self.assertEqual(result["tiles_draw_inside_phase_ns"]["input.acquire"], 8)
+
+    def test_undrawn_mid_step_is_not_a_completed_frame(self):
+        events = [e for e in self.fixture() if not (e.name == "tiles.draw" and e.start == 1060)]
+        with self.assertRaisesRegex(ValueError, "incomplete capture"):
+            summarize(events, ["UP", "DOWN"], ["UP", "DOWN"])
+
+    def test_worker_draw_cannot_complete_the_avatar_frame(self):
+        events = [e for e in self.fixture() if not (e.name == "tiles.draw" and e.start == 1060)]
+        events += [Event("game.input_redraw", 1066, 8, "worker"),
+                   Event("tiles.draw", 1068, 4, "worker")]
+        with self.assertRaisesRegex(ValueError, "incomplete capture"):
+            summarize(events, ["UP", "DOWN"], ["UP", "DOWN"])
+
     def test_multiple_action_threads_are_rejected(self):
         events = [Event(e.name, e.start, e.duration, "worker", e.value)
                   if e.value == "DOWN" else e for e in self.fixture()]
