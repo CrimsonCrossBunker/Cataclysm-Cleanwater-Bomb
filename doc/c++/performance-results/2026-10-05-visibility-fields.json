@@ -1,0 +1,454 @@
+{
+  "kind": "local_actual_game_measurement",
+  "schema_version": 1,
+  "measured_utc_date": "2026-10-05",
+  "subject": "Visibility grid uses one synchronous read-only field storage view per submap",
+  "source_commits": {
+    "before": "5eaa90d6da938285b40cf482e928bc2dd45c595b",
+    "after": "82a67a868cd903e1b6ab76350770dd9c2a582f91"
+  },
+  "binary_build_ids": {
+    "before": "d5325b84ef7539c15e046f49d79f9bc0c7de0364",
+    "after": "faff77aa5caa51295c211cd868ba58ae5794fcf7"
+  },
+  "build": {
+    "system": "CMake Release",
+    "compiler": "clang++",
+    "release_flags": "-O3 -DNDEBUG",
+    "tiles": true,
+    "sound": true,
+    "lua_runtime": "Platform v1 only",
+    "tracy": "0.14.1 /30997d5ca6bb632cc10807a1da8a6d3de0aeeb3c,enabled client",
+    "sdl_api": 2,
+    "runtime_sdl2": "SDL2compat2.32.72; loaded backend library libSDL3.so.0.4.16",
+    "USE_SDL3": false
+  },
+  "host": {
+    "cpu": "AMD Ryzen7 5800H",
+    "logical_cpus": 16,
+    "kernel": "6.18.54-1-lts",
+    "affinity_and_frequency_locked": false
+  },
+  "scene": {
+    "fixture_archive_sha256": "6db5acc81b92e5a2be927398315c537e7a9bf1761556837541c80932f0e674f4",
+    "tileset": "UNDEAD_PEOPLE",
+    "tileset_manifest_sha256": "011c588f72f9dfaa43f106b158aaefe1e1d25937bf897c8a170d0dd060d1a4ce",
+    "resolution": [
+      1280,
+      720
+    ],
+    "render_path": "SDL2 API/OpenGL/private authenticated Xvfb/Mesa llvmpipe(LLVM22.1.8),software rendering",
+    "audio_device": "dummy",
+    "location": "evacuation shelter with NPC",
+    "cli_seed": "CCB-perf-20261005",
+    "recorded_rng_seed": 707463108,
+    "initial_game_time": "08:00:00",
+    "final_game_time": "08:25:06",
+    "test_copy_overrides": {
+      "AUTOSAVE": false
+    },
+    "save": "Manual save after collectors exit; no measured autosave",
+    "private_fixture_not_distributed": true
+  },
+  "protocol": {
+    "warmup": "64.64. =6 normal SDL actions",
+    "measured": "64. repeated500 times =1500 normal SDL actions",
+    "cadence_seconds": 0.12,
+    "stat_seconds": 195,
+    "perf_record_seconds": 190,
+    "record_frequency_hz": 199,
+    "record_thread": "main thread only",
+    "stat_scope": "game process threads",
+    "commands": [
+      [
+        "perf",
+        "stat",
+        "-x",
+        ";",
+        "-e",
+        "task-clock,cycles:u,instructions:u,cache-misses:u",
+        "-p",
+        "PID",
+        "-o",
+        "PREFIX.stat",
+        "--",
+        "sleep",
+        "195"
+      ],
+      [
+        "perf",
+        "record",
+        "-m",
+        "64",
+        "-e",
+        "cycles:u",
+        "-F",
+        "199",
+        "--call-graph",
+        "dwarf,8192",
+        "-o",
+        "PREFIX.data",
+        "-t",
+        "PID",
+        "--",
+        "sleep",
+        "190"
+      ],
+      [
+        "perf",
+        "script",
+        "--no-inline",
+        "-i",
+        "PREFIX.data"
+      ],
+      [
+        "tracy-capture",
+        "-a",
+        "127.0.0.1",
+        "-o",
+        "PREFIX.tracy",
+        "-s",
+        "195"
+      ],
+      [
+        "tracy-csvexport",
+        "-u",
+        "-f",
+        "do_avatar_action_loop",
+        "PREFIX.tracy"
+      ],
+      [
+        "tracy-csvexport",
+        "-u",
+        "-f",
+        "rebuild_visibility_cache_grid",
+        "PREFIX.tracy"
+      ]
+    ],
+    "input_runs": {
+      "before-perf": {
+        "events": 1500,
+        "elapsed_send_s": 180.460862781998,
+        "collector_exits": [
+          0,
+          0
+        ],
+        "sequence_sha256": "67839aabb227e74c9d19913bb27a2a430dc486054203fade7c11e1318a714451"
+      },
+      "after-perf": {
+        "events": 1500,
+        "elapsed_send_s": 180.45084978902014,
+        "collector_exits": [
+          0,
+          0
+        ],
+        "sequence_sha256": "67839aabb227e74c9d19913bb27a2a430dc486054203fade7c11e1318a714451"
+      },
+      "before-zones": {
+        "events": 1500,
+        "elapsed_send_s": 180.46019129699562,
+        "collector_exits": [
+          0,
+          0
+        ],
+        "sequence_sha256": "67839aabb227e74c9d19913bb27a2a430dc486054203fade7c11e1318a714451"
+      },
+      "after-zones": {
+        "events": 1500,
+        "elapsed_send_s": 180.53917217600974,
+        "collector_exits": [
+          0,
+          0
+        ],
+        "sequence_sha256": "67839aabb227e74c9d19913bb27a2a430dc486054203fade7c11e1318a714451"
+      }
+    }
+  },
+  "perf_with_dwarf_pair": {
+    "task-clock:u": {
+      "before": 149242.16,
+      "after": 148210.61,
+      "change_percent": -0.69119,
+      "unit": "msec",
+      "counter_running_percent": [
+        100.0,
+        100.0
+      ]
+    },
+    "cycles:u": {
+      "before": 418939357603.0,
+      "after": 413675303980.0,
+      "change_percent": -1.25652,
+      "unit": "",
+      "counter_running_percent": [
+        50.0,
+        50.0
+      ]
+    },
+    "instructions:u": {
+      "before": 628695886892.0,
+      "after": 531548822173.0,
+      "change_percent": -15.45216,
+      "unit": "",
+      "counter_running_percent": [
+        49.0,
+        50.0
+      ]
+    },
+    "cache-misses:u": {
+      "before": 2636116066.0,
+      "after": 2730023731.0,
+      "change_percent": 3.56235,
+      "unit": "",
+      "counter_running_percent": [
+        50.0,
+        49.0
+      ]
+    }
+  },
+  "tracy_with_stat_pair": {
+    "task-clock:u": {
+      "before": 347281.13,
+      "after": 382037.99,
+      "change_percent": 10.00828,
+      "unit": "msec",
+      "counter_running_percent": [
+        100.0,
+        100.0
+      ]
+    },
+    "cycles:u": {
+      "before": 1120197520069.0,
+      "after": 1102950739607.0,
+      "change_percent": -1.53962,
+      "unit": "",
+      "counter_running_percent": [
+        60.0,
+        59.0
+      ]
+    },
+    "instructions:u": {
+      "before": 1672212270429.0,
+      "after": 1531054327845.0,
+      "change_percent": -8.44139,
+      "unit": "",
+      "counter_running_percent": [
+        60.0,
+        58.0
+      ]
+    },
+    "cache-misses:u": {
+      "before": 4065724976.0,
+      "after": 4375579488.0,
+      "change_percent": 7.62114,
+      "unit": "",
+      "counter_running_percent": [
+        60.0,
+        58.0
+      ]
+    }
+  },
+  "visibility_zones": {
+    "function": "rebuild_visibility_cache_grid",
+    "window_rule": "Last1500 completed do_avatar_action_loop events; include grid events fully within first start and last end; excludes startup, preconnection waits and six warmup actions",
+    "before": {
+      "action_count": 1506,
+      "measured_action_count": 1500,
+      "window_ns": [
+        225257585331,
+        406068633174
+      ],
+      "window_s": 180.811047843,
+      "grid_calls": 44000,
+      "grid_total_ms": 18367.733506,
+      "grid_mean_ms": 0.4174484887727273,
+      "grid_median_ms": 0.392939,
+      "grid_p95_ms": 0.557273,
+      "grid_min_ms": 0.358363,
+      "grid_max_ms": 2.254118,
+      "grid_threads": [
+        "2"
+      ]
+    },
+    "after": {
+      "action_count": 1506,
+      "measured_action_count": 1500,
+      "window_ns": [
+        352623903486,
+        533441808959
+      ],
+      "window_s": 180.817905473,
+      "grid_calls": 44000,
+      "grid_total_ms": 15697.588932,
+      "grid_mean_ms": 0.3567633848181818,
+      "grid_median_ms": 0.339815,
+      "grid_p95_ms": 0.444518,
+      "grid_min_ms": 0.302941,
+      "grid_max_ms": 4.187587,
+      "grid_threads": [
+        "2"
+      ]
+    },
+    "change_percent": {
+      "grid_mean_ms": -14.53715,
+      "grid_median_ms": -13.51966,
+      "grid_p95_ms": -20.23335
+    }
+  },
+  "sampled_functions": {
+    "width_basis": "user-space sampled cycle period within game::do_turn; horizontal order is not time",
+    "before": {
+      "main_thread_samples": 6883,
+      "game_do_turn_samples": 5653,
+      "unknown_self_percent": 50.11724,
+      "cycle_period_within_do_turn": 95496629039,
+      "symbols": {
+        "map::field_at": {
+          "self_percent": 14.31792,
+          "inclusive_percent": 21.00381
+        },
+        "map::get_nonant": {
+          "self_percent": 4.6559,
+          "inclusive_percent": 4.67451
+        },
+        "rebuild_visibility_cache_grid": {
+          "self_percent": 7.0341,
+          "inclusive_percent": 35.86754
+        },
+        "apparent_light_helper": {
+          "self_percent": 7.30256,
+          "inclusive_percent": 7.35571
+        }
+      }
+    },
+    "after": {
+      "main_thread_samples": 6589,
+      "game_do_turn_samples": 4374,
+      "unknown_self_percent": 66.036,
+      "cycle_period_within_do_turn": 73253236086,
+      "symbols": {
+        "map::field_at": {
+          "self_percent": 0.01853,
+          "inclusive_percent": 0.01853
+        },
+        "map::get_nonant": {
+          "self_percent": 0.01922,
+          "inclusive_percent": 0.01922
+        },
+        "rebuild_visibility_cache_grid": {
+          "self_percent": 3.14633,
+          "inclusive_percent": 13.73864
+        },
+        "apparent_light_helper": {
+          "self_percent": 9.96871,
+          "inclusive_percent": 9.99385
+        }
+      }
+    }
+  },
+  "state_validation": {
+    "comparisons": [
+      {
+        "comparison": "corrected-state-comparison.json",
+        "simulation_equal": true,
+        "world_files": 44,
+        "byte_identical_world_files": 42,
+        "different_suffixes": [
+          ".pt",
+          ".sav.zzip"
+        ],
+        "wall_time_fields": [
+          "/stats_tracker/data/game_save/event_counts/0/0/time_since_load/1",
+          "/stats_tracker/data/game_save/event_counts/0/0/total_time_played/1"
+        ],
+        "unordered_recipe_count": 1181
+      },
+      {
+        "comparison": "tracy-state-comparison.json",
+        "simulation_equal": true,
+        "world_files": 44,
+        "byte_identical_world_files": 42,
+        "different_suffixes": [
+          ".pt",
+          ".sav.zzip"
+        ],
+        "wall_time_fields": [
+          "/stats_tracker/data/game_save/event_counts/0/0/time_since_load/1",
+          "/stats_tracker/data/game_save/event_counts/0/0/total_time_played/1"
+        ],
+        "unordered_recipe_count": 1181
+      },
+      {
+        "comparison": "cross-before-state-comparison.json",
+        "simulation_equal": true,
+        "world_files": 44,
+        "byte_identical_world_files": 42,
+        "different_suffixes": [
+          ".pt",
+          ".sav.zzip"
+        ],
+        "wall_time_fields": [
+          "/stats_tracker/data/game_save/event_counts/0/0/time_since_load/1",
+          "/stats_tracker/data/game_save/event_counts/0/0/total_time_played/1"
+        ],
+        "unordered_recipe_count": 1181
+      },
+      {
+        "comparison": "cross-after-state-comparison.json",
+        "simulation_equal": true,
+        "world_files": 44,
+        "byte_identical_world_files": 42,
+        "different_suffixes": [
+          ".pt",
+          ".sav.zzip"
+        ],
+        "wall_time_fields": [
+          "/stats_tracker/data/game_save/event_counts/0/0/time_since_load/1",
+          "/stats_tracker/data/game_save/event_counts/0/0/total_time_played/1"
+        ],
+        "unordered_recipe_count": 1181
+      }
+    ],
+    "pt_matches_character_save_wall_time_in_all4_runs": true,
+    "normalization": "Recipe list compared as multiset; preserve all recipe values/counts. Only two explicit real-wall-time fields excluded. All other player simulation data compared strictly."
+  },
+  "cached_native_regression": {
+    "command": "./tests/perf-cata_test '[vision]~[benchmark],[map_memory]~[benchmark]' --rng-seed 20261004",
+    "cases": 53,
+    "assertions": 28636,
+    "seconds": 43.3887,
+    "result": "passed",
+    "config": "Make SDL2+sound+LuaPlatform,Tracy disabled",
+    "reuse_reason": "source and regression inputs unchanged; no C++ edit in this measurement batch"
+  },
+  "separate_microbenchmark": {
+    "before_ms": 4.47825,
+    "after_ms": 3.89807,
+    "not_used_as_whole_game_speedup_proof": true
+  },
+  "assessment": {
+    "local_zone_observed_mean_reduction_percent": 14.53715,
+    "stable_whole_game_speedup_proven": false,
+    "desktop_gpu_fps_proven": false,
+    "reason": "Same simulation and same grid calls; local zone time improved. Process task-clock differs by collector mode: -0.69% with DWARF, +10.01% with Tracy. Profiler overhead, unlocked frequency and software rendering prevent general CPU/FPS claims. Do not pool those two counter configurations.",
+    "costs": "Hardware cache-miss counts increased in both pairs; reported with49-60% multiplexed counter runtime. Unknown stripped system/driver symbols remain50-66% of do_turn self sample weight.",
+    "coverage_limits": [
+      "one shelter scenario",
+      "no representative desktop GPU or sounddevice acceptance",
+      "no dedicated multiplayer scenario",
+      "no stress of loaded dense fields,large vehicles or combat",
+      "one pair per collector mode; many zone events are not independent game-run repetitions"
+    ]
+  },
+  "discarded_evidence": [
+    "Prior3.22% task-clock claim discarded: wall-clock autosaves occurred at different simulation times.",
+    "Fast .03s input attempt lost events and was discarded.",
+    "One baseline trace incomplete due write quota; discarded and retried successfully."
+  ],
+  "next_boundary": {
+    "problem": "Map cache update calls global tilecontext; cata_tiles::set_draw_cache_dirty writes get_map instead of source map. Map setter itself is gated by current reality bubble and test_mode.",
+    "action": "Make map own its presentation-dirty state; renderer consumes the source map flag. Add two-map cache-change/observer-move regression without live SDL renderer. Label structural ownership repair without proven speedup.",
+    "long_term": "Chunked authoritative world, composition-based domain state,deterministic dependency jobs,independent presentation; retain sole LuaPlatformv1. No async borrowed submap pointers or mutable render scratch shared as immutable snapshots."
+  },
+  "private_evidence_manifest": ".ccb-performance-tiles-evidence/actual-fields-20261005/manifest.json"
+}
