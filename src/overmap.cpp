@@ -2404,6 +2404,26 @@ void overmap::place_railroads( const std::vector<const overmap *> &neighbor_over
                                     );
     }
 
+    // City buildings are placed before the regional network.  Include one
+    // point from each existing component so their rail entrances are not isolated.
+    std::unordered_set<point_om_omt> visited;
+    const auto is_railroad = [&]( const point_om_omt & p ) {
+        return inbounds( p ) && overmap_connection_local_railroad->has( ter( tripoint_om_omt( p, 0 ) ) );
+    };
+    for( int x = 0; x < OMAPX; ++x ) {
+        for( int y = 0; y < OMAPY; ++y ) {
+            const point_om_omt p( x, y );
+            if( visited.count( p ) || !is_railroad( p ) ) {
+                continue;
+            }
+            const auto component = ff::point_flood_fill_4_connected<std::vector>( p, visited,
+                is_railroad );
+            if( !component.empty() ) {
+                railroad_points.push_back( p );
+            }
+        }
+    }
+
     // And finally connect them via railroads.
     connect_closest_points( railroad_points, 0, *overmap_connection_local_railroad );
 }
@@ -2767,6 +2787,58 @@ void overmap::build_connection(
     build_connection(
         connection, lay_out_connection( connection, source, dest, z, must_be_unexplored ),
         z, initial_dir );
+}
+
+void overmap::build_special_connection( const point_om_omt &target,
+                                        const tripoint_om_omt &entrance,
+                                        const overmap_connection &connection,
+                                        const bool must_be_unexplored,
+                                        const cube_direction initial_dir )
+{
+    if( connection.id != settings->overmap_connection.rail_connection ) {
+        build_connection( target, entrance.xy(), entrance.z(), connection, must_be_unexplored,
+                          initial_dir );
+        return;
+    }
+
+    if( !inbounds( entrance ) || ( must_be_unexplored &&
+                                   !connection.has( ter( entrance ) ) && is_omt_generated( entrance ) ) ) {
+        return;
+    }
+
+    // Only actual rails are targets, not any terrain on which rails could be built.
+    std::vector<point_om_omt> candidates;
+    for( int x = 0; x < OMAPX; ++x ) {
+        for( int y = 0; y < OMAPY; ++y ) {
+            const point_om_omt p( x, y );
+            if( p != entrance.xy() && connection.has( ter( tripoint_om_omt( p, entrance.z() ) ) ) ) {
+                candidates.push_back( p );
+            }
+        }
+    }
+    std::stable_sort( candidates.begin(), candidates.end(), [&]( const point_om_omt & a,
+    const point_om_omt & b ) {
+        return square_dist( entrance.xy(), a ) < square_dist( entrance.xy(), b );
+    } );
+    for( const point_om_omt &candidate : candidates ) {
+        const auto path = lay_out_connection( connection, candidate, entrance.xy(), entrance.z(),
+                                              must_be_unexplored );
+        if( !path.nodes.empty() ) {
+            build_connection( connection, path, entrance.z(), initial_dir );
+            return;
+        }
+    }
+
+    // No network yet (city generation), or no reachable track: retain the
+    // entrance facing the station.  place_railroads includes it when building the network.
+    const auto *subtype = connection.pick_subtype_for( ter( entrance ) );
+    if( subtype && subtype->terrain->is_linear() && initial_dir != cube_direction::last ) {
+        const auto direction = om_direction::from_cube( initial_dir,
+            "Up and down connections not yet supported" );
+        const size_t existing_line = connection.has( ter( entrance ) ) ? ter( entrance )->get_line() : 0;
+        const size_t line = om_lines::set_segment( existing_line, om_direction::opposite( direction ) );
+        ter_set( entrance, subtype->terrain->get_linear( line ) );
+    }
 }
 
 // connect the points to each other using a minimum spanning tree

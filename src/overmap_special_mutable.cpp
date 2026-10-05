@@ -909,8 +909,8 @@ special_placement_result mutable_overmap_special_data::place(
         } else {
             target = om.get_fallback_road_connection_point();
         }
-        om.build_connection( target, pos.xy(), pos.z(), *elem.connection, must_be_unexplored,
-                             connection_dir );
+        om.build_special_connection( target, pos, *elem.connection, must_be_unexplored,
+                                     connection_dir );
     }
 
     return { result, unresolved.all_used() };

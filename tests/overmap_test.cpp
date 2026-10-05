@@ -37,6 +37,7 @@
 #include "options.h"
 #include "output.h"
 #include "overmap.h"
+#include "overmap_connection.h"
 #include "overmap_location.h"
 #include "overmap_types.h"
 #include "overmapbuffer.h"
@@ -62,6 +63,9 @@ static const overmap_special_id overmap_special_Lab( "Lab" );
 class overmap_test_helper
 {
     public:
+        static void generate_railroads( overmap &om ) {
+            om.place_railroads( std::vector<const overmap *>( 4, nullptr ) );
+        }
         static void set_highway_connections(
             overmap &om,
             const std::array<tripoint_om_omt, 4> &conns ) {
@@ -1104,4 +1108,133 @@ TEST_CASE( "overmap_generation_is_deterministic", "[overmap]" )
             SUCCEED( "run " << run << " matches run 0" );
         }
     }
+}
+
+namespace
+{
+void fill_railroad_test_overmap( overmap &om )
+{
+    for( int x = 0; x < OMAPX; ++x ) {
+        for( int y = 0; y < OMAPY; ++y ) {
+            om.ter_set( tripoint_om_omt( x, y, 0 ), oter_id( "field" ) );
+        }
+    }
+}
+
+bool railroad_reaches( const overmap &om, const tripoint_om_omt &start,
+                       const std::function<bool( const tripoint_om_omt & )> &goal )
+{
+    const overmap_connection &rails = *overmap_connection_id( "local_railroad" );
+    std::vector<tripoint_om_omt> pending{ start };
+    std::set<tripoint_om_omt> visited;
+    while( !pending.empty() ) {
+        const tripoint_om_omt p = pending.back();
+        pending.pop_back();
+        if( !om.inbounds( p ) || !visited.insert( p ).second || !rails.has( om.ter( p ) ) ) {
+            continue;
+        }
+        if( goal( p ) ) {
+            return true;
+        }
+        for( const om_direction::type dir : om_direction::all ) {
+            const tripoint_om_omt next = p + om_direction::displace( dir );
+            if( om.inbounds( next ) && rails.has( om.ter( next ) ) &&
+                om_lines::has_segment( om.ter( p )->get_line(), dir ) &&
+                om_lines::has_segment( om.ter( next )->get_line(), om_direction::opposite( dir ) ) ) {
+                pending.push_back( next );
+            }
+        }
+    }
+    return false;
+}
+} // namespace
+
+// Requires --mods=railroads; the Mod is not part of the default test world.
+TEST_CASE( "railroad_stations_join_the_network", "[.][overmap][railroads]" )
+{
+    const overmap_special_id id( GENERATE( "Railway Station", "railroad_station_city" ) );
+    const om_direction::type direction = GENERATE( om_direction::type::north,
+        om_direction::type::east, om_direction::type::south,
+        om_direction::type::west );
+    CAPTURE( id.str(), direction );
+    REQUIRE( id.is_valid() );
+    REQUIRE( overmap_connection_id( "local_railroad" ).is_valid() );
+    auto om = std::make_unique<overmap>( point_abs_om::zero );
+    fill_railroad_test_overmap( *om );
+    const tripoint_om_omt origin( 60, 60, 0 );
+    const city cit( point_om_omt( 100, 120 ), 4 );
+
+    SECTION( "station placed after the regional railroad" ) {
+        for( int x = 20; x <= 120; ++x ) {
+            om->ter_set( tripoint_om_omt( x, 40, 0 ), oter_id( "railroad_ew" ) );
+        }
+        REQUIRE_FALSE( om->place_special( *id, origin, direction, cit, false, false ).empty() );
+        for( const tripoint_rel_omt offset : {
+                 tripoint_rel_omt( 0, 0, 0 ), tripoint_rel_omt( 0, 5, 0 )
+             } ) {
+            const tripoint_om_omt entrance = origin + om_direction::rotate( offset, direction );
+            CHECK( railroad_reaches( *om, entrance, []( const tripoint_om_omt & p ) {
+                return p.y() == 40;
+            } ) );
+        }
+        CHECK_FALSE( overmap_connection_id( "local_railroad" )->has(
+                         om->ter( tripoint_om_omt( cit.pos, 0 ) ) ) );
+    }
+    SECTION( "city station placed before the regional railroad" ) {
+        REQUIRE_FALSE( om->place_special( *id, origin, direction, cit, false, false ).empty() );
+        overmap_test_helper::generate_railroads( *om );
+        for( const tripoint_rel_omt offset : {
+                 tripoint_rel_omt( 0, 0, 0 ), tripoint_rel_omt( 0, 5, 0 )
+             } ) {
+            const tripoint_om_omt entrance = origin + om_direction::rotate( offset, direction );
+            CHECK( railroad_reaches( *om, entrance, []( const tripoint_om_omt & p ) {
+                return p.x() == 0 || p.y() == 0 || p.x() == OMAPX - 1 || p.y() == OMAPY - 1;
+            } ) );
+        }
+    }
+    // Network generation must preserve the station, its parking lot and other levels.
+    for( const overmap_special_terrain &terrain : id->get_terrains() ) {
+        // Road entrance line shapes are extended by the existing road connector.
+        if( terrain.terrain->is_linear() ) {
+            continue;
+        }
+        const tripoint_om_omt pos = origin + om_direction::rotate( terrain.p, direction );
+        CHECK( om->ter( pos ) == terrain.terrain->get_rotated( direction ) );
+    }
+}
+
+TEST_CASE( "railroad_special_connection_skips_unreachable_track", "[.][overmap][railroads]" )
+{
+    REQUIRE( overmap_connection_id( "local_railroad" ).is_valid() );
+    auto om = std::make_unique<overmap>( point_abs_om::zero );
+    fill_railroad_test_overmap( *om );
+    for( int x = 29; x <= 31; ++x ) {
+        for( int y = 29; y <= 31; ++y ) {
+            om->ter_set( tripoint_om_omt( x, y, 0 ), oter_id( "solid_earth" ) );
+        }
+    }
+    om->ter_set( tripoint_om_omt( 30, 30, 0 ), oter_id( "railroad_ew" ) );
+    om->ter_set( tripoint_om_omt( 45, 40, 0 ), oter_id( "railroad_ew" ) );
+    const tripoint_om_omt entrance( 30, 40, 0 );
+    om->build_special_connection( point_om_omt( 100, 100 ), entrance,
+                                  *overmap_connection_id( "local_railroad" ), false, cube_direction::north );
+    CHECK( railroad_reaches( *om, entrance, []( const tripoint_om_omt & p ) {
+        return p == tripoint_om_omt( 45, 40, 0 );
+    } ) );
+    CHECK_FALSE( railroad_reaches( *om, entrance, []( const tripoint_om_omt & p ) {
+        return p == tripoint_om_omt( 30, 30, 0 );
+    } ) );
+}
+
+TEST_CASE( "special_road_connections_keep_their_city_target", "[overmap][connections]" )
+{
+    auto om = std::make_unique<overmap>( point_abs_om::zero );
+    fill_railroad_test_overmap( *om );
+    const tripoint_om_omt entrance( 40, 40, 0 );
+    const point_om_omt target( 70, 70 );
+    const overmap_connection &road = *overmap_connection_id( "local_road" );
+    om->ter_set( tripoint_om_omt( 45, 40, 0 ), oter_id( "road_ew" ) );
+    om->build_special_connection( target, entrance, road, false, cube_direction::north );
+    CHECK( road.has( om->ter( entrance ) ) );
+    CHECK( road.has( om->ter( tripoint_om_omt( target, 0 ) ) ) );
 }

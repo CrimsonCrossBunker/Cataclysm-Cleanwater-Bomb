@@ -315,8 +315,8 @@ special_placement_result fixed_overmap_special_data::place(
             } else {
                 target = om.get_fallback_road_connection_point();
             }
-            om.build_connection( target, rp.xy(), elem.p.z(), *elem.connection, must_be_unexplored,
-                                 initial_dir );
+            om.build_special_connection( target, rp, *elem.connection, must_be_unexplored,
+                                         initial_dir );
         }
     }
 
