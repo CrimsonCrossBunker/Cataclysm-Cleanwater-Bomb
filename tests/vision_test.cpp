@@ -553,6 +553,77 @@ BENCHMARK_TEST_CASE( "unchanged_map_visibility_refresh", "[vision][map_cache]" )
     };
 }
 
+TEST_CASE( "visibility_cache_reuse_preserves_invalidation", "[vision][map][cache]" )
+{
+    clear_avatar();
+    clear_map();
+    scoped_weather_override weather_clear( WEATHER_CLEAR );
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms original_position = you.pos_bub( here );
+    const time_point original_time = calendar::turn;
+    on_out_of_scope restore_player( [&]() {
+        you.remove_effect( efftype_id( "blind" ) );
+        you.setpos( here, original_position );
+        set_time( original_time );
+    } );
+    set_time( calendar::turn_zero + 12_hours );
+    const tripoint_bub_ms target( 64, 60, 0 );
+    you.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
+    here.build_map_cache( 0 );
+    here.invalidate_visibility_cache();
+    here.update_visibility_cache( 1 );
+    here.update_visibility_cache( 0 );
+    const lit_level initial = here.get_cache_ref( 0 ).visibility_cache[target.x()][target.y()];
+    REQUIRE( initial != lit_level::BLANK );
+
+    SECTION( "explicit invalidation refreshes previously queried levels" ) {
+        you.add_effect( efftype_id( "blind" ), 1_turns );
+        you.recalc_sight_limits();
+        here.invalidate_visibility_cache();
+    }
+    SECTION( "perception changes without an explicit map invalidation" ) {
+        you.add_effect( efftype_id( "blind" ), 1_turns );
+        you.recalc_sight_limits();
+    }
+    SECTION( "observer movement invalidates previously queried levels" ) {
+        you.setpos( here, tripoint_bub_ms( 1, 1, 0 ) );
+        REQUIRE( rl_dist( you.pos_bub( here ), target ) > you.unimpaired_range() );
+    }
+    here.update_visibility_cache( 1 );
+    here.update_visibility_cache( 0 );
+    const lit_level updated = here.get_cache_ref( 0 ).visibility_cache[target.x()][target.y()];
+    CHECK( updated == here.apparent_light_at( target, here.get_visibility_variables_cache() ) );
+    CHECK( updated == lit_level::BLANK );
+    CHECK( updated != initial );
+}
+
+BENCHMARK_TEST_CASE( "alternating_level_visibility_refresh", "[vision][map_cache]" )
+{
+    clear_avatar();
+    clear_map();
+    scoped_weather_override weather_clear( WEATHER_CLEAR );
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms original_position = you.pos_bub( here );
+    const time_point original_time = calendar::turn;
+    on_out_of_scope restore_player( [&]() {
+        you.setpos( here, original_position );
+        set_time( original_time );
+    } );
+    set_time( calendar::turn_zero + 12_hours );
+    you.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
+    here.build_map_cache( 0 );
+    here.build_map_cache( 1 );
+    here.invalidate_visibility_cache();
+    here.update_visibility_cache( 1 );
+    here.update_visibility_cache( 0 );
+    BENCHMARK( "two warmed levels queried alternately" ) {
+        here.update_visibility_cache( 1 );
+        here.update_visibility_cache( 0 );
+    };
+}
+
 static int get_actual_light_level( const map_test_case::tile &t )
 {
     const map &here = get_map();

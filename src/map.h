@@ -148,6 +148,8 @@ struct visibility_variables {
     tripoint_bub_ms last_pos;
     // The observer may request a different level without moving.
     int last_zlev = 0;
+    // Per-level results share the observer and invalidation lifetime above.
+    std::bitset<OVERMAP_LAYERS> cached_levels;
 };
 
 struct bash_params {

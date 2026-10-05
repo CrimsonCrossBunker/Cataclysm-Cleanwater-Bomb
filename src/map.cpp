@@ -8722,48 +8722,66 @@ void map::update_visibility_cache( const int zlev )
         return;
     }
 
-    if( pos.z() - zlev < fov_3d_z_range && zlev > -OVERMAP_DEPTH ) {
+    const float vision_threshold = player_character.get_vision_threshold(
+                                       get_cache_ref( pos.z() ).lm[pos.x()][pos.y()].max() );
+    const int clairvoyance = player_character.clairvoyance();
+    const bool sight_impaired = player_character.sight_impaired();
+    const bool boomered = player_character.has_effect( effect_boomered );
+    // Perception can change before a render-driven map-cache rebuild.
+    const bool perception_changed = vision_threshold != visibility_variables_cache.vision_threshold ||
+                                    clairvoyance != visibility_variables_cache.u_clairvoyance ||
+                                    sight_impaired != visibility_variables_cache.u_sight_impaired ||
+                                    boomered != visibility_variables_cache.u_is_boomered ||
+                                    !previous_visibility_observer ||
+                                    previous_visibility_observer->second != player_character.unimpaired_range();
+    if( visibility_variables_cache.visibility_cache_dirty ||
+        pos != visibility_variables_cache.last_pos || perception_changed ) {
+        visibility_variables_cache.cached_levels.reset();
+    }
+    const bool rebuild_level = !visibility_variables_cache.cached_levels[zlev + OVERMAP_DEPTH];
+    if( rebuild_level && pos.z() - zlev < fov_3d_z_range && zlev > -OVERMAP_DEPTH ) {
         update_visibility_cache( zlev - 1 );
     }
+    // Common variables describe the requested level even when its grid is reused.
     visibility_variables_cache.variables_set = true; // Not used yet
     visibility_variables_cache.g_light_level = static_cast<int>( g->light_level( zlev ) );
-    visibility_variables_cache.vision_threshold = player_character.get_vision_threshold(
-                get_cache_ref(
-                    pos.z() ).lm[pos.x()][pos.y()].max() );
-
-    visibility_variables_cache.u_clairvoyance = player_character.clairvoyance();
-    visibility_variables_cache.u_sight_impaired = player_character.sight_impaired();
-    visibility_variables_cache.u_is_boomered = player_character.has_effect( effect_boomered );
+    visibility_variables_cache.vision_threshold = vision_threshold;
+    visibility_variables_cache.u_clairvoyance = clairvoyance;
+    visibility_variables_cache.u_sight_impaired = sight_impaired;
+    visibility_variables_cache.u_is_boomered = boomered;
     visibility_variables_cache.clairvoyance_field.reset();
     if( field_fd_clairvoyant.is_valid() ) {
         visibility_variables_cache.clairvoyance_field = field_fd_clairvoyant;
     }
 
-    cata::mdarray<int, point_bub_sm> sm_squares_seen = {};
+    if( rebuild_level ) {
+        cata::mdarray<int, point_bub_sm> sm_squares_seen = {};
 
-    auto &visibility_cache = get_cache( zlev ).visibility_cache;
+        auto &visibility_cache = get_cache( zlev ).visibility_cache;
 
-    tripoint_bub_ms p;
-    p.z() = zlev;
-    int &x = p.x();
-    int &y = p.y();
-    for( x = 0; x < MAPSIZE_X; x++ ) {
-        for( y = 0; y < MAPSIZE_Y; y++ ) {
-            lit_level ll = apparent_light_at( p, visibility_variables_cache );
-            visibility_cache[x][y] = ll;
-            sm_squares_seen[ x / SEEX ][ y / SEEY ] += ( ll == lit_level::BRIGHT || ll == lit_level::LIT );
-        }
-    }
-
-    for( int gridx = 0; gridx < my_MAPSIZE; gridx++ ) {
-        for( int gridy = 0; gridy < my_MAPSIZE; gridy++ ) {
-            if( sm_squares_seen[gridx][gridy] > 36 ) { // 25% of the submap is visible
-                const tripoint sm( gridx, gridy, 0 );
-                const tripoint_abs_sm abs_sm = map::abs_sub + sm;
-                const tripoint_abs_omt abs_omt = project_to<coords::omt>( abs_sm );
-                overmap_buffer.set_seen( abs_omt, om_vision_level::full );
+        tripoint_bub_ms p;
+        p.z() = zlev;
+        int &x = p.x();
+        int &y = p.y();
+        for( x = 0; x < MAPSIZE_X; x++ ) {
+            for( y = 0; y < MAPSIZE_Y; y++ ) {
+                lit_level ll = apparent_light_at( p, visibility_variables_cache );
+                visibility_cache[x][y] = ll;
+                sm_squares_seen[ x / SEEX ][ y / SEEY ] += ( ll == lit_level::BRIGHT || ll == lit_level::LIT );
             }
         }
+
+        for( int gridx = 0; gridx < my_MAPSIZE; gridx++ ) {
+            for( int gridy = 0; gridy < my_MAPSIZE; gridy++ ) {
+                if( sm_squares_seen[gridx][gridy] > 36 ) { // 25% of the submap is visible
+                    const tripoint sm( gridx, gridy, 0 );
+                    const tripoint_abs_sm abs_sm = map::abs_sub + sm;
+                    const tripoint_abs_omt abs_omt = project_to<coords::omt>( abs_sm );
+                    overmap_buffer.set_seen( abs_omt, om_vision_level::full );
+                }
+            }
+        }
+        visibility_variables_cache.cached_levels.set( zlev + OVERMAP_DEPTH );
     }
 
 #if defined(TILES)
