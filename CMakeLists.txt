@@ -326,6 +326,8 @@ if (TRACY)
             "Install the tracy package (e.g. 'pacman -S tracy' on Arch, or build\n"
             "tracy from source and set TRACY_INCLUDE_DIR / TRACY_LIBRARY manually).")
     endif()
+    include(CheckTracyClient)
+    ccb_check_tracy_client()
     message(STATUS "Tracy profiler : enabled")
     message(STATUS "  Tracy include: ${TRACY_INCLUDE_DIR}")
     message(STATUS "  Tracy library: ${TRACY_LIBRARY}")
