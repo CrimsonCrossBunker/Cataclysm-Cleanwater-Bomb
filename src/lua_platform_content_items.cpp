@@ -322,8 +322,8 @@ struct item_group_entry_definition_data {
     std::int64_t count_max = 1;
     std::int64_t charges_min = -1;
     std::int64_t charges_max = -1;
-    std::optional<std::string> container;
-    std::optional<std::string> wrapper;
+    std::optional<std::string> container = std::nullopt;
+    std::optional<std::string> wrapper = std::nullopt;
 };
 
 struct item_group_definition_data {
