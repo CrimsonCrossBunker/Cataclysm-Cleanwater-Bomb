@@ -122,6 +122,86 @@ class ActionPhaseTests(unittest.TestCase):
                 with self.subTest(body=body), self.assertRaises(ValueError):
                     read_events([path])
 
+    def pause_fixture(self):
+        return [
+            Event("game.action_execute", 1000, 5, "2", "PAUSE"),
+            Event("game.mid_step", 1005, 5, "2"),
+            Event("tiles.draw", 1007, 2, "2"),
+            Event("simulate_turn_suffix", 1010, 20, "2"),
+            Event("monmove", 1012, 15, "2"),
+            Event("input.acquire", 1030, 70, "2"),
+            Event("game.action_execute", 1100, 5, "2", "PAUSE"),
+            Event("game.mid_step", 1105, 5, "2"),
+            Event("tiles.draw", 1107, 2, "2"),
+            Event("simulate_turn_suffix", 1110, 20, "2"),
+            Event("monmove", 1112, 15, "2"),
+            Event("game.input_redraw", 1130, 20, "2"),
+            Event("tiles.draw", 1132, 10, "2"),
+        ]
+
+    def pause_summary(self, events):
+        return summarize(events, ["PAUSE", "PAUSE"], ["PAUSE"],
+                         require_turn_per_action=True)
+
+    def test_pause_tail_includes_simulation_after_early_action_redraw(self):
+        events = self.pause_fixture()
+        default = summarize(events, ["PAUSE", "PAUSE"], ["PAUSE"])
+        self.assertEqual(default["window_ns"], [1000, 1110])
+        result = self.pause_summary(events)
+        self.assertEqual(result["window_ns"], [1000, 1150])
+        self.assertEqual(result["completed_turns"]["count"], 2)
+        self.assertEqual(result["completed_turns"]["last_suffix_end_ns"], 1130)
+        for name in ("simulate_turn_suffix", "monmove"):
+            self.assertEqual(result["zones"][name]["complete_calls"], 2)
+
+    def test_acknowledged_pause_without_simulation_is_rejected(self):
+        events = [e for e in self.pause_fixture()
+                  if not (e.name == "simulate_turn_suffix" and e.start == 1110)]
+        with self.assertRaisesRegex(ValueError, "action 2.*completed turn suffix"):
+            self.pause_summary(events)
+
+    def test_one_turn_per_pause_cannot_be_replaced_by_a_total_count(self):
+        events = [e for e in self.pause_fixture()
+                  if not (e.name == "simulate_turn_suffix" and e.start == 1110)]
+        events.append(Event("simulate_turn_suffix", 1050, 20, "2"))
+        with self.assertRaisesRegex(ValueError, "action 1.*completed turn suffix"):
+            self.pause_summary(events)
+
+    def test_turn_must_finish_before_next_pause(self):
+        events = [Event(e.name, e.start, 100, e.thread, e.value)
+                  if e.name == "simulate_turn_suffix" and e.start == 1010 else e
+                  for e in self.pause_fixture()]
+        with self.assertRaisesRegex(ValueError, "action 1.*completed turn suffix"):
+            self.pause_summary(events)
+
+    def test_missing_partial_or_worker_only_monster_update_is_rejected(self):
+        for replacement in (None, Event("monmove", 1112, 30, "2"),
+                            Event("monmove", 1112, 15, "worker")):
+            events = [e for e in self.pause_fixture()
+                      if not (e.name == "monmove" and e.start == 1112)]
+            if replacement:
+                events.append(replacement)
+            with self.subTest(replacement=replacement), self.assertRaisesRegex(
+                    ValueError, "action 2.*completed monster update"):
+                self.pause_summary(events)
+
+    def test_worker_suffix_cannot_complete_avatar_turn(self):
+        events = [Event(e.name, e.start, e.duration, "worker", e.value)
+                  if e.name == "simulate_turn_suffix" and e.start == 1110 else e
+                  for e in self.pause_fixture()]
+        with self.assertRaisesRegex(ValueError, "action 2.*completed turn suffix"):
+            self.pause_summary(events)
+
+    def test_extra_monster_update_outside_suffix_is_rejected(self):
+        events = self.pause_fixture() + [Event("monmove", 1040, 5, "2")]
+        with self.assertRaisesRegex(ValueError, "outside a selected turn suffix"):
+            self.pause_summary(events)
+
+    def test_pre_simulation_frame_cannot_complete_pause_sequence(self):
+        events = [e for e in self.pause_fixture() if e.start < 1130]
+        with self.assertRaisesRegex(ValueError, "incomplete capture"):
+            self.pause_summary(events)
+
 
 if __name__ == "__main__":
     unittest.main()

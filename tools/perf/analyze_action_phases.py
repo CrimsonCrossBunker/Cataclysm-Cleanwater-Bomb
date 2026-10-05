@@ -83,7 +83,33 @@ def intersection(left, right):
     return merged(result)
 
 
-def summarize(events, expected, action_labels):
+def completed_turns(events, actions):
+    """Require one main-thread suffix and monster update after each action.
+
+    This is opt-in for fixed pause sequences. Movement at unusual speeds and
+    long activities do not have a one-action/one-turn contract.
+    """
+    thread = actions[0].thread
+    suffixes = [e for e in events if e.name == "simulate_turn_suffix" and e.thread == thread]
+    monsters = [e for e in events if e.name == "monmove" and e.thread == thread]
+    turns = []
+    for index, action in enumerate(actions):
+        boundary = actions[index + 1].start if index + 1 < len(actions) else float("inf")
+        following = [e for e in suffixes if action.end <= e.start < boundary]
+        if len(following) != 1 or following[0].end > boundary:
+            raise ValueError(f"action {index + 1}: expected exactly one completed turn suffix")
+        suffix = following[0]
+        updates = [e for e in monsters if suffix.start <= e.start < suffix.end]
+        if len(updates) != 1 or updates[0].end > suffix.end:
+            raise ValueError(f"action {index + 1}: expected exactly one completed monster update")
+        turns.append(suffix)
+    in_window = [e for e in monsters if actions[0].start <= e.start < turns[-1].end]
+    if len(in_window) != len(turns):
+        raise ValueError("unexpected monster update outside a selected turn suffix")
+    return turns
+
+
+def summarize(events, expected, action_labels, *, require_turn_per_action=False):
     if not isinstance(expected, list) or not expected or any(
             not isinstance(label, str) or not label for label in expected):
         raise ValueError("expected sequence must be a nonempty list of action labels")
@@ -102,7 +128,8 @@ def summarize(events, expected, action_labels):
     thread = actions[0].thread
     if any(a.end > b.start for a, b in zip(actions, actions[1:])):
         raise ValueError("selected action scopes overlap")
-    last_end = actions[-1].end
+    turns = completed_turns(events, actions) if require_turn_per_action else []
+    last_end = turns[-1].end if turns else actions[-1].end
     draws = [e for e in events if e.name == "tiles.draw" and e.thread == thread]
     tail = min((e for e in events if e.name in ("game.mid_step", "game.input_redraw")
                 and e.thread == thread and e.start >= last_end
@@ -142,10 +169,11 @@ def summarize(events, expected, action_labels):
     covered = span(phase_intervals)
     draw = intervals["tiles.draw"]
     draw_by_phase = {name: span(intersection(draw, intervals[name])) for name in phases}
-    return {
+    report = {
         "action_count": len(actions), "action_family": sorted(labels), "tracy_thread_id": thread,
         "window_ns": [lo, hi], "window_elapsed_ms": (hi - lo) / 1e6,
-        "window_policy": "first selected action start through first completed mid-step or input redraw containing a tile draw after last action",
+        "window_policy": ("first selected action start through first completed mid-step or input redraw containing a tile draw after "
+                          + ("last completed simulation turn" if turns else "last action")),
         "presentation_tail": {"zone": tail.name, "start_ns": tail.start, "end_ns": tail.end},
         "zones": summaries, "phase_covered_elapsed_ns": covered,
         "phase_overlap_ns": sum(span(intervals[n]) for n in phases) - covered,
@@ -161,6 +189,14 @@ def summarize(events, expected, action_labels):
             "Tracy thread identifiers are not operating-system thread identifiers.",
         ],
     }
+    if turns:
+        report["completed_turns"] = {
+            "count": len(turns), "first_suffix_start_ns": turns[0].start,
+            "last_suffix_end_ns": turns[-1].end,
+            "policy": "one completed main-thread suffix containing one completed monmove after every selected action, before the next action",
+            "limits": "Scope completion does not establish calendar advancement or save equivalence; verify the native saved state separately.",
+        }
+    return report
 
 
 def main():
@@ -169,11 +205,13 @@ def main():
                         help="comma-separated complete action family, e.g. UP,DOWN")
     parser.add_argument("--sequence", type=Path, required=True,
                         help="JSON array of expected action labels in order")
+    parser.add_argument("--require-turn-per-action", action="store_true",
+                        help="fixed pause sequences only: require one completed simulation/monster turn per action and include its presentation tail")
     parser.add_argument("csv", nargs="+", type=Path, help="accepted unwrapped CPU-zone exports")
     args = parser.parse_args()
     try:
         report = summarize(read_events(args.csv), json.loads(args.sequence.read_text()),
-                           args.actions.split(","))
+                           args.actions.split(","), require_turn_per_action=args.require_turn_per_action)
     except (ValueError, OSError) as error:
         parser.error(str(error))
     print(json.dumps(report, indent=2, sort_keys=True))
