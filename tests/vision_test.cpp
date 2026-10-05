@@ -589,6 +589,73 @@ TEST_CASE( "visibility_grid_refresh_uses_current_observer", "[vision][map][cache
     }
 }
 
+TEST_CASE( "visibility_grid_tracks_fields_across_submap_boundaries", "[vision][map][cache]" )
+{
+    clear_avatar();
+    clear_map();
+    scoped_weather_override weather_clear( WEATHER_CLEAR );
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms old_pos = you.pos_bub( here );
+    const time_point old_time = calendar::turn;
+    on_out_of_scope restore_player( [&]() {
+        you.remove_effect( efftype_id( "blind" ) );
+        you.last_target_pos.reset();
+        you.recoil = MAX_RECOIL;
+        you.aim_cache_dirty = true;
+        you.setpos( here, old_pos );
+        set_time( old_time );
+    } );
+    set_time( calendar::turn_zero + 12_hours );
+    you.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
+    for( int y = 0; y < MAPSIZE_Y; ++y ) {
+        here.ter_set( tripoint_bub_ms( 62, y, 0 ), ter_t_brick_wall );
+    }
+    const bool blind = GENERATE( false, true );
+    const bool aiming = GENERATE( false, true );
+    CAPTURE( blind, aiming );
+    if( blind ) {
+        you.add_effect( efftype_id( "blind" ), 1_turns );
+        you.recalc_sight_limits();
+    }
+    if( aiming ) {
+        you.last_target_pos = here.get_abs( tripoint_bub_ms( 72, 60, 0 ) );
+        you.recoil = 0;
+    }
+    const field_type_id clairvoyant = field_type_str_id( "fd_clairvoyant" );
+    const auto refresh = [&]() {
+        you.aim_cache_dirty = true;
+        here.build_map_cache( 0 );
+        here.invalidate_visibility_cache();
+        here.update_visibility_cache( 0 );
+        const auto &grid = here.get_cache_ref( 0 ).visibility_cache;
+        for( int x = 70; x <= 73; ++x ) {
+            for( int y = 58; y <= 61; ++y ) {
+                const tripoint_bub_ms p( x, y, 0 );
+                CAPTURE( p );
+                CHECK( grid[x][y] == here.apparent_light_at( p,
+                        here.get_visibility_variables_cache() ) );
+            }
+        }
+    };
+    // Cross both x and y submap boundaries. Removing and moving the override
+    // must be reflected by the next rebuild, including behind walls or blind.
+    for( const tripoint_bub_ms target : {
+             tripoint_bub_ms( 71, 59, 0 ), tripoint_bub_ms( 72, 59, 0 ),
+             tripoint_bub_ms( 71, 60, 0 ), tripoint_bub_ms( 72, 60, 0 )
+         } ) {
+        CAPTURE( target );
+        REQUIRE( here.add_field( target, clairvoyant ) );
+        refresh();
+        CHECK( here.get_cache_ref( 0 ).visibility_cache[target.x()][target.y()] ==
+               lit_level::BRIGHT );
+        here.remove_field( target, clairvoyant );
+        refresh();
+        CHECK( here.get_cache_ref( 0 ).visibility_cache[target.x()][target.y()] !=
+               lit_level::BRIGHT );
+    }
+}
+
 BENCHMARK_TEST_CASE( "invalidated_map_visibility_refresh", "[vision][map_cache]" )
 {
     clear_avatar();

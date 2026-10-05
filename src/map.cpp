@@ -8768,9 +8768,26 @@ void map::update_visibility_cache( const int zlev )
 
     if( rebuild_level ) {
         cata::mdarray<int, point_bub_sm> sm_squares_seen = {};
+        // Resolve field storage once per submap while map owns the loaded grid.
+        // This read-only view ends with this synchronous rebuild; field contents
+        // and the evaluator's tile traversal order remain unchanged.
+        cata::mdarray<const submap *, point_bub_sm> field_submaps = {};
+        if( visibility_variables_cache.clairvoyance_field ) {
+            for( int x = 0; x < std::min( my_MAPSIZE, MAPSIZE ); ++x ) {
+                for( int y = 0; y < std::min( my_MAPSIZE, MAPSIZE ); ++y ) {
+                    if( inbounds( tripoint_bub_ms( x * SEEX, y * SEEY, zlev ) ) ) {
+                        const size_t index = get_nonant( tripoint_rel_sm( x, y, zlev ) );
+                        // Leave invalid/unloaded cells to the usual field_at fallback.
+                        if( index < grid.size() ) {
+                            field_submaps[x][y] = grid[index];
+                        }
+                    }
+                }
+            }
+        }
 
         rebuild_visibility_cache_grid( *this, get_cache( zlev ), zlev,
-                                       visibility_variables_cache, sm_squares_seen );
+                                       visibility_variables_cache, field_submaps, sm_squares_seen );
 
         for( int gridx = 0; gridx < my_MAPSIZE; gridx++ ) {
             for( int gridy = 0; gridy < my_MAPSIZE; gridy++ ) {

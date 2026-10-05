@@ -1093,16 +1093,28 @@ lit_level map::apparent_light_at( const tripoint_bub_ms &p,
 
 void rebuild_visibility_cache_grid( const map &here, level_cache &map_cache, const int zlev,
                                     const visibility_variables &variables,
+                                    const cata::mdarray<const submap *, point_bub_sm> &field_submaps,
                                     cata::mdarray<int, point_bub_sm> &sm_squares_seen )
 {
     CATA_PROFILE_SCOPE();
     const light_observer observer( get_avatar() );
+    const auto has_clairvoyant_field = [&]( const tripoint_bub_ms & p ) {
+        const submap *const sm = field_submaps[p.x() / SEEX][p.y() / SEEY];
+        // Preserve the point-query fallback for small maps and unloaded cells,
+        // including its existing null-field and diagnostic behavior.
+        const field &fields = sm != nullptr ?
+                              sm->get_field( point_sm_ms( p.x() % SEEX, p.y() % SEEY ) ) :
+                              here.field_at( p );
+        return fields.find_field( *variables.clairvoyance_field ) != nullptr;
+    };
     for( int x = 0; x < MAPSIZE_X; ++x ) {
         for( int y = 0; y < MAPSIZE_Y; ++y ) {
             const tripoint_bub_ms p( x, y, zlev );
             const int dist = rl_dist( observer.position, p );
-            const lit_level ll = clairvoyance_applies( here, p, variables, dist ) ?
-                                 lit_level::BRIGHT :
+            const bool clairvoyant = ( variables.u_clairvoyance > 0 &&
+                                       dist <= variables.u_clairvoyance ) ||
+                                     ( variables.clairvoyance_field && has_clairvoyant_field( p ) );
+            const lit_level ll = clairvoyant ? lit_level::BRIGHT :
                                  ::apparent_light_at( map_cache, p, variables, observer, dist );
             map_cache.visibility_cache[x][y] = ll;
             sm_squares_seen[x / SEEX][y / SEEY] += ( ll == lit_level::BRIGHT || ll == lit_level::LIT );
