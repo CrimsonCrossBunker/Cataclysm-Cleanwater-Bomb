@@ -85,6 +85,7 @@
 #include "sdltiles.h"
 #include "shockwave.h"
 #include "sounds.h"
+#include "sprite_geometry.h"
 #include "string_formatter.h"
 #include "submap.h"
 #include "tileray.h"
@@ -3510,93 +3511,40 @@ bool cata_tiles::draw_sprite_at(
     int height = 0;
     std::tie( width, height ) = sprite_tex->dimension();
 
-    const point &tile_offset = retract <= 0
-                               ? tile.offset
-                               : ( retract >= 100
-                                   ? tile.offset_retracted
-                                   : tile.offset
-                                   + ( ( tile.offset_retracted - tile.offset ) * retract ) / 100
-                                 );
-    SDL_Rect destination;
-    // Using divide_round_down because the offset might be negative.
-    destination.x = p.x + divide_round_down( ( tile_offset.x + offset.x ) * tile_width,
-                    tileset_ptr->get_tile_width() );
-    destination.y = p.y + divide_round_down( ( tile_offset.y + offset.y - height_3d ) * tile_width,
-                    tileset_ptr->get_tile_width() );
-    destination.w = width * tile_width * tile.pixelscale / tileset_ptr->get_tile_width();
-    destination.h = height * tile_height * tile.pixelscale / tileset_ptr->get_tile_height();
-
-    const bool iso = is_isometric();
-
-    // --- Tint bounds tracking (ortho only) ---
-    // Accumulate the screen-space extent of opaque pixels for this tile so the
-    // tint overlay knows the actual sprite footprint. We use the pre-computed
-    // opaque_rect (tightest non-transparent bounding box, computed at tileset
-    // load) rather than the full destination rect to avoid tinting transparent
-    // padding around sprites. When the sprite is flipped, mirror the opaque
-    // rect to match.
-    if( m_cur_bounds ) {
-        SDL_Rect opq = sprite_tex->get_opaque_rect();
-        if( opq.w > 0 && opq.h > 0 ) {
-            if( rotate_sprite ) {
-                // rota == -1 is horizontal flip only.
-                // rota % 4 == 2 is 180 degrees, implemented as H+V flip.
-                if( rota == -1 || ( !iso && rota % 4 == 2 ) ) {
-                    opq.x = width - opq.x - opq.w;
-                }
-                if( !iso && rota % 4 == 2 ) {
-                    opq.y = height - opq.y - opq.h;
-                }
-            }
-            // Scale from source pixel coords to destination screen coords.
-            m_cur_bounds->expand(
-                destination.x + opq.x * destination.w / width,
-                destination.y + opq.y * destination.h / height,
-                opq.w * destination.w / width,
-                opq.h * destination.h / height );
-        }
+    sprite_geometry_input geometry_input;
+    geometry_input.screen_position = p;
+    geometry_input.sprite_size = point( width, height );
+    geometry_input.screen_tile_size = point( tile_width, tile_height );
+    geometry_input.tileset_tile_size = point( tileset_ptr->get_tile_width(),
+        tileset_ptr->get_tile_height() );
+    geometry_input.offset = tile.offset;
+    geometry_input.offset_retracted = tile.offset_retracted;
+    geometry_input.extra_offset = offset;
+    geometry_input.stacked_height = height_3d;
+    geometry_input.retract = retract;
+    geometry_input.pixelscale = tile.pixelscale;
+    geometry_input.rotate_sprite = rotate_sprite;
+    geometry_input.rotation = rota;
+    geometry_input.isometric = is_isometric();
+    geometry_input.allow_diagonal_rotation = allow_diagonal_rota;
+    geometry_input.calculate_opaque_bounds = m_cur_bounds != nullptr;
+    if( geometry_input.calculate_opaque_bounds ) {
+        const SDL_Rect opaque = sprite_tex->get_opaque_rect();
+        geometry_input.source_opaque_bounds = {
+            point( opaque.x, opaque.y ), point( opaque.w, opaque.h )
+        };
     }
-
-    // --- Pre-compute rotation for tint recording ---
-    // We need the final angle/flip values both for the actual render call below
-    // and for recording into tint_sprites (which replays the sprite as a white
-    // silhouette during the tint overlay pass). Compute them once here.
-    double render_angle = 0;
-    CataFlipMode render_flip = SDL_FLIP_NONE;
-    if( rotate_sprite ) {
-        if( rota == -1 ) {
-            render_flip = SDL_FLIP_HORIZONTAL;
-        } else if( !iso ) {
-            // Non-bullet tiles keep the historical `% 4` fold exactly. Bullets
-            // opt into the extended codes (5-8) for true diagonal rotation.
-            const int r = allow_diagonal_rota ? rota : ( rota % 4 );
-            switch( r ) {
-                case 1:
-                    render_angle = 90;
-                    break;
-                case 2:
-                    render_flip = static_cast<CataFlipMode>( SDL_FLIP_HORIZONTAL | SDL_FLIP_VERTICAL );
-                    break;
-                case 3:
-                    render_angle = -90;
-                    break;
-                // Diagonal rotations, only reachable when allow_diagonal_rota.
-                case 5:
-                    render_angle = 45;
-                    break;
-                case 6:
-                    render_angle = -45;
-                    break;
-                case 7:
-                    render_angle = -135;
-                    break;
-                case 8:
-                    render_angle = 135;
-                    break;
-                default:
-                    break;
-            }
-        }
+    const sprite_geometry_result geometry = prepare_sprite_geometry( geometry_input );
+    SDL_Rect destination = { geometry.destination.origin.x, geometry.destination.origin.y,
+                             geometry.destination.size.x, geometry.destination.size.y
+                           };
+    const double render_angle = geometry.angle;
+    const CataFlipMode render_flip = static_cast<CataFlipMode>(
+                                         ( geometry.flip_horizontal ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE ) |
+                                         ( geometry.flip_vertical ? SDL_FLIP_VERTICAL : SDL_FLIP_NONE ) );
+    if( geometry.opaque_bounds ) {
+        const sprite_rectangle &bounds = *geometry.opaque_bounds;
+        m_cur_bounds->expand( bounds.origin.x, bounds.origin.y, bounds.size.x, bounds.size.y );
     }
 
     // Record this sprite for silhouette mask replay. Must happen before the
@@ -3608,117 +3556,18 @@ bool cata_tiles::draw_sprite_at(
             render_angle, static_cast<int>( render_flip ) } );
     }
 
-    if( rotate_sprite ) {
-        if( rota == -1 ) {
-            // flip horizontally
-            ret = sprite_tex->render_copy_ex(
-                      renderer, &destination, 0, nullptr,
-                      static_cast<CataFlipMode>( SDL_FLIP_HORIZONTAL ) );
-        } else {
-            // Non-bullet tiles keep the historical `% 4` fold exactly. Bullets
-            // opt into the extended codes (5-8) for true diagonal rotation.
-            const int r = allow_diagonal_rota ? rota : ( rota % 4 );
-            switch( r ) {
-                default:
-                case 0:
-                    // unrotated (and 180, with just two sprites)
-                    ret = sprite_tex->render_copy_ex( renderer, &destination, 0, nullptr,
-                                                      SDL_FLIP_NONE );
-                    break;
-                case 1:
-                    // 90 degrees (and 270, with just two sprites)
 #if defined(_WIN32) && defined(CROSS_LINUX)
-                    // For an unknown reason, additional offset is required in direct3d mode
-                    // for cross-compilation from Linux to Windows
-                    if( direct3d_mode ) {
-                        destination.y -= 1;
-                    }
-#endif
-                    if( !iso ) {
-                        // never rotate isometric tiles
-                        ret = sprite_tex->render_copy_ex( renderer, &destination, 90, nullptr,
-                                                          SDL_FLIP_NONE );
-                    } else {
-                        ret = sprite_tex->render_copy_ex( renderer, &destination, 0, nullptr,
-                                                          SDL_FLIP_NONE );
-                    }
-                    break;
-                case 2:
-                    // 180 degrees, implemented with flips instead of rotation
-                    if( !iso ) {
-                        // never flip isometric tiles vertically
-                        ret = sprite_tex->render_copy_ex(
-                                  renderer, &destination, 0, nullptr,
-                                  static_cast<CataFlipMode>( SDL_FLIP_HORIZONTAL | SDL_FLIP_VERTICAL ) );
-                    } else {
-                        ret = sprite_tex->render_copy_ex( renderer, &destination, 0, nullptr,
-                                                          SDL_FLIP_NONE );
-                    }
-                    break;
-                case 3:
-                    // 270 degrees
-#if defined(_WIN32) && defined(CROSS_LINUX)
-                    // For an unknown reason, additional offset is required in direct3d mode
-                    // for cross-compilation from Linux to Windows
-                    if( direct3d_mode ) {
-                        destination.x -= 1;
-                    }
-#endif
-                    if( !iso ) {
-                        // never rotate isometric tiles
-                        ret = sprite_tex->render_copy_ex( renderer, &destination, -90, nullptr,
-                                                          SDL_FLIP_NONE );
-                    } else {
-                        ret = sprite_tex->render_copy_ex( renderer, &destination, 0, nullptr,
-                                                          SDL_FLIP_NONE );
-                    }
-                    break;
-                case 5:
-                    // 45 degrees (diagonal, bullets only)
-                    if( !iso ) {
-                        ret = sprite_tex->render_copy_ex( renderer, &destination, 45, nullptr,
-                                                          SDL_FLIP_NONE );
-                    } else {
-                        ret = sprite_tex->render_copy_ex( renderer, &destination, 0, nullptr,
-                                                          SDL_FLIP_NONE );
-                    }
-                    break;
-                case 6:
-                    // -45 degrees (diagonal, bullets only)
-                    if( !iso ) {
-                        ret = sprite_tex->render_copy_ex( renderer, &destination, -45, nullptr,
-                                                          SDL_FLIP_NONE );
-                    } else {
-                        ret = sprite_tex->render_copy_ex( renderer, &destination, 0, nullptr,
-                                                          SDL_FLIP_NONE );
-                    }
-                    break;
-                case 7:
-                    // -135 degrees (diagonal, bullets only)
-                    if( !iso ) {
-                        ret = sprite_tex->render_copy_ex( renderer, &destination, -135, nullptr,
-                                                          SDL_FLIP_NONE );
-                    } else {
-                        ret = sprite_tex->render_copy_ex( renderer, &destination, 0, nullptr,
-                                                          SDL_FLIP_NONE );
-                    }
-                    break;
-                case 8:
-                    // 135 degrees (diagonal, bullets only)
-                    if( !iso ) {
-                        ret = sprite_tex->render_copy_ex( renderer, &destination, 135, nullptr,
-                                                          SDL_FLIP_NONE );
-                    } else {
-                        ret = sprite_tex->render_copy_ex( renderer, &destination, 0, nullptr,
-                                                          SDL_FLIP_NONE );
-                    }
-                    break;
-            }
+    // Preserve the cross-compiled Direct3D workaround only at submission time.
+    // Tint bounds and mask replay above use the unadjusted screen destination.
+    if( direct3d_mode ) {
+        if( geometry.rotation_code == 1 ) {
+            destination.y -= 1;
+        } else if( geometry.rotation_code == 3 ) {
+            destination.x -= 1;
         }
-    } else {
-        // don't rotate, same as case 0 above
-        ret = sprite_tex->render_copy_ex( renderer, &destination, 0, nullptr, SDL_FLIP_NONE );
     }
+#endif
+    ret = sprite_tex->render_copy_ex( renderer, &destination, render_angle, nullptr, render_flip );
 
     // Shape-exact gray overlay: blend the sprite's own silhouette over it so
     // the gray effect never tints neighboring sprites that overflow this tile.
