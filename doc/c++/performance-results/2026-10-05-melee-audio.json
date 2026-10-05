@@ -1,0 +1,405 @@
+{
+  "batch": "main-thread-owned-melee-audio-scheduling",
+  "classification": "Bounded resource/lifecycle improvement and simulation RNG correctness repair; no whole-game speedup claim",
+  "baseline_commit": "f3d2daca5c260ad28313baf5514c362784b6d603",
+  "implementation": [
+    "Replace detached thread per melee invocation with an owned deadline queue, serviced by main-thread input polling, rendering and subsequent melee submission",
+    "Copy season/indoors/night, selected weapon/skill variants, volumes and angles at the action; no deferred borrowed world or asset pointers",
+    "Schedule swing and hit with independent presentation randomness; effect-file selection and pitch also use a separate per-event engine",
+    "Retain swing1-2ms and weapon-volume-dependent hit9-12ms or12-16ms formulas, current sound IDs/fallbacks/volume scaling/angle/pitch ranges",
+    "Bound to1024pending effects; reject a whole cosmetic sequence when full; stable due-time and insertion ordering, including unarmed equal deadlines",
+    "Clear pending requests at world reset and before audio resource shutdown; preserve ordinary positional audio RNG paths",
+    "Existing SDL audio backend owns asynchronous playback. No new application worker; simulation, SDL resource access and hosting SFX packet submission stay on owner thread"
+  ],
+  "contracts": [
+    "No save format, gameplay combat formulas, Lua contract or network packet schema changed",
+    "Intentional correction: melee audio no longer consumes/races the simulation RNG. Exact contaminated old combat outcomes cannot be preserved; prior unchanged baseline repeats already diverged",
+    "Remaining presentation RNG users are outside this batch; do not claim the entire game is audio-setting-independent",
+    "Sound scheduling follows wall-clock presentation time. A blocked main thread can delay playback; this is not a real-time audio deadline guarantee"
+  ],
+  "build": {
+    "configuration": "Clang Release-O3, SDL2 API, Tiles+sound, Lua Platform v1, enabled staticTracy0.14.1; compatible existing CMake cache",
+    "commands": [
+      "cmake -S . -B out/build/ccb-tracy-tiles",
+      "cmake --build out/build/ccb-tracy-tiles --config Release --target cataclysm-tiles --parallel 2"
+    ],
+    "configure_exit": 0,
+    "build_exit": 0,
+    "artifact": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/out/build/ccb-tracy-tiles/src/Release/cataclysm-tiles",
+    "immutable_baseline": {
+      "path": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/carrier-20261005/binaries/sprite-geometry",
+      "sha256": "0d9ddda63cb95e2ec43d705e6b3fa019d9276c6f292682ddbe116ec995322ed8",
+      "build_id": "cd2f6efc059df8fe421317a94dec287e8d53ebe7"
+    },
+    "immutable_after": {
+      "path": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/melee-scheduling-20261005/binaries/melee-scheduling",
+      "sha256": "160a617581b72b5c33c7eeec7708aeba889ae6ca6d877f1d48d6e7bb3b6770c1",
+      "build_id": "23e65f3651ea6d3e38e19b36b49b59144681470e"
+    },
+    "fixed_failures": [
+      "Used actual CATA_PROFILE_SCOPE_NAMED macro after compile diagnosed an invalid macro name",
+      "Removed now-unused legacy dbg macro after deleting detached-thread error handling"
+    ],
+    "existing_link_warning": "Lua loslib tmpnam warning; no linker failure"
+  },
+  "native_regression": {
+    "builder": "python3 .ccb-performance-tiles-evidence/melee-scheduling-20261005/build-focused-tests.py",
+    "linkage": "Checked-in test_support_sources and queue/backend tests compiled with production SDL flags, linked to exact production CMake object files and libraries; local focused executable, not full maintained test target",
+    "command": [
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/melee-scheduling-20261005/melee-cata_test-tiles",
+      "[melee_sound_queue],[sound_backend]",
+      "--rng-seed",
+      "20261005",
+      "--warn",
+      "NoTests",
+      "--user-dir",
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/melee-scheduling-20261005/test-user/"
+    ],
+    "env": {
+      "SDL_AUDIODRIVER": "dummy",
+      "SDL_VIDEODRIVER": "dummy"
+    },
+    "exit": 0,
+    "elapsed_seconds": 20.03448201098945,
+    "cases": 9,
+    "assertions": 2087,
+    "coverage": [
+      "Deadline bounds and swing/hit order",
+      "Zero-volume unarmed ties, misses",
+      "Copied context survives producer changes; earlier deadlines overtake long pending hits",
+      "Atomic bounded overload and world clear",
+      "Pump-cadence-independent presentation seeds; simulation engine unchanged",
+      "Actual generate_melee_sound and positional effect selection/pitch leave simulation engine unchanged",
+      "Existing SDL2 backend predicate and uninitialized poll cases"
+    ],
+    "fixture_failure_and_fix": "Initial test constructed a null item inside RNG window; weighted variant selection calls rng_bits even for an empty list. Move item construction before the snapshot; retain failed evidence. No production RNG change made to hide this failure",
+    "device_scope": "SDL dummy audio/video for native regression; missing test files use valid silent backend fallback; actual desktop perf below uses normal hardware Tiles"
+  },
+  "sound_disabled_gate": {
+    "command": [
+      "/usr/bin/clang++",
+      "-DBACKTRACE",
+      "-DCATA_ENABLE_LUA_PLATFORM=1",
+      "-DCMAKE",
+      "-DDATA_DIR_PREFIX",
+      "-DGIT_VERSION",
+      "-DPREFIX=/usr/local",
+      "-DRELEASE",
+      "-DUSE_HOME_DIR",
+      "-DZSTD_DISABLE_ASM",
+      "-DZSTD_STATIC_LINKING_ONLY",
+      "-DCMAKE_INTDIR=\"Release\"",
+      "-I/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/out/build/ccb-tracy-tiles/src",
+      "-I/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/src",
+      "-isystem",
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/src/third-party/asio/asio/include",
+      "-isystem",
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/src/third-party",
+      "-isystem",
+      "/usr/include/SDL2",
+      "-isystem",
+      "/usr/include/freetype2",
+      "-isystem",
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/src/sol/..",
+      "-isystem",
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/src/lua",
+      "-isystem",
+      "/usr/include/Tracy/tracy",
+      "-mcx16",
+      "-Werror",
+      "-Wall",
+      "-Wextra",
+      "-Wformat-signedness",
+      "-Wlogical-op",
+      "-Wmissing-declarations",
+      "-Wmissing-noreturn",
+      "-Wnon-virtual-dtor",
+      "-Wold-style-cast",
+      "-Woverloaded-virtual",
+      "-Wpedantic",
+      "-Wsuggest-override",
+      "-Wunused-macros",
+      "-Wzero-as-null-pointer-constant",
+      "-Wno-c++20-compat",
+      "-Wno-unknown-warning-option",
+      "-Wno-error=array-bounds",
+      "-Wredundant-decls",
+      "-fsigned-char",
+      "-g1",
+      "-O3",
+      "-DNDEBUG",
+      "-std=c++17",
+      "-pthread",
+      "-fsyntax-only",
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/src/sounds.cpp",
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/src/melee_sound_queue.cpp"
+    ],
+    "exit": 0,
+    "seconds": 7.503683035989525,
+    "limit": "Focused syntax-only Sound/Tiles/Tracy-disabled paths; not a full alternate build"
+  },
+  "format_gate": {
+    "command": "make BUILD_PREFIX=perf- ODIR=perf-obj ASTYLE_SOURCES='src/melee_sound_queue.h src/melee_sound_queue.cpp src/sdlsound.h tests/melee_sound_queue_test.cpp' astyle-check",
+    "exit": 0,
+    "astyle_version": "3.6.18",
+    "large_file_policy": "Changed responsibility windows formatted; no unrelated whole-file churn"
+  },
+  "actual_game": {
+    "fixture": "Copied Damon aircraft-carrier save; user original48SHA256unchanged",
+    "display": "Actual SDL2 Tiles, UndeadPeople, fullscreen2880x1800, X11 on KDE Wayland, hardware AMD Radeon OpenGL, tile_zoom4, safety off, autosave false",
+    "soundpack": "Menu_Sound_Test contains menu_move and menu_error only; real scene exercises melee scheduling/thread creation but does not validate audible melee assets",
+    "profile": "perf stat -pPID all threads; perf record -pPID all threads, cycles:u397Hz, DWARF32768bytes, record33s/stat35s",
+    "sequence": "8*20,2*20,8*20,2*20. Normal keyboard events with modifiers0, same replay seed. Blocked moves and melee are ordinary gameplay; not80walked tiles",
+    "runs": [
+      {
+        "trial": "move-before",
+        "recorded_keys": 80,
+        "modifiers": 0,
+        "seed_header": "SEED 3843168543",
+        "collector_exit": [
+          0,
+          0
+        ],
+        "capture_seconds": 35,
+        "input_ack_window_seconds": 13.141121782013215,
+        "active_window_fork_records": 24,
+        "stat": {
+          "task-clock:u": {
+            "value": 24478.21,
+            "unit": "msec",
+            "counter_running_percent": 100.0
+          },
+          "cycles:u": {
+            "value": 81576524067.0,
+            "unit": "",
+            "counter_running_percent": 55.0
+          },
+          "instructions:u": {
+            "value": 199198716933.0,
+            "unit": "",
+            "counter_running_percent": 53.0
+          },
+          "cache-misses:u": {
+            "value": 541957038.0,
+            "unit": "",
+            "counter_running_percent": 52.0
+          },
+          "context-switches:u": {
+            "value": 0.0,
+            "unit": "",
+            "counter_running_percent": 100.0
+          },
+          "cpu-migrations:u": {
+            "value": 0.0,
+            "unit": "",
+            "counter_running_percent": 100.0
+          }
+        },
+        "final_turn": 5212818,
+        "player_position": [
+          5495,
+          7458,
+          2
+        ],
+        "active_monsters": 845,
+        "tracked_inclusive_percent": {
+          "cata_tiles::draw": 64.15175462478375,
+          "cata_tiles::draw_sprite_at": 24.536383328962753,
+          "monmove": 0.5209188111097371,
+          "map::shift": 1.199947892770489,
+          "map::build_map_cache": 3.193858761283544
+        },
+        "unresolved_leaf_cycle_percent": 40.19730949310517
+      },
+      {
+        "trial": "move-after",
+        "recorded_keys": 80,
+        "modifiers": 0,
+        "seed_header": "SEED 3843168543",
+        "collector_exit": [
+          0,
+          0
+        ],
+        "capture_seconds": 35,
+        "input_ack_window_seconds": 12.40491139399819,
+        "active_window_fork_records": 1,
+        "stat": {
+          "task-clock:u": {
+            "value": 23852.67,
+            "unit": "msec",
+            "counter_running_percent": 100.0
+          },
+          "cycles:u": {
+            "value": 79165505504.0,
+            "unit": "",
+            "counter_running_percent": 56.0
+          },
+          "instructions:u": {
+            "value": 205003193442.0,
+            "unit": "",
+            "counter_running_percent": 55.0
+          },
+          "cache-misses:u": {
+            "value": 537853683.0,
+            "unit": "",
+            "counter_running_percent": 54.0
+          },
+          "context-switches:u": {
+            "value": 0.0,
+            "unit": "",
+            "counter_running_percent": 100.0
+          },
+          "cpu-migrations:u": {
+            "value": 0.0,
+            "unit": "",
+            "counter_running_percent": 100.0
+          }
+        },
+        "final_turn": 5212818,
+        "player_position": [
+          5495,
+          7454,
+          2
+        ],
+        "active_monsters": 832,
+        "tracked_inclusive_percent": {
+          "cata_tiles::draw": 64.28337165234532,
+          "cata_tiles::draw_sprite_at": 25.069450819114,
+          "monmove": 0.39320557802542216,
+          "map::shift": 1.2846008037448962,
+          "map::build_map_cache": 3.0457334915125878
+        },
+        "unresolved_leaf_cycle_percent": 39.93760293530319
+      },
+      {
+        "trial": "move-after-repeat",
+        "recorded_keys": 80,
+        "modifiers": 0,
+        "seed_header": "SEED 3843168543",
+        "collector_exit": [
+          0,
+          0
+        ],
+        "capture_seconds": 35,
+        "input_ack_window_seconds": 12.226422031002585,
+        "active_window_fork_records": 1,
+        "stat": {
+          "task-clock:u": {
+            "value": 23696.68,
+            "unit": "msec",
+            "counter_running_percent": 100.0
+          },
+          "cycles:u": {
+            "value": 78589758020.0,
+            "unit": "",
+            "counter_running_percent": 58.0
+          },
+          "instructions:u": {
+            "value": 206068977015.0,
+            "unit": "",
+            "counter_running_percent": 56.0
+          },
+          "cache-misses:u": {
+            "value": 541934534.0,
+            "unit": "",
+            "counter_running_percent": 55.0
+          },
+          "context-switches:u": {
+            "value": 0.0,
+            "unit": "",
+            "counter_running_percent": 100.0
+          },
+          "cpu-migrations:u": {
+            "value": 0.0,
+            "unit": "",
+            "counter_running_percent": 100.0
+          }
+        },
+        "final_turn": 5212818,
+        "player_position": [
+          5495,
+          7454,
+          2
+        ],
+        "active_monsters": 832,
+        "tracked_inclusive_percent": {
+          "cata_tiles::draw": 64.50754230665143,
+          "cata_tiles::draw_sprite_at": 24.57857676293875,
+          "monmove": 0.4212018174195062,
+          "map::shift": 1.3523408947292686,
+          "map::build_map_cache": 2.69125465283619
+        },
+        "unresolved_leaf_cycle_percent": 40.05266566368495
+      }
+    ],
+    "observed_fork_change_percent": -95.83333333333334,
+    "task_clock_change_percent": [
+      -2.555497317818589,
+      -3.1927579671879536
+    ],
+    "interpretation": [
+      "New capture fork records24->1,1; source no longer creates any melee worker. These counts cover all process threads; the remaining fork is not identified and no zero-thread claim is made",
+      "User CPU capture totals decrease in both after runs, but old/new combat world outcomes differ after RNG repair. Do not infer same-work speedup, FPS, latency or no-regression from these totals",
+      "One before run and two after runs; all stat totals include idle drawing. Controller acknowledgement includes helper launch/queue cost; not simulation completion or frame latency",
+      "Hardware counters multiplexed about52-58percent; weighted inclusive paths overlap, ~40percent unresolved leaves. Do not treat missing symbols as zero cost",
+      "This host reports user-only context-switch/cpu-migration counts0; they do not measure real scheduler switches and are excluded from conclusions"
+    ]
+  },
+  "after_repeat_save_comparison": {
+    "before_trial": ".ccb-performance-tiles-evidence/melee-scheduling-20261005/move-after",
+    "after_trial": ".ccb-performance-tiles-evidence/melee-scheduling-20261005/move-after-repeat",
+    "player_save_semantic_equal_excluding_real_wall_time": true,
+    "normalized_unordered_fields": [
+      {
+        "path": "/player/learned_recipes",
+        "count": 1127,
+        "multiset_equal": true
+      }
+    ],
+    "wall_time_only_differences": [
+      "/stats_tracker/data/game_save/event_counts/0/0/time_since_load/1",
+      "/stats_tracker/data/game_save/event_counts/0/0/total_time_played/1"
+    ],
+    "unexplained_player_differences": [],
+    "world_file_count_before": 48,
+    "world_file_count_after": 48,
+    "world_file_set_equal": true,
+    "identical_world_files": 46,
+    "different_world_files": [
+      "#TWl0Y2hlbCBSaWNl.pt",
+      "#TWl0Y2hlbCBSaWNl.sav.zzip"
+    ],
+    "pt_checks": [
+      {
+        "trial": "move-after",
+        "pt_equals_saved_total_played_seconds": true,
+        "seconds": 214
+      },
+      {
+        "trial": "move-after-repeat",
+        "pt_equals_saved_total_played_seconds": true,
+        "seconds": 231
+      }
+    ],
+    "interpretation": "Two independent fresh launches with same binary/fixture/keys produce equal simulation and46/48byte-identical files; two real wall-clock stats and1127recipe multiset normalized explicitly. Not complete replay/multiplayer acceptance"
+  },
+  "unrun_gates": [
+    "Full native suite/CI",
+    "Full separate SOUND-off build beyond focused syntax",
+    "SDL3/Android and Windows audio devices",
+    "Dedicated multiplayer/packet-timing scenario",
+    "Audible melee soundpack, audio latency under a long blocked turn",
+    "GPU/FPS/off-CPU latency and statistically powered speed benchmark"
+  ],
+  "next_exact_action": "Use the now-repeatable carrier combat fixture to capture bounded Tracy action/simulation/presentation zones; isolate action-time blocking from idle drawing before selecting additional parallel work. Current all-thread CPU samples still include cata_tiles::draw around64percent, overlapping draw_sprite_at around25percent",
+  "source_input_sha256": {
+    "src/melee_sound_queue.h": "a25d3072b5d055725c3c6dc1aa98ce89393be009b23af799dfa2b1d3e28261a7",
+    "src/melee_sound_queue.cpp": "9ce913888f2c1ab477f15393aa4c05208112a9a05e465da77ea648ff0bc0df5c",
+    "src/sounds.cpp": "d960b25222864ac7948af97db290b6d1699bb313d594457630d04032aa039dca",
+    "src/sdlsound.cpp": "11d15fcb557246e5d244886be3d12b07b44b6a26d6f7d2bcd8cab238e35faec5",
+    "src/sdlsound.h": "5974216cb6ff81047ddfa378bfaa853fa852cbc10bd6f0fd245eb9eced85e3f8",
+    "src/sdltiles.cpp": "70761606c4ebbdb734273fdb46e1753a664c30c52d2a913c0b563300a8560905",
+    "tests/melee_sound_queue_test.cpp": "8de9c56089433b4b2c3251d81343d96b9f3965407221ed314bc702dc3fb7f8b3"
+  },
+  "evidence_root": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/melee-scheduling-20261005"
+}

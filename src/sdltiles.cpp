@@ -1423,6 +1423,7 @@ void refresh_display()
     }
 
 #if defined(SDL_SOUND)
+    sfx::process_melee_sounds();
     sound_backend::poll();
 #endif
 
@@ -6207,6 +6208,9 @@ static bool pop_extra_button_input( input_event &event )
 //Check for any window messages (keypress, paint, mousemove, etc)
 static void CheckMessages()
 {
+#if defined(SDL_SOUND)
+    sfx::process_melee_sounds();
+#endif
     static mouse_button_capture imgui_mouse_buttons;
     SDL_Event ev;
     bool quit = false;
