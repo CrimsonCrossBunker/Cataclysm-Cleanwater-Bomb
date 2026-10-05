@@ -143,6 +143,7 @@ struct visibility_variables {
     // Cached values for map visibility calculations
     int g_light_level = 0;
     int u_clairvoyance = 0;
+    int u_unimpaired_range = 0;
     float vision_threshold = 0.0f;
     std::optional<field_type_id> clairvoyance_field;
     tripoint_bub_ms last_pos;

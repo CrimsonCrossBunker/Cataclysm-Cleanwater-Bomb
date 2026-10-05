@@ -598,6 +598,51 @@ TEST_CASE( "visibility_cache_reuse_preserves_invalidation", "[vision][map][cache
     CHECK( updated != initial );
 }
 
+TEST_CASE( "same_level_visibility_refreshes_after_perception_changes", "[vision][map][cache]" )
+{
+    clear_avatar();
+    clear_map();
+    scoped_weather_override weather_clear( WEATHER_CLEAR );
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms original_position = you.pos_bub( here );
+    const time_point original_time = calendar::turn;
+    const efftype_id perception_effect = GENERATE( efftype_id( "blind" ), efftype_id( "boomered" ),
+        efftype_id( "narcosis" ) );
+    on_out_of_scope restore_player( [&]() {
+        you.remove_effect( perception_effect );
+        you.recalc_sight_limits();
+        you.setpos( here, original_position );
+        set_time( original_time );
+    } );
+    set_time( calendar::turn_zero + 12_hours );
+    const tripoint_bub_ms target( 64, 60, 0 );
+    you.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
+    here.build_map_cache( 0 );
+    here.update_visibility_cache( 0 );
+    const auto target_visibility = [&]() {
+        return here.get_cache_ref( 0 ).visibility_cache[target.x()][target.y()];
+    };
+    REQUIRE( target_visibility() != lit_level::BLANK );
+
+    // Effects may change between frames without a map-cache rebuild or a level switch.
+    you.add_effect( perception_effect, 1_turns );
+    you.recalc_sight_limits();
+    here.update_visibility_cache( 0 );
+    CHECK( target_visibility() == lit_level::BLANK );
+    CHECK( here.get_visibility_variables_cache().u_is_boomered ==
+           you.has_effect( efftype_id( "boomered" ) ) );
+
+    // Recovery before a map-cache rebuild must also refresh the same level.
+    you.remove_effect( perception_effect );
+    you.recalc_sight_limits();
+    here.update_visibility_cache( 0 );
+    CHECK( target_visibility() == here.apparent_light_at( target,
+            here.get_visibility_variables_cache() ) );
+    CHECK( target_visibility() != lit_level::BLANK );
+    CHECK_FALSE( here.get_visibility_variables_cache().u_is_boomered );
+}
+
 BENCHMARK_TEST_CASE( "alternating_level_visibility_refresh", "[vision][map_cache]" )
 {
     clear_avatar();

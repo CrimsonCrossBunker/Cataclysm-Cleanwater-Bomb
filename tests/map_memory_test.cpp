@@ -15,6 +15,7 @@
 #include "lru_cache.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "map_helpers_tests.h"
 #include "map_memory.h"
 #include "map_scale_constants.h"
 #include "mapdata.h"
@@ -230,6 +231,110 @@ TEST_CASE( "map_memory_refreshes_visibility_after_transparency_changes", "[map_m
 
     CHECK( target_is_clear() );
     CHECK( you.get_memorized_tile( target_abs ).get_ter_id() == ter_t_floor.str() );
+}
+
+TEST_CASE( "map_memory_refreshes_visibility_dependencies", "[map_memory][vision]" )
+{
+    clear_avatar();
+    clear_map();
+    scoped_weather_override weather_clear( WEATHER_CLEAR );
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms original_position = you.pos_bub( here );
+    const time_point original_time = calendar::turn;
+    on_out_of_scope restore_player( [&]() {
+        you.remove_effect( efftype_id( "blind" ) );
+        you.recalc_sight_limits();
+        you.setpos( here, original_position );
+        set_time( original_time );
+    } );
+    set_time( calendar::turn_zero + 12_hours );
+    you.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
+    const tripoint_bub_ms target( 64, 60, 0 );
+    const tripoint_abs_ms target_abs = here.get_abs( target );
+    here.ter_set( target, ter_t_floor );
+    const auto target_is_clear = [&]() {
+        return here.get_visibility( here.get_cache_ref( 0 ).visibility_cache[target.x()][target.y()],
+                                    here.get_visibility_variables_cache() ) == visibility_type::CLEAR;
+    };
+
+    SECTION( "loss and recovery of sight without movement" ) {
+        here.update_map_memory( you );
+        REQUIRE( target_is_clear() );
+        you.clear_map_memory();
+        you.add_effect( efftype_id( "blind" ), 1_turns );
+        you.recalc_sight_limits();
+        here.update_map_memory( you );
+        CHECK_FALSE( target_is_clear() );
+        CHECK_FALSE( you.has_memory_at( target_abs ) );
+        you.remove_effect( efftype_id( "blind" ) );
+        you.recalc_sight_limits();
+        here.update_map_memory( you );
+        CHECK( target_is_clear() );
+        CHECK( you.get_memorized_tile( target_abs ).get_ter_id() == ter_t_floor.str() );
+    }
+    SECTION( "light source changes without movement" ) {
+        set_time( calendar::turn_zero );
+        here.update_map_memory( you );
+        REQUIRE_FALSE( target_is_clear() );
+        you.clear_map_memory();
+        here.ter_set( target, ter_str_id( "t_utility_light" ) );
+        here.update_map_memory( you );
+        CHECK( target_is_clear() );
+        CHECK( you.get_memorized_tile( target_abs ).get_ter_id() == "t_utility_light" );
+        here.ter_set( target, ter_t_floor );
+        here.update_map_memory( you );
+        CHECK_FALSE( target_is_clear() );
+        CHECK( you.get_memorized_tile( target_abs ).get_ter_id() == "t_utility_light" );
+    }
+    SECTION( "natural light classification changes without an explicit map invalidation" ) {
+        here.update_map_memory( you );
+        const int daylight = here.get_visibility_variables_cache().g_light_level;
+        calendar::turn = calendar::turn_zero;
+        g->reset_light_level();
+        REQUIRE( static_cast<int>( g->light_level( 0 ) ) != daylight );
+        here.update_map_memory( you );
+        CHECK( here.get_visibility_variables_cache().g_light_level ==
+               static_cast<int>( g->light_level( 0 ) ) );
+    }
+    SECTION( "clairvoyant field changes behind a wall" ) {
+        for( int y = 0; y < MAPSIZE_Y; ++y ) {
+            here.ter_set( tripoint_bub_ms( 61, y, 0 ), ter_t_wall );
+        }
+        here.update_map_memory( you );
+        REQUIRE_FALSE( target_is_clear() );
+        you.clear_map_memory();
+        const field_type_id clairvoyant( "fd_clairvoyant" );
+        REQUIRE( here.add_field( target, clairvoyant, 1 ) );
+        here.update_map_memory( you );
+        CHECK( target_is_clear() );
+        CHECK( you.get_memorized_tile( target_abs ).get_ter_id() == ter_t_floor.str() );
+        here.delete_field( target, clairvoyant );
+        here.update_map_memory( you );
+        CHECK_FALSE( target_is_clear() );
+    }
+}
+
+BENCHMARK_TEST_CASE( "unchanged_map_memory_refresh", "[map_memory][vision][map_cache]" )
+{
+    clear_avatar();
+    clear_map();
+    scoped_weather_override weather_clear( WEATHER_CLEAR );
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms original_position = you.pos_bub( here );
+    const time_point original_time = calendar::turn;
+    on_out_of_scope restore_player( [&]() {
+        you.setpos( here, original_position );
+        set_time( original_time );
+    } );
+    set_time( calendar::turn_zero + 12_hours );
+    you.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
+    you.clear_map_memory();
+    here.update_map_memory( you );
+    BENCHMARK( "unchanged daytime map memory update" ) {
+        here.update_map_memory( you );
+    };
 }
 
 TEST_CASE( "ascii_map_memory_survives_simulation_and_decoration_updates",

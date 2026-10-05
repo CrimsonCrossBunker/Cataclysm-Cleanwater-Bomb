@@ -667,8 +667,10 @@ void map::update_map_memory( avatar &you )
     // previous position.  Refresh it here so simulation-side memory never
     // depends on whether a frame happened to be drawn.
     here.build_map_cache( z );
-    here.invalidate_visibility_cache();
+    // Sight/light rebuilds notify visibility; the query also checks perception changes.
     here.update_visibility_cache( z );
+    // Refreshed memory must reach presentation even when visibility is reused.
+    here.set_draw_points_cache_dirty();
 
     const visibility_variables &cache = here.get_visibility_variables_cache();
     const tripoint_bub_ms you_pos = you.pos_bub( here );
@@ -698,7 +700,7 @@ void map::update_map_memory( avatar &you )
         return np.y() < min_visible.y || np.y() > max_visible.y ||
         np.x() < min_visible.x || np.x() > max_visible.x ||
         here.get_visibility( ch.visibility_cache[np.x()][np.y()], cache ) !=
-        visibility_type::CLEAR;
+            visibility_type::CLEAR;
     };
 
     // Memorize everything the character can currently see, even if it was not
@@ -8716,15 +8718,11 @@ void map::update_visibility_cache( const int zlev )
     Character &player_character = get_player_character();
     const tripoint_bub_ms pos = player_character.pos_bub( *this );
 
-    if( !visibility_variables_cache.visibility_cache_dirty &&
-        pos == visibility_variables_cache.last_pos &&
-        zlev == visibility_variables_cache.last_zlev ) {
-        return;
-    }
-
     const float vision_threshold = player_character.get_vision_threshold(
                                        get_cache_ref( pos.z() ).lm[pos.x()][pos.y()].max() );
     const int clairvoyance = player_character.clairvoyance();
+    const int unimpaired_range = player_character.unimpaired_range();
+    const int light_level = static_cast<int>( g->light_level( zlev ) );
     const bool sight_impaired = player_character.sight_impaired();
     const bool boomered = player_character.has_effect( effect_boomered );
     // Perception can change before a render-driven map-cache rebuild.
@@ -8732,8 +8730,15 @@ void map::update_visibility_cache( const int zlev )
                                     clairvoyance != visibility_variables_cache.u_clairvoyance ||
                                     sight_impaired != visibility_variables_cache.u_sight_impaired ||
                                     boomered != visibility_variables_cache.u_is_boomered ||
-                                    !previous_visibility_observer ||
-                                    previous_visibility_observer->second != player_character.unimpaired_range();
+                                    unimpaired_range != visibility_variables_cache.u_unimpaired_range ||
+                                    ( zlev == visibility_variables_cache.last_zlev &&
+                                      light_level != visibility_variables_cache.g_light_level );
+    if( !visibility_variables_cache.visibility_cache_dirty && !perception_changed &&
+        pos == visibility_variables_cache.last_pos &&
+        zlev == visibility_variables_cache.last_zlev ) {
+        return;
+    }
+
     if( visibility_variables_cache.visibility_cache_dirty ||
         pos != visibility_variables_cache.last_pos || perception_changed ) {
         visibility_variables_cache.cached_levels.reset();
@@ -8744,9 +8749,10 @@ void map::update_visibility_cache( const int zlev )
     }
     // Common variables describe the requested level even when its grid is reused.
     visibility_variables_cache.variables_set = true; // Not used yet
-    visibility_variables_cache.g_light_level = static_cast<int>( g->light_level( zlev ) );
+    visibility_variables_cache.g_light_level = light_level;
     visibility_variables_cache.vision_threshold = vision_threshold;
     visibility_variables_cache.u_clairvoyance = clairvoyance;
+    visibility_variables_cache.u_unimpaired_range = unimpaired_range;
     visibility_variables_cache.u_sight_impaired = sight_impaired;
     visibility_variables_cache.u_is_boomered = boomered;
     visibility_variables_cache.clairvoyance_field.reset();
