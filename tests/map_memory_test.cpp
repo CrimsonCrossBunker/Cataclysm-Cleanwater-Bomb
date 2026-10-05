@@ -315,6 +315,69 @@ TEST_CASE( "map_memory_refreshes_visibility_dependencies", "[map_memory][vision]
     }
 }
 
+TEST_CASE( "map_memory_preserves_clean_terrain_and_refreshes_connections", "[map_memory][vision]" )
+{
+    clear_avatar();
+    clear_map();
+    scoped_weather_override weather_clear( WEATHER_CLEAR );
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms original_position = you.pos_bub( here );
+    const time_point original_time = calendar::turn;
+    on_out_of_scope restore_player( [&]() {
+        you.setpos( here, original_position );
+        set_time( original_time );
+    } );
+    set_time( calendar::turn_zero + 12_hours );
+    you.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
+    const tripoint_bub_ms target( 64, 60, 0 );
+    const tripoint_abs_ms target_abs = here.get_abs( target );
+    you.clear_map_memory();
+
+    SECTION( "clean non-connecting memory is retained and real changes are recorded" ) {
+        REQUIRE( ter_t_grass->connect_to_groups.none() );
+        here.ter_set( target, ter_t_grass );
+        here.update_map_memory( you );
+        const memorized_tile before = you.get_memorized_tile( target_abs );
+        REQUIRE( before.get_ter_id() == ter_t_grass.str() );
+        REQUIRE_FALSE( here.memory_cache_ter_is_dirty( target ) );
+        here.update_map_memory( you );
+        const memorized_tile &after = you.get_memorized_tile( target_abs );
+        CHECK( after.get_ter_id() == before.get_ter_id() );
+        CHECK( after.get_ter_subtile() == before.get_ter_subtile() );
+        CHECK( after.get_ter_rotation() == before.get_ter_rotation() );
+        CHECK( after.symbol == before.symbol );
+        here.ter_set( target, ter_t_floor );
+        here.update_map_memory( you );
+        CHECK( you.get_memorized_tile( target_abs ).get_ter_id() == ter_t_floor.str() );
+    }
+
+    SECTION( "clean connecting terrain follows neighbour changes without a frame" ) {
+        REQUIRE( ter_t_wall->connect_to_groups.any() );
+        here.ter_set( target, ter_t_wall );
+        here.update_map_memory( you );
+        const memorized_tile before = you.get_memorized_tile( target_abs );
+        REQUIRE( before.get_ter_id() == ter_t_wall.str() );
+        REQUIRE_FALSE( here.memory_cache_ter_is_dirty( target ) );
+        const tripoint_bub_ms neighbour = target + tripoint::south;
+        here.ter_set( neighbour, ter_t_wall );
+        REQUIRE_FALSE( here.memory_cache_ter_is_dirty( target ) );
+        here.update_map_memory( you );
+        int subtile = 0;
+        int rotation = 0;
+        map::get_connect_values( target, subtile, rotation,
+                                 ter_t_wall->connect_to_groups, ter_t_wall->rotate_to_groups, {} );
+        const memorized_tile &connected = you.get_memorized_tile( target_abs );
+        CHECK( connected.get_ter_subtile() == subtile );
+        CHECK( connected.get_ter_rotation() == rotation );
+        CHECK( connected.get_ter_subtile() != before.get_ter_subtile() );
+        here.ter_set( neighbour, ter_t_grass );
+        here.update_map_memory( you );
+        CHECK( you.get_memorized_tile( target_abs ).get_ter_subtile() == before.get_ter_subtile() );
+        CHECK( you.get_memorized_tile( target_abs ).get_ter_rotation() == before.get_ter_rotation() );
+    }
+}
+
 BENCHMARK_TEST_CASE( "unchanged_map_memory_refresh", "[map_memory][vision][map_cache]" )
 {
     clear_avatar();

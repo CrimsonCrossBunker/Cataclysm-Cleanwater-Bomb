@@ -555,10 +555,15 @@ void memorize_terrain_at( map &here, avatar &you, const tripoint_bub_ms &p,
     if( !t || invisible[0] ) {
         return;
     }
+    const std::bitset<NUM_TERCONN> &connect_group = t.obj().connect_to_groups;
+    // Connecting terrain must still learn newly visible neighbours.  Other
+    // clean terrain cannot write memory, so its orientation work is unused.
+    if( connect_group.none() && !here.memory_cache_ter_is_dirty( p ) ) {
+        return;
+    }
     const std::string &tname = t.id().str();
     int subtile = 0;
     int rotation = 0;
-    const std::bitset<NUM_TERCONN> &connect_group = t.obj().connect_to_groups;
     const std::bitset<NUM_TERCONN> &rotate_group = t.obj().rotate_to_groups;
     if( connect_group.any() ) {
         map::get_connect_values( p, subtile, rotation, connect_group, rotate_group, {} );
