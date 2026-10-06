@@ -35,7 +35,9 @@ if args[:2] == ["run", "list"]:
 elif args[0] == "api":
     run_id = re.search(r"/runs/(\d+)/artifacts", args[1]).group(1)
     artifact = scenario["artifacts"].get(run_id)
-    if artifact and (not artifact["expired"] or ".expired" not in value("--jq")):
+    if artifact and (
+        not artifact["expired"] or ".expired" not in value("--jq")
+    ):
         print(run_id)
 elif args[:2] == ["run", "download"]:
     run_id = args[2]
@@ -71,7 +73,9 @@ def fallback_script() -> str:
 
 
 class BuildTranslationsFallbackTest(unittest.TestCase):
-    def run_fallback(self, scenario: dict) -> tuple[subprocess.CompletedProcess, list[str], bool]:
+    def run_fallback(
+        self, scenario: dict
+    ) -> tuple[subprocess.CompletedProcess, list[str], bool]:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             executable = root / "bin/gh"
@@ -81,14 +85,26 @@ class BuildTranslationsFallbackTest(unittest.TestCase):
             scenario_file = root / "scenario.json"
             scenario_file.write_text(json.dumps(scenario))
             downloads = root / "downloads"
-            env = dict(os.environ, PATH=f"{executable.parent}:{os.environ['PATH']}",
-                       GH_SCENARIO=str(scenario_file), GH_DOWNLOADS=str(downloads),
-                       GITHUB_REPOSITORY="CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb",
-                       RUNNER_TEMP=str(root / "runner"))
-            result = subprocess.run(["bash", "-e", "-o", "pipefail", "-c", fallback_script()],
-                                    cwd=root, env=env, text=True, capture_output=True)
-            downloaded = downloads.read_text().splitlines() if downloads.exists() else []
-            compiled = (root / "lang/mo/zh_CN/LC_MESSAGES/cataclysm-dda.mo").is_file()
+            env = dict(os.environ)
+            env.update({
+                "PATH": f"{executable.parent}:{os.environ['PATH']}",
+                "GH_SCENARIO": str(scenario_file),
+                "GH_DOWNLOADS": str(downloads),
+                "GITHUB_REPOSITORY": (
+                    "CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb"
+                ),
+                "RUNNER_TEMP": str(root / "runner"),
+            })
+            result = subprocess.run(
+                ["bash", "-e", "-o", "pipefail", "-c", fallback_script()],
+                cwd=root, env=env, text=True, capture_output=True,
+            )
+            downloaded = (
+                downloads.read_text().splitlines() if downloads.exists()
+                else []
+            )
+            mo_file = root / "lang/mo/zh_CN/LC_MESSAGES/cataclysm-dda.mo"
+            compiled = mo_file.is_file()
             return result, downloaded, compiled
 
     def test_uses_translation_job_from_running_parent_build(self) -> None:
