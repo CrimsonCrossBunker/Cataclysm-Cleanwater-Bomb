@@ -8,6 +8,7 @@
 #include "map.h"
 #include "math_parser_diag_value.h"
 #include "point.h"
+#include "safe_reference.h"
 
 talker_furniture_const::talker_furniture_const( computer *new_me )
 {

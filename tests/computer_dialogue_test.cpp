@@ -1,15 +1,23 @@
+#include <functional>
 #include <initializer_list>
 #include <memory>
+#include <optional>
+#include <string>
+#include <vector>
 
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
 #include "computer.h"
 #include "coordinates.h"
 #include "game.h"
+#include "item_location.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "math_parser_diag_value.h"
 #include "player_helpers.h"
+#include "point.h"
 #include "talker.h"
+#include "type_id.h"
 #include "worldfactory.h"
 
 TEST_CASE( "terminal_dialogue_survives_unloading_its_computer", "[dialogue][computer][dimension]" )

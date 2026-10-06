@@ -6,6 +6,7 @@
 #include <string>
 
 #include "coordinates.h"
+#include "point.h"
 #include "safe_reference.h"
 #include "talker.h"
 

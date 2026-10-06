@@ -1,7 +1,10 @@
 #include <filesystem>
 #include <fstream>
+#include <functional>
+#include <memory>
 #include <string>
 #include <system_error>
+#include <vector>
 
 #include "cata_catch.h"
 #include "cata_path.h"
