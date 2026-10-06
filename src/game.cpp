@@ -1194,6 +1194,22 @@ vehicle *game::place_vehicle_nearby(
     map &here = get_map();
 
     std::vector<std::string> search_types = omt_search_types;
+    // The large airship spans more than one overmap tile. A 24x24 tinymap
+    // treats the rest of its footprint as blocked, so every placement fails.
+    int radius = 0;
+    for( const vpart_reference &part : id->blueprint->get_all_parts() ) {
+        radius = std::max( { radius, std::abs( part.part().mount.x() ),
+                             std::abs( part.part().mount.y() ) } );
+    }
+    const int map_size = 2 * divide_round_up( radius + 1, SEEX );
+    if( map_size > MAPSIZE ) {
+        return nullptr;
+    }
+    class vehicle_spawn_map : public map
+    {
+        public:
+            explicit vehicle_spawn_map( int size ) : map( size, false ) {}
+    };
     if( search_types.empty() ) {
         const vehicle &veh = *id->blueprint;
         std::vector<std::string> water_types = { "river", "lake", "ocean" };
@@ -1216,19 +1232,20 @@ vehicle *game::place_vehicle_nearby(
         const tripoint_abs_omt omt_origin( origin, 0 );
         for( const tripoint_abs_omt &goal : overmap_buffer.find_all( omt_origin, find_params ) ) {
             // try place vehicle there.
-            tinymap target_map;
-            target_map.load( goal, false );
+            vehicle_spawn_map target_map( map_size );
+            const int offset = map_size / 2 - 1;
+            target_map.load( project_to<coords::sm>( goal ) - tripoint( offset, offset, 0 ), false );
             // Redundant as long as map operations aren't using get_map() in a transitive call chain. Added for future proofing.
-            swap_map swap( *target_map.cast_to_map() );
-            const tripoint_omt_ms tinymap_center( SEEX, SEEY, goal.z() );
+            swap_map swap( target_map );
+            const tripoint_bub_ms map_center( map_size / 2 * SEEX, map_size / 2 * SEEY, goal.z() );
             static constexpr std::array<units::angle, 4> angles = {{
                     0_degrees, 90_degrees, 180_degrees, 270_degrees
                 }
             };
-            vehicle *veh = target_map.add_vehicle( id, tinymap_center, random_entry( angles ),
+            vehicle *veh = target_map.add_vehicle( id, map_center, random_entry( angles ),
                                                    rng( 50, 80 ), veh_spawn_status::UNDAMAGED, false );
             if( veh ) {
-                const tripoint_abs_ms abs_local = target_map.get_abs( tinymap_center );
+                const tripoint_abs_ms abs_local = target_map.get_abs( map_center );
                 tripoint_abs_sm quotient;
                 point_sm_ms remainder;
                 std::tie( quotient, remainder ) = coords::project_remain<coords::sm>( abs_local );
