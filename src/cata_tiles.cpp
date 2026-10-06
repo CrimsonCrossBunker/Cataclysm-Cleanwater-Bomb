@@ -3384,7 +3384,7 @@ bool cata_tiles::draw_sprite_at(
     geometry_input.sprite_size = point( width, height );
     geometry_input.screen_tile_size = point( tile_width, tile_height );
     geometry_input.tileset_tile_size = point( tileset_ptr->get_tile_width(),
-        tileset_ptr->get_tile_height() );
+                                       tileset_ptr->get_tile_height() );
     geometry_input.offset = tile.offset;
     geometry_input.offset_retracted = tile.offset_retracted;
     geometry_input.extra_offset = offset;

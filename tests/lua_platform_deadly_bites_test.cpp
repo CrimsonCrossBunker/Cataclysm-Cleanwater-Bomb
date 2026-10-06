@@ -4,6 +4,7 @@
 #include <pimpl.h>
 #include <memory>
 #include <sstream>
+#include <string>
 #include <vector>
 
 #include "avatar.h"
@@ -47,11 +48,11 @@ TEST_CASE( "deadly_bites_lua_medication_treats_once_and_consumes_one_dose",
     }
     // Solid medication is stored as individual items in CCB, not charge stacks.
     item &first_dose = patient.inv->add_item( item( itype_antivirals, calendar::turn ),
-        false, false, false );
+                       false, false, false );
     item &second_dose = patient.inv->add_item( item( itype_antivirals, calendar::turn ),
-        false, false, false );
+                        false, false, false );
     item &third_dose = patient.inv->add_item( item( itype_antivirals, calendar::turn ),
-        false, false, false );
+                       false, false, false );
     const item_location first( patient, &first_dose );
     const item_location second( patient, &second_dose );
     const item_location third( patient, &third_dose );

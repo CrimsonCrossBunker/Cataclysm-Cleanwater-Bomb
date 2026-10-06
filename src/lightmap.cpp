@@ -255,11 +255,11 @@ bool map::build_vision_transparency_cache( int zlev )
     const tripoint_bub_ms p = player_character.pos_bub();
     const bool is_player_z = p.z() == zlev;
     const bool low_profile = is_player_z && ( player_character.is_crouching() ||
-        player_character.is_prone() ||
-        ( player_character.has_effect( effect_quadruped_full ) &&
-          player_character.is_running() ) );
+                             player_character.is_prone() ||
+                             ( player_character.has_effect( effect_quadruped_full ) &&
+                               player_character.is_running() ) );
     const std::optional<tripoint_bub_ms> override_origin = is_player_z ?
-        std::make_optional( p ) : std::nullopt;
+            std::make_optional( p ) : std::nullopt;
     const bool observer_changed = override_origin != map_cache.vision_transparency_override_origin ||
                                   low_profile != map_cache.vision_transparency_low_profile;
     if( map_cache.transparency_cache_dirty.none() && !observer_changed ) {

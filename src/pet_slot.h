@@ -21,6 +21,11 @@ enum class creature_size : int;
 class pet_slot;
 using pet_slot_id = string_id<pet_slot>;
 
+template<>
+const pet_slot &string_id<pet_slot>::obj() const;
+template<>
+bool string_id<pet_slot>::is_valid() const;
+
 /**
  * A data-driven equipment position on a friendly creature.
  *

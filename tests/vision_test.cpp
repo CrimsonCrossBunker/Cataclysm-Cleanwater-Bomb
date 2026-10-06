@@ -218,7 +218,7 @@ TEST_CASE( "only_emitting_character_movement_invalidates_lightmap", "[vision][ma
 {
     const bool npc_actor = GENERATE( false, true );
     const efftype_id light_effect = GENERATE( efftype_id( "haslight" ), efftype_id( "onfire" ),
-        efftype_id( "glowing" ) );
+                                    efftype_id( "glowing" ) );
     CAPTURE( npc_actor, light_effect );
     clear_avatar();
     clear_map();
@@ -423,7 +423,7 @@ TEST_CASE( "visibility_refreshes_after_map_cache_rebuild", "[vision][map][cache]
     };
     const auto require_current_visibility = [&]() {
         CHECK( target_visibility() == here.apparent_light_at( target,
-            here.get_visibility_variables_cache() ) );
+                here.get_visibility_variables_cache() ) );
         CHECK_FALSE( here.get_visibility_variables_cache().visibility_cache_dirty );
     };
 
@@ -763,7 +763,7 @@ TEST_CASE( "same_level_visibility_refreshes_after_perception_changes", "[vision]
     const tripoint_bub_ms original_position = you.pos_bub( here );
     const time_point original_time = calendar::turn;
     const efftype_id perception_effect = GENERATE( efftype_id( "blind" ), efftype_id( "boomered" ),
-        efftype_id( "narcosis" ) );
+                                         efftype_id( "narcosis" ) );
     on_out_of_scope restore_player( [&]() {
         you.remove_effect( perception_effect );
         you.recalc_sight_limits();
