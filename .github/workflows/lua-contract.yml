@@ -22,6 +22,8 @@ on:
       - 'src/lua_platform*.h'
       - 'src/event.h'
       - 'tools/lua_api/**'
+      - 'tools/ci/run_lua_checks.py'
+      - 'tools/ci/test_run_lua_checks.py'
       - 'tools/create_lua_mod.py'
       - 'tools/test_create_lua_mod.py'
   push:
@@ -46,6 +48,8 @@ on:
       - 'src/lua_platform*.h'
       - 'src/event.h'
       - 'tools/lua_api/**'
+      - 'tools/ci/run_lua_checks.py'
+      - 'tools/ci/test_run_lua_checks.py'
       - 'tools/create_lua_mod.py'
       - 'tools/test_create_lua_mod.py'
   workflow_dispatch:
@@ -79,13 +83,31 @@ jobs:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 2
           persist-credentials: false
 
+      - name: Select affected Lua checks
+        id: scope
+        run: >-
+          python3 tools/ci/run_lua_checks.py
+          --plan "${RUNNER_TEMP}/ccb-lua-checks.json"
+          --github-output "$GITHUB_OUTPUT"
+
       - name: Install pinned validation dependencies
+        if: steps.scope.outputs.checks == 'true'
         run: |
           python3 -m pip install --disable-pip-version-check -r tools/lua_api/requirements.txt
 
+      - name: Cache pinned Lua language server
+        id: luals-cache
+        if: steps.scope.outputs.editor == 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/ccb-luals
+          key: luals-linux-x64-3.19.1-e9235d2d72ef55bc41cf8c99cda2ed64777682024b4bb81f5dea425060c5cbb8
+
       - name: Install pinned Lua language server
+        if: steps.scope.outputs.editor == 'true' && steps.luals-cache.outputs.cache-hit != 'true'
         run: |
           curl --fail --location --retry 3 --silent --show-error \
             https://github.com/LuaLS/lua-language-server/releases/download/3.19.1/lua-language-server-3.19.1-linux-x64.tar.gz \
@@ -94,14 +116,13 @@ jobs:
           mkdir -p "${RUNNER_TEMP}/ccb-luals"
           tar -xzf "${RUNNER_TEMP}/ccb-luals.tar.gz" -C "${RUNNER_TEMP}/ccb-luals"
 
-      - name: Validate Lua contracts and editor diagnostics once
-        # Includes the five contract gates, negative cases and real LuaLS diagnostics.
+      - name: Run affected Lua checks
+        if: steps.scope.outputs.checks == 'true'
         env:
-          CCB_LUALS: ${{ runner.temp }}/ccb-luals/bin/lua-language-server
-        run: python3 -m unittest discover -s tools/lua_api -p 'test_*.py'
-
-      - name: Validate Mod scaffolds
-        run: python3 tools/test_create_lua_mod.py
+          CCB_LUALS: ${{ steps.scope.outputs.editor == 'true' && format('{0}/ccb-luals/bin/lua-language-server', runner.temp) || '' }}
+        run: >-
+          python3 tools/ci/run_lua_checks.py
+          --plan "${RUNNER_TEMP}/ccb-lua-checks.json" --run
 
   native-acceptance:
     name: Native Lua batch acceptance
