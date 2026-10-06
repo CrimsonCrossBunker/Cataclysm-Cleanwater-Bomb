@@ -3,10 +3,13 @@
 #include <algorithm>
 
 #include "action.h"
+#include "bionics.h"
 #include "character.h"
 #include "color.h"
 #include "enums.h"
 #include "flexbuffer_json.h"
+#include "item.h"
+#include "item_location.h"
 #include "json.h"
 #include "martialarts.h"
 #include "messages.h"
@@ -93,6 +96,50 @@ void character_martial_arts::set_style( const matype_id &mastyle, bool force )
     }
 }
 
+void character_martial_arts::remember_weapon_style( const Character &owner )
+{
+    const item_location weapon = owner.get_wielded_item();
+    preferred_weapon_styles[weapon ? weapon->typeId() : itype_id::NULL_ID()] = style_selected;
+}
+
+void character_martial_arts::auto_select_style( Character &owner )
+{
+    if( !auto_style ) {
+        return;
+    }
+    // Active combat implants supply their own restricted style list.
+    for( const bionic_id &bio : owner.get_bionics() ) {
+        if( !bio->ma_styles.empty() && owner.has_active_bionic( bio ) ) {
+            return;
+        }
+    }
+    const item_location weapon = owner.get_wielded_item();
+    const auto usable = [&]( const matype_id & style ) {
+        return style.is_valid() && has_martialart( style ) &&
+               ( style == style_none || style->force_unarmed || style->weapon_valid( weapon ) );
+    };
+    matype_id chosen = style_none;
+    const auto preferred = preferred_weapon_styles.find( weapon ? weapon->typeId() :
+                           itype_id::NULL_ID() );
+    if( preferred != preferred_weapon_styles.end() && usable( preferred->second ) ) {
+        chosen = preferred->second;
+    } else if( style_selected != style_none && usable( style_selected ) ) {
+        chosen = style_selected;
+    } else {
+        const auto found = std::find_if( ma_styles.begin(), ma_styles.end(),
+        [&]( const matype_id & style ) {
+            return style != style_none && style != style_kicks && usable( style );
+        } );
+        if( found != ma_styles.end() ) {
+            chosen = *found;
+        }
+    }
+    if( chosen != style_selected ) {
+        clear_all_effects( owner );
+        set_style( chosen );
+    }
+}
+
 void character_martial_arts::reset_style()
 {
     style_selected = style_none;
@@ -106,6 +153,8 @@ void character_martial_arts::clear_style( const matype_id &id )
 
 void character_martial_arts::clear_styles()
 {
+    auto_style = false;
+    preferred_weapon_styles.clear();
     keep_hands_free = false;
 
     ma_styles = { {
@@ -182,6 +231,8 @@ void character_martial_arts::serialize( JsonOut &json ) const
     json.member( "ma_styles", ma_styles );
     json.member( "keep_hands_free", keep_hands_free );
     json.member( "style_selected", style_selected );
+    json.member( "auto_style", auto_style );
+    json.member( "preferred_weapon_styles", preferred_weapon_styles );
     json.end_object();
 }
 
@@ -190,4 +241,8 @@ void character_martial_arts::deserialize( const JsonObject &data )
     data.read( "ma_styles", ma_styles );
     data.read( "keep_hands_free", keep_hands_free );
     data.read( "style_selected", style_selected );
+    auto_style = false;
+    preferred_weapon_styles.clear();
+    data.read( "auto_style", auto_style );
+    data.read( "preferred_weapon_styles", preferred_weapon_styles );
 }

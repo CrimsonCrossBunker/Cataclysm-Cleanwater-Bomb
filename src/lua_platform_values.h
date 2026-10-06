@@ -13,13 +13,21 @@ struct diag_value;
 namespace cata::lua_platform
 {
 
-// Native dialogue/computer values share 512-node, 8-level and 8192-byte string
+enum class script_diag_value_read_policy {
+    bounded,
+    native_range
+};
+
+// Bounded dialogue/computer values share 512-node, 8-level and 8192-byte string
 // bounds. A caller may impose a smaller per-array limit (computers use 256).
+// native_range preserves native scalar/string/tree values and rejects cyclic
+// Lua arrays; callers still specify their per-array limit explicitly.
 // Empty array slots use NullValue; a top-level empty value reads as nil.
 // Nil deletion and key/store limits remain the caller's responsibility.
 diag_value script_diag_value_from_lua(
     const sol::object &value, const std::string &description,
-    std::size_t maximum_array_entries = 512 );
+    std::size_t maximum_array_entries = 512,
+    script_diag_value_read_policy policy = script_diag_value_read_policy::bounded );
 sol::object script_diag_value_to_lua(
     sol::state_view lua, const diag_value &value, const std::string &description,
     std::size_t maximum_array_entries = 512 );

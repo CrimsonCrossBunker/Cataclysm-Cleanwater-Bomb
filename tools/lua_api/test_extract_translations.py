@@ -17,23 +17,28 @@ class ExtractTranslationsTest(unittest.TestCase):
         self.root = Path(self.directory.name)
         self.source = self.root / "main.lua"
         self.source.write_text(
-            'ccb.services.translate("hello")\n', encoding="utf-8")
+            'ccb.services.translate("hello")\n', encoding="utf-8"
+        )
 
-    @unittest.skipUnless(shutil.which("xgettext"),
-                         "GNU xgettext is not installed")
+    @unittest.skipUnless(
+        shutil.which("xgettext"), "GNU xgettext is not installed"
+    )
     def test_no_messages_produces_a_valid_empty_template(self):
         self.source.write_text("local value = 42\n", encoding="utf-8")
         output = extract([self.source])
-        self.assertIn('charset=UTF-8', output)
-        self.assertEqual(output.count('msgid '), 1)
+        self.assertIn("charset=UTF-8", output)
+        self.assertEqual(output.count("msgid "), 1)
         self.assertNotIn("POT-Creation-Date", output)
 
-    @unittest.skipUnless(shutil.which("xgettext"),
-                         "GNU xgettext is not installed")
+    @unittest.skipUnless(
+        shutil.which("xgettext"), "GNU xgettext is not installed"
+    )
     def test_format_flags_follow_enclosing_string_format(self):
-        self.source.write_text('string.format(ccb.services.translate_plural('
-                               '"%d apple", "%d apples", n, "fruit"), n)',
-                               encoding="utf-8")
+        self.source.write_text(
+            "string.format(ccb.services.translate_plural("
+            '"%d apple", "%d apples", n, "fruit"), n)',
+            encoding="utf-8",
+        )
         output = extract([self.source])
         self.assertIn("#, lua-format", output)
         self.assertIn('msgctxt "fruit"', output)
@@ -42,7 +47,8 @@ class ExtractTranslationsTest(unittest.TestCase):
         destination = self.root / "messages.pot"
         destination.write_text("existing template", encoding="utf-8")
         with patch.object(
-                Path, "replace", side_effect=OSError("replacement failed")):
+            Path, "replace", side_effect=OSError("replacement failed")
+        ):
             with self.assertRaisesRegex(OSError, "replacement failed"):
                 write_template(destination, "new template")
         self.assertEqual(destination.read_text(), "existing template")
@@ -57,23 +63,29 @@ class ExtractTranslationsTest(unittest.TestCase):
         except OSError as error:
             self.skipTest(f"hard links unavailable: {error}")
         before = self.source.read_bytes()
-        with (contextlib.redirect_stderr(io.StringIO()),
-              patch("extract_translations.extract") as run):
+        with (
+            contextlib.redirect_stderr(io.StringIO()),
+            patch("extract_translations.extract") as run,
+        ):
             self.assertEqual(
-                main([str(self.source), "--output", str(destination)]), 2)
+                main([str(self.source), "--output", str(destination)]), 2
+            )
             run.assert_not_called()
         self.assertEqual(self.source.read_bytes(), before)
 
     def test_failed_extractor_is_not_success(self):
         failure = subprocess.CompletedProcess([], 1, "", "parse error")
-        with patch("extract_translations.subprocess.run",
-                   return_value=failure):
+        with patch(
+            "extract_translations.subprocess.run", return_value=failure
+        ):
             with self.assertRaisesRegex(ValueError, "parse error"):
                 extract([self.source])
 
     def test_missing_tool_has_actionable_error(self):
-        with patch("extract_translations.subprocess.run",
-                   side_effect=FileNotFoundError("missing")):
+        with patch(
+            "extract_translations.subprocess.run",
+            side_effect=FileNotFoundError("missing"),
+        ):
             with self.assertRaisesRegex(ValueError, "cannot run GNU xgettext"):
                 extract([self.source])
 
@@ -83,10 +95,12 @@ class ExtractTranslationsTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "at least one"):
             extract([])
 
-    @unittest.skipUnless(shutil.which("xgettext"),
-                         "GNU xgettext is not installed")
+    @unittest.skipUnless(
+        shutil.which("xgettext"), "GNU xgettext is not installed"
+    )
     def test_context_plural_literals_and_no_execution(self):
-        self.source.write_text('''
+        self.source.write_text(
+            """
 error("must never execute")
 ccb.services.translate("Hello")
 ccb.services.translate("Open", "verb")
@@ -96,54 +110,158 @@ ccb.services.translate([[多行
 文字]])
 -- ccb.services.translate("comment is not a message")
 ccb.services.translate(variable)
-''', encoding="utf-8")
+""",
+            encoding="utf-8",
+        )
         output = extract([self.source])
         self.assertIn('msgid "Hello"', output)
         self.assertIn('msgctxt "verb"\nmsgid "Open"', output)
         self.assertIn('msgid "apple"\nmsgid_plural "apples"', output)
         self.assertIn(
-            'msgctxt "fruit"\nmsgid "pear"\nmsgid_plural "pears"', output)
+            'msgctxt "fruit"\nmsgid "pear"\nmsgid_plural "pears"', output
+        )
         self.assertIn("多行", output)
         self.assertNotIn("comment is not a message", output)
         self.assertNotIn("must never execute", output)
         self.assertEqual(output, extract([self.source, self.source]))
 
-    @unittest.skipUnless(shutil.which("xgettext"),
-                         "GNU xgettext is not installed")
+    @unittest.skipUnless(
+        shutil.which("xgettext"), "GNU xgettext is not installed"
+    )
     def test_static_content_markers_extract_context_and_plural_forms(self):
-        self.source.write_text('''
+        self.source.write_text(
+            """
 local item = ccb.content.Item {
     name = ccb.content.plural_text("bottle", "bottles", "container"),
     description = ccb.content.text("A small bottle.", "item description")
 }
 local other_name = ccb.content.plural_text("fish", "fish")
 local other_description = ccb.content.text("Fresh water.")
-''', encoding="utf-8")
+""",
+            encoding="utf-8",
+        )
         output = extract([self.source])
         self.assertIn(
-            'msgctxt "container"\nmsgid "bottle"\n'
-            'msgid_plural "bottles"', output)
+            'msgctxt "container"\nmsgid "bottle"\nmsgid_plural "bottles"',
+            output,
+        )
         self.assertIn(
-            'msgctxt "item description"\nmsgid "A small bottle."', output)
+            'msgctxt "item description"\nmsgid "A small bottle."', output
+        )
         self.assertIn('msgid "fish"\nmsgid_plural "fish"', output)
         self.assertIn('msgid "Fresh water."', output)
 
-    @unittest.skipUnless(shutil.which("xgettext"),
-                         "GNU xgettext is not installed")
+    @unittest.skipUnless(
+        shutil.which("xgettext"), "GNU xgettext is not installed"
+    )
+    def test_migrated_dialogue_markers_extract_only_direct_literal_fields(
+        self,
+    ):
+        source = """ccb.dialogue.register_topic {
+    id = "TALK_migrated_truefalsetext",
+    dynamic_line = "Check the selected mission.",
+    responses = {
+        {
+            text = "I killed him.",
+            text_translation = {  },
+            text_condition = function(context)
+                local false_text_translation = { context = "callback only" }
+                local text = "callback only"
+                return context:get("selected") == true
+            end,
+            false_text = "I killed it.",
+            false_text_translation = { context = "dialogue response" },
+        },
+        { text = "Unmarked plain response." },
+        { text = dynamic_response, text_translation = {  } },
+        {
+            text = "Parent text without its own marker.",
+            nested = { text_translation = {  } },
+        },
+    },
+    dynamic_line_translation = { context = "dialogue line" },
+}
+"""
+        self.source.write_text(source, encoding="utf-8")
+        output = extract([self.source])
+
+        self.assertIn('msgid "Check the selected mission."', output)
+        self.assertIn('msgid "I killed him."', output)
+        self.assertIn(
+            'msgctxt "dialogue response"\nmsgid "I killed it."', output
+        )
+        self.assertIn('msgctxt "dialogue line"', output)
+        self.assertNotIn("Unmarked plain response.", output)
+        self.assertNotIn("callback only", output)
+        self.assertNotIn("Parent text without its own marker.", output)
+        self.assertNotIn("dynamic_response", output)
+        true_text_line = (
+            source.splitlines().index('            text = "I killed him.",') +
+            1
+        )
+        self.assertIn(f"#: {self.source}:{true_text_line}", output)
+
+    @unittest.skipUnless(
+        shutil.which("xgettext"), "GNU xgettext is not installed"
+    )
+    def test_dialogue_marker_with_nonliteral_text_or_context_is_skipped(self):
+        self.source.write_text(
+            """
+ccb.dialogue.register_topic {
+    id = "TALK_nonliteral_dialogue",
+    dynamic_line = computed_line,
+    dynamic_line_translation = {  },
+    responses = {
+        {
+            text = computed_response,
+            text_translation = {  },
+        },
+        {
+            text = "Computed context must not be catalogued.",
+            text_translation = { context = active_context },
+        },
+        {
+            text = "Concatenated response must not be catalogued." .. suffix,
+            text_translation = {  },
+        },
+        {
+            text = "Concatenated context must not be catalogued.",
+            text_translation = { context = "computed" .. suffix },
+        },
+        {
+            text = "Concatenated marker must not be catalogued.",
+            text_translation = {  } .. marker_tail,
+        },
+    },
+}
+""",
+            encoding="utf-8",
+        )
+        output = extract([self.source])
+        self.assertEqual(output.count("msgid "), 1)
+
+    @unittest.skipUnless(
+        shutil.which("xgettext"), "GNU xgettext is not installed"
+    )
     def test_explicit_translator_notes_are_retained(self):
-        self.source.write_text('''
+        self.source.write_text(
+            """
 -- TRANSLATORS: This is a button action, not a door state.
 ccb.services.translate("Open", "MyMod action")
 -- This implementation comment is not a translator note.
 ccb.content.text("A description.")
-''', encoding="utf-8")
+""",
+            encoding="utf-8",
+        )
         output = extract([self.source])
         self.assertIn(
-            "TRANSLATORS: This is a button action, not a door state.", output)
+            "TRANSLATORS: This is a button action, not a door state.", output
+        )
         self.assertNotIn("This implementation comment", output)
 
-    @unittest.skipUnless(shutil.which("xgettext"),
-                         "GNU xgettext is not installed")
+    @unittest.skipUnless(
+        shutil.which("xgettext"), "GNU xgettext is not installed"
+    )
     def test_check_does_not_write_and_rejects_input_overwrite(self):
         destination = self.root / "messages.pot"
         args = [str(self.source), "--output", str(destination)]
@@ -154,12 +272,14 @@ ccb.content.text("A description.")
             original = destination.read_bytes()
             self.assertEqual(main(args + ["--check"]), 0)
             self.source.write_text(
-                'ccb.services.translate("changed")', encoding="utf-8")
+                'ccb.services.translate("changed")', encoding="utf-8"
+            )
             self.assertEqual(main(args + ["--check"]), 1)
             self.assertEqual(destination.read_bytes(), original)
             source_bytes = self.source.read_bytes()
             self.assertEqual(
-                main([str(self.source), "--output", str(self.source)]), 2)
+                main([str(self.source), "--output", str(self.source)]), 2
+            )
             self.assertEqual(self.source.read_bytes(), source_bytes)
 
 

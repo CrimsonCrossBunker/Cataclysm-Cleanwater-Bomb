@@ -2,9 +2,9 @@
 
 #include "lua_platform_variables.h"
 
-#include "lua_platform_values.h"
+#include <coordinates.h>
+#include <point.h>
 #include <talker.h>
-#include <algorithm>
 #include <cstddef>
 #include <functional>
 #include <memory>
@@ -15,11 +15,15 @@
 #include <utility>
 
 #include "creature.h"
+#include "dialogue.h"
 #include "dialogue_helpers.h"
 #include "global_vars.h"
 #include "item.h"
+#include "lua_platform_bindings_coords.h"
 #include "lua_platform_handle.h"
+#include "lua_platform_values.h"
 #include "math_parser_diag_value.h"
+#include "math_parser_type.h"
 #include "vehicle.h"
 
 namespace cata::lua_platform
@@ -29,8 +33,6 @@ struct script_null_value;
 
 namespace
 {
-
-constexpr std::size_t maximum_context_key_bytes = 128;
 
 void require_active_callback(
     const std::function<bool()> &has_active_callback,
@@ -43,15 +45,40 @@ void require_active_callback(
     }
 }
 
-void validate_context_key( const std::string_view key )
+struct variable_mutation_options {
+    bool include_before = true;
+};
+
+bool read_variable_number_strict( const sol::optional<sol::table> &requested )
 {
-    if( key.empty() || key.size() > maximum_context_key_bytes ||
-    std::any_of( key.begin(), key.end(), []( const unsigned char ch ) {
-    return ch < 0x20U || ch == 0x7fU;
-} ) ) {
-        throw std::invalid_argument(
-            "services.variables context keys must contain 1..128 printable bytes" );
+    if( !requested ) {
+        return false;
     }
+    const sol::object strict = requested->raw_get<sol::object>( "strict" );
+    if( !strict.valid() || strict.get_type() == sol::type::nil ) {
+        return false;
+    }
+    if( strict.get_type() != sol::type::boolean ) {
+        throw std::invalid_argument( "services.variables options.strict must be a boolean" );
+    }
+    return strict.as<bool>();
+}
+
+variable_mutation_options read_variable_mutation_options(
+    const sol::optional<sol::table> &requested )
+{
+    variable_mutation_options result;
+    if( requested ) {
+        const sol::object include_before = requested->raw_get<sol::object>( "include_before" );
+        if( include_before.valid() && include_before.get_type() != sol::type::nil ) {
+            if( include_before.get_type() != sol::type::boolean ) {
+                throw std::invalid_argument(
+                    "services.variables options.include_before must be a boolean" );
+            }
+            result.include_before = include_before.as<bool>();
+        }
+    }
+    return result;
 }
 
 diag_value context_value_from_lua( const sol::object &value, const std::string &key )
@@ -62,6 +89,27 @@ diag_value context_value_from_lua( const sol::object &value, const std::string &
 sol::object context_value_to_lua( sol::state_view lua, const diag_value &value )
 {
     return script_diag_value_to_lua( std::move( lua ), value, "services.variables returned context" );
+}
+
+diag_value native_variable_value_from_lua( const sol::object &value, const std::string &key )
+{
+    if( value.get_type() == sol::type::number ) {
+        // Native variable arithmetic stores IEEE doubles, including infinities
+        // and NaN. Preserve that representation for scalar numeric writes.
+        return diag_value( value.as<double>() );
+    }
+    if( value.get_type() == sol::type::string ) {
+        return diag_value( value.as<std::string>() );
+    }
+    return context_value_from_lua( value, key );
+}
+
+sol::object native_variable_value_to_lua( sol::state_view lua, const diag_value &value )
+{
+    if( value.is_str() ) {
+        return sol::make_object( lua, value.str() );
+    }
+    return context_value_to_lua( std::move( lua ), value );
 }
 
 struct resolved_variable_talker {
@@ -153,7 +201,6 @@ sol::table get_variable(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    validate_context_key( key );
     sol::state_view state( lua );
     resolved_variable_talker resolved = resolve_variable_talker(
                                             handle, runtime_generation,
@@ -165,7 +212,7 @@ sol::table get_variable(
     const diag_value *stored = resolved_variable_get( resolved, key );
     value["exists"] = stored != nullptr;
     if( stored != nullptr ) {
-        value["value"] = context_value_to_lua(
+        value["value"] = native_variable_value_to_lua(
                              state, *stored );
     } else {
         value["value"] = sol::nil;
@@ -174,15 +221,105 @@ sol::table get_variable(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table get_variable_string(
+    sol::this_state lua, const game_handle &handle,
+    const std::string &key,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    resolved_variable_talker resolved = resolve_variable_talker(
+                                            handle, runtime_generation,
+                                            world_generation );
+    if( resolved.error ) {
+        return make_game_error_result( state, *resolved.error );
+    }
+    const diag_value *stored = resolved_variable_get( resolved, key );
+    sol::table value = state.create_table();
+    value["exists"] = stored != nullptr;
+    // Match native value_or_var<std::string>::evaluate directly.  This avoids
+    // snapshotting unrelated array contents and retains diag_value::str's
+    // native conversion and type-mismatch diagnostic.
+    value["value"] = stored != nullptr ?
+                     sol::make_object( state, stored->str() ) :
+                     sol::make_object( state, sol::nil );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table native_variable_number_read(
+    sol::state_view state, const diag_value *stored, const bool strict )
+{
+    sol::table value = state.create_table();
+    value["exists"] = stored != nullptr;
+    try {
+        value["value"] = stored != nullptr ?
+                         sol::make_object( state, strict ? stored->dbl( const_dialogue{} ) : stored->dbl() ) :
+                         sol::make_object( state, sol::nil );
+    } catch( const math::exception &error ) {
+        // Keep conversion failure distinct from a valid zero or missing key.
+        // The caller decides whether to abort a larger calculation; no legacy
+        // expression or dialogue is executed by this typed variable read.
+        return make_game_error_result( state, { "variable_type_mismatch", error.what() } );
+    }
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table get_variable_number(
+    sol::this_state lua, const game_handle &handle,
+    const std::string &key,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation, const bool strict )
+{
+    sol::state_view state( lua );
+    resolved_variable_talker resolved = resolve_variable_talker(
+                                            handle, runtime_generation,
+                                            world_generation );
+    if( resolved.error ) {
+        return make_game_error_result( state, *resolved.error );
+    }
+    const diag_value *stored = resolved_variable_get( resolved, key );
+    // Read the native numeric type without converting unrelated array data.
+    // Preserve legacy conversion, presence and diag_value::dbl diagnostics.
+    return native_variable_number_read( state, stored, strict );
+}
+
+sol::table native_variable_tripoint_read( sol::state_view state, const diag_value *stored )
+{
+    sol::table value = state.create_table();
+    value["exists"] = stored != nullptr;
+    // Query only the Native coordinate type. Retain presence, legacy-string
+    // conversion and type diagnostics without traversing unrelated arrays.
+    value["value"] = stored != nullptr ?
+                     sol::make_object( state, script_tripoint_coord::from_native(
+                                           coords::origin::abs, coords::scale::map_square, stored->tripoint().raw() ) ) :
+                     sol::make_object( state, sol::nil );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table get_variable_tripoint(
+    sol::this_state lua, const game_handle &handle, const std::string &key,
+    const game_handle_runtime &runtime_generation, const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    resolved_variable_talker resolved = resolve_variable_talker(
+                                            handle, runtime_generation, world_generation );
+    if( resolved.error ) {
+        return make_game_error_result( state, *resolved.error );
+    }
+    return native_variable_tripoint_read( state, resolved_variable_get( resolved, key ) );
+}
+
 sol::table set_variable(
     sol::this_state lua, const game_handle &handle,
     const std::string &key, const sol::object &requested,
     const game_handle_runtime &runtime_generation,
-    const std::size_t world_generation )
+    const std::size_t world_generation, const bool include_before )
 {
-    validate_context_key( key );
     const diag_value replacement =
-        context_value_from_lua( requested, key );
+        native_variable_value_from_lua( requested, key );
     sol::state_view state( lua );
     resolved_variable_talker resolved = resolve_variable_talker(
                                             handle, runtime_generation,
@@ -193,14 +330,16 @@ sol::table set_variable(
     sol::table value = state.create_table();
     const diag_value *before = resolved_variable_get( resolved, key );
     value["existed"] = before != nullptr;
-    if( before != nullptr ) {
-        value["before"] = context_value_to_lua(
-                              state, *before );
-    } else {
-        value["before"] = sol::nil;
+    if( include_before ) {
+        if( before != nullptr ) {
+            value["before"] = native_variable_value_to_lua(
+                                  state, *before );
+        } else {
+            value["before"] = sol::nil;
+        }
     }
     resolved_variable_set( resolved, key, replacement );
-    value["after"] = context_value_to_lua(
+    value["after"] = native_variable_value_to_lua(
                          state, replacement );
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
@@ -210,9 +349,8 @@ sol::table remove_variable(
     sol::this_state lua, const game_handle &handle,
     const std::string &key,
     const game_handle_runtime &runtime_generation,
-    const std::size_t world_generation )
+    const std::size_t world_generation, const bool include_before )
 {
-    validate_context_key( key );
     sol::state_view state( lua );
     resolved_variable_talker resolved = resolve_variable_talker(
                                             handle, runtime_generation,
@@ -223,12 +361,16 @@ sol::table remove_variable(
     sol::table value = state.create_table();
     const diag_value *before = resolved_variable_get( resolved, key );
     value["removed"] = before != nullptr;
+    if( include_before ) {
+        if( before != nullptr ) {
+            value["before"] = native_variable_value_to_lua(
+                                  state, *before );
+        } else {
+            value["before"] = sol::nil;
+        }
+    }
     if( before != nullptr ) {
-        value["before"] = context_value_to_lua(
-                              state, *before );
         resolved_variable_remove( resolved, key );
-    } else {
-        value["before"] = sol::nil;
     }
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
@@ -237,13 +379,12 @@ sol::table remove_variable(
 sol::table get_global_variable(
     sol::this_state lua, const std::string &key )
 {
-    validate_context_key( key );
     sol::state_view state( lua );
     sol::table value = state.create_table();
     const diag_value *stored = get_globals().maybe_get_global_value( key );
     value["exists"] = stored != nullptr;
     if( stored != nullptr ) {
-        value["value"] = context_value_to_lua( state, *stored );
+        value["value"] = native_variable_value_to_lua( state, *stored );
     } else {
         value["value"] = sol::nil;
     }
@@ -251,39 +392,219 @@ sol::table get_global_variable(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
-sol::table set_global_variable(
-    sol::this_state lua, const std::string &key, const sol::object &requested )
+sol::table get_global_variable_string(
+    sol::this_state lua, const std::string &key )
 {
-    validate_context_key( key );
-    const diag_value replacement = context_value_from_lua( requested, key );
+    sol::state_view state( lua );
+    sol::table value = state.create_table();
+    const diag_value *stored = get_globals().maybe_get_global_value( key );
+    value["exists"] = stored != nullptr;
+    // Read the requested native type directly.  Snapshot limits for unrelated
+    // arrays must not change the native string query or its type diagnostics.
+    value["value"] = stored != nullptr ?
+                     sol::make_object( state, stored->str() ) :
+                     sol::make_object( state, sol::nil );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table get_global_variable_number(
+    sol::this_state lua, const std::string &key, const bool strict )
+{
+    sol::state_view state( lua );
+    const diag_value *stored = get_globals().maybe_get_global_value( key );
+    // Preserve the direct native numeric read and its type diagnostics.
+    return native_variable_number_read( state, stored, strict );
+}
+
+sol::table get_global_variable_tripoint( sol::this_state lua, const std::string &key )
+{
+    return native_variable_tripoint_read( sol::state_view( lua ),
+                                          get_globals().maybe_get_global_value( key ) );
+}
+
+std::string context_variable_string( const sol::object &stored )
+{
+    if( stored.get_type() == sol::type::string ) {
+        return stored.as<std::string>();
+    }
+    if( stored.is<script_null_value>() ) {
+        return diag_value{}.str();
+    }
+    // diag_value's string mismatch reports only the outer native type.  Read
+    // that type without traversing arrays or applying snapshot limits to an
+    // unrelated string query. Lua booleans use the native numeric storage type.
+    if( stored.get_type() == sol::type::boolean || stored.get_type() == sol::type::number ) {
+        return diag_value( 0.0 ).str();
+    }
+    if( stored.get_type() == sol::type::table ) {
+        return diag_value( diag_array{} ).str();
+    }
+    if( stored.is<script_tripoint_coord>() ) {
+        const script_tripoint_coord position = stored.as<script_tripoint_coord>();
+        if( position.native_origin() != coords::origin::abs ||
+            position.native_scale() != coords::scale::map_square ) {
+            throw std::invalid_argument(
+                "services.variables.get_context_string coordinates must be absolute map squares" );
+        }
+        return diag_value( tripoint_abs_ms( position.to_native() ) ).str();
+    }
+    throw std::invalid_argument(
+        "services.variables.get_context_string value has no native variable storage type" );
+}
+
+sol::table get_context_variable_string(
+    sol::this_state lua, const sol::optional<sol::table> &context, const std::string &key )
+{
+    sol::state_view state( lua );
+    const sol::object stored = context ? context->raw_get<sol::object>( key ) :
+                               sol::make_object( state, sol::nil );
+    const bool exists = stored.valid() && stored.get_type() != sol::type::nil;
+    sol::table value = state.create_table();
+    value["exists"] = exists;
+    value["value"] = exists ? sol::make_object( state, context_variable_string( stored ) ) :
+                     sol::make_object( state, sol::nil );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+double context_variable_number( const sol::object &stored, const bool strict )
+{
+    const auto read = [strict]( const diag_value & value ) {
+        return strict ? value.dbl( const_dialogue{} ) : value.dbl();
+    };
+    if( stored.get_type() == sol::type::number ) {
+        return stored.as<double>();
+    }
+    if( stored.get_type() == sol::type::boolean ) {
+        return stored.as<bool>() ? 1.0 : 0.0;
+    }
+    if( stored.is<script_null_value>() ) {
+        return read( diag_value{} );
+    }
+    if( stored.get_type() == sol::type::string ) {
+        // The diagnostic depends only on the native outer type, not bytes.
+        return read( diag_value( std::string() ) );
+    }
+    if( stored.get_type() == sol::type::table ) {
+        return read( diag_value( diag_array{} ) );
+    }
+    if( stored.is<script_tripoint_coord>() ) {
+        const script_tripoint_coord position = stored.as<script_tripoint_coord>();
+        if( position.native_origin() != coords::origin::abs ||
+            position.native_scale() != coords::scale::map_square ) {
+            throw std::invalid_argument(
+                "services.variables.get_context_number coordinates must be absolute map squares" );
+        }
+        return read( diag_value( tripoint_abs_ms( position.to_native() ) ) );
+    }
+    throw std::invalid_argument(
+        "services.variables.get_context_number value has no native variable storage type" );
+}
+
+sol::table get_context_variable_number(
+    sol::this_state lua, const sol::optional<sol::table> &context, const std::string &key,
+    const bool strict )
+{
+    sol::state_view state( lua );
+    const sol::object stored = context ? context->raw_get<sol::object>( key ) :
+                               sol::make_object( state, sol::nil );
+    const bool exists = stored.valid() && stored.get_type() != sol::type::nil;
+    sol::table value = state.create_table();
+    value["exists"] = exists;
+    try {
+        value["value"] = exists ? sol::make_object( state, context_variable_number( stored, strict ) ) :
+                         sol::make_object( state, sol::nil );
+    } catch( const math::exception &error ) {
+        return make_game_error_result( state, { "variable_type_mismatch", error.what() } );
+    }
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+tripoint_abs_ms context_variable_tripoint( const sol::object &stored )
+{
+    if( stored.is<script_tripoint_coord>() ) {
+        const script_tripoint_coord position = stored.as<script_tripoint_coord>();
+        if( position.native_origin() != coords::origin::abs ||
+            position.native_scale() != coords::scale::map_square ) {
+            throw std::invalid_argument(
+                "services.variables.get_context_tripoint coordinates must be absolute map squares" );
+        }
+        return tripoint_abs_ms( position.to_native() );
+    }
+    if( stored.is<script_null_value>() ) {
+        return diag_value{}.tripoint();
+    }
+    if( stored.get_type() == sol::type::number || stored.get_type() == sol::type::boolean ) {
+        return diag_value( 0.0 ).tripoint();
+    }
+    if( stored.get_type() == sol::type::string ) {
+        // Ordinary stored strings are not legacy strings: do not parse them.
+        return diag_value( std::string{} ).tripoint();
+    }
+    if( stored.get_type() == sol::type::table ) {
+        return diag_value( diag_array{} ).tripoint();
+    }
+    throw std::invalid_argument(
+        "services.variables.get_context_tripoint value has no native variable storage type" );
+}
+
+sol::table get_context_variable_tripoint(
+    sol::this_state lua, const sol::optional<sol::table> &context, const std::string &key )
+{
+    sol::state_view state( lua );
+    const sol::object stored = context ? context->raw_get<sol::object>( key ) :
+                               sol::make_object( state, sol::nil );
+    const bool exists = stored.valid() && stored.get_type() != sol::type::nil;
+    sol::table value = state.create_table();
+    value["exists"] = exists;
+    value["value"] = exists ? sol::make_object( state, script_tripoint_coord::from_native(
+                         coords::origin::abs, coords::scale::map_square,
+                         context_variable_tripoint( stored ).raw() ) ) :
+                     sol::make_object( state, sol::nil );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table set_global_variable(
+    sol::this_state lua, const std::string &key, const sol::object &requested,
+    const bool include_before )
+{
+    const diag_value replacement = native_variable_value_from_lua( requested, key );
     sol::state_view state( lua );
     sol::table value = state.create_table();
     const diag_value *before = get_globals().maybe_get_global_value( key );
     value["existed"] = before != nullptr;
-    if( before != nullptr ) {
-        value["before"] = context_value_to_lua( state, *before );
-    } else {
-        value["before"] = sol::nil;
+    if( include_before ) {
+        if( before != nullptr ) {
+            value["before"] = native_variable_value_to_lua( state, *before );
+        } else {
+            value["before"] = sol::nil;
+        }
     }
     get_globals().set_global_value( key, replacement );
-    value["after"] = context_value_to_lua( state, replacement );
+    value["after"] = native_variable_value_to_lua( state, replacement );
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
 sol::table remove_global_variable(
-    sol::this_state lua, const std::string &key )
+    sol::this_state lua, const std::string &key, const bool include_before )
 {
-    validate_context_key( key );
     sol::state_view state( lua );
     sol::table value = state.create_table();
     const diag_value *before = get_globals().maybe_get_global_value( key );
     value["removed"] = before != nullptr;
+    if( include_before ) {
+        if( before != nullptr ) {
+            value["before"] = native_variable_value_to_lua( state, *before );
+        } else {
+            value["before"] = sol::nil;
+        }
+    }
     if( before != nullptr ) {
-        value["before"] = context_value_to_lua( state, *before );
         get_globals().remove_global_value( key );
-    } else {
-        value["before"] = sol::nil;
     }
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
@@ -296,7 +617,6 @@ sol::table resolve_variable(
     const std::size_t world_generation,
     const sol::optional<sol::table> &participants )
 {
-    validate_context_key( key );
     if( scope != "u" && scope != "npc" && scope != "global" &&
         scope != "context" && scope != "var" ) {
         throw std::invalid_argument( "services.variables.resolve received an unknown scope" );
@@ -353,7 +673,6 @@ sol::table resolve_variable(
                     break;
             }
             current_key = nested.name;
-            validate_context_key( current_key );
             continue;
         }
         if( current_scope == "global" ) {
@@ -361,7 +680,7 @@ sol::table resolve_variable(
             sol::table result = state.create_table();
             result["exists"] = stored != nullptr;
             if( stored != nullptr ) {
-                result["value"] = context_value_to_lua( state, *stored );
+                result["value"] = native_variable_value_to_lua( state, *stored );
             } else {
                 result["value"] = sol::nil;
             }
@@ -389,7 +708,7 @@ sol::table resolve_variable(
         sol::table result = state.create_table();
         result["exists"] = stored != nullptr;
         if( stored != nullptr ) {
-            result["value"] = context_value_to_lua( state, *stored );
+            result["value"] = native_variable_value_to_lua( state, *stored );
         } else {
             result["value"] = sol::nil;
         }
@@ -405,15 +724,15 @@ sol::table set_resolved_variable(
     const std::string &key, const sol::object &requested,
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation,
-    const sol::optional<sol::table> &participants )
+    const sol::optional<sol::table> &participants,
+    const bool include_before )
 {
-    validate_context_key( key );
     if( scope != "u" && scope != "npc" && scope != "global" &&
         scope != "context" && scope != "var" ) {
         throw std::invalid_argument( "services.variables.set_resolved received an unknown scope" );
     }
     if( scope == "global" ) {
-        return set_global_variable( lua, key, requested );
+        return set_global_variable( lua, key, requested, include_before );
     }
     if( scope == "u" || scope == "npc" ) {
         sol::optional<game_handle> selected_actor = actor;
@@ -430,7 +749,7 @@ sol::table set_resolved_variable(
         }
         return set_variable(
                    lua, *selected_actor, key, requested,
-                   runtime_generation, world_generation );
+                   runtime_generation, world_generation, include_before );
     }
     if( !context ) {
         sol::state_view state( lua );
@@ -445,10 +764,12 @@ sol::table set_resolved_variable(
         sol::table value = state.create_table();
         const sol::object before = context->raw_get<sol::object>( key );
         value["existed"] = before.valid() && before.get_type() != sol::type::nil;
-        if( before.valid() && before.get_type() != sol::type::nil ) {
-            value["before"] = before;
-        } else {
-            value["before"] = sol::nil;
+        if( include_before ) {
+            if( before.valid() && before.get_type() != sol::type::nil ) {
+                value["before"] = before;
+            } else {
+                value["before"] = sol::nil;
+            }
         }
         context->raw_set( key, requested );
         value["after"] = context_value_to_lua( state, replacement );
@@ -489,7 +810,7 @@ sol::table set_resolved_variable(
     }
     return set_resolved_variable(
                lua, context, actor, nested_scope, nested.name, requested,
-               runtime_generation, world_generation, participants );
+               runtime_generation, world_generation, participants, include_before );
 }
 
 sol::table copy_variable(
@@ -498,8 +819,6 @@ sol::table copy_variable(
     const std::string &target_key, const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    validate_context_key( source_key );
-    validate_context_key( target_key );
     sol::state_view state( lua );
     resolved_variable_talker source;
     resolved_variable_talker target;
@@ -571,32 +890,69 @@ void install_variable_api(
                    current_world_generation() );
     } );
     variables.set_function(
+        "get_string",
+        [current_runtime_generation, current_world_generation,
+                                     require_read]( sol::this_state lua_state, const game_handle & handle,
+    const std::string & key ) {
+        require_read();
+        return get_variable_string(
+                   lua_state, handle, key,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    variables.set_function(
+        "get_number",
+        [current_runtime_generation, current_world_generation,
+                                     require_read]( sol::this_state lua_state, const game_handle & handle,
+    const std::string & key, const sol::optional<sol::table> &options ) {
+        require_read();
+        const bool strict = read_variable_number_strict( options );
+        return get_variable_number(
+                   lua_state, handle, key,
+                   current_runtime_generation(),
+                   current_world_generation(), strict );
+    } );
+    variables.set_function(
+        "get_tripoint",
+        [current_runtime_generation, current_world_generation,
+                                     require_read]( sol::this_state lua_state, const game_handle & handle,
+    const std::string & key ) {
+        require_read();
+        return get_variable_tripoint( lua_state, handle, key,
+                                      current_runtime_generation(), current_world_generation() );
+    } );
+    variables.set_function(
         "set",
         [current_runtime_generation, current_world_generation,
                                      require_write, has_active_callback](
             sol::this_state lua_state, const game_handle & handle,
-    const std::string & key, const sol::object & value ) {
+            const std::string & key, const sol::object & value,
+    const sol::optional<sol::table> &options ) {
         require_write();
         require_active_callback(
             has_active_callback, "services.variables.set" );
+        const variable_mutation_options mutation_options =
+            read_variable_mutation_options( options );
         return set_variable(
                    lua_state, handle, key, value,
                    current_runtime_generation(),
-                   current_world_generation() );
+                   current_world_generation(), mutation_options.include_before );
     } );
     variables.set_function(
         "remove",
         [current_runtime_generation, current_world_generation,
                                      require_write, has_active_callback](
             sol::this_state lua_state, const game_handle & handle,
-    const std::string & key ) {
+    const std::string & key, const sol::optional<sol::table> &options ) {
         require_write();
         require_active_callback(
             has_active_callback, "services.variables.remove" );
+        const variable_mutation_options mutation_options =
+            read_variable_mutation_options( options );
         return remove_variable(
                    lua_state, handle, key,
                    current_runtime_generation(),
-                   current_world_generation() );
+                   current_world_generation(), mutation_options.include_before );
     } );
     variables.set_function(
         "get_global",
@@ -605,20 +961,67 @@ void install_variable_api(
         return get_global_variable( lua_state, key );
     } );
     variables.set_function(
+        "get_global_string",
+    [require_read]( sol::this_state lua_state, const std::string & key ) {
+        require_read();
+        return get_global_variable_string( lua_state, key );
+    } );
+    variables.set_function(
+        "get_context_string",
+        [require_read]( sol::this_state lua_state, const sol::optional<sol::table> &context,
+    const std::string & key ) {
+        require_read();
+        return get_context_variable_string( lua_state, context, key );
+    } );
+    variables.set_function(
+        "get_global_number",
+        [require_read]( sol::this_state lua_state, const std::string & key,
+    const sol::optional<sol::table> &options ) {
+        require_read();
+        const bool strict = read_variable_number_strict( options );
+        return get_global_variable_number( lua_state, key, strict );
+    } );
+    variables.set_function(
+        "get_context_number",
+        [require_read]( sol::this_state lua_state, const sol::optional<sol::table> &context,
+    const std::string & key, const sol::optional<sol::table> &options ) {
+        require_read();
+        const bool strict = read_variable_number_strict( options );
+        return get_context_variable_number( lua_state, context, key, strict );
+    } );
+    variables.set_function(
+        "get_global_tripoint",
+    [require_read]( sol::this_state lua_state, const std::string & key ) {
+        require_read();
+        return get_global_variable_tripoint( lua_state, key );
+    } );
+    variables.set_function(
+        "get_context_tripoint",
+        [require_read]( sol::this_state lua_state, const sol::optional<sol::table> &context,
+    const std::string & key ) {
+        require_read();
+        return get_context_variable_tripoint( lua_state, context, key );
+    } );
+    variables.set_function(
         "set_global",
         [require_write, has_active_callback]( sol::this_state lua_state,
-    const std::string & key, const sol::object & value ) {
+                const std::string & key, const sol::object & value,
+    const sol::optional<sol::table> &options ) {
         require_write();
         require_active_callback( has_active_callback, "services.variables.set_global" );
-        return set_global_variable( lua_state, key, value );
+        const variable_mutation_options mutation_options =
+            read_variable_mutation_options( options );
+        return set_global_variable( lua_state, key, value, mutation_options.include_before );
     } );
     variables.set_function(
         "remove_global",
         [require_write, has_active_callback]( sol::this_state lua_state,
-    const std::string & key ) {
+    const std::string & key, const sol::optional<sol::table> &options ) {
         require_write();
         require_active_callback( has_active_callback, "services.variables.remove_global" );
-        return remove_global_variable( lua_state, key );
+        const variable_mutation_options mutation_options =
+            read_variable_mutation_options( options );
+        return remove_global_variable( lua_state, key, mutation_options.include_before );
     } );
     variables.set_function(
         "resolve",
@@ -638,12 +1041,18 @@ void install_variable_api(
             sol::this_state lua_state, const sol::optional<sol::table> &context,
             const sol::optional<game_handle> &actor, const std::string & scope,
             const std::string & key, const sol::object & value,
-    const sol::optional<sol::table> &participants ) {
+            const sol::object & requested_participants,
+    const sol::optional<sol::table> &options ) {
         require_write();
         require_active_callback( has_active_callback, "services.variables.set_resolved" );
+        const sol::optional<sol::table> participants = read_optional_table(
+                    requested_participants, "services.variables.set_resolved participants" );
+        const variable_mutation_options mutation_options =
+            read_variable_mutation_options( options );
         return set_resolved_variable(
                    lua_state, context, actor, scope, key, value,
-                   current_runtime_generation(), current_world_generation(), participants );
+                   current_runtime_generation(), current_world_generation(), participants,
+                   mutation_options.include_before );
     } );
     services["variables"] = std::move( variables );
 }

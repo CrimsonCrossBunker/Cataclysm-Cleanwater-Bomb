@@ -1847,6 +1847,7 @@ void character_martial_arts::clear_all_effects( Character &owner )
 // event handlers
 void character_martial_arts::ma_static_effects( Character &owner )
 {
+    auto_select_style( owner );
     style_selected->apply_static_buffs( owner );
     style_selected->apply_static_eocs( owner );
 }

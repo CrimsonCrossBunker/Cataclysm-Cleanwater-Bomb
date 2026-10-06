@@ -75,6 +75,7 @@
     #include <SDL_keyboard.h>
 #endif
 
+static const activity_id ACT_CONSUME( "ACT_CONSUME" );
 static const flag_id json_flag_NO_RELOAD( "NO_RELOAD" );
 static const flag_id json_flag_NO_UNLOAD( "NO_UNLOAD" );
 
@@ -127,8 +128,10 @@ void create_advanced_inv()
         advinv = std::make_unique<advanced_inventory>();
     }
     advinv->display();
-    // keep the UI and its ui_adaptor running if we're returning
-    if( uistate.transfer_save.exit_code != aim_exit::re_entry || get_avatar().activity.is_null() ) {
+    if( uistate.transfer_save.exit_code == aim_exit::re_entry &&
+        !get_avatar().activity.is_null() ) {
+        advinv->hide_for_activity();
+    } else {
         advinv.reset();
         cancel_aim_processing();
     }
@@ -1805,6 +1808,13 @@ void advanced_inventory::action_examine( advanced_inv_listitem *sitem,
         ret = g->inventory_item_menu( loc, info_startx, info_width,
                                       src == advanced_inventory::side::left ? game::LEFT_OF_INFO : game::RIGHT_OF_INFO );
         always_recalc = false;
+        // Eating either defers a container choice or starts an activity that
+        // reopens the consume menu when done.  In both cases AIM must close
+        // instead of leaving an orphaned re-entry callback behind.
+        if( ret == 'E' || uistate.open_menu ) {
+            exit = true;
+            return;
+        }
         // If examining the item did create a new activity, we have to add "return to AIM".
         if( last_activity != player_character.activity.id() || !ui ) {
             exit = true;
@@ -2035,7 +2045,7 @@ void advanced_inventory::display()
         g->wait_popup_reset();
     }
 
-    if( !ui ) {
+    if( !is_visible() ) {
         init();
         ui = std::make_unique<ui_adaptor>();
         ui->on_screen_resize( [&]( ui_adaptor & ui ) {
@@ -2468,8 +2478,8 @@ void advanced_inventory::swap_panes()
 
 void advanced_inventory::do_return_entry()
 {
-    // only save pane settings
-    save_settings( true );
+    // Reinitializing after an activity must retain the selected source pane.
+    save_settings( false );
     uistate.open_menu = create_advanced_inv;
     save_state->exit_code = aim_exit::re_entry;
 }
@@ -2479,6 +2489,15 @@ void advanced_inventory::temp_hide()
     ui = nullptr;
     do_return_entry();
     cancel_aim_processing();
+}
+
+void advanced_inventory::hide_for_activity()
+{
+    // Transfers return to this UI, so keep its adaptor and move-all progress.
+    // Consuming can reopen a different menu; hide AIM to avoid a stale overlay.
+    if( get_avatar().activity.id() == ACT_CONSUME ) {
+        temp_hide();
+    }
 }
 
 bool advanced_inventory::is_processing() const

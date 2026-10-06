@@ -180,7 +180,10 @@ sol::object get_persistent_value( const persistent_state &store,
         }
         return fallback.value_or( sol::make_object( lua, sol::lua_nil ) );
     }
-    return script_persistent_value_to_lua( lua, found->second );
+    // Lua allocations can run finalizers that replace or erase the stored value.
+    // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
+    const persistent_value snapshot = found->second;
+    return script_persistent_value_to_lua( lua, snapshot );
 }
 
 sol::table persistent_table( sol::state &lua, const persistent_state &values )

@@ -329,6 +329,27 @@ sol::table get_state(
                        skill_id( requested_id.value() ).obj() ) ) );
 }
 
+sol::table get_effective_level(
+    sol::this_state lua, const game_handle &handle,
+    const std::string &requested_id,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_exact_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    // The native getter deliberately accepts unregistered skill IDs.  Its base
+    // level is zero for a missing ID, while Character modifiers still apply.
+    const float level = character->get_skill_level( skill_id( requested_id ) );
+    return make_game_value_result(
+               state, sol::make_object( state, level ) );
+}
+
 struct level_adjustments {
     std::optional<int> practical;
     std::optional<int> knowledge;
@@ -622,6 +643,17 @@ void install_skill_api(
         require_read();
         return list_states(
                    lua_state, handle, options,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    skills.set_function(
+        "level",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+    const std::string & id ) {
+        require_read();
+        return get_effective_level(
+                   lua_state, handle, id,
                    current_runtime_generation(),
                    current_world_generation() );
     } );

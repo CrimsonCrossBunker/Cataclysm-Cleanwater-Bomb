@@ -14,7 +14,6 @@
     "current_contract",
     "target",
     "current_phase",
-    "verification_policy",
     "corpus_sources",
     "status_definitions",
     "milestones",
@@ -30,39 +29,6 @@
     "current_contract": { "const": "ccb Platform v1" },
     "target": { "type": "string", "minLength": 1 },
     "current_phase": { "type": "string", "minLength": 1 },
-    "verification_policy": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "implementation_loop",
-        "acceptance_gate",
-        "forbidden_before_gate",
-        "verified_requires",
-        "bounded_means",
-        "complete_means"
-      ],
-      "properties": {
-        "implementation_loop": { "enum": ["domain_batch_with_focused_checks"] },
-        "acceptance_gate": { "enum": ["scoped_gate_after_each_domain_batch"] },
-        "forbidden_before_gate": {
-          "type": "array",
-          "items": {
-            "enum": [
-              "cxx_build",
-              "catch2",
-              "python_suite",
-              "contract_generation",
-              "ledger_refresh",
-              "full_corpus_audit"
-            ]
-          },
-          "uniqueItems": true
-        },
-        "verified_requires": { "const": "final_semantic_gate_with_native_and_real_corpus_evidence" },
-        "bounded_means": { "type": "string", "minLength": 1 },
-        "complete_means": { "type": "string", "minLength": 1 }
-      }
-    },
     "corpus_sources": {
       "type": "array",
       "minItems": 3,

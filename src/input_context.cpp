@@ -227,6 +227,13 @@ void input_context_stack_impl::pop()
     }
 }
 
+void input_context_stack_impl::remove( const std::shared_ptr<input_context_handle> &context )
+{
+    stack.remove_if( [&]( const std::weak_ptr<input_context_handle> &entry ) {
+        return entry.expired() || entry.lock() == context;
+    } );
+}
+
 void input_context_stack_impl::push( std::shared_ptr<input_context_handle> const &context )
 {
     reap();

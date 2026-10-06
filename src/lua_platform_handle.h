@@ -42,6 +42,8 @@ enum class game_handle_kind : int {
     camp
 };
 
+// Locator aggregates mirror the published x/y/z wire fields and existing native callers.
+// NOLINTNEXTLINE(cata-xy)
 struct game_handle_locator {
     std::string scope;
     std::int64_t stable_id = 0;
@@ -278,9 +280,9 @@ sol::table make_game_error_result( sol::state_view lua, const game_handle_error 
 
 void install_game_handle_api(
     sol::state &lua, sol::table &services,
-    std::function<game_handle_runtime()> current_runtime,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read );
+    const std::function<game_handle_runtime()> &current_runtime,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read );
 
 } // namespace cata::lua_platform
 

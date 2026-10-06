@@ -55,10 +55,8 @@
 class overmap_connection;
 
 static const dimension_id dimension_world_default( "default" );
-
 static const mongroup_id GROUP_ZOMBIE( "GROUP_ZOMBIE" );
 static const mongroup_id GROUP_ZOMBIE_HORDE( "GROUP_ZOMBIE_HORDE" );
-
 static const oter_str_id oter_forest( "forest" );
 static const oter_str_id oter_forest_thick( "forest_thick" );
 static const oter_str_id oter_lake_bed( "lake_bed" );
@@ -1903,6 +1901,14 @@ void timed_event_manager::unserialize_all( const JsonArray &ja )
                     jp.get_member( "items" ).read( itm, false );
                     revert.get_items( pt ) = std::move( itm );
                 }
+                if( jp.has_member( "fertilized_at" ) ) {
+                    terrain_growth_state state;
+                    jp.read( "fertilized_at", state.fertilized_at );
+                    revert.set_terrain_growth( pt, state );
+                }
+                if( jp.has_member( "finite_liquid" ) ) {
+                    revert.set_finite_liquid( pt, jp.get_int( "finite_liquid" ) );
+                }
                 // We didn't always save the point, this is the original logic, it doesn't work right but for older saves at least they won't crash
                 if( !jp.has_member( "point" ) ) {
                     if( pt.x()++ < SEEX ) {
@@ -1911,6 +1917,9 @@ void timed_event_manager::unserialize_all( const JsonArray &ja )
                     }
                 }
             }
+        }
+        if( jo.has_member( "revert_cosmetics" ) ) {
+            revert.load( jo.get_member( "revert_cosmetics" ), "cosmetics", savegame_loading_version );
         }
         get_timed_events().add( static_cast<timed_event_type>( type ), when, faction_id, map_square,
                                 strength,
@@ -2049,8 +2058,28 @@ void timed_event_manager::serialize_all( JsonOut &jsout )
                     jsout.member( "ter", elem.revert.get_ter( pt ) );
                     jsout.member( "trap", elem.revert.get_trap( pt ) );
                     jsout.member( "items", elem.revert.get_items( pt ) );
+                    if( const terrain_growth_state *growth = elem.revert.get_terrain_growth( pt ) ) {
+                        jsout.member( "fertilized_at", growth->fertilized_at );
+                    }
+                    if( elem.revert.has_finite_liquid( pt ) ) {
+                        jsout.member( "finite_liquid", elem.revert.get_finite_liquid( pt ) );
+                    }
                     jsout.end_object();
                 }
+            }
+            jsout.end_array();
+        }
+        if( !elem.revert.cosmetics.empty() ) {
+            jsout.member( "revert_cosmetics" );
+            jsout.start_array();
+            for( const submap::cosmetic_t &cosmetic : elem.revert.cosmetics ) {
+                // Use the ordinary submap cosmetics format and loader.
+                jsout.start_array();
+                jsout.write( cosmetic.pos.x() );
+                jsout.write( cosmetic.pos.y() );
+                jsout.write( cosmetic.type );
+                jsout.write( cosmetic.str );
+                jsout.end_array();
             }
             jsout.end_array();
         }

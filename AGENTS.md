@@ -42,25 +42,15 @@ rules and does not replace this file.
 | `doc/` | Legacy developer documentation awaiting classified migration | this file |
 
 The machine-readable map is `ai/project-map.yml`; validation routing is in
-`ai/test-matrix.yml`.  The long-term pure-Lua authoring direction is defined
-by `data/lua/LUA_FIRST_PLATFORM.md`, with implementation status in
-`ai/lua-first-roadmap.yml`.  Platform v1 is the repository's only supported
-Lua runtime and public authoring contract; the former API v5 runtime,
-capability sandbox, manifest, and `game.*` compatibility surface are removed
-rather than maintained as a second system.
+`ai/test-matrix.yml`. The Lua architecture is in `data/lua/LUA_FIRST_PLATFORM.md`;
+the short goal and progress page is `data/lua/LUA_FIRST_EOC_WORKFLOW.md`.
+Platform v1 and `require("ccb")` are the only supported Lua behavior entrypoint.
+For Lua changes, implement the needed behavior and run focused checks for the
+changed code; do not require a 586-item audit for each task. Keep public
+interfaces, declarations, and generated references in sync.
 
-Lua-first EOC capability work follows `data/lua/LUA_FIRST_EOC_WORKFLOW.md`.
-Finish one domain batch with its implementation, declarations, and test source.
-Run the affected acceptance gate once; reuse passing evidence while its inputs
-and build configuration are unchanged. Focused tool tests are allowed during
-implementation. Defer C++ builds, broad suites and generated refreshes to batch
-acceptance; full corpus audits are for migration, parity claims, or EOC removal.
-`ai/test-matrix.yml` lists available checks, not a mandate to run them all.
-
-Lua-first 的 EOC 能力开发遵循 `data/lua/LUA_FIRST_EOC_WORKFLOW.md`：按完整领域批次同步
-实现、声明与测试，集中验收受影响的范围；输入和构建配置不变时复用已通过证据。开发中可执行
-聚焦工具测试，C++ 构建、宽测试与生成刷新留到批次验收；全量语料审计用于迁移、完整替代声明
-或删除 EOC。`ai/test-matrix.yml` 是可选检查的路由表，不是每轮全跑的清单。
+Lua 开发只读简短目标与进度页，按实际改动选择聚焦测试；不把逐条 EOC 语义对照当作
+每次修改的门槛。公开接口变化时同步声明和生成清单。
 
 ## Modification boundaries / 修改边界
 

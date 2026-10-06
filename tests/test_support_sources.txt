@@ -1,0 +1,12 @@
+activity_scheduling_helper.cpp
+cata_generators.cpp
+fake_messages.cpp
+map_helpers_tests.cpp
+map_test_case.cpp
+mapgen_helpers.cpp
+monster_helpers.cpp
+options_helpers.cpp
+player_helpers.cpp
+stringmaker.cpp
+test_main.cpp
+test_statistics.cpp

@@ -51,10 +51,11 @@ T _convert( diag_value::legacy_value const &val )
     }
 
     if constexpr( at_runtime ) {
-        throw math::runtime_error( R"(Could not convert legacy value "%s" to a %s)", _str_type_of( T{} ) );
+        throw math::runtime_error( R"(Could not convert legacy value "%s" to a %s)", val.val,
+                                   _str_type_of( T{} ) );
     }
 
-    debugmsg( R"(Could not convert legacy value "%s" to a %s)", _str_type_of( T{} ) );
+    debugmsg( R"(Could not convert legacy value "%s" to a %s)", val.val, _str_type_of( T{} ) );
     static T const null_val{};
     return null_val;
 }

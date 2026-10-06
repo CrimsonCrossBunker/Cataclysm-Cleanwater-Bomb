@@ -7,9 +7,11 @@
 #include "avatar.h"
 #include "cata_scope_helpers.h"
 #include "color.h"
+#include "coordinates.h"
 #include "debug.h"
 #include "game.h"
 #include "game_constants.h"
+#include "input_context.h"
 #include "input_enums.h"
 #include "localized_comparator.h"
 #include "map.h"
@@ -20,12 +22,13 @@
 #include "point.h"
 #include "ret_val.h"
 #include "translations.h"
-#include "uilist.h"
 #include "ui_manager.h"
+#include "uilist.h"
 #include "units.h"
 #include "veh_type.h"
 #include "veh_utils.h"
 #include "vehicle.h"
+#include "vpart_position.h"
 #include "vpart_range.h"
 
 veh_shape::veh_shape( map &here, vehicle &vehicle ): veh( vehicle ), here( here ) { }
@@ -44,6 +47,9 @@ player_activity veh_shape::start( const tripoint_bub_ms &pos )
         cursor_allowed.insert( part.pos_bub( here ) );
     }
 
+    // The shape editor does not allow changing z-levels.  Initialise its plane
+    // from the selected part, rather than the default z=0 cursor position.
+    cursor_pos = pos;
     if( !set_cursor_pos( pos ) ) {
         debugmsg( "failed to set cursor at given part" );
         set_cursor_pos( veh.bub_part_pos( here, 0 ) );

@@ -569,9 +569,16 @@ static bool mountable_gun_filter( const itype &guntype )
     } );
 }
 
-// @returns true if itype uses liquid ammo directly or has a magwell + magazine pocket that accepts liquid ammo
+// @returns true if a gun accepts liquid directly, without a detachable fuel magazine.
 static bool gun_uses_liquid_ammo( const itype &guntype )
 {
+    // Preserve detachable pressure tanks when mounting the weapon.  Treating
+    // these as vehicle plumbing disables both magazine insertion and removal.
+    for( const pocket_data &pkt : guntype.pockets ) {
+        if( pkt.type == pocket_type::MAGAZINE_WELL ) {
+            return false;
+        }
+    }
     for( const ammotype &at : guntype.gun->ammo ) {
         if( at->default_ammotype()->phase == phase_id::LIQUID ) {
             return true;

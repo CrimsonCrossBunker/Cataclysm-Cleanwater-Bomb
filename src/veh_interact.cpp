@@ -185,9 +185,8 @@ void veh_interact::assign_activity( map &here )
     if( sel_cmd == VEHICLE_SHAPE ) {
         if( !parts_here.empty() ) {
             const vpart_reference part_here( *veh, parts_here[0] );
-            const vpart_reference displayed_part( *veh, veh->part_displayed_at( part_here.mount_pos() ) );
             player_character.set_moves( 0 );
-            player_character.assign_activity( veh_shape( here, *veh ).start( displayed_part.pos_bub( here ) ) );
+            player_character.assign_activity( veh_shape( here, *veh ).start( part_here.pos_bub( here ) ) );
         }
         return;
     }
@@ -2618,10 +2617,20 @@ std::pair<bool, std::string> veh_interact::calc_lift_requirements( map &here, co
  * @param d The coordinates, relative to the viewport's 0-point (?)
  * @return The first vehicle part at the specified coordinates.
  */
+int veh_interact::part_at_mount( const vehicle &veh, const point_rel_ms &mount )
+{
+    const int displayed = veh.part_displayed_at( mount );
+    if( displayed >= 0 ) {
+        return displayed;
+    }
+    const std::vector<int> remaining = veh.parts_at_relative( mount, true, false );
+    return remaining.empty() ? -1 : remaining.front();
+}
+
 int veh_interact::part_at( const point_rel_ms &d )
 {
     const point_rel_ms vd{ -cursor_vp_mount + d.rotate( 1 ) };
-    return veh->part_displayed_at( vd );
+    return part_at_mount( *veh, vd );
 }
 
 /**

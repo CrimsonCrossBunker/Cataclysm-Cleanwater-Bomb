@@ -1,6 +1,11 @@
 #include "timed_event.h"
 
+#include <calendar.h>
+#include <point.h>
+#include <submap.h>
 #include <array>
+#include <cstdint>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <string>
@@ -38,14 +43,10 @@
 #include "worldfactory.h"
 
 static const itype_id itype_petrified_eye( "petrified_eye" );
-
 static const map_extra_id map_extra_mx_dsa_alrp( "mx_dsa_alrp" );
-
 static const mod_id MOD_INFORMATION_aftershock_exoplanet( "aftershock_exoplanet" );
 static const mod_id MOD_INFORMATION_catalegacy_future( "catalegacy_future" );
-
 static const morale_type morale_scream( "morale_scream" );
-
 static const mtype_id mon_afs_copbot( "mon_afs_copbot" );
 static const mtype_id mon_afs_riotbot( "mon_afs_riotbot" );
 static const mtype_id mon_amigara_horror( "mon_amigara_horror" );
@@ -57,9 +58,7 @@ static const mtype_id mon_fcl_riotbot( "mon_fcl_riotbot" );
 static const mtype_id mon_sewer_snake( "mon_sewer_snake" );
 static const mtype_id mon_spider_cellar_giant( "mon_spider_cellar_giant" );
 static const mtype_id mon_spider_widow_giant( "mon_spider_widow_giant" );
-
 static const spell_id spell_dks_summon_alrp( "dks_summon_alrp" );
-
 static const ter_str_id ter_t_fault( "t_fault" );
 static const ter_str_id ter_t_grate( "t_grate" );
 static const ter_str_id ter_t_rock_floor( "t_rock_floor" );
@@ -68,6 +67,25 @@ static const ter_str_id ter_t_stairs_down( "t_stairs_down" );
 static const ter_str_id ter_t_underbrush( "t_underbrush" );
 static const ter_str_id ter_t_water_dp( "t_water_dp" );
 static const ter_str_id ter_t_water_sh( "t_water_sh" );
+
+time_point timed_event_due_time( const time_duration &delay,
+                                 const time_duration &phase_offset )
+{
+    // Keep the native turn formula exact where representable.  Widen before
+    // adding the calendar turn, delay, and phase offset so signed overflow is
+    // defined at this scheduling boundary without changing other calendar math.
+    const std::int64_t due_turn =
+        static_cast<std::int64_t>( to_turn<int>( calendar::turn ) ) +
+        static_cast<std::int64_t>( to_turns<int>( delay ) ) +
+        static_cast<std::int64_t>( to_turns<int>( phase_offset ) );
+    if( due_turn > std::numeric_limits<int>::max() ) {
+        return time_point::from_turn( std::numeric_limits<int>::max() );
+    }
+    if( due_turn < std::numeric_limits<int>::min() ) {
+        return time_point::from_turn( std::numeric_limits<int>::min() );
+    }
+    return time_point::from_turn( static_cast<int>( due_turn ) );
+}
 
 timed_event::timed_event( timed_event_type e_t, const time_point &w, int f_id, tripoint_abs_ms p,
                           int s, std::string key )
@@ -518,7 +536,8 @@ void timed_event_manager::set_all( const std::string &key, time_duration time_in
 {
     for( timed_event &e : events ) {
         if( e.key == key ) {
-            e.when = calendar::turn + time_in_future;
+            // This retimes matching events; zero and negative delays remain valid.
+            e.when = timed_event_due_time( time_in_future, 0_seconds );
         }
     }
 }

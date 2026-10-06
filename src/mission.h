@@ -261,6 +261,7 @@ struct mission_type {
          */
         std::string tname() const;
         void set_platform_name( const std::string &value );
+        void set_platform_name( translation value );
 };
 
 class mission

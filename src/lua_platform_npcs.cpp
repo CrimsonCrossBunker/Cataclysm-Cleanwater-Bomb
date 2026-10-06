@@ -37,8 +37,6 @@
 #include "basecamp.h"
 #include "calendar.h"
 #include "coordinates.h"
-#include "event.h"
-#include "event_bus.h"
 #include "faction.h"
 #include "game.h"
 #include "game_constants.h"
@@ -52,17 +50,25 @@
 #include "lua_platform_npc_services.h"
 #include "lua_platform_runtime.h"
 #include "map.h"
+#include "messages.h"
 #include "mission.h"
 #include "mission_companion.h"
 #include "npc.h"
 #include "npc_class.h"
 #include "npctalk.h"
-#include "messages.h"
-#include "translations.h"
 #include "npctalk_rules.h"
 #include "overmapbuffer.h"
 #include "talker_npc.h"
+#include "translations.h"
 #include "viewer.h"
+
+static const efftype_id effect_asked_for_item( "asked_for_item" );
+static const efftype_id effect_asked_personal_info( "asked_personal_info" );
+static const efftype_id effect_asked_to_follow( "asked_to_follow" );
+static const efftype_id effect_asked_to_lead( "asked_to_lead" );
+static const efftype_id effect_asked_to_train( "asked_to_train" );
+static const faction_id faction_no_faction( "no_faction" );
+static const faction_id faction_your_followers( "your_followers" );
 
 namespace cata::lua_platform
 {
@@ -84,13 +90,6 @@ constexpr std::size_t maximum_npc_role_bytes = 256;
 constexpr int maximum_opinion_delta = 1000000;
 constexpr int maximum_npc_role_radius = 1000;
 
-const faction_id faction_no_faction( "no_faction" );
-const faction_id faction_your_followers( "your_followers" );
-const efftype_id effect_asked_for_item( "asked_for_item" );
-const efftype_id effect_asked_personal_info( "asked_personal_info" );
-const efftype_id effect_asked_to_follow( "asked_to_follow" );
-const efftype_id effect_asked_to_lead( "asked_to_lead" );
-const efftype_id effect_asked_to_train( "asked_to_train" );
 
 struct definition_options {
     int offset = 0;
@@ -293,6 +292,8 @@ std::vector<const npc_class *> matching_classes(
     std::sort(
         result.begin(), result.end(),
     []( const npc_class * lhs, const npc_class * rhs ) {
+        // IDs retain byte order independently of the UI locale.
+        // NOLINTNEXTLINE(cata-use-localized-sorting)
         return lhs->id.str() < rhs->id.str();
     } );
     return result;
@@ -353,16 +354,25 @@ game_handle make_npc_handle(
     runtime_generation, world_generation );
 }
 
+bool live_mission_pointer( const mission *candidate )
+{
+    if( candidate == nullptr ) {
+        return false;
+    }
+    const std::vector<mission *> live = mission::get_all_active();
+    return std::find( live.begin(), live.end(), candidate ) != live.end();
+}
+
 sol::table snapshot_opinion(
-    sol::state_view lua, const npc_opinion &opinion )
+    sol::state_view lua, const npc_opinion snapshot )
 {
     sol::table result = lua.create_table();
-    result["trust"] = opinion.trust;
-    result["fear"] = opinion.fear;
-    result["value"] = opinion.value;
-    result["anger"] = opinion.anger;
-    result["owed"] = opinion.owed;
-    result["sold"] = opinion.sold;
+    result["trust"] = snapshot.trust;
+    result["fear"] = snapshot.fear;
+    result["value"] = snapshot.value;
+    result["anger"] = snapshot.anger;
+    result["owed"] = snapshot.owed;
+    result["sold"] = snapshot.sold;
     return result;
 }
 
@@ -377,38 +387,71 @@ std::string reverse_string_lookup( const Mapping &mapping, const Value &value )
     return std::string();
 }
 
-sol::table snapshot_ai_rules( sol::state_view lua, const npc &entry )
+struct npc_ai_rules_snapshot {
+    std::string aim;
+    std::string engagement;
+    std::string cbm_recharge;
+    std::string cbm_reserve;
+    std::vector<std::string> allies;
+    std::vector<std::string> base_allies;
+    std::vector<std::pair<std::string, bool>> overrides;
+    bool pickup_whitelist = false;
+};
+
+npc_ai_rules_snapshot capture_ai_rules( const npc &entry )
 {
     const npc_follower_rules &rules = entry.rules;
+    npc_ai_rules_snapshot snapshot;
+    snapshot.aim = reverse_string_lookup( aim_rule_strs, rules.aim );
+    snapshot.engagement = reverse_string_lookup(
+                              combat_engagement_strs, rules.engagement );
+    snapshot.cbm_recharge = reverse_string_lookup(
+                                cbm_recharge_strs, rules.cbm_recharge );
+    snapshot.cbm_reserve = reverse_string_lookup(
+                               cbm_reserve_strs, rules.cbm_reserve );
+    snapshot.allies.reserve( ally_rule_strs.size() );
+    snapshot.base_allies.reserve( ally_rule_strs.size() );
+    snapshot.overrides.reserve( ally_rule_strs.size() );
+    for( const auto &rule_entry : ally_rule_strs ) {
+        if( rules.has_flag( rule_entry.second.rule ) ) {
+            snapshot.allies.push_back( rule_entry.first );
+        }
+        if( rules.has_flag( rule_entry.second.rule, false ) ) {
+            snapshot.base_allies.push_back( rule_entry.first );
+        }
+        if( rules.has_override_enable( rule_entry.second.rule ) ) {
+            snapshot.overrides.emplace_back(
+                rule_entry.first, rules.has_override( rule_entry.second.rule ) );
+        }
+    }
+    snapshot.pickup_whitelist = !rules.pickup_whitelist->empty();
+    return snapshot;
+}
+
+sol::table snapshot_ai_rules(
+    sol::state_view lua, const npc_ai_rules_snapshot &snapshot )
+{
     sol::table result = lua.create_table();
-    result["aim"] = reverse_string_lookup( aim_rule_strs, rules.aim );
-    result["engagement"] =
-        reverse_string_lookup( combat_engagement_strs, rules.engagement );
-    result["cbm_recharge"] =
-        reverse_string_lookup( cbm_recharge_strs, rules.cbm_recharge );
-    result["cbm_reserve"] =
-        reverse_string_lookup( cbm_reserve_strs, rules.cbm_reserve );
+    result["aim"] = snapshot.aim;
+    result["engagement"] = snapshot.engagement;
+    result["cbm_recharge"] = snapshot.cbm_recharge;
+    result["cbm_reserve"] = snapshot.cbm_reserve;
     sol::table allies = lua.create_table();
     sol::table base_allies = lua.create_table();
     sol::table overrides = lua.create_table();
-    std::size_t effective_index = 0;
-    std::size_t base_index = 0;
-    for( const auto &rule_entry : ally_rule_strs ) {
-        if( rules.has_flag( rule_entry.second.rule ) ) {
-            allies[++effective_index] = rule_entry.first;
-        }
-        if( rules.has_flag( rule_entry.second.rule, false ) ) {
-            base_allies[++base_index] = rule_entry.first;
-        }
-        if( rules.has_override_enable( rule_entry.second.rule ) ) {
-            overrides[rule_entry.first] =
-                rules.has_override( rule_entry.second.rule );
-        }
+    for( std::size_t index = 0; index < snapshot.allies.size(); ++index ) {
+        allies[index + 1] = snapshot.allies[index];
+    }
+    for( std::size_t index = 0; index < snapshot.base_allies.size(); ++index ) {
+        base_allies[index + 1] = snapshot.base_allies[index];
+    }
+    for( const auto &entry : snapshot.overrides ) {
+        overrides[entry.first] = entry.second;
     }
     result["allies"] = std::move( allies );
     result["base_allies"] = std::move( base_allies );
     result["overrides"] = std::move( overrides );
-    result["pickup_whitelist"] = !rules.pickup_whitelist->empty();
+    result["pickup_whitelist"] = snapshot.pickup_whitelist;
     return result;
 }
 
@@ -444,198 +487,305 @@ sol::table npc_ai_rule_catalog( sol::this_state lua )
     return result;
 }
 
-sol::table snapshot_companion_assignment(
-    sol::state_view lua, const npc &entry )
+struct companion_assignment_snapshot_data {
+    npc_companion_mission companion;
+    bool assigned = false;
+    std::string source_role;
+    time_point departure_time;
+    time_point return_time;
+    bool return_due = false;
+    float exertion = 1.0f;
+    time_duration travel_time;
+    std::size_t point_count = 0;
+    std::size_t inventory_stacks = 0;
+};
+
+companion_assignment_snapshot_data capture_companion_assignment(
+    const npc &entry )
 {
-    const npc_companion_mission companion =
-        entry.get_companion_mission();
+    companion_assignment_snapshot_data snapshot;
+    snapshot.companion = entry.get_companion_mission();
+    snapshot.assigned = entry.has_companion_mission();
+    snapshot.source_role = entry.companion_mission_role_id;
+    snapshot.departure_time = entry.companion_mission_time;
+    snapshot.return_time = entry.companion_mission_time_ret;
+    snapshot.return_due = snapshot.assigned &&
+                          snapshot.return_time != calendar::before_time_starts &&
+                          snapshot.return_time <= calendar::turn;
+    snapshot.exertion = entry.companion_mission_exertion;
+    snapshot.travel_time = entry.companion_mission_travel_time;
+    snapshot.point_count = entry.companion_mission_points.size();
+    snapshot.inventory_stacks = entry.companion_mission_inv.size();
+    return snapshot;
+}
+
+sol::table snapshot_companion_assignment(
+    sol::state_view lua, const companion_assignment_snapshot_data &snapshot )
+{
     sol::table result = lua.create_table();
-    result["assigned"] = entry.has_companion_mission();
-    result["source_role"] =
-        entry.companion_mission_role_id;
-    result["role"] = companion.role_id;
+    result["assigned"] = snapshot.assigned;
+    result["source_role"] = snapshot.source_role;
+    result["role"] = snapshot.companion.role_id;
     result["kind"] =
-        io::enum_to_string( companion.miss_id.id );
+        io::enum_to_string( snapshot.companion.miss_id.id );
     result["parameters"] =
-        companion.miss_id.parameters;
-    if( companion.position == tripoint_abs_omt::invalid ) {
+        snapshot.companion.miss_id.parameters;
+    if( snapshot.companion.position == tripoint_abs_omt::invalid ) {
         result["position"] = sol::nil;
     } else {
         result["position"] =
             script_tripoint_coord::from_native(
                 coords::origin::abs,
                 coords::scale::overmap_terrain,
-                companion.position.raw() );
+                snapshot.companion.position.raw() );
     }
-    if( companion.destination ) {
+    if( snapshot.companion.destination ) {
         result["destination"] =
             script_tripoint_coord::from_native(
                 coords::origin::abs,
                 coords::scale::overmap_terrain,
-                companion.destination->raw() );
+                snapshot.companion.destination->raw() );
     } else {
         result["destination"] = sol::nil;
     }
     result["departure_time"] =
         script_time_point::from_native(
-            entry.companion_mission_time );
+            snapshot.departure_time );
     result["return_time"] =
         script_time_point::from_native(
-            entry.companion_mission_time_ret );
-    result["return_due"] =
-        entry.has_companion_mission() &&
-        entry.companion_mission_time_ret !=
-        calendar::before_time_starts &&
-        entry.companion_mission_time_ret <= calendar::turn;
-    result["exertion"] =
-        entry.companion_mission_exertion;
+            snapshot.return_time );
+    result["return_due"] = snapshot.return_due;
+    result["exertion"] = snapshot.exertion;
     result["travel_time"] =
         script_time_duration::from_native(
-            entry.companion_mission_travel_time );
-    result["point_count"] =
-        entry.companion_mission_points.size();
-    result["inventory_stacks"] =
-        entry.companion_mission_inv.size();
+            snapshot.travel_time );
+    result["point_count"] = snapshot.point_count;
+    result["inventory_stacks"] = snapshot.inventory_stacks;
     return result;
 }
 
+struct selected_mission_snapshot_data {
+    int uid = 0;
+    std::size_t identity_generation = 0;
+    std::string id;
+    bool assigned = false;
+    bool in_progress = false;
+    bool failed = false;
+    bool has_generic_rewards = false;
+};
+
+struct npc_snapshot_data {
+    explicit npc_snapshot_data( game_handle native_handle ) : handle( std::move( native_handle ) ) {}
+
+    game_handle handle;
+    std::int64_t id = 0;
+    std::string unique_id;
+    int assigned_missions_value = 0;
+    std::string name;
+    std::string display_name;
+    tripoint_abs_ms position;
+    std::string class_id;
+    std::optional<std::string> template_id;
+    std::optional<std::string> faction_id;
+    std::string attitude;
+    std::string attitude_name;
+    std::string mission;
+    std::string status;
+    std::string activity;
+    bool male = false;
+    bool dead = false;
+    bool hallucination = false;
+    bool enemy = false;
+    bool friendly = false;
+    bool following = false;
+    bool player_ally = false;
+    bool leader = false;
+    bool guarding = false;
+    bool patrolling = false;
+    bool shopkeeper = false;
+    std::int64_t restock_turn = 0;
+    bool faction_representative = false;
+    std::string first_topic;
+    std::string companion_role;
+    companion_assignment_snapshot_data companion_assignment;
+    std::optional<tripoint_abs_omt> assigned_camp;
+    std::size_t available_missions = 0;
+    std::size_t assigned_missions = 0;
+    bool selected_mission_stale = false;
+    std::optional<selected_mission_snapshot_data> selected_mission;
+    bool travelling = false;
+    npc_ai_rules_snapshot ai_rules;
+    npc_opinion opinion;
+    int aggression = 0;
+    int bravery = 0;
+    int collector = 0;
+    int altruism = 0;
+};
+
+npc_snapshot_data capture_npc_snapshot(
+    npc &entry, const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    npc_snapshot_data snapshot( make_npc_handle(
+                                    entry, runtime_generation, world_generation ) );
+    snapshot.id = entry.getID().get_value();
+    snapshot.unique_id = entry.get_unique_id();
+    snapshot.assigned_missions_value = entry.assigned_missions_value();
+    snapshot.name = entry.get_name();
+    snapshot.display_name = entry.display_name();
+    snapshot.position = entry.pos_abs();
+    snapshot.class_id = entry.myclass.str();
+    if( !entry.idz.is_null() ) {
+        snapshot.template_id = entry.idz.str();
+    }
+    const faction_id faction = entry.get_fac_id();
+    if( !faction.is_null() ) {
+        snapshot.faction_id = faction.str();
+    }
+    const npc_attitude attitude = entry.get_attitude();
+    snapshot.attitude = npc_attitude_id( attitude );
+    snapshot.attitude_name = npc_attitude_name( attitude );
+    snapshot.mission = io::enum_to_string( entry.mission );
+    snapshot.status = entry.get_current_status();
+    snapshot.activity = entry.get_current_activity();
+    snapshot.male = entry.male;
+    snapshot.dead = entry.is_dead();
+    snapshot.hallucination = entry.is_hallucination();
+    snapshot.enemy = entry.is_enemy();
+    snapshot.friendly = entry.is_friendly( get_avatar() );
+    snapshot.following = entry.is_following();
+    snapshot.player_ally = entry.is_player_ally();
+    snapshot.leader = entry.is_leader();
+    snapshot.guarding = entry.is_guarding();
+    snapshot.patrolling = entry.is_patrolling();
+    snapshot.shopkeeper = entry.is_shopkeeper();
+    snapshot.restock_turn = to_turn<std::int64_t>( entry.restock_time() );
+    snapshot.faction_representative = entry.faction_representative;
+    snapshot.first_topic = entry.chatbin.first_topic;
+    snapshot.companion_role = entry.companion_mission_role_id;
+    snapshot.companion_assignment = capture_companion_assignment( entry );
+    snapshot.assigned_camp = entry.assigned_camp;
+    snapshot.available_missions = entry.chatbin.missions.size();
+    snapshot.assigned_missions = entry.chatbin.missions_assigned.size();
+    const mission *selected_mission = entry.chatbin.mission_selected;
+    const bool selected_live = live_mission_pointer( selected_mission );
+    snapshot.selected_mission_stale = selected_mission != nullptr && !selected_live;
+    if( selected_live ) {
+        snapshot.selected_mission = selected_mission_snapshot_data {
+            selected_mission->get_id(),
+            selected_mission->identity_generation(),
+            selected_mission->mission_id().str(),
+            selected_mission->is_assigned(),
+            selected_mission->in_progress(),
+            selected_mission->has_failed(),
+            selected_mission->has_generic_rewards()
+        };
+    }
+    snapshot.travelling = !entry.omt_path.empty();
+    snapshot.ai_rules = capture_ai_rules( entry );
+    snapshot.opinion = entry.op_of_u;
+    // Preserve negative values in the native signed personality fields.
+    // NOLINTNEXTLINE(bugprone-signed-char-misuse,cert-str34-c)
+    snapshot.aggression = entry.personality.aggression;
+    // Preserve negative values in the native signed personality fields.
+    // NOLINTNEXTLINE(bugprone-signed-char-misuse,cert-str34-c)
+    snapshot.bravery = entry.personality.bravery;
+    // Preserve negative values in the native signed personality fields.
+    // NOLINTNEXTLINE(bugprone-signed-char-misuse,cert-str34-c)
+    snapshot.collector = entry.personality.collector;
+    // Preserve negative values in the native signed personality fields.
+    // NOLINTNEXTLINE(bugprone-signed-char-misuse,cert-str34-c)
+    snapshot.altruism = entry.personality.altruism;
+    return snapshot;
+}
+
 sol::table snapshot_npc(
-    sol::state_view lua, npc &entry,
+    sol::state_view lua, const npc_snapshot_data &snapshot,
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    const tripoint_abs_ms position =
-        entry.pos_abs();
     sol::table result = lua.create_table();
-    result["handle"] = make_npc_handle(
-                           entry, runtime_generation,
-                           world_generation );
-    result["id"] = entry.getID().get_value();
-    result["unique_id"] = entry.get_unique_id();
-    result["assigned_missions_value"] = entry.assigned_missions_value();
-    result["name"] = entry.get_name();
-    result["display_name"] =
-        entry.display_name();
-    result["position"] =
-        script_tripoint_coord::from_native(
-            coords::origin::abs,
-            coords::scale::map_square,
-            position.raw() );
-    result["class"] = script_game_id(
-                          "npc_class",
-                          entry.myclass.str() );
-    if( entry.idz.is_null() ) {
+    result["handle"] = snapshot.handle;
+    result["id"] = snapshot.id;
+    result["unique_id"] = snapshot.unique_id;
+    result["assigned_missions_value"] = snapshot.assigned_missions_value;
+    result["name"] = snapshot.name;
+    result["display_name"] = snapshot.display_name;
+    result["position"] = script_tripoint_coord::from_native(
+                             coords::origin::abs, coords::scale::map_square,
+                             snapshot.position.raw() );
+    result["class"] = script_game_id( "npc_class", snapshot.class_id );
+    if( snapshot.template_id ) {
+        result["template"] = script_game_id( "npc_template", *snapshot.template_id );
+    } else {
         result["template"] = sol::nil;
-    } else {
-        result["template"] = script_game_id(
-                                 "npc_template",
-                                 entry.idz.str() );
     }
-    const faction_id faction = entry.get_fac_id();
-    if( faction.is_null() ) {
+    if( snapshot.faction_id ) {
+        result["faction"] = script_game_id( "faction", *snapshot.faction_id );
+    } else {
         result["faction"] = sol::nil;
-    } else {
-        result["faction"] = script_game_id(
-                                "faction",
-                                faction.str() );
     }
-    result["attitude"] =
-        npc_attitude_id(
-            entry.get_attitude() );
-    result["attitude_name"] =
-        npc_attitude_name(
-            entry.get_attitude() );
-    result["mission"] =
-        io::enum_to_string( entry.mission );
-    result["status"] =
-        entry.get_current_status();
-    result["activity"] =
-        entry.get_current_activity();
-    result["male"] = entry.male;
-    result["dead"] = entry.is_dead();
-    result["hallucination"] =
-        entry.is_hallucination();
-    result["enemy"] = entry.is_enemy();
-    result["following"] = entry.is_following();
-    result["player_ally"] =
-        entry.is_player_ally();
-    result["leader"] = entry.is_leader();
-    result["guarding"] = entry.is_guarding();
-    result["patrolling"] = entry.is_patrolling();
-    result["shopkeeper"] =
-        entry.is_shopkeeper();
-    result["restock_turn"] =
-        to_turn<std::int64_t>( entry.restock_time() );
-    result["faction_representative"] =
-        entry.faction_representative;
-    result["first_topic"] =
-        entry.chatbin.first_topic;
-    result["companion_role"] =
-        entry.companion_mission_role_id;
-    result["companion_assignment"] =
-        snapshot_companion_assignment( lua, entry );
-    result["has_assigned_camp"] =
-        entry.assigned_camp.has_value();
-    if( entry.assigned_camp ) {
-        result["assigned_camp"] =
-            script_tripoint_coord::from_native(
-                coords::origin::abs,
-                coords::scale::overmap_terrain,
-                entry.assigned_camp->raw() );
+    result["attitude"] = snapshot.attitude;
+    result["attitude_name"] = snapshot.attitude_name;
+    result["mission"] = snapshot.mission;
+    result["status"] = snapshot.status;
+    result["activity"] = snapshot.activity;
+    result["male"] = snapshot.male;
+    result["dead"] = snapshot.dead;
+    result["hallucination"] = snapshot.hallucination;
+    result["enemy"] = snapshot.enemy;
+    result["friendly"] = snapshot.friendly;
+    result["following"] = snapshot.following;
+    result["player_ally"] = snapshot.player_ally;
+    result["leader"] = snapshot.leader;
+    result["guarding"] = snapshot.guarding;
+    result["patrolling"] = snapshot.patrolling;
+    result["shopkeeper"] = snapshot.shopkeeper;
+    result["restock_turn"] = snapshot.restock_turn;
+    result["faction_representative"] = snapshot.faction_representative;
+    result["first_topic"] = snapshot.first_topic;
+    result["companion_role"] = snapshot.companion_role;
+    result["companion_assignment"] = snapshot_companion_assignment(
+                                         lua, snapshot.companion_assignment );
+    result["has_assigned_camp"] = snapshot.assigned_camp.has_value();
+    if( snapshot.assigned_camp ) {
+        result["assigned_camp"] = script_tripoint_coord::from_native(
+                                      coords::origin::abs,
+                                      coords::scale::overmap_terrain,
+                                      snapshot.assigned_camp->raw() );
     } else {
         result["assigned_camp"] = sol::nil;
     }
     sol::table dialogue_missions = lua.create_table();
-    dialogue_missions["available_count"] =
-        entry.chatbin.missions.size();
-    dialogue_missions["assigned_count"] =
-        entry.chatbin.missions_assigned.size();
-    mission *selected_mission =
-        entry.chatbin.mission_selected;
-    if( selected_mission == nullptr ) {
+    dialogue_missions["available_count"] = snapshot.available_missions;
+    dialogue_missions["assigned_count"] = snapshot.assigned_missions;
+    dialogue_missions["selected_stale"] = snapshot.selected_mission_stale;
+    if( !snapshot.selected_mission ) {
         dialogue_missions["selected"] = sol::nil;
     } else {
         sol::table selected = lua.create_table();
         selected["token"] = mission_token(
-                                selected_mission->get_id(),
-                                selected_mission->identity_generation(),
-                                runtime_generation,
-                                world_generation );
-        selected["uid"] = selected_mission->get_id();
-        selected["id"] = script_game_id(
-                             "mission",
-                             selected_mission->mission_id().str() );
-        selected["assigned"] =
-            selected_mission->is_assigned();
-        selected["in_progress"] =
-            selected_mission->in_progress();
-        selected["failed"] =
-            selected_mission->has_failed();
-        selected["has_generic_rewards"] =
-            selected_mission->has_generic_rewards();
-        dialogue_missions["selected"] =
-            std::move( selected );
+                                snapshot.selected_mission->uid,
+                                snapshot.selected_mission->identity_generation,
+                                runtime_generation, world_generation );
+        selected["uid"] = snapshot.selected_mission->uid;
+        selected["id"] = script_game_id( "mission", snapshot.selected_mission->id );
+        selected["assigned"] = snapshot.selected_mission->assigned;
+        selected["in_progress"] = snapshot.selected_mission->in_progress;
+        selected["failed"] = snapshot.selected_mission->failed;
+        selected["has_generic_rewards"] = snapshot.selected_mission->has_generic_rewards;
+        dialogue_missions["selected"] = std::move( selected );
     }
-    result["dialogue_missions"] =
-        std::move( dialogue_missions );
-    result["travelling"] =
-        !entry.omt_path.empty();
-    result["ai_rules"] =
-        snapshot_ai_rules( lua, entry );
-    result["opinion"] =
-        snapshot_opinion(
-            lua, entry.op_of_u );
+    result["dialogue_missions"] = std::move( dialogue_missions );
+    result["travelling"] = snapshot.travelling;
+    result["ai_rules"] = snapshot_ai_rules( lua, snapshot.ai_rules );
+    result["opinion"] = snapshot_opinion( lua, snapshot.opinion );
     sol::table personality = lua.create_table();
-    personality["aggression"] =
-        entry.personality.aggression;
-    personality["bravery"] =
-        entry.personality.bravery;
-    personality["collector"] =
-        entry.personality.collector;
-    personality["altruism"] =
-        entry.personality.altruism;
-    result["personality"] =
-        std::move( personality );
+    personality["aggression"] = snapshot.aggression;
+    personality["bravery"] = snapshot.bravery;
+    personality["collector"] = snapshot.collector;
+    personality["altruism"] = snapshot.altruism;
+    result["personality"] = std::move( personality );
     return result;
 }
 
@@ -719,14 +869,21 @@ sol::table visible_player_allies(
         return make_game_error_result(
                    state, { "unavailable", "No active game is available" } );
     }
-    sol::table items = state.create_table();
-    std::size_t index = 0;
-    const map &here = get_map();
-    for( npc &entry : g->all_npcs() ) {
-        if( entry.is_player_ally() && get_player_view().sees( here, entry ) ) {
-            items[++index] = snapshot_npc(
-                                 state, entry, runtime_generation, world_generation );
+    std::vector<npc_snapshot_data> snapshots;
+    {
+        const map &here = get_map();
+        for( npc &entry : g->all_npcs() ) {
+            if( entry.is_player_ally() && get_player_view().sees( here, entry ) ) {
+                snapshots.push_back( capture_npc_snapshot(
+                                         entry, runtime_generation, world_generation ) );
+            }
         }
+    }
+    sol::table items = state.create_table();
+    for( std::size_t index = 0; index < snapshots.size(); ++index ) {
+        items[index + 1] = snapshot_npc(
+                               state, snapshots[index], runtime_generation,
+                               world_generation );
     }
     return make_game_value_result(
                state, sol::make_object( state, std::move( items ) ) );
@@ -747,29 +904,37 @@ sol::table list_npcs(
             "unavailable", "No active game is available"
         } );
     }
-    const std::vector<npc *> entries =
-        matching_npcs( options.query );
-    const std::size_t first = std::min<std::size_t>(
-                                  options.offset, entries.size() );
-    const std::size_t last = std::min<std::size_t>(
-                                 first + options.limit,
-                                 entries.size() );
+    std::size_t total = 0;
+    std::size_t first = 0;
+    std::size_t last = 0;
+    std::vector<npc_snapshot_data> snapshots;
+    {
+        const std::vector<npc *> entries = matching_npcs( options.query );
+        total = entries.size();
+        first = std::min<std::size_t>( options.offset, total );
+        last = std::min<std::size_t>(
+                   first + options.limit, total );
+        snapshots.reserve( last - first );
+        for( std::size_t index = first; index < last; ++index ) {
+            snapshots.push_back( capture_npc_snapshot(
+                                     *entries[index], runtime_generation,
+                                     world_generation ) );
+        }
+    }
     sol::table items = state.create_table(
                            static_cast<int>( last - first ), 0 );
-    for( std::size_t index = first; index < last; ++index ) {
-        items[index - first + 1] =
-            snapshot_npc(
-                state, *entries[index],
-                runtime_generation,
-                world_generation );
+    for( std::size_t index = 0; index < snapshots.size(); ++index ) {
+        items[index + 1] = snapshot_npc(
+                               state, snapshots[index], runtime_generation,
+                               world_generation );
     }
     sol::table value = state.create_table();
     value["items"] = std::move( items );
     value["offset"] = options.offset;
     value["limit"] = options.limit;
-    value["total"] = entries.size();
+    value["total"] = total;
     value["returned"] = last - first;
-    value["has_more"] = last < entries.size();
+    value["has_more"] = last < total;
     return make_game_value_result(
                state, sol::make_object(
                    state, std::move( value ) ) );
@@ -788,12 +953,12 @@ sol::table get_npc(
     if( entry == nullptr ) {
         return make_game_error_result( state, *error );
     }
+    const npc_snapshot_data snapshot = capture_npc_snapshot(
+                                           *entry, runtime_generation, world_generation );
     return make_game_value_result(
                state, sol::make_object(
                    state, snapshot_npc(
-                       state, *entry,
-                       runtime_generation,
-                       world_generation ) ) );
+                       state, snapshot, runtime_generation, world_generation ) ) );
 }
 
 sol::table find_unique_npc(
@@ -833,12 +998,12 @@ sol::table find_unique_npc(
             "The unique NPC registry entry no longer references a living NPC"
         } );
     }
+    const npc_snapshot_data snapshot = capture_npc_snapshot(
+                                           *entry, runtime_generation, world_generation );
     return make_game_value_result(
                state, sol::make_object(
                    state, snapshot_npc(
-                       state, *entry,
-                       runtime_generation,
-                       world_generation ) ) );
+                       state, snapshot, runtime_generation, world_generation ) ) );
 }
 
 std::size_t count_npc_allies( const bool global )
@@ -947,7 +1112,7 @@ sol::table has_npc_follower_nearby(
                    state, !matches.empty() ) );
 }
 
-void validate_npc_name( const std::string &name )
+void validate_npc_name( const std::string_view name )
 {
     if( name.empty() ) {
         throw std::invalid_argument(
@@ -1036,7 +1201,7 @@ std::optional<npc_attitude> parse_attitude(
 
 sol::table set_npc_attitude(
     sol::this_state lua, const game_handle &handle,
-    const std::string &requested_attitude,
+    const std::string_view requested_attitude,
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
@@ -1166,6 +1331,11 @@ sol::table modify_npc_opinion(
     sol::table before =
         snapshot_opinion(
             state, entry->op_of_u );
+    entry = resolve_exact_npc(
+                handle, runtime_generation, world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
     if( deltas.trust ) {
         entry->op_of_u.trust =
             adjusted_opinion_value(
@@ -1202,14 +1372,11 @@ sol::table modify_npc_opinion(
                 entry->op_of_u.sold,
                 *deltas.sold, true );
     }
+    const npc_opinion after = entry->op_of_u;
     sol::table value = state.create_table();
     value["before"] = std::move( before );
-    value["after"] =
-        snapshot_opinion(
-            state, entry->op_of_u );
-    value["effective"] =
-        snapshot_opinion(
-            state, entry->op_of_u );
+    value["after"] = snapshot_opinion( state, after );
+    value["effective"] = snapshot_opinion( state, after );
     return make_game_value_result(
                state, sol::make_object(
                    state, std::move( value ) ) );
@@ -1383,7 +1550,7 @@ sol::table set_npc_faction(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
-void validate_npc_topic( const std::string &topic )
+void validate_npc_topic( const std::string_view topic )
 {
     if( topic.empty() || topic.size() > maximum_npc_topic_bytes ||
     std::any_of( topic.begin(), topic.end(), []( const unsigned char ch ) {
@@ -1484,7 +1651,13 @@ sol::table set_npc_ai_policy(
     if( entry == nullptr ) {
         return make_game_error_result( state, *error );
     }
-    sol::table before = snapshot_ai_rules( state, *entry );
+    const npc_ai_rules_snapshot before_snapshot = capture_ai_rules( *entry );
+    sol::table before = snapshot_ai_rules( state, before_snapshot );
+    entry = resolve_exact_npc(
+                handle, runtime_generation, world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
     if( family == "aim" ) {
         const auto found = aim_rule_strs.find( rule );
         if( found == aim_rule_strs.end() ) {
@@ -1521,9 +1694,10 @@ sol::table set_npc_ai_policy(
             "services.npcs.set_ai_policy family must be aim, engagement, "
             "cbm_recharge, or cbm_reserve" );
     }
+    const npc_ai_rules_snapshot after = capture_ai_rules( *entry );
     sol::table value = state.create_table();
     value["before"] = std::move( before );
-    value["after"] = snapshot_ai_rules( state, *entry );
+    value["after"] = snapshot_ai_rules( state, after );
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
@@ -1548,19 +1722,24 @@ sol::table set_npc_ally_rule(
     }
     const ally_rule native_rule = found->second.rule;
     const bool before = entry->rules.has_flag( native_rule, false );
-    const bool enabled = requested_enabled.value_or( !before );
-    if( enabled ) {
+    // Native talker_npc::toggle_ai_rule uses toggle_flag(), which chooses the
+    // new base flag from has_flag() including any active override.  Explicit
+    // true/false requests still set or clear only the underlying base flag.
+    const bool base_enabled = requested_enabled.value_or(
+                                  !entry->rules.has_flag( native_rule ) );
+    if( base_enabled ) {
         entry->rules.set_flag( native_rule );
     } else {
         entry->rules.clear_flag( native_rule );
     }
+    const bool after = entry->rules.has_flag( native_rule, false );
     entry->invalidate_range_cache();
     entry->wield_better_weapon();
     sol::table value = state.create_table();
     value["rule"] = rule;
     value["before"] = before;
-    value["after"] = enabled;
-    value["changed"] = before != enabled;
+    value["after"] = after;
+    value["changed"] = before != after;
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
@@ -1589,7 +1768,13 @@ sol::table set_npc_ally_override(
     if( entry == nullptr ) {
         return make_game_error_result( state, *error );
     }
-    sol::table before = snapshot_ai_rules( state, *entry );
+    const npc_ai_rules_snapshot before_snapshot = capture_ai_rules( *entry );
+    sol::table before = snapshot_ai_rules( state, before_snapshot );
+    entry = resolve_exact_npc(
+                handle, runtime_generation, world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
     const ally_rule native_rule = found->second.rule;
     if( state_name == "inherit" ) {
         entry->rules.disable_override( native_rule );
@@ -1599,9 +1784,10 @@ sol::table set_npc_ally_override(
             native_rule, state_name == "allow" );
     }
     entry->invalidate_range_cache();
+    const npc_ai_rules_snapshot after_rules = capture_ai_rules( *entry );
     sol::table value = state.create_table();
     value["before"] = std::move( before );
-    value["after"] = snapshot_ai_rules( state, *entry );
+    value["after"] = snapshot_ai_rules( state, after_rules );
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
@@ -1627,13 +1813,27 @@ sol::table copy_npc_ai_rules(
     if( source == nullptr ) {
         return make_game_error_result( state, *source_error );
     }
-    sol::table before = snapshot_ai_rules( state, *target );
+    const npc_ai_rules_snapshot before_snapshot = capture_ai_rules( *target );
+    sol::table before = snapshot_ai_rules( state, before_snapshot );
+    target = resolve_exact_npc(
+                 target_handle, runtime_generation,
+                 world_generation, target_error );
+    if( target == nullptr ) {
+        return make_game_error_result( state, *target_error );
+    }
+    source = resolve_exact_npc(
+                 source_handle, runtime_generation,
+                 world_generation, source_error );
+    if( source == nullptr ) {
+        return make_game_error_result( state, *source_error );
+    }
     if( target != source ) {
         target->rules = source->rules;
     }
+    const npc_ai_rules_snapshot after = capture_ai_rules( *target );
     sol::table value = state.create_table();
     value["before"] = std::move( before );
-    value["after"] = snapshot_ai_rules( state, *target );
+    value["after"] = snapshot_ai_rules( state, after );
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
@@ -1652,6 +1852,8 @@ sol::table make_npc_thankful(
     }
     const npc_attitude attitude_before = entry->get_attitude();
     const std::string topic_before = entry->chatbin.first_topic;
+    // Preserve negative values in the native signed personality fields.
+    // NOLINTNEXTLINE(bugprone-signed-char-misuse,cert-str34-c)
     const int aggression_before = entry->personality.aggression;
     if( attitude_before == NPCATT_MUG ||
         attitude_before == NPCATT_WAIT_FOR_LEAVE ||
@@ -1816,9 +2018,16 @@ sol::table join_npc_to_player(
             entry, owner, error ) ) {
         return make_game_error_result( state, *error );
     }
+    const npc_snapshot_data before_snapshot = capture_npc_snapshot(
+                *entry, runtime_generation, world_generation );
     sol::table before = snapshot_npc(
-                            state, *entry, runtime_generation,
+                            state, before_snapshot, runtime_generation,
                             world_generation );
+    if( !resolve_exact_npc_with_avatar_owner(
+            handle, avatar_handle, runtime_generation, world_generation,
+            entry, owner, error ) ) {
+        return make_game_error_result( state, *error );
+    }
     const int transferred_cash = entry->cash;
     owner->follower_ids.insert( entry->getID() );
     entry->set_attitude( NPCATT_FOLLOW );
@@ -1827,13 +2036,20 @@ sol::table join_npc_to_player(
     owner->cash += transferred_cash;
     entry->cash = 0;
     entry->custom_profession.clear();
+    if( !resolve_exact_npc_with_avatar_owner(
+            handle, avatar_handle, runtime_generation, world_generation,
+            entry, owner, error ) ) {
+        return make_game_error_result( state, *error );
+    }
+    const npc_snapshot_data after = capture_npc_snapshot(
+                                        *entry, runtime_generation, world_generation );
+    const std::int64_t avatar_id = owner->getID().get_value();
     sol::table value = state.create_table();
     value["before"] = std::move( before );
     value["after"] = snapshot_npc(
-                         state, *entry, runtime_generation,
-                         world_generation );
+                         state, after, runtime_generation, world_generation );
     value["transferred_cash"] = transferred_cash;
-    value["avatar_id"] = owner->getID().get_value();
+    value["avatar_id"] = avatar_id;
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
@@ -1859,9 +2075,16 @@ sol::table leave_npc_player(
             entry, owner, error ) ) {
         return make_game_error_result( state, *error );
     }
+    const npc_snapshot_data before_snapshot = capture_npc_snapshot(
+                *entry, runtime_generation, world_generation );
     sol::table before = snapshot_npc(
-                            state, *entry, runtime_generation,
+                            state, before_snapshot, runtime_generation,
                             world_generation );
+    if( !resolve_exact_npc_with_avatar_owner(
+            handle, avatar_handle, runtime_generation, world_generation,
+            entry, owner, error ) ) {
+        return make_game_error_result( state, *error );
+    }
     add_msg( _( "%s leaves." ), entry->get_name() );
     owner->follower_ids.erase( entry->getID() );
     const faction_id solo_faction(
@@ -1881,13 +2104,21 @@ sol::table leave_npc_player(
     entry->set_attitude( NPCATT_NULL );
     entry->mission = NPC_MISSION_NULL;
     entry->long_term_goal_action();
+    if( !resolve_exact_npc_with_avatar_owner(
+            handle, avatar_handle, runtime_generation, world_generation,
+            entry, owner, error ) ) {
+        return make_game_error_result( state, *error );
+    }
+    const npc_snapshot_data after = capture_npc_snapshot(
+                                        *entry, runtime_generation, world_generation );
+    const bool created_faction = created != nullptr;
+    const std::int64_t avatar_id = owner->getID().get_value();
     sol::table value = state.create_table();
     value["before"] = std::move( before );
     value["after"] = snapshot_npc(
-                         state, *entry, runtime_generation,
-                         world_generation );
-    value["created_faction"] = created != nullptr;
-    value["avatar_id"] = owner->getID().get_value();
+                         state, after, runtime_generation, world_generation );
+    value["created_faction"] = created_faction;
+    value["avatar_id"] = avatar_id;
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
@@ -1906,19 +2137,32 @@ sol::table set_npc_guarding(
     if( entry == nullptr ) {
         return make_game_error_result( state, *error );
     }
+    const npc_snapshot_data before_snapshot = capture_npc_snapshot(
+                *entry, runtime_generation, world_generation );
     sol::table before = snapshot_npc(
-                            state, *entry, runtime_generation,
+                            state, before_snapshot, runtime_generation,
                             world_generation );
+    entry = resolve_exact_npc(
+                handle, runtime_generation, world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
     if( enabled ) {
         talk_function::assign_guard( *entry );
     } else {
         talk_function::stop_guard( *entry );
     }
+    entry = resolve_exact_npc(
+                handle, runtime_generation, world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const npc_snapshot_data after = capture_npc_snapshot(
+                                        *entry, runtime_generation, world_generation );
     sol::table value = state.create_table();
     value["before"] = std::move( before );
     value["after"] = snapshot_npc(
-                         state, *entry, runtime_generation,
-                         world_generation );
+                         state, after, runtime_generation, world_generation );
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
@@ -2182,8 +2426,12 @@ sol::table list_npc_destinations(
                []( const npc_destination_entry & lhs,
     const npc_destination_entry & rhs ) {
         if( lhs.kind != rhs.kind ) {
+            // Protocol tags retain byte order independently of the UI locale.
+            // NOLINTNEXTLINE(cata-use-localized-sorting)
             return lhs.kind < rhs.kind;
         }
+        // IDs retain byte order independently of the UI locale.
+        // NOLINTNEXTLINE(cata-use-localized-sorting)
         return lhs.id < rhs.id;
     } );
 
@@ -2326,7 +2574,7 @@ sol::table set_npc_guard_position(
 }
 
 void require_companion_role(
-    const std::string &role, const std::string_view api_name,
+    const std::string_view role, const std::string_view api_name,
     const bool allow_empty )
 {
     if( ( role.empty() && !allow_empty ) ||
@@ -2364,11 +2612,13 @@ sol::table get_npc_companion_state(
     if( entry == nullptr ) {
         return make_game_error_result( state, *error );
     }
+    const companion_assignment_snapshot_data snapshot =
+        capture_companion_assignment( *entry );
     return make_game_value_result(
                state, sol::make_object(
                    state,
                    snapshot_companion_assignment(
-                       state, *entry ) ) );
+                       state, snapshot ) ) );
 }
 
 sol::table set_npc_companion_role(
@@ -2427,12 +2677,18 @@ sol::table open_npc_companion_missions(
         entry->companion_mission_role_id;
     entry->companion_mission_role_id = role;
     talk_function::companion_mission( *entry );
+    entry = resolve_exact_npc(
+                handle, runtime_generation, world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const std::string after_role = entry->companion_mission_role_id;
+    const companion_assignment_snapshot_data after_state =
+        capture_companion_assignment( *entry );
     sol::table value = state.create_table();
     value["role_before"] = before_role;
-    value["role_after"] =
-        entry->companion_mission_role_id;
-    value["state"] =
-        snapshot_companion_assignment( state, *entry );
+    value["role_after"] = after_role;
+    value["state"] = snapshot_companion_assignment( state, after_state );
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
@@ -2588,12 +2844,24 @@ sol::table open_npc_rules(
     if( entry == nullptr ) {
         return make_game_error_result( state, *error );
     }
-    sol::table before = snapshot_ai_rules( state, *entry );
+    const npc_ai_rules_snapshot before_snapshot = capture_ai_rules( *entry );
+    sol::table before = snapshot_ai_rules( state, before_snapshot );
+    entry = resolve_exact_npc(
+                handle, runtime_generation, world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
     follower_rules_ui rules_ui;
     rules_ui.draw_follower_rules_ui( entry );
+    entry = resolve_exact_npc(
+                handle, runtime_generation, world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const npc_ai_rules_snapshot after = capture_ai_rules( *entry );
     sol::table value = state.create_table();
     value["before"] = std::move( before );
-    value["after"] = snapshot_ai_rules( state, *entry );
+    value["after"] = snapshot_ai_rules( state, after );
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
@@ -2716,11 +2984,11 @@ sol::table detail::make_npc_dialogue_result(
 
 void install_npc_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write,
-    std::function<void()> invalidate_handles )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write,
+    const std::function<void()> &invalidate_handles )
 {
     sol::state_view lua( services.lua_state() );
     sol::table npcs = lua.create_table();
@@ -2825,7 +3093,7 @@ void install_npc_api(
         "set_attitude",
         [current_runtime_generation, current_world_generation, require_write](
             sol::this_state lua_state, const game_handle & handle,
-    const std::string & attitude ) {
+    const std::string_view attitude ) {
         require_write();
         return set_npc_attitude(
                    lua_state, handle, attitude,
@@ -3245,9 +3513,10 @@ void install_npc_api(
             return make_game_error_result( lua_state, *error );
         }
         sol::state_view state( lua_state );
+        const npc_ai_rules_snapshot snapshot = capture_ai_rules( *entry );
         return make_game_value_result(
                    state, sol::make_object(
-                       state, snapshot_ai_rules( state, *entry ) ) );
+                       state, snapshot_ai_rules( state, snapshot ) ) );
     } );
     install_npc_domain_services(
         npcs, current_runtime_generation,

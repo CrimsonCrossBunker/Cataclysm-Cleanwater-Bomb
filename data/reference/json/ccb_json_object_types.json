@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:df68578d616ec366021a2713a944d8375d9647e6c7cb6376baec845b1a8a3e6f",
+    "source_fingerprint": "sha256:abdefe5655cfc74e65ecbf047ce29462125a1764e4e1fc7751031b64d8e52dbd",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -17,22 +17,20 @@
   "summary": {
     "registration_calls": 193,
     "registered_types": 192,
-    "observed_types": 183,
-    "registered_and_observed": 183,
+    "observed_types": 185,
+    "registered_and_observed": 185,
     "registered_not_observed": [
       "TRAIT_BLACKLIST",
       "WORLD_OPTION",
       "colordef",
-      "pet_slot",
-      "riding_config",
       "sound_effect_preload",
       "spell_migration",
       "wound",
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6770,
-    "top_level_objects": 94757,
+    "tracked_json_files": 6775,
+    "top_level_objects": 94779,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -115,7 +113,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 15120,
+        "occurrences": 15121,
         "examples": [
           {
             "path": "data/json/artifact/artifact_item_types.json",
@@ -2469,7 +2467,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 909,
+        "occurrences": 911,
         "examples": [
           {
             "path": "data/json/construction/appliances.json",
@@ -2582,7 +2580,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 525,
+        "occurrences": 526,
         "examples": [
           {
             "path": "data/json/construction_group.json",
@@ -3049,7 +3047,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 5549,
+        "occurrences": 5551,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -4796,7 +4794,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 28,
+        "occurrences": 30,
         "examples": [
           {
             "path": "data/mods/Isolation-Protocol/Player/sorcery.json",
@@ -6853,8 +6851,13 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 0,
-        "examples": [],
+        "occurrences": 5,
+        "examples": [
+          {
+            "path": "data/json/pet_slots/pet_slots.json",
+            "pointer": "/0"
+          }
+        ],
         "contract_roots": [
           "data/core",
           "data/json",
@@ -7305,7 +7308,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 322,
+        "occurrences": 327,
         "examples": [
           {
             "path": "data/json/proficiencies/athletics.json",
@@ -7364,7 +7367,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 31,
+        "occurrences": 32,
         "examples": [
           {
             "path": "data/json/proficiencies/proficiency_categories.json",
@@ -8539,8 +8542,13 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 0,
-        "examples": [],
+        "occurrences": 1,
+        "examples": [
+          {
+            "path": "data/json/riding_config.json",
+            "pointer": "/0"
+          }
+        ],
         "contract_roots": [
           "data/core",
           "data/json",
@@ -8996,10 +9004,10 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 37,
+        "occurrences": 38,
         "examples": [
           {
-            "path": "data/json/skills.json",
+            "path": "data/json/riding_skill.json",
             "pointer": "/0"
           }
         ],
@@ -10495,7 +10503,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 600,
+        "occurrences": 601,
         "examples": [
           {
             "path": "data/json/debug/teleportation.json",

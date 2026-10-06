@@ -22,6 +22,10 @@ msgstr[1] "батарейки"
 msgstr[2] "батареек"
 msgstr[3] "батарейки"
 
+# Used to verify that environment predicates consume a non-identity i18n value.
+msgid "__ccb_test_environment_spring__"
+msgstr "spring"
+
 #: lang/json/GENERIC_from_json.py
 msgctxt "weapon"
 msgid "pike"

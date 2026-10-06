@@ -1169,8 +1169,10 @@ class game
         //  int autosave_timeout();  // If autosave enabled, how long we should wait for user inaction before saving.
         void autosave();         // automatic quicksaves - Performs some checks before calling quicksave()
     public:
-        void quicksave();        // Saves the game without quitting
+        void quicksave( bool automatic = false ); // Saves the game without quitting
         void save_pending_dimension_checkpoint();
+        void ensure_dimension_rollback_snapshot();
+        void discard_dimension_rollback_snapshot();
         void quickload();        // Loads the previously saved game if it exists
         void snapshot_menu();    // Opens the snapshot (multi-save) save/load menu
         // Restore the most recent snapshot and quit to the main menu, discarding

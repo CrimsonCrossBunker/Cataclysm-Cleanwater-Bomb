@@ -3,7 +3,10 @@
 #include "lua_platform_crafting.h"
 
 #include <calendar.h>
+#include <coordinates.h>
 #include <crafting.h>
+#include <player_activity.h>
+
 extern "C" {
 #include <lua.h>
 }
@@ -34,7 +37,11 @@ extern "C" {
 #include "requirements.h"
 #include "type_id.h"
 
+static const activity_id ACT_CRAFT( "ACT_CRAFT" );
+static const activity_id ACT_CRAFT_WAIT( "ACT_CRAFT_WAIT" );
+
 class read_only_visitable;
+
 
 namespace cata::lua_platform
 {
@@ -1269,6 +1276,85 @@ void install_crafting_api(
                    world_generation() );
     } );
     services["recipes"] = std::move( recipes );
+
+    sol::table crafting = state.create_table();
+    crafting.set_function(
+        "start",
+        [require_write, current_runtime_generation, world_generation](
+            sol::this_state lua, const game_handle & character_handle,
+            const script_game_id & id,
+            const sol::optional<std::int64_t> &requested_batch,
+    const sol::optional<bool> &continue_while_possible ) {
+        require_write();
+        require_id( id, "recipe", "services.crafting.start" );
+        const std::int64_t batch = requested_batch.value_or( 1 );
+        if( batch < 1 || batch > maximum_recipe_batch ) {
+            throw std::invalid_argument(
+                "services.crafting.start batch must be within 1..1000" );
+        }
+
+        sol::state_view lua_state( lua );
+        std::optional<game_handle_error> error;
+        Character *character = resolve_exact_character(
+                                   character_handle,
+                                   current_runtime_generation(),
+                                   world_generation(), error );
+        if( character == nullptr ) {
+            return make_game_error_result( lua_state, *error );
+        }
+        if( !character->is_avatar() ) {
+            return make_game_error_result( lua_state, {
+                "wrong_target",
+                "services.crafting.start requires the avatar; use the native NPC craft "
+                "job for NPCs"
+            } );
+        }
+
+        const recipe_id native_id( id.value() );
+        const recipe &definition = native_id.obj();
+        if( !character->has_recipe( &definition ) ) {
+            return make_game_error_result( lua_state, {
+                "recipe_unavailable",
+                "The avatar does not currently have access to this recipe"
+            } );
+        }
+
+        if( continue_while_possible.value_or( false ) ) {
+            character->make_all_craft( native_id, static_cast<int>( batch ),
+                                       std::nullopt );
+        } else {
+            character->make_craft( native_id, static_cast<int>( batch ) );
+        }
+
+        character = resolve_exact_character(
+                        character_handle, current_runtime_generation(),
+                        world_generation(), error );
+        if( character == nullptr ) {
+            return make_game_error_result( lua_state, *error );
+        }
+
+        const bool craft_activity_active = character->activity &&
+                                           ( character->activity.id() == ACT_CRAFT ||
+                                             character->activity.id() ==
+                                             ACT_CRAFT_WAIT );
+        const std::optional<script_game_id> activity = character->activity ?
+                std::make_optional( script_game_id(
+                                        "activity", character->activity.id().str() ) ) : std::nullopt;
+        sol::table value = lua_state.create_table();
+        value["recipe"] = id;
+        value["batch"] = batch;
+        value["continue_while_possible"] =
+            continue_while_possible.value_or( false );
+        value["craft_activity_active"] = craft_activity_active;
+        if( activity ) {
+            value["activity"] = *activity;
+        } else {
+            value["activity"] = sol::nil;
+        }
+        return make_game_value_result(
+                   lua_state, sol::make_object( lua_state, std::move( value ) ) );
+    } );
+    services["crafting"] = std::move( crafting );
 
     sol::table requirements = state.create_table();
     requirements.set_function(

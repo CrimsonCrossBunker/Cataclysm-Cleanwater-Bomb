@@ -67,6 +67,7 @@
 #include "overmapbuffer.h"
 #include "path_info.h"
 #include "popup.h"
+#include "rng.h"
 #include "safemode_ui.h"
 #include "save_snapshot.h"
 #include "scenario.h"
@@ -1389,6 +1390,7 @@ bool main_menu::opening_screen()
 #endif
 
     while( !start ) {
+        input_context::scoped_activation active_menu_context( ctxt );
 #if defined(__ANDROID__)
         if( imgui_menu ) {
             imgui_menu->set_snapshot( make_main_menu_snapshot() );
@@ -2076,6 +2078,13 @@ bool main_menu::new_character_tab()
                 }
 
                 world_generator->set_active_world( world );
+                // Roll the world seed before character creation: the
+                // character creator may touch the overmap, and everything
+                // this world generates must share one seed.  Worlds with
+                // saves instead restore their seed from the master save.
+                if( world->world_saves.empty() ) {
+                    g->set_seed( rng_bits() );
+                }
                 try {
                     if( !g->setup() ) {
                         continue;
@@ -2124,6 +2133,13 @@ bool main_menu::new_character_tab()
             return false;
         }
         world_generator->set_active_world( world );
+        // Roll the world seed before character creation: the
+        // character creator may touch the overmap, and everything
+        // this world generates must share one seed.  Worlds with
+        // saves instead restore their seed from the master save.
+        if( world->world_saves.empty() ) {
+            g->set_seed( rng_bits() );
+        }
         try {
             if( !g->setup() ) {
                 return false;

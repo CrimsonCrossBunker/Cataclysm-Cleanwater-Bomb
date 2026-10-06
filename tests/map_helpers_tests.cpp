@@ -151,3 +151,8 @@ submap *map_meddler::unsafe_get_submap_at( tripoint_bub_ms &p, point_sm_ms &l )
 {
     return get_map().unsafe_get_submap_at( p, l );
 }
+
+submap *map_meddler::get_submap_at_grid( map &m, const tripoint_rel_sm &p )
+{
+    return m.get_submap_at_grid( p );
+}

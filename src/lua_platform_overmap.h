@@ -63,15 +63,18 @@ std::optional<game_handle_error> validate_overmap_tile_token(
     const game_handle_runtime &runtime_generation,
     std::size_t world_generation );
 
-// Install bounded, existing-overmap-only observation, search and mutation
-// APIs. Calls may load saved overmaps, but never generate new overmaps.
+// Install bounded observation, search and mutation APIs. Most overmap scans
+// only inspect existing tiles; the explicit native-condition matchers call
+// overmap_buffer::ter(), and route reveal searches call it for path terrain.
+// These operations may lazily load a saved overmap or create and populate an
+// overmap for the requested OMT to preserve native semantics.
 void install_overmap_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write,
-    std::function<std::size_t( std::size_t )> random_index );
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write,
+    const std::function<std::size_t( std::size_t )> &random_index );
 
 } // namespace cata::lua_platform
 

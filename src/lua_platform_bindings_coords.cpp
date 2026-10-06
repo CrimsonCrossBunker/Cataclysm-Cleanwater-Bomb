@@ -354,11 +354,10 @@ std::uint64_t inclusive_axis_count( const int from, const int to )
 }
 
 std::size_t checked_rectangle_count(
-    const int from_x, const int to_x, const int from_y, const int to_y,
-    const std::size_t limit )
+    const point &from, const point &to, const std::size_t limit )
 {
-    const std::uint64_t width = inclusive_axis_count( from_x, to_x );
-    const std::uint64_t height = inclusive_axis_count( from_y, to_y );
+    const std::uint64_t width = inclusive_axis_count( from.x, to.x );
+    const std::uint64_t height = inclusive_axis_count( from.y, to.y );
     require_output_count( width, limit );
     require_output_count( height, limit );
     if( width > limit / height ) {
@@ -369,13 +368,12 @@ std::size_t checked_rectangle_count(
 }
 
 std::size_t checked_box_count(
-    const int from_x, const int to_x, const int from_y, const int to_y,
-    const int from_z, const int to_z, const std::size_t limit )
+    const tripoint &from, const tripoint &to, const std::size_t limit )
 {
-    const std::uint64_t depth = inclusive_axis_count( from_z, to_z );
+    const std::uint64_t depth = inclusive_axis_count( from.z, to.z );
     require_output_count( depth, limit );
     const std::size_t area =
-        checked_rectangle_count( from_x, to_x, from_y, to_y, limit );
+        checked_rectangle_count( from.xy(), to.xy(), limit );
     if( area > limit / depth ) {
         throw std::length_error(
             "services.coords result exceeds the requested max_points limit" );
@@ -400,35 +398,36 @@ sol::table coordinate_vector_table(
 
 script_point_coord::script_point_coord(
     const coords::origin origin, const coords::scale scale,
-    const int x, const int y )
-    : origin_( origin ), scale_( scale ), x_( x ), y_( y )
+    const point &value )
+    : origin_( origin ), scale_( scale ), value_( value )
 {
     require_supported_kind( origin_, scale_ );
 }
 
+// Scalar Lua arguments stay wide until checked_axis rejects out-of-range values.
+// NOLINTNEXTLINE(cata-xy)
 script_point_coord script_point_coord::from(
     const std::string_view origin, const std::string_view scale,
     const std::int64_t x, const std::int64_t y )
 {
-    return script_point_coord(
-               parse_origin( origin ), parse_scale( scale ),
-               checked_axis( x ), checked_axis( y ) );
+    return script_point_coord( parse_origin( origin ), parse_scale( scale ), point( checked_axis( x ),
+                               checked_axis( y ) ) );
 }
 
 script_point_coord script_point_coord::from_native(
     const coords::origin origin, const coords::scale scale, const point &value )
 {
-    return script_point_coord( origin, scale, value.x, value.y );
+    return script_point_coord( origin, scale, value );
 }
 
 int script_point_coord::x() const noexcept
 {
-    return x_;
+    return value_.x;
 }
 
 int script_point_coord::y() const noexcept
 {
-    return y_;
+    return value_.y;
 }
 
 std::string script_point_coord::origin() const
@@ -448,33 +447,29 @@ std::string script_point_coord::type_name() const
 
 point script_point_coord::to_native() const
 {
-    return point( x_, y_ );
+    return value_;
 }
 
 script_point_coord script_point_coord::add( const script_point_coord &rhs ) const
 {
     require_same_scale( scale_, rhs.scale_ );
-    return script_point_coord(
-               addition_result_origin( origin_, rhs.origin_ ), scale_,
-               checked_axis_sum( x_, rhs.x_ ), checked_axis_sum( y_, rhs.y_ ) );
+    return script_point_coord( addition_result_origin( origin_, rhs.origin_ ), scale_,
+                               point( checked_axis_sum( value_.x, rhs.value_.x ), checked_axis_sum( value_.y, rhs.value_.y ) ) );
 }
 
 script_point_coord script_point_coord::subtract( const script_point_coord &rhs ) const
 {
     require_same_scale( scale_, rhs.scale_ );
-    return script_point_coord(
-               subtraction_result_origin( origin_, rhs.origin_ ), scale_,
-               checked_axis_difference( x_, rhs.x_ ),
-               checked_axis_difference( y_, rhs.y_ ) );
+    return script_point_coord( subtraction_result_origin( origin_, rhs.origin_ ), scale_,
+                               point( checked_axis_difference( value_.x, rhs.value_.x ), checked_axis_difference( value_.y,
+                                       rhs.value_.y ) ) );
 }
 
 script_point_coord script_point_coord::scale_by( const std::int64_t factor ) const
 {
     require_relative( origin_, "scaling" );
-    return script_point_coord(
-               origin_, scale_,
-               checked_axis_product( x_, factor ),
-               checked_axis_product( y_, factor ) );
+    return script_point_coord( origin_, scale_, point( checked_axis_product( value_.x, factor ),
+                               checked_axis_product( value_.y, factor ) ) );
 }
 
 script_point_coord script_point_coord::negate() const
@@ -488,10 +483,8 @@ script_point_coord script_point_coord::project_to(
     const coords::scale target = parse_scale( result_scale );
     require_supported_kind( origin_, target );
     exact_projection_factor( scale_, target );
-    return script_point_coord(
-               origin_, target,
-               projected_axis( x_, scale_, target ),
-               projected_axis( y_, scale_, target ) );
+    return script_point_coord( origin_, target, point( projected_axis( value_.x, scale_, target ),
+                               projected_axis( value_.y, scale_, target ) ) );
 }
 
 std::tuple<script_point_coord, script_point_coord>
@@ -505,18 +498,16 @@ script_point_coord::project_remain(
     require_supported_kind( origin_, coarse_scale );
     require_supported_kind( fine_origin, scale_ );
 
-    const int coarse_x = floor_divide_axis( x_, factor );
-    const int coarse_y = floor_divide_axis( y_, factor );
-    const int remainder_x = checked_axis(
-                                static_cast<std::int64_t>( x_ ) -
-                                static_cast<std::int64_t>( coarse_x ) * factor );
-    const int remainder_y = checked_axis(
-                                static_cast<std::int64_t>( y_ ) -
-                                static_cast<std::int64_t>( coarse_y ) * factor );
+    const point coarse( floor_divide_axis( value_.x, factor ),
+                        floor_divide_axis( value_.y, factor ) );
+    const point remainder(
+        checked_axis( static_cast<std::int64_t>( value_.x ) -
+                      static_cast<std::int64_t>( coarse.x ) * factor ),
+        checked_axis( static_cast<std::int64_t>( value_.y ) -
+                      static_cast<std::int64_t>( coarse.y ) * factor ) );
     return {
-        script_point_coord( origin_, coarse_scale, coarse_x, coarse_y ),
-        script_point_coord(
-            fine_origin, scale_, remainder_x, remainder_y )
+        script_point_coord( origin_, coarse_scale, coarse ),
+        script_point_coord( fine_origin, scale_, remainder )
     };
 }
 
@@ -530,14 +521,11 @@ script_point_coord script_point_coord::project_combine(
             "services.coords project_combine received the wrong remainder origin" );
     }
     require_supported_kind( origin_, remainder.scale_ );
-    require_valid_remainder_axis( remainder.x_, factor );
-    require_valid_remainder_axis( remainder.y_, factor );
-    return script_point_coord(
-               origin_, remainder.scale_,
-               checked_axis(
-                   static_cast<std::int64_t>( x_ ) * factor + remainder.x_ ),
-               checked_axis(
-                   static_cast<std::int64_t>( y_ ) * factor + remainder.y_ ) );
+    require_valid_remainder_axis( remainder.value_.x, factor );
+    require_valid_remainder_axis( remainder.value_.y, factor );
+    return script_point_coord( origin_, remainder.scale_, point( checked_axis(
+                                   static_cast<std::int64_t>( value_.x ) * factor + remainder.value_.x ), checked_axis(
+                                   static_cast<std::int64_t>( value_.y ) * factor + remainder.value_.y ) ) );
 }
 
 std::vector<script_point_coord> script_point_coord::line_to(
@@ -566,14 +554,14 @@ std::int64_t script_point_coord::manhattan_distance(
     const script_point_coord &rhs ) const
 {
     require_matching_kind( origin_, scale_, rhs.origin_, rhs.scale_, "measure" );
-    return axis_distance( x_, rhs.x_ ) + axis_distance( y_, rhs.y_ );
+    return axis_distance( value_.x, rhs.value_.x ) + axis_distance( value_.y, rhs.value_.y );
 }
 
 std::int64_t script_point_coord::square_distance(
     const script_point_coord &rhs ) const
 {
     require_matching_kind( origin_, scale_, rhs.origin_, rhs.scale_, "measure" );
-    return std::max( axis_distance( x_, rhs.x_ ), axis_distance( y_, rhs.y_ ) );
+    return std::max( axis_distance( value_.x, rhs.value_.x ), axis_distance( value_.y, rhs.value_.y ) );
 }
 
 double script_point_coord::euclidean_distance(
@@ -581,23 +569,23 @@ double script_point_coord::euclidean_distance(
 {
     require_matching_kind( origin_, scale_, rhs.origin_, rhs.scale_, "measure" );
     return std::hypot(
-               static_cast<double>( axis_distance( x_, rhs.x_ ) ),
-               static_cast<double>( axis_distance( y_, rhs.y_ ) ) );
+               static_cast<double>( axis_distance( value_.x, rhs.value_.x ) ),
+               static_cast<double>( axis_distance( value_.y, rhs.value_.y ) ) );
 }
 
 int script_point_coord::compare( const script_point_coord &rhs ) const
 {
     require_matching_kind( origin_, scale_, rhs.origin_, rhs.scale_, "compare" );
-    if( x_ == rhs.x_ && y_ == rhs.y_ ) {
+    if( value_.x == rhs.value_.x && value_.y == rhs.value_.y ) {
         return 0;
     }
-    return std::tie( x_, y_ ) < std::tie( rhs.x_, rhs.y_ ) ? -1 : 1;
+    return std::tie( value_.x, value_.y ) < std::tie( rhs.value_.x, rhs.value_.y ) ? -1 : 1;
 }
 
 std::string script_point_coord::to_string() const
 {
-    return type_name() + "(" + std::to_string( x_ ) + "," +
-           std::to_string( y_ ) + ")";
+    return type_name() + "(" + std::to_string( value_.x ) + "," +
+           std::to_string( value_.y ) + ")";
 }
 
 coords::origin script_point_coord::native_origin() const noexcept
@@ -612,42 +600,42 @@ coords::scale script_point_coord::native_scale() const noexcept
 
 script_tripoint_coord::script_tripoint_coord(
     const coords::origin origin, const coords::scale scale,
-    const int x, const int y, const int z )
-    : origin_( origin ), scale_( scale ), x_( x ), y_( y ), z_( z )
+    const tripoint &value )
+    : origin_( origin ), scale_( scale ), value_( value )
 {
     require_supported_kind( origin_, scale_ );
 }
 
+// Scalar Lua arguments stay wide until checked_axis rejects out-of-range values.
+// NOLINTNEXTLINE(cata-xy)
 script_tripoint_coord script_tripoint_coord::from(
     const std::string_view origin, const std::string_view scale,
     const std::int64_t x, const std::int64_t y, const std::int64_t z )
 {
-    return script_tripoint_coord(
-               parse_origin( origin ), parse_scale( scale ),
-               checked_axis( x ), checked_axis( y ), checked_axis( z ) );
+    return script_tripoint_coord( parse_origin( origin ), parse_scale( scale ),
+                                  tripoint( checked_axis( x ), checked_axis( y ), checked_axis( z ) ) );
 }
 
 script_tripoint_coord script_tripoint_coord::from_native(
     const coords::origin origin, const coords::scale scale,
     const tripoint &value )
 {
-    return script_tripoint_coord(
-               origin, scale, value.x, value.y, value.z );
+    return script_tripoint_coord( origin, scale, value );
 }
 
 int script_tripoint_coord::x() const noexcept
 {
-    return x_;
+    return value_.x;
 }
 
 int script_tripoint_coord::y() const noexcept
 {
-    return y_;
+    return value_.y;
 }
 
 int script_tripoint_coord::z() const noexcept
 {
-    return z_;
+    return value_.z;
 }
 
 std::string script_tripoint_coord::origin() const
@@ -667,23 +655,22 @@ std::string script_tripoint_coord::type_name() const
 
 tripoint script_tripoint_coord::to_native() const
 {
-    return tripoint( x_, y_, z_ );
+    return value_;
 }
 
 script_point_coord script_tripoint_coord::xy() const
 {
     return script_point_coord::from_native(
-               origin_, scale_, point( x_, y_ ) );
+               origin_, scale_, value_.xy() );
 }
 
 script_tripoint_coord script_tripoint_coord::add(
     const script_tripoint_coord &rhs ) const
 {
     require_same_scale( scale_, rhs.scale_ );
-    return script_tripoint_coord(
-               addition_result_origin( origin_, rhs.origin_ ), scale_,
-               checked_axis_sum( x_, rhs.x_ ), checked_axis_sum( y_, rhs.y_ ),
-               checked_axis_sum( z_, rhs.z_ ) );
+    return script_tripoint_coord( addition_result_origin( origin_, rhs.origin_ ), scale_,
+                                  tripoint( checked_axis_sum( value_.x, rhs.value_.x ), checked_axis_sum( value_.y, rhs.value_.y ),
+                                            checked_axis_sum( value_.z, rhs.value_.z ) ) );
 }
 
 script_tripoint_coord script_tripoint_coord::add_xy(
@@ -691,21 +678,17 @@ script_tripoint_coord script_tripoint_coord::add_xy(
 {
     require_same_scale( scale_, rhs.native_scale() );
     require_relative( rhs.native_origin(), "point offset addition" );
-    return script_tripoint_coord(
-               origin_, scale_,
-               checked_axis_sum( x_, rhs.x() ),
-               checked_axis_sum( y_, rhs.y() ), z_ );
+    return script_tripoint_coord( origin_, scale_, tripoint( checked_axis_sum( value_.x, rhs.x() ),
+                                  checked_axis_sum( value_.y, rhs.y() ), value_.z ) );
 }
 
 script_tripoint_coord script_tripoint_coord::subtract(
     const script_tripoint_coord &rhs ) const
 {
     require_same_scale( scale_, rhs.scale_ );
-    return script_tripoint_coord(
-               subtraction_result_origin( origin_, rhs.origin_ ), scale_,
-               checked_axis_difference( x_, rhs.x_ ),
-               checked_axis_difference( y_, rhs.y_ ),
-               checked_axis_difference( z_, rhs.z_ ) );
+    return script_tripoint_coord( subtraction_result_origin( origin_, rhs.origin_ ), scale_,
+                                  tripoint( checked_axis_difference( value_.x, rhs.value_.x ), checked_axis_difference( value_.y,
+                                            rhs.value_.y ), checked_axis_difference( value_.z, rhs.value_.z ) ) );
 }
 
 script_tripoint_coord script_tripoint_coord::subtract_xy(
@@ -713,21 +696,23 @@ script_tripoint_coord script_tripoint_coord::subtract_xy(
 {
     require_same_scale( scale_, rhs.native_scale() );
     require_relative( rhs.native_origin(), "point offset subtraction" );
-    return script_tripoint_coord(
-               origin_, scale_,
-               checked_axis_difference( x_, rhs.x() ),
-               checked_axis_difference( y_, rhs.y() ), z_ );
+    return script_tripoint_coord( origin_, scale_, tripoint( checked_axis_difference( value_.x,
+                                  rhs.x() ), checked_axis_difference( value_.y, rhs.y() ), value_.z ) );
+}
+
+script_tripoint_coord script_tripoint_coord::mirror_around(
+    const script_tripoint_coord &center ) const
+{
+    require_matching_kind( origin_, scale_, center.origin_, center.scale_, "reflect" );
+    return from_native( origin_, scale_, to_native().mirror_around( center.to_native() ) );
 }
 
 script_tripoint_coord script_tripoint_coord::scale_by(
     const std::int64_t factor ) const
 {
     require_relative( origin_, "scaling" );
-    return script_tripoint_coord(
-               origin_, scale_,
-               checked_axis_product( x_, factor ),
-               checked_axis_product( y_, factor ),
-               checked_axis_product( z_, factor ) );
+    return script_tripoint_coord( origin_, scale_, tripoint( checked_axis_product( value_.x, factor ),
+                                  checked_axis_product( value_.y, factor ), checked_axis_product( value_.z, factor ) ) );
 }
 
 script_tripoint_coord script_tripoint_coord::negate() const
@@ -741,10 +726,8 @@ script_tripoint_coord script_tripoint_coord::project_to(
     const coords::scale target = parse_scale( result_scale );
     require_supported_kind( origin_, target );
     exact_projection_factor( scale_, target );
-    return script_tripoint_coord(
-               origin_, target,
-               projected_axis( x_, scale_, target ),
-               projected_axis( y_, scale_, target ), z_ );
+    return script_tripoint_coord( origin_, target, tripoint( projected_axis( value_.x, scale_, target ),
+                                  projected_axis( value_.y, scale_, target ), value_.z ) );
 }
 
 std::tuple<script_tripoint_coord, script_point_coord>
@@ -758,19 +741,17 @@ script_tripoint_coord::project_remain(
     require_supported_kind( origin_, coarse_scale );
     require_supported_kind( fine_origin, scale_ );
 
-    const int coarse_x = floor_divide_axis( x_, factor );
-    const int coarse_y = floor_divide_axis( y_, factor );
-    const int remainder_x = checked_axis(
-                                static_cast<std::int64_t>( x_ ) -
-                                static_cast<std::int64_t>( coarse_x ) * factor );
-    const int remainder_y = checked_axis(
-                                static_cast<std::int64_t>( y_ ) -
-                                static_cast<std::int64_t>( coarse_y ) * factor );
+    const point coarse( floor_divide_axis( value_.x, factor ),
+                        floor_divide_axis( value_.y, factor ) );
+    const point remainder(
+        checked_axis( static_cast<std::int64_t>( value_.x ) -
+                      static_cast<std::int64_t>( coarse.x ) * factor ),
+        checked_axis( static_cast<std::int64_t>( value_.y ) -
+                      static_cast<std::int64_t>( coarse.y ) * factor ) );
     return {
-        script_tripoint_coord(
-            origin_, coarse_scale, coarse_x, coarse_y, z_ ),
+        script_tripoint_coord( origin_, coarse_scale, tripoint( coarse, value_.z ) ),
         script_point_coord::from_native(
-            fine_origin, scale_, point( remainder_x, remainder_y ) )
+            fine_origin, scale_, remainder )
     };
 }
 
@@ -786,13 +767,9 @@ script_tripoint_coord script_tripoint_coord::project_combine(
     require_supported_kind( origin_, remainder.native_scale() );
     require_valid_remainder_axis( remainder.x(), factor );
     require_valid_remainder_axis( remainder.y(), factor );
-    return script_tripoint_coord(
-               origin_, remainder.native_scale(),
-               checked_axis(
-                   static_cast<std::int64_t>( x_ ) * factor + remainder.x() ),
-               checked_axis(
-                   static_cast<std::int64_t>( y_ ) * factor + remainder.y() ),
-               z_ );
+    return script_tripoint_coord( origin_, remainder.native_scale(), tripoint( checked_axis(
+                                      static_cast<std::int64_t>( value_.x ) * factor + remainder.x() ), checked_axis(
+                                      static_cast<std::int64_t>( value_.y ) * factor + remainder.y() ), value_.z ) );
 }
 
 std::vector<script_tripoint_coord> script_tripoint_coord::line_to(
@@ -821,8 +798,8 @@ std::int64_t script_tripoint_coord::manhattan_distance(
     const script_tripoint_coord &rhs ) const
 {
     require_matching_kind( origin_, scale_, rhs.origin_, rhs.scale_, "measure" );
-    return axis_distance( x_, rhs.x_ ) + axis_distance( y_, rhs.y_ ) +
-           axis_distance( z_, rhs.z_ );
+    return axis_distance( value_.x, rhs.value_.x ) + axis_distance( value_.y, rhs.value_.y ) +
+           axis_distance( value_.z, rhs.value_.z );
 }
 
 std::int64_t script_tripoint_coord::square_distance(
@@ -830,9 +807,9 @@ std::int64_t script_tripoint_coord::square_distance(
 {
     require_matching_kind( origin_, scale_, rhs.origin_, rhs.scale_, "measure" );
     return std::max( {
-        axis_distance( x_, rhs.x_ ),
-        axis_distance( y_, rhs.y_ ),
-        axis_distance( z_, rhs.z_ )
+        axis_distance( value_.x, rhs.value_.x ),
+        axis_distance( value_.y, rhs.value_.y ),
+        axis_distance( value_.z, rhs.value_.z )
     } );
 }
 
@@ -841,24 +818,25 @@ double script_tripoint_coord::euclidean_distance(
 {
     require_matching_kind( origin_, scale_, rhs.origin_, rhs.scale_, "measure" );
     return std::hypot(
-               static_cast<double>( axis_distance( x_, rhs.x_ ) ),
-               static_cast<double>( axis_distance( y_, rhs.y_ ) ),
-               static_cast<double>( axis_distance( z_, rhs.z_ ) ) );
+               static_cast<double>( axis_distance( value_.x, rhs.value_.x ) ),
+               static_cast<double>( axis_distance( value_.y, rhs.value_.y ) ),
+               static_cast<double>( axis_distance( value_.z, rhs.value_.z ) ) );
 }
 
 int script_tripoint_coord::compare( const script_tripoint_coord &rhs ) const
 {
     require_matching_kind( origin_, scale_, rhs.origin_, rhs.scale_, "compare" );
-    if( x_ == rhs.x_ && y_ == rhs.y_ && z_ == rhs.z_ ) {
+    if( value_.x == rhs.value_.x && value_.y == rhs.value_.y && value_.z == rhs.value_.z ) {
         return 0;
     }
-    return std::tie( x_, y_, z_ ) < std::tie( rhs.x_, rhs.y_, rhs.z_ ) ? -1 : 1;
+    return std::tie( value_.x, value_.y, value_.z ) < std::tie( rhs.value_.x, rhs.value_.y,
+            rhs.value_.z ) ? -1 : 1;
 }
 
 std::string script_tripoint_coord::to_string() const
 {
-    return type_name() + "(" + std::to_string( x_ ) + "," +
-           std::to_string( y_ ) + "," + std::to_string( z_ ) + ")";
+    return type_name() + "(" + std::to_string( value_.x ) + "," +
+           std::to_string( value_.y ) + "," + std::to_string( value_.z ) + ")";
 }
 
 coords::origin script_tripoint_coord::native_origin() const noexcept
@@ -890,7 +868,7 @@ std::vector<script_point_coord> script_coordinate_rectangle(
         to.native_origin(), to.native_scale(), "iterate" );
     const std::size_t limit = checked_output_limit( max_points );
     const std::size_t count =
-        checked_rectangle_count( from.x(), to.x(), from.y(), to.y(), limit );
+        checked_rectangle_count( from.to_native(), to.to_native(), limit );
     const std::int64_t minimum_x = std::min( from.x(), to.x() );
     const std::int64_t maximum_x = std::max( from.x(), to.x() );
     const std::int64_t minimum_y = std::min( from.y(), to.y() );
@@ -917,8 +895,7 @@ std::vector<script_tripoint_coord> script_coordinate_box(
         to.native_origin(), to.native_scale(), "iterate" );
     const std::size_t limit = checked_output_limit( max_points );
     const std::size_t count =
-        checked_box_count(
-            from.x(), to.x(), from.y(), to.y(), from.z(), to.z(), limit );
+        checked_box_count( from.to_native(), to.to_native(), limit );
     const std::int64_t minimum_x = std::min( from.x(), to.x() );
     const std::int64_t maximum_x = std::max( from.x(), to.x() );
     const std::int64_t minimum_y = std::min( from.y(), to.y() );
@@ -943,7 +920,7 @@ std::vector<script_tripoint_coord> script_coordinate_box(
 }
 
 void install_coordinate_value_api(
-    sol::state &lua, sol::table &services, std::function<void()> require_values )
+    sol::state &lua, sol::table &services, const std::function<void()> &require_values )
 {
     lua.new_usertype<script_point_coord>(
         "PointCoord", sol::no_constructor,
@@ -996,6 +973,7 @@ void install_coordinate_value_api(
         "subtract", sol::overload(
             &script_tripoint_coord::subtract,
             &script_tripoint_coord::subtract_xy ),
+        "mirror_around", &script_tripoint_coord::mirror_around,
         "scale_by", &script_tripoint_coord::scale_by,
         "to", &script_tripoint_coord::project_to,
         "project_to", &script_tripoint_coord::project_to,
@@ -1032,16 +1010,20 @@ void install_coordinate_value_api(
     sol::table coord_api = lua.create_table();
     coord_api.set_function(
         "point",
+        // Raw Lua axes must stay wide until the native range checks.
+        // NOLINTNEXTLINE(cata-xy)
         [require_values](
-            const std::string & origin, const std::string & scale,
+            const std::string_view origin, const std::string_view scale,
     const std::int64_t x, const std::int64_t y ) {
         require_values();
         return script_point_coord::from( origin, scale, x, y );
     } );
     coord_api.set_function(
         "tripoint",
+        // Raw Lua axes must stay wide until the native range checks.
+        // NOLINTNEXTLINE(cata-xy)
         [require_values](
-            const std::string & origin, const std::string & scale,
+            const std::string_view origin, const std::string_view scale,
     const std::int64_t x, const std::int64_t y, const std::int64_t z ) {
         require_values();
         return script_tripoint_coord::from( origin, scale, x, y, z );
@@ -1061,12 +1043,12 @@ void install_coordinate_value_api(
         "project_to",
         sol::overload(
             [require_values](
-    const script_point_coord & value, const std::string & scale ) {
+    const script_point_coord & value, const std::string_view scale ) {
         require_values();
         return value.project_to( scale );
     },
     [require_values](
-        const script_tripoint_coord & value, const std::string & scale ) {
+        const script_tripoint_coord & value, const std::string_view scale ) {
         require_values();
         return value.project_to( scale );
     } ) );
@@ -1074,12 +1056,12 @@ void install_coordinate_value_api(
         "project_remain",
         sol::overload(
             [require_values](
-    const script_point_coord & value, const std::string & scale ) {
+    const script_point_coord & value, const std::string_view scale ) {
         require_values();
         return value.project_remain( scale );
     },
     [require_values](
-        const script_tripoint_coord & value, const std::string & scale ) {
+        const script_tripoint_coord & value, const std::string_view scale ) {
         require_values();
         return value.project_remain( scale );
     } ) );
@@ -1141,6 +1123,8 @@ void install_coordinate_value_api(
         const std::string point_name = "point_" + std::string( definition.name );
         coord_api.set_function(
             point_name,
+            // Scalar Lua axes must remain wide until checked_axis validates them.
+            // NOLINTNEXTLINE(cata-xy)
             [require_values, definition](
         const std::int64_t x, const std::int64_t y ) {
             require_values();
@@ -1153,6 +1137,8 @@ void install_coordinate_value_api(
             "tripoint_" + std::string( definition.name );
         coord_api.set_function(
             tripoint_name,
+            // Scalar Lua axes must remain wide until checked_axis validates them.
+            // NOLINTNEXTLINE(cata-xy)
             [require_values, definition](
         const std::int64_t x, const std::int64_t y, const std::int64_t z ) {
             require_values();

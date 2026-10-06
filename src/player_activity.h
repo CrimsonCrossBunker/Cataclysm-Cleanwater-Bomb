@@ -4,6 +4,7 @@
 
 #include <climits>
 #include <cstddef>
+#include <cstdint>
 #include <map>
 #include <optional>
 #include <set>
@@ -34,6 +35,23 @@ class player_activity
 {
     private:
         activity_id type;
+
+        struct identity_token {
+            static std::uint64_t next_value() noexcept;
+            std::uint64_t value = next_value();
+            identity_token() = default;
+            identity_token( const identity_token & ) noexcept : identity_token() { }
+            identity_token( identity_token && ) noexcept : identity_token() { }
+            identity_token &operator=( const identity_token & ) noexcept {
+                value = next_value();
+                return *this;
+            }
+            identity_token &operator=( identity_token && ) noexcept {
+                value = next_value();
+                return *this;
+            }
+        };
+        identity_token identity_; // NOLINT(cata-serialize)
 
         std::set<distraction_type> ignored_distractions; // NOLINT(cata-serialize)
 
@@ -103,6 +121,9 @@ class player_activity
         }
         bool is_null() const {
             return type.is_null();
+        }
+        std::uint64_t identity_generation() const noexcept {
+            return identity_.value;
         }
         bool is_multi_type() const;
         /** This replaces the former usage `act.type = ACT_NULL` */

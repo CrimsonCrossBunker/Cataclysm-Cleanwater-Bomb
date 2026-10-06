@@ -16,6 +16,7 @@ extern "C" {
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <list>
 #include <memory>
 #include <optional>
@@ -412,6 +413,8 @@ sol::table list_weather_types(
         matches.begin(), matches.end(),
         []( const weather_type * lhs,
     const weather_type * rhs ) {
+        // IDs retain byte order independently of the UI locale.
+        // NOLINTNEXTLINE(cata-use-localized-sorting)
         return lhs->id.str() <
                rhs->id.str();
     } );
@@ -1163,14 +1166,14 @@ sol::table set_wind(
         get_weather();
     if( options.speed ) {
         weather.windspeed_override =
-            *options.speed;
+            options.speed;
     } else if( options.clear_speed ) {
         weather.windspeed_override =
             std::nullopt;
     }
     if( options.direction ) {
         weather.wind_direction_override =
-            *options.direction;
+            options.direction;
     } else if( options.clear_direction ) {
         weather.wind_direction_override =
             std::nullopt;
@@ -1258,8 +1261,23 @@ sol::table override_light(
         throw std::invalid_argument(
             "services.weather.override_light key exceeds 256 bytes" );
     }
-    const time_point expires_at =
-        calendar::turn + duration + 1_seconds;
+    const std::int64_t requested_when_turn =
+        to_turn<std::int64_t>( calendar::turn ) +
+        to_turns<std::int64_t>( duration );
+    if( requested_when_turn < std::numeric_limits<int>::min() ||
+        requested_when_turn > std::numeric_limits<int>::max() ) {
+        throw std::overflow_error(
+            "services.weather.override_light expiration exceeds the engine time range" );
+    }
+    const std::int64_t expires_at_turn =
+        requested_when_turn + to_turns<std::int64_t>( 1_seconds );
+    if( expires_at_turn < std::numeric_limits<int>::min() ||
+        expires_at_turn > std::numeric_limits<int>::max() ) {
+        throw std::overflow_error(
+            "services.weather.override_light expiration exceeds the engine time range" );
+    }
+    const time_point expires_at = time_point::from_turn(
+                                      static_cast<int>( expires_at_turn ) );
     timed_event_manager &timed_events =
         get_timed_events();
     bool replaced = false;
@@ -1300,6 +1318,57 @@ sol::table override_light(
     value["key"] = key;
     value["accepted"] = true;
     value["replaced"] = replaced;
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+sol::table append_light_event(
+    sol::this_state lua, const int level,
+    const script_time_duration &requested_duration,
+    const sol::optional<std::string> &requested_key )
+{
+    constexpr std::string_view api_name =
+        "services.weather.append_light_event";
+    require_active_game( api_name );
+    const time_duration duration =
+        requested_duration.to_native();
+    const std::int64_t requested_when_turn =
+        to_turn<std::int64_t>( calendar::turn ) +
+        to_turns<std::int64_t>( duration );
+    if( requested_when_turn < std::numeric_limits<int>::min() ||
+        requested_when_turn > std::numeric_limits<int>::max() ) {
+        throw std::overflow_error(
+            "services.weather.append_light_event expiration exceeds the engine time range" );
+    }
+    const std::int64_t expires_at_turn =
+        requested_when_turn + to_turns<std::int64_t>( 1_seconds );
+    if( expires_at_turn < std::numeric_limits<int>::min() ||
+        expires_at_turn > std::numeric_limits<int>::max() ) {
+        throw std::overflow_error(
+            "services.weather.append_light_event expiration exceeds the engine time range" );
+    }
+    const time_point expires_at = time_point::from_turn(
+                                      static_cast<int>( expires_at_turn ) );
+    const std::string key =
+        requested_key.value_or( std::string() );
+
+    // Match f_custom_light_level: every call appends an event, even when its
+    // key matches an existing event.  Natural-light lookup consumes the first
+    // queued event of this type, so keyed replacement would change behavior.
+    get_timed_events().add(
+        timed_event_type::CUSTOM_LIGHT_LEVEL,
+        expires_at, -1, level, key );
+
+    sol::state_view state( lua );
+    sol::table value = state.create_table();
+    value["level"] = level;
+    value["duration"] = requested_duration;
+    value["expires_at"] =
+        script_time_point::from_native( expires_at );
+    value["key"] = key;
+    value["accepted"] = true;
+    value["replaced"] = false;
     return make_game_value_result(
                state, sol::make_object(
                    state, std::move( value ) ) );
@@ -1350,8 +1419,8 @@ sol::table weather_limits(
 
 void install_weather_api(
     sol::table &services,
-    std::function<void()> require_read,
-    std::function<void()> require_write )
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write )
 {
     sol::state_view lua(
         services.lua_state() );
@@ -1483,6 +1552,16 @@ void install_weather_api(
     const sol::optional<std::string> &key ) {
         require_write();
         return override_light(
+                   state, level, duration, key );
+    } );
+    weather.set_function(
+        "append_light_event",
+        [require_write](
+            sol::this_state state, const int level,
+            const script_time_duration & duration,
+    const sol::optional<std::string> &key ) {
+        require_write();
+        return append_light_event(
                    state, level, duration, key );
     } );
     services["weather"] =

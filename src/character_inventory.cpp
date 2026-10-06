@@ -13,6 +13,7 @@
 #include <set>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -984,6 +985,7 @@ item_location Character::get_wielded_item()
 void Character::set_wielded_item( const item &to_wield )
 {
     weapon = to_wield;
+    martial_arts_data->auto_select_style( *this );
 }
 
 bool Character::has_alarm_clock() const
@@ -1223,6 +1225,7 @@ item Character::remove_weapon()
 {
     item tmp = weapon;
     weapon = item();
+    martial_arts_data->auto_select_style( *this );
     get_event_bus().send<event_type::character_wields_item>( getID(), weapon.typeId() );
     cached_info.erase( "weapon_value" );
     invalidate_weight_carried_cache();
@@ -2013,7 +2016,16 @@ bool Character::trim_haul_list( const std::vector<item_location> &valid_items )
         return std::count( valid_items.begin(), valid_items.end(), it ) == 0;
     } ), haul_list.end() );
 
-    return qty_before != haul_list.size();
+    const bool lost_items = qty_before != haul_list.size();
+    // Several charge stacks can merge when dropped on the same tile.  Their
+    // returned locations then all refer to one item, which must only be moved once.
+    std::unordered_set<const item *> seen;
+    haul_list.erase( std::remove_if( haul_list.begin(),
+    haul_list.end(), [&seen]( const item_location & it ) {
+        return !seen.insert( it.get_item() ).second;
+    } ), haul_list.end() );
+
+    return lost_items;
 }
 
 void Character::migrate_items_to_storage( bool disintegrate )
@@ -3172,6 +3184,7 @@ bool Character::wield_contents( item &container, item *internal_item, bool penal
 
     mod_moves( -mv );
 
+    martial_arts_data->auto_select_style( *this );
     weapon.on_wield( *this );
 
     item_location loc( *this, &weapon );

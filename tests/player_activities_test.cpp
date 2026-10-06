@@ -73,6 +73,8 @@ static const furn_str_id furn_test_f_oxytorch2( "test_f_oxytorch2" );
 static const furn_str_id furn_test_f_oxytorch3( "test_f_oxytorch3" );
 static const furn_str_id furn_test_f_prying1( "test_f_prying1" );
 
+static const ter_str_id ter_t_trunk( "t_trunk" );
+
 static const item_group_id Item_spawn_data_test_edevices_compat( "test_edevices_compat" );
 static const item_group_id Item_spawn_data_test_edevices_incompat( "test_edevices_incompat" );
 static const item_group_id Item_spawn_data_test_edevices_power( "test_edevices_power" );
@@ -609,6 +611,49 @@ TEST_CASE( "shearing", "[activity][shearing][animals]" )
             }
         }
     }
+}
+
+TEST_CASE( "chopped_wood_is_not_reserved_as_an_activity_tool", "[activity][chop_logs]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+
+    map &here = get_map();
+    avatar &player = get_avatar();
+    const tripoint_bub_ms trunk_pos = player.pos_bub() + tripoint::north;
+    here.ter_set( trunk_pos, ter_t_trunk );
+
+    player_activity activity;
+    activity.placement = here.get_abs( trunk_pos );
+    chop_logs_activity_actor actor( 1, item_location() );
+    actor.finish( activity, player );
+
+    REQUIRE_FALSE( here.i_at( trunk_pos ).empty() );
+    for( const item &wood : here.i_at( trunk_pos ) ) {
+        CHECK_FALSE( wood.has_var( "activity_var" ) );
+    }
+}
+
+TEST_CASE( "canceling_milking_removes_only_its_temporary_tie", "[activity][milking][animals]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    clear_creatures();
+
+    avatar &player = get_avatar();
+    monster &cow = spawn_test_monster( "mon_cow", player.pos_bub() + tripoint::north );
+    liquid_dest_opt destination;
+    player_activity activity;
+
+    cow.add_effect( effect_tied, 1_turns, true );
+    milk_activity_actor temporary_tie( 3000, 3000, cow.pos_abs(), destination, true );
+    temporary_tie.canceled( activity, player );
+    CHECK_FALSE( cow.has_effect( effect_tied ) );
+
+    cow.add_effect( effect_tied, 1_turns, true );
+    milk_activity_actor existing_tie( 3000, 3000, cow.pos_abs(), destination, false );
+    existing_tie.canceled( activity, player );
+    CHECK( cow.has_effect( effect_tied ) );
 }
 
 TEST_CASE( "boltcut", "[activity][boltcut]" )

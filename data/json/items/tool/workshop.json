@@ -383,7 +383,7 @@
     "type": "ITEM",
     "name": { "str": "electric mining jackhammer" },
     "description": "A construction or mining tool for drilling through hard rock or other surfaces.  This model has a cord compatible with a UPS.",
-    "proportional": { "weight": 1.1, "volume": 1.1 },
+    "proportional": { "weight": 0.6, "volume": 0.4 },
     "extend": { "flags": [ "MULTI_DRILL" ] }
   },
   {
@@ -696,7 +696,7 @@
     "type": "ITEM",
     "name": { "str": "mining jackhammer" },
     "description": "A construction or mining tool for drilling through hard rock or other surfaces.  This model runs on gasoline.",
-    "proportional": { "weight": 1.1, "volume": 1.1 },
+    "proportional": { "weight": 0.6, "volume": 0.4 },
     "extend": { "flags": [ "MULTI_DRILL" ] }
   },
   {

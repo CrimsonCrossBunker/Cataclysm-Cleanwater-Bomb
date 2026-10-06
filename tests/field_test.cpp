@@ -9,6 +9,8 @@
 #include "coordinates.h"
 #include "field.h"
 #include "field_type.h"
+#include "game.h"
+#include "mtype.h"
 #include "item.h"
 #include "map.h"
 #include "map_helpers.h"
@@ -21,6 +23,8 @@
 #include "type_id.h"
 #include "weather_type.h"
 
+static const efftype_id effect_downed( "downed" );
+static const efftype_id effect_quadruped_full( "quadruped_full" );
 static const efftype_id effect_test_rash( "test_rash" );
 
 static const field_type_str_id field_fd_acid( "fd_acid" );
@@ -28,6 +32,7 @@ static const field_type_str_id field_fd_test( "fd_test" );
 static const field_type_str_id field_fd_test_fire_reaction( "fd_test_fire_reaction" );
 static const field_type_str_id field_fd_test_fire_reaction_source( "fd_test_fire_reaction_source" );
 
+static const itype_id itype_test_acid_contact_boots( "test_acid_contact_boots" );
 static const itype_id itype_test_2x4( "test_2x4" );
 static const itype_id itype_test_hazmat_hat( "test_hazmat_hat" );
 static const itype_id itype_test_hazmat_shirt( "test_hazmat_shirt" );
@@ -143,6 +148,28 @@ static void fire_duration( const std::string &terrain_type, const time_duration 
         field_alive = this_field && this_field->is_field_alive();
     }
     CHECK( !field_alive );
+}
+
+TEST_CASE( "thin_smoke_ages_without_spreading", "[field][smoke]" )
+{
+    clear_map_without_vision();
+    map &here = get_map();
+    const tripoint_bub_ms pos( 60, 60, 0 );
+    here.build_map_cache( pos.z() );
+    REQUIRE( here.is_outside( pos ) );
+    here.add_field( pos, fd_smoke, 1 );
+    field_entry *smoke = here.get_field( pos, fd_smoke );
+    REQUIRE( smoke != nullptr );
+    smoke->set_field_age( -1_hours );
+    const time_duration before = smoke->get_field_age();
+    here.process_fields();
+    CHECK( smoke->get_field_age() > before );
+    CHECK( smoke->get_field_intensity() == 1 );
+    for( const tripoint_bub_ms &neighbor : here.points_in_radius( pos, 1 ) ) {
+        if( neighbor != pos ) {
+            CHECK( here.get_field( neighbor, fd_smoke ) == nullptr );
+        }
+    }
 }
 
 TEST_CASE( "firebugs", "[field]" )
@@ -618,4 +645,51 @@ TEST_CASE( "player_single_effect_field_test_all", "[field][player]" )
 
     clear_avatar();
     fields_test_cleanup();
+}
+
+TEST_CASE( "acid_immunity_uses_ground_contact_parts", "[field][player]" )
+{
+    clear_avatar();
+    avatar &you = get_avatar();
+    REQUIRE_FALSE( you.is_immune_field( fd_acid ) );
+    REQUIRE( you.wear_item( item( itype_test_acid_contact_boots ), false ) );
+    CHECK( you.is_immune_field( fd_acid ) );
+
+    SECTION( "lying_down_exposes_unprotected_body_parts" ) {
+        you.add_effect( effect_downed, 1_minutes );
+        CHECK_FALSE( you.is_immune_field( fd_acid ) );
+    }
+    SECTION( "quadrupeds_also_need_protected_hands" ) {
+        you.add_effect( effect_quadruped_full, 1_minutes );
+        CHECK_FALSE( you.is_immune_field( fd_acid ) );
+    }
+    clear_avatar();
+}
+
+TEST_CASE( "acid_warnings_do_not_control_damage", "[field][player][acid]" )
+{
+    clear_map_without_vision();
+    clear_avatar();
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const bool warnings = GENERATE( true, false );
+    const override_option warning_option( "ACID_DANGER_WARNING", warnings ? "true" : "false" );
+    const tripoint_bub_ms pos( 65, 65, 0 );
+    you.setpos( here, pos );
+    const tripoint_bub_ms acid_pos = pos + point( 1, 0 );
+    here.add_field( acid_pos, fd_acid, 3 );
+    CHECK( g->get_dangerous_tile( acid_pos ).empty() == !warnings );
+    const tripoint_bub_ms fire_pos = pos + point( 0, 1 );
+    here.add_field( fire_pos, fd_fire, 3 );
+    CHECK_FALSE( g->get_dangerous_tile( fire_pos ).empty() );
+    const mtype &corpse = mtype_id( "mon_zombie_acidic" ).obj();
+    REQUIRE( corpse.bloodType().obj().has_acid );
+    CHECK( g->can_pulp_acid_corpse( you, corpse ) == !warnings );
+    you.setpos( here, acid_pos );
+    CHECK( ( g->is_in_dangerous_field() != nullptr ) == warnings );
+    REQUIRE_FALSE( you.is_immune_field( fd_acid ) );
+    const int hp_before = you.get_hp();
+    here.creature_in_field( you );
+    CHECK( you.get_hp() < hp_before );
+    clear_avatar();
 }

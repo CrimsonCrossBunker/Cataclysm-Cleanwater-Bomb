@@ -60,6 +60,7 @@ jobs:
             --output /tmp/ccb-context-pack.json
           python3 tools/agent/check_project_metadata.py
           python3 -m unittest discover -s tools/agent -p 'test_*.py'
+          python3 tools/test_generate_builtin_mods.py
 
       - name: Validate generated JSON and EOC contracts
         run: |

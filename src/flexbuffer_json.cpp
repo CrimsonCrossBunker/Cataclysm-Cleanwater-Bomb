@@ -1,9 +1,14 @@
 #include "flexbuffer_json.h"
 
 #include <atomic>
+#include <cstdint>
 #include <cstring>
 #include <istream>
+#include <limits>
+#include <memory>
 #include <optional>
+#include <stdexcept>
+#include <vector>
 
 #include "cata_unreachable.h"
 #include "filesystem.h"
@@ -135,6 +140,38 @@ std::string Json::str() const
     std::string ret;
     json_.ToString( false, true, ret );
     return ret;
+}
+
+int JsonValue::get_int_exact() const
+{
+    if( !test_int() ) {
+        throw_error( "Expected an integer" );
+    }
+    std::unique_ptr<std::istream> source = root_->get_source_stream();
+    if( !source ) {
+        // Precompiled FlexBuffers (for example, in an archive) have no JSON source.
+        // Check the stored integer without narrowing it to int first.
+        if( json_.IsUInt() ) {
+            const uint64_t number = json_.AsUInt64();
+            if( number > static_cast<uint64_t>( std::numeric_limits<int>::max() ) ) {
+                throw_error( "Integer exceeds int range" );
+            }
+            return static_cast<int>( number );
+        }
+        const int64_t number = json_.AsInt64();
+        if( number < std::numeric_limits<int>::min() ||
+            number > std::numeric_limits<int>::max() ) {
+            throw_error( "Integer exceeds int range" );
+        }
+        return static_cast<int>( number );
+    }
+    TextJsonIn jsin( *source, get_root_source_path() );
+    JsonPath path;
+    if( parent_path_ ) {
+        path = *parent_path_ + path_index_;
+    }
+    advance_jsin( &jsin, flexbuffer_root_from_storage( root_->get_storage() ), path );
+    return jsin.get_int();
 }
 
 bool JsonValue::read( bool &b, bool throw_on_error ) const

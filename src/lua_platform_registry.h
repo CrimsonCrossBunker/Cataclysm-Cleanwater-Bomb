@@ -14,8 +14,8 @@ namespace cata::lua_platform
 // or mutable game object, and no global registry table is created.
 void install_registry_api(
     sol::state &lua, sol::table &services,
-    std::function<void()> require_read,
-    std::function<void()> require_typed_read );
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_typed_read );
 
 } // namespace cata::lua_platform
 

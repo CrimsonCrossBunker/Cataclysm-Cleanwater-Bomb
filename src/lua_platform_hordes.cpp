@@ -51,6 +51,7 @@ constexpr std::size_t maximum_offset = 1000000;
 constexpr int maximum_query_radius = 30;
 constexpr int maximum_query_radius_z = 5;
 constexpr int maximum_tracking_intensity = 1000000;
+constexpr int maximum_signal_power = 10000;
 constexpr unsigned int maximum_legacy_population = 1000000;
 constexpr std::size_t maximum_conditions = 64;
 constexpr std::size_t maximum_legacy_monsters = 64;
@@ -357,7 +358,8 @@ lua_Integer require_integer(
 {
     if( !requested.is<lua_Integer>() ) {
         throw std::invalid_argument(
-            api_name + " option '" + option_name + "' must be an integer" );
+            std::string( api_name ).append( " option '" ).append(
+                option_name ).append( "' must be an integer" ) );
     }
     return requested.as<lua_Integer>();
 }
@@ -369,7 +371,8 @@ bool require_boolean(
 {
     if( !requested.is<bool>() ) {
         throw std::invalid_argument(
-            api_name + " option '" + option_name + "' must be a boolean" );
+            std::string( api_name ).append( " option '" ).append(
+                option_name ).append( "' must be a boolean" ) );
     }
     return requested.as<bool>();
 }
@@ -419,7 +422,7 @@ page_options read_page_options(
                                    value, maximum_page_limit ) );
         } else {
             throw std::invalid_argument(
-                api_name + " received unknown option '" + key + "'" );
+                std::string( api_name ).append( " received unknown option '" ).append( key ).append( "'" ) );
         }
     }
     return result;
@@ -540,7 +543,7 @@ horde_query_options read_query_options(
                                     entry.second, api_name, key );
         } else {
             throw std::invalid_argument(
-                api_name + " received unknown option '" + key + "'" );
+                std::string( api_name ).append( " received unknown option '" ).append( key ).append( "'" ) );
         }
     }
     return result;
@@ -650,6 +653,8 @@ bool within_query(
     const tripoint_abs_omt &center,
     const horde_query_options &options )
 {
+    // Wide coordinate calculations must retain all 64 bits before native conversion.
+    // NOLINTNEXTLINE(cata-combine-locals-into-point)
     const std::int64_t dx =
         static_cast<std::int64_t>( position.x() ) - center.x();
     const std::int64_t dy =
@@ -732,6 +737,8 @@ entity_scan scan_entities(
         }
         if( lhs.entry->get_type()->id.str() !=
             rhs.entry->get_type()->id.str() ) {
+            // IDs retain byte order independently of the UI locale.
+            // NOLINTNEXTLINE(cata-use-localized-sorting)
             return lhs.entry->get_type()->id.str() <
                    rhs.entry->get_type()->id.str();
         }
@@ -759,6 +766,32 @@ legacy_scan scan_legacy_groups(
     const overmap_scan_bounds bounds =
         query_overmap_bounds(
             center, options.radius, api_name );
+    const int minimum_x = checked_axis_offset(
+                              center.x(), -options.radius, api_name );
+    const int maximum_x = checked_axis_offset(
+                              center.x(), options.radius, api_name );
+    const int minimum_y = checked_axis_offset(
+                              center.y(), -options.radius, api_name );
+    const int maximum_y = checked_axis_offset(
+                              center.y(), options.radius, api_name );
+    const int omt_to_sm =
+        coords::map_squares_per( coords::scale::overmap_terrain ) /
+        coords::map_squares_per( coords::scale::submap );
+    const auto projected_axis_fits = []( const int coordinate,
+    const int maximum_offset ) {
+        const std::int64_t projected =
+            static_cast<std::int64_t>( coordinate ) * omt_to_sm;
+        return projected >= std::numeric_limits<int>::min() &&
+               projected + maximum_offset <= std::numeric_limits<int>::max();
+    };
+    if( !projected_axis_fits( minimum_x, 0 ) ||
+        !projected_axis_fits( maximum_x, 1 ) ||
+        !projected_axis_fits( minimum_y, 0 ) ||
+        !projected_axis_fits( maximum_y, 1 ) ) {
+        throw std::invalid_argument(
+            api_name +
+            " query bounds cannot be represented as native submap coordinates" );
+    }
     for( int x = bounds.minimum.x();
          x <= bounds.maximum.x(); ++x ) {
         for( int y = bounds.minimum.y();
@@ -770,14 +803,6 @@ legacy_scan scan_legacy_groups(
         }
     }
 
-    const int minimum_x = checked_axis_offset(
-                              center.x(), -options.radius, api_name );
-    const int maximum_x = checked_axis_offset(
-                              center.x(), options.radius, api_name );
-    const int minimum_y = checked_axis_offset(
-                              center.y(), -options.radius, api_name );
-    const int maximum_y = checked_axis_offset(
-                              center.y(), options.radius, api_name );
     const int minimum_z = std::max(
                               -OVERMAP_DEPTH,
                               center.z() - options.radius_z );
@@ -819,6 +844,8 @@ legacy_scan scan_legacy_groups(
             return lhs.group->abs_pos < rhs.group->abs_pos;
         }
         if( lhs.group->type != rhs.group->type ) {
+            // IDs retain byte order independently of the UI locale.
+            // NOLINTNEXTLINE(cata-use-localized-sorting)
             return lhs.group->type.str() <
                    rhs.group->type.str();
         }
@@ -1128,6 +1155,8 @@ sol::table group_monsters(
         std::sort(
             monsters.begin(), monsters.end(),
         []( const mtype_id & lhs, const mtype_id & rhs ) {
+            // IDs retain byte order independently of the UI locale.
+            // NOLINTNEXTLINE(cata-use-localized-sorting)
             return lhs.str() < rhs.str();
         } );
         monsters.erase(
@@ -1865,6 +1894,68 @@ sol::table alert_entity(
                    state, std::move( value ) ) );
 }
 
+sol::table broadcast_signal(
+    sol::this_state lua,
+    const script_tripoint_coord &center,
+    const sol::object &requested_power )
+{
+    constexpr std::string_view api_name =
+        "services.hordes.broadcast_signal";
+    const lua_Integer power_value = require_integer(
+                                        requested_power,
+                                        std::string( api_name ),
+                                        "signal_power" );
+    if( power_value < 0 || power_value > maximum_signal_power ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " signal_power must be within 0..10000" );
+    }
+    const int signal_power = static_cast<int>( power_value );
+    const tripoint_abs_ms native_center =
+        require_absolute_ms(
+            center, std::string( api_name ) );
+    const tripoint_abs_sm submap_center =
+        project_to<coords::sm>( native_center );
+    const std::int64_t min_coordinate = std::numeric_limits<int>::min();
+    const std::int64_t max_coordinate = std::numeric_limits<int>::max();
+    // Wide coordinate calculations must retain all 64 bits before native conversion.
+    // NOLINTNEXTLINE(cata-combine-locals-into-point)
+    const std::int64_t submap_x = submap_center.x();
+    const std::int64_t submap_y = submap_center.y();
+    const std::int64_t map_square_x =
+        static_cast<std::int64_t>( submap_center.x() ) * SEEX;
+    const std::int64_t map_square_y =
+        static_cast<std::int64_t>( submap_center.y() ) * SEEX;
+    if( submap_x - signal_power < min_coordinate ||
+        submap_x + signal_power > max_coordinate ||
+        submap_y - signal_power < min_coordinate ||
+        submap_y + signal_power > max_coordinate ||
+        map_square_x < min_coordinate || map_square_x > max_coordinate ||
+        map_square_y < min_coordinate || map_square_y > max_coordinate ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " center and signal_power exceed safe absolute-coordinate bounds" );
+    }
+
+    overmap_buffer.signal_hordes(
+        submap_center, signal_power );
+
+    const tripoint_abs_ms broadcast_center =
+        project_to<coords::ms>( submap_center );
+    sol::state_view state( lua );
+    sol::table value = state.create_table();
+    value["status"] = "broadcast";
+    value["center"] = script_tripoint_coord::from_native(
+                          coords::origin::abs,
+                          coords::scale::map_square,
+                          broadcast_center.raw() );
+    value["signal_power"] = signal_power;
+    return make_game_value_result(
+               state,
+               sol::make_object(
+                   state, std::move( value ) ) );
+}
+
 sol::table remove_entity(
     sol::this_state lua,
     const horde_entity_token &token,
@@ -1958,8 +2049,8 @@ void read_legacy_setting(
                key == "nemesis_target" ) {
         if( !value.is<script_tripoint_coord>() ) {
             throw std::invalid_argument(
-                api_name + " option '" + key +
-                "' must be an absolute submap Tripoint" );
+                std::string( api_name ).append( " option '" ).append(
+                    key ).append( "' must be an absolute submap Tripoint" ) );
         }
         const tripoint_abs_sm requested =
             require_absolute_sm(
@@ -1972,7 +2063,7 @@ void read_legacy_setting(
         }
     } else {
         throw std::invalid_argument(
-            api_name + " received unknown option '" + key + "'" );
+            std::string( api_name ).append( " received unknown option '" ).append( key ).append( "'" ) );
     }
 }
 
@@ -2315,6 +2406,8 @@ sol::table horde_limits( sol::this_state lua )
         maximum_offset;
     result["maximum_tracking_intensity"] =
         maximum_tracking_intensity;
+    result["maximum_signal_power"] =
+        maximum_signal_power;
     result["maximum_legacy_population"] =
         maximum_legacy_population;
     result["flavors"] = std::move( flavors );
@@ -2340,10 +2433,10 @@ void reset_horde_tokens() noexcept
 
 void install_horde_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write )
 {
     sol::state_view lua( services.lua_state() );
     lua.new_usertype<horde_entity_token>(
@@ -2567,6 +2660,16 @@ void install_horde_api(
                    destination, intensity,
                    current_runtime_generation(),
                    current_world_generation() );
+    } );
+    hordes.set_function(
+        "broadcast_signal",
+        [require_write](
+            sol::this_state lua_state,
+            const script_tripoint_coord & center,
+    const sol::object & signal_power ) {
+        require_write();
+        return broadcast_signal(
+                   lua_state, center, signal_power );
     } );
     hordes.set_function(
         "remove_entity",

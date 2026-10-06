@@ -35,6 +35,11 @@ class advanced_inventory
 
         void display();
         void temp_hide();
+        void hide_for_activity();
+
+        bool is_visible() const {
+            return static_cast<bool>( ui );
+        }
 
         void init();
 

@@ -6,6 +6,7 @@
 #include <array>
 #include <climits>
 #include <cmath>
+#include <cstddef>
 #include <functional>
 #include <list>
 #include <memory>
@@ -1204,6 +1205,61 @@ void destroy_the_carcass( const butchery_data &bd, Character &you )
 
 }
 
+bool butcher_action_applicable( Character &you, const item &corpse_item,
+                                const butcher_type action )
+{
+    const mtype *corpse = corpse_item.get_mtype();
+    if( !corpse || action == butcher_type::NUM_TYPES ) {
+        return false;
+    }
+    const bool field_dressed = corpse_item.has_flag( flag_FIELD_DRESS ) ||
+                               corpse_item.has_flag( flag_FIELD_DRESS_FAILED );
+    const bool quartered = corpse_item.has_flag( flag_QUARTERED );
+    switch( action ) {
+        case butcher_type::FIELD_DRESS:
+            if( field_dressed || quartered || !corpse->harvest->has_entry_type( harvest_drop_offal ) ) {
+                return false;
+            }
+            break;
+        case butcher_type::SKIN:
+            if( corpse_item.has_flag( flag_SKINNED ) ||
+                !corpse->harvest->has_entry_type( harvest_drop_skin ) ) {
+                return false;
+            }
+            break;
+        case butcher_type::BLEED:
+            if( field_dressed || quartered || corpse_item.has_flag( flag_BLED ) ||
+                corpse->bleed_rate <= 0 || !corpse->harvest->has_entry_type( harvest_drop_blood ) ) {
+                return false;
+            }
+            break;
+        case butcher_type::QUARTER:
+            if( quartered || corpse->size == creature_size::tiny ||
+                ( !field_dressed && corpse->harvest->has_entry_type( harvest_drop_offal ) ) ) {
+                return false;
+            }
+            break;
+        case butcher_type::DISSECT:
+            if( quartered || corpse_item.has_flag( flag_FIELD_DRESS_FAILED ) ) {
+                return false;
+            }
+            break;
+        case butcher_type::DISMEMBER:
+            return true;
+        default:
+            break;
+    }
+    for( int i = 0; i < static_cast<int>( butcher_type::NUM_TYPES ); ++i ) {
+        const butcher_type other = static_cast<butcher_type>( i );
+        if( butcher_get_progress( corpse_item, other ) > 0 &&
+            butcher_time_to_cut( you, corpse_item, other ) <
+            butcher_time_to_cut( you, corpse_item, action ) ) {
+            return false;
+        }
+    }
+    return true;
+}
+
 // Butchery sub-menu and time calculation
 std::optional<butcher_type> butcher_submenu( const std::vector<map_stack::iterator> &corpses,
         int index )
@@ -1212,32 +1268,35 @@ std::optional<butcher_type> butcher_submenu( const std::vector<map_stack::iterat
     constexpr int num_butcher_types = static_cast<int>( butcher_type::NUM_TYPES );
 
     std::array<time_duration, num_butcher_types> cut_times;
-    std::array<bool, num_butcher_types> has_started;
+    std::array<int, num_butcher_types> eligible_counts = {};
     for( int bt_i = 0; bt_i < num_butcher_types; bt_i++ ) {
         const butcher_type bt = static_cast<butcher_type>( bt_i );
         int time_to_cut = 0;
-        if( index != -1 ) {
-            const mtype &corpse = *corpses[index]->get_mtype();
-            const float factor = corpse.harvest->get_butchery_requirements().get_fastest_requirements(
-                                     &player_character, player_character.crafting_inventory(),
-                                     corpse.size, bt ).first;
-            time_to_cut = butcher_time_to_cut( player_character, *corpses[index], bt ) * factor;
-            has_started[bt_i] = butcher_get_progress( *corpses[index], bt ) > 0;
-        } else {
-            has_started[bt_i] = false;
-            for( const map_stack::iterator &it : corpses ) {
+        for( std::size_t i = 0; i < corpses.size(); ++i ) {
+            if( index != -1 && i != static_cast<std::size_t>( index ) ) {
+                continue;
+            }
+            const map_stack::iterator &it = corpses[i];
+            if( butcher_action_applicable( player_character, *it, bt ) ) {
+                ++eligible_counts[bt_i];
                 const mtype &corpse = *it->get_mtype();
                 const float factor = corpse.harvest->get_butchery_requirements().get_fastest_requirements(
                                          &player_character, player_character.crafting_inventory(),
                                          corpse.size, bt ).first;
-                time_to_cut += butcher_time_to_cut( player_character, *it, bt ) * factor;
-                has_started[bt_i] |= butcher_get_progress( *it, bt ) > 0;
+                time_to_cut += butcher_time_to_cut( player_character, *it, bt ) * factor *
+                               ( 1.0 - butcher_get_progress( *it, bt ) );
             }
         }
         cut_times[bt_i] = time_duration::from_moves( time_to_cut );
     }
     auto cut_time = [&]( butcher_type bt ) {
-        return to_string_clipped( cut_times[static_cast<int>( bt )] );
+        const int bt_i = static_cast<int>( bt );
+        const std::string duration = to_string_clipped( cut_times[bt_i] );
+        if( index != -1 ) {
+            return duration;
+        }
+        return string_format( n_gettext( "%d corpse, %s", "%d corpses, %s", eligible_counts[bt_i] ),
+                              eligible_counts[bt_i], duration );
     };
     auto progress_str = [&]( butcher_type bt ) {
         std::string result;
@@ -1249,7 +1308,7 @@ std::optional<butcher_type> butcher_submenu( const std::vector<map_stack::iterat
         } else {
             for( const map_stack::iterator &it : corpses ) {
                 const double progress = butcher_get_progress( *it, bt );
-                if( progress > 0 ) {
+                if( progress > 0 && butcher_action_applicable( player_character, *it, bt ) ) {
                     result = _( "partially complete" );
                 }
             }
@@ -1268,30 +1327,11 @@ std::optional<butcher_type> butcher_submenu( const std::vector<map_stack::iterat
                                    ? string_format( _( "Your best tool has <color_cyan>%d fine cutting</color>." ), factorD )
                                    :  _( "You have no fine cutting tool." );
 
-    bool has_blood = false;
-    bool has_skin = false;
-    bool has_organs = false;
     std::string dissect_wp_hint; // dissection weakpoint proficiencies training hint
 
     if( index != -1 ) {
         const mtype *dead_mon = corpses[index]->get_mtype();
         if( dead_mon ) {
-            for( const harvest_entry &entry : dead_mon->harvest.obj() ) {
-                if( entry.type == harvest_drop_skin && !corpses[index]->has_flag( flag_SKINNED ) ) {
-                    has_skin = true;
-                }
-                if( entry.type == harvest_drop_offal && !( corpses[index]->has_flag( flag_QUARTERED ) ||
-                        corpses[index]->has_flag( flag_FIELD_DRESS ) ||
-                        corpses[index]->has_flag( flag_FIELD_DRESS_FAILED ) ) ) {
-                    has_organs = true;
-                }
-                if( entry.type == harvest_drop_blood && dead_mon->bleed_rate > 0 &&
-                    !( corpses[index]->has_flag( flag_QUARTERED ) ||
-                       corpses[index]->has_flag( flag_FIELD_DRESS ) ||
-                       corpses[index]->has_flag( flag_FIELD_DRESS_FAILED ) || corpses[index]->has_flag( flag_BLED ) ) ) {
-                    has_blood = true;
-                }
-            }
             if( !dead_mon->families.families.empty() ) {
                 dissect_wp_hint += std::string( "\n\n" ) + _( "Dissecting may yield knowledge of:" );
                 for( const weakpoint_family &wf : dead_mon->families.families ) {
@@ -1307,26 +1347,9 @@ std::optional<butcher_type> butcher_submenu( const std::vector<map_stack::iterat
         }
     }
 
-    // Returns true if a cruder method is already in progress, to disallow finer butchering methods
-    auto has_started_cruder_type = [&]( butcher_type bt ) {
-        for( int other_bt = 0; other_bt < num_butcher_types; other_bt++ ) {
-            if( has_started[other_bt] && cut_times[other_bt] < cut_times[static_cast<int>( bt )] ) {
-                return true;
-            }
-        }
-        return false;
-    };
     auto is_enabled = [&]( butcher_type bt ) {
-        if( bt == butcher_type::DISMEMBER ) {
-            return true;
-        } else if( !enough_light
-                   || ( bt == butcher_type::FIELD_DRESS && !has_organs )
-                   || ( bt == butcher_type::SKIN && !has_skin )
-                   || ( bt == butcher_type::BLEED && !has_blood )
-                   || has_started_cruder_type( bt ) ) {
-            return false;
-        }
-        return true;
+        return eligible_counts[static_cast<int>( bt )] > 0 &&
+               ( bt == butcher_type::DISMEMBER || enough_light );
     };
 
     const std::string cannot_see = colorize( _( "can't see!" ), c_red );
@@ -1335,14 +1358,8 @@ std::optional<butcher_type> butcher_submenu( const std::vector<map_stack::iterat
             return cut_time( bt );
         } else if( !enough_light ) {
             return cannot_see;
-        } else if( bt == butcher_type::FIELD_DRESS && !has_organs ) {
-            return colorize( _( "has no organs" ), c_red );
-        } else if( bt == butcher_type::SKIN && !has_skin ) {
-            return colorize( _( "has no skin" ), c_red );
-        } else if( bt == butcher_type::BLEED && !has_blood ) {
-            return colorize( _( "has no blood" ), c_red );
-        } else if( has_started_cruder_type( bt ) ) {
-            return colorize( _( "other type started" ), c_red );
+        } else if( eligible_counts[static_cast<int>( bt )] == 0 ) {
+            return colorize( _( "no eligible corpses" ), c_red );
         }
         return cut_time( bt );
     };

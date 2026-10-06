@@ -1,0 +1,11 @@
+[
+  {
+    "id": "test_acid_contact_boots",
+    "copy-from": "test_hazmat_shirt",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str_sp": "TEST acid contact boots" },
+    "material_thickness": 10,
+    "armor": [ { "encumbrance": 0, "coverage": 100, "covers": [ "foot_l", "foot_r" ] } ]
+  }
+]

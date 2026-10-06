@@ -80,13 +80,14 @@
 #include "widget.h"
 #include "worldfactory.h"
 
+static const efftype_id effect_currently_busy( "currently_busy" );
+static const json_character_flag json_flag_MUTATION_THRESHOLD( "MUTATION_THRESHOLD" );
+
 // IWYU pragma: no_forward_declare cardinal_direction // need its enum_traits
 class recipe;
 struct mapgen_arguments;
 
-static const efftype_id effect_currently_busy( "currently_busy" );
 
-static const json_character_flag json_flag_MUTATION_THRESHOLD( "MUTATION_THRESHOLD" );
 
 namespace
 {
@@ -1790,13 +1791,9 @@ conditional_t::func f_mod_is_loaded( const JsonObject &jo, std::string_view memb
 {
     str_or_var compared_mod = get_str_or_var( jo.get_member( member ), member, true );
     return [compared_mod]( const_dialogue const & d ) {
-        const mod_id comp_mod = canonical_mod_id( mod_id( compared_mod.evaluate( d ) ) );
-        for( const mod_id &mod : world_generator->active_world->active_mod_order ) {
-            if( comp_mod == canonical_mod_id( mod ) ) {
-                return true;
-            }
-        }
-        return false;
+        const mod_id comp_mod( compared_mod.evaluate( d ) );
+        return mod_id_is_in_active_order(
+                   comp_mod, world_generator->active_world->active_mod_order );
     };
 }
 

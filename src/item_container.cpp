@@ -342,8 +342,9 @@ void item::on_contents_changed()
 
 bool item::is_collapsed() const
 {
-    return !contents.empty() && !contents.get_pockets( []( item_pocket const & pocket ) {
-        return pocket.settings.is_collapsed() && pocket.is_standard_type();
+    return !contents.get_pockets( []( item_pocket const & pocket ) {
+        return pocket.settings.is_collapsed() &&
+               ( pocket.is_standard_type() || pocket.is_type( pocket_type::MOD ) );
     } ).empty();
 }
 

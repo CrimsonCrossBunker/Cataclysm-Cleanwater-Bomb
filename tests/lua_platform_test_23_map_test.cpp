@@ -1,11 +1,23 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-#include "lua_platform_test_map_support.h"
+#include <avatar.h>
 #include <calendar.h>
 #include <cata_scope_helpers.h>
+#include "debug.h"
+#include <character_id.h>
 #include <coordinates.h>
 #include <creature_tracker.h>
 #include <field_type.h>
 #include <item.h>
+#include <monster_uid.h>
+#include <talker.h>
+#include <vehicle.h>
+#include <vpart_position.h>
+
+#include "lua_platform_test_map_support.h"
+
+using cata::lua_platform::test::platform_map_api_test_fixture;
+using cata::lua_platform::test::platform_vehicle_relocation_fixture;
+
 extern "C" {
 #include <lua.h>
 }
@@ -19,27 +31,331 @@ extern "C" {
 #include <map_scale_constants.h>
 #include <memory_fast.h>
 #include <monster.h>
+#include <npc.h>
 #include <point.h>
+#include <rng.h>
+#include <talker_npc.h>
+#include <trap.h>
 #include <type_id.h>
+#include <viewer.h>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <initializer_list>
 #include <limits>
 #include <memory>
+#include <optional>
+#include <random>
 #include <set>
 #include <string>
 #include <utility>
+#include <vector>
+
 #include "cata_catch.h"
+#include "lua_platform_creatures.h"
 #include "lua_platform_sol.h"
 #include "lua_platform_test_support.h"
-#include "lua_platform_creatures.h"
 
 static const itype_id itype_knife_combat( "knife_combat" );
 static const itype_id itype_rock( "rock" );
 static const mtype_id mon_zombie( "mon_zombie" );
+static const ter_furn_transform_id ter_furn_transform_spider_clear_webs( "spider_clear_webs" );
 static const ter_str_id ter_t_floor( "t_floor" );
+static const ter_str_id ter_t_pit( "t_pit" );
 static const ter_str_id ter_t_wall( "t_wall" );
+static const trap_str_id tr_beartrap( "tr_beartrap" );
+static const trap_str_id tr_pit( "tr_pit" );
+static const trap_str_id tr_rollmat( "tr_rollmat" );
+
+TEST_CASE( "lua_platform_character_snapshot_intelligence_matches_native_talker",
+           "[lua][platform][characters][conditions][semantic]" )
+{
+    platform_map_api_test_fixture fixture( 709, 9 );
+    const auto current_runtime = [&]() {
+        return fixture.active_runtime;
+    };
+    const auto current_world = [&]() {
+        return fixture.active_world_generation;
+    };
+    cata::lua_platform::install_creature_api(
+    fixture.services, current_runtime, current_world, []() {}, []() {} );
+
+    avatar &player = get_avatar();
+    const int original_intelligence_base = player.get_int_base();
+    player.set_int_base( 12 );
+    const on_out_of_scope restore_intelligence( [&player, original_intelligence_base]() {
+        player.set_int_base( original_intelligence_base );
+    } );
+
+    fixture.lua.open_libraries( sol::lib::base );
+    fixture.lua["services"] = fixture.services;
+    const sol::protected_function_result snapshot_call = fixture.lua.safe_script( R"(
+        local speaker = services.characters.avatar()
+        return services.characters.snapshot(speaker)
+    )", sol::script_pass_on_error );
+    REQUIRE( snapshot_call.valid() );
+    const sol::table snapshot_result = snapshot_call.get<sol::table>();
+    REQUIRE( snapshot_result["ok"].get<bool>() );
+    const sol::table snapshot = snapshot_result["value"].get<sol::table>();
+    const sol::table stats = snapshot["stats"].get<sol::table>();
+
+    const std::unique_ptr<talker> native_speaker = get_talker_for( player );
+    REQUIRE( native_speaker );
+    const int native_intelligence = native_speaker->int_cur();
+    CHECK( stats["intelligence"].get<int>() == native_intelligence );
+    // Compare both sides of the native response-condition threshold. The
+    // generated Platform predicate reads this same snapshot field.
+    for( const int threshold : {
+             native_intelligence, native_intelligence + 1
+         } ) {
+        CHECK( ( native_intelligence >= threshold ) ==
+               ( stats["intelligence"].get<int>() >= threshold ) );
+    }
+}
+
+TEST_CASE( "lua_platform_player_can_see_uses_active_player_view",
+           "[lua][platform][creatures][vision]" )
+{
+    platform_map_api_test_fixture fixture( 710, 10 );
+    const auto current_runtime = [&]() {
+        return fixture.active_runtime;
+    };
+    const auto current_world = [&]() {
+        return fixture.active_world_generation;
+    };
+    cata::lua_platform::install_creature_api(
+    fixture.services, current_runtime, current_world, []() {}, []() {} );
+
+    avatar &player = get_avatar();
+    const tripoint_bub_ms target_position = player.pos_bub() + tripoint::east;
+    const shared_ptr_fast<monster> target = make_shared_fast<monster>(
+            mon_zombie, target_position );
+    REQUIRE( target );
+    target->set_hp( 1 );
+    REQUIRE( get_creature_tracker().add( target ) );
+    const on_out_of_scope cleanup( [&target]() {
+        if( target && get_creature_tracker().temporary_id( *target ) >= 0 ) {
+            get_creature_tracker().remove( *target );
+        }
+    } );
+    const tripoint_abs_ms position = fixture.get_map().get_abs( target_position );
+    const cata::lua_platform::game_handle target_handle =
+        cata::lua_platform::game_handle::from_creature(
+    *target, {
+        "monster", target->uid().get_value(), position.x(),
+        position.y(), position.z(), {}
+    },
+    fixture.active_runtime, fixture.active_world_generation );
+    fixture.lua.open_libraries( sol::lib::base );
+    fixture.lua["services"] = fixture.services;
+    fixture.lua["target_handle"] = target_handle;
+    fixture.lua["empty_handle"] = cata::lua_platform::game_handle{};
+    fixture.lua["stale_handle"] = target_handle;
+
+    const sol::protected_function_result visible = fixture.lua.safe_script(
+                "return services.creatures.player_can_see(target_handle)",
+                sol::script_pass_on_error );
+    REQUIRE( visible.valid() );
+    const sol::table visible_result = visible.get<sol::table>();
+    REQUIRE( visible_result["ok"].get<bool>() );
+    // The map fixture has no remote-view switch; this checks target handle
+    // resolution and delegation to the active player-view interface only.
+    CHECK( visible_result["value"].get<bool>() ==
+           get_player_view().sees( fixture.get_map(), *target ) );
+
+    const sol::protected_function_result empty = fixture.lua.safe_script(
+                "return services.creatures.player_can_see(empty_handle)",
+                sol::script_pass_on_error );
+    REQUIRE( empty.valid() );
+    const sol::table empty_result = empty.get<sol::table>();
+    REQUIRE_FALSE( empty_result["ok"].get<bool>() );
+    CHECK( empty_result["error"].get<sol::table>()
+           ["code"].get<std::string>() == "wrong_kind" );
+
+    ++fixture.active_world_generation;
+    const sol::protected_function_result stale = fixture.lua.safe_script(
+                "return services.creatures.player_can_see(stale_handle)",
+                sol::script_pass_on_error );
+    REQUIRE( stale.valid() );
+    const sol::table stale_result = stale.get<sol::table>();
+    REQUIRE_FALSE( stale_result["ok"].get<bool>() );
+    CHECK( stale_result["error"].get<sol::table>()
+           ["code"].get<std::string>() == "stale_world" );
+    --fixture.active_world_generation;
+
+    const sol::protected_function_result nil_target = fixture.lua.safe_script( R"(
+        local ok = pcall(services.creatures.player_can_see, nil)
+        assert(not ok)
+    )", sol::script_pass_on_error );
+    REQUIRE( nil_target.valid() );
+}
+
+TEST_CASE( "lua_platform_character_vehicle_condition_uses_map_occupancy",
+           "[lua][platform][characters][vehicle][semantic]" )
+{
+    platform_vehicle_relocation_fixture fixture( 733, 32 );
+    REQUIRE( fixture.test_vehicle );
+    const auto current_runtime = [&]() {
+        return fixture.active_runtime;
+    };
+    const auto current_world = [&]() {
+        return fixture.active_world_generation;
+    };
+    cata::lua_platform::install_creature_api(
+    fixture.services, current_runtime, current_world, []() {}, []() {} );
+
+    avatar &player = get_avatar();
+    player.setpos( fixture.get_map(), fixture.source_local );
+    player.in_vehicle = false;
+    fixture.lua.open_libraries( sol::lib::base );
+    fixture.lua["services"] = fixture.services;
+
+    const sol::protected_function_result on_vehicle = fixture.lua.safe_script(
+                "local player = services.characters.avatar(); "
+                "return services.characters.is_in_vehicle(player)",
+                sol::script_pass_on_error );
+    REQUIRE( on_vehicle.valid() );
+    const sol::table on_vehicle_result = on_vehicle.get<sol::table>();
+    REQUIRE( on_vehicle_result["ok"].get<bool>() );
+    CHECK_FALSE( player.in_vehicle );
+    CHECK( get_map().veh_at( player.pos_bub() ).has_value() );
+    CHECK( on_vehicle_result["value"].get<bool>() ==
+           get_map().veh_at( player.pos_bub() ).has_value() );
+
+    player.setpos( fixture.get_map(), fixture.target_local );
+    player.in_vehicle = true;
+    const sol::protected_function_result off_vehicle = fixture.lua.safe_script(
+                "local player = services.characters.avatar(); "
+                "return services.characters.is_in_vehicle(player)",
+                sol::script_pass_on_error );
+    REQUIRE( off_vehicle.valid() );
+    const sol::table off_vehicle_result = off_vehicle.get<sol::table>();
+    REQUIRE( off_vehicle_result["ok"].get<bool>() );
+    CHECK( player.in_vehicle );
+    CHECK_FALSE( get_map().veh_at( player.pos_bub() ).has_value() );
+    CHECK_FALSE( off_vehicle_result["value"].get<bool>() );
+
+    fixture.lua["vehicle_handle"] = fixture.vehicle_handle;
+    const sol::protected_function_result wrong_kind = fixture.lua.safe_script(
+                "return services.characters.is_in_vehicle(vehicle_handle)",
+                sol::script_pass_on_error );
+    REQUIRE( wrong_kind.valid() );
+    const sol::table wrong_kind_result = wrong_kind.get<sol::table>();
+    REQUIRE_FALSE( wrong_kind_result["ok"].get<bool>() );
+    CHECK( wrong_kind_result["error"].get<sol::table>()
+           ["code"].get<std::string>() == "wrong_kind" );
+
+    const tripoint_bub_ms non_character_local =
+        fixture.source_local + tripoint_rel_ms( 8, 1, 0 );
+    const shared_ptr_fast<monster> non_character =
+        fixture.add_monster( non_character_local );
+    REQUIRE( non_character );
+    const tripoint_abs_ms non_character_position =
+        fixture.get_map().get_abs( non_character_local );
+    fixture.lua["non_character_handle"] =
+        cata::lua_platform::game_handle::from_creature(
+    *non_character, {
+        "monster", non_character->uid().get_value(),
+        non_character_position.x(), non_character_position.y(),
+        non_character_position.z(), {}
+    },
+    fixture.active_runtime, fixture.active_world_generation );
+    const sol::protected_function_result wrong_subtype = fixture.lua.safe_script(
+                "return services.characters.is_in_vehicle(non_character_handle)",
+                sol::script_pass_on_error );
+    REQUIRE( wrong_subtype.valid() );
+    const sol::table wrong_subtype_result = wrong_subtype.get<sol::table>();
+    REQUIRE_FALSE( wrong_subtype_result["ok"].get<bool>() );
+    CHECK( wrong_subtype_result["error"].get<sol::table>()
+           ["code"].get<std::string>() == "wrong_subtype" );
+
+    const sol::protected_function_result saved_character =
+        fixture.lua.safe_script(
+            "stale_character = services.characters.avatar()",
+            sol::script_pass_on_error );
+    REQUIRE( saved_character.valid() );
+    ++fixture.active_world_generation;
+    const sol::protected_function_result stale = fixture.lua.safe_script(
+                "return services.characters.is_in_vehicle(stale_character)",
+                sol::script_pass_on_error );
+    REQUIRE( stale.valid() );
+    const sol::table stale_result = stale.get<sol::table>();
+    REQUIRE_FALSE( stale_result["ok"].get<bool>() );
+    CHECK( stale_result["error"].get<sol::table>()
+           ["code"].get<std::string>() == "stale_world" );
+    --fixture.active_world_generation;
+}
+
+TEST_CASE( "lua_platform_character_snapshot_matches_npc_movement_conditions",
+           "[lua][platform][characters][movement][semantic]" )
+{
+    platform_vehicle_relocation_fixture fixture( 734, 33 );
+    REQUIRE( fixture.test_vehicle );
+    const auto current_runtime = [&]() {
+        return fixture.active_runtime;
+    };
+    const auto current_world = [&]() {
+        return fixture.active_world_generation;
+    };
+    cata::lua_platform::install_creature_api(
+    fixture.services, current_runtime, current_world, []() {}, []() {} );
+
+    npc beta;
+    beta.normalize();
+    beta.setID( character_id( 7334 ), true );
+    beta.spawn_at_precise( fixture.get_map().get_abs( fixture.source_local ) );
+    beta.set_attitude( NPCATT_FOLLOW );
+    const talker_npc_const native_beta( &beta );
+    const sol::protected_function snapshot =
+        fixture.services["characters"]["snapshot"];
+
+    const auto check_native_match = [&]( const bool expected_controlling,
+    const bool expected_driving, const bool expected_following ) {
+        const optional_vpart_position control_vehicle = fixture.get_map().veh_at(
+                    native_beta.pos_bub( fixture.get_map() ) );
+        const bool native_controlling = control_vehicle &&
+                                        native_beta.is_in_control_of( control_vehicle->vehicle() );
+        const optional_vpart_position driving_vehicle = fixture.get_map().veh_at(
+                    native_beta.pos_abs() );
+        const bool native_driving = driving_vehicle &&
+                                    driving_vehicle->vehicle().is_moving() &&
+                                    native_beta.is_in_control_of( driving_vehicle->vehicle() );
+        const bool native_following = native_beta.is_following();
+        CHECK( native_controlling == expected_controlling );
+        CHECK( native_driving == expected_driving );
+        CHECK( native_following == expected_following );
+        const tripoint_abs_ms position = beta.pos_abs();
+        const cata::lua_platform::game_handle beta_handle =
+            cata::lua_platform::game_handle::from_creature(
+        beta, {
+            "npc", beta.getID().get_value(), position.x(),
+            position.y(), position.z(), {}
+        },
+        fixture.active_runtime, fixture.active_world_generation );
+        const sol::protected_function_result result = snapshot( beta_handle );
+        REQUIRE( result.valid() );
+        const sol::table envelope = result.get<sol::table>();
+        REQUIRE( envelope["ok"].get<bool>() );
+        const sol::table value = envelope["value"].get<sol::table>();
+        const sol::table movement = value["movement"].get<sol::table>();
+        const sol::table npc_state = value["npc_state"].get<sol::table>();
+        CHECK( movement["controlling_vehicle"].get<bool>() == native_controlling );
+        CHECK( movement["driving"].get<bool>() == native_driving );
+        CHECK( npc_state["following"].get<bool>() == native_following );
+    };
+
+    fixture.test_vehicle->tags.insert( "IN_CONTROL_OVERRIDE" );
+    fixture.test_vehicle->velocity = 0;
+    check_native_match( true, false, true ); // In control of a stationary vehicle.
+    fixture.test_vehicle->velocity = 100;
+    check_native_match( true, true, true ); // In control of a moving vehicle.
+    beta.set_attitude( NPCATT_WAIT );
+    check_native_match( true, true, true ); // WAIT is also a native following attitude.
+    beta.set_attitude( NPCATT_KILL );
+    check_native_match( true, true, false ); // Not following despite the same vehicle state.
+    beta.spawn_at_precise( fixture.get_map().get_abs( fixture.target_local ) );
+    check_native_match( false, false, false ); // No vehicle at the native actor square.
+}
 
 TEST_CASE( "lua_platform_nil_query_selector_preserves_explicit_options",
            "[lua][platform][map][creatures][semantic]" )
@@ -110,6 +426,86 @@ TEST_CASE( "lua_platform_nil_query_selector_preserves_explicit_options",
     CHECK_FALSE( fixture.write_called );
     CHECK( get_creature_tracker().size() == 3 );
     CHECK( fixture.get_map().get_abs( fixture.local ) == fixture.absolute );
+}
+
+TEST_CASE( "lua_platform_transform_radius_matches_native_scope_and_rng",
+           "[lua][platform][world][transform][semantic]" )
+{
+    platform_map_api_test_fixture fixture( 741, 41 );
+    fixture.local = tripoint_bub_ms( 60, 60, 0 );
+    fixture.absolute = fixture.get_map().get_abs( fixture.local );
+    const auto current_runtime = [&]() {
+        return fixture.active_runtime;
+    };
+    const auto current_world = [&]() {
+        return fixture.active_world_generation;
+    };
+    cata::lua_platform::install_world_api(
+    fixture.services, current_runtime, current_world, []() {}, [&]() {
+        fixture.write_called = true;
+    } );
+
+    map &here = fixture.get_map();
+    const tripoint_bub_ms center = fixture.local;
+    const tripoint_bub_ms inside = center + tripoint::east;
+    const tripoint_bub_ms outside = center + tripoint::south_east;
+    const field_type_id web = fd_web.id();
+    REQUIRE( ter_furn_transform_spider_clear_webs.is_valid() );
+    REQUIRE( here.add_field( center, web, 1, 0_turns, false ) );
+    REQUIRE( here.add_field( inside, web, 1, 0_turns, false ) );
+    REQUIRE( here.add_field( outside, web, 1, 0_turns, false ) );
+    const on_out_of_scope remove_test_fields( [&]() {
+        for( const tripoint_bub_ms &position : {
+                 center, inside, outside
+             } ) {
+            here.remove_field( position, web );
+        }
+    } );
+
+    fixture.lua.open_libraries( sol::lib::base );
+    fixture.lua["services"] = fixture.services;
+    fixture.lua["origin"] = fixture.position( center );
+
+    const cata_default_random_engine saved_rng = rng_get_engine(); // NOLINT(cata-determinism)
+    const on_out_of_scope restore_rng( [&saved_rng]() {
+        rng_get_engine() = saved_rng;
+    } );
+    constexpr unsigned int seed = 51837;
+    rng_set_engine_seed( seed );
+    const sol::protected_function_result transformed = fixture.lua.safe_script( R"(
+        local transform = services.types.id("terrain_furniture_transform", "spider_clear_webs")
+        assert(transform:is_valid())
+        local wrong_kind = services.types.id("item", "rock")
+        assert(not pcall(services.world.transform_radius, origin, 1, wrong_kind))
+        assert(not pcall(services.world.transform_radius, origin, -1, transform))
+        assert(not pcall(services.world.transform_radius, origin, 61, transform))
+        local result = services.world.transform_radius(origin, 1, transform)
+        assert(result.ok)
+        assert(result.value.position == origin)
+        assert(result.value.radius == 1)
+        assert(result.value.transform == transform)
+        assert(result.value.scheduled == false)
+        return result
+    )", sol::script_pass_on_error );
+    REQUIRE( transformed.valid() );
+    CHECK( fixture.write_called );
+    // Snapshot the native engine to compare draw counts without advancing it.
+    // NOLINTNEXTLINE(cata-determinism)
+    const cata_default_random_engine platform_rng_after = rng_get_engine();
+    CHECK( here.get_field( center, web ) == nullptr );
+    CHECK( here.get_field( inside, web ) == nullptr );
+    REQUIRE( here.get_field( outside, web ) != nullptr );
+
+    REQUIRE( here.add_field( center, web, 1, 0_turns, false ) );
+    REQUIRE( here.add_field( inside, web, 1, 0_turns, false ) );
+    rng_set_engine_seed( seed );
+    here.transform_radius( ter_furn_transform_spider_clear_webs,
+                           1, fixture.absolute );
+
+    CHECK( rng_get_engine() == platform_rng_after );
+    CHECK( here.get_field( center, web ) == nullptr );
+    CHECK( here.get_field( inside, web ) == nullptr );
+    CHECK( here.get_field( outside, web ) != nullptr );
 }
 
 TEST_CASE( "lua_platform_map_tile_rejects_mixed_coordinate_frames",
@@ -353,12 +749,104 @@ TEST_CASE( "lua_platform_map_tile_edits_are_atomic_and_rollback",
     CHECK( cata::lua_platform::map_mutation_epoch() == revision + 1 );
 }
 
+TEST_CASE( "lua_platform_map_trap_set_matches_native_same_id_and_builtin_semantics",
+           "[lua][platform][map][traps][semantic]" )
+{
+    platform_map_api_test_fixture fixture( 717, 17 );
+    map &here = fixture.get_map();
+    REQUIRE( ter_t_floor.is_valid() );
+    REQUIRE( ter_t_pit.is_valid() );
+    REQUIRE( tr_beartrap.is_valid() );
+    REQUIRE( tr_rollmat.is_valid() );
+    REQUIRE( tr_pit.is_valid() );
+
+    const tripoint_bub_ms local = fixture.local + tripoint::east;
+    here.ter_set( local, ter_t_floor.id() );
+    REQUIRE( here.ter( local ) == ter_t_floor.id() );
+    here.trap_set( local, tr_beartrap.id() );
+    here.memory_cache_dec_set_dirty( local, false );
+
+    const sol::table map_api = fixture.map_api();
+    const sol::protected_function_result tile_result = map_api["tile"](
+                fixture.position( local ) );
+    REQUIRE( tile_result.valid() );
+    REQUIRE( tile_result.get<sol::table>()["ok"].get<bool>() );
+    const cata::lua_platform::map_tile_token token =
+        tile_result.get<sol::table>()["value"]
+        .get<cata::lua_platform::map_tile_token>();
+    const sol::protected_function_result snapshot_result =
+        map_api["snapshot"]( token );
+    REQUIRE( snapshot_result.valid() );
+    REQUIRE( snapshot_result.get<sol::table>()["ok"].get<bool>() );
+    const std::uint64_t revision = snapshot_result.get<sol::table>()
+                                   ["value"].get<sol::table>()
+                                   ["revision"].get<std::uint64_t>();
+    const std::uint64_t epoch_before = cata::lua_platform::map_mutation_epoch();
+
+    fixture.write_called = false;
+    const sol::protected_function trap_set = map_api["trap_set"];
+    const sol::protected_function_result repeated = trap_set(
+                token, revision,
+                cata::lua_platform::script_game_id( "trap", tr_beartrap.str() ) );
+    REQUIRE( repeated.valid() );
+    REQUIRE( repeated.get<sol::table>()["ok"].get<bool>() );
+    CHECK( fixture.write_called );
+    CHECK( here.tr_at( local ).id.id() == tr_beartrap.id() );
+    // Native map::trap_set marks decoration memory dirty even when asked to
+    // reapply the trap already at this position.
+    CHECK( here.memory_cache_dec_is_dirty( local ) );
+    CHECK( cata::lua_platform::map_mutation_epoch() == epoch_before + 1 );
+
+    const sol::protected_function_result stale = trap_set(
+                token, revision,
+                cata::lua_platform::script_game_id( "trap", tr_rollmat.str() ) );
+    REQUIRE( stale.valid() );
+    REQUIRE_FALSE( stale.get<sol::table>()["ok"].get<bool>() );
+    CHECK( stale.get<sol::table>()["error"].get<sol::table>()
+           ["code"].get<std::string>() == "revision_conflict" );
+    CHECK( here.tr_at( local ).id.id() == tr_beartrap.id() );
+    CHECK( cata::lua_platform::map_mutation_epoch() == epoch_before + 1 );
+
+    const sol::table repeated_value = repeated.get<sol::table>()
+                                      ["value"].get<sol::table>();
+    const sol::protected_function_result replaced = trap_set(
+                token, repeated_value["revision"].get<std::uint64_t>(),
+                cata::lua_platform::script_game_id( "trap", tr_rollmat.str() ) );
+    REQUIRE( replaced.valid() );
+    REQUIRE( replaced.get<sol::table>()["ok"].get<bool>() );
+    CHECK( here.tr_at( local ).id.id() == tr_rollmat.id() );
+
+    here.ter_set( local, ter_t_floor.id() );
+    REQUIRE( here.ter( local ) == ter_t_floor.id() );
+    here.trap_set( local, tr_null );
+    here.ter_set( local, ter_t_pit.id() );
+    REQUIRE( here.ter( local ) == ter_t_pit.id() );
+    const sol::protected_function_result built_in_snapshot =
+        map_api["snapshot"]( token );
+    REQUIRE( built_in_snapshot.valid() );
+    REQUIRE( built_in_snapshot.get<sol::table>()["ok"].get<bool>() );
+    sol::protected_function_result built_in;
+    const std::string built_in_diagnostic = capture_debugmsg_during( [&]() {
+        built_in = trap_set(
+                       token,
+                       built_in_snapshot.get<sol::table>()["value"].get<sol::table>()
+                       ["revision"].get<std::uint64_t>(),
+                       cata::lua_platform::script_game_id( "trap", tr_beartrap.str() ) );
+    } );
+    CHECK( built_in_diagnostic.find( "on top of terrain t_pit" ) != std::string::npos );
+    REQUIRE( built_in.valid() );
+    REQUIRE( built_in.get<sol::table>()["ok"].get<bool>() );
+    CHECK( here.tr_at( local ).id.id() == tr_pit.id() );
+}
+
 TEST_CASE( "lua_platform_map_tile_never_uses_avatar_or_nearest_fallback",
            "[lua][platform][map][contract]" )
 {
     platform_map_api_test_fixture fixture( 705, 5 );
     const sol::table map_api = fixture.map_api();
-    const std::set<std::string> expected = { "edit", "snapshot", "tile" };
+    const std::set<std::string> expected = {
+        "edit", "snapshot", "tile", "trap_set"
+    };
     std::set<std::string> exposed;
     for( const auto &entry : map_api ) {
         REQUIRE( entry.first.is<std::string>() );

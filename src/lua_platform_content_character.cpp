@@ -1,7 +1,28 @@
 #include "lua_platform_content_character.h"
 
-#include "lua_platform_runtime.h"
+#include <addiction.h>
+#include <body_part_set.h>
+#include <coordinates.h>
+#include <damage.h>
+#include <enum_bitset.h>
+#include <enums.h>
+#include <flat_set.h>
+#include <martialarts.h>
+#include <mutation.h>
+#include <sleep.h>
+#include <units.h>
+#include <value_ptr.h>
+#include <exception>
+#include <variant>
+
+#include "lua_platform_content_text.h"
 #include "lua_platform_runtime_internal.h"
+
+class avatar;
+namespace sounds
+{
+enum class sound_t : int;
+}  // namespace sounds
 
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
@@ -23,6 +44,7 @@
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
+#include <tuple>
 #include <vector>
 
 extern "C" {
@@ -30,40 +52,38 @@ extern "C" {
 }
 
 #include "bionics.h"
-#include "avatar.h"
 #include "calendar.h"
 #include "catacharset.h"
-#include "character.h"
-#include "character_martial_arts.h"
 #include "color.h"
 #include "creature.h"
 #include "dialogue.h"
 #include "dialogue_helpers.h"
-#include "field_type.h"
-#include "magic_enchantment.h"
 #include "enum_conversions.h"
 #include "generic_factory.h"
 #include "item.h"
 #include "item_group.h"
 #include "lua_platform_content.h"
 #include "magic.h"
+#include "magic_enchantment.h"
 #include "magic_type.h"
 #include "mission.h"
 #include "move_mode.h"
-#include "monstergenerator.h"
-#include "mtype.h"
-#include "npc.h"
 #include "profession.h"
 #include "profession_group.h"
-#include "point.h"
-#include "requirements.h"
-#include "sounds.h"
 #include "translation.h"
 #include "type_id.h"
 #include "widget.h"
 
+static const flag_id json_flag_W_LABEL_NONE( "W_LABEL_NONE" );
+static const json_character_flag json_flag_BIONIC_GUN( "BIONIC_GUN" );
+static const json_character_flag json_flag_BIONIC_REMOVABLE( "BIONIC_REMOVABLE" );
+static const json_character_flag json_flag_BIONIC_TOGGLED( "BIONIC_TOGGLED" );
+
 namespace cata::lua_platform
 {
+
+using detail::authored_text;
+using detail::read_singular_text;
 
 using detail::invoke_enchantment_condition_handler;
 using detail::invoke_enchantment_number_handler;
@@ -182,6 +202,18 @@ void hash_part( std::uint64_t &state, const std::string_view value )
     append( ";" );
 }
 
+void hash_part( std::uint64_t &state, const authored_text &text )
+{
+    hash_part( state, text.raw );
+    hash_part( state, text.translated ? "localized" : "literal" );
+    if( text.translated ) {
+        hash_part( state, text.translated->context ? "context" : "no_context" );
+        if( text.translated->context ) {
+            hash_part( state, *text.translated->context );
+        }
+    }
+}
+
 template<typename Registration>
 bool registration_id_exists( const std::vector<Registration> &entries,
                              const std::string_view id )
@@ -254,8 +286,6 @@ std::optional<steed_type> platform_steed_type( std::string value )
     return std::nullopt;
 }
 
-} // namespace
-
 struct profession_addiction_definition_data {
     std::string type;
     std::int64_t intensity = 1;
@@ -268,10 +298,10 @@ struct profession_trait_definition_data {
 
 struct profession_definition_data {
     std::string id;
-    std::string name_male;
-    std::string name_female;
-    std::string description_male;
-    std::string description_female;
+    authored_text name_male;
+    authored_text name_female;
+    authored_text description_male;
+    authored_text description_female;
     std::int64_t points = 0;
     std::optional<std::int64_t> starting_cash;
     std::string npc_background = "BG_survival_story_UNIVERSAL";
@@ -329,7 +359,7 @@ struct widget_definition_data {
     std::int64_t height = 1;
     std::string symbols = "-";
     std::string fill = "bucket";
-    std::string label;
+    authored_text label;
     std::string description;
     std::string style = "number";
     std::string arrange = "columns";
@@ -369,15 +399,15 @@ struct enchantment_fake_spell_definition_data {
     std::int64_t level = 0;
     bool self = false;
     std::int64_t trigger_once_in = 1;
-    std::string trigger_message;
-    std::string npc_trigger_message;
+    authored_text trigger_message;
+    authored_text npc_trigger_message;
 };
 
 struct enchantment_vision_description_definition_data {
     std::string id = "infrared_creature";
     std::string color = "red";
     std::string symbol = "?";
-    std::string text;
+    authored_text text;
     std::string condition_handler;
 };
 
@@ -392,8 +422,8 @@ struct enchantment_vision_definition_data {
 
 struct enchantment_definition_data {
     std::string id;
-    std::string name;
-    std::string description;
+    authored_text name;
+    authored_text description;
     std::string has = "HELD";
     std::string condition = "ALWAYS";
     std::string condition_handler;
@@ -418,9 +448,9 @@ struct bionic_protection_definition_data {
 
 struct bionic_definition_data {
     std::string id;
-    std::string name;
-    std::string description;
-    std::optional<std::string> cant_remove_reason;
+    authored_text name;
+    authored_text description;
+    std::optional<authored_text> cant_remove_reason;
     std::int64_t activation_energy_millijoules = 0;
     std::int64_t deactivation_energy_millijoules = 0;
     std::int64_t over_time_energy_millijoules = 0;
@@ -474,13 +504,13 @@ struct bionic_definition_data {
 
 struct spell_definition_data {
     std::string id;
-    std::string name;
-    std::string description;
-    std::string message = "You cast %s!";
+    authored_text name;
+    authored_text description;
+    authored_text message{ "You cast %s!", std::nullopt };
     std::string skill = "spellcraft";
     std::string magic_type;
     std::string components;
-    std::string sound_description = "an explosion.";
+    authored_text sound_description{ "an explosion.", std::nullopt };
     std::string sound_type = "combat";
     bool sound_ambient = false;
     std::string sound_id;
@@ -500,9 +530,9 @@ struct spell_definition_data {
     std::string exp_for_level_formula;
     std::optional<std::int64_t> max_book_level;
     std::string caster_condition_handler;
-    std::string caster_condition_fail_message;
+    authored_text caster_condition_fail_message;
     std::string target_condition_handler;
-    std::string target_condition_fail_message;
+    authored_text target_condition_fail_message;
     std::vector<std::string> valid_targets;
     std::vector<std::string> flags;
     std::vector<std::string> targeted_monsters;
@@ -564,8 +594,8 @@ struct spell_definition_data {
 
 struct mission_definition_data {
     std::string id;
-    std::string name;
-    std::string description;
+    authored_text name;
+    authored_text description;
     std::string goal = "MGOAL_NULL";
     std::int64_t difficulty = 0;
     std::int64_t value = 0;
@@ -673,10 +703,10 @@ struct profession_item_bonus_definition_data {
 
 struct technique_definition_data {
     std::string id;
-    std::string name;
-    std::string description;
-    std::string avatar_message;
-    std::string npc_message;
+    authored_text name;
+    authored_text description;
+    authored_text avatar_message;
+    authored_text npc_message;
     bool crit_tec = false;
     bool crit_ok = false;
     bool wall_adjacent = false;
@@ -713,10 +743,10 @@ struct technique_definition_data {
 
 struct martial_art_definition_data {
     std::string id;
-    std::string name;
-    std::string description;
-    std::string initiate_avatar;
-    std::string initiate_npc;
+    authored_text name;
+    authored_text description;
+    authored_text initiate_avatar;
+    authored_text initiate_npc;
     std::int64_t priority = 0;
     std::string primary_skill;
     std::int64_t learn_difficulty = 0;
@@ -760,14 +790,14 @@ struct magic_type_definition_data {
 
 struct movement_mode_message_definition_data {
     std::string steed;
-    std::string prepare;
-    std::string success;
-    std::string failure = "You feel bugs crawl over your skin.";
+    authored_text prepare;
+    authored_text success;
+    authored_text failure = { "You feel bugs crawl over your skin.", std::nullopt };
 };
 
 struct movement_mode_definition_data {
     std::string id;
-    std::string name;
+    authored_text name;
     std::string kind = "walking";
     std::uint32_t character_symbol = 0;
     std::uint32_t panel_symbol = 0;
@@ -870,10 +900,13 @@ struct movement_mode_definition_handle {
         require_building_handle( token, *definition, "movement mode" );
         movement_mode_message_definition_data messages;
         messages.steed = steed;
-        messages.prepare = options.get_or( "prepare", std::string() );
-        messages.success = options.get_or( "success", std::string() );
-        messages.failure = options.get_or(
-                               "failure", std::string( "You feel bugs crawl over your skin." ) );
+        messages.prepare = detail::read_singular_text(
+                               options.get<sol::object>( "prepare" ), "", "movement-mode prepare message" );
+        messages.success = detail::read_singular_text(
+                               options.get<sol::object>( "success" ), "", "movement-mode success message" );
+        messages.failure = detail::read_singular_text_or(
+                               options.get<sol::object>( "failure" ), messages.failure,
+                               "movement-mode failure message" );
         if( messages.prepare.empty() || messages.success.empty() || messages.failure.empty() ) {
             throw std::runtime_error( "movement-mode messages cannot be empty" );
         }
@@ -1132,9 +1165,10 @@ struct enchantment_definition_handle {
         spell.self = options.get_or( "self", fake_spell::self_default );
         spell.trigger_once_in = options.get_or<std::int64_t>(
                                     "trigger_once_in", fake_spell::trigger_once_in_default );
-        spell.trigger_message = options.get_or( "trigger_message", std::string() );
-        spell.npc_trigger_message = options.get_or(
-                                        "npc_trigger_message", std::string() );
+        spell.trigger_message = read_singular_text(
+                                    options.get<sol::object>( "trigger_message" ), {}, "spell trigger message" );
+        spell.npc_trigger_message = read_singular_text(
+                                        options.get<sol::object>( "npc_trigger_message" ), {}, "NPC spell trigger message" );
         return spell;
     }
 
@@ -1267,7 +1301,8 @@ struct enchantment_definition_handle {
                 description.color = item.get_or( "color", description.color );
                 description.symbol = item.get_or(
                                          "symbol", item.get_or( "sym", description.symbol ) );
-                description.text = item.get_or( "text", std::string() );
+                description.text = read_singular_text(
+                                       item.get<sol::object>( "text" ), {}, "enchantment vision description" );
                 description.condition_handler = item.get_or(
                                                     "condition", item.get_or( "condition_handler", std::string() ) );
                 vision.descriptions.push_back( std::move( description ) );
@@ -1540,18 +1575,22 @@ struct spell_definition_handle {
     }
 
     spell_definition_handle &caster_when( const std::string &handler,
-                                          const std::string &failure_message ) {
+                                          const sol::object &failure_message ) {
         require_building_handle( token, *definition, "spell" );
+        authored_text message = read_singular_text(
+                                    failure_message, {}, "spell caster failure message" );
         definition->caster_condition_handler = handler;
-        definition->caster_condition_fail_message = failure_message;
+        definition->caster_condition_fail_message = std::move( message );
         return *this;
     }
 
     spell_definition_handle &target_when( const std::string &handler,
-                                          const std::string &failure_message ) {
+                                          const sol::object &failure_message ) {
         require_building_handle( token, *definition, "spell" );
+        authored_text message = read_singular_text(
+                                    failure_message, {}, "spell target failure message" );
         definition->target_condition_handler = handler;
-        definition->target_condition_fail_message = failure_message;
+        definition->target_condition_fail_message = std::move( message );
         return *this;
     }
 
@@ -1856,6 +1895,8 @@ using martial_art_registration = catalog_registration<martial_art_definition_dat
 using magic_type_registration = catalog_registration<magic_type_definition_data>;
 using movement_mode_registration = catalog_registration<movement_mode_definition_data>;
 
+} // namespace
+
 struct character_content_transaction::impl {
     impl( std::string owner_id, const std::size_t owner_generation ) :
         owner( std::move( owner_id ) ), generation( owner_generation ),
@@ -1901,6 +1942,33 @@ struct character_content_transaction::impl {
         character_content_apply_phase::profession;
     std::size_t applied_phase_count = 0;
     mutable bool finalization_validated = false;
+    void install_profession( sol::table &content );
+    void install_profession_group( sol::table &content );
+    void install_widget( sol::table &content );
+    void install_enchantment( sol::table &content );
+    void install_bionic( sol::table &content );
+    void install_spell( sol::table &content );
+    void install_mission( sol::table &content );
+    void install_profession_item_substitution( sol::table &content );
+    void install_profession_item_bonus( sol::table &content );
+    void install_technique( sol::table &content );
+    void install_martial_art( sol::table &content );
+    void install_magic_type( sol::table &content );
+    void install_movement_mode( sol::table &content );
+
+    void apply_profession();
+    void apply_profession_group();
+    void apply_widget();
+    void apply_enchantment();
+    void apply_bionic();
+    void apply_spell();
+    void apply_mission_definition();
+    void apply_profession_item();
+    void apply_technique();
+    void apply_martial_art();
+    void apply_magic_type();
+    void apply_movement_mode();
+
     bool applied = false;
 };
 
@@ -1968,6 +2036,1146 @@ bool character_content_transaction::register_definition( const sol::object &valu
     CATA_CHARACTER_REGISTER( movement_mode_definition_handle, movement_modes, "movement mode" )
 #undef CATA_CHARACTER_REGISTER
     return false;
+}
+
+void character_content_transaction::impl::install_profession( sol::table &content )
+{
+    content.set_function( "Profession", [this]( const sol::table & options ) {
+        if( this->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<profession_definition_data>();
+        definition->id = options.get_or( "id", std::string() );
+        const authored_text common_name = read_singular_text(
+                                              options.get<sol::object>( "name" ), definition->id,
+                                              "profession name" );
+        definition->name_male = detail::read_singular_text_or(
+                                    options.get<sol::object>( "name_male" ), common_name,
+                                    "profession male name" );
+        definition->name_female = detail::read_singular_text_or(
+                                      options.get<sol::object>( "name_female" ), common_name,
+                                      "profession female name" );
+        const authored_text common_description = read_singular_text(
+                    options.get<sol::object>( "description" ), {}, "profession description" );
+        definition->description_male = detail::read_singular_text_or(
+                                           options.get<sol::object>( "description_male" ), common_description,
+                                           "profession male description" );
+        definition->description_female = detail::read_singular_text_or(
+                                             options.get<sol::object>( "description_female" ), common_description,
+                                             "profession female description" );
+        definition->points = options.get_or<std::int64_t>( "points", 0 );
+        if( const sol::optional<std::int64_t> starting_cash =
+                options.get<sol::optional<std::int64_t>>( "starting_cash" ) ) {
+            definition->starting_cash = *starting_cash;
+        }
+        definition->npc_background = options.get_or(
+                                         "npc_background", definition->npc_background );
+        definition->chargen_allow_npc = options.get_or( "chargen_allow_npc", true );
+        definition->age_lower = options.get_or<std::int64_t>(
+                                    "age_lower", profession::DEFAULT_PROF_AGE_LOWER );
+        definition->age_upper = options.get_or<std::int64_t>(
+                                    "age_upper", profession::DEFAULT_PROF_AGE_UPPER );
+        definition->starting_vehicle = options.get_or( "vehicle", std::string() );
+        definition->items_both = options.get_or( "items_both", definition->items_both );
+        definition->items_male = options.get_or( "items_male", definition->items_male );
+        definition->items_female = options.get_or( "items_female", definition->items_female );
+        definition->no_bonus = options.get_or( "no_bonus", std::string() );
+        definition->hard_requirement = options.get_or( "hard_requirement", false );
+        definition->hobbies_whitelist = options.get_or( "whitelist_hobbies", true );
+        definition->martial_arts_choice_amount = options.get_or<std::int64_t>(
+                    "starting_styles_choices_amount", 1 );
+        definition->subtype = options.get_or( "subtype", std::string() );
+        definition->start_handler = options.get_or(
+                                        "on_start", options.get_or(
+                                            "start_handler", std::string() ) );
+
+        profession_definition_handle handle{ definition, this->token };
+        const auto each_array_entry = [&options]( const char *key, const char *label,
+        const auto & visitor ) {
+            const sol::optional<sol::table> values =
+                options.get<sol::optional<sol::table>>( key );
+            if( !values ) {
+                return;
+            }
+            const std::size_t count = require_dense_array( *values, label, 0, 4096 );
+            for( std::size_t index = 1; index <= count; ++index ) {
+                visitor( values->raw_get<sol::object>( index ) );
+            }
+        };
+        const auto each_string = [&each_array_entry]( const char *key, const char *label,
+        const auto & visitor ) {
+            each_array_entry( key, label, [label, &visitor]( const sol::object & value ) {
+                if( !value.is<std::string>() ) {
+                    throw std::runtime_error( std::string( label ) +
+                                              " must contain strings" );
+                }
+                visitor( value.as<std::string>() );
+            } );
+        };
+
+        each_string( "requirements", "profession requirements",
+        [&handle]( const std::string & value ) {
+            handle.requirement( value );
+        } );
+        each_array_entry( "skills", "profession skills",
+        [&handle]( const sol::object & value ) {
+            if( !value.is<sol::table>() ) {
+                throw std::runtime_error( "profession skills must contain tables" );
+            }
+            const sol::table item = value.as<sol::table>();
+            handle.skill( item.get_or( "id", item.get_or( "name", std::string() ) ),
+                          item.get_or<std::int64_t>( "level", 0 ) );
+        } );
+        each_array_entry( "addictions", "profession addictions",
+        [&handle]( const sol::object & value ) {
+            if( !value.is<sol::table>() ) {
+                throw std::runtime_error( "profession addictions must contain tables" );
+            }
+            const sol::table item = value.as<sol::table>();
+            handle.addiction( item.get_or( "type", std::string() ),
+                              item.get_or<std::int64_t>( "intensity", 1 ) );
+        } );
+        each_string( "cbms", "profession CBMs", [&handle]( const std::string & value ) {
+            handle.cbm( value );
+        } );
+        each_string( "proficiencies", "profession proficiencies",
+        [&handle]( const std::string & value ) {
+            handle.proficiency( value );
+        } );
+        each_string( "recipes", "profession recipes", [&handle]( const std::string & value ) {
+            handle.recipe( value );
+        } );
+        each_array_entry( "traits", "profession traits",
+        [&handle]( const sol::object & value ) {
+            if( value.is<std::string>() ) {
+                handle.trait( value.as<std::string>(), std::string() );
+                return;
+            }
+            if( !value.is<sol::table>() ) {
+                throw std::runtime_error( "profession traits must contain strings or tables" );
+            }
+            const sol::table item = value.as<sol::table>();
+            handle.trait( item.get_or( "id", item.get_or( "trait", std::string() ) ),
+                          item.get_or( "variant", std::string() ) );
+        } );
+        each_string( "forbidden_traits", "profession forbidden traits",
+        [&handle]( const std::string & value ) {
+            handle.forbid_trait( value );
+        } );
+        each_string( "flags", "profession flags", [&handle]( const std::string & value ) {
+            handle.flag( value );
+        } );
+        each_string( "hobbies", "profession hobbies", [&handle]( const std::string & value ) {
+            handle.hobby( value );
+        } );
+        each_string( "starting_styles", "profession starting styles",
+        [&handle]( const std::string & value ) {
+            handle.martial_art( value );
+        } );
+        each_string( "starting_styles_choices", "profession starting style choices",
+        [&handle]( const std::string & value ) {
+            handle.martial_art_choice( value );
+        } );
+        each_array_entry( "pets", "profession pets", [&handle]( const sol::object & value ) {
+            if( !value.is<sol::table>() ) {
+                throw std::runtime_error( "profession pets must contain tables" );
+            }
+            const sol::table item = value.as<sol::table>();
+            handle.pet( item.get_or( "id", item.get_or( "name", std::string() ) ),
+                        item.get_or<std::int64_t>( "amount", 1 ) );
+        } );
+        each_array_entry( "spells", "profession spells", [&handle]( const sol::object & value ) {
+            if( !value.is<sol::table>() ) {
+                throw std::runtime_error( "profession spells must contain tables" );
+            }
+            const sol::table item = value.as<sol::table>();
+            handle.spell( item.get_or( "id", item.get_or( "spell", std::string() ) ),
+                          item.get_or<std::int64_t>( "level", 0 ) );
+        } );
+        each_string( "missions", "profession missions", [&handle]( const std::string & value ) {
+            handle.mission( value );
+        } );
+        return handle;
+    } );
+}
+
+void character_content_transaction::impl::install_profession_group( sol::table &content )
+{
+    content.set_function( "ProfessionGroup", [this]( const sol::table & options ) {
+        if( this->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<profession_group_definition_data>();
+        definition->id = options.get_or( "id", std::string() );
+        return profession_group_definition_handle{
+            std::move( definition ), this->token
+        };
+    } );
+}
+
+void character_content_transaction::impl::install_widget( sol::table &content )
+{
+    content.set_function( "Widget", [this]( const sol::table & options ) {
+        if( this->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<widget_definition_data>();
+        definition->id = options.get_or( "id", std::string() );
+        definition->width = options.get_or<std::int64_t>( "width", 0 );
+        definition->height = options.get_or<std::int64_t>( "height", 1 );
+        definition->symbols = options.get_or( "symbols", definition->symbols );
+        definition->fill = options.get_or( "fill", definition->fill );
+        definition->label = detail::read_singular_text(
+                                options.get<sol::object>( "label" ), "", "widget label" );
+        definition->description = options.get_or( "description", std::string() );
+        definition->style = options.get_or( "style", definition->style );
+        definition->arrange = options.get_or( "arrange", definition->arrange );
+        definition->body_graph = options.get_or( "body_graph", definition->body_graph );
+        definition->direction = options.get_or( "direction", std::string() );
+        definition->text_align = options.get_or( "text_align", definition->text_align );
+        definition->label_align = options.get_or( "label_align", definition->label_align );
+        if( const sol::optional<bool> pad_labels =
+                options.get<sol::optional<bool>>( "pad_labels" ) ) {
+            definition->pad_labels = *pad_labels;
+
+        }
+        if( const sol::optional<std::string> separator =
+                options.get<sol::optional<std::string>>( "separator" ) ) {
+            definition->separator = *separator;
+        }
+        if( const sol::optional<std::int64_t> padding =
+                options.get<sol::optional<std::int64_t>>( "padding" ) ) {
+            definition->padding = *padding;
+        }
+        definition->variable = options.get_or( "var", std::string() );
+        definition->custom_handler = options.get_or(
+                                         "custom_handler", std::string() );
+        definition->text = options.get_or( "string", std::string() );
+        widget_definition_handle handle{ definition, this->token };
+
+        if( !options.get<sol::optional<sol::table>>( "bodyparts" ) ) {
+            if( const sol::optional<std::string> bodypart =
+                    options.get<sol::optional<std::string>>( "bodypart" ) ) {
+                handle.bodypart( *bodypart );
+            }
+        }
+        const auto each_array_entry = [&options]( const char *key, const char *label,
+        const auto & visitor ) {
+            const sol::optional<sol::table> values =
+                options.get<sol::optional<sol::table>>( key );
+            if( !values ) {
+                return;
+            }
+            const std::size_t count = require_dense_array( *values, label, 0, 4096 );
+            for( std::size_t index = 1; index <= count; ++index ) {
+                visitor( values->raw_get<sol::object>( index ) );
+            }
+        };
+        const auto each_string = [&each_array_entry]( const char *key, const char *label,
+        const auto & visitor ) {
+            each_array_entry( key, label, [label, &visitor]( const sol::object & value ) {
+                if( !value.is<std::string>() ) {
+                    throw std::runtime_error( std::string( label ) + " must contain strings" );
+                }
+                visitor( value.as<std::string>() );
+            } );
+        };
+        each_string( "bodyparts", "widget bodyparts", [&handle]( const std::string & value ) {
+            handle.bodypart( value );
+        } );
+        each_string( "colors", "widget colors", [&handle]( const std::string & value ) {
+            handle.color( value );
+        } );
+        each_array_entry( "breaks", "widget breaks", [&handle]( const sol::object & value ) {
+            if( !value.is<lua_Integer>() ) {
+                throw std::runtime_error( "widget breaks must contain integers" );
+            }
+            handle.break_at( value.as<std::int64_t>() );
+        } );
+        each_string( "widgets", "widget children", [&handle]( const std::string & value ) {
+            handle.child( value );
+        } );
+        each_string( "flags", "widget flags", [&handle]( const std::string & value ) {
+            handle.flag( value );
+        } );
+        each_array_entry( "clauses", "widget clauses", [&handle]( const sol::object & value ) {
+            if( !value.is<sol::table>() ) {
+                throw std::runtime_error( "widget clauses must contain tables" );
+            }
+            handle.clause( value.as<sol::table>() );
+        } );
+        if( const sol::optional<sol::table> default_clause =
+                options.get<sol::optional<sol::table>>( "default_clause" ) ) {
+            handle.default_clause( *default_clause );
+        }
+        if( !definition->custom_handler.empty() ) {
+            handle.custom_value( definition->custom_handler );
+        }
+        return handle;
+    } );
+}
+
+void character_content_transaction::impl::install_enchantment( sol::table &content )
+{
+    content.set_function( "Enchantment", [this]( const sol::table & options ) {
+        if( this->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<enchantment_definition_data>();
+        definition->id = options.get_or( "id", std::string() );
+        definition->name = read_singular_text(
+                               options.get<sol::object>( "name" ), {}, "enchantment name" );
+        definition->description = read_singular_text(
+                                      options.get<sol::object>( "description" ), {}, "enchantment description" );
+        definition->has = options.get_or( "has", definition->has );
+        definition->condition = options.get_or( "condition", definition->condition );
+        definition->condition_handler = options.get_or(
+                                            "condition_handler", std::string() );
+        definition->emitter = options.get_or( "emitter", std::string() );
+        enchantment_definition_handle handle{ definition, this->token };
+        if( !definition->condition_handler.empty() ) {
+            handle.active_when( definition->condition_handler );
+        }
+        const auto each_array_entry = [&options]( const char *key, const char *label,
+        const auto & visitor ) {
+            const sol::optional<sol::table> values =
+                options.get<sol::optional<sol::table>>( key );
+            if( !values ) {
+                return;
+            }
+            const std::size_t count = require_dense_array( *values, label, 0, 4096 );
+            for( std::size_t index = 1; index <= count; ++index ) {
+                visitor( values->raw_get<sol::object>( index ) );
+            }
+        };
+        const auto modifier_array = [&each_array_entry, &handle](
+        const char *key, const char *label, const char *kind, const char *target_key ) {
+            each_array_entry( key, label, [&handle, kind, target_key, label](
+            const sol::object & value ) {
+                if( !value.is<sol::table>() ) {
+                    throw std::runtime_error( std::string( label ) + " must contain tables" );
+                }
+                const sol::table item = value.as<sol::table>();
+                handle.modifier( kind, item.get_or( target_key, std::string() ), item );
+            } );
+        };
+        modifier_array( "values", "enchantment values", "value", "value" );
+        modifier_array( "skills", "enchantment skills", "skill", "value" );
+        modifier_array( "custom", "enchantment custom values", "custom", "value" );
+        modifier_array( "encumbrance_modifier", "enchantment encumbrance modifiers",
+                        "encumbrance", "part" );
+        modifier_array( "max_hp_modifier", "enchantment maximum-HP modifiers",
+                        "max_hp", "part" );
+        modifier_array( "limb_score_modifier", "enchantment limb-score modifiers",
+                        "limb_score", "score" );
+        modifier_array( "melee_damage_bonus", "enchantment melee-damage modifiers",
+                        "melee_damage", "type" );
+        modifier_array( "incoming_damage_mod", "enchantment incoming-damage modifiers",
+                        "incoming_damage", "type" );
+        modifier_array( "incoming_damage_mod_post_absorbed",
+                        "enchantment post-armor damage modifiers",
+                        "post_armor_damage", "type" );
+        each_array_entry( "ench_effects", "enchantment effects",
+        [&handle]( const sol::object & value ) {
+            if( !value.is<sol::table>() ) {
+                throw std::runtime_error( "enchantment effects must contain tables" );
+            }
+            const sol::table item = value.as<sol::table>();
+            handle.effect( item.get_or( "effect", std::string() ),
+                           item.get_or<std::int64_t>( "intensity", 1 ) );
+        } );
+        each_array_entry( "modified_bodyparts", "enchantment body-part changes",
+        [&handle]( const sol::object & value ) {
+            if( !value.is<sol::table>() ) {
+                throw std::runtime_error( "enchantment body-part changes must contain tables" );
+            }
+            const sol::table item = value.as<sol::table>();
+            handle.bodypart_change( item.get_or( "gain", std::string() ),
+                                    item.get_or( "lose", std::string() ) );
+        } );
+        each_array_entry( "mutations", "enchantment mutations",
+        [&handle]( const sol::object & value ) {
+            if( !value.is<std::string>() ) {
+                throw std::runtime_error( "enchantment mutations must contain strings" );
+            }
+            handle.mutation( value.as<std::string>() );
+        } );
+        each_array_entry( "hit_you_effect", "enchantment hit-you effects",
+        [&handle]( const sol::object & value ) {
+            if( !value.is<sol::table>() ) {
+                throw std::runtime_error( "enchantment hit-you effects must contain tables" );
+            }
+            handle.hit_you( value.as<sol::table>() );
+        } );
+        each_array_entry( "hit_me_effect", "enchantment hit-me effects",
+        [&handle]( const sol::object & value ) {
+            if( !value.is<sol::table>() ) {
+                throw std::runtime_error( "enchantment hit-me effects must contain tables" );
+            }
+            handle.hit_me( value.as<sol::table>() );
+        } );
+        each_array_entry( "intermittent_effects", "enchantment intermittent effects",
+        [&handle]( const sol::object & value ) {
+            if( !value.is<sol::table>() ) {
+                throw std::runtime_error( "enchantment intermittent effects must contain tables" );
+            }
+            const sol::table item = value.as<sol::table>();
+            const sol::optional<sol::table> spell =
+                item.get<sol::optional<sol::table>>( "spell" );
+            if( !spell ) {
+                throw std::runtime_error( "enchantment intermittent effect requires a spell table" );
+
+            }
+            handle.every( item.get_or<std::int64_t>( "frequency_turns", 0 ), *spell );
+        } );
+        each_array_entry( "special_vision", "enchantment special vision",
+        [&handle]( const sol::object & value ) {
+            if( !value.is<sol::table>() ) {
+                throw std::runtime_error( "enchantment special vision must contain tables" );
+            }
+            handle.vision( value.as<sol::table>() );
+        } );
+        return handle;
+    } );
+}
+
+void character_content_transaction::impl::install_bionic( sol::table &content )
+{
+    content.set_function( "Bionic", [this]( const sol::table & options ) {
+        if( this->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<bionic_definition_data>();
+        definition->id = options.get_or( "id", std::string() );
+        definition->name = read_singular_text(
+                               options.get<sol::object>( "name" ), {}, "bionic name" );
+        definition->description = read_singular_text(
+                                      options.get<sol::object>( "description" ), {}, "bionic description" );
+        const sol::object reason = options.get<sol::object>( "cant_remove_reason" );
+        if( reason.valid() && reason.get_type() != sol::type::nil ) {
+            definition->cant_remove_reason = read_singular_text(
+                                                 reason, {}, "bionic removal reason" );
+        }
+        definition->activation_energy_millijoules = options.get_or<std::int64_t>(
+                    "activation_energy_millijoules", 0 );
+        definition->deactivation_energy_millijoules = options.get_or<std::int64_t>(
+                    "deactivation_energy_millijoules", 0 );
+        definition->over_time_energy_millijoules = options.get_or<std::int64_t>(
+                    "over_time_energy_millijoules", 0 );
+        definition->trigger_energy_millijoules = options.get_or<std::int64_t>(
+                    "trigger_energy_millijoules", 0 );
+        definition->capacity_energy_millijoules = options.get_or<std::int64_t>(
+                    "capacity_energy_millijoules", 0 );
+        definition->charge_time_turns = options.get_or<std::int64_t>( "charge_time_turns", 0 );
+        definition->power_gen_emission = options.get_or( "power_gen_emission", std::string() );
+        definition->fake_weapon = options.get_or( "fake_weapon", std::string() );
+        definition->upgraded_bionic = options.get_or( "upgraded_bionic", std::string() );
+        definition->required_bionic = options.get_or( "required_bionic", std::string() );
+        definition->installation_requirement = options.get_or(
+                "installation_requirement", std::string() );
+        definition->fuel_efficiency = options.get_or( "fuel_efficiency", 0.0 );
+        definition->passive_fuel_efficiency = options.get_or(
+                "passive_fuel_efficiency", 0.0 );
+        if( const sol::optional<double> penalty =
+                options.get<sol::optional<double>>( "coverage_power_gen_penalty" ) ) {
+            definition->coverage_power_gen_penalty = *penalty;
+        }
+        definition->social_lie = options.get_or<std::int64_t>( "social_lie", 0 );
+        definition->social_persuade = options.get_or<std::int64_t>( "social_persuade", 0 );
+        definition->social_intimidate = options.get_or<std::int64_t>( "social_intimidate", 0 );
+        if( const sol::optional<sol::table> social =
+                options.get<sol::optional<sol::table>>( "social_modifiers" ) ) {
+            definition->social_lie = social->get_or<std::int64_t>(
+                                         "lie", definition->social_lie );
+            definition->social_persuade = social->get_or<std::int64_t>(
+                                              "persuade", definition->social_persuade );
+            definition->social_intimidate = social->get_or<std::int64_t>(
+                                                "intimidate", definition->social_intimidate );
+        }
+        definition->dupes_allowed = options.get_or( "dupes_allowed", false );
+        definition->activated_on_install = options.get_or( "activated_on_install", false );
+        definition->included = options.get_or( "included", false );
+        definition->activate_remove_cbm = options.get_or( "activate_remove_cbm", false );
+        definition->is_remote_fueled = options.get_or( "is_remote_fueled", false );
+        definition->exothermic_power_gen = options.get_or( "exothermic_power_gen", false );
+        definition->activated_close_ui = options.get_or( "activated_close_ui", false );
+        definition->deactivated_close_ui = options.get_or( "deactivated_close_ui", false );
+        bionic_definition_handle handle{ definition, this->token };
+
+        const auto each_array_entry = [&options]( const char *key, const char *label,
+        const auto & visitor ) {
+            const sol::optional<sol::table> values =
+                options.get<sol::optional<sol::table>>( key );
+            if( !values ) {
+                return;
+            }
+            const std::size_t count = require_dense_array( *values, label, 0, 4096 );
+            for( std::size_t index = 1; index <= count; ++index ) {
+                visitor( values->raw_get<sol::object>( index ) );
+            }
+        };
+        const auto each_string = [&each_array_entry]( const char *key, const char *label,
+        const auto & visitor ) {
+            each_array_entry( key, label, [label, &visitor]( const sol::object & value ) {
+                if( !value.is<std::string>() ) {
+                    throw std::runtime_error( std::string( label ) + " must contain strings" );
+                }
+                visitor( value.as<std::string>() );
+            } );
+        };
+        if( const sol::optional<sol::table> spell =
+                options.get<sol::optional<sol::table>>( "activation_spell" ) ) {
+            handle.activation_spell( *spell );
+        }
+        each_string( "fuel_options", "bionic fuel options",
+        [&handle]( const std::string & value ) {
+            handle.fuel( value );
+        } );
+        each_string( "enchantments", "bionic enchantments",
+        [&handle]( const std::string & value ) {
+            handle.enchantment( value );
+        } );
+        each_string( "martial_arts", "bionic martial arts",
+        [&handle]( const std::string & value ) {
+            handle.martial_art( value );
+        } );
+        each_string( "proficiencies", "bionic proficiencies",
+        [&handle]( const std::string & value ) {
+            handle.proficiency( value );
+        } );
+        each_string( "passive_pseudo_items", "bionic passive pseudo-items",
+        [&handle]( const std::string & value ) {
+            handle.passive_item( value );
+        } );
+        each_string( "toggled_pseudo_items", "bionic toggled pseudo-items",
+        [&handle]( const std::string & value ) {
+            handle.toggled_item( value );
+        } );
+        each_string( "canceled_mutations", "bionic canceled mutations",
+        [&handle]( const std::string & value ) {
+            handle.cancel_mutation( value );
+        } );
+        each_string( "included_bionics", "bionic included bionics",
+        [&handle]( const std::string & value ) {
+            handle.include_bionic( value );
+        } );
+        each_string( "auto_deactivated_bionics", "bionic auto-deactivated bionics",
+        [&handle]( const std::string & value ) {
+            handle.auto_deactivate( value );
+        } );
+        each_string( "flags", "bionic flags", [&handle]( const std::string & value ) {
+            handle.flag( value, "always" );
+        } );
+        each_string( "active_flags", "bionic active flags",
+        [&handle]( const std::string & value ) {
+            handle.flag( value, "active" );
+        } );
+        each_string( "inactive_flags", "bionic inactive flags",
+        [&handle]( const std::string & value ) {
+            handle.flag( value, "inactive" );
+        } );
+        each_array_entry( "environment_protection", "bionic environmental protection",
+        [&handle]( const sol::object & value ) {
+            if( !value.is<sol::table>() ) {
+                throw std::runtime_error(
+                    "bionic environmental protection must contain tables" );
+            }
+            const sol::table item = value.as<sol::table>();
+            handle.environment_protection(
+                item.get_or( "bodypart", std::string() ),
+                item.get_or<std::int64_t>( "amount", 0 ) );
+        } );
+        each_array_entry( "protection", "bionic protection",
+        [&handle]( const sol::object & value ) {
+            if( !value.is<sol::table>() ) {
+                throw std::runtime_error( "bionic protection must contain tables" );
+            }
+            const sol::table item = value.as<sol::table>();
+            handle.armor(
+                item.get_or( "bodypart", std::string() ),
+                item.get_or( "damage_type", item.get_or( "type", std::string() ) ),
+                item.get_or( "amount", 0.0 ) );
+        } );
+        each_array_entry( "occupied_bodyparts", "bionic occupied body parts",
+        [&handle]( const sol::object & value ) {
+            if( !value.is<sol::table>() ) {
+                throw std::runtime_error( "bionic occupied body parts must contain tables" );
+            }
+            const sol::table item = value.as<sol::table>();
+            handle.occupies( item.get_or( "bodypart", std::string() ),
+                             item.get_or<std::int64_t>( "slots", 0 ) );
+        } );
+        each_array_entry( "encumbrance", "bionic encumbrance",
+        [&handle]( const sol::object & value ) {
+            if( !value.is<sol::table>() ) {
+                throw std::runtime_error( "bionic encumbrance must contain tables" );
+            }
+            const sol::table item = value.as<sol::table>();
+            handle.encumbers( item.get_or( "bodypart", std::string() ),
+
+                              item.get_or<std::int64_t>( "amount", 0 ) );
+        } );
+        each_string( "installable_weapon_flags", "bionic installable weapon flags",
+        [&handle]( const std::string & value ) {
+            handle.installable_weapon_flag( value );
+        } );
+        each_string( "replaced_bodyparts", "bionic replaced body parts",
+        [&handle]( const std::string & value ) {
+            handle.replace_bodypart( value );
+        } );
+        each_string( "mutation_conflicts", "bionic mutation conflicts",
+        [&handle]( const std::string & value ) {
+            handle.conflict_mutation( value );
+        } );
+        each_string( "give_mutation_on_removal", "bionic removal mutations",
+        [&handle]( const std::string & value ) {
+            handle.give_mutation_when_removed( value );
+        } );
+        each_array_entry( "learned_spells", "bionic learned spells",
+        [&handle]( const sol::object & value ) {
+            if( !value.is<sol::table>() ) {
+                throw std::runtime_error( "bionic learned spells must contain tables" );
+            }
+            const sol::table item = value.as<sol::table>();
+            handle.learn_spell( item.get_or( "spell", std::string() ),
+                                item.get_or<std::int64_t>( "level", 0 ) );
+        } );
+        each_string( "available_upgrades", "bionic available upgrades",
+        [&handle]( const std::string & value ) {
+            handle.available_upgrade( value );
+        } );
+        return handle;
+    } );
+}
+
+void character_content_transaction::impl::install_spell( sol::table &content )
+{
+    content.set_function( "Spell", [this]( const sol::table & options ) {
+        if( this->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<spell_definition_data>();
+        definition->id = options.get_or( "id", std::string() );
+        definition->name = read_singular_text(
+                               options.get<sol::object>( "name" ), {}, "spell name" );
+        definition->description = read_singular_text(
+                                      options.get<sol::object>( "description" ), {}, "spell description" );
+        definition->message = read_singular_text(
+                                  options.get<sol::object>( "message" ), definition->message.raw,
+                                  "spell casting message" );
+        definition->skill = options.get_or( "skill", definition->skill );
+        definition->magic_type = options.get_or( "magic_type", std::string() );
+        definition->components = options.get_or( "components", std::string() );
+        definition->sound_description = read_singular_text(
+                                            options.get<sol::object>( "sound_description" ),
+                                            definition->sound_description.raw, "spell sound description" );
+        definition->sound_type = options.get_or( "sound_type", definition->sound_type );
+        definition->sound_ambient = options.get_or( "sound_ambient", false );
+        definition->sound_id = options.get_or( "sound_id", std::string() );
+        definition->sound_variant = options.get_or(
+                                        "sound_variant", definition->sound_variant );
+        definition->effect = options.get_or( "effect", definition->effect );
+        definition->effect_handler = options.get_or( "effect_handler", std::string() );
+        definition->shape = options.get_or( "shape", definition->shape );
+        definition->effect_data = options.get_or(
+                                      "effect_data", options.get_or( "effect_str", std::string() ) );
+        definition->explosion_light = options.get_or( "explosion_light", std::string() );
+        definition->field = options.get_or(
+                                "field", options.get_or( "field_id", std::string() ) );
+        definition->spell_class = options.get_or( "spell_class", definition->spell_class );
+        definition->energy_source = options.get_or(
+                                        "energy_source", definition->energy_source );
+        definition->energy_vitamin = options.get_or( "energy_vitamin", std::string() );
+        definition->energy_color = options.get_or(
+                                       "energy_color", definition->energy_color );
+        if( const sol::optional<sol::table> energy =
+                options.get<sol::optional<sol::table>>( "energy" ) ) {
+            definition->energy_source = energy->get_or(
+                                            "source", energy->get_or( "type", definition->energy_source ) );
+            definition->energy_vitamin = energy->get_or(
+                                             "vitamin", definition->energy_vitamin );
+            definition->energy_color = energy->get_or(
+                                           "color", definition->energy_color );
+        }
+        definition->damage_type = options.get_or( "damage_type", std::string() );
+        definition->get_level_formula = options.get_or(
+                                            "get_level_formula", options.get_or(
+                                                "get_level_formula_id", std::string() ) );
+        definition->exp_for_level_formula = options.get_or(
+                                                "exp_for_level_formula", options.get_or(
+                                                        "exp_for_level_formula_id", std::string() ) );
+        if( const sol::optional<std::int64_t> maximum =
+                options.get<sol::optional<std::int64_t>>( "max_book_level" ) ) {
+            definition->max_book_level = *maximum;
+        }
+        definition->caster_condition_handler = options.get_or(
+                "caster_condition", options.get_or( "caster_condition_handler", std::string() ) );
+        definition->caster_condition_fail_message = read_singular_text(
+                    options.get<sol::object>( "caster_condition_fail_message" ), {},
+                    "spell caster failure message" );
+        definition->target_condition_handler = options.get_or(
+                "target_condition", options.get_or( "target_condition_handler", std::string() ) );
+        definition->target_condition_fail_message = read_singular_text(
+                    options.get<sol::object>( "target_condition_fail_message" ), {},
+                    "spell target failure message" );
+        definition->teachable = options.get_or( "teachable", true );
+        if( const sol::optional<sol::table> channel =
+                options.get<sol::optional<sol::table>>( "channel" ) ) {
+            const std::int64_t max_channel_turns = channel->get_or<std::int64_t>(
+                    "max_channel_turns", 0 );
+            definition->channel_turns = channel->get<sol::optional<std::int64_t>>(
+                                            "turns" ).value_or( max_channel_turns );
+            definition->channel_spell = channel->get_or( "spell", channel->get_or(
+                                            "channel_spell", std::string() ) );
+            definition->channel_end_spell = channel->get_or(
+                                                "end_spell", channel->get_or(
+                                                    "channel_end_spell", std::string() ) );
+            definition->channel_interrupt_spell = channel->get_or(
+                    "interrupt_spell", channel->get_or(
+                        "channel_interrupt_spell", std::string() ) );
+            definition->channel_uses_energy = channel->get_or(
+                                                  "uses_energy", channel->get_or(
+                                                          "channel_uses_energy", true ) );
+        }
+        const auto has_option = [&options]( const std::string & name ) {
+            const sol::object value = options.raw_get<sol::object>( name );
+            return value.valid() && value.get_type() != sol::type::nil;
+        };
+        const bool has_final_energy = has_option( "final_energy_cost" );
+        const bool has_final_casting = has_option( "final_casting_time" );
+        for( auto &[name, value] : definition->stats ) {
+            const sol::object supplied = options.raw_get<sol::object>( name );
+            if( !supplied.valid() || supplied.get_type() == sol::type::nil ) {
+                continue;
+            }
+            if( supplied.is<double>() ) {
+                value = supplied.as<double>();
+                continue;
+            }
+            if( supplied.is<sol::table>() ) {
+                const sol::table range = supplied.as<sol::table>();
+                value = range.get_or( "minimum", range.get_or( "min", value ) );
+                definition->stat_maximums[name] = range.get_or(
+                                                      "maximum", range.get_or( "max", value ) );
+                continue;
+            }
+            throw std::runtime_error( "spell stat '" + name +
+                                      "' must be a number or range table" );
+        }
+        if( !has_final_energy ) {
+            definition->stats["final_energy_cost"] = definition->stats["base_energy_cost"];
+        }
+        if( !has_final_casting ) {
+            definition->stats["final_casting_time"] = definition->stats["base_casting_time"];
+        }
+        spell_definition_handle handle{ definition, this->token };
+        if( !definition->effect_handler.empty() ) {
+            handle.lua_effect( definition->effect_handler );
+        }
+
+        const auto each_array_entry = [&options]( const char *key, const char *label,
+        const auto & visitor ) {
+            const sol::optional<sol::table> values =
+                options.get<sol::optional<sol::table>>( key );
+            if( !values ) {
+                return;
+            }
+            const std::size_t count = require_dense_array( *values, label, 0, 4096 );
+            for( std::size_t index = 1; index <= count; ++index ) {
+                visitor( values->raw_get<sol::object>( index ) );
+            }
+        };
+        const auto each_string = [&each_array_entry]( const char *key, const char *label,
+        const auto & visitor ) {
+            each_array_entry( key, label, [label, &visitor]( const sol::object & value ) {
+                if( !value.is<std::string>() ) {
+                    throw std::runtime_error( std::string( label ) + " must contain strings" );
+                }
+                visitor( value.as<std::string>() );
+            } );
+        };
+        each_string( "valid_targets", "spell valid targets",
+        [&handle]( const std::string & value ) {
+            handle.target( value );
+        } );
+        each_string( "flags", "spell flags", [&handle]( const std::string & value ) {
+            handle.flag( value );
+        } );
+        each_string( "targeted_monsters", "spell targeted monsters",
+        [&handle]( const std::string & value ) {
+            handle.target_monster( value );
+
+        } );
+        each_string( "targeted_species", "spell targeted species",
+        [&handle]( const std::string & value ) {
+            handle.target_species( value );
+        } );
+        each_string( "ignored_species", "spell ignored species",
+        [&handle]( const std::string & value ) {
+            handle.ignore_species( value );
+        } );
+        each_string( "affected_bodyparts", "spell affected body parts",
+        [&handle]( const std::string & value ) {
+            handle.bodypart( value );
+        } );
+        each_array_entry( "additional_spells", "spell additional spells",
+        [&handle]( const sol::object & value ) {
+            if( !value.is<sol::table>() ) {
+                throw std::runtime_error( "spell additional spells must contain tables" );
+            }
+            handle.extra_spell( value.as<sol::table>() );
+        } );
+        each_array_entry( "learned_spells", "spell learned spells",
+        [&handle]( const sol::object & value ) {
+            if( !value.is<sol::table>() ) {
+                throw std::runtime_error( "spell learned spells must contain tables" );
+            }
+            const sol::table item = value.as<sol::table>();
+            handle.learn_spell( item.get_or( "spell", std::string() ),
+                                item.get_or<std::int64_t>( "level", 0 ) );
+        } );
+        if( const sol::optional<sol::table> handlers =
+                options.get<sol::optional<sol::table>>( "dynamic_stats" ) ) {
+            std::size_t count = 0;
+            for( const auto &entry : *handlers ) {
+                if( ++count > definition->stats.size() ||
+                    !entry.first.is<std::string>() || !entry.second.is<std::string>() ) {
+                    throw std::runtime_error(
+                        "spell dynamic_stats must map known stat names to handler ids" );
+                }
+                handle.dynamic_stat( entry.first.as<std::string>(),
+                                     entry.second.as<std::string>() );
+            }
+        }
+        return handle;
+    } );
+}
+
+void character_content_transaction::impl::install_mission( sol::table &content )
+{
+    content.set_function( "Mission", [this]( const sol::table & options ) {
+        if( this->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<mission_definition_data>();
+        definition->id = options.get_or( "id", std::string() );
+        definition->name = read_singular_text(
+                               options.get<sol::object>( "name" ), {}, "mission name" );
+        definition->description = read_singular_text(
+                                      options.get<sol::object>( "description" ), {}, "mission description" );
+        definition->goal = options.get_or( "goal", definition->goal );
+        definition->difficulty = options.get_or<std::int64_t>( "difficulty", 0 );
+        definition->value = options.get_or<std::int64_t>( "value", 0 );
+        definition->urgent = options.get_or( "urgent", false );
+        definition->has_generic_rewards = options.get_or( "has_generic_rewards", true );
+        definition->item = options.get_or( "item", std::string() );
+        definition->item_group = options.get_or( "item_group", std::string() );
+        definition->required_container = options.get_or(
+                                             "required_container", std::string() );
+        definition->empty_container = options.get_or( "empty_container", std::string() );
+        const std::int64_t count = options.get_or<std::int64_t>( "count", 1 );
+        definition->item_count = options.get<sol::optional<std::int64_t>>(
+                                     "item_count" ).value_or( count );
+        definition->remove_container = options.get_or( "remove_container", false );
+        definition->invisible_on_complete = options.get_or(
+                                                "invisible_on_complete", false );
+        definition->recruit_class = options.get_or( "recruit_class", std::string() );
+        definition->monster_type = options.get_or( "monster_type", std::string() );
+        definition->monster_species = options.get_or( "monster_species", std::string() );
+        definition->monster_kill_goal = options.get_or<std::int64_t>(
+                                            "monster_kill_goal", -1 );
+        definition->destination = options.get_or( "destination", std::string() );
+        definition->followup = options.get_or( "followup", std::string() );
+        definition->place = options.get_or( "place", definition->place );
+        definition->place_handler = options.get_or( "place_handler", std::string() );
+        definition->start_handler = options.get_or( "start_handler", std::string() );
+        definition->end_handler = options.get_or( "end_handler", std::string() );
+        definition->fail_handler = options.get_or( "fail_handler", std::string() );
+        definition->goal_condition_handler = options.get_or(
+                "goal_condition", options.get_or( "goal_condition_handler", std::string() ) );
+        definition->deadline_handler = options.get_or( "deadline_handler", std::string() );
+        if( const sol::optional<std::int64_t> deadline =
+                options.get<sol::optional<std::int64_t>>( "deadline_turns" ) ) {
+            definition->deadline_min_turns = *deadline;
+        }
+        if( const sol::optional<sol::table> deadline =
+                options.get<sol::optional<sol::table>>( "deadline" ) ) {
+            const std::int64_t min_turns = deadline->get_or<std::int64_t>(
+                                               "min_turns", 0 );
+            definition->deadline_min_turns = deadline->get<sol::optional<std::int64_t>>(
+                                                 "minimum_turns" ).value_or( min_turns );
+            if( const sol::optional<std::int64_t> maximum =
+                    deadline->get<sol::optional<std::int64_t>>( "maximum_turns" ) ) {
+                definition->deadline_max_turns = *maximum;
+            } else if( const sol::optional<std::int64_t> maximum =
+                           deadline->get<sol::optional<std::int64_t>>( "max_turns" ) ) {
+                definition->deadline_max_turns = *maximum;
+            }
+            definition->deadline_handler = deadline->get_or(
+                                               "handler", definition->deadline_handler );
+        }
+        if( const sol::optional<sol::table> phases =
+                options.get<sol::optional<sol::table>>( "phases" ) ) {
+            definition->start_handler = phases->get_or( "start", definition->start_handler );
+            definition->end_handler = phases->get_or( "success", phases->get_or(
+                                          "end", definition->end_handler ) );
+            definition->fail_handler = phases->get_or( "failure", phases->get_or(
+                                           "fail", definition->fail_handler ) );
+        }
+        mission_definition_handle handle{ definition, this->token };
+        const auto each_array_entry = [&options]( const char *key, const char *label,
+        const auto & visitor ) {
+            const sol::optional<sol::table> values =
+                options.get<sol::optional<sol::table>>( key );
+            if( !values ) {
+                return;
+            }
+            const std::size_t count = require_dense_array( *values, label, 0, 256 );
+            for( std::size_t index = 1; index <= count; ++index ) {
+                visitor( values->raw_get<sol::object>( index ) );
+            }
+        };
+        each_array_entry( "origins", "mission origins", [&handle]( const sol::object & value ) {
+            if( !value.is<std::string>() ) {
+                throw std::runtime_error( "mission origins must contain strings" );
+            }
+            handle.origin( value.as<std::string>() );
+        } );
+        each_array_entry( "likely_rewards", "mission likely rewards",
+        [&handle]( const sol::object & value ) {
+            if( !value.is<sol::table>() ) {
+                throw std::runtime_error( "mission likely rewards must contain tables" );
+            }
+            const sol::table reward = value.as<sol::table>();
+            handle.reward( reward.get_or( "value", 0.0 ),
+                           reward.get_or( "description", reward.get_or(
+                                              "text", std::string() ) ) );
+        } );
+        if( const sol::optional<sol::table> dialogue =
+                options.get<sol::optional<sol::table>>( "dialogue" ) ) {
+            std::size_t count = 0;
+            for( const auto &entry : *dialogue ) {
+                if( ++count > 64 || !entry.first.is<std::string>() ||
+                    !entry.second.is<std::string>() ) {
+                    throw std::runtime_error(
+                        "mission dialogue must map phase names to strings" );
+                }
+                handle.dialogue( entry.first.as<std::string>(),
+                                 entry.second.as<std::string>() );
+            }
+        }
+        if( !definition->place_handler.empty() ) {
+            handle.place_when( definition->place_handler );
+        }
+        if( !definition->goal_condition_handler.empty() ) {
+            handle.complete_when( definition->goal_condition_handler );
+        }
+        return handle;
+    } );
+}
+
+void character_content_transaction::impl::install_profession_item_substitution(
+    sol::table &content )
+{
+    content.set_function( "ProfessionItemSubstitution", [this](
+    const sol::table & options ) {
+        if( this->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<profession_item_substitution_definition_data>();
+        definition->id = options.get_or( "item", options.get_or( "id", std::string() ) );
+        return profession_item_substitution_definition_handle{
+            std::move( definition ), this->token
+        };
+    } );
+}
+
+void character_content_transaction::impl::install_profession_item_bonus( sol::table &content )
+{
+    content.set_function( "ProfessionItemBonus", [this]( const sol::table & options ) {
+        if( this->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<profession_item_bonus_definition_data>();
+        definition->id = options.get_or( "group", options.get_or( "id", std::string() ) );
+        return profession_item_bonus_definition_handle{
+            std::move( definition ), this->token
+        };
+    } );
+}
+
+void character_content_transaction::impl::install_technique( sol::table &content )
+{
+    content.set_function( "Technique", [this]( const sol::table & options ) {
+        if( this->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<technique_definition_data>();
+        definition->id = options.get_or( "id", std::string() );
+        definition->name = detail::read_singular_text(
+                               options.get<sol::object>( "name" ), "", "technique name" );
+        definition->description = detail::read_singular_text(
+                                      options.get<sol::object>( "description" ), "", "technique description" );
+        definition->avatar_message = detail::read_singular_text(
+                                         options.get<sol::object>( "avatar_message" ), "", "technique avatar message" );
+        definition->npc_message = detail::read_singular_text(
+                                      options.get<sol::object>( "npc_message" ), "", "technique NPC message" );
+        definition->crit_tec = options.get_or( "crit_tec", false );
+        definition->crit_ok = options.get_or( "crit_ok", false );
+        definition->wall_adjacent = options.get_or( "wall_adjacent", false );
+        definition->reach_tec = options.get_or( "reach_tec", false );
+        definition->reach_ok = options.get_or( "reach_ok", false );
+        definition->needs_ammo = options.get_or( "needs_ammo", false );
+        definition->defensive = options.get_or( "defensive", false );
+        definition->disarms = options.get_or( "disarms", false );
+        definition->take_weapon = options.get_or( "take_weapon", false );
+        definition->side_switch = options.get_or( "side_switch", false );
+        definition->dummy = options.get_or( "dummy", false );
+        definition->dodge_counter = options.get_or( "dodge_counter", false );
+        definition->block_counter = options.get_or( "block_counter", false );
+        definition->miss_recovery = options.get_or( "miss_recovery", false );
+        definition->grab_break = options.get_or( "grab_break", false );
+        definition->weighting = options.get_or<std::int64_t>( "weighting", 1 );
+        definition->repeat_min = options.get_or<std::int64_t>( "repeat_min", 1 );
+        definition->repeat_max = options.get_or<std::int64_t>( "repeat_max", 1 );
+        definition->down_dur = options.get_or<std::int64_t>( "down_dur", 0 );
+        definition->stun_dur = options.get_or<std::int64_t>( "stun_dur", 0 );
+        definition->knockback_dist = options.get_or<std::int64_t>( "knockback_dist", 0 );
+        definition->knockback_spread = options.get_or( "knockback_spread", 0.0 );
+        definition->knockback_follow = options.get_or( "knockback_follow", false );
+        definition->aoe = options.get_or( "aoe", std::string() );
+        definition->unarmed_allowed = options.get_or( "unarmed_allowed", false );
+        definition->melee_allowed = options.get_or( "melee_allowed", false );
+        definition->strictly_unarmed = options.get_or( "strictly_unarmed", false );
+        definition->apply_handler = options.get_or(
+                                        "on_apply",
+                                        options.get_or( "apply_handler", std::string() ) );
+        return technique_definition_handle{
+            std::move( definition ), this->token
+        };
+    } );
+}
+
+void character_content_transaction::impl::install_martial_art( sol::table &content )
+{
+    content.set_function( "MartialArt", [this]( const sol::table & options ) {
+        if( this->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<martial_art_definition_data>();
+        definition->id = options.get_or( "id", std::string() );
+        definition->name = detail::read_singular_text(
+                               options.get<sol::object>( "name" ), "", "martial-art name" );
+        definition->description = detail::read_singular_text(
+                                      options.get<sol::object>( "description" ), "", "martial-art description" );
+        definition->initiate_avatar = detail::read_singular_text(
+                                          options.get<sol::object>( "initiate_avatar" ), "", "martial-art avatar message" );
+        definition->initiate_npc = detail::read_singular_text(
+                                       options.get<sol::object>( "initiate_npc" ), "", "martial-art NPC message" );
+        definition->priority = options.get_or<std::int64_t>( "priority", 0 );
+        definition->primary_skill = options.get_or( "primary_skill", std::string() );
+        definition->learn_difficulty = options.get_or<std::int64_t>( "learn_difficulty", 0 );
+        definition->teachable = options.get_or( "teachable", true );
+        definition->arm_block = options.get_or<std::int64_t>( "arm_block", 0 );
+        definition->leg_block = options.get_or<std::int64_t>( "leg_block", 0 );
+        definition->arm_block_with_bio_armor_arms =
+            options.get_or( "arm_block_with_bio_armor_arms", false );
+        definition->leg_block_with_bio_armor_legs =
+            options.get_or( "leg_block_with_bio_armor_legs", false );
+        definition->strictly_unarmed = options.get_or( "strictly_unarmed", false );
+        definition->strictly_melee = options.get_or( "strictly_melee", false );
+        definition->allow_all_weapons = options.get_or( "allow_all_weapons", false );
+        definition->force_unarmed = options.get_or( "force_unarmed", false );
+        definition->prevent_weapon_blocking =
+            options.get_or( "prevent_weapon_blocking", false );
+        for( const char *phase : {
+                 "static", "move", "pause", "hit", "attack", "dodge",
+                 "block", "gethit", "miss", "crit", "kill"
+             } ) {
+            const std::string handler = options.get_or(
+                                            std::string( "on_" ) + phase, std::string() );
+            if( !handler.empty() ) {
+                definition->handlers.emplace( phase, handler );
+            }
+        }
+        return martial_art_definition_handle{
+            std::move( definition ), this->token
+
+        };
+    } );
+}
+
+void character_content_transaction::impl::install_magic_type( sol::table &content )
+{
+    content.set_function( "MagicType", [this]( const sol::table & options ) {
+        if( this->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<magic_type_definition_data>();
+        definition->id = options.get_or( "id", std::string() );
+        definition->energy_source = options.get_or( "energy", std::string( "none" ) );
+        definition->vitamin = options.get_or( "vitamin", std::string() );
+        definition->energy_color = options.get_or( "energy_color", std::string( "cyan" ) );
+        if( const sol::optional<std::string> message =
+                options.get<sol::optional<std::string>>( "cannot_cast_message" ) ) {
+            definition->cannot_cast_message = *message;
+
+        }
+        if( const sol::optional<std::int64_t> maximum =
+                options.get<sol::optional<std::int64_t>>( "max_book_level" ) ) {
+            definition->max_book_level = *maximum;
+        }
+        definition->failure_cost_fraction = options.get_or(
+                                                "failure_cost_fraction", 0.0 );
+        definition->failure_experience_fraction = options.get_or(
+                    "failure_experience_fraction", 0.2 );
+        return magic_type_definition_handle{
+            std::move( definition ), this->token
+        };
+    } );
+}
+
+void character_content_transaction::impl::install_movement_mode( sol::table &content )
+{
+    content.set_function( "MovementMode", [this]( const sol::table & options ) {
+        if( this->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<movement_mode_definition_data>();
+        definition->id = options.get_or( "id", std::string() );
+        definition->name = detail::read_singular_text(
+                               options.get<sol::object>( "name" ), definition->id, "movement-mode name" );
+        definition->kind = options.get_or( "kind", std::string( "walking" ) );
+        definition->panel_color = options.get_or( "panel_color", std::string( "white" ) );
+        definition->symbol_color = options.get_or( "symbol_color", std::string( "white" ) );
+        definition->exertion = options.get_or( "exertion", 1.0 );
+        definition->riding_exertion = options.get_or( "riding_exertion", 0.0 );
+        definition->stamina_multiplier = options.get_or(
+                                             "stamina_multiplier", 1.0 );
+        definition->sound_multiplier = options.get_or(
+                                           "sound_multiplier", 1.0 );
+        definition->speed_multiplier = options.get_or(
+                                           "speed_multiplier", 1.0 );
+        definition->mech_power_kilojoules = options.get_or<std::int64_t>(
+                                                "mech_power_kilojoules", 2 );
+        definition->swim_speed_modifier = options.get_or<std::int64_t>(
+                                              "swim_speed_modifier", 0 );
+        definition->stop_hauling = options.get_or( "stop_hauling", false );
+        const auto read_symbol = [&options]( const char *name ) {
+            const std::string symbol = options.get_or( name, std::string() );
+            const utf8_wrapper wrapped( symbol );
+            if( wrapped.size() != 1 ) {
+                throw std::runtime_error( std::string( "movement-mode " ) + name +
+                                          " must be one Unicode codepoint" );
+            }
+            return wrapped.at( 0 );
+        };
+        definition->character_symbol = read_symbol( "character_symbol" );
+        definition->panel_symbol = read_symbol( "panel_symbol" );
+        return movement_mode_definition_handle{
+            std::move( definition ), this->token
+        };
+    } );
 }
 
 void character_content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
@@ -2121,1061 +3329,19 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
         "id", sol::property( &movement_mode_definition_handle::id ),
         "messages", &movement_mode_definition_handle::messages );
 
-    content.set_function( "Profession", [this]( const sol::table & options ) {
-        if( pimpl_->token->lifecycle != handle_lifecycle::building ) {
-            throw std::runtime_error( "content transaction is no longer building" );
-        }
-        auto definition = std::make_shared<profession_definition_data>();
-        definition->id = options.get_or( "id", std::string() );
-        const std::string common_name = options.get_or( "name", definition->id );
-        definition->name_male = options.get_or( "name_male", common_name );
-        definition->name_female = options.get_or( "name_female", common_name );
-        const std::string common_description =
-            options.get_or( "description", std::string() );
-        definition->description_male = options.get_or(
-                                           "description_male", common_description );
-        definition->description_female = options.get_or(
-                                             "description_female", common_description );
-        definition->points = options.get_or<std::int64_t>( "points", 0 );
-        if( const sol::optional<std::int64_t> starting_cash =
-                options.get<sol::optional<std::int64_t>>( "starting_cash" ) ) {
-            definition->starting_cash = *starting_cash;
-        }
-        definition->npc_background = options.get_or(
-                                         "npc_background", definition->npc_background );
-        definition->chargen_allow_npc = options.get_or( "chargen_allow_npc", true );
-        definition->age_lower = options.get_or<std::int64_t>(
-                                    "age_lower", profession::DEFAULT_PROF_AGE_LOWER );
-        definition->age_upper = options.get_or<std::int64_t>(
-                                    "age_upper", profession::DEFAULT_PROF_AGE_UPPER );
-        definition->starting_vehicle = options.get_or( "vehicle", std::string() );
-        definition->items_both = options.get_or( "items_both", definition->items_both );
-        definition->items_male = options.get_or( "items_male", definition->items_male );
-        definition->items_female = options.get_or( "items_female", definition->items_female );
-        definition->no_bonus = options.get_or( "no_bonus", std::string() );
-        definition->hard_requirement = options.get_or( "hard_requirement", false );
-        definition->hobbies_whitelist = options.get_or( "whitelist_hobbies", true );
-        definition->martial_arts_choice_amount = options.get_or<std::int64_t>(
-                    "starting_styles_choices_amount", 1 );
-        definition->subtype = options.get_or( "subtype", std::string() );
-        definition->start_handler = options.get_or(
-                                        "on_start", options.get_or(
-                                            "start_handler", std::string() ) );
-
-        profession_definition_handle handle{ definition, pimpl_->token };
-        const auto each_array_entry = [&options]( const char *key, const char *label,
-        const auto & visitor ) {
-            const sol::optional<sol::table> values =
-                options.get<sol::optional<sol::table>>( key );
-            if( !values ) {
-                return;
-            }
-            const std::size_t count = require_dense_array( *values, label, 0, 4096 );
-            for( std::size_t index = 1; index <= count; ++index ) {
-                visitor( values->raw_get<sol::object>( index ) );
-            }
-        };
-        const auto each_string = [&each_array_entry]( const char *key, const char *label,
-        const auto & visitor ) {
-            each_array_entry( key, label, [label, &visitor]( const sol::object & value ) {
-                if( !value.is<std::string>() ) {
-                    throw std::runtime_error( std::string( label ) +
-                                              " must contain strings" );
-                }
-                visitor( value.as<std::string>() );
-            } );
-        };
-
-        each_string( "requirements", "profession requirements",
-        [&handle]( const std::string & value ) {
-            handle.requirement( value );
-        } );
-        each_array_entry( "skills", "profession skills",
-        [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
-                throw std::runtime_error( "profession skills must contain tables" );
-            }
-            const sol::table item = value.as<sol::table>();
-            handle.skill( item.get_or( "id", item.get_or( "name", std::string() ) ),
-                          item.get_or<std::int64_t>( "level", 0 ) );
-        } );
-        each_array_entry( "addictions", "profession addictions",
-        [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
-                throw std::runtime_error( "profession addictions must contain tables" );
-            }
-            const sol::table item = value.as<sol::table>();
-            handle.addiction( item.get_or( "type", std::string() ),
-                              item.get_or<std::int64_t>( "intensity", 1 ) );
-        } );
-        each_string( "cbms", "profession CBMs", [&handle]( const std::string & value ) {
-            handle.cbm( value );
-        } );
-        each_string( "proficiencies", "profession proficiencies",
-        [&handle]( const std::string & value ) {
-            handle.proficiency( value );
-        } );
-        each_string( "recipes", "profession recipes", [&handle]( const std::string & value ) {
-            handle.recipe( value );
-        } );
-        each_array_entry( "traits", "profession traits",
-        [&handle]( const sol::object & value ) {
-            if( value.is<std::string>() ) {
-                handle.trait( value.as<std::string>(), std::string() );
-                return;
-            }
-            if( !value.is<sol::table>() ) {
-                throw std::runtime_error( "profession traits must contain strings or tables" );
-            }
-            const sol::table item = value.as<sol::table>();
-            handle.trait( item.get_or( "id", item.get_or( "trait", std::string() ) ),
-                          item.get_or( "variant", std::string() ) );
-        } );
-        each_string( "forbidden_traits", "profession forbidden traits",
-        [&handle]( const std::string & value ) {
-            handle.forbid_trait( value );
-        } );
-        each_string( "flags", "profession flags", [&handle]( const std::string & value ) {
-            handle.flag( value );
-        } );
-        each_string( "hobbies", "profession hobbies", [&handle]( const std::string & value ) {
-            handle.hobby( value );
-        } );
-        each_string( "starting_styles", "profession starting styles",
-        [&handle]( const std::string & value ) {
-            handle.martial_art( value );
-        } );
-        each_string( "starting_styles_choices", "profession starting style choices",
-        [&handle]( const std::string & value ) {
-            handle.martial_art_choice( value );
-        } );
-        each_array_entry( "pets", "profession pets", [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
-                throw std::runtime_error( "profession pets must contain tables" );
-            }
-            const sol::table item = value.as<sol::table>();
-            handle.pet( item.get_or( "id", item.get_or( "name", std::string() ) ),
-                        item.get_or<std::int64_t>( "amount", 1 ) );
-        } );
-        each_array_entry( "spells", "profession spells", [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
-                throw std::runtime_error( "profession spells must contain tables" );
-            }
-            const sol::table item = value.as<sol::table>();
-            handle.spell( item.get_or( "id", item.get_or( "spell", std::string() ) ),
-                          item.get_or<std::int64_t>( "level", 0 ) );
-        } );
-        each_string( "missions", "profession missions", [&handle]( const std::string & value ) {
-            handle.mission( value );
-        } );
-        return handle;
-    } );
-    content.set_function( "ProfessionGroup", [this]( const sol::table & options ) {
-        if( pimpl_->token->lifecycle != handle_lifecycle::building ) {
-            throw std::runtime_error( "content transaction is no longer building" );
-        }
-        auto definition = std::make_shared<profession_group_definition_data>();
-        definition->id = options.get_or( "id", std::string() );
-        return profession_group_definition_handle{
-            std::move( definition ), pimpl_->token
-        };
-    } );
-    content.set_function( "Widget", [this]( const sol::table & options ) {
-        if( pimpl_->token->lifecycle != handle_lifecycle::building ) {
-            throw std::runtime_error( "content transaction is no longer building" );
-        }
-        auto definition = std::make_shared<widget_definition_data>();
-        definition->id = options.get_or( "id", std::string() );
-        definition->width = options.get_or<std::int64_t>( "width", 0 );
-        definition->height = options.get_or<std::int64_t>( "height", 1 );
-        definition->symbols = options.get_or( "symbols", definition->symbols );
-        definition->fill = options.get_or( "fill", definition->fill );
-        definition->label = options.get_or( "label", std::string() );
-        definition->description = options.get_or( "description", std::string() );
-        definition->style = options.get_or( "style", definition->style );
-        definition->arrange = options.get_or( "arrange", definition->arrange );
-        definition->body_graph = options.get_or( "body_graph", definition->body_graph );
-        definition->direction = options.get_or( "direction", std::string() );
-        definition->text_align = options.get_or( "text_align", definition->text_align );
-        definition->label_align = options.get_or( "label_align", definition->label_align );
-        if( const sol::optional<bool> pad_labels =
-                options.get<sol::optional<bool>>( "pad_labels" ) ) {
-            definition->pad_labels = *pad_labels;
-
-        }
-        if( const sol::optional<std::string> separator =
-                options.get<sol::optional<std::string>>( "separator" ) ) {
-            definition->separator = *separator;
-        }
-        if( const sol::optional<std::int64_t> padding =
-                options.get<sol::optional<std::int64_t>>( "padding" ) ) {
-            definition->padding = *padding;
-        }
-        definition->variable = options.get_or( "var", std::string() );
-        definition->custom_handler = options.get_or(
-                                         "custom_handler", std::string() );
-        definition->text = options.get_or( "string", std::string() );
-        widget_definition_handle handle{ definition, pimpl_->token };
-
-        if( !options.get<sol::optional<sol::table>>( "bodyparts" ) ) {
-            if( const sol::optional<std::string> bodypart =
-                    options.get<sol::optional<std::string>>( "bodypart" ) ) {
-                handle.bodypart( *bodypart );
-            }
-        }
-        const auto each_array_entry = [&options]( const char *key, const char *label,
-        const auto & visitor ) {
-            const sol::optional<sol::table> values =
-                options.get<sol::optional<sol::table>>( key );
-            if( !values ) {
-                return;
-            }
-            const std::size_t count = require_dense_array( *values, label, 0, 4096 );
-            for( std::size_t index = 1; index <= count; ++index ) {
-                visitor( values->raw_get<sol::object>( index ) );
-            }
-        };
-        const auto each_string = [&each_array_entry]( const char *key, const char *label,
-        const auto & visitor ) {
-            each_array_entry( key, label, [label, &visitor]( const sol::object & value ) {
-                if( !value.is<std::string>() ) {
-                    throw std::runtime_error( std::string( label ) + " must contain strings" );
-                }
-                visitor( value.as<std::string>() );
-            } );
-        };
-        each_string( "bodyparts", "widget bodyparts", [&handle]( const std::string & value ) {
-            handle.bodypart( value );
-        } );
-        each_string( "colors", "widget colors", [&handle]( const std::string & value ) {
-            handle.color( value );
-        } );
-        each_array_entry( "breaks", "widget breaks", [&handle]( const sol::object & value ) {
-            if( !value.is<lua_Integer>() ) {
-                throw std::runtime_error( "widget breaks must contain integers" );
-            }
-            handle.break_at( value.as<std::int64_t>() );
-        } );
-        each_string( "widgets", "widget children", [&handle]( const std::string & value ) {
-            handle.child( value );
-        } );
-        each_string( "flags", "widget flags", [&handle]( const std::string & value ) {
-            handle.flag( value );
-        } );
-        each_array_entry( "clauses", "widget clauses", [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
-                throw std::runtime_error( "widget clauses must contain tables" );
-            }
-            handle.clause( value.as<sol::table>() );
-        } );
-        if( const sol::optional<sol::table> default_clause =
-                options.get<sol::optional<sol::table>>( "default_clause" ) ) {
-            handle.default_clause( *default_clause );
-        }
-        if( !definition->custom_handler.empty() ) {
-            handle.custom_value( definition->custom_handler );
-        }
-        return handle;
-    } );
-    content.set_function( "Enchantment", [this]( const sol::table & options ) {
-        if( pimpl_->token->lifecycle != handle_lifecycle::building ) {
-            throw std::runtime_error( "content transaction is no longer building" );
-        }
-        auto definition = std::make_shared<enchantment_definition_data>();
-        definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", std::string() );
-        definition->description = options.get_or( "description", std::string() );
-        definition->has = options.get_or( "has", definition->has );
-        definition->condition = options.get_or( "condition", definition->condition );
-        definition->condition_handler = options.get_or(
-                                            "condition_handler", std::string() );
-        definition->emitter = options.get_or( "emitter", std::string() );
-        enchantment_definition_handle handle{ definition, pimpl_->token };
-        if( !definition->condition_handler.empty() ) {
-            handle.active_when( definition->condition_handler );
-        }
-        const auto each_array_entry = [&options]( const char *key, const char *label,
-        const auto & visitor ) {
-            const sol::optional<sol::table> values =
-                options.get<sol::optional<sol::table>>( key );
-            if( !values ) {
-                return;
-            }
-            const std::size_t count = require_dense_array( *values, label, 0, 4096 );
-            for( std::size_t index = 1; index <= count; ++index ) {
-                visitor( values->raw_get<sol::object>( index ) );
-            }
-        };
-        const auto modifier_array = [&each_array_entry, &handle](
-        const char *key, const char *label, const char *kind, const char *target_key ) {
-            each_array_entry( key, label, [&handle, kind, target_key, label](
-            const sol::object & value ) {
-                if( !value.is<sol::table>() ) {
-                    throw std::runtime_error( std::string( label ) + " must contain tables" );
-                }
-                const sol::table item = value.as<sol::table>();
-                handle.modifier( kind, item.get_or( target_key, std::string() ), item );
-            } );
-        };
-        modifier_array( "values", "enchantment values", "value", "value" );
-        modifier_array( "skills", "enchantment skills", "skill", "value" );
-        modifier_array( "custom", "enchantment custom values", "custom", "value" );
-        modifier_array( "encumbrance_modifier", "enchantment encumbrance modifiers",
-                        "encumbrance", "part" );
-        modifier_array( "max_hp_modifier", "enchantment maximum-HP modifiers",
-                        "max_hp", "part" );
-        modifier_array( "limb_score_modifier", "enchantment limb-score modifiers",
-                        "limb_score", "score" );
-        modifier_array( "melee_damage_bonus", "enchantment melee-damage modifiers",
-                        "melee_damage", "type" );
-        modifier_array( "incoming_damage_mod", "enchantment incoming-damage modifiers",
-                        "incoming_damage", "type" );
-        modifier_array( "incoming_damage_mod_post_absorbed",
-                        "enchantment post-armor damage modifiers",
-                        "post_armor_damage", "type" );
-        each_array_entry( "ench_effects", "enchantment effects",
-        [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
-                throw std::runtime_error( "enchantment effects must contain tables" );
-            }
-            const sol::table item = value.as<sol::table>();
-            handle.effect( item.get_or( "effect", std::string() ),
-                           item.get_or<std::int64_t>( "intensity", 1 ) );
-        } );
-        each_array_entry( "modified_bodyparts", "enchantment body-part changes",
-        [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
-                throw std::runtime_error( "enchantment body-part changes must contain tables" );
-            }
-            const sol::table item = value.as<sol::table>();
-            handle.bodypart_change( item.get_or( "gain", std::string() ),
-                                    item.get_or( "lose", std::string() ) );
-        } );
-        each_array_entry( "mutations", "enchantment mutations",
-        [&handle]( const sol::object & value ) {
-            if( !value.is<std::string>() ) {
-                throw std::runtime_error( "enchantment mutations must contain strings" );
-            }
-            handle.mutation( value.as<std::string>() );
-        } );
-        each_array_entry( "hit_you_effect", "enchantment hit-you effects",
-        [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
-                throw std::runtime_error( "enchantment hit-you effects must contain tables" );
-            }
-            handle.hit_you( value.as<sol::table>() );
-        } );
-        each_array_entry( "hit_me_effect", "enchantment hit-me effects",
-        [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
-                throw std::runtime_error( "enchantment hit-me effects must contain tables" );
-            }
-            handle.hit_me( value.as<sol::table>() );
-        } );
-        each_array_entry( "intermittent_effects", "enchantment intermittent effects",
-        [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
-                throw std::runtime_error( "enchantment intermittent effects must contain tables" );
-            }
-            const sol::table item = value.as<sol::table>();
-            const sol::optional<sol::table> spell =
-                item.get<sol::optional<sol::table>>( "spell" );
-            if( !spell ) {
-                throw std::runtime_error( "enchantment intermittent effect requires a spell table" );
-
-            }
-            handle.every( item.get_or<std::int64_t>( "frequency_turns", 0 ), *spell );
-        } );
-        each_array_entry( "special_vision", "enchantment special vision",
-        [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
-                throw std::runtime_error( "enchantment special vision must contain tables" );
-            }
-            handle.vision( value.as<sol::table>() );
-        } );
-        return handle;
-    } );
-    content.set_function( "Bionic", [this]( const sol::table & options ) {
-        if( pimpl_->token->lifecycle != handle_lifecycle::building ) {
-            throw std::runtime_error( "content transaction is no longer building" );
-        }
-        auto definition = std::make_shared<bionic_definition_data>();
-        definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", std::string() );
-        definition->description = options.get_or( "description", std::string() );
-        if( const sol::optional<std::string> reason =
-                options.get<sol::optional<std::string>>( "cant_remove_reason" ) ) {
-            definition->cant_remove_reason = *reason;
-        }
-        definition->activation_energy_millijoules = options.get_or<std::int64_t>(
-                    "activation_energy_millijoules", 0 );
-        definition->deactivation_energy_millijoules = options.get_or<std::int64_t>(
-                    "deactivation_energy_millijoules", 0 );
-        definition->over_time_energy_millijoules = options.get_or<std::int64_t>(
-                    "over_time_energy_millijoules", 0 );
-        definition->trigger_energy_millijoules = options.get_or<std::int64_t>(
-                    "trigger_energy_millijoules", 0 );
-        definition->capacity_energy_millijoules = options.get_or<std::int64_t>(
-                    "capacity_energy_millijoules", 0 );
-        definition->charge_time_turns = options.get_or<std::int64_t>( "charge_time_turns", 0 );
-        definition->power_gen_emission = options.get_or( "power_gen_emission", std::string() );
-        definition->fake_weapon = options.get_or( "fake_weapon", std::string() );
-        definition->upgraded_bionic = options.get_or( "upgraded_bionic", std::string() );
-        definition->required_bionic = options.get_or( "required_bionic", std::string() );
-        definition->installation_requirement = options.get_or(
-                "installation_requirement", std::string() );
-        definition->fuel_efficiency = options.get_or( "fuel_efficiency", 0.0 );
-        definition->passive_fuel_efficiency = options.get_or(
-                "passive_fuel_efficiency", 0.0 );
-        if( const sol::optional<double> penalty =
-                options.get<sol::optional<double>>( "coverage_power_gen_penalty" ) ) {
-            definition->coverage_power_gen_penalty = *penalty;
-        }
-        definition->social_lie = options.get_or<std::int64_t>( "social_lie", 0 );
-        definition->social_persuade = options.get_or<std::int64_t>( "social_persuade", 0 );
-        definition->social_intimidate = options.get_or<std::int64_t>( "social_intimidate", 0 );
-        if( const sol::optional<sol::table> social =
-                options.get<sol::optional<sol::table>>( "social_modifiers" ) ) {
-            definition->social_lie = social->get_or<std::int64_t>(
-                                         "lie", definition->social_lie );
-            definition->social_persuade = social->get_or<std::int64_t>(
-                                              "persuade", definition->social_persuade );
-            definition->social_intimidate = social->get_or<std::int64_t>(
-                                                "intimidate", definition->social_intimidate );
-        }
-        definition->dupes_allowed = options.get_or( "dupes_allowed", false );
-        definition->activated_on_install = options.get_or( "activated_on_install", false );
-        definition->included = options.get_or( "included", false );
-        definition->activate_remove_cbm = options.get_or( "activate_remove_cbm", false );
-        definition->is_remote_fueled = options.get_or( "is_remote_fueled", false );
-        definition->exothermic_power_gen = options.get_or( "exothermic_power_gen", false );
-        definition->activated_close_ui = options.get_or( "activated_close_ui", false );
-        definition->deactivated_close_ui = options.get_or( "deactivated_close_ui", false );
-        bionic_definition_handle handle{ definition, pimpl_->token };
-
-        const auto each_array_entry = [&options]( const char *key, const char *label,
-        const auto & visitor ) {
-            const sol::optional<sol::table> values =
-                options.get<sol::optional<sol::table>>( key );
-            if( !values ) {
-                return;
-            }
-            const std::size_t count = require_dense_array( *values, label, 0, 4096 );
-            for( std::size_t index = 1; index <= count; ++index ) {
-                visitor( values->raw_get<sol::object>( index ) );
-            }
-        };
-        const auto each_string = [&each_array_entry]( const char *key, const char *label,
-        const auto & visitor ) {
-            each_array_entry( key, label, [label, &visitor]( const sol::object & value ) {
-                if( !value.is<std::string>() ) {
-                    throw std::runtime_error( std::string( label ) + " must contain strings" );
-                }
-                visitor( value.as<std::string>() );
-            } );
-        };
-        if( const sol::optional<sol::table> spell =
-                options.get<sol::optional<sol::table>>( "activation_spell" ) ) {
-            handle.activation_spell( *spell );
-        }
-        each_string( "fuel_options", "bionic fuel options",
-        [&handle]( const std::string & value ) {
-            handle.fuel( value );
-        } );
-        each_string( "enchantments", "bionic enchantments",
-        [&handle]( const std::string & value ) {
-            handle.enchantment( value );
-        } );
-        each_string( "martial_arts", "bionic martial arts",
-        [&handle]( const std::string & value ) {
-            handle.martial_art( value );
-        } );
-        each_string( "proficiencies", "bionic proficiencies",
-        [&handle]( const std::string & value ) {
-            handle.proficiency( value );
-        } );
-        each_string( "passive_pseudo_items", "bionic passive pseudo-items",
-        [&handle]( const std::string & value ) {
-            handle.passive_item( value );
-        } );
-        each_string( "toggled_pseudo_items", "bionic toggled pseudo-items",
-        [&handle]( const std::string & value ) {
-            handle.toggled_item( value );
-        } );
-        each_string( "canceled_mutations", "bionic canceled mutations",
-        [&handle]( const std::string & value ) {
-            handle.cancel_mutation( value );
-        } );
-        each_string( "included_bionics", "bionic included bionics",
-        [&handle]( const std::string & value ) {
-            handle.include_bionic( value );
-        } );
-        each_string( "auto_deactivated_bionics", "bionic auto-deactivated bionics",
-        [&handle]( const std::string & value ) {
-            handle.auto_deactivate( value );
-        } );
-        each_string( "flags", "bionic flags", [&handle]( const std::string & value ) {
-            handle.flag( value, "always" );
-        } );
-        each_string( "active_flags", "bionic active flags",
-        [&handle]( const std::string & value ) {
-            handle.flag( value, "active" );
-        } );
-        each_string( "inactive_flags", "bionic inactive flags",
-        [&handle]( const std::string & value ) {
-            handle.flag( value, "inactive" );
-        } );
-        each_array_entry( "environment_protection", "bionic environmental protection",
-        [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
-                throw std::runtime_error(
-                    "bionic environmental protection must contain tables" );
-            }
-            const sol::table item = value.as<sol::table>();
-            handle.environment_protection(
-                item.get_or( "bodypart", std::string() ),
-                item.get_or<std::int64_t>( "amount", 0 ) );
-        } );
-        each_array_entry( "protection", "bionic protection",
-        [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
-                throw std::runtime_error( "bionic protection must contain tables" );
-            }
-            const sol::table item = value.as<sol::table>();
-            handle.armor(
-                item.get_or( "bodypart", std::string() ),
-                item.get_or( "damage_type", item.get_or( "type", std::string() ) ),
-                item.get_or( "amount", 0.0 ) );
-        } );
-        each_array_entry( "occupied_bodyparts", "bionic occupied body parts",
-        [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
-                throw std::runtime_error( "bionic occupied body parts must contain tables" );
-            }
-            const sol::table item = value.as<sol::table>();
-            handle.occupies( item.get_or( "bodypart", std::string() ),
-                             item.get_or<std::int64_t>( "slots", 0 ) );
-        } );
-        each_array_entry( "encumbrance", "bionic encumbrance",
-        [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
-                throw std::runtime_error( "bionic encumbrance must contain tables" );
-            }
-            const sol::table item = value.as<sol::table>();
-            handle.encumbers( item.get_or( "bodypart", std::string() ),
-
-                              item.get_or<std::int64_t>( "amount", 0 ) );
-        } );
-        each_string( "installable_weapon_flags", "bionic installable weapon flags",
-        [&handle]( const std::string & value ) {
-            handle.installable_weapon_flag( value );
-        } );
-        each_string( "replaced_bodyparts", "bionic replaced body parts",
-        [&handle]( const std::string & value ) {
-            handle.replace_bodypart( value );
-        } );
-        each_string( "mutation_conflicts", "bionic mutation conflicts",
-        [&handle]( const std::string & value ) {
-            handle.conflict_mutation( value );
-        } );
-        each_string( "give_mutation_on_removal", "bionic removal mutations",
-        [&handle]( const std::string & value ) {
-            handle.give_mutation_when_removed( value );
-        } );
-        each_array_entry( "learned_spells", "bionic learned spells",
-        [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
-                throw std::runtime_error( "bionic learned spells must contain tables" );
-            }
-            const sol::table item = value.as<sol::table>();
-            handle.learn_spell( item.get_or( "spell", std::string() ),
-                                item.get_or<std::int64_t>( "level", 0 ) );
-        } );
-        each_string( "available_upgrades", "bionic available upgrades",
-        [&handle]( const std::string & value ) {
-            handle.available_upgrade( value );
-        } );
-        return handle;
-    } );
-    content.set_function( "Spell", [this]( const sol::table & options ) {
-        if( pimpl_->token->lifecycle != handle_lifecycle::building ) {
-            throw std::runtime_error( "content transaction is no longer building" );
-        }
-        auto definition = std::make_shared<spell_definition_data>();
-        definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", std::string() );
-        definition->description = options.get_or( "description", std::string() );
-        definition->message = options.get_or( "message", definition->message );
-        definition->skill = options.get_or( "skill", definition->skill );
-        definition->magic_type = options.get_or( "magic_type", std::string() );
-        definition->components = options.get_or( "components", std::string() );
-        definition->sound_description = options.get_or(
-                                            "sound_description", definition->sound_description );
-        definition->sound_type = options.get_or( "sound_type", definition->sound_type );
-        definition->sound_ambient = options.get_or( "sound_ambient", false );
-        definition->sound_id = options.get_or( "sound_id", std::string() );
-        definition->sound_variant = options.get_or(
-                                        "sound_variant", definition->sound_variant );
-        definition->effect = options.get_or( "effect", definition->effect );
-        definition->effect_handler = options.get_or( "effect_handler", std::string() );
-        definition->shape = options.get_or( "shape", definition->shape );
-        definition->effect_data = options.get_or(
-                                      "effect_data", options.get_or( "effect_str", std::string() ) );
-        definition->explosion_light = options.get_or( "explosion_light", std::string() );
-        definition->field = options.get_or(
-                                "field", options.get_or( "field_id", std::string() ) );
-        definition->spell_class = options.get_or( "spell_class", definition->spell_class );
-        definition->energy_source = options.get_or(
-                                        "energy_source", definition->energy_source );
-        definition->energy_vitamin = options.get_or( "energy_vitamin", std::string() );
-        definition->energy_color = options.get_or(
-                                       "energy_color", definition->energy_color );
-        if( const sol::optional<sol::table> energy =
-                options.get<sol::optional<sol::table>>( "energy" ) ) {
-            definition->energy_source = energy->get_or(
-                                            "source", energy->get_or( "type", definition->energy_source ) );
-            definition->energy_vitamin = energy->get_or(
-                                             "vitamin", definition->energy_vitamin );
-            definition->energy_color = energy->get_or(
-                                           "color", definition->energy_color );
-        }
-        definition->damage_type = options.get_or( "damage_type", std::string() );
-        definition->get_level_formula = options.get_or(
-                                            "get_level_formula", options.get_or(
-                                                "get_level_formula_id", std::string() ) );
-        definition->exp_for_level_formula = options.get_or(
-                                                "exp_for_level_formula", options.get_or(
-                                                        "exp_for_level_formula_id", std::string() ) );
-        if( const sol::optional<std::int64_t> maximum =
-                options.get<sol::optional<std::int64_t>>( "max_book_level" ) ) {
-            definition->max_book_level = *maximum;
-        }
-        definition->caster_condition_handler = options.get_or(
-                "caster_condition", options.get_or( "caster_condition_handler", std::string() ) );
-        definition->caster_condition_fail_message = options.get_or(
-                    "caster_condition_fail_message", std::string() );
-        definition->target_condition_handler = options.get_or(
-                "target_condition", options.get_or( "target_condition_handler", std::string() ) );
-        definition->target_condition_fail_message = options.get_or(
-                    "target_condition_fail_message", std::string() );
-        definition->teachable = options.get_or( "teachable", true );
-        if( const sol::optional<sol::table> channel =
-                options.get<sol::optional<sol::table>>( "channel" ) ) {
-            const std::int64_t max_channel_turns = channel->get_or<std::int64_t>(
-                    "max_channel_turns", 0 );
-            definition->channel_turns = channel->get<sol::optional<std::int64_t>>(
-                                            "turns" ).value_or( max_channel_turns );
-            definition->channel_spell = channel->get_or( "spell", channel->get_or(
-                                            "channel_spell", std::string() ) );
-            definition->channel_end_spell = channel->get_or(
-                                                "end_spell", channel->get_or(
-                                                    "channel_end_spell", std::string() ) );
-            definition->channel_interrupt_spell = channel->get_or(
-                    "interrupt_spell", channel->get_or(
-                        "channel_interrupt_spell", std::string() ) );
-            definition->channel_uses_energy = channel->get_or(
-                                                  "uses_energy", channel->get_or(
-                                                          "channel_uses_energy", true ) );
-        }
-        const auto has_option = [&options]( const std::string & name ) {
-            const sol::object value = options.raw_get<sol::object>( name );
-            return value.valid() && value.get_type() != sol::type::nil;
-        };
-        const bool has_final_energy = has_option( "final_energy_cost" );
-        const bool has_final_casting = has_option( "final_casting_time" );
-        for( auto &[name, value] : definition->stats ) {
-            const sol::object supplied = options.raw_get<sol::object>( name );
-            if( !supplied.valid() || supplied.get_type() == sol::type::nil ) {
-                continue;
-            }
-            if( supplied.is<double>() ) {
-                value = supplied.as<double>();
-                continue;
-            }
-            if( supplied.is<sol::table>() ) {
-                const sol::table range = supplied.as<sol::table>();
-                value = range.get_or( "minimum", range.get_or( "min", value ) );
-                definition->stat_maximums[name] = range.get_or(
-                                                      "maximum", range.get_or( "max", value ) );
-                continue;
-            }
-            throw std::runtime_error( "spell stat '" + name +
-                                      "' must be a number or range table" );
-        }
-        if( !has_final_energy ) {
-            definition->stats["final_energy_cost"] = definition->stats["base_energy_cost"];
-        }
-        if( !has_final_casting ) {
-            definition->stats["final_casting_time"] = definition->stats["base_casting_time"];
-        }
-        spell_definition_handle handle{ definition, pimpl_->token };
-        if( !definition->effect_handler.empty() ) {
-            handle.lua_effect( definition->effect_handler );
-        }
-
-        const auto each_array_entry = [&options]( const char *key, const char *label,
-        const auto & visitor ) {
-            const sol::optional<sol::table> values =
-                options.get<sol::optional<sol::table>>( key );
-            if( !values ) {
-                return;
-            }
-            const std::size_t count = require_dense_array( *values, label, 0, 4096 );
-            for( std::size_t index = 1; index <= count; ++index ) {
-                visitor( values->raw_get<sol::object>( index ) );
-            }
-        };
-        const auto each_string = [&each_array_entry]( const char *key, const char *label,
-        const auto & visitor ) {
-            each_array_entry( key, label, [label, &visitor]( const sol::object & value ) {
-                if( !value.is<std::string>() ) {
-                    throw std::runtime_error( std::string( label ) + " must contain strings" );
-                }
-                visitor( value.as<std::string>() );
-            } );
-        };
-        each_string( "valid_targets", "spell valid targets",
-        [&handle]( const std::string & value ) {
-            handle.target( value );
-        } );
-        each_string( "flags", "spell flags", [&handle]( const std::string & value ) {
-            handle.flag( value );
-        } );
-        each_string( "targeted_monsters", "spell targeted monsters",
-        [&handle]( const std::string & value ) {
-            handle.target_monster( value );
-
-        } );
-        each_string( "targeted_species", "spell targeted species",
-        [&handle]( const std::string & value ) {
-            handle.target_species( value );
-        } );
-        each_string( "ignored_species", "spell ignored species",
-        [&handle]( const std::string & value ) {
-            handle.ignore_species( value );
-        } );
-        each_string( "affected_bodyparts", "spell affected body parts",
-        [&handle]( const std::string & value ) {
-            handle.bodypart( value );
-        } );
-        each_array_entry( "additional_spells", "spell additional spells",
-        [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
-                throw std::runtime_error( "spell additional spells must contain tables" );
-            }
-            handle.extra_spell( value.as<sol::table>() );
-        } );
-        each_array_entry( "learned_spells", "spell learned spells",
-        [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
-                throw std::runtime_error( "spell learned spells must contain tables" );
-            }
-            const sol::table item = value.as<sol::table>();
-            handle.learn_spell( item.get_or( "spell", std::string() ),
-                                item.get_or<std::int64_t>( "level", 0 ) );
-        } );
-        if( const sol::optional<sol::table> handlers =
-                options.get<sol::optional<sol::table>>( "dynamic_stats" ) ) {
-            std::size_t count = 0;
-            for( const auto &entry : *handlers ) {
-                if( ++count > definition->stats.size() ||
-                    !entry.first.is<std::string>() || !entry.second.is<std::string>() ) {
-                    throw std::runtime_error(
-                        "spell dynamic_stats must map known stat names to handler ids" );
-                }
-                handle.dynamic_stat( entry.first.as<std::string>(),
-                                     entry.second.as<std::string>() );
-            }
-        }
-        return handle;
-    } );
-    content.set_function( "Mission", [this]( const sol::table & options ) {
-        if( pimpl_->token->lifecycle != handle_lifecycle::building ) {
-            throw std::runtime_error( "content transaction is no longer building" );
-        }
-        auto definition = std::make_shared<mission_definition_data>();
-        definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", std::string() );
-        definition->description = options.get_or( "description", std::string() );
-        definition->goal = options.get_or( "goal", definition->goal );
-        definition->difficulty = options.get_or<std::int64_t>( "difficulty", 0 );
-        definition->value = options.get_or<std::int64_t>( "value", 0 );
-        definition->urgent = options.get_or( "urgent", false );
-        definition->has_generic_rewards = options.get_or( "has_generic_rewards", true );
-        definition->item = options.get_or( "item", std::string() );
-        definition->item_group = options.get_or( "item_group", std::string() );
-        definition->required_container = options.get_or(
-                                             "required_container", std::string() );
-        definition->empty_container = options.get_or( "empty_container", std::string() );
-        const std::int64_t count = options.get_or<std::int64_t>( "count", 1 );
-        definition->item_count = options.get<sol::optional<std::int64_t>>(
-                                     "item_count" ).value_or( count );
-        definition->remove_container = options.get_or( "remove_container", false );
-        definition->invisible_on_complete = options.get_or(
-                                                "invisible_on_complete", false );
-        definition->recruit_class = options.get_or( "recruit_class", std::string() );
-        definition->monster_type = options.get_or( "monster_type", std::string() );
-        definition->monster_species = options.get_or( "monster_species", std::string() );
-        definition->monster_kill_goal = options.get_or<std::int64_t>(
-                                            "monster_kill_goal", -1 );
-        definition->destination = options.get_or( "destination", std::string() );
-        definition->followup = options.get_or( "followup", std::string() );
-        definition->place = options.get_or( "place", definition->place );
-        definition->place_handler = options.get_or( "place_handler", std::string() );
-        definition->start_handler = options.get_or( "start_handler", std::string() );
-        definition->end_handler = options.get_or( "end_handler", std::string() );
-        definition->fail_handler = options.get_or( "fail_handler", std::string() );
-        definition->goal_condition_handler = options.get_or(
-                "goal_condition", options.get_or( "goal_condition_handler", std::string() ) );
-        definition->deadline_handler = options.get_or( "deadline_handler", std::string() );
-        if( const sol::optional<std::int64_t> deadline =
-                options.get<sol::optional<std::int64_t>>( "deadline_turns" ) ) {
-            definition->deadline_min_turns = *deadline;
-        }
-        if( const sol::optional<sol::table> deadline =
-                options.get<sol::optional<sol::table>>( "deadline" ) ) {
-            const std::int64_t min_turns = deadline->get_or<std::int64_t>(
-                                               "min_turns", 0 );
-            definition->deadline_min_turns = deadline->get<sol::optional<std::int64_t>>(
-                                                 "minimum_turns" ).value_or( min_turns );
-            if( const sol::optional<std::int64_t> maximum =
-                    deadline->get<sol::optional<std::int64_t>>( "maximum_turns" ) ) {
-                definition->deadline_max_turns = *maximum;
-            } else if( const sol::optional<std::int64_t> maximum =
-                           deadline->get<sol::optional<std::int64_t>>( "max_turns" ) ) {
-                definition->deadline_max_turns = *maximum;
-            }
-            definition->deadline_handler = deadline->get_or(
-                                               "handler", definition->deadline_handler );
-        }
-        if( const sol::optional<sol::table> phases =
-                options.get<sol::optional<sol::table>>( "phases" ) ) {
-            definition->start_handler = phases->get_or( "start", definition->start_handler );
-            definition->end_handler = phases->get_or( "success", phases->get_or(
-                                          "end", definition->end_handler ) );
-            definition->fail_handler = phases->get_or( "failure", phases->get_or(
-                                           "fail", definition->fail_handler ) );
-        }
-        mission_definition_handle handle{ definition, pimpl_->token };
-        const auto each_array_entry = [&options]( const char *key, const char *label,
-        const auto & visitor ) {
-            const sol::optional<sol::table> values =
-                options.get<sol::optional<sol::table>>( key );
-            if( !values ) {
-                return;
-            }
-            const std::size_t count = require_dense_array( *values, label, 0, 256 );
-            for( std::size_t index = 1; index <= count; ++index ) {
-                visitor( values->raw_get<sol::object>( index ) );
-            }
-        };
-        each_array_entry( "origins", "mission origins", [&handle]( const sol::object & value ) {
-            if( !value.is<std::string>() ) {
-                throw std::runtime_error( "mission origins must contain strings" );
-            }
-            handle.origin( value.as<std::string>() );
-        } );
-        each_array_entry( "likely_rewards", "mission likely rewards",
-        [&handle]( const sol::object & value ) {
-            if( !value.is<sol::table>() ) {
-                throw std::runtime_error( "mission likely rewards must contain tables" );
-            }
-            const sol::table reward = value.as<sol::table>();
-            handle.reward( reward.get_or( "value", 0.0 ),
-                           reward.get_or( "description", reward.get_or(
-                                              "text", std::string() ) ) );
-        } );
-        if( const sol::optional<sol::table> dialogue =
-                options.get<sol::optional<sol::table>>( "dialogue" ) ) {
-            std::size_t count = 0;
-            for( const auto &entry : *dialogue ) {
-                if( ++count > 64 || !entry.first.is<std::string>() ||
-                    !entry.second.is<std::string>() ) {
-                    throw std::runtime_error(
-                        "mission dialogue must map phase names to strings" );
-                }
-                handle.dialogue( entry.first.as<std::string>(),
-                                 entry.second.as<std::string>() );
-            }
-        }
-        if( !definition->place_handler.empty() ) {
-            handle.place_when( definition->place_handler );
-        }
-        if( !definition->goal_condition_handler.empty() ) {
-            handle.complete_when( definition->goal_condition_handler );
-        }
-        return handle;
-    } );
-    content.set_function( "ProfessionItemSubstitution", [this](
-    const sol::table & options ) {
-        if( pimpl_->token->lifecycle != handle_lifecycle::building ) {
-            throw std::runtime_error( "content transaction is no longer building" );
-        }
-        auto definition = std::make_shared<profession_item_substitution_definition_data>();
-        definition->id = options.get_or( "item", options.get_or( "id", std::string() ) );
-        return profession_item_substitution_definition_handle{
-            std::move( definition ), pimpl_->token
-        };
-    } );
-    content.set_function( "ProfessionItemBonus", [this]( const sol::table & options ) {
-        if( pimpl_->token->lifecycle != handle_lifecycle::building ) {
-            throw std::runtime_error( "content transaction is no longer building" );
-        }
-        auto definition = std::make_shared<profession_item_bonus_definition_data>();
-        definition->id = options.get_or( "group", options.get_or( "id", std::string() ) );
-        return profession_item_bonus_definition_handle{
-            std::move( definition ), pimpl_->token
-        };
-    } );
-    content.set_function( "Technique", [this]( const sol::table & options ) {
-        if( pimpl_->token->lifecycle != handle_lifecycle::building ) {
-            throw std::runtime_error( "content transaction is no longer building" );
-        }
-        auto definition = std::make_shared<technique_definition_data>();
-        definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", std::string() );
-        definition->description = options.get_or( "description", std::string() );
-        definition->avatar_message = options.get_or( "avatar_message", std::string() );
-        definition->npc_message = options.get_or( "npc_message", std::string() );
-        definition->crit_tec = options.get_or( "crit_tec", false );
-        definition->crit_ok = options.get_or( "crit_ok", false );
-        definition->wall_adjacent = options.get_or( "wall_adjacent", false );
-        definition->reach_tec = options.get_or( "reach_tec", false );
-        definition->reach_ok = options.get_or( "reach_ok", false );
-        definition->needs_ammo = options.get_or( "needs_ammo", false );
-        definition->defensive = options.get_or( "defensive", false );
-        definition->disarms = options.get_or( "disarms", false );
-        definition->take_weapon = options.get_or( "take_weapon", false );
-        definition->side_switch = options.get_or( "side_switch", false );
-        definition->dummy = options.get_or( "dummy", false );
-        definition->dodge_counter = options.get_or( "dodge_counter", false );
-        definition->block_counter = options.get_or( "block_counter", false );
-        definition->miss_recovery = options.get_or( "miss_recovery", false );
-        definition->grab_break = options.get_or( "grab_break", false );
-        definition->weighting = options.get_or<std::int64_t>( "weighting", 1 );
-        definition->repeat_min = options.get_or<std::int64_t>( "repeat_min", 1 );
-        definition->repeat_max = options.get_or<std::int64_t>( "repeat_max", 1 );
-        definition->down_dur = options.get_or<std::int64_t>( "down_dur", 0 );
-        definition->stun_dur = options.get_or<std::int64_t>( "stun_dur", 0 );
-        definition->knockback_dist = options.get_or<std::int64_t>( "knockback_dist", 0 );
-        definition->knockback_spread = options.get_or( "knockback_spread", 0.0 );
-        definition->knockback_follow = options.get_or( "knockback_follow", false );
-        definition->aoe = options.get_or( "aoe", std::string() );
-        definition->unarmed_allowed = options.get_or( "unarmed_allowed", false );
-        definition->melee_allowed = options.get_or( "melee_allowed", false );
-        definition->strictly_unarmed = options.get_or( "strictly_unarmed", false );
-        definition->apply_handler = options.get_or(
-                                        "on_apply",
-                                        options.get_or( "apply_handler", std::string() ) );
-        return technique_definition_handle{
-            std::move( definition ), pimpl_->token
-        };
-    } );
-    content.set_function( "MartialArt", [this]( const sol::table & options ) {
-        if( pimpl_->token->lifecycle != handle_lifecycle::building ) {
-            throw std::runtime_error( "content transaction is no longer building" );
-        }
-        auto definition = std::make_shared<martial_art_definition_data>();
-        definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", std::string() );
-        definition->description = options.get_or( "description", std::string() );
-        definition->initiate_avatar = options.get_or( "initiate_avatar", std::string() );
-        definition->initiate_npc = options.get_or( "initiate_npc", std::string() );
-        definition->priority = options.get_or<std::int64_t>( "priority", 0 );
-        definition->primary_skill = options.get_or( "primary_skill", std::string() );
-        definition->learn_difficulty = options.get_or<std::int64_t>( "learn_difficulty", 0 );
-        definition->teachable = options.get_or( "teachable", true );
-        definition->arm_block = options.get_or<std::int64_t>( "arm_block", 0 );
-        definition->leg_block = options.get_or<std::int64_t>( "leg_block", 0 );
-        definition->arm_block_with_bio_armor_arms =
-            options.get_or( "arm_block_with_bio_armor_arms", false );
-        definition->leg_block_with_bio_armor_legs =
-            options.get_or( "leg_block_with_bio_armor_legs", false );
-        definition->strictly_unarmed = options.get_or( "strictly_unarmed", false );
-        definition->strictly_melee = options.get_or( "strictly_melee", false );
-        definition->allow_all_weapons = options.get_or( "allow_all_weapons", false );
-        definition->force_unarmed = options.get_or( "force_unarmed", false );
-        definition->prevent_weapon_blocking =
-            options.get_or( "prevent_weapon_blocking", false );
-        for( const char *phase : {
-                 "static", "move", "pause", "hit", "attack", "dodge",
-                 "block", "gethit", "miss", "crit", "kill"
-             } ) {
-            const std::string handler = options.get_or(
-                                            std::string( "on_" ) + phase, std::string() );
-            if( !handler.empty() ) {
-                definition->handlers.emplace( phase, handler );
-            }
-        }
-        return martial_art_definition_handle{
-            std::move( definition ), pimpl_->token
-
-        };
-    } );
-    content.set_function( "MagicType", [this]( const sol::table & options ) {
-        if( pimpl_->token->lifecycle != handle_lifecycle::building ) {
-            throw std::runtime_error( "content transaction is no longer building" );
-        }
-        auto definition = std::make_shared<magic_type_definition_data>();
-        definition->id = options.get_or( "id", std::string() );
-        definition->energy_source = options.get_or( "energy", std::string( "none" ) );
-        definition->vitamin = options.get_or( "vitamin", std::string() );
-        definition->energy_color = options.get_or( "energy_color", std::string( "cyan" ) );
-        if( const sol::optional<std::string> message =
-                options.get<sol::optional<std::string>>( "cannot_cast_message" ) ) {
-            definition->cannot_cast_message = *message;
-
-        }
-        if( const sol::optional<std::int64_t> maximum =
-                options.get<sol::optional<std::int64_t>>( "max_book_level" ) ) {
-            definition->max_book_level = *maximum;
-        }
-        definition->failure_cost_fraction = options.get_or(
-                                                "failure_cost_fraction", 0.0 );
-        definition->failure_experience_fraction = options.get_or(
-                    "failure_experience_fraction", 0.2 );
-        return magic_type_definition_handle{
-            std::move( definition ), pimpl_->token
-        };
-    } );
-    content.set_function( "MovementMode", [this]( const sol::table & options ) {
-        if( pimpl_->token->lifecycle != handle_lifecycle::building ) {
-            throw std::runtime_error( "content transaction is no longer building" );
-        }
-        auto definition = std::make_shared<movement_mode_definition_data>();
-        definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", definition->id );
-        definition->kind = options.get_or( "kind", std::string( "walking" ) );
-        definition->panel_color = options.get_or( "panel_color", std::string( "white" ) );
-        definition->symbol_color = options.get_or( "symbol_color", std::string( "white" ) );
-        definition->exertion = options.get_or( "exertion", 1.0 );
-        definition->riding_exertion = options.get_or( "riding_exertion", 0.0 );
-        definition->stamina_multiplier = options.get_or(
-                                             "stamina_multiplier", 1.0 );
-        definition->sound_multiplier = options.get_or(
-                                           "sound_multiplier", 1.0 );
-        definition->speed_multiplier = options.get_or(
-                                           "speed_multiplier", 1.0 );
-        definition->mech_power_kilojoules = options.get_or<std::int64_t>(
-                                                "mech_power_kilojoules", 2 );
-        definition->swim_speed_modifier = options.get_or<std::int64_t>(
-                                              "swim_speed_modifier", 0 );
-        definition->stop_hauling = options.get_or( "stop_hauling", false );
-        const auto read_symbol = [&options]( const char *name ) {
-            const std::string symbol = options.get_or( name, std::string() );
-            const utf8_wrapper wrapped( symbol );
-            if( wrapped.size() != 1 ) {
-                throw std::runtime_error( std::string( "movement-mode " ) + name +
-                                          " must be one Unicode codepoint" );
-            }
-            return wrapped.at( 0 );
-        };
-        definition->character_symbol = read_symbol( "character_symbol" );
-        definition->panel_symbol = read_symbol( "panel_symbol" );
-        return movement_mode_definition_handle{
-            std::move( definition ), pimpl_->token
-        };
-    } );
+    pimpl_->install_profession( content );
+    pimpl_->install_profession_group( content );
+    pimpl_->install_widget( content );
+    pimpl_->install_enchantment( content );
+    pimpl_->install_bionic( content );
+    pimpl_->install_spell( content );
+    pimpl_->install_mission( content );
+    pimpl_->install_profession_item_substitution( content );
+    pimpl_->install_profession_item_bonus( content );
+    pimpl_->install_technique( content );
+    pimpl_->install_martial_art( content );
+    pimpl_->install_magic_type( content );
+    pimpl_->install_movement_mode( content );
 
     const auto edit_catalog = [this]( const std::string & id, auto & registrations,
     const char *kind ) {
@@ -3197,7 +3363,8 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
     };
 #define CATA_CHARACTER_EDIT( lua_name, handle_type, member, kind ) \
     content.set_function( lua_name, [this, edit_catalog]( const std::string &id ) { \
-        return handle_type{ edit_catalog( id, pimpl_->member, kind ), pimpl_->token }; \
+        using edited_handle = handle_type; \
+        return edited_handle{ edit_catalog( id, pimpl_->member, kind ), pimpl_->token }; \
     } )
     CATA_CHARACTER_EDIT( "edit_profession", profession_definition_handle, professions, "profession" );
     CATA_CHARACTER_EDIT( "edit_profession_group", profession_group_definition_handle,
@@ -3226,6 +3393,8 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
     static_cast<void>( lua );
 }
 
+// Cross-catalog references share the staged validation index before any apply.
+// NOLINTNEXTLINE(readability-function-size)
 bool character_content_transaction::validate( const runtime &owner_runtime,
         const bool check_engine_state, const character_content_validation_index &index,
         std::string &error ) const
@@ -3254,77 +3423,77 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
         std::set<std::string> profession_ids;
 
         const auto index_defines = []( const std::function<bool( std::string_view )> &predicate,
-        const std::string & id ) {
+        const std::string_view id ) {
             return predicate && predicate( id );
         };
-        const auto staged_item_group = [&index_defines, &index]( const std::string & id ) {
+        const auto staged_item_group = [&index_defines, &index]( const std::string_view id ) {
             return index_defines( index.defines_item_group, id );
         };
-        const auto staged_proficiency = [&index_defines, &index]( const std::string & id ) {
+        const auto staged_proficiency = [&index_defines, &index]( const std::string_view id ) {
             return index_defines( index.defines_proficiency, id );
         };
-        const auto staged_addiction = [&index_defines, &index]( const std::string & id ) {
+        const auto staged_addiction = [&index_defines, &index]( const std::string_view id ) {
             return index_defines( index.defines_addiction, id );
         };
-        const auto staged_achievement = [&index_defines, &index]( const std::string & id ) {
+        const auto staged_achievement = [&index_defines, &index]( const std::string_view id ) {
             return index_defines( index.defines_achievement, id );
         };
-        const auto staged_monster = [&index_defines, &index]( const std::string & id ) {
+        const auto staged_monster = [&index_defines, &index]( const std::string_view id ) {
             return index_defines( index.defines_monster, id );
         };
-        const auto staged_martial_art = [this]( const std::string & id ) {
+        const auto staged_martial_art = [this]( const std::string_view id ) {
             return registration_id_exists( pimpl_->martial_arts, id );
         };
-        const auto staged_trait_group = [&index_defines, &index]( const std::string & id ) {
+        const auto staged_trait_group = [&index_defines, &index]( const std::string_view id ) {
             return index_defines( index.defines_trait_group, id );
         };
-        const auto staged_body_part = [&index_defines, &index]( const std::string & id ) {
+        const auto staged_body_part = [&index_defines, &index]( const std::string_view id ) {
             return index_defines( index.defines_body_part, id );
         };
-        const auto staged_body_graph = [&index_defines, &index]( const std::string & id ) {
+        const auto staged_body_graph = [&index_defines, &index]( const std::string_view id ) {
             return index_defines( index.defines_body_graph, id );
         };
-        const auto staged_emission = [&index_defines, &index]( const std::string & id ) {
+        const auto staged_emission = [&index_defines, &index]( const std::string_view id ) {
             return index_defines( index.defines_emission, id );
         };
-        const auto staged_effect = [&index_defines, &index]( const std::string & id ) {
+        const auto staged_effect = [&index_defines, &index]( const std::string_view id ) {
             return index_defines( index.defines_effect_type, id );
         };
-        const auto staged_limb_score = [&index_defines, &index]( const std::string & id ) {
+        const auto staged_limb_score = [&index_defines, &index]( const std::string_view id ) {
             return index_defines( index.defines_limb_score, id );
         };
-        const auto staged_material = [&index_defines, &index]( const std::string & id ) {
+        const auto staged_material = [&index_defines, &index]( const std::string_view id ) {
             return index_defines( index.defines_material, id );
         };
-        const auto staged_requirement = [&index_defines, &index]( const std::string & id ) {
+        const auto staged_requirement = [&index_defines, &index]( const std::string_view id ) {
             return index_defines( index.defines_requirement, id );
         };
-        const auto staged_bionic = [this]( const std::string & id ) {
+        const auto staged_bionic = [this]( const std::string_view id ) {
             return registration_id_exists( pimpl_->bionics, id );
         };
-        const auto staged_spell = [this]( const std::string & id ) {
+        const auto staged_spell = [this]( const std::string_view id ) {
             return registration_id_exists( pimpl_->spells, id );
         };
-        const auto staged_magic_type = [this]( const std::string & id ) {
+        const auto staged_magic_type = [this]( const std::string_view id ) {
             return registration_id_exists( pimpl_->magic_types, id );
         };
-        const auto staged_explosion_light = [&index_defines, &index]( const std::string & id ) {
+        const auto staged_explosion_light = [&index_defines, &index]( const std::string_view id ) {
             return index_defines( index.defines_explosion_light, id );
         };
-        const auto staged_field = [&index_defines, &index]( const std::string & id ) {
+        const auto staged_field = [&index_defines, &index]( const std::string_view id ) {
             return index_defines( index.defines_field_type, id );
         };
-        const auto staged_species = [&index_defines, &index]( const std::string & id ) {
+        const auto staged_species = [&index_defines, &index]( const std::string_view id ) {
             return index_defines( index.defines_species, id );
         };
-        const auto staged_monster_for_spell = [&index_defines, &index]( const std::string & id ) {
+        const auto staged_monster_for_spell = [&index_defines, &index]( const std::string_view id ) {
             return index_defines( index.defines_monster, id );
         };
-        const auto staged_spell_id = [this]( const std::string & id ) {
+        const auto staged_spell_id = [this]( const std::string_view id ) {
             return registration_id_exists( pimpl_->spells, id );
         };
         const auto staged_item_group_for_mission = [&index_defines, &index](
-        const std::string & id ) {
+        const std::string_view id ) {
             return index_defines( index.defines_item_group, id );
         };
 
@@ -4000,8 +4169,8 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
             std::set<std::string> unique;
             for( const std::string &value : values ) {
                 if( !unique.insert( value ).second ) {
-                    throw std::runtime_error( "bionic '" + owner + "' has duplicate " +
-                                              kind + " '" + value + "'" );
+                    throw std::runtime_error( std::string( "bionic '" ).append( owner ).append(
+                                                  "' has duplicate " ).append( kind ).append( " '" ).append( value ).append( "'" ) );
                 }
                 require_bionic_reference( owner, value, kind, exists );
             }
@@ -4743,9 +4912,8 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 if( !traits.insert( trait ).second ||
                     ( check_engine_state && !index_defines( index.defines_trait, trait ) &&
                       !trait_id( trait ).is_valid() ) ) {
-                    throw std::runtime_error( owner +
-                                              " has an unknown, duplicate, or contradictory trait '" +
-                                              trait + "'" );
+                    throw std::runtime_error( std::string( owner ).append(
+                                                  " has an unknown, duplicate, or contradictory trait '" ).append( trait ).append( "'" ) );
                 }
             }
             for( const std::string &trait : requirements.absent ) {
@@ -4753,9 +4921,8 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 if( !traits.insert( trait ).second ||
                     ( check_engine_state && !index_defines( index.defines_trait, trait ) &&
                       !trait_id( trait ).is_valid() ) ) {
-                    throw std::runtime_error( owner +
-                                              " has an unknown, duplicate, or contradictory trait '" +
-                                              trait + "'" );
+                    throw std::runtime_error( std::string( owner ).append(
+                                                  " has an unknown, duplicate, or contradictory trait '" ).append( trait ).append( "'" ) );
                 }
             }
         };
@@ -5355,6 +5522,1164 @@ void character_content_transaction::discard()
     pimpl_->token->lifecycle = handle_lifecycle::discarded;
 }
 
+void character_content_transaction::impl::apply_profession()
+{
+    for( const profession_registration &entry : this->professions ) {
+        const profession_id id( entry.definition->id );
+        this->profession_undo.emplace_back(
+            id, id.is_valid() ? std::optional<profession>( id.obj() ) : std::nullopt );
+        const profession_definition_data &source = *entry.definition;
+        profession native;
+        native.id = id;
+        native.was_loaded = true;
+        native._name_male = source.name_male.native();
+        native._name_female = source.name_female.native();
+        native._description_male = source.description_male.native();
+        native._description_female = source.description_female.native();
+        native._point_cost = static_cast<int>( source.points );
+        if( source.starting_cash ) {
+            native._starting_cash = static_cast<int>( *source.starting_cash );
+        }
+        native._starting_npc_background =
+            trait_group::Trait_group_tag( source.npc_background );
+        native._chargen_allow_npc = source.chargen_allow_npc;
+        native.age_lower = static_cast<int>( source.age_lower );
+        native.age_upper = static_cast<int>( source.age_upper );
+        native._starting_vehicle = source.starting_vehicle.empty() ?
+                                   vproto_id::NULL_ID() : vproto_id( source.starting_vehicle );
+        native._starting_items = item_group_id( source.items_both );
+        native._starting_items_male = item_group_id( source.items_male );
+        native._starting_items_female = item_group_id( source.items_female );
+        native.no_bonus = itype_id( source.no_bonus );
+        for( const std::string &achievement : source.requirements ) {
+            native._requirements.emplace_back( achievement );
+        }
+        native.hard_requirement = source.hard_requirement;
+        for( const auto &[skill, level] : source.skills ) {
+            native._starting_skills.emplace_back(
+                skill_id( skill ), static_cast<int>( level ) );
+        }
+        for( const profession_addiction_definition_data &value : source.addictions ) {
+            native._starting_addictions.emplace_back(
+                addiction_id( value.type ), static_cast<int>( value.intensity ) );
+        }
+        for( const std::string &bionic : source.cbms ) {
+            native._starting_CBMs.emplace_back( bionic );
+        }
+        for( const std::string &proficiency : source.proficiencies ) {
+            native._starting_proficiencies.emplace_back( proficiency );
+        }
+        for( const std::string &recipe : source.recipes ) {
+            native._starting_recipes.emplace_back( recipe );
+        }
+        for( const profession_trait_definition_data &value : source.traits ) {
+            native._starting_traits.emplace_back(
+                trait_id( value.trait ), value.variant );
+        }
+        for( const std::string &trait : source.forbidden_traits ) {
+            native._forbidden_traits.emplace( trait );
+        }
+        native.flags.insert( source.flags.begin(), source.flags.end() );
+        for( const std::string &hobby : source.hobbies ) {
+            native._hobby_exclusion.emplace( hobby );
+        }
+        native.hobbies_whitelist = source.hobbies_whitelist;
+        for( const std::string &style : source.martial_arts ) {
+            native._starting_martialarts.emplace_back( style );
+        }
+        for( const std::string &style : source.martial_arts_choices ) {
+            native._starting_martialarts_choices.emplace_back( style );
+        }
+        native.ma_choice_amount = static_cast<int>( source.martial_arts_choice_amount );
+        for( const auto &[monster, amount] : source.pets ) {
+            for( std::int64_t count = 0; count < amount; ++count ) {
+                native._starting_pets.emplace_back( monster );
+            }
+        }
+        for( const auto &[spell, level] : source.spells ) {
+            native._starting_spells.emplace(
+                spell_id( spell ), static_cast<int>( level ) );
+        }
+        for( const std::string &mission : source.missions ) {
+            native._missions.emplace_back( mission );
+        }
+        native._subtype = source.subtype;
+        if( !source.start_handler.empty() ) {
+            native.lua_platform_mod = this->owner;
+            native.lua_platform_start_handler = source.start_handler;
+        }
+        native.src.emplace_back( id, mod_id( this->owner ) );
+        detail::profession_registry().insert( native );
+    }
+    if( !this->professions.empty() ) {
+        detail::profession_registry().finalize();
+    }
+}
+
+void character_content_transaction::impl::apply_profession_group()
+{
+    for( const profession_group_registration &entry : this->profession_groups ) {
+        const profession_group_id id( entry.definition->id );
+        this->profession_group_undo.emplace_back(
+            id, id.is_valid() ? std::optional<profession_group>( id.obj() ) : std::nullopt );
+        profession_group native;
+        native.id = id;
+        native.was_loaded = true;
+        for( const std::string &profession : entry.definition->professions ) {
+            native.profession_list.emplace_back( profession );
+        }
+        detail::profession_group_registry().insert( native );
+    }
+    if( !this->profession_groups.empty() ) {
+        detail::profession_group_registry().finalize();
+    }
+}
+
+void character_content_transaction::impl::apply_widget()
+{
+    for( const widget_registration &entry : this->widgets ) {
+        const widget_id id( entry.definition->id );
+        this->widget_undo.emplace_back(
+            id, id.is_valid() ? std::optional<widget>( id.obj() ) : std::nullopt );
+        const widget_definition_data &source = *entry.definition;
+        widget native;
+        native.id = id;
+        native.was_loaded = true;
+        native.src.emplace_back( id, mod_id( this->owner ) );
+        native._width = static_cast<int>( source.width );
+        native._height_max = static_cast<int>( source.height );
+        native._height = native._height_max;
+        native._symbols = source.symbols;
+
+        native._fill = source.fill;
+        native._label = source.label.native();
+        native._description = source.description;
+        native._style = source.style;
+        native._arrange = source.arrange;
+        native._body_graph = source.body_graph;
+        native._direction = source.direction.empty() ?
+                            cardinal_direction::num_cardinal_directions :
+                            *io::string_to_enum_optional<cardinal_direction>( source.direction );
+        native._text_align =
+            *io::string_to_enum_optional<widget_alignment>( source.text_align );
+        native._label_align =
+            *io::string_to_enum_optional<widget_alignment>( source.label_align );
+        native._pad_labels = source.pad_labels.value_or(
+                                 source.style != "layout" || source.arrange == "rows" );
+        native.explicit_separator = source.separator.has_value();
+        native.explicit_padding = source.padding.has_value();
+        native._separator = source.separator.value_or( ": " );
+        native._padding = static_cast<int>( source.padding.value_or( 2 ) );
+        native._var = source.variable.empty() ? widget_var::last :
+                      *io::string_to_enum_optional<widget_var>( source.variable );
+        for( const std::string &bodypart : source.bodyparts ) {
+            native._bps.emplace( bodypart_str_id( bodypart ).id() );
+        }
+        for( const std::string &color : source.colors ) {
+            native._colors.push_back(
+                color_from_string( color, report_color_error::no ) );
+        }
+        for( const std::int64_t value : source.breaks ) {
+            native._breaks.push_back( static_cast<int>( value ) );
+        }
+        for( const std::string &child : source.widgets ) {
+            native._widgets.emplace_back( child );
+        }
+        for( const std::string &flag : source.flags ) {
+            native._flags.emplace( flag );
+        }
+        native._string = no_translation( source.text );
+        const auto make_clause = [this, &source](
+        const widget_clause_definition_data & value ) {
+            widget_clause result;
+            result.id = value.id;
+            result.sym = value.symbol;
+            result.text = no_translation( value.text );
+            result.color = value.color.empty() ? c_unset :
+                           color_from_string( value.color, report_color_error::no );
+            result.value = static_cast<int>( value.value );
+            result.should_parse_tags = value.parse_tags;
+            for( const std::string &child : value.widgets ) {
+                result.widgets.emplace_back( child );
+            }
+            if( !value.condition_handler.empty() ) {
+                result.has_condition = true;
+                const std::string owner = this->owner;
+                const std::string widget_name = source.id;
+                const std::string clause_name = value.id;
+                const std::string handler = value.condition_handler;
+                result.condition = [owner, widget_name, clause_name, handler](
+                const const_dialogue & d ) {
+                    return invoke_widget_condition_handler(
+                               owner, widget_name, clause_name, handler, d.reason ).value_or( false );
+                };
+            }
+            return result;
+        };
+        for( const widget_clause_definition_data &clause : source.clauses ) {
+            native._clauses.push_back( make_clause( clause ) );
+        }
+        if( source.default_clause ) {
+            native._default_clause = make_clause( *source.default_clause );
+        }
+        if( !source.custom_handler.empty() ) {
+            const std::string owner = this->owner;
+            const std::string widget_name = source.id;
+            const std::string handler = source.custom_handler;
+            native.platform_custom_value = [owner, widget_name, handler]( const avatar & subject ) {
+                const std::optional<widget_custom_handler_result> value =
+                    invoke_widget_custom_handler( owner, widget_name, handler, subject );
+                return value ? value->value : 0;
+            };
+            native.platform_custom_range = [owner, widget_name, handler](
+            const avatar & subject, widget & target ) {
+                const std::optional<widget_custom_handler_result> value =
+                    invoke_widget_custom_handler( owner, widget_name, handler, subject );
+                if( value ) {
+                    target._var_min = value->minimum;
+                    target._var_norm = { value->normal_minimum, value->normal_maximum };
+                    target._var_max = value->maximum;
+                }
+            };
+        }
+        native._label_width = native._label.empty() ||
+                              native._flags.count( json_flag_W_LABEL_NONE ) != 0 ?
+                              0 : utf8_width( native._label.translated() );
+        detail::widget_registry().insert( native );
+    }
+    if( !this->widgets.empty() ) {
+        detail::widget_registry().finalize();
+    }
+}
+
+void character_content_transaction::impl::apply_enchantment()
+{
+    for( const enchantment_registration &entry : this->enchantments ) {
+        const enchantment_id id( entry.definition->id );
+        this->enchantment_undo.emplace_back(
+            id, id.is_valid() ? std::optional<enchantment>( id.obj() ) : std::nullopt );
+        const enchantment_definition_data &source = *entry.definition;
+        enchantment native;
+        native.id = id;
+        native.was_loaded = true;
+        native.src.emplace_back( id, mod_id( this->owner ) );
+        native.name = source.name.native();
+        native.description = source.description.native();
+        native.active_conditions.first =
+            *io::string_to_enum_optional<enchantment::has>( source.has );
+        native.active_conditions.second =
+            *io::string_to_enum_optional<enchantment::condition>( source.condition );
+        if( !source.condition_handler.empty() ) {
+            const std::string owner = this->owner;
+            const std::string enchantment_name = source.id;
+            const std::string handler = source.condition_handler;
+            native.dialog_condition = [owner, enchantment_name, handler](
+
+            const const_dialogue & dialogue ) {
+                return invoke_enchantment_condition_handler(
+                           owner, enchantment_name, "activation", std::string_view(),
+                           handler, dialogue ).value_or( false );
+            };
+        }
+        if( !source.emitter.empty() ) {
+            native.emitter = emit_id( source.emitter );
+        }
+        for( const auto &[effect, intensity] : source.effects ) {
+            native.ench_effects.emplace(
+                efftype_id( effect ), static_cast<int>( intensity ) );
+        }
+        for( const auto &[gain, lose] : source.modified_bodyparts ) {
+            enchantment::bodypart_changes change;
+            change.gain = bodypart_str_id( gain );
+            change.lose = bodypart_str_id( lose );
+            change.was_loaded = true;
+            native.modified_bodyparts.push_back( change );
+        }
+        for( const std::string &mutation : source.mutations ) {
+            native.mutations.emplace_back( mutation );
+        }
+        for( const enchantment_modifier_definition_data &modifier : source.modifiers ) {
+            const auto static_value = []( const std::optional<double> &number,
+            auto & map, const auto & key ) {
+                if( number ) {
+                    map.emplace( key, dbl_or_var( *number ) );
+                }
+            };
+            if( modifier.kind == "value" ) {
+                const enchant_vals::mod key =
+                    *io::string_to_enum_optional<enchant_vals::mod>( modifier.target );
+                static_value( modifier.add, native.values_add, key );
+                static_value( modifier.multiply, native.values_multiply, key );
+            } else if( modifier.kind == "skill" ) {
+                static_value( modifier.add, native.skill_values_add,
+                              skill_id( modifier.target ) );
+                static_value( modifier.multiply, native.skill_values_multiply,
+                              skill_id( modifier.target ) );
+            } else if( modifier.kind == "custom" ) {
+                static_value( modifier.add, native.custom_values_add, modifier.target );
+                static_value( modifier.multiply, native.custom_values_multiply,
+                              modifier.target );
+            } else if( modifier.kind == "encumbrance" ) {
+                static_value( modifier.add, native.encumbrance_values_add,
+                              bodypart_str_id( modifier.target ) );
+                static_value( modifier.multiply, native.encumbrance_values_multiply,
+                              bodypart_str_id( modifier.target ) );
+            } else if( modifier.kind == "max_hp" ) {
+                static_value( modifier.add, native.max_hp_values_add,
+                              bodypart_str_id( modifier.target ) );
+                static_value( modifier.multiply, native.max_hp_values_multiply,
+                              bodypart_str_id( modifier.target ) );
+            } else if( modifier.kind == "limb_score" ) {
+                enchantment::limb_score_mod_bp value;
+                value.score = limb_score_id( modifier.target );
+                value.part = modifier.part.empty() ? bodypart_str_id::NULL_ID() :
+                             bodypart_str_id( modifier.part );
+                if( modifier.add ) {
+                    value.add = *modifier.add;
+                }
+                if( modifier.multiply ) {
+                    value.mult = *modifier.multiply;
+                }
+                native.limb_score_mods.push_back( std::move( value ) );
+            } else {
+                std::map<damage_type_id, dbl_or_var> *add_map = nullptr;
+                std::map<damage_type_id, dbl_or_var> *multiply_map = nullptr;
+                if( modifier.kind == "melee_damage" ) {
+                    add_map = &native.damage_values_add;
+                    multiply_map = &native.damage_values_multiply;
+                } else if( modifier.kind == "incoming_damage" ) {
+                    add_map = &native.armor_values_add;
+                    multiply_map = &native.armor_values_multiply;
+                } else if( modifier.kind == "post_armor_damage" ) {
+                    add_map = &native.extra_damage_add;
+                    multiply_map = &native.extra_damage_multiply;
+                }
+                if( add_map != nullptr ) {
+                    static_value( modifier.add, *add_map,
+                                  damage_type_id( modifier.target ) );
+                    static_value( modifier.multiply, *multiply_map,
+                                  damage_type_id( modifier.target ) );
+                }
+            }
+            if( !modifier.add_handler.empty() || !modifier.multiply_handler.empty() ) {
+                enchantment::platform_modifier value;
+                value.kind = modifier.kind;
+                value.target = modifier.target;
+                value.part = modifier.part;
+                const std::string owner = this->owner;
+                const std::string enchantment_name = source.id;
+                if( !modifier.add_handler.empty() ) {
+                    const std::string handler = modifier.add_handler;
+                    const std::string kind = modifier.kind;
+                    const std::string target = modifier.target;
+                    const std::string part = modifier.part;
+                    value.add = [owner, enchantment_name, kind, target, part, handler](
+                    const const_dialogue & dialogue ) {
+                        return invoke_enchantment_number_handler(
+                                   owner, enchantment_name, kind + ":add", target, part,
+                                   handler, dialogue ).value_or( 0.0 );
+                    };
+                }
+                if( !modifier.multiply_handler.empty() ) {
+                    const std::string handler = modifier.multiply_handler;
+                    const std::string kind = modifier.kind;
+                    const std::string target = modifier.target;
+                    const std::string part = modifier.part;
+                    value.multiply = [owner, enchantment_name, kind, target, part, handler](
+                    const const_dialogue & dialogue ) {
+                        return invoke_enchantment_number_handler(
+                                   owner, enchantment_name, kind + ":multiply", target, part,
+                                   handler, dialogue ).value_or( 0.0 );
+                    };
+                }
+                native.platform_modifiers.push_back( std::move( value ) );
+            }
+        }
+
+        const auto make_fake_spell = []( const enchantment_fake_spell_definition_data & source ) {
+            fake_spell result( spell_id( source.spell ), source.self );
+            if( source.max_level ) {
+                result.max_level = static_cast<int>( *source.max_level );
+            }
+            result.level = static_cast<int>( source.level );
+            result.trigger_once_in = static_cast<int>( source.trigger_once_in );
+            result.trigger_message = source.trigger_message.native();
+            result.npc_trigger_message = source.npc_trigger_message.native();
+            return result;
+        };
+        for( const enchantment_fake_spell_definition_data &spell : source.hit_you_effects ) {
+            native.hit_you_effect.push_back( make_fake_spell( spell ) );
+        }
+        for( const enchantment_fake_spell_definition_data &spell : source.hit_me_effects ) {
+            native.hit_me_effect.push_back( make_fake_spell( spell ) );
+        }
+        for( const auto &[turns, spell] : source.intermittent_effects ) {
+            native.add_activation(
+                time_duration::from_turns( turns ), make_fake_spell( spell ) );
+        }
+        for( const enchantment_vision_definition_data &vision : source.visions ) {
+            enchantment::special_vision value;
+            value.range = dbl_or_var( vision.distance );
+            value.precise = vision.precise;
+            value.ignores_aiming_cone = vision.ignores_aiming_cone;
+            const std::string owner = this->owner;
+            const std::string enchantment_name = source.id;
+            if( vision.condition_handler.empty() ) {
+                value.condition = []( const const_dialogue & ) {
+                    return true;
+                };
+            } else {
+                const std::string handler = vision.condition_handler;
+                value.condition = [owner, enchantment_name, handler](
+                const const_dialogue & dialogue ) {
+                    return invoke_enchantment_condition_handler(
+                               owner, enchantment_name, "vision", std::string_view(),
+                               handler, dialogue ).value_or( false );
+                };
+            }
+            if( !vision.distance_handler.empty() ) {
+                const std::string handler = vision.distance_handler;
+                value.platform_range = [owner, enchantment_name, handler](
+                const const_dialogue & dialogue ) {
+                    return std::max( 0.0, invoke_enchantment_number_handler(
+                                         owner, enchantment_name, "vision_range",
+                                         std::string_view(), std::string_view(), handler,
+                                         dialogue ).value_or( 0.0 ) );
+                };
+            }
+            for( const enchantment_vision_description_definition_data &description :
+                 vision.descriptions ) {
+                enchantment::special_vision_descriptions result;
+                result.id = description.id;
+                result.color = color_from_string(
+                                   description.color, report_color_error::no );
+                result.symbol = description.symbol;
+                result.text = description.text.raw;
+                result.description = description.text.native();
+                if( description.condition_handler.empty() ) {
+                    result.condition = []( const const_dialogue & ) {
+                        return true;
+                    };
+                } else {
+                    const std::string handler = description.condition_handler;
+                    const std::string description_id = description.id;
+                    result.condition = [owner, enchantment_name, handler, description_id](
+                    const const_dialogue & dialogue ) {
+                        return invoke_enchantment_condition_handler(
+                                   owner, enchantment_name, "vision_description",
+                                   description_id, handler, dialogue ).value_or( false );
+                    };
+                }
+                value.special_vision_descriptions_vector.push_back( std::move( result ) );
+            }
+            native.special_vision_vector.push_back( std::move( value ) );
+        }
+        detail::enchantment_registry().insert( native );
+    }
+    if( !this->enchantments.empty() ) {
+        detail::enchantment_registry().finalize();
+    }
+}
+
+void character_content_transaction::impl::apply_bionic()
+{
+    for( const bionic_registration &entry : this->bionics ) {
+        const bionic_id id( entry.definition->id );
+        this->bionic_undo.emplace_back(
+            id, id.is_valid() ? std::optional<bionic_data>( id.obj() ) : std::nullopt );
+        const bionic_definition_data &source = *entry.definition;
+        bionic_data native;
+        native.id = id;
+        native.src.emplace_back( id, mod_id( this->owner ) );
+        native.was_loaded = true;
+        native.name = source.name.native();
+        native.description = source.description.native();
+        if( source.cant_remove_reason ) {
+            native.cant_remove_reason = source.cant_remove_reason->native();
+        }
+        native.power_activate = units::from_millijoule(
+                                    source.activation_energy_millijoules );
+        native.power_deactivate = units::from_millijoule(
+                                      source.deactivation_energy_millijoules );
+        native.power_over_time = units::from_millijoule(
+                                     source.over_time_energy_millijoules );
+        native.power_trigger = units::from_millijoule(
+                                   source.trigger_energy_millijoules );
+        native.capacity = units::from_millijoule(
+                              source.capacity_energy_millijoules );
+        native.charge_time = time_duration::from_turns( source.charge_time_turns );
+        const auto make_fake_spell = []( const enchantment_fake_spell_definition_data & value ) {
+            fake_spell result( spell_id( value.spell ), value.self );
+            if( value.max_level ) {
+                result.max_level = static_cast<int>( *value.max_level );
+            }
+            result.level = static_cast<int>( value.level );
+            result.trigger_once_in = static_cast<int>( value.trigger_once_in );
+            result.trigger_message = value.trigger_message.native();
+            result.npc_trigger_message = value.npc_trigger_message.native();
+            return result;
+        };
+
+        if( source.activation_spell ) {
+            native.spell_on_activate = cata::make_value<fake_spell>(
+                                           make_fake_spell( *source.activation_spell ) );
+        }
+        if( !source.power_gen_emission.empty() ) {
+            native.power_gen_emission = emit_id( source.power_gen_emission );
+        }
+        native.fake_weapon = itype_id( source.fake_weapon );
+        native.upgraded_bionic = bionic_id( source.upgraded_bionic );
+        native.required_bionic = bionic_id( source.required_bionic );
+        native.installation_requirement = requirement_id( source.installation_requirement );
+        for( const std::string &material : source.fuel_options ) {
+            native.fuel_opts.emplace_back( material );
+        }
+        for( const std::string &enchantment : source.enchantments ) {
+            native.enchantments.emplace_back( enchantment );
+        }
+        for( const std::string &style : source.martial_arts ) {
+            native.ma_styles.emplace_back( style );
+        }
+        for( const std::string &proficiency : source.proficiencies ) {
+            native.proficiencies.emplace_back( proficiency );
+        }
+        for( const std::string &item : source.passive_pseudo_items ) {
+            native.passive_pseudo_items.emplace_back( item );
+        }
+        for( const std::string &item : source.toggled_pseudo_items ) {
+            native.toggled_pseudo_items.emplace_back( item );
+        }
+        for( const std::string &trait : source.canceled_mutations ) {
+            native.canceled_mutations.emplace_back( trait );
+        }
+        for( const std::string &bionic : source.included_bionics ) {
+            native.included_bionics.emplace_back( bionic );
+        }
+        for( const std::string &bionic : source.auto_deactivated_bionics ) {
+            native.autodeactivated_bionics.emplace_back( bionic );
+        }
+        for( const std::string &flag : source.flags ) {
+            native.flags.insert( json_character_flag( flag ) );
+        }
+        for( const std::string &flag : source.active_flags ) {
+            native.active_flags.insert( json_character_flag( flag ) );
+        }
+        for( const std::string &flag : source.inactive_flags ) {
+            native.inactive_flags.insert( json_character_flag( flag ) );
+        }
+        for( const auto &[bodypart, amount] : source.environment_protection ) {
+            native.env_protec.emplace(
+                bodypart_str_id( bodypart ), static_cast<std::size_t>( amount ) );
+        }
+        for( const bionic_protection_definition_data &protection : source.protection ) {
+            native.protec[bodypart_str_id( protection.bodypart )].set_resist(
+                damage_type_id( protection.damage_type ),
+                static_cast<float>( protection.amount ) );
+        }
+        for( const auto &[bodypart, slots] : source.occupied_bodyparts ) {
+            native.occupied_bodyparts.emplace(
+                bodypart_str_id( bodypart ), static_cast<std::size_t>( slots ) );
+        }
+        for( const auto &[bodypart, amount] : source.encumbrance ) {
+            native.encumbrance.emplace(
+                bodypart_str_id( bodypart ), static_cast<int>( amount ) );
+        }
+        for( const std::string &flag : source.installable_weapon_flags ) {
+            native.installable_weapon_flags.emplace( flag );
+        }
+        for( const std::string &bodypart : source.replaced_bodyparts ) {
+            native.replaced_bodyparts.emplace( bodypart );
+        }
+        for( const std::string &trait : source.mutation_conflicts ) {
+            native.mutation_conflicts.emplace( trait );
+        }
+        for( const std::string &trait : source.give_mutation_on_removal ) {
+            native.give_mut_on_removal.emplace( trait );
+        }
+        for( const auto &[spell, level] : source.learned_spells ) {
+            native.learned_spells.emplace( spell_id( spell ), static_cast<int>( level ) );
+        }
+        for( const std::string &bionic : source.available_upgrades ) {
+            native.available_upgrades.emplace( bionic );
+        }
+        native.fuel_efficiency = static_cast<float>( source.fuel_efficiency );
+        native.passive_fuel_efficiency = static_cast<float>( source.passive_fuel_efficiency );
+        if( source.coverage_power_gen_penalty ) {
+            native.coverage_power_gen_penalty = static_cast<float>(
+                                                    *source.coverage_power_gen_penalty );
+        }
+        native.social_mods.lie = static_cast<int>( source.social_lie );
+        native.social_mods.persuade = static_cast<int>( source.social_persuade );
+        native.social_mods.intimidate = static_cast<int>( source.social_intimidate );
+        native.dupes_allowed = source.dupes_allowed;
+        native.activated_on_install = source.activated_on_install;
+        native.included = source.included;
+        native.activate_remove_cbm = source.activate_remove_cbm;
+        native.is_remote_fueled = source.is_remote_fueled;
+        native.exothermic_power_gen = source.exothermic_power_gen;
+        native.activated_close_ui = source.activated_close_ui || source.activate_remove_cbm;
+        native.deactivated_close_ui = source.deactivated_close_ui;
+        native.activated = native.has_flag( json_flag_BIONIC_TOGGLED ) ||
+                           native.has_flag( json_flag_BIONIC_REMOVABLE ) ||
+                           native.has_flag( json_flag_BIONIC_GUN ) ||
+                           native.power_activate > 0_kJ ||
+                           native.spell_on_activate ||
+                           native.charge_time > 0_turns;
+        detail::bionic_registry().insert( native );
+    }
+    if( !this->bionics.empty() ) {
+        detail::bionic_registry().finalize();
+        detail::refresh_bionic_registry_cache();
+    }
+}
+
+void character_content_transaction::impl::apply_spell()
+{
+    for( const spell_registration &entry : this->spells ) {
+        const spell_id id( entry.definition->id );
+        this->spell_undo.emplace_back(
+            id, id.is_valid() ? std::optional<spell_type>( id.obj() ) : std::nullopt );
+        const spell_definition_data &source = *entry.definition;
+
+        spell_type native;
+        native.id = id;
+        native.src_mod = mod_id( this->owner );
+        native.src.emplace_back( id, native.src_mod );
+        native.was_loaded = true;
+        native.name = source.name.native();
+        native.description = source.description.native();
+        native.message = source.message.native();
+        native.skill = skill_id( source.skill );
+        native.teachable = source.teachable;
+        native.spell_components = requirement_id( source.components );
+        native.sound_description = source.sound_description.native();
+        native.sound_type = *io::string_to_enum_optional<sounds::sound_t>( source.sound_type );
+        native.sound_ambient = source.sound_ambient;
+        native.sound_id = source.sound_id;
+        native.sound_variant = source.sound_variant;
+        native.effect_name = source.effect;
+        if( source.effect_handler.empty() ) {
+            native.effect = spell_effect::effect_map.at( source.effect );
+        } else {
+            const std::string owner = this->owner;
+            const std::string spell_name = source.id;
+            const std::string handler = source.effect_handler;
+            native.effect = [owner, spell_name, handler](
+            const spell & cast_spell, Creature & caster, const tripoint_bub_ms & target ) {
+                invoke_spell_effect_handler(
+                    owner, spell_name, handler, cast_spell, caster, target );
+            };
+        }
+        native.spell_area = *io::string_to_enum_optional<spell_shape>( source.shape );
+        native.spell_area_function = spell_effect::shape_map.at( native.spell_area );
+        native.effect_str = source.effect_data;
+        native.explosion_light = explosion_light_str_id( source.explosion_light );
+        if( !source.field.empty() ) {
+            native.field = field_type_id( source.field );
+        }
+        native.spell_class = trait_id( source.spell_class );
+        native.dmg_type = damage_type_id( source.damage_type );
+        if( !source.magic_type.empty() ) {
+            native.magic_type = magic_type_id( source.magic_type );
+        }
+        const std::optional<magic_energy_type> energy = source.energy_source.empty() ?
+                std::optional<magic_energy_type>() :
+                io::string_to_enum_optional<magic_energy_type>( source.energy_source );
+        native.set_platform_energy_source(
+            energy,
+            source.energy_vitamin.empty() ? std::optional<vitamin_id>() :
+            std::optional<vitamin_id>( vitamin_id( source.energy_vitamin ) ),
+            energy && *energy == magic_energy_type::vitamin ?
+            std::optional<nc_color>( color_from_string(
+                                         source.energy_color, report_color_error::no ) ) :
+            std::optional<nc_color>() );
+        native.set_platform_progression(
+            source.get_level_formula.empty() ? std::optional<jmath_func_id>() :
+            std::optional<jmath_func_id>( jmath_func_id( source.get_level_formula ) ),
+            source.exp_for_level_formula.empty() ? std::optional<jmath_func_id>() :
+            std::optional<jmath_func_id>( jmath_func_id( source.exp_for_level_formula ) ),
+            source.max_book_level ?
+            std::optional<int>( static_cast<int>( *source.max_book_level ) ) :
+            std::optional<int>() );
+        for( const std::string &target : source.valid_targets ) {
+            native.valid_targets.set(
+                *io::string_to_enum_optional<spell_target>( target ) );
+        }
+        for( const std::string &flag : source.flags ) {
+            native.flags.insert( flag );
+            if( const std::optional<spell_flag> parsed =
+                    io::string_to_enum_optional<spell_flag>( flag ) ) {
+                native.spell_tags.set( *parsed );
+            }
+        }
+        for( const std::string &monster : source.targeted_monsters ) {
+            native.targeted_monster_ids.emplace( monster );
+        }
+        for( const std::string &species : source.targeted_species ) {
+            native.targeted_species_ids.emplace( species );
+        }
+        for( const std::string &species : source.ignored_species ) {
+            native.ignored_species_ids.emplace( species );
+        }
+        for( const std::string &bodypart : source.affected_bodyparts ) {
+            native.affected_bps.set( bodypart_str_id( bodypart ) );
+        }
+        const auto make_fake_spell = []( const enchantment_fake_spell_definition_data & value ) {
+            fake_spell result( spell_id( value.spell ), value.self );
+            if( value.max_level ) {
+                result.max_level = static_cast<int>( *value.max_level );
+            }
+            result.level = static_cast<int>( value.level );
+            result.trigger_once_in = static_cast<int>( value.trigger_once_in );
+            result.trigger_message = value.trigger_message.native();
+            result.npc_trigger_message = value.npc_trigger_message.native();
+            return result;
+        };
+        for( const enchantment_fake_spell_definition_data &spell :
+             source.additional_spells ) {
+            native.additional_spells.push_back( make_fake_spell( spell ) );
+        }
+        for( const auto &[spell, level] : source.learned_spells ) {
+            native.learn_spells.emplace( spell, static_cast<int>( level ) );
+        }
+        native.channelling_turns = static_cast<int>( source.channel_turns );
+        native.channel_spell = source.channel_spell;
+        native.channel_end_spell = source.channel_end_spell;
+        native.channel_interrupt_spell = source.channel_interrupt_spell;
+        native.channel_uses_energy = source.channel_uses_energy;
+        if( !source.caster_condition_handler.empty() ) {
+            const std::string owner = this->owner;
+            const std::string spell_name = source.id;
+            const std::string handler = source.caster_condition_handler;
+            native.has_caster_condition = true;
+            native.caster_condition = [owner, spell_name, handler](
+            const const_dialogue & dialogue ) {
+                return invoke_spell_condition_handler(
+                           owner, spell_name, "caster", handler, dialogue ).value_or( false );
+            };
+        }
+        native.caster_condition_fail_message_ = source.caster_condition_fail_message.native();
+        if( !source.target_condition_handler.empty() ) {
+
+            const std::string owner = this->owner;
+            const std::string spell_name = source.id;
+            const std::string handler = source.target_condition_handler;
+            native.has_target_condition = true;
+            native.target_condition = [owner, spell_name, handler](
+            const const_dialogue & dialogue ) {
+                return invoke_spell_condition_handler(
+                           owner, spell_name, "target", handler, dialogue ).value_or( false );
+            };
+        }
+        native.target_condition_fail_message_ = source.target_condition_fail_message.native();
+        const auto make_stat = [&]( const std::string & name ) {
+            dbl_or_var result( source.stats.at( name ) );
+            const auto maximum = source.stat_maximums.find( name );
+            if( maximum != source.stat_maximums.end() ) {
+                result.max.emplace( maximum->second );
+            }
+            const auto dynamic = source.stat_handlers.find( name );
+            if( dynamic != source.stat_handlers.end() ) {
+                const std::string owner = this->owner;
+                const std::string spell_name = source.id;
+                const std::string handler = dynamic->second;
+                const double fallback = source.stats.at( name );
+                runtime_dbl_provider provider;
+                provider.callback = [owner, spell_name, name, handler, fallback](
+                const const_dialogue & dialogue ) {
+                    return invoke_spell_stat_handler(
+                               owner, spell_name, name, handler, dialogue ).value_or( fallback );
+                };
+                result.min.val = std::move( provider );
+            }
+            return result;
+        };
+        native.field_chance = make_stat( "field_chance" );
+        native.min_field_intensity = make_stat( "min_field_intensity" );
+        native.field_intensity_increment = make_stat( "field_intensity_increment" );
+        native.max_field_intensity = make_stat( "max_field_intensity" );
+        native.field_intensity_variance = make_stat( "field_intensity_variance" );
+        native.min_accuracy = make_stat( "min_accuracy" );
+        native.accuracy_increment = make_stat( "accuracy_increment" );
+        native.max_accuracy = make_stat( "max_accuracy" );
+        native.min_damage = make_stat( "min_damage" );
+        native.damage_increment = make_stat( "damage_increment" );
+        native.max_damage = make_stat( "max_damage" );
+        native.min_range = make_stat( "min_range" );
+        native.range_increment = make_stat( "range_increment" );
+        native.max_range = make_stat( "max_range" );
+        native.min_aoe = make_stat( "min_aoe" );
+        native.aoe_increment = make_stat( "aoe_increment" );
+        native.max_aoe = make_stat( "max_aoe" );
+        native.min_dot = make_stat( "min_dot" );
+        native.dot_increment = make_stat( "dot_increment" );
+        native.max_dot = make_stat( "max_dot" );
+        native.min_duration = make_stat( "min_duration" );
+        native.duration_increment = make_stat( "duration_increment" );
+        native.max_duration = make_stat( "max_duration" );
+        native.min_pierce = make_stat( "min_pierce" );
+        native.pierce_increment = make_stat( "pierce_increment" );
+        native.max_pierce = make_stat( "max_pierce" );
+        native.min_bash_scaling = make_stat( "min_bash_scaling" );
+        native.bash_scaling_increment = make_stat( "bash_scaling_increment" );
+        native.max_bash_scaling = make_stat( "max_bash_scaling" );
+        native.base_energy_cost = make_stat( "base_energy_cost" );
+        native.energy_increment = make_stat( "energy_increment" );
+        native.final_energy_cost = make_stat( "final_energy_cost" );
+        native.difficulty = make_stat( "difficulty" );
+        native.multiple_projectiles = make_stat( "multiple_projectiles" );
+        native.max_level = make_stat( "max_level" );
+        native.base_casting_time = make_stat( "base_casting_time" );
+        native.casting_time_increment = make_stat( "casting_time_increment" );
+        native.final_casting_time = make_stat( "final_casting_time" );
+        detail::spell_registry().insert( native );
+    }
+    if( !this->spells.empty() ) {
+        detail::spell_registry().finalize();
+    }
+}
+
+void character_content_transaction::impl::apply_mission_definition()
+{
+    for( const mission_definition_registration &entry : this->mission_definitions ) {
+        const mission_type_id id( entry.definition->id );
+        this->mission_definition_undo.emplace_back(
+            id, id.is_valid() ? std::optional<mission_type>( id.obj() ) : std::nullopt );
+        const mission_definition_data &source = *entry.definition;
+        mission_type native;
+        native.id = id;
+        native.src.emplace_back( id, mod_id( this->owner ) );
+        native.was_loaded = true;
+        native.set_platform_name( source.name.native() );
+        native.description = source.description.native();
+        native.goal = *io::string_to_enum_optional<mission_goal>( source.goal );
+        native.difficulty = static_cast<int>( source.difficulty );
+        native.value = static_cast<int>( source.value );
+        native.urgent = source.urgent;
+        native.has_generic_rewards = source.has_generic_rewards;
+        for( const std::string &origin : source.origins ) {
+            native.origins.push_back(
+                *io::string_to_enum_optional<mission_origin>( origin ) );
+        }
+        native.item_id = source.item.empty() ? itype_id::NULL_ID() : itype_id( source.item );
+        native.group_id = source.item_group.empty() ? item_group_id::NULL_ID() :
+                          item_group_id( source.item_group );
+        native.container_id = source.required_container.empty() ? itype_id::NULL_ID() :
+                              itype_id( source.required_container );
+        native.empty_container = source.empty_container.empty() ? itype_id::NULL_ID() :
+                                 itype_id( source.empty_container );
+        native.item_count = static_cast<int>( source.item_count );
+        native.remove_container = source.remove_container;
+        native.invisible_on_complete = source.invisible_on_complete;
+        native.recruit_class = source.recruit_class.empty() ? npc_class_id::NULL_ID() :
+                               npc_class_id( source.recruit_class );
+        native.monster_type = source.monster_type.empty() ? mtype_id::NULL_ID() :
+                              mtype_id( source.monster_type );
+        if( !source.monster_species.empty() ) {
+            native.monster_species = species_id( source.monster_species );
+        }
+        native.monster_kill_goal = static_cast<int>( source.monster_kill_goal );
+        if( !source.destination.empty() ) {
+            native.target_id = oter_type_str_id( source.destination );
+        }
+        native.follow_up = source.followup.empty() ? mission_type_id::NULL_ID() :
+
+                           mission_type_id( source.followup );
+        for( const auto &[phase, text] : source.dialogue ) {
+            native.dialogue.emplace( phase, no_translation( text ) );
+        }
+        for( const auto &[value, description] : source.likely_rewards ) {
+            native.likely_rewards.emplace_back(
+                std::piecewise_construct,
+                std::forward_as_tuple( value ), std::forward_as_tuple( description ) );
+        }
+
+        native.deadline = duration_or_var(
+                              time_duration::from_turns( source.deadline_min_turns ) );
+        if( source.deadline_max_turns ) {
+            native.deadline.max.emplace(
+                time_duration::from_turns( *source.deadline_max_turns ) );
+        }
+        if( !source.deadline_handler.empty() ) {
+            const std::string owner = this->owner;
+            const std::string mission_id = source.id;
+            const std::string handler = source.deadline_handler;
+            runtime_duration_provider provider;
+            provider.callback = [owner, mission_id, handler](
+            const const_dialogue & dialogue ) {
+                return time_duration::from_turns(
+                           invoke_mission_deadline_handler(
+                               owner, mission_id, handler, dialogue ).value_or( 0 ) );
+            };
+            native.deadline.min.val = std::move( provider );
+            native.deadline.max.reset();
+        }
+
+        if( !source.place_handler.empty() ) {
+            const std::string owner = this->owner;
+            const std::string mission_id = source.id;
+            const std::string handler = source.place_handler;
+            native.place = [owner, mission_id, handler]( const tripoint_abs_omt & position ) {
+                return invoke_mission_place_handler(
+                           owner, mission_id, handler, position ).value_or( false );
+            };
+        } else if( source.place == "never" ) {
+            native.place = mission_place::never;
+        } else if( source.place == "near_town" ) {
+            native.place = mission_place::near_town;
+        } else {
+            native.place = mission_place::always;
+        }
+        const auto make_phase = [this, &source](
+                                    const std::string & phase,
+        const std::string & handler ) {
+            const std::string owner = this->owner;
+            const std::string mission_id = source.id;
+            return [owner, mission_id, phase, handler]( mission * active_mission ) {
+                invoke_mission_phase_handler(
+                    owner, mission_id, phase, handler, active_mission );
+            };
+        };
+        if( !source.start_handler.empty() ) {
+            native.start = make_phase( "start", source.start_handler );
+        }
+        if( !source.end_handler.empty() ) {
+            native.end = make_phase( "success", source.end_handler );
+        }
+        if( !source.fail_handler.empty() ) {
+            native.fail = make_phase( "failure", source.fail_handler );
+        }
+        if( !source.goal_condition_handler.empty() ) {
+            const std::string owner = this->owner;
+            const std::string mission_id = source.id;
+            const std::string handler = source.goal_condition_handler;
+            native.goal_condition = [owner, mission_id, handler](
+            const const_dialogue & dialogue ) {
+                return invoke_mission_condition_handler(
+                           owner, mission_id, "goal", handler, dialogue ).value_or( false );
+            };
+        }
+        detail::mission_type_registry().insert( native );
+    }
+    if( !this->mission_definitions.empty() ) {
+        detail::mission_type_registry().finalize();
+    }
+}
+
+void character_content_transaction::impl::apply_profession_item()
+{
+    if( !this->profession_item_substitutions.empty() ||
+        !this->profession_item_bonuses.empty() ) {
+        this->profession_item_substitution_undo =
+            detail::profession_item_substitution_registry_snapshot();
+    }
+    for( const profession_item_substitution_registration &entry :
+         this->profession_item_substitutions ) {
+        detail::profession_item_substitution_native_entry native;
+        native.item = entry.definition->id;
+        native.rules = entry.definition->rules;
+        detail::profession_item_substitution_registry_set( native );
+    }
+    for( const profession_item_bonus_registration &entry :
+         this->profession_item_bonuses ) {
+        detail::profession_item_bonus_native_entry native;
+        native.group = entry.definition->id;
+        native.requirements = entry.definition->requirements;
+        detail::profession_item_bonus_registry_set( native );
+    }
+}
+
+void character_content_transaction::impl::apply_technique()
+{
+    for( const technique_registration &entry : this->techniques ) {
+        const matec_id id( entry.definition->id );
+        this->technique_undo.emplace_back(
+            id, id.is_valid() ? std::optional<ma_technique>( id.obj() ) :
+            std::nullopt );
+        const technique_definition_data &source = *entry.definition;
+        ma_technique native;
+        native.id = id;
+        native.src.emplace_back( id, mod_id( this->owner ) );
+        native.name = source.name.native();
+        native.description = source.description.empty() ? translation() :
+                             source.description.native();
+        if( !source.avatar_message.empty() ) {
+            native.avatar_message = source.avatar_message.native();
+        }
+        if( !source.npc_message.empty() ) {
+            native.npc_message = source.npc_message.native();
+        }
+        native.crit_tec = source.crit_tec;
+        native.crit_ok = source.crit_ok;
+        native.wall_adjacent = source.wall_adjacent;
+        native.reach_tec = source.reach_tec;
+        native.reach_ok = source.reach_ok;
+        native.needs_ammo = source.needs_ammo;
+        native.defensive = source.defensive;
+        native.disarms = source.disarms;
+        native.take_weapon = source.take_weapon;
+        native.side_switch = source.side_switch;
+        native.dummy = source.dummy;
+        native.dodge_counter = source.dodge_counter;
+        native.block_counter = source.block_counter;
+        native.miss_recovery = source.miss_recovery;
+        native.grab_break = source.grab_break;
+        native.weighting = static_cast<int>( source.weighting );
+        native.repeat_min = static_cast<int>( source.repeat_min );
+        native.repeat_max = static_cast<int>( source.repeat_max );
+        native.down_dur = static_cast<int>( source.down_dur );
+        native.stun_dur = static_cast<int>( source.stun_dur );
+        native.knockback_dist = static_cast<int>( source.knockback_dist );
+        native.knockback_spread = static_cast<float>( source.knockback_spread );
+        native.knockback_follow = source.knockback_follow;
+        native.aoe = source.aoe;
+        native.flags = source.flags;
+        native.reqs.unarmed_allowed = source.unarmed_allowed;
+        native.reqs.melee_allowed = source.melee_allowed;
+        native.reqs.strictly_unarmed = source.strictly_unarmed;
+        for( const std::string &vector : source.attack_vectors ) {
+            native.attack_vectors.emplace_back( vector );
+        }
+        for( const auto &[skill, level] : source.min_skills ) {
+            native.reqs.min_skill.emplace_back( skill_id( skill ),
+                                                static_cast<int>( level ) );
+        }
+        native.lua_platform_mod = this->owner;
+        native.lua_platform_apply_handler = source.apply_handler;
+        native.was_loaded = true;
+        detail::ma_technique_registry().insert( native );
+    }
+    if( !this->techniques.empty() ) {
+        detail::ma_technique_registry().finalize();
+    }
+}
+
+void character_content_transaction::impl::apply_martial_art()
+{
+    for( const martial_art_registration &entry : this->martial_arts ) {
+        const matype_id id( entry.definition->id );
+        this->martial_art_undo.emplace_back(
+            id, id.is_valid() ? std::optional<martialart>( id.obj() ) :
+            std::nullopt );
+        const martial_art_definition_data &source = *entry.definition;
+        martialart native;
+        native.id = id;
+        native.src.emplace_back( id, mod_id( this->owner ) );
+        native.name = source.name.native();
+        native.description = source.description.empty() ? translation() :
+                             source.description.native();
+        if( !source.initiate_avatar.empty() ) {
+            native.initiate.emplace_back( source.initiate_avatar.native() );
+        }
+        if( !source.initiate_npc.empty() ) {
+            native.initiate.emplace_back( source.initiate_npc.native() );
+        }
+        native.priority = static_cast<int>( source.priority );
+        native.primary_skill = source.primary_skill.empty() ?
+                               skill_id::NULL_ID() : skill_id( source.primary_skill );
+        native.learn_difficulty = static_cast<int>( source.learn_difficulty );
+        native.teachable = source.teachable;
+        native.arm_block = static_cast<int>( source.arm_block );
+        native.leg_block = static_cast<int>( source.leg_block );
+        native.arm_block_with_bio_armor_arms = source.arm_block_with_bio_armor_arms;
+        native.leg_block_with_bio_armor_legs = source.leg_block_with_bio_armor_legs;
+        native.strictly_unarmed = source.strictly_unarmed;
+        native.strictly_melee = source.strictly_melee;
+        native.allow_all_weapons = source.allow_all_weapons;
+        native.force_unarmed = source.force_unarmed;
+        native.prevent_weapon_blocking = source.prevent_weapon_blocking;
+        for( const auto &[skill, level] : source.autolearn_skills ) {
+            native.autolearn_skills.emplace_back( skill, static_cast<int>( level ) );
+        }
+        for( const std::string &technique : source.techniques ) {
+            native.techniques.insert( matec_id( technique ) );
+        }
+        for( const std::string &weapon : source.weapons ) {
+            native.weapons.insert( itype_id( weapon ) );
+        }
+        for( const std::string &category : source.weapon_categories ) {
+            native.weapon_category.insert( weapon_category_id( category ) );
+        }
+        native.was_loaded = true;
+        detail::martialart_registry().insert( native );
+    }
+    if( !this->martial_arts.empty() ) {
+        detail::martialart_registry().finalize();
+    }
+}
+
+void character_content_transaction::impl::apply_magic_type()
+{
+    for( const magic_type_registration &entry : this->magic_types ) {
+        const magic_type_id id( entry.definition->id );
+        this->magic_type_undo.emplace_back(
+            id, id.is_valid() ? std::optional<magic_type>( id.obj() ) : std::nullopt );
+        const magic_type_definition_data &source = *entry.definition;
+        magic_type native;
+        native.id = id;
+        native.src_mod = mod_id( this->owner );
+        native.was_loaded = true;
+        native.energy_source = platform_magic_energy_type( source.energy_source );
+        if( !source.vitamin.empty() ) {
+            native.vitamin_energy_source_ = vitamin_id( source.vitamin );
+        }
+        native.energy_color_ = color_from_string(
+                                   source.energy_color, report_color_error::no );
+        native.cannot_cast_flags = source.cannot_cast_flags;
+        native.cannot_cast_message = source.cannot_cast_message;
+        if( source.max_book_level ) {
+            native.max_book_level = static_cast<int>( *source.max_book_level );
+        }
+        native.failure_cost_percent = source.failure_cost_fraction;
+        native.failure_exp_percent = source.failure_experience_fraction;
+        detail::magic_type_registry().insert( native );
+    }
+    if( !this->magic_types.empty() ) {
+        detail::magic_type_registry().finalize();
+    }
+}
+
+void character_content_transaction::impl::apply_movement_mode()
+{
+    for( const movement_mode_registration &entry : this->movement_modes ) {
+        const move_mode_id id( entry.definition->id );
+        this->movement_mode_undo.emplace_back(
+            id, id.is_valid() ? std::optional<move_mode>( id.obj() ) : std::nullopt );
+        const movement_mode_definition_data &source = *entry.definition;
+        move_mode native;
+        native.id = id;
+        native.src.emplace_back( id, mod_id( this->owner ) );
+        native.was_loaded = true;
+        native._name = source.name.native();
+        native._type = *platform_movement_mode_type( source.kind );
+        native._letter = source.character_symbol;
+        native._panel_letter = source.panel_symbol;
+        native._panel_color = color_from_string(
+                                  source.panel_color, report_color_error::no );
+        native._symbol_color = color_from_string(
+                                   source.symbol_color, report_color_error::no );
+        native._exertion_level = static_cast<float>( source.exertion );
+        native._exertion_level_animal_riding =
+            static_cast<float>( source.riding_exertion );
+        native._stamina_multiplier = static_cast<float>( source.stamina_multiplier );
+        native._sound_multiplier = static_cast<float>( source.sound_multiplier );
+        native._move_speed_mult = static_cast<float>( source.speed_multiplier );
+        native._mech_power_use = static_cast<int>( source.mech_power_kilojoules );
+        native._swim_speed_mod = static_cast<int>( source.swim_speed_modifier );
+        native._stop_hauling = source.stop_hauling;
+        for( const movement_mode_message_definition_data &messages : source.messages ) {
+            const steed_type steed = *platform_steed_type( messages.steed );
+            native.prepare_messages[steed] = messages.prepare.native();
+            native.change_messages_success[steed] = messages.success.native();
+            native.change_messages_fail[steed] = messages.failure.native();
+        }
+        detail::movement_mode_registry().insert( native );
+    }
+    if( !this->movement_modes.empty() ) {
+        detail::refresh_movement_mode_registry();
+    }
+}
+
 bool character_content_transaction::apply_phase(
     const character_content_apply_phase phase, std::string &error )
 {
@@ -5373,1166 +6698,42 @@ bool character_content_transaction::apply_phase(
     }
     try {
         switch( phase ) {
-            case character_content_apply_phase::profession: {
-                for( const profession_registration &entry : pimpl_->professions ) {
-                    const profession_id id( entry.definition->id );
-                    pimpl_->profession_undo.emplace_back(
-                        id, id.is_valid() ? std::optional<profession>( id.obj() ) : std::nullopt );
-                    const profession_definition_data &source = *entry.definition;
-                    profession native;
-                    native.id = id;
-                    native.was_loaded = true;
-                    native._name_male = no_translation( source.name_male );
-                    native._name_female = no_translation( source.name_female );
-                    native._description_male = no_translation( source.description_male );
-                    native._description_female = no_translation( source.description_female );
-                    native._point_cost = static_cast<int>( source.points );
-                    if( source.starting_cash ) {
-                        native._starting_cash = static_cast<int>( *source.starting_cash );
-                    }
-                    native._starting_npc_background =
-                        trait_group::Trait_group_tag( source.npc_background );
-                    native._chargen_allow_npc = source.chargen_allow_npc;
-                    native.age_lower = static_cast<int>( source.age_lower );
-                    native.age_upper = static_cast<int>( source.age_upper );
-                    native._starting_vehicle = source.starting_vehicle.empty() ?
-                                               vproto_id::NULL_ID() : vproto_id( source.starting_vehicle );
-                    native._starting_items = item_group_id( source.items_both );
-                    native._starting_items_male = item_group_id( source.items_male );
-                    native._starting_items_female = item_group_id( source.items_female );
-                    native.no_bonus = itype_id( source.no_bonus );
-                    for( const std::string &achievement : source.requirements ) {
-                        native._requirements.emplace_back( achievement );
-                    }
-                    native.hard_requirement = source.hard_requirement;
-                    for( const auto &[skill, level] : source.skills ) {
-                        native._starting_skills.emplace_back(
-                            skill_id( skill ), static_cast<int>( level ) );
-                    }
-                    for( const profession_addiction_definition_data &value : source.addictions ) {
-                        native._starting_addictions.emplace_back(
-                            addiction_id( value.type ), static_cast<int>( value.intensity ) );
-                    }
-                    for( const std::string &bionic : source.cbms ) {
-                        native._starting_CBMs.emplace_back( bionic );
-                    }
-                    for( const std::string &proficiency : source.proficiencies ) {
-                        native._starting_proficiencies.emplace_back( proficiency );
-                    }
-                    for( const std::string &recipe : source.recipes ) {
-                        native._starting_recipes.emplace_back( recipe );
-                    }
-                    for( const profession_trait_definition_data &value : source.traits ) {
-                        native._starting_traits.emplace_back(
-                            trait_id( value.trait ), value.variant );
-                    }
-                    for( const std::string &trait : source.forbidden_traits ) {
-                        native._forbidden_traits.emplace( trait );
-                    }
-                    native.flags.insert( source.flags.begin(), source.flags.end() );
-                    for( const std::string &hobby : source.hobbies ) {
-                        native._hobby_exclusion.emplace( hobby );
-                    }
-                    native.hobbies_whitelist = source.hobbies_whitelist;
-                    for( const std::string &style : source.martial_arts ) {
-                        native._starting_martialarts.emplace_back( style );
-                    }
-                    for( const std::string &style : source.martial_arts_choices ) {
-                        native._starting_martialarts_choices.emplace_back( style );
-                    }
-                    native.ma_choice_amount = static_cast<int>( source.martial_arts_choice_amount );
-                    for( const auto &[monster, amount] : source.pets ) {
-                        for( std::int64_t count = 0; count < amount; ++count ) {
-                            native._starting_pets.emplace_back( monster );
-                        }
-                    }
-                    for( const auto &[spell, level] : source.spells ) {
-                        native._starting_spells.emplace(
-                            spell_id( spell ), static_cast<int>( level ) );
-                    }
-                    for( const std::string &mission : source.missions ) {
-                        native._missions.emplace_back( mission );
-                    }
-                    native._subtype = source.subtype;
-                    if( !source.start_handler.empty() ) {
-                        native.lua_platform_mod = pimpl_->owner;
-                        native.lua_platform_start_handler = source.start_handler;
-                    }
-                    native.src.emplace_back( id, mod_id( pimpl_->owner ) );
-                    detail::profession_registry().insert( native );
-                }
-                if( !pimpl_->professions.empty() ) {
-                    detail::profession_registry().finalize();
-                }
+            case character_content_apply_phase::profession:
+                pimpl_->apply_profession();
                 break;
-            }
-
-            case character_content_apply_phase::profession_group: {
-                for( const profession_group_registration &entry : pimpl_->profession_groups ) {
-                    const profession_group_id id( entry.definition->id );
-                    pimpl_->profession_group_undo.emplace_back(
-                        id, id.is_valid() ? std::optional<profession_group>( id.obj() ) : std::nullopt );
-                    profession_group native;
-                    native.id = id;
-                    native.was_loaded = true;
-                    for( const std::string &profession : entry.definition->professions ) {
-                        native.profession_list.emplace_back( profession );
-                    }
-                    detail::profession_group_registry().insert( native );
-                }
-                if( !pimpl_->profession_groups.empty() ) {
-                    detail::profession_group_registry().finalize();
-                }
+            case character_content_apply_phase::profession_group:
+                pimpl_->apply_profession_group();
                 break;
-            }
-
-            case character_content_apply_phase::widget: {
-                for( const widget_registration &entry : pimpl_->widgets ) {
-                    const widget_id id( entry.definition->id );
-                    pimpl_->widget_undo.emplace_back(
-                        id, id.is_valid() ? std::optional<widget>( id.obj() ) : std::nullopt );
-                    const widget_definition_data &source = *entry.definition;
-                    widget native;
-                    native.id = id;
-                    native.was_loaded = true;
-                    native.src.emplace_back( id, mod_id( pimpl_->owner ) );
-                    native._width = static_cast<int>( source.width );
-                    native._height_max = static_cast<int>( source.height );
-                    native._height = native._height_max;
-                    native._symbols = source.symbols;
-
-                    native._fill = source.fill;
-                    native._label = no_translation( source.label );
-                    native._description = source.description;
-                    native._style = source.style;
-                    native._arrange = source.arrange;
-                    native._body_graph = source.body_graph;
-                    native._direction = source.direction.empty() ?
-                                        cardinal_direction::num_cardinal_directions :
-                                        *io::string_to_enum_optional<cardinal_direction>( source.direction );
-                    native._text_align =
-                        *io::string_to_enum_optional<widget_alignment>( source.text_align );
-                    native._label_align =
-                        *io::string_to_enum_optional<widget_alignment>( source.label_align );
-                    native._pad_labels = source.pad_labels.value_or(
-                                             source.style != "layout" || source.arrange == "rows" );
-                    native.explicit_separator = source.separator.has_value();
-                    native.explicit_padding = source.padding.has_value();
-                    native._separator = source.separator.value_or( ": " );
-                    native._padding = static_cast<int>( source.padding.value_or( 2 ) );
-                    native._var = source.variable.empty() ? widget_var::last :
-                                  *io::string_to_enum_optional<widget_var>( source.variable );
-                    for( const std::string &bodypart : source.bodyparts ) {
-                        native._bps.emplace( bodypart_str_id( bodypart ).id() );
-                    }
-                    for( const std::string &color : source.colors ) {
-                        native._colors.push_back(
-                            color_from_string( color, report_color_error::no ) );
-                    }
-                    for( const std::int64_t value : source.breaks ) {
-                        native._breaks.push_back( static_cast<int>( value ) );
-                    }
-                    for( const std::string &child : source.widgets ) {
-                        native._widgets.emplace_back( child );
-                    }
-                    for( const std::string &flag : source.flags ) {
-                        native._flags.emplace( flag );
-                    }
-                    native._string = no_translation( source.text );
-                    const auto make_clause = [this, &source](
-                    const widget_clause_definition_data & value ) {
-                        widget_clause result;
-                        result.id = value.id;
-                        result.sym = value.symbol;
-                        result.text = no_translation( value.text );
-                        result.color = value.color.empty() ? c_unset :
-                                       color_from_string( value.color, report_color_error::no );
-                        result.value = static_cast<int>( value.value );
-                        result.should_parse_tags = value.parse_tags;
-                        for( const std::string &child : value.widgets ) {
-                            result.widgets.emplace_back( child );
-                        }
-                        if( !value.condition_handler.empty() ) {
-                            result.has_condition = true;
-                            const std::string owner = pimpl_->owner;
-                            const std::string widget_name = source.id;
-                            const std::string clause_name = value.id;
-                            const std::string handler = value.condition_handler;
-                            result.condition = [owner, widget_name, clause_name, handler](
-                            const const_dialogue & d ) {
-                                return invoke_widget_condition_handler(
-                                           owner, widget_name, clause_name, handler, d.reason ).value_or( false );
-                            };
-                        }
-                        return result;
-                    };
-                    for( const widget_clause_definition_data &clause : source.clauses ) {
-                        native._clauses.push_back( make_clause( clause ) );
-                    }
-                    if( source.default_clause ) {
-                        native._default_clause = make_clause( *source.default_clause );
-                    }
-                    if( !source.custom_handler.empty() ) {
-                        const std::string owner = pimpl_->owner;
-                        const std::string widget_name = source.id;
-                        const std::string handler = source.custom_handler;
-                        native.platform_custom_value = [owner, widget_name, handler]( const avatar & subject ) {
-                            const std::optional<widget_custom_handler_result> value =
-                                invoke_widget_custom_handler( owner, widget_name, handler, subject );
-                            return value ? value->value : 0;
-                        };
-                        native.platform_custom_range = [owner, widget_name, handler](
-                        const avatar & subject, widget & target ) {
-                            const std::optional<widget_custom_handler_result> value =
-                                invoke_widget_custom_handler( owner, widget_name, handler, subject );
-                            if( value ) {
-                                target._var_min = value->minimum;
-                                target._var_norm = { value->normal_minimum, value->normal_maximum };
-                                target._var_max = value->maximum;
-                            }
-                        };
-                    }
-                    native._label_width = native._label.empty() ||
-                                          native._flags.count( flag_id( "W_LABEL_NONE" ) ) != 0 ?
-                                          0 : utf8_width( native._label.translated() );
-                    detail::widget_registry().insert( native );
-                }
-                if( !pimpl_->widgets.empty() ) {
-                    detail::widget_registry().finalize();
-                }
+            case character_content_apply_phase::widget:
+                pimpl_->apply_widget();
                 break;
-            }
-
-            case character_content_apply_phase::enchantment: {
-                for( const enchantment_registration &entry : pimpl_->enchantments ) {
-                    const enchantment_id id( entry.definition->id );
-                    pimpl_->enchantment_undo.emplace_back(
-                        id, id.is_valid() ? std::optional<enchantment>( id.obj() ) : std::nullopt );
-                    const enchantment_definition_data &source = *entry.definition;
-                    enchantment native;
-                    native.id = id;
-                    native.was_loaded = true;
-                    native.src.emplace_back( id, mod_id( pimpl_->owner ) );
-                    native.name = no_translation( source.name );
-                    native.description = no_translation( source.description );
-                    native.active_conditions.first =
-                        *io::string_to_enum_optional<enchantment::has>( source.has );
-                    native.active_conditions.second =
-                        *io::string_to_enum_optional<enchantment::condition>( source.condition );
-                    if( !source.condition_handler.empty() ) {
-                        const std::string owner = pimpl_->owner;
-                        const std::string enchantment_name = source.id;
-                        const std::string handler = source.condition_handler;
-                        native.dialog_condition = [owner, enchantment_name, handler](
-
-                        const const_dialogue & dialogue ) {
-                            return invoke_enchantment_condition_handler(
-                                       owner, enchantment_name, "activation", std::string_view(),
-                                       handler, dialogue ).value_or( false );
-                        };
-                    }
-                    if( !source.emitter.empty() ) {
-                        native.emitter = emit_id( source.emitter );
-                    }
-                    for( const auto &[effect, intensity] : source.effects ) {
-                        native.ench_effects.emplace(
-                            efftype_id( effect ), static_cast<int>( intensity ) );
-                    }
-                    for( const auto &[gain, lose] : source.modified_bodyparts ) {
-                        enchantment::bodypart_changes change;
-                        change.gain = bodypart_str_id( gain );
-                        change.lose = bodypart_str_id( lose );
-                        change.was_loaded = true;
-                        native.modified_bodyparts.push_back( std::move( change ) );
-                    }
-                    for( const std::string &mutation : source.mutations ) {
-                        native.mutations.emplace_back( mutation );
-                    }
-                    for( const enchantment_modifier_definition_data &modifier : source.modifiers ) {
-                        const auto static_value = []( const std::optional<double> &number,
-                        auto & map, const auto & key ) {
-                            if( number ) {
-                                map.emplace( key, dbl_or_var( *number ) );
-                            }
-                        };
-                        if( modifier.kind == "value" ) {
-                            const enchant_vals::mod key =
-                                *io::string_to_enum_optional<enchant_vals::mod>( modifier.target );
-                            static_value( modifier.add, native.values_add, key );
-                            static_value( modifier.multiply, native.values_multiply, key );
-                        } else if( modifier.kind == "skill" ) {
-                            static_value( modifier.add, native.skill_values_add,
-                                          skill_id( modifier.target ) );
-                            static_value( modifier.multiply, native.skill_values_multiply,
-                                          skill_id( modifier.target ) );
-                        } else if( modifier.kind == "custom" ) {
-                            static_value( modifier.add, native.custom_values_add, modifier.target );
-                            static_value( modifier.multiply, native.custom_values_multiply,
-                                          modifier.target );
-                        } else if( modifier.kind == "encumbrance" ) {
-                            static_value( modifier.add, native.encumbrance_values_add,
-                                          bodypart_str_id( modifier.target ) );
-                            static_value( modifier.multiply, native.encumbrance_values_multiply,
-                                          bodypart_str_id( modifier.target ) );
-                        } else if( modifier.kind == "max_hp" ) {
-                            static_value( modifier.add, native.max_hp_values_add,
-                                          bodypart_str_id( modifier.target ) );
-                            static_value( modifier.multiply, native.max_hp_values_multiply,
-                                          bodypart_str_id( modifier.target ) );
-                        } else if( modifier.kind == "limb_score" ) {
-                            enchantment::limb_score_mod_bp value;
-                            value.score = limb_score_id( modifier.target );
-                            value.part = modifier.part.empty() ? bodypart_str_id::NULL_ID() :
-                                         bodypart_str_id( modifier.part );
-                            if( modifier.add ) {
-                                value.add = *modifier.add;
-                            }
-                            if( modifier.multiply ) {
-                                value.mult = *modifier.multiply;
-                            }
-                            native.limb_score_mods.push_back( std::move( value ) );
-                        } else {
-                            std::map<damage_type_id, dbl_or_var> *add_map = nullptr;
-                            std::map<damage_type_id, dbl_or_var> *multiply_map = nullptr;
-                            if( modifier.kind == "melee_damage" ) {
-                                add_map = &native.damage_values_add;
-                                multiply_map = &native.damage_values_multiply;
-                            } else if( modifier.kind == "incoming_damage" ) {
-                                add_map = &native.armor_values_add;
-                                multiply_map = &native.armor_values_multiply;
-                            } else if( modifier.kind == "post_armor_damage" ) {
-                                add_map = &native.extra_damage_add;
-                                multiply_map = &native.extra_damage_multiply;
-                            }
-                            if( add_map != nullptr ) {
-                                static_value( modifier.add, *add_map,
-                                              damage_type_id( modifier.target ) );
-                                static_value( modifier.multiply, *multiply_map,
-                                              damage_type_id( modifier.target ) );
-                            }
-                        }
-                        if( !modifier.add_handler.empty() || !modifier.multiply_handler.empty() ) {
-                            enchantment::platform_modifier value;
-                            value.kind = modifier.kind;
-                            value.target = modifier.target;
-                            value.part = modifier.part;
-                            const std::string owner = pimpl_->owner;
-                            const std::string enchantment_name = source.id;
-                            if( !modifier.add_handler.empty() ) {
-                                const std::string handler = modifier.add_handler;
-                                const std::string kind = modifier.kind;
-                                const std::string target = modifier.target;
-                                const std::string part = modifier.part;
-                                value.add = [owner, enchantment_name, kind, target, part, handler](
-                                const const_dialogue & dialogue ) {
-                                    return invoke_enchantment_number_handler(
-                                               owner, enchantment_name, kind + ":add", target, part,
-                                               handler, dialogue ).value_or( 0.0 );
-                                };
-                            }
-                            if( !modifier.multiply_handler.empty() ) {
-                                const std::string handler = modifier.multiply_handler;
-                                const std::string kind = modifier.kind;
-                                const std::string target = modifier.target;
-                                const std::string part = modifier.part;
-                                value.multiply = [owner, enchantment_name, kind, target, part, handler](
-                                const const_dialogue & dialogue ) {
-                                    return invoke_enchantment_number_handler(
-                                               owner, enchantment_name, kind + ":multiply", target, part,
-                                               handler, dialogue ).value_or( 0.0 );
-                                };
-                            }
-                            native.platform_modifiers.push_back( std::move( value ) );
-                        }
-                    }
-
-                    const auto make_fake_spell = []( const enchantment_fake_spell_definition_data & source ) {
-                        fake_spell result( spell_id( source.spell ), source.self );
-                        if( source.max_level ) {
-                            result.max_level = static_cast<int>( *source.max_level );
-                        }
-                        result.level = static_cast<int>( source.level );
-                        result.trigger_once_in = static_cast<int>( source.trigger_once_in );
-                        result.trigger_message = no_translation( source.trigger_message );
-                        result.npc_trigger_message = no_translation( source.npc_trigger_message );
-                        return result;
-                    };
-                    for( const enchantment_fake_spell_definition_data &spell : source.hit_you_effects ) {
-                        native.hit_you_effect.push_back( make_fake_spell( spell ) );
-                    }
-                    for( const enchantment_fake_spell_definition_data &spell : source.hit_me_effects ) {
-                        native.hit_me_effect.push_back( make_fake_spell( spell ) );
-                    }
-                    for( const auto &[turns, spell] : source.intermittent_effects ) {
-                        native.add_activation(
-                            time_duration::from_turns( turns ), make_fake_spell( spell ) );
-                    }
-                    for( const enchantment_vision_definition_data &vision : source.visions ) {
-                        enchantment::special_vision value;
-                        value.range = dbl_or_var( vision.distance );
-                        value.precise = vision.precise;
-                        value.ignores_aiming_cone = vision.ignores_aiming_cone;
-                        const std::string owner = pimpl_->owner;
-                        const std::string enchantment_name = source.id;
-                        if( vision.condition_handler.empty() ) {
-                            value.condition = []( const const_dialogue & ) {
-                                return true;
-                            };
-                        } else {
-                            const std::string handler = vision.condition_handler;
-                            value.condition = [owner, enchantment_name, handler](
-                            const const_dialogue & dialogue ) {
-                                return invoke_enchantment_condition_handler(
-                                           owner, enchantment_name, "vision", std::string_view(),
-                                           handler, dialogue ).value_or( false );
-                            };
-                        }
-                        if( !vision.distance_handler.empty() ) {
-                            const std::string handler = vision.distance_handler;
-                            value.platform_range = [owner, enchantment_name, handler](
-                            const const_dialogue & dialogue ) {
-                                return std::max( 0.0, invoke_enchantment_number_handler(
-                                                     owner, enchantment_name, "vision_range",
-                                                     std::string_view(), std::string_view(), handler,
-                                                     dialogue ).value_or( 0.0 ) );
-                            };
-                        }
-                        for( const enchantment_vision_description_definition_data &description :
-                             vision.descriptions ) {
-                            enchantment::special_vision_descriptions result;
-                            result.id = description.id;
-                            result.color = color_from_string(
-                                               description.color, report_color_error::no );
-                            result.symbol = description.symbol;
-                            result.text = description.text;
-                            result.description = no_translation( description.text );
-                            if( description.condition_handler.empty() ) {
-                                result.condition = []( const const_dialogue & ) {
-                                    return true;
-                                };
-                            } else {
-                                const std::string handler = description.condition_handler;
-                                const std::string description_id = description.id;
-                                result.condition = [owner, enchantment_name, handler, description_id](
-                                const const_dialogue & dialogue ) {
-                                    return invoke_enchantment_condition_handler(
-                                               owner, enchantment_name, "vision_description",
-                                               description_id, handler, dialogue ).value_or( false );
-                                };
-                            }
-                            value.special_vision_descriptions_vector.push_back( std::move( result ) );
-                        }
-                        native.special_vision_vector.push_back( std::move( value ) );
-                    }
-                    detail::enchantment_registry().insert( native );
-                }
-                if( !pimpl_->enchantments.empty() ) {
-                    detail::enchantment_registry().finalize();
-                }
+            case character_content_apply_phase::enchantment:
+                pimpl_->apply_enchantment();
                 break;
-            }
-
-            case character_content_apply_phase::bionic: {
-                for( const bionic_registration &entry : pimpl_->bionics ) {
-                    const bionic_id id( entry.definition->id );
-                    pimpl_->bionic_undo.emplace_back(
-                        id, id.is_valid() ? std::optional<bionic_data>( id.obj() ) : std::nullopt );
-                    const bionic_definition_data &source = *entry.definition;
-                    bionic_data native;
-                    native.id = id;
-                    native.src.emplace_back( id, mod_id( pimpl_->owner ) );
-                    native.was_loaded = true;
-                    native.name = no_translation( source.name );
-                    native.description = no_translation( source.description );
-                    if( source.cant_remove_reason ) {
-                        native.cant_remove_reason = no_translation( *source.cant_remove_reason );
-                    }
-                    native.power_activate = units::from_millijoule(
-                                                source.activation_energy_millijoules );
-                    native.power_deactivate = units::from_millijoule(
-                                                  source.deactivation_energy_millijoules );
-                    native.power_over_time = units::from_millijoule(
-                                                 source.over_time_energy_millijoules );
-                    native.power_trigger = units::from_millijoule(
-                                               source.trigger_energy_millijoules );
-                    native.capacity = units::from_millijoule(
-                                          source.capacity_energy_millijoules );
-                    native.charge_time = time_duration::from_turns( source.charge_time_turns );
-                    const auto make_fake_spell = []( const enchantment_fake_spell_definition_data & value ) {
-                        fake_spell result( spell_id( value.spell ), value.self );
-                        if( value.max_level ) {
-                            result.max_level = static_cast<int>( *value.max_level );
-                        }
-                        result.level = static_cast<int>( value.level );
-                        result.trigger_once_in = static_cast<int>( value.trigger_once_in );
-                        result.trigger_message = no_translation( value.trigger_message );
-                        result.npc_trigger_message = no_translation( value.npc_trigger_message );
-                        return result;
-                    };
-
-                    if( source.activation_spell ) {
-                        native.spell_on_activate = cata::make_value<fake_spell>(
-                                                       make_fake_spell( *source.activation_spell ) );
-                    }
-                    if( !source.power_gen_emission.empty() ) {
-                        native.power_gen_emission = emit_id( source.power_gen_emission );
-                    }
-                    native.fake_weapon = itype_id( source.fake_weapon );
-                    native.upgraded_bionic = bionic_id( source.upgraded_bionic );
-                    native.required_bionic = bionic_id( source.required_bionic );
-                    native.installation_requirement = requirement_id( source.installation_requirement );
-                    for( const std::string &material : source.fuel_options ) {
-                        native.fuel_opts.emplace_back( material );
-                    }
-                    for( const std::string &enchantment : source.enchantments ) {
-                        native.enchantments.emplace_back( enchantment );
-                    }
-                    for( const std::string &style : source.martial_arts ) {
-                        native.ma_styles.emplace_back( style );
-                    }
-                    for( const std::string &proficiency : source.proficiencies ) {
-                        native.proficiencies.emplace_back( proficiency );
-                    }
-                    for( const std::string &item : source.passive_pseudo_items ) {
-                        native.passive_pseudo_items.emplace_back( item );
-                    }
-                    for( const std::string &item : source.toggled_pseudo_items ) {
-                        native.toggled_pseudo_items.emplace_back( item );
-                    }
-                    for( const std::string &trait : source.canceled_mutations ) {
-                        native.canceled_mutations.emplace_back( trait );
-                    }
-                    for( const std::string &bionic : source.included_bionics ) {
-                        native.included_bionics.emplace_back( bionic );
-                    }
-                    for( const std::string &bionic : source.auto_deactivated_bionics ) {
-                        native.autodeactivated_bionics.emplace_back( bionic );
-                    }
-                    for( const std::string &flag : source.flags ) {
-                        native.flags.insert( json_character_flag( flag ) );
-                    }
-                    for( const std::string &flag : source.active_flags ) {
-                        native.active_flags.insert( json_character_flag( flag ) );
-                    }
-                    for( const std::string &flag : source.inactive_flags ) {
-                        native.inactive_flags.insert( json_character_flag( flag ) );
-                    }
-                    for( const auto &[bodypart, amount] : source.environment_protection ) {
-                        native.env_protec.emplace(
-                            bodypart_str_id( bodypart ), static_cast<std::size_t>( amount ) );
-                    }
-                    for( const bionic_protection_definition_data &protection : source.protection ) {
-                        native.protec[bodypart_str_id( protection.bodypart )].set_resist(
-                            damage_type_id( protection.damage_type ),
-                            static_cast<float>( protection.amount ) );
-                    }
-                    for( const auto &[bodypart, slots] : source.occupied_bodyparts ) {
-                        native.occupied_bodyparts.emplace(
-                            bodypart_str_id( bodypart ), static_cast<std::size_t>( slots ) );
-                    }
-                    for( const auto &[bodypart, amount] : source.encumbrance ) {
-                        native.encumbrance.emplace(
-                            bodypart_str_id( bodypart ), static_cast<int>( amount ) );
-                    }
-                    for( const std::string &flag : source.installable_weapon_flags ) {
-                        native.installable_weapon_flags.emplace( flag );
-                    }
-                    for( const std::string &bodypart : source.replaced_bodyparts ) {
-                        native.replaced_bodyparts.emplace( bodypart );
-                    }
-                    for( const std::string &trait : source.mutation_conflicts ) {
-                        native.mutation_conflicts.emplace( trait );
-                    }
-                    for( const std::string &trait : source.give_mutation_on_removal ) {
-                        native.give_mut_on_removal.emplace( trait );
-                    }
-                    for( const auto &[spell, level] : source.learned_spells ) {
-                        native.learned_spells.emplace( spell_id( spell ), static_cast<int>( level ) );
-                    }
-                    for( const std::string &bionic : source.available_upgrades ) {
-                        native.available_upgrades.emplace( bionic );
-                    }
-                    native.fuel_efficiency = static_cast<float>( source.fuel_efficiency );
-                    native.passive_fuel_efficiency = static_cast<float>( source.passive_fuel_efficiency );
-                    if( source.coverage_power_gen_penalty ) {
-                        native.coverage_power_gen_penalty = static_cast<float>(
-                                                                *source.coverage_power_gen_penalty );
-                    }
-                    native.social_mods.lie = static_cast<int>( source.social_lie );
-                    native.social_mods.persuade = static_cast<int>( source.social_persuade );
-                    native.social_mods.intimidate = static_cast<int>( source.social_intimidate );
-                    native.dupes_allowed = source.dupes_allowed;
-                    native.activated_on_install = source.activated_on_install;
-                    native.included = source.included;
-                    native.activate_remove_cbm = source.activate_remove_cbm;
-                    native.is_remote_fueled = source.is_remote_fueled;
-                    native.exothermic_power_gen = source.exothermic_power_gen;
-                    native.activated_close_ui = source.activated_close_ui || source.activate_remove_cbm;
-                    native.deactivated_close_ui = source.deactivated_close_ui;
-                    static const json_character_flag toggled_flag( "BIONIC_TOGGLED" );
-                    static const json_character_flag removable_flag( "BIONIC_REMOVABLE" );
-                    static const json_character_flag gun_flag( "BIONIC_GUN" );
-                    native.activated = native.has_flag( toggled_flag ) ||
-                                       native.has_flag( removable_flag ) ||
-                                       native.has_flag( gun_flag ) ||
-                                       native.power_activate > 0_kJ ||
-                                       native.spell_on_activate ||
-                                       native.charge_time > 0_turns;
-                    detail::bionic_registry().insert( native );
-                }
-                if( !pimpl_->bionics.empty() ) {
-                    detail::bionic_registry().finalize();
-                    detail::refresh_bionic_registry_cache();
-                }
+            case character_content_apply_phase::bionic:
+                pimpl_->apply_bionic();
                 break;
-            }
-
-            case character_content_apply_phase::spell: {
-                for( const spell_registration &entry : pimpl_->spells ) {
-                    const spell_id id( entry.definition->id );
-                    pimpl_->spell_undo.emplace_back(
-                        id, id.is_valid() ? std::optional<spell_type>( id.obj() ) : std::nullopt );
-                    const spell_definition_data &source = *entry.definition;
-
-                    spell_type native;
-                    native.id = id;
-                    native.src_mod = mod_id( pimpl_->owner );
-                    native.src.emplace_back( id, native.src_mod );
-                    native.was_loaded = true;
-                    native.name = no_translation( source.name );
-                    native.description = no_translation( source.description );
-                    native.message = no_translation( source.message );
-                    native.skill = skill_id( source.skill );
-                    native.teachable = source.teachable;
-                    native.spell_components = requirement_id( source.components );
-                    native.sound_description = no_translation( source.sound_description );
-                    native.sound_type = *io::string_to_enum_optional<sounds::sound_t>( source.sound_type );
-                    native.sound_ambient = source.sound_ambient;
-                    native.sound_id = source.sound_id;
-                    native.sound_variant = source.sound_variant;
-                    native.effect_name = source.effect;
-                    if( source.effect_handler.empty() ) {
-                        native.effect = spell_effect::effect_map.at( source.effect );
-                    } else {
-                        const std::string owner = pimpl_->owner;
-                        const std::string spell_name = source.id;
-                        const std::string handler = source.effect_handler;
-                        native.effect = [owner, spell_name, handler](
-                        const spell & cast_spell, Creature & caster, const tripoint_bub_ms & target ) {
-                            invoke_spell_effect_handler(
-                                owner, spell_name, handler, cast_spell, caster, target );
-                        };
-                    }
-                    native.spell_area = *io::string_to_enum_optional<spell_shape>( source.shape );
-                    native.spell_area_function = spell_effect::shape_map.at( native.spell_area );
-                    native.effect_str = source.effect_data;
-                    native.explosion_light = explosion_light_str_id( source.explosion_light );
-                    if( !source.field.empty() ) {
-                        native.field = field_type_id( source.field );
-                    }
-                    native.spell_class = trait_id( source.spell_class );
-                    native.dmg_type = damage_type_id( source.damage_type );
-                    if( !source.magic_type.empty() ) {
-                        native.magic_type = magic_type_id( source.magic_type );
-                    }
-                    const std::optional<magic_energy_type> energy = source.energy_source.empty() ?
-                            std::optional<magic_energy_type>() :
-                            io::string_to_enum_optional<magic_energy_type>( source.energy_source );
-                    native.set_platform_energy_source(
-                        energy,
-                        source.energy_vitamin.empty() ? std::optional<vitamin_id>() :
-                        std::optional<vitamin_id>( vitamin_id( source.energy_vitamin ) ),
-                        energy && *energy == magic_energy_type::vitamin ?
-                        std::optional<nc_color>( color_from_string(
-                                                     source.energy_color, report_color_error::no ) ) :
-                        std::optional<nc_color>() );
-                    native.set_platform_progression(
-                        source.get_level_formula.empty() ? std::optional<jmath_func_id>() :
-                        std::optional<jmath_func_id>( jmath_func_id( source.get_level_formula ) ),
-                        source.exp_for_level_formula.empty() ? std::optional<jmath_func_id>() :
-                        std::optional<jmath_func_id>( jmath_func_id( source.exp_for_level_formula ) ),
-                        source.max_book_level ?
-                        std::optional<int>( static_cast<int>( *source.max_book_level ) ) :
-                        std::optional<int>() );
-                    for( const std::string &target : source.valid_targets ) {
-                        native.valid_targets.set(
-                            *io::string_to_enum_optional<spell_target>( target ) );
-                    }
-                    for( const std::string &flag : source.flags ) {
-                        native.flags.insert( flag );
-                        if( const std::optional<spell_flag> parsed =
-                                io::string_to_enum_optional<spell_flag>( flag ) ) {
-                            native.spell_tags.set( *parsed );
-                        }
-                    }
-                    for( const std::string &monster : source.targeted_monsters ) {
-                        native.targeted_monster_ids.emplace( monster );
-                    }
-                    for( const std::string &species : source.targeted_species ) {
-                        native.targeted_species_ids.emplace( species );
-                    }
-                    for( const std::string &species : source.ignored_species ) {
-                        native.ignored_species_ids.emplace( species );
-                    }
-                    for( const std::string &bodypart : source.affected_bodyparts ) {
-                        native.affected_bps.set( bodypart_str_id( bodypart ) );
-                    }
-                    const auto make_fake_spell = []( const enchantment_fake_spell_definition_data & value ) {
-                        fake_spell result( spell_id( value.spell ), value.self );
-                        if( value.max_level ) {
-                            result.max_level = static_cast<int>( *value.max_level );
-                        }
-                        result.level = static_cast<int>( value.level );
-                        result.trigger_once_in = static_cast<int>( value.trigger_once_in );
-                        result.trigger_message = no_translation( value.trigger_message );
-                        result.npc_trigger_message = no_translation( value.npc_trigger_message );
-                        return result;
-                    };
-                    for( const enchantment_fake_spell_definition_data &spell :
-                         source.additional_spells ) {
-                        native.additional_spells.push_back( make_fake_spell( spell ) );
-                    }
-                    for( const auto &[spell, level] : source.learned_spells ) {
-                        native.learn_spells.emplace( spell, static_cast<int>( level ) );
-                    }
-                    native.channelling_turns = static_cast<int>( source.channel_turns );
-                    native.channel_spell = source.channel_spell;
-                    native.channel_end_spell = source.channel_end_spell;
-                    native.channel_interrupt_spell = source.channel_interrupt_spell;
-                    native.channel_uses_energy = source.channel_uses_energy;
-                    if( !source.caster_condition_handler.empty() ) {
-                        const std::string owner = pimpl_->owner;
-                        const std::string spell_name = source.id;
-                        const std::string handler = source.caster_condition_handler;
-                        native.has_caster_condition = true;
-                        native.caster_condition = [owner, spell_name, handler](
-                        const const_dialogue & dialogue ) {
-                            return invoke_spell_condition_handler(
-                                       owner, spell_name, "caster", handler, dialogue ).value_or( false );
-                        };
-                    }
-                    native.caster_condition_fail_message_ = no_translation(
-                            source.caster_condition_fail_message );
-                    if( !source.target_condition_handler.empty() ) {
-
-                        const std::string owner = pimpl_->owner;
-                        const std::string spell_name = source.id;
-                        const std::string handler = source.target_condition_handler;
-                        native.has_target_condition = true;
-                        native.target_condition = [owner, spell_name, handler](
-                        const const_dialogue & dialogue ) {
-                            return invoke_spell_condition_handler(
-                                       owner, spell_name, "target", handler, dialogue ).value_or( false );
-                        };
-                    }
-                    native.target_condition_fail_message_ = no_translation(
-                            source.target_condition_fail_message );
-                    const auto make_stat = [&]( const std::string & name ) {
-                        dbl_or_var result( source.stats.at( name ) );
-                        const auto maximum = source.stat_maximums.find( name );
-                        if( maximum != source.stat_maximums.end() ) {
-                            result.max.emplace( maximum->second );
-                        }
-                        const auto dynamic = source.stat_handlers.find( name );
-                        if( dynamic != source.stat_handlers.end() ) {
-                            const std::string owner = pimpl_->owner;
-                            const std::string spell_name = source.id;
-                            const std::string handler = dynamic->second;
-                            const double fallback = source.stats.at( name );
-                            runtime_dbl_provider provider;
-                            provider.callback = [owner, spell_name, name, handler, fallback](
-                            const const_dialogue & dialogue ) {
-                                return invoke_spell_stat_handler(
-                                           owner, spell_name, name, handler, dialogue ).value_or( fallback );
-                            };
-                            result.min.val = std::move( provider );
-                        }
-                        return result;
-                    };
-                    native.field_chance = make_stat( "field_chance" );
-                    native.min_field_intensity = make_stat( "min_field_intensity" );
-                    native.field_intensity_increment = make_stat( "field_intensity_increment" );
-                    native.max_field_intensity = make_stat( "max_field_intensity" );
-                    native.field_intensity_variance = make_stat( "field_intensity_variance" );
-                    native.min_accuracy = make_stat( "min_accuracy" );
-                    native.accuracy_increment = make_stat( "accuracy_increment" );
-                    native.max_accuracy = make_stat( "max_accuracy" );
-                    native.min_damage = make_stat( "min_damage" );
-                    native.damage_increment = make_stat( "damage_increment" );
-                    native.max_damage = make_stat( "max_damage" );
-                    native.min_range = make_stat( "min_range" );
-                    native.range_increment = make_stat( "range_increment" );
-                    native.max_range = make_stat( "max_range" );
-                    native.min_aoe = make_stat( "min_aoe" );
-                    native.aoe_increment = make_stat( "aoe_increment" );
-                    native.max_aoe = make_stat( "max_aoe" );
-                    native.min_dot = make_stat( "min_dot" );
-                    native.dot_increment = make_stat( "dot_increment" );
-                    native.max_dot = make_stat( "max_dot" );
-                    native.min_duration = make_stat( "min_duration" );
-                    native.duration_increment = make_stat( "duration_increment" );
-                    native.max_duration = make_stat( "max_duration" );
-                    native.min_pierce = make_stat( "min_pierce" );
-                    native.pierce_increment = make_stat( "pierce_increment" );
-                    native.max_pierce = make_stat( "max_pierce" );
-                    native.min_bash_scaling = make_stat( "min_bash_scaling" );
-                    native.bash_scaling_increment = make_stat( "bash_scaling_increment" );
-                    native.max_bash_scaling = make_stat( "max_bash_scaling" );
-                    native.base_energy_cost = make_stat( "base_energy_cost" );
-                    native.energy_increment = make_stat( "energy_increment" );
-                    native.final_energy_cost = make_stat( "final_energy_cost" );
-                    native.difficulty = make_stat( "difficulty" );
-                    native.multiple_projectiles = make_stat( "multiple_projectiles" );
-                    native.max_level = make_stat( "max_level" );
-                    native.base_casting_time = make_stat( "base_casting_time" );
-                    native.casting_time_increment = make_stat( "casting_time_increment" );
-                    native.final_casting_time = make_stat( "final_casting_time" );
-                    detail::spell_registry().insert( native );
-                }
-                if( !pimpl_->spells.empty() ) {
-                    detail::spell_registry().finalize();
-                }
+            case character_content_apply_phase::spell:
+                pimpl_->apply_spell();
                 break;
-            }
-
-            case character_content_apply_phase::mission_definition: {
-                for( const mission_definition_registration &entry : pimpl_->mission_definitions ) {
-                    const mission_type_id id( entry.definition->id );
-                    pimpl_->mission_definition_undo.emplace_back(
-                        id, id.is_valid() ? std::optional<mission_type>( id.obj() ) : std::nullopt );
-                    const mission_definition_data &source = *entry.definition;
-                    mission_type native;
-                    native.id = id;
-                    native.src.emplace_back( id, mod_id( pimpl_->owner ) );
-                    native.was_loaded = true;
-                    native.set_platform_name( source.name );
-                    native.description = no_translation( source.description );
-                    native.goal = *io::string_to_enum_optional<mission_goal>( source.goal );
-                    native.difficulty = static_cast<int>( source.difficulty );
-                    native.value = static_cast<int>( source.value );
-                    native.urgent = source.urgent;
-                    native.has_generic_rewards = source.has_generic_rewards;
-                    for( const std::string &origin : source.origins ) {
-                        native.origins.push_back(
-                            *io::string_to_enum_optional<mission_origin>( origin ) );
-                    }
-                    native.item_id = source.item.empty() ? itype_id::NULL_ID() : itype_id( source.item );
-                    native.group_id = source.item_group.empty() ? item_group_id::NULL_ID() :
-                                      item_group_id( source.item_group );
-                    native.container_id = source.required_container.empty() ? itype_id::NULL_ID() :
-                                          itype_id( source.required_container );
-                    native.empty_container = source.empty_container.empty() ? itype_id::NULL_ID() :
-                                             itype_id( source.empty_container );
-                    native.item_count = static_cast<int>( source.item_count );
-                    native.remove_container = source.remove_container;
-                    native.invisible_on_complete = source.invisible_on_complete;
-                    native.recruit_class = source.recruit_class.empty() ? npc_class_id::NULL_ID() :
-                                           npc_class_id( source.recruit_class );
-                    native.monster_type = source.monster_type.empty() ? mtype_id::NULL_ID() :
-                                          mtype_id( source.monster_type );
-                    if( !source.monster_species.empty() ) {
-                        native.monster_species = species_id( source.monster_species );
-                    }
-                    native.monster_kill_goal = static_cast<int>( source.monster_kill_goal );
-                    if( !source.destination.empty() ) {
-                        native.target_id = oter_type_str_id( source.destination );
-                    }
-                    native.follow_up = source.followup.empty() ? mission_type_id::NULL_ID() :
-
-                                       mission_type_id( source.followup );
-                    for( const auto &[phase, text] : source.dialogue ) {
-                        native.dialogue.emplace( phase, no_translation( text ) );
-                    }
-                    for( const auto &[value, description] : source.likely_rewards ) {
-                        native.likely_rewards.emplace_back(
-                            dbl_or_var( value ), str_or_var( description ) );
-                    }
-
-                    native.deadline = duration_or_var(
-                                          time_duration::from_turns( source.deadline_min_turns ) );
-                    if( source.deadline_max_turns ) {
-                        native.deadline.max.emplace(
-                            time_duration::from_turns( *source.deadline_max_turns ) );
-                    }
-                    if( !source.deadline_handler.empty() ) {
-                        const std::string owner = pimpl_->owner;
-                        const std::string mission_id = source.id;
-                        const std::string handler = source.deadline_handler;
-                        runtime_duration_provider provider;
-                        provider.callback = [owner, mission_id, handler](
-                        const const_dialogue & dialogue ) {
-                            return time_duration::from_turns(
-                                       invoke_mission_deadline_handler(
-                                           owner, mission_id, handler, dialogue ).value_or( 0 ) );
-                        };
-                        native.deadline.min.val = std::move( provider );
-                        native.deadline.max.reset();
-                    }
-
-                    if( !source.place_handler.empty() ) {
-                        const std::string owner = pimpl_->owner;
-                        const std::string mission_id = source.id;
-                        const std::string handler = source.place_handler;
-                        native.place = [owner, mission_id, handler]( const tripoint_abs_omt & position ) {
-                            return invoke_mission_place_handler(
-                                       owner, mission_id, handler, position ).value_or( false );
-                        };
-                    } else if( source.place == "never" ) {
-                        native.place = mission_place::never;
-                    } else if( source.place == "near_town" ) {
-                        native.place = mission_place::near_town;
-                    } else {
-                        native.place = mission_place::always;
-                    }
-                    const auto make_phase = [this, &source](
-                                                const std::string & phase,
-                    const std::string & handler ) {
-                        const std::string owner = pimpl_->owner;
-                        const std::string mission_id = source.id;
-                        return [owner, mission_id, phase, handler]( mission * active_mission ) {
-                            invoke_mission_phase_handler(
-                                owner, mission_id, phase, handler, active_mission );
-                        };
-                    };
-                    if( !source.start_handler.empty() ) {
-                        native.start = make_phase( "start", source.start_handler );
-                    }
-                    if( !source.end_handler.empty() ) {
-                        native.end = make_phase( "success", source.end_handler );
-                    }
-                    if( !source.fail_handler.empty() ) {
-                        native.fail = make_phase( "failure", source.fail_handler );
-                    }
-                    if( !source.goal_condition_handler.empty() ) {
-                        const std::string owner = pimpl_->owner;
-                        const std::string mission_id = source.id;
-                        const std::string handler = source.goal_condition_handler;
-                        native.goal_condition = [owner, mission_id, handler](
-                        const const_dialogue & dialogue ) {
-                            return invoke_mission_condition_handler(
-                                       owner, mission_id, "goal", handler, dialogue ).value_or( false );
-                        };
-                    }
-                    detail::mission_type_registry().insert( native );
-                }
-                if( !pimpl_->mission_definitions.empty() ) {
-                    detail::mission_type_registry().finalize();
-                }
+            case character_content_apply_phase::mission_definition:
+                pimpl_->apply_mission_definition();
                 break;
-            }
-            case character_content_apply_phase::profession_item: {
-                if( !pimpl_->profession_item_substitutions.empty() ||
-                    !pimpl_->profession_item_bonuses.empty() ) {
-                    pimpl_->profession_item_substitution_undo =
-                        detail::profession_item_substitution_registry_snapshot();
-                }
-                for( const profession_item_substitution_registration &entry :
-                     pimpl_->profession_item_substitutions ) {
-                    detail::profession_item_substitution_native_entry native;
-                    native.item = entry.definition->id;
-                    native.rules = entry.definition->rules;
-                    detail::profession_item_substitution_registry_set( native );
-                }
-                for( const profession_item_bonus_registration &entry :
-                     pimpl_->profession_item_bonuses ) {
-                    detail::profession_item_bonus_native_entry native;
-                    native.group = entry.definition->id;
-                    native.requirements = entry.definition->requirements;
-                    detail::profession_item_bonus_registry_set( native );
-                }
+            case character_content_apply_phase::profession_item:
+                pimpl_->apply_profession_item();
                 break;
-            }
-
-            case character_content_apply_phase::technique: {
-                for( const technique_registration &entry : pimpl_->techniques ) {
-                    const matec_id id( entry.definition->id );
-                    pimpl_->technique_undo.emplace_back(
-                        id, id.is_valid() ? std::optional<ma_technique>( id.obj() ) :
-                        std::nullopt );
-                    const technique_definition_data &source = *entry.definition;
-                    ma_technique native;
-                    native.id = id;
-                    native.src.emplace_back( id, mod_id( pimpl_->owner ) );
-                    native.name = no_translation( source.name );
-                    native.description = source.description.empty() ? translation() :
-                                         no_translation( source.description );
-                    if( !source.avatar_message.empty() ) {
-                        native.avatar_message = no_translation( source.avatar_message );
-                    }
-                    if( !source.npc_message.empty() ) {
-                        native.npc_message = no_translation( source.npc_message );
-                    }
-                    native.crit_tec = source.crit_tec;
-                    native.crit_ok = source.crit_ok;
-                    native.wall_adjacent = source.wall_adjacent;
-                    native.reach_tec = source.reach_tec;
-                    native.reach_ok = source.reach_ok;
-                    native.needs_ammo = source.needs_ammo;
-                    native.defensive = source.defensive;
-                    native.disarms = source.disarms;
-                    native.take_weapon = source.take_weapon;
-                    native.side_switch = source.side_switch;
-                    native.dummy = source.dummy;
-                    native.dodge_counter = source.dodge_counter;
-                    native.block_counter = source.block_counter;
-                    native.miss_recovery = source.miss_recovery;
-                    native.grab_break = source.grab_break;
-                    native.weighting = static_cast<int>( source.weighting );
-                    native.repeat_min = static_cast<int>( source.repeat_min );
-                    native.repeat_max = static_cast<int>( source.repeat_max );
-                    native.down_dur = static_cast<int>( source.down_dur );
-                    native.stun_dur = static_cast<int>( source.stun_dur );
-                    native.knockback_dist = static_cast<int>( source.knockback_dist );
-                    native.knockback_spread = static_cast<float>( source.knockback_spread );
-                    native.knockback_follow = source.knockback_follow;
-                    native.aoe = source.aoe;
-                    native.flags = source.flags;
-                    native.reqs.unarmed_allowed = source.unarmed_allowed;
-                    native.reqs.melee_allowed = source.melee_allowed;
-                    native.reqs.strictly_unarmed = source.strictly_unarmed;
-                    for( const std::string &vector : source.attack_vectors ) {
-                        native.attack_vectors.emplace_back( vector );
-                    }
-                    for( const auto &[skill, level] : source.min_skills ) {
-                        native.reqs.min_skill.emplace_back( skill_id( skill ),
-                                                            static_cast<int>( level ) );
-                    }
-                    native.lua_platform_mod = pimpl_->owner;
-                    native.lua_platform_apply_handler = source.apply_handler;
-                    native.was_loaded = true;
-                    detail::ma_technique_registry().insert( native );
-                }
-                if( !pimpl_->techniques.empty() ) {
-                    detail::ma_technique_registry().finalize();
-                }
+            case character_content_apply_phase::technique:
+                pimpl_->apply_technique();
                 break;
-            }
-
-            case character_content_apply_phase::martial_art: {
-                for( const martial_art_registration &entry : pimpl_->martial_arts ) {
-                    const matype_id id( entry.definition->id );
-                    pimpl_->martial_art_undo.emplace_back(
-                        id, id.is_valid() ? std::optional<martialart>( id.obj() ) :
-                        std::nullopt );
-                    const martial_art_definition_data &source = *entry.definition;
-                    martialart native;
-                    native.id = id;
-                    native.src.emplace_back( id, mod_id( pimpl_->owner ) );
-                    native.name = no_translation( source.name );
-                    native.description = source.description.empty() ? translation() :
-                                         no_translation( source.description );
-                    if( !source.initiate_avatar.empty() ) {
-                        native.initiate.emplace_back( no_translation( source.initiate_avatar ) );
-                    }
-                    if( !source.initiate_npc.empty() ) {
-                        native.initiate.emplace_back( no_translation( source.initiate_npc ) );
-                    }
-                    native.priority = static_cast<int>( source.priority );
-                    native.primary_skill = source.primary_skill.empty() ?
-                                           skill_id::NULL_ID() : skill_id( source.primary_skill );
-                    native.learn_difficulty = static_cast<int>( source.learn_difficulty );
-                    native.teachable = source.teachable;
-                    native.arm_block = static_cast<int>( source.arm_block );
-                    native.leg_block = static_cast<int>( source.leg_block );
-                    native.arm_block_with_bio_armor_arms = source.arm_block_with_bio_armor_arms;
-                    native.leg_block_with_bio_armor_legs = source.leg_block_with_bio_armor_legs;
-                    native.strictly_unarmed = source.strictly_unarmed;
-                    native.strictly_melee = source.strictly_melee;
-                    native.allow_all_weapons = source.allow_all_weapons;
-                    native.force_unarmed = source.force_unarmed;
-                    native.prevent_weapon_blocking = source.prevent_weapon_blocking;
-                    for( const auto &[skill, level] : source.autolearn_skills ) {
-                        native.autolearn_skills.emplace_back( skill, static_cast<int>( level ) );
-                    }
-                    for( const std::string &technique : source.techniques ) {
-                        native.techniques.insert( matec_id( technique ) );
-                    }
-                    for( const std::string &weapon : source.weapons ) {
-                        native.weapons.insert( itype_id( weapon ) );
-                    }
-                    for( const std::string &category : source.weapon_categories ) {
-                        native.weapon_category.insert( weapon_category_id( category ) );
-                    }
-                    native.was_loaded = true;
-                    detail::martialart_registry().insert( native );
-                }
-                if( !pimpl_->martial_arts.empty() ) {
-                    detail::martialart_registry().finalize();
-                }
+            case character_content_apply_phase::martial_art:
+                pimpl_->apply_martial_art();
                 break;
-            }
-
-            case character_content_apply_phase::magic_type: {
-                for( const magic_type_registration &entry : pimpl_->magic_types ) {
-                    const magic_type_id id( entry.definition->id );
-                    pimpl_->magic_type_undo.emplace_back(
-                        id, id.is_valid() ? std::optional<magic_type>( id.obj() ) : std::nullopt );
-                    const magic_type_definition_data &source = *entry.definition;
-                    magic_type native;
-                    native.id = id;
-                    native.src_mod = mod_id( pimpl_->owner );
-                    native.was_loaded = true;
-                    native.energy_source = *platform_magic_energy_type( source.energy_source );
-                    if( !source.vitamin.empty() ) {
-                        native.vitamin_energy_source_ = vitamin_id( source.vitamin );
-                    }
-                    native.energy_color_ = color_from_string(
-                                               source.energy_color, report_color_error::no );
-                    native.cannot_cast_flags = source.cannot_cast_flags;
-                    native.cannot_cast_message = source.cannot_cast_message;
-                    if( source.max_book_level ) {
-                        native.max_book_level = static_cast<int>( *source.max_book_level );
-                    }
-                    native.failure_cost_percent = source.failure_cost_fraction;
-                    native.failure_exp_percent = source.failure_experience_fraction;
-                    detail::magic_type_registry().insert( native );
-                }
-                if( !pimpl_->magic_types.empty() ) {
-                    detail::magic_type_registry().finalize();
-                }
+            case character_content_apply_phase::magic_type:
+                pimpl_->apply_magic_type();
                 break;
-            }
-
-            case character_content_apply_phase::movement_mode: {
-                for( const movement_mode_registration &entry : pimpl_->movement_modes ) {
-                    const move_mode_id id( entry.definition->id );
-                    pimpl_->movement_mode_undo.emplace_back(
-                        id, id.is_valid() ? std::optional<move_mode>( id.obj() ) : std::nullopt );
-                    const movement_mode_definition_data &source = *entry.definition;
-                    move_mode native;
-                    native.id = id;
-                    native.src.emplace_back( id, mod_id( pimpl_->owner ) );
-                    native.was_loaded = true;
-                    native._name = no_translation( source.name );
-                    native._type = *platform_movement_mode_type( source.kind );
-                    native._letter = source.character_symbol;
-                    native._panel_letter = source.panel_symbol;
-                    native._panel_color = color_from_string(
-                                              source.panel_color, report_color_error::no );
-                    native._symbol_color = color_from_string(
-                                               source.symbol_color, report_color_error::no );
-                    native._exertion_level = static_cast<float>( source.exertion );
-                    native._exertion_level_animal_riding =
-                        static_cast<float>( source.riding_exertion );
-                    native._stamina_multiplier = static_cast<float>( source.stamina_multiplier );
-                    native._sound_multiplier = static_cast<float>( source.sound_multiplier );
-                    native._move_speed_mult = static_cast<float>( source.speed_multiplier );
-                    native._mech_power_use = static_cast<int>( source.mech_power_kilojoules );
-                    native._swim_speed_mod = static_cast<int>( source.swim_speed_modifier );
-                    native._stop_hauling = source.stop_hauling;
-                    for( const movement_mode_message_definition_data &messages : source.messages ) {
-                        const steed_type steed = *platform_steed_type( messages.steed );
-                        native.prepare_messages[steed] = no_translation( messages.prepare );
-                        native.change_messages_success[steed] = no_translation( messages.success );
-                        native.change_messages_fail[steed] = no_translation( messages.failure );
-                    }
-                    detail::movement_mode_registry().insert( native );
-                }
-                if( !pimpl_->movement_modes.empty() ) {
-                    detail::refresh_movement_mode_registry();
-                }
+            case character_content_apply_phase::movement_mode:
+                pimpl_->apply_movement_mode();
                 break;
-            }
         }
         ++pimpl_->applied_phase_count;
         if( pimpl_->applied_phase_count ==
@@ -6919,8 +7120,11 @@ void character_content_transaction::append_fingerprint(
                 hash_part( state, value.id );
                 hash_part( state, value.name );
                 hash_part( state, value.description );
-                hash_part( state, value.cant_remove_reason ?
-                           *value.cant_remove_reason : "no_cant_remove_reason" );
+                if( value.cant_remove_reason ) {
+                    hash_part( state, *value.cant_remove_reason );
+                } else {
+                    hash_part( state, "no_cant_remove_reason" );
+                }
                 hash_part( state, std::to_string( value.activation_energy_millijoules ) );
                 hash_part( state, std::to_string( value.deactivation_energy_millijoules ) );
                 hash_part( state, std::to_string( value.over_time_energy_millijoules ) );

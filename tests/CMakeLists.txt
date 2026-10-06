@@ -1,8 +1,22 @@
 cmake_minimum_required(VERSION 3.20)
 
 if (BUILD_TESTING)
-    file(GLOB CATACLYSM_DDA_TEST_SOURCES
+    file(GLOB CATACLYSM_DDA_TEST_SOURCES CONFIGURE_DEPENDS
             ${CMAKE_SOURCE_DIR}/tests/*.cpp)
+    if (CATA_TEST_SUITE STREQUAL "lua")
+        if (NOT CATA_ENABLE_LUA_PLATFORM)
+            message(FATAL_ERROR "CATA_TEST_SUITE=lua requires CATA_ENABLE_LUA_PLATFORM=ON")
+        endif ()
+        list(FILTER CATACLYSM_DDA_TEST_SOURCES INCLUDE REGEX "/lua_platform[^/]*\\.cpp$")
+        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_support_sources.txt)
+        file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/test_support_sources.txt TEST_SUPPORT_SOURCES)
+        list(TRANSFORM TEST_SUPPORT_SOURCES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/")
+        list(APPEND CATACLYSM_DDA_TEST_SOURCES ${TEST_SUPPORT_SOURCES})
+        set(_test_filter "[lua][platform]")
+    elseif (NOT CATA_TEST_SUITE STREQUAL "all")
+        message(FATAL_ERROR "CATA_TEST_SUITE must be all or lua")
+    endif ()
 
     # Enabling benchmarks
     add_definitions(-DCATCH_CONFIG_ENABLE_BENCHMARKING)
@@ -36,20 +50,22 @@ if (BUILD_TESTING)
         target_link_libraries(cata_test-tiles PRIVATE cataclysm-tiles-common)
 	target_compile_definitions(cata_test-tiles PUBLIC SDL_MAIN_HANDLED)
         add_test(NAME cata.tiles.default
-                COMMAND cata_test-tiles --rng-seed time
+                COMMAND cata_test-tiles ${_test_filter} --rng-seed time --warn NoTests
                 WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
         # ctest -C RelWithDebInfo -j 2 -V -L ^gha$
-        list(APPEND _n 1 2)
-        list(APPEND _args "[slow] ~starting_items" "~[slow] ~[.],starting_items")
-        foreach(n args IN ZIP_LISTS _n _args)
-            add_test(NAME cata.tiles.gha-${n}
-                    COMMAND cata_test-tiles --min-duration 20 --use-colour yes --rng-seed time
-                    --order lex --user-dir=test_user_dir_${n} ${args}
-                    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-            set_tests_properties(cata.tiles.gha-${n} PROPERTIES LABELS "gha")
-        endforeach()
-        catch_discover_tests(cata_test-tiles
-            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+        if (CATA_TEST_SUITE STREQUAL "all")
+            list(APPEND _n 1 2)
+            list(APPEND _args "[slow] ~starting_items" "~[slow] ~[.],starting_items")
+            foreach(n args IN ZIP_LISTS _n _args)
+                add_test(NAME cata.tiles.gha-${n}
+                        COMMAND cata_test-tiles --min-duration 20 --use-colour yes --rng-seed time
+                        --order lex --user-dir=test_user_dir_${n} ${args}
+                        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+                set_tests_properties(cata.tiles.gha-${n} PROPERTIES LABELS "gha")
+            endforeach()
+            catch_discover_tests(cata_test-tiles
+                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+        endif ()
     endif ()
 
     if (CURSES)
@@ -59,7 +75,7 @@ if (BUILD_TESTING)
         endif()
         target_link_libraries(cata_test PRIVATE cataclysm-common)
         add_test(NAME test
-                COMMAND cata_test --rng-seed time
+                COMMAND cata_test ${_test_filter} --rng-seed time --warn NoTests
                 WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
     endif ()
 endif ()

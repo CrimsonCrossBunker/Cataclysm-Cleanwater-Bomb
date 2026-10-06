@@ -14,6 +14,14 @@
 class JsonArray;
 class JsonOut;
 
+/**
+ * Calculate a native timed-event due time with an optional phase offset.
+ * Results within the time_point range match `calendar::turn + delay + offset`;
+ * out-of-range sums saturate instead of overflowing signed turn arithmetic.
+ */
+time_point timed_event_due_time( const time_duration &delay,
+                                 const time_duration &phase_offset );
+
 enum class timed_event_type : int {
     NONE,
     HELP,

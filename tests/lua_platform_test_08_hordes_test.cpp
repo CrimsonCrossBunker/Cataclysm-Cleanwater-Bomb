@@ -1,6 +1,27 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-#include "lua_platform_test_support.h"
+#include <cata_scope_helpers.h>
+#include <coordinates.h>
+#include <lua_platform_bindings_coords.h>
+#include <lua_platform_bindings_values.h>
+#include <lua_platform_handle.h>
+#include <lua_platform_hordes.h>
+#include <map.h>
+#include <map_scale_constants.h>
+#include <point.h>
+#include <type_id.h>
+#include <algorithm>
+#include <cstddef>
+#include <functional>
+#include <initializer_list>
+#include <string>
+#include <vector>
+
+#include "cata_catch.h"
+#include "lua_platform_sol.h"
 #include "mongroup.h"
+#include "overmapbuffer.h"
+
+static const mongroup_id GROUP_ZOMBIE( "GROUP_ZOMBIE" );
 
 TEST_CASE( "lua_platform_hordes_read_surface_is_registered",
            "[lua][platform][hordes][contract]" )
@@ -32,12 +53,150 @@ TEST_CASE( "lua_platform_hordes_read_surface_is_registered",
     CHECK( hordes["summary"].get_type() == sol::type::function );
     CHECK( hordes["spawn_entity"].get_type() == sol::type::function );
     CHECK( hordes["alert_entity"].get_type() == sol::type::function );
+    CHECK( hordes["broadcast_signal"].get_type() == sol::type::function );
     CHECK( hordes["remove_entity"].get_type() == sol::type::function );
     CHECK( hordes["spawn_legacy_group"].get_type() == sol::type::function );
     CHECK( hordes["update_legacy_group"].get_type() == sol::type::function );
     CHECK( hordes["remove_legacy_group"].get_type() == sol::type::function );
     CHECK_FALSE( hordes["signal"].valid() );
     CHECK_FALSE( hordes["advance"].valid() );
+    const sol::table limits = hordes["limits"]();
+    CHECK( limits["maximum_signal_power"].get<int>() == 10000 );
+}
+
+TEST_CASE( "lua_platform_hordes_broadcast_signal_matches_native_path",
+           "[lua][platform][hordes][semantic]" )
+{
+    sol::state lua;
+    sol::table services = lua.create_table();
+    const cata::lua_platform::game_handle_runtime_owner_ptr runtime_owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime active_runtime(
+        runtime_owner, 1 );
+    cata::lua_platform::install_horde_api(
+        services,
+    [active_runtime]() {
+        return active_runtime;
+    },
+    []() {
+        return std::size_t( 1 );
+    },
+    []() {}, []() {} );
+
+    const sol::table hordes = services["hordes"];
+    const auto make_position = []( const tripoint_abs_ms & position ) {
+        return cata::lua_platform::script_tripoint_coord::from_native(
+                   coords::origin::abs, coords::scale::map_square,
+                   position.raw() );
+    };
+    const tripoint_abs_ms native_center =
+        project_to<coords::ms>( get_map().get_abs_sub() );
+    const tripoint_abs_ms platform_center(
+        native_center.x() + 4 * SEEX, native_center.y(), native_center.z() );
+    constexpr int signal_power = 1;
+
+    const sol::protected_function_result native_spawn_result =
+        hordes["spawn_entity"](
+            make_position( native_center ),
+            cata::lua_platform::script_game_id( "monster", "mon_zombie" ) );
+    REQUIRE( native_spawn_result.valid() );
+    const sol::table native_spawn_envelope =
+        native_spawn_result.get<sol::table>();
+    REQUIRE( native_spawn_envelope["ok"].get<bool>() );
+    const sol::userdata native_token =
+        native_spawn_envelope["value"].get<sol::table>()["token"];
+    REQUIRE( native_token.valid() );
+    on_out_of_scope native_cleanup( [&hordes, native_token]() {
+        hordes["remove_entity"]( native_token );
+    } );
+
+    const sol::protected_function_result platform_spawn_result =
+        hordes["spawn_entity"](
+            make_position( platform_center ),
+            cata::lua_platform::script_game_id( "monster", "mon_zombie" ) );
+    REQUIRE( platform_spawn_result.valid() );
+    const sol::table platform_spawn_envelope =
+        platform_spawn_result.get<sol::table>();
+    REQUIRE( platform_spawn_envelope["ok"].get<bool>() );
+    const sol::userdata platform_token =
+        platform_spawn_envelope["value"].get<sol::table>()["token"];
+    REQUIRE( platform_token.valid() );
+    on_out_of_scope platform_cleanup( [&hordes, platform_token]() {
+        hordes["remove_entity"]( platform_token );
+    } );
+
+    const auto read_entity = [&hordes]( const sol::userdata & token ) {
+        const sol::protected_function_result result =
+            hordes["entity"]( token );
+        REQUIRE( result.valid() );
+        const sol::table envelope = result.get<sol::table>();
+        REQUIRE( envelope["ok"].get<bool>() );
+        return envelope["value"].get<sol::table>();
+    };
+
+    overmap_buffer.signal_hordes(
+        project_to<coords::sm>( native_center ), signal_power );
+    const tripoint_abs_ms native_broadcast_center = project_to<coords::ms>(
+                project_to<coords::sm>( native_center ) );
+    const sol::table native_entity = read_entity( native_token );
+    CHECK( native_entity["destination"].get <
+           cata::lua_platform::script_tripoint_coord > () ==
+           make_position( native_broadcast_center ) );
+    CHECK( native_entity["tracking_intensity"].get<int>() == signal_power * SEEX );
+
+    const sol::protected_function_result broadcast_result =
+        hordes["broadcast_signal"](
+            make_position( platform_center ), signal_power );
+    REQUIRE( broadcast_result.valid() );
+    const sol::table broadcast_envelope = broadcast_result.get<sol::table>();
+    REQUIRE( broadcast_envelope["ok"].get<bool>() );
+    const sol::table broadcast_value = broadcast_envelope["value"];
+    const tripoint_abs_ms expected_platform_center = project_to<coords::ms>(
+                project_to<coords::sm>( platform_center ) );
+    CHECK( broadcast_value["status"].get<std::string>() == "broadcast" );
+    CHECK( broadcast_value["center"].get <
+           cata::lua_platform::script_tripoint_coord > () ==
+           make_position( expected_platform_center ) );
+    CHECK( broadcast_value["signal_power"].get<int>() == signal_power );
+    const sol::table platform_entity = read_entity( platform_token );
+    CHECK( platform_entity["destination"].get <
+           cata::lua_platform::script_tripoint_coord > () ==
+           make_position( expected_platform_center ) );
+    CHECK( platform_entity["tracking_intensity"].get<int>() == signal_power * SEEX );
+    const sol::table native_entity_after = read_entity( native_token );
+    CHECK( native_entity_after["destination"].get <
+           cata::lua_platform::script_tripoint_coord > () ==
+           make_position( native_broadcast_center ) );
+}
+
+TEST_CASE( "lua_platform_hordes_broadcast_signal_rejects_unbounded_inputs",
+           "[lua][platform][hordes]" )
+{
+    sol::state lua;
+    sol::table services = lua.create_table();
+    cata::lua_platform::install_horde_api(
+        services,
+    []() {
+        return cata::lua_platform::game_handle_runtime();
+    },
+    []() {
+        return std::size_t( 1 );
+    },
+    []() {}, []() {} );
+
+    const sol::table hordes = services["hordes"];
+    const sol::protected_function broadcast = hordes["broadcast_signal"];
+    const auto make_position = []( const coords::origin origin ) {
+        return cata::lua_platform::script_tripoint_coord::from_native(
+                   origin, coords::scale::map_square,
+                   tripoint( 100, 100, 0 ) );
+    };
+    const cata::lua_platform::script_tripoint_coord absolute = make_position( coords::origin::abs );
+    CHECK_FALSE( broadcast( absolute, -1 ).valid() );
+    CHECK_FALSE( broadcast( absolute, 10001 ).valid() );
+    CHECK_FALSE( broadcast( absolute, 1.5 ).valid() );
+    CHECK_FALSE( broadcast(
+                     make_position( coords::origin::relative ), 1 ).valid() );
 }
 
 TEST_CASE( "lua_platform_hordes_alert_entity_commits_with_before_and_after",
@@ -45,7 +204,7 @@ TEST_CASE( "lua_platform_hordes_alert_entity_commits_with_before_and_after",
 {
     sol::state lua;
     sol::table services = lua.create_table();
-    const auto runtime_owner =
+    const cata::lua_platform::game_handle_runtime_owner_ptr runtime_owner =
         cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime active_runtime(
         runtime_owner, 1 );
@@ -123,7 +282,7 @@ TEST_CASE( "lua_platform_hordes_alert_entity_invalid_intensity_is_unchanged",
 {
     sol::state lua;
     sol::table services = lua.create_table();
-    const auto runtime_owner =
+    const cata::lua_platform::game_handle_runtime_owner_ptr runtime_owner =
         cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime active_runtime(
         runtime_owner, 1 );
@@ -196,7 +355,7 @@ TEST_CASE( "lua_platform_hordes_update_legacy_group_commits_multi_field_update",
 {
     sol::state lua;
     sol::table services = lua.create_table();
-    const auto runtime_owner =
+    const cata::lua_platform::game_handle_runtime_owner_ptr runtime_owner =
         cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime active_runtime(
         runtime_owner, 1 );
@@ -310,7 +469,7 @@ TEST_CASE( "lua_platform_hordes_update_legacy_group_invalid_target_is_unchanged"
 {
     sol::state lua;
     sol::table services = lua.create_table();
-    const auto runtime_owner =
+    const cata::lua_platform::game_handle_runtime_owner_ptr runtime_owner =
         cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime active_runtime(
         runtime_owner, 1 );
@@ -409,7 +568,7 @@ TEST_CASE( "lua_platform_hordes_tokens_bind_identity_and_context",
 {
     sol::state lua;
     sol::table services = lua.create_table();
-    const auto runtime_owner =
+    const cata::lua_platform::game_handle_runtime_owner_ptr runtime_owner =
         cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime(
         runtime_owner, 41 );
@@ -463,7 +622,7 @@ TEST_CASE( "lua_platform_hordes_tokens_bind_identity_and_context",
            ["code"].get<std::string>() == "occupied" );
     CHECK( token_is_valid( token ).get<bool>() );
 
-    const auto other_owner =
+    const cata::lua_platform::game_handle_runtime_owner_ptr other_owner =
         cata::lua_platform::make_game_handle_runtime_owner();
     current_runtime = cata::lua_platform::game_handle_runtime(
                           other_owner, 41 );
@@ -531,7 +690,7 @@ TEST_CASE( "lua_platform_hordes_entity_pages_are_stable_and_bounded",
 {
     sol::state lua;
     sol::table services = lua.create_table();
-    const auto runtime_owner =
+    const cata::lua_platform::game_handle_runtime_owner_ptr runtime_owner =
         cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime active_runtime(
         runtime_owner, 42 );
@@ -615,7 +774,7 @@ TEST_CASE( "lua_platform_hordes_remove_legacy_group_is_single_commit",
 {
     sol::state lua;
     sol::table services = lua.create_table();
-    const auto runtime_owner =
+    const cata::lua_platform::game_handle_runtime_owner_ptr runtime_owner =
         cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime active_runtime(
         runtime_owner, 43 );
@@ -706,9 +865,8 @@ TEST_CASE( "lua_platform_horde_monsters_native_order", "[lua][platform][hordes]"
     }, []() {
         return std::size_t{ 1 };
     }, []() {}, []() {} );
-    const mongroup_id group( "GROUP_ZOMBIE" );
-    REQUIRE( group.is_valid() );
-    const auto native = MonsterGroupManager::GetMonstersFromGroup( group, true );
+    REQUIRE( GROUP_ZOMBIE.is_valid() );
+    const auto native = MonsterGroupManager::GetMonstersFromGroup( GROUP_ZOMBIE, true );
     REQUIRE_FALSE( native.empty() );
     sol::protected_function monsters = services["hordes"]["monsters"];
     for( std::size_t offset = 0; offset < native.size(); offset += 7 ) {
@@ -717,7 +875,7 @@ TEST_CASE( "lua_platform_horde_monsters_native_order", "[lua][platform][hordes]"
         options["offset"] = offset;
         options["limit"] = 7;
         sol::protected_function_result call = monsters(
-                cata::lua_platform::script_game_id( "monster_group", group.str() ), true, options );
+                cata::lua_platform::script_game_id( "monster_group", GROUP_ZOMBIE.str() ), true, options );
         REQUIRE( call.valid() );
         sol::table page = call;
         CHECK( page["total"].get<std::size_t>() == native.size() );
@@ -729,6 +887,7 @@ TEST_CASE( "lua_platform_horde_monsters_native_order", "[lua][platform][hordes]"
         }
     }
     std::vector<std::string> sorted;
+    sorted.reserve( native.size() );
     for( const mtype_id &entry : native ) {
         sorted.push_back( entry.str() );
     }
@@ -745,7 +904,7 @@ TEST_CASE( "lua_platform_horde_monsters_native_order", "[lua][platform][hordes]"
             options["offset"] = offset;
             options["limit"] = 7;
             sol::protected_function_result call = monsters(
-                    cata::lua_platform::script_game_id( "monster_group", group.str() ), true, options );
+                    cata::lua_platform::script_game_id( "monster_group", GROUP_ZOMBIE.str() ), true, options );
             REQUIRE( call.valid() );
             sol::table page = call;
             CHECK( page["total"].get<std::size_t>() == sorted.size() );
@@ -759,10 +918,12 @@ TEST_CASE( "lua_platform_horde_monsters_native_order", "[lua][platform][hordes]"
     }
     sol::table invalid = lua.create_table();
     invalid["order"] = "invalid";
-    CHECK_FALSE( monsters( cata::lua_platform::script_game_id( "monster_group", group.str() ), true,
+    CHECK_FALSE( monsters( cata::lua_platform::script_game_id( "monster_group", GROUP_ZOMBIE.str() ),
+                           true,
                            invalid ).valid() );
     invalid["order"] = true;
-    CHECK_FALSE( monsters( cata::lua_platform::script_game_id( "monster_group", group.str() ), true,
+    CHECK_FALSE( monsters( cata::lua_platform::script_game_id( "monster_group", GROUP_ZOMBIE.str() ),
+                           true,
                            invalid ).valid() );
 
 }

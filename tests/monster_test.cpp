@@ -25,9 +25,12 @@
 #include "creature_tracker.h"
 #include "debug.h"
 #include "game.h"
+#include "flexbuffer_json.h"
 #include "horde_entity.h"
 #include "item.h"
 #include "itype.h"
+#include "json.h"
+#include "json_loader.h"
 #include "line.h"
 #include "map.h"
 #include "map_helpers.h"
@@ -746,6 +749,34 @@ TEST_CASE( "pet_equipment_slots_bridge_legacy_and_nested_equipment",
     REQUIRE( horse.remove_pet_equipment( saddle_slot ) );
     CHECK_FALSE( horse.tack_item );
     CHECK_FALSE( horse.has_effect( effect_monster_saddled ) );
+}
+
+TEST_CASE( "pet_equipment_and_stored_items_survive_save_load", "[monster][pet_equipment][save]" )
+{
+    monster horse( mtype_id( "mon_horse" ) );
+    const pet_slot_id saddle( "saddle" );
+    const pet_slot_id stirrup( "stirrup" );
+    const pet_slot_id bag( "saddlebag" );
+    REQUIRE( horse.equip_pet_equipment( saddle, item( itype_horse_tack ) ) );
+    REQUIRE( horse.equip_pet_equipment( stirrup, item( itype_horse_stirrups ) ) );
+    REQUIRE( horse.equip_pet_equipment( bag, item( itype_saddlebag ) ) );
+    horse.add_item( item( itype_rope_30 ) );
+    std::ostringstream stream;
+    JsonOut json( stream );
+    horse.serialize( json );
+    monster restored;
+    restored.deserialize( json_loader::from_string( stream.str() ).get_object() );
+    REQUIRE( restored.get_pet_equipment( saddle ) );
+    REQUIRE( restored.get_pet_equipment( stirrup ) );
+    REQUIRE( restored.get_pet_equipment( bag ) );
+    CHECK( restored.get_pet_equipment( saddle )->typeId() == itype_horse_tack );
+    CHECK( restored.get_pet_equipment( stirrup )->typeId() == itype_horse_stirrups );
+    CHECK( restored.get_pet_equipment( bag )->typeId() == itype_saddlebag );
+    CHECK( restored.has_effect( effect_monster_saddled ) );
+    CHECK( restored.has_effect( effect_has_bag ) );
+    CHECK( restored.pet_equipment_melee_hit_multiplier() == Approx( 1.1 ) );
+    REQUIRE( restored.inv.size() == 1 );
+    CHECK( restored.inv.front().typeId() == itype_rope_30 );
 }
 
 TEST_CASE( "riding_skill_reduces_mounted_movement_cost", "[monster][mount][riding]" )

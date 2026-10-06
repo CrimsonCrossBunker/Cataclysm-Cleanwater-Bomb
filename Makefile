@@ -174,6 +174,7 @@ IMTUI_DIR = $(SRC_DIR)/third-party/imtui
 LOCALIZE = 1
 ASTYLE_BINARY = astyle
 CATA_ENABLE_LUA_PLATFORM ?= 1
+CATA_TEST_SUITE ?= all
 
 ifneq ($(filter $(CATA_ENABLE_LUA_PLATFORM),0 1),$(CATA_ENABLE_LUA_PLATFORM))
   $(error CATA_ENABLE_LUA_PLATFORM must be 0 or 1)
@@ -1682,7 +1683,7 @@ endif
 	$(BINDIST_CMD)
 
 export ODIR _OBJS LDFLAGS CXX W32FLAGS DEFINES CXXFLAGS TARGETSYSTEM CLANG PCH PCHFLAGS
-export CATA_ENABLE_LUA_PLATFORM
+export CATA_ENABLE_LUA_PLATFORM CATA_TEST_SUITE
 
 ctags: $(ASTYLE_SOURCES)
 	ctags $^
@@ -1771,7 +1772,7 @@ $(ZZIP_BIN): $(ZZIP_SOURCES) $(BUILD_PREFIX)zstd.a
 	$(subst $(LDFLAGS),,$(LINK.cc)) $(OUTPUT_OPTION) -MMD -MP -isystem src/third-party $^
 
 python-check:
-	flake8
+	git ls-files -z -- '*.py' ':!obj-lua' ':!obj-lua/**' | xargs -0 flake8
 
 tests: version $(BUILD_PREFIX)cataclysm.a $(LOCALIZE_TEST_DEPS)
 	$(MAKE) -C tests

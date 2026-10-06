@@ -1,17 +1,28 @@
 #include "lua_platform_dialogue.h"
 
-#include "lua_platform_state.h"
+#include <bodypart.h>
+#include <calendar.h>
 #include <character_id.h>
 #include <coordinates.h>
 #include <dialogue.h>
+#include <effect.h>
+#include <flag.h>
 #include <item_uid.h>
+#include <lua_platform_bindings_values.h>
 #include <lua_platform_handle.h>
 #include <lua_platform_hooks.h>
+#include <lua_platform_items.h>
+#include <npctalk.h>
+#include <output.h>
+#include <overmapbuffer.h>
 #include <point.h>
 #include <safe_reference.h>
 #include <talker.h>
 #include <translation.h>
+#include <translations.h>
 #include <type_id.h>
+#include <cmath>
+#include <limits>
 #include <stdexcept>
 #include <unordered_map>
 #include <utility>
@@ -20,6 +31,8 @@
 #include "character.h"
 #include "creature.h"
 #include "item.h"
+#include "lua_platform_creatures.h"
+#include "lua_platform_state.h"
 #include "math_parser_diag_value.h"
 #include "npc.h"
 
@@ -411,6 +424,7 @@ struct context::state {
     lua_State *lua_state = nullptr;
     std::string topic_id;
     bool allow_write = false;
+    bool response_action_phase = false;
     std::string invalid_context_message;
     actor_converter convert_actor;
     dialogue_session_ptr session;
@@ -473,12 +487,14 @@ context::context( lua_State *const lua_state, ::dialogue &d, std::string topic_i
                   actor_converter convert_actor,
                   dialogue_session_ptr session,
                   game_handle_runtime runtime_identity,
-                  const std::size_t world_generation )
+                  const std::size_t world_generation,
+                  const bool response_action_phase )
     : state_( std::make_shared<state>() )
 {
     state_->lua_state = lua_state;
     state_->topic_id = std::move( topic_id );
     state_->allow_write = allow_write;
+    state_->response_action_phase = response_action_phase;
     state_->invalid_context_message = std::move( invalid_context_message );
     state_->convert_actor = std::move( convert_actor );
     state_->session = session ? std::move( session ) :
@@ -571,6 +587,16 @@ context::state &context::require_write_state() const
     return result;
 }
 
+context::state &context::require_action_write_state() const
+{
+    state &result = require_write_state();
+    if( !result.response_action_phase ) {
+        throw std::runtime_error(
+            "native dialogue effects require an active on_action callback" );
+    }
+    return result;
+}
+
 std::string context::topic() const
 {
     return require_state().topic_id;
@@ -581,6 +607,25 @@ std::string context::topic_item() const
     return require_state().dialogue_ref().cur_item.str();
 }
 
+std::string context::sample_technique( const bool critical, const bool dodge_counter,
+                                       const bool block_counter, const sol::object &blacklist ) const
+{
+    const ::dialogue &d = require_state().dialogue_ref();
+    const std::vector<matec_id> excluded = detail::read_technique_blacklist(
+            blacklist, "dialogue context sample_technique" );
+    const const_talker *alpha = d.const_actor( false );
+    const const_talker *beta = d.const_actor( true );
+    const Creature *target = beta ? beta->get_const_creature() : nullptr;
+    if( alpha == nullptr || target == nullptr ) {
+        throw std::invalid_argument(
+            "dialogue context sample_technique requires a speaker and a Creature interlocutor" );
+    }
+    // Native selection is allowed in dialogue predicates. It advances the
+    // shared RNG but does not execute an attack or retain either participant.
+    return alpha->get_random_technique( *target, critical, dodge_counter, block_counter,
+                                        excluded ).str();
+}
+
 bool context::has_speaker() const
 {
     return require_state().speaker_snapshot.present;
@@ -589,6 +634,256 @@ bool context::has_speaker() const
 bool context::has_interlocutor() const
 {
     return require_state().interlocutor_snapshot.present;
+}
+
+bool context::interlocutor_at_safe_space() const
+{
+    const ::dialogue &d = require_state().dialogue_ref();
+    if( !d.has_beta ) {
+        return false;
+    }
+    const const_talker *const beta = d.const_actor( true );
+    return beta != nullptr && overmap_buffer.is_safe( beta->pos_abs_omt() ) &&
+           beta->is_safe();
+}
+
+std::size_t context::assigned_mission_count() const
+{
+    return require_state().dialogue_ref().missions_assigned.size();
+}
+
+void context::clear_selected_mission() const
+{
+    ::dialogue &d = require_action_write_state().dialogue_ref();
+    if( !d.has_beta ) {
+        return;
+    }
+    talker *const interlocutor = d.actor( true );
+    if( interlocutor == nullptr ) {
+        return;
+    }
+    npc *const provider = interlocutor->get_npc();
+    if( provider != nullptr ) {
+        talk_function::clear_mission( *provider );
+    }
+}
+
+void context::succeed_selected_mission() const
+{
+    ::dialogue &d = require_action_write_state().dialogue_ref();
+    if( !d.has_beta ) {
+        return;
+    }
+    talker *const interlocutor = d.actor( true );
+    if( interlocutor == nullptr ) {
+        return;
+    }
+    npc *const provider = interlocutor->get_npc();
+    if( provider != nullptr ) {
+        talk_function::mission_success( *provider );
+    }
+}
+
+void context::fail_selected_mission() const
+{
+    ::dialogue &d = require_action_write_state().dialogue_ref();
+    if( !d.has_beta ) {
+        return;
+    }
+    talker *const interlocutor = d.actor( true );
+    if( interlocutor == nullptr ) {
+        return;
+    }
+    npc *const provider = interlocutor->get_npc();
+    if( provider != nullptr ) {
+        talk_function::mission_failure( *provider );
+    }
+}
+
+void context::end_interlocutor_conversation() const
+{
+    ::dialogue &d = require_action_write_state().dialogue_ref();
+    if( !d.has_beta ) {
+        return;
+    }
+    talker *const interlocutor = d.actor( true );
+    if( interlocutor == nullptr ) {
+        return;
+    }
+    npc *const provider = interlocutor->get_npc();
+    if( provider != nullptr ) {
+        talk_function::end_conversation( *provider );
+    }
+}
+
+void context::grant_item_to_speaker( const script_game_id &item_type ) const
+{
+    ::dialogue &d = require_action_write_state().dialogue_ref();
+    if( item_type.kind() != "item" || item_type.value().empty() ||
+        item_type.value().size() > 256 ||
+        item_type.value().find( '\0' ) != std::string::npos ) {
+        throw std::invalid_argument(
+            "dialogue grant_item_to_speaker requires a bounded GameId<item>" );
+    }
+    const itype_id native_type( item_type.value() );
+    if( !native_type.is_valid() ) {
+        throw std::invalid_argument(
+            "dialogue grant_item_to_speaker requires a registered item type" );
+    }
+    talker *const speaker = d.actor( false );
+    if( speaker == nullptr ) {
+        throw std::runtime_error(
+            "dialogue grant_item_to_speaker requires a live native speaker" );
+    }
+
+    // This is the no-parameter TALK u_spawn_item path: count defaults to one,
+    // the actor is dialogue alpha, and Character talkers own native
+    // i_add_or_drop (including its inventory/map fallback).
+    item received( native_type, calendar::turn );
+    if( received.has_flag( flag_PRESERVE_SPAWN_LOC ) ) {
+        received.preserve_location( speaker->pos_abs() );
+    }
+    if( received.count_by_charges() ) {
+        received.charges = 1;
+    } else {
+        const itype_id default_ammo = received.ammo_default();
+        if( !default_ammo.is_null() ) {
+            received.ammo_set( default_ammo );
+        }
+    }
+    speaker->i_add_or_drop( received );
+
+    if( d.has_beta ) {
+        talker *const interlocutor = d.actor( true );
+        if( interlocutor != nullptr && !interlocutor->disp_name().empty() ) {
+            //~ %1$s is the NPC name, %2$s is an item
+            popup( _( "%1$s gives you a %2$s." ), interlocutor->disp_name(),
+                   received.tname() );
+        }
+    }
+    bump_item_query_mutation_epoch();
+}
+
+bool context::purchase_pet(
+    const script_game_id &monster_type,
+    const sol::optional<sol::table> &requested_options ) const
+{
+    ::dialogue &d = require_action_write_state().dialogue_ref();
+    if( monster_type.kind() != "monster" || monster_type.value().empty() ||
+        monster_type.value().size() > 256 ||
+        monster_type.value().find( '\0' ) != std::string::npos ) {
+        throw std::invalid_argument(
+            "dialogue purchase_pet requires a bounded GameId<monster>" );
+    }
+    const mtype_id native_type( monster_type.value() );
+    if( !native_type.is_valid() ) {
+        throw std::invalid_argument(
+            "dialogue purchase_pet requires a registered monster type" );
+    }
+    if( !d.has_beta ) {
+        throw std::runtime_error(
+            "dialogue purchase_pet requires a native interlocutor" );
+    }
+
+    int cost = 0;
+    int count = 1;
+    bool pacified = false;
+    std::string name;
+    if( requested_options ) {
+        for( const auto &entry : *requested_options ) {
+            const sol::object key_object = entry.first;
+            if( key_object.get_type() != sol::type::string ) {
+                throw std::invalid_argument(
+                    "dialogue purchase_pet option keys must be strings" );
+            }
+            const std::string key = key_object.as<std::string>();
+            const sol::object value = entry.second;
+            if( key == "cost" || key == "count" ) {
+                if( value.get_type() != sol::type::number ) {
+                    throw std::invalid_argument(
+                        "dialogue purchase_pet cost and count must be numbers" );
+                }
+                const double number = value.as<double>();
+                if( !std::isfinite( number ) ||
+                    number < std::numeric_limits<int>::min() ||
+                    number > std::numeric_limits<int>::max() ) {
+                    throw std::invalid_argument(
+                        "dialogue purchase_pet cost and count must fit a native integer" );
+                }
+                // Native TALK's dbl_or_var values are implicitly converted to
+                // the int arguments of talker::buy_monster (truncation toward zero).
+                const int native_value = static_cast<int>( number );
+                if( key == "cost" ) {
+                    cost = native_value;
+                } else {
+                    count = native_value;
+                }
+            } else if( key == "pacified" ) {
+                if( value.get_type() != sol::type::boolean ) {
+                    throw std::invalid_argument(
+                        "dialogue purchase_pet pacified must be a boolean" );
+                }
+                pacified = value.as<bool>();
+            } else if( key == "name" ) {
+                if( value.get_type() != sol::type::string ) {
+                    throw std::invalid_argument(
+                        "dialogue purchase_pet name must be a string" );
+                }
+                name = value.as<std::string>();
+            } else {
+                throw std::invalid_argument(
+                    "dialogue purchase_pet received unknown option '" + key + "'" );
+            }
+        }
+    }
+
+    talker *const buyer = d.actor( false );
+    talker *const seller = d.actor( true );
+    if( buyer == nullptr || seller == nullptr ) {
+        throw std::runtime_error(
+            "dialogue purchase_pet requires live alpha and beta talkers" );
+    }
+
+    // The native operation owns payment, placement, disposition, naming, and
+    // feedback. In particular, a partial placement still returns its native
+    // successful result, and an empty name remains untranslated and empty.
+    return buyer->buy_monster( *seller, native_type, cost, count, pacified,
+                               no_translation( name ) );
+}
+
+bool context::has_interlocutor_effect( const script_game_id &effect_type ) const
+{
+    const ::dialogue &d = require_state().dialogue_ref();
+    if( effect_type.kind() != "effect" || effect_type.value().empty() ||
+        effect_type.value().size() > 256 ||
+        effect_type.value().find( '\0' ) != std::string::npos ) {
+        throw std::invalid_argument(
+            "dialogue has_interlocutor_effect requires a bounded GameId<effect>" );
+    }
+    if( !effect_type.is_valid() ) {
+        throw std::invalid_argument(
+            "dialogue has_interlocutor_effect requires a registered effect type" );
+    }
+    if( !d.has_beta ) {
+        return false;
+    }
+    const const_talker *const interlocutor = d.const_actor( true );
+    if( interlocutor == nullptr ) {
+        return false;
+    }
+
+    // Native TALK npc_has_effect uses dialogue.reason as an implicit body part
+    // when the condition has no explicit bodypart member.
+    bodypart_id body_part = bodypart_str_id::NULL_ID();
+    if( !d.reason.empty() ) {
+        body_part = bodypart_id( d.reason );
+        if( !body_part.is_valid() ) {
+            body_part = bodypart_str_id::NULL_ID();
+        }
+    }
+    const effect active = interlocutor->get_effect(
+                              efftype_id( effect_type.value() ), body_part );
+    return !active.is_null() && active.get_intensity() >= -1;
 }
 
 bool context::by_radio() const
@@ -604,6 +899,22 @@ bool context::has_reason() const
 std::string context::reason() const
 {
     return require_state().dialogue_ref().reason;
+}
+
+std::string context::offer_item_to_interlocutor( const bool use_item ) const
+{
+    ::dialogue &d = require_action_write_state().dialogue_ref();
+    if( !d.has_beta ) {
+        throw std::runtime_error(
+            "dialogue item offer requires a native interlocutor" );
+    }
+    talker *const interlocutor = d.actor( true );
+    if( interlocutor == nullptr ) {
+        throw std::runtime_error(
+            "dialogue item offer requires a live native interlocutor" );
+    }
+    d.reason = interlocutor->give_item_to( use_item );
+    return d.reason;
 }
 
 int context::trial_chance( const std::string &kind, const int difficulty,
@@ -625,11 +936,6 @@ bool context::roll_trial( const std::string &kind, const int difficulty,
 std::string context::expand_text( const std::string &text,
                                   const std::string &item_id ) const
 {
-    if( text.size() > 32768 || text.find( '\0' ) != std::string::npos ||
-        item_id.size() > 256 || item_id.find( '\0' ) != std::string::npos ) {
-        throw std::invalid_argument(
-            "dialogue text expansion exceeds its native string limit" );
-    }
     ::dialogue &d = require_state().dialogue_ref();
     const_talker empty_participant;
     const const_talker &speaker = d.has_alpha ? *d.const_actor( false ) :
@@ -670,6 +976,38 @@ sol::object context::interlocutor() const
             "Lua dialogue actor conversion is unavailable" );
     }
     return current.convert_actor( current.interlocutor_snapshot );
+}
+
+namespace
+{
+sol::object native_variable_string( lua_State *lua_state, const diag_value *value )
+{
+    sol::state_view lua( lua_state );
+    // Presence is independent of the native string slot. Do not serialize
+    // arrays or turn a present Null/type mismatch into a missing variable.
+    return value == nullptr ? sol::make_object( lua, sol::lua_nil ) :
+           sol::make_object( lua, value->str() );
+}
+} // namespace
+
+sol::object context::get_string( const std::string &key ) const
+{
+    state &current = require_state();
+    return native_variable_string( current.lua_state, current.dialogue_ref().maybe_get_value( key ) );
+}
+
+sol::object context::speaker_variable_string( const std::string &key ) const
+{
+    state &current = require_state();
+    const const_talker *actor = current.dialogue_ref().const_actor( false );
+    return native_variable_string( current.lua_state, actor ? actor->maybe_get_value( key ) : nullptr );
+}
+
+sol::object context::interlocutor_variable_string( const std::string &key ) const
+{
+    state &current = require_state();
+    const const_talker *actor = current.dialogue_ref().const_actor( true );
+    return native_variable_string( current.lua_state, actor ? actor->maybe_get_value( key ) : nullptr );
 }
 
 sol::object context::get( const std::string &key ) const
@@ -726,19 +1064,29 @@ struct stored_response_callback {
     std::string topic;
 };
 
+struct stored_response_action_callback {
+    response_callback_origin origin;
+    response_action_callback callback;
+    dialogue_session_ptr session;
+    std::string topic;
+};
+
 std::unordered_map<std::uint64_t, stored_response_callback> response_callbacks;
 std::uint64_t next_response_callback_id = 1;
+std::unordered_map<std::uint64_t, stored_response_action_callback>
+response_action_callbacks;
+std::uint64_t next_response_action_callback_id = 1;
 
 } // namespace
 
 
-bool valid_topic_id( const std::string &value )
+bool valid_topic_id( const std::string_view value )
 {
     return !value.empty() && value.size() <= 256 &&
            value.find( '\0' ) == std::string::npos;
 }
 
-void require_text( const std::string &value, const std::string_view api_name,
+void require_text( const std::string_view value, const std::string_view api_name,
                    const std::string_view field )
 {
     if( value.empty() || value.size() > 4096 ||
@@ -763,9 +1111,24 @@ std::uint64_t register_response_callback( const response_callback_origin origin,
     return id;
 }
 
+std::uint64_t register_response_action_callback( const response_callback_origin origin,
+        response_action_callback callback, dialogue_session_ptr session,
+        std::string topic )
+{
+    if( next_response_action_callback_id == 0 ) {
+        throw std::runtime_error( "dialogue response action callback id space is exhausted" );
+    }
+    const std::uint64_t id = next_response_action_callback_id++;
+    response_action_callbacks.emplace( id, stored_response_action_callback{
+        origin, std::move( callback ), std::move( session ), std::move( topic )
+    } );
+    return id;
+}
+
 void clear_response_callbacks()
 {
     response_callbacks.clear();
+    response_action_callbacks.clear();
 }
 
 void clear_response_callbacks( const response_callback_origin origin )
@@ -773,6 +1136,14 @@ void clear_response_callbacks( const response_callback_origin origin )
     for( auto iter = response_callbacks.begin(); iter != response_callbacks.end(); ) {
         if( iter->second.origin == origin ) {
             iter = response_callbacks.erase( iter );
+        } else {
+            ++iter;
+        }
+    }
+    for( auto iter = response_action_callbacks.begin();
+         iter != response_action_callbacks.end(); ) {
+        if( iter->second.origin == origin ) {
+            iter = response_action_callbacks.erase( iter );
         } else {
             ++iter;
         }
@@ -794,6 +1165,61 @@ talk_topic apply_response_callback( ::dialogue &d, const std::uint64_t response_
     return stored.callback( d, fallback, trial_success );
 }
 
+void apply_response_action_callback( ::dialogue &d, const std::uint64_t response_id,
+                                     const bool trial_success )
+{
+    const auto found = response_action_callbacks.find( response_id );
+    if( found == response_action_callbacks.end() ) {
+        return;
+    }
+    stored_response_action_callback stored = std::move( found->second );
+    response_action_callbacks.erase( found );
+    if( stored.session && !stored.session->active_for( stored.topic, &d ) ) {
+        return;
+    }
+    stored.callback( d, trial_success );
+}
+
+translation deferred_translation_from_descriptor(
+    const sol::table &descriptor, const std::string_view field_name,
+    const std::string &text, const std::string_view api_name )
+{
+    const std::string field( field_name );
+    const sol::object raw_translation = descriptor.raw_get<sol::object>( field );
+    if( !raw_translation.valid() || raw_translation.get_type() == sol::type::nil ) {
+        return no_translation( text );
+    }
+    const std::string field_label = std::string( api_name ) + " field '" + field + "'";
+    if( raw_translation.get_type() != sol::type::table ) {
+        throw std::invalid_argument( field_label + " must be a table" );
+    }
+
+    const sol::table translation_options = raw_translation.as<sol::table>();
+    for( const auto &entry : translation_options ) {
+        if( entry.first.get_type() != sol::type::string ) {
+            throw std::invalid_argument( field_label + " keys must be strings" );
+        }
+        const std::string key = entry.first.as<std::string>();
+        if( key != "context" ) {
+            throw std::invalid_argument( std::string( field_label ).append( " has unknown field '" ).append(
+                                             key ).append( "'" ) );
+        }
+    }
+
+    const sol::object raw_context = translation_options.raw_get<sol::object>( "context" );
+    if( !raw_context.valid() || raw_context.get_type() == sol::type::nil ) {
+        return to_translation( text );
+    }
+    if( raw_context.get_type() != sol::type::string ) {
+        throw std::invalid_argument( field_label + ".context must be a string" );
+    }
+    const std::string context = raw_context.as<std::string>();
+    if( context.find( '\0' ) != std::string::npos ) {
+        throw std::invalid_argument( field_label + ".context must not contain NUL" );
+    }
+    return to_translation( context, text );
+}
+
 talk_response response_from_table( const sol::table &descriptor,
                                    const response_descriptor_options &options )
 {
@@ -808,7 +1234,7 @@ talk_response response_from_table( const sol::table &descriptor,
         }
         const std::string key = entry.first.as<std::string>();
         if( key != "text" && key != "topic" && key != "on_select" &&
-            options.additional_fields.count( key ) == 0 ) {
+            key != "text_translation" && options.additional_fields.count( key ) == 0 ) {
             throw std::invalid_argument( std::string( options.api_name ) + " " +
                                          std::string( options.descriptor_name ) + " " +
                                          std::string( options.unknown_field_verb ) +
@@ -839,7 +1265,8 @@ talk_response response_from_table( const sol::table &descriptor,
     }
 
     talk_response response;
-    response.truetext = no_translation( text );
+    response.truetext = deferred_translation_from_descriptor(
+                            descriptor, "text_translation", text, options.api_name );
     response.truefalse_condition = []( const_dialogue const & ) {
         return true;
     };

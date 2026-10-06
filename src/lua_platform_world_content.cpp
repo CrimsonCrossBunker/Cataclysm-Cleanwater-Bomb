@@ -50,6 +50,7 @@ extern "C" {
 #include "generic_factory.h"
 #include "init.h"
 #include "lua_platform_content.h"
+#include "lua_platform_content_text.h"
 #include "lua_platform_runtime.h"
 #include "memory_fast.h"
 #include "npc.h"
@@ -66,6 +67,8 @@ namespace cata::lua_platform
 
 namespace
 {
+
+using detail::authored_text;
 
 enum class lifecycle : int {
     building,
@@ -126,7 +129,7 @@ struct price_rule_data {
     std::string item;
     std::string group;
     std::string category;
-    std::string message;
+    authored_text message;
     double markup = 1.0;
     double premium = 1.0;
     std::optional<double> fixed_adjustment;
@@ -136,7 +139,7 @@ struct price_rule_data {
 
 struct faction_data : definition_base {
     std::string name;
-    std::string description;
+    authored_text description;
     int likes = 0;
     int respects = 0;
     int trusts = 0;
@@ -162,13 +165,13 @@ struct shop_group_data {
     int trust = 0;
     bool strict = false;
     bool rigid = false;
-    std::string refusal;
+    authored_text refusal;
     std::string condition_handler;
 };
 
 struct npc_class_data : definition_base {
-    std::string name;
-    std::string job_description;
+    authored_text name;
+    authored_text job_description;
     bool common = true;
     double common_spawn_weight = 1.0;
     bool sells_belongings = true;
@@ -201,9 +204,9 @@ struct npc_class_data : definition_base {
 };
 
 struct npc_data : definition_base {
-    std::string unique_name;
-    std::string suffix;
-    std::string temporary_suffix;
+    authored_text unique_name;
+    authored_text suffix;
+    authored_text temporary_suffix;
     std::string gender = "random";
     std::string npc_class;
     std::string faction;
@@ -213,7 +216,7 @@ struct npc_data : definition_base {
     std::string stole_item_chat;
     std::vector<std::string> missions_offered;
     std::map<std::string, std::string> dialogue_topics;
-    std::map<std::string, std::string> snippets;
+    std::map<std::string, authored_text> snippets;
     std::optional<int> age;
     std::optional<int> height;
     std::optional<int> strength;
@@ -226,7 +229,7 @@ struct npc_data : definition_base {
 };
 
 struct overmap_terrain_data : definition_base {
-    std::string name;
+    authored_text name;
     std::string symbol = "?";
     std::string color = "white";
     std::string see_cost = "none";
@@ -254,20 +257,16 @@ struct overmap_terrain_data : definition_base {
 };
 
 struct special_terrain_data {
-    int x = 0;
-    int y = 0;
-    int z = 0;
+    tripoint position = tripoint::zero;
     std::string terrain;
     std::set<std::string> locations;
     std::set<std::string> flags;
     std::optional<std::string> camp_owner;
-    std::string camp_name;
+    authored_text camp_name;
 };
 
 struct special_connection_data {
-    int x = 0;
-    int y = 0;
-    int z = 0;
+    tripoint position = tripoint::zero;
     std::optional<std::array<int, 3>> from;
     std::string terrain;
     std::string connection;
@@ -275,9 +274,7 @@ struct special_connection_data {
 };
 
 struct special_location_data {
-    int x = 0;
-    int y = 0;
-    int z = 0;
+    tripoint position = tripoint::zero;
     std::set<std::string> locations;
 };
 
@@ -305,7 +302,7 @@ struct mutable_special_terrain_data {
     std::map<std::string, special_terrain_join_data> joins;
     std::map<std::string, std::string> connections;
     std::optional<std::string> camp_owner;
-    std::string camp_name;
+    authored_text camp_name;
 };
 
 struct integer_distribution_data {
@@ -324,9 +321,7 @@ struct integer_distribution_data {
 
 struct mutable_special_piece_data {
     std::string overmap;
-    int x = 0;
-    int y = 0;
-    int z = 0;
+    tripoint position = tripoint::zero;
     std::string rotation = "north";
 };
 
@@ -409,8 +404,8 @@ struct vpart_terrain_transform_data {
 
 struct vehicle_part_data : definition_base {
     std::string copy_from;
-    std::optional<std::string> name;
-    std::optional<std::string> description;
+    std::optional<authored_text> name;
+    std::optional<authored_text> description;
     std::optional<std::string> item;
     std::optional<std::string> remove_as;
     std::optional<std::string> location;
@@ -487,8 +482,7 @@ struct vehicle_part_data : definition_base {
 };
 
 struct vehicle_part_placement_data {
-    int x = 0;
-    int y = 0;
+    point position = point::zero;
     std::string part;
     std::string variant;
     int with_ammo = 0;
@@ -499,8 +493,7 @@ struct vehicle_part_placement_data {
 };
 
 struct vehicle_item_data {
-    int x = 0;
-    int y = 0;
+    point position = point::zero;
     int chance = 0;
     int with_ammo = 0;
     int with_magazine = 0;
@@ -509,8 +502,7 @@ struct vehicle_item_data {
 };
 
 struct vehicle_zone_data {
-    int x = 0;
-    int y = 0;
+    point position = point::zero;
     std::string type;
     std::string name;
     std::string filter;
@@ -518,7 +510,7 @@ struct vehicle_zone_data {
 
 struct vehicle_data : definition_base {
     std::string copy_from;
-    std::optional<std::string> name;
+    std::optional<authored_text> name;
     std::string color_palette;
     bool color_palette_set = false;
     std::vector<vehicle_part_placement_data> parts;
@@ -610,7 +602,8 @@ price_rule_data read_price_rule( const sol::table &rule )
     result.item = rule.get_or( "item", std::string() );
     result.group = rule.get_or( "group", std::string() );
     result.category = rule.get_or( "category", std::string() );
-    result.message = rule.get_or( "message", std::string() );
+    result.message = detail::read_singular_text_or(
+                         rule.raw_get<sol::object>( "message" ), {}, "price rule message" );
     result.markup = rule.get_or( "markup", 1.0 );
     result.premium = rule.get_or( "premium", 1.0 );
     result.fixed_adjustment = read_optional<double>( rule, "fixed_adjustment" );
@@ -621,6 +614,23 @@ price_rule_data read_price_rule( const sol::table &rule )
         throw std::invalid_argument( "price rule numeric values must be finite" );
     }
     return result;
+}
+
+authored_text read_authored_text( const sol::table &source, const std::string &field,
+                                  const authored_text &fallback = {} )
+{
+    return detail::read_singular_text_or( source.raw_get<sol::object>( field ), fallback,
+                                          field );
+}
+
+std::optional<authored_text> read_optional_authored_text( const sol::table &source,
+        const std::string &field )
+{
+    const sol::object value = source.raw_get<sol::object>( field );
+    if( !value.valid() || value.get_type() == sol::type::nil ) {
+        return std::nullopt;
+    }
+    return detail::read_singular_text( value, {}, field );
 }
 
 std::array<int, 3> read_point( const sol::table &source, const char *description )
@@ -964,6 +974,22 @@ void hash_part( std::uint64_t &state, const std::string_view value )
     state *= 1099511628211ULL;
 }
 
+void hash_part( std::uint64_t &state, const authored_text &value )
+{
+    hash_part( state, value.raw );
+    hash_part( state, value.translated ? "localized" : "literal" );
+    if( value.translated ) {
+        hash_part( state, value.translated->context ? "context" : "no_context" );
+        if( value.translated->context ) {
+            hash_part( state, *value.translated->context );
+        }
+        hash_part( state, value.translated->plural ? "plural" : "singular" );
+        if( value.translated->plural ) {
+            hash_part( state, *value.translated->plural );
+        }
+    }
+}
+
 template<typename Value>
 void hash_number( std::uint64_t &state, const Value value )
 {
@@ -985,6 +1011,15 @@ void hash_optional_number( std::uint64_t &state, const std::optional<Value> &val
 }
 
 void hash_optional_string( std::uint64_t &state, const std::optional<std::string> &value )
+{
+    hash_part( state, value ? "present" : "absent" );
+    if( value ) {
+        hash_part( state, *value );
+    }
+}
+
+void hash_optional_authored_text( std::uint64_t &state,
+                                  const std::optional<authored_text> &value )
 {
     hash_part( state, value ? "present" : "absent" );
     if( value ) {
@@ -1232,9 +1267,9 @@ void hash_definition( std::uint64_t &state, const overmap_special_data &value )
         hash_interval( state, value.spawns->radius );
     }
     for( const special_terrain_data &terrain : value.terrains ) {
-        hash_number( state, terrain.x );
-        hash_number( state, terrain.y );
-        hash_number( state, terrain.z );
+        hash_number( state, terrain.position.x );
+        hash_number( state, terrain.position.y );
+        hash_number( state, terrain.position.z );
         hash_part( state, terrain.terrain );
         hash_strings( state, terrain.locations );
         hash_strings( state, terrain.flags );
@@ -1242,9 +1277,9 @@ void hash_definition( std::uint64_t &state, const overmap_special_data &value )
         hash_part( state, terrain.camp_name );
     }
     for( const special_connection_data &connection : value.connections ) {
-        hash_number( state, connection.x );
-        hash_number( state, connection.y );
-        hash_number( state, connection.z );
+        hash_number( state, connection.position.x );
+        hash_number( state, connection.position.y );
+        hash_number( state, connection.position.z );
         hash_part( state, connection.from ? "present" : "absent" );
         if( connection.from ) {
             for( const int coordinate : *connection.from ) {
@@ -1256,9 +1291,9 @@ void hash_definition( std::uint64_t &state, const overmap_special_data &value )
         hash_bool( state, connection.existing );
     }
     for( const special_location_data &location : value.check_for_locations ) {
-        hash_number( state, location.x );
-        hash_number( state, location.y );
-        hash_number( state, location.z );
+        hash_number( state, location.position.x );
+        hash_number( state, location.position.y );
+        hash_number( state, location.position.z );
         hash_strings( state, location.locations );
     }
     for( const special_join_data &join : value.joins ) {
@@ -1295,9 +1330,9 @@ void hash_definition( std::uint64_t &state, const overmap_special_data &value )
             hash_optional_number( state, rule.weight );
             for( const mutable_special_piece_data &piece : rule.pieces ) {
                 hash_part( state, piece.overmap );
-                hash_number( state, piece.x );
-                hash_number( state, piece.y );
-                hash_number( state, piece.z );
+                hash_number( state, piece.position.x );
+                hash_number( state, piece.position.y );
+                hash_number( state, piece.position.z );
                 hash_part( state, piece.rotation );
             }
         }
@@ -1339,8 +1374,8 @@ void hash_definition( std::uint64_t &state, const vehicle_part_data &value )
 {
     hash_part( state, value.id );
     hash_part( state, value.copy_from );
-    hash_optional_string( state, value.name );
-    hash_optional_string( state, value.description );
+    hash_optional_authored_text( state, value.name );
+    hash_optional_authored_text( state, value.description );
     hash_optional_string( state, value.item );
     hash_optional_string( state, value.remove_as );
     hash_optional_string( state, value.location );
@@ -1499,12 +1534,12 @@ void hash_definition( std::uint64_t &state, const vehicle_data &value )
 {
     hash_part( state, value.id );
     hash_part( state, value.copy_from );
-    hash_optional_string( state, value.name );
+    hash_optional_authored_text( state, value.name );
     hash_bool( state, value.color_palette_set );
     hash_part( state, value.color_palette );
     for( const vehicle_part_placement_data &part : value.parts ) {
-        hash_number( state, part.x );
-        hash_number( state, part.y );
+        hash_number( state, part.position.x );
+        hash_number( state, part.position.y );
         hash_part( state, part.part );
         hash_part( state, part.variant );
         hash_number( state, part.with_ammo );
@@ -1517,8 +1552,8 @@ void hash_definition( std::uint64_t &state, const vehicle_data &value )
     hash_part( state, value.extend_parts ? "extend_parts" : "no_extend_parts" );
     if( value.extend_parts ) {
         for( const vehicle_part_placement_data &part : *value.extend_parts ) {
-            hash_number( state, part.x );
-            hash_number( state, part.y );
+            hash_number( state, part.position.x );
+            hash_number( state, part.position.y );
             hash_part( state, part.part );
             hash_part( state, part.variant );
             hash_number( state, part.with_ammo );
@@ -1532,8 +1567,8 @@ void hash_definition( std::uint64_t &state, const vehicle_data &value )
     hash_part( state, value.delete_parts ? "delete_parts" : "no_delete_parts" );
     if( value.delete_parts ) {
         for( const vehicle_part_placement_data &part : *value.delete_parts ) {
-            hash_number( state, part.x );
-            hash_number( state, part.y );
+            hash_number( state, part.position.x );
+            hash_number( state, part.position.y );
             hash_part( state, part.part );
             hash_part( state, part.variant );
             hash_number( state, part.with_ammo );
@@ -1545,8 +1580,8 @@ void hash_definition( std::uint64_t &state, const vehicle_data &value )
         }
     }
     for( const vehicle_item_data &item : value.items ) {
-        hash_number( state, item.x );
-        hash_number( state, item.y );
+        hash_number( state, item.position.x );
+        hash_number( state, item.position.y );
         hash_number( state, item.chance );
         hash_number( state, item.with_ammo );
         hash_number( state, item.with_magazine );
@@ -1558,8 +1593,8 @@ void hash_definition( std::uint64_t &state, const vehicle_data &value )
     }
     hash_bool( state, value.items_set );
     for( const vehicle_zone_data &zone : value.zones ) {
-        hash_number( state, zone.x );
-        hash_number( state, zone.y );
+        hash_number( state, zone.position.x );
+        hash_number( state, zone.position.y );
         hash_part( state, zone.type );
         hash_part( state, zone.name );
         hash_part( state, zone.filter );
@@ -1600,8 +1635,7 @@ std::array<char32_t, 8> read_variant_symbols( const std::string &source,
 bool same_vehicle_part_placement( const vehicle_part_placement_data &lhs,
                                   const vehicle_part_placement_data &rhs )
 {
-    return lhs.x == rhs.x &&
-           lhs.y == rhs.y &&
+    return lhs.position == rhs.position &&
            lhs.part == rhs.part &&
            lhs.variant == rhs.variant &&
            lhs.with_ammo == rhs.with_ammo &&
@@ -1638,7 +1672,7 @@ void set_npc_dialogue_topic( dialogue_chatbin &chat, const std::string &name,
 }
 
 void set_npc_snippet( dialogue_chatbin_snippets &snippets,
-                      const std::string &name, const std::string &text )
+                      const std::string &name, const authored_text &text )
 {
     static const std::map<std::string, translation dialogue_chatbin_snippets::*> fields = {
         { "<acknowledged>", &dialogue_chatbin_snippets::snip_acknowledged },
@@ -1717,12 +1751,35 @@ void set_npc_snippet( dialogue_chatbin_snippets &snippets,
     if( found == fields.end() ) {
         throw std::runtime_error( "unknown NPC snippet slot '" + name + "'" );
     }
-    snippets.*found->second = no_translation( text );
+    snippets.*found->second = text.native();
 }
 
 } // namespace
 
 struct world_content_transaction::impl {
+    using faction_handle = definition_handle<faction_data>;
+    using npc_class_handle = definition_handle<npc_class_data>;
+    using npc_handle = definition_handle<npc_data>;
+    using omt_handle = definition_handle<overmap_terrain_data>;
+    using special_handle = definition_handle<overmap_special_data>;
+    using vpart_handle = definition_handle<vehicle_part_data>;
+    using vehicle_handle = definition_handle<vehicle_data>;
+
+    void install_faction_api( sol::table &content ) const;
+    void apply_faction();
+    void install_npc_class_api( sol::table &content ) const;
+    void apply_npc_class();
+    void install_npc_api( sol::table &content ) const;
+    void apply_npc();
+    void install_overmap_terrain_api( sol::table &content ) const;
+    void apply_overmap_terrain();
+    void install_overmap_special_api( sol::table &content ) const;
+    void apply_overmap_special();
+    void install_vehicle_part_api( sol::table &content ) const;
+    void apply_vehicle_part( std::string &error );
+    void install_vehicle_api( sol::table &content ) const;
+    void apply_vehicle();
+
     impl( std::string owner_id, std::size_t owner_generation ) :
         owner( std::move( owner_id ) ), generation( owner_generation ),
         handle_token( std::make_shared<token>() ) {}
@@ -1793,7 +1850,19 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
     ccb.new_usertype<vehicle_handle>( "VehicleDefinition", sol::no_constructor,
                                       "id", sol::property( &vehicle_handle::id ) );
 
-    const std::shared_ptr<token> owner = pimpl_->handle_token;
+    pimpl_->install_faction_api( content );
+    pimpl_->install_npc_class_api( content );
+    pimpl_->install_npc_api( content );
+    pimpl_->install_overmap_terrain_api( content );
+    pimpl_->install_overmap_special_api( content );
+    pimpl_->install_vehicle_part_api( content );
+    pimpl_->install_vehicle_api( content );
+    static_cast<void>( lua );
+}
+
+void world_content_transaction::impl::install_faction_api( sol::table &content ) const
+{
+    const std::shared_ptr<token> owner = handle_token;
     content.set_function( "Faction", [owner]( const sol::table & options ) {
         if( owner->state != lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
@@ -1801,7 +1870,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         auto value = std::make_shared<faction_data>();
         value->id = options.get_or( "id", std::string() );
         value->name = options.get_or( "name", value->id );
-        value->description = options.get_or( "description", std::string() );
+        value->description = read_authored_text( options, "description" );
         value->likes = options.get_or( "likes", 0 );
         value->respects = options.get_or( "respects", 0 );
         value->trusts = options.get_or( "trusts", 0 );
@@ -1857,7 +1926,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                                                          condition, "power_min" );
                         native_condition.power_max = read_optional<int>(
                                                          condition, "power_max" );
-                        parsed.dynamic.push_back( std::move( native_condition ) );
+                        parsed.dynamic.push_back( native_condition );
                     }
                 }
                 value->epilogues.push_back( std::move( parsed ) );
@@ -1865,14 +1934,20 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         }
         return faction_handle{ std::move( value ), owner };
     } );
+}
+
+void world_content_transaction::impl::install_npc_class_api( sol::table &content ) const
+{
+    const std::shared_ptr<token> owner = handle_token;
     content.set_function( "NpcClass", [owner]( const sol::table & options ) {
         if( owner->state != lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
         auto value = std::make_shared<npc_class_data>();
         value->id = options.get_or( "id", std::string() );
-        value->name = options.get_or( "name", value->id );
-        value->job_description = options.get_or( "job_description", std::string() );
+        value->name = read_authored_text(
+                          options, "name", authored_text{ value->id, std::nullopt } );
+        value->job_description = read_authored_text( options, "job_description" );
         value->common = options.get_or( "common", true );
         value->common_spawn_weight = options.get_or( "common_spawn_weight", 1.0 );
         value->sells_belongings = options.get_or( "sells_belongings", true );
@@ -1950,7 +2025,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                 value->shop_groups.push_back( {
                     group.get_or( "id", std::string() ), group.get_or( "trust", 0 ),
                     group.get_or( "strict", false ), group.get_or( "rigid", false ),
-                    group.get_or( "refusal", std::string() ),
+                    read_authored_text( group, "refusal" ),
                     group.get_or( "condition_handler", std::string() )
                 } );
             }
@@ -1964,15 +2039,20 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         }
         return npc_class_handle{ std::move( value ), owner };
     } );
+}
+
+void world_content_transaction::impl::install_npc_api( sol::table &content ) const
+{
+    const std::shared_ptr<token> owner = handle_token;
     content.set_function( "Npc", [owner]( const sol::table & options ) {
         if( owner->state != lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
         auto value = std::make_shared<npc_data>();
         value->id = options.get_or( "id", std::string() );
-        value->unique_name = options.get_or( "unique_name", std::string() );
-        value->suffix = options.get_or( "suffix", std::string() );
-        value->temporary_suffix = options.get_or( "temporary_suffix", std::string() );
+        value->unique_name = read_authored_text( options, "unique_name" );
+        value->suffix = read_authored_text( options, "suffix" );
+        value->temporary_suffix = read_authored_text( options, "temporary_suffix" );
         value->gender = options.get_or( "gender", std::string( "random" ) );
         value->npc_class = options.get_or( "class", std::string() );
         value->faction = options.get_or( "faction", std::string() );
@@ -1998,13 +2078,12 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         if( const sol::optional<sol::table> snippets =
                 options.get<sol::optional<sol::table>>( "snippets" ) ) {
             for( const auto &entry : *snippets ) {
-                if( entry.first.get_type() != sol::type::string ||
-                    entry.second.get_type() != sol::type::string ) {
+                if( entry.first.get_type() != sol::type::string ) {
                     throw std::invalid_argument(
                         "NPC snippets must map names to text" );
                 }
                 value->snippets[entry.first.as<std::string>()] =
-                    entry.second.as<std::string>();
+                    detail::read_singular_text( entry.second, {}, "NPC snippet text" );
             }
         }
         value->age = read_optional<int>( options, "age" );
@@ -2028,13 +2107,19 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         value->death_handler = options.get_or( "on_death", std::string() );
         return npc_handle{ std::move( value ), owner };
     } );
+}
+
+void world_content_transaction::impl::install_overmap_terrain_api( sol::table &content ) const
+{
+    const std::shared_ptr<token> owner = handle_token;
     content.set_function( "OvermapTerrain", [owner]( const sol::table & options ) {
         if( owner->state != lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
         auto value = std::make_shared<overmap_terrain_data>();
         value->id = options.get_or( "id", std::string() );
-        value->name = options.get_or( "name", value->id );
+        value->name = read_authored_text(
+                          options, "name", authored_text{ value->id, std::nullopt } );
         value->symbol = options.get_or( "symbol", std::string( "?" ) );
         value->color = options.get_or( "color", std::string( "white" ) );
         value->see_cost = options.get_or( "see_cost", std::string( "none" ) );
@@ -2071,6 +2156,11 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                            options.get<sol::optional<sol::table>>( "flags" ), "overmap terrain flags" );
         return omt_handle{ std::move( value ), owner };
     } );
+}
+
+void world_content_transaction::impl::install_overmap_special_api( sol::table &content ) const
+{
+    const std::shared_ptr<token> owner = handle_token;
     content.set_function( "OvermapSpecial", [owner]( const sol::table & options ) {
         if( owner->state != lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
@@ -2121,9 +2211,9 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                     const std::array<int, 3> point = read_point(
                                                          terrain.get<sol::table>( "point" ), "overmap special point" );
                     special_terrain_data parsed;
-                    parsed.x = point[0];
-                    parsed.y = point[1];
-                    parsed.z = point[2];
+                    parsed.position.x = point[0];
+                    parsed.position.y = point[1];
+                    parsed.position.z = point[2];
                     parsed.terrain = terrain.get_or( "terrain", terrain.get_or(
                                                          "overmap", std::string() ) );
                     parsed.locations = read_string_set(
@@ -2133,7 +2223,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                                        terrain.get<sol::optional<sol::table>>( "flags" ),
                                        "overmap special terrain flags" );
                     parsed.camp_owner = read_optional<std::string>( terrain, "camp" );
-                    parsed.camp_name = terrain.get_or( "camp_name", std::string() );
+                    parsed.camp_name = read_authored_text( terrain, "camp_name" );
                     value->terrains.push_back( std::move( parsed ) );
                 }
             }
@@ -2144,9 +2234,9 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                     const std::array<int, 3> point = read_point(
                                                          connection.get<sol::table>( "point" ), "overmap connection point" );
                     special_connection_data parsed;
-                    parsed.x = point[0];
-                    parsed.y = point[1];
-                    parsed.z = point[2];
+                    parsed.position.x = point[0];
+                    parsed.position.y = point[1];
+                    parsed.position.z = point[2];
                     if( const sol::optional<sol::table> from =
                             connection.get<sol::optional<sol::table>>( "from" ) ) {
                         parsed.from = read_point( *from, "overmap connection from" );
@@ -2179,7 +2269,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                     const std::array<int, 3> coordinates = read_point(
                             *point, "mutable special checked point" );
                     value->check_for_locations.push_back( {
-                        coordinates[0], coordinates[1], coordinates[2],
+                        tripoint( coordinates[0], coordinates[1], coordinates[2] ),
                         read_string_set( allowed, "mutable special checked location types" )
                     } );
                 }
@@ -2214,7 +2304,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                     for( int x = min_x; x <= max_x; ++x ) {
                         for( int y = min_y; y <= max_y; ++y ) {
                             for( int z = min_z; z <= max_z; ++z ) {
-                                value->check_for_locations.push_back( { x, y, z, allowed } );
+                                value->check_for_locations.push_back( { tripoint( x, y, z ), allowed } );
                             }
                         }
                     }
@@ -2262,7 +2352,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                                            descriptor.get<sol::optional<sol::table>>( "locations" ),
                                            "mutable special overmap locations" );
                     parsed.camp_owner = read_optional<std::string>( descriptor, "camp" );
-                    parsed.camp_name = descriptor.get_or( "camp_name", std::string() );
+                    parsed.camp_name = read_authored_text( descriptor, "camp_name" );
                     for( const char *direction : {
                              "north", "east", "south", "west", "above", "below"
                          } ) {
@@ -2329,7 +2419,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                         parsed_rule.weight = read_optional<int>( rule, "weight" );
                         const std::string single = rule.get_or( "overmap", std::string() );
                         if( !single.empty() ) {
-                            parsed_rule.pieces.push_back( { single, 0, 0, 0, "north" } );
+                            parsed_rule.pieces.push_back( { single, tripoint::zero, "north" } );
                         } else if( const sol::optional<sol::table> chunk =
                                        rule.get<sol::optional<sol::table>>( "chunk" ) ) {
                             for( const sol::table &piece : read_dense_array<sol::table>(
@@ -2342,7 +2432,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                                 }
                                 parsed_rule.pieces.push_back( {
                                     piece.get_or( "overmap", std::string() ),
-                                    point[0], point[1], point[2],
+                                    tripoint( point[0], point[1], point[2] ),
                                     piece.get_or( "rotation", piece.get_or(
                                                       "rot", std::string( "north" ) ) )
                                 } );
@@ -2361,6 +2451,11 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
     // The native loader treats city_building as a fixed overmap_special alias.
     // Keep one implementation and registry path while exposing both authoring names.
     content["CityBuilding"] = content["OvermapSpecial"];
+}
+
+void world_content_transaction::impl::install_vehicle_part_api( sol::table &content ) const
+{
+    const std::shared_ptr<token> owner = handle_token;
     content.set_function( "VehiclePart", [owner]( const sol::table & options ) {
         if( owner->state != lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
@@ -2368,8 +2463,8 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         auto value = std::make_shared<vehicle_part_data>();
         value->id = options.get_or( "id", std::string() );
         value->copy_from = options.get_or( "copy_from", std::string() );
-        value->name = read_optional<std::string>( options, "name" );
-        value->description = read_optional<std::string>( options, "description" );
+        value->name = read_optional_authored_text( options, "name" );
+        value->description = read_optional_authored_text( options, "description" );
         value->item = read_optional<std::string>( options, "item" );
         value->remove_as = read_optional<std::string>( options, "remove_as" );
         value->location = read_optional<std::string>( options, "location" );
@@ -2671,6 +2766,11 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         }
         return vpart_handle{ std::move( value ), owner };
     } );
+}
+
+void world_content_transaction::impl::install_vehicle_api( sol::table &content ) const
+{
+    const std::shared_ptr<token> owner = handle_token;
     content.set_function( "Vehicle", [owner]( const sol::table & options ) {
         if( owner->state != lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
@@ -2678,7 +2778,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         auto value = std::make_shared<vehicle_data>();
         value->id = options.get_or( "id", std::string() );
         value->copy_from = options.get_or( "copy_from", std::string() );
-        value->name = read_optional<std::string>( options, "name" );
+        value->name = read_optional_authored_text( options, "name" );
         if( const std::optional<std::string> palette = read_optional<std::string>(
                     options, "color_palette" ) ) {
             value->color_palette = *palette;
@@ -2692,8 +2792,8 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
             require_known_table_keys( part, placement_fields,
                                       "vehicle part placement" );
             vehicle_part_placement_data parsed;
-            parsed.x = part.get_or( "x", 0 );
-            parsed.y = part.get_or( "y", 0 );
+            parsed.position.x = part.get_or( "x", 0 );
+            parsed.position.y = part.get_or( "y", 0 );
             parsed.part = part.get_or( "part", std::string() );
             parsed.variant = part.get_or( "variant", std::string() );
             parsed.with_ammo = part.get_or( "with_ammo", 0 );
@@ -2752,8 +2852,8 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
             for( const sol::table &item : read_dense_array<sol::table>( *items,
                     "vehicle item spawns" ) ) {
                 vehicle_item_data parsed;
-                parsed.x = item.get_or( "x", 0 );
-                parsed.y = item.get_or( "y", 0 );
+                parsed.position.x = item.get_or( "x", 0 );
+                parsed.position.y = item.get_or( "y", 0 );
                 parsed.chance = item.get_or( "chance", 0 );
                 parsed.with_ammo = item.get_or( "with_ammo", 0 );
                 parsed.with_magazine = item.get_or( "with_magazine", 0 );
@@ -2786,7 +2886,7 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
             for( const sol::table &zone : read_dense_array<sol::table>( *zones,
                     "vehicle zones" ) ) {
                 value->zones.push_back( {
-                    zone.get_or( "x", 0 ), zone.get_or( "y", 0 ),
+                    point( zone.get_or( "x", 0 ), zone.get_or( "y", 0 ) ),
                     zone.get_or( "type", std::string() ),
                     zone.get_or( "name", std::string() ),
                     zone.get_or( "filter", std::string() )
@@ -2795,8 +2895,6 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         }
         return vehicle_handle{ std::move( value ), owner };
     } );
-
-    static_cast<void>( lua );
 }
 
 bool world_content_transaction::register_definition( const sol::object &value,
@@ -2831,19 +2929,37 @@ bool world_content_transaction::register_definition( const sol::object &value,
         entries.push_back( { op, handle.definition } );
     };
 
-#define CATA_REGISTER_WORLD_DEFINITION( Data, Entries, Label ) \
-    if( value.is<definition_handle<Data>>() ) { \
-        register_value( value.as<definition_handle<Data>>(), pimpl_->Entries, Label ); \
-        return true; \
+    if( value.is<definition_handle<faction_data>>() ) {
+        register_value( value.as<definition_handle<faction_data>>(), pimpl_->factions, "faction" );
+        return true;
     }
-    CATA_REGISTER_WORLD_DEFINITION( faction_data, factions, "faction" )
-    CATA_REGISTER_WORLD_DEFINITION( npc_class_data, npc_classes, "NPC class" )
-    CATA_REGISTER_WORLD_DEFINITION( npc_data, npcs, "NPC" )
-    CATA_REGISTER_WORLD_DEFINITION( overmap_terrain_data, overmap_terrains, "overmap terrain" )
-    CATA_REGISTER_WORLD_DEFINITION( overmap_special_data, overmap_specials, "overmap special" )
-    CATA_REGISTER_WORLD_DEFINITION( vehicle_part_data, vehicle_parts, "vehicle part" )
-    CATA_REGISTER_WORLD_DEFINITION( vehicle_data, vehicles, "vehicle" )
-#undef CATA_REGISTER_WORLD_DEFINITION
+    if( value.is<definition_handle<npc_class_data>>() ) {
+        register_value( value.as<definition_handle<npc_class_data>>(), pimpl_->npc_classes, "NPC class" );
+        return true;
+    }
+    if( value.is<definition_handle<npc_data>>() ) {
+        register_value( value.as<definition_handle<npc_data>>(), pimpl_->npcs, "NPC" );
+        return true;
+    }
+    if( value.is<definition_handle<overmap_terrain_data>>() ) {
+        register_value( value.as<definition_handle<overmap_terrain_data>>(), pimpl_->overmap_terrains,
+                        "overmap terrain" );
+        return true;
+    }
+    if( value.is<definition_handle<overmap_special_data>>() ) {
+        register_value( value.as<definition_handle<overmap_special_data>>(), pimpl_->overmap_specials,
+                        "overmap special" );
+        return true;
+    }
+    if( value.is<definition_handle<vehicle_part_data>>() ) {
+        register_value( value.as<definition_handle<vehicle_part_data>>(), pimpl_->vehicle_parts,
+                        "vehicle part" );
+        return true;
+    }
+    if( value.is<definition_handle<vehicle_data>>() ) {
+        register_value( value.as<definition_handle<vehicle_data>>(), pimpl_->vehicles, "vehicle" );
+        return true;
+    }
     return false;
 }
 
@@ -3035,7 +3151,7 @@ bool world_content_transaction::validate( const runtime &owner_runtime,
             if( special.subtype == "fixed" ) {
                 std::set<std::tuple<int, int, int>> points;
                 for( const special_terrain_data &terrain : special.terrains ) {
-                    if( !points.emplace( terrain.x, terrain.y, terrain.z ).second ) {
+                    if( !points.emplace( terrain.position.x, terrain.position.y, terrain.position.z ).second ) {
                         throw std::runtime_error( "overmap special '" + special.id +
                                                   "' has duplicate terrain coordinates" );
                     }
@@ -3113,7 +3229,7 @@ bool world_content_transaction::validate( const runtime &owner_runtime,
                         std::set<std::tuple<int, int, int>> positions;
                         for( const mutable_special_piece_data &piece : rule.pieces ) {
                             if( special.mutable_terrains.count( piece.overmap ) == 0 ||
-                                !positions.emplace( piece.x, piece.y, piece.z ).second ) {
+                                !positions.emplace( piece.position.x, piece.position.y, piece.position.z ).second ) {
                                 throw std::runtime_error( "mutable overmap special '" +
                                                           special.id +
                                                           "' rule has an invalid piece" );
@@ -3299,8 +3415,8 @@ bool world_content_transaction::validate( const runtime &owner_runtime,
                       part.ammo_quantity.second < part.ammo_quantity.first ) ) {
                     throw std::runtime_error( "vehicle '" + vehicle.id +
                                               "' has an invalid part placement '" + part.part +
-                                              "' at (" + std::to_string( part.x ) + ", " +
-                                              std::to_string( part.y ) + ")" );
+                                              "' at (" + std::to_string( part.position.x ) + ", " +
+                                              std::to_string( part.position.y ) + ")" );
                 }
             }
             for( const std::optional<std::vector<vehicle_part_placement_data>> *patch : {
@@ -3314,8 +3430,8 @@ bool world_content_transaction::validate( const runtime &owner_runtime,
                               part.ammo_quantity.second < part.ammo_quantity.first ) ) {
                             throw std::runtime_error( "vehicle '" + vehicle.id +
                                                       "' has an invalid collection patch for part '" + part.part +
-                                                      "' at (" + std::to_string( part.x ) + ", " +
-                                                      std::to_string( part.y ) + ")" );
+                                                      "' at (" + std::to_string( part.position.x ) + ", " +
+                                                      std::to_string( part.position.y ) + ")" );
                         }
                     }
                 }
@@ -3404,903 +3520,998 @@ bool world_content_transaction::apply( std::string &error )
         return false;
     }
     try {
-        for( const registration<faction_data> &entry : pimpl_->factions ) {
-            const faction_data &source = *entry.definition;
-            const faction_id id( source.id );
-            std::vector<faction_template> &registry = detail::faction_template_registry();
-            const auto previous = std::find_if( registry.begin(), registry.end(),
-            [&id]( const faction_template & value ) {
-                return value.id == id;
-            } );
-            pimpl_->faction_undo.emplace_back(
-                id, previous == registry.end() ? std::nullopt :
-                std::optional<faction_template>( *previous ) );
-            if( previous != registry.end() ) {
-                registry.erase( previous );
-            }
-            faction_template native;
-            native.id = id;
-            native.set_name( source.name );
-            native.desc = no_translation( source.description );
-            native.likes_u = source.likes;
-            native.respects_u = source.respects;
-            native.trusts_u = source.trusts;
-            native.known_by_u = source.known;
-            native.size = source.size;
-            native.power = source.power;
-            native.wealth = source.wealth;
-            native.steal_persist = source.steal_persist;
-            native.consumes_food = source.consumes_food;
-            native.lone_wolf_faction = source.lone_wolf;
-            native.limited_area_claim = source.limited_area;
-            if( !source.currency.empty() ) {
-                native.currency = itype_id( source.currency );
-            } else {
-                native.currency = itype_id::NULL_ID();
-            }
-            native.mon_faction = mfaction_str_id( source.monster_faction );
-            if( source.food_calories > 0 || !source.food_vitamins.empty() ) {
-                nutrients supply;
-                supply.calories = static_cast<std::int64_t>( source.food_calories ) * 1000;
-                for( const auto &[vitamin, amount] : source.food_vitamins ) {
-                    supply.set_vitamin( vitamin_id( vitamin ), amount );
-                }
-                native.add_to_food_supply( { { calendar::turn_zero, std::move( supply ) } } );
-            }
-            for( const price_rule_data &rule : source.price_rules ) {
-                icg_entry base{ itype_id( rule.item ), item_category_id( rule.category ),
-                                item_group_id( rule.group ), no_translation( rule.message ), {}, {} };
-                if( !rule.condition_handler.empty() ) {
-                    const std::string mod = pimpl_->owner;
-                    const std::string owner_id = source.id;
-                    const std::string selector_kind = !rule.item.empty() ? "item" :
-                                                      !rule.group.empty() ? "group" :
-                                                      !rule.category.empty() ? "category" : "all";
-                    const std::string selector_id = !rule.item.empty() ? rule.item :
-                                                    !rule.group.empty() ? rule.group : rule.category;
-                    const std::string handler = rule.condition_handler;
-                    base.platform_condition = [mod, owner_id, selector_kind, selector_id,
-                                                    handler]( const item & candidate,
-                    const npc & shopkeeper ) {
-                        return invoke_shop_condition_handler(
-                                   mod, owner_id, "faction_price_rule", selector_kind,
-                                   selector_id, handler, &candidate, shopkeeper ).value_or( false );
-                    };
-                }
-                faction_price_rule native_rule( base );
-                native_rule.markup = rule.markup;
-                native_rule.premium = rule.premium;
-                native_rule.fixed_adj = rule.fixed_adjustment;
-                native_rule.price = rule.price;
-                native.price_rules.push_back( std::move( native_rule ) );
-            }
-            if( !source.currency.empty() ) {
-                native.price_rules.emplace_back( native.currency, 1.0, 0.0 );
-            }
-            for( const auto &[target, flags] : source.relations ) {
-                std::bitset<static_cast<std::size_t>( npc_factions::relationship::rel_types )> bits;
-                for( const std::string &flag : flags ) {
-                    const auto relation = npc_factions::relation_strs.find( flag );
-                    if( relation == npc_factions::relation_strs.end() ) {
-                        throw std::runtime_error( "faction '" + source.id +
-                                                  "' has unknown relation flag '" + flag + "'" );
-                    }
-                    bits.set( static_cast<std::size_t>( relation->second ) );
-                }
-                native.relations[target] = bits;
-            }
-            for( const faction_epilogue_data_definition &epilogue : source.epilogues ) {
-                faction_epilogue_data native_epilogue;
-                native_epilogue.epilogue = snippet_id( epilogue.id );
-                native_epilogue.power_min = epilogue.power_min;
-                native_epilogue.power_max = epilogue.power_max;
-                for( const faction_epilogue_condition_data &condition :
-                     epilogue.dynamic ) {
-                    faction_power_spec native_condition;
-                    native_condition.faction = faction_id( condition.faction );
-                    native_condition.power_min = condition.power_min;
-                    native_condition.power_max = condition.power_max;
-                    native_epilogue.dynamic_conditions.push_back(
-                        std::move( native_condition ) );
-                }
-                native.epilogue_data.push_back( std::move( native_epilogue ) );
-            }
-            registry.push_back( std::move( native ) );
-        }
+        pimpl_->apply_faction();
+        pimpl_->apply_npc_class();
+        pimpl_->apply_npc();
+        pimpl_->apply_overmap_terrain();
+        pimpl_->apply_overmap_special();
+        pimpl_->apply_vehicle_part( error );
+        pimpl_->apply_vehicle();
+        pimpl_->applied = true;
+        error.clear();
+        return true;
+    } catch( const std::exception &exception ) {
+        rollback();
+        error = "Lua-first Mod '" + pimpl_->owner + "': " + exception.what();
+        return false;
+    }
+}
 
-        for( const registration<npc_class_data> &entry : pimpl_->npc_classes ) {
-            const npc_class_data &source = *entry.definition;
-            const npc_class_id id( source.id );
-            pimpl_->npc_class_undo.emplace_back(
-                id, id.is_valid() ? std::optional<npc_class>( id.obj() ) : std::nullopt );
-            npc_class native;
-            native.id = id;
-            native.src.emplace_back( id, mod_id( pimpl_->owner ) );
-            native.was_loaded = true;
-            native.name = no_translation( source.name );
-            native.job_description = no_translation( source.job_description );
-            native.common = source.common;
-            native.common_spawn_weight = source.common_spawn_weight;
-            native.sells_belongings = source.sells_belongings;
-            native.worn_override = item_group_id( source.worn );
-            native.carry_override = item_group_id( source.carry );
-            native.weapon_override = item_group_id( source.weapon );
-            native.bye_message_override = source.bye_message;
-            native.traits = trait_group::Trait_group_tag( source.traits );
-            native.shop_cons_rates_id = shopkeeper_cons_rates_id( source.consumption_rates );
-            native.shop_blacklist_id = shopkeeper_blacklist_id( source.blacklist );
-            native.shop_whitelist_id = shopkeeper_whitelist_id( source.whitelist );
-            native.restock_interval = time_duration::from_minutes( source.restock_minutes );
-            native.work_hours_ = source.work_hours;
-            native.bonus_str = make_distribution( source.strength );
-            native.bonus_dex = make_distribution( source.dexterity );
-            native.bonus_int = make_distribution( source.intelligence );
-            native.bonus_per = make_distribution( source.perception );
-            native.bonus_aggression = make_distribution( source.aggression );
-            native.bonus_bravery = make_distribution( source.bravery );
-            native.bonus_collector = make_distribution( source.collector );
-            native.bonus_altruism = make_distribution( source.altruism );
-            for( const auto &[category, rounds] : source.mutation_rounds ) {
-                native.mutation_rounds[mutation_category_id( category )] =
-                    make_distribution( rounds );
-            }
-            for( const auto &[skill, value] : source.skills ) {
-                native.skills[skill_id( skill )] = make_distribution( value );
-            }
-            for( const auto &[skill, value] : source.bonus_skills ) {
-                native.bonus_skills[skill_id( skill )] = make_distribution( value );
-            }
-            for( const auto &[spell, level] : source.spells ) {
-                native._starting_spells[spell_id( spell )] = level;
-            }
-            for( const auto &[bionic, chance] : source.bionics ) {
-                native.bionic_list[bionic_id( bionic )] = chance;
-            }
-            for( const std::string &proficiency : source.proficiencies ) {
-                native._starting_proficiencies.emplace_back( proficiency );
-            }
-            for( const shop_group_data &group : source.shop_groups ) {
-                shopkeeper_item_group native_group( group.id, group.trust,
-                                                    group.strict, group.rigid );
-                if( !group.refusal.empty() ) {
-                    native_group.refusal = no_translation( group.refusal );
-                }
-                if( !group.condition_handler.empty() ) {
-                    const std::string mod = pimpl_->owner;
-                    const std::string owner_id = source.id;
-                    const std::string group_id = group.id;
-                    const std::string handler = group.condition_handler;
-                    native_group.platform_condition = [mod, owner_id, group_id, handler](
-                    const npc & shopkeeper ) {
-                        return invoke_shop_condition_handler(
-                                   mod, owner_id, "npc_class_shop_group", "group", group_id,
-                                   handler, nullptr, shopkeeper ).value_or( false );
-                    };
-                }
-                native.shop_item_groups.push_back( std::move( native_group ) );
-            }
-            for( const price_rule_data &rule : source.price_rules ) {
-                icg_entry base{ itype_id( rule.item ), item_category_id( rule.category ),
-                                item_group_id( rule.group ), no_translation( rule.message ), {}, {} };
-                if( !rule.condition_handler.empty() ) {
-                    const std::string mod = pimpl_->owner;
-                    const std::string owner_id = source.id;
-                    const std::string selector_kind = !rule.item.empty() ? "item" :
-                                                      !rule.group.empty() ? "group" :
-                                                      !rule.category.empty() ? "category" : "all";
-                    const std::string selector_id = !rule.item.empty() ? rule.item :
-                                                    !rule.group.empty() ? rule.group : rule.category;
-                    const std::string handler = rule.condition_handler;
-                    base.platform_condition = [mod, owner_id, selector_kind, selector_id,
-                                                    handler]( const item & candidate,
-                    const npc & shopkeeper ) {
-                        return invoke_shop_condition_handler(
-                                   mod, owner_id, "npc_class_price_rule", selector_kind,
-                                   selector_id, handler, &candidate, shopkeeper ).value_or( false );
-                    };
-                }
-                faction_price_rule native_rule( base );
-                native_rule.markup = rule.markup;
-                native_rule.premium = rule.premium;
-                native_rule.fixed_adj = rule.fixed_adjustment;
-                native_rule.price = rule.price;
-                native.shop_price_rules.push_back( std::move( native_rule ) );
-            }
-            detail::npc_class_registry().insert( native );
+void world_content_transaction::impl::apply_faction()
+{
+    for( const registration<faction_data> &entry : factions ) {
+        const faction_data &source = *entry.definition;
+        const faction_id id( source.id );
+        std::vector<faction_template> &registry = detail::faction_template_registry();
+        const auto previous = std::find_if( registry.begin(), registry.end(),
+        [&id]( const faction_template & value ) {
+            return value.id == id;
+        } );
+        faction_undo.emplace_back(
+            id, previous == registry.end() ? std::nullopt :
+            std::optional<faction_template>( *previous ) );
+        if( previous != registry.end() ) {
+            registry.erase( previous );
         }
-        for( const registration<npc_data> &entry : pimpl_->npcs ) {
-            const npc_data &source = *entry.definition;
-            const npc_template_id id( source.id );
-            std::map<npc_template_id, npc_template> &registry = npc_template::get_npc_templates();
-            pimpl_->npc_undo.emplace_back( id, registry.extract( id ) );
-            npc_template native;
-            native.guy.idz = id;
-            native.guy.myclass = npc_class_id( source.npc_class );
-            if( !source.faction.empty() ) {
-                native.guy.set_fac_id( source.faction );
-            }
-            native.guy.set_attitude( static_cast<npc_attitude>( source.attitude ) );
-            native.guy.mission = io::string_to_enum<npc_mission>( source.mission );
-            native.guy.chatbin.first_topic = source.chat;
-            if( !source.stole_item_chat.empty() ) {
-                native.guy.chatbin.talk_stole_item = source.stole_item_chat;
-            }
-            for( const std::string &mission : source.missions_offered ) {
-                native.guy.miss_ids.emplace_back( mission );
-            }
-            for( const auto &[slot, topic] : source.dialogue_topics ) {
-                set_npc_dialogue_topic( native.guy.chatbin, slot, topic );
-            }
-            for( const auto &[slot, text] : source.snippets ) {
-                set_npc_snippet( native.snippets, slot, text );
-            }
-            native.name_unique = no_translation( source.unique_name );
-            native.name_suffix = no_translation( source.suffix );
-            native.temp_suffix = no_translation( source.temporary_suffix );
-            native.gender_override = source.gender == "male" ? npc_template::gender::male :
-                                     source.gender == "female" ? npc_template::gender::female :
-                                     npc_template::gender::random;
-            native.age = source.age;
-            native.height = source.height;
-            native.str = source.strength;
-            native.dex = source.dexterity;
-            native.intl = source.intelligence;
-            native.per = source.perception;
-            if( source.personality ) {
-                native.personality.emplace();
-                native.personality->aggression = ( *source.personality )[0];
-                native.personality->bravery = ( *source.personality )[1];
-                native.personality->collector = ( *source.personality )[2];
-                native.personality->altruism = ( *source.personality )[3];
-            }
-            for( const std::string &eoc : source.death_eocs ) {
-                native.guy.death_eocs.emplace_back( eoc );
-            }
-            native.guy.lua_platform_death_mod = pimpl_->owner;
-            native.guy.lua_platform_death_handler = source.death_handler;
-            registry.emplace( id, std::move( native ) );
+        faction_template native;
+        native.id = id;
+        native.set_name( source.name );
+        native.desc = source.description.native();
+        native.likes_u = source.likes;
+        native.respects_u = source.respects;
+        native.trusts_u = source.trusts;
+        native.known_by_u = source.known;
+        native.size = source.size;
+        native.power = source.power;
+        native.wealth = source.wealth;
+        native.steal_persist = source.steal_persist;
+        native.consumes_food = source.consumes_food;
+        native.lone_wolf_faction = source.lone_wolf;
+        native.limited_area_claim = source.limited_area;
+        if( !source.currency.empty() ) {
+            native.currency = itype_id( source.currency );
+        } else {
+            native.currency = itype_id::NULL_ID();
         }
-
-        for( const registration<overmap_terrain_data> &entry : pimpl_->overmap_terrains ) {
-            const overmap_terrain_data &source = *entry.definition;
-            const oter_type_str_id id( source.id );
-            pimpl_->overmap_terrain_undo.push_back( {
-                id, id.is_valid() ? std::optional<oter_type_t>( id.obj() ) : std::nullopt, {}
-            } );
-            if( pimpl_->overmap_terrain_undo.back().previous ) {
-                for( const oter_id &terrain :
-                     pimpl_->overmap_terrain_undo.back().previous->directional_peers ) {
-                    detail::overmap_terrain_registry().erase( terrain.id() );
-                }
+        native.mon_faction = mfaction_str_id( source.monster_faction );
+        if( source.food_calories > 0 || !source.food_vitamins.empty() ) {
+            nutrients supply;
+            supply.calories = static_cast<std::int64_t>( source.food_calories ) * 1000;
+            for( const auto &[vitamin, amount] : source.food_vitamins ) {
+                supply.set_vitamin( vitamin_id( vitamin ), amount );
             }
-            oter_type_t native;
-            native.id = id;
-            native.src.emplace_back( id, mod_id( pimpl_->owner ) );
-            native.was_loaded = true;
-            native.name = no_translation( source.name );
-            native.symbol = UTF8_getch( source.symbol );
-            native.color = color_from_string( source.color, report_color_error::no );
-            native.see_cost = io::string_to_enum<oter_type_t::see_costs>( source.see_cost );
-            native.travel_cost_type = io::string_to_enum<oter_travel_cost_type>(
-                                          source.travel_cost );
-            native.default_map_data = string_id<map_data_summary>( source.default_map_data );
-            native.vision_levels = oter_vision_id( source.vision_levels );
-            native.land_use_code = overmap_land_use_code_id( source.land_use_code );
-            native.extras = source.extras;
-            native.connect_group = source.connect_group;
-            native.entry_EOC = effect_on_condition_id( source.entry_eoc );
-            native.exit_EOC = effect_on_condition_id( source.exit_eoc );
-            if( source.uniform_terrain ) {
-                native.uniform_terrain = ter_str_id( *source.uniform_terrain );
-            }
-            for( const std::string &looks_like : source.looks_like ) {
-                native.looks_like.push_back( looks_like );
-            }
-            for( const std::string &generator : source.post_process_generators ) {
-                native.post_process_generators.emplace_back( generator );
-            }
-            native.mondensity = source.monster_density;
-            if( source.static_spawns ) {
-                native.static_spawns.group = mongroup_id( source.static_spawns->group );
-                native.static_spawns.population = {
-                    source.static_spawns->population.minimum,
-                    source.static_spawns->population.maximum
+            native.add_to_food_supply( { { calendar::turn_zero, std::move( supply ) } } );
+        }
+        for( const price_rule_data &rule : source.price_rules ) {
+            icg_entry base{ itype_id( rule.item ), item_category_id( rule.category ),
+                            item_group_id( rule.group ), rule.message.native(), {}, {} };
+            if( !rule.condition_handler.empty() ) {
+                const std::string mod = owner;
+                const std::string owner_id = source.id;
+                const std::string selector_kind = !rule.item.empty() ? "item" :
+                                                  !rule.group.empty() ? "group" :
+                                                  !rule.category.empty() ? "category" : "all";
+                const std::string selector_id = !rule.item.empty() ? rule.item :
+                                                !rule.group.empty() ? rule.group : rule.category;
+                const std::string handler = rule.condition_handler;
+                base.platform_condition = [mod, owner_id, selector_kind, selector_id,
+                                                handler]( const item & candidate,
+                const npc & shopkeeper ) {
+                    return invoke_shop_condition_handler(
+                               mod, owner_id, "faction_price_rule", selector_kind,
+                               selector_id, handler, &candidate, shopkeeper ).value_or( false );
                 };
-                native.static_spawns.chance = source.static_spawns->chance;
             }
-            for( const std::string &flag : source.flags ) {
-                native.set_flag( io::string_to_enum<oter_flags>( flag ) );
-            }
-            detail::overmap_terrain_type_registry().insert( native );
+            faction_price_rule native_rule( base );
+            native_rule.markup = rule.markup;
+            native_rule.premium = rule.premium;
+            native_rule.fixed_adj = rule.fixed_adjustment;
+            native_rule.price = rule.price;
+            native.price_rules.push_back( std::move( native_rule ) );
         }
+        if( !source.currency.empty() ) {
+            native.price_rules.emplace_back( native.currency, 1.0, 0.0 );
+        }
+        for( const auto &[target, flags] : source.relations ) {
+            std::bitset<static_cast<std::size_t>( npc_factions::relationship::rel_types )> bits;
+            for( const std::string &flag : flags ) {
+                const auto relation = npc_factions::relation_strs.find( flag );
+                if( relation == npc_factions::relation_strs.end() ) {
+                    throw std::runtime_error( "faction '" + source.id +
+                                              "' has unknown relation flag '" + flag + "'" );
+                }
+                bits.set( static_cast<std::size_t>( relation->second ) );
+            }
+            native.relations[target] = bits;
+        }
+        for( const faction_epilogue_data_definition &epilogue : source.epilogues ) {
+            faction_epilogue_data native_epilogue;
+            native_epilogue.epilogue = snippet_id( epilogue.id );
+            native_epilogue.power_min = epilogue.power_min;
+            native_epilogue.power_max = epilogue.power_max;
+            for( const faction_epilogue_condition_data &condition :
+                 epilogue.dynamic ) {
+                faction_power_spec native_condition;
+                native_condition.faction = faction_id( condition.faction );
+                native_condition.power_min = condition.power_min;
+                native_condition.power_max = condition.power_max;
+                native_epilogue.dynamic_conditions.push_back(
+                    native_condition );
+            }
+            native.epilogue_data.push_back( std::move( native_epilogue ) );
+        }
+        registry.push_back( std::move( native ) );
+    }
+}
 
-        for( const registration<overmap_special_data> &entry : pimpl_->overmap_specials ) {
-            const overmap_special_data &source = *entry.definition;
-            const overmap_special_id id( source.id );
-            pimpl_->overmap_special_undo.emplace_back(
-                id, id.is_valid() ? std::optional<overmap_special>( id.obj() ) : std::nullopt );
-            overmap_special native;
-            native.id = id;
-            native.was_loaded = true;
-            native.subtype_ = source.subtype == "mutable" ?
-                              overmap_special_subtype::mutable_ : overmap_special_subtype::fixed;
-            native.constraints_.city_size = { source.city_size.minimum, source.city_size.maximum };
-            native.constraints_.city_distance = {
-                source.city_distance.minimum, source.city_distance.maximum
+void world_content_transaction::impl::apply_npc_class()
+{
+    for( const registration<npc_class_data> &entry : npc_classes ) {
+        const npc_class_data &source = *entry.definition;
+        const npc_class_id id( source.id );
+        npc_class_undo.emplace_back(
+            id, id.is_valid() ? std::optional<npc_class>( id.obj() ) : std::nullopt );
+        npc_class native;
+        native.id = id;
+        native.src.emplace_back( id, mod_id( owner ) );
+        native.was_loaded = true;
+        native.name = source.name.native();
+        native.job_description = source.job_description.native();
+        native.common = source.common;
+        native.common_spawn_weight = source.common_spawn_weight;
+        native.sells_belongings = source.sells_belongings;
+        native.worn_override = item_group_id( source.worn );
+        native.carry_override = item_group_id( source.carry );
+        native.weapon_override = item_group_id( source.weapon );
+        native.bye_message_override = source.bye_message;
+        native.traits = trait_group::Trait_group_tag( source.traits );
+        native.shop_cons_rates_id = shopkeeper_cons_rates_id( source.consumption_rates );
+        native.shop_blacklist_id = shopkeeper_blacklist_id( source.blacklist );
+        native.shop_whitelist_id = shopkeeper_whitelist_id( source.whitelist );
+        native.restock_interval = time_duration::from_minutes( source.restock_minutes );
+        native.work_hours_ = source.work_hours;
+        native.bonus_str = make_distribution( source.strength );
+        native.bonus_dex = make_distribution( source.dexterity );
+        native.bonus_int = make_distribution( source.intelligence );
+        native.bonus_per = make_distribution( source.perception );
+        native.bonus_aggression = make_distribution( source.aggression );
+        native.bonus_bravery = make_distribution( source.bravery );
+        native.bonus_collector = make_distribution( source.collector );
+        native.bonus_altruism = make_distribution( source.altruism );
+        for( const auto &[category, rounds] : source.mutation_rounds ) {
+            native.mutation_rounds[mutation_category_id( category )] =
+                make_distribution( rounds );
+        }
+        for( const auto &[skill, value] : source.skills ) {
+            native.skills[skill_id( skill )] = make_distribution( value );
+        }
+        for( const auto &[skill, value] : source.bonus_skills ) {
+            native.bonus_skills[skill_id( skill )] = make_distribution( value );
+        }
+        for( const auto &[spell, level] : source.spells ) {
+            native._starting_spells[spell_id( spell )] = level;
+        }
+        for( const auto &[bionic, chance] : source.bionics ) {
+            native.bionic_list[bionic_id( bionic )] = chance;
+        }
+        for( const std::string &proficiency : source.proficiencies ) {
+            native._starting_proficiencies.emplace_back( proficiency );
+        }
+        for( const shop_group_data &group : source.shop_groups ) {
+            shopkeeper_item_group native_group( group.id, group.trust,
+                                                group.strict, group.rigid );
+            if( !group.refusal.empty() ) {
+                native_group.refusal = group.refusal.native();
+            }
+            if( !group.condition_handler.empty() ) {
+                const std::string mod = owner;
+                const std::string owner_id = source.id;
+                const std::string group_id = group.id;
+                const std::string handler = group.condition_handler;
+                native_group.platform_condition = [mod, owner_id, group_id, handler](
+                const npc & shopkeeper ) {
+                    return invoke_shop_condition_handler(
+                               mod, owner_id, "npc_class_shop_group", "group", group_id,
+                               handler, nullptr, shopkeeper ).value_or( false );
+                };
+            }
+            native.shop_item_groups.push_back( std::move( native_group ) );
+        }
+        for( const price_rule_data &rule : source.price_rules ) {
+            icg_entry base{ itype_id( rule.item ), item_category_id( rule.category ),
+                            item_group_id( rule.group ), rule.message.native(), {}, {} };
+            if( !rule.condition_handler.empty() ) {
+                const std::string mod = owner;
+                const std::string owner_id = source.id;
+                const std::string selector_kind = !rule.item.empty() ? "item" :
+                                                  !rule.group.empty() ? "group" :
+                                                  !rule.category.empty() ? "category" : "all";
+                const std::string selector_id = !rule.item.empty() ? rule.item :
+                                                !rule.group.empty() ? rule.group : rule.category;
+                const std::string handler = rule.condition_handler;
+                base.platform_condition = [mod, owner_id, selector_kind, selector_id,
+                                                handler]( const item & candidate,
+                const npc & shopkeeper ) {
+                    return invoke_shop_condition_handler(
+                               mod, owner_id, "npc_class_price_rule", selector_kind,
+                               selector_id, handler, &candidate, shopkeeper ).value_or( false );
+                };
+            }
+            faction_price_rule native_rule( base );
+            native_rule.markup = rule.markup;
+            native_rule.premium = rule.premium;
+            native_rule.fixed_adj = rule.fixed_adjustment;
+            native_rule.price = rule.price;
+            native.shop_price_rules.push_back( std::move( native_rule ) );
+        }
+        detail::npc_class_registry().insert( native );
+    }
+}
+
+void world_content_transaction::impl::apply_npc()
+{
+    for( const registration<npc_data> &entry : npcs ) {
+        const npc_data &source = *entry.definition;
+        const npc_template_id id( source.id );
+        std::map<npc_template_id, npc_template> &registry = npc_template::get_npc_templates();
+        npc_undo.emplace_back( id, registry.extract( id ) );
+        npc_template native;
+        native.guy.idz = id;
+        native.guy.myclass = npc_class_id( source.npc_class );
+        if( !source.faction.empty() ) {
+            native.guy.set_fac_id( source.faction );
+        }
+        native.guy.set_attitude( static_cast<npc_attitude>( source.attitude ) );
+        native.guy.mission = io::string_to_enum<npc_mission>( source.mission );
+        native.guy.chatbin.first_topic = source.chat;
+        if( !source.stole_item_chat.empty() ) {
+            native.guy.chatbin.talk_stole_item = source.stole_item_chat;
+        }
+        for( const std::string &mission : source.missions_offered ) {
+            native.guy.miss_ids.emplace_back( mission );
+        }
+        for( const auto &[slot, topic] : source.dialogue_topics ) {
+            set_npc_dialogue_topic( native.guy.chatbin, slot, topic );
+        }
+        for( const auto &[slot, text] : source.snippets ) {
+            set_npc_snippet( native.snippets, slot, text );
+        }
+        native.name_unique = source.unique_name.native();
+        native.name_suffix = source.suffix.native();
+        native.temp_suffix = source.temporary_suffix.native();
+        native.gender_override = source.gender == "male" ? npc_template::gender::male :
+                                 source.gender == "female" ? npc_template::gender::female :
+                                 npc_template::gender::random;
+        native.age = source.age;
+        native.height = source.height;
+        native.str = source.strength;
+        native.dex = source.dexterity;
+        native.intl = source.intelligence;
+        native.per = source.perception;
+        if( source.personality ) {
+            native.personality.emplace();
+            native.personality->aggression = ( *source.personality )[0];
+            native.personality->bravery = ( *source.personality )[1];
+            native.personality->collector = ( *source.personality )[2];
+            native.personality->altruism = ( *source.personality )[3];
+        }
+        for( const std::string &eoc : source.death_eocs ) {
+            native.guy.death_eocs.emplace_back( eoc );
+        }
+        native.guy.lua_platform_death_mod = owner;
+        native.guy.lua_platform_death_handler = source.death_handler;
+        registry.emplace( id, std::move( native ) );
+    }
+}
+
+void world_content_transaction::impl::apply_overmap_terrain()
+{
+    for( const registration<overmap_terrain_data> &entry : overmap_terrains ) {
+        const overmap_terrain_data &source = *entry.definition;
+        const oter_type_str_id id( source.id );
+        overmap_terrain_undo.push_back( {
+            id, id.is_valid() ? std::optional<oter_type_t>( id.obj() ) : std::nullopt, {}
+        } );
+        if( overmap_terrain_undo.back().previous ) {
+            for( const oter_id &terrain :
+                 overmap_terrain_undo.back().previous->directional_peers ) {
+                detail::overmap_terrain_registry().erase( terrain.id() );
+            }
+        }
+        oter_type_t native;
+        native.id = id;
+        native.src.emplace_back( id, mod_id( owner ) );
+        native.was_loaded = true;
+        native.name = source.name.native();
+        native.symbol = UTF8_getch( source.symbol );
+        native.color = color_from_string( source.color, report_color_error::no );
+        native.see_cost = io::string_to_enum<oter_type_t::see_costs>( source.see_cost );
+        native.travel_cost_type = io::string_to_enum<oter_travel_cost_type>(
+                                      source.travel_cost );
+        native.default_map_data = string_id<map_data_summary>( source.default_map_data );
+        native.vision_levels = oter_vision_id( source.vision_levels );
+        native.land_use_code = overmap_land_use_code_id( source.land_use_code );
+        native.extras = source.extras;
+        native.connect_group = source.connect_group;
+        native.entry_EOC = effect_on_condition_id( source.entry_eoc );
+        native.exit_EOC = effect_on_condition_id( source.exit_eoc );
+        if( source.uniform_terrain ) {
+            native.uniform_terrain = ter_str_id( *source.uniform_terrain );
+        }
+        for( const std::string &looks_like : source.looks_like ) {
+            native.looks_like.push_back( looks_like );
+        }
+        for( const std::string &generator : source.post_process_generators ) {
+            native.post_process_generators.emplace_back( generator );
+        }
+        native.mondensity = source.monster_density;
+        if( source.static_spawns ) {
+            native.static_spawns.group = mongroup_id( source.static_spawns->group );
+            native.static_spawns.population = {
+                source.static_spawns->population.minimum,
+                source.static_spawns->population.maximum
             };
-            native.constraints_.occurrences = {
-                source.occurrences.minimum, source.occurrences.maximum
-            };
-            native.rotatable_ = source.rotate;
-            native.priority_ = source.priority;
-            native.flags_.insert( source.flags.begin(), source.flags.end() );
-            if( !source.eoc.empty() ) {
-                native.eoc = effect_on_condition_id( source.eoc );
-                native.has_eoc_ = true;
-            }
-            if( source.spawns ) {
-                native.monster_spawns_.group = mongroup_id( source.spawns->group );
-                native.monster_spawns_.population = {
-                    source.spawns->population.minimum, source.spawns->population.maximum
-                };
-                native.monster_spawns_.radius = {
-                    source.spawns->radius.minimum, source.spawns->radius.maximum
-                };
-            }
-            for( const std::string &location : source.default_locations ) {
-                native.default_locations_.insert( overmap_location_id( location ) );
-            }
-            if( source.subtype == "fixed" ) {
-                auto fixed = make_shared_fast<fixed_overmap_special_data>();
-                for( const special_terrain_data &terrain : source.terrains ) {
-                    cata::flat_set<overmap_location_id> locations;
-                    for( const std::string &location : terrain.locations ) {
-                        locations.insert( overmap_location_id( location ) );
-                    }
-                    fixed->terrains.emplace_back(
-                        tripoint_rel_omt( terrain.x, terrain.y, terrain.z ),
-                        oter_str_id( terrain.terrain ), locations, terrain.flags );
-                    if( terrain.camp_owner ) {
-                        fixed->terrains.back().camp_owner = faction_id( *terrain.camp_owner );
-                        fixed->terrains.back().camp_name = no_translation( terrain.camp_name );
-                    }
-                }
-                for( const special_connection_data &connection : source.connections ) {
-                    overmap_special_connection native_connection;
-                    native_connection.p = tripoint_rel_omt(
-                                              connection.x, connection.y, connection.z );
-                    if( connection.from ) {
-                        native_connection.from = tripoint_rel_omt(
-                                                     ( *connection.from )[0], ( *connection.from )[1],
-                                                     ( *connection.from )[2] );
-                    }
-                    native_connection.terrain = oter_type_str_id( connection.terrain );
-                    native_connection.connection = overmap_connection_id(
-                                                       connection.connection );
-                    native_connection.existing = connection.existing;
-                    fixed->connections.push_back( std::move( native_connection ) );
-                }
-                native.data_ = std::move( fixed );
-            } else {
-                auto mutable_data = make_shared_fast<mutable_overmap_special_data>( id );
-                for( const special_location_data &location : source.check_for_locations ) {
-                    overmap_special_locations native_location;
-                    native_location.p = tripoint_rel_omt(
-                                            location.x, location.y, location.z );
-                    for( const std::string &allowed : location.locations ) {
-                        native_location.locations.insert( overmap_location_id( allowed ) );
-                    }
-                    mutable_data->check_for_locations.push_back(
-                        std::move( native_location ) );
-                }
-                for( const special_join_data &join : source.joins ) {
-                    mutable_overmap_join native_join;
-                    native_join.id = join.id;
-                    native_join.opposite_id = join.opposite;
-                    for( const std::string &location : join.into_locations ) {
-                        native_join.into_locations.insert( overmap_location_id( location ) );
-                    }
-                    mutable_data->joins_vec.push_back( std::move( native_join ) );
-                }
-                for( const auto &[terrain_id, terrain] : source.mutable_terrains ) {
-                    mutable_overmap_terrain native_terrain;
-                    native_terrain.terrain = oter_str_id( terrain.terrain );
-                    for( const std::string &location : terrain.locations ) {
-                        native_terrain.locations.insert( overmap_location_id( location ) );
-                    }
-                    for( const auto &[direction, join] : terrain.joins ) {
-                        mutable_overmap_terrain_join native_join;
-                        native_join.join_id = join.id;
-                        native_join.alternative_join_ids.insert(
-                            join.alternatives.begin(), join.alternatives.end() );
-                        native_join.type = join.type == "available" ?
-                                           join_type::available : join_type::mandatory;
-                        native_terrain.joins.emplace(
-                            read_cube_direction( direction ), std::move( native_join ) );
-                    }
-                    for( const auto &[direction, connection] : terrain.connections ) {
-                        mutable_special_connection native_connection;
-                        native_connection.connection = overmap_connection_id( connection );
-                        native_terrain.connections.emplace(
-                            read_cube_direction( direction ), std::move( native_connection ) );
-                    }
-                    if( terrain.camp_owner ) {
-                        native_terrain.camp_owner = faction_id( *terrain.camp_owner );
-                        native_terrain.camp_name = no_translation( terrain.camp_name );
-                    }
-                    mutable_data->overmaps.emplace( terrain_id, std::move( native_terrain ) );
-                }
-                mutable_data->root = source.root;
-                for( const std::vector<mutable_special_rule_data> &phase : source.phases ) {
-                    mutable_overmap_phase native_phase;
-                    for( const mutable_special_rule_data &rule : phase ) {
-                        mutable_overmap_placement_rule native_rule;
-                        native_rule.name = rule.name;
-                        if( rule.maximum ) {
-                            native_rule.max = make_integer_distribution( *rule.maximum );
-                        }
-                        if( rule.weight ) {
-                            native_rule.weight = *rule.weight;
-                        }
-                        for( const mutable_special_piece_data &piece : rule.pieces ) {
-                            mutable_overmap_placement_rule_piece native_piece;
-                            native_piece.overmap_id = piece.overmap;
-                            native_piece.pos = tripoint_rel_omt(
-                                                   piece.x, piece.y, piece.z );
-                            native_piece.rot = read_rotation( piece.rotation );
-                            native_rule.pieces.push_back( std::move( native_piece ) );
-                        }
-                        native_phase.rules.push_back( std::move( native_rule ) );
-                    }
-                    mutable_data->phases.push_back( std::move( native_phase ) );
-                }
-                native.data_ = std::move( mutable_data );
-            }
-            detail::overmap_special_registry().insert( native );
+            native.static_spawns.chance = source.static_spawns->chance;
         }
+        for( const std::string &flag : source.flags ) {
+            native.set_flag( io::string_to_enum<oter_flags>( flag ) );
+        }
+        detail::overmap_terrain_type_registry().insert( native );
+    }
+}
 
-        std::vector<std::size_t> vehicle_part_order;
-        std::string inheritance_error;
-        if( !detail::resolve_platform_inheritance_order(
-                pimpl_->vehicle_parts,
-        []( const registration<vehicle_part_data> &entry ) {
-        return entry.definition->id;
-    },
+void world_content_transaction::impl::apply_overmap_special()
+{
+    for( const registration<overmap_special_data> &entry : overmap_specials ) {
+        const overmap_special_data &source = *entry.definition;
+        const overmap_special_id id( source.id );
+        overmap_special_undo.emplace_back(
+            id, id.is_valid() ? std::optional<overmap_special>( id.obj() ) : std::nullopt );
+        overmap_special native;
+        native.id = id;
+        native.was_loaded = true;
+        native.subtype_ = source.subtype == "mutable" ?
+                          overmap_special_subtype::mutable_ : overmap_special_subtype::fixed;
+        native.constraints_.city_size = { source.city_size.minimum, source.city_size.maximum };
+        native.constraints_.city_distance = {
+            source.city_distance.minimum, source.city_distance.maximum
+        };
+        native.constraints_.occurrences = {
+            source.occurrences.minimum, source.occurrences.maximum
+        };
+        native.rotatable_ = source.rotate;
+        native.priority_ = source.priority;
+        native.flags_.insert( source.flags.begin(), source.flags.end() );
+        if( !source.eoc.empty() ) {
+            native.eoc = effect_on_condition_id( source.eoc );
+            native.has_eoc_ = true;
+        }
+        if( source.spawns ) {
+            native.monster_spawns_.group = mongroup_id( source.spawns->group );
+            native.monster_spawns_.population = {
+                source.spawns->population.minimum, source.spawns->population.maximum
+            };
+            native.monster_spawns_.radius = {
+                source.spawns->radius.minimum, source.spawns->radius.maximum
+            };
+        }
+        for( const std::string &location : source.default_locations ) {
+            native.default_locations_.insert( overmap_location_id( location ) );
+        }
+        if( source.subtype == "fixed" ) {
+            auto fixed = make_shared_fast<fixed_overmap_special_data>();
+            for( const special_terrain_data &terrain : source.terrains ) {
+                cata::flat_set<overmap_location_id> locations;
+                for( const std::string &location : terrain.locations ) {
+                    locations.insert( overmap_location_id( location ) );
+                }
+                fixed->terrains.emplace_back(
+                    tripoint_rel_omt( terrain.position.x, terrain.position.y, terrain.position.z ),
+                    oter_str_id( terrain.terrain ), locations, terrain.flags );
+                if( terrain.camp_owner ) {
+                    fixed->terrains.back().camp_owner = faction_id( *terrain.camp_owner );
+                    fixed->terrains.back().camp_name = terrain.camp_name.native();
+                }
+            }
+            for( const special_connection_data &connection : source.connections ) {
+                overmap_special_connection native_connection;
+                native_connection.p = tripoint_rel_omt(
+                                          connection.position.x, connection.position.y, connection.position.z );
+                if( connection.from ) {
+                    native_connection.from = tripoint_rel_omt(
+                                                 ( *connection.from )[0], ( *connection.from )[1],
+                                                 ( *connection.from )[2] );
+                }
+                native_connection.terrain = oter_type_str_id( connection.terrain );
+                native_connection.connection = overmap_connection_id(
+                                                   connection.connection );
+                native_connection.existing = connection.existing;
+                fixed->connections.push_back( native_connection );
+            }
+            native.data_ = std::move( fixed );
+        } else {
+            auto mutable_data = make_shared_fast<mutable_overmap_special_data>( id );
+            for( const special_location_data &location : source.check_for_locations ) {
+                overmap_special_locations native_location;
+                native_location.p = tripoint_rel_omt(
+                                        location.position.x, location.position.y, location.position.z );
+                for( const std::string &allowed : location.locations ) {
+                    native_location.locations.insert( overmap_location_id( allowed ) );
+                }
+                mutable_data->check_for_locations.push_back(
+                    std::move( native_location ) );
+            }
+            for( const special_join_data &join : source.joins ) {
+                mutable_overmap_join native_join;
+                native_join.id = join.id;
+                native_join.opposite_id = join.opposite;
+                for( const std::string &location : join.into_locations ) {
+                    native_join.into_locations.insert( overmap_location_id( location ) );
+                }
+                mutable_data->joins_vec.push_back( std::move( native_join ) );
+            }
+            for( const auto &[terrain_id, terrain] : source.mutable_terrains ) {
+                mutable_overmap_terrain native_terrain;
+                native_terrain.terrain = oter_str_id( terrain.terrain );
+                for( const std::string &location : terrain.locations ) {
+                    native_terrain.locations.insert( overmap_location_id( location ) );
+                }
+                for( const auto &[direction, join] : terrain.joins ) {
+                    mutable_overmap_terrain_join native_join;
+                    native_join.join_id = join.id;
+                    native_join.alternative_join_ids.insert(
+                        join.alternatives.begin(), join.alternatives.end() );
+                    native_join.type = join.type == "available" ?
+                                       join_type::available : join_type::mandatory;
+                    native_terrain.joins.emplace(
+                        read_cube_direction( direction ), std::move( native_join ) );
+                }
+                for( const auto &[direction, connection] : terrain.connections ) {
+                    mutable_special_connection native_connection;
+                    native_connection.connection = overmap_connection_id( connection );
+                    native_terrain.connections.emplace(
+                        read_cube_direction( direction ), native_connection );
+                }
+                if( terrain.camp_owner ) {
+                    native_terrain.camp_owner = faction_id( *terrain.camp_owner );
+                    native_terrain.camp_name = terrain.camp_name.native();
+                }
+                mutable_data->overmaps.emplace( terrain_id, std::move( native_terrain ) );
+            }
+            mutable_data->root = source.root;
+            for( const std::vector<mutable_special_rule_data> &phase : source.phases ) {
+                mutable_overmap_phase native_phase;
+                for( const mutable_special_rule_data &rule : phase ) {
+                    mutable_overmap_placement_rule native_rule;
+                    native_rule.name = rule.name;
+                    if( rule.maximum ) {
+                        native_rule.max = make_integer_distribution( *rule.maximum );
+                    }
+                    if( rule.weight ) {
+                        native_rule.weight = *rule.weight;
+                    }
+                    for( const mutable_special_piece_data &piece : rule.pieces ) {
+                        mutable_overmap_placement_rule_piece native_piece;
+                        native_piece.overmap_id = piece.overmap;
+                        native_piece.pos = tripoint_rel_omt(
+                                               piece.position.x, piece.position.y, piece.position.z );
+                        native_piece.rot = read_rotation( piece.rotation );
+                        native_rule.pieces.push_back( std::move( native_piece ) );
+                    }
+                    native_phase.rules.push_back( std::move( native_rule ) );
+                }
+                mutable_data->phases.push_back( std::move( native_phase ) );
+            }
+            native.data_ = std::move( mutable_data );
+        }
+        detail::overmap_special_registry().insert( native );
+    }
+}
+
+void world_content_transaction::impl::apply_vehicle_part( std::string &error )
+{
+    std::vector<std::size_t> vehicle_part_order;
+    std::string inheritance_error;
+    if( !detail::resolve_platform_inheritance_order(
+            vehicle_parts,
     []( const registration<vehicle_part_data> &entry ) {
-        return entry.definition->copy_from;
+    return entry.definition->id;
+},
+[]( const registration<vehicle_part_data> &entry ) {
+    return entry.definition->copy_from;
+},
+[]( const std::string & id ) {
+    return vpart_id( id ).is_valid();
     },
-    []( const std::string & id ) {
-        return vpart_id( id ).is_valid();
-        },
-        vehicle_part_order, inheritance_error, "vehicle part" ) ) {
-            throw std::runtime_error( inheritance_error );
+    vehicle_part_order, inheritance_error, "vehicle part" ) ) {
+        throw std::runtime_error( inheritance_error );
+    }
+    for( const std::size_t index : vehicle_part_order ) {
+        const registration<vehicle_part_data> &entry = vehicle_parts[index];
+        const vehicle_part_data &source = *entry.definition;
+        const vpart_id id( source.id );
+        vehicle_part_undo.emplace_back(
+            id, id.is_valid() ? std::optional<vpart_info>( id.obj() ) : std::nullopt );
+        vpart_info native = source.copy_from.empty() ? vpart_info() :
+                            vpart_id( source.copy_from ).obj();
+        native.id = id;
+        native.src.clear();
+        native.src.emplace_back( id, mod_id( owner ) );
+        native.was_loaded = true;
+        if( source.name ) {
+            native.name_ = source.name->native();
         }
-        for( const std::size_t index : vehicle_part_order ) {
-            const registration<vehicle_part_data> &entry = pimpl_->vehicle_parts[index];
-            const vehicle_part_data &source = *entry.definition;
-            const vpart_id id( source.id );
-            pimpl_->vehicle_part_undo.emplace_back(
-                id, id.is_valid() ? std::optional<vpart_info>( id.obj() ) : std::nullopt );
-            vpart_info native = source.copy_from.empty() ? vpart_info() :
-                                vpart_id( source.copy_from ).obj();
-            native.id = id;
-            native.src.clear();
-            native.src.emplace_back( id, mod_id( pimpl_->owner ) );
-            native.was_loaded = true;
-            if( source.name ) {
-                native.name_ = no_translation( *source.name );
+        if( source.description ) {
+            native.description = source.description->native();
+        }
+        if( source.item ) {
+            native.base_item = itype_id( *source.item );
+        }
+        if( source.remove_as ) {
+            native.removed_item = itype_id( *source.remove_as );
+        }
+        if( source.location ) {
+            native.location = vpart_location_id( *source.location );
+        }
+        if( source.looks_like ) {
+            native.looks_like = *source.looks_like;
+        }
+        if( source.color ) {
+            native.color = color_from_string( *source.color, report_color_error::no );
+        }
+        if( source.broken_color ) {
+            native.color_broken = color_from_string( *source.broken_color,
+                                  report_color_error::no );
+        }
+        if( source.fuel_type ) {
+            native.fuel_type = itype_id( *source.fuel_type );
+        }
+        if( source.default_ammo ) {
+            native.default_ammo = itype_id( *source.default_ammo );
+        }
+        if( source.durability ) {
+            native.durability = *source.durability;
+        }
+        if( source.size_ml ) {
+            native.size = units::from_milliliter( *source.size_ml );
+        }
+        if( source.folded_volume_ml ) {
+            native.folded_volume = units::from_milliliter( *source.folded_volume_ml );
+        }
+        if( source.damage_modifier ) {
+            native.dmg_mod = *source.damage_modifier;
+        }
+        if( source.power_watts ) {
+            native.power = units::from_watt( static_cast<std::int64_t>( *source.power_watts ) );
+        }
+        if( source.epower_watts ) {
+            native.epower = units::from_watt( static_cast<std::int64_t>( *source.epower_watts ) );
+        }
+        if( source.energy_consumption_watts ) {
+            native.energy_consumption = units::from_watt( static_cast<std::int64_t>
+                                        ( *source.energy_consumption_watts ) );
+        }
+        if( source.bonus ) {
+            native.bonus = *source.bonus;
+        }
+        if( source.light_color ) {
+            native.light_color = {
+                ( *source.light_color )[0] / 255.0f,
+                ( *source.light_color )[1] / 255.0f,
+                ( *source.light_color )[2] / 255.0f
+            };
+        }
+        if( source.cargo_weight_modifier ) {
+            native.cargo_weight_modifier = *source.cargo_weight_modifier;
+        }
+        if( source.cargo_spoil_multiplier ) {
+            native.cargo_spoil_multiplier = *source.cargo_spoil_multiplier;
+        }
+        if( source.comfort ) {
+            native.comfort = *source.comfort;
+        }
+        if( source.floor_bedding_warmth_celsius ) {
+            native.floor_bedding_warmth = units::from_celsius_delta(
+                                              *source.floor_bedding_warmth_celsius );
+        }
+        if( source.bonus_fire_warmth_feet_celsius ) {
+            native.bonus_fire_warmth_feet = units::from_celsius_delta(
+                                                *source.bonus_fire_warmth_feet_celsius );
+        }
+        if( source.default_tint_color ) {
+            native.default_tint_color_string = *source.default_tint_color;
+        }
+        if( source.activatable_eoc ) {
+            native.activatable_eoc = effect_on_condition_id( *source.activatable_eoc );
+        }
+        if( source.emissions ) {
+            native.emissions.clear();
+            for( const std::string &emission : *source.emissions ) {
+                native.emissions.emplace( emission );
             }
-            if( source.description ) {
-                native.description = no_translation( *source.description );
+        }
+        if( source.exhaust ) {
+            native.exhaust.clear();
+            for( const std::string &emission : *source.exhaust ) {
+                native.exhaust.emplace( emission );
             }
-            if( source.item ) {
-                native.base_item = itype_id( *source.item );
-            }
-            if( source.remove_as ) {
-                native.removed_item = itype_id( *source.remove_as );
-            }
-            if( source.location ) {
-                native.location = vpart_location_id( *source.location );
-            }
-            if( source.looks_like ) {
-                native.looks_like = *source.looks_like;
-            }
-            if( source.color ) {
-                native.color = color_from_string( *source.color, report_color_error::no );
-            }
-            if( source.broken_color ) {
-                native.color_broken = color_from_string( *source.broken_color,
-                                      report_color_error::no );
-            }
-            if( source.fuel_type ) {
-                native.fuel_type = itype_id( *source.fuel_type );
-            }
-            if( source.default_ammo ) {
-                native.default_ammo = itype_id( *source.default_ammo );
-            }
-            if( source.durability ) {
-                native.durability = *source.durability;
-            }
-            if( source.size_ml ) {
-                native.size = units::from_milliliter( *source.size_ml );
-            }
-            if( source.folded_volume_ml ) {
-                native.folded_volume = units::from_milliliter( *source.folded_volume_ml );
-            }
-            if( source.damage_modifier ) {
-                native.dmg_mod = *source.damage_modifier;
-            }
-            if( source.power_watts ) {
-                native.power = units::from_watt( *source.power_watts );
-            }
-            if( source.epower_watts ) {
-                native.epower = units::from_watt( *source.epower_watts );
-            }
-            if( source.energy_consumption_watts ) {
-                native.energy_consumption = units::from_watt( *source.energy_consumption_watts );
-            }
-            if( source.bonus ) {
-                native.bonus = *source.bonus;
-            }
-            if( source.light_color ) {
-                native.light_color = {
-                    ( *source.light_color )[0] / 255.0f,
-                    ( *source.light_color )[1] / 255.0f,
-                    ( *source.light_color )[2] / 255.0f
-                };
-            }
-            if( source.cargo_weight_modifier ) {
-                native.cargo_weight_modifier = *source.cargo_weight_modifier;
-            }
-            if( source.cargo_spoil_multiplier ) {
-                native.cargo_spoil_multiplier = *source.cargo_spoil_multiplier;
-            }
-            if( source.comfort ) {
-                native.comfort = *source.comfort;
-            }
-            if( source.floor_bedding_warmth_celsius ) {
-                native.floor_bedding_warmth = units::from_celsius_delta(
-                                                  *source.floor_bedding_warmth_celsius );
-            }
-            if( source.bonus_fire_warmth_feet_celsius ) {
-                native.bonus_fire_warmth_feet = units::from_celsius_delta(
-                                                    *source.bonus_fire_warmth_feet_celsius );
-            }
-            if( source.default_tint_color ) {
-                native.default_tint_color_string = *source.default_tint_color;
-            }
-            if( source.activatable_eoc ) {
-                native.activatable_eoc = effect_on_condition_id( *source.activatable_eoc );
-            }
-            if( source.emissions ) {
-                native.emissions.clear();
-                for( const std::string &emission : *source.emissions ) {
-                    native.emissions.emplace( emission );
-                }
-            }
-            if( source.exhaust ) {
-                native.exhaust.clear();
-                for( const std::string &emission : *source.exhaust ) {
-                    native.exhaust.emplace( emission );
-                }
-            }
-            if( !detail::apply_platform_collection_patch(
-                    native.emissions,
-                    source.extend_emissions ? &*source.extend_emissions : nullptr,
-                    source.delete_emissions ? &*source.delete_emissions : nullptr,
-            []( const std::string & value ) {
-            return emit_id( value );
-            },
-            "vehicle part emissions", error ) ) {
-                throw std::runtime_error( error );
-            }
-            if( !detail::apply_platform_collection_patch(
-                    native.exhaust,
-                    source.extend_exhaust ? &*source.extend_exhaust : nullptr,
-                    source.delete_exhaust ? &*source.delete_exhaust : nullptr,
-            []( const std::string & value ) {
-            return emit_id( value );
-            },
-            "vehicle part exhaust", error ) ) {
-                throw std::runtime_error( error );
-            }
-            if( source.enchantments ) {
-                native.enchantments.clear();
-                for( const std::string &enchantment : *source.enchantments ) {
-                    native.enchantments.emplace_back( enchantment );
-                }
-            }
-            if( source.balloon_height ) {
-                native.balloon_info = vpslot_balloon{ true, *source.balloon_height };
-            }
-            if( source.categories ) {
-                native.categories = *source.categories;
-            }
-            if( !detail::apply_platform_collection_patch(
-                    native.categories,
-                    source.extend_categories ? &*source.extend_categories : nullptr,
-                    source.delete_categories ? &*source.delete_categories : nullptr,
-            []( const std::string & value ) {
-            return value;
+        }
+        if( !detail::apply_platform_collection_patch(
+                native.emissions,
+                source.extend_emissions ? &*source.extend_emissions : nullptr,
+                source.delete_emissions ? &*source.delete_emissions : nullptr,
+        []( const std::string & value ) {
+        return emit_id( value );
         },
-        "vehicle part categories", error ) ) {
-                throw std::runtime_error( error );
-            }
-            if( source.flags ) {
-                native.flags.clear();
-                native.bitflags.reset();
-                for( const std::string &flag : *source.flags ) {
-                    native.set_flag( flag );
-                }
-            }
-            if( !detail::apply_platform_collection_patch(
-                    native.flags,
-                    source.extend_flags ? &*source.extend_flags : nullptr,
-                    source.delete_flags ? &*source.delete_flags : nullptr,
-            []( const std::string & value ) {
-            return value;
+        "vehicle part emissions", error ) ) {
+            throw std::runtime_error( error );
+        }
+        if( !detail::apply_platform_collection_patch(
+                native.exhaust,
+                source.extend_exhaust ? &*source.extend_exhaust : nullptr,
+                source.delete_exhaust ? &*source.delete_exhaust : nullptr,
+        []( const std::string & value ) {
+        return emit_id( value );
         },
-        "vehicle part flags", error ) ) {
-                throw std::runtime_error( error );
+        "vehicle part exhaust", error ) ) {
+            throw std::runtime_error( error );
+        }
+        if( source.enchantments ) {
+            native.enchantments.clear();
+            for( const std::string &enchantment : *source.enchantments ) {
+                native.enchantments.emplace_back( enchantment );
             }
+        }
+        if( source.balloon_height ) {
+            native.balloon_info = vpslot_balloon{ true, *source.balloon_height };
+        }
+        if( source.categories ) {
+            native.categories = *source.categories;
+        }
+        if( !detail::apply_platform_collection_patch(
+                native.categories,
+                source.extend_categories ? &*source.extend_categories : nullptr,
+                source.delete_categories ? &*source.delete_categories : nullptr,
+        []( const std::string & value ) {
+        return value;
+    },
+    "vehicle part categories", error ) ) {
+            throw std::runtime_error( error );
+        }
+        if( source.flags ) {
+            native.flags.clear();
             native.bitflags.reset();
-            for( const std::string &flag : native.flags ) {
+            for( const std::string &flag : *source.flags ) {
                 native.set_flag( flag );
             }
-            if( !source.activation_handler.empty() ) {
-                native.set_flag( "EOC_ACTIVATION" );
-            }
-            if( source.variants ) {
-                native.variants.clear();
-                native.variant_default.clear();
-                for( const vpart_variant_data &variant : *source.variants ) {
-                    vpart_variant native_variant;
-                    native_variant.id = variant.id;
-                    native_variant.label_ = variant.label;
-                    native_variant.symbols = read_variant_symbols( variant.symbols, source.id );
-                    native_variant.symbols_broken = read_variant_symbols(
-                                                        variant.broken_symbols, source.id );
-                    if( native.variants.empty() ) {
-                        native.variant_default = native_variant.id;
-                    }
-                    native.variants[native_variant.id] = std::move( native_variant );
+        }
+        if( !detail::apply_platform_collection_patch(
+                native.flags,
+                source.extend_flags ? &*source.extend_flags : nullptr,
+                source.delete_flags ? &*source.delete_flags : nullptr,
+        []( const std::string & value ) {
+        return value;
+    },
+    "vehicle part flags", error ) ) {
+            throw std::runtime_error( error );
+        }
+        native.bitflags.reset();
+        for( const std::string &flag : native.flags ) {
+            native.set_flag( flag );
+        }
+        if( !source.activation_handler.empty() ) {
+            native.set_flag( "EOC_ACTIVATION" );
+        }
+        if( source.variants ) {
+            native.variants.clear();
+            native.variant_default.clear();
+            for( const vpart_variant_data &variant : *source.variants ) {
+                vpart_variant native_variant;
+                native_variant.id = variant.id;
+                native_variant.label_ = variant.label;
+                native_variant.symbols = read_variant_symbols( variant.symbols, source.id );
+                native_variant.symbols_broken = read_variant_symbols(
+                                                    variant.broken_symbols, source.id );
+                if( native.variants.empty() ) {
+                    native.variant_default = native_variant.id;
                 }
+                native.variants[native_variant.id] = std::move( native_variant );
             }
-            if( source.variant_bases ) {
-                native.variants_bases = *source.variant_bases;
+        }
+        if( source.variant_bases ) {
+            native.variants_bases = *source.variant_bases;
+        }
+        if( source.qualities ) {
+            native.qualities.clear();
+            for( const auto &[quality, level] : *source.qualities ) {
+                native.qualities[quality_id( quality )] = level;
             }
-            if( source.qualities ) {
-                native.qualities.clear();
-                for( const auto &[quality, level] : *source.qualities ) {
-                    native.qualities[quality_id( quality )] = level;
-                }
+        }
+        if( source.pseudo_tools ) {
+            native.pseudo_tools.clear();
+            for( const vpart_pseudo_tool_data &tool : *source.pseudo_tools ) {
+                native.pseudo_tools.emplace( itype_id( tool.id ), tool.hotkey );
             }
-            if( source.pseudo_tools ) {
-                native.pseudo_tools.clear();
-                for( const vpart_pseudo_tool_data &tool : *source.pseudo_tools ) {
-                    native.pseudo_tools.emplace( itype_id( tool.id ), tool.hotkey );
-                }
+        }
+        if( source.folding_tools ) {
+            native.folding_tools.clear();
+            for( const std::string &tool : *source.folding_tools ) {
+                native.folding_tools.emplace_back( tool );
             }
-            if( source.folding_tools ) {
-                native.folding_tools.clear();
-                for( const std::string &tool : *source.folding_tools ) {
-                    native.folding_tools.emplace_back( tool );
-                }
+        }
+        if( source.unfolding_tools ) {
+            native.unfolding_tools.clear();
+            for( const std::string &tool : *source.unfolding_tools ) {
+                native.unfolding_tools.emplace_back( tool );
             }
-            if( source.unfolding_tools ) {
-                native.unfolding_tools.clear();
-                for( const std::string &tool : *source.unfolding_tools ) {
-                    native.unfolding_tools.emplace_back( tool );
-                }
+        }
+        if( source.folding_time_seconds ) {
+            native.folding_time = time_duration::from_seconds(
+                                      *source.folding_time_seconds );
+        }
+        if( source.unfolding_time_seconds ) {
+            native.unfolding_time = time_duration::from_seconds(
+                                        *source.unfolding_time_seconds );
+        }
+        if( source.fuel_options_set || source.backfire_threshold ||
+            source.backfire_frequency || source.damaged_power_factor ||
+            source.noise_factor || source.m2c || source.muscle_power_factor ||
+            source.engine_exclusions ) {
+            if( !native.engine_info ) {
+                native.engine_info.emplace();
             }
-            if( source.folding_time_seconds ) {
-                native.folding_time = time_duration::from_seconds(
-                                          *source.folding_time_seconds );
+            native.engine_info->was_loaded = true;
+            if( source.backfire_threshold ) {
+                native.engine_info->backfire_threshold = *source.backfire_threshold;
             }
-            if( source.unfolding_time_seconds ) {
-                native.unfolding_time = time_duration::from_seconds(
-                                            *source.unfolding_time_seconds );
+            if( source.backfire_frequency ) {
+                native.engine_info->backfire_freq = *source.backfire_frequency;
             }
-            if( source.fuel_options_set || source.backfire_threshold ||
-                source.backfire_frequency || source.damaged_power_factor ||
-                source.noise_factor || source.m2c || source.muscle_power_factor ||
-                source.engine_exclusions ) {
-                if( !native.engine_info ) {
-                    native.engine_info.emplace();
-                }
-                native.engine_info->was_loaded = true;
-                if( source.backfire_threshold ) {
-                    native.engine_info->backfire_threshold = *source.backfire_threshold;
-                }
-                if( source.backfire_frequency ) {
-                    native.engine_info->backfire_freq = *source.backfire_frequency;
-                }
-                if( source.damaged_power_factor ) {
-                    native.engine_info->damaged_power_factor = *source.damaged_power_factor;
-                }
-                if( source.noise_factor ) {
-                    native.engine_info->noise_factor = *source.noise_factor;
-                }
-                if( source.m2c ) {
-                    native.engine_info->m2c = *source.m2c;
-                }
-                if( source.muscle_power_factor ) {
-                    native.engine_info->muscle_power_factor = *source.muscle_power_factor;
-                }
-                if( source.engine_exclusions ) {
-                    native.engine_info->exclusions.assign(
-                        source.engine_exclusions->begin(), source.engine_exclusions->end() );
-                }
-                if( source.fuel_options_set ) {
-                    native.engine_info->fuel_opts.clear();
-                    for( const std::string &fuel : source.fuel_options ) {
-                        native.engine_info->fuel_opts.emplace_back( fuel );
-                    }
-                }
+            if( source.damaged_power_factor ) {
+                native.engine_info->damaged_power_factor = *source.damaged_power_factor;
             }
-            if( source.wheel ) {
-                native.wheel_info.emplace();
-                native.wheel_info->was_loaded = true;
-                native.wheel_info->rolling_resistance = source.wheel->rolling_resistance;
-                native.wheel_info->contact_area = source.wheel->contact_area;
-                native.wheel_info->offroad_rating = source.wheel->offroad_rating;
-                native.wheel_info->terrain_modifiers.clear();
-                for( const vpart_wheel_terrain_modifier_data &modifier :
-                     source.wheel->terrain_modifiers ) {
-                    native.wheel_info->terrain_modifiers.push_back( {
-                        modifier.flag, modifier.move_override, modifier.move_penalty
-                    } );
-                }
+            if( source.noise_factor ) {
+                native.engine_info->noise_factor = *source.noise_factor;
             }
-            if( source.rotor_diameter ) {
-                native.rotor_info = vpslot_rotor{ true, *source.rotor_diameter };
+            if( source.m2c ) {
+                native.engine_info->m2c = *source.m2c;
             }
-            if( source.propeller_diameter ) {
-                native.propeller_info = vpslot_propeller{
-                    true, *source.propeller_diameter
-                };
+            if( source.muscle_power_factor ) {
+                native.engine_info->muscle_power_factor = *source.muscle_power_factor;
             }
-            if( source.ladder_length ) {
-                native.ladder_info = vpslot_ladder{ *source.ladder_length };
+            if( source.engine_exclusions ) {
+                native.engine_info->exclusions.assign(
+                    source.engine_exclusions->begin(), source.engine_exclusions->end() );
             }
-            if( source.workbench ) {
-                native.workbench_info.emplace();
-                native.workbench_info->multiplier = source.workbench->multiplier;
-                native.workbench_info->allowed_mass = units::from_gram(
-                        source.workbench->mass_grams );
-                native.workbench_info->allowed_volume = units::from_milliliter(
-                        source.workbench->volume_ml );
-            }
-            if( source.toolkit_allowed_tools ) {
-                native.toolkit_info.emplace();
-                native.toolkit_info->was_loaded = true;
-                native.toolkit_info->allowed_types.clear();
-                for( const std::string &tool : *source.toolkit_allowed_tools ) {
-                    native.toolkit_info->allowed_types.emplace( tool );
+            if( source.fuel_options_set ) {
+                native.engine_info->fuel_opts.clear();
+                for( const std::string &fuel : source.fuel_options ) {
+                    native.engine_info->fuel_opts.emplace_back( fuel );
                 }
             }
-            if( source.terrain_transform ) {
-                native.transform_terrain_info.emplace();
-                native.transform_terrain_info->pre_flags =
-                    source.terrain_transform->pre_flags;
-                if( source.terrain_transform->post_terrain ) {
-                    native.transform_terrain_info->post_terrain = ter_str_id(
-                                *source.terrain_transform->post_terrain );
-                }
-                if( source.terrain_transform->post_furniture ) {
-                    native.transform_terrain_info->post_furniture = furn_str_id(
-                                *source.terrain_transform->post_furniture );
-                }
-                if( source.terrain_transform->post_field ) {
-                    native.transform_terrain_info->post_field = field_type_str_id(
-                                *source.terrain_transform->post_field );
-                    native.transform_terrain_info->post_field_intensity =
-                        source.terrain_transform->post_field_intensity;
-                    native.transform_terrain_info->post_field_age =
-                        time_duration::from_seconds(
-                            source.terrain_transform->post_field_age_seconds );
-                }
+        }
+        if( source.wheel ) {
+            native.wheel_info.emplace();
+            native.wheel_info->was_loaded = true;
+            native.wheel_info->rolling_resistance = source.wheel->rolling_resistance;
+            native.wheel_info->contact_area = source.wheel->contact_area;
+            native.wheel_info->offroad_rating = source.wheel->offroad_rating;
+            native.wheel_info->terrain_modifiers.clear();
+            for( const vpart_wheel_terrain_modifier_data &modifier :
+                 source.wheel->terrain_modifiers ) {
+                native.wheel_info->terrain_modifiers.push_back( {
+                    modifier.flag, modifier.move_override, modifier.move_penalty
+                } );
             }
-            if( !source.breaks_into.empty() ) {
-                native.breaks_into_group = item_group_id( source.breaks_into );
-            }
-            if( source.damage_reduction_set ) {
-                native.damage_reduction.clear();
-            }
-            for( const auto &[damage, amount] : source.damage_reduction ) {
-                native.damage_reduction[damage_type_id( damage )] = amount;
-            }
-            const auto apply_requirement = []( const vpart_requirement_data & value,
-                                               std::vector<std::pair<requirement_id, int>> &requirements,
-            std::map<skill_id, int> &skills, time_duration & time ) {
-                if( !value.id.empty() ) {
-                    requirements = { { requirement_id( value.id ), value.multiplier } };
-                }
-                if( !value.using_requirements.empty() ) {
-                    requirements.clear();
-                    for( const auto &[id, multiplier] : value.using_requirements ) {
-                        requirements.emplace_back( requirement_id( id ), multiplier );
-                    }
-                }
-                for( const auto &[skill, level] : value.skills ) {
-                    skills[skill_id( skill )] = level;
-                }
-                if( value.time_minutes >= 0 ) {
-                    time = time_duration::from_minutes( value.time_minutes );
-                }
+        }
+        if( source.rotor_diameter ) {
+            native.rotor_info = vpslot_rotor{ true, *source.rotor_diameter };
+        }
+        if( source.propeller_diameter ) {
+            native.propeller_info = vpslot_propeller{
+                true, *source.propeller_diameter
             };
-            apply_requirement( source.install, native.install_reqs,
-                               native.install_skills, native.install_moves );
-            apply_requirement( source.removal, native.removal_reqs,
-                               native.removal_skills, native.removal_moves );
-            apply_requirement( source.repair, native.repair_reqs,
-                               native.repair_skills, native.repair_moves );
-            if( source.air_proficiencies ) {
-                native.control_air.proficiencies.clear();
-                for( const std::string &proficiency : *source.air_proficiencies ) {
-                    native.control_air.proficiencies.emplace( proficiency );
-                }
-            }
-            if( source.land_proficiencies ) {
-                native.control_land.proficiencies.clear();
-                for( const std::string &proficiency : *source.land_proficiencies ) {
-                    native.control_land.proficiencies.emplace( proficiency );
-                }
-            }
-            if( source.air_skills ) {
-                native.control_air.skills.clear();
-                for( const auto &[skill, level] : *source.air_skills ) {
-                    native.control_air.skills.emplace( skill_id( skill ), level );
-                }
-            }
-            if( source.land_skills ) {
-                native.control_land.skills.clear();
-                for( const auto &[skill, level] : *source.land_skills ) {
-                    native.control_land.skills.emplace( skill_id( skill ), level );
-                }
-            }
-            detail::vehicle_part_registry().insert( native );
         }
+        if( source.ladder_length ) {
+            native.ladder_info = vpslot_ladder{ *source.ladder_length };
+        }
+        if( source.workbench ) {
+            native.workbench_info.emplace();
+            native.workbench_info->multiplier = source.workbench->multiplier;
+            native.workbench_info->allowed_mass = units::from_gram(
+                    source.workbench->mass_grams );
+            native.workbench_info->allowed_volume = units::from_milliliter(
+                    source.workbench->volume_ml );
+        }
+        if( source.toolkit_allowed_tools ) {
+            native.toolkit_info.emplace();
+            native.toolkit_info->was_loaded = true;
+            native.toolkit_info->allowed_types.clear();
+            for( const std::string &tool : *source.toolkit_allowed_tools ) {
+                native.toolkit_info->allowed_types.emplace( tool );
+            }
+        }
+        if( source.terrain_transform ) {
+            native.transform_terrain_info.emplace();
+            native.transform_terrain_info->pre_flags =
+                source.terrain_transform->pre_flags;
+            if( source.terrain_transform->post_terrain ) {
+                native.transform_terrain_info->post_terrain = ter_str_id(
+                            *source.terrain_transform->post_terrain );
+            }
+            if( source.terrain_transform->post_furniture ) {
+                native.transform_terrain_info->post_furniture = furn_str_id(
+                            *source.terrain_transform->post_furniture );
+            }
+            if( source.terrain_transform->post_field ) {
+                native.transform_terrain_info->post_field = field_type_str_id(
+                            *source.terrain_transform->post_field );
+                native.transform_terrain_info->post_field_intensity =
+                    source.terrain_transform->post_field_intensity;
+                native.transform_terrain_info->post_field_age =
+                    time_duration::from_seconds(
+                        source.terrain_transform->post_field_age_seconds );
+            }
+        }
+        if( !source.breaks_into.empty() ) {
+            native.breaks_into_group = item_group_id( source.breaks_into );
+        }
+        if( source.damage_reduction_set ) {
+            native.damage_reduction.clear();
+        }
+        for( const auto &[damage, amount] : source.damage_reduction ) {
+            native.damage_reduction[damage_type_id( damage )] = amount;
+        }
+        const auto apply_requirement = []( const vpart_requirement_data & value,
+                                           std::vector<std::pair<requirement_id, int>> &requirements,
+        std::map<skill_id, int> &skills, time_duration & time ) {
+            if( !value.id.empty() ) {
+                requirements = { { requirement_id( value.id ), value.multiplier } };
+            }
+            if( !value.using_requirements.empty() ) {
+                requirements.clear();
+                for( const auto &[id, multiplier] : value.using_requirements ) {
+                    requirements.emplace_back( requirement_id( id ), multiplier );
+                }
+            }
+            for( const auto &[skill, level] : value.skills ) {
+                skills[skill_id( skill )] = level;
+            }
+            if( value.time_minutes >= 0 ) {
+                time = time_duration::from_minutes( value.time_minutes );
+            }
+        };
+        apply_requirement( source.install, native.install_reqs,
+                           native.install_skills, native.install_moves );
+        apply_requirement( source.removal, native.removal_reqs,
+                           native.removal_skills, native.removal_moves );
+        apply_requirement( source.repair, native.repair_reqs,
+                           native.repair_skills, native.repair_moves );
+        if( source.air_proficiencies ) {
+            native.control_air.proficiencies.clear();
+            for( const std::string &proficiency : *source.air_proficiencies ) {
+                native.control_air.proficiencies.emplace( proficiency );
+            }
+        }
+        if( source.land_proficiencies ) {
+            native.control_land.proficiencies.clear();
+            for( const std::string &proficiency : *source.land_proficiencies ) {
+                native.control_land.proficiencies.emplace( proficiency );
+            }
+        }
+        if( source.air_skills ) {
+            native.control_air.skills.clear();
+            for( const auto &[skill, level] : *source.air_skills ) {
+                native.control_air.skills.emplace( skill_id( skill ), level );
+            }
+        }
+        if( source.land_skills ) {
+            native.control_land.skills.clear();
+            for( const auto &[skill, level] : *source.land_skills ) {
+                native.control_land.skills.emplace( skill_id( skill ), level );
+            }
+        }
+        detail::vehicle_part_registry().insert( native );
+    }
+}
 
-        std::vector<std::size_t> vehicle_order;
-        if( !detail::resolve_platform_inheritance_order(
-                pimpl_->vehicles,
-        []( const registration<vehicle_data> &entry ) {
-        return entry.definition->id;
-    },
+void world_content_transaction::impl::apply_vehicle()
+{
+    std::string inheritance_error;
+    std::vector<std::size_t> vehicle_order;
+    if( !detail::resolve_platform_inheritance_order(
+            vehicles,
     []( const registration<vehicle_data> &entry ) {
-        return entry.definition->copy_from;
+    return entry.definition->id;
+},
+[]( const registration<vehicle_data> &entry ) {
+    return entry.definition->copy_from;
+},
+[]( const std::string & id ) {
+    return vproto_id( id ).is_valid();
     },
-    []( const std::string & id ) {
-        return vproto_id( id ).is_valid();
-        },
-        vehicle_order, inheritance_error, "vehicle" ) ) {
-            throw std::runtime_error( inheritance_error );
+    vehicle_order, inheritance_error, "vehicle" ) ) {
+        throw std::runtime_error( inheritance_error );
+    }
+    for( const std::size_t index : vehicle_order ) {
+        const registration<vehicle_data> &entry = vehicles[index];
+        const vehicle_data &source = *entry.definition;
+        const vproto_id id( source.id );
+        vehicle_undo.emplace_back(
+            id, id.is_valid() ? std::optional<vehicle_prototype>( id.obj() ) : std::nullopt );
+        vehicle_prototype native = source.copy_from.empty() ? vehicle_prototype() :
+                                   vproto_id( source.copy_from ).obj();
+        native.id = id;
+        if( source.name ) {
+            native.name = source.name->native();
+        } else if( source.copy_from.empty() ) {
+            native.name = no_translation( source.id );
         }
-        for( const std::size_t index : vehicle_order ) {
-            const registration<vehicle_data> &entry = pimpl_->vehicles[index];
-            const vehicle_data &source = *entry.definition;
-            const vproto_id id( source.id );
-            pimpl_->vehicle_undo.emplace_back(
-                id, id.is_valid() ? std::optional<vehicle_prototype>( id.obj() ) : std::nullopt );
-            vehicle_prototype native = source.copy_from.empty() ? vehicle_prototype() :
-                                       vproto_id( source.copy_from ).obj();
-            native.id = id;
-            if( source.name ) {
-                native.name = no_translation( *source.name );
-            } else if( source.copy_from.empty() ) {
-                native.name = no_translation( source.id );
+        native.src.clear();
+        native.src.emplace_back( id, mod_id( owner ) );
+        native.was_loaded = true;
+        native.blueprint.reset();
+        if( source.color_palette_set ) {
+            native.color_palette = vpalette_id( source.color_palette );
+        }
+        for( const vehicle_part_placement_data &part : source.parts ) {
+            vehicle_prototype::part_def native_part;
+            native_part.pos = point_rel_ms( part.position.x, part.position.y );
+            native_part.part = vpart_id( part.part );
+            native_part.variant = part.variant;
+            native_part.with_ammo = part.with_ammo;
+            for( const std::string &ammo : part.ammo_types ) {
+                native_part.ammo_types.emplace( ammo );
             }
-            native.src.clear();
-            native.src.emplace_back( id, mod_id( pimpl_->owner ) );
-            native.was_loaded = true;
-            native.blueprint.reset();
-            if( source.color_palette_set ) {
-                native.color_palette = vpalette_id( source.color_palette );
+            native_part.ammo_qty = part.ammo_quantity;
+            if( !part.fuel.empty() ) {
+                native_part.fuel = itype_id( part.fuel );
             }
-            for( const vehicle_part_placement_data &part : source.parts ) {
+            for( const std::string &tool : part.tools ) {
+                native_part.tools.emplace_back( tool );
+            }
+            native.parts.push_back( std::move( native_part ) );
+        }
+        const auto matches_placement = []( const vehicle_prototype::part_def & existing,
+        const vehicle_part_placement_data & requested, const bool exact ) {
+            if( existing.pos != point_rel_ms( requested.position.x, requested.position.y ) ||
+                existing.part != vpart_id( requested.part ) ||
+                existing.variant != requested.variant ) {
+                return false;
+            }
+            if( !exact ) {
+                return true;
+            }
+            if( existing.with_ammo != requested.with_ammo ||
+                existing.ammo_qty != requested.ammo_quantity ||
+                existing.fuel != itype_id( requested.fuel ) ||
+                existing.ammo_types.size() != requested.ammo_types.size() ||
+                existing.tools.size() != requested.tools.size() ) {
+                return false;
+            }
+            for( const std::string &ammo : requested.ammo_types ) {
+                if( existing.ammo_types.count( itype_id( ammo ) ) == 0 ) {
+                    return false;
+                }
+            }
+            for( std::size_t index = 0; index < requested.tools.size(); ++index ) {
+                if( existing.tools[index] != itype_id( requested.tools[index] ) ) {
+                    return false;
+                }
+            }
+            return true;
+        };
+        if( source.extend_parts ) {
+            for( const vehicle_part_placement_data &part : *source.extend_parts ) {
+                if( std::any_of( native.parts.begin(), native.parts.end(),
+                [&part, &matches_placement]( const vehicle_prototype::part_def & existing ) {
+                return matches_placement( existing, part, false );
+                } ) ) {
+                    throw std::runtime_error( "vehicle '" + source.id +
+                                              "' extend_parts conflicts with an existing placement" );
+                }
                 vehicle_prototype::part_def native_part;
-                native_part.pos = point_rel_ms( part.x, part.y );
+                native_part.pos = point_rel_ms( part.position.x, part.position.y );
                 native_part.part = vpart_id( part.part );
                 native_part.variant = part.variant;
                 native_part.with_ammo = part.with_ammo;
@@ -4316,118 +4527,55 @@ bool world_content_transaction::apply( std::string &error )
                 }
                 native.parts.push_back( std::move( native_part ) );
             }
-            const auto matches_placement = []( const vehicle_prototype::part_def & existing,
-            const vehicle_part_placement_data & requested, const bool exact ) {
-                if( existing.pos != point_rel_ms( requested.x, requested.y ) ||
-                    existing.part != vpart_id( requested.part ) ||
-                    existing.variant != requested.variant ) {
-                    return false;
-                }
-                if( !exact ) {
-                    return true;
-                }
-                if( existing.with_ammo != requested.with_ammo ||
-                    existing.ammo_qty != requested.ammo_quantity ||
-                    existing.fuel != itype_id( requested.fuel ) ||
-                    existing.ammo_types.size() != requested.ammo_types.size() ||
-                    existing.tools.size() != requested.tools.size() ) {
-                    return false;
-                }
-                for( const std::string &ammo : requested.ammo_types ) {
-                    if( existing.ammo_types.count( itype_id( ammo ) ) == 0 ) {
-                        return false;
-                    }
-                }
-                for( std::size_t index = 0; index < requested.tools.size(); ++index ) {
-                    if( existing.tools[index] != itype_id( requested.tools[index] ) ) {
-                        return false;
-                    }
-                }
-                return true;
-            };
-            if( source.extend_parts ) {
-                for( const vehicle_part_placement_data &part : *source.extend_parts ) {
-                    if( std::any_of( native.parts.begin(), native.parts.end(),
-                    [&part, &matches_placement]( const vehicle_prototype::part_def & existing ) {
-                    return matches_placement( existing, part, false );
-                    } ) ) {
-                        throw std::runtime_error( "vehicle '" + source.id +
-                                                  "' extend_parts conflicts with an existing placement" );
-                    }
-                    vehicle_prototype::part_def native_part;
-                    native_part.pos = point_rel_ms( part.x, part.y );
-                    native_part.part = vpart_id( part.part );
-                    native_part.variant = part.variant;
-                    native_part.with_ammo = part.with_ammo;
-                    for( const std::string &ammo : part.ammo_types ) {
-                        native_part.ammo_types.emplace( ammo );
-                    }
-                    native_part.ammo_qty = part.ammo_quantity;
-                    if( !part.fuel.empty() ) {
-                        native_part.fuel = itype_id( part.fuel );
-                    }
-                    for( const std::string &tool : part.tools ) {
-                        native_part.tools.emplace_back( tool );
-                    }
-                    native.parts.push_back( std::move( native_part ) );
-                }
-            }
-            if( source.delete_parts ) {
-                for( const vehicle_part_placement_data &part : *source.delete_parts ) {
-                    const auto found = std::find_if( native.parts.begin(), native.parts.end(),
-                    [&part, &matches_placement]( const vehicle_prototype::part_def & existing ) {
-                        return matches_placement( existing, part, true );
-                    } );
-                    if( found == native.parts.end() ) {
-                        throw std::runtime_error( "vehicle '" + source.id +
-                                                  "' delete_parts references an absent placement" );
-                    }
-                    native.parts.erase( found );
-                }
-            }
-            if( source.items_set ) {
-                native.item_spawns.clear();
-            }
-            for( const vehicle_item_data &spawn : source.items ) {
-                vehicle_item_spawn native_spawn;
-                native_spawn.pos = point_rel_ms( spawn.x, spawn.y );
-                native_spawn.chance = spawn.chance;
-                native_spawn.with_ammo = spawn.with_ammo;
-                native_spawn.with_magazine = spawn.with_magazine;
-                for( const auto &[item, variant] : spawn.items ) {
-                    native_spawn.item_ids.emplace_back( itype_id( item ), variant );
-                }
-                for( const std::string &group : spawn.groups ) {
-                    native_spawn.item_groups.emplace_back( group );
-                }
-                native.item_spawns.push_back( std::move( native_spawn ) );
-            }
-            if( source.zones_set ) {
-                native.zone_defs.clear();
-            }
-            for( const vehicle_zone_data &zone : source.zones ) {
-                native.zone_defs.push_back( {
-                    zone_type_id( zone.type ), zone.name, zone.filter,
-                    point_rel_ms( zone.x, zone.y )
-                } );
-            }
-            const VehicleGroup *previous_group =
-                detail::vehicle_group_registry_find( source.id );
-            pimpl_->vehicle_self_group_undo.emplace_back(
-                source.id, previous_group ? std::optional<VehicleGroup>( *previous_group ) :
-                std::nullopt );
-            VehicleGroup self_group = previous_group ? *previous_group : VehicleGroup();
-            self_group.add_vehicle( id, 100 );
-            detail::vehicle_group_registry_set( source.id, self_group );
-            detail::vehicle_prototype_registry().insert( native );
         }
-        pimpl_->applied = true;
-        error.clear();
-        return true;
-    } catch( const std::exception &exception ) {
-        rollback();
-        error = "Lua-first Mod '" + pimpl_->owner + "': " + exception.what();
-        return false;
+        if( source.delete_parts ) {
+            for( const vehicle_part_placement_data &part : *source.delete_parts ) {
+                const auto found = std::find_if( native.parts.begin(), native.parts.end(),
+                [&part, &matches_placement]( const vehicle_prototype::part_def & existing ) {
+                    return matches_placement( existing, part, true );
+                } );
+                if( found == native.parts.end() ) {
+                    throw std::runtime_error( "vehicle '" + source.id +
+                                              "' delete_parts references an absent placement" );
+                }
+                native.parts.erase( found );
+            }
+        }
+        if( source.items_set ) {
+            native.item_spawns.clear();
+        }
+        for( const vehicle_item_data &spawn : source.items ) {
+            vehicle_item_spawn native_spawn;
+            native_spawn.pos = point_rel_ms( spawn.position.x, spawn.position.y );
+            native_spawn.chance = spawn.chance;
+            native_spawn.with_ammo = spawn.with_ammo;
+            native_spawn.with_magazine = spawn.with_magazine;
+            for( const auto &[item, variant] : spawn.items ) {
+                native_spawn.item_ids.emplace_back( itype_id( item ), variant );
+            }
+            for( const std::string &group : spawn.groups ) {
+                native_spawn.item_groups.emplace_back( group );
+            }
+            native.item_spawns.push_back( std::move( native_spawn ) );
+        }
+        if( source.zones_set ) {
+            native.zone_defs.clear();
+        }
+        for( const vehicle_zone_data &zone : source.zones ) {
+            native.zone_defs.push_back( {
+                zone_type_id( zone.type ), zone.name, zone.filter,
+                point_rel_ms( zone.position.x, zone.position.y )
+            } );
+        }
+        const VehicleGroup *previous_group =
+            detail::vehicle_group_registry_find( source.id );
+        vehicle_self_group_undo.emplace_back(
+            source.id, previous_group ? std::optional<VehicleGroup>( *previous_group ) :
+            std::nullopt );
+        VehicleGroup self_group = previous_group ? *previous_group : VehicleGroup();
+        self_group.add_vehicle( id, 100 );
+        detail::vehicle_group_registry_set( source.id, self_group );
+        detail::vehicle_prototype_registry().insert( native );
     }
 }
 

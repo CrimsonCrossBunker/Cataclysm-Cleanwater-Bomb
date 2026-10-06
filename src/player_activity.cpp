@@ -6,8 +6,12 @@
 #include <enums.h>
 #include <item_location.h>
 #include <point.h>
+#include <safe_reference.h>
 #include <type_id.h>
 #include <algorithm>
+#include <atomic>
+#include <exception>
+#include <limits>
 #include <memory>
 
 #include "activity_actor_definitions.h"
@@ -65,6 +69,19 @@ static const activity_id ACT_WORKOUT_MODERATE( "ACT_WORKOUT_MODERATE" );
 
 static const efftype_id effect_nausea( "nausea" );
 
+std::uint64_t player_activity::identity_token::next_value() noexcept
+{
+    static std::atomic<std::uint64_t> next{ 1 };
+    std::uint64_t current = next.load( std::memory_order_relaxed );
+    do {
+        if( current == std::numeric_limits<std::uint64_t>::max() ) {
+            std::terminate();
+        }
+    } while( !next.compare_exchange_weak( current, current + 1,
+                                          std::memory_order_relaxed ) );
+    return current;
+}
+
 player_activity::player_activity() : type( activity_id::NULL_ID() ) { }
 
 player_activity::player_activity( activity_id t, int turns, int Index, int pos,
@@ -93,6 +110,7 @@ player_activity::player_activity( const activity_actor &actor ) : type( actor.ge
 
 void player_activity::set_to_null()
 {
+    identity_.value = identity_token::next_value();
     type = activity_id::NULL_ID();
     sfx::end_activity_sounds(); // kill activity sounds when activity is nullified
 }
@@ -208,10 +226,14 @@ void player_activity::start_or_resume( Character &who, bool resuming )
 
 void player_activity::do_turn( Character &you )
 {
+    const safe_reference<Creature> character_reference = you.get_safe_reference();
     // Specifically call the do turn function for the cancellation activity early
     // This is because the game can get stuck trying to fuel a fire when it's not...
     if( type == ACT_MIGRATION_CANCEL ) {
         actor->do_turn( *this, you );
+        if( !character_reference ) {
+            return;
+        }
         activity_handlers::clean_may_activity_occupancy_items_var_if_is_avatar_and_no_activity_now( you );
         return;
     }
@@ -287,8 +309,13 @@ void player_activity::do_turn( Character &you )
     const bool travel_activity = id() == ACT_TRAVELLING;
     you.set_activity_level( exertion_level() );
 
+    const std::uint64_t dispatched_identity = identity_generation();
     const bool lua_first_activity = cata::lua_platform::invoke_activity_type_handler(
                                         type.str(), "do_turn", *this, you );
+    if( !character_reference ||
+        ( *this && identity_generation() != dispatched_identity ) ) {
+        return;
+    }
     if( !*this ) {
         activity_handlers::clean_may_activity_occupancy_items_var_if_is_avatar_and_no_activity_now( you );
         return;
@@ -298,6 +325,10 @@ void player_activity::do_turn( Character &you )
         // if we have an EOC defined in json do that
         dialogue d( get_talker_for( you ), nullptr );
         type->do_turn_EOC->activate_activation_only( d, "player activities" );
+        if( !character_reference ||
+            ( *this && identity_generation() != dispatched_identity ) ) {
+            return;
+        }
         // We may have canceled this via a message interrupt.
         if( type.is_null() ) {
             activity_handlers::clean_may_activity_occupancy_items_var_if_is_avatar_and_no_activity_now( you );
@@ -308,15 +339,23 @@ void player_activity::do_turn( Character &you )
     // This might finish the activity (set it to null)
     if( actor ) {
         const activity_id prior_act_id = id();
+        const std::uint64_t prior_identity = identity_generation();
         actor->do_turn( *this, you );
+        if( !character_reference ) {
+            return;
+        }
 
         // if an activity was assigned during this activity, stop processing immediately
-        if( *this && prior_act_id != id() ) {
+        if( *this && ( prior_act_id != id() || prior_identity != identity_generation() ) ) {
             return;
         }
     } else {
         // Use the legacy turn function
         type->call_do_turn( this, &you );
+        if( !character_reference ||
+            ( *this && identity_generation() != dispatched_identity ) ) {
+            return;
+        }
     }
 
     // Activities should never excessively drain stamina.
@@ -374,13 +413,22 @@ void player_activity::do_turn( Character &you )
     if( *this && moves_left <= 0 ) {
         // Note: For some activities "finish" is a misnomer; that's why we explicitly check if the
         // type is ACT_NULL below.
+        const std::uint64_t completion_identity = identity_generation();
         const bool lua_first_completion = cata::lua_platform::invoke_activity_type_handler(
                                               type.str(), "completion", *this, you );
+        if( !character_reference ||
+            ( *this && identity_generation() != completion_identity ) ) {
+            return;
+        }
         if( *this && moves_left <= 0 && !lua_first_completion &&
             !type->completion_EOC.is_null() ) {
             // if we have an EOC defined in json do that
             dialogue d( get_talker_for( you ), nullptr );
             type->completion_EOC->activate_activation_only( d, "player activities" );
+            if( !character_reference ||
+                ( *this && identity_generation() != completion_identity ) ) {
+                return;
+            }
         }
         // A Lua completion policy may cancel the activity or extend it by
         // restoring moves_left.  Only finish the native activity if it still
@@ -389,15 +437,24 @@ void player_activity::do_turn( Character &you )
             add_msg_debug( debugmode::DF_ACTIVITY,
                            "Setting activity %s to null for %s, no moves left.",
                            type.c_str(), you.name );
+            const std::uint64_t finished_identity = identity_generation();
             get_event_bus().send<event_type::character_finished_activity>( you.getID(), type, false );
+            if( !character_reference ||
+                ( *this && identity_generation() != finished_identity ) ) {
+                return;
+            }
             g->wait_popup_reset();
-            if( actor ) {
+            if( *this && actor ) {
                 actor->finish( *this, you );
-            } else {
+            } else if( *this ) {
                 if( !type->call_finish( this, &you ) ) {
                     // "Finish" is never a misnomer for any activity without a finish function
                     set_to_null();
                 }
+            }
+            if( !character_reference ||
+                ( *this && identity_generation() != finished_identity ) ) {
+                return;
             }
         }
     }

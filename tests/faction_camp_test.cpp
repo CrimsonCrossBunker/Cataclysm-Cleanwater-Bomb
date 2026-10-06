@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <map>
 #include <memory>
 #include <optional>
@@ -51,6 +52,13 @@ TEST_CASE( "camp_calorie_counting", "[camp]" )
     REQUIRE( !!bcp );
     basecamp *test_camp = *bcp;
     test_camp->set_owner( your_fac );
+    WHEN( "a practice mission has no physical result" ) {
+        test_camp->set_dumping_spot( zone_loc );
+        const tripoint_bub_ms dump = m.get_bub( test_camp->get_dumping_spot() );
+        const size_t items_before = m.i_at( dump ).size();
+        test_camp->place_results( item() );
+        CHECK( m.i_at( dump ).size() == items_before );
+    }
     WHEN( "a base item is added to larder" ) {
         camp_faction->empty_food_supply();
         item test_100_kcal( itype_test_100_kcal );

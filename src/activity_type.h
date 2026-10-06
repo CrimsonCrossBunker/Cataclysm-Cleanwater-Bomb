@@ -21,7 +21,7 @@ namespace cata::lua_platform
 {
 class content_transaction;
 class presentation_content_transaction;
-}
+} // namespace cata::lua_platform
 
 /** @relates string_id */
 template<>

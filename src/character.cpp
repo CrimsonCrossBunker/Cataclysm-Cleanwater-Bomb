@@ -55,6 +55,7 @@
 #include "city.h"
 #include "clone_ptr.h"
 #include "color.h"
+#include "combat_training.h"
 #include "coordinates.h"
 #include "creature_tracker.h"
 #include "current_map.h"
@@ -2007,7 +2008,7 @@ void Character::on_dodge( Creature *source, float difficulty, float training_lev
 
     if( source && source->times_combatted_player <= 100 ) {
         source->times_combatted_player++;
-        practice( skill_dodge, difficulty * 2, difficulty );
+        practice_combat( skill_dodge, difficulty * 2, difficulty );
     }
     martial_arts_data->ma_ondodge_effects( *this );
 
@@ -2663,6 +2664,12 @@ float Character::get_vision_threshold( float light_level ) const
 
     return std::min( LIGHT_AMBIENT_LOW,
                      threshold_for_range( range ) * dimming_from_light );
+}
+
+bool Character::practice_combat( const skill_id &id, int amount, double training_level )
+{
+    const double multiplier = combat_training_multiplier( get_skill_level( id ), training_level );
+    return practice( id, roll_remainder( amount * multiplier ), MAX_SKILL );
 }
 
 bool Character::practice( const skill_id &id, int amount, int cap, bool suppress_warning,
@@ -3808,15 +3815,21 @@ bool Character::is_immune_field( const field_type_id &fid ) const
         return has_flag( json_flag_HEATSINK ) || is_wearing( itype_rm13_armor_on );
     }
     if( ft.has_acid ) {
-        return !is_on_ground() && get_env_resist( body_part_foot_l ) >= 15 &&
-               get_env_resist( body_part_foot_r ) >= 15 &&
-               get_env_resist( body_part_leg_l ) >= 15 &&
-               get_env_resist( body_part_leg_r ) >= 15 &&
-               // FIXME: Hardcoded damage type
-               get_armor_type( damage_acid, body_part_foot_l ) >= 5 &&
-               get_armor_type( damage_acid, body_part_foot_r ) >= 5 &&
-               get_armor_type( damage_acid, body_part_leg_l ) >= 5 &&
-               get_armor_type( damage_acid, body_part_leg_r ) >= 5;
+        if( is_on_ground() ) {
+            return false;
+        }
+        // Use the same contact parts as map::creature_in_field, including
+        // hands for quadrupeds.  Standing humans do not immerse their legs.
+        const std::vector<bodypart_id> contact_parts = get_ground_contact_bodyparts();
+        return std::all_of( contact_parts.begin(), contact_parts.end(),
+        [&]( const bodypart_id & bp ) {
+            // Match burn_body_part's maximum direct damage and add_env_effect's
+            // worst possible corrosion roll for the strongest field intensity.
+            const int intensity = ft.get_max_intensity();
+            const bool corrosion_safe = is_immune_effect( effect_corroding ) ||
+                                        get_env_resist( bp ) >= 3 * ( 2 + intensity );
+            return corrosion_safe && get_armor_type( damage_acid, bp ) >= ( 2 + intensity ) / 2;
+        } );
     }
     // If we haven't found immunity yet fall up to the next level
     return Creature::is_immune_field( fid );
@@ -8885,6 +8898,7 @@ bool character_martial_arts::pick_style( const Character &you ) // Style selecti
 {
     enum style_selection {
         KEEP_HANDS_FREE = 0,
+        AUTO_STYLE,
         STYLE_OFFSET
     };
 
@@ -8926,6 +8940,11 @@ bool character_martial_arts::pick_style( const Character &you ) // Style selecti
                          keep_hands_free ? _( "Keep hands free (on)" ) : _( "Keep hands free (off)" ),
                          wrap60( _( "When this is enabled, player won't wield things unless explicitly told to." ) ) );
 
+    kmenu.addentry_desc( AUTO_STYLE, true, 'a',
+                         auto_style ? _( "Switch style with weapon (on)" ) :
+                         _( "Switch style with weapon (off)" ),
+                         wrap60( _( "Automatically select a learned style for your weapon.  While enabled, selecting a style remembers it as the preference for this weapon type (or for empty hands)." ) ) );
+
     kmenu.selected = STYLE_OFFSET;
 
     // +1 to keep "No Style" at top
@@ -8957,8 +8976,14 @@ bool character_martial_arts::pick_style( const Character &you ) // Style selecti
         Character &u = const_cast<Character &>( you );
         clear_all_effects( u );
         set_style( selectable_styles[selection - STYLE_OFFSET], true );
+        if( auto_style ) {
+            remember_weapon_style( you );
+        }
         ma_static_effects( u );
         martialart_use_message( you );
+    } else if( selection == AUTO_STYLE ) {
+        auto_style = !auto_style;
+        auto_select_style( const_cast<Character &>( you ) );
     } else if( selection == KEEP_HANDS_FREE ) {
         keep_hands_free = !keep_hands_free;
     } else {

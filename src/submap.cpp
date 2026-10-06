@@ -1,5 +1,18 @@
 #include "submap.h"
 
+#include <active_item_cache.h>
+#include <calendar.h>
+#include <compatibility.h>
+#include <computer.h>
+#include <construction.h>
+#include <coordinates.h>
+#include <field.h>
+#include <item.h>
+#include <map_scale_constants.h>
+#include <mdarray.h>
+#include <plf/colony.h>
+#include <point.h>
+#include <type_id.h>
 #include <algorithm>
 #include <array>
 #include <iterator>
@@ -14,9 +27,10 @@
 #include "units.h"
 #include "vehicle.h"
 
+static const furn_str_id furn_f_console( "f_console" );
+
 static furn_id f_null;
 
-static const furn_str_id furn_f_console( "f_console" );
 
 void maptile_soa::swap_soa_tile( const point_sm_ms &p1, const point_sm_ms &p2 )
 {
@@ -369,6 +383,7 @@ void submap::revert_submap( submap &sr )
         m.reset();
         terrain_growth.clear();
         finite_liquids.clear();
+        cosmetics.clear();
         set_all_ter( sr.get_ter( point_sm_ms::zero ), true );
         return;
     }

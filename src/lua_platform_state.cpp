@@ -52,7 +52,7 @@ bool script_array_value::operator!=( const script_array_value &other ) const
 void script_array_value::serialize( JsonOut &json ) const
 {
     json.start_array();
-    for( const script_persistent_value &value : get().values ) {
+    for( const script_persistent_value &value : value_->values ) {
         json.start_object();
         detail::write_persistent_value( json, value );
         json.end_object();
@@ -219,11 +219,10 @@ static script_persistent_value read_persistent_value_impl( const JsonObject &ent
         }
         const auto component = [&coordinate]( const std::size_t index ) {
             const JsonValue value = coordinate[index];
-            if( !value.test_int() || value.get_float() < std::numeric_limits<int>::min() ||
-                value.get_float() > std::numeric_limits<int>::max() ) {
+            if( !value.test_int() ) {
                 throw std::invalid_argument( "Persistent tripoint component exceeds integer range" );
             }
-            return value.get_int();
+            return value.get_int_exact();
         };
         result = script_persistent_tripoint{ component( 0 ), component( 1 ), component( 2 ) };
     } else if( type == "array" ) {

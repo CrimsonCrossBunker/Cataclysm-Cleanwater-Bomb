@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstddef>
 #include <string>
 #include <utility>
@@ -28,9 +29,17 @@ class window;
 
 static std::vector<std::pair<std::string, std::string>> messages;
 
-std::vector<std::pair<std::string, std::string>> Messages::recent_messages( size_t )
+std::vector<std::pair<std::string, std::string>> Messages::recent_messages( size_t count )
 {
-    return messages;
+    count = std::min( count, messages.size() );
+    return { messages.end() - static_cast<std::ptrdiff_t>( count ), messages.end() };
+}
+std::vector<std::pair<std::string, std::string>> Messages::recent_messages_with_formatting(
+            const size_t count )
+{
+    // Headless tests preserve the supplied text, including inline formatting tags.
+    // Display colours and message fading belong to the UI implementation.
+    return recent_messages( count );
 }
 bool Messages::has_debug_filter( debugmode::debug_filter )
 {

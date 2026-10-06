@@ -1,8 +1,10 @@
 #if CATA_ENABLE_LUA_PLATFORM
 
-#include "lua_platform_items.h"
-#include "lua_platform_values.h"
+#include "creature.h"
 
+#include "lua_platform_items.h"
+
+#include <cached_options.h>
 #include <character_attire.h>
 #include <character_id.h>
 #include <enums.h>
@@ -10,6 +12,10 @@
 #include <game.h> // IWYU pragma: keep
 #include <inventory_ui.h>
 #include <item_uid.h>
+#include <translations.h>
+#include <vpart_position.h>
+
+#include "lua_platform_values.h"
 
 extern "C" {
 #include <lua.h>
@@ -43,6 +49,7 @@ extern "C" {
 #include <string_view>
 #include <type_traits>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -73,15 +80,19 @@ extern "C" {
 #include "lua_platform_world.h"
 #include "map.h"
 #include "math_parser_diag_value.h"
+#include "output.h"
 #include "requirements.h"
 #include "string_formatter.h"
+#include "talker.h"
+#include "talker_character.h"
 #include "type_id.h"
 #include "units.h"
 #include "vehicle.h"
 
+static const flag_id json_flag_ONE_PER_LAYER( "ONE_PER_LAYER" );
+
 struct bionic;
 
-static const flag_id json_flag_ONE_PER_LAYER( "ONE_PER_LAYER" );
 
 namespace cata::lua_platform
 {
@@ -2423,6 +2434,31 @@ sol::table item_ammo_sufficient(
                state, sol::make_object( state, sufficient ) );
 }
 
+sol::table item_has_ammo(
+    sol::this_state lua, const game_handle &item_handle,
+    const game_handle &character_handle,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    const native_handle_result<item> resolved =
+        item_handle.resolve_item(
+            runtime_generation, world_generation );
+    if( !resolved ) {
+        return make_game_error_result( state, *resolved.error );
+    }
+    std::optional<game_handle_error> error;
+    Character *character = resolve_exact_character(
+                               character_handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, resolved.value->ammo_sufficient( character ) ) );
+}
+
 sol::table set_item_flag(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &flag, const bool enabled,
@@ -2632,14 +2668,20 @@ sol::table activate_item(
     const int before_charges = actually_used->charges;
     const int before_damage = actually_used->damage();
     const bool before_active = actually_used->is_active();
+    const game_handle actually_used_handle = make_character_item_handle(
+                *character, *actually_used, "platform_item_use_item",
+                runtime_generation, world_generation );
     const bool destroyed = character->invoke_item( entry, method, target );
     const native_handle_result<item> after = item_handle.resolve_item(
                 runtime_generation, world_generation );
+    const native_handle_result<item> actually_used_after_handle =
+        actually_used_handle.resolve_item( runtime_generation, world_generation );
     item *actually_used_after = after ? after.value->get_usable_item( method ) : nullptr;
-    const bool changed = destroyed || ( actually_used_after != nullptr && (
-                                            before_charges != actually_used_after->charges ||
-                                            before_damage != actually_used_after->damage() ||
-                                            before_active != actually_used_after->is_active() ) );
+    const bool changed = destroyed || !after || !actually_used_after_handle ||
+                         ( actually_used_after != nullptr &&
+                           ( before_charges != actually_used_after->charges ||
+                             before_damage != actually_used_after->damage() ||
+                             before_active != actually_used_after->is_active() ) );
     sol::table value = state.create_table();
     value["accepted"] = changed;
     value["destroyed"] = destroyed || !after;
@@ -3549,6 +3591,50 @@ sol::table inventory_resources(
                    state, std::move( value ) ) );
 }
 
+sol::table inventory_has_items(
+    sol::this_state lua, const game_handle &character_handle,
+    const script_game_id &type, const std::int64_t count,
+    const std::int64_t charges,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    constexpr std::string_view api_name = "services.inventory.has_items";
+    require_id_kind( type, "item", std::string( api_name ) );
+    if( count < 0 || count > maximum_inventory_resource_quantity ||
+        charges < 0 || charges > maximum_inventory_resource_quantity ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " count and charges must be within 0..1000000000" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_exact_character(
+                               character_handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    const itype_id native( type.value() );
+    const int requested_count = static_cast<int>( count );
+    const int requested_charges = static_cast<int>( charges );
+    const talker_character_const actor( character );
+    bool matches = false;
+    if( requested_charges == 0 && item::count_by_charges( native ) ) {
+        matches = actor.has_charges( native, requested_count, true );
+    } else if( requested_charges > 0 && requested_count == 0 ) {
+        matches = actor.has_charges( native, requested_charges, true );
+    } else {
+        const bool enough_charges = requested_charges == 0 ||
+                                    actor.has_charges(
+                                        native, requested_charges, true );
+        matches = enough_charges &&
+                  actor.has_amount( native, requested_count );
+    }
+    return make_game_value_result(
+               state, sol::make_object( state, matches ) );
+}
+
 sol::table inventory_has_items_sum(
     sol::this_state lua, const game_handle &character_handle,
     const sol::table &requested_entries,
@@ -3591,7 +3677,7 @@ sol::table inventory_has_items_sum(
             desired > maximum_inventory_resource_quantity ) {
             throw std::invalid_argument(
                 std::string( api_name ) +
-                " amount must be finite and within 0..1000000000" );
+                " amount must be finite and within (0, 1000000000]" );
         }
         entries.push_back( { id, desired } );
     }
@@ -3604,7 +3690,18 @@ sol::table inventory_has_items_sum(
     if( character == nullptr ) {
         return make_game_error_result( state, *error );
     }
-    const inventory available_inventory = character->crafting_inventory();
+    inventory available_inventory = character->crafting_inventory(
+                                        character->pos_bub(), pickup_range );
+    map &here = get_map();
+    for( const wrapped_vehicle &wv : here.get_vehicles() ) {
+        if( wv.v->owner == character->get_faction_id() ) {
+            for( const tripoint_abs_ms &veh_pt : wv.v->get_points() ) {
+                if( optional_vpart_position vp = here.veh_at( veh_pt ) ) {
+                    vp->form_inventory( here, available_inventory );
+                }
+            }
+        }
+    }
     double coverage = 0.0;
     for( const weighted_entry &entry : entries ) {
         const itype_id native( entry.id.value() );
@@ -3737,6 +3834,32 @@ sol::table inventory_has_item_flag(
     return make_game_value_result(
                state, sol::make_object(
                    state, character->has_item_with_flag(
+                       flag_id( requested_flag.value() ) ) ) );
+}
+
+sol::table inventory_has_item_type_flag(
+    sol::this_state lua, const game_handle &character_handle,
+    const script_game_id &requested_flag,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    if( requested_flag.kind() != "json_flag" ) {
+        throw std::invalid_argument(
+            "services.inventory.has_item_type_flag requires GameId<json_flag>" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_exact_character(
+                               character_handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    // Native item-flag conditions use cache_has_item_with(), which matches
+    // flags declared on item types and treats an invalid flag ID as no filter.
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, character->cache_has_item_with(
                        flag_id( requested_flag.value() ) ) ) );
 }
 
@@ -4193,6 +4316,128 @@ sol::table consume_inventory_items(
                    state, std::move( value ) ) );
 }
 
+sol::table consume_inventory_by_type(
+    sol::this_state lua, const game_handle &character_handle,
+    const script_game_id &type, const std::int64_t requested_count,
+    const std::int64_t requested_charges,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    require_id_kind(
+        type, "item", "services.inventory.consume_by_type" );
+    if( requested_count < std::numeric_limits<int>::min() ||
+        requested_count > std::numeric_limits<int>::max() ||
+        requested_charges < std::numeric_limits<int>::min() ||
+        requested_charges > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument(
+            "services.inventory.consume_by_type count and charges must fit native int" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_exact_character(
+                               character_handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    // Match the legacy ID path: an unknown but well-formed itype_id resolves
+    // through the native undefined-item template, then follows the ordinary
+    // amount check and missing-item popup path.
+    const itype_id native_type( type.value() );
+
+    int count = static_cast<int>( requested_count );
+    int charges = static_cast<int>( requested_charges );
+    if( charges == 0 && item::count_by_charges( native_type ) ) {
+        charges = count;
+        count = 0;
+    }
+
+    // The mutable Character mixin alone has no const inventory queries.
+    // Native dialogue constructs the complete avatar/NPC talker.
+    std::unique_ptr<talker> target = get_talker_for( *character );
+    bool matched = false;
+    bool changed = false;
+    if( count == 0 && charges > 0 &&
+        target->has_charges( native_type, charges, true ) ) {
+        target->use_charges( native_type, charges, true );
+        matched = true;
+        changed = true;
+    } else if( target->has_amount( native_type, count ) ) {
+        if( charges > 0 && target->has_charges( native_type, charges, true ) ) {
+            target->use_charges( native_type, charges, true );
+            changed = true;
+        }
+        const std::list<item> consumed = target->use_amount( native_type, count );
+        matched = true;
+        changed = changed || !consumed.empty();
+    }
+
+    sol::table value = state.create_table();
+    value["id"] = type;
+    value["count"] = count;
+    value["charges"] = charges;
+    value["matched"] = matched;
+    if( !matched ) {
+        const item missing_item( native_type );
+        popup( _( "%1$s doesn't have a %2$s!" ), target->disp_name(),
+               missing_item.tname() );
+    } else if( changed ) {
+        character->invalidate_crafting_inventory();
+        bump_item_query_mutation_epoch();
+    }
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+sol::table remove_inventory_items_by_type(
+    sol::this_state lua, const game_handle &character_handle,
+    const script_game_id &type,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    if( type.kind() != "item" ) {
+        throw std::invalid_argument(
+            "services.inventory.remove_type requires GameId<item>" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_exact_character(
+                               character_handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    // Match the native remove_items_with contract: an unknown item id simply
+    // matches nothing, and matching recursively covers inventory/equipment.
+    // Do not validate the native id here: the legacy predicate also receives
+    // the empty weapon slot, so the valid null item id must follow that path.
+    // Retire while each native item still has its original address: in
+    // particular, remove_weapon() moves from the Character's weapon slot.
+    const itype_id native_type( type.value() );
+    std::list<item> removed = character->remove_items_with(
+    [&native_type]( const item & entry ) {
+        if( entry.typeId() != native_type ) {
+            return false;
+        }
+        retire_item_handle_identity( const_cast<item &>( entry ) );
+        return true;
+    } );
+    if( !removed.empty() ) {
+        character->invalidate_crafting_inventory();
+        bump_item_query_mutation_epoch();
+    }
+
+    sol::table value = state.create_table();
+    value["id"] = type;
+    value["removed"] = removed.size();
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
 sol::table hand_in_inventory_items(
     sol::this_state lua, const game_handle &character_handle,
     const game_handle &recipient_handle,
@@ -4237,6 +4482,98 @@ sol::table hand_in_inventory_items(
                               item::nname( native_type, display_count ) );
     }
     return result;
+}
+
+sol::table transfer_inventory_items_by_type(
+    sol::this_state lua, const game_handle &character_handle,
+    const game_handle &recipient_handle, const script_game_id &type,
+    const std::int64_t requested_count,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    constexpr std::string_view api_name =
+        "services.inventory.transfer_by_type";
+    require_id_kind( type, "item", std::string( api_name ) );
+    if( requested_count <= 0 ||
+        requested_count > maximum_inventory_resource_quantity ||
+        requested_count > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument(
+            "services.inventory.transfer_by_type count must be within 1..1000000000" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_exact_character(
+                               character_handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    Character *recipient = resolve_exact_character(
+                               recipient_handle, runtime_generation,
+                               world_generation, error );
+    if( recipient == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    const itype_id native_type( type.value() );
+    const int count = static_cast<int>( requested_count );
+    const bool use_charge_path = item::count_by_charges( native_type ) &&
+                                 character->has_charges( native_type, count );
+    const bool use_item_path = !use_charge_path &&
+                               character->has_amount( native_type, count );
+    const std::string_view transfer_kind = use_charge_path ? "charges" :
+                                           use_item_path ? "items" : "none";
+
+    sol::table value = state.create_table();
+    value["id"] = type;
+    value["count"] = count;
+    value["matched"] = transfer_kind != "none";
+    value["kind"] = std::string( transfer_kind );
+    if( transfer_kind == "none" ) {
+        value["fragments"] = 0;
+        value["notice"] = string_format(
+                              to_translation( "You don't have a %1$s!" ).translated(),
+                              item::nname( native_type ) );
+        return make_game_value_result(
+                   state, sol::make_object( state, std::move( value ) ) );
+    }
+
+    // Resolve ownership only once native inventory selection has succeeded;
+    // the missing-item branch above does not require a recipient faction.
+    faction *recipient_faction = recipient->get_faction();
+    if( recipient_faction == nullptr ) {
+        return make_game_error_result( state, {
+            "missing_faction",
+            "The recipient Character has no faction to own transferred items"
+        } );
+    }
+    std::list<item> transferred = use_charge_path ?
+                                  character->use_charges( native_type, count ) :
+                                  character->use_amount( native_type, count );
+    const std::size_t fragment_count = transferred.size();
+    for( item &entry : transferred ) {
+        entry.set_owner( recipient_faction->id );
+        // Match the native f_u_sell_item call, which passes each lvalue
+        // fragment to Character::i_add and lets that API take its copy.
+        recipient->i_add( entry );
+    }
+    character->invalidate_crafting_inventory();
+    recipient->invalidate_crafting_inventory();
+    bump_item_query_mutation_epoch();
+
+    value["fragments"] = fragment_count;
+    if( count == 1 ) {
+        value["notice"] = string_format(
+                              to_translation( "You give %1$s a %2$s." ).translated(),
+                              recipient->disp_name(), item::nname( native_type ) );
+    } else {
+        value["notice"] = string_format(
+                              to_translation( "You give %1$s %2$d %3$s." ).translated(),
+                              recipient->disp_name(), count,
+                              item::nname( native_type, count ) );
+    }
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
 }
 
 sol::table consume_inventory_sum(
@@ -4337,6 +4674,143 @@ sol::table consume_inventory_sum(
     value["fulfilled"] = coverage >= 1.0;
     value["coverage"] = std::min( coverage, 1.0 );
     value["consumed"] = std::move( consumed );
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, std::move( value ) ) );
+}
+
+sol::table consume_dialogue_inventory_sum(
+    sol::this_state lua, const sol::optional<game_handle> &alpha_handle,
+    const sol::optional<game_handle> &beta_handle,
+    const std::string &participant, const sol::table &requested_entries,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    if( participant != "alpha" && participant != "beta" ) {
+        throw std::invalid_argument(
+            "services.inventory.consume_dialogue_sum participant must be alpha or beta" );
+    }
+    const std::size_t entry_count = requested_entries.size();
+    if( entry_count > maximum_inventory_sum_entries ) {
+        throw std::invalid_argument(
+            "services.inventory.consume_dialogue_sum accepts at most 128 weighted item entries" );
+    }
+    struct weighted_entry {
+        script_game_id id;
+        double desired = 0.0;
+    };
+    std::vector<weighted_entry> entries;
+    entries.reserve( entry_count );
+    for( std::size_t index = 1; index <= entry_count; ++index ) {
+        const sol::object row_object = requested_entries[index];
+        if( !row_object.is<sol::table>() ) {
+            throw std::invalid_argument(
+                "services.inventory.consume_dialogue_sum entries must be a dense table array" );
+        }
+        const sol::table row = row_object.as<sol::table>();
+        const sol::object id_object = row["item"];
+        const sol::object amount_object = row["amount"];
+        if( !id_object.is<script_game_id>() ||
+            amount_object.get_type() != sol::type::number ) {
+            throw std::invalid_argument(
+                "services.inventory.consume_dialogue_sum entries require item and numeric amount fields" );
+        }
+        const script_game_id &id = id_object.as<script_game_id>();
+        // Native itype_id accepts an unknown static item string and simply
+        // matches no candidates.  Keep this API's check to the ID namespace;
+        // require_id_kind would reject unknown IDs and change that no-op.
+        if( id.kind() != "item" ) {
+            throw std::invalid_argument(
+                "services.inventory.consume_dialogue_sum requires GameId<item> entries" );
+        }
+        const double desired = amount_object.as<double>();
+        if( !std::isfinite( desired ) || desired <= 0.0 ||
+            desired > maximum_inventory_resource_quantity ) {
+            throw std::invalid_argument(
+                "services.inventory.consume_dialogue_sum amount must be finite, positive, and within native integer bounds" );
+        }
+        entries.push_back( { id, desired } );
+    }
+
+    const game_handle *selected_handle = nullptr;
+    if( participant == "alpha" ) {
+        selected_handle = alpha_handle ? &*alpha_handle :
+                          beta_handle ? &*beta_handle : nullptr;
+    } else {
+        selected_handle = beta_handle ? &*beta_handle :
+                          alpha_handle ? &*alpha_handle : nullptr;
+    }
+
+    sol::state_view state( lua );
+    if( selected_handle == nullptr ) {
+        return make_game_error_result( state, {
+            "missing_actor",
+            "services.inventory.consume_dialogue_sum requires at least one dialogue Character"
+        } );
+    }
+    std::optional<game_handle_error> error;
+    Character *character = resolve_exact_character(
+                               *selected_handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    const auto legal_to_consume = [character]( const item & entry ) {
+        return entry.is_owned_by( *character );
+    };
+    std::unordered_set<item_location> all_items = get_map().all_items(
+                legal_to_consume, *character,
+                Access_Inventory | Access_Map_Around | Access_Vehicle );
+    double coverage = 0.0;
+    int removed_items = 0;
+    int modified_charge_stacks = 0;
+    bool changed = false;
+    for( const weighted_entry &entry : entries ) {
+        const itype_id item_to_remove( entry.id.value() );
+        auto iter = all_items.begin();
+        while( iter != all_items.end() && coverage < 1.0 ) {
+            item_location location = *iter;
+            if( location && location->typeId() == item_to_remove ) {
+                const int available = location->count_by_charges() ?
+                                      location->charges : 1;
+                const int amount_to_remove = std::min(
+                                                 available,
+                                                 static_cast<int>( std::ceil(
+                                                         ( 1.0 - coverage ) * entry.desired ) ) );
+                coverage += amount_to_remove / entry.desired;
+
+                if( amount_to_remove >= available ) {
+                    location->spill_contents( location.pos_bub( get_map() ) );
+                    retire_item_handle_identity( *location );
+                    location.remove_item();
+                    iter = all_items.erase( iter );
+                    ++removed_items;
+                    changed = true;
+                } else {
+                    location->mod_charges( -amount_to_remove );
+                    ++iter;
+                    if( amount_to_remove != 0 ) {
+                        ++modified_charge_stacks;
+                        changed = true;
+                    }
+                }
+            } else {
+                ++iter;
+            }
+        }
+    }
+
+    if( changed ) {
+        character->invalidate_crafting_inventory();
+        bump_item_query_mutation_epoch();
+    }
+    sol::table value = state.create_table();
+    value["coverage"] = coverage;
+    value["fulfilled"] = coverage >= 1.0;
+    value["changed"] = changed;
+    value["removed_items"] = removed_items;
+    value["modified_charge_stacks"] = modified_charge_stacks;
     return make_game_value_result(
                state, sol::make_object(
                    state, std::move( value ) ) );
@@ -5725,6 +6199,44 @@ sol::table perform_equipment_transaction(
     return result;
 }
 
+sol::table equipment_stow_current_weapon(
+    sol::this_state lua, const game_handle &actor_handle,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state_view( lua );
+    std::optional<game_handle_error> error;
+    Character *actor = resolve_exact_character(
+                           actor_handle, runtime_generation,
+                           world_generation, error );
+    if( actor == nullptr ) {
+        return make_game_error_result( state_view, *error );
+    }
+    if( const std::optional<game_handle_error> identity_error =
+            require_equipment_character_identity(
+                actor_handle, *actor, "actor" ) ) {
+        return make_game_error_result( state_view, *identity_error );
+    }
+
+    sol::table value = state_view.create_table();
+    value["invoked"] = true;
+    // Match player_weapon_away's action directly; can_stash_weapon is only a
+    // response condition and is not a precondition on the native effect.
+    const std::optional<bionic *> weapon_bionic =
+        actor->find_bionic_by_uid( actor->get_weapon_bionic_uid() );
+    if( weapon_bionic ) {
+        value["path"] = "weapon_bionic";
+        value["bionic_deactivated"] =
+            actor->deactivate_bionic( **weapon_bionic );
+    } else {
+        value["path"] = "remove_weapon_i_add";
+        actor->i_add( actor->remove_weapon() );
+    }
+    bump_item_query_mutation_epoch();
+    return make_game_value_result(
+               state_view, sol::make_object( state_view, std::move( value ) ) );
+}
+
 } // namespace
 
 void bump_item_query_mutation_epoch()
@@ -7081,6 +7593,17 @@ void install_item_api(
                    current_world_generation() );
     } );
     items.set_function(
+        "has_ammo",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & item_handle,
+    const game_handle & character ) {
+        require_read();
+        return item_has_ammo(
+                   lua_state, item_handle, character,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    items.set_function(
         "ammo_sufficient",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state, const game_handle & item_handle,
@@ -7299,6 +7822,18 @@ void install_item_api(
                    current_world_generation() );
     } );
     inventory.set_function(
+        "has_items",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & character,
+            const script_game_id & type, const std::int64_t count,
+    const std::int64_t charges ) {
+        require_read();
+        return inventory_has_items(
+                   lua_state, character, type, count, charges,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    inventory.set_function(
         "has_items_sum",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state,
@@ -7358,6 +7893,18 @@ void install_item_api(
     const script_game_id & flag ) {
         require_read();
         return inventory_has_item_flag(
+                   lua_state, character, flag,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    inventory.set_function(
+        "has_item_type_flag",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state,
+            const game_handle & character,
+    const script_game_id & flag ) {
+        require_read();
+        return inventory_has_item_type_flag(
                    lua_state, character, flag,
                    current_runtime_generation(),
                    current_world_generation() );
@@ -7465,6 +8012,32 @@ void install_item_api(
                    current_world_generation() );
     } );
     inventory.set_function(
+        "consume_by_type",
+        [current_runtime_generation, current_world_generation, require_item_write](
+            sol::this_state lua_state,
+            const game_handle & character,
+            const script_game_id & type,
+            const std::int64_t count,
+    const std::int64_t charges ) {
+        require_item_write();
+        return consume_inventory_by_type(
+                   lua_state, character, type, count, charges,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    inventory.set_function(
+        "remove_type",
+        [current_runtime_generation, current_world_generation, require_item_write](
+            sol::this_state lua_state,
+            const game_handle & character,
+    const script_game_id & type ) {
+        require_item_write();
+        return remove_inventory_items_by_type(
+                   lua_state, character, type,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    inventory.set_function(
         "hand_in",
         [current_runtime_generation, current_world_generation, require_item_write](
             sol::this_state lua_state,
@@ -7481,6 +8054,20 @@ void install_item_api(
                    current_world_generation() );
     } );
     inventory.set_function(
+        "transfer_by_type",
+        [current_runtime_generation, current_world_generation, require_item_write](
+            sol::this_state lua_state,
+            const game_handle & character,
+            const game_handle & recipient,
+            const script_game_id & type,
+    const std::int64_t count ) {
+        require_item_write();
+        return transfer_inventory_items_by_type(
+                   lua_state, character, recipient, type, count,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    inventory.set_function(
         "consume_sum",
         [current_runtime_generation, current_world_generation, require_item_write](
             sol::this_state lua_state,
@@ -7489,6 +8076,20 @@ void install_item_api(
         require_item_write();
         return consume_inventory_sum(
                    lua_state, character, entries,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    inventory.set_function(
+        "consume_dialogue_sum",
+        [current_runtime_generation, current_world_generation, require_item_write](
+            sol::this_state lua_state,
+            const sol::optional<game_handle> &alpha,
+            const sol::optional<game_handle> &beta,
+            const std::string & participant,
+    const sol::table & entries ) {
+        require_item_write();
+        return consume_dialogue_inventory_sum(
+                   lua_state, alpha, beta, participant, entries,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
@@ -7537,6 +8138,16 @@ void install_item_api(
                    lua_state, actor, item_handle, nullptr,
                    destination_holder, equipment_operation::unequip,
                    current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    equipment.set_function(
+        "stow_current_weapon",
+        [current_runtime_generation, current_world_generation, require_item_write](
+            sol::this_state lua_state,
+    const game_handle & actor ) {
+        require_item_write();
+        return equipment_stow_current_weapon(
+                   lua_state, actor, current_runtime_generation(),
                    current_world_generation() );
     } );
     services["equipment"] = std::move( equipment );

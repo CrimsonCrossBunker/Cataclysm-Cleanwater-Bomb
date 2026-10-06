@@ -4,6 +4,7 @@
 
 #include <character_id.h>
 #include <dialogue_chatbin.h>
+
 extern "C" {
 #include <lua.h>
 }
@@ -15,6 +16,7 @@ extern "C" {
 #include <exception>
 #include <iterator>
 #include <limits>
+#include <list>
 #include <map>
 #include <memory>
 #include <optional>
@@ -31,9 +33,13 @@ extern "C" {
 #include "character.h"
 #include "character_martial_arts.h"
 #include "creature.h"
+#include "enum_conversions.h"
 #include "faction.h"
+#include "item.h"
+#include "item_location.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
+#include "lua_platform_items.h"
 #include "lua_platform_missions.h"
 #include "mission.h"
 #include "npc.h"
@@ -42,16 +48,18 @@ extern "C" {
 #include "player_activity.h"
 #include "type_id.h"
 
+static const activity_id ACT_TRAIN( "ACT_TRAIN" );
+static const efftype_id effect_bite( "bite" );
+static const efftype_id effect_bleed( "bleed" );
+static const efftype_id effect_currently_busy( "currently_busy" );
+static const efftype_id effect_infected( "infected" );
+
 namespace cata::lua_platform
 {
 
 namespace
 {
 
-const efftype_id effect_bite( "bite" );
-const efftype_id effect_bleed( "bleed" );
-const efftype_id effect_currently_busy( "currently_busy" );
-const efftype_id effect_infected( "infected" );
 constexpr std::size_t maximum_npc_mission_results = 256;
 constexpr std::size_t maximum_training_students = 64;
 
@@ -69,6 +77,30 @@ void commit_generic_mission_reward(
 {
     provider.op_of_u.owed = owed_after;
     entry.commit_generic_reward_claim();
+}
+
+void collect_stolen_item_subtree_for_retirement(
+    item &entry, std::vector<item *> &items )
+{
+    items.push_back( &entry );
+    for( item *const contained : entry.all_items_top() ) {
+        collect_stolen_item_subtree_for_retirement( *contained, items );
+    }
+}
+
+void collect_stolen_item_identities(
+    item &entry, npc &owner, std::vector<item *> &items )
+{
+    if( entry.is_old_owner( owner ) ) {
+        // The native talk function removes a matching item before it visits
+        // its contents.  The complete subtree moves with it and all handles
+        // into the old inventory tree must become stale.
+        collect_stolen_item_subtree_for_retirement( entry, items );
+    } else if( entry.is_container() ) {
+        for( item *const contained : entry.all_items_top() ) {
+            collect_stolen_item_identities( *contained, owner, items );
+        }
+    }
 }
 
 sol::table character_service_state(
@@ -108,7 +140,7 @@ sol::table provider_service_state(
     sol::state_view lua, npc &provider )
 {
     sol::table result = character_service_state(
-                            lua, provider );
+                            std::move( lua ), provider );
     result["owed"] = provider.op_of_u.owed;
     result["attitude"] = static_cast<int>(
                              provider.get_attitude() );
@@ -469,7 +501,8 @@ sol::table npc_mission_collection(
     sol::state_view lua, const std::vector<mission *> &source,
     const character_id &provider_id,
     const game_handle_runtime &runtime_generation,
-    const std::size_t world_generation )
+    const std::size_t world_generation,
+    const std::optional<character_id> &assigned_owner = std::nullopt )
 {
     const std::size_t capacity = std::min(
                                      source.size(), maximum_npc_mission_results );
@@ -479,7 +512,9 @@ sol::table npc_mission_collection(
     std::size_t output = 0;
     for( mission *entry : source ) {
         if( !live_mission_pointer( entry ) ||
-            entry->get_npc_id() != provider_id ) {
+            entry->get_npc_id() != provider_id ||
+            ( assigned_owner &&
+              entry->get_assigned_player_id() != *assigned_owner ) ) {
             continue;
         }
         ++total;
@@ -602,6 +637,171 @@ sol::table get_npc_mission_provider_state(
                        state, *provider,
                        runtime_generation,
                        world_generation ) ) );
+}
+
+sol::table get_npc_mission_assigned_for_owner(
+    sol::this_state lua, const game_handle &provider_handle,
+    const game_handle &owner_handle,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    npc *provider = resolve_exact_npc(
+                        provider_handle, runtime_generation,
+                        world_generation, error );
+    if( provider == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    avatar *owner = resolve_exact_avatar(
+                        owner_handle, runtime_generation,
+                        world_generation, error );
+    if( owner == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    // Native dialogue snapshots assigned missions only for the talker's
+    // assigned player.  Return just that owner-filtered collection so callers
+    // cannot confuse provider-wide selection with dialogue-owned state.
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, npc_mission_collection(
+                       state, provider->chatbin.missions_assigned,
+                       provider->getID(), runtime_generation,
+                       world_generation, owner->getID() ) ) );
+}
+
+sol::table get_npc_mission_available_count(
+    sol::this_state lua, const game_handle &provider_handle,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    npc *provider = resolve_exact_npc(
+                        provider_handle, runtime_generation,
+                        world_generation, error );
+    if( provider == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    // Native talker_npc_const::available_missions returns this raw vector;
+    // its count includes entries omitted from the bounded live-item snapshot.
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, provider->chatbin.missions.size() ) );
+}
+
+sol::table get_npc_mission_selected_condition(
+    sol::this_state lua, const game_handle &provider_handle,
+    const game_handle &owner_handle, const std::string &predicate,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    if( predicate != "complete" && predicate != "incomplete" &&
+        predicate != "failed" ) {
+        return make_game_error_result( state, {
+            "invalid_predicate",
+            "NPC mission selected condition must be complete, incomplete, or failed"
+        } );
+    }
+    std::optional<game_handle_error> error;
+    npc *provider = resolve_exact_npc(
+                        provider_handle, runtime_generation,
+                        world_generation, error );
+    if( provider == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    avatar *owner = resolve_exact_avatar(
+                        owner_handle, runtime_generation,
+                        world_generation, error );
+    if( owner == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    mission *selected = provider->chatbin.mission_selected;
+    if( !live_mission_pointer( selected ) ) {
+        return make_game_value_result(
+                   state, sol::make_object( state, false ) );
+    }
+    // Compute only the requested native predicate.  is_complete can inspect
+    // world and inventory state; has_failed only checks mission status.
+    if( predicate == "complete" ) {
+        return make_game_value_result(
+                   state, sol::make_object( state,
+                                            selected->is_complete(
+                                                provider->getID(), *owner ) ) );
+    }
+    if( predicate == "incomplete" ) {
+        return make_game_value_result(
+                   state, sol::make_object( state,
+                                            !selected->is_complete(
+                                                provider->getID(), *owner ) ) );
+    }
+    return make_game_value_result(
+               state, sol::make_object( state, selected->has_failed() ) );
+}
+
+sol::table get_npc_mission_selected_has_goal(
+    sol::this_state lua, const game_handle &provider_handle,
+    const std::string &goal_name,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    npc *provider = resolve_exact_npc(
+                        provider_handle, runtime_generation,
+                        world_generation, error );
+    if( provider == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    mission *selected = provider->chatbin.mission_selected;
+    if( !live_mission_pointer( selected ) ) {
+        return make_game_value_result(
+                   state, sol::make_object( state, false ) );
+    }
+    const std::optional<mission_goal> requested_goal =
+        io::string_to_enum_optional<mission_goal>( goal_name );
+    if( !requested_goal ) {
+        return make_game_error_result( state, {
+            "invalid_mission_goal",
+            "Mission goal must be a native mission_goal enum name"
+        } );
+    }
+    return make_game_value_result(
+               state, sol::make_object(
+                   state, selected->get_type().goal == *requested_goal ) );
+}
+
+sol::table get_npc_mission_selected_has_generic_rewards(
+    sol::this_state lua, const game_handle &provider_handle,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    npc *provider = resolve_exact_npc(
+                        provider_handle, runtime_generation,
+                        world_generation, error );
+    if( provider == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    mission *selected = provider->chatbin.mission_selected;
+    if( selected == nullptr ) {
+        // f_mission_has_generic_rewards explicitly treats an empty selection
+        // as true (without reproducing its diagnostic message).  Keep a stale
+        // non-null pointer distinct from that case.
+        return make_game_value_result(
+                   state, sol::make_object( state, true ) );
+    }
+    if( !live_mission_pointer( selected ) ) {
+        return make_game_error_result( state, {
+            "stale_mission",
+            "The NPC selected mission no longer exists"
+        } );
+    }
+    return make_game_value_result(
+               state, sol::make_object( state, selected->has_generic_rewards() ) );
 }
 
 sol::table select_npc_mission(
@@ -1063,6 +1263,41 @@ sol::table run_selected_npc_mission_action(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
+sol::table open_selected_npc_mission_reward_trade(
+    sol::this_state lua, const game_handle &provider_handle,
+    const game_handle &owner_handle,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    npc *provider = resolve_exact_npc(
+                        provider_handle, runtime_generation,
+                        world_generation, error );
+    if( provider == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    avatar *owner = resolve_exact_avatar(
+                        owner_handle, runtime_generation,
+                        world_generation, error );
+    if( owner == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    if( owner != &get_avatar() ) {
+        return make_game_error_result( state, {
+            "unsupported_participants",
+            "The native mission reward trade requires the active avatar"
+        } );
+    }
+
+    // Preserve WRAP mission_reward exactly: it reads beta's selected mission,
+    // adds that mission's value to NPC debt, then opens the localized native
+    // reward trade.  In particular, do not route through claim_selected_reward,
+    // which validates and commits a generic-reward claim instead.
+    talk_function::mission_reward( *provider );
+    return make_game_value_result( state, sol::make_object( state, true ) );
+}
+
 sol::table finish_npc_dialogue(
     sol::this_state lua, const game_handle &handle,
     const game_handle_runtime &runtime_generation,
@@ -1227,6 +1462,91 @@ sol::table choose_npc_combat_style(
                           "martial_art", before.str() );
     value["after"] = script_game_id(
                          "martial_art", after.str() );
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table drop_npc_weapon(
+    sol::this_state lua, const game_handle &handle,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    npc *entry = resolve_exact_npc(
+                     handle, runtime_generation,
+                     world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    const bool hallucination = entry->is_hallucination();
+    item_location wielded = entry->get_wielded_item();
+    const bool dropped = !hallucination && static_cast<bool>( wielded );
+    if( dropped ) {
+        retire_item_handle_identity( *wielded );
+    }
+    // Keep the native talk-effect behavior: hallucinations are ignored and
+    // the NPC's weapon is removed directly onto its current map tile.  This
+    // deliberately does not use orders.run(), whose public order rejects an
+    // unarmed NPC before reaching the native remove-and-map-drop path.
+    talk_function::drop_weapon( *entry );
+    if( dropped ) {
+        entry->invalidate_crafting_inventory();
+    }
+    if( !hallucination ) {
+        // The legacy function also calls map::add_item_or_charges with the
+        // null weapon on an unarmed NPC, so item-query continuations must be
+        // invalidated for every non-hallucination call, not only real drops.
+        bump_item_query_mutation_epoch();
+    }
+
+    sol::table value = state.create_table();
+    value["dropped"] = dropped;
+    return make_game_value_result(
+               state, sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table drop_stolen_npc_items(
+    sol::this_state lua, const game_handle &handle,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    npc *entry = resolve_exact_npc(
+                     handle, runtime_generation,
+                     world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    Character &player_character = get_player_character();
+    std::vector<item *> stolen_items;
+    if( entry->get_faction() != nullptr ) {
+        for( item *const candidate : player_character.inv_dump() ) {
+            collect_stolen_item_identities( *candidate, *entry, stolen_items );
+        }
+    }
+    const bool dropped = !stolen_items.empty();
+    const bool had_claim = entry->known_stolen_item != nullptr;
+    for( item *const stolen_item : stolen_items ) {
+        retire_item_handle_identity( *stolen_item );
+    }
+
+    // Preserve the native operation as the single owner of item selection,
+    // recursive removal, ownership transfer, map placement and NPC state.
+    talk_function::drop_stolen_item( *entry );
+    if( dropped ) {
+        player_character.invalidate_crafting_inventory();
+        bump_item_query_mutation_epoch();
+    }
+
+    sol::table value = state.create_table();
+    value["dropped"] = dropped;
+    value["claim_cleared"] = had_claim;
+    value["attitude"] = npc_attitude_id(
+                            entry->get_attitude() );
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
@@ -1574,12 +1894,10 @@ sol::table start_npc_training(
         teacher->activity ?
         teacher->activity.id().str() :
         std::string();
-    static const activity_id training_activity(
-        "ACT_TRAIN" );
     sol::table value = state.create_table();
     value["started"] =
         teacher->activity &&
-        teacher->activity.id() == training_activity;
+        teacher->activity.id() == ACT_TRAIN;
     value["teacher"] = teacher_handle;
     value["subject"] = subject;
     value["student_count"] = students.size();
@@ -1643,8 +1961,6 @@ sol::table start_selected_npc_training(
     } else {
         talk_function::start_training( *provider );
     }
-    static const activity_id training_activity(
-        "ACT_TRAIN" );
     sol::table value = state.create_table();
     value["mode"] = mode;
     value["provider"] = provider_handle;
@@ -1652,11 +1968,11 @@ sol::table start_selected_npc_training(
     value["provider_training"] =
         provider->activity &&
         provider->activity.id() ==
-        training_activity;
+        ACT_TRAIN;
     value["player_training"] =
         student->activity &&
         student->activity.id() ==
-        training_activity;
+        ACT_TRAIN;
     return make_game_value_result(
                state, sol::make_object(
                    state, std::move( value ) ) );
@@ -1666,10 +1982,10 @@ sol::table start_selected_npc_training(
 
 void install_npc_domain_services(
     sol::table &npcs,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write )
 {
     sol::state_view lua( npcs.lua_state() );
 
@@ -1793,6 +2109,59 @@ void install_npc_domain_services(
                    current_world_generation() );
     } );
     missions.set_function(
+        "assigned_for_owner",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state state, const game_handle & provider,
+    const game_handle & owner ) {
+        require_read();
+        return get_npc_mission_assigned_for_owner(
+                   state, provider, owner,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    missions.set_function(
+        "available_count",
+        [current_runtime_generation, current_world_generation, require_read](
+    sol::this_state state, const game_handle & provider ) {
+        require_read();
+        return get_npc_mission_available_count(
+                   state, provider,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    missions.set_function(
+        "selected_condition",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state state, const game_handle & provider,
+    const game_handle & owner, const std::string & predicate ) {
+        require_read();
+        return get_npc_mission_selected_condition(
+                   state, provider, owner, predicate,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    missions.set_function(
+        "selected_has_goal",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state state, const game_handle & provider,
+    const std::string & goal_name ) {
+        require_read();
+        return get_npc_mission_selected_has_goal(
+                   state, provider, goal_name,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    missions.set_function(
+        "selected_has_generic_rewards",
+        [current_runtime_generation, current_world_generation, require_read](
+    sol::this_state state, const game_handle & provider ) {
+        require_read();
+        return get_npc_mission_selected_has_generic_rewards(
+                   state, provider,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    missions.set_function(
         "select",
         [current_runtime_generation, current_world_generation, require_write](
             sol::this_state state, const game_handle & provider,
@@ -1883,6 +2252,17 @@ void install_npc_domain_services(
                    current_runtime_generation(),
                    current_world_generation() );
     } );
+    missions.set_function(
+        "open_selected_reward_trade",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state state, const game_handle & provider,
+    const game_handle & owner ) {
+        require_write();
+        return open_selected_npc_mission_reward_trade(
+                   state, provider, owner,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
     npcs["missions"] = std::move( missions );
 
     sol::table dialogue = lua.create_table();
@@ -1907,6 +2287,27 @@ void install_npc_domain_services(
                    current_world_generation() );
     } );
     npcs["dialogue"] = std::move( dialogue );
+
+    npcs.set_function(
+        "drop_weapon",
+        [current_runtime_generation, current_world_generation, require_write](
+    sol::this_state state, const game_handle & handle ) {
+        require_write();
+        return drop_npc_weapon(
+                   state, handle,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    npcs.set_function(
+        "drop_stolen_items",
+        [current_runtime_generation, current_world_generation, require_write](
+    sol::this_state state, const game_handle & handle ) {
+        require_write();
+        return drop_stolen_npc_items(
+                   state, handle,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
 
     sol::table orders = lua.create_table();
     orders.set_function(

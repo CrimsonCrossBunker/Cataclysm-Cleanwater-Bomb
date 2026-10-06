@@ -15,6 +15,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <map>
 #include <memory>
 #include <optional>
@@ -215,6 +216,8 @@ std::vector<const vehicle_prototype *> matching_definitions(
         result.begin(), result.end(),
         []( const vehicle_prototype * lhs,
     const vehicle_prototype * rhs ) {
+        // IDs retain byte order independently of the UI locale.
+        // NOLINTNEXTLINE(cata-use-localized-sorting)
         return lhs->id.str() < rhs->id.str();
     } );
     return result;
@@ -352,6 +355,22 @@ tripoint_bub_ms require_loaded_position(
             " requires an absolute map-square Tripoint" );
     }
     const tripoint_abs_ms absolute( position.to_native() );
+    const tripoint_abs_ms map_origin =
+        here.get_abs( tripoint_bub_ms( 0, 0, 0 ) );
+    // Wide coordinate calculations must retain all 64 bits before native conversion.
+    // NOLINTNEXTLINE(cata-combine-locals-into-point)
+    const std::int64_t local_x = static_cast<std::int64_t>( absolute.x() ) -
+                                 map_origin.x();
+    const std::int64_t local_y = static_cast<std::int64_t>( absolute.y() ) -
+                                 map_origin.y();
+    if( local_x < std::numeric_limits<int>::min() ||
+        local_x > std::numeric_limits<int>::max() ||
+        local_y < std::numeric_limits<int>::min() ||
+        local_y > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument(
+            std::string( api_name ) +
+            " position is outside the active map's native coordinate range" );
+    }
     if( !here.inbounds( absolute ) ) {
         throw std::invalid_argument(
             std::string( api_name ) +
@@ -819,7 +838,7 @@ sol::table list_vehicle_fuels(
                    state, std::move( value ) ) );
 }
 
-void validate_vehicle_name( const std::string &name )
+void validate_vehicle_name( const std::string_view name )
 {
     if( name.empty() ) {
         throw std::invalid_argument(
@@ -1217,7 +1236,7 @@ vehicle_spawn_options read_vehicle_spawn_options(
                 throw std::invalid_argument(
                     "services.vehicles.spawn owner must be a GameId<faction>" );
             }
-            const script_game_id id = owner.as<script_game_id>();
+            const script_game_id &id = owner.as<script_game_id>();
             if( id.kind() != "faction" || !id.is_valid() ) {
                 throw std::invalid_argument(
                     "services.vehicles.spawn owner must be a valid GameId<faction>" );
@@ -1518,10 +1537,10 @@ sol::table open_part_service(
 
 void install_vehicle_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write )
 {
     static_cast<void>( current_runtime_generation );
     static_cast<void>( current_world_generation );

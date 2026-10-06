@@ -13,8 +13,8 @@ namespace cata::lua_platform
 // snapshots and checked world-clock controls.
 void install_time_api(
     sol::table &services,
-    std::function<void()> require_read,
-    std::function<void()> require_write );
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write );
 
 } // namespace cata::lua_platform
 

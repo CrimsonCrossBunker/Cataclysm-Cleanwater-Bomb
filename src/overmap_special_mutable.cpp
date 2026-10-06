@@ -1,5 +1,12 @@
 #include "omdata.h" // IWYU pragma: associated
 
+#include "cube_direction.h"
+#include "flat_set.h"
+#include "flexbuffer_json.h"
+#include "mapgen_parameter.h"
+#include "point.h"
+#include "translation.h"
+#include "type_id.h"
 #include <algorithm>
 #include <functional>
 #include <list>
@@ -26,6 +33,8 @@
 #include "rng.h"
 #include "string_formatter.h"
 #include "weighted_list.h"
+
+struct overmap_location;
 
 template<>
 struct enum_traits<join_type> {
@@ -909,8 +918,8 @@ special_placement_result mutable_overmap_special_data::place(
         } else {
             target = om.get_fallback_road_connection_point();
         }
-        om.build_connection( target, pos.xy(), pos.z(), *elem.connection, must_be_unexplored,
-                             connection_dir );
+        om.build_special_connection( target, pos, *elem.connection, must_be_unexplored,
+                                     connection_dir );
     }
 
     return { result, unresolved.all_used() };

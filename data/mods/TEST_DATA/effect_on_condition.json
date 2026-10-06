@@ -20,6 +20,16 @@
   },
   {
     "type": "effect_on_condition",
+    "id": "EOC_TEST_U_TRANSFORM_RADIUS_ACTOR",
+    "effect": [ { "u_transform_radius": 0, "ter_furn_transform": "test_grass_transform" } ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_TEST_NPC_TRANSFORM_RADIUS_ACTOR",
+    "effect": [ { "npc_transform_radius": 0, "ter_furn_transform": "test_grass_transform" } ]
+  },
+  {
+    "type": "effect_on_condition",
     "id": "EOC_TEST_TRANSFORM_LINE",
     "global": true,
     "effect": [

@@ -9,6 +9,7 @@ extern "C" {
 #include <translation.h>
 #include <algorithm>
 #include <atomic>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -31,6 +32,7 @@ extern "C" {
 #include "lua_platform_bindings_enums.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
+#include "map_iterator.h"
 #include "omdata.h"
 #include "overmap.h"
 #include "overmapbuffer.h"
@@ -76,12 +78,30 @@ constexpr int maximum_search_limit = 256;
 constexpr std::size_t maximum_search_offset = 1000000;
 constexpr std::size_t maximum_search_selectors = 16;
 constexpr std::size_t maximum_selector_bytes = 256;
+// point.cpp's square-ring sizing keeps (2 * radius + 1)^2 in a signed int.
+constexpr int maximum_native_square_search_radius = 23169;
 constexpr std::size_t maximum_note_width = 1024;
 constexpr std::size_t maximum_note_bytes = 4096;
 constexpr int maximum_note_danger_radius = 100;
 constexpr int maximum_reveal_radius = 30;
+// Covers the largest current source radius (EOC_CHECK_MAP_CACHE uses rng(11, 36))
+// while bounding work and keeping overmapbuffer::reveal's radius square safe.
+constexpr int maximum_native_reveal_radius = 36;
+constexpr int maximum_location_near_radius = 30;
 constexpr std::size_t initial_overmap_tile_owner_generation = 1;
 constexpr std::size_t initial_overmap_mutation_epoch = 1;
+
+int checked_axis_offset( const int value, const int offset,
+                         const std::string &api_name )
+{
+    const std::int64_t result = static_cast<std::int64_t>( value ) + offset;
+    if( result < std::numeric_limits<int>::min() ||
+        result > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument(
+            api_name + " query bounds overflow native coordinates" );
+    }
+    return static_cast<int>( result );
+}
 
 struct overmap_tile_position_less {
     bool operator()( const tripoint_abs_omt &lhs,
@@ -187,6 +207,14 @@ bool same_overmap_tile_owner(
 struct terrain_selector {
     std::string terrain;
     ot_match_type match = ot_match_type::type;
+};
+
+struct overmap_target_options {
+    bool random = false;
+    int search_range = OMAPX * 3;
+    int min_distance = 0;
+    std::optional<int> z;
+    std::optional<tripoint_rel_omt> offset;
 };
 
 struct overmap_search_options {
@@ -351,13 +379,85 @@ terrain_selector read_selector(
                                  api_name );
         } else {
             throw std::invalid_argument(
-                api_name +
-                " selector received unknown key '" + key + "'" );
+                std::string( api_name ).append( " selector received unknown key '" ).append( key ).append( "'" ) );
         }
     }
     if( !has_terrain ) {
         throw std::invalid_argument(
             api_name + " selector requires terrain" );
+    }
+    if( explicit_match ) {
+        result.match = *explicit_match;
+    }
+    return result;
+}
+
+terrain_selector read_target_selector(
+    const sol::object &requested,
+    const std::string &api_name )
+{
+    terrain_selector result;
+    bool has_terrain = false;
+    std::optional<ot_match_type> explicit_match;
+    const auto read_terrain = [&]( const sol::object & value ) {
+        if( value.is<std::string>() ) {
+            return value.as<std::string>();
+        }
+        if( value.is<script_game_id>() ) {
+            const script_game_id &id =
+                value.as<const script_game_id &>();
+            if( id.kind() != "overmap_terrain" ||
+                !id.is_valid() ) {
+                throw std::invalid_argument(
+                    api_name +
+                    " requires GameId<overmap_terrain>" );
+            }
+            return id.value();
+        }
+        throw std::invalid_argument(
+            api_name +
+            " selector terrain must be a string or GameId<overmap_terrain>" );
+    };
+
+    if( requested.is<std::string>() ||
+        requested.is<script_game_id>() ) {
+        result.terrain = read_terrain( requested );
+        return result;
+    }
+    if( !requested.is<sol::table>() ) {
+        throw std::invalid_argument(
+            api_name +
+            " selector must be a string, GameId<overmap_terrain>, or table" );
+    }
+
+    const sol::table table = requested.as<sol::table>();
+    for( const auto &entry : table ) {
+        const sol::object key_object = entry.first;
+        if( key_object.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                api_name + " selector keys must be strings" );
+        }
+        const std::string key = key_object.as<std::string>();
+        if( key == "terrain" ) {
+            result.terrain = read_terrain( entry.second );
+            has_terrain = true;
+        } else if( key == "match" ) {
+            if( !entry.second.is<script_enum_value>() ) {
+                throw std::invalid_argument(
+                    api_name +
+                    " selector match must be GameEnum<OtMatchType>" );
+            }
+            explicit_match = require_match_type(
+                                 entry.second.as<const script_enum_value &>(),
+                                 api_name );
+        } else {
+            throw std::invalid_argument(
+                std::string( api_name ).append( " selector received unknown key '" ).append( key ).append( "'" ) );
+        }
+    }
+    if( !has_terrain ) {
+        throw std::invalid_argument(
+            api_name + " selector table requires terrain" );
     }
     if( explicit_match ) {
         result.match = *explicit_match;
@@ -372,8 +472,8 @@ std::vector<terrain_selector> read_selectors(
 {
     if( !requested.is<sol::table>() ) {
         throw std::invalid_argument(
-            api_name + " option '" + option_name +
-            "' must be an array" );
+            std::string( api_name ).append( " option '" ).append(
+                option_name ).append( "' must be an array" ) );
     }
     std::vector<std::pair<std::size_t, terrain_selector>>
             ordered;
@@ -382,8 +482,8 @@ std::vector<terrain_selector> read_selectors(
         const sol::object key_object = entry.first;
         if( !key_object.is<lua_Integer>() ) {
             throw std::invalid_argument(
-                api_name + " option '" + option_name +
-                "' must use consecutive integer keys" );
+                std::string( api_name ).append( " option '" ).append(
+                    option_name ).append( "' must use consecutive integer keys" ) );
         }
         const lua_Integer raw_index =
             key_object.as<lua_Integer>();
@@ -392,15 +492,14 @@ std::vector<terrain_selector> read_selectors(
             static_cast<lua_Integer>(
                 maximum_search_selectors ) ) {
             throw std::invalid_argument(
-                api_name + " option '" + option_name +
-                "' supports at most 16 selectors" );
+                std::string( api_name ).append( " option '" ).append(
+                    option_name ).append( "' supports at most 16 selectors" ) );
         }
         ordered.emplace_back(
             static_cast<std::size_t>( raw_index ),
             read_selector(
                 entry.second,
-                api_name + " option '" +
-                option_name + "'" ) );
+                std::string( api_name ).append( " option '" ).append( option_name ).append( "'" ) ) );
     }
     std::sort(
         ordered.begin(), ordered.end(),
@@ -413,8 +512,8 @@ std::vector<terrain_selector> read_selectors(
          index < ordered.size(); ++index ) {
         if( ordered[index].first != index + 1 ) {
             throw std::invalid_argument(
-                api_name + " option '" + option_name +
-                "' must use consecutive integer keys" );
+                std::string( api_name ).append( " option '" ).append(
+                    option_name ).append( "' must use consecutive integer keys" ) );
         }
         result.push_back(
             std::move( ordered[index].second ) );
@@ -429,18 +528,50 @@ int require_integer(
 {
     if( !requested.is<lua_Integer>() ) {
         throw std::invalid_argument(
-            api_name + " option '" + option_name +
-            "' must be an integer" );
+            std::string( api_name ).append( " option '" ).append(
+                option_name ).append( "' must be an integer" ) );
     }
     const lua_Integer value =
         requested.as<lua_Integer>();
     if( value < 0 ||
         value > std::numeric_limits<int>::max() ) {
         throw std::invalid_argument(
-            api_name + " option '" + option_name +
-            "' must be a non-negative int" );
+            std::string( api_name ).append( " option '" ).append(
+                option_name ).append( "' must be a non-negative int" ) );
     }
     return static_cast<int>( value );
+}
+
+int require_native_int(
+    const sol::object &requested,
+    const std::string &api_name,
+    const std::string &option_name )
+{
+    if( requested.is<lua_Integer>() ) {
+        const lua_Integer value = requested.as<lua_Integer>();
+        if( value < std::numeric_limits<int>::min() ||
+            value > std::numeric_limits<int>::max() ) {
+            throw std::invalid_argument(
+                std::string( api_name ).append( " option '" ).append(
+                    option_name ).append( "' must truncate to a native int" ) );
+        }
+        return static_cast<int>( value );
+    }
+    if( !requested.is<double>() ) {
+        throw std::invalid_argument(
+            std::string( api_name ).append( " option '" ).append(
+                option_name ).append( "' must be a number" ) );
+    }
+    const double value = requested.as<double>();
+    const double truncated = std::trunc( value );
+    if( !std::isfinite( value ) ||
+        truncated < std::numeric_limits<int>::min() ||
+        truncated > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument(
+            std::string( api_name ).append( " option '" ).append(
+                option_name ).append( "' must truncate to a native int" ) );
+    }
+    return static_cast<int>( truncated );
 }
 
 bool require_boolean(
@@ -450,10 +581,91 @@ bool require_boolean(
 {
     if( !requested.is<bool>() ) {
         throw std::invalid_argument(
-            api_name + " option '" + option_name +
-            "' must be a boolean" );
+            std::string( api_name ).append( " option '" ).append(
+                option_name ).append( "' must be a boolean" ) );
     }
     return requested.as<bool>();
+}
+
+overmap_target_options read_overmap_target_options(
+    const sol::optional<sol::table> &requested,
+    const std::string &api_name )
+{
+    overmap_target_options result;
+    if( !requested ) {
+        return result;
+    }
+    for( const auto &entry : *requested ) {
+        const sol::object key_object = entry.first;
+        if( key_object.get_type() != sol::type::string ) {
+            throw std::invalid_argument(
+                api_name + " option keys must be strings" );
+        }
+        const std::string key = key_object.as<std::string>();
+        if( key == "random" ) {
+            result.random = require_boolean(
+                                entry.second, api_name, key );
+        } else if( key == "search_range" ) {
+            result.search_range = require_native_int(
+                                      entry.second, api_name, key );
+        } else if( key == "min_distance" ) {
+            result.min_distance = require_native_int(
+                                      entry.second, api_name, key );
+        } else if( key == "z" ) {
+            result.z = require_native_int(
+                           entry.second, api_name, key );
+        } else if( key == "offset" ) {
+            if( !entry.second.is<script_tripoint_coord>() ) {
+                throw std::invalid_argument(
+                    api_name +
+                    " option 'offset' must be a relative OMT Tripoint" );
+            }
+            const script_tripoint_coord &offset =
+                entry.second.as<const script_tripoint_coord &>();
+            if( offset.native_origin() != coords::origin::relative ||
+                offset.native_scale() != coords::scale::overmap_terrain ) {
+                throw std::invalid_argument(
+                    api_name +
+                    " option 'offset' must be a relative OMT Tripoint" );
+            }
+            result.offset = tripoint_rel_omt( offset.to_native() );
+        } else {
+            throw std::invalid_argument(
+                std::string( api_name ).append( " received unknown option '" ).append( key ).append( "'" ) );
+        }
+    }
+    return result;
+}
+
+void validate_native_target_search_range(
+    const overmap_target_options &options,
+    const tripoint_abs_omt &origin,
+    const std::string &api_name )
+{
+    const std::int64_t requested_radius = options.search_range == 0 ?
+                                          ( options.random ? OMAPX : OMAPX * 5 ) :
+                                          options.search_range;
+    const std::int64_t radius = std::max<std::int64_t>( 0, requested_radius );
+    const std::int64_t minimum_distance =
+        std::max<std::int64_t>( 0, options.min_distance );
+    if( radius > maximum_native_square_search_radius ||
+        minimum_distance > maximum_native_square_search_radius ) {
+        throw std::invalid_argument(
+            api_name +
+            " search_range/min_distance exceed the native square-search arithmetic range" );
+    }
+    if( minimum_distance <= radius ) {
+        const auto coordinate_fits = [radius]( const int coordinate ) {
+            const std::int64_t wide = coordinate;
+            return wide - radius >= std::numeric_limits<int>::min() &&
+                   wide + radius <= std::numeric_limits<int>::max();
+        };
+        if( !coordinate_fits( origin.x() ) || !coordinate_fits( origin.y() ) ) {
+            throw std::invalid_argument(
+                api_name +
+                " origin and native search range exceed the signed coordinate range" );
+        }
+    }
 }
 
 overmap_search_options read_search_options(
@@ -518,8 +730,7 @@ overmap_search_options read_search_options(
                     entry.second, api_name, key );
         } else {
             throw std::invalid_argument(
-                api_name +
-                " received unknown option '" + key + "'" );
+                std::string( api_name ).append( " received unknown option '" ).append( key ).append( "'" ) );
         }
     }
     if( result.radius > maximum_radius ) {
@@ -597,6 +808,8 @@ std::int64_t distance_key(
     const tripoint_abs_omt &origin,
     const tripoint_abs_omt &position )
 {
+    // Wide coordinate calculations must retain all 64 bits before native conversion.
+    // NOLINTNEXTLINE(cata-combine-locals-into-point)
     const std::int64_t dx =
         std::abs(
             static_cast<std::int64_t>( position.x() ) -
@@ -632,6 +845,8 @@ overmap_search_scan scan_existing_overmap(
                 if( distance < options.minimum_radius ) {
                     continue;
                 }
+                // Wide coordinate calculations must retain all 64 bits before native conversion.
+                // NOLINTNEXTLINE(cata-combine-locals-into-point)
                 const std::int64_t raw_x =
                     static_cast<std::int64_t>(
                         origin.x() ) + dx;
@@ -1002,6 +1217,15 @@ sol::table overmap_closest(
     std::optional<tripoint_abs_omt> native_match;
     overmap_search_scan scan;
     if( native_compatible ) {
+        const int native_search_range = options.radius + 1;
+        checked_axis_offset( native_origin.x(), -native_search_range,
+                             std::string( api_name ) );
+        checked_axis_offset( native_origin.x(), native_search_range,
+                             std::string( api_name ) );
+        checked_axis_offset( native_origin.y(), -native_search_range,
+                             std::string( api_name ) );
+        checked_axis_offset( native_origin.y(), native_search_range,
+                             std::string( api_name ) );
         omt_find_params params;
         params.types.reserve( options.types.size() );
         for( const terrain_selector &selector : options.types ) {
@@ -1054,6 +1278,74 @@ sol::table overmap_closest(
                state,
                sol::make_object(
                    state, std::move( value ) ) );
+}
+
+script_tripoint_coord overmap_find_target(
+    const script_tripoint_coord &origin,
+    const sol::object &requested_selector,
+    const sol::optional<sol::table> &requested_options,
+    const std::function<void()> &require_write )
+{
+    constexpr std::string_view api_name =
+        "services.overmap.find_target";
+    tripoint_abs_omt target = require_absolute_omt(
+                                  origin, std::string( api_name ) );
+    const terrain_selector selector = read_target_selector(
+                                          requested_selector,
+                                          std::string( api_name ) );
+    const overmap_target_options options = read_overmap_target_options(
+            requested_options, std::string( api_name ) );
+
+    if( options.z ) {
+        target.z() = *options.z;
+    }
+    const tripoint_abs_omt search_origin = target;
+    if( !selector.terrain.empty() ) {
+        validate_native_target_search_range(
+            options, search_origin, std::string( api_name ) );
+        omt_find_params params;
+        params.types.emplace_back( selector.terrain, selector.match );
+        params.search_range = options.search_range;
+        params.min_distance = options.min_distance;
+        params.existing_only = true;
+
+        const auto find = [&]() {
+            return options.random ?
+                   overmap_buffer.find_random( search_origin, params ) :
+                   overmap_buffer.find_closest( search_origin, params );
+        };
+        target = find();
+        if( target.is_invalid() ) {
+            // The native non-existing-only search can generate overmaps.
+            require_write();
+            params.existing_only = false;
+            target = find();
+        }
+        if( target.is_invalid() ) {
+            target = search_origin;
+        }
+    }
+
+    if( options.offset ) {
+        const tripoint_rel_omt &offset = *options.offset;
+        // Wide coordinate calculations must retain all 64 bits before native conversion.
+        // NOLINTNEXTLINE(cata-combine-locals-into-point)
+        const std::int64_t x = static_cast<std::int64_t>( target.x() ) + offset.x();
+        const std::int64_t y = static_cast<std::int64_t>( target.y() ) + offset.y();
+        const std::int64_t z = static_cast<std::int64_t>( target.z() ) + offset.z();
+        if( x < std::numeric_limits<int>::min() || x > std::numeric_limits<int>::max() ||
+            y < std::numeric_limits<int>::min() || y > std::numeric_limits<int>::max() ||
+            z < std::numeric_limits<int>::min() || z > std::numeric_limits<int>::max() ) {
+            throw std::overflow_error(
+                std::string( api_name ) + " offset exceeds the signed coordinate range" );
+        }
+        target = tripoint_abs_omt( static_cast<int>( x ), static_cast<int>( y ),
+                                   static_cast<int>( z ) );
+    }
+    return script_tripoint_coord::from_native(
+               coords::origin::abs,
+               coords::scale::overmap_terrain,
+               target.raw() );
 }
 
 sol::table overmap_closest_city(
@@ -1133,6 +1425,15 @@ sol::table overmap_random(
     std::vector<tripoint_abs_omt> native_matches;
     overmap_search_scan scan;
     if( native_compatible ) {
+        const int native_search_range = options.radius + 1;
+        checked_axis_offset( native_origin.x(), -native_search_range,
+                             std::string( api_name ) );
+        checked_axis_offset( native_origin.x(), native_search_range,
+                             std::string( api_name ) );
+        checked_axis_offset( native_origin.y(), -native_search_range,
+                             std::string( api_name ) );
+        checked_axis_offset( native_origin.y(), native_search_range,
+                             std::string( api_name ) );
         omt_find_params params;
         params.types.reserve( options.types.size() );
         for( const terrain_selector &selector : options.types ) {
@@ -1222,6 +1523,92 @@ bool overmap_matches(
                selector.match );
 }
 
+bool overmap_matches_terrain(
+    const script_tripoint_coord &position,
+    const std::string &requested )
+{
+    constexpr std::string_view api_name =
+        "services.overmap.matches_terrain";
+    const tripoint_abs_omt native_position =
+        require_absolute_omt( position, std::string( api_name ) );
+    const std::string terrain_id =
+        require_selector_text( requested, std::string( api_name ) );
+    const oter_id &terrain = overmap_buffer.ter( native_position );
+    return oter_no_dir_or_connections( terrain ) == terrain_id;
+}
+
+bool overmap_matches_location(
+    const script_tripoint_coord &position,
+    const std::string &requested )
+{
+    constexpr std::string_view api_name =
+        "services.overmap.matches_location";
+    const tripoint_abs_omt native_position =
+        require_absolute_omt( position, std::string( api_name ) );
+    const std::string location_id =
+        require_selector_text( requested, std::string( api_name ) );
+    const oter_id &terrain = overmap_buffer.ter( native_position );
+    if( location_id == "FACTION_CAMP_ANY" ) {
+        if( overmap_buffer.find_camp( native_position.xy() ) ) {
+            return true;
+        }
+        // Preserve the native condition's legacy camp-terrain fallback.
+        return terrain.id().str().find( "faction_base_camp" ) !=
+               std::string::npos;
+    }
+    if( location_id == "FACTION_CAMP_START" ) {
+        const std::optional<mapgen_arguments> *arguments =
+            overmap_buffer.mapgen_args( native_position );
+        return !recipe_group::get_recipes_by_id(
+                   "all_faction_base_types", terrain, arguments ).empty();
+    }
+    return oter_no_dir_or_connections( terrain ) == location_id;
+}
+
+bool overmap_matches_location_near(
+    const script_tripoint_coord &position,
+    const std::string &requested,
+    const int radius )
+{
+    constexpr std::string_view api_name =
+        "services.overmap.matches_location_near";
+    if( radius < 0 || radius > maximum_location_near_radius ) {
+        throw std::invalid_argument(
+            std::string( api_name ) + " radius must be within 0.." +
+            std::to_string( maximum_location_near_radius ) );
+    }
+    const tripoint_abs_omt origin = require_absolute_omt(
+                                        position, std::string( api_name ) );
+    const std::string location_id = require_selector_text(
+                                        requested, std::string( api_name ) );
+    checked_axis_offset( origin.x(), -radius, std::string( api_name ) );
+    checked_axis_offset( origin.x(), radius, std::string( api_name ) );
+    checked_axis_offset( origin.y(), -radius, std::string( api_name ) );
+    checked_axis_offset( origin.y(), radius, std::string( api_name ) );
+    for( const tripoint_abs_omt &curr_pos : points_in_radius( origin, radius ) ) {
+        const oter_id &terrain = overmap_buffer.ter( curr_pos );
+        const std::optional<mapgen_arguments> *arguments =
+            overmap_buffer.mapgen_args( origin );
+        const std::string &terrain_id = terrain.id().str();
+
+        if( location_id == "FACTION_CAMP_ANY" ) {
+            if( overmap_buffer.find_camp( curr_pos.xy() ) ) {
+                return true;
+            }
+            // Preserve the native condition's legacy camp-terrain fallback.
+            if( terrain_id.find( "faction_base_camp" ) != std::string::npos ) {
+                return true;
+            }
+        } else if( ( location_id == "FACTION_CAMP_START" &&
+                     !recipe_group::get_recipes_by_id(
+                         "all_faction_base_types", terrain, arguments ).empty() ) ||
+                   oter_no_dir_or_connections( terrain ) == location_id ) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool overmap_is_camp(
     const script_tripoint_coord &position,
     const bool include_legacy_terrain )
@@ -1256,7 +1643,7 @@ bool overmap_is_camp_start(
 }
 
 void validate_note(
-    const std::string &note,
+    std::string_view note,
     const std::string &api_name );
 
 sol::table edit_overmap(
@@ -1742,7 +2129,7 @@ sol::table edit_overmap(
 }
 
 void validate_note(
-    const std::string &note,
+    const std::string_view note,
     const std::string &api_name )
 {
     if( note.size() > maximum_note_bytes ) {
@@ -1780,6 +2167,8 @@ sol::table reveal_existing_overmap(
          dy <= radius; ++dy ) {
         for( int dx = -radius;
              dx <= radius; ++dx ) {
+            // Wide coordinate calculations must retain all 64 bits before native conversion.
+            // NOLINTNEXTLINE(cata-combine-locals-into-point)
             const std::int64_t raw_x =
                 static_cast<std::int64_t>(
                     native_center.x() ) + dx;
@@ -1837,6 +2226,66 @@ sol::table reveal_existing_overmap(
                state,
                sol::make_object(
                    state, std::move( value ) ) );
+}
+
+bool reveal_native_overmap(
+    const script_tripoint_coord &center,
+    const sol::object &raw_radius )
+{
+    constexpr std::string_view api_name =
+        "services.overmap.reveal_native";
+    const int radius = require_integer(
+                           raw_radius, std::string( api_name ), "radius" );
+    if( radius > maximum_native_reveal_radius ) {
+        throw std::invalid_argument(
+            std::string( api_name ) + " radius must be within 0..36" );
+    }
+    const tripoint_abs_omt native_center = require_absolute_omt(
+            center, std::string( api_name ) );
+    // overmapbuffer::reveal adds each radius offset using int coordinates.
+    // Reject centers whose square would overflow before calling native code.
+    if( native_center.x() < std::numeric_limits<int>::min() + radius ||
+        native_center.x() > std::numeric_limits<int>::max() - radius ||
+        native_center.y() < std::numeric_limits<int>::min() + radius ||
+        native_center.y() > std::numeric_limits<int>::max() - radius ) {
+        throw std::invalid_argument(
+            std::string( api_name ) + " center and radius exceed coordinate range" );
+    }
+    const bool changed = overmap_buffer.reveal( native_center, radius );
+    if( changed ) {
+        // Native reveal may touch multiple tiles and does not expose them.
+        bump_all_tracked_overmap_tile_revisions();
+    }
+    return changed;
+}
+
+bool reveal_overmap_route(
+    const script_tripoint_coord &start,
+    const script_tripoint_coord &end,
+    const sol::object &raw_radius,
+    const bool road_only )
+{
+    constexpr std::string_view api_name =
+        "services.overmap.reveal_route";
+    const int radius = require_integer(
+                           raw_radius, std::string( api_name ), "radius" );
+    if( radius > maximum_reveal_radius ) {
+        throw std::invalid_argument(
+            std::string( api_name ) + " radius must be within 0..30" );
+    }
+    const tripoint_abs_omt native_start = require_absolute_omt(
+            start, std::string( api_name ) + " start" );
+    const tripoint_abs_omt native_end = require_absolute_omt(
+                                            end, std::string( api_name ) + " end" );
+
+    const bool found_route = overmap_buffer.reveal_route(
+                                 native_start, native_end, radius, road_only );
+    if( found_route ) {
+        // Native route search does not expose the path nodes, so invalidate
+        // tracked snapshots conservatively after a successful route reveal.
+        bump_all_tracked_overmap_tile_revisions();
+    }
+    return found_route;
 }
 
 } // namespace
@@ -1968,11 +2417,11 @@ void reset_overmap_tile_tokens() noexcept
 
 void install_overmap_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write,
-    std::function<std::size_t( std::size_t )> random_index )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write,
+    const std::function<std::size_t( std::size_t )> &random_index )
 {
     sol::state_view lua( services.lua_state() );
     lua.new_usertype<overmap_tile_token>(
@@ -2071,6 +2520,16 @@ void install_overmap_api(
                    lua_state, origin, options );
     } );
     overmap.set_function(
+        "find_target",
+        [require_read, require_write](
+            const script_tripoint_coord & origin,
+            const sol::object & selector,
+    const sol::optional<sol::table> &options ) {
+        require_read();
+        return overmap_find_target(
+                   origin, selector, options, require_write );
+    } );
+    overmap.set_function(
         "closest_city",
         [require_read](
             sol::this_state lua_state,
@@ -2099,6 +2558,31 @@ void install_overmap_api(
         require_read();
         return overmap_matches(
                    position, selector, match );
+    } );
+    overmap.set_function(
+        "matches_terrain",
+        [require_read](
+            const script_tripoint_coord & position,
+    const std::string & terrain_id ) {
+        require_read();
+        return overmap_matches_terrain( position, terrain_id );
+    } );
+    overmap.set_function(
+        "matches_location",
+        [require_read](
+            const script_tripoint_coord & position,
+    const std::string & location_id ) {
+        require_read();
+        return overmap_matches_location( position, location_id );
+    } );
+    overmap.set_function(
+        "matches_location_near",
+        [require_read](
+            const script_tripoint_coord & position,
+    const std::string & location_id, const int radius ) {
+        require_read();
+        return overmap_matches_location_near(
+                   position, location_id, radius );
     } );
     overmap.set_function(
         "is_safe",
@@ -2152,6 +2636,25 @@ void install_overmap_api(
         require_write();
         return reveal_existing_overmap(
                    lua_state, center, radius );
+    } );
+    overmap.set_function(
+        "reveal_native",
+        [require_write](
+            const script_tripoint_coord & center,
+    const sol::object & radius ) {
+        require_write();
+        return reveal_native_overmap( center, radius );
+    } );
+    overmap.set_function(
+        "reveal_route",
+        [require_write](
+            const script_tripoint_coord & start,
+            const script_tripoint_coord & end,
+            const sol::object & radius,
+    const bool road_only ) {
+        require_write();
+        return reveal_overmap_route(
+                   start, end, radius, road_only );
     } );
     services["overmap"] = std::move( overmap );
 }

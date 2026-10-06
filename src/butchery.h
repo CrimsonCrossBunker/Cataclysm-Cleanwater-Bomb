@@ -41,6 +41,10 @@ struct butchery_data {
 
 int butcher_time_to_cut( Character &you, const item &corpse_item, butcher_type action );
 
+// Checks corpse contents, prior processing and incompatible work in progress.
+// Tools, light and other activity requirements are checked separately.
+bool butcher_action_applicable( Character &you, const item &corpse_item, butcher_type action );
+
 // Whether this corpse should trigger species-empathy reactions during butchery.
 // CCB keeps the pre-CDDA#78796 rule: zombified corpses are exempt.
 bool character_has_butchery_empathy( const Character &character, const mtype_id &corpse );

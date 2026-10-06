@@ -214,6 +214,8 @@ class JsonValue : Json
         std::string get_string() const;
         bool get_bool() const;
         int get_int() const;
+        // Read the original JSON token when FlexBuffers may have lost integer range information.
+        int get_int_exact() const;
         unsigned int get_uint() const;
         int64_t get_int64() const;
         uint64_t get_uint64() const;

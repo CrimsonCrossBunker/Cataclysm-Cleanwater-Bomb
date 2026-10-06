@@ -3,6 +3,7 @@
 #define CATA_SRC_ACTIVITY_ACTOR_DEFINITIONS_H
 
 #include <algorithm>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
@@ -2315,7 +2316,7 @@ class milk_activity_actor : public activity_actor
         void start( player_activity &act, Character &/*who*/ ) override;
         void do_turn( player_activity &/*act*/, Character &/*who*/ ) override;
         void finish( player_activity &act, Character &who ) override;
-        void canceled( player_activity &/*act*/, Character &/*who*/ ) override {}
+        void canceled( player_activity &/*act*/, Character &/*who*/ ) override;
 
         std::unique_ptr<activity_actor> clone() const override {
             return std::make_unique<milk_activity_actor>( *this );
@@ -3079,6 +3080,14 @@ class training_activity_actor : public activity_actor
         explicit training_activity_actor( time_duration initial_moves, talk_function::teach_domain subject,
                                           character_id teacher ) :
             initial_moves( initial_moves ), subject( subject ), teaching( false ), teacher( teacher ) {};
+
+        bool matches_assignment( const training_activity_actor &other ) const {
+            return initial_moves == other.initial_moves && subject.skill == other.subject.skill &&
+                   subject.style == other.subject.style && subject.spell == other.subject.spell &&
+                   subject.prof == other.subject.prof &&
+                   teaching == other.teaching &&
+                   ( teaching ? trainees == other.trainees : teacher == other.teacher );
+        }
 
         const activity_id &get_type() const override {
             static const activity_id ACT_TRAIN( "ACT_TRAIN" );
@@ -4014,7 +4023,6 @@ class butchery_activity_actor : public activity_actor
 
 /**
 * NPC-only activity to find and mount the nearest mountable creature
-* TODO: serialize ID of monster found; this activity does not serialize
 * TODO: fails often because routing destination is equal to mounting destination,
 * and the mounted monster can move in-between the start and end of the route
 */
@@ -4022,8 +4030,10 @@ class find_mount_activity_actor : public activity_actor
 {
     public:
         find_mount_activity_actor() = default;
+        explicit find_mount_activity_actor( const std::int64_t target_monster_uid ) :
+            target_monster_uid( target_monster_uid ) {}
 
-        void start( player_activity &, Character & ) override {};
+        void start( player_activity &, Character & ) override;
         void do_turn( player_activity &act, Character &who ) override;
         void finish( player_activity &, Character & ) override {};
 
@@ -4038,6 +4048,9 @@ class find_mount_activity_actor : public activity_actor
 
         void serialize( JsonOut &jsout ) const override;
         static std::unique_ptr<activity_actor> deserialize( JsonValue & );
+
+    private:
+        std::int64_t target_monster_uid = 0;
 };
 
 /**

@@ -26,6 +26,7 @@ class map_meddler
     public:
         static bool has_altered_submaps( map &m );
         static submap *unsafe_get_submap_at( tripoint_bub_ms &p, point_sm_ms &l );
+        static submap *get_submap_at_grid( map &m, const tripoint_rel_sm &p );
 };
 
 #endif // CATA_TESTS_MAP_HELPERS_H

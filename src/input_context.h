@@ -46,6 +46,7 @@ class input_context_stack_impl
     public:
         input_context *back();
         void pop();
+        void remove( const std::shared_ptr<input_context_handle> &context );
         void push( std::shared_ptr<input_context_handle> const &context );
 
     private:
@@ -105,21 +106,25 @@ class input_context
         class scoped_activation
         {
             public:
-                explicit scoped_activation( input_context &ctx ) {
+                explicit scoped_activation( input_context &ctx ) :
+                    activation( std::make_shared<input_context_handle>( input_context_handle{ &ctx } ) ) {
                     ( void )ctx;
 #if defined(__ANDROID__) || defined(TILES)
-                    input_context_stack.push( ctx.handle );
+                    input_context_stack.push( activation );
 #endif
                 }
                 ~scoped_activation() {
 #if defined(__ANDROID__) || defined(TILES)
-                    input_context_stack.pop();
+                    input_context_stack.remove( activation );
 #endif
                 }
                 scoped_activation( const scoped_activation & ) = delete;
                 scoped_activation &operator=( const scoped_activation & ) = delete;
                 scoped_activation( scoped_activation && ) = delete;
                 scoped_activation &operator=( scoped_activation && ) = delete;
+
+            private:
+                std::shared_ptr<input_context_handle> activation;
         };
 
         input_context( const input_context &other ) {

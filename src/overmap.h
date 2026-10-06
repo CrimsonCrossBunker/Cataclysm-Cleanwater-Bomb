@@ -925,6 +925,10 @@ class overmap
         void build_connection( const point_om_omt &source, const point_om_omt &dest, int z,
                                const overmap_connection &connection, bool must_be_unexplored,
                                cube_direction initial_dir = cube_direction::last );
+        // Rail entrances join the existing network rather than the city centre.
+        void build_special_connection( const point_om_omt &target, const tripoint_om_omt &entrance,
+                                       const overmap_connection &connection, bool must_be_unexplored,
+                                       cube_direction initial_dir );
         void connect_closest_points( const std::vector<point_om_omt> &points, int z,
                                      const overmap_connection &connection );
         // Polishing

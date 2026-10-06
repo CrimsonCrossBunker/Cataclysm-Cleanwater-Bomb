@@ -180,6 +180,8 @@ struct talk_response {
     translation truetext;
     translation falsetext;
     std::function<bool( const_dialogue const & )> truefalse_condition;
+    // Optional Platform selector evaluated when the response line is created.
+    std::function<bool( dialogue & )> deferred_text_condition;
 
     talk_trial trial;
     /**

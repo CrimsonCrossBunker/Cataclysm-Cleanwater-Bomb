@@ -1,5 +1,15 @@
 #include "lua_platform_content_presentation.h"
 
+#include <dialogue.h>
+#include <game_constants.h>
+#include <exception>
+#include <functional>
+#include <iterator>
+#include <type_traits>
+#include <unordered_map>
+
+enum class distraction_type : int;
+
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
 #include <algorithm>
@@ -22,7 +32,6 @@
 #include "activity_actor.h"
 #include "activity_handlers.h"
 #include "activity_type.h"
-#include "ascii_art.h"
 #include "clzones.h"
 #include "end_screen.h"
 #include "enum_conversions.h"
@@ -30,6 +39,7 @@
 #include "generic_factory.h"
 #include "help.h"
 #include "lua_platform_content.h"
+#include "lua_platform_content_text.h"
 #include "lua_platform_runtime_internal.h"
 #include "overlay_ordering.h"
 #include "sounds.h"
@@ -65,7 +75,7 @@ struct owner_token {
 struct score_definition_data {
     std::string id;
     std::string statistic;
-    std::string description;
+    detail::authored_text description;
     bool registered = false;
 };
 
@@ -77,8 +87,8 @@ struct overlay_order_definition_data {
 
 struct zone_type_definition_data {
     std::string id;
-    std::string name;
-    std::string description;
+    detail::authored_text name;
+    detail::authored_text description;
     std::string display_field;
     bool can_be_personal = false;
     bool hidden = false;
@@ -87,7 +97,7 @@ struct zone_type_definition_data {
 
 struct speech_pool_definition_data {
     std::string id;
-    std::vector<std::pair<std::string, std::int64_t>> lines;
+    std::vector<std::pair<detail::authored_text, std::int64_t>> lines;
     bool registered = false;
 };
 
@@ -103,7 +113,7 @@ struct end_screen_definition_data {
 
 struct activity_type_definition_data {
     std::string id;
-    std::string verb;
+    detail::authored_text verb;
     bool rooted = false;
     bool interruptable = true;
     bool interruptable_with_keyboard = true;
@@ -122,16 +132,16 @@ struct activity_type_definition_data {
 
 struct help_topic_definition_data {
     std::string id;
-    std::string title;
+    detail::authored_text title;
     std::optional<std::int64_t> order;
-    std::vector<std::string> paragraphs;
+    std::vector<detail::authored_text> paragraphs;
     bool registered = false;
 };
 
 struct snippet_entry_definition_data {
     std::string id;
-    std::string text;
-    std::string name;
+    detail::authored_text text;
+    detail::authored_text name;
     std::int64_t weight = 1;
     std::string examine_handler;
 };
@@ -227,13 +237,15 @@ struct speech_pool_definition_handle {
     std::shared_ptr<speech_pool_definition_data> definition;
     std::shared_ptr<owner_token> token;
 
-    speech_pool_definition_handle &line( const std::string &sound,
+    speech_pool_definition_handle &line( const sol::object &sound,
                                          const std::int64_t volume ) {
         require_building_handle( token, *definition, "speech pool" );
-        if( sound.empty() ) {
+        detail::authored_text text = detail::read_singular_text(
+                                         sound, {}, "SpeechPool.line" );
+        if( text.empty() ) {
             throw std::runtime_error( "speech-pool line cannot be empty" );
         }
-        definition->lines.emplace_back( sound, volume );
+        definition->lines.emplace_back( std::move( text ), volume );
         return *this;
     }
 
@@ -315,12 +327,14 @@ struct help_topic_definition_handle {
     std::shared_ptr<help_topic_definition_data> definition;
     std::shared_ptr<owner_token> token;
 
-    help_topic_definition_handle &paragraph( const std::string &text ) {
+    help_topic_definition_handle &paragraph( const sol::object &value ) {
         require_building_handle( token, *definition, "help topic" );
+        detail::authored_text text = detail::read_singular_text(
+                                         value, {}, "HelpTopic.paragraph" );
         if( text.empty() ) {
             throw std::runtime_error( "help-topic paragraph cannot be empty" );
         }
-        definition->paragraphs.push_back( text );
+        definition->paragraphs.push_back( std::move( text ) );
         return *this;
     }
 
@@ -334,14 +348,16 @@ struct snippet_category_definition_handle {
     std::shared_ptr<snippet_category_definition_data> definition;
     std::shared_ptr<owner_token> token;
 
-    snippet_category_definition_handle &text( const std::string &value,
+    snippet_category_definition_handle &text( const sol::object &value,
             const sol::optional<std::int64_t> &weight ) {
         require_building_handle( token, *definition, "snippet category" );
-        if( value.empty() ) {
+        detail::authored_text text = detail::read_singular_text(
+                                         value, {}, "SnippetCategory.text" );
+        if( text.empty() ) {
             throw std::runtime_error( "snippet text cannot be empty" );
         }
         definition->entries.push_back( snippet_entry_definition_data{
-            std::string(), value, std::string(), weight.value_or( 1 ), std::string()
+            std::string(), std::move( text ), {}, weight.value_or( 1 ), std::string()
         } );
         return *this;
     }
@@ -349,15 +365,25 @@ struct snippet_category_definition_handle {
     snippet_category_definition_handle &entry( const sol::table &options ) {
         require_building_handle( token, *definition, "snippet category" );
         snippet_entry_definition_data value;
-        value.id = options.get_or( "id", std::string() );
-        value.text = options.get_or( "text", std::string() );
-        value.name = options.get_or( "name", std::string() );
-        value.weight = options.get_or<std::int64_t>( "weight", 1 );
-        value.examine_handler = options.get_or( "on_examine", std::string() );
-        if( value.id.empty() || value.text.empty() ) {
+        const std::string id = options.get_or( "id", std::string() );
+        const detail::authored_text text = detail::read_singular_text(
+                                               options.get<sol::object>( "text" ), {},
+                                               "SnippetCategory.entry text" );
+        const detail::authored_text name = detail::read_singular_text(
+                                               options.get<sol::object>( "name" ), {},
+                                               "SnippetCategory.entry name" );
+        const std::int64_t weight = options.get_or<std::int64_t>( "weight", 1 );
+        const std::string examine_handler = options.get_or(
+                                                "on_examine", std::string() );
+        if( id.empty() || text.empty() ) {
             throw std::runtime_error(
                 "named snippet entries require non-empty id and text" );
         }
+        value.id = id;
+        value.text = text;
+        value.name = name;
+        value.weight = weight;
+        value.examine_handler = examine_handler;
         definition->entries.push_back( std::move( value ) );
         return *this;
     }
@@ -473,6 +499,22 @@ void hash_part( std::uint64_t &state, const std::string_view value )
     state = fnv1a( ";", state );
 }
 
+void hash_part( std::uint64_t &state, const detail::authored_text &value )
+{
+    hash_part( state, value.raw );
+    hash_part( state, value.translated ? "localized" : "literal" );
+    if( value.translated ) {
+        hash_part( state, value.translated->context ? "context" : "no_context" );
+        if( value.translated->context ) {
+            hash_part( state, *value.translated->context );
+        }
+        hash_part( state, value.translated->plural ? "plural" : "singular" );
+        if( value.translated->plural ) {
+            hash_part( state, *value.translated->plural );
+        }
+    }
+}
+
 } // namespace
 
 struct presentation_content_transaction::impl {
@@ -573,10 +615,14 @@ void presentation_content_transaction::install_lua_api( sol::state &lua, sol::ta
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
+        const std::string id = options.get_or( "id", std::string() );
+        const std::string statistic = options.get_or( "statistic", std::string() );
+        const detail::authored_text description = detail::read_singular_text(
+                    options.get<sol::object>( "description" ), {}, "Score.description" );
         auto definition = std::make_shared<score_definition_data>();
-        definition->id = options.get_or( "id", std::string() );
-        definition->statistic = options.get_or( "statistic", std::string() );
-        definition->description = options.get_or( "description", std::string() );
+        definition->id = id;
+        definition->statistic = statistic;
+        definition->description = description;
         return score_definition_handle{ std::move( definition ), transaction->token };
     } );
     content.set_function( "OverlayOrder", [transaction]() {
@@ -591,13 +637,22 @@ void presentation_content_transaction::install_lua_api( sol::state &lua, sol::ta
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
+        const std::string id = options.get_or( "id", std::string() );
+        const detail::authored_text name = detail::read_singular_text(
+                                               options.get<sol::object>( "name" ), {}, "ZoneType.name" );
+        const detail::authored_text description = detail::read_singular_text(
+                    options.get<sol::object>( "description" ), {}, "ZoneType.description" );
+        const std::string display_field = options.get_or(
+                                              "display_field", std::string() );
+        const bool can_be_personal = options.get_or( "can_be_personal", false );
+        const bool hidden = options.get_or( "hidden", false );
         auto definition = std::make_shared<zone_type_definition_data>();
-        definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", std::string() );
-        definition->description = options.get_or( "description", std::string() );
-        definition->display_field = options.get_or( "display_field", std::string() );
-        definition->can_be_personal = options.get_or( "can_be_personal", false );
-        definition->hidden = options.get_or( "hidden", false );
+        definition->id = id;
+        definition->name = name;
+        definition->description = description;
+        definition->display_field = display_field;
+        definition->can_be_personal = can_be_personal;
+        definition->hidden = hidden;
         return zone_type_definition_handle{ std::move( definition ), transaction->token };
     } );
     content.set_function( "SpeechPool", [transaction]( const sol::table & options ) {
@@ -624,33 +679,51 @@ void presentation_content_transaction::install_lua_api( sol::state &lua, sol::ta
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
-        auto definition = std::make_shared<activity_type_definition_data>();
-        definition->id = options.get_or( "id", std::string() );
-        definition->verb = options.get_or( "verb", std::string() );
-        definition->rooted = options.get_or( "rooted", false );
-        definition->interruptable = options.get_or( "interruptable", true );
-        definition->interruptable_with_keyboard = options.get_or(
+        const std::string id = options.get_or( "id", std::string() );
+        const detail::authored_text verb = detail::read_singular_text(
+                                               options.get<sol::object>( "verb" ), {}, "ActivityType.verb" );
+        const bool rooted = options.get_or( "rooted", false );
+        const bool interruptable = options.get_or( "interruptable", true );
+        const bool interruptable_with_keyboard = options.get_or(
                     "interruptable_with_keyboard", true );
-        definition->based_on = options.get_or( "based_on", std::string( "speed" ) );
-        definition->can_resume = options.get_or( "can_resume", true );
-        definition->multi_activity = options.get_or( "multi_activity", false );
-        definition->fetch_items_to_zone = options.get_or( "fetch_items_to_zone", true );
-        definition->refuel_fires = options.get_or( "refuel_fires", false );
-        definition->auto_needs = options.get_or( "auto_needs", false );
-        definition->activity_level = options.get_or( "activity_level", 1.0 );
+        const std::string based_on = options.get_or( "based_on", std::string( "speed" ) );
+        const bool can_resume = options.get_or( "can_resume", true );
+        const bool multi_activity = options.get_or( "multi_activity", false );
+        const bool fetch_items_to_zone = options.get_or( "fetch_items_to_zone", true );
+        const bool refuel_fires = options.get_or( "refuel_fires", false );
+        const bool auto_needs = options.get_or( "auto_needs", false );
+        const double activity_level = options.get_or( "activity_level", 1.0 );
+        auto definition = std::make_shared<activity_type_definition_data>();
+        definition->id = id;
+        definition->verb = verb;
+        definition->rooted = rooted;
+        definition->interruptable = interruptable;
+        definition->interruptable_with_keyboard = interruptable_with_keyboard;
+        definition->based_on = based_on;
+        definition->can_resume = can_resume;
+        definition->multi_activity = multi_activity;
+        definition->fetch_items_to_zone = fetch_items_to_zone;
+        definition->refuel_fires = refuel_fires;
+        definition->auto_needs = auto_needs;
+        definition->activity_level = activity_level;
         return activity_type_definition_handle{ std::move( definition ), transaction->token };
     } );
     content.set_function( "HelpTopic", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
-        auto definition = std::make_shared<help_topic_definition_data>();
-        definition->id = options.get_or( "id", std::string() );
-        definition->title = options.get_or( "title", std::string() );
-        if( const sol::optional<std::int64_t> order =
+        const std::string id = options.get_or( "id", std::string() );
+        const detail::authored_text title = detail::read_singular_text(
+                                                options.get<sol::object>( "title" ), {}, "HelpTopic.title" );
+        std::optional<std::int64_t> order;
+        if( const sol::optional<std::int64_t> requested_order =
                 options.get<sol::optional<std::int64_t>>( "order" ) ) {
-            definition->order = *order;
+            order = *requested_order;
         }
+        auto definition = std::make_shared<help_topic_definition_data>();
+        definition->id = id;
+        definition->title = title;
+        definition->order = order;
         return help_topic_definition_handle{ std::move( definition ), transaction->token };
     } );
     content.set_function( "SnippetCategory", [transaction]( const sol::table & options ) {
@@ -1070,7 +1143,7 @@ bool presentation_content_transaction::validate( const runtime &owner_runtime,
                                           "' has invalid presentation, order, or a duplicate registration" );
             }
             if( std::any_of( definition.paragraphs.begin(), definition.paragraphs.end(),
-            []( const std::string & paragraph ) {
+            []( const detail::authored_text & paragraph ) {
             return paragraph.empty();
             } ) ) {
                 throw std::runtime_error( "help topic '" + definition.id +
@@ -1163,10 +1236,10 @@ bool presentation_content_transaction::validate( const runtime &owner_runtime,
                                           "' requires tracks and one registration per transaction" );
             }
             for( const auto &[file, volume] : definition.tracks ) {
-                const std::filesystem::path path( file );
+                const std::filesystem::path path = std::filesystem::u8path( file );
                 const bool traverses_parent = std::any_of(
                 path.begin(), path.end(), []( const auto & part ) {
-                    return part == "..";
+                    return part == std::filesystem::u8path( ".." );
                 } );
                 if( file.empty() || file.size() > 4096 || file.find( '\0' ) != std::string::npos ||
                     path.is_absolute() || traverses_parent || volume < 0 || volume > 128 ) {
@@ -1188,10 +1261,10 @@ bool presentation_content_transaction::validate( const runtime &owner_runtime,
                                           "' has a volume outside 0..128" );
             }
             for( const std::string &file : definition.files ) {
-                const std::filesystem::path path( file );
+                const std::filesystem::path path = std::filesystem::u8path( file );
                 const bool traverses_parent = std::any_of(
                 path.begin(), path.end(), []( const auto & part ) {
-                    return part == "..";
+                    return part == std::filesystem::u8path( ".." );
                 } );
                 if( file.empty() || file.size() > 4096 || file.find( '\0' ) != std::string::npos ||
                     path.is_absolute() || traverses_parent ) {
@@ -1240,7 +1313,7 @@ bool presentation_content_transaction::apply( std::string &error )
             native.was_loaded = true;
             native.stat_ = event_statistic_id( source.statistic );
             native.description_ = source.description.empty() ? translation() :
-                                  no_translation( source.description );
+                                  source.description.native();
             detail::score_registry().insert( native );
         }
         if( !pimpl_->scores.empty() ) {
@@ -1264,8 +1337,8 @@ bool presentation_content_transaction::apply( std::string &error )
                 id, id.is_valid() ? std::optional<zone_type>( id.obj() ) : std::nullopt );
             const zone_type_definition_data &source = *entry.definition;
             const translation description = source.description.empty() ? translation() :
-                                            no_translation( source.description );
-            zone_type native( no_translation( source.name ), description,
+                                            source.description.native();
+            zone_type native( source.name.native(), description,
                               field_type_str_id( source.display_field ) );
             native.id = id;
             native.src.emplace_back( id, mod_id( pimpl_->owner ) );
@@ -1287,8 +1360,8 @@ bool presentation_content_transaction::apply( std::string &error )
                 std::optional<std::vector<SpeechBubble>>( *previous ) );
             std::vector<SpeechBubble> native;
             native.reserve( source.lines.size() );
-            for( const auto &[sound, volume] : source.lines ) {
-                native.push_back( SpeechBubble{ no_translation( sound ),
+            for( const auto &[text, volume] : source.lines ) {
+                native.push_back( SpeechBubble{ text.native(),
                                                 static_cast<int>( volume ) } );
             }
             detail::speech_registry_set( source.id, std::move( native ) );
@@ -1327,7 +1400,7 @@ bool presentation_content_transaction::apply( std::string &error )
             activity_type native;
             native.id_ = id;
             native.rooted_ = source.rooted;
-            native.verb_ = no_translation( source.verb );
+            native.verb_ = source.verb.native();
             native.interruptable_ = source.interruptable;
             native.interruptable_with_kb_ = source.interruptable_with_keyboard;
             native.based_on_ = *platform_activity_based_on( source.based_on );
@@ -1359,8 +1432,8 @@ bool presentation_content_transaction::apply( std::string &error )
             }
             std::vector<translation> paragraphs;
             paragraphs.reserve( source.paragraphs.size() );
-            for( const std::string &paragraph : source.paragraphs ) {
-                paragraphs.push_back( no_translation( paragraph ) );
+            for( const detail::authored_text &paragraph : source.paragraphs ) {
+                paragraphs.push_back( paragraph.native() );
             }
             int order = 0;
             if( source.order ) {
@@ -1374,7 +1447,7 @@ bool presentation_content_transaction::apply( std::string &error )
                 order = registry.help_texts.crbegin()->first + 1;
             }
             registry.help_texts[order] = std::make_pair(
-                                             no_translation( source.title ),
+                                             source.title.native(),
                                              std::move( paragraphs ) );
             registry.platform_help_topic_orders[source.id] = order;
         }
@@ -1406,16 +1479,16 @@ bool presentation_content_transaction::apply( std::string &error )
                     const std::uint64_t accumulated = category.no_id.empty() ? weight :
                                                       category.no_id.back().weight_acc + weight;
                     category.no_id.push_back( snippet_library::weighted_translation{
-                        accumulated, no_translation( snippet.text )
+                        accumulated, snippet.text.native()
                     } );
                 } else {
                     const snippet_id id( snippet.id );
                     const std::uint64_t accumulated = category.ids.empty() ? weight :
                                                       category.ids.back().weight_acc + weight;
                     category.ids.push_back( snippet_library::weighted_id{ accumulated, id } );
-                    SNIPPET.snippets_by_id[id] = no_translation( snippet.text );
+                    SNIPPET.snippets_by_id[id] = snippet.text.native();
                     SNIPPET.name_by_id[id] = snippet.name.empty() ? translation() :
-                                             no_translation( snippet.name );
+                                             snippet.name.native();
                     // Lua-authored snippets deliberately do not populate EOC_by_id.
                     SNIPPET.EOC_by_id.erase( id );
                 }
@@ -1508,8 +1581,8 @@ bool presentation_content_transaction::validate_finalized( std::string &error ) 
             return false;
         }
         for( std::size_t index = 0; index < found->size(); ++index ) {
-            if( ( *found )[index].text.translated() !=
-                entry.definition->lines[index].first ||
+            if( !( ( *found )[index].text ==
+                   entry.definition->lines[index].first.native() ) ||
                 ( *found )[index].volume != entry.definition->lines[index].second ) {
                 error = "Lua-first speech pool '" + entry.definition->id +
                         "' changed during global finalization";
@@ -1743,8 +1816,8 @@ void presentation_content_transaction::append_fingerprint( std::uint64_t &state 
         hash_part( state, "speech_pool" );
         hash_part( state, operation_name( entry.operation ) );
         hash_part( state, entry.definition->id );
-        for( const auto &[sound, volume] : entry.definition->lines ) {
-            hash_part( state, sound );
+        for( const auto &[text, volume] : entry.definition->lines ) {
+            hash_part( state, text );
             hash_part( state, std::to_string( volume ) );
         }
     }
@@ -1793,7 +1866,7 @@ void presentation_content_transaction::append_fingerprint( std::uint64_t &state 
         hash_part( state, value.id );
         hash_part( state, value.title );
         hash_part( state, value.order ? std::to_string( *value.order ) : "automatic" );
-        for( const std::string &paragraph : value.paragraphs ) {
+        for( const detail::authored_text &paragraph : value.paragraphs ) {
             hash_part( state, paragraph );
         }
     }

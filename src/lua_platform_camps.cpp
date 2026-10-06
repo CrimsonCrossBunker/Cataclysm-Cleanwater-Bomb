@@ -4,6 +4,7 @@
 
 #include <character.h>
 #include <character_id.h>
+
 extern "C" {
 #include <lua.h>
 }
@@ -21,6 +22,7 @@ extern "C" {
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -184,6 +186,23 @@ sol::table list_camps( sol::this_state lua,
     return make_game_value_result( state, sol::make_object( state, std::move( result ) ) );
 }
 
+bool player_has_owned_camp()
+{
+    Character &player = get_player_character();
+    const faction *player_faction = player.get_faction();
+    if( player_faction == nullptr ) {
+        return false;
+    }
+    for( const tripoint_abs_omt &camp_position : player.camps ) {
+        const std::optional<basecamp *> camp =
+            overmap_buffer.find_camp( camp_position.xy() );
+        if( camp && ( *camp )->get_owner() == player_faction->id ) {
+            return true;
+        }
+    }
+    return false;
+}
+
 basecamp *resolve_camp( const game_handle &handle,
                         const game_handle_runtime &runtime,
                         const std::size_t world_generation,
@@ -339,7 +358,7 @@ sol::table make_map_tile_holder( sol::state_view lua,
     return holder;
 }
 
-void validate_name( const std::string &name )
+void validate_name( const std::string_view name )
 {
     if( name.empty() || name.size() > maximum_name_bytes ) {
         throw std::invalid_argument( "services.camps.rename name must contain 1..25 bytes" );
@@ -685,7 +704,7 @@ std::vector<basecamp_platform_resource_change> read_resource_changes(
     for( const auto &entry : requested ) {
         if( !entry.first.is<lua_Integer>() ||
             entry.first.as<lua_Integer>() !=
-            static_cast<lua_Integer>( changes.size() + 1 ) ) {
+            ( static_cast<lua_Integer>( changes.size() ) + 1 ) ) {
             throw std::invalid_argument(
                 "services.camps.resources.adjust changes must be a dense array" );
         }
@@ -700,7 +719,7 @@ std::vector<basecamp_platform_resource_change> read_resource_changes(
             throw std::invalid_argument(
                 "services.camps.resources.adjust change requires item id and integer delta" );
         }
-        const script_game_id resource_id = raw_id.as<script_game_id>();
+        const script_game_id &resource_id = raw_id.as<script_game_id>();
         if( resource_id.kind() != "item" || !resource_id.is_valid() ) {
             throw std::invalid_argument(
                 "services.camps.resources.adjust change id must be GameId<item>" );
@@ -753,7 +772,7 @@ basecamp_platform_resource_work read_resource_work_descriptor(
         for( const auto &entry : values ) {
             if( !entry.first.is<lua_Integer>() ||
                 entry.first.as<lua_Integer>() !=
-                static_cast<lua_Integer>( result.size() + 1 ) ) {
+                ( static_cast<lua_Integer>( result.size() ) + 1 ) ) {
                 throw std::invalid_argument(
                     std::string( "services.camps.tasks.create " ) + field +
                     " must be a dense array" );
@@ -771,7 +790,7 @@ basecamp_platform_resource_work read_resource_work_descriptor(
                     std::string( "services.camps.tasks.create " ) + field +
                     " entries require GameId<item> id and integer amount" );
             }
-            const script_game_id id = raw_id.as<script_game_id>();
+            const script_game_id &id = raw_id.as<script_game_id>();
             const lua_Integer amount = raw_amount.as<lua_Integer>();
             if( id.kind() != "item" || !id.is_valid() || amount <= 0 ||
                 amount > 1000000000 ) {
@@ -867,7 +886,7 @@ basecamp_platform_recipe_holder read_recipe_holder_descriptor(
         throw std::invalid_argument( std::string( api_name ) +
                                      " requires a character GameHandle and slot" );
     }
-    const game_handle character_handle = raw_character.as<game_handle>();
+    const game_handle &character_handle = raw_character.as<game_handle>();
     const std::string slot = raw_slot.as<std::string>();
     if( slot != "inventory" && slot != "worn" && slot != "wielded" ) {
         throw std::invalid_argument( std::string( api_name ) +
@@ -942,7 +961,7 @@ basecamp_platform_recipe_work read_recipe_work_descriptor(
     for( const auto &entry : source_tables ) {
         if( !entry.first.is<lua_Integer>() ||
             entry.first.as<lua_Integer>() !=
-            static_cast<lua_Integer>( result.source_holders.size() + 1 ) ||
+            ( static_cast<lua_Integer>( result.source_holders.size() ) + 1 ) ||
             !entry.second.is<sol::table>() ) {
             throw std::invalid_argument( "services.camps.tasks.create recipe_work source_holders must be a dense typed array" );
         }
@@ -1126,7 +1145,7 @@ basecamp_platform_upgrade_work read_upgrade_work_descriptor(
             throw std::invalid_argument( std::string( api_name ) +
                                          " expansion target requires CampExpansionToken" );
         }
-        const camp_expansion_token token = raw_expansion.as<camp_expansion_token>();
+        const camp_expansion_token &token = raw_expansion.as<camp_expansion_token>();
         if( !token.belongs_to( runtime ) || token.world_generation() != world_generation ) {
             throw std::invalid_argument( std::string( api_name ) +
                                          " target expansion token is stale" );
@@ -1152,7 +1171,7 @@ basecamp_platform_upgrade_work read_upgrade_work_descriptor(
     for( const auto &entry : source_tables ) {
         if( !entry.first.is<lua_Integer>() ||
             entry.first.as<lua_Integer>() !=
-            static_cast<lua_Integer>( result.source_holders.size() + 1 ) ||
+            ( static_cast<lua_Integer>( result.source_holders.size() ) + 1 ) ||
             !entry.second.is<sol::table>() ) {
             throw std::invalid_argument( std::string( api_name ) +
                                          " source_holders must be a dense typed array" );
@@ -1188,7 +1207,7 @@ std::vector<platform_recipe_item_request> read_recipe_item_requests(
     for( const auto &entry : values ) {
         if( !entry.first.is<lua_Integer>() ||
             entry.first.as<lua_Integer>() !=
-            static_cast<lua_Integer>( result.size() + 1 ) ||
+            ( static_cast<lua_Integer>( result.size() ) + 1 ) ||
             !entry.second.is<sol::table>() ) {
             throw std::invalid_argument( "services.camps.tasks.start item requests must be a dense typed array" );
         }
@@ -2851,7 +2870,7 @@ std::optional<game_handle_error> resolve_camp_expansion(
     return std::nullopt;
 }
 
-void validate_expansion_name( const std::string &name )
+void validate_expansion_name( const std::string_view name )
 {
     if( name.empty() || name.size() > 64 ||
     std::any_of( name.begin(), name.end(), []( const unsigned char ch ) {
@@ -2985,10 +3004,10 @@ sol::table remove_camp_expansion(
 
 void install_camp_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write )
 {
     sol::state_view lua( services.lua_state() );
     lua.new_usertype<camp_task_token>(
@@ -3087,6 +3106,11 @@ void install_camp_api(
         require_read();
         return list_camps( state, center, options, current_runtime_generation(),
                            current_world_generation() );
+    } );
+    camps.set_function( "has_player_owned_camp", [require_read]( sol::this_state state ) {
+        require_read();
+        sol::state_view lua( state );
+        return make_game_value_result( lua, sol::make_object( lua, player_has_owned_camp() ) );
     } );
     camps.set_function( "get",
                         [current_runtime_generation, current_world_generation, require_read](

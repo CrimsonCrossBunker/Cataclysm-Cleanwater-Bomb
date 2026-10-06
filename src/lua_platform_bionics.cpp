@@ -29,8 +29,14 @@ extern "C" {
 #include "damage.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
+#include "lua_platform_relation_page.h"
 #include "type_id.h"
 #include "units.h"
+
+static const efftype_id effect_bite( "bite" );
+static const efftype_id effect_bleed( "bleed" );
+static const json_character_flag json_flag_BIONIC_LIMB( "BIONIC_LIMB" );
+static const json_character_flag json_flag_PARTIAL_BIONIC_LIMB( "PARTIAL_BIONIC_LIMB" );
 
 namespace cata::lua_platform
 {
@@ -48,12 +54,6 @@ constexpr std::size_t maximum_protection_values = 128;
 constexpr std::size_t maximum_definition_offset = 1000000;
 constexpr std::int64_t maximum_power_millijoule =
     1000000000000000LL;
-
-const efftype_id effect_bite( "bite" );
-const efftype_id effect_bleed( "bleed" );
-const json_character_flag json_flag_BIONIC_LIMB( "BIONIC_LIMB" );
-const json_character_flag json_flag_PARTIAL_BIONIC_LIMB(
-    "PARTIAL_BIONIC_LIMB" );
 
 void require_id_kind( const script_game_id &id, const std::string &kind,
                       const std::string &api_name )
@@ -91,86 +91,19 @@ units::energy native_energy(
                millijoule, units::energy::unit_type{} );
 }
 
-template<typename Range>
-sol::table typed_id_page(
-    sol::state_view lua, const Range &ids,
-    const std::string &kind )
-{
-    const std::size_t total = ids.size();
-    const std::size_t returned = std::min(
-                                     total, maximum_relation_values );
-    sol::table items = lua.create_table(
-                           static_cast<int>( returned ), 0 );
-    std::size_t index = 0;
-    for( const auto &id : ids ) {
-        if( index >= returned ) {
-            break;
-        }
-        items[index + 1] =
-            script_game_id( kind, id.str() );
-        ++index;
-    }
-    sol::table result = lua.create_table();
-    result["items"] = std::move( items );
-    result["total"] = total;
-    result["returned"] = returned;
-    result["truncated"] = returned < total;
-    return result;
-}
-
-template<typename Range>
-sol::table string_id_page(
-    sol::state_view lua, const Range &ids )
-{
-    const std::size_t total = ids.size();
-    const std::size_t returned = std::min(
-                                     total, maximum_relation_values );
-    sol::table items = lua.create_table(
-                           static_cast<int>( returned ), 0 );
-    std::size_t index = 0;
-    for( const auto &id : ids ) {
-        if( index >= returned ) {
-            break;
-        }
-        items[index + 1] = id.str();
-        ++index;
-    }
-    sol::table result = lua.create_table();
-    result["items"] = std::move( items );
-    result["total"] = total;
-    result["returned"] = returned;
-    result["truncated"] = returned < total;
-    return result;
-}
-
 template<typename Value>
 sol::table body_part_value_page(
     sol::state_view lua,
     const std::map<bodypart_str_id, Value> &values )
 {
-    const std::size_t returned = std::min(
-                                     values.size(),
-                                     maximum_body_part_values );
-    sol::table items = lua.create_table(
-                           static_cast<int>( returned ), 0 );
-    std::size_t index = 0;
-    for( const auto &entry : values ) {
-        if( index >= returned ) {
-            break;
-        }
+    return detail::make_bounded_relation_page( lua, values, maximum_body_part_values,
+    [&lua]( const auto & entry ) {
         sol::table item = lua.create_table();
         item["body_part"] = script_game_id(
                                 "body_part", entry.first.str() );
         item["value"] = entry.second;
-        items[index + 1] = std::move( item );
-        ++index;
-    }
-    sol::table result = lua.create_table();
-    result["items"] = std::move( items );
-    result["total"] = values.size();
-    result["returned"] = returned;
-    result["truncated"] = returned < values.size();
-    return result;
+        return item;
+    } );
 }
 
 sol::table protection_page(
@@ -274,61 +207,54 @@ sol::table snapshot_definition(
         result["coverage_power_generation_penalty"] = sol::nil;
     }
 
-    result["flags"] = typed_id_page(
-                          lua, definition.flags, "json_flag" );
-    result["active_flags"] = typed_id_page(
-                                 lua, definition.active_flags,
+    result["flags"] = detail::make_typed_id_page(
+                          lua, maximum_relation_values, definition.flags, "json_flag" );
+    result["active_flags"] = detail::make_typed_id_page(
+                                 lua, maximum_relation_values, definition.active_flags,
                                  "json_flag" );
-    result["inactive_flags"] = typed_id_page(
-                                   lua, definition.inactive_flags,
+    result["inactive_flags"] = detail::make_typed_id_page(
+                                   lua, maximum_relation_values, definition.inactive_flags,
                                    "json_flag" );
-    result["fuel_options"] = typed_id_page(
-                                 lua, definition.fuel_opts,
+    result["fuel_options"] = detail::make_typed_id_page(
+                                 lua, maximum_relation_values, definition.fuel_opts,
                                  "material" );
-    result["included_bionics"] = typed_id_page(
-                                     lua,
-                                     definition.included_bionics,
+    result["included_bionics"] = detail::make_typed_id_page(
+                                     lua, maximum_relation_values, definition.included_bionics,
                                      "bionic" );
-    result["auto_deactivated_bionics"] = typed_id_page(
-            lua, definition.autodeactivated_bionics,
+    result["auto_deactivated_bionics"] = detail::make_typed_id_page(
+            lua, maximum_relation_values, definition.autodeactivated_bionics,
             "bionic" );
-    result["available_upgrades"] = typed_id_page(
-                                       lua,
-                                       definition.available_upgrades,
+    result["available_upgrades"] = detail::make_typed_id_page(
+                                       lua, maximum_relation_values, definition.available_upgrades,
                                        "bionic" );
-    result["canceled_mutations"] = typed_id_page(
-                                       lua,
-                                       definition.canceled_mutations,
+    result["canceled_mutations"] = detail::make_typed_id_page(
+                                       lua, maximum_relation_values, definition.canceled_mutations,
                                        "mutation" );
-    result["mutation_conflicts"] = typed_id_page(
-                                       lua,
-                                       definition.mutation_conflicts,
+    result["mutation_conflicts"] = detail::make_typed_id_page(
+                                       lua, maximum_relation_values, definition.mutation_conflicts,
                                        "mutation" );
-    result["mutations_on_removal"] = typed_id_page(
-                                         lua,
-                                         definition.give_mut_on_removal,
+    result["mutations_on_removal"] = detail::make_typed_id_page(
+                                         lua, maximum_relation_values, definition.give_mut_on_removal,
                                          "mutation" );
-    result["martial_arts"] = typed_id_page(
-                                 lua, definition.ma_styles,
+    result["martial_arts"] = detail::make_typed_id_page(
+                                 lua, maximum_relation_values, definition.ma_styles,
                                  "martial_art" );
-    result["passive_pseudo_items"] = typed_id_page(
-                                         lua,
-                                         definition.passive_pseudo_items,
+    result["passive_pseudo_items"] = detail::make_typed_id_page(
+                                         lua, maximum_relation_values, definition.passive_pseudo_items,
                                          "item" );
-    result["toggled_pseudo_items"] = typed_id_page(
-                                         lua,
-                                         definition.toggled_pseudo_items,
+    result["toggled_pseudo_items"] = detail::make_typed_id_page(
+                                         lua, maximum_relation_values, definition.toggled_pseudo_items,
                                          "item" );
-    result["enchantments"] = string_id_page(
-                                 lua, definition.enchantments );
-    result["proficiencies"] = string_id_page(
-                                  lua, definition.proficiencies );
-    result["activation_eocs"] = string_id_page(
-                                    lua, definition.activated_eocs );
-    result["processing_eocs"] = string_id_page(
-                                    lua, definition.processed_eocs );
-    result["deactivation_eocs"] = string_id_page(
-                                      lua, definition.deactivated_eocs );
+    result["enchantments"] = detail::make_string_id_page(
+                                 lua, maximum_relation_values, definition.enchantments );
+    result["proficiencies"] = detail::make_string_id_page(
+                                  lua, maximum_relation_values, definition.proficiencies );
+    result["activation_eocs"] = detail::make_string_id_page(
+                                    lua, maximum_relation_values, definition.activated_eocs );
+    result["processing_eocs"] = detail::make_string_id_page(
+                                    lua, maximum_relation_values, definition.processed_eocs );
+    result["deactivation_eocs"] = detail::make_string_id_page(
+                                      lua, maximum_relation_values, definition.deactivated_eocs );
 
     set_optional_id(
         result, "upgraded_bionic",
@@ -452,6 +378,8 @@ sol::table list_definitions(
     std::sort(
         definitions.begin(), definitions.end(),
     []( const bionic_data * lhs, const bionic_data * rhs ) {
+        // Stable API IDs must not depend on the UI locale.
+        // NOLINTNEXTLINE(cata-use-localized-sorting)
         return lhs->id.str() < rhs->id.str();
     } );
     const std::size_t offset = std::min(
@@ -488,23 +416,64 @@ sol::table get_definition(
                state, bionic_id( requested_id.value() ).obj() );
 }
 
+struct bionic_instance_snapshot {
+    bionic_uid uid = 0;
+    bionic_uid parent_uid = 0;
+    std::string id;
+    std::string name;
+    std::string description;
+    char invlet = ' ';
+    bool powered = false;
+    bool active = false;
+    bool activatable = false;
+    bool included = false;
+    bool show_sprite = false;
+    bool auto_shutdown = false;
+    time_duration charge_timer = 0_turns;
+    time_duration incapacitated_time = 0_turns;
+    float safe_fuel_threshold = 0.0f;
+    bool safe_fuel_enabled = false;
+    bool has_weapon = false;
+};
+
+bionic_instance_snapshot capture_instance( const bionic &installed )
+{
+    return {
+        installed.get_uid(),
+        installed.get_parent_uid(),
+        installed.id.str(),
+        installed.info().name.translated(),
+        installed.info().description.translated(),
+        installed.invlet,
+        installed.powered,
+        installed.powered &&installed.incapacitated_time <= 0_turns,
+        installed.info().activated,
+        installed.is_included(),
+        installed.show_sprite,
+        installed.auto_shutdown,
+        installed.charge_timer,
+        installed.incapacitated_time,
+        installed.get_safe_fuel_thresh(),
+        installed.is_safe_fuel_on(),
+        installed.has_weapon()
+    };
+}
+
 sol::table snapshot_instance(
-    sol::state_view lua, const bionic &installed )
+    sol::state_view lua, const bionic_instance_snapshot &installed )
 {
     sol::table result = lua.create_table();
-    result["uid"] = installed.get_uid();
-    result["parent_uid"] = installed.get_parent_uid();
+    result["uid"] = installed.uid;
+    result["parent_uid"] = installed.parent_uid;
     result["id"] = script_game_id(
-                       "bionic", installed.id.str() );
-    result["name"] = installed.info().name.translated();
-    result["description"] =
-        installed.info().description.translated();
+                       "bionic", installed.id );
+    result["name"] = installed.name;
+    result["description"] = installed.description;
     result["invlet"] = std::string( 1, installed.invlet );
     result["powered"] = installed.powered;
-    result["active"] = installed.powered &&
-                       installed.incapacitated_time <= 0_turns;
-    result["activatable"] = installed.info().activated;
-    result["included"] = installed.is_included();
+    result["active"] = installed.active;
+    result["activatable"] = installed.activatable;
+    result["included"] = installed.included;
     result["show_sprite"] = installed.show_sprite;
     result["auto_shutdown"] = installed.auto_shutdown;
     result["charge_timer"] =
@@ -514,11 +483,17 @@ sol::table snapshot_instance(
         script_time_duration::from_native(
             installed.incapacitated_time );
     result["safe_fuel_threshold"] =
-        installed.get_safe_fuel_thresh();
+        installed.safe_fuel_threshold;
     result["safe_fuel_enabled"] =
-        installed.is_safe_fuel_on();
-    result["has_weapon"] = installed.has_weapon();
+        installed.safe_fuel_enabled;
+    result["has_weapon"] = installed.has_weapon;
     return result;
+}
+
+sol::table snapshot_instance(
+    sol::state_view lua, const bionic &installed )
+{
+    return snapshot_instance( std::move( lua ), capture_instance( installed ) );
 }
 
 int instance_limit( const sol::optional<int> &requested )
@@ -547,27 +522,32 @@ sol::table list_instances(
     if( character == nullptr ) {
         return make_game_error_result( state, *error );
     }
-    const bionic_collection &installed =
-        *character->my_bionics;
+    const bionic_collection &installed = *character->my_bionics;
+    const std::size_t total = installed.size();
     const std::size_t returned = std::min(
-                                     installed.size(),
+                                     total,
                                      static_cast<std::size_t>( limit ) );
+    std::vector<bionic_instance_snapshot> snapshots;
+    snapshots.reserve( returned );
+    for( std::size_t index = 0; index < returned; ++index ) {
+        snapshots.push_back( capture_instance( installed[index] ) );
+    }
+    const units::energy power = character->get_power_level();
+    const units::energy maximum_power = character->get_max_power_level();
     sol::table items = state.create_table(
                            static_cast<int>( returned ), 0 );
     for( std::size_t index = 0; index < returned; ++index ) {
         items[index + 1] = snapshot_instance(
-                               state, installed[index] );
+                               state, snapshots[index] );
     }
     sol::table value = state.create_table();
     value["items"] = std::move( items );
-    value["total"] = installed.size();
+    value["total"] = total;
     value["returned"] = returned;
     value["limit"] = limit;
-    value["truncated"] = returned < installed.size();
-    value["power"] = energy_value(
-                         character->get_power_level() );
-    value["maximum_power"] = energy_value(
-                                 character->get_max_power_level() );
+    value["truncated"] = returned < total;
+    value["power"] = energy_value( power );
+    value["maximum_power"] = energy_value( maximum_power );
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
@@ -668,6 +648,12 @@ sol::table install_instance(
     }
     const bionic_uid uid =
         character->add_bionic( id, 0, true );
+    character = resolve_exact_character(
+                    handle, runtime_generation,
+                    world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
     const std::optional<bionic *> installed =
         character->find_bionic_by_uid( uid );
     if( uid == 0 || !installed ) {
@@ -714,10 +700,30 @@ sol::table remove_instance(
     }
     sol::table removed = snapshot_instance(
                              state, **installed );
-    character->remove_bionic( **installed );
+    character = resolve_exact_character(
+                    handle, runtime_generation,
+                    world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const std::optional<bionic *> current_instance =
+        find_instance( *character, uid );
+    if( !current_instance ) {
+        return make_game_error_result( state, {
+            "not_found", "The bionic was removed while its state was captured"
+        } );
+    }
+    character->remove_bionic( **current_instance );
+    Character *after_character = resolve_exact_character(
+                                     handle, runtime_generation,
+                                     world_generation, error );
+    if( after_character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const int remaining_bionics = after_character->num_bionics();
     sol::table value = state.create_table();
     value["removed"] = std::move( removed );
-    value["remaining"] = character->num_bionics();
+    value["remaining"] = remaining_bionics;
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
@@ -742,14 +748,14 @@ sol::table set_power(
     const units::energy before =
         character->get_power_level();
     character->set_power_level( power );
+    const units::energy after = character->get_power_level();
+    const units::energy maximum = character->get_max_power_level();
+    const bool clamped = after != power;
     sol::table value = state.create_table();
     value["before"] = energy_value( before );
-    value["after"] = energy_value(
-                         character->get_power_level() );
-    value["maximum"] = energy_value(
-                           character->get_max_power_level() );
-    value["clamped"] =
-        character->get_power_level() != power;
+    value["after"] = energy_value( after );
+    value["maximum"] = energy_value( maximum );
+    value["clamped"] = clamped;
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
@@ -792,29 +798,52 @@ sol::table set_activation(
             "Self-removing bionics cannot be activated through Lua"
         } );
     }
-    sol::table before = snapshot_instance(
-                            state, **installed );
     const units::energy power_before =
         character->get_power_level();
+    sol::table before = snapshot_instance(
+                            state, **installed );
+    character = resolve_exact_character(
+                    handle, runtime_generation,
+                    world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const std::optional<bionic *> current_instance =
+        find_instance( *character, uid );
+    if( !current_instance ) {
+        return make_game_error_result( state, {
+            "not_found", "The bionic was removed while its state was captured"
+        } );
+    }
     const bool accepted = active ?
-                          character->activate_bionic( **installed ) :
-                          character->deactivate_bionic( **installed );
+                          character->activate_bionic( **current_instance ) :
+                          character->deactivate_bionic( **current_instance );
+    Character *after_character = resolve_exact_character(
+                                     handle, runtime_generation,
+                                     world_generation, error );
+    if( after_character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
     const std::optional<bionic *> after_instance =
-        character->find_bionic_by_uid(
+        after_character->find_bionic_by_uid(
             static_cast<bionic_uid>( uid ) );
+    std::optional<bionic_instance_snapshot> after_snapshot;
+    if( after_instance ) {
+        after_snapshot = capture_instance( **after_instance );
+    }
+    const units::energy power_after = after_character->get_power_level();
 
     sol::table value = state.create_table();
     value["accepted"] = accepted;
     value["before"] = std::move( before );
-    if( after_instance ) {
+    if( after_snapshot ) {
         value["after"] = snapshot_instance(
-                             state, **after_instance );
+                             state, *after_snapshot );
     } else {
         value["after"] = sol::nil;
     }
     value["power_before"] = energy_value( power_before );
-    value["power_after"] = energy_value(
-                               character->get_power_level() );
+    value["power_after"] = energy_value( power_after );
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
@@ -897,22 +926,36 @@ sol::table configure_instance(
     }
     sol::table before = snapshot_instance(
                             state, **installed );
+    character = resolve_exact_character(
+                    handle, runtime_generation,
+                    world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const std::optional<bionic *> current_instance =
+        find_instance( *character, uid );
+    if( !current_instance ) {
+        return make_game_error_result( state, {
+            "not_found", "The bionic was removed while its state was captured"
+        } );
+    }
     if( options.auto_shutdown ) {
-        ( **installed ).auto_shutdown =
+        ( **current_instance ).auto_shutdown =
             *options.auto_shutdown;
     }
     if( options.show_sprite ) {
-        ( **installed ).show_sprite =
+        ( **current_instance ).show_sprite =
             *options.show_sprite;
     }
     if( options.safe_fuel_threshold ) {
-        ( **installed ).set_safe_fuel_thresh(
+        ( **current_instance ).set_safe_fuel_thresh(
             *options.safe_fuel_threshold );
     }
+    const bionic_instance_snapshot after_snapshot =
+        capture_instance( **current_instance );
     sol::table value = state.create_table();
     value["before"] = std::move( before );
-    value["after"] = snapshot_instance(
-                         state, **installed );
+    value["after"] = snapshot_instance( state, after_snapshot );
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
 }
@@ -923,29 +966,40 @@ bool is_bionic_limb( const bodypart_id &part )
            part->has_flag( json_flag_PARTIAL_BIONIC_LIMB );
 }
 
-sol::table bionic_limb_repair_state(
-    sol::state_view lua, Character &character, const bool apply )
+std::optional<sol::table> bionic_limb_repair_state(
+    sol::state_view lua, const game_handle &handle,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation, const bool apply,
+    std::optional<game_handle_error> &error )
 {
     struct limb_repair {
         bodypart_id part;
         int before = 0;
+        int after = 0;
         int maximum = 0;
         bool bite = false;
         bool bleed = false;
     };
+    Character *character = resolve_exact_character(
+                               handle, runtime_generation,
+                               world_generation, error );
+    if( character == nullptr ) {
+        return std::nullopt;
+    }
     std::vector<limb_repair> limbs;
     int total_missing = 0;
-    for( const bodypart_id &part : character.get_all_body_parts(
+    for( const bodypart_id &part : character->get_all_body_parts(
              get_body_part_flags::only_main ) ) {
         if( !is_bionic_limb( part ) ) {
             continue;
         }
         limb_repair entry;
         entry.part = part;
-        entry.before = character.get_part_hp_cur( part );
-        entry.maximum = character.get_part_hp_max( part );
-        entry.bite = character.has_effect( effect_bite, part.id() );
-        entry.bleed = character.has_effect( effect_bleed, part.id() );
+        entry.before = character->get_part_hp_cur( part );
+        entry.after = entry.before;
+        entry.maximum = character->get_part_hp_max( part );
+        entry.bite = character->has_effect( effect_bite, part.id() );
+        entry.bleed = character->has_effect( effect_bleed, part.id() );
         total_missing += std::max( 0, entry.maximum - entry.before );
         limbs.push_back( entry );
     }
@@ -954,15 +1008,42 @@ sol::table bionic_limb_repair_state(
         for( const limb_repair &entry : limbs ) {
             const int missing = std::max( 0, entry.maximum - entry.before );
             if( missing > 0 ) {
-                character.heal( entry.part, missing );
+                character->heal( entry.part, missing );
+                character = resolve_exact_character(
+                                handle, runtime_generation,
+                                world_generation, error );
+                if( character == nullptr ) {
+                    return std::nullopt;
+                }
             }
             if( entry.bite ) {
-                character.remove_effect( effect_bite, entry.part );
+                character->remove_effect( effect_bite, entry.part );
+                character = resolve_exact_character(
+                                handle, runtime_generation,
+                                world_generation, error );
+                if( character == nullptr ) {
+                    return std::nullopt;
+                }
             }
             if( entry.bleed ) {
-                character.remove_effect( effect_bleed, entry.part );
+                character->remove_effect( effect_bleed, entry.part );
+                character = resolve_exact_character(
+                                handle, runtime_generation,
+                                world_generation, error );
+                if( character == nullptr ) {
+                    return std::nullopt;
+                }
             }
         }
+    }
+    character = resolve_exact_character(
+                    handle, runtime_generation,
+                    world_generation, error );
+    if( character == nullptr ) {
+        return std::nullopt;
+    }
+    for( limb_repair &entry : limbs ) {
+        entry.after = character->get_part_hp_cur( entry.part );
     }
 
     sol::table items = lua.create_table(
@@ -973,7 +1054,7 @@ sol::table bionic_limb_repair_state(
         item["body_part"] = script_game_id(
                                 "body_part", entry.part.id().str() );
         item["before"] = entry.before;
-        item["after"] = character.get_part_hp_cur( entry.part );
+        item["after"] = entry.after;
         item["maximum"] = entry.maximum;
         item["missing"] = std::max( 0, entry.maximum - entry.before );
         item["had_bite"] = entry.bite;
@@ -1003,9 +1084,14 @@ sol::table quote_bionic_limb_repairs(
     if( character == nullptr ) {
         return make_game_error_result( state, *error );
     }
+    std::optional<sol::table> result = bionic_limb_repair_state(
+                                           state, handle, runtime_generation, world_generation,
+                                           false, error );
+    if( !result ) {
+        return make_game_error_result( state, *error );
+    }
     return make_game_value_result(
-               state, sol::make_object(
-                   state, bionic_limb_repair_state( state, *character, false ) ) );
+               state, sol::make_object( state, std::move( *result ) ) );
 }
 
 sol::table repair_bionic_limbs(
@@ -1021,19 +1107,24 @@ sol::table repair_bionic_limbs(
     if( character == nullptr ) {
         return make_game_error_result( state, *error );
     }
+    std::optional<sol::table> result = bionic_limb_repair_state(
+                                           state, handle, runtime_generation, world_generation,
+                                           true, error );
+    if( !result ) {
+        return make_game_error_result( state, *error );
+    }
     return make_game_value_result(
-               state, sol::make_object(
-                   state, bionic_limb_repair_state( state, *character, true ) ) );
+               state, sol::make_object( state, std::move( *result ) ) );
 }
 
 } // namespace
 
 void install_bionic_api(
     sol::table &services,
-    std::function<game_handle_runtime()> current_runtime_generation,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read,
-    std::function<void()> require_write )
+    const std::function<game_handle_runtime()> &current_runtime_generation,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read,
+    const std::function<void()> &require_write )
 {
     sol::state_view lua( services.lua_state() );
     sol::table bionics = lua.create_table();

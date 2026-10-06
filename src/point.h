@@ -142,7 +142,10 @@ inline int divide_round_to_minus_infinity( int n, int d )
     if( n >= 0 ) {
         return n / d; // NOLINT(clang-analyzer-core.DivideZero)
     }
-    return ( n - d + 1 ) / d; // NOLINT(clang-analyzer-core.DivideZero)
+    // Coordinate scales use a positive divisor. Widen before subtracting it:
+    // valid negative coordinates near INT_MIN must not overflow the numerator.
+    return static_cast<int>( ( static_cast<std::int64_t>( n ) - d + 1 ) /
+                             d ); // NOLINT(clang-analyzer-core.DivideZero)
 }
 
 inline point multiply_xy( const point &p, int f )
@@ -284,6 +287,10 @@ struct tripoint {
     tripoint rotate_in_map( int turns ) const {
         return tripoint( xy().rotate_in_map( turns ), z );
     }
+
+    // Reflect around center with wide intermediates; reject only a final
+    // coordinate outside the signed engine range.
+    tripoint mirror_around( const tripoint &center ) const;
 
     std::string to_string() const;
     std::string to_string_writable() const;

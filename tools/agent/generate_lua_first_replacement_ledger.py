@@ -75,14 +75,10 @@ CONTROL_FLOW = {
     "or",
     "not",
     "if",
-    "foreach",
     "nothing",
-    "run_eoc_selector",
-    "run_eocs",
     "set_condition",
     "switch",
     "test_eoc",
-    "weighted_list_eocs",
 }
 
 # JSON object types remain unverified. Promote exact selectors only after
@@ -2371,9 +2367,10 @@ NATIVE_PRIMITIVE_EVIDENCE = [
 ]
 
 BOUNDED_IMPLEMENTED_EOC = {
-    # Charge-aware inventory queries and wielded/worn predicates now lower to
-    # the typed inventory API for proven avatar/NPC actors.  Dynamic variable
-    # forms remain explicit TODOs in the migrator.
+    # Charge-aware inventory queries and worn/wielded flag predicates now
+    # lower to typed inventory APIs for proven Character slots.  Dynamic flag
+    # values are validated through services.types.id; unsupported provenance
+    # and implicit dialogue-reason body parts remain explicit TODOs.
     ("eoc-conditions", "has_ammo"): "services.items",
     ("eoc-conditions", "is_rotten"): "services.items",
     ("eoc-conditions", "u_has_item"): "services.inventory",
@@ -2386,14 +2383,10 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-conditions", "npc_has_item_category"): "services.items",
     ("eoc-conditions", "u_has_software"): "services.characters",
     ("eoc-conditions", "npc_has_software"): "services.characters",
-    ("eoc-conditions", "u_has_worn_with_flag"): "services.characters",
-    ("eoc-conditions", "npc_has_worn_with_flag"): "services.characters",
-    ("eoc-conditions", "u_has_wielded_with_flag"): (
-        "services.inventory-and-items"
-    ),
-    ("eoc-conditions", "npc_has_wielded_with_flag"): (
-        "services.inventory-and-items"
-    ),
+    ("eoc-conditions", "u_has_worn_with_flag"): "services.inventory",
+    ("eoc-conditions", "npc_has_worn_with_flag"): "services.inventory",
+    ("eoc-conditions", "u_has_wielded_with_flag"): "services.inventory",
+    ("eoc-conditions", "npc_has_wielded_with_flag"): "services.inventory",
     ("eoc-conditions", "u_has_wielded_with_weapon_category"): (
         "services.items"
     ),
@@ -2441,7 +2434,9 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "u_travel_to_dimension"): "services.relocation",
     ("eoc-effects", "u_activate"): "services.items",
     ("eoc-effects", "npc_activate"): "services.items",
-    ("eoc-effects", "custom_light_level"): "services.gameplay",
+    ("eoc-effects", "custom_light_level"): (
+        'services.weather.append_light_event'
+    ),
     ("eoc-effects", "alter_timed_events"): "services.time",
     ("eoc-effects", "dimension_name"): "services.gameplay.environment",
     ("eoc-effects", "mirror_coordinates"): "services.coords",
@@ -2618,7 +2613,7 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-conditions", "npc_hostile"): "services.npcs",
     ("eoc-conditions", "npc_friend"): "services.npcs",
     ("eoc-conditions", "u_hostile"): "services.characters",
-    ("eoc-conditions", "u_friend"): "services.characters",
+    ("eoc-conditions", "u_friend"): "services.npcs",
     ("eoc-conditions", "u_is_in_vehicle"): "services.characters",
     ("eoc-conditions", "u_controlling_vehicle"): "services.characters",
     ("eoc-conditions", "u_driving"): "services.characters",
@@ -2714,7 +2709,7 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-conditions", "npc_has_species"): "services.characters",
     ("eoc-conditions", "u_has_stolen_item"): "services.inventory",
     ("eoc-conditions", "u_can_stow_weapon"): "services.inventory",
-    ("eoc-conditions", "u_are_owed"): "services.characters",
+    ("eoc-conditions", "u_are_owed"): "services.npcs",
     ("eoc-conditions", "u_train_skills"): "services.skills",
     ("eoc-conditions", "u_train_spells"): "services.magic",
     ("eoc-conditions", "u_train_styles"): "services.martial_arts",
@@ -2793,7 +2788,7 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "transform_item"): "services.items",
     ("eoc-effects", "clear_dimension"): "services.dialogue",
     ("eoc-effects", "clear_overrides"): "services.dialogue",
-    ("eoc-effects", "place_override"): "services.dialogue",
+    ("eoc-effects", "place_override"): "services.world",
     ("eoc-effects", "transform_line"): "services.world",
     ("eoc-effects", "u_assign_activity"): "services.activities",
     ("eoc-effects", "npc_assign_activity"): "services.activities",
@@ -2835,8 +2830,12 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "start_vehicle_full_repair"): "services.vehicles",
     ("eoc-effects", "npc_run_vehicle_eocs"): "services.vehicles",
     ("eoc-effects", "u_run_vehicle_eocs"): "services.vehicles",
-    ("eoc-effects", "copy_location"): "services.map",
-    ("eoc-effects", "location_variable_adjust"): "services.map",
+    ("eoc-effects", "copy_location"): "services.world",
+    ("eoc-effects", (
+        'location_variable_adjust'
+    )): (
+        'services.coords-and-variables'
+    ),
     ("eoc-effects", "mapgen_update"): "services.map",
     ("eoc-effects", "npc_location_variable"): "services.map",
     ("eoc-effects", "npc_map_run_eocs"): "services.map",
@@ -2871,7 +2870,7 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "quote_npc_trade_item"): "services.items",
     ("eoc-effects", "remove_active_mission"): "services.missions",
     ("eoc-effects", "reveal_map"): "services.map",
-    ("eoc-effects", "revert_location"): "services.map",
+    ("eoc-effects", "revert_location"): "services.world",
     ("eoc-effects", "set_furniture"): "services.map",
     ("eoc-effects", "set_item_category_spawn_rates"): (
         "services.item_categories"
@@ -2889,14 +2888,14 @@ BOUNDED_IMPLEMENTED_EOC = {
     ("eoc-effects", "u_set_field"): "services.map",
     ("eoc-effects", "u_set_flag"): "services.items",
     ("eoc-effects", "u_unset_flag"): "services.items",
-    ("eoc-conditions", "npc_has_any_effect"): "services.characters",
-    ("eoc-conditions", "npc_has_effect"): "services.characters",
+    ("eoc-conditions", "npc_has_any_effect"): "services.effects",
+    ("eoc-conditions", "npc_has_effect"): "services.effects",
     ("eoc-conditions", "npc_has_move_mode"): "services.characters.movement",
     ("eoc-conditions", "npc_query"): "services.characters",
     ("eoc-conditions", "npc_service"): "services.characters",
-    ("eoc-conditions", "u_has_any_effect"): "services.characters",
-    ("eoc-conditions", "u_has_effect"): "services.characters",
-    ("eoc-conditions", "u_has_faction_trust"): "services.characters",
+    ("eoc-conditions", "u_has_any_effect"): "services.effects",
+    ("eoc-conditions", "u_has_effect"): "services.effects",
+    ("eoc-conditions", "u_has_faction_trust"): "services.factions",
     ("eoc-conditions", "u_service"): "services.characters",
     ("eoc-effects", "clear_npc_rule"): "services.characters",
     ("eoc-effects", "copy_npc_rules"): "services.npcs",
@@ -3024,6 +3023,19 @@ RETIRED_BOUNDED_IMPLEMENTED_EOC = {
 }
 
 BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
+    ("eoc-effects", "copy_location"): [
+        "src/npctalk.cpp", (
+            'src/lua_platform_world.cpp'
+        ), (
+            'src/lua_platform_variables.cpp'
+        ),
+        (
+            'tests/lua_platform_test_09_world_content_test.cpp'
+        ), (
+            'tests/lua_platform_variable_native_key_test.cpp'
+        ),
+        "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
+    ],
     ("eoc-effects", "u_lose_mutation_type"): [
         "src/npctalk.cpp", "src/lua_platform_mutations.cpp",
         "tests/lua_platform_mutations_test.cpp",
@@ -3033,7 +3045,13 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
         "tests/lua_platform_mutations_test.cpp",
     ],
     ("eoc-effects", "location_variable_adjust"): [
-        "src/npctalk.cpp", "src/lua_platform_bindings_values.cpp",
+        "src/npctalk.cpp", "src/lua_platform_bindings_coords.cpp",
+        (
+            'src/lua_platform_variables.cpp'
+        ), (
+            'tests/lua_platform_variable_native_key_test.cpp'
+        ),
+        "tests/lua_platform_random_range_test.cpp",
         "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
     ],
     ("eoc-effects", "npc_location_variable"): [
@@ -3083,7 +3101,11 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
         "src/npctalk.cpp", "src/lua_platform_runtime.cpp",
     ],
     ("eoc-effects", "mirror_coordinates"): [
-        "src/npctalk.cpp", "src/lua_platform_bindings_values.cpp",
+        "src/npctalk.cpp", "src/point.cpp", (
+            'src/lua_platform_bindings_coords.cpp'
+        ),
+        "src/lua_platform_variables.cpp", "tests/point_test.cpp",
+        "tests/lua_platform_variable_native_key_test.cpp",
     ],
     ("eoc-effects", "closest_city"): [
         "src/npctalk.cpp", "src/overmapbuffer.cpp",
@@ -3135,25 +3157,66 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
         "src/lua_platform_creatures.cpp",
         "data/lua/types/ccb_platform_v1.d.lua",
     ],
+    ("eoc-conditions", "u_friend"): [
+        "src/condition.cpp",
+        "src/talker.h",
+        "src/talker_npc.cpp",
+        "src/npc.cpp",
+        "src/lua_platform_npcs.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tests/lua_platform_npc_relationship_test.cpp",
+        "tools/migrate_lua_first.py",
+        "tools/test_migrate_lua_first.py",
+    ],
+    ("eoc-conditions", "u_are_owed"): [
+        "src/condition.cpp",
+        "src/talker.h",
+        "src/talker_npc.cpp",
+        "src/lua_platform_npcs.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tests/lua_platform_npc_relationship_test.cpp",
+        "tools/migrate_lua_first.py",
+        "tools/test_migrate_lua_first.py",
+    ],
     ("eoc-conditions", "u_has_faction_trust"): [
         "src/condition.cpp",
         "src/lua_platform_factions.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tests/lua_platform_npc_relationship_test.cpp",
+        "tools/migrate_lua_first.py",
+        "tools/test_migrate_lua_first.py",
     ],
     ("eoc-conditions", "u_has_effect"): [
         "src/condition.cpp",
         "src/lua_platform_effects.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tests/lua_platform_effects_test.cpp",
+        "tools/migrate_lua_first.py",
+        "tools/test_migrate_lua_first.py",
     ],
     ("eoc-conditions", "u_has_any_effect"): [
         "src/condition.cpp",
         "src/lua_platform_effects.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tests/lua_platform_effects_test.cpp",
+        "tools/migrate_lua_first.py",
+        "tools/test_migrate_lua_first.py",
     ],
     ("eoc-conditions", "npc_has_effect"): [
         "src/condition.cpp",
         "src/lua_platform_effects.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tests/lua_platform_effects_test.cpp",
+        "tools/migrate_lua_first.py",
+        "tools/test_migrate_lua_first.py",
     ],
     ("eoc-conditions", "npc_has_any_effect"): [
         "src/condition.cpp",
         "src/lua_platform_effects.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tests/lua_platform_effects_test.cpp",
+        "tools/migrate_lua_first.py",
+        "tools/test_migrate_lua_first.py",
     ],
     ("eoc-conditions", "expects_vars"): [
         "src/condition.cpp",
@@ -3923,6 +3986,36 @@ BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE = {
         "src/talker_character.cpp",
         "src/lua_platform_items.cpp",
         "data/lua/types/ccb_platform_v1.d.lua",
+        "tools/migrate_lua_first.py",
+        "tools/test_migrate_lua_first.py",
+        "tests/lua_platform_knowledge_semantics_test.cpp",
+    ],
+    ("eoc-conditions", "npc_has_worn_with_flag"): [
+        "src/condition.cpp",
+        "src/talker_character.cpp",
+        "src/lua_platform_items.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tools/migrate_lua_first.py",
+        "tools/test_migrate_lua_first.py",
+        "tests/lua_platform_knowledge_semantics_test.cpp",
+    ],
+    ("eoc-conditions", "u_has_worn_with_flag"): [
+        "src/condition.cpp",
+        "src/talker_character.cpp",
+        "src/lua_platform_items.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tools/migrate_lua_first.py",
+        "tools/test_migrate_lua_first.py",
+        "tests/lua_platform_knowledge_semantics_test.cpp",
+    ],
+    ("eoc-conditions", "npc_has_wielded_with_flag"): [
+        "src/condition.cpp",
+        "src/talker_character.cpp",
+        "src/lua_platform_items.cpp",
+        "data/lua/types/ccb_platform_v1.d.lua",
+        "tools/migrate_lua_first.py",
+        "tools/test_migrate_lua_first.py",
+        "tests/lua_platform_knowledge_semantics_test.cpp",
     ],
     ("eoc-conditions", "u_has_any_trait"): [
         "src/condition.cpp",
@@ -4134,7 +4227,29 @@ for _prefix in ("u_", "npc_"):
             "tools/test_lua_mutation_migration.py",
         ]
 
+# Named predicates carry dialogue-local state and dynamic lookup semantics.
+# Existing Lua lowering is bounded (for example, test_eoc only inlines static
+# known IDs); ordinary Lua control flow does not exempt these from acceptance.
+for _inventory, _selector in (
+    ("eoc-effects", "set_condition"),
+    ("eoc-conditions", "get_condition"),
+    ("eoc-conditions", "test_eoc"),
+):
+    _key = (_inventory, _selector)
+    BOUNDED_IMPLEMENTED_EOC[_key] = "native-lua-predicate-context"
+    BOUNDED_IMPLEMENTED_EOC_EXTRA_EVIDENCE[_key] = [
+        "src/condition.cpp", "src/npctalk.cpp", "src/dialogue.h",
+        "tools/migrate_lua_first.py", "tools/test_migrate_lua_first.py",
+    ]
+
 EXPLICIT_PRIMITIVE_EOC = {
+    # These also require engine behavior: persisted scheduling and actor
+    # context, player presentation, or weighted random selection.
+    # is not evidence that their complete native semantics have been accepted.
+    ("eoc-effects", "foreach"): "services.registry-and-variables",
+    ("eoc-effects", "run_eocs"): "ccb.tasks-and-actor-context",
+    ("eoc-effects", "run_eoc_selector"): "ccb.presentation.choose",
+    ("eoc-effects", "weighted_list_eocs"): "services.random",
     ("eoc-conditions", "is_rotten"): "services.items",
     ("eoc-conditions", "npc_can_drop_weapon"): (
         "services.inventory-and-martial-arts"
@@ -4144,9 +4259,6 @@ EXPLICIT_PRIMITIVE_EOC = {
     ("eoc-conditions", "npc_has_move_mode"): "services.characters.movement",
     ("eoc-conditions", "npc_has_weapon"): (
         "services.inventory-and-martial-arts"
-    ),
-    ("eoc-conditions", "npc_has_wielded_with_flag"): (
-        "services.inventory-and-items"
     ),
     ("eoc-effects", "assign_mission"): "services.missions-and-dialogue",
     ("eoc-effects", "give_aid"): "services.characters-and-effects",
@@ -4162,6 +4274,17 @@ EXPLICIT_PRIMITIVE_EOC = {
 }
 
 EXPLICIT_PRIMITIVE_EOC_EXTRA_EVIDENCE = {
+    **{
+        ("eoc-effects", selector): [
+            "src/npctalk.cpp",
+            "src/lua_platform_runtime_services.cpp",
+            "tools/migrate_lua_first.py",
+            "tools/test_migrate_lua_first.py",
+        ]
+        for selector in (
+            "foreach", "run_eocs", "run_eoc_selector", "weighted_list_eocs"
+        )
+    },
     ("eoc-effects", "u_add_trait"): [
         "src/lua_platform_mutations.cpp",
         "tests/lua_platform_mutations_test.cpp",
@@ -4336,10 +4459,6 @@ EXPLICIT_PRIMITIVE_EOC_EXTRA_EVIDENCE = {
     ("eoc-conditions", "npc_has_weapon"): [
         "src/melee.cpp", "src/lua_platform_items.cpp",
         "src/lua_platform_martial_arts.cpp",
-        "data/lua/types/ccb_platform_v1.d.lua",
-    ],
-    ("eoc-conditions", "npc_has_wielded_with_flag"): [
-        "src/talker_character.cpp", "src/lua_platform_items.cpp",
         "data/lua/types/ccb_platform_v1.d.lua",
     ],
     ("eoc-effects", "assign_mission"): [

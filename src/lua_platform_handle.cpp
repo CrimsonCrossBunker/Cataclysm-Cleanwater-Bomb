@@ -61,21 +61,49 @@ struct vehicle_handle_identity_state {
 namespace
 {
 
+constexpr std::size_t initial_identity_state_prune_threshold = 64;
+
 struct item_identity_registry {
     std::unordered_map<const item *, std::weak_ptr<item_handle_identity_state>> states;
+    std::size_t lookups_until_prune = initial_identity_state_prune_threshold;
 };
 
 struct vehicle_identity_registry {
     std::unordered_map<const vehicle *, std::weak_ptr<vehicle_handle_identity_state>> states;
+    std::size_t lookups_until_prune = initial_identity_state_prune_threshold;
 };
 
 struct npc_identity_registry {
     std::unordered_map<std::int64_t, std::weak_ptr<npc_handle_identity_state>> states;
+    std::size_t lookups_until_prune = initial_identity_state_prune_threshold;
 };
 
 struct camp_identity_registry {
     std::unordered_map<std::uint64_t, std::weak_ptr<camp_handle_identity_state>> states;
+    std::size_t lookups_until_prune = initial_identity_state_prune_threshold;
 };
+
+template<typename States>
+void prune_expired_identity_states( States &states, std::size_t &lookups_until_prune )
+{
+    if( lookups_until_prune > 0 ) {
+        --lookups_until_prune;
+    }
+    if( lookups_until_prune != 0 ) {
+        return;
+    }
+
+    for( auto it = states.begin(); it != states.end(); ) {
+        if( it->second.expired() ) {
+            it = states.erase( it );
+        } else {
+            ++it;
+        }
+    }
+
+    lookups_until_prune = states.size() < initial_identity_state_prune_threshold ?
+                          initial_identity_state_prune_threshold : states.size();
+}
 
 item_identity_registry &item_identities()
 {
@@ -85,8 +113,10 @@ item_identity_registry &item_identities()
 
 std::shared_ptr<item_handle_identity_state> item_identity_for( item &value )
 {
+    item_identity_registry &registry = item_identities();
+    prune_expired_identity_states( registry.states, registry.lookups_until_prune );
     std::weak_ptr<item_handle_identity_state> &stored =
-        item_identities().states[&value];
+        registry.states[&value];
     if( std::shared_ptr<item_handle_identity_state> identity = stored.lock() ) {
         if( identity->reference.get() == &value ) {
             return identity;
@@ -121,8 +151,10 @@ std::shared_ptr<camp_handle_identity_state> camp_identity_for(
     basecamp &value, const bool activate )
 {
     const std::uint64_t stable_id = value.platform_id();
+    camp_identity_registry &registry = camp_identities();
+    prune_expired_identity_states( registry.states, registry.lookups_until_prune );
     std::weak_ptr<camp_handle_identity_state> &stored =
-        camp_identities().states[stable_id];
+        registry.states[stable_id];
     if( std::shared_ptr<camp_handle_identity_state> identity = stored.lock() ) {
         if( identity->reference.get() == &value ) {
             if( activate && !identity->active ) {
@@ -149,8 +181,10 @@ std::shared_ptr<camp_handle_identity_state> camp_identity_for(
 std::shared_ptr<camp_handle_identity_state> camp_identity_for_retirement(
     const basecamp &value )
 {
-    const auto found = camp_identities().states.find( value.platform_id() );
-    if( found == camp_identities().states.end() ) {
+    camp_identity_registry &registry = camp_identities();
+    prune_expired_identity_states( registry.states, registry.lookups_until_prune );
+    const auto found = registry.states.find( value.platform_id() );
+    if( found == registry.states.end() ) {
         return nullptr;
     }
     const std::shared_ptr<camp_handle_identity_state> identity =
@@ -165,8 +199,10 @@ std::shared_ptr<npc_handle_identity_state> npc_identity_for(
     npc &value, const bool activate )
 {
     const std::int64_t stable_id = value.getID().get_value();
+    npc_identity_registry &registry = npc_identities();
+    prune_expired_identity_states( registry.states, registry.lookups_until_prune );
     std::weak_ptr<npc_handle_identity_state> &stored =
-        npc_identities().states[stable_id];
+        registry.states[stable_id];
     if( std::shared_ptr<npc_handle_identity_state> identity = stored.lock() ) {
         if( identity->reference.get() == &value ) {
             if( activate && !identity->active ) {
@@ -195,9 +231,11 @@ std::shared_ptr<npc_handle_identity_state> npc_identity_for(
 std::shared_ptr<npc_handle_identity_state> npc_identity_for_retirement(
     npc &value )
 {
-    const auto found = npc_identities().states.find(
+    npc_identity_registry &registry = npc_identities();
+    prune_expired_identity_states( registry.states, registry.lookups_until_prune );
+    const auto found = registry.states.find(
                            value.getID().get_value() );
-    if( found == npc_identities().states.end() ) {
+    if( found == registry.states.end() ) {
         return nullptr;
     }
     const std::shared_ptr<npc_handle_identity_state> identity =
@@ -228,8 +266,10 @@ game_handle_error stale_camp_identity_error()
 
 std::shared_ptr<vehicle_handle_identity_state> vehicle_identity_for( vehicle &value )
 {
+    vehicle_identity_registry &registry = vehicle_identities();
+    prune_expired_identity_states( registry.states, registry.lookups_until_prune );
     std::weak_ptr<vehicle_handle_identity_state> &stored =
-        vehicle_identities().states[&value];
+        registry.states[&value];
     if( std::shared_ptr<vehicle_handle_identity_state> identity = stored.lock() ) {
         if( identity->reference.get() == &value ) {
             return identity;
@@ -573,11 +613,11 @@ std::optional<game_handle_error> game_handle::validation_error(
             if( !creature_ || creature_.get() == nullptr ) {
                 return destroyed_error( kind_ );
             }
-            if( creature_.get()->is_dead_state() ) {
+            if( creature_->is_dead_state() ) {
                 return dead_error( kind_ );
             }
             if( avatar_stable_id_ ) {
-                const Character *character = creature_.get()->as_character();
+                const Character *character = creature_->as_character();
                 if( character == nullptr || !character->is_avatar() ||
                     character->getID().get_value() != *avatar_stable_id_ ) {
                     return game_handle_error{
@@ -591,7 +631,7 @@ std::optional<game_handle_error> game_handle::validation_error(
                     npc_identity_generation_ != npc_identity_->generation ) {
                     return stale_npc_identity_error();
                 }
-                const Character *character = creature_.get()->as_character();
+                const Character *character = creature_->as_character();
                 if( !npc_stable_id_ || character == nullptr ||
                     character->getID().get_value() != *npc_stable_id_ ||
                     npc_identity_->stable_id != *npc_stable_id_ ) {
@@ -603,18 +643,18 @@ std::optional<game_handle_error> game_handle::validation_error(
             if( !item_ || item_.get() == nullptr ) {
                 return destroyed_error( kind_ );
             }
-            if( item_.get()->is_null() ) {
+            if( item_->is_null() ) {
                 return game_handle_error{
                     "invalid_item",
                     "The GameHandle does not reference a live item instance"
                 };
             }
             if( item_uid_ &&
-                item_.get()->uid().get_value() != *item_uid_ ) {
+                item_->uid().get_value() != *item_uid_ ) {
                 return replaced_item_error();
             }
             if( !item_type_id_.empty() &&
-                item_.get()->typeId().str() != item_type_id_ ) {
+                item_->typeId().str() != item_type_id_ ) {
                 return replaced_item_error();
             }
             if( !item_identity_ ||
@@ -627,7 +667,7 @@ std::optional<game_handle_error> game_handle::validation_error(
                 return destroyed_error( kind_ );
             }
             if( !vehicle_uid_ || *vehicle_uid_ <= 0 ||
-                vehicle_.get()->uid().get_value() != *vehicle_uid_ ) {
+                vehicle_->uid().get_value() != *vehicle_uid_ ) {
                 return stale_vehicle_error();
             }
             if( !vehicle_identity_ ||
@@ -640,7 +680,7 @@ std::optional<game_handle_error> game_handle::validation_error(
                 return destroyed_error( kind_ );
             }
             if( !vehicle_uid_ || *vehicle_uid_ <= 0 ||
-                vehicle_.get()->uid().get_value() != *vehicle_uid_ ) {
+                vehicle_->uid().get_value() != *vehicle_uid_ ) {
                 return stale_vehicle_error();
             }
             if( !vehicle_identity_ ||
@@ -1091,9 +1131,9 @@ sol::table make_game_error_result( sol::state_view lua, const game_handle_error 
 
 void install_game_handle_api(
     sol::state &lua, sol::table &services,
-    std::function<game_handle_runtime()> current_runtime,
-    std::function<std::size_t()> current_world_generation,
-    std::function<void()> require_read )
+    const std::function<game_handle_runtime()> &current_runtime,
+    const std::function<std::size_t()> &current_world_generation,
+    const std::function<void()> &require_read )
 {
     lua.new_usertype<game_handle>(
         "GameHandle", sol::no_constructor,

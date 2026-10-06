@@ -3,9 +3,12 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <map>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 #include <variant>
+#include <vector>
 
 #include "cata_catch.h"
 #include "condition.h"
@@ -13,6 +16,8 @@
 #include "dialogue_helpers.h"
 #include "flexbuffer_json.h"
 #include "math_parser_diag_value.h"
+#include "point.h"
+#include "translation.h"
 #include "json_loader.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_bindings_coords.h"
@@ -86,7 +91,8 @@ TEST_CASE( "lua_platform_explicit_null_survives_context_payload_and_save",
                 json_loader::from_string( output.str() ) );
     REQUIRE( restored == state );
     const script_value_map restored_values( restored.begin(), restored.end() );
-    const sol::table restored_table = script_value_map_to_lua( lua, restored_values );
+    const sol::table restored_table = script_value_map_to_lua( sol::state_view( lua.lua_state() ),
+                                      restored_values );
     CHECK( restored_table.get<sol::object>( "wanted" ).is<script_null_value>() );
     CHECK( restored_table.get<sol::object>( "missing" ).get_type() == sol::type::nil );
     const sol::table array = restored_table["array"];
@@ -200,8 +206,8 @@ TEST_CASE( "lua_platform_null_storage_rejects_mismatched_types",
                       entry ).get_object() ) );
     const std::string document = R"({"version":1,"values":{"empty":)" + entry + "}}";
     CHECK_THROWS( read_persistent_state( json_loader::from_string( document ) ) );
-    const auto valid = cata::lua_platform::detail::read_persistent_value(
-                           json_loader::from_string( R"({"type":"null","value":null})" ).get_object() );
+    const script_persistent_value valid = cata::lua_platform::detail::read_persistent_value(
+            json_loader::from_string( R"({"type":"null","value":null})" ).get_object() );
     CHECK( std::holds_alternative<script_null_value>( valid ) );
 }
 
@@ -233,27 +239,43 @@ TEST_CASE( "lua_platform_persistent_arrays_reject_invalid_input_atomically",
                 "store({1, {2, 3}})", sol::script_pass_on_error );
     REQUIRE( valid.valid() );
     REQUIRE( std::holds_alternative<script_array_value>( state.at( "kept" ) ) );
-    sol::table first = script_persistent_value_to_lua( lua, state.at( "kept" ) );
+    sol::table first = script_persistent_value_to_lua( sol::state_view( lua.lua_state() ),
+                       state.at( "kept" ) );
     first[1] = 99;
     sol::table nested = first.get<sol::table>( 2 );
     nested[1] = 88;
-    const sol::table second = script_persistent_value_to_lua( lua, state.at( "kept" ) );
+    const sol::table second = script_persistent_value_to_lua( sol::state_view( lua.lua_state() ),
+                              state.at( "kept" ) );
     CHECK( second.get<std::int64_t>( 1 ) == 1 );
     CHECK( second.get<sol::table>( 2 ).get<std::int64_t>( 1 ) == 2 );
-    const sol::table empty = script_persistent_value_to_lua( lua,
-        script_array_value( script_persistent_array{} ) );
+    const sol::table empty = script_persistent_value_to_lua( sol::state_view( lua.lua_state() ),
+                             script_array_value( script_persistent_array{} ) );
     CHECK( empty.size() == 0 );
 }
 
 TEST_CASE( "lua_platform_persistent_coordinates_reject_invalid_components",
            "[lua][platform][semantic][state]" )
 {
-    const std::string coordinates = GENERATE(
-                                        "[]", "[1,2]", "[1,2,3,4]", "[1.5,2,3]", "[true,2,3]",
-                                        "[2147483648,0,0]", "[-2147483649,0,0]", "[18446744073709551615,0,0]" );
-    const std::string input = R"({"type":"tripoint_abs_ms","value":)" + coordinates + "}";
-    CHECK_THROWS( cata::lua_platform::detail::read_persistent_value(
-                      json_loader::from_string( input ).get_object() ) );
+    SECTION( "invalid type, shape and native integer range" ) {
+        const std::string coordinates = GENERATE(
+                                            "[]", "[1,2]", "[1,2,3,4]", "[1.5,2,3]", "[true,2,3]",
+                                            "[2147483648,0,0]", "[-2147483649,0,0]", "[18446744073709551615,0,0]" );
+        const std::string input = R"({"type":"tripoint_abs_ms","value":)" + coordinates + "}";
+        CAPTURE( coordinates );
+        CHECK_THROWS( cata::lua_platform::detail::read_persistent_value(
+                          json_loader::from_string( input ).get_object() ) );
+    }
+    SECTION( "valid native integer boundaries" ) {
+        const cata::lua_platform::script_persistent_value value =
+            cata::lua_platform::detail::read_persistent_value(
+                json_loader::from_string(
+                    R"({"type":"tripoint_abs_ms","value":[-2147483648,0,2147483647]})" ).get_object() );
+        const cata::lua_platform::script_persistent_tripoint &position =
+            std::get<cata::lua_platform::script_persistent_tripoint>( value );
+        CHECK( position.x == -2147483647 - 1 );
+        CHECK( position.y == 0 );
+        CHECK( position.z == 2147483647 );
+    }
 }
 
 #endif

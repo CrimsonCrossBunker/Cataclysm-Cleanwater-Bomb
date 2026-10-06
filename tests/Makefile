@@ -1,11 +1,20 @@
 # Make any tests, and possibly run them.
 # A selection of variables are exported from the master Makefile.
 
-# As each test will have a main function we need to handle this file by file.
-# We're using the fairly typical convention that any file ending in _test.cpp
-# is a test executable.
+# Both suites use the same engine library, test runner and object directory.
+# Restricting sources avoids compiling unrelated tests for a Lua batch.
 CATA_ENABLE_LUA_PLATFORM ?= 0
+CATA_TEST_SUITE ?= all
+ifeq ($(CATA_TEST_SUITE),all)
 SOURCES = $(wildcard *.cpp)
+else ifeq ($(CATA_TEST_SUITE),lua)
+ifneq ($(CATA_ENABLE_LUA_PLATFORM),1)
+$(error CATA_TEST_SUITE=lua requires CATA_ENABLE_LUA_PLATFORM=1)
+endif
+SOURCES = $(sort $(wildcard lua_platform*.cpp) $(shell cat test_support_sources.txt))
+else
+$(error CATA_TEST_SUITE must be all or lua)
+endif
 OBJS = $(sort $(SOURCES:%.cpp=$(ODIR)/%.o))
 
 CATA_LIB=../$(BUILD_PREFIX)cataclysm.a
@@ -68,13 +77,24 @@ endif
 
 tests: $(TEST_TARGET)
 
-$(TEST_TARGET): $(OBJS) $(CATA_LIB)
+$(TEST_TARGET): $(OBJS) $(CATA_LIB) $(ODIR)/.test-suite Makefile test_support_sources.txt
 	+$(CXX) $(W32FLAGS) -o $@ $(DEFINES) $(OBJS) $(CATA_LIB) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS)
+
+# Relink when switching suites or removing sources, even if the omitted objects
+# are older than the executable. Unchanged selections do not invalidate the link.
+$(ODIR)/.test-suite: FORCE
+	@if [ ! -f "$@" ] || [ "$$(cat "$@")" != "$(CATA_TEST_SUITE) $(sort $(SOURCES))" ]; then \
+		printf '%s\n' "$(CATA_TEST_SUITE) $(sort $(SOURCES))" > "$@"; \
+	fi
 
 $(PCH_P): $(PCH_H)
 	-$(CXX) $(CPPFLAGS) $(DEFINES) $(CXXFLAGS) -MMD -MP -Wno-error -Wno-non-virtual-dtor -Wno-unused-macros -I. -c $(PCH_H) -o $(PCH_P)
 
 TEST_BATCHES = "crafting_skill_gain" "[slow]\ ~crafting_skill_gain" "~[slow]\ ~[.]"
+ifeq ($(CATA_TEST_SUITE),lua)
+TEST_BATCHES = "[lua][platform]"
+TEST_FILTER = '[lua][platform]'
+endif
 
 $(TEST_BATCHES): $(TEST_TARGET)
 	cd .. && tests/$(TEST_TARGET) --min-duration 0.2 --rng-seed time --order lex --user-dir test_user_dir_$$$$ $@
@@ -82,7 +102,7 @@ $(TEST_BATCHES): $(TEST_TARGET)
 check: $(TEST_TARGET) $(TEST_BATCHES)
 
 check-single: $(TEST_TARGET)
-	cd .. && tests/$(TEST_TARGET) --min-duration 0.2 --rng-seed time --order lex
+	cd .. && tests/$(TEST_TARGET) --min-duration 0.2 --rng-seed time --order lex --warn NoTests $(TEST_FILTER)
 
 clean:
 	rm -rf *obj *objwin *obj-lua
@@ -101,7 +121,7 @@ $(ODIR)/%.inc: %.cpp
 .PHONY: includes
 includes: $(OBJS:.o=.inc)
 
-.PHONY: clean check check-single tests precompile_header
+.PHONY: clean check check-single tests precompile_header FORCE
 
 .SECONDARY: $(OBJS)
 

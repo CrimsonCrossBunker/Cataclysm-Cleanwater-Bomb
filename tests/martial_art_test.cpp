@@ -2,6 +2,7 @@
 #include <memory>
 #include <optional>
 #include <set>
+#include <sstream>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -19,6 +20,7 @@
 #include "flexbuffer_json.h"
 #include "item.h"
 #include "json_loader.h"
+#include "json.h"
 #include "magic_enchantment.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
@@ -326,4 +328,50 @@ TEST_CASE( "Martial_art_technique_conditionals", "[martial_arts]" )
         CHECK( dude.evaluate_technique( tec, target_3, dude.used_weapon(), false, false,
                                         false ).has_value() );
     }
+}
+
+TEST_CASE( "automatic_martial_style_weapon_preferences", "[martial_arts]" )
+{
+    standard_npc dude( "TestCharacter", dude_pos, {}, 0, 8, 8, 8, 8 );
+    clear_character( dude, true );
+    character_martial_arts &arts = *dude.martial_arts_data;
+    const matype_id none( "style_none" );
+    arts.add_martialart( test_style_ma1 );
+    dude.set_wielded_item( item( itype_test_weapon1 ) );
+    REQUIRE( test_style_ma1->weapon_valid( dude.get_wielded_item() ) );
+    CHECK( arts.selected_style() == none );
+
+    arts.auto_style = true;
+    arts.auto_select_style( dude );
+    CHECK( arts.selected_style() == test_style_ma1 );
+
+    // Explicitly choosing no style is a valid preference, not a missing value.
+    arts.set_style( none );
+    arts.remember_weapon_style( dude );
+    dude.set_wielded_item( item( itype_test_weapon2 ) );
+    CHECK( arts.selected_style() == test_style_ma1 );
+    dude.set_wielded_item( item( itype_test_weapon1 ) );
+    CHECK( arts.selected_style() == none );
+
+    std::ostringstream saved;
+    JsonOut out( saved );
+    arts.serialize( out );
+    character_martial_arts restored;
+    restored.deserialize( json_loader::from_string( saved.str() ).get_object() );
+    REQUIRE( restored.auto_style );
+    restored.set_style( test_style_ma1 );
+    restored.auto_select_style( dude );
+    CHECK( restored.selected_style() == none );
+
+    dude.set_wielded_item( item() );
+    arts.set_style( none );
+    arts.remember_weapon_style( dude );
+    dude.set_wielded_item( item( itype_test_weapon2 ) );
+    CHECK( arts.selected_style() == test_style_ma1 );
+    dude.remove_weapon();
+    CHECK( arts.selected_style() == none );
+
+    arts.auto_style = false;
+    dude.set_wielded_item( item( itype_test_weapon2 ) );
+    CHECK( arts.selected_style() == none );
 }

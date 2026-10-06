@@ -877,7 +877,9 @@ bool game::start_game()
         gamemode = std::make_unique<special_game>();
     }
 
-    seed = rng_bits();
+    // The world seed is rolled by the new-game flow before character
+    // creation (see main_menu::new_character_tab); loading restores it
+    // from the master save.
 #ifdef MP_ENABLED
     cata_mp::mp_client_prepare_spawn();
 #endif
@@ -2347,7 +2349,9 @@ int game::inventory_item_menu( item_location locThisItem,
                 } );
 
                 action_menu.additional_actions = {
-                    { "RIGHT", translation() }
+                    { "RIGHT", translation() },
+                    { "SCROLL_ITEM_INFO_UP", translation() },
+                    { "SCROLL_ITEM_INFO_DOWN", translation() }
                 };
 
                 lang_version = detail::get_current_language_version();
@@ -2368,6 +2372,9 @@ int game::inventory_item_menu( item_location locThisItem,
                 // could be instructed to ignore these two keys instead of scrolling.
                 action_menu.selected = prev_selected;
                 action_menu.fselected = prev_selected;
+            } else if( action_menu.ret_act == "SCROLL_ITEM_INFO_UP" ||
+                       action_menu.ret_act == "SCROLL_ITEM_INFO_DOWN" ) {
+                cMenu = action_menu.ret_act == "SCROLL_ITEM_INFO_UP" ? KEY_PPAGE : KEY_NPAGE;
             } else {
                 cMenu = 0;
             }
@@ -4086,6 +4093,9 @@ field_entry *game::is_in_dangerous_field()
 {
     map &here = get_map();
     for( std::pair<const field_type_id, field_entry> &field : here.field_at( u.pos_bub() ) ) {
+        if( field.first.obj().has_acid && !get_option<bool>( "ACID_DANGER_WARNING" ) ) {
+            continue;
+        }
         if( u.is_dangerous_field( field.second ) ) {
             if( u.in_vehicle ) {
                 bool not_safe = false;
@@ -7500,10 +7510,15 @@ void game::butcher( const std::optional<tripoint_bub_ms> &p )
                 if( bt.has_value() ) {
                     std::vector<butchery_data> bd;
                     for( map_stack::iterator &it : corpses ) {
+                        if( !butcher_action_applicable( u, *it, bt.value() ) ) {
+                            continue;
+                        }
                         item_location corpse_loc = item_location( map_cursor( pos ), &*it );
                         bd.emplace_back( corpse_loc, bt.value() );
                     }
-                    u.assign_activity( butchery_activity_actor( bd ) );
+                    if( !bd.empty() ) {
+                        u.assign_activity( butchery_activity_actor( bd ) );
+                    }
                 }
             } else if( indexer_index == MULTIDISASSEMBLE_ONE ) {
                 u.disassemble_all( true );
@@ -8005,7 +8020,8 @@ std::vector<std::string> game::get_dangerous_tile( const tripoint_bub_ms &dest_l
     const bool veh_dest_inside = veh_dest && veh_dest->is_inside();
 
     for( const std::pair<const field_type_id, field_entry> &e : here.field_at( dest_loc ) ) {
-        if( !u.is_dangerous_field( e.second ) ) {
+        if( ( e.first.obj().has_acid && !get_option<bool>( "ACID_DANGER_WARNING" ) ) ||
+            !u.is_dangerous_field( e.second ) ) {
             continue;
         }
 
@@ -10315,6 +10331,9 @@ bool game::travel_to_dimension( dimension_id dimension_destination,
                                 const std::optional<tripoint_bub_ms> item_travellers_location,
                                 vehicle *veh )
 {
+    // Keep the last complete save before this trip writes source maps.  The
+    // later safety checkpoint must not replace the player's quickload target.
+    ensure_dimension_rollback_snapshot();
     map &here = get_map();
     avatar &player = get_avatar();
     std::vector<npc_ptr> moving_npcs;
@@ -10381,6 +10400,8 @@ bool game::travel_to_dimension( dimension_id dimension_destination,
     // so i'm using 'default' as empty/main dimension
     dimension_id previous_dimension = dimension_prefix;
     dimension_prefix = dimension_destination;
+    // Clear the previous dimension before loading the destination's global state.
+    overmap_buffer.clear();
     // Load in data specific to the dimension (like weather)
     load_dimension_data();
 
@@ -10389,8 +10410,6 @@ bool game::travel_to_dimension( dimension_id dimension_destination,
     // hack to prevent crashes from temperature checks
     // This returns to false in 'on_turn()' so it should be fine?
     swapping_dimensions = true;
-    // Clear the overmap
-    overmap_buffer.clear();
     overmap_buffer.init_region_layout();
     // load/create new overmap
     overmap &new_om = overmap_buffer.get( project_to<coords::om>( player.pos_abs().xy() ) );
@@ -12173,6 +12192,9 @@ bool game::can_pulp_corpse( const pulp_data &pd )
 
 bool game::can_pulp_acid_corpse( const Character &you, const mtype &corpse_mtype )
 {
+    if( you.is_avatar() && !get_option<bool>( "ACID_DANGER_WARNING" ) ) {
+        return true;
+    }
     const bool acid_immune = you.is_immune_damage( damage_acid ) ||
                              you.is_immune_field( fd_acid );
     // this corpse is acid, and you are not immune to it

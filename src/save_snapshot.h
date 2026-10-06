@@ -108,6 +108,15 @@ bool restore_snapshot( const cata_path &world_dir, const std::string &dir_name )
  */
 bool delete_snapshot( const cata_path &world_dir, const std::string &dir_name );
 
+/** Preserve the last complete on-disk save before dimension travel rewrites maps.
+ * The slot is stable across game restarts and is also visible in the snapshot menu.
+ */
+bool dimension_rollback_exists( const cata_path &world_dir );
+bool make_dimension_rollback( const cata_path &world_dir,
+                              const std::string &character_name, int turn );
+bool restore_dimension_rollback( const cata_path &world_dir );
+bool delete_dimension_rollback( const cata_path &world_dir );
+
 } // namespace save_snapshot
 
 #endif // CATA_SRC_SAVE_SNAPSHOT_H

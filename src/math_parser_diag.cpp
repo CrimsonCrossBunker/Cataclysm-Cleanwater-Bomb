@@ -364,7 +364,9 @@ double limb_score_eval( const_dialogue const &d, char scope,
                         std::vector<diag_value> const &params, diag_kwargs const &kwargs )
 {
     const limb_score_id ls( params[0].str( d ) );
-    const bp_type bp_t = io::string_to_enum<bp_type>( kwargs.kwarg_or( "type" ).str( d ) );
+    const std::string bp_type_str = kwargs.kwarg_or( "type" ).str( d );
+    const bp_type bp_t = bp_type_str.empty() ? bp_type::num_types :
+                         io::string_to_enum<bp_type>( bp_type_str );
 
     return d.const_actor( is_beta( scope ) )->get_limb_score( ls, bp_t );
 }

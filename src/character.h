@@ -1305,6 +1305,8 @@ class Character : public Creature, public visitable
         /** This handles giving xp for a skill. Returns true on level-up. */
         bool practice( const skill_id &id, int amount, int cap = 99, bool suppress_warning = false,
                        bool allow_multilevel = false );
+        /** Combat practice decays above the opponent's difficulty instead of stopping. */
+        bool practice_combat( const skill_id &id, int amount, double training_level );
         /** This handles warning the player that there current activity will not give them xp */
         void handle_skill_warning( const skill_id &id, bool force_warning = false );
 
@@ -3958,8 +3960,10 @@ class Character : public Creature, public visitable
          *  when no explicit level is provided. */
         int craft_vitamin_available( const vitamin_resource_cost &resource ) const;
         /** Advance the active unattended step's tool consumption to match its
-         *  wall-clock progress.  Returns false (consuming nothing) if charges are short. */
-        bool craft_consume_passive_step_tools( item &craft, time_point now, const item_location &loc );
+         *  wall-clock progress.  Returns false (consuming nothing) if charges are short.
+         *  report_shortfall suppresses repeated messages during a pending pause. */
+        bool craft_consume_passive_step_tools( item &craft, time_point now, const item_location &loc,
+                                               bool report_shortfall = true );
         /** Consume each step's tool allocations up to its 5% bucket target.
          *  Non-charged selected tools are re-checked for presence on bucket
          *  transitions only; verify_step_tools catches tools removed within a
@@ -3969,7 +3973,7 @@ class Character : public Creature, public visitable
          *  nothing) on a shortfall. */
         bool consume_step_tool_targets( item &craft, const std::vector<int> &targets,
                                         const tripoint_bub_ms &origin, int radius,
-                                        bool pin_to_map );
+                                        bool pin_to_map, bool report_shortfall = true );
         /** Verify that every non-charged tool selected for a recipe step is
          *  present at the source the step draws from.  Emits a player-visible
          *  message naming the missing tool on failure and clears the craft's
@@ -3978,7 +3982,8 @@ class Character : public Creature, public visitable
          *  when consumed.  When pin_to_map is set, presence is checked against
          *  the map at origin instead of the crafter. */
         bool verify_step_tools( item &craft, int step_idx,
-                                const tripoint_bub_ms &origin, int radius, bool pin_to_map );
+                                const tripoint_bub_ms &origin, int radius, bool pin_to_map,
+                                bool report_shortfall = true );
         void consume_tools( const comp_selection<tool_comp> &tool, int batch );
         void consume_tools( map &m, const comp_selection<tool_comp> &tool, int batch,
                             const tripoint_bub_ms &origin = tripoint_bub_ms::zero, int radius = pickup_range,
