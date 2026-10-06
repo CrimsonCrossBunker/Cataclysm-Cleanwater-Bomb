@@ -1,11 +1,14 @@
 #include <functional>
 
 #include "avatar.h"
+#include "calendar.h"
 #include "cata_catch.h"
 #include "inventory.h"
 #include "item.h"
 #include "player_helpers.h"
 #include "type_id.h"
+#include "veh_interact.h"
+#include "veh_type.h"
 #include "visitable.h"
 
 namespace
@@ -63,4 +66,28 @@ TEST_CASE( "provider_quality_cache_is_scoped_and_actor_specific", "[craft][quali
         scoped_provider_quality_cache reopened( inv );
         CHECK( inv.has_provider_quality( present, 1, 1, nullptr ) );
     }
+}
+
+TEST_CASE( "vehicle_installation_inventory_checks_are_bounded_and_refreshable",
+           "[vehicle][quality][cache]" )
+{
+    clear_avatar();
+    counting_quality_inventory inv;
+    for( int n = 0; n < 5000; ++n ) {
+        inv.add_item( item( itype_id( "rock" ) ) );
+    }
+    inv.traversals = 0;
+    const auto available = veh_interact::installation_requirement_availability( get_avatar(), inv );
+    REQUIRE( available.size() == vehicles::parts::get_all().size() );
+    // Thousands of part definitions share a small set of quality queries.
+    // The inventory must not be traversed once for every definition/cursor.
+    CHECK( inv.traversals < 100 );
+    CHECK_FALSE( available.at( &vpart_id( "frame_wood" ).obj() ) );
+
+    inv.clear();
+    inv.add_item( item( itype_id( "frame_wood" ) ) );
+    inv.add_item( item( itype_id( "hammer" ) ) );
+    inv.add_item( item( itype_id( "nail" ), calendar::turn, 100 ) );
+    const auto refreshed = veh_interact::installation_requirement_availability( get_avatar(), inv );
+    CHECK( refreshed.at( &vpart_id( "frame_wood" ).obj() ) );
 }
