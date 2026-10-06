@@ -1,7 +1,9 @@
 #include <array>
 #include <cstdint>
+#include <functional>
 #include <set>
 #include <string>
+#include <vector>
 
 #include "avatar.h"
 #include "calendar.h"
@@ -11,6 +13,7 @@
 #include "enums.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "mapdata.h"
 #include "mapbuffer.h"
 #include "map_scale_constants.h"
 #include "omdata.h"
@@ -18,8 +21,8 @@
 #include "overmapbuffer.h"
 #include "player_helpers.h"
 #include "point.h"
-#include "rng.h"
 #include "regional_settings.h"
+#include "rng.h"
 #include "type_id.h"
 #include "units.h"
 #include "vehicle.h"
@@ -308,10 +311,13 @@ TEST_CASE( "railroad_powered_driving", "[.][railroads][vehicle]" )
 
 TEST_CASE( "railroad_world_generation", "[.][railroads][overmap]" )
 {
-    const cata_default_random_engine saved_rng = rng_get_engine();
-    on_out_of_scope restore_rng( [saved_rng]() {
-        rng_get_engine() = saved_rng;
-    } );
+    // Snapshot the shared engine to restore global state, not to generate random values.
+    struct restore_rng {
+        cata_default_random_engine saved = rng_get_engine(); // NOLINT(cata-determinism)
+        ~restore_rng() {
+            rng_get_engine() = saved;
+        }
+    } restore;
     rng_set_engine_seed( 3404 );
     // Stay inland: the default region becomes ocean east of overmap x=10.
     const point_abs_om location( 1, 0 );
