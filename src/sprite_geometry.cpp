@@ -11,9 +11,9 @@ sprite_geometry_result prepare_sprite_geometry( const sprite_geometry_input &inp
                               input.offset + ( input.offset_retracted - input.offset ) * input.retract / 100;
     result.destination.origin = input.screen_position + point(
                                     divide_round_down( ( tile_offset.x + input.extra_offset.x ) * input.screen_tile_size.x,
-                                        input.tileset_tile_size.x ),
+                                            input.tileset_tile_size.x ),
                                     divide_round_down( ( tile_offset.y + input.extra_offset.y - input.stacked_height ) *
-                                        input.screen_tile_size.x, input.tileset_tile_size.x ) );
+                                            input.screen_tile_size.x, input.tileset_tile_size.x ) );
     result.destination.size = point(
                                   input.sprite_size.x * input.screen_tile_size.x * input.pixelscale / input.tileset_tile_size.x,
                                   input.sprite_size.y * input.screen_tile_size.y * input.pixelscale / input.tileset_tile_size.y );
@@ -68,10 +68,10 @@ sprite_geometry_result prepare_sprite_geometry( const sprite_geometry_input &inp
         }
         result.opaque_bounds = sprite_rectangle {
             result.destination.origin + point(
-            opaque.origin.x * result.destination.size.x / input.sprite_size.x,
-            opaque.origin.y * result.destination.size.y / input.sprite_size.y ),
-            point( opaque.size.x * result.destination.size.x / input.sprite_size.x,
-            opaque.size.y * result.destination.size.y / input.sprite_size.y )
+                opaque.origin.x *result.destination.size.x / input.sprite_size.x,
+                opaque.origin.y *result.destination.size.y / input.sprite_size.y ),
+            point( opaque.size.x *result.destination.size.x / input.sprite_size.x,
+                   opaque.size.y *result.destination.size.y / input.sprite_size.y )
         };
     }
     return result;
