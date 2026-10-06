@@ -302,8 +302,8 @@ def main() -> int:
     message = report(result)
     if metadata_only:
         message += (
-            "\nGenerated inventories with unchanged contract content: "
-            + ", ".join(metadata_only)
+            "\nGenerated inventories with unchanged contract content: " +
+            ", ".join(metadata_only)
         )
     print(message)
     summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
