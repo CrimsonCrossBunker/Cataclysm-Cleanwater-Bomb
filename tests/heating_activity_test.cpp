@@ -1,12 +1,14 @@
 #include <algorithm>
-#include <initializer_list>
+#include <functional>
 #include <list>
+#include <string>
 #include <utility>
 
+#include "activity_actor.h"
 #include "activity_actor_definitions.h"
 #include "avatar.h"
-#include "calendar.h"
 #include "cata_catch.h"
+#include "clone_ptr.h"
 #include "coordinates.h"
 #include "enums.h"
 #include "item.h"
@@ -15,15 +17,14 @@
 #include "iuse.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "map_selector.h"
 #include "player_activity.h"
 #include "player_helpers.h"
 #include "point.h"
 #include "ret_val.h"
 #include "type_id.h"
 #include "units.h"
-#include "veh_type.h"
 #include "vehicle.h"
-#include "visitable.h"
 
 static const flag_id json_flag_HOT( "HOT" );
 
