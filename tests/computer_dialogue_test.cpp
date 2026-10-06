@@ -20,6 +20,8 @@
 #include "type_id.h"
 #include "worldfactory.h"
 
+static const dimension_id dimension_netherum_labyrinth_safehouse( "netherum_labyrinth_safehouse" );
+
 TEST_CASE( "terminal_dialogue_survives_unloading_its_computer", "[dialogue][computer][dimension]" )
 {
     const tripoint_abs_ms position( 120, 240, -2 );
@@ -70,7 +72,7 @@ TEST_CASE( "dimension_travel_invalidates_the_departed_terminal_safely",
     const tripoint_abs_ms original_position = terminal->loc;
     auto speaker = get_talker_for( *terminal );
 
-    REQUIRE( g->travel_to_dimension( dimension_id( "netherum_labyrinth_safehouse" ), {}, {},
+    REQUIRE( g->travel_to_dimension( dimension_netherum_labyrinth_safehouse, {}, {},
                                      std::nullopt, nullptr ) );
 
     CHECK( g->dimension_checkpoint_pending );

@@ -104,7 +104,7 @@ TEST_CASE( "dimension_rollback_restores_the_last_complete_world_save", "[save][d
     std::error_code ec;
     for( int i = 0; i < 100; ++i ) {
         const std::filesystem::path candidate = temporary_root /
-                                                ( "ccb-dimension-rollback-test-" + std::to_string( i ) );
+                                                std::filesystem::u8path( "ccb-dimension-rollback-test-存档-" + std::to_string( i ) );
         if( std::filesystem::create_directory( candidate, ec ) ) {
             world_root = candidate;
             break;
@@ -118,10 +118,11 @@ TEST_CASE( "dimension_rollback_restores_the_last_complete_world_save", "[save][d
         std::filesystem::remove_all( world_root, remove_error );
     } );
     const cata_path world_dir( cata_path::root_path::unknown, world_root );
-    const std::filesystem::path character_file = world_root / "character.sav";
-    const std::filesystem::path map_dir = world_root / "maps";
+    const std::filesystem::path character_file = world_root /
+            std::filesystem::u8path( "character.sav" );
+    const std::filesystem::path map_dir = world_root / std::filesystem::u8path( "maps" );
     REQUIRE( std::filesystem::create_directory( map_dir ) );
-    const std::filesystem::path map_file = map_dir / "submap";
+    const std::filesystem::path map_file = map_dir / std::filesystem::u8path( "submap" );
 
     auto write_state = [&]( const std::string & value ) {
         std::ofstream( character_file ) << value;
@@ -151,10 +152,11 @@ TEST_CASE( "dimension_rollback_restores_the_last_complete_world_save", "[save][d
     // The restore itself can be interrupted after moving the marker into its
     // backup directory. A new process must still detect that pending trip.
     REQUIRE( save_snapshot::begin_dimension_transition( world_dir ) );
-    const std::filesystem::path backup_dir = world_root / ".snapshot_restore_backup";
+    const std::filesystem::path backup_dir = world_root /
+            std::filesystem::u8path( ".snapshot_restore_backup" );
     REQUIRE( std::filesystem::create_directory( backup_dir ) );
-    std::filesystem::rename( world_root / ".ccb-dimension-transition",
-                             backup_dir / ".ccb-dimension-transition" );
+    std::filesystem::rename( world_root / std::filesystem::u8path( ".ccb-dimension-transition" ),
+                             backup_dir / std::filesystem::u8path( ".ccb-dimension-transition" ) );
     write_state( "interrupted_restore" );
     REQUIRE( save_snapshot::dimension_transition_pending( world_dir ) );
     REQUIRE( save_snapshot::recover_dimension_transition( world_dir ) );
@@ -164,7 +166,8 @@ TEST_CASE( "dimension_rollback_restores_the_last_complete_world_save", "[save][d
     REQUIRE( save_snapshot::begin_dimension_transition( world_dir ) );
     write_state( "interrupted_restore" );
     REQUIRE( save_snapshot::restore_dimension_rollback( world_dir ) );
-    CHECK( std::filesystem::exists( world_root / ".ccb-dimension-transition" ) );
+    CHECK( std::filesystem::exists( world_root /
+                                    std::filesystem::u8path( ".ccb-dimension-transition" ) ) );
     REQUIRE( save_snapshot::recover_dimension_transition( world_dir ) );
     CHECK_FALSE( save_snapshot::dimension_transition_pending( world_dir ) );
 
