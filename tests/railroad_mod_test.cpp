@@ -283,12 +283,11 @@ TEST_CASE( "railroad_powered_driving", "[.][railroads][vehicle]" )
     stamp_railroad( here, point_bub_ms( 48, 48 ), "railroad_ns" );
     stamp_railroad( here, point_bub_ms( 48, 72 ), "railroad_ns" );
     const tripoint_bub_ms start( 55, 39, 0 );
-    vehicle *veh = here.add_vehicle( prototype, start, 90_degrees, 100, veh_spawn_status::UNDAMAGED );
+    vehicle *veh = here.add_vehicle( prototype, start, 90_degrees, 70, veh_spawn_status::PRISTINE );
     REQUIRE( veh );
     driver.setpos( here, start );
     here.board_vehicle( start, &driver );
     REQUIRE( driver.in_vehicle );
-    driver.controlling_vehicle = true;
     on_out_of_scope unboard( [&here, &driver]() {
         driver.controlling_vehicle = false;
         here.unboard_vehicle( driver.pos_bub( here ) );
@@ -296,7 +295,10 @@ TEST_CASE( "railroad_powered_driving", "[.][railroads][vehicle]" )
     const int64_t starting_fuel = veh->fuel_left( here, itype_gasoline );
     REQUIRE( starting_fuel > 0 );
     REQUIRE( veh->safe_velocity( here ) > 0 );
-    veh->engine_on = true;
+    veh->start_engines( here, &driver, true );
+    REQUIRE( driver.controlling_vehicle );
+    process_activity( driver );
+    REQUIRE( veh->engine_on );
     veh->cruise_velocity = 1000;
     for( int i = 0; i < 8; ++i ) {
         here.vehmove();
