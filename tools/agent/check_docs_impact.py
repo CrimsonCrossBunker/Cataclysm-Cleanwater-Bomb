@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import fnmatch
+import json
 import os
 import re
 import subprocess
@@ -24,6 +25,11 @@ DOCUMENTATION_PR_FIELDS = (
 )
 RESPONSIBLE_HUMAN_FIELD = "Responsible human"
 VALID_ENFORCEMENT = {"advisory", "required", "staged"}
+JSON_EOC_INVENTORIES = frozenset({
+    "data/reference/json/ccb_json_object_types.json",
+    "data/reference/json/ccb_eoc_conditions.json",
+    "data/reference/json/ccb_eoc_effects.json",
+})
 PLACEHOLDER_VALUES = {
     "-",
     "n/a",
@@ -90,6 +96,40 @@ def changed_files(base: str, head: str) -> list[str]:
         text=True,
     ).stdout
     return [line.strip() for line in output.splitlines() if line.strip()]
+
+
+def inventory_fingerprint_only_change(
+    path: str, base: str, head: str
+) -> bool:
+    """Prove that a known generated contract only refreshed its fingerprint."""
+    if path not in JSON_EOC_INVENTORIES:
+        return False
+    documents = []
+    try:
+        for revision in (base, head):
+            output = subprocess.run(
+                ["git", "show", f"{revision}:{path}"],
+                cwd=ROOT,
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            ).stdout
+            document = json.loads(output)
+            if not isinstance(document, dict):
+                return False
+            source = document.get("source")
+            if not isinstance(source, dict):
+                return False
+            fingerprint = source.pop("source_fingerprint", None)
+            if not isinstance(fingerprint, str) or not re.fullmatch(
+                r"sha256:[0-9a-f]{64}", fingerprint
+            ):
+                return False
+            documents.append(document)
+    except (subprocess.CalledProcessError, json.JSONDecodeError):
+        return False
+    return documents[0] == documents[1]
 
 
 def impacts(files: list[str], rules: list[dict]) -> list[dict]:
@@ -250,8 +290,21 @@ def main() -> int:
         files.extend(changed_files(args.base, args.head))
     files = sorted(set(files))
 
-    result = impacts(files, load_rules())
+    metadata_only = []
+    if args.base and args.head:
+        metadata_only = [
+            path for path in files
+            if inventory_fingerprint_only_change(path, args.base, args.head)
+        ]
+    result = impacts(
+        [path for path in files if path not in metadata_only], load_rules()
+    )
     message = report(result)
+    if metadata_only:
+        message += (
+            "\nGenerated inventories with unchanged contract content: "
+            + ", ".join(metadata_only)
+        )
     print(message)
     summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary_path:
