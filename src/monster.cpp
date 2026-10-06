@@ -14,6 +14,7 @@
 #include <list>
 #include <memory>
 #include <optional>
+#include <set>
 #include <sstream>
 #include <string>
 #include <tuple>
@@ -143,6 +144,9 @@ static const efftype_id effect_onfire( "onfire" );
 static const efftype_id effect_pacified( "pacified" );
 static const efftype_id effect_paralyzepoison( "paralyzepoison" );
 static const efftype_id effect_pet( "pet" );
+static const pet_slot_id pet_slot_armor( "armor" );
+static const pet_slot_id pet_slot_saddle( "saddle" );
+static const pet_slot_id pet_slot_storage( "storage" );
 static const efftype_id effect_photophobia( "photophobia" );
 static const efftype_id effect_poison( "poison" );
 static const efftype_id effect_psi_stunned( "psi_stunned" );
@@ -343,7 +347,7 @@ monster::monster( const mtype_id &id ) : monster()
             itype_id storage_item_id = itype_id( type->mount_items.storage );
             item storage_item_item = item( storage_item_id, calendar::turn_zero );
             add_effect( effect_has_bag, 1_turns, true );
-            tack_item = cata::make_value<item>( storage_item_item );
+            storage_item = cata::make_value<item>( storage_item_item );
         }
     }
     aggro_character = type->aggro_character;
@@ -2831,6 +2835,234 @@ int monster::get_worn_armor_val( const damage_type_id &dt ) const
     return 0;
 }
 
+const item *monster::get_pet_equipment( const pet_slot_id &slot ) const
+{
+    if( slot == pet_slot_saddle ) {
+        return tack_item.get();
+    }
+    if( slot == pet_slot_armor ) {
+        return armor_item.get();
+    }
+    if( slot == pet_slot_storage ) {
+        return storage_item.get();
+    }
+    const auto iter = custom_pet_equipment.find( slot );
+    return iter == custom_pet_equipment.end() ? nullptr : iter->second.get();
+}
+
+item *monster::get_pet_equipment( const pet_slot_id &slot )
+{
+    return const_cast<item *>( std::as_const( *this ).get_pet_equipment( slot ) );
+}
+
+const item *monster::get_pet_storage() const
+{
+    if( storage_item ) {
+        return storage_item.get();
+    }
+    for( const pet_slot &slot : get_all_pet_slots() ) {
+        if( slot.min_storage > 0_ml ) {
+            if( const item *equipment = get_pet_equipment( slot.id ) ) {
+                return equipment;
+            }
+        }
+    }
+    return nullptr;
+}
+
+item *monster::get_pet_storage()
+{
+    return const_cast<item *>( std::as_const( *this ).get_pet_storage() );
+}
+
+std::optional<pet_slot_id> monster::get_pet_storage_slot() const
+{
+    if( storage_item ) {
+        return pet_slot_storage;
+    }
+    for( const pet_slot &slot : get_all_pet_slots() ) {
+        if( slot.id == pet_slot_storage ) {
+            continue;
+        }
+        if( slot.min_storage > 0_ml && has_pet_equipment( slot.id ) ) {
+            return slot.id;
+        }
+    }
+    return std::nullopt;
+}
+
+int monster::pet_storage_count() const
+{
+    int result = 0;
+    for( const pet_slot &slot : get_all_pet_slots() ) {
+        if( slot.min_storage > 0_ml && has_pet_equipment( slot.id ) ) {
+            ++result;
+        }
+    }
+    return result;
+}
+
+bool monster::has_pet_equipment( const pet_slot_id &slot ) const
+{
+    return get_pet_equipment( slot ) != nullptr;
+}
+
+bool monster::pet_slot_available( const pet_slot_id &slot ) const
+{
+    if( !slot.is_valid() ) {
+        return false;
+    }
+    const std::optional<pet_slot_id> parent = get_pet_slot_parent( slot );
+    return !parent || has_pet_equipment( *parent );
+}
+
+bool monster::equip_pet_equipment( const pet_slot_id &slot, const item &equipment )
+{
+    if( !pet_slot_available( slot ) || has_pet_equipment( slot ) ||
+        !slot.obj().accepts( equipment, *this ) ) {
+        return false;
+    }
+
+    cata::value_ptr<item> equipped = cata::make_value<item>( equipment );
+    if( slot == pet_slot_saddle ) {
+        tack_item = std::move( equipped );
+    } else if( slot == pet_slot_armor ) {
+        equipped->set_var( "pet_armor", "true" );
+        armor_item = std::move( equipped );
+    } else if( slot == pet_slot_storage ) {
+        storage_item = std::move( equipped );
+    } else {
+        custom_pet_equipment[slot] = std::move( equipped );
+    }
+
+    std::set<efftype_id> passive_effects( slot.obj().passive_effects.begin(),
+                                          slot.obj().passive_effects.end() );
+    if( equipment.type->pet_equipment ) {
+        passive_effects.insert( equipment.type->pet_equipment->passive_effects.begin(),
+                                equipment.type->pet_equipment->passive_effects.end() );
+    }
+    for( const efftype_id &effect : passive_effects ) {
+        add_effect( effect, 1_turns, true );
+    }
+    return true;
+}
+
+cata::value_ptr<item> monster::remove_pet_equipment( const pet_slot_id &slot )
+{
+    if( !slot.is_valid() || !has_pet_equipment( slot ) ) {
+        return {};
+    }
+    for( const pet_slot_id &child : slot.obj().sub_slots ) {
+        if( has_pet_equipment( child ) ) {
+            return {};
+        }
+    }
+
+    const item *installed = get_pet_equipment( slot );
+    std::set<efftype_id> removed_effects( slot.obj().passive_effects.begin(),
+                                          slot.obj().passive_effects.end() );
+    if( installed->type->pet_equipment ) {
+        removed_effects.insert( installed->type->pet_equipment->passive_effects.begin(),
+                                installed->type->pet_equipment->passive_effects.end() );
+    }
+
+    cata::value_ptr<item> removed;
+    if( slot == pet_slot_saddle ) {
+        removed = std::move( tack_item );
+    } else if( slot == pet_slot_armor ) {
+        armor_item->erase_var( "pet_armor" );
+        removed = std::move( armor_item );
+    } else if( slot == pet_slot_storage ) {
+        removed = std::move( storage_item );
+    } else {
+        auto iter = custom_pet_equipment.find( slot );
+        removed = std::move( iter->second );
+        custom_pet_equipment.erase( iter );
+    }
+
+    for( const efftype_id &effect : removed_effects ) {
+        const bool supplied_elsewhere = std::any_of(
+                                            get_all_pet_slots().begin(), get_all_pet_slots().end(),
+        [this, &slot, &effect]( const pet_slot & other ) {
+            if( other.id == slot ) {
+                return false;
+            }
+            const item *other_equipment = get_pet_equipment( other.id );
+            if( other_equipment == nullptr ) {
+                return false;
+            }
+            if( std::find( other.passive_effects.begin(), other.passive_effects.end(), effect ) !=
+                other.passive_effects.end() ) {
+                return true;
+            }
+            const islot_pet_equipment *item_data = other_equipment->type->pet_equipment.get();
+            return item_data != nullptr &&
+                   std::find( item_data->passive_effects.begin(), item_data->passive_effects.end(),
+                              effect ) != item_data->passive_effects.end();
+        } );
+        if( !supplied_elsewhere ) {
+            remove_effect( effect );
+        }
+    }
+    return removed;
+}
+
+int monster::pet_equipment_mount_threshold_delta() const
+{
+    int result = 0;
+    for( const pet_slot &slot : get_all_pet_slots() ) {
+        if( const item *equipment = get_pet_equipment( slot.id ) ) {
+            result += slot.mount_threshold_delta;
+            if( equipment->type->pet_equipment ) {
+                result += equipment->type->pet_equipment->mount_threshold_delta;
+            }
+        }
+    }
+    return result;
+}
+
+double monster::pet_equipment_melee_hit_multiplier() const
+{
+    double result = 1.0;
+    for( const pet_slot &slot : get_all_pet_slots() ) {
+        if( const item *equipment = get_pet_equipment( slot.id ) ) {
+            result *= slot.melee_hit_multiplier;
+            if( equipment->type->pet_equipment ) {
+                result *= equipment->type->pet_equipment->melee_hit_multiplier;
+            }
+        }
+    }
+    return result;
+}
+
+double monster::pet_equipment_melee_damage_multiplier() const
+{
+    double result = 1.0;
+    for( const pet_slot &slot : get_all_pet_slots() ) {
+        if( const item *equipment = get_pet_equipment( slot.id ) ) {
+            result *= slot.melee_damage_multiplier;
+            if( equipment->type->pet_equipment ) {
+                result *= equipment->type->pet_equipment->melee_damage_multiplier;
+            }
+        }
+    }
+    return result;
+}
+
+double monster::pet_equipment_fear_multiplier() const
+{
+    double result = 1.0;
+    for( const pet_slot &slot : get_all_pet_slots() ) {
+        if( const item *equipment = get_pet_equipment( slot.id ) ) {
+            result *= slot.fear_multiplier;
+            if( equipment->type->pet_equipment ) {
+                result *= equipment->type->pet_equipment->fear_multiplier;
+            }
+        }
+    }
+    return result;
+}
+
 int monster::get_armor_type( const damage_type_id &dt, bodypart_id /*bp*/ ) const
 {
     return get_worn_armor_val( dt ) + type->armor.type_resist( dt ) + get_armor_res_bonus( dt );
@@ -3335,6 +3567,10 @@ void monster::die( map *here, Creature *nkiller )
         move_special_item_to_inv( armor_item );
         move_special_item_to_inv( storage_item );
         move_special_item_to_inv( tied_item );
+        for( auto &[slot, equipment] : custom_pet_equipment ) {
+            move_special_item_to_inv( equipment );
+        }
+        custom_pet_equipment.clear();
 
         if( has_effect( effect_heavysnare ) ) {
             add_item( item( itype_rope_6, calendar::turn_zero ) );
@@ -4059,6 +4295,11 @@ units::mass monster::get_carried_weight() const
     if( armor_item ) {
         total_weight += armor_item->weight();
     }
+    for( const auto &[slot, equipment] : custom_pet_equipment ) {
+        if( equipment ) {
+            total_weight += equipment->weight();
+        }
+    }
     for( const item &it : inv ) {
         total_weight += it.weight();
     }
@@ -4598,6 +4839,11 @@ std::vector<std::pair<std::string, std::string>> monster::get_overlay_ids() cons
     }
     if( storage_item ) {
         add_generic_overlay_id( "worn_storage", rval, overlay_suffixes );
+    }
+    for( const auto &[slot, equipment] : custom_pet_equipment ) {
+        if( equipment ) {
+            add_item_overlay_id( *equipment, rval, overlay_suffixes );
+        }
     }
 
     return rval;

@@ -36,6 +36,7 @@
 #include "mtype.h"
 #include "output.h"
 #include "pathfinding.h"
+#include "pet_inventory_ui.h"
 #include "point.h"
 #include "rng.h"
 #include "string_formatter.h"
@@ -72,6 +73,9 @@ static const quality_id qual_CUT( "CUT" );
 static const quality_id qual_SHEAR( "SHEAR" );
 
 static const skill_id skill_survival( "survival" );
+static const pet_slot_id pet_slot_armor( "armor" );
+static const pet_slot_id pet_slot_saddle( "saddle" );
+static const pet_slot_id pet_slot_storage( "storage" );
 
 namespace
 {
@@ -95,9 +99,9 @@ void attach_saddle_to( monster &z )
         add_msg( _( "Never mind." ) );
         return;
     }
-    z.add_effect( effect_monster_saddled, 1_turns, true );
-    z.tack_item = cata::make_value<item>( *loc.get_item() );
-    loc.remove_item();
+    if( z.equip_pet_equipment( pet_slot_saddle, *loc.get_item() ) ) {
+        loc.remove_item();
+    }
 }
 
 void bandage_animal( monster &z )
@@ -135,15 +139,20 @@ void remove_saddle_from( monster &z )
     if( !z.has_effect( effect_monster_saddled ) ) {
         return;
     }
-    z.remove_effect( effect_monster_saddled );
-    get_player_character().i_add( *z.tack_item );
-    z.tack_item.reset();
+    cata::value_ptr<item> removed = z.remove_pet_equipment( pet_slot_saddle );
+    if( removed ) {
+        get_player_character().i_add( *removed );
+    } else {
+        add_msg( m_bad, _( "Remove the saddle's attached equipment first." ) );
+    }
 }
 
 void mount_pet( monster &z )
 {
-    get_player_character().mount_creature( z );
+    get_player_character().try_mount_creature( z );
 }
+
+void dump_items( monster &z );
 
 void swap( monster &z )
 {
@@ -231,10 +240,11 @@ void attach_bag_to( monster &z )
             it.remove_item( i );
         }
     }
-    z.storage_item = cata::make_value<item>( it );
+    if( !z.equip_pet_equipment( pet_slot_storage, it ) ) {
+        return;
+    }
     add_msg( _( "You mount the %1$s on your %2$s." ), it.display_name(), pet_name );
     player_character.i_rem( &it );
-    z.add_effect( effect_has_bag, 1_turns, true );
     // Update encumbrance in case we were wearing it
     player_character.flag_encumbrance();
     player_character.mod_moves( -to_moves<int>( 2_seconds ) );
@@ -259,30 +269,35 @@ void dump_items( monster &z )
 void remove_bag_from( monster &z )
 {
     std::string pet_name = z.get_name();
-    if( z.storage_item ) {
+    const std::optional<pet_slot_id> storage_slot = z.get_pet_storage_slot();
+    if( storage_slot ) {
         if( !z.inv.empty() ) {
             dump_items( z );
         }
         Character &player_character = get_player_character();
-        get_map().add_item_or_charges( player_character.pos_bub(), *z.storage_item );
-        add_msg( _( "You remove the %1$s from %2$s." ), z.storage_item->display_name(), pet_name );
-        z.storage_item.reset();
+        cata::value_ptr<item> removed = z.remove_pet_equipment( *storage_slot );
+        if( !removed ) {
+            add_msg( m_bad, _( "Remove dependent equipment first." ) );
+            return;
+        }
+        get_map().add_item_or_charges( player_character.pos_bub(), *removed );
+        add_msg( _( "You remove the %1$s from %2$s." ), removed->display_name(), pet_name );
         player_character.mod_moves( -to_moves<int>( 2_seconds ) );
     } else {
         add_msg( m_bad, _( "Your %1$s doesn't have a bag!" ), pet_name );
     }
-    z.remove_effect( effect_has_bag );
 }
 
 bool give_items_to( monster &z )
 {
     std::string pet_name = z.get_name();
-    if( !z.storage_item ) {
+    item *storage_ptr = z.get_pet_storage();
+    if( storage_ptr == nullptr ) {
         add_msg( _( "There is no container on your %s to put things in!" ), pet_name );
         return true;
     }
 
-    item &storage = *z.storage_item;
+    item &storage = *storage_ptr;
     units::mass max_weight = z.weight_capacity() - z.get_carried_weight();
     units::volume max_volume = storage.get_volume_capacity() - z.get_carried_volume();
     units::length max_length = storage.max_containable_length();
@@ -359,12 +374,12 @@ bool add_armor( monster &z )
         return true;
     }
 
-    armor.set_var( "pet_armor", "true" );
-    z.armor_item = cata::make_value<item>( armor );
+    if( !z.equip_pet_equipment( pet_slot_armor, armor ) ) {
+        return true;
+    }
     add_msg( pgettext( "pet armor", "You put the %1$s on your %2$s." ), armor.display_name(),
              pet_name );
     loc.remove_item();
-    z.add_effect( effect_monster_armor, 1_turns, true );
     // TODO: armoring a horse takes a lot longer than 2 seconds. This should be a long action.
     get_player_character().mod_moves( -to_moves<int>( 2_seconds ) );
     return true;
@@ -380,17 +395,15 @@ void remove_armor( monster &z )
 {
     std::string pet_name = z.get_name();
     if( z.armor_item ) {
-        z.armor_item->erase_var( "pet_armor" );
-        get_map().add_item_or_charges( z.pos_bub(), *z.armor_item );
-        add_msg( pgettext( "pet armor", "You remove the %1$s from %2$s." ), z.armor_item->display_name(),
+        cata::value_ptr<item> removed = z.remove_pet_equipment( pet_slot_armor );
+        get_map().add_item_or_charges( z.pos_bub(), *removed );
+        add_msg( pgettext( "pet armor", "You remove the %1$s from %2$s." ), removed->display_name(),
                  pet_name );
-        z.armor_item.reset();
         // TODO: removing armor from a horse takes a lot longer than 2 seconds. This should be a long action.
         get_player_character().mod_moves( -to_moves<int>( 2_seconds ) );
     } else {
         add_msg( m_bad, _( "Your %1$s isn't wearing armor!" ), pet_name );
     }
-    z.remove_effect( effect_monster_armor );
 }
 
 void play_with( monster &z )
@@ -641,11 +654,10 @@ bool Character::can_mount( const monster &critter ) const
     if( route.empty() ) {
         return false;
     }
-    return ( critter.has_flag( mon_flag_PET_MOUNTABLE ) && critter.friendly == -1 &&
-             !critter.has_effect( effect_controlled ) && !critter.has_effect( effect_ridden ) ) &&
-           ( ( critter.has_effect( effect_monster_saddled ) && get_skill_level( skill_survival ) >= 1 ) ||
-             get_skill_level( skill_survival ) >= 4 ) && ( critter.get_size() >= ( get_size() + 1 ) &&
-                     get_weight() <= critter.get_weight() * critter.get_mountable_weight_ratio() );
+    return critter.has_flag( mon_flag_PET_MOUNTABLE ) && critter.friendly == -1 &&
+           !critter.has_effect( effect_controlled ) && !critter.has_effect( effect_ridden ) &&
+           critter.get_size() >= ( get_size() + 1 ) &&
+           get_weight() <= critter.get_weight() * critter.get_mountable_weight_ratio();
 }
 
 bool monexamine::pet_menu( monster &z )
@@ -656,6 +668,8 @@ bool monexamine::pet_menu( monster &z )
         lead,
         stop_lead,
         rename,
+        manage_equipment,
+        transfer_items,
         attach_bag,
         remove_bag,
         drop_all,
@@ -700,25 +714,17 @@ bool monexamine::pet_menu( monster &z )
         }
     }
     amenu.addentry( rename, true, 'e', _( "Rename" ) );
+    if( !z.has_flag( mon_flag_RIDEABLE_MECH ) ) {
+        amenu.addentry( manage_equipment, true, 'E', _( "Manage animal equipment" ) );
+        amenu.addentry( transfer_items, z.get_pet_storage() != nullptr, 'I',
+                        z.get_pet_storage() != nullptr ? _( "Transfer items" ) :
+                        _( "Transfer items (equip storage first)" ) );
+    }
     amenu.addentry( attack, true, 'A', _( "Attack" ) );
     Character &player_character = get_player_character();
-    if( z.has_effect( effect_has_bag ) ) {
-        amenu.addentry( give_items, true, 'g', _( "Place items into bag" ) );
-        amenu.addentry( remove_bag, true, 'b', _( "Remove a bag from the %s" ), pet_name );
-        if( !z.inv.empty() ) {
-            amenu.addentry( drop_all, true, 'd', _( "Remove all items from a bag" ) );
-        }
-    } else if( !z.has_flag( mon_flag_RIDEABLE_MECH ) ) {
-        amenu.addentry( attach_bag, true, 'b', _( "Attach a bag to the %s" ), pet_name );
-    }
     if( z.has_effect( effect_harnessed ) ) {
         amenu.addentry( mon_harness_remove, true, 'H', _( "Remove the vehicle harness from the %s" ),
                         pet_name );
-    }
-    if( z.has_effect( effect_monster_armor ) ) {
-        amenu.addentry( mon_armor_remove, true, 'a', _( "Remove armor from the %s" ), pet_name );
-    } else if( !z.has_flag( mon_flag_RIDEABLE_MECH ) ) {
-        amenu.addentry( mon_armor_add, true, 'a', _( "Equip the %s with armor" ), pet_name );
     }
     if( z.has_effect( effect_tied ) ) {
         amenu.addentry( untie, true, 't', _( "Untie" ) );
@@ -763,17 +769,6 @@ bool monexamine::pet_menu( monster &z )
             }
         }
     }
-    if( z.has_flag( mon_flag_PET_MOUNTABLE ) && !z.has_effect( effect_monster_saddled ) &&
-        player_character.cache_has_item_with( json_flag_TACK ) ) {
-        if( player_character.get_skill_level( skill_survival ) >= 1 ) {
-            amenu.addentry( attach_saddle, true, 'h', _( "Tack up the %s" ), pet_name );
-        } else {
-            amenu.addentry( attach_saddle, false, 'h', _( "You don't know how to saddle the %s" ), pet_name );
-        }
-    }
-    if( z.has_flag( mon_flag_PET_MOUNTABLE ) && z.has_effect( effect_monster_saddled ) ) {
-        amenu.addentry( remove_saddle, true, 'h', _( "Remove the tack from the %s" ), pet_name );
-    }
     if( z.has_flag( mon_flag_PAY_BOT ) ) {
         amenu.addentry( pay, true, 'f', _( "Manage your friendship with the %s" ), pet_name );
     }
@@ -790,13 +785,8 @@ bool monexamine::pet_menu( monster &z )
             amenu.addentry( mount, false, 'r', _( "The %s cannot be mounted" ), pet_name );
         } else if( z.get_size() <= player_character.get_size() ) {
             amenu.addentry( mount, false, 'r', _( "The %s is too small to carry your weight" ), pet_name );
-        } else if( player_character.get_skill_level( skill_survival ) < 1 ) {
-            amenu.addentry( mount, false, 'r', _( "You require survival skill 1 to ride a mount" ) );
         } else if( player_character.get_weight() >= z.get_weight() * z.get_mountable_weight_ratio() ) {
             amenu.addentry( mount, false, 'r', _( "You are too heavy to mount the %s" ), pet_name );
-        } else if( !z.has_effect( effect_monster_saddled ) &&
-                   player_character.get_skill_level( skill_survival ) < 4 ) {
-            amenu.addentry( mount, false, 'r', _( "You require survival skill 4 to ride without a saddle" ) );
         }
     } else {
         const itype &type = *item::find_type( z.type->mech_battery );
@@ -884,6 +874,14 @@ bool monexamine::pet_menu( monster &z )
         case rename:
             selected_entry = "rename";
             rename_pet( z );
+            break;
+        case manage_equipment:
+            selected_entry = "manage_equipment";
+            pet_inventory_ui::show_equipment( z );
+            break;
+        case transfer_items:
+            selected_entry = "transfer_items";
+            pet_inventory_ui::show_transfer( z );
             break;
         case attach_bag:
             selected_entry = "attach_bag";

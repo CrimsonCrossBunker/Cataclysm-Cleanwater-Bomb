@@ -253,13 +253,13 @@ TEST_CASE( "horde_map_signals_multiple_submaps", "[hordes][horde_signal_submaps]
 {
     horde_map hordes;
     hordes.set_location( point_abs_om( 0, 0 ) );
-    const tripoint_abs_ms near( 12, 12, 0 );
-    const tripoint_abs_ms nearby( 24, 12, 0 );
-    const tripoint_abs_ms far( 120, 120, 0 );
-    REQUIRE( hordes.spawn_entity( near, mon_zombie ).inserted );
-    REQUIRE( hordes.spawn_entity( nearby, mon_zombie ).inserted );
-    REQUIRE( hordes.spawn_entity( far, mon_zombie ).inserted );
-    hordes.signal_entities( near + point::east, 3 );
+    const tripoint_abs_ms near_pos( 12, 12, 0 );
+    const tripoint_abs_ms nearby_pos( 24, 12, 0 );
+    const tripoint_abs_ms far_pos( 120, 120, 0 );
+    REQUIRE( hordes.spawn_entity( near_pos, mon_zombie ).inserted );
+    REQUIRE( hordes.spawn_entity( nearby_pos, mon_zombie ).inserted );
+    REQUIRE( hordes.spawn_entity( far_pos, mon_zombie ).inserted );
+    hordes.signal_entities( near_pos + point::east, 3 );
     CHECK( hordes.entity_group_at( tripoint_om_sm( 1, 1, 0 ), horde_map_flavors::idle ).empty() );
     CHECK( hordes.entity_group_at( tripoint_om_sm( 2, 1, 0 ), horde_map_flavors::idle ).empty() );
     CHECK( count_entities( hordes, horde_map_flavors::active ) == 2 );
@@ -267,5 +267,5 @@ TEST_CASE( "horde_map_signals_multiple_submaps", "[hordes][horde_signal_submaps]
     horde_map::view_proxy idle = hordes.get_view( horde_map_flavors::idle );
     const horde_map::iterator idle_begin = idle.begin();
     REQUIRE( idle_begin != idle.end() );
-    CHECK( idle.begin()->first == far );
+    CHECK( idle.begin()->first == far_pos );
 }

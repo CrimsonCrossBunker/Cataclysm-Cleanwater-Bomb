@@ -1,6 +1,14 @@
+#include <list>
+#include <memory>
+#include <vector>
+
+#include "avatar.h"
 #include "cata_catch.h"
 #include "calendar.h"
 #include "item.h"
+#include "inventory.h"
+#include "pimpl.h"
+#include "player_helpers.h"
 #include "requirements.h"
 #include "type_id.h"
 
@@ -33,4 +41,33 @@ TEST_CASE( "physical_stack_merging_preserves_item_state", "[item][stacking][char
     CHECK_FALSE( lhs.combine( rhs ) );
     CHECK( lhs.charges == 10 );
     CHECK( rhs.charges == 10 );
+}
+
+TEST_CASE( "inventory_restack_preserves_charge_items_that_cannot_physically_merge",
+           "[item][stacking][charges][inventory]" )
+{
+    clear_avatar();
+    avatar &player = get_avatar();
+    item lhs( itype_id( "9mm" ), calendar::turn, 10 );
+    item rhs = lhs;
+    rhs.charges = 20;
+    lhs.force_set_damage( 1001 );
+    rhs.force_set_damage( 1002 );
+    REQUIRE( lhs.stacks_with( rhs ) );
+    REQUIRE_FALSE( lhs.merge_charges( rhs ) );
+    player.inv->add_item( lhs, false, false, false );
+    player.inv->add_item( rhs, false, false, false );
+    player.inv->restack( player );
+
+    int total = 0;
+    int count = 0;
+    for( const std::list<item> *stack : player.inv->slice() ) {
+        for( const item &entry : *stack ) {
+            total += entry.charges;
+            ++count;
+            CHECK( entry.damage() == ( entry.charges == 10 ? 1001 : 1002 ) );
+        }
+    }
+    CHECK( total == 30 );
+    CHECK( count == 2 );
 }

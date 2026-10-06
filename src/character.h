@@ -1558,10 +1558,14 @@ class Character : public Creature, public visitable
 
         bool can_mount( const monster &critter ) const;
         void mount_creature( monster &z );
+        /** Attempts an animal mount using riding skill and equipment modifiers. */
+        bool try_mount_creature( monster &z );
         bool cant_do_mounted( bool msg = true ) const;
         bool is_mounted() const;
         bool check_mount_will_move( const tripoint_bub_ms &dest_loc );
         bool check_mount_is_spooked();
+        /** Tests whether a mounted character keeps their seat after a melee impact. */
+        void check_mounted_balance( int damage );
         void dismount();
         void forced_dismount();
 

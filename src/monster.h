@@ -25,6 +25,7 @@
 #include "coordinates.h"
 #include "creature.h"
 #include "monster_uid.h"
+#include "pet_slot.h"
 #include "type_id.h"
 #include "units_fwd.h"
 #include "value_ptr.h"
@@ -563,6 +564,29 @@ class monster : public Creature
         cata::value_ptr<item> armor_item; // item of armor the monster may be wearing
         cata::value_ptr<item> storage_item; // storage item for monster carrying items
         cata::value_ptr<item> battery_item; // item to power mechs
+
+        /**
+         * Equipment in mod-defined slots.  The three legacy slots continue to
+         * use tack_item, armor_item, and storage_item so existing native code
+         * and old save fields remain valid.
+         */
+        std::map<pet_slot_id, cata::value_ptr<item>> custom_pet_equipment;
+
+        const item *get_pet_equipment( const pet_slot_id &slot ) const;
+        item *get_pet_equipment( const pet_slot_id &slot );
+        const item *get_pet_storage() const;
+        item *get_pet_storage();
+        std::optional<pet_slot_id> get_pet_storage_slot() const;
+        int pet_storage_count() const;
+        bool has_pet_equipment( const pet_slot_id &slot ) const;
+        bool pet_slot_available( const pet_slot_id &slot ) const;
+        bool equip_pet_equipment( const pet_slot_id &slot, const item &equipment );
+        cata::value_ptr<item> remove_pet_equipment( const pet_slot_id &slot );
+        int pet_equipment_mount_threshold_delta() const;
+        double pet_equipment_melee_hit_multiplier() const;
+        double pet_equipment_melee_damage_multiplier() const;
+        double pet_equipment_fear_multiplier() const;
+
         units::mass get_carried_weight() const;
         units::volume get_carried_volume() const;
         void move_special_item_to_inv( cata::value_ptr<item> &it );

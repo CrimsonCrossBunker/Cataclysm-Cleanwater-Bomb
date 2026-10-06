@@ -221,7 +221,7 @@ class RepositoryNativeInventoryGeneratorTest(unittest.TestCase):
         inventory = self.inventory
         self.assertEqual(inventory["schema_version"], 2)
         self.assertEqual(len(inventory["id_kinds"]), 132)
-        self.assertEqual(len(inventory["json_types"]), 190)
+        self.assertEqual(len(inventory["json_types"]), 192)
         self.assertEqual(len(inventory["event_types"]), 113)
         self.assertEqual(
             [entry["id"] for entry in inventory["native_domains"]],

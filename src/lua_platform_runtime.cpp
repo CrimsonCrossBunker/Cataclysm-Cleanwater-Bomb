@@ -3932,6 +3932,233 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
                                                 "butchery_requirements", std::string( "default" ) );
         return harvest_definition_handle{ std::move( definition ), transaction->token };
     } );
+    // Install constructors for native catalogs owned by this transaction.
+    content.set_function( "ConstructionCategory", [transaction]( const sol::table & options ) {
+        if( transaction->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<construction_category_definition_data>();
+        definition->id = options.get_or( "id", std::string() );
+        definition->name = options.get_or( "name", definition->id );
+        return construction_category_definition_handle{
+            std::move( definition ), transaction->token
+        };
+    } );
+    content.set_function( "ConstructionGroup", [transaction]( const sol::table & options ) {
+        if( transaction->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<construction_group_definition_data>();
+        definition->id = options.get_or( "id", std::string() );
+        definition->name = options.get_or( "name", definition->id );
+        return construction_group_definition_handle{
+            std::move( definition ), transaction->token
+        };
+    } );
+    content.set_function( "VehiclePartLocation", [transaction]( const sol::table & options ) {
+        if( transaction->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<vehicle_part_location_definition_data>();
+        definition->id = options.get_or( "id", std::string() );
+        definition->name = options.get_or( "name", definition->id );
+        definition->description = options.get_or( "description", std::string() );
+        definition->z_order = options.get_or<std::int64_t>( "z_order", 0 );
+        definition->list_order = options.get_or<std::int64_t>( "list_order", 5 );
+        return vehicle_part_location_definition_handle{
+            std::move( definition ), transaction->token
+        };
+    } );
+    content.set_function( "MoodFace", [transaction]( const sol::table & options ) {
+        if( transaction->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<mood_face_definition_data>();
+        definition->id = options.get_or( "id", std::string() );
+        return mood_face_definition_handle{
+            std::move( definition ), transaction->token
+        };
+    } );
+    content.set_function( "DamageInfoOrder", [transaction]( const sol::table & options ) {
+        if( transaction->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<damage_info_order_definition_data>();
+        definition->id = options.get_or( "id", std::string() );
+        definition->display = options.get_or( "display", std::string( "detailed" ) );
+        definition->verb = options.get_or( "verb", std::string() );
+        return damage_info_order_definition_handle{
+            std::move( definition ), transaction->token
+        };
+    } );
+    content.set_function( "VehiclePartCategory", [transaction]( const sol::table & options ) {
+        if( transaction->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<vehicle_part_category_definition_data>();
+        definition->id = options.get_or( "id", std::string() );
+        definition->name = options.get_or( "name", definition->id );
+        definition->short_name = options.get_or( "short_name", definition->name );
+        definition->priority = options.get_or<std::int64_t>( "priority", 0 );
+        return vehicle_part_category_definition_handle{
+            std::move( definition ), transaction->token
+        };
+    } );
+    content.set_function( "NamedColor", [transaction]( const sol::table & options ) {
+        if( transaction->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<named_color_definition_data>();
+        definition->name = options.get_or( "name", std::string() );
+        definition->id = definition->name;
+        definition->red = options.get_or<std::int64_t>( "red", 0 );
+        definition->green = options.get_or<std::int64_t>( "green", 0 );
+        definition->blue = options.get_or<std::int64_t>( "blue", 0 );
+        definition->alpha = options.get_or<std::int64_t>( "alpha", 255 );
+        return named_color_definition_handle{
+            std::move( definition ), transaction->token
+        };
+    } );
+    content.set_function( "RotatableSymbol", [transaction]( const sol::table & options ) {
+        if( transaction->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<rotatable_symbol_definition_data>();
+        const sol::optional<sol::table> symbols =
+            options.get<sol::optional<sol::table>>( "symbols" );
+        if( !symbols ) {
+            throw std::runtime_error( "rotatable symbols require a symbols array" );
+        }
+        const std::size_t count = require_dense_array(
+                                      *symbols, "rotatable symbols", 2, 4 );
+        if( count != 2 && count != 4 ) {
+            throw std::runtime_error( "rotatable symbols require two or four symbols" );
+        }
+        definition->symbols.reserve( count );
+        for( std::size_t index = 1; index <= count; ++index ) {
+            const std::string symbol = symbols->raw_get<std::string>( index );
+            const utf8_wrapper wrapped( symbol );
+            if( wrapped.size() != 1 ) {
+                throw std::runtime_error(
+                    "rotatable symbols must be single Unicode codepoints" );
+            }
+            definition->symbols.push_back( wrapped.at( 0 ) );
+        }
+        definition->key = utf32_to_utf8( definition->symbols.front() );
+        definition->id = definition->key;
+        return rotatable_symbol_definition_handle{
+            std::move( definition ), transaction->token
+        };
+    } );
+    content.set_function( "AsciiArt", [transaction]( const sol::table & options ) {
+        if( transaction->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<ascii_art_definition_data>();
+        definition->id = options.get_or( "id", std::string() );
+        return ascii_art_definition_handle{
+            std::move( definition ), transaction->token
+        };
+    } );
+    content.set_function( "LimbScore", [transaction]( const sol::table & options ) {
+        if( transaction->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<limb_score_definition_data>();
+        definition->id = options.get_or( "id", std::string() );
+        definition->name = options.get_or( "name", definition->id );
+        definition->affected_by_wounds = options.get_or( "affected_by_wounds", true );
+        definition->affected_by_encumbrance =
+            options.get_or( "affected_by_encumbrance", true );
+        return limb_score_definition_handle{
+            std::move( definition ), transaction->token
+        };
+    } );
+    content.set_function( "HitRange", [transaction]( const sol::table & options ) {
+        if( transaction->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<hit_range_definition_data>();
+        const sol::optional<sol::table> values =
+            options.get<sol::optional<sol::table>>( "even_good" );
+        if( !values ) {
+            throw std::runtime_error( "hit range requires an even_good array" );
+        }
+        const std::size_t count = require_dense_array( *values, "hit range", 1, 4096 );
+        definition->even_good.reserve( count );
+        for( std::size_t index = 1; index <= count; ++index ) {
+            definition->even_good.push_back( values->raw_get<std::int64_t>( index ) );
+        }
+        return hit_range_definition_handle{
+            std::move( definition ), transaction->token
+        };
+    } );
+    content.set_function( "BashDamageProfile", [transaction]( const sol::table & options ) {
+        if( transaction->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<bash_damage_profile_definition_data>();
+        definition->id = options.get_or( "id", std::string() );
+        return bash_damage_profile_definition_handle{
+            std::move( definition ), transaction->token
+        };
+    } );
+    content.set_function( "ClothingMod", [transaction]( const sol::table & options ) {
+        if( transaction->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<clothing_mod_definition_data>();
+        definition->id = options.get_or( "id", std::string() );
+        definition->flag = options.get_or( "flag", std::string() );
+        definition->material_item = options.get_or( "material_item", std::string() );
+        definition->apply_prompt = options.get_or( "apply_prompt", std::string() );
+        definition->remove_prompt = options.get_or( "remove_prompt", std::string() );
+        definition->restricted = options.get_or( "restricted", false );
+        return clothing_mod_definition_handle{
+            std::move( definition ), transaction->token
+        };
+    } );
+    content.set_function( "OvermapLandUseCode", [transaction]( const sol::table & options ) {
+        if( transaction->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<overmap_land_use_code_definition_data>();
+        definition->id = options.get_or( "id", std::string() );
+        definition->code = options.get_or<std::int64_t>( "code", 0 );
+        definition->name = options.get_or( "name", definition->id );
+        definition->description = options.get_or( "description", std::string() );
+        definition->color = options.get_or( "color", std::string( "black" ) );
+        const std::string symbol = options.get_or( "symbol", std::string() );
+        const utf8_wrapper wrapped( symbol );
+        if( wrapped.size() != 1 ) {
+            throw std::runtime_error(
+                "overmap land-use codes require one Unicode symbol" );
+        }
+        definition->symbol = wrapped.at( 0 );
+        return overmap_land_use_code_definition_handle{
+            std::move( definition ), transaction->token
+        };
+    } );
+    content.set_function( "OvermapVision", [transaction]( const sol::table & options ) {
+        if( transaction->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<overmap_vision_definition_data>();
+        definition->id = options.get_or( "id", std::string() );
+        return overmap_vision_definition_handle{
+            std::move( definition ), transaction->token
+        };
+    } );
+    content.set_function( "OvermapLocation", [transaction]( const sol::table & options ) {
+        if( transaction->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<overmap_location_definition_data>();
+        definition->id = options.get_or( "id", std::string() );
+        return overmap_location_definition_handle{
+            std::move( definition ), transaction->token
+        };
+    } );
     content.set_function( "MapExtraCollection", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );

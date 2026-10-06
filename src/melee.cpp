@@ -61,6 +61,7 @@
 #include "messages.h"
 #include "monattack.h"
 #include "monster.h"
+#include "move_mode.h"
 #include "mtype.h"
 #include "mutation.h"
 #include "npc.h"
@@ -73,6 +74,7 @@
 #include "proficiency.h"
 #include "projectile.h"
 #include "ret_val.h"
+#include "riding_config.h"
 #include "rng.h"
 #include "sounds.h"
 #include "string_formatter.h"
@@ -160,6 +162,7 @@ static const material_id material_steel( "steel" );
 static const move_mode_id move_mode_prone( "prone" );
 
 static const skill_id skill_melee( "melee" );
+static const skill_id skill_riding( "riding" );
 static const skill_id skill_spellcraft( "spellcraft" );
 static const skill_id skill_unarmed( "unarmed" );
 
@@ -396,6 +399,81 @@ float Character::get_melee_hit_base() const
            enchantment_cache->modify_value( enchant_vals::mod::MELEE_TO_HIT, 0.0f );
 }
 
+static std::array<std::pair<damage_type_id, proficiency_id>, 3> mounted_damage_proficiencies()
+{
+    const riding_config &config = get_riding_config();
+    return {{
+            { damage_bash, config.mounted_bashing_proficiency },
+            { damage_cut, config.mounted_cutting_proficiency },
+            { damage_stab, config.mounted_piercing_proficiency }
+        }};
+}
+
+static double mounted_damage_total( const item &weapon )
+{
+    double total = 0.0;
+    for( const auto &[damage_type, proficiency] : mounted_damage_proficiencies() ) {
+        total += std::max( 0, weapon.damage_melee( damage_type ) );
+    }
+    if( weapon.is_null() ) {
+        total = std::max( total, 1.0 );
+    }
+    return total;
+}
+
+static double learned_mounted_damage_fraction( const Character &character, const item &weapon )
+{
+    const double total = mounted_damage_total( weapon );
+    if( total <= 0.0 ) {
+        return 0.0;
+    }
+
+    double learned_damage = 0.0;
+    for( const auto &[damage_type, proficiency] : mounted_damage_proficiencies() ) {
+        double amount = std::max( 0, weapon.damage_melee( damage_type ) );
+        if( weapon.is_null() && damage_type == damage_bash ) {
+            amount = std::max( amount, 1.0 );
+        }
+        if( character.has_proficiency( proficiency ) ) {
+            learned_damage += amount;
+        }
+    }
+    return learned_damage / total;
+}
+
+static void practice_mounted_melee( Character &character, const item &weapon )
+{
+    if( !character.is_mounted() || character.get_steed_type() != steed_type::ANIMAL ) {
+        return;
+    }
+
+    const riding_config &config = get_riding_config();
+    character.practice( skill_riding, config.melee_practice );
+    const time_duration base_practice = time_duration::from_seconds(
+                                            config.proficiency_practice_seconds );
+    character.practice_proficiency( config.mounted_combat_proficiency, base_practice );
+    if( !character.has_proficiency( config.mounted_combat_proficiency ) ) {
+        return;
+    }
+
+    const double total = mounted_damage_total( weapon );
+    if( total <= 0.0 ) {
+        return;
+    }
+    for( const auto &[damage_type, proficiency] : mounted_damage_proficiencies() ) {
+        double amount = std::max( 0, weapon.damage_melee( damage_type ) );
+        if( weapon.is_null() && damage_type == damage_bash ) {
+            amount = std::max( amount, 1.0 );
+        }
+        if( amount <= 0.0 ) {
+            continue;
+        }
+        const int seconds = std::max( 1, static_cast<int>( std::round(
+                                          config.proficiency_practice_seconds * amount / total ) ) );
+        character.practice_proficiency( proficiency, time_duration::from_seconds( seconds ) );
+    }
+}
+
 float Character::hit_roll() const
 {
     // Dexterity, skills, weapon and martial arts
@@ -422,6 +500,17 @@ float Character::hit_roll() const
     } else if( is_crouching() && ( !has_flag( json_flag_PSEUDOPOD_GRASP ) &&
                                    ( !has_effect( effect_natural_stance ) ) ) ) {
         hit -= 2.0f;
+    }
+
+    if( is_mounted() && get_steed_type() == steed_type::ANIMAL ) {
+        const riding_config &config = get_riding_config();
+        const double penalty = std::max( 0.0,
+                                         config.mounted_melee_hit_penalty -
+                                         get_skill_level( skill_riding ) * config.melee_hit_skill_reduction );
+        const double proficiency_bonus = learned_mounted_damage_fraction( *this, cur_weap ) *
+                                         config.mounted_melee_proficiency_hit_bonus;
+        hit = static_cast<float>( ( hit - penalty + proficiency_bonus ) *
+                                  mounted_creature->pet_equipment_melee_hit_multiplier() );
     }
 
     // Cleanwater: 撤销 PR #81632 — 移除载具近战惩罚
@@ -486,6 +575,20 @@ void Character::roll_all_damage( bool crit, damage_instance &di, bool average,
     for( const damage_type &dt : damage_type::get_all() ) {
         roll_damage( dt.id, crit, di, average, weap, attack_vector, contact, crit_mod,
                      target_cut_armor );
+    }
+    if( is_mounted() && get_steed_type() == steed_type::ANIMAL ) {
+        const riding_config &config = get_riding_config();
+        const double equipment_multiplier = mounted_creature->pet_equipment_melee_damage_multiplier();
+        for( damage_unit &unit : di.damage_units ) {
+            double multiplier = equipment_multiplier;
+            for( const auto &[damage_type, proficiency] : mounted_damage_proficiencies() ) {
+                if( unit.type == damage_type && has_proficiency( proficiency ) ) {
+                    multiplier *= 1.0 + config.mounted_melee_proficiency_damage_bonus;
+                    break;
+                }
+            }
+            unit.amount *= multiplier;
+        }
     }
 }
 
@@ -822,6 +925,7 @@ bool Character::melee_attack_abstract( Creature &t, bool allow_special,
 
         damage_instance d;
         roll_all_damage( critical_hit, d, false, cur_weap, vector_id, contact_area, &t, target_bp );
+        practice_mounted_melee( *this, cur_weap );
 
         // polearms and pikes (but not spears) do less damage to adjacent targets
         // In the case of a weapon like a glaive or a naginata, the wielder
