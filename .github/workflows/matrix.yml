@@ -409,6 +409,9 @@ jobs:
     - name: run horde map regression
       if: ${{ env.SKIP == 'false' && env.SKIP_TESTS == 'true' && matrix.semantic_acceptance == true }}
       run: ./tests/cata_test 'horde_map_*' --rng-seed 20260921 --order lex --error-format=github-action
+    - name: run Railroads spawn regression
+      if: ${{ env.SKIP == 'false' && matrix.semantic_acceptance == true }}
+      run: ./tests/cata_test 'railroad_end_vehicle_spawns' --mods=railroads --rng-seed 3404 --order lex --user-dir=test_user_dir_railroad_spawns --drop-world --error-format=github-action
     - name: post-build ccache manipulation
       id: trim-compiler-cache
       if: ${{ always() && !cancelled() && steps.compiler-cache.outcome == 'success' }}
