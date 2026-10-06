@@ -440,6 +440,12 @@ jobs:
     - name: run Railroads spawn regression
       if: ${{ env.SKIP == 'false' && matrix.semantic_acceptance == true }}
       run: ./tests/cata_test 'railroad_end_vehicle_spawns' --mods=railroads --rng-seed 3404 --order lex --user-dir=test_user_dir_railroad_spawns --drop-world --error-format=github-action
+    - name: run Lua effect definition and packaging regressions
+      if: ${{ env.SKIP == 'false' && matrix.semantic_acceptance == true }}
+      run: ./tests/cata_test 'lua_platform_effect_definitions_*,lua_platform_medicine_group_wraps_counted_doses_once,lua_platform_effect_modifier_fingerprints_retain_fractional_precision' --rng-seed 965 --order lex --warn NoTests --user-dir=test_user_dir_lua_effects --drop-world --error-format=github-action
+    - name: run isolated deadly bites gameplay and save regressions
+      if: ${{ env.SKIP == 'false' && matrix.semantic_acceptance == true }}
+      run: ./tests/cata_test 'deadly_bites_*' --mods=deadly_bites --rng-seed 965 --order lex --warn NoTests --user-dir=test_user_dir_deadly_bites --drop-world --error-format=github-action
     - name: upload artifacts if failed
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       if: failure()

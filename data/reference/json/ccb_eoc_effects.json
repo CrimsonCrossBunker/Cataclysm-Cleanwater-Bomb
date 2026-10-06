@@ -4,7 +4,7 @@
   "inventory_kind": "eoc_effects",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:b67b1bf0ab7b11fcdf83fd635f808b88db149113d457f54b777512a44b5a8710",
+    "source_fingerprint": "sha256:44cfae9014dd221f23efc28ee14a082394e1c825701289bcaeabe6933efc4465",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -678,7 +678,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 347,
+        "occurrences": 346,
         "examples": [
           {
             "path": "data/json/effects_on_condition/nether_eocs/portal_storm_effect_on_condition.json",
@@ -6401,7 +6401,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 1952,
+        "occurrences": 1949,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -7330,7 +7330,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 22129,
+        "occurrences": 22126,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -21204,7 +21204,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 1362,
+        "occurrences": 1356,
         "examples": [
           {
             "path": "data/json/effects_on_condition/addictions_eocs.json",
@@ -25219,7 +25219,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 3248,
+        "occurrences": 3243,
         "examples": [
           {
             "path": "data/json/debug/quick_setup_eoc.json",

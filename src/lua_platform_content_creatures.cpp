@@ -5,6 +5,7 @@
 #include <dialogue_helpers.h>
 #include <enum_bitset.h>
 #include <enums.h>
+#include <event.h>
 #include <flat_set.h>
 #include <game_constants.h>
 #include <iexamine.h>
@@ -27,13 +28,16 @@ struct const_dialogue;
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <locale>
 #include <map>
 #include <memory>
 #include <optional>
 #include <set>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -372,11 +376,25 @@ struct behavior_definition_data {
 };
 
 struct effect_type_definition_data {
+    struct modifier_data {
+        double base = 0.0;
+        double per_intensity = 0.0;
+        double resisted_base = 0.0;
+        double resisted_per_intensity = 0.0;
+    };
     std::string id;
     std::vector<authored_text> names;
     std::vector<authored_text> descriptions;
     std::vector<authored_text> reduced_descriptions;
     authored_text remove_message;
+    authored_text apply_message;
+    authored_text death_message;
+    std::string rating = "neutral";
+    std::string death_event;
+    bool harmful_cough = false;
+    std::vector<std::pair<int, int>> death_chances;
+    std::vector<std::pair<int, int>> resisted_death_chances;
+    std::map<std::pair<std::string, mod_action>, modifier_data> modifiers;
     std::string apply_memorial_log;
     std::string remove_memorial_log;
     authored_text blood_analysis_description;
@@ -1208,6 +1226,53 @@ struct effect_type_definition_handle {
             return insert_id( definition->enchantments, id, "enchantment" );
         }
 
+        effect_type_definition_handle &death_chance( const sol::table &options ) {
+            require_building_handle( token, *definition, "effect type" );
+            const auto read_chance = [&]( const char *top, const char *bottom ) {
+                const std::int64_t numerator = options.get<std::int64_t>( top );
+                const std::int64_t denominator = options.get<std::int64_t>( bottom );
+                if( numerator < std::numeric_limits<int>::min() ||
+                    numerator > std::numeric_limits<int>::max() || denominator <= 0 ||
+                    denominator > std::numeric_limits<int>::max() ) {
+                    throw std::runtime_error( "effect death chance requires a native numerator and positive denominator" );
+                }
+                return std::make_pair( static_cast<int>( numerator ), static_cast<int>( denominator ) );
+            };
+            const auto normal = read_chance( "numerator", "denominator" );
+            const auto resisted = read_chance( "resisted_numerator", "resisted_denominator" );
+            definition->death_chances.push_back( normal );
+            definition->resisted_death_chances.push_back( resisted );
+            return *this;
+        }
+
+        effect_type_definition_handle &modifier( const std::string &kind,
+                const std::string &action, const sol::table &options ) {
+            require_building_handle( token, *definition, "effect type" );
+            static const std::map<std::string, mod_action> actions = {
+                { "amount", mod_action::AMOUNT }, { "minimum", mod_action::MIN },
+                { "maximum", mod_action::MAX }, { "maximum_value", mod_action::MAX_VAL },
+                { "chance_numerator", mod_action::CHANCE_TOP },
+                { "chance_denominator", mod_action::CHANCE_BOT }, { "tick", mod_action::TICK }
+            };
+            const auto found = actions.find( action );
+            if( ( kind != "pain" && kind != "cough" ) || found == actions.end() ||
+                ( kind == "cough" && action != "chance_numerator" &&
+                  action != "chance_denominator" && action != "tick" ) ) {
+                throw std::runtime_error( "unsupported effect modifier kind or action" );
+            }
+            effect_type_definition_data::modifier_data value;
+            value.base = options.get_or( "base", 0.0 );
+            value.per_intensity = options.get_or( "per_intensity", 0.0 );
+            value.resisted_base = options.get_or( "resisted_base", 0.0 );
+            value.resisted_per_intensity = options.get_or( "resisted_per_intensity", 0.0 );
+            if( !std::isfinite( value.base ) || !std::isfinite( value.per_intensity ) ||
+                !std::isfinite( value.resisted_base ) || !std::isfinite( value.resisted_per_intensity ) ) {
+                throw std::runtime_error( "effect modifier values must be finite" );
+            }
+            definition->modifiers[ { kind == "pain" ? "PAIN" : "COUGH", found->second }] = value;
+            return *this;
+        }
+
         std::string id() const {
             require_readable_handle( token, *definition, "effect type" );
             return definition->id;
@@ -1218,9 +1283,6 @@ struct effect_type_definition_handle {
                 const sol::object &text, const std::string &label ) {
             require_building_handle( token, *definition, "effect type" );
             authored_text parsed = read_singular_text( text, {}, label );
-            if( parsed.empty() ) {
-                throw std::runtime_error( label + " cannot be empty" );
-            }
             target.push_back( std::move( parsed ) );
             return *this;
         }
@@ -2802,6 +2864,8 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         "resist_effect", &effect_type_definition_handle::resist_effect,
         "removes_effect", &effect_type_definition_handle::removes_effect,
         "blocks_effect", &effect_type_definition_handle::blocks_effect,
+        "death_chance", &effect_type_definition_handle::death_chance,
+        "modifier", &effect_type_definition_handle::modifier,
         "enchantment", &effect_type_definition_handle::enchantment );
     ccb.new_usertype<monster_attack_definition_handle>(
         "MonsterAttackDefinition", sol::no_constructor,
@@ -3009,16 +3073,23 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         auto definition = std::make_shared<effect_type_definition_data>();
         definition->id = options.get_or( "id", std::string() );
         if( authored_text value = read_text_option( options, "name", {}, "effect name" );
-            !value.empty() ) {
+            options.get<sol::object>( "name" ).get_type() != sol::type::nil ) {
             definition->names.push_back( std::move( value ) );
         }
         if( authored_text value = read_text_option( options, "description", {},
                                   "effect description" );
-            !value.empty() ) {
+            options.get<sol::object>( "description" ).get_type() != sol::type::nil ) {
             definition->descriptions.push_back( std::move( value ) );
         }
         definition->remove_message = read_text_option( options, "remove_message", {},
                                      "effect remove message" );
+        definition->apply_message = read_text_option( options, "apply_message", {},
+                                    "effect apply message" );
+        definition->death_message = read_text_option( options, "death_message", {},
+                                    "effect death message" );
+        definition->rating = options.get_or( "rating", std::string( "neutral" ) );
+        definition->death_event = options.get_or( "death_event", std::string() );
+        definition->harmful_cough = options.get_or( "harmful_cough", false );
         definition->apply_memorial_log = options.get_or( "apply_memorial_log", std::string() );
         definition->remove_memorial_log = options.get_or( "remove_memorial_log", std::string() );
         definition->blood_analysis_description = read_text_option( options,
@@ -3848,6 +3919,34 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
         }
         for( const auto &entry : pimpl_->effect_types ) {
             const auto &definition = *entry.definition;
+            const auto native_int = []( const std::int64_t value ) {
+                return value >= std::numeric_limits<int>::min() && value <= std::numeric_limits<int>::max();
+            };
+            if( definition.maximum_intensity <= 0 || !native_int( definition.maximum_intensity ) ||
+                definition.maximum_duration_turns < 0 || !native_int( definition.maximum_duration_turns ) ||
+                definition.intensity_duration_turns < 0 || !native_int( definition.intensity_duration_turns ) ||
+                !native_int( definition.duration_add_percent ) ||
+                !native_int( definition.intensity_add_value ) || !native_int( definition.intensity_decay_step ) ||
+                definition.intensity_decay_tick < 0 || !native_int( definition.intensity_decay_tick ) ||
+                definition.death_chances.size() > static_cast<std::size_t>( definition.maximum_intensity ) ) {
+                throw std::runtime_error( "effect type '" + definition.id +
+                                          "' has invalid intensity or duration values" );
+            }
+            if( definition.rating != "good" && definition.rating != "neutral" &&
+                definition.rating != "bad" && definition.rating != "mixed" ) {
+                throw std::runtime_error( "effect type '" + definition.id + "' has an invalid rating" );
+            }
+            if( !definition.death_event.empty() ) {
+                const auto event = io::string_to_enum_optional<event_type>( definition.death_event );
+                if( !event || *event == event_type::num_event_types ||
+                    cata::event::get_fields( *event ) != cata::event::get_fields( event_type::dies_of_infection ) ) {
+                    throw std::runtime_error( "effect type '" + definition.id + "' requires a character death event" );
+                }
+            }
+            if( !definition.death_chances.empty() && definition.death_event.empty() ) {
+                throw std::runtime_error( "effect type '" + definition.id +
+                                          "' requires a death event for death chances" );
+            }
             for( const std::string &id : definition.resist_effects ) {
                 if( !effect_exists( id ) ) {
                     throw std::runtime_error( "effect type '" + definition.id +
@@ -4526,8 +4625,14 @@ void creatures_content_transaction::impl::apply_effect_type()
         for( const authored_text &value : source.names ) {
             native.name.push_back( value.native() );
         }
+        if( native.name.empty() ) {
+            native.name.emplace_back();
+        }
         for( const authored_text &value : source.descriptions ) {
             native.desc.push_back( value.native() );
+        }
+        if( native.desc.empty() ) {
+            native.desc.emplace_back();
         }
         if( source.reduced_descriptions.empty() ) {
             native.reduced_desc = native.desc;
@@ -4538,6 +4643,24 @@ void creatures_content_transaction::impl::apply_effect_type()
         }
         native.remove_message = source.remove_message.empty() ? translation() :
                                 source.remove_message.native();
+        static const std::map<std::string, game_message_type> ratings = {
+            { "neutral", m_neutral }, { "good", m_good }, { "bad", m_bad }, { "mixed", m_mixed }
+        };
+        native.apply_msgs.emplace_back( source.apply_message.native(), ratings.at( source.rating ) );
+        native.death_msg = source.death_message.empty() ? to_translation( "You died." ) :
+                           source.death_message.native();
+        if( !source.death_event.empty() ) {
+            native.death_event = io::string_to_enum_optional<event_type>( source.death_event );
+        }
+        native.kill_chance = source.death_chances;
+        native.red_kill_chance = source.resisted_death_chances;
+        native.harmful_cough = source.harmful_cough;
+        for( const auto &[key, value] : source.modifiers ) {
+            native.mod_data[key.first][native.get_effect_modifier_key( key.second, 0 )] =
+            { value.base, value.per_intensity };
+            native.mod_data[key.first][native.get_effect_modifier_key( key.second, 1 )] =
+            { value.resisted_base, value.resisted_per_intensity };
+        }
         native.apply_memorial_log = source.apply_memorial_log;
         native.remove_memorial_log = source.remove_memorial_log;
         native.blood_analysis_description = source.blood_analysis_description.empty() ?
@@ -6282,6 +6405,26 @@ void creatures_content_transaction::append_fingerprint(
                 hash_part( state, text );
             }
             hash_part( state, value.remove_message );
+            hash_part( state, value.apply_message );
+            hash_part( state, value.death_message );
+            hash_part( state, value.rating );
+            hash_part( state, value.death_event );
+            hash_part( state, value.harmful_cough ? "harmful_cough" : "harmless_cough" );
+            for( std::size_t index = 0; index < value.death_chances.size(); ++index ) {
+                hash_part( state, std::to_string( value.death_chances[index].first ) );
+                hash_part( state, std::to_string( value.death_chances[index].second ) );
+                hash_part( state, std::to_string( value.resisted_death_chances[index].first ) );
+                hash_part( state, std::to_string( value.resisted_death_chances[index].second ) );
+            }
+            for( const auto &[key, modifier] : value.modifiers ) {
+                hash_part( state, key.first );
+                hash_part( state, std::to_string( static_cast<int>( key.second ) ) );
+                std::ostringstream values;
+                values.imbue( std::locale::classic() );
+                values << std::hexfloat << modifier.base << ',' << modifier.per_intensity << ','
+                       << modifier.resisted_base << ',' << modifier.resisted_per_intensity;
+                hash_part( state, values.str() );
+            }
             hash_part( state, value.apply_memorial_log );
             hash_part( state, value.remove_memorial_log );
             hash_part( state, value.blood_analysis_description );
