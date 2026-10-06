@@ -334,3 +334,31 @@ TEST_CASE( "railroad_world_generation", "[.][railroads][overmap]" )
     CHECK( rail_tiles > 0 );
     CHECK( stations > 0 );
 }
+
+TEST_CASE( "railroad_station_starter_vehicle", "[.][railroads][vehicle][mapgen]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    const std::string suffix = GENERATE( "north", "east", "south", "west" );
+    const tripoint_abs_omt pos = project_to<coords::omt>( get_map().get_abs_sub() );
+    overmap_buffer.ter_set( pos, oter_str_id( "railroad_station_0_4_" + suffix ).id() );
+    smallmap generated;
+    generated.generate( pos, calendar::turn, false, true );
+    vehicle *starter = nullptr;
+    for( const wrapped_vehicle &entry : generated.get_vehicles() ) {
+        if( entry.v->type == vehicle_prototype_motorized_draisine_2seats ) {
+            REQUIRE_FALSE( starter );
+            starter = entry.v;
+        }
+    }
+    CAPTURE( suffix );
+    REQUIRE( starter );
+    map &generated_map = *generated.cast_to_map();
+    CHECK( starter->fuel_left( generated_map, itype_gasoline ) > 0 );
+    CHECK( starter->safe_velocity( generated_map ) > 0 );
+    CHECK( starter->can_use_rails( generated_map ) );
+    for( const int index : starter->rail_wheelcache ) {
+        CHECK( generated_map.has_flag_ter_or_furn( ter_furn_flag::TFLAG_RAIL,
+                starter->bub_part_pos( generated_map, index ) ) );
+    }
+}
