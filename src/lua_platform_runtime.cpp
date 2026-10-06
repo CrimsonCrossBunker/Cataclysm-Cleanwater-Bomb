@@ -1,43 +1,30 @@
 #include "lua_platform_runtime.h"
 #include "lua_platform_runtime_internal.h"
+#include "lua_platform_content_text.h"
 
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
-#include <body_part_set.h>
 #include <character_id.h>
 #include <clone_ptr.h>
 #include <common_types.h>
 #include <damage.h>
-#include <enum_bitset.h>
 #include <enums.h>
-#include <explosion.h>
-#include <fire.h>
 #include <flat_set.h>
-#include <game_constants.h>
 #include <iexamine.h>
-#include <item_pocket.h>
 #include <item_uid.h>
-#include <lua_platform_hooks.h>
-#include <magic.h>
 #include <mapgen_primitives.h>
 #include <math_parser_diag_value.h>
-#include <memory_fast.h>
 #include <monster_uid.h>
-#include <npc_opinion.h>
 #include <overmap_ui.h>
-#include <pimpl.h>
-#include <pocket_type.h>
-#include <point.h>
-#include <sleep.h>
-#include <stomach.h>
-#include <value_ptr.h>
 #include <vehicle_uid.h>
 #include <weighted_list.h>
-#include <bitset>
 #include <exception>
 #include <initializer_list>
-#include <iterator>
 #include <list>
+
+class event_transformation;
+enum class cata_variant_type : int;
+struct const_dialogue;
 
 namespace cata::lua_platform::detail
 {
@@ -52,13 +39,11 @@ struct event_transformation_snapshot;
 #include <cstdint>
 #include <filesystem>
 #include <functional>
-#include <iomanip>
 extern "C" {
 #include <lua.h>
 }
 #include <limits>
 #include <map>
-#include <random>
 #include <set>
 #include <sstream>
 #include <stdexcept>
@@ -66,218 +51,77 @@ extern "C" {
 #include <tuple>
 #include <type_traits>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
-#include <variant>
 
 #include "achievement.h"
-#include "activity_actor.h"
-#include "activity_handlers.h"
-#include "activity_type.h"
 #include "addiction.h"
-#include "ammo.h"
-#include "ammo_effect.h"
-#include "anatomy.h"
 #include "ascii_art.h"
-#include "avatar.h"
-#include "behavior.h"
-#include "behavior_oracle.h"
-#include "behavior_strategy.h"
-#include "bionics.h"
-#include "bodygraph.h"
 #include "bodypart.h"
-#include "butchery.h"
-#include "butchery_requirements.h"
 #include "calendar.h"
-#include "cata_path.h"
-#include "cata_scope_helpers.h"
-#include "cata_utility.h"
-#include "cata_variant.h"
 #include "catacharset.h"
-#include "character.h"
-#include "character_martial_arts.h"
 #include "character_modifier.h"
-#include "city.h"
 #include "climbing.h"
 #include "clothing_mod.h"
-#include "clzones.h"
 #include "color.h"
-#include "computer.h"
 #include "construction.h"
 #include "construction_category.h"
 #include "construction_group.h"
 #include "coordinates.h"
-#include "crafting_gui.h"
 #include "creature.h"
-#include "creature_tracker.h"
-#include "debug.h"
-#include "dialogue.h"
-#include "dialogue_helpers.h"
-#include "disease.h"
-#include "effect.h"
-#include "emit.h"
-#include "end_screen.h"
 #include "enum_conversions.h"
 #include "event.h"
-#include "event_bus.h"
 #include "event_field_transformations.h"
-#include "event_statistics.h"
-#include "event_subscriber.h"
 #include "explosion_light.h"
-#include "faction_camp.h"
 #include "fault.h"
-#include "field.h"
 #include "field_type.h"
-#include "filesystem.h"
-#include "flag.h"
-#include "flexbuffer_json.h"
-#include "game.h"
 #include "gates.h"
 #include "generic_factory.h"
 #include "harvest.h"
-#include "help.h"
 #include "hsv_color.h"
-#include "init.h"
 #include "item.h"
-#include "item_action.h"
-#include "item_category.h"
-#include "item_factory.h"
 #include "item_group.h"
-#include "item_location.h"
-#include "item_wakeup.h"
-#include "itype.h"
-#include "iuse.h"
-#include "json.h"
-#include "json_loader.h"
-#include "lua_platform_achievements.h"
-#include "lua_platform_activities.h"
-#include "lua_platform_addictions.h"
-#include "lua_platform_bindings_coords.h"
-#include "lua_platform_bindings_values.h"
-#include "lua_platform_bionics.h"
-#include "lua_platform_camps.h"
 #include "lua_platform_content.h"
 #include "lua_platform_content_character.h"
 #include "lua_platform_content_creatures.h"
 #include "lua_platform_content_items.h"
 #include "lua_platform_content_presentation.h"
 #include "lua_platform_content_worldgen.h"
-#include "lua_platform_crafting.h"
-#include "lua_platform_creatures.h"
-#include "lua_platform_dialogue.h"
-#include "lua_platform_effects.h"
-#include "lua_platform_factions.h"
 #include "lua_platform_handle.h"
-#include "lua_platform_hordes.h"
-#include "lua_platform_interaction.h"
-#include "lua_platform_items.h"
-#include "lua_platform_magic.h"
-#include "lua_platform_mapgen.h"
-#include "lua_platform_martial_arts.h"
-#include "lua_platform_missions.h"
-#include "lua_platform_mutations.h"
-#include "lua_platform_needs.h"
-#include "lua_platform_npcs.h"
-#include "lua_platform_overmap.h"
-#include "lua_platform_proficiencies.h"
-#include "lua_platform_registry.h"
-#include "lua_platform_skills.h"
-#include "lua_platform_snapshots.h"
 #include "lua_platform_state.h"
-#include "lua_platform_statistics.h"
-#include "lua_platform_time.h"
-#include "lua_platform_trade.h"
-#include "lua_platform_variables.h"
-#include "lua_platform_vehicles.h"
-#include "lua_platform_vitamins.h"
-#include "lua_platform_weather.h"
-#include "lua_platform_world.h"
 #include "lua_platform_world_content.h"
-#include "lua_platform_world_info.h"
-#include "lua_platform_world_services.h"
-#include "lua_platform_zones.h"
 #include "magic_enchantment.h"
 #include "magic_ter_furn_transform.h"
-#include "magic_type.h"
-#include "map.h"
 #include "map_accessories.h"
 #include "map_extras.h"
 #include "map_scale_constants.h"
 #include "mapdata.h"
-#include "mapgen.h"
-#include "mapgen_functions.h"
 #include "mapgen_post_process.h"
-#include "mapgendata.h"
 #include "martialarts.h"
-#include "material.h"
-#include "math_parser.h"
-#include "math_parser_diag.h"
-#include "math_parser_jmath.h"
-#include "mattack_actors.h"
-#include "mattack_common.h"
-#include "messages.h"
-#include "mission.h"
 #include "mod_tileset.h"
-#include "mondefense.h"
-#include "monfaction.h"
 #include "mongroup.h"
-#include "monster.h"
-#include "monstergenerator.h"
 #include "mood_face.h"
-#include "morale_types.h"
-#include "move_mode.h"
-#include "mtype.h"
 #include "mutation.h"
-#include "npc.h"
 #include "omdata.h"
-#include "options.h"
 #include "output.h"
-#include "overlay_ordering.h"
 #include "overmap_connection.h"
 #include "overmap_location.h"
-#include "overmap_map_data_cache.h"
-#include "overmap_worldgen.h"
-#include "path_info.h"
-#include "player_activity.h"
-#include "profession.h"
-#include "profession_group.h"
-#include "proficiency.h"
-#include "recipe.h"
-#include "recipe_dictionary.h"
-#include "recipe_groups.h"
 #include "regional_settings.h"
 #include "relic.h"
 #include "requirements.h"
-#include "safe_reference.h"
 #include "scenario.h"
-#include "scent_map.h"
 #include "shop_cons_rate.h"
-#include "skill.h"
-#include "sounds.h"
-#include "speech.h"
 #include "speed_description.h"
 #include "start_location.h"
-#include "string_input_popup.h"
-#include "subbodypart.h"
-#include "talker.h"
-#include "text_snippets.h"
 #include "translation.h"
 #include "trap.h"
 #include "type_id.h"
-#include "uilist.h"
 #include "units.h"
 #include "veh_type.h"
-#include "vehicle.h"
 #include "vehicle_group.h"
 #include "vehicle_palette.h"
 #include "vehicle_part_location.h"
-#include "vitamin.h"
-#include "weakpoint.h"
 #include "weather_gen.h"
 #include "weather_type.h"
-#include "widget.h"
-#include "worldfactory.h"
-#include "wound.h"
 
 namespace cata::lua_platform
 {
@@ -437,9 +281,9 @@ void require_readable_handle( const std::shared_ptr<owner_token> &token,
 
 struct scenario_definition_data {
     std::string id;
-    std::string name;
-    std::string description;
-    std::string start_name;
+    detail::authored_text name;
+    detail::authored_text description;
+    detail::authored_text start_name;
     std::int64_t points = 0;
     bool blacklist = false;
     bool extra_professions = false;
@@ -2622,7 +2466,7 @@ struct relic_procgen_definition_handle {
         relic_procgen_charge_definition_data value;
         value.weight = options.get_or<std::int64_t>( "weight", 0 );
         const auto [initial_minimum, initial_maximum] = integer_range(
-                    options.raw_get<sol::object>( "charges" ), "initial charges" );
+                options.raw_get<sol::object>( "charges" ), "initial charges" );
         value.initial_minimum = initial_minimum;
         value.initial_maximum = initial_maximum;
         const auto [use_minimum, use_maximum] = integer_range(
@@ -2630,14 +2474,14 @@ struct relic_procgen_definition_handle {
         value.use_minimum = use_minimum;
         value.use_maximum = use_maximum;
         const auto [maximum_minimum, maximum_maximum] = integer_range(
-                    options.raw_get<sol::object>( "max_charges" ), "maximum charges" );
+                options.raw_get<sol::object>( "max_charges" ), "maximum charges" );
         value.maximum_minimum = maximum_minimum;
         value.maximum_maximum = maximum_maximum;
         const sol::object recharge_time = options.raw_get<sol::object>( "time_turns" );
         if( recharge_time.valid() && recharge_time.get_type() != sol::type::lua_nil &&
             recharge_time.get_type() != sol::type::none ) {
             const auto [time_minimum, time_maximum] = integer_range(
-                        recharge_time, "recharge time" );
+                    recharge_time, "recharge time" );
             value.time_minimum_turns = time_minimum;
             value.time_maximum_turns = time_maximum;
         }
@@ -3427,6 +3271,18 @@ void hash_part( std::uint64_t &state, std::string_view value )
     state = fnv1a( ";", state );
 }
 
+void hash_part( std::uint64_t &state, const detail::authored_text &text )
+{
+    hash_part( state, text.raw );
+    hash_part( state, text.translated ? "localized" : "literal" );
+    if( text.translated ) {
+        hash_part( state, text.translated->context ? "context" : "no_context" );
+        if( text.translated->context ) {
+            hash_part( state, *text.translated->context );
+        }
+    }
+}
+
 bool platform_filesystem_path_is_within(
     const std::filesystem::path &path,
     const std::filesystem::path &directory )
@@ -3480,7 +3336,7 @@ struct content_transaction::impl {
     impl( std::string owner_id, std::size_t owner_generation ) :
         owner( std::move( owner_id ) ), generation( owner_generation ),
         token( std::make_shared<owner_token>( owner_token{ owner, generation,
-                                              handle_lifecycle::building } ) ),
+                handle_lifecycle::building } ) ),
         world( owner, generation ), presentation( owner, generation ),
         worldgen( owner, generation ), item_content( owner, generation ),
         creatures( owner, generation ), character( owner, generation ) {}
@@ -3983,16 +3839,18 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         }
         auto definition = std::make_shared<scenario_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", definition->id );
-        definition->description = options.get_or( "description", std::string() );
-        definition->start_name = options.get_or( "start_name", std::string() );
+        definition->name = detail::read_singular_text( options["name"], definition->id, "Scenario.name" );
+        definition->description = detail::read_singular_text( options["description"], {},
+            "Scenario.description" );
+        definition->start_name = detail::read_singular_text( options["start_name"], {},
+            "Scenario.start_name" );
         definition->points = options.get_or<std::int64_t>( "points", 0 );
         definition->blacklist = options.get_or( "blacklist", false );
         definition->extra_professions = options.get_or( "extra_professions", false );
         definition->reveal_locale = options.get_or( "reveal_locale", true );
         definition->hard_requirement = options.get_or( "hard_requirement", false );
         definition->distance_initial_visibility = options.get_or<std::int64_t>(
-                    "distance_initial_visibility", 15 );
+                "distance_initial_visibility", 15 );
         definition->map_extra = options.get_or( "map_extra", std::string() );
         definition->start_handler = options.get_or(
                                         "on_start", options.get_or(
@@ -5080,7 +4938,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
     const std::string & id ) {
         return post_process_generator_definition_handle{
             edit_catalog( id, transaction->post_process_generators,
-                          "post_process_generator" ), transaction->token
+            "post_process_generator" ), transaction->token
         };
     } );
     content.set_function( "edit_speed_description", [transaction, edit_catalog](
@@ -5141,7 +4999,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
     const std::string & id ) {
         return vehicle_part_category_definition_handle{
             edit_catalog( id, transaction->vehicle_part_categories,
-                          "vehicle_part_category" ), transaction->token
+            "vehicle_part_category" ), transaction->token
         };
     } );
     content.set_function( "edit_named_color", [transaction, edit_catalog](
@@ -5187,7 +5045,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
     const std::string & id ) {
         return overmap_land_use_code_definition_handle{
             edit_catalog( id, transaction->overmap_land_use_codes,
-                          "overmap_land_use_code" ), transaction->token
+            "overmap_land_use_code" ), transaction->token
         };
     } );
     content.set_function( "edit_overmap_vision", [transaction, edit_catalog](
@@ -5285,14 +5143,14 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
     const std::string & id ) {
         return event_transformation_definition_handle{
             edit_catalog( id, transaction->event_transformations,
-                          "event_transformation" ), transaction->token
+            "event_transformation" ), transaction->token
         };
     } );
     content.set_function( "edit_event_statistic", [transaction, edit_catalog](
     const std::string & id ) {
         return event_statistic_definition_handle{
             edit_catalog( id, transaction->event_statistics,
-                          "event_statistic" ), transaction->token
+            "event_statistic" ), transaction->token
         };
     } );
     content.set_function( "edit_relic_procgen", [transaction, edit_catalog](
@@ -5395,7 +5253,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
             return trait_id( std::string( id ) ).is_valid();
         };
         creatures_index.validate_scaled_requirements = [this](
-                    const std::vector<std::pair<std::string, std::int64_t>> &requirements,
+                const std::vector<std::pair<std::string, std::int64_t>> &requirements,
         std::string & requirement_error ) {
             return pimpl_->item_content.validate_scaled_requirement_set(
                        requirements, requirement_error );
@@ -6515,9 +6373,9 @@ bool content_transaction::validate( const runtime &owner_runtime,
         }
 
         std::set<std::string> terrain_ids;
-        const auto terrain_is_staged = [this]( const std::string &id ) {
+        const auto terrain_is_staged = [this]( const std::string & id ) {
             return std::any_of( pimpl_->terrain.begin(), pimpl_->terrain.end(),
-            [&id]( const terrain_registration &candidate ) {
+            [&id]( const terrain_registration & candidate ) {
                 return candidate.definition->id == id;
             } );
         };
@@ -7003,6 +6861,11 @@ bool content_transaction::validate( const runtime &owner_runtime,
         }
 
 
+        if( !pimpl_->scenarios.empty() ) {
+            // JSON locations may still await copy-from resolution. Resolve
+            // available parents without finalizing or dropping missing ones.
+            detail::start_location_registry().resolve_deferred();
+        }
         std::set<std::string> scenario_ids;
         for( const scenario_registration &entry : pimpl_->scenarios ) {
             const scenario_definition_data &definition = *entry.definition;
@@ -8890,11 +8753,11 @@ bool content_transaction::apply( std::string &error )
             native.id = id;
             native.src.emplace_back( id, mod_id( pimpl_->owner ) );
             native.was_loaded = true;
-            native._name_male = no_translation( source.name );
-            native._name_female = no_translation( source.name );
-            native._description_male = no_translation( source.description );
-            native._description_female = no_translation( source.description );
-            native._start_name = no_translation( source.start_name );
+            native._name_male = source.name.native();
+            native._name_female = source.name.native();
+            native._description_male = source.description.native();
+            native._description_female = source.description.native();
+            native._start_name = source.start_name.native();
             native._point_cost = static_cast<int>( source.points );
             native.blacklist = source.blacklist;
             native.extra_professions = source.extra_professions;
@@ -11763,7 +11626,7 @@ bool validate_runtime( const std::shared_ptr<runtime> &value,
     if( check_engine_state && !value->native_tilesets.empty() ) {
         std::error_code filesystem_error;
         const std::filesystem::path canonical_root = std::filesystem::canonical(
-                    value->mod_root, filesystem_error );
+                value->mod_root, filesystem_error );
         if( filesystem_error ||
             !std::filesystem::is_directory( canonical_root, filesystem_error ) ||
             filesystem_error ) {
