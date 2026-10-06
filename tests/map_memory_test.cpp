@@ -342,7 +342,10 @@ TEST_CASE( "map_memory_preserves_clean_terrain_and_refreshes_connections", "[map
 
     SECTION( "clean non-connecting memory is retained and real changes are recorded" ) {
         REQUIRE( ter_t_grass->connect_to_groups.none() );
-        here.ter_set( target, ter_t_grass );
+        // Ensure fresh memory even if a preceding test already left grass here.
+        REQUIRE( here.ter_set( target, ter_t_wall ) );
+        REQUIRE( here.ter_set( target, ter_t_grass ) );
+        REQUIRE( here.memory_cache_ter_is_dirty( target ) );
         here.update_map_memory( you );
         const memorized_tile before = you.get_memorized_tile( target_abs );
         REQUIRE( before.get_ter_id() == ter_t_grass.str() );
