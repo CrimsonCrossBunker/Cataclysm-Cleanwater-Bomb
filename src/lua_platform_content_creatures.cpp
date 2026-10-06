@@ -3084,7 +3084,7 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         definition->remove_message = read_text_option( options, "remove_message", {},
                                      "effect remove message" );
         definition->apply_message = read_text_option( options, "apply_message", {},
-            "effect apply message" );
+                                    "effect apply message" );
         definition->death_message = read_text_option( options, "death_message", {},
                                     "effect death message" );
         definition->rating = options.get_or( "rating", std::string( "neutral" ) );

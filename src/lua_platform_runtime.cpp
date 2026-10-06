@@ -2466,7 +2466,7 @@ struct relic_procgen_definition_handle {
         relic_procgen_charge_definition_data value;
         value.weight = options.get_or<std::int64_t>( "weight", 0 );
         const auto [initial_minimum, initial_maximum] = integer_range(
-                options.raw_get<sol::object>( "charges" ), "initial charges" );
+                    options.raw_get<sol::object>( "charges" ), "initial charges" );
         value.initial_minimum = initial_minimum;
         value.initial_maximum = initial_maximum;
         const auto [use_minimum, use_maximum] = integer_range(
@@ -2474,14 +2474,14 @@ struct relic_procgen_definition_handle {
         value.use_minimum = use_minimum;
         value.use_maximum = use_maximum;
         const auto [maximum_minimum, maximum_maximum] = integer_range(
-                options.raw_get<sol::object>( "max_charges" ), "maximum charges" );
+                    options.raw_get<sol::object>( "max_charges" ), "maximum charges" );
         value.maximum_minimum = maximum_minimum;
         value.maximum_maximum = maximum_maximum;
         const sol::object recharge_time = options.raw_get<sol::object>( "time_turns" );
         if( recharge_time.valid() && recharge_time.get_type() != sol::type::lua_nil &&
             recharge_time.get_type() != sol::type::none ) {
             const auto [time_minimum, time_maximum] = integer_range(
-                    recharge_time, "recharge time" );
+                        recharge_time, "recharge time" );
             value.time_minimum_turns = time_minimum;
             value.time_maximum_turns = time_maximum;
         }
@@ -3336,7 +3336,7 @@ struct content_transaction::impl {
     impl( std::string owner_id, std::size_t owner_generation ) :
         owner( std::move( owner_id ) ), generation( owner_generation ),
         token( std::make_shared<owner_token>( owner_token{ owner, generation,
-                handle_lifecycle::building } ) ),
+                                              handle_lifecycle::building } ) ),
         world( owner, generation ), presentation( owner, generation ),
         worldgen( owner, generation ), item_content( owner, generation ),
         creatures( owner, generation ), character( owner, generation ) {}
@@ -3841,16 +3841,16 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->id = options.get_or( "id", std::string() );
         definition->name = detail::read_singular_text( options["name"], definition->id, "Scenario.name" );
         definition->description = detail::read_singular_text( options["description"], {},
-            "Scenario.description" );
+                                  "Scenario.description" );
         definition->start_name = detail::read_singular_text( options["start_name"], {},
-            "Scenario.start_name" );
+                                 "Scenario.start_name" );
         definition->points = options.get_or<std::int64_t>( "points", 0 );
         definition->blacklist = options.get_or( "blacklist", false );
         definition->extra_professions = options.get_or( "extra_professions", false );
         definition->reveal_locale = options.get_or( "reveal_locale", true );
         definition->hard_requirement = options.get_or( "hard_requirement", false );
         definition->distance_initial_visibility = options.get_or<std::int64_t>(
-                "distance_initial_visibility", 15 );
+                    "distance_initial_visibility", 15 );
         definition->map_extra = options.get_or( "map_extra", std::string() );
         definition->start_handler = options.get_or(
                                         "on_start", options.get_or(
@@ -4938,7 +4938,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
     const std::string & id ) {
         return post_process_generator_definition_handle{
             edit_catalog( id, transaction->post_process_generators,
-            "post_process_generator" ), transaction->token
+                          "post_process_generator" ), transaction->token
         };
     } );
     content.set_function( "edit_speed_description", [transaction, edit_catalog](
@@ -4999,7 +4999,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
     const std::string & id ) {
         return vehicle_part_category_definition_handle{
             edit_catalog( id, transaction->vehicle_part_categories,
-            "vehicle_part_category" ), transaction->token
+                          "vehicle_part_category" ), transaction->token
         };
     } );
     content.set_function( "edit_named_color", [transaction, edit_catalog](
@@ -5045,7 +5045,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
     const std::string & id ) {
         return overmap_land_use_code_definition_handle{
             edit_catalog( id, transaction->overmap_land_use_codes,
-            "overmap_land_use_code" ), transaction->token
+                          "overmap_land_use_code" ), transaction->token
         };
     } );
     content.set_function( "edit_overmap_vision", [transaction, edit_catalog](
@@ -5143,14 +5143,14 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
     const std::string & id ) {
         return event_transformation_definition_handle{
             edit_catalog( id, transaction->event_transformations,
-            "event_transformation" ), transaction->token
+                          "event_transformation" ), transaction->token
         };
     } );
     content.set_function( "edit_event_statistic", [transaction, edit_catalog](
     const std::string & id ) {
         return event_statistic_definition_handle{
             edit_catalog( id, transaction->event_statistics,
-            "event_statistic" ), transaction->token
+                          "event_statistic" ), transaction->token
         };
     } );
     content.set_function( "edit_relic_procgen", [transaction, edit_catalog](
@@ -5253,7 +5253,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
             return trait_id( std::string( id ) ).is_valid();
         };
         creatures_index.validate_scaled_requirements = [this](
-                const std::vector<std::pair<std::string, std::int64_t>> &requirements,
+                    const std::vector<std::pair<std::string, std::int64_t>> &requirements,
         std::string & requirement_error ) {
             return pimpl_->item_content.validate_scaled_requirement_set(
                        requirements, requirement_error );
@@ -11626,7 +11626,7 @@ bool validate_runtime( const std::shared_ptr<runtime> &value,
     if( check_engine_state && !value->native_tilesets.empty() ) {
         std::error_code filesystem_error;
         const std::filesystem::path canonical_root = std::filesystem::canonical(
-                value->mod_root, filesystem_error );
+                    value->mod_root, filesystem_error );
         if( filesystem_error ||
             !std::filesystem::is_directory( canonical_root, filesystem_error ) ||
             filesystem_error ) {
