@@ -1,5 +1,12 @@
 #include "omdata.h" // IWYU pragma: associated
 
+#include "cube_direction.h"
+#include "flat_set.h"
+#include "flexbuffer_json.h"
+#include "mapgen_parameter.h"
+#include "point.h"
+#include "translation.h"
+#include "type_id.h"
 #include <algorithm>
 #include <functional>
 #include <list>
@@ -26,6 +33,8 @@
 #include "rng.h"
 #include "string_formatter.h"
 #include "weighted_list.h"
+
+struct overmap_location;
 
 template<>
 struct enum_traits<join_type> {
@@ -151,7 +160,7 @@ mutable_overmap_phase_remainder::satisfy_result mutable_overmap_phase_remainder:
                 tripoint_om_omt origin = pos - piece_pos;
 
                 if( std::optional<can_place_result> result = can_place(
-                            om, rule, origin, dir, unresolved ) ) {
+                        om, rule, origin, dir, unresolved ) ) {
                     if( best_result < *result ) {
                         pos_dir_options.clear();
                         best_result = *result;

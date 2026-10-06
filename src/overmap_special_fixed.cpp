@@ -1,5 +1,11 @@
 #include "omdata.h" // IWYU pragma: associated
 
+#include "cube_direction.h"
+#include "flat_set.h"
+#include "mapgen_parameter.h"
+#include "point.h"
+#include "translation.h"
+#include "type_id.h"
 #include <algorithm>
 #include <cstdlib>
 #include <iterator>
