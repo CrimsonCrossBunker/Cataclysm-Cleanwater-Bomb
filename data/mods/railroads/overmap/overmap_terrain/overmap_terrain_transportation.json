@@ -59,6 +59,7 @@
     "type": "overmap_terrain",
     "name": "railroad station",
     "copy-from": "generic_city_building_no_sidewalk",
+    "delete": { "flags": [ "GENERIC_LOOT" ] },
     "sym": "R",
     "color": "light_green"
   },

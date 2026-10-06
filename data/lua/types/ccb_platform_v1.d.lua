@@ -673,6 +673,7 @@ local ModDefinition = {}
 ---@field color? string Native color id.
 ---@field category? string Native item-category id.
 ---@field looks_like? string Existing item id used for presentation.
+---@field default_container? string Default package item id; `null` explicitly disables inherited packaging.
 ---@field mass_grams? integer Non-negative mass in grams.
 ---@field volume_ml? integer Non-negative volume in milliliters.
 ---@field price_cents? integer Non-negative pre-Cataclysm price in cents.
@@ -728,14 +729,14 @@ function ItemDefinition:quality(id, level) end
 function ItemDefinition:flag(id) end
 
 ---@class ComestibleDefinitionOptions
----@field type "FOOD"|"DRINK"
----@field calories integer Fixed kilocalories per serving.
----@field fun integer Base enjoyment.
+---@field type "FOOD"|"DRINK"|"MED"
+---@field calories? integer Fixed kilocalories per serving; required for food/drink, defaults to zero for medicine.
+---@field fun? integer Base enjoyment; defaults to zero.
 ---@field healthy? integer Health modifier; defaults to zero.
 ---@field quench? integer Thirst modifier; defaults to zero.
 ---@field spoils_in_turns? integer Non-negative shelf life; zero never spoils.
----@field charges? integer Positive default serving count; defaults to one.
----@field stack_size? integer Positive servings represented by the volume; defaults to charges.
+---@field charges? integer Default serving count; defaults to one for food/drink, zero for solid medicine.
+---@field stack_size? integer Servings represented by the volume; defaults to charges. Medicine may use zero.
 
 ---@param options ComestibleDefinitionOptions
 ---@return ItemDefinition self
@@ -994,9 +995,9 @@ local ItemActionDefinition = {}
 ---Calendar defaults match native JSON scenarios without explicit dates, using SEASON_LENGTH.
 ---Game start is at 08:00; the cataclysm begins five calendar days earlier at 00:00.
 ---@field id string Stable scenario id.
----@field name string Scenario display name.
----@field description string Scenario description.
----@field start_name string Start-location display name.
+---@field name string|LocalizedText Scenario display name.
+---@field description string|LocalizedText Scenario description.
+---@field start_name string|LocalizedText Start-location display name.
 ---@field points? integer Character-creation point cost; defaults to 0.
 ---@field blacklist? boolean Professions are a blacklist instead of a whitelist.
 ---@field extra_professions? boolean Professions add to the default set.
@@ -1222,6 +1223,11 @@ function MonsterAttackDefinition:policy(handler_id) end
 ---@field name? string|LocalizedText First intensity name; additional intensities use name().
 ---@field description? string|LocalizedText First intensity description; additional intensities use description().
 ---@field remove_message? string|LocalizedText Player-facing removal message.
+---@field apply_message? string|LocalizedText Player-facing application message.
+---@field rating? 'neutral'|'good'|'bad'|'mixed' Message rating; defaults to neutral.
+---@field death_message? string|LocalizedText Player-facing death message.
+---@field death_event? string Native event with only a character field; required when death chances are specified.
+---@field harmful_cough? boolean Whether coughing causes damage.
 ---@field apply_memorial_log? string Memorial text recorded when applied.
 ---@field remove_memorial_log? string Memorial text recorded when removed.
 ---@field blood_analysis_description? string|LocalizedText Player-facing blood-analysis description.
@@ -1276,6 +1282,28 @@ function EffectTypeDefinition:blocks_effect(id) end
 ---@param id string Existing or same-transaction Enchantment id.
 ---@return EffectTypeDefinition self
 function EffectTypeDefinition:enchantment(id) end
+
+---@class EffectDeathChanceOptions
+---@field numerator integer Non-positive values disable the roll at this intensity.
+---@field denominator integer Positive native probability denominator.
+---@field resisted_numerator integer Numerator while resisted.
+---@field resisted_denominator integer Positive denominator while resisted.
+
+---@param options EffectDeathChanceOptions Appends the next intensity's chance; higher intensities reuse the last entry.
+---@return EffectTypeDefinition self
+function EffectTypeDefinition:death_chance(options) end
+
+---@class EffectModifierOptions
+---@field base? number Value at intensity one; defaults to zero.
+---@field per_intensity? number Added for each intensity beyond one; defaults to zero.
+---@field resisted_base? number Base while resisted; defaults to zero.
+---@field resisted_per_intensity? number Scaling while resisted; defaults to zero.
+
+---@param kind 'pain'|'cough'
+---@param action 'amount'|'minimum'|'maximum'|'maximum_value'|'chance_numerator'|'chance_denominator'|'tick' Cough accepts chance_numerator, chance_denominator and tick only.
+---@param options EffectModifierOptions Finite native modifier values; setting the same kind/action replaces its previous value.
+---@return EffectTypeDefinition self
+function EffectTypeDefinition:modifier(kind, action, options) end
 
 ---@class WeakpointDefinitionOptions
 ---@field id string Unique weakpoint id within its set.
@@ -1427,6 +1455,8 @@ function ItemGroupDefinition:group(group_id, probability) end
 ---@field count? integer[] Two-element inclusive count interval.
 ---@field charges? integer[] Two-element inclusive item charge interval; group entries may not set it.
 ---@field variant? string Native item variant id.
+---@field container? string Per-item container override; `null` disables the item's default package.
+---@field wrapper? string Container for all items generated by this entry, including counted solid items.
 
 ---@param options ItemGroupEntryOptions
 ---@return ItemGroupDefinition self
@@ -5221,6 +5251,12 @@ function CcbPlatformContent.MathFunction(options) end
 ---@field id string
 ---@field name string|LocalizedText
 ---@field description? string|LocalizedText
+---@field goal? string Native mission goal enum.
+---@field difficulty? integer Native mission difficulty.
+---@field value? integer Mission reward value.
+---@field origins? string[] Native mission origin enums.
+---@field item? string Item required by find-item goals.
+---@field item_count? integer Required item count; defaults to one.
 ---@field [string] any
 
 ---@param options MissionDefinitionOptions
@@ -6098,7 +6134,7 @@ function CcbPlatformContent.RegionSettingsCity(options) end
 ---@return ForestBiomeMapgenDefinition
 function CcbPlatformContent.ForestBiomeMapgen(options) end
 
----@alias PlatformContentDefinition FactionDefinition|NpcClassDefinition|NpcDefinition|OvermapTerrainDefinition|OvermapSpecialDefinition|VehiclePartDefinition|VehicleDefinition|ItemDefinition|RecipeDefinition|NestedRecipeCategoryDefinition|ToolQualityDefinition|SkillDisplayDefinition|SkillDefinition|VitaminDefinition|JsonFlagDefinition|DamageTypeDefinition|MaterialDefinition|AmmunitionTypeDefinition|ItemCategoryDefinition|RecipeCategoryDefinition|ProficiencyCategoryDefinition|ProficiencyDefinition|WeaponCategoryDefinition|RequirementDefinition|RecipeGroupDefinition|ScentTypeDefinition|SpeedDescriptionDefinition|HarvestDropTypeDefinition|HarvestDefinition|BehaviorDefinition|MonsterAttackDefinition|EffectTypeDefinition|WeakpointSetDefinition|FieldTypeDefinition|ItemGroupDefinition|SubBodyPartDefinition|WoundDefinition|BodyPartDefinition|WoundFixDefinition|AnatomyDefinition|BodyGraphDefinition|MonsterDefinition|MoraleTypeDefinition|DiseaseTypeDefinition|MonsterFlagDefinition|SpeciesDefinition|EmissionDefinition|MonsterFactionDefinition|MutationTypeDefinition|ConnectGroupDefinition|MutationCategoryDefinition|ConstructionCategoryDefinition|ConstructionGroupDefinition|VehiclePartLocationDefinition|MoodFaceDefinition|DamageInfoOrderDefinition|VehiclePartCategoryDefinition|NamedColorDefinition|RotatableSymbolDefinition|AsciiArtDefinition|LimbScoreDefinition|HitRangeDefinition|BashDamageProfileDefinition|ClothingModDefinition|OvermapLandUseCodeDefinition|OvermapVisionDefinition|OvermapLocationDefinition|ProfessionGroupDefinition|MapExtraCollectionDefinition|VehicleGroupDefinition|FaultGroupDefinition|ExplosionLightDefinition|AmmoEffectDefinition|AddictionTypeDefinition|CharacterModifierDefinition|StartLocationDefinition|ClimbingAidDefinition|WeatherTypeDefinition|ScoreDefinition|OverlayOrderDefinition|ZoneTypeDefinition|SpeechPoolDefinition|EndScreenDefinition|ActivityTypeDefinition|HelpTopicDefinition|SnippetCategoryDefinition|PlaylistDefinition|AttackVectorDefinition|MagicTypeDefinition|MovementModeDefinition|RegionSettingsRavineDefinition|RegionSettingsLakeDefinition|RegionSettingsOceanDefinition|RegionSettingsForestDefinition|RegionSettingsRiverDefinition|RegionSettingsForestMapgenDefinition|RegionSettingsMapExtrasDefinition|RegionSettingsTerrainFurnitureDefinition|RegionSettingsForestTrailDefinition|RegionSettingsHighwayDefinition|RegionSettingsDefinition|OptionSliderDefinition|DimensionRegionLayoutDefinition|DimensionDefinition|OmtPlaceholderDefinition|RegionTerrainFurnitureDefinition|ForestBiomeComponentDefinition|CityDefinition|FactionMissionDefinition|RegionSettingsCityDefinition|ForestBiomeMapgenDefinition
+---@alias PlatformContentDefinition MissionDefinition|MonsterAdjustmentDefinition|FactionDefinition|NpcClassDefinition|NpcDefinition|OvermapTerrainDefinition|OvermapSpecialDefinition|VehiclePartDefinition|VehicleDefinition|ItemDefinition|RecipeDefinition|NestedRecipeCategoryDefinition|ToolQualityDefinition|SkillDisplayDefinition|SkillDefinition|VitaminDefinition|JsonFlagDefinition|DamageTypeDefinition|MaterialDefinition|AmmunitionTypeDefinition|ItemCategoryDefinition|RecipeCategoryDefinition|ProficiencyCategoryDefinition|ProficiencyDefinition|WeaponCategoryDefinition|RequirementDefinition|RecipeGroupDefinition|ScentTypeDefinition|SpeedDescriptionDefinition|HarvestDropTypeDefinition|HarvestDefinition|BehaviorDefinition|MonsterAttackDefinition|EffectTypeDefinition|WeakpointSetDefinition|FieldTypeDefinition|ItemGroupDefinition|SubBodyPartDefinition|WoundDefinition|BodyPartDefinition|WoundFixDefinition|AnatomyDefinition|BodyGraphDefinition|MonsterDefinition|MoraleTypeDefinition|DiseaseTypeDefinition|MonsterFlagDefinition|SpeciesDefinition|EmissionDefinition|MonsterFactionDefinition|MutationTypeDefinition|ConnectGroupDefinition|MutationCategoryDefinition|ConstructionCategoryDefinition|ConstructionGroupDefinition|VehiclePartLocationDefinition|MoodFaceDefinition|DamageInfoOrderDefinition|VehiclePartCategoryDefinition|NamedColorDefinition|RotatableSymbolDefinition|AsciiArtDefinition|LimbScoreDefinition|HitRangeDefinition|BashDamageProfileDefinition|ClothingModDefinition|OvermapLandUseCodeDefinition|OvermapVisionDefinition|OvermapLocationDefinition|ProfessionGroupDefinition|MapExtraCollectionDefinition|VehicleGroupDefinition|FaultGroupDefinition|ExplosionLightDefinition|AmmoEffectDefinition|AddictionTypeDefinition|CharacterModifierDefinition|StartLocationDefinition|ClimbingAidDefinition|WeatherTypeDefinition|ScoreDefinition|OverlayOrderDefinition|ZoneTypeDefinition|SpeechPoolDefinition|EndScreenDefinition|ActivityTypeDefinition|HelpTopicDefinition|SnippetCategoryDefinition|PlaylistDefinition|AttackVectorDefinition|MagicTypeDefinition|MovementModeDefinition|RegionSettingsRavineDefinition|RegionSettingsLakeDefinition|RegionSettingsOceanDefinition|RegionSettingsForestDefinition|RegionSettingsRiverDefinition|RegionSettingsForestMapgenDefinition|RegionSettingsMapExtrasDefinition|RegionSettingsTerrainFurnitureDefinition|RegionSettingsForestTrailDefinition|RegionSettingsHighwayDefinition|RegionSettingsDefinition|OptionSliderDefinition|DimensionRegionLayoutDefinition|DimensionDefinition|OmtPlaceholderDefinition|RegionTerrainFurnitureDefinition|ForestBiomeComponentDefinition|CityDefinition|FactionMissionDefinition|RegionSettingsCityDefinition|ForestBiomeMapgenDefinition|ScenarioDefinition
 
 ---@param definition PlatformContentDefinition
 function CcbPlatformContent.add(definition) end

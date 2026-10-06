@@ -181,6 +181,7 @@ struct item_definition_data {
     std::string color = "white";
     std::string category;
     std::string looks_like;
+    std::optional<std::string> default_container;
     bool has_name = false;
     bool has_description = false;
     bool has_symbol = false;
@@ -321,6 +322,8 @@ struct item_group_entry_definition_data {
     std::int64_t count_max = 1;
     std::int64_t charges_min = -1;
     std::int64_t charges_max = -1;
+    std::optional<std::string> container = std::nullopt;
+    std::optional<std::string> wrapper = std::nullopt;
 };
 
 struct item_group_definition_data {
@@ -747,12 +750,12 @@ struct item_definition_handle {
         }
         item_definition_data::comestible_data value;
         value.type = options.get_or( "type", std::string() );
-        value.calories = options.get_or<std::int64_t>( "calories", -1 );
+        value.calories = options.get_or<std::int64_t>( "calories", value.type == "MED" ? 0 : -1 );
         value.fun = options.get_or<std::int64_t>( "fun", 0 );
         value.healthy = options.get_or<std::int64_t>( "healthy", 0 );
         value.quench = options.get_or<std::int64_t>( "quench", 0 );
         value.spoils_in_turns = options.get_or<std::int64_t>( "spoils_in_turns", 0 );
-        value.charges = options.get_or<std::int64_t>( "charges", 1 );
+        value.charges = options.get_or<std::int64_t>( "charges", value.type == "MED" ? 0 : 1 );
         value.stack_size = options.get_or<std::int64_t>( "stack_size", value.charges );
         definition->comestible = std::move( value );
         return *this;
@@ -1718,6 +1721,12 @@ struct item_group_definition_handle {
             value.group = item.empty();
             value.probability = options.get_or<std::int64_t>( "probability", 100 );
             value.variant = options.get_or( "variant", std::string() );
+            if( const auto container = options.get<sol::optional<std::string>>( "container" ) ) {
+                value.container = *container;
+            }
+            if( const auto wrapper = options.get<sol::optional<std::string>>( "wrapper" ) ) {
+                value.wrapper = *wrapper;
+            }
             if( const sol::optional<sol::table> count =
                     options.get<sol::optional<sol::table>>( "count" ) ) {
                 require_dense_array( *count, "item-group count", 2, 2 );
@@ -2707,6 +2716,9 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         read_string( "color", definition->color, definition->has_color );
         read_string( "category", definition->category, definition->has_category );
         read_string( "looks_like", definition->looks_like, definition->has_looks_like );
+        if( const auto container = options.get<sol::optional<std::string>>( "default_container" ) ) {
+            definition->default_container = *container;
+        }
         definition->consume_handler = options.get_or(
                                           "on_consume",
                                           options.get_or( "consume_handler", std::string() ) );
@@ -3901,6 +3913,15 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                                              group_entry.charges_min != -1 || group_entry.charges_max != -1 ) ) ) {
                     throw std::runtime_error( "item group '" + definition.id + "' contains an invalid entry" );
                 }
+                for( const auto &container : {
+                         group_entry.container, group_entry.wrapper
+                     } ) {
+                    if( container && ( container->empty() ||
+                                       ( *container != "null" && declared_item_ids.count( *container ) == 0 &&
+                                         check_engine_state && !item::type_is_defined( itype_id( *container ) ) ) ) ) {
+                        throw std::runtime_error( "item group '" + definition.id + "' references an unknown container" );
+                    }
+                }
                 if( group_entry.group ) {
                     if( group_entry.id == definition.id ||
                         ( item_group_ids.count( group_entry.id ) == 0 && check_engine_state &&
@@ -4121,7 +4142,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
             }
             if( definition.comestible ) {
                 const item_definition_data::comestible_data &food = *definition.comestible;
-                if( ( food.type != "FOOD" && food.type != "DRINK" ) ||
+                if( ( food.type != "FOOD" && food.type != "DRINK" && food.type != "MED" ) ||
                     food.calories < 0 || food.calories > std::numeric_limits<int>::max() ||
                     food.fun < std::numeric_limits<int>::min() ||
                     food.fun > std::numeric_limits<int>::max() ||
@@ -4131,8 +4152,8 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                     food.quench > std::numeric_limits<int>::max() ||
                     food.spoils_in_turns < 0 ||
                     food.spoils_in_turns > std::numeric_limits<int>::max() ||
-                    food.charges <= 0 || food.charges > std::numeric_limits<int>::max() ||
-                    food.stack_size <= 0 ||
+                    food.charges < ( food.type == "MED" ? 0 : 1 ) || food.charges > std::numeric_limits<int>::max() ||
+                    food.stack_size < ( food.type == "MED" ? 0 : 1 ) ||
                     food.stack_size > std::numeric_limits<int>::max() ) {
                     throw std::runtime_error( "item '" + definition.id +
                                               "' has invalid comestible values" );
@@ -4147,6 +4168,13 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                                                   vitamin_key + "'" );
                     }
                 }
+            }
+            if( definition.default_container &&
+                ( definition.default_container->empty() ||
+                  ( *definition.default_container != "null" &&
+                    declared_item_ids.count( *definition.default_container ) == 0 &&
+                    check_engine_state && !item::type_is_defined( itype_id( *definition.default_container ) ) ) ) ) {
+                throw std::runtime_error( "item '" + definition.id + "' references an unknown default container" );
             }
             if( definition.book ) {
                 const item_definition_data::book_data &book = *definition.book;
@@ -5157,7 +5185,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                                                 static_cast<int>( source_entry.probability ),
                                                 "Lua-first item-group entry " + source.id );
                         if( source_entry.count_min != 1 || source_entry.count_max != 1 ||
-                            !source_entry.variant.empty() || source_entry.charges_min != -1 ) {
+                            !source_entry.variant.empty() || source_entry.charges_min != -1 || source_entry.container ) {
                             native_entry->modifier.emplace();
                             native_entry->modifier->count = {
                                 static_cast<int>( source_entry.count_min ),
@@ -5168,6 +5196,14 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                                 static_cast<int>( source_entry.charges_min ),
                                 static_cast<int>( source_entry.charges_max )
                             };
+                            if( source_entry.container ) {
+                                native_entry->modifier->container = std::make_unique<Single_item_creator>(
+                                                                        *source_entry.container, Single_item_creator::S_ITEM, 100,
+                                                                        "Lua-first item-group container " + source.id );
+                            }
+                        }
+                        if( source_entry.wrapper ) {
+                            native_entry->container_item = itype_id( *source_entry.wrapper );
                         }
                         native->add_entry( std::move( native_entry ) );
                     }
@@ -5335,6 +5371,10 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     }
                     if( definition.has_looks_like ) {
                         native->looks_like = itype_id( definition.looks_like );
+                    }
+                    if( definition.default_container ) {
+                        native->default_container = itype_id( *definition.default_container );
+                        native->default_container_variant.reset();
                     }
                     native->was_loaded = true;
                     native->src.clear();
@@ -6516,6 +6556,10 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                     hash_part( state, std::to_string( e.count_max ) );
                     hash_part( state, std::to_string( e.charges_min ) );
                     hash_part( state, std::to_string( e.charges_max ) );
+                    hash_part( state, e.container ? "container" : "default_container" );
+                    hash_part( state, e.container.value_or( "" ) );
+                    hash_part( state, e.wrapper ? "wrapper" : "no_wrapper" );
+                    hash_part( state, e.wrapper.value_or( "" ) );
                 }
             }
             break;
@@ -6613,6 +6657,8 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, v.color );
                 hash_part( state, v.category );
                 hash_part( state, v.looks_like );
+                hash_part( state, v.default_container ? "container" : "inherit_container" );
+                hash_part( state, v.default_container.value_or( "" ) );
                 hash_part( state, std::to_string( v.magazine_capacity ) );
                 hash_part( state, v.use_handler );
                 hash_part( state, v.use_label.raw );
