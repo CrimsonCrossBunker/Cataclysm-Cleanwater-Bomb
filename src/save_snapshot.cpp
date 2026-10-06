@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <functional>
 #include <iosfwd>
+#include <ostream>
 #include <string>
 #include <system_error>
 #include <vector>
@@ -33,6 +34,7 @@ const std::string SNAPSHOT_META = "snapshot_meta.json";
 // A stable slot name is needed because the game may restart or change language
 // between the first dimension trip and the player's next quickload.
 const std::string DIMENSION_ROLLBACK_SLOT = "ccb-dimension-rollback";
+const std::string DIMENSION_TRANSITION_MARKER = ".ccb-dimension-transition";
 // Temp folder used to stage a rollback during restore.
 const std::string RESTORE_BACKUP_DIR = ".snapshot_restore_backup";
 
@@ -191,7 +193,8 @@ bool make_snapshot( const cata_path &world_dir, const std::string &slot_name,
 
     // Copy the whole world, excluding the snapshots folder itself (so a snapshot
     // never nests prior snapshots).
-    if( !copy_tree( world_dir.get_unrelative_path(), dest_fs, { SNAPSHOTS_DIR } ) ) {
+    if( !copy_tree( world_dir.get_unrelative_path(), dest_fs,
+    { SNAPSHOTS_DIR, DIMENSION_TRANSITION_MARKER } ) ) {
         // Clean up the partial snapshot so it is never presented as restorable.
         std::error_code ec;
         std::filesystem::remove_all( dest_fs, ec );
@@ -287,7 +290,11 @@ bool restore_snapshot( const cata_path &world_dir, const std::string &dir_name )
     //   2. Copy the snapshot into the world (excluding its own meta file).
     //   3. On success, delete the backup. On any failure, move the backup
     //      contents back so the world is never left half-deleted.
-    const std::vector<std::string> protect = { SNAPSHOTS_DIR, RESTORE_BACKUP_DIR };
+    std::vector<std::string> protect = { SNAPSHOTS_DIR, RESTORE_BACKUP_DIR };
+    if( dir_name == DIMENSION_ROLLBACK_SLOT ) {
+        // Keep recovery discoverable even if this restore is interrupted.
+        protect.push_back( DIMENSION_TRANSITION_MARKER );
+    }
 
     std::error_code ec;
     std::filesystem::remove_all( backup_fs, ec ); // clear any stale backup
@@ -358,6 +365,36 @@ bool restore_dimension_rollback( const cata_path &world_dir )
 bool delete_dimension_rollback( const cata_path &world_dir )
 {
     return delete_snapshot( world_dir, DIMENSION_ROLLBACK_SLOT );
+}
+
+bool begin_dimension_transition( const cata_path &world_dir )
+{
+    if( !dimension_rollback_exists( world_dir ) ) {
+        return false;
+    }
+    return write_to_file( world_dir / DIMENSION_TRANSITION_MARKER, []( std::ostream & out ) {
+        out << "pending\n";
+    }, _( "dimension travel recovery marker" ) );
+}
+
+bool dimension_transition_pending( const cata_path &world_dir )
+{
+    return file_exist( world_dir / DIMENSION_TRANSITION_MARKER ) ||
+           file_exist( world_dir / RESTORE_BACKUP_DIR / DIMENSION_TRANSITION_MARKER );
+}
+
+bool finish_dimension_transition( const cata_path &world_dir )
+{
+    std::error_code ec;
+    std::filesystem::remove( ( world_dir / DIMENSION_TRANSITION_MARKER ).get_unrelative_path(), ec );
+    return !ec;
+}
+
+bool recover_dimension_transition( const cata_path &world_dir )
+{
+    return !dimension_transition_pending( world_dir ) ||
+           ( begin_dimension_transition( world_dir ) && restore_dimension_rollback( world_dir ) &&
+             finish_dimension_transition( world_dir ) );
 }
 
 std::string snapshot_info::display_label() const

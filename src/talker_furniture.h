@@ -5,7 +5,8 @@
 #include <memory>
 #include <string>
 
-#include "coords_fwd.h"
+#include "coordinates.h"
+#include "safe_reference.h"
 #include "talker.h"
 
 class computer;
@@ -16,7 +17,7 @@ class computer;
 class talker_furniture_const: public const_talker_cloner<talker_furniture_const>
 {
     public:
-        explicit talker_furniture_const( computer *new_me ): me_comp( new_me ) {};
+        explicit talker_furniture_const( computer *new_me );
         talker_furniture_const() = default;
         talker_furniture_const( const talker_furniture_const & ) = default;
         talker_furniture_const( talker_furniture_const && ) = delete;
@@ -25,7 +26,7 @@ class talker_furniture_const: public const_talker_cloner<talker_furniture_const>
         ~talker_furniture_const() override = default;
 
         computer const *get_const_computer() const override {
-            return me_comp;
+            return me_comp.get();
         }
         // identity and location
         std::string disp_name() const override;
@@ -42,13 +43,14 @@ class talker_furniture_const: public const_talker_cloner<talker_furniture_const>
         bool will_talk_to_u( const Character &you, bool force ) const override;
 
     private:
-        computer *me_comp{};
+        safe_reference<computer> me_comp;
+        std::string last_name;
+        tripoint_abs_ms last_position;
 };
 class talker_furniture: public talker_furniture_const, public talker_cloner<talker_furniture>
 {
     public:
-        explicit talker_furniture( computer *new_me ): talker_furniture_const( new_me ),
-            me_comp( new_me ) {};
+        explicit talker_furniture( computer *new_me ): talker_furniture_const( new_me ) {};
         talker_furniture() = default;
         talker_furniture( const talker_furniture & ) = default;
         talker_furniture( talker_furniture && ) = delete;
@@ -57,13 +59,11 @@ class talker_furniture: public talker_furniture_const, public talker_cloner<talk
         ~talker_furniture() override = default;
 
         computer *get_computer() override {
-            return me_comp;
+            return const_cast<computer *>( get_const_computer() );
         }
 
         void set_value( const std::string &var_name, diag_value const &value ) override;
         void remove_value( const std::string & ) override;
 
-    private:
-        computer *me_comp{};
 };
 #endif // CATA_SRC_TALKER_FURNITURE_H

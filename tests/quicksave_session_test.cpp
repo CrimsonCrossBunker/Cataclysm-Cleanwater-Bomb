@@ -132,8 +132,45 @@ TEST_CASE( "dimension_rollback_restores_the_last_complete_world_save", "[save][d
     };
 
     write_state( "manual" );
+    CHECK_FALSE( save_snapshot::begin_dimension_transition( world_dir ) );
     REQUIRE( save_snapshot::make_dimension_rollback( world_dir, "survivor", 1 ) );
+    REQUIRE( save_snapshot::begin_dimension_transition( world_dir ) );
+    // Source maps and the character save are separate writes. A crash between
+    // them must never load the old position in the new dimension's world.
+    std::ofstream( character_file ) << "destination";
+    std::ofstream( map_file ) << "partial";
+    REQUIRE( save_snapshot::dimension_transition_pending( world_dir ) );
+    REQUIRE( save_snapshot::recover_dimension_transition( world_dir ) );
+    CHECK( read_state( character_file ) == "manual" );
+    CHECK( read_state( map_file ) == "manual" );
+    CHECK_FALSE( save_snapshot::dimension_transition_pending( world_dir ) );
+
+    // The restore itself can be interrupted after moving the marker into its
+    // backup directory. A new process must still detect that pending trip.
+    REQUIRE( save_snapshot::begin_dimension_transition( world_dir ) );
+    const std::filesystem::path backup_dir = world_root / ".snapshot_restore_backup";
+    REQUIRE( std::filesystem::create_directory( backup_dir ) );
+    std::filesystem::rename( world_root / ".ccb-dimension-transition",
+                             backup_dir / ".ccb-dimension-transition" );
+    write_state( "interrupted_restore" );
+    REQUIRE( save_snapshot::dimension_transition_pending( world_dir ) );
+    REQUIRE( save_snapshot::recover_dimension_transition( world_dir ) );
+    CHECK( read_state( character_file ) == "manual" );
+    CHECK_FALSE( std::filesystem::exists( backup_dir ) );
+
+    REQUIRE( save_snapshot::begin_dimension_transition( world_dir ) );
+    write_state( "interrupted_restore" );
+    REQUIRE( save_snapshot::restore_dimension_rollback( world_dir ) );
+    CHECK( std::filesystem::exists( world_root / ".ccb-dimension-transition" ) );
+    REQUIRE( save_snapshot::recover_dimension_transition( world_dir ) );
+    CHECK_FALSE( save_snapshot::dimension_transition_pending( world_dir ) );
+
+    REQUIRE( save_snapshot::begin_dimension_transition( world_dir ) );
     write_state( "checkpoint" );
+    REQUIRE( save_snapshot::finish_dimension_transition( world_dir ) );
+    REQUIRE( save_snapshot::recover_dimension_transition( world_dir ) );
+    CHECK( read_state( character_file ) == "checkpoint" );
+    CHECK( read_state( map_file ) == "checkpoint" );
     CHECK( save_snapshot::dimension_rollback_exists( world_dir ) );
     REQUIRE( save_snapshot::restore_dimension_rollback( world_dir ) );
     CHECK( read_state( character_file ) == "manual" );
