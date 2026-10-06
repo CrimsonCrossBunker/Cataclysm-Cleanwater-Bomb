@@ -365,6 +365,11 @@ TEST_CASE( "railroad_station_starter_vehicle", "[.][railroads][vehicle][mapgen]"
     CHECK( starter->fuel_left( generated_map, itype_gasoline ) > 0 );
     CHECK( starter->safe_velocity( generated_map ) > 0 );
     CHECK( starter->can_use_rails( generated_map ) );
+    REQUIRE_FALSE( starter->engines.empty() );
+    starter->start_engines( generated_map );
+    for( const int index : starter->engines ) {
+        REQUIRE( starter->start_engine( generated_map, starter->part( index ) ) );
+    }
     for( const int index : starter->rail_wheelcache ) {
         CHECK( generated_map.has_flag_ter_or_furn( ter_furn_flag::TFLAG_RAIL,
                 starter->bub_part_pos( generated_map, index ) ) );
