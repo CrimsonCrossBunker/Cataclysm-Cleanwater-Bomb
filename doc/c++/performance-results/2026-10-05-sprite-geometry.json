@@ -1,0 +1,258 @@
+{
+  "schema_version": 1,
+  "batch": "Separate owned sprite geometry from SDL submission",
+  "date": "2026-10-05",
+  "classification": "Structural refactor; no speedup claim and no production worker enabled",
+  "baseline_commit": "06ea1b270e6293b6e41467d4147c919d5848b473",
+  "baseline_native_source": "82a67a868cd903e1b6ab76350770dd9c2a582f91",
+  "source_sha256": {
+    "src/sprite_geometry.h": "c213d67441252652b5b96d9664bc7b250c54ee2be1ad304428b93291ae304e43",
+    "src/sprite_geometry.cpp": "79d07a4147b0eec7b39fb1bd006a4dabaa5f732b3cf509fee48f2ce09c647d0f",
+    "src/cata_tiles.cpp": "e600ec46a8a586f84d6b07e5bc66f939c8808ca4374373a14a66e36d6c1588fd",
+    "tests/sprite_geometry_test.cpp": "3a998feeea86c6be73c441a3e0da0fed1a44094461e79b1c8f9a0c50b69b1597"
+  },
+  "before_binary": {
+    "build_id": "faff77aa5caa51295c211cd868ba58ae5794fcf7",
+    "sha256": "9921f2f1de41b8d1da867f608d527d263c11c576a7c14173d71dfc7928f40f32"
+  },
+  "after_binary": {
+    "build_id": "cd2f6efc059df8fe421317a94dec287e8d53ebe7",
+    "sha256": "0d9ddda63cb95e2ec43d705e6b3fa019d9276c6f292682ddbe116ec995322ed8"
+  },
+  "boundary": {
+    "preparation": "prepare_sprite_geometry takes owned values and returns destination, rotation/flip, and optional opaque footprint; no renderer, texture, map, Lua, scratch references, or RNG calls",
+    "renderer_owner": "cata_tiles still selects sprite/texture/lighting, owns shaders and tint scratch, submits SDL copies, applies the legacy Direct3D adjustment, and updates ordered per-tile height",
+    "preserved_behavior": [
+      "Negative pixel offsets floor; retraction interpolation truncates and clamps at endpoints",
+      "Isometric suppression, explicit horizontal mirror, manual rotations, and bullet diagonal codes retain existing behavior",
+      "Existing modulo-4 tint footprint retained separately from actual diagonal transform",
+      "Tint mask records pre-backend destination; gray silhouette uses submission destination",
+      "Foreground/background height accumulation unchanged; no save/Lua/network schema changes"
+    ],
+    "parallel_contract_test": "Four std::async jobs each own 64 mixed sprite inputs and return results in input order; producer inputs destroyed before joins; matches serial reference",
+    "production_threading": "No new gameplay or renderer worker; resource submission remains on owning thread"
+  },
+  "validation": {
+    "tiles_configure": {
+      "command": "cmake -S . -B out/build/ccb-tracy-tiles",
+      "exit": 0,
+      "configuration": "Clang Release -O3, SDL2, sound, Lua Platform v1, enabled static Tracy 0.14.1"
+    },
+    "tiles_build": {
+      "command": "cmake --build out/build/ccb-tracy-tiles --config Release --target cataclysm-tiles --parallel 2",
+      "exit": 0
+    },
+    "native_build": {
+      "command": "make -j2 CCACHE=1 CLANG=1 RELEASE=1 DEBUGSYMS= BUILD_PREFIX=perf- ODIR=perf-obj CATA_ENABLE_LUA_PLATFORM=1 ASTYLE=0 LINTJSON=0 LOCALIZE=0 tests",
+      "exit": 0,
+      "configuration": "Cached Clang Release -O2, curses test runner, sole Lua Platform v1; pure geometry tests do not require SDL"
+    },
+    "focused_tests": {
+      "command": "./tests/perf-cata_test '[sprite_geometry]' --rng-seed 20261005 --warn NoTests",
+      "exit": 0,
+      "cases": 4,
+      "assertions": 2539,
+      "elapsed_seconds": 16.815282
+    },
+    "format": {
+      "command": "make BUILD_PREFIX=perf- ODIR=perf-obj ASTYLE_SOURCES='src/sprite_geometry.h src/sprite_geometry.cpp tests/sprite_geometry_test.cpp' astyle-check",
+      "exit": 0,
+      "astyle_version": "3.6.18",
+      "large_file": "Only modified draw_sprite_at function formatted and checked unchanged on repeat; unrelated whole-file formatting not broadened"
+    },
+    "not_run": "Broad suites/CI, SDL3 and Windows device tests, GPU/FPS/off-CPU analysis, and multiplayer session. Existing unrelated vision/data gates not repeated."
+  },
+  "actual_game": {
+    "backend": "Real desktop 2880x1800 SDL2 API via sdl2-compat/OpenGL/Radeon hardware, actual sound device, fullscreen UndeadPeople; no headless/Xvfb substitute",
+    "fixture": "Damon aircraft carrier, Mitchel Rice, original debug-speed1100 setup; origin time5212811, active759 monsters, SafeOff, zoom4",
+    "seed": "CCB-carrier-20261005 / replay seed3843168543",
+    "collectors": "perf-only cycles:u F397, main-thread DWARF32768 record; all-thread perf stat; native replay journals verify counts/codes/modifiers",
+    "accepted_wait": {
+      "normal_inputs": 220,
+      "collector_exits": [
+        0,
+        0
+      ],
+      "before_state": {
+        "turn": 5213031,
+        "absolute_player_location": [
+          5495,
+          7449,
+          2
+        ],
+        "active_monsters": 757,
+        "map_origin": [
+          92,
+          255,
+          2
+        ],
+        "pt_matches_saved_wall_time": true
+      },
+      "after_state": {
+        "turn": 5213031,
+        "absolute_player_location": [
+          5495,
+          7449,
+          2
+        ],
+        "active_monsters": 757,
+        "map_origin": [
+          92,
+          255,
+          2
+        ],
+        "pt_matches_saved_wall_time": true
+      },
+      "simulation_equal_excluding_real_wall_time": true,
+      "world_files": 48,
+      "byte_identical_world_files": 46,
+      "recipe_multiset_equal": true,
+      "recipe_count": 1127,
+      "allowed_real_wall_time_paths": [
+        "/stats_tracker/data/game_save/event_counts/0/0/time_since_load/1",
+        "/stats_tracker/data/game_save/event_counts/0/0/total_time_played/1"
+      ]
+    },
+    "movement_qualification": {
+      "normal_directional_inputs_per_run": 80,
+      "sequence": "8x20,2x20,8x20,2x20",
+      "after_collectors_exit": [
+        0,
+        0
+      ],
+      "original_baseline_state": {
+        "turn": 5212818,
+        "absolute_player_location": [
+          5495,
+          7456,
+          2
+        ],
+        "active_monsters": 825,
+        "map_origin": [
+          92,
+          256,
+          2
+        ],
+        "pt_matches_saved_wall_time": true
+      },
+      "repeated_unchanged_baseline_state": {
+        "turn": 5212818,
+        "absolute_player_location": [
+          5495,
+          7455,
+          2
+        ],
+        "active_monsters": 837,
+        "map_origin": [
+          92,
+          256,
+          2
+        ],
+        "pt_matches_saved_wall_time": true
+      },
+      "after_state": {
+        "turn": 5212819,
+        "absolute_player_location": [
+          5495,
+          7462,
+          2
+        ],
+        "active_monsters": 846,
+        "map_origin": [
+          92,
+          256,
+          2
+        ],
+        "pt_matches_saved_wall_time": true
+      },
+      "original_vs_repeated_baseline_equal": false,
+      "original_vs_repeat_changed_paths": 19,
+      "original_vs_after_equal": false,
+      "original_vs_after_changed_paths": 37,
+      "acceptance": "Not used as a performance A/B or deterministic equivalence proof: unchanged baseline itself diverges; successful submap-shift smoke only"
+    },
+    "original_world_sha256": "48 original Damon files rechecked unchanged; test games saved to isolated copies and all own PIDs stopped"
+  },
+  "wait_cpu_observation": {
+    "before_perf_stat": {
+      "task-clock:u": 48114.06,
+      "cycles:u": 163258933422.0,
+      "instructions:u": 424495212959.0,
+      "cache-misses:u": 1085555248.0
+    },
+    "after_perf_stat": {
+      "task-clock:u": 48097.37,
+      "cycles:u": 164493597178.0,
+      "instructions:u": 426905120478.0,
+      "cache-misses:u": 1111758687.0
+    },
+    "active_samples_before": 8702,
+    "active_samples_after": 8692,
+    "key_ack_window_seconds_before": 37.11656391900033,
+    "key_ack_window_seconds_after": 37.320570953015704,
+    "tracked_inclusive_cycle_percent_before": {
+      "cata_tiles::draw": 65.98633984540787,
+      "cata_tiles::draw_sprite_at": 24.527517785075034,
+      "pixel_minimap::render": 10.92870859980275,
+      "prepare_sprite_geometry": null
+    },
+    "tracked_inclusive_cycle_percent_after": {
+      "cata_tiles::draw": 66.74050784342708,
+      "cata_tiles::draw_sprite_at": 25.316676114194838,
+      "pixel_minimap::render": 10.058334702595728,
+      "prepare_sprite_geometry": 1.6256422524442955
+    },
+    "limits": "One pair only; capture includes idle drawing; CPU samples are not GPU/FPS/off-CPU measures; key acknowledgement includes controller/queue cost. Inclusive rows overlap. No speedup or statistical no-regression claim."
+  },
+  "visual_qualification": {
+    "wait_map_pixels": [
+      {
+        "phase": "start",
+        "map_roi": [
+          0,
+          0,
+          2500,
+          1800
+        ],
+        "pixel_count": 4500000,
+        "changed_pixels": 181,
+        "pixel_identical": false
+      },
+      {
+        "phase": "end",
+        "map_roi": [
+          0,
+          0,
+          2500,
+          1800
+        ],
+        "pixel_count": 4500000,
+        "changed_pixels": 166,
+        "pixel_identical": false
+      }
+    ],
+    "idle_diagnostic": {
+      "map_roi": [
+        0,
+        0,
+        2500,
+        1800
+      ],
+      "before_after_changed_pixels": 181,
+      "idle_animated_pixels": 24,
+      "changed_pixels_outside_idle_animation": 169,
+      "baseline_colors_not_seen_in_after_frames": 150,
+      "sampled_idle_frames": 12,
+      "simulation_inputs_during_idle_capture": 0,
+      "source": "cata_tiles.cpp idle tile animations use steady_clock /17ms"
+    },
+    "existing_source_fact": "cata_tiles.cpp MONSTER variant seed uses transient creature pointer; idle animated tiles use steady_clock. Cross-process exact sprite pixels are not a deterministic gate. Geometry fixtures and actual screenshots inspected; differences not all attributed to animation."
+  },
+  "existing_threading_followup": {
+    "source_fact": "sounds.cpp generate_melee_sound starts detached sound_thread; operator calls rng and reads calendar/player. rng.cpp returns shared global engine unless that thread called rng_set_worker_seed; melee thread does not register. This violates owned-state/RNG boundaries.",
+    "causality": "Likely contributor to observed old combat non-reproducibility; first differing RNG draw not traced. Audio and simulation code not changed in this batch.",
+    "next_exact_search": "rg -n 'generate_melee_sound|sound_thread::operator|rng_set_worker_seed|find_random_effect' src/sounds.cpp src/sdlsound.cpp src/rng.cpp src/thread_pool.cpp",
+    "next_design": "Close melee presentation job ownership first: capture immutable context on main owner, isolate presentation randomness, remove live world reads, and use a bounded scheduling/submission boundary. Preserve gameplay RNG/replay contracts with focused regressions before adding wider workers."
+  },
+  "evidence_root": ".ccb-performance-tiles-evidence/sprite-geometry-20261005"
+}

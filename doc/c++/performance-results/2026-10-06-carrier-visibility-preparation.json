@@ -1,0 +1,226 @@
+{
+  "schema": 1,
+  "batch": 22,
+  "saved_utc": "2026-10-06T00:18:59.329384+00:00",
+  "baseline_commit": "61ed311526db32c00af24f85d7bd3bfc8942bdcc",
+  "purpose": "Prepare current sight and lighting before intermediate visibility, including stationary input steps that defer drawing.",
+  "review_state": "native-gates-passed; actual paired Tiles performance and save-state acceptance pending",
+  "implementation": {
+    "sources": [
+      "src/do_turn.cpp",
+      "tests/map_memory_test.cpp"
+    ],
+    "change": "game::render_mid_step now calls map::build_map_cache for the observer level before map::update_visibility_cache.",
+    "trigger": "A stationary observer remains in place while a terrain light is enabled or extinguished. Intermediate visibility previously consumed the previous lightmap; the next input frame prepared lighting and replaced that grid.",
+    "regression": "Both light-on and light-off variants compare the complete prepared grid with a subsequent map/visibility refresh and its point query, while verifying the lightmap is clean and the observer position is unchanged.",
+    "ownership": "Existing synchronous map cache preparation and visibility publication remain on the main thread; no new persistent cache, public contract or production worker."
+  },
+  "source_diagnostic": {
+    "window_ns": [
+      176438985973,
+      180265175800
+    ],
+    "measured_grid_calls": 1045,
+    "root_queries": 128,
+    "rebuilt_roots": 95,
+    "grids_per_rebuilt_root": 11,
+    "roots_by_phase": [
+      {
+        "phase": "update_map_memory",
+        "grids": 11,
+        "count": 31
+      },
+      {
+        "phase": "game.mid_step",
+        "grids": 11,
+        "count": 32
+      },
+      {
+        "phase": "game.input_redraw",
+        "grids": 11,
+        "count": 32
+      },
+      {
+        "phase": "other before input",
+        "grids": 0,
+        "count": 32
+      },
+      {
+        "phase": "update_map_memory",
+        "grids": 0,
+        "count": 1
+      }
+    ],
+    "source_explanation": {
+      "prefix": "do_turn.cpp sets each level lightmap dirty before input loop",
+      "suffix": "update_map_memory prepares the map; suffix later invalidates visibility",
+      "mid_step": "updates visibility using previous lm while dirty lightmap remains pending",
+      "input_redraw": "game::draw prepares lightmap, invalidates and rebuilds the same 11 levels"
+    },
+    "evidence_kind": "Counts and phase containment measured from accepted existing Tracy trace; dirty ordering inferred from native source and covered by the new stationary-light regression."
+  },
+  "validation": {
+    "before_fix": {
+      "command": [
+        "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/visibility-preparation-20261006/baseline-cata_test-tiles",
+        "mid_step_visibility_prepares_dirty_lightmap_without_movement",
+        "--rng-seed",
+        "20261006",
+        "--warn",
+        "NoTests",
+        "--user-dir",
+        "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/visibility-preparation-20261006/baseline-test-user/"
+      ],
+      "env_overrides": {
+        "SDL_VIDEODRIVER": "dummy",
+        "SDL_AUDIODRIVER": "dummy"
+      },
+      "exit": 8,
+      "elapsed_s": 18.69926569701056,
+      "expected_failure_before_fix": true,
+      "log": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/visibility-preparation-20261006/baseline-tests.log",
+      "cases": 1,
+      "assertions": 16,
+      "passed_assertions": 8,
+      "failed_assertions": 8,
+      "meaning": "The new regression linked to the preceding engine fails on the stale lightmap, unchanged brightness, mismatched full grid and point query in both variants."
+    },
+    "tiles_build": {
+      "command": [
+        "cmake",
+        "--build",
+        "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/out/build/ccb-tracy-tiles",
+        "--config",
+        "Release",
+        "--target",
+        "cataclysm-tiles",
+        "--parallel",
+        "2"
+      ],
+      "source_sha256": {
+        "src/do_turn.cpp": "96091060ee7f0c81f64be6db410460020f21eb278bce24dc3e48e81ceb705d48",
+        "tests/map_memory_test.cpp": "6c4ab716ec863835b18b96e8b6a64ecdf7d6bf4950e48c6256cb61e24ecd7c57"
+      },
+      "started": 1791243354.7264023,
+      "configuration": "existing Release SDL2 Tiles+sound, Lua Platform v1 ON, Tracy ON, TESTS OFF",
+      "exit": 0,
+      "elapsed_s": 14.568383930018172,
+      "finished": 1791243369.2954369
+    },
+    "focused_native_tests": {
+      "command": [
+        "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/visibility-preparation-20261006/candidate-cata_test-tiles",
+        "[map_memory]~[benchmark],[vision][map][cache]",
+        "--rng-seed",
+        "20261006",
+        "--warn",
+        "NoTests",
+        "--user-dir",
+        "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/visibility-preparation-20261006/candidate-test-user/"
+      ],
+      "env_overrides": {
+        "SDL_VIDEODRIVER": "dummy",
+        "SDL_AUDIODRIVER": "dummy"
+      },
+      "exit": 0,
+      "elapsed_s": 24.008088328002486,
+      "expected_failure_before_fix": false,
+      "log": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/visibility-preparation-20261006/candidate-tests.log",
+      "cases": 22,
+      "assertions": 1723,
+      "scope": "Map memory and map visibility cache regression tests, including the new stationary-light scenario. Dummy SDL drivers are used only by this native test gate, not for game performance measurement."
+    },
+    "format": {
+      "command": [
+        "make",
+        "astyle-check",
+        "ASTYLE_BINARY=/tmp/ccb-astyle-3.1-src/astyle/build/gcc/bin/astyle",
+        "ASTYLE_SOURCES=src/do_turn.cpp tests/map_memory_test.cpp",
+        "ODIR=/tmp/ccb-visibility-astyle-20261006"
+      ],
+      "version": "Artistic Style Version 3.1",
+      "exit": 0,
+      "stdout": "/tmp/ccb-astyle-3.1-src/astyle/build/gcc/bin/astyle -V: Artistic Style Version 3.1\nno astyle regressions\n",
+      "stderr": "",
+      "scope": "Both complete changed native files; project-pinned formatter3.1",
+      "formatter_download": "https://sourceforge.net/projects/astyle/files/astyle/astyle%203.1/astyle_3.1_linux.tar.gz/download",
+      "archive_sha256": "cbcc4cf996294534bb56f025d6f199ebfde81aa4c271ccbd5ee1c1a3192745d7",
+      "initial_host_check": {
+        "version": "3.6.18",
+        "exit": 2,
+        "finding": "Same 3 formatting hunks on both baseline and candidate; changed blocks unchanged under host formatter."
+      }
+    },
+    "diff_check": {
+      "command": [
+        "git",
+        "diff",
+        "--check",
+        "--",
+        "src/do_turn.cpp",
+        "tests/map_memory_test.cpp"
+      ],
+      "exit": 0
+    },
+    "evidence_reuse": "Build, test and formatting inputs match the recorded SHA256 values; publishing this report does not require repeating those gates."
+  },
+  "binaries": {
+    "control": {
+      "sha256": "fb498ab7ec1ede89685625698cfb00d43cc6f7269d3950c9b700897fed90e5b4",
+      "provenance": "Immutable preceding frame-tile-lookup engine binary, also accepted for the normal-turn profiling baseline."
+    },
+    "candidate": {
+      "sha256": "f0c34f10ac75073b3b2e8173735b8db5d43b18eda81b62a22c233311892553c9",
+      "version": "Cataclysm: Cleanwater Bomb 2026-10-06-HEAD-HASH-dirty",
+      "features": [
+        "tiles",
+        "sound"
+      ],
+      "source_sha256": {
+        "src/do_turn.cpp": "96091060ee7f0c81f64be6db410460020f21eb278bce24dc3e48e81ceb705d48",
+        "tests/map_memory_test.cpp": "6c4ab716ec863835b18b96e8b6a64ecdf7d6bf4950e48c6256cb61e24ecd7c57"
+      }
+    }
+  },
+  "actual_game_attempt": {
+    "fixture": "Existing fixed normal-speed carrier fixture, SDL2 Tiles+sound, UndeadPeople, fullscreen, zoom4; 32 pause actions.",
+    "trial": "control-tracy-1",
+    "recorded_inputs": 32,
+    "collector_exits": [
+      0
+    ],
+    "collector_elapsed_s": 24.12,
+    "game_status": "Exited before native-save acceptance; /proc/1302848/exe absent and native log has a shutdown entry.",
+    "final_disk_turn": 5212812,
+    "expected_saved_turn": 5212844,
+    "acceptance": "Diagnostic trace only; recorded input receipt and a successful collector do not establish completed native turns or saved-state equivalence.",
+    "candidate_run_performed": false,
+    "next": "Restart fresh control/candidate paired runs; do not reuse this unsaved control as an accepted baseline."
+  },
+  "speedup_claim": {
+    "proven": false,
+    "statement": "This report establishes a stale intermediate visibility fix and source ordering boundary. No paired game performance result or new speedup claim is available."
+  },
+  "limitations": [
+    "The previously accepted normal-turn trace diagnoses the repeated rebuild path; its phase counts are not a post-change benchmark.",
+    "The source fix uses existing map-cache preparation earlier in the turn. Native regression passes, but native save/RNG/replay equivalence still requires fresh paired game runs.",
+    "Full CI, multiplayer sessions, Windows/Android/SDL3 and complete native suites were not rerun for this batch.",
+    "No new production threading is introduced; worker dispatch and read-only computation ownership remain future measured work."
+  ],
+  "evidence_root": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/visibility-preparation-20261006",
+  "evidence_sha256": {
+    "candidate-build-result.json": "c4af4caa0c2d0a5127963b7ffe93c2a34a5814e5e216ad0de9a2bfaf86717381",
+    "baseline-tests-result.json": "c0339bb945035a2dea2b344e443148049af672f0e0e7e39c9aec9b09697f19f0",
+    "candidate-tests-result.json": "ca41b63fa8bc6213922a0666b2ff24a71acadd07a40d58ece18c8ad3859aa94c",
+    "format-result.json": "d961f7ed4d7788778c82580c58eb4e5cf4044e921085f122eae6bc418fd94f81",
+    "candidate-version.json": "14715f93dbb969ba4e7aea12a923cc1272c5135687404be91ccbc6904c0f7f1c",
+    "control-tracy-1/wait-workload.json": "736a9f4cdb9e3ee2201bf3bbdb2341607578299cdd995c8961861a16c8b457d6"
+  },
+  "documentation_impact": "Developer performance evidence only; no public Lua, JSON or save-format changes.",
+  "related_ccb_docs_pr": null,
+  "affected_documentation_ids": [
+    "cpp-performance"
+  ],
+  "generated_reference_impact": "None",
+  "next_exact_action": "After updating draft PR967, run fresh ABBA control/candidate normal-carrier 32-pause Tiles trials with the frozen binaries, prove completed main-thread action phases and native +32 calendar advancement, compare all saved world files with only classified metadata normalization, then report fixed-window perf/Tracy deltas or reject the result."
+}

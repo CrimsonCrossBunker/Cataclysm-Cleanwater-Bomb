@@ -20,6 +20,15 @@ void update_music_volume();
 void load_soundset();
 extern bool sound_init_success;
 
+namespace sfx
+{
+struct melee_sound_sequence;
+void queue_melee_sound( melee_sound_sequence sequence );
+// Main-thread presentation pump and world/audio lifetime cleanup.
+void process_melee_sounds();
+void clear_melee_sounds();
+}
+
 #else
 
 inline bool init_sound()

@@ -1,0 +1,357 @@
+{
+  "kind": "actual-game-performance-baseline",
+  "schema_version": 1,
+  "measured_utc_date": "2026-10-05",
+  "subject": "Aircraft carrier waits and movement/interaction on the user desktop",
+  "source_commit": "a9de9826fe5dc8fc3a20579ce6ef68499c8b90e5",
+  "binary_source_commit": "82a67a868cd903e1b6ab76350770dd9c2a582f91",
+  "binary_build_id": "faff77aa5caa51295c211cd868ba58ae5794fcf7",
+  "native_sources_unchanged_since_binary_build": true,
+  "native_code_changes_this_batch": [],
+  "build": {
+    "configuration": "CMake Release, clang, SDL2 Tiles, sound, Lua Platform v1, Tracy enabled",
+    "binary": "out/build/ccb-tracy-tiles/src/Release/cataclysm-tiles",
+    "measurement_copy": ".ccb-performance-tiles-evidence/actual-fields-20261005/binaries/after-82a6"
+  },
+  "host": {
+    "screen_pixels": [
+      2880,
+      1800
+    ],
+    "desktop": "KDE Wayland / XWayland",
+    "sdl_video_driver": "x11",
+    "render_driver": "opengl",
+    "hardware": "AMD Radeon Graphics (radeonsi, renoir, ACO), hardware accelerated",
+    "mesa": "26.2.3-arch1.1",
+    "runtime_sdl2_compat": "2.32.72-1",
+    "runtime_sdl3": "3.4.16-1",
+    "perf_version": "7.2.7-1"
+  },
+  "scene": {
+    "world": "Damon",
+    "scenario": "Challenge - Aircraft Carrier",
+    "tileset": "UNDEAD_PEOPLE",
+    "fullscreen": true,
+    "zoom_level": 4,
+    "initial_active_monsters": 759,
+    "initial_game_turn": 5212811,
+    "initial_game_time": "Year 1, May 28, 08:00:11",
+    "initial_debug_speed": 1100,
+    "debug_mode": true,
+    "safe_mode": 0,
+    "mods": [
+      "ccb",
+      "no_npc_food",
+      "personal_portal_storms"
+    ],
+    "global_multithreading_enabled": false,
+    "thread_pool_workers": 0,
+    "autosave_for_test_copies": false,
+    "source_world_file_count": 48,
+    "source_world_bytes": 1356868,
+    "original_world_preserved": true,
+    "original_world_integrity_method": "All 48 SHA256 hashes equal the pre-test fixture; experiments use copied user directories."
+  },
+  "protocol": {
+    "seed": "CCB-carrier-20261005",
+    "fresh_origin_copy_per_workload": true,
+    "input": "Normal X11 key events addressed only to the verified game window PID; native replay log confirms exact key count and order.",
+    "startup_inputs": [
+      "Return to acknowledge existing Lua notice",
+      "Z once to zoom from 8 to 4"
+    ],
+    "minimum_cadence_seconds": 0.12,
+    "sampling": "perf record -m 64 -e cycles:u -F 397 --call-graph dwarf,32768 -t GAME_PID -o PREFIX.data -- sleep RECORD_SECONDS",
+    "stat": "perf stat -x ; -e task-clock,cycles:u,instructions:u,cache-misses:u -p GAME_PID -o PREFIX.stat -- sleep COLLECTOR_SECONDS",
+    "record_window_seconds": "Collector window minus 2 seconds; wait 48s, movement 43s.",
+    "export": "perf script --no-inline -i PREFIX.data > PREFIX.script",
+    "analysis_window": "Input start through final input acknowledgement plus 0.25 seconds; excludes startup and long idle collector tail.",
+    "functions": "Cycle-period weighted inclusive caller groups; argument signatures stripped, overloaded variants grouped once per sampled stack.",
+    "acceptance_commands": [
+      "python3 measure-carrier.py --workload wait --collectors perf --frequency 397 --stack-bytes 32768 --seconds 50",
+      "python3 measure-carrier.py --workload move --collectors perf --frequency 397 --stack-bytes 32768 --seconds 45",
+      "python3 read-latest-save.py PLAYER_SAVE FINAL_STATE_JSON",
+      "python3 compare-latest-state.py INITIAL_WAIT_TRIAL PERF_ONLY_WAIT_TRIAL OUTPUT_JSON --world Damon"
+    ],
+    "collector_mode": "perf record plus stat concurrently; no Tracy capture during the accepted perf-only pair, and no export or build running during sampling."
+  },
+  "cases": [
+    {
+      "name": "wait",
+      "private_trial": "wait-perf",
+      "normal_key_sequence": "............................................................................................................................................................................................................................",
+      "acknowledged_inputs": 220,
+      "minimum_input_cadence_seconds": 0.12,
+      "active_input_duration_seconds": 37.11656391900033,
+      "collector_window_seconds": 50,
+      "game_seconds_advanced": 220,
+      "initial_active_monsters": 759,
+      "final_active_monsters": 757,
+      "initial_map_origin_submap": [
+        92,
+        255,
+        2
+      ],
+      "final_map_origin_submap": [
+        92,
+        255,
+        2
+      ],
+      "initial_player_location_absolute": [
+        5495,
+        7449,
+        2
+      ],
+      "final_player_location_absolute": [
+        5495,
+        7449,
+        2
+      ],
+      "safe_mode": 0,
+      "perf_samples_total": 9522,
+      "active_window_samples": 8702,
+      "chain_reached_main_weighted_percent": 95.14631963922737,
+      "unresolved_leaf_weighted_percent": 30.258430331535934,
+      "function_inclusive_sampled_cycle_percent": {
+        "cata_tiles::draw": 65.98633984540787,
+        "cata_tiles::draw_from_id_string_internal": 32.70182476507984,
+        "cata_tiles::draw_sprite_at": 24.527517785075034,
+        "pixel_minimap::render": 10.92870859980275,
+        "monmove": 5.120951060984468,
+        "creature_tracker::flood_fill_zone": 4.008948256600608,
+        "map::update_visibility_cache": 4.2637376328342365,
+        "map::update_map_memory": 2.2036905748827293,
+        "game::update_map": 0.0,
+        "map::shift": 0.0,
+        "map::generate": 0.0
+      },
+      "tile_or_minimap_path_sampled_cycle_percent": 79.55574404501452,
+      "counter_scope": "All process threads for the full collector window, including idle tail. Not comparable across workloads with different windows.",
+      "counters": [
+        {
+          "event": "task-clock:u",
+          "value": 48114.06,
+          "unit": "msec",
+          "counter_running_percent": 100.0
+        },
+        {
+          "event": "cycles:u",
+          "value": 163258933422.0,
+          "unit": "",
+          "counter_running_percent": 58.0
+        },
+        {
+          "event": "instructions:u",
+          "value": 424495212959.0,
+          "unit": "",
+          "counter_running_percent": 58.0
+        },
+        {
+          "event": "cache-misses:u",
+          "value": 1085555248.0,
+          "unit": "",
+          "counter_running_percent": 56.0
+        }
+      ],
+      "input_receipt_ms": {
+        "mean": 168.1110606913783,
+        "median": 167.10347599291708,
+        "p95": 196.0066729807295,
+        "max": 226.74069702043198,
+        "meaning": "controller launch and event receipt/queue delay, not frame or pure simulation completion"
+      },
+      "perf_and_stat_exit_codes": [
+        0,
+        0
+      ],
+      "state_reader": {
+        "method": "active zzip footer entry, footer and payload XXH64 verified",
+        "entry": {
+          "len": 36097,
+          "offset": 31572
+        }
+      }
+    },
+    {
+      "name": "move",
+      "private_trial": "movement",
+      "normal_key_sequence": "88888888888888888888222222222222222222228888888888888888888822222222222222222222",
+      "acknowledged_inputs": 80,
+      "minimum_input_cadence_seconds": 0.12,
+      "active_input_duration_seconds": 12.150862977985526,
+      "collector_window_seconds": 45,
+      "game_seconds_advanced": 7,
+      "initial_active_monsters": 759,
+      "final_active_monsters": 825,
+      "initial_map_origin_submap": [
+        92,
+        255,
+        2
+      ],
+      "final_map_origin_submap": [
+        92,
+        256,
+        2
+      ],
+      "initial_player_location_absolute": [
+        5495,
+        7449,
+        2
+      ],
+      "final_player_location_absolute": [
+        5495,
+        7456,
+        2
+      ],
+      "safe_mode": 0,
+      "perf_samples_total": 5065,
+      "active_window_samples": 2834,
+      "chain_reached_main_weighted_percent": 98.18799363474696,
+      "unresolved_leaf_weighted_percent": 32.29010964479004,
+      "function_inclusive_sampled_cycle_percent": {
+        "cata_tiles::draw": 71.57669345178267,
+        "cata_tiles::draw_from_id_string_internal": 36.44879804205176,
+        "cata_tiles::draw_sprite_at": 26.82837522396965,
+        "pixel_minimap::render": 7.461084198266343,
+        "monmove": 0.5712175581711321,
+        "creature_tracker::flood_fill_zone": 0.84116052304423,
+        "map::update_visibility_cache": 3.4085436047280875,
+        "map::update_map_memory": 0.967740581866097,
+        "game::update_map": 1.9763228399652268,
+        "map::shift": 1.3855069077216615,
+        "map::generate": 0.7092643241139236
+      },
+      "tile_or_minimap_path_sampled_cycle_percent": 84.59884179548037,
+      "counter_scope": "All process threads for the full collector window, including idle tail. Not comparable across workloads with different windows.",
+      "counters": [
+        {
+          "event": "task-clock:u",
+          "value": 27466.74,
+          "unit": "msec",
+          "counter_running_percent": 100.0
+        },
+        {
+          "event": "cycles:u",
+          "value": 90602196329.0,
+          "unit": "",
+          "counter_running_percent": 58.0
+        },
+        {
+          "event": "instructions:u",
+          "value": 234502232760.0,
+          "unit": "",
+          "counter_running_percent": 57.0
+        },
+        {
+          "event": "cache-misses:u",
+          "value": 599262446.0,
+          "unit": "",
+          "counter_running_percent": 57.0
+        }
+      ],
+      "input_receipt_ms": {
+        "mean": 150.831701997231,
+        "median": 147.85089700308163,
+        "p95": 190.51740298164077,
+        "max": 287.95219399034977,
+        "meaning": "controller launch and event receipt/queue delay, not frame or pure simulation completion"
+      },
+      "perf_and_stat_exit_codes": [
+        0,
+        0
+      ],
+      "state_reader": {
+        "method": "active zzip footer entry, footer and payload XXH64 verified",
+        "entry": {
+          "len": 34615,
+          "offset": 31572
+        }
+      }
+    }
+  ],
+  "state_validation": {
+    "read_method": "Active zzip footer entry and both footer/payload XXH64 checksums; a first-frame scan may read historical data after an append save.",
+    "repeat_wait_player_simulation_equal": true,
+    "normalized_unordered_fields": [
+      {
+        "path": "/player/learned_recipes",
+        "count": 1127,
+        "multiset_equal": true
+      }
+    ],
+    "excluded_real_wall_time_fields": [
+      "/stats_tracker/data/game_save/event_counts/0/0/time_since_load/1",
+      "/stats_tracker/data/game_save/event_counts/0/0/total_time_played/1"
+    ],
+    "unexplained_player_differences": [],
+    "repeat_wait_world_files": 48,
+    "byte_identical_world_files": 46,
+    "different_world_files": "Only character .sav.zzip and .pt; the .pt values exactly equal saved total_time_played.",
+    "play_time_checks": [
+      {
+        "trial": "baseline-inspect",
+        "total_time_played_seconds": 910,
+        "pt_equals_character_save": true
+      },
+      {
+        "trial": "wait-perf",
+        "total_time_played_seconds": 363,
+        "pt_equals_character_save": true
+      }
+    ],
+    "previous_four_visibility_pairs_revalidated_with_active_footer_reader": true
+  },
+  "profiling_tool_failure": {
+    "attempt": "Initial wait run with perf/stat and Tracy simultaneously, before the accepted perf-only wait repeat.",
+    "retained": "baseline-inspect/wait.tracy",
+    "result": "CSV export spins in FileRead decompression-ready wait; stopped the owned exporter. A bounded 15s targeted export also produced no CSV. No Tracy zone time accepted.",
+    "container_check": "5529 complete compressed blocks; all four Zstd streams decode without errors; final uncompressed block 51191 bytes.",
+    "uncompressed_bytes": 362334199,
+    "next_diagnostic": "Compare the same retained capture with a matching reference 0.14.1 reader; do not repeat gameplay solely to regenerate an unreadable trace."
+  },
+  "cached_native_regression": {
+    "source": "2026-10-05-visibility-fields.json",
+    "evidence": {
+      "command": "./tests/perf-cata_test '[vision]~[benchmark],[map_memory]~[benchmark]' --rng-seed 20261004",
+      "cases": 53,
+      "assertions": 28636,
+      "seconds": 43.3887,
+      "result": "passed",
+      "config": "Make SDL2+sound+LuaPlatform,Tracy disabled",
+      "reuse_reason": "source and regression inputs unchanged; no C++ edit in this measurement batch"
+    },
+    "reused": true,
+    "reason": "No src/, tests/, Makefile or CMakeLists.txt changes since 82a67a868cd903e1b6ab76350770dd9c2a582f91. No new game build or broad suite required for measurement metadata."
+  },
+  "assessment": {
+    "speedup_claimed": false,
+    "finding": "Tile and minimap call paths dominate active main-thread CPU cycle samples in this fullscreen zoom-4 fixture: about 80% in 220 waits and 85% in 80 move/interaction inputs.",
+    "multithreading_priority": "Measure and separate immutable render preparation from ordered main-thread SDL submission before choosing a worker batch. Keep simulation mutation, Lua and SDL on their owning threads.",
+    "existing_zones_to_use": [
+      "tiles.draw",
+      "tiles.map_memory_prepare",
+      "tiles.draw_cache_rebuild",
+      "tiles.dynamic_cache_refresh",
+      "tiles.layer_loop"
+    ],
+    "map_shift_exercised": true,
+    "movement_note": "80 directional inputs include melee/blocked interactions; not 80 walked tiles. The save advances 7 game seconds at debug speed 1100, net +7 y tiles, and one submap-origin change.",
+    "limitations": [
+      "This is a baseline, not a before/after optimization comparison or a universal workload ranking.",
+      "Inclusive function rows and call-path categories overlap; do not sum them.",
+      "Unresolved SDL/system/driver leaves remain included under identifiable native callers; no-sample functions are not established to have zero cost.",
+      "Sampling overhead and counter multiplexing are present; counter running fractions are retained.",
+      "Input receipt latency includes the controller and event queue, not completed frame or pure simulation time.",
+      "GPU timings, FPS, off-CPU blocking, cold-load exploration, multiplayer and other platforms are outside this baseline.",
+      "Tracy aggregate/frame/phase statistics were not accepted because the CSV reader failed."
+    ]
+  },
+  "next_exact_action": "rg -n 'tiles.draw_cache_rebuild|tiles.layer_loop|view_snapshot|draw_from_id_string_internal|RenderCopyEx' src/cata_tiles.cpp src/cata_tiles.h src/pixel_minimap.cpp; obtain reliable phase attribution before implementing a pure render-preparation job or SDL batching change.",
+  "private_evidence_manifest": ".ccb-performance-tiles-evidence/carrier-20261005/manifest.json",
+  "private_evidence_manifest_sha256": "8fd5aa7867b4e8a815ec9274f06398224c65e44f5990f89497d1d50ec08dc3d0",
+  "plots": {
+    "hotspots": ".ccb-performance-tiles-evidence/carrier-20261005/carrier-hotspots.svg",
+    "wait_flamegraph": ".ccb-performance-tiles-evidence/carrier-20261005/wait-perf/wait-flamegraph.svg",
+    "movement_flamegraph": ".ccb-performance-tiles-evidence/carrier-20261005/movement/move-flamegraph.svg"
+  }
+}

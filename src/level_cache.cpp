@@ -1,4 +1,6 @@
 #include "level_cache.h"
+#include <coordinates.h>
+#include <map_scale_constants.h>
 
 #include <cstring>
 
@@ -21,6 +23,8 @@ void level_cache::clear()
 #pragma GCC diagnostic pop
 
     transparency_cache_dirty.set();
+    vision_transparency_override_origin.reset();
+    vision_transparency_low_profile = false;
     outside_cache_dirty = true;
     floor_cache_dirty = false;
     seen_cache_dirty = false;

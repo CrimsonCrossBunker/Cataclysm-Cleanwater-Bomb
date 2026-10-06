@@ -79,6 +79,20 @@ cmake -S . -B build-tracy -DTRACY=ON
 cmake --build build-tracy -j
 ```
 
+Configuration checks that enabled scopes, frame markers, and plots compile and
+link against the selected client. A library built with `TRACY_ENABLE=OFF` is
+rejected before the game build starts. Use matching headers and an enabled
+client; for a separate Linux static client build from a Tracy checkout:
+
+```sh
+cmake -S /path/to/tracy -B /path/to/tracy-client \
+    -DCMAKE_BUILD_TYPE=Release -DTRACY_ENABLE=ON -DTRACY_STATIC=ON
+cmake --build /path/to/tracy-client --target TracyClient --parallel 2
+cmake -S . -B build-tracy -DTRACY=ON \
+    -DTRACY_INCLUDE_DIR=/path/to/tracy/public \
+    -DTRACY_LIBRARY=/path/to/tracy-client/libTracyClient.a
+```
+
 ## Diagnostic timings
 
 Thresholded timings that explain a live failure, such as multiplayer wait

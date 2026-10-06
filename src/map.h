@@ -143,9 +143,14 @@ struct visibility_variables {
     // Cached values for map visibility calculations
     int g_light_level = 0;
     int u_clairvoyance = 0;
+    int u_unimpaired_range = 0;
     float vision_threshold = 0.0f;
     std::optional<field_type_id> clairvoyance_field;
     tripoint_bub_ms last_pos;
+    // The observer may request a different level without moving.
+    int last_zlev = 0;
+    // Per-level results share the observer and invalidation lifetime above.
+    std::bitset<OVERMAP_LAYERS> cached_levels;
 };
 
 struct bash_params {
@@ -2319,6 +2324,24 @@ class map
         using lru_cache_t = lru_cache<point, char>;
         mutable lru_cache_t skew_vision_cache;
         mutable lru_cache_t skew_vision_wo_fields_cache;
+
+        // The observer belongs to this map's seen cache, not to the process.
+        std::optional<std::pair<tripoint_abs_ms, int>> previous_visibility_observer;
+
+        struct char_light_state {
+            float light;
+            tripoint_bub_ms pos;
+            bool operator==( const char_light_state &o ) const {
+                return light == o.light && pos == o.pos;
+            }
+            bool operator!=( const char_light_state &o ) const {
+                return !( *this == o );
+            }
+        };
+        // Each map tracks its own light sources.  Keep both buffers so unchanged
+        // cache queries do not allocate another temporary snapshot every time.
+        std::vector<char_light_state> cached_char_lights;
+        std::vector<char_light_state> current_char_lights;
 
         // Note: no bounds check
         level_cache &get_cache( int zlev ) const {
