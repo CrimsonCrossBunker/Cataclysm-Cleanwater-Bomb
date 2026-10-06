@@ -1,14 +1,13 @@
 #include <string>
+#include <vector>
 
 #include "calendar.h"
 #include "cata_catch.h"
-#include "cata_scope_helpers.h"
 #include "coordinates.h"
-#include "enums.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "mapdata.h"
 #include "overmapbuffer.h"
-#include "point.h"
 #include "rng.h"
 #include "type_id.h"
 #include "vehicle.h"
@@ -18,10 +17,13 @@ static const vproto_id vehicle_prototype_motorized_draisine_6seats( "motorized_d
 
 TEST_CASE( "railroad_end_vehicle_spawns", "[.][railroads][vehicle][mapgen]" )
 {
-    const cata_default_random_engine saved_rng = rng_get_engine();
-    on_out_of_scope restore_rng( [saved_rng]() {
-        rng_get_engine() = saved_rng;
-    } );
+    // Snapshot the shared engine to restore global state, not to generate random values.
+    struct restore_rng {
+        cata_default_random_engine saved = rng_get_engine(); // NOLINT(cata-determinism)
+        ~restore_rng() {
+            rng_get_engine() = saved;
+        }
+    } restore;
     rng_set_engine_seed( 3404 );
     clear_map_without_vision();
     const std::string suffix = GENERATE( "north", "east", "south", "west" );
