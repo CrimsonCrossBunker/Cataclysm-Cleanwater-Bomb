@@ -13,9 +13,14 @@
 #include "type_id.h"
 #include "vehicle.h"
 
+static const oter_str_id oter_field( "field" );
+static const oter_str_id oter_forest( "forest" );
+
+static const vproto_id vehicle_prototype_airship( "airship" );
+
 struct starting_vehicle_test_access {
     static vehicle *place( game &world, const point_abs_omt &origin ) {
-        return world.place_vehicle_nearby( vproto_id( "airship" ), origin, 1, 1, { "field" } );
+        return world.place_vehicle_nearby( vehicle_prototype_airship, origin, 1, 1, { "field" } );
     }
 };
 
@@ -27,16 +32,16 @@ TEST_CASE( "large_starting_airship_fits_across_overmap_tiles", "[vehicle][airshi
                                     0 ) ) );
     for( int x = -1; x <= 1; ++x ) {
         for( int y = -1; y <= 1; ++y ) {
-            overmap_buffer.ter_set( origin + point( x, y ), oter_str_id( "forest" ).id() );
+            overmap_buffer.ter_set( origin + point( x, y ), oter_forest.id() );
         }
     }
-    const tripoint_abs_omt goal = origin + point( 1, 0 );
-    overmap_buffer.ter_set( goal, oter_str_id( "field" ).id() );
+    const tripoint_abs_omt goal = origin + point::east;
+    overmap_buffer.ter_set( goal, oter_field.id() );
 
     vehicle *airship = starting_vehicle_test_access::place( *g, origin.xy() );
 
     REQUIRE( airship );
-    CHECK( airship->type == vproto_id( "airship" ) );
+    CHECK( airship->type == vehicle_prototype_airship );
     CHECK( project_to<coords::omt>( airship->pos_abs() ) == goal );
     CHECK_FALSE( airship->is_locked );
     CHECK( airship->tracking_on );
