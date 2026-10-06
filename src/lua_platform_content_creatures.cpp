@@ -5,6 +5,7 @@
 #include <dialogue_helpers.h>
 #include <enum_bitset.h>
 #include <enums.h>
+#include <event.h>
 #include <flat_set.h>
 #include <game_constants.h>
 #include <iexamine.h>
@@ -27,6 +28,7 @@ struct const_dialogue;
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <limits>

@@ -1,5 +1,19 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
+#include <cata_scope_helpers.h>
+#include <enums.h>
+#include <event.h>
+#include <lua_platform_loader.h>
+#include <type_id.h>
+#include <value_ptr.h>
+#include <filesystem>
+#include <functional>
+#include <list>
+#include <memory>
+#include <optional>
+#include <string>
+#include <vector>
+#include "cata_catch.h"
 #include "effect.h"
 #include "item.h"
 #include "item_group.h"

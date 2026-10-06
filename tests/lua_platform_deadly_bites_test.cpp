@@ -1,14 +1,21 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include <algorithm>
+#include <enums.h>
+#include <pimpl.h>
+#include <memory>
+#include <sstream>
 #include <vector>
 
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
 #include "effect.h"
+#include "flexbuffer_json.h"
 #include "inventory.h"
 #include "item.h"
 #include "item_location.h"
+#include "json.h"
+#include "json_loader.h"
 #include "lua_platform_runtime.h"
 #include "mission.h"
 #include "player_helpers.h"
@@ -85,5 +92,34 @@ TEST_CASE( "deadly_bites_lua_scenario_starts_infection_and_find_medicine_mission
     CHECK( std::any_of( missions.begin(), missions.end(), []( const mission * entry ) {
         return entry->mission_id() == mission_find_antivirals;
     } ) );
+}
+
+TEST_CASE( "deadly_bites_lua_infection_and_medicine_survive_character_save_load",
+           "[.][mods][deadly_bites][save]" )
+{
+    REQUIRE( itype_antivirals.is_valid() );
+    clear_avatar();
+    avatar &patient = get_avatar();
+    cata::lua_platform::runtime_world_ready( true );
+    patient.add_effect( effect_zombie_virus, 1_turns, true, 3 );
+    patient.inv->add_item( item( itype_antivirals, calendar::turn ), false, false, false );
+    std::ostringstream stream;
+    JsonOut json( stream );
+    patient.serialize( json );
+
+    clear_avatar();
+    patient.deserialize( json_loader::from_string( stream.str() ).get_object() );
+    cata::lua_platform::runtime_world_ready( false );
+    REQUIRE( patient.get_effect_int( effect_zombie_virus ) == 3 );
+    REQUIRE( patient.get_effect( effect_zombie_virus ).is_permanent() );
+    REQUIRE( patient.amount_of( itype_antivirals ) == 1 );
+    // Legacy inventory entries are not included in all_items_loc().
+    item &stored = patient.inv->find_item( 0 );
+    const item_location medication( patient, &stored );
+    REQUIRE( medication->typeId() == itype_antivirals );
+    REQUIRE( patient.consume( medication, true ) != trinary::NONE );
+    CHECK( patient.amount_of( itype_antivirals ) == 0 );
+    CHECK( patient.get_effect_int( effect_zombie_virus ) == 2 );
+    CHECK( patient.get_effect_dur( effect_antivirals ) == 16_hours );
 }
 #endif
