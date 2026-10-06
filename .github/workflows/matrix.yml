@@ -5,8 +5,7 @@ on:
     branches:
     - master
   pull_request:
-    branches:
-    - master
+    # Stacked content PRs need the same native acceptance before reaching master.
     types: [opened, reopened, synchronize, ready_for_review]
   workflow_dispatch:
     inputs:
