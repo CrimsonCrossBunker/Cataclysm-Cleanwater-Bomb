@@ -1,3 +1,8 @@
+#include <memory>
+#include <set>
+#include <string>
+#include <vector>
+
 #include "cata_catch.h"
 #include "coordinates.h"
 #include "game.h"
