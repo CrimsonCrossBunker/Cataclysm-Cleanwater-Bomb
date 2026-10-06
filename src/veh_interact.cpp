@@ -720,6 +720,7 @@ void veh_interact::hide_ui( map &here, const bool hide )
 
 void veh_interact::do_main_loop( map &here )
 {
+    input_context::scoped_activation active_context( main_context );
     bool finish = false;
     Character &player_character = get_player_character();
     const bool owned_by_player = veh->handle_potential_theft( player_character, true );
