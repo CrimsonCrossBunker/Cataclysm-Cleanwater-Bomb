@@ -1,4 +1,10 @@
 #include <functional>
+#include <bodypart.h>
+#include <level_cache.h>
+#include <lightmap.h>
+#include <mdarray.h>
+#include <bitset>
+#include <initializer_list>
 #include <memory>
 #include <optional>
 #include <set>

@@ -1,4 +1,7 @@
 #include <array>
+#include <point.h>
+#include <stddef.h>
+#include <optional>
 #include <future>
 #include <vector>
 

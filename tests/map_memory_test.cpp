@@ -1,4 +1,9 @@
 #include <bitset>
+#include <lightmap.h>
+#include <array>
+#include <functional>
+#include <map>
+#include <optional>
 #include <cstddef>
 #include <memory>
 #include <sstream>

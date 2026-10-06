@@ -1,4 +1,5 @@
 #include "sprite_geometry.h"
+#include <point.h>
 
 #include "cata_utility.h"
 
