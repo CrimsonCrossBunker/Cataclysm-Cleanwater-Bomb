@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <functional>
 #include <map>
 #include <memory>
 #include <optional>
@@ -85,6 +86,7 @@
 #include "type_id.h"
 #include "ui_manager.h"
 #include "uilist.h"
+#include "uistate.h"
 #include "units.h"
 #include "vehicle.h"
 #include "vpart_position.h"
@@ -1201,13 +1203,29 @@ void game::present_turn()
 
 void game::render_mid_step( avatar &u, map &m, tripoint_bub_ms &last_memorized_pos )
 {
-    // Visibility cache must stay fresh even when the render is skipped:
-    // it is consumed by update_map_memory to decide which tiles were seen.
+    // Includes visibility and map-memory maintenance as well as optional drawing.
+    CATA_PROFILE_SCOPE_NAMED( "game.mid_step" );
+    // Prepare sight and lighting before calculating visibility. Otherwise a
+    // dirty lightmap makes this grid stale before the next input frame rebuilds
+    // it again. Skipped frames and intermediate map memory use the same state.
+    m.build_map_cache( u.posz() );
     m.update_visibility_cache( u.posz() );
 
     if( !skip_mid_step_render ) {
         wait_popup_reset();
-        ui_manager::redraw();
+        // Animated single-player input redraws after binding its overlay
+        // callback.  Request that frame here instead of drawing the same view
+        // twice.  Routes, resumed menus, screenshots and other input paths keep
+        // their immediate frame.
+        const bool input_owns_redraw = get_option<bool>( "ANIMATIONS" ) &&
+                                       !u.has_destination() && !u.has_destination_activity() &&
+                                       !uistate.open_menu && !cata_mp::is_hosting() &&
+                                       !cata_mp::is_client_mode();
+        if( input_owns_redraw && !queue_screenshot ) {
+            invalidate_main_ui_adaptor();
+        } else {
+            ui_manager::redraw();
+        }
     }
 
     // A single turn can span several steps (roads, speed effects,

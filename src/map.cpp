@@ -69,6 +69,7 @@
 #include "magic_ter_furn_transform.h"
 #include "map_accessories.h"
 #include "map_iterator.h"
+#include "map_visibility.h"
 #include "map_memory.h"
 #include "map_selector.h"
 #include "mapbuffer.h"
@@ -555,10 +556,15 @@ void memorize_terrain_at( map &here, avatar &you, const tripoint_bub_ms &p,
     if( !t || invisible[0] ) {
         return;
     }
+    const std::bitset<NUM_TERCONN> &connect_group = t.obj().connect_to_groups;
+    // Connecting terrain must still learn newly visible neighbours.  Other
+    // clean terrain cannot write memory, so its orientation work is unused.
+    if( connect_group.none() && !here.memory_cache_ter_is_dirty( p ) ) {
+        return;
+    }
     const std::string &tname = t.id().str();
     int subtile = 0;
     int rotation = 0;
-    const std::bitset<NUM_TERCONN> &connect_group = t.obj().connect_to_groups;
     const std::bitset<NUM_TERCONN> &rotate_group = t.obj().rotate_to_groups;
     if( connect_group.any() ) {
         map::get_connect_values( p, subtile, rotation, connect_group, rotate_group, {} );
@@ -667,8 +673,10 @@ void map::update_map_memory( avatar &you )
     // previous position.  Refresh it here so simulation-side memory never
     // depends on whether a frame happened to be drawn.
     here.build_map_cache( z );
-    here.invalidate_visibility_cache();
+    // Sight/light rebuilds notify visibility; the query also checks perception changes.
     here.update_visibility_cache( z );
+    // Refreshed memory must reach presentation even when visibility is reused.
+    here.set_draw_points_cache_dirty();
 
     const visibility_variables &cache = here.get_visibility_variables_cache();
     const tripoint_bub_ms you_pos = you.pos_bub( here );
@@ -8716,53 +8724,82 @@ void map::update_visibility_cache( const int zlev )
     Character &player_character = get_player_character();
     const tripoint_bub_ms pos = player_character.pos_bub( *this );
 
-    if( !visibility_variables_cache.visibility_cache_dirty &&
-        pos == visibility_variables_cache.last_pos ) {
+    const float vision_threshold = player_character.get_vision_threshold(
+                                       get_cache_ref( pos.z() ).lm[pos.x()][pos.y()].max() );
+    const int clairvoyance = player_character.clairvoyance();
+    const int unimpaired_range = player_character.unimpaired_range();
+    const int light_level = static_cast<int>( g->light_level( zlev ) );
+    const bool sight_impaired = player_character.sight_impaired();
+    const bool boomered = player_character.has_effect( effect_boomered );
+    // Perception can change before a render-driven map-cache rebuild.
+    const bool perception_changed = vision_threshold != visibility_variables_cache.vision_threshold ||
+                                    clairvoyance != visibility_variables_cache.u_clairvoyance ||
+                                    sight_impaired != visibility_variables_cache.u_sight_impaired ||
+                                    boomered != visibility_variables_cache.u_is_boomered ||
+                                    unimpaired_range != visibility_variables_cache.u_unimpaired_range ||
+                                    ( zlev == visibility_variables_cache.last_zlev &&
+                                      light_level != visibility_variables_cache.g_light_level );
+    if( !visibility_variables_cache.visibility_cache_dirty && !perception_changed &&
+        pos == visibility_variables_cache.last_pos &&
+        zlev == visibility_variables_cache.last_zlev ) {
         return;
     }
 
-    if( pos.z() - zlev < fov_3d_z_range && zlev > -OVERMAP_DEPTH ) {
+    if( visibility_variables_cache.visibility_cache_dirty ||
+        pos != visibility_variables_cache.last_pos || perception_changed ) {
+        visibility_variables_cache.cached_levels.reset();
+    }
+    const bool rebuild_level = !visibility_variables_cache.cached_levels[zlev + OVERMAP_DEPTH];
+    if( rebuild_level && pos.z() - zlev < fov_3d_z_range && zlev > -OVERMAP_DEPTH ) {
         update_visibility_cache( zlev - 1 );
     }
+    // Common variables describe the requested level even when its grid is reused.
     visibility_variables_cache.variables_set = true; // Not used yet
-    visibility_variables_cache.g_light_level = static_cast<int>( g->light_level( zlev ) );
-    visibility_variables_cache.vision_threshold = player_character.get_vision_threshold(
-                get_cache_ref(
-                    pos.z() ).lm[pos.x()][pos.y()].max() );
-
-    visibility_variables_cache.u_clairvoyance = player_character.clairvoyance();
-    visibility_variables_cache.u_sight_impaired = player_character.sight_impaired();
-    visibility_variables_cache.u_is_boomered = player_character.has_effect( effect_boomered );
+    visibility_variables_cache.g_light_level = light_level;
+    visibility_variables_cache.vision_threshold = vision_threshold;
+    visibility_variables_cache.u_clairvoyance = clairvoyance;
+    visibility_variables_cache.u_unimpaired_range = unimpaired_range;
+    visibility_variables_cache.u_sight_impaired = sight_impaired;
+    visibility_variables_cache.u_is_boomered = boomered;
     visibility_variables_cache.clairvoyance_field.reset();
     if( field_fd_clairvoyant.is_valid() ) {
         visibility_variables_cache.clairvoyance_field = field_fd_clairvoyant;
     }
 
-    cata::mdarray<int, point_bub_sm> sm_squares_seen = {};
-
-    auto &visibility_cache = get_cache( zlev ).visibility_cache;
-
-    tripoint_bub_ms p;
-    p.z() = zlev;
-    int &x = p.x();
-    int &y = p.y();
-    for( x = 0; x < MAPSIZE_X; x++ ) {
-        for( y = 0; y < MAPSIZE_Y; y++ ) {
-            lit_level ll = apparent_light_at( p, visibility_variables_cache );
-            visibility_cache[x][y] = ll;
-            sm_squares_seen[ x / SEEX ][ y / SEEY ] += ( ll == lit_level::BRIGHT || ll == lit_level::LIT );
-        }
-    }
-
-    for( int gridx = 0; gridx < my_MAPSIZE; gridx++ ) {
-        for( int gridy = 0; gridy < my_MAPSIZE; gridy++ ) {
-            if( sm_squares_seen[gridx][gridy] > 36 ) { // 25% of the submap is visible
-                const tripoint sm( gridx, gridy, 0 );
-                const tripoint_abs_sm abs_sm = map::abs_sub + sm;
-                const tripoint_abs_omt abs_omt = project_to<coords::omt>( abs_sm );
-                overmap_buffer.set_seen( abs_omt, om_vision_level::full );
+    if( rebuild_level ) {
+        cata::mdarray<int, point_bub_sm> sm_squares_seen = {};
+        // Resolve field storage once per submap while map owns the loaded grid.
+        // This read-only view ends with this synchronous rebuild; field contents
+        // and the evaluator's tile traversal order remain unchanged.
+        cata::mdarray<const submap *, point_bub_sm> field_submaps = {};
+        if( visibility_variables_cache.clairvoyance_field ) {
+            for( int x = 0; x < std::min( my_MAPSIZE, MAPSIZE ); ++x ) {
+                for( int y = 0; y < std::min( my_MAPSIZE, MAPSIZE ); ++y ) {
+                    if( inbounds( tripoint_bub_ms( x * SEEX, y * SEEY, zlev ) ) ) {
+                        const size_t index = get_nonant( tripoint_rel_sm( x, y, zlev ) );
+                        // Leave invalid/unloaded cells to the usual field_at fallback.
+                        if( index < grid.size() ) {
+                            field_submaps[x][y] = grid[index];
+                        }
+                    }
+                }
             }
         }
+
+        rebuild_visibility_cache_grid( *this, get_cache( zlev ), zlev,
+                                       visibility_variables_cache, field_submaps, sm_squares_seen );
+
+        for( int gridx = 0; gridx < my_MAPSIZE; gridx++ ) {
+            for( int gridy = 0; gridy < my_MAPSIZE; gridy++ ) {
+                if( sm_squares_seen[gridx][gridy] > 36 ) { // 25% of the submap is visible
+                    const tripoint sm( gridx, gridy, 0 );
+                    const tripoint_abs_sm abs_sm = map::abs_sub + sm;
+                    const tripoint_abs_omt abs_omt = project_to<coords::omt>( abs_sm );
+                    overmap_buffer.set_seen( abs_omt, om_vision_level::full );
+                }
+            }
+        }
+        visibility_variables_cache.cached_levels.set( zlev + OVERMAP_DEPTH );
     }
 
 #if defined(TILES)
@@ -8773,6 +8810,7 @@ void map::update_visibility_cache( const int zlev )
 #endif
 
     visibility_variables_cache.last_pos = pos;
+    visibility_variables_cache.last_zlev = zlev;
     visibility_variables_cache.visibility_cache_dirty = false;
 }
 
@@ -12084,18 +12122,16 @@ void map::build_map_cache( const int zlev, bool skip_lightmap )
     std::set_symmetric_difference( u.moncam_cache.begin(), u.moncam_cache.end(), mcache.begin(),
                                    mcache.end(), std::inserter( diff, diff.end() ) );
     camera_cache_dirty |= !diff.empty();
-    // Initial value is illegal player position.
     const tripoint_abs_ms p = get_player_character().pos_abs();
     int const sr = u.unimpaired_range();
-    static tripoint_abs_ms player_prev_pos;
-    static int player_prev_range( 0 );
-    seen_cache_dirty |= player_prev_pos != p || sr != player_prev_range || camera_cache_dirty;
+    const auto observer = std::make_pair( p, sr );
+    seen_cache_dirty |= !previous_visibility_observer ||
+                        *previous_visibility_observer != observer || camera_cache_dirty;
     if( seen_cache_dirty ) {
         if( inbounds( p ) ) {
             build_seen_cache( get_bub( p ), zlev, sr );
         }
-        player_prev_pos = p;
-        player_prev_range = sr;
+        previous_visibility_observer = observer;
         camera_cache_dirty = true;
 #if defined(TILES)
         if( !test_mode ) {
@@ -12119,42 +12155,34 @@ void map::build_map_cache( const int zlev, bool skip_lightmap )
     // Detect character/NPC light changes reactively.
     // Covers equipment, effects, trade/dialogue mutations, and position changes.
     {
-        struct char_light_state {
-            float light;
-            tripoint_bub_ms pos;
-            bool operator==( const char_light_state &o ) const {
-                return light == o.light && pos == o.pos;
-            }
-            bool operator!=( const char_light_state &o ) const {
-                return !( *this == o );
-            }
-        };
-        auto compute = []( const Character & ch ) -> char_light_state {
+        CATA_PROFILE_SCOPE_NAMED( "map.character_light_cache" );
+        current_char_lights.clear();
+        auto record_light = [this]( const Character & ch ) {
             float light = ch.active_light();
-            if( ch.has_effect( effect_onfire ) )
-            {
+            if( ch.has_effect( effect_onfire ) ) {
                 light += 8.0f;
-            } else if( ch.has_effect( effect_haslight ) )
-            {
+            } else if( ch.has_effect( effect_haslight ) ) {
                 light += 4.0f;
             }
-            return { light, ch.pos_bub() };
+            // A non-emitting character cannot change the lightmap by moving.
+            // Still track all emitting characters so movement and extinction invalidate it.
+            if( light != 0.0f ) {
+                current_char_lights.push_back( { light, ch.pos_bub() } );
+            }
         };
 
-        static std::vector<char_light_state> cached_char_lights;
-        std::vector<char_light_state> current_lights;
-        current_lights.push_back( compute( get_player_character() ) );
+        record_light( get_player_character() );
         for( const npc &guy : g->all_npcs() ) {
-            current_lights.push_back( compute( guy ) );
+            record_light( guy );
         }
-        if( current_lights != cached_char_lights ) {
+        if( current_char_lights != cached_char_lights ) {
             for( const char_light_state &s : cached_char_lights ) {
                 set_lightmap_cache_dirty( s.pos.z() );
             }
-            for( const char_light_state &s : current_lights ) {
+            for( const char_light_state &s : current_char_lights ) {
                 set_lightmap_cache_dirty( s.pos.z() );
             }
-            cached_char_lights = std::move( current_lights );
+            cached_char_lights.swap( current_char_lights );
         }
     }
 

@@ -9,6 +9,7 @@
 #include <string_view>
 #include <type_traits>
 #include <unordered_map>
+#include <utility>
 
 #include "activity_type.h"
 #include "cached_options.h" // IWYU pragma: keep
@@ -49,12 +50,8 @@
 
 #if defined(SDL_SOUND)
     #include "sound_backend.h"
-    #include <thread>
-    #if defined(_WIN32) && !defined(_MSC_VER)
-        #include "mingw.thread.h"
-    #endif
-
-    #define dbg(x) DebugLog((x),D_SDL) << __FILE__ << ":" << __LINE__ << ": "
+    #include "melee_sound_queue.h"
+    #include "sdlsound.h"
 
     static int prev_hostiles = 0;
     static int previous_speed = 0;
@@ -792,6 +789,9 @@ void sounds::reset_sounds()
     recent_sounds.clear();
     sounds_since_last_turn.clear();
     sound_markers.clear();
+#if defined(SDL_SOUND)
+    sfx::clear_melee_sounds();
+#endif
 }
 
 void sounds::reset_markers()
@@ -1390,141 +1390,56 @@ void sfx::generate_gun_sound( const Character &source_arg, const item &firing )
     start_sfx_timestamp = std::chrono::high_resolution_clock::now();
 }
 
-namespace sfx
-{
-namespace
-{
-struct sound_thread {
-    sound_thread( const item &weapon, const tripoint_bub_ms &source, const tripoint_bub_ms &target,
-                  bool hit, bool targ_mon,
-                  const std::string &material );
-
-    bool hit;
-    bool targ_mon;
-    std::string material;
-
-    itype_id weapon_id;
-    skill_id weapon_skill;
-    int weapon_volume;
-    // volume and angle for calls to play_variant_sound
-    units::angle ang_src;
-    int vol_src;
-    int vol_targ;
-    units::angle ang_targ;
-
-    // Operator overload required for thread API.
-    void operator()() const;
-};
-} // namespace
-} // namespace sfx
-
 void sfx::generate_melee_sound( const item &weapon, const tripoint_bub_ms &source,
-                                const tripoint_bub_ms &target,
-                                bool hit, bool targ_mon,
+                                const tripoint_bub_ms &target, bool hit, bool targ_mon,
                                 std::string_view material )
 {
     if( test_mode ) {
         return;
     }
-    // If creating a new thread for each invocation is too much, we have to consider a thread
-    // pool or maybe a single thread that works continuously, but that requires a queue or similar
-    // to coordinate its work.
-    try {
-        std::thread the_thread( sound_thread( weapon, source, target, hit, targ_mon,
-                                              std::string( material ) ) );
-        try {
-            if( the_thread.joinable() ) {
-                the_thread.detach();
-            }
-        } catch( std::system_error &err ) {
-            dbg( D_ERROR ) << "Failed to detach melee sound thread: std::system_error: " << err.what();
-        }
-    } catch( std::system_error &err ) {
-        // not a big deal, just skip playing the sound.
-        dbg( D_ERROR ) << "Failed to create melee sound thread: std::system_error: " << err.what();
-    }
-}
-
-sfx::sound_thread::sound_thread( const item &weapon, const tripoint_bub_ms &source,
-                                 const tripoint_bub_ms &target,
-                                 const bool hit,
-                                 const bool targ_mon, const std::string &material )
-    : hit( hit )
-    , targ_mon( targ_mon )
-    , material( material )
-{
-    // This is function is run in the main thread.
+    process_melee_sounds();
     const int heard_volume = get_heard_volume( source );
-    npc *np = get_creature_tracker().creature_at<npc>( source );
-    const Character &you = np ? static_cast<Character &>( *np ) :
-                           dynamic_cast<Character &>( get_player_character() );
-    if( !you.is_npc() ) {
-        // sound comes from the same place as the player is, calculation of angle wouldn't work
-        ang_src = 0_degrees;
-        vol_src = heard_volume;
-        vol_targ = heard_volume;
-    } else {
-        ang_src = get_heard_angle( source );
-        vol_src = std::max( heard_volume - 30, 0 );
-        vol_targ = std::max( heard_volume - 20, 0 );
-    }
-    ang_targ = get_heard_angle( target );
-    weapon_id = weapon.typeId();
-    weapon_skill = weapon.is_null() ? skill_unarmed : weapon.melee_skill();
-    weapon_volume = !weapon.is_null() ? weapon.volume() / 250_ml : 0;
-}
-
-// Operator overload required for thread API.
-void sfx::sound_thread::operator()() const
-{
-    // This is function is run in a separate thread. One must be careful and not access game data
-    // that might change (e.g. g->u.weapon, the character could switch weapons while this thread
-    // runs).
-    std::this_thread::sleep_for( std::chrono::milliseconds( rng( 1, 2 ) ) );
-    const season_type seas = season_of_year( calendar::turn );
-    const std::string seas_str = season_str( seas );
-    const bool indoors = !is_creature_outside( get_player_character() );
-    const bool night = is_night( calendar::turn );
-
+    const npc *np = get_creature_tracker().creature_at<npc>( source );
+    const bool from_npc = np != nullptr;
+    const int weapon_volume = weapon.is_null() ? 0 : weapon.volume() / 250_ml;
+    const skill_id weapon_skill = weapon.is_null() ? skill_unarmed : weapon.melee_skill();
     std::string skill_variant;
-    std::string weapon_variant = weapon_id.str();
-
     if( weapon_skill == skill_bashing ) {
-        skill_variant = ( weapon_volume > 8 ) ? "big_bash" : "small_bash";
+        skill_variant = weapon_volume > 8 ? "big_bash" : "small_bash";
     } else if( weapon_skill == skill_cutting ) {
-        skill_variant = ( weapon_volume > 6 ) ? "big_cutting" : "small_cutting";
+        skill_variant = weapon_volume > 6 ? "big_cutting" : "small_cutting";
     } else if( weapon_skill == skill_stabbing ) {
-        skill_variant = ( weapon_volume > 4 ) ? "big_stabbing" : "small_stabbing";
+        skill_variant = weapon_volume > 4 ? "big_stabbing" : "small_stabbing";
     } else if( weapon_skill == skill_unarmed ) {
         skill_variant = "unarmed";
     } else {
         skill_variant = "default";
     }
 
-    if( has_exact_variant_sound( "melee_swing", weapon_variant, seas_str, indoors, night ) ) {
-        play_variant_sound( "melee_swing", weapon_variant, seas_str, indoors, night,
-                            vol_src, ang_src, 0.8, 1.2 );
-    } else {
-        play_variant_sound( "melee_swing", skill_variant, seas_str, indoors, night,
-                            vol_src, ang_src, 0.8, 1.2 );
+    // Capture all world context at the authoritative action, before scheduling.
+    const std::string season = season_str( season_of_year( calendar::turn ) );
+    const bool indoors = !is_creature_outside( get_player_character() );
+    const bool night = is_night( calendar::turn );
+    const std::string weapon_variant = weapon.typeId().str();
+    melee_sound_sequence sequence;
+    sequence.weapon_volume = weapon_volume;
+    sequence.target_monster = targ_mon;
+    sequence.swing = { "melee_swing", weapon_variant, season, indoors, night,
+                       from_npc ? std::max( heard_volume - 30, 0 ) : heard_volume,
+                       from_npc ? get_heard_angle( source ) : 0_degrees
+                     };
+    if( !has_exact_variant_sound( sequence.swing.id, weapon_variant, season, indoors, night ) ) {
+        sequence.swing.variant = skill_variant;
     }
-
     if( hit ) {
-        const int sleep_time = weapon_volume * ( targ_mon ? rng( 12, 16 ) : rng( 9, 12 ) );
-        std::string melee_hit_material = ( targ_mon &&
-                                           material == "steel" ) ? "melee_hit_metal" : "melee_hit_flesh";
-
-        if( has_exact_variant_sound( melee_hit_material, weapon_variant, seas_str, indoors, night ) ) {
-            std::this_thread::sleep_for( std::chrono::milliseconds( sleep_time ) );
-            play_variant_sound( melee_hit_material, weapon_variant, seas_str, indoors,
-                                night, vol_targ, ang_targ, 0.8, 1.2 );
-
-        } else {
-            std::this_thread::sleep_for( std::chrono::milliseconds( sleep_time ) );
-            play_variant_sound( melee_hit_material, skill_variant, seas_str, indoors,
-                                night, vol_targ, ang_targ, 0.8, 1.2 );
-        }
+        sequence.hit = sequence.swing;
+        sequence.hit->id = targ_mon && material == "steel" ? "melee_hit_metal" : "melee_hit_flesh";
+        sequence.hit->variant = has_exact_variant_sound( sequence.hit->id, weapon_variant,
+                                season, indoors, night ) ? weapon_variant : skill_variant;
+        sequence.hit->volume = from_npc ? std::max( heard_volume - 20, 0 ) : heard_volume;
+        sequence.hit->angle = get_heard_angle( target );
     }
+    queue_melee_sound( std::move( sequence ) );
 }
 
 void sfx::do_projectile_hit( const Creature &target )

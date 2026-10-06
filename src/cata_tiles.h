@@ -63,6 +63,7 @@ class memorized_tile;
 class monster;
 class nc_color;
 class pixel_minimap;
+class tile_lookup_frame;
 class vehicle;
 struct sprite_screen_bounds;
 struct tint_sprite_record;
@@ -138,13 +139,13 @@ class tile_lookup_res
 {
         // references are stored as pointers to support copy assignment of the class
         const std::string *_id;
-        tile_type *_tile;
+        const tile_type *_tile;
     public:
-        tile_lookup_res( const std::string &id, tile_type &tile ): _id( &id ), _tile( &tile ) {}
-        inline const std::string &id() {
+        tile_lookup_res( const std::string &id, const tile_type &tile ): _id( &id ), _tile( &tile ) {}
+        inline const std::string &id() const {
             return *_id;
         }
-        inline tile_type &tile() {
+        inline const tile_type &tile() const {
             return *_tile;
         }
 };
@@ -669,12 +670,6 @@ class cata_tiles
         find_tile_looks_like( const std::string &id, TILE_CATEGORY category, const std::string &variant,
                               int looks_like_jumps_limit = 10 ) const;
 
-        // this templated method is used only from it's own cpp file, so it's ok to declare it here
-        template<typename T>
-        std::optional<tile_lookup_res>
-        find_tile_looks_like_by_string_id( std::string_view id, TILE_CATEGORY category,
-                                           int looks_like_jumps_limit ) const;
-
         bool find_overlay_looks_like( bool male, const std::string &overlay, const std::string &variant,
                                       std::string &draw_id );
 
@@ -1183,6 +1178,9 @@ class cata_tiles
         // Consumers reach it via get_shared_variant_pass in sdltiles.h.
 #endif
         std::shared_ptr<const tileset> tileset_ptr;
+        // Borrowed only while draw() owns its stack-local query frame. The
+        // restoration guard also handles nested draws and exceptional exits.
+        tile_lookup_frame *lookup_frame_ = nullptr;
         // Platform-owned sprite descriptors are populated during mod loading.
         // Keep the bound descriptor revision alongside the renderer revisions so
         // a cached atlas cannot outlive a descriptor change.

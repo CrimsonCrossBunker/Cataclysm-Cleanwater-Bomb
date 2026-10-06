@@ -1,6 +1,7 @@
 #include "lightmap.h" // IWYU pragma: associated
 #include "shadowcasting.h" // IWYU pragma: associated
 
+#include <algorithm>
 #include <array>
 #include <bitset>
 #include <cmath>
@@ -30,6 +31,7 @@
 #include "line.h"
 #include "map.h"
 #include "map_iterator.h"
+#include "map_visibility.h"
 #include "mapdata.h"
 #include "messages.h"
 #include "monster.h"
@@ -249,66 +251,52 @@ bool map::build_vision_transparency_cache( int zlev )
 {
     CATA_PROFILE_SCOPE();
     level_cache &map_cache = get_cache( zlev );
-
-    // We copy the transparency_cache so we need to recalc if it's dirty
-    if( map_cache.transparency_cache_dirty.none() /*&& map_cache.vision_transparency_cache_dirty.none()*/ ) {
-        return false;
-    }
-
-    const cata::mdarray<float, point_bub_ms> &transparency_cache = map_cache.transparency_cache;
-    cata::mdarray<float, point_bub_ms> &vision_transparency_cache = map_cache.vision_transparency_cache;
-
-    // TODO: Should only copy if transparency_cache was dirty
-    memcpy( &vision_transparency_cache, &transparency_cache, sizeof( transparency_cache ) );
-
     const Character &player_character = get_player_character();
     const tripoint_bub_ms p = player_character.pos_bub();
     const bool is_player_z = p.z() == zlev;
-
-    bool dirty = false;
-
-    if( is_player_z ) {
-        // This segment handles vision when the player is crouching or prone. It only checks adjacent tiles.
-        // If you change this, also consider creature::sees and map::obstacle_coverage.
-        // TODO: Is fairly nonsense because it changes vision for everyone only (eg if you @ crouch behind the window W then the NPC N and monster M can't see each other bc the window is counted as opaque)
-        // .N.
-        // .@.
-        // #W#
-        // .M.
-        const bool is_crouching = player_character.is_crouching();
-        const bool low_profile = player_character.has_effect( effect_quadruped_full ) &&
-                                 player_character.is_running();
-        const bool is_prone = player_character.is_prone();
-        if( is_crouching || is_prone || low_profile ) {
-            for( const tripoint_bub_ms &loc : points_in_radius( p, 1 ) ) {
-                if( loc != p && coverage( loc ) >= 30 ) {
-                    // If we're crouching or prone behind an obstacle, we can't see past it.
-                    dirty |= vision_transparency_cache[loc.x()][loc.y()] != LIGHT_TRANSPARENCY_SOLID;
-                    vision_transparency_cache[loc.x()][loc.y()] = LIGHT_TRANSPARENCY_SOLID;
-                }
-            }
-        }
+    const bool low_profile = is_player_z && ( player_character.is_crouching() ||
+                             player_character.is_prone() ||
+                             ( player_character.has_effect( effect_quadruped_full ) &&
+                               player_character.is_running() ) );
+    const std::optional<tripoint_bub_ms> override_origin = is_player_z ?
+            std::make_optional( p ) : std::nullopt;
+    const bool observer_changed = override_origin != map_cache.vision_transparency_override_origin ||
+                                  low_profile != map_cache.vision_transparency_low_profile;
+    if( map_cache.transparency_cache_dirty.none() && !observer_changed ) {
+        return false;
     }
 
-    // This segment handles blocking vision through TRANSLUCENT flagged terrain.
-    // Traverse the submaps in order (else map::ter() calls get_submap each time)
+    const auto &transparency_cache = map_cache.transparency_cache;
+    auto &vision_transparency_cache = map_cache.vision_transparency_cache;
+    const bool rebuild_all = map_cache.transparency_cache_dirty.all();
+    if( rebuild_all ) {
+        memcpy( &vision_transparency_cache, &transparency_cache, sizeof( transparency_cache ) );
+    }
+
+    bool dirty = observer_changed;
+    // Only refresh changed submaps. A whole-level copy would erase TRANSLUCENT
+    // and observer adjustments on submaps that are not being rebuilt.
     for( int smx = 0; smx < my_MAPSIZE; ++smx ) {
         for( int smy = 0; smy < my_MAPSIZE; ++smy ) {
+            if( !map_cache.transparency_cache_dirty[smx * MAPSIZE + smy] ) {
+                continue;
+            }
             const submap *cur_submap = get_submap_at_grid( tripoint_rel_sm{smx, smy, zlev} );
             if( cur_submap == nullptr ) {
                 debugmsg( "Tried to build transparency cache at (%d,%d,%d) but the submap is not loaded", smx, smy,
                           zlev );
                 continue;
             }
-            if( !map_cache.transparency_cache_dirty[smx * MAPSIZE + smy] ) {
-                continue;
-            }
-            for( int smi = 0; smi < SEEX; smi++ ) {
-                for( int smj = 0; smj < SEEY; smj++ ) {
+            for( int smi = 0; smi < SEEX; ++smi ) {
+                const int i = smi + smx * SEEX;
+                const int j0 = smy * SEEY;
+                if( !rebuild_all ) {
+                    std::copy_n( &transparency_cache[i][j0], SEEY, &vision_transparency_cache[i][j0] );
+                }
+                for( int smj = 0; smj < SEEY; ++smj ) {
                     if( cur_submap->get_ter( point_sm_ms{smi, smj} ).obj().has_flag(
                             ter_furn_flag::TFLAG_TRANSLUCENT ) ) {
-                        const int i = smi + ( smx * SEEX );
-                        const int j = smj + ( smy * SEEY );
+                        const int j = smj + j0;
                         dirty |= vision_transparency_cache[i][j] != LIGHT_TRANSPARENCY_SOLID;
                         vision_transparency_cache[i][j] = LIGHT_TRANSPARENCY_SOLID;
                     }
@@ -317,12 +305,41 @@ bool map::build_vision_transparency_cache( int zlev )
         }
     }
 
-    // The tile player is standing on should always be visible
-    // Shouldn't this be handled in the player's seen cache instead??
+    // Posture can cover adjacent tiles across a submap boundary. Restore both
+    // the previous and current observer regions before applying the new posture.
+    if( !rebuild_all ) {
+        auto restore_region = [&]( const tripoint_bub_ms & origin ) {
+            for( const tripoint_bub_ms &loc : points_in_radius( origin, 1 ) ) {
+                const float value = ter( loc )->has_flag( ter_furn_flag::TFLAG_TRANSLUCENT ) ?
+                                    LIGHT_TRANSPARENCY_SOLID : transparency_cache[loc.x()][loc.y()];
+                dirty |= vision_transparency_cache[loc.x()][loc.y()] != value;
+                vision_transparency_cache[loc.x()][loc.y()] = value;
+            }
+        };
+        if( map_cache.vision_transparency_override_origin ) {
+            restore_region( *map_cache.vision_transparency_override_origin );
+        }
+        if( override_origin && override_origin != map_cache.vision_transparency_override_origin ) {
+            restore_region( *override_origin );
+        }
+    }
+
+    // Keep the existing observer-specific coverage rule. These adjustments
+    // affect vision, while the base transparency cache remains suitable for light.
+    if( low_profile ) {
+        for( const tripoint_bub_ms &loc : points_in_radius( p, 1 ) ) {
+            if( loc != p && coverage( loc ) >= 30 ) {
+                dirty |= vision_transparency_cache[loc.x()][loc.y()] != LIGHT_TRANSPARENCY_SOLID;
+                vision_transparency_cache[loc.x()][loc.y()] = LIGHT_TRANSPARENCY_SOLID;
+            }
+        }
+    }
     if( is_player_z && inbounds( p ) ) {
         vision_transparency_cache[p.x()][p.y()] = LIGHT_TRANSPARENCY_OPEN_AIR;
     }
 
+    map_cache.vision_transparency_override_origin = override_origin;
+    map_cache.vision_transparency_low_profile = low_profile;
     map_cache.transparency_cache_dirty.reset();
     return dirty;
 }
@@ -494,6 +511,8 @@ void map::generate_lightmap( const int zlev )
         return;
     }
     map_cache.lightmap_dirty = false;
+    // Apparent visibility depends on the rebuilt lighting, even if sight is unchanged.
+    invalidate_visibility_cache();
 
     auto &lm = map_cache.lm;
     auto &sm = map_cache.sm;
@@ -905,14 +924,26 @@ float map::light_transparency( const tripoint_bub_ms &p ) const
 
 // End of tile light/transparency
 
-map::apparent_light_info map::apparent_light_helper( const level_cache &map_cache,
-        const tripoint_bub_ms &p )
+namespace
 {
-    avatar const &u = get_avatar();
-    const int dist = rl_dist( u.pos_bub(), p );
+// This snapshot belongs to one synchronous grid calculation. It is never kept
+// across observer movement, perception changes or a map-cache invalidation.
+struct light_observer {
+    const avatar &character;
+    const tripoint_bub_ms position;
+    const int unimpaired_range;
+
+    explicit light_observer( const avatar &u ) :
+        character( u ), position( u.pos_bub() ), unimpaired_range( u.unimpaired_range() ) {}
+};
+
+map::apparent_light_info apparent_light_helper( const level_cache &map_cache,
+        const tripoint_bub_ms &p, const light_observer &observer, const int dist )
+{
+    const avatar &u = observer.character;
     const float abs_vis =
         std::max( map_cache.seen_cache[p.x()][p.y()], map_cache.camera_cache[p.x()][p.y()] );
-    const float vis = dist > u.unimpaired_range() ? map_cache.camera_cache[p.x()][p.y()] : abs_vis;
+    const float vis = dist > observer.unimpaired_range ? map_cache.camera_cache[p.x()][p.y()] : abs_vis;
     const bool obstructed = vis <= LIGHT_TRANSPARENCY_SOLID + 0.1;
     const bool abs_obstructed = abs_vis <= LIGHT_TRANSPARENCY_SOLID + 0.1;
 
@@ -955,8 +986,8 @@ map::apparent_light_info map::apparent_light_helper( const level_cache &map_cach
         four_quadrants seen_from( 0 );
         // Hoist loop-invariant player position and vision range out of the
         // 8-neighbour loop (player does not move within a single helper call).
-        const point_bub_ms u_xy = u.pos_bub().xy();
-        const int u_range = u.unimpaired_range();
+        const point_bub_ms u_xy = observer.position.xy();
+        const int u_range = observer.unimpaired_range;
         for( const offset_and_quadrants &oq : adjacent_offsets ) {
             const point_bub_ms neighbour = p.xy() + oq.offset;
 
@@ -992,25 +1023,22 @@ map::apparent_light_info map::apparent_light_helper( const level_cache &map_cach
     return { obstructed, abs_obstructed, apparent_light };
 }
 
-lit_level map::apparent_light_at( const tripoint_bub_ms &p,
-                                  const visibility_variables &cache ) const
+bool clairvoyance_applies( const map &here, const tripoint_bub_ms &p,
+                           const visibility_variables &cache, const int dist )
 {
-    Character &player_character = get_player_character();
-    const int dist = rl_dist( player_character.pos_bub(), p );
+    return ( cache.u_clairvoyance > 0 && dist <= cache.u_clairvoyance ) ||
+           ( cache.clairvoyance_field && here.field_at( p ).find_field( *cache.clairvoyance_field ) );
+}
 
-    // Clairvoyance overrides everything.
-    if( cache.u_clairvoyance > 0 && dist <= cache.u_clairvoyance ) {
-        return lit_level::BRIGHT;
-    }
-    if( cache.clairvoyance_field && field_at( p ).find_field( *cache.clairvoyance_field ) ) {
-        return lit_level::BRIGHT;
-    }
-    const level_cache &map_cache = get_cache_ref( p.z() );
-    const apparent_light_info a = apparent_light_helper( map_cache, p );
+lit_level apparent_light_at( const level_cache &map_cache, const tripoint_bub_ms &p,
+                             const visibility_variables &cache, const light_observer &observer,
+                             const int dist )
+{
+    const map::apparent_light_info a = apparent_light_helper( map_cache, p, observer, dist );
 
     // Unimpaired range is an override to strictly limit vision range based on various conditions,
     // but the player can still see light sources
-    if( dist > player_character.unimpaired_range() && map_cache.camera_cache[p.x()][p.y()] == 0.0 ) {
+    if( dist > observer.unimpaired_range && map_cache.camera_cache[p.x()][p.y()] == 0.0 ) {
         if( !a.abs_obstructed && map_cache.sm[p.x()][p.y()] > 0.0 ) {
             return lit_level::BRIGHT_ONLY;
         }
@@ -1038,6 +1066,59 @@ lit_level map::apparent_light_at( const tripoint_bub_ms &p,
         return lit_level::LOW;
     } else {
         return lit_level::BLANK;
+    }
+}
+
+} // namespace
+
+map::apparent_light_info map::apparent_light_helper( const level_cache &map_cache,
+        const tripoint_bub_ms &p )
+{
+    const light_observer observer( get_avatar() );
+    return ::apparent_light_helper( map_cache, p, observer, rl_dist( observer.position, p ) );
+}
+
+lit_level map::apparent_light_at( const tripoint_bub_ms &p,
+                                  const visibility_variables &cache ) const
+{
+    const light_observer observer( get_avatar() );
+    const int dist = rl_dist( observer.position, p );
+    // Preserve the override's early return, including avoiding a lazy cache
+    // allocation for a clairvoyant query on an otherwise uncached level.
+    if( clairvoyance_applies( *this, p, cache, dist ) ) {
+        return lit_level::BRIGHT;
+    }
+    return ::apparent_light_at( get_cache_ref( p.z() ), p, cache, observer, dist );
+}
+
+void rebuild_visibility_cache_grid( const map &here, level_cache &map_cache, const int zlev,
+                                    const visibility_variables &variables,
+                                    const cata::mdarray<const submap *, point_bub_sm> &field_submaps,
+                                    cata::mdarray<int, point_bub_sm> &sm_squares_seen )
+{
+    CATA_PROFILE_SCOPE();
+    const light_observer observer( get_avatar() );
+    const auto has_clairvoyant_field = [&]( const tripoint_bub_ms & p ) {
+        const submap *const sm = field_submaps[p.x() / SEEX][p.y() / SEEY];
+        // Preserve the point-query fallback for small maps and unloaded cells,
+        // including its existing null-field and diagnostic behavior.
+        const field &fields = sm != nullptr ?
+                              sm->get_field( point_sm_ms( p.x() % SEEX, p.y() % SEEY ) ) :
+                              here.field_at( p );
+        return fields.find_field( *variables.clairvoyance_field ) != nullptr;
+    };
+    for( int x = 0; x < MAPSIZE_X; ++x ) {
+        for( int y = 0; y < MAPSIZE_Y; ++y ) {
+            const tripoint_bub_ms p( x, y, zlev );
+            const int dist = rl_dist( observer.position, p );
+            const bool clairvoyant = ( variables.u_clairvoyance > 0 &&
+                                       dist <= variables.u_clairvoyance ) ||
+                                     ( variables.clairvoyance_field && has_clairvoyant_field( p ) );
+            const lit_level ll = clairvoyant ? lit_level::BRIGHT :
+                                 ::apparent_light_at( map_cache, p, variables, observer, dist );
+            map_cache.visibility_cache[x][y] = ll;
+            sm_squares_seen[x / SEEX][y / SEEY] += ( ll == lit_level::BRIGHT || ll == lit_level::LIT );
+        }
     }
 }
 
@@ -1274,6 +1355,8 @@ castLightAll<fragment_cloud, fragment_cloud, shrapnel_calc, shrapnel_check,
 void map::build_seen_cache( const tripoint_bub_ms &origin, const int target_z, int extension_range,
                             bool cumulative, bool camera, int penalty )
 {
+    // Notify consumers of both direct sight and camera coverage changes.
+    invalidate_visibility_cache();
     level_cache &map_cache = get_cache( target_z );
     using mdarray = cata::mdarray<float, point_bub_ms>;
     mdarray &transparency_cache = map_cache.vision_transparency_cache;

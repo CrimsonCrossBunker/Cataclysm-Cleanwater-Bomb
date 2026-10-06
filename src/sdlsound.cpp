@@ -12,6 +12,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <random>
 #include <ostream>
 #include <stdexcept>
 #include <string>
@@ -28,6 +29,8 @@
 #include "init.h"
 #include "messages.h"
 #include "music.h"
+#include "melee_sound_queue.h"
+#include "profiling.h"
 #include "options.h"
 #include "path_info.h"
 #include "rng.h"
@@ -337,6 +340,7 @@ static cata_path current_soundpack_path;
 static std::unordered_map<std::string, int> unique_paths;
 static std::unordered_map<std::string, int> direct_sfx_paths;
 static sfx_resources_t sfx_resources;
+static sfx::melee_sound_queue melee_sounds;
 static std::vector<sfx_args> sfx_preload;
 
 bool sounds::sound_enabled = false;
@@ -391,6 +395,7 @@ bool init_sound()
 }
 void shutdown_sound()
 {
+    sfx::clear_melee_sounds();
     sfx_resources.resource.clear();
     sfx_resources.sound_effects.clear();
     direct_sfx_paths.clear();
@@ -807,7 +812,7 @@ void sfx::playlist_registry_erase( const std::string_view id )
 // May still return `nullptr`
 static const sound_effect *find_random_effect( const std::string &id, const std::string &variant,
         const std::string &season, const std::optional<bool> &is_indoors,
-        const std::optional<bool> &is_night )
+        const std::optional<bool> &is_night, std::minstd_rand0 *presentation_rng = nullptr )
 {
     const std::vector<sound_effect> *iter = sfx_resources.sound_effects.find( id, variant, season,
                                             is_indoors,
@@ -816,6 +821,11 @@ static const sound_effect *find_random_effect( const std::string &id, const std:
         return nullptr;
     }
 
+    if( presentation_rng ) {
+        const size_t index = std::uniform_int_distribution<size_t>( 0, iter->size() - 1 )(
+                                 *presentation_rng );
+        return &( *iter )[index];
+    }
     return &random_entry_ref( *iter );
 }
 
@@ -889,10 +899,10 @@ void sfx::play_variant_sound( std::string_view id, std::string_view variant,
     }
 }
 
-void sfx::play_variant_sound( std::string_view id, std::string_view variant,
-                              std::string_view season, const std::optional<bool> &is_indoors,
-                              const std::optional<bool> &is_night, int volume, units::angle angle,
-                              double pitch_min, double pitch_max )
+static void play_positional_variant_sound( std::string_view id, std::string_view variant,
+        std::string_view season, const std::optional<bool> &is_indoors,
+        const std::optional<bool> &is_night, int volume, units::angle angle,
+        double pitch_min, double pitch_max, std::minstd_rand0 *presentation_rng )
 {
     if( test_mode ) {
         return;
@@ -904,7 +914,7 @@ void sfx::play_variant_sound( std::string_view id, std::string_view variant,
         return;
     }
     const sound_effect *eff = find_random_effect( std::string( id ), std::string( variant ),
-                              std::string( season ), is_indoors, is_night );
+                              std::string( season ), is_indoors, is_night, presentation_rng );
     if( eff == nullptr ) {
         return;
     }
@@ -918,11 +928,52 @@ void sfx::play_variant_sound( std::string_view id, std::string_view variant,
                   get_option<int>( "SOUND_EFFECT_VOLUME" ) * volume / ( 100 * 100 );
     opts.angle_deg = static_cast<int>( to_degrees( angle ) );
     opts.positional = true;
-    opts.pitch = is_pitched ? static_cast<float>( rng_float( pitch_min, pitch_max ) ) : 1.0f;
+    opts.pitch = 1.0f;
+    if( is_pitched ) {
+        opts.pitch = static_cast<float>( presentation_rng ?
+                                         std::uniform_real_distribution<double>( pitch_min, pitch_max )( *presentation_rng ) :
+                                         rng_float( pitch_min, pitch_max ) );
+    }
     sound_backend::play_oneshot( effect_to_play, opts );
     if( cata_mp::is_hosting() ) {
         cata_mp::host_queue_sfx( std::string( id ), std::string( variant ), volume );
     }
+}
+
+void sfx::play_variant_sound( std::string_view id, std::string_view variant,
+                              std::string_view season, const std::optional<bool> &is_indoors,
+                              const std::optional<bool> &is_night, int volume, units::angle angle,
+                              double pitch_min, double pitch_max )
+{
+    play_positional_variant_sound( id, variant, season, is_indoors, is_night, volume, angle,
+                                   pitch_min, pitch_max, nullptr );
+}
+
+void sfx::queue_melee_sound( melee_sound_sequence sequence )
+{
+    if( !test_mode && sound_init_success && sounds::sound_enabled ) {
+        CATA_PROFILE_SCOPE_NAMED( "enqueue_melee_sound" );
+        melee_sounds.enqueue( std::move( sequence ), melee_sound_queue::clock::now() );
+    }
+}
+
+void sfx::process_melee_sounds()
+{
+    if( melee_sounds.empty() || test_mode ) {
+        return;
+    }
+    CATA_PROFILE_SCOPE_NAMED( "process_melee_sounds" );
+    const melee_sound_queue::clock::time_point now = melee_sound_queue::clock::now();
+    while( std::optional<queued_sound> sound = melee_sounds.pop_due( now ) ) {
+        std::minstd_rand0 presentation_rng( sound->random_seed );
+        play_positional_variant_sound( sound->id, sound->variant, sound->season, sound->indoors,
+                                       sound->night, sound->volume, sound->angle, 0.8, 1.2, &presentation_rng );
+    }
+}
+
+void sfx::clear_melee_sounds()
+{
+    melee_sounds.clear();
 }
 
 void sfx::play_ambient_variant_sound( std::string_view id, std::string_view variant,

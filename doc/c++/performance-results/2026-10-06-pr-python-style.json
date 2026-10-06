@@ -1,0 +1,118 @@
+{
+  "schema": 1,
+  "batch": "pr-python-style",
+  "saved_utc": "2026-10-06T00:33:28.929257+00:00",
+  "baseline_commit": "89ba19803c6a7c8f118b7343bc678fd35c4c2eb9",
+  "purpose": "Resolve Flake8 failures in the three Python tools introduced by this performance PR without changing their behavior.",
+  "classification": "Developer-tool formatting only; no speedup claim.",
+  "ci_failure": {
+    "workflow": "Flake8 Python linting",
+    "run_id": 37393652361,
+    "job_id": 112044354302,
+    "url": "https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/actions/runs/37393652361",
+    "flake8_version": "7.0.0",
+    "diagnostic_count": 82,
+    "files": {
+      "tools/agent/test_tracy_cmake.py": 8,
+      "tools/perf/analyze_action_phases.py": 47,
+      "tools/perf/test_analyze_action_phases.py": 27
+    },
+    "errors": "E501 long lines and W503 operator continuation"
+  },
+  "implementation": "Reflow calls, comprehensions, imports and long literal strings; preserve evaluated strings and module docstrings, CLI arguments and report values. No lint exemptions or repository dependency changes.",
+  "semantic_equality": {
+    "method": "ast.dump(ast.parse(source), include_attributes=False) is equal before/after for all3 files, including literal values and docstrings.",
+    "sources": {
+      "tools/agent/test_tracy_cmake.py": {
+        "before_sha256": "e474b8d062cd4270537b6db7b1100dd17bf499b95aab54fcb3c12b9f28953444",
+        "candidate_sha256": "1a494d1bdd494ec7ebc816c91b26a8900c30a11cae2f0cc676a71ee08d6371a9",
+        "ast_equal": true
+      },
+      "tools/perf/analyze_action_phases.py": {
+        "before_sha256": "020bb28b8b076534148a98cb80af0677cfb9390e9a071d43463f47af6d4ac9f0",
+        "candidate_sha256": "8b6d3fee130fd631a71a6240ee90b180953bafda32b5e6812fef71a8c33a2386",
+        "ast_equal": true
+      },
+      "tools/perf/test_analyze_action_phases.py": {
+        "before_sha256": "73614dc64b636e4585f0ff089514b526c65884899eaa0475dbbb7cedfffc4abe",
+        "candidate_sha256": "e3f51af6c43ab44f435fff16f1685edb38f6e0a6bce52149c02e2f218f68bc10",
+        "ast_equal": true
+      }
+    }
+  },
+  "validation": {
+    "python-lint": {
+      "command": [
+        "make",
+        "python-check"
+      ],
+      "exit": 0,
+      "elapsed_s": 5.740800808998756,
+      "stdout": "git ls-files -z -- '*.py' ':!obj-lua' ':!obj-lua/**' | xargs -0 flake8\n",
+      "stderr": ""
+    },
+    "phase-tests": {
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tools/perf",
+        "-p",
+        "test_*.py"
+      ],
+      "exit": 0,
+      "elapsed_s": 0.07552959202439524,
+      "stdout": "",
+      "stderr": "....................\n----------------------------------------------------------------------\nRan 20 tests in 0.003s\n\nOK\n"
+    },
+    "tracy-cmake-tests": {
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tools/agent",
+        "-p",
+        "test_tracy_cmake.py"
+      ],
+      "exit": 0,
+      "elapsed_s": 2.9212803350237664,
+      "stdout": "",
+      "stderr": ".....\n----------------------------------------------------------------------\nRan 5 tests in 2.861s\n\nOK\n"
+    }
+  },
+  "tool_environment": {
+    "location": "/tmp/ccb-pr-python-style-20261006",
+    "versions": {
+      "flake8": "7.0.0",
+      "pycodestyle": "2.11.1",
+      "pyflakes": "3.2.0",
+      "black": "25.9.0",
+      "autopep8": "2.0.4"
+    },
+    "installation": "Temporary isolated virtual environment only; no project or system dependency mutation.",
+    "format_policy": "79 characters with repository W503 policy; equivalent strings use implicit literal concatenation."
+  },
+  "evidence_root": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/pr-python-style-20261006",
+  "evidence_sha256": {
+    "ast-and-format-proof.json": "4976cf026f387b3928e4405b9b60f31c6b554f91605ccfd9c4fb05619f10a734",
+    "validation.json": "3abe995bf88fef215d0d6cb3d9ceebe14ea80c0527cc40dc5995a168af1d7157"
+  },
+  "native_evidence_reuse": "Native source and build inputs are unchanged from the accepted batch22 gate: Tiles build and22cases/1723assertions. Native builds or gameplay are not repeated for Python formatting.",
+  "limitations": [
+    "Final remote CI still needs to run after the new push; earlier draft workflow success alone is not full game acceptance.",
+    "Batch22 actual Tiles performance and save-equivalence trials remain pending.",
+    "No new production behavior, threading or performance changes in this cleanup."
+  ],
+  "documentation_impact": "Developer validation record only.",
+  "related_ccb_docs_pr": null,
+  "affected_documentation_ids": [
+    "cpp-performance",
+    "validation.quickstart"
+  ],
+  "generated_reference_impact": "None",
+  "next_exact_action": "Publish this lint fix to draft PR967 and verify its remote head and affected CI status; keep the native lighting runtime comparison pending for fresh paired carrier trials."
+}

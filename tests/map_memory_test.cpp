@@ -1,4 +1,9 @@
 #include <bitset>
+#include <lightmap.h>
+#include <array>
+#include <functional>
+#include <map>
+#include <optional>
 #include <cstddef>
 #include <memory>
 #include <sstream>
@@ -15,6 +20,7 @@
 #include "lru_cache.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "map_helpers_tests.h"
 #include "map_memory.h"
 #include "map_scale_constants.h"
 #include "mapdata.h"
@@ -23,6 +29,7 @@
 #include "player_helpers.h"
 #include "point.h"
 #include "type_id.h"
+#include "uistate.h"
 #include "weather_type.h"
 
 #if defined(TILES)
@@ -232,6 +239,176 @@ TEST_CASE( "map_memory_refreshes_visibility_after_transparency_changes", "[map_m
     CHECK( you.get_memorized_tile( target_abs ).get_ter_id() == ter_t_floor.str() );
 }
 
+TEST_CASE( "map_memory_refreshes_visibility_dependencies", "[map_memory][vision]" )
+{
+    clear_avatar();
+    clear_map();
+    scoped_weather_override weather_clear( WEATHER_CLEAR );
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms original_position = you.pos_bub( here );
+    const time_point original_time = calendar::turn;
+    on_out_of_scope restore_player( [&]() {
+        you.remove_effect( efftype_id( "blind" ) );
+        you.recalc_sight_limits();
+        you.setpos( here, original_position );
+        set_time( original_time );
+    } );
+    set_time( calendar::turn_zero + 12_hours );
+    you.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
+    const tripoint_bub_ms target( 64, 60, 0 );
+    const tripoint_abs_ms target_abs = here.get_abs( target );
+    here.ter_set( target, ter_t_floor );
+    const auto target_is_clear = [&]() {
+        return here.get_visibility( here.get_cache_ref( 0 ).visibility_cache[target.x()][target.y()],
+                                    here.get_visibility_variables_cache() ) == visibility_type::CLEAR;
+    };
+
+    SECTION( "loss and recovery of sight without movement" ) {
+        here.update_map_memory( you );
+        REQUIRE( target_is_clear() );
+        you.clear_map_memory();
+        you.add_effect( efftype_id( "blind" ), 1_turns );
+        you.recalc_sight_limits();
+        here.update_map_memory( you );
+        CHECK_FALSE( target_is_clear() );
+        CHECK_FALSE( you.has_memory_at( target_abs ) );
+        you.remove_effect( efftype_id( "blind" ) );
+        you.recalc_sight_limits();
+        here.update_map_memory( you );
+        CHECK( target_is_clear() );
+        CHECK( you.get_memorized_tile( target_abs ).get_ter_id() == ter_t_floor.str() );
+    }
+    SECTION( "light source changes without movement" ) {
+        set_time( calendar::turn_zero );
+        here.update_map_memory( you );
+        REQUIRE_FALSE( target_is_clear() );
+        you.clear_map_memory();
+        here.ter_set( target, ter_str_id( "t_utility_light" ) );
+        here.update_map_memory( you );
+        CHECK( target_is_clear() );
+        CHECK( you.get_memorized_tile( target_abs ).get_ter_id() == "t_utility_light" );
+        here.ter_set( target, ter_t_floor );
+        here.update_map_memory( you );
+        CHECK_FALSE( target_is_clear() );
+        CHECK( you.get_memorized_tile( target_abs ).get_ter_id() == "t_utility_light" );
+    }
+    SECTION( "natural light classification changes without an explicit map invalidation" ) {
+        here.update_map_memory( you );
+        const int daylight = here.get_visibility_variables_cache().g_light_level;
+        calendar::turn = calendar::turn_zero;
+        g->reset_light_level();
+        REQUIRE( static_cast<int>( g->light_level( 0 ) ) != daylight );
+        here.update_map_memory( you );
+        CHECK( here.get_visibility_variables_cache().g_light_level ==
+               static_cast<int>( g->light_level( 0 ) ) );
+    }
+    SECTION( "clairvoyant field changes behind a wall" ) {
+        for( int y = 0; y < MAPSIZE_Y; ++y ) {
+            here.ter_set( tripoint_bub_ms( 61, y, 0 ), ter_t_wall );
+        }
+        here.update_map_memory( you );
+        REQUIRE_FALSE( target_is_clear() );
+        you.clear_map_memory();
+        const field_type_id clairvoyant( "fd_clairvoyant" );
+        REQUIRE( here.add_field( target, clairvoyant, 1 ) );
+        here.update_map_memory( you );
+        CHECK( target_is_clear() );
+        CHECK( you.get_memorized_tile( target_abs ).get_ter_id() == ter_t_floor.str() );
+        here.delete_field( target, clairvoyant );
+        here.update_map_memory( you );
+        CHECK_FALSE( target_is_clear() );
+    }
+}
+
+TEST_CASE( "map_memory_preserves_clean_terrain_and_refreshes_connections", "[map_memory][vision]" )
+{
+    clear_avatar();
+    clear_map();
+    scoped_weather_override weather_clear( WEATHER_CLEAR );
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms original_position = you.pos_bub( here );
+    const time_point original_time = calendar::turn;
+    on_out_of_scope restore_player( [&]() {
+        you.setpos( here, original_position );
+        set_time( original_time );
+    } );
+    set_time( calendar::turn_zero + 12_hours );
+    you.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
+    const tripoint_bub_ms target( 64, 60, 0 );
+    const tripoint_abs_ms target_abs = here.get_abs( target );
+    you.clear_map_memory();
+
+    SECTION( "clean non-connecting memory is retained and real changes are recorded" ) {
+        REQUIRE( ter_t_grass->connect_to_groups.none() );
+        // Ensure fresh memory even if a preceding test already left grass here.
+        REQUIRE( here.ter_set( target, ter_t_wall ) );
+        REQUIRE( here.ter_set( target, ter_t_grass ) );
+        REQUIRE( here.memory_cache_ter_is_dirty( target ) );
+        here.update_map_memory( you );
+        const memorized_tile before = you.get_memorized_tile( target_abs );
+        REQUIRE( before.get_ter_id() == ter_t_grass.str() );
+        REQUIRE_FALSE( here.memory_cache_ter_is_dirty( target ) );
+        here.update_map_memory( you );
+        const memorized_tile &after = you.get_memorized_tile( target_abs );
+        CHECK( after.get_ter_id() == before.get_ter_id() );
+        CHECK( after.get_ter_subtile() == before.get_ter_subtile() );
+        CHECK( after.get_ter_rotation() == before.get_ter_rotation() );
+        CHECK( after.symbol == before.symbol );
+        here.ter_set( target, ter_t_floor );
+        here.update_map_memory( you );
+        CHECK( you.get_memorized_tile( target_abs ).get_ter_id() == ter_t_floor.str() );
+    }
+
+    SECTION( "clean connecting terrain follows neighbour changes without a frame" ) {
+        REQUIRE( ter_t_wall->connect_to_groups.any() );
+        here.ter_set( target, ter_t_wall );
+        here.update_map_memory( you );
+        const memorized_tile before = you.get_memorized_tile( target_abs );
+        REQUIRE( before.get_ter_id() == ter_t_wall.str() );
+        REQUIRE_FALSE( here.memory_cache_ter_is_dirty( target ) );
+        const tripoint_bub_ms neighbour = target + tripoint::south;
+        here.ter_set( neighbour, ter_t_wall );
+        REQUIRE_FALSE( here.memory_cache_ter_is_dirty( target ) );
+        here.update_map_memory( you );
+        int subtile = 0;
+        int rotation = 0;
+        map::get_connect_values( target, subtile, rotation,
+                                 ter_t_wall->connect_to_groups, ter_t_wall->rotate_to_groups, {} );
+        const memorized_tile &connected = you.get_memorized_tile( target_abs );
+        CHECK( connected.get_ter_subtile() == subtile );
+        CHECK( connected.get_ter_rotation() == rotation );
+        CHECK( connected.get_ter_subtile() != before.get_ter_subtile() );
+        here.ter_set( neighbour, ter_t_grass );
+        here.update_map_memory( you );
+        CHECK( you.get_memorized_tile( target_abs ).get_ter_subtile() == before.get_ter_subtile() );
+        CHECK( you.get_memorized_tile( target_abs ).get_ter_rotation() == before.get_ter_rotation() );
+    }
+}
+
+BENCHMARK_TEST_CASE( "unchanged_map_memory_refresh", "[map_memory][vision][map_cache]" )
+{
+    clear_avatar();
+    clear_map();
+    scoped_weather_override weather_clear( WEATHER_CLEAR );
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms original_position = you.pos_bub( here );
+    const time_point original_time = calendar::turn;
+    on_out_of_scope restore_player( [&]() {
+        you.setpos( here, original_position );
+        set_time( original_time );
+    } );
+    set_time( calendar::turn_zero + 12_hours );
+    you.setpos( here, tripoint_bub_ms( 60, 60, 0 ) );
+    you.clear_map_memory();
+    here.update_map_memory( you );
+    BENCHMARK( "unchanged daytime map memory update" ) {
+        here.update_map_memory( you );
+    };
+}
+
 TEST_CASE( "ascii_map_memory_survives_simulation_and_decoration_updates",
            "[map_memory][vision][ascii_regression]" )
 {
@@ -288,6 +465,36 @@ TEST_CASE( "ascii_map_memory_survives_simulation_and_decoration_updates",
         check_grass_memory();
     }
 
+    SECTION( "mid_step_memorizes_before_the_next_input_frame" ) {
+        restore_on_out_of_scope restore_screenshot( g->queue_screenshot );
+        restore_on_out_of_scope restore_menu( uistate.open_menu );
+        uistate.open_menu.reset();
+        const bool screenshot_pending = GENERATE( false, true );
+        const bool animations_enabled = GENERATE( false, true );
+        override_option animation_option( "ANIMATIONS", animations_enabled ? "true" : "false" );
+        g->queue_screenshot = screenshot_pending;
+        INFO( "immediate screenshot frame: " << screenshot_pending );
+        INFO( "input animations enabled: " << animations_enabled );
+        REQUIRE_FALSE( you.has_destination() );
+        REQUIRE_FALSE( you.has_destination_activity() );
+
+        tripoint_bub_ms last_memorized_pos = p - tripoint::east;
+        REQUIRE( you.get_memorized_tile( abs_p ).symbol == 0 );
+        g->render_mid_step( you, here, last_memorized_pos );
+        CHECK( last_memorized_pos == p );
+        check_grass_memory();
+
+        // No input or rendered frame may be required to retain the grass from
+        // an intermediate step that is already hidden at the next position.
+        you.setpos( here, p + tripoint::east * 20, false );
+        g->render_mid_step( you, here, last_memorized_pos );
+        CHECK( last_memorized_pos == you.pos_bub( here ) );
+        const level_cache &cache = here.access_cache( p.z() );
+        REQUIRE( here.get_visibility( cache.visibility_cache[p.x()][p.y()],
+                                      here.get_visibility_variables_cache() ) != visibility_type::CLEAR );
+        check_grass_memory();
+    }
+
 #if defined(TILES) || defined(HEADLESS)
     SECTION( "render_then_sim_then_render_keeps_newly_seen_grass" ) {
         // These test backends can create windows without a real terminal.
@@ -301,7 +508,7 @@ TEST_CASE( "ascii_map_memory_survives_simulation_and_decoration_updates",
         if( had_terrain_memory ) {
             you.memorize_terrain( abs_p, ter_t_grass.str(), 0, 0 );
         }
-        // render_mid_step redraws before calling update_map_memory.
+        // An immediate screenshot or route frame can draw before map-memory maintenance.
         memorize_ascii();
         REQUIRE( you.get_memorized_tile( abs_p ).symbol == grass_symbol );
         REQUIRE_FALSE( here.memory_cache_ter_is_dirty( p ) );
@@ -488,4 +695,61 @@ TEST_CASE( "shift_map_memory_bitset_cache" )
             }
         }
     }
+}
+
+TEST_CASE( "mid_step_visibility_prepares_dirty_lightmap_without_movement",
+           "[vision][map][cache][map_memory]" )
+{
+    clear_avatar();
+    clear_map();
+    scoped_weather_override weather_clear( WEATHER_CLEAR );
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms old_pos = you.pos_bub( here );
+    const time_point old_time = calendar::turn;
+    restore_on_out_of_scope restore_screenshot( g->queue_screenshot );
+    restore_on_out_of_scope restore_menu( uistate.open_menu );
+    override_option animations( "ANIMATIONS", "true" );
+    g->queue_screenshot = false;
+    uistate.open_menu.reset();
+    on_out_of_scope restore_player( [&]() {
+        you.setpos( here, old_pos );
+        set_time( old_time );
+    } );
+    set_time( calendar::turn_zero );
+    const tripoint_bub_ms observer( 60, 60, 0 );
+    const tripoint_bub_ms target( 64, 60, 0 );
+    you.setpos( here, observer );
+    const bool extinguish = GENERATE( false, true );
+    CAPTURE( extinguish );
+    const ter_str_id light( "t_utility_light" );
+    here.ter_set( target, extinguish ? light : ter_t_floor );
+    here.build_map_cache( 0 );
+    here.update_visibility_cache( 0 );
+    const lit_level previous = here.get_cache_ref( 0 ).visibility_cache[target.x()][target.y()];
+
+    // A stationary input step has neither a frame nor movement-driven memory
+    // to prepare newly changed light. It must still provide current visibility.
+    here.ter_set( target, extinguish ? ter_t_floor : light );
+    REQUIRE( here.get_cache_ref( 0 ).lightmap_dirty );
+    REQUIRE_FALSE( you.has_destination() );
+    REQUIRE_FALSE( you.has_destination_activity() );
+    tripoint_bub_ms last_memorized_pos = observer;
+    g->render_mid_step( you, here, last_memorized_pos );
+    CHECK( last_memorized_pos == observer );
+    CHECK_FALSE( here.get_cache_ref( 0 ).lightmap_dirty );
+    const auto prepared = here.get_cache_ref( 0 ).visibility_cache;
+    CHECK( prepared[target.x()][target.y()] != previous );
+
+    // The later presentation preparation must observe the same grid, rather
+    // than repairing the lightmap and replacing a stale intermediate result.
+    here.build_map_cache( 0 );
+    here.update_visibility_cache( 0 );
+    bool grid_matches = true;
+    for( int x = 0; x < MAPSIZE_X; ++x ) {
+        grid_matches &= prepared[x] == here.get_cache_ref( 0 ).visibility_cache[x];
+    }
+    CHECK( grid_matches );
+    CHECK( prepared[target.x()][target.y()] == here.apparent_light_at( target,
+            here.get_visibility_variables_cache() ) );
 }
