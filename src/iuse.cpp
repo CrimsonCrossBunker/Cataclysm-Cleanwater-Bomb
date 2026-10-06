@@ -8262,6 +8262,17 @@ heating_requirements heating_requirements_for_weight( const units::mass &frozen,
     return {volume, ammo, time};
 }
 
+heater find_vehicle_heater( const tripoint_bub_ms &position, const item &tool )
+{
+    map &here = get_map();
+    const optional_vpart_position vp = here.veh_at( position );
+    if( !vp || !tool.has_quality( qual_HOTPLATE, 2 ) ) {
+        return {{}, true, -1, 0, {}, true};
+    }
+    const auto &[fuel_type, available] = vp->vehicle().tool_ammo_available( here, tool.typeId() );
+    return {{}, true, available, tool.type->charges_to_use(), here.get_abs( position ), true, fuel_type};
+}
+
 static std::optional<std::pair<tripoint_bub_ms, itype_id>> appliance_heater_selector( Character *p )
 {
     map &here = get_map();
@@ -8278,10 +8289,14 @@ static std::optional<std::pair<tripoint_bub_ms, itype_id>> appliance_heater_sele
             return std::nullopt;
         } else {
             std::map<int, itype_id> pseudo_tools;
+            std::vector<bool> available;
             int n = 0;
             for( const auto&[tool_item, hk] : vp_.value().get_tools( here ) ) {
                 if( tool_item.has_quality( qual_HOTPLATE, 2 ) ) {
                     pseudo_tools[n] = tool_item.typeId();
+                    const heater source = find_vehicle_heater( *pt, tool_item );
+                    available.push_back( source.available_heater >= source.heating_effect &&
+                                         !source.fuel_type.is_null() );
                     n++;
                 }
             }
@@ -8292,8 +8307,14 @@ static std::optional<std::pair<tripoint_bub_ms, itype_id>> appliance_heater_sele
                 uilist app_menu;
                 app_menu.title = _( "Select a built-in heater." );
                 for( const auto &[n, i] : pseudo_tools ) {
-                    app_menu.addentry( n, true, MENU_AUTOASSIGN, i->nname( 1 ) );
+                    app_menu.addentry( n, available[n], MENU_AUTOASSIGN, i->nname( 1 ) );
                 }
+                const auto first_available = std::find( available.begin(), available.end(), true );
+                if( first_available == available.end() ) {
+                    p->add_msg_if_player( m_info, _( "The appliance doesn't have enough power." ) );
+                    return std::nullopt;
+                }
+                app_menu.selected = std::distance( available.begin(), first_available );
                 app_menu.query();
                 if( app_menu.ret < 0 || static_cast<size_t>( app_menu.ret ) >= pseudo_tools.size() ) {
                     p->add_msg_if_player( m_info, _( "You haven't selected any heater." ) );
@@ -8387,16 +8408,10 @@ heater find_heater( Character *p, item *it, bool force_use_it )
                 return {loc, true, -1, 0, vpt, pseudo_flag};
             } else {
                 pseudo_flag = true;
-                optional_vpart_position vp = here.veh_at( app.value().first );
                 const item heater_item( app->second );
-                const itype_id fuel_type = heater_item.ammo_default();
-                available_heater = fuel_type == itype_battery ?
-                                   vp->vehicle().connected_battery_power_level( here ).first :
-                                   vp->vehicle().fuel_left( here, fuel_type );
-                heating_effect = app.value().second->charges_to_use();
-                vpt = here.get_abs( app.value().first );
-                if( available_heater >= heating_effect ) {
-                    return {loc, consume_flag, available_heater, heating_effect, vpt, pseudo_flag, fuel_type};
+                const heater source = find_vehicle_heater( app->first, heater_item );
+                if( source.available_heater >= source.heating_effect ) {
+                    return source;
                 } else {
                     p->add_msg_if_player( m_info, _( "The appliance doesn't have enough power." ) );
                     return {loc, true, -1, 0, vpt, pseudo_flag};
