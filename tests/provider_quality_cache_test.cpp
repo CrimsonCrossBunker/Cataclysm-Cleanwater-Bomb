@@ -1,4 +1,5 @@
-#include <functional>
+#include <map>
+#include <vector>
 
 #include "avatar.h"
 #include "calendar.h"
