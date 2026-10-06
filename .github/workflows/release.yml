@@ -473,7 +473,7 @@ jobs:
           vcpkg integrate install --vcpkg-root '${{ runner.workspace }}\b\vcpkg'
       - name: Install dependencies (windows msvc) (4/4)
         if: runner.os == 'Windows'
-        uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884 # v2
+        uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e # v2
         with:
           msystem: mingw64
           install: >-
