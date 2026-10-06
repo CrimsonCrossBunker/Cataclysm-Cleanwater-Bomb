@@ -688,3 +688,60 @@ TEST_CASE( "shift_map_memory_bitset_cache" )
         }
     }
 }
+
+TEST_CASE( "mid_step_visibility_prepares_dirty_lightmap_without_movement",
+           "[vision][map][cache][map_memory]" )
+{
+    clear_avatar();
+    clear_map();
+    scoped_weather_override weather_clear( WEATHER_CLEAR );
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms old_pos = you.pos_bub( here );
+    const time_point old_time = calendar::turn;
+    restore_on_out_of_scope restore_screenshot( g->queue_screenshot );
+    restore_on_out_of_scope restore_menu( uistate.open_menu );
+    override_option animations( "ANIMATIONS", "true" );
+    g->queue_screenshot = false;
+    uistate.open_menu.reset();
+    on_out_of_scope restore_player( [&]() {
+        you.setpos( here, old_pos );
+        set_time( old_time );
+    } );
+    set_time( calendar::turn_zero );
+    const tripoint_bub_ms observer( 60, 60, 0 );
+    const tripoint_bub_ms target( 64, 60, 0 );
+    you.setpos( here, observer );
+    const bool extinguish = GENERATE( false, true );
+    CAPTURE( extinguish );
+    const ter_str_id light( "t_utility_light" );
+    here.ter_set( target, extinguish ? light : ter_t_floor );
+    here.build_map_cache( 0 );
+    here.update_visibility_cache( 0 );
+    const lit_level previous = here.get_cache_ref( 0 ).visibility_cache[target.x()][target.y()];
+
+    // A stationary input step has neither a frame nor movement-driven memory
+    // to prepare newly changed light. It must still provide current visibility.
+    here.ter_set( target, extinguish ? ter_t_floor : light );
+    REQUIRE( here.get_cache_ref( 0 ).lightmap_dirty );
+    REQUIRE_FALSE( you.has_destination() );
+    REQUIRE_FALSE( you.has_destination_activity() );
+    tripoint_bub_ms last_memorized_pos = observer;
+    g->render_mid_step( you, here, last_memorized_pos );
+    CHECK( last_memorized_pos == observer );
+    CHECK_FALSE( here.get_cache_ref( 0 ).lightmap_dirty );
+    const auto prepared = here.get_cache_ref( 0 ).visibility_cache;
+    CHECK( prepared[target.x()][target.y()] != previous );
+
+    // The later presentation preparation must observe the same grid, rather
+    // than repairing the lightmap and replacing a stale intermediate result.
+    here.build_map_cache( 0 );
+    here.update_visibility_cache( 0 );
+    bool grid_matches = true;
+    for( int x = 0; x < MAPSIZE_X; ++x ) {
+        grid_matches &= prepared[x] == here.get_cache_ref( 0 ).visibility_cache[x];
+    }
+    CHECK( grid_matches );
+    CHECK( prepared[target.x()][target.y()] == here.apparent_light_at( target,
+            here.get_visibility_variables_cache() ) );
+}

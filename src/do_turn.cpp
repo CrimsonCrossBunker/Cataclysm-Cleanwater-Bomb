@@ -1204,8 +1204,10 @@ void game::render_mid_step( avatar &u, map &m, tripoint_bub_ms &last_memorized_p
 {
     // Includes visibility and map-memory maintenance as well as optional drawing.
     CATA_PROFILE_SCOPE_NAMED( "game.mid_step" );
-    // Visibility cache must stay fresh even when the render is skipped:
-    // it is consumed by update_map_memory to decide which tiles were seen.
+    // Prepare sight and lighting before calculating visibility. Otherwise a
+    // dirty lightmap makes this grid stale before the next input frame rebuilds
+    // it again. Skipped frames and intermediate map memory use the same state.
+    m.build_map_cache( u.posz() );
     m.update_visibility_cache( u.posz() );
 
     if( !skip_mid_step_render ) {
