@@ -4,7 +4,7 @@
     "id": "railroads",
     "name": "Railroads",
     "authors": [ "ZhilkinSerg" ],
-    "description": "Enables basic railroad network generation in the world.  <color_red>Not intended for regular gameplay, more for development purposes.</color>",
+    "description": "Adds a surface railway network, stations, bridges, level crossings and motorized draisines.  New stations include a fueled two-seat draisine.  Previously generated terrain is not rebuilt.",
     "category": "buildings",
     "dependencies": [ "ccb" ]
   }
