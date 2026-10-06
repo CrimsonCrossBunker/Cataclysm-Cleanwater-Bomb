@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <map>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -14,6 +15,8 @@
 #include "memory_fast.h"
 #include "point.h" // IWYU pragma: keep
 #include "type_id.h"
+
+class zzip_stack;
 
 class JsonArray;
 class JsonOut;
@@ -176,11 +179,13 @@ class map_memory
         point cache_size;
 
         /** Find, load or allocate a submap. @returns the submap. */
-        shared_ptr_fast<mm_submap> fetch_submap( const tripoint_abs_sm &sm_pos );
+        shared_ptr_fast<mm_submap> fetch_submap( const tripoint_abs_sm &sm_pos,
+                std::shared_ptr<zzip_stack> &reader );
         /** Find submap amongst the loaded submaps. @returns nullptr if failed. */
         shared_ptr_fast<mm_submap> find_submap( const tripoint_abs_sm &sm_pos );
         /** Load submap from disk. @returns nullptr if failed. */
-        shared_ptr_fast<mm_submap> load_submap( const tripoint_abs_sm &sm_pos );
+        shared_ptr_fast<mm_submap> load_submap( const tripoint_abs_sm &sm_pos,
+                                                std::shared_ptr<zzip_stack> &reader );
         /** Allocate empty submap. @returns the submap. */
         shared_ptr_fast<mm_submap> allocate_submap( const tripoint_abs_sm &sm_pos );
 

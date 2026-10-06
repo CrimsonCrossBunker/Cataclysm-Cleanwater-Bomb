@@ -1,16 +1,23 @@
 #include <bitset>
 #include <cstddef>
+#include <filesystem>
+#include <fstream>
+#include <functional>
 #include <memory>
 #include <sstream>
 #include <string>
+#include <system_error>
 
 #include "avatar.h"
+#include "cached_options.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "cata_path.h"
 #include "cata_scope_helpers.h"
 #include "coordinates.h"
 #include "enums.h"
 #include "game.h"
+#include "json.h"
 #include "level_cache.h"
 #include "lru_cache.h"
 #include "map.h"
@@ -20,16 +27,16 @@
 #include "map_scale_constants.h"
 #include "mapdata.h"
 #include "mdarray.h"
+#include "memory_fast.h"
 #include "options_helpers.h"
+#include "path_info.h"
 #include "player_helpers.h"
 #include "point.h"
 #include "type_id.h"
 #include "uistate.h"
 #include "weather_type.h"
-
-#if defined(TILES)
-    #include "cached_options.h"
-#endif
+#include "worldfactory.h"
+#include "zzip_stack.h"
 
 #if defined(TILES) || defined(HEADLESS)
     #include "cursesdef.h"
@@ -45,6 +52,145 @@ static const furn_str_id furn_f_chair( "f_chair" );
 static const ter_str_id ter_t_floor( "t_floor" );
 static const ter_str_id ter_t_grass( "t_grass" );
 static const ter_str_id ter_t_wall( "t_wall" );
+
+// Disk-backed fixtures must opt out of test_mode's memory IO bypass.
+static void with_map_memory_world( bool compressed, const std::function<void()> &run )
+{
+    REQUIRE( world_generator->active_world != nullptr );
+    WORLD *const previous_world = world_generator->active_world;
+    WORLD world;
+    world.WORLD_OPTIONS = previous_world->WORLD_OPTIONS;
+    std::filesystem::path directory;
+    for( int i = 0; i < 100; ++i ) {
+        world.world_name = previous_world->world_name + " memory IO " + std::to_string( i );
+        std::error_code error;
+        const std::filesystem::path candidate = world.folder_path().get_unrelative_path();
+        if( std::filesystem::create_directory( candidate, error ) ) {
+            directory = candidate;
+            break;
+        }
+        REQUIRE( ( !error || error == std::errc::file_exists ) );
+    }
+    REQUIRE_FALSE( directory.empty() );
+    on_out_of_scope cleanup( [&]() {
+        world_generator->set_active_world( previous_world );
+        std::error_code error;
+        std::filesystem::remove_all( directory, error );
+    } );
+    restore_on_out_of_scope restore_test_mode( test_mode );
+    test_mode = false;
+    world_generator->set_active_world( &world );
+    if( compressed ) {
+        std::ofstream dictionary( directory / "mmr.dict" );
+        dictionary << "map memory region dictionary";
+        REQUIRE( dictionary.good() );
+    }
+    REQUIRE( world.has_compression_enabled() == compressed );
+    run();
+}
+
+TEST_CASE( "map_memory_disk_reads_preserve_regions_and_observe_later_saves",
+           "[map_memory][save][regression]" )
+{
+    const bool compressed = GENERATE( false, true );
+    CAPTURE( compressed );
+    with_map_memory_world( compressed, []() {
+        const tripoint_abs_ms negative( -100, -101, -1 );
+        const tripoint_abs_ms positive( 100, 101, -1 );
+        const tripoint_abs_ms upper( 100, 101, 1 );
+        const tripoint_abs_ms missing( 500, 500, -1 );
+        map_memory writer;
+        writer.prepare_region( negative, positive );
+        writer.set_tile_terrain( negative, "t_floor", 2, 3 );
+        writer.set_tile_decoration( negative, "f_chair", 1, 2 );
+        writer.set_tile_symbol( negative, U'\u03bb' );
+        writer.set_tile_terrain( positive, "t_grass", 3, 1 );
+        writer.set_tile_symbol( positive, U'+' );
+        writer.prepare_region( upper, upper );
+        writer.set_tile_symbol( upper, U'^' );
+        REQUIRE( writer.save( positive ) );
+
+        map_memory reader;
+        reader.load( positive );
+        REQUIRE( reader.prepare_region( negative, positive ) );
+        CHECK( reader.get_tile( negative ).get_ter_id() == "t_floor" );
+        CHECK( reader.get_tile( negative ).get_ter_subtile() == 2 );
+        CHECK( reader.get_tile( negative ).get_ter_rotation() == 3 );
+        CHECK( reader.get_tile( negative ).get_dec_id() == "f_chair" );
+        CHECK( reader.get_tile( negative ).get_dec_subtile() == 1 );
+        CHECK( reader.get_tile( negative ).get_dec_rotation() == 2 );
+        CHECK( reader.get_tile( negative ).symbol == U'\u03bb' );
+        CHECK( reader.get_tile( positive ).symbol == U'+' );
+        CHECK_FALSE( reader.prepare_region( negative, positive ) );
+        CHECK( reader.prepare_region( upper, upper ) );
+        CHECK( reader.get_tile( upper ).symbol == U'^' );
+        CHECK( reader.prepare_region( missing, missing ) );
+        CHECK( reader.get_tile( missing ) == memorized_tile{} );
+        reader.set_tile_symbol( missing, U'?' );
+        REQUIRE( reader.save( missing ) );
+
+        // The same object must reopen the archive after clear/save. Holding a
+        // mapped reader across calls would hide rewritten archive contents.
+        reader.clear();
+        reader.prepare_region( positive, positive );
+        CHECK( reader.get_tile( positive ).symbol == U'+' );
+        reader.set_tile_symbol( positive, U'!' );
+        REQUIRE( reader.save( positive ) );
+        reader.clear();
+        reader.load( positive );
+        reader.prepare_region( positive, positive );
+        CHECK( reader.get_tile( positive ).symbol == U'!' );
+        reader.prepare_region( missing, missing );
+        CHECK( reader.get_tile( missing ).symbol == U'?' );
+    } );
+}
+
+BENCHMARK_TEST_CASE( "map_memory_first_exploration_compressed_archive",
+                     "[map_memory][save][exploration]" )
+{
+    with_map_memory_world( true, []() {
+        constexpr int archive_regions = 4096;
+        const std::filesystem::path source =
+            ( PATH_INFO::world_base_save_path() / "memory-source" ).get_unrelative_path();
+        REQUIRE( std::filesystem::create_directory( source ) );
+        mm_region region;
+        for( size_t y = 0; y < MM_REG_SIZE; ++y ) {
+            for( size_t x = 0; x < MM_REG_SIZE; ++x ) {
+                region.submaps[x][y] = make_shared_fast<mm_submap>();
+            }
+        }
+        std::ostringstream output;
+        JsonOut json( output );
+        region.serialize( json );
+        const std::string empty_region = output.str();
+        for( int i = 0; i < archive_regions; ++i ) {
+            std::ofstream file( source / ( std::to_string( i + 100 ) + ".0.0.mmr" ) );
+            file << empty_region;
+            REQUIRE( file.good() );
+        }
+        const std::filesystem::path archive =
+            ( PATH_INFO::current_dimension_player_save_path() + ".mm1" ).get_unrelative_path();
+        const std::filesystem::path dictionary =
+            ( PATH_INFO::world_base_save_path() / "mmr.dict" ).get_unrelative_path();
+        {
+            const std::shared_ptr<zzip_stack> packed = zzip_stack::create_from_folder(
+                        archive, source, dictionary );
+            REQUIRE( packed != nullptr );
+            REQUIRE( packed->get_entries().size() == archive_regions );
+        }
+        const tripoint_abs_ms center( 0, 0, 0 );
+        map_memory memory;
+        BENCHMARK( "prepare new 120x120 viewport beside 4096 saved regions" ) {
+            memory.clear();
+            memory.prepare_region( center - point( 60, 60 ), center + point( 60, 60 ) );
+            return memory.get_tile( center ).symbol;
+        };
+        BENCHMARK( "load new 24x24 submaps beside 4096 saved regions" ) {
+            memory.clear();
+            memory.load( center );
+        };
+    } );
+}
 
 TEST_CASE( "map_memory_keeps_region", "[map_memory]" )
 {
