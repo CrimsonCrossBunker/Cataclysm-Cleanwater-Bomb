@@ -5,8 +5,7 @@ on:
     branches:
     - master
   pull_request:
-    branches:
-    - master
+    # Stacked content PRs need the same native acceptance before reaching master.
     types: [opened, reopened, synchronize, ready_for_review]
   workflow_dispatch:
     inputs:
@@ -406,6 +405,9 @@ jobs:
     - name: Build CDDA
       if: ${{ env.SKIP == 'false' }}
       run: bash ./build-scripts/gha_compile_only.sh
+    - name: run Railroads native acceptance
+      if: ${{ env.SKIP == 'false' && matrix.semantic_acceptance == true }}
+      run: ./tests/cata_test '[railroads]' --mods=railroads --rng-seed 3404 --order lex --user-dir=test_user_dir_railroads --drop-world --error-format=github-action
     - name: post-build ccache manipulation
       id: trim-compiler-cache
       if: ${{ always() && !cancelled() && steps.compiler-cache.outcome == 'success' }}
