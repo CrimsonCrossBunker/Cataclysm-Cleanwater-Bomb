@@ -320,6 +320,9 @@ TEST_CASE( "railroad_world_generation", "[.][railroads][overmap]" )
             rng_get_engine() = saved;
         }
     } restore;
+    // Earlier mapgen cases may already have populated this overmap or consumed
+    // its unique-special deck.  Generate this fixture from a fresh buffer.
+    overmap_buffer.clear();
     rng_set_engine_seed( 3404 );
     // Stay inland: the default region becomes ocean east of overmap x=10.
     const point_abs_om location( 1, 0 );
@@ -328,6 +331,16 @@ TEST_CASE( "railroad_world_generation", "[.][railroads][overmap]" )
     CAPTURE( region.str(), region->place_railroads, region->get_settings_city().city_size );
     REQUIRE( region->place_railroads );
     REQUIRE( region->get_settings_city().city_size > 0 );
+    const overmap_special_id station( "Railway Station" );
+    REQUIRE( station.is_valid() );
+    REQUIRE( station->has_flag( "OVERMAP_UNIQUE" ) );
+    const auto &occurrences = station->get_constraints().occurrences;
+    REQUIRE( occurrences.min > 0 );
+    REQUIRE( occurrences.max >= occurrences.min );
+    // The real Mod uses a 50/100 deck, so an individual overmap is allowed to
+    // draw no station.  Supply a pending placement to test generation rather
+    // than assert that an optional draw always wins.
+    overmap_buffer.get_deck_state( station, occurrences.min, occurrences.max ).to_place = 1;
     const overmap &generated = overmap_buffer.get( location );
     int rail_tiles = 0;
     int stations = 0;
