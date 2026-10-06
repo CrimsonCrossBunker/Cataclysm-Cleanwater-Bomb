@@ -41,6 +41,7 @@ from .parsers.map_extra import parse_map_extra
 from .parsers.mapgen import parse_mapgen
 from .parsers.mod_migration import parse_mod_migration
 from .parsers.mutation import parse_mutation
+from .parsers.named_color import parse_named_color
 from .parsers.nested_category import parse_nested_category
 from .parsers.npc import parse_npc
 from .parsers.npc_class import parse_npc_class
@@ -155,7 +156,7 @@ parsers = {
     "MONSTER_BLACKLIST": dummy_parser,
     "MONSTER_FACTION": dummy_parser,
     "MONSTER_WHITELIST": dummy_parser,
-    "named_color": dummy_parser,
+    "named_color": parse_named_color,
     "SCENARIO_BLACKLIST": dummy_parser,
     "SPECIES": parse_species,
     "SPELL": parse_spell,
@@ -214,7 +215,7 @@ parsers = {
     "mutation": parse_mutation,
     "mutation_category": parse_mutation_category,
     "mutation_type": dummy_parser,
-    "named_color": dummy_parser,
+    "named_color": parse_named_color,
     "nested_category": parse_nested_category,
     "npc": parse_npc,
     "npc_class": parse_npc_class,

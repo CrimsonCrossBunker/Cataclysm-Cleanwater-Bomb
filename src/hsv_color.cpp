@@ -127,7 +127,7 @@ std::string RGBColor::friendly_name() const
 {
     const std::unordered_map<RGBColor, std::string>::iterator it = named_colors.find( *this );
     if( it != named_colors.end() ) {
-        return it->second;
+        return pgettext( "named_color", it->second.c_str() );
     }
 
     // https://www.compuphase.com/cmetric.htm
@@ -144,7 +144,8 @@ std::string RGBColor::friendly_name() const
     const std::unordered_map<RGBColor, std::string>::iterator nearest = similar_name_cache.find(
                 *this );
     if( nearest != similar_name_cache.end() ) {
-        return nearest->second;
+        return string_format( _( "%s (Off-Brand)" ),
+                              pgettext( "named_color", nearest->second.c_str() ) );
     }
 
     if( named_colors.empty() ) {
@@ -157,9 +158,10 @@ std::string RGBColor::friendly_name() const
     const std::pair<const RGBColor, std::string> &b ) {
         return distFunc( a.first, *this ) < distFunc( b.first, *this );
     } );
-    std::string similar_name = string_format( _( "%s (Off-Brand)" ), min->second );
-    similar_name_cache.emplace( *this, similar_name );
-    return similar_name;
+    // Cache the canonical name so changing language also updates cached matches.
+    similar_name_cache.emplace( *this, min->second );
+    return string_format( _( "%s (Off-Brand)" ),
+                          pgettext( "named_color", min->second.c_str() ) );
 }
 
 auto curses_color_to_RGB( const nc_color &color ) -> RGBColor
