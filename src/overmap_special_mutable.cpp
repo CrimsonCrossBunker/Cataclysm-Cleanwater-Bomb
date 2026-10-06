@@ -160,7 +160,7 @@ mutable_overmap_phase_remainder::satisfy_result mutable_overmap_phase_remainder:
                 tripoint_om_omt origin = pos - piece_pos;
 
                 if( std::optional<can_place_result> result = can_place(
-                        om, rule, origin, dir, unresolved ) ) {
+                            om, rule, origin, dir, unresolved ) ) {
                     if( best_result < *result ) {
                         pos_dir_options.clear();
                         best_result = *result;

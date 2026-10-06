@@ -54,14 +54,14 @@
 #include "vehicle.h"
 #include "vpart_position.h"
 
-static const overmap_connection_id overmap_connection_local_railroad( "local_railroad" );
-static const overmap_connection_id overmap_connection_local_road( "local_road" );
-
 static const oter_str_id oter_cabin( "cabin" );
 static const oter_str_id oter_cabin_east( "cabin_east" );
 static const oter_str_id oter_cabin_north( "cabin_north" );
 static const oter_str_id oter_cabin_south( "cabin_south" );
 static const oter_str_id oter_cabin_west( "cabin_west" );
+
+static const overmap_connection_id overmap_connection_local_railroad( "local_railroad" );
+static const overmap_connection_id overmap_connection_local_road( "local_road" );
 
 static const overmap_special_id overmap_special_Cabin( "Cabin" );
 static const overmap_special_id overmap_special_Lab( "Lab" );
@@ -194,7 +194,7 @@ TEST_CASE( "default_overmap_generation_always_succeeds", "[overmap][slow]" )
             continue;
         }
         overmap_special_batch test_specials = overmap_specials::get_default_batch( candidate_addr,
-            city_size );
+                                              city_size );
         overmap_buffer.create_custom_overmap( candidate_addr, test_specials );
         for( const overmap_special_placement &special_placement : test_specials ) {
             const overmap_special *special = special_placement.special_details;
@@ -1160,8 +1160,8 @@ TEST_CASE( "railroad_stations_join_the_network", "[.][overmap][railroads]" )
 {
     const overmap_special_id id( GENERATE( "Railway Station", "railroad_station_city" ) );
     const om_direction::type direction = GENERATE( om_direction::type::north,
-        om_direction::type::east, om_direction::type::south,
-        om_direction::type::west );
+                                         om_direction::type::east, om_direction::type::south,
+                                         om_direction::type::west );
     CAPTURE( id.str(), direction );
     REQUIRE( id.is_valid() );
     REQUIRE( overmap_connection_local_railroad.is_valid() );
