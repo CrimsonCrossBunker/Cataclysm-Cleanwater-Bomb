@@ -10,6 +10,13 @@
 > This in-repository body is no longer maintained. The historical body is retained through `2027-02-02` and may then be removed; this bilingual entry banner remains permanently.
 > 本仓库正文不再维护；历史正文至少保留到上述日期，之后可删除，但本双语迁移入口永久保留。
 <!-- CCB-DOC-MOVED-END -->
+
+> CCB SDL3 migration (2026-10-07): tiles builds now require SDL3 >= 3.4.0;
+> the SDL2 backend and fallback switches have been removed. The checked-in
+> [CMake contract](../../CMakeLists.txt), [Make contract](../../Makefile), and
+> [CI SDK setup](../../.github/actions/setup-sdl3-stack/action.yml) define the
+> current requirements. Other parts of the historical body below may be stale.
+
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 *Contents*
@@ -72,29 +79,17 @@ You'll need to have these libraries and their development headers installed in o
 * Curses
   * `ncurses`
 * Tiles
-  * `SDL`                       >= 2.0.0
-  * `SDL_image`                 >= 2.0.0
-    * `jpeg`
-    * `png`
-    * `tiff`
-    * `jbig`
-    * `LZMA`
-    * `zstd`
-  * `SDL_ttf`                   >= 2.0.0
-    * `freetype`
-    * `harfbuzz`
-* Sound
-  * `SDL_mixer`                 >= 2.0.0
-    * `modplug`
-    * `fluidsynth`
-    * `vorbisfile`      
-    * `FLAC`
-    * `mpg123`
-    * `opusfile`
-  * `libbz2`
-  * `libz`
-  * `libintl`
-  * `iconv`
+  * `SDL3` >= 3.4.0
+  * `SDL3_image`
+  * `SDL3_ttf`
+  * `freetype` (desktop ImGui text rendering)
+* Sound (tiles only)
+  * `SDL3_mixer`
+
+CCB CI builds SDL 3.4.10, SDL_image 3.4.4, SDL_ttf 3.2.2, and SDL_mixer 3.2.4.
+Install the development headers and codec dependencies for the selected SDK;
+see the [pinned Linux recipe](../../.github/actions/setup-sdl3-stack/action.yml)
+or [universal macOS recipe](../../.github/actions/setup-sdl3-stack-macos/action.yml).
 
 
 # Build Environment
@@ -176,26 +171,12 @@ At the moment only a limited combination of options is supported (tiles only, no
 
 ### Get the required libraries
 
-* `SDL2` - <https://www.libsdl.org/download-2.0.php> (you need the "(Visual C++ 32/64-bit)" version; same below)
-* `SDL2_ttf` - <https://www.libsdl.org/projects/SDL_ttf/>
-* `SDL2_image` - <https://www.libsdl.org/projects/SDL_image/>
-* `SDL2_mixer` (optional, for sound support) - <https://www.libsdl.org/projects/SDL_mixer/>
-* Unsupported (and unused in the following instructions) optional libs:
-  *  `gettext`/`libintl` - <http://gnuwin32.sourceforge.net/packages/gettext.htm>
-  * `ncurses` - ???
+Tiles builds require SDL3 >= 3.4.0, SDL3_image, SDL3_ttf, and SDL3_mixer
+when sound is enabled. Install their CMake config packages and pass their
+installation prefix through `CMAKE_PREFIX_PATH`. For vcpkg, use the maintained
+instructions in [COMPILING-VS-VCPKG.md](COMPILING-VS-VCPKG.md).
 
-### Unpack the archives with the libraries
-
-Open the Windows command line (or powershell) and set the environment variables to point to the libs above as follows (adjusting the paths as appropriate):
-
-```
-> set SDL2DIR=C:\path\to\SDL2-devel-2.0.9-VC
-> set SDL2TTFDIR=C:\path\to\SDL2_ttf-devel-2.0.15-VC
-> set SDL2IMAGEDIR=C:\path\to\SDL2_image-devel-2.0.4-VC
-> set SDL2MIXERDIR=C:\path\to\SDL2_mixer-devel-2.0.4-VC
-```
-
-(for powershell the syntax is `$env:SDL2DIR="C:\path\to\SDL2-devel-2.0.9-VC"`).
+`USE_SDL3=OFF` with `TILES=ON` is an error; the SDL2 backend has been removed.
 
 ### Make a build directory and run CMake's configuration step
 
