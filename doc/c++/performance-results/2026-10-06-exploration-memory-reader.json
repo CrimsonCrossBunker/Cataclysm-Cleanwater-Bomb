@@ -1,0 +1,608 @@
+{
+  "batch": "exploration-memory-reader",
+  "baseline": "e6a25a4b041569d5ed4c72640bffb5666dccff8e",
+  "branch": "codex/exploration-memory-reader",
+  "request": "Ordinary exploration of unlit areas reportedly freezes for several seconds; exact player scene not supplied.",
+  "finding": "Each newly required compressed memory region previously constructed a fresh lazy zzip_stack, reopening archive layers and rebuilding their entry index. Cost scales with both requested regions and saved index size.",
+  "change": "A lazily opened reader is shared only within one prepare_region or load call, then released. Cached submap ownership, iteration order and public save format are unchanged. Save/clear cannot retain a mapped reader from earlier IO.",
+  "profiling": "Added map_memory.prepare_region, map_memory.load_region and map_memory.load through the existing profiling wrapper. Default profiling-off source syntax also passes. No production workers or additional Lua runtime.",
+  "source_sha256": {
+    "src/map_memory.cpp": "68e8c31ec4b64a479bf95414564ab096b8d9c3dfefb6c607f0fcbe710292fdce",
+    "src/map_memory.h": "5865a71c33e6dda6314f9b302d1580b2533399f4bceefe489ef0b4df41526ad0",
+    "tests/map_memory_test.cpp": "249261000435c39ec0e2bfc1b59b1f8da529624e7c7726956ce2495489349818"
+  },
+  "build": {
+    "command": [
+      "cmake",
+      "--build",
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/out/build/ccb-tracy-tiles",
+      "--config",
+      "Release",
+      "--target",
+      "cataclysm-tiles",
+      "--parallel",
+      "2"
+    ],
+    "configuration": "Release SDL2 Tiles+sound Lua Platform v1 Tracy ON, existing compatible build tree",
+    "pid": 1534694,
+    "started": 1791292100.0861824,
+    "source_sha256": {
+      "src/map_memory.cpp": "68e8c31ec4b64a479bf95414564ab096b8d9c3dfefb6c607f0fcbe710292fdce",
+      "src/map_memory.h": "5865a71c33e6dda6314f9b302d1580b2533399f4bceefe489ef0b4df41526ad0",
+      "tests/map_memory_test.cpp": "249261000435c39ec0e2bfc1b59b1f8da529624e7c7726956ce2495489349818"
+    },
+    "exit": 0,
+    "elapsed_s": 116.51035599596798,
+    "finished": 1791292216.599914
+  },
+  "focused_runner": "Same compatible Release Tiles engine objects plus maintained test support sources; private focused runner, not the full tests target or full CI.",
+  "native_acceptance": {
+    "command": [
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/exploration-memory-20261006/candidate-cata_test-tiles",
+      "[map_memory]~[benchmark],[vision][map][cache],map_memory_first_exploration_compressed_archive",
+      "--rng-seed",
+      "20261006",
+      "--warn",
+      "NoTests",
+      "--user-dir",
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/exploration-memory-20261006/candidate-test-user/",
+      "--benchmark-samples",
+      "8",
+      "--benchmark-resamples",
+      "1000",
+      "--benchmark-warmup-time",
+      "50",
+      "--reporter",
+      "xml",
+      "--out",
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/exploration-memory-20261006/candidate-native.xml"
+    ],
+    "exit": 0,
+    "elapsed_s": 34.21345291403122
+  },
+  "baseline_acceptance": {
+    "command": [
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/exploration-memory-20261006/baseline-cata_test-tiles",
+      "map_memory_disk_reads_preserve_regions_and_observe_later_saves,map_memory_first_exploration_compressed_archive",
+      "--rng-seed",
+      "20261006",
+      "--warn",
+      "NoTests",
+      "--user-dir",
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/exploration-memory-20261006/baseline-test-user/",
+      "--benchmark-samples",
+      "8",
+      "--benchmark-resamples",
+      "1000",
+      "--benchmark-warmup-time",
+      "50",
+      "--reporter",
+      "xml",
+      "--out",
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/exploration-memory-20261006/baseline-native.xml"
+    ],
+    "exit": 0,
+    "elapsed_s": 22.12687082501361
+  },
+  "native_checks": {
+    "cases": 24,
+    "assertions": 5873,
+    "failures": 0,
+    "coverage": [
+      "Compressed and uncompressed real disk-backed saves, opting out of test_mode IO bypass",
+      "Negative region coordinates, multiple regions and z-levels",
+      "Terrain, decoration orientation and Unicode symbols",
+      "Empty missing regions, save/clear/reload on the same map_memory object",
+      "Existing map memory, perception and visibility cache regressions"
+    ]
+  },
+  "fixed_benchmark": {
+    "scenario": "4096 real native compressed memory entries in a cold layer. Fresh in-memory cache on every iteration. New area lies outside saved entries; includes empty-submap allocation and map clearing. Archive construction occurs before timing. Catch warmup makes this a warm filesystem-cache benchmark, not cold-disk latency.",
+    "results": {
+      "baseline": {
+        "cases": 2,
+        "assertions": 4150,
+        "failures": 0,
+        "benchmarks": [
+          {
+            "name": "prepare new 120x120 viewport beside 4096 saved regions",
+            "samples": 8,
+            "iterations": 1,
+            "mean_ms": 81.1598,
+            "ci95_ms": [
+              80.9697,
+              81.2933
+            ]
+          },
+          {
+            "name": "load new 24x24 submaps beside 4096 saved regions",
+            "samples": 8,
+            "iterations": 1,
+            "mean_ms": 15.3597,
+            "ci95_ms": [
+              15.3046,
+              15.467
+            ]
+          }
+        ]
+      },
+      "candidate": {
+        "cases": 24,
+        "assertions": 5873,
+        "failures": 0,
+        "benchmarks": [
+          {
+            "name": "prepare new 120x120 viewport beside 4096 saved regions",
+            "samples": 8,
+            "iterations": 1,
+            "mean_ms": 2.02769,
+            "ci95_ms": [
+              1.83281,
+              2.35397
+            ]
+          },
+          {
+            "name": "load new 24x24 submaps beside 4096 saved regions",
+            "samples": 8,
+            "iterations": 2,
+            "mean_ms": 1.36619,
+            "ci95_ms": [
+              1.25966,
+              1.56623
+            ]
+          }
+        ]
+      },
+      "reductions_percent": [
+        97.5016079389057,
+        91.10536013073171
+      ]
+    },
+    "claim": "Proven reduction in these two isolated IO/cache preparation operations. No overall game/FPS claim."
+  },
+  "format": {
+    "command": [
+      "make",
+      "astyle-check",
+      "ASTYLE_BINARY=/tmp/ccb-astyle-3.1-src/astyle/build/gcc/bin/astyle",
+      "ASTYLE_SOURCES=src/map_memory.cpp src/map_memory.h tests/map_memory_test.cpp",
+      "ODIR=/tmp/ccb-exploration-memory-astyle-20261006"
+    ],
+    "version": "3.1",
+    "exit": 0
+  },
+  "profiling_off_syntax": {
+    "command": [
+      "/usr/bin/clang++",
+      "-DBACKTRACE",
+      "-DCATA_ENABLE_LUA_PLATFORM=1",
+      "-DCMAKE",
+      "-DDATA_DIR_PREFIX",
+      "-DGIT_VERSION",
+      "-DPREFIX=/usr/local",
+      "-DRELEASE",
+      "-DSDL_SOUND",
+      "-DTILES",
+      "-DUSE_HOME_DIR",
+      "-DZSTD_DISABLE_ASM",
+      "-DZSTD_STATIC_LINKING_ONLY",
+      "-DCMAKE_INTDIR=\"Release\"",
+      "-I/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/out/build/ccb-tracy-tiles/src",
+      "-I/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/src",
+      "-isystem",
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/src/third-party/asio/asio/include",
+      "-isystem",
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/src/third-party",
+      "-isystem",
+      "/usr/include/SDL2",
+      "-isystem",
+      "/usr/include/freetype2",
+      "-isystem",
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/src/sol/..",
+      "-isystem",
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/src/lua",
+      "-isystem",
+      "/usr/include/Tracy/tracy",
+      "-mcx16",
+      "-Werror",
+      "-Wall",
+      "-Wextra",
+      "-Wformat-signedness",
+      "-Wlogical-op",
+      "-Wmissing-declarations",
+      "-Wmissing-noreturn",
+      "-Wnon-virtual-dtor",
+      "-Wold-style-cast",
+      "-Woverloaded-virtual",
+      "-Wpedantic",
+      "-Wsuggest-override",
+      "-Wunused-macros",
+      "-Wzero-as-null-pointer-constant",
+      "-Wno-c++20-compat",
+      "-Wno-unknown-warning-option",
+      "-Wno-error=array-bounds",
+      "-Wredundant-decls",
+      "-fsigned-char",
+      "-g1",
+      "-O3",
+      "-DNDEBUG",
+      "-std=c++17",
+      "-pthread",
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/src/map_memory.cpp",
+      "-fsyntax-only"
+    ],
+    "exit": 0,
+    "scope": "Source syntax/warnings with TRACY_ENABLE removed; this is not a separate linked game build",
+    "stderr": ""
+  },
+  "actual_game": {
+    "backend": "SDL2 Tiles + sound, hardware X11 fullscreen2880x1800, UndeadPeople, tile_zoom4, safe mode off; no dummy driver for these measurements.",
+    "fixture": "A private native-saved copy of Damon carrier at normal100 speed. DEBUG_NODMG and DEBUG_CLOAK retained. Native Kill all monsters cleared759 blockers, leaving their corpses/items and terrain. This isolates exploration and is not a representative monster-combat benchmark.",
+    "input": "Identical north32 actions at0.5s cadence; fixed3s drain; simultaneous perf99Hz cycles:u DWARF32768 and Tracy. Session/PID-specific X11 input guard.",
+    "trials": [
+      {
+        "trial": "control-tracy-3",
+        "binary_sha256": "f0c34f10ac75073b3b2e8173735b8db5d43b18eda81b62a22c233311892553c9",
+        "native_state": {
+          "turn": 5212849,
+          "calendar_advance": 37,
+          "player_location": [
+            5495,
+            7417,
+            2
+          ],
+          "initial_location": [
+            5495,
+            7449,
+            2
+          ],
+          "north_tiles": 32,
+          "moves": 28,
+          "active_monsters": 0,
+          "hp": {
+            "arm_l": [
+              85,
+              85
+            ],
+            "arm_r": [
+              85,
+              85
+            ],
+            "eyes": [
+              85,
+              85
+            ],
+            "foot_l": [
+              85,
+              85
+            ],
+            "foot_r": [
+              85,
+              85
+            ],
+            "hand_l": [
+              85,
+              85
+            ],
+            "hand_r": [
+              85,
+              85
+            ],
+            "head": [
+              85,
+              85
+            ],
+            "leg_l": [
+              85,
+              85
+            ],
+            "leg_r": [
+              85,
+              85
+            ],
+            "mouth": [
+              85,
+              85
+            ],
+            "torso": [
+              85,
+              85
+            ]
+          },
+          "mutations": [
+            "DEBUG_NODMG",
+            "DEBUG_CLOAK"
+          ],
+          "read_metadata": {
+            "method": "active zzip footer entry, footer and payload XXH64 verified",
+            "entry": {
+              "len": 17677,
+              "offset": 24
+            }
+          },
+          "tile_zoom": 4,
+          "all_moves_completed": true
+        },
+        "tracy_complete_zones_within_action_window": {
+          "tiles.draw": {
+            "complete_calls": 96,
+            "mean_ms": 46.571430802083334,
+            "max_ms": 82.3075
+          },
+          "tiles.map_memory_prepare": {
+            "complete_calls": 96,
+            "mean_ms": 0.09971748958333333,
+            "max_ms": 7.736238
+          },
+          "unserialize_submaps": {
+            "complete_calls": 492,
+            "mean_ms": 0.003699359756097561,
+            "max_ms": 0.257856
+          }
+        },
+        "perf_active_samples": 1915,
+        "perf_unresolved_leaf_cycle_percent": 58.76564969201176,
+        "perf_main_reached_cycle_percent": 30.742127557792994,
+        "tracked_inclusive_percent": {
+          "cata_tiles::draw": 20.71263235697865,
+          "game::update_map": 0.4817448455344822,
+          "map::shift": 0.4100231423533957,
+          "map::loadn": 0.0568356767142166,
+          "map::generate": 0.0,
+          "map::update_map_memory": 1.68837481057654,
+          "map_memory::prepare_region": 0.0
+        },
+        "input_actions": 32,
+        "collector_exits": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "trial": "candidate-tracy-2",
+        "binary_sha256": "0d1635b52ad3213ea55eac401316c28c78c4b4f3ae4318f5d65fb65cf1d31c14",
+        "native_state": {
+          "turn": 5212849,
+          "calendar_advance": 37,
+          "player_location": [
+            5495,
+            7417,
+            2
+          ],
+          "initial_location": [
+            5495,
+            7449,
+            2
+          ],
+          "north_tiles": 32,
+          "moves": 28,
+          "active_monsters": 0,
+          "hp": {
+            "arm_l": [
+              85,
+              85
+            ],
+            "arm_r": [
+              85,
+              85
+            ],
+            "eyes": [
+              85,
+              85
+            ],
+            "foot_l": [
+              85,
+              85
+            ],
+            "foot_r": [
+              85,
+              85
+            ],
+            "hand_l": [
+              85,
+              85
+            ],
+            "hand_r": [
+              85,
+              85
+            ],
+            "head": [
+              85,
+              85
+            ],
+            "leg_l": [
+              85,
+              85
+            ],
+            "leg_r": [
+              85,
+              85
+            ],
+            "mouth": [
+              85,
+              85
+            ],
+            "torso": [
+              85,
+              85
+            ]
+          },
+          "mutations": [
+            "DEBUG_NODMG",
+            "DEBUG_CLOAK"
+          ],
+          "read_metadata": {
+            "method": "active zzip footer entry, footer and payload XXH64 verified",
+            "entry": {
+              "len": 17679,
+              "offset": 24
+            }
+          },
+          "tile_zoom": 4,
+          "all_moves_completed": true
+        },
+        "tracy_complete_zones_within_action_window": {
+          "tiles.draw": {
+            "complete_calls": 97,
+            "mean_ms": 45.478703175257735,
+            "max_ms": 78.939619
+          },
+          "tiles.map_memory_prepare": {
+            "complete_calls": 97,
+            "mean_ms": 0.10343769072164949,
+            "max_ms": 8.244695
+          },
+          "map_memory.load_region": {
+            "complete_calls": 76,
+            "mean_ms": 0.08702244736842105,
+            "max_ms": 6.509531
+          },
+          "map_memory.prepare_region": {
+            "complete_calls": 3,
+            "mean_ms": 3.3188446666666667,
+            "max_ms": 8.244194
+          },
+          "unserialize_submaps": {
+            "complete_calls": 492,
+            "mean_ms": 0.0041851544715447156,
+            "max_ms": 0.406274
+          }
+        },
+        "perf_active_samples": 1861,
+        "perf_unresolved_leaf_cycle_percent": 61.66145922381492,
+        "perf_main_reached_cycle_percent": 29.90013794106637,
+        "tracked_inclusive_percent": {
+          "cata_tiles::draw": 21.005511101990805,
+          "game::update_map": 0.24486906267153957,
+          "map::shift": 0.12326314733310331,
+          "map::loadn": 0.06169138712836793,
+          "map::generate": 0.0,
+          "map::update_map_memory": 1.2094985611437399,
+          "map_memory::prepare_region": 0.0
+        },
+        "input_actions": 32,
+        "collector_exits": [
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "movement": "Both native saves advance37 simulation seconds and32 north tiles across3 submap boundaries; extra memory submaps198 ->208.",
+    "claim": "Exploration and save-output regression acceptance. Only one accepted runtime pair; timing is diagnostic, not statistically established scene-wide speedup."
+  },
+  "world_comparison": {
+    "archive_method": "Active footer entries and compressed payload XXH64 verified; cold/warm/hot precedence; JSON object keys ignored, arrays strict",
+    "differing_archives": [],
+    "other_differing_files": [
+      {
+        "file": "#TWl0Y2hlbCBSaWNl.pt",
+        "semantic_equal": true,
+        "classification": "Only measured wall-clock playtime differs; equals the corresponding final game_save field in both native saves",
+        "before": 1766,
+        "after": 1881,
+        "source": "src/game_io.cpp:872-875"
+      }
+    ],
+    "player_semantic_equal": true,
+    "world_file_set_equal": true,
+    "immutable_origin_unchanged": true,
+    "memory_before": {
+      "regions": 11,
+      "nonempty_submaps": 198
+    },
+    "memory_control": {
+      "regions": 11,
+      "nonempty_submaps": 208
+    },
+    "memory_candidate": {
+      "regions": 11,
+      "nonempty_submaps": 208
+    },
+    "all_checked_world_content_equal": true
+  },
+  "save_comparison": {
+    "before_trial": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/exploration-memory-20261006/control-tracy-3",
+    "after_trial": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/exploration-memory-20261006/candidate-tracy-2",
+    "player_save_semantic_equal_excluding_classified_metadata": true,
+    "classified_build_metadata": [],
+    "classified_final_save_wall_metadata": [
+      {
+        "side": "before",
+        "event": [
+          {
+            "time_since_load": [
+              "chrono_seconds",
+              "100"
+            ],
+            "total_time_played": [
+              "chrono_seconds",
+              "1766"
+            ]
+          },
+          {
+            "count": 1,
+            "first": 5212849,
+            "last": 5212849
+          }
+        ],
+        "source": "src/game_io.cpp:825-834 steady_clock save metadata"
+      },
+      {
+        "side": "after",
+        "event": [
+          {
+            "time_since_load": [
+              "chrono_seconds",
+              "215"
+            ],
+            "total_time_played": [
+              "chrono_seconds",
+              "1881"
+            ]
+          },
+          {
+            "count": 1,
+            "first": 5212849,
+            "last": 5212849
+          }
+        ],
+        "source": "src/game_io.cpp:825-834 steady_clock save metadata"
+      }
+    ],
+    "normalized_unordered_fields": [
+      {
+        "path": "/player/learned_recipes",
+        "count": 1127,
+        "multiset_equal": true
+      }
+    ],
+    "wall_time_only_differences": [],
+    "unexplained_player_differences": [],
+    "world_file_count_before": 48,
+    "world_file_count_after": 48,
+    "world_file_set_equal": true,
+    "identical_world_files": 46,
+    "different_world_files": [
+      "#TWl0Y2hlbCBSaWNl.pt",
+      "#TWl0Y2hlbCBSaWNl.sav.zzip"
+    ]
+  },
+  "discarded_attempts": [
+    "Original combat pilot:32 north inputs moved4 tiles; diagnostic only.",
+    "Cloak-only control-tracy-1:64 inputs moved6 tiles; blocked by monsters.",
+    "Initial collector handshake connected8086 while owned control bound8087; no movement input sent; retried using verified port.",
+    "candidate-tracy-1 included an extra invalid space input and an Unknown command message. Comparison rejected it; fresh candidate-tracy-2 replaced it. No player message differences are waived."
+  ],
+  "limits": [
+    "Reported multi-second exploration stall is not reproduced in the accepted small11-region carrier save. This fixes a demonstrated scaling defect, not a proven complete solution to that report.",
+    "Perf unresolved leaf stacks exceed half of sampled cycles, limiting precise CPU attribution. Inclusive percentages overlap and missing samples are not zero cost.",
+    "No cold-disk/large real-player-save benchmark, full replay playback, multiplayer session, full CI, Windows/Android or SDL3 acceptance in this batch.",
+    "Earlier visibility-preparation batch22 remains separately pending its own original runtime acceptance. This pair uses that fix in both binaries and does not close that comparison.",
+    "Existing remote performance branch has53 additional commits. This local isolated branch preserves that history and has not been pushed or merged."
+  ],
+  "next_exact_action": "Create a frozen normal-speed field exploration scene that crosses into absent map quads. Instrument/measure map::loadn generation separately from mapbuffer::unserialize_submaps and memory preparation; use valid completed movement and checksum-verified native saves. Investigate first generation and render/upload stalls before choosing a worker boundary.",
+  "evidence_root": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/exploration-memory-20261006",
+  "documentation_impact": "Implementation and reproducible native performance evidence only; no public contract or generated reference change."
+}

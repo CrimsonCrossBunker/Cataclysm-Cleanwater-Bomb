@@ -14,6 +14,7 @@
 #include "cata_path.h"
 #include "cata_utility.h"
 #include "coordinate_conversions.h"
+#include "coordinates.h"
 #include "cuboid_rectangle.h"
 #include "debug.h"
 #include "filesystem.h"
@@ -21,9 +22,15 @@
 #include "game_constants.h"
 #include "json_loader.h"
 #include "map_memory.h"
+#include "map_scale_constants.h"
+#include "mdarray.h"
+#include "memory_fast.h"
 #include "path_info.h"
+#include "point.h"
+#include "profiling.h"
 #include "string_formatter.h"
 #include "translations.h"
+#include "type_id.h"
 #include "worldfactory.h"
 #include "zzip_stack.h"
 
@@ -297,6 +304,11 @@ bool map_memory::prepare_region( const tripoint_abs_ms &p1, const tripoint_abs_m
         }
     }
 
+    CATA_PROFILE_SCOPE_NAMED( "map_memory.prepare_region" );
+    // Share the lazy archive index only within this preparation. A save may
+    // rewrite its mapped files after this call returns.
+    std::shared_ptr<zzip_stack> reader;
+
     dbg( D_INFO ) << "Preparing memory map for area: pos: " << sm_pos << " size: " << sm_size;
 
     cache_pos = sm_pos;
@@ -310,20 +322,21 @@ bool map_memory::prepare_region( const tripoint_abs_ms &p1, const tripoint_abs_m
             for( int dx = 0; dx < cache_size.x; dx++ ) {
                 // Store submap pointer in cache, categorized by z-level
                 const tripoint_abs_sm smpos( cache_pos.x() + dx, cache_pos.y() + dy, z );
-                cached[z].push_back( fetch_submap( smpos ) );
+                cached[z].push_back( fetch_submap( smpos, reader ) );
             }
         }
     }
     return true;
 }
 
-shared_ptr_fast<mm_submap> map_memory::fetch_submap( const tripoint_abs_sm &sm_pos )
+shared_ptr_fast<mm_submap> map_memory::fetch_submap( const tripoint_abs_sm &sm_pos,
+        std::shared_ptr<zzip_stack> &reader )
 {
     shared_ptr_fast<mm_submap> sm = find_submap( sm_pos );
     if( sm ) {
         return sm;
     }
-    sm = load_submap( sm_pos );
+    sm = load_submap( sm_pos, reader );
     if( sm ) {
         return sm;
     }
@@ -363,12 +376,14 @@ shared_ptr_fast<mm_submap> map_memory::find_submap( const tripoint_abs_sm &sm_po
     }
 }
 
-shared_ptr_fast<mm_submap> map_memory::load_submap( const tripoint_abs_sm &sm_pos )
+shared_ptr_fast<mm_submap> map_memory::load_submap( const tripoint_abs_sm &sm_pos,
+        std::shared_ptr<zzip_stack> &reader )
 {
     if( test_mode ) {
         return nullptr;
     }
 
+    CATA_PROFILE_SCOPE_NAMED( "map_memory.load_region" );
     const reg_coord_pair p( sm_pos );
     const cata_path mm_dir = find_mm_dir();
     std::filesystem::path mm_filename = std::filesystem::u8path( find_region_filename( p.reg ) );
@@ -381,12 +396,14 @@ shared_ptr_fast<mm_submap> map_memory::load_submap( const tripoint_abs_sm &sm_po
     try {
 
         if( world_generator->active_world->has_compression_enabled() ) {
-            std::shared_ptr<zzip_stack> z = zzip_stack::load( mm_dir.get_unrelative_path(),
-                                            ( PATH_INFO::world_base_save_path() / "mmr.dict" ).get_unrelative_path() );
-            if( !z ) {
+            if( !reader ) {
+                reader = zzip_stack::load( mm_dir.get_unrelative_path(),
+                                           ( PATH_INFO::world_base_save_path() / "mmr.dict" ).get_unrelative_path() );
+            }
+            if( !reader ) {
                 return nullptr;
             }
-            if( !read_from_zzip_optional( z, mm_filename, [&]( std::string_view sv ) {
+            if( !read_from_zzip_optional( reader, mm_filename, [&]( std::string_view sv ) {
             JsonValue jsin = json_loader::from_string( std::string( sv ) );
                 loader( jsin );
             } ) ) {
@@ -454,6 +471,8 @@ bool map_memory::is_valid() const
 
 void map_memory::load( const tripoint_abs_ms &pos )
 {
+    CATA_PROFILE_SCOPE_NAMED( "map_memory.load" );
+    std::shared_ptr<zzip_stack> reader;
     const coord_pair p( pos );
     const tripoint_abs_sm start = p.sm - tripoint_rel_sm( MM_SIZE / 2, MM_SIZE / 2, 0 );
     dbg( D_INFO ) << "[LOAD] Loading memory map around " << p.sm << ". Loading submaps within " << start
@@ -461,7 +480,7 @@ void map_memory::load( const tripoint_abs_ms &pos )
     clear_cache();
     for( int dy = 0; dy < MM_SIZE; dy++ ) {
         for( int dx = 0; dx < MM_SIZE; dx++ ) {
-            fetch_submap( start + tripoint_rel_sm( dx, dy, 0 ) );
+            fetch_submap( start + tripoint_rel_sm( dx, dy, 0 ), reader );
         }
     }
     dbg( D_INFO ) << "[LOAD] Done.";
