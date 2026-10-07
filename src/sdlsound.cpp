@@ -815,8 +815,8 @@ static const sound_effect *find_random_effect( const std::string &id, const std:
         const std::optional<bool> &is_night, std::minstd_rand0 *presentation_rng = nullptr )
 {
     const std::vector<sound_effect> *iter = sfx_resources.sound_effects.find( id, variant, season,
-        is_indoors,
-        is_night );
+                                            is_indoors,
+                                            is_night );
     if( !iter ) {
         return nullptr;
     }
@@ -914,7 +914,7 @@ static void play_positional_variant_sound( std::string_view id, std::string_view
         return;
     }
     const sound_effect *eff = find_random_effect( std::string( id ), std::string( variant ),
-        std::string( season ), is_indoors, is_night, presentation_rng );
+                              std::string( season ), is_indoors, is_night, presentation_rng );
     if( eff == nullptr ) {
         return;
     }

@@ -1,4 +1,8 @@
 #include <chrono>
+#include <stddef.h>
+#include <units.h>
+#include <initializer_list>
+#include <random>
 #include <optional>
 #include <string>
 
@@ -133,9 +137,9 @@ TEST_CASE( "melee_sound_schedule_is_independent_of_simulation_rng_and_pump_caden
         REQUIRE( first );
         REQUIRE( second );
         const std::optional<sfx::queued_sound> late_first = delayed.pop_due( action_time + milliseconds(
-                100 ) );
+                    100 ) );
         const std::optional<sfx::queued_sound> late_second = delayed.pop_due( action_time + milliseconds(
-                100 ) );
+                    100 ) );
         REQUIRE( late_first );
         REQUIRE( late_second );
         CHECK( first->id == late_first->id );

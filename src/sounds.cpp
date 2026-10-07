@@ -1435,7 +1435,7 @@ void sfx::generate_melee_sound( const item &weapon, const tripoint_bub_ms &sourc
         sequence.hit = sequence.swing;
         sequence.hit->id = targ_mon && material == "steel" ? "melee_hit_metal" : "melee_hit_flesh";
         sequence.hit->variant = has_exact_variant_sound( sequence.hit->id, weapon_variant,
-            season, indoors, night ) ? weapon_variant : skill_variant;
+                                season, indoors, night ) ? weapon_variant : skill_variant;
         sequence.hit->volume = from_npc ? std::max( heard_volume - 20, 0 ) : heard_volume;
         sequence.hit->angle = get_heard_angle( target );
     }

@@ -23,7 +23,7 @@ bool sfx::melee_sound_queue::enqueue( melee_sound_sequence sequence, clock::time
     if( sequence.hit ) {
         const int delay = std::max( sequence.weapon_volume, 0 ) *
                           std::uniform_int_distribution<int>( sequence.target_monster ? 12 : 9,
-                              sequence.target_monster ? 16 : 12 )( random_engine );
+                                  sequence.target_monster ? 16 : 12 )( random_engine );
         sequence.hit->random_seed = random_engine();
         pending.push( { swing_due + std::chrono::milliseconds( delay ), next_order++,
                         std::move( *sequence.hit ) } );

@@ -62,6 +62,7 @@
 #include "point.h"
 #include "proficiency.h"
 #include "requirements.h"
+#include "visitable.h"
 #include "ret_val.h"
 #include "skill.h"
 #include "string_formatter.h"
@@ -1055,6 +1056,8 @@ void veh_interact::cache_tool_availability()
 
     Character &player_character = get_player_character();
     crafting_inv = &player_character.crafting_inventory();
+    install_requirements_available = installation_requirement_availability( player_character,
+                                     *crafting_inv );
 
     cache_tool_availability_update_lifting( player_character.pos_bub() );
     int mech_jack = 0;
@@ -2638,6 +2641,18 @@ int veh_interact::part_at( const point_rel_ms &d )
  * Affects coloring in display_list() and is also used to
  * sort can_mount so potentially installable parts come first.
  */
+std::map<const vpart_info *, bool> veh_interact::installation_requirement_availability(
+    const Character &actor, const inventory &inv )
+{
+    std::map<const vpart_info *, bool> result;
+    scoped_provider_quality_cache qualities( inv );
+    for( const vpart_info &vpart : vehicles::parts::get_all() ) {
+        result.emplace( &vpart, vpart.install_requirements().can_make_with_inventory(
+                            &actor, inv, is_crafting_component, 1, craft_flags::none, false ) );
+    }
+    return result;
+}
+
 bool veh_interact::can_potentially_install( const vpart_info &vpart )
 {
     if( vehicle_service_mode ) {
@@ -2646,9 +2661,8 @@ bool veh_interact::can_potentially_install( const vpart_info &vpart )
                !vpart.has_flag( VPFLAG_APPLIANCE );
     }
     bool engine_reqs_met = true;
-    bool can_make = vpart.install_requirements().can_make_with_inventory( &get_player_character(),
-                    *crafting_inv,
-                    is_crafting_component, 1, craft_flags::none, false );
+    const auto available = install_requirements_available.find( &vpart );
+    const bool can_make = available != install_requirements_available.end() && available->second;
     bool hammerspace = get_player_character().has_trait( trait_DEBUG_HS );
 
     int engines = 0;

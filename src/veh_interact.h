@@ -109,6 +109,10 @@ class veh_interact
         // Hidden parts must remain selectable even when no visible frame remains.
         static int part_at_mount( const vehicle &veh, const point_rel_ms &mount );
 
+        // Inventory requirements are independent of the selected vehicle tile.
+        static std::map<const vpart_info *, bool> installation_requirement_availability(
+            const Character &actor, const inventory &inv );
+
         /** Prompt for a part matching the selector function */
         static std::optional<vpart_reference> select_part( map &here, const vehicle &veh,
                 const part_selector &sel,
@@ -362,6 +366,7 @@ class veh_interact
          * Can be converted to a vector<vpart_info>.
          * Updated whenever the cursor moves. */
         std::vector<const vpart_info *> can_mount;
+        std::map<const vpart_info *, bool> install_requirements_available;
 
         /* Vector of vparts in the current square that can be repaired. Strictly a
          * subset of parts_here.

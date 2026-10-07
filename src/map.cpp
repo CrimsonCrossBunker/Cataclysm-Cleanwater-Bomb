@@ -706,7 +706,7 @@ void map::update_map_memory( avatar &you )
         return np.y() < min_visible.y || np.y() > max_visible.y ||
         np.x() < min_visible.x || np.x() > max_visible.x ||
         here.get_visibility( ch.visibility_cache[np.x()][np.y()], cache ) !=
-            visibility_type::CLEAR;
+        visibility_type::CLEAR;
     };
 
     // Memorize everything the character can currently see, even if it was not
