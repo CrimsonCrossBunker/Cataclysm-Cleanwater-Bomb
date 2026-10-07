@@ -7,11 +7,11 @@
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
-#include <functional>
 #include <memory>
 #include <sstream>
 #include <string>
 #include <system_error>
+#include <vector>
 
 #include "avatar.h"
 #include "cached_options.h"
@@ -52,10 +52,13 @@ static constexpr tripoint_abs_ms p2{ 5, 7, -1 };
 static constexpr tripoint_abs_ms p3{ SEEX * 2 + 5, SEEY + 7, -1 };
 static constexpr tripoint_abs_ms p4{ SEEX * 3 + 2, SEEY * 7 + 1, -1 };
 
+static const efftype_id effect_blind( "blind" );
+
 static const furn_str_id furn_f_chair( "f_chair" );
 
 static const ter_str_id ter_t_floor( "t_floor" );
 static const ter_str_id ter_t_grass( "t_grass" );
+static const ter_str_id ter_t_utility_light( "t_utility_light" );
 static const ter_str_id ter_t_wall( "t_wall" );
 
 // Disk-backed fixtures must opt out of test_mode's memory IO bypass.
@@ -86,7 +89,7 @@ static void with_map_memory_world( bool compressed, const std::function<void()> 
     test_mode = false;
     world_generator->set_active_world( &world );
     if( compressed ) {
-        std::ofstream dictionary( directory / "mmr.dict" );
+        std::ofstream dictionary( directory / std::filesystem::u8path( "mmr.dict" ) );
         dictionary << "map memory region dictionary";
         REQUIRE( dictionary.good() );
     }
@@ -169,7 +172,7 @@ BENCHMARK_TEST_CASE( "map_memory_first_exploration_compressed_archive",
         region.serialize( json );
         const std::string empty_region = output.str();
         for( int i = 0; i < archive_regions; ++i ) {
-            std::ofstream file( source / ( std::to_string( i + 100 ) + ".0.0.mmr" ) );
+            std::ofstream file( source / std::filesystem::u8path( std::to_string( i + 100 ) + ".0.0.mmr" ) );
             file << empty_region;
             REQUIRE( file.good() );
         }
@@ -395,7 +398,7 @@ TEST_CASE( "map_memory_refreshes_visibility_dependencies", "[map_memory][vision]
     const tripoint_bub_ms original_position = you.pos_bub( here );
     const time_point original_time = calendar::turn;
     on_out_of_scope restore_player( [&]() {
-        you.remove_effect( efftype_id( "blind" ) );
+        you.remove_effect( effect_blind );
         you.recalc_sight_limits();
         you.setpos( here, original_position );
         set_time( original_time );
@@ -414,12 +417,12 @@ TEST_CASE( "map_memory_refreshes_visibility_dependencies", "[map_memory][vision]
         here.update_map_memory( you );
         REQUIRE( target_is_clear() );
         you.clear_map_memory();
-        you.add_effect( efftype_id( "blind" ), 1_turns );
+        you.add_effect( effect_blind, 1_turns );
         you.recalc_sight_limits();
         here.update_map_memory( you );
         CHECK_FALSE( target_is_clear() );
         CHECK_FALSE( you.has_memory_at( target_abs ) );
-        you.remove_effect( efftype_id( "blind" ) );
+        you.remove_effect( effect_blind );
         you.recalc_sight_limits();
         here.update_map_memory( you );
         CHECK( target_is_clear() );
@@ -430,7 +433,7 @@ TEST_CASE( "map_memory_refreshes_visibility_dependencies", "[map_memory][vision]
         here.update_map_memory( you );
         REQUIRE_FALSE( target_is_clear() );
         you.clear_map_memory();
-        here.ter_set( target, ter_str_id( "t_utility_light" ) );
+        here.ter_set( target, ter_t_utility_light );
         here.update_map_memory( you );
         CHECK( target_is_clear() );
         CHECK( you.get_memorized_tile( target_abs ).get_ter_id() == "t_utility_light" );
@@ -868,15 +871,14 @@ TEST_CASE( "mid_step_visibility_prepares_dirty_lightmap_without_movement",
     you.setpos( here, observer );
     const bool extinguish = GENERATE( false, true );
     CAPTURE( extinguish );
-    const ter_str_id light( "t_utility_light" );
-    here.ter_set( target, extinguish ? light : ter_t_floor );
+    here.ter_set( target, extinguish ? ter_t_utility_light : ter_t_floor );
     here.build_map_cache( 0 );
     here.update_visibility_cache( 0 );
     const lit_level previous = here.get_cache_ref( 0 ).visibility_cache[target.x()][target.y()];
 
     // A stationary input step has neither a frame nor movement-driven memory
     // to prepare newly changed light. It must still provide current visibility.
-    here.ter_set( target, extinguish ? ter_t_floor : light );
+    here.ter_set( target, extinguish ? ter_t_floor : ter_t_utility_light );
     REQUIRE( here.get_cache_ref( 0 ).lightmap_dirty );
     REQUIRE_FALSE( you.has_destination() );
     REQUIRE_FALSE( you.has_destination_activity() );

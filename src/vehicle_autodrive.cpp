@@ -27,6 +27,7 @@
 #include "field.h"
 #include "flood_fill.h"
 #include "hash_utils.h"
+#include "line.h"
 #include "map.h"
 #include "map_iterator.h"
 #include "map_memory.h"
@@ -37,6 +38,7 @@
 #include "tileray.h"
 #include "translations.h"
 #include "type_id.h"
+#include "units.h"
 #include "veh_type.h"
 #include "vpart_position.h"
 
