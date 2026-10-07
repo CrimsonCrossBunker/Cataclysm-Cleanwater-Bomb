@@ -82,6 +82,7 @@ class advanced_inventory
         bool move_all_items_and_waiting_to_quit = false;
 
         std::unique_ptr<ui_adaptor> ui;
+        std::shared_ptr<input_context> shortcut_context;
         std::unique_ptr<string_input_popup> spopup;
 
         // swap the panes and windows via std::swap()
