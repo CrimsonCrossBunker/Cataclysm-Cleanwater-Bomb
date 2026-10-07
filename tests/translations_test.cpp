@@ -24,7 +24,7 @@ namespace translation_macro_test
 // A caller may have its own detail namespace, as the Lua platform does.
 namespace detail
 {
-}
+} // namespace detail
 
 static std::string translate_string( const std::string &text )
 {

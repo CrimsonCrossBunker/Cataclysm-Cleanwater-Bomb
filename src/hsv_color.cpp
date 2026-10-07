@@ -213,7 +213,7 @@ auto hsv2rgb( HSVColor color ) -> RGBColor
         I = 5;
     }
 
-    uint32_t F = ( H - static_cast<uint32_t>( E * I ) );
+    uint32_t F = H - static_cast<uint32_t>( E * I );
     if( F == 0 ) {
         ++F;
     }
@@ -304,7 +304,7 @@ RGBColor tint_blend( const RGBColor &base, const RGBColor &tint )
     const auto overlay = []( const uint8_t b, const uint8_t blend ) -> uint8_t {
         if( b > 127 )
         {
-            return static_cast<uint8_t>( std::clamp<int>( 255 - ( std::max( 255 - blend, 1 ) ) *
+            return static_cast<uint8_t>( std::clamp<int>( 255 - std::max( 255 - blend, 1 ) *
                                          ( ( 255 - b ) * 255 / 127 ) / 255, 0, 255 ) );
         }
         return static_cast<uint8_t>( std::clamp<int>( blend * ( b * 255 / 127 ) / 255, 0, 255 ) );
