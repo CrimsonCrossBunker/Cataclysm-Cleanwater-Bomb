@@ -1,12 +1,19 @@
+#include <string>
+
 #include "cata_catch.h"
 #include "calendar.h"
 #include "item.h"
+#include "item_components.h"
 #include "requirements.h"
 #include "type_id.h"
 
+static const itype_id itype_copper( "copper" );
+static const itype_id itype_lead( "lead" );
+static const itype_id itype_string_6( "string_6" );
+
 TEST_CASE( "physical_stack_merging_preserves_item_state", "[item][stacking][charges]" )
 {
-    item lhs( itype_id( "string_6" ), calendar::turn, 10 );
+    item lhs( itype_string_6, calendar::turn, 10 );
     REQUIRE( lhs.count_by_charges() );
     REQUIRE( lhs.max_damage() > 1002 );
     item rhs = lhs;
@@ -17,8 +24,8 @@ TEST_CASE( "physical_stack_merging_preserves_item_state", "[item][stacking][char
         REQUIRE( lhs.damage_level() == rhs.damage_level() );
     }
     SECTION( "different_crafting_components" ) {
-        item lead( itype_id( "lead" ), calendar::turn, 1 );
-        item copper( itype_id( "copper" ), calendar::turn, 1 );
+        item lead( itype_lead, calendar::turn, 1 );
+        item copper( itype_copper, calendar::turn, 1 );
         lhs.components.add( lead );
         rhs.components.add( copper );
         REQUIRE( lhs.get_uncraft_components() != rhs.get_uncraft_components() );
