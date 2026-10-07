@@ -2034,7 +2034,16 @@ void advanced_inventory::process_action( const std::string &input_action )
 void advanced_inventory::display()
 {
     avatar &player_character = get_avatar();
-    input_context ctxt{ register_ctxt() };
+    if( !shortcut_context ) {
+        // The overlay survives transfer activities. Its shortcut context must
+        // survive too, or Android briefly switches to gameplay keys each move.
+        shortcut_context = std::make_shared<input_context>( "ADVANCED_INVENTORY" );
+        *shortcut_context = register_ctxt();
+    }
+    // A nested action may clear cached UIs before this input loop unwinds.
+    const std::shared_ptr<input_context> active_shortcuts = shortcut_context;
+    input_context &ctxt = *active_shortcuts;
+    input_context::scoped_activation active_context( ctxt );
 
     exit = false;
     if( !is_processing() ) {
@@ -2487,6 +2496,7 @@ void advanced_inventory::do_return_entry()
 void advanced_inventory::temp_hide()
 {
     ui = nullptr;
+    shortcut_context.reset();
     do_return_entry();
     cancel_aim_processing();
 }
