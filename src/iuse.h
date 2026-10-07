@@ -263,6 +263,7 @@ struct heater {
     void deserialize( const JsonValue &jsin );
 };
 heater find_heater( Character *, item *, bool force_use_it );
+heater find_vehicle_heater( const tripoint_bub_ms &position, const item &tool );
 heating_requirements heating_requirements_for_weight( const units::mass &,
         const units::mass &, const units::volume & );
 

@@ -55,7 +55,7 @@
     "sub": "hotplate",
     "charges_per_use": 1,
     "qualities": [ [ "DISTILL", 1 ], [ "CHEM", 3 ], [ "BOIL", 1 ], [ "HOTPLATE", 2 ] ],
-    "use_action": [ { "type": "link_up", "cable_length": 7, "charge_rate": "1 kW" } ],
+    "use_action": [ "HEAT_ALL_ITEMS", { "type": "link_up", "cable_length": 7, "charge_rate": "1 kW" } ],
     "tool_ammo": [ "battery" ]
   },
   {
