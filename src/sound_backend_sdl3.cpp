@@ -1,4 +1,4 @@
-#if defined(SDL_SOUND) && defined(USE_SDL3)
+#if defined(SDL_SOUND)
 
 #include "sound_backend.h"
 
@@ -631,4 +631,4 @@ bool is_music_playing()
 
 } // namespace sound_backend
 
-#endif // SDL_SOUND && USE_SDL3
+#endif // SDL_SOUND

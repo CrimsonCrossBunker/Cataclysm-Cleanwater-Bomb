@@ -86,10 +86,6 @@ then
         ${SDL3:+-DUSE_SDL3=${SDL3}}
     cmake --build build --parallel "$num_jobs"
 else
-    effective_sdl3="${SDL3:-}"
-    if [ -z "${SDL3+x}" ] && [ "${TILES:-0}" = "1" ]; then
-        effective_sdl3=1
-    fi
     # The linter workflow owns formatting; compile jobs do not repeat it.
     make_args=( CCACHE=1 CROSS="$CROSS_COMPILATION" LINTJSON=0 ASTYLE=0 )
     # Full debug information substantially increases GCC's memory use for the
@@ -102,17 +98,11 @@ else
     if [ -n "${SDL3+x}" ]; then
         make_args+=( SDL3="$SDL3" )
     fi
-    if [ "$effective_sdl3" != "1" ]; then
-        make_args+=( FRAMEWORK=1 UNIVERSAL_BINARY=1 )
+    if [ "${NATIVE:-}" = "osx" ] && [ "${TILES:-0}" = "1" ]; then
+        make_args+=( UNIVERSAL_BINARY=1 )
     fi
     make -j "$num_jobs" "${make_args[@]}"
 
-    # For CI on macOS, patch the test binary so it can find SDL2 libraries.
-    if [[ ! -z "$OS" && "$OS" = "macos-12" ]]
-    then
-        file tests/cata_test
-        install_name_tool -add_rpath $HOME/Library/Frameworks tests/cata_test
-    fi
 fi
 
 # vim:tw=0

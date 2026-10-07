@@ -36,7 +36,7 @@ body:
     attributes:
       label: Build variant / 构建变体
       description: Include architecture, terminal/tiles, SDL backend, and package source where relevant.
-      placeholder: x86_64 tiles + sound, SDL2, official experimental archive
+      placeholder: x86_64 tiles + sound, SDL3, official experimental archive
     validations:
       required: true
   - type: textarea

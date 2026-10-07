@@ -3348,11 +3348,7 @@ void options_manager::add_options_graphics()
         // SDL3 drives renderer selection through SDL_HINT_RENDER_DRIVER; the
         // saved RENDERER value is ignored at startup but the option ID is
         // retained so configs from existing worlds still parse.
-#   if defined(USE_SDL3)
         const options_manager::copt_hide_t renderer_hide = COPT_ALWAYS_HIDE;
-#   else
-        const options_manager::copt_hide_t renderer_hide = COPT_CURSES_HIDE;
-#   endif
         add( "RENDERER", page_id, to_translation( "Renderer" ),
              to_translation( "Set which renderer to use.  Requires restart." ), renderer_list,
              default_renderer, renderer_hide );
@@ -3376,11 +3372,7 @@ void options_manager::add_options_graphics()
         // FRAMEBUFFER_ACCEL only meaningful for the SDL2 software renderer
         // path; under SDL3 the renderer is hidden and software fallback is
         // automatic, so the option is hidden too.
-#if defined(USE_SDL3)
         const options_manager::copt_hide_t framebuffer_accel_hide = COPT_ALWAYS_HIDE;
-#else
-        const options_manager::copt_hide_t framebuffer_accel_hide = COPT_CURSES_HIDE;
-#endif
         add( "FRAMEBUFFER_ACCEL", page_id, to_translation( "Software framebuffer acceleration" ),
              to_translation( "If true, use hardware acceleration for the framebuffer when using software rendering.  Requires restart." ),
              false, framebuffer_accel_hide
@@ -3388,8 +3380,6 @@ void options_manager::add_options_graphics()
 
 #if defined(__ANDROID__)
         get_option( "FRAMEBUFFER_ACCEL" ).setPrerequisite( "SOFTWARE_RENDERING" );
-#elif !defined(USE_SDL3)
-        get_option( "FRAMEBUFFER_ACCEL" ).setPrerequisite( "RENDERER", "software" );
 #endif
 
         // Color-modulated textures are an SDL2-era speed-up that replaces
@@ -3397,11 +3387,7 @@ void options_manager::add_options_graphics()
         // batches fills efficiently and the texture path blends differently, so
         // the saved value is ignored at startup and the option is hidden; the ID
         // is retained so existing configs still parse.
-#if defined(USE_SDL3)
         const options_manager::copt_hide_t color_modulated_hide = COPT_ALWAYS_HIDE;
-#else
-        const options_manager::copt_hide_t color_modulated_hide = COPT_CURSES_HIDE;
-#endif
         add( "USE_COLOR_MODULATED_TEXTURES", page_id, to_translation( "Use color modulated textures" ),
              to_translation( "If true, tries to use color modulated textures to speed-up ASCII drawing.  Requires restart." ),
              false, color_modulated_hide

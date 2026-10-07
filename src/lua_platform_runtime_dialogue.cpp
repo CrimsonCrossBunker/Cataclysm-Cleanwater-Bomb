@@ -215,15 +215,9 @@ bool platform_canvas_context::sprite( const std::string &id, const float x, cons
         return false;
     }
     SDL_Texture *tex = sprite->get_texture_ptr().get();
-#if SDL_MAJOR_VERSION >= 3
     float atlas_width = 0;
     float atlas_height = 0;
     SDL_GetTextureSize( tex, &atlas_width, &atlas_height );
-#else
-    int atlas_width = 0;
-    int atlas_height = 0;
-    SDL_QueryTexture( tex, nullptr, nullptr, &atlas_width, &atlas_height );
-#endif
     if( atlas_width <= 0 || atlas_height <= 0 ) {
         return false;
     }
