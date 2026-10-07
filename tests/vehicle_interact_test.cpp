@@ -41,8 +41,8 @@ static const skill_id skill_mechanics( "mechanics" );
 
 static const vpart_id vpart_ap_test_storage_battery( "ap_test_storage_battery" );
 static const vpart_id vpart_board( "board" );
-static const vpart_id vpart_controls( "controls" );
 static const vpart_id vpart_frame( "frame" );
+static const vpart_id vpart_roof( "roof" );
 
 static const vpart_location_id vpart_location_structure( "structure" );
 
@@ -277,8 +277,8 @@ TEST_CASE( "vehicle_interaction_selects_hidden_remaining_parts", "[vehicle][vehi
     const point_rel_ms mount = point_rel_ms::zero;
     const int frame = veh->install_part( here, mount, vpart_frame );
     REQUIRE( frame >= 0 );
-    const int controls = veh->install_part( here, mount, vpart_controls );
-    REQUIRE( controls >= 0 );
+    const int hidden = veh->install_part( here, mount, vpart_roof );
+    REQUIRE( hidden >= 0 );
     CHECK( veh_interact::part_at_mount( *veh, mount ) == frame );
 
     // Reproduce a legacy wreck containing only a non-displayed component.
@@ -287,7 +287,7 @@ TEST_CASE( "vehicle_interaction_selects_hidden_remaining_parts", "[vehicle][vehi
     REQUIRE( veh->part_displayed_at( mount ) == -1 );
     const int selected = veh_interact::part_at_mount( *veh, mount );
     REQUIRE( selected >= 0 );
-    CHECK( veh->part( selected ).info().id == vpart_controls );
+    CHECK( veh->part( selected ).info().id == vpart_roof );
     CHECK( veh->can_unmount( veh->part( selected ) ).success() );
     CHECK( veh_interact::part_at_mount( *veh, point_rel_ms( 5, 5 ) ) == -1 );
 }
