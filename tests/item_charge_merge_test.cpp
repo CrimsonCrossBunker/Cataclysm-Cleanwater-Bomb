@@ -1,7 +1,8 @@
 #include <string>
+#include <vector>
 
-#include "cata_catch.h"
 #include "calendar.h"
+#include "cata_catch.h"
 #include "item.h"
 #include "item_components.h"
 #include "requirements.h"
