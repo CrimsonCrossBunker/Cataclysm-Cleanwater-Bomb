@@ -179,6 +179,7 @@ class game
         friend class main_menu;
         friend class exosuit_interact;
         friend class swap_map;
+        friend struct starting_vehicle_test_access;
         friend achievements_tracker &get_achievements();
         friend event_bus &get_event_bus();
         friend map &get_map();
