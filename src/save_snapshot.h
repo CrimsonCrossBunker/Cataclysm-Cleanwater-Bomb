@@ -117,6 +117,13 @@ bool make_dimension_rollback( const cata_path &world_dir,
 bool restore_dimension_rollback( const cata_path &world_dir );
 bool delete_dimension_rollback( const cata_path &world_dir );
 
+// Mark travel before it rewrites any world files. Only a complete checkpoint
+// clears the marker; a fresh load restores the rollback after an interruption.
+bool begin_dimension_transition( const cata_path &world_dir );
+bool dimension_transition_pending( const cata_path &world_dir );
+bool finish_dimension_transition( const cata_path &world_dir );
+bool recover_dimension_transition( const cata_path &world_dir );
+
 } // namespace save_snapshot
 
 #endif // CATA_SRC_SAVE_SNAPSHOT_H

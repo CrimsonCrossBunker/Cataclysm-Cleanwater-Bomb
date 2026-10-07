@@ -172,8 +172,8 @@
 #include "monster.h"
 #include "monstergenerator.h"
 #include "move_mode.h"
+#include "mp_client_conn.h"
 #ifdef MP_ENABLED
-    #include "mp_client_conn.h"
     #include "mp_gamestate.h"
 #endif
 #include "mtype.h"
@@ -201,7 +201,9 @@
 #include "regional_settings.h"
 #include "ret_val.h"
 #include "rng.h"
+#include "safe_reference.h"
 #include "safemode_ui.h"
+#include "save_snapshot.h"
 #include "scenario.h"
 #include "scent_map.h"
 #include "scores_ui.h"
@@ -4739,16 +4741,22 @@ void game::use_computer( const tripoint_bub_ms &p )
         }
         return;
     }
+    const safe_reference<computer> terminal_reference = used->get_safe_reference();
     if( used->has_platform_access_handler() &&
         !cata::lua_platform::invoke_computer_access_handler(
             *used, get_player_character() ).value_or( false ) ) {
+        return;
+    }
+    if( !terminal_reference ) {
         return;
     }
     if( used->eocs.empty() ) {
         computer_session( *used ).use();
     } else {
         dialogue d( get_talker_for( get_avatar() ), get_talker_for( used ) );
-        for( const effect_on_condition_id &eoc : used->eocs ) {
+        // An EOC can unload this map (and the terminal) during dimension travel.
+        const std::vector<effect_on_condition_id> eocs = used->eocs;
+        for( const effect_on_condition_id &eoc : eocs ) {
             eoc->activate( d );
         }
     }
@@ -10334,6 +10342,11 @@ bool game::travel_to_dimension( dimension_id dimension_destination,
     // Keep the last complete save before this trip writes source maps.  The
     // later safety checkpoint must not replace the player's quickload target.
     ensure_dimension_rollback_snapshot();
+    if( !cata_mp::is_client_mode() && world_generator && world_generator->active_world &&
+        !world_generator->active_world->world_saves.empty() &&
+        !save_snapshot::begin_dimension_transition( world_generator->active_world->folder_path() ) ) {
+        return false;
+    }
     map &here = get_map();
     avatar &player = get_avatar();
     std::vector<npc_ptr> moving_npcs;
