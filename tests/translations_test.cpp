@@ -1,8 +1,12 @@
 #include <iosfwd>
+#include <optional>
 #include <string>
 #include <vector>
 
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
+#include "hsv_color.h"
+#include "translation_manager.h"
 #include "translations.h"
 
 // wrapping in another macro to prevent collection of the test string for translation
@@ -20,7 +24,7 @@ namespace translation_macro_test
 // A caller may have its own detail namespace, as the Lua platform does.
 namespace detail
 {
-}
+} // namespace detail
 
 static std::string translate_string( const std::string &text )
 {
@@ -101,6 +105,39 @@ TEST_CASE( "translations_macro_char_address", "[translations]" )
 }
 
 #ifdef LOCALIZE
+TEST_CASE( "paint_color_names_translate_without_changing_identifiers",
+           "[translations][vehicle][paint]" )
+{
+    TranslationManager &manager = TranslationManager::GetInstance();
+    const std::string old_language = manager.GetCurrentLanguage();
+    const on_out_of_scope restore_language( [old_language]() {
+        set_language( old_language );
+    } );
+    set_language( "en" );
+
+    const std::optional<RGBColor> color = RGBColor::try_parse( "Azure blue" );
+    REQUIRE( color.has_value() );
+    CHECK( color->friendly_name() == "Azure blue" );
+    RGBColor similar = *color;
+    similar.a = 254;
+    REQUIRE( similar != *color );
+    CHECK( similar.friendly_name() == "Azure blue (Off-Brand)" );
+
+    set_language( "ru" );
+    manager.LoadDocuments( {
+        "./data/mods/TEST_DATA/lang/mo/ru/LC_MESSAGES/TEST_DATA.mo"
+    } );
+    CHECK( color->friendly_name() == "Лазурно-синий" );
+    CHECK( similar.friendly_name() == "Лазурно-синий (Off-Brand)" );
+    CHECK( RGBColor::try_parse( "Azure blue" ) == color );
+    CHECK_FALSE( RGBColor::try_parse( "Лазурно-синий" ).has_value() );
+    CHECK( RGBColor::get_all_named_colors().at( *color ) == "Azure blue" );
+
+    set_language( "en" );
+    CHECK( color->friendly_name() == "Azure blue" );
+    CHECK( similar.friendly_name() == "Azure blue (Off-Brand)" );
+}
+
 // this test will only succeed when LOCALIZE is enabled
 // assuming [en] language is used for this test
 // requires .mo file for "en" language

@@ -662,6 +662,9 @@ std::optional<RGBColor> paint_vehicle_select_color()
 {
     const std::unordered_map<RGBColor, std::string> named = RGBColor::get_all_named_colors();
     std::vector<std::pair<RGBColor, std::string>> colors( named.begin(), named.end() );
+    for( auto &entry : colors ) {
+        entry.second = entry.first.friendly_name();
+    }
     std::sort( colors.begin(), colors.end(),
     []( const std::pair<RGBColor, std::string> &a, const std::pair<RGBColor, std::string> &b ) {
         return localized_compare( a.second, b.second );

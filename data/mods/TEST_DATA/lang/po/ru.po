@@ -26,6 +26,11 @@ msgstr[3] "батарейки"
 msgid "__ccb_test_environment_spring__"
 msgstr "spring"
 
+# Used to verify contextual paint names and language changes after caching.
+msgctxt "named_color"
+msgid "Azure blue"
+msgstr "Лазурно-синий"
+
 #: lang/json/GENERIC_from_json.py
 msgctxt "weapon"
 msgid "pike"
