@@ -71,7 +71,7 @@ class ProjectMetadataTest(unittest.TestCase):
 
     def test_lua_first_replacement_ledger_is_exact(self):
         result = check_lua_first_replacement_ledger()
-        self.assertEqual(result["total"], 776)
+        self.assertEqual(result["total"], 778)
 
     def test_lua_first_roadmap_rejects_dependency_cycles(self):
         path = ROOT / "ai/lua-first-roadmap.yml"
