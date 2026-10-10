@@ -2,14 +2,16 @@
   {
     "abstract": "horse_armor",
     "type": "ITEM",
-    "subtypes": [ "PET_ARMOR" ],
+    "subtypes": [ "PET_ARMOR", "PET_EQUIPMENT" ],
     "name": { "str": "horse armor", "//~": "NO_I18N" },
     "symbol": "[",
     "min_pet_vol": "380 L",
     "max_pet_vol": "1000 L",
     "pet_bodytype": "horse",
     "longest_side": "60 cm",
-    "flags": [ "IS_PET_ARMOR" ]
+    "flags": [ "IS_PET_ARMOR" ],
+    "pet_slots": [ "armor" ],
+    "pet_passive_effects": [ "monster_armor" ]
   },
   {
     "type": "ITEM",
@@ -200,7 +202,7 @@
   {
     "id": "saddlebag",
     "type": "ITEM",
-    "subtypes": [ "ARMOR" ],
+    "subtypes": [ "ARMOR", "PET_EQUIPMENT" ],
     "name": { "str_sp": "saddle bags (pair)" },
     "description": "A pair of covered pouches laid across the back of a horse behind the saddle.",
     "weight": "1 kg",
@@ -213,7 +215,9 @@
     "color": "green",
     "warmth": 10,
     "material_thickness": 2,
-    "flags": [ "BELTED", "WATER_FRIENDLY" ],
+    "flags": [ "BELTED", "WATER_FRIENDLY", "SADDLE_BAG" ],
+    "pet_slots": [ "saddlebag" ],
+    "pet_passive_effects": [ "has_bag" ],
     "//": "each 15 L bag is ~ 60 x 25 x 10 cm",
     "pocket_data": [
       {

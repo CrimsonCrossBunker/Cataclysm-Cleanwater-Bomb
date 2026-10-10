@@ -31,26 +31,26 @@ sources:
 - id: json-object-types
   path: data/reference/json/ccb_json_object_types.json
   selector: type
-  source_fingerprint: sha256:0d2c64867ca5a2d0c5954b8a3f12a16edce6d30c65abc104f29f081e676a5cba
-  entry_count: 190
+  source_fingerprint: sha256:62ad94ad1f56a3d7d94edf1b90bdfdf8a735fdf65ea9fc2f05ee4736da49ce77
+  entry_count: 192
 - id: eoc-conditions
   path: data/reference/json/ccb_eoc_conditions.json
   selector: key
-  source_fingerprint: sha256:0d2c64867ca5a2d0c5954b8a3f12a16edce6d30c65abc104f29f081e676a5cba
+  source_fingerprint: sha256:62ad94ad1f56a3d7d94edf1b90bdfdf8a735fdf65ea9fc2f05ee4736da49ce77
   entry_count: 275
 - id: eoc-effects
   path: data/reference/json/ccb_eoc_effects.json
   selector: key
-  source_fingerprint: sha256:0d2c64867ca5a2d0c5954b8a3f12a16edce6d30c65abc104f29f081e676a5cba
+  source_fingerprint: sha256:62ad94ad1f56a3d7d94edf1b90bdfdf8a735fdf65ea9fc2f05ee4736da49ce77
   entry_count: 311
 summary:
-  total: 776
+  total: 778
   implemented_verified: 1
   implemented_unverified: 89
   bounded_implemented_verified: 0
   bounded_implemented_unverified: 672
   primitive_available_unverified: 4
-  planned: 0
+  planned: 2
   private_adapter: 0
   reviewed_not_applicable: 10
 entries:
@@ -9964,6 +9964,15 @@ entries:
   - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: json-object-types
+  selector: pet_slot
+  target_kind: platform_domain
+  target: content.gameplay
+  status: planned
+  legacy_dependency: public_legacy
+  evidence:
+  - data/reference/json/ccb_json_object_types.json
+  verification: not_run
+- inventory: json-object-types
   selector: playlist
   target_kind: platform_domain
   target: content.playlists
@@ -10351,6 +10360,15 @@ entries:
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
   verification: source_only
+- inventory: json-object-types
+  selector: riding_config
+  target_kind: platform_domain
+  target: content.gameplay
+  status: planned
+  legacy_dependency: public_legacy
+  evidence:
+  - data/reference/json/ccb_json_object_types.json
+  verification: not_run
 - inventory: json-object-types
   selector: rotatable_symbol
   target_kind: platform_domain

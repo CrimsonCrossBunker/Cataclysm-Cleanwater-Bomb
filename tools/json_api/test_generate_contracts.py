@@ -106,13 +106,13 @@ class RepositoryParityTest(unittest.TestCase):
 
     def test_runtime_registry_parity(self) -> None:
         payload = self.payloads["json_object_types"]
-        self.assertEqual(payload["summary"]["registration_calls"], 191)
-        self.assertEqual(payload["summary"]["registered_types"], 190)
-        self.assertEqual(payload["summary"]["observed_types"], 183)
+        self.assertEqual(payload["summary"]["registration_calls"], 193)
+        self.assertEqual(payload["summary"]["registered_types"], 192)
+        self.assertEqual(payload["summary"]["observed_types"], 185)
         self.assertEqual(payload["summary"]["observed_not_registered"], [])
         registrations = sum(len(entry["registrations"])
                             for entry in payload["entries"])
-        self.assertEqual(registrations, 191)
+        self.assertEqual(registrations, 193)
 
     def test_eoc_parser_parity(self) -> None:
         conditions = self.payloads["eoc_conditions"]
@@ -172,7 +172,7 @@ class RepositoryParityTest(unittest.TestCase):
             for entry in json_entries
             if entry["field_contract"]["status"] == "unclassified"
         ]
-        self.assertEqual(len(unclassified), 189)
+        self.assertEqual(len(unclassified), 191)
         self.assertTrue(all(entry["schema"]["status"] ==
                         "none" for entry in json_entries))
         condition = next(

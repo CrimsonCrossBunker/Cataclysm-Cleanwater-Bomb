@@ -1,0 +1,79 @@
+[
+  {
+    "type": "skill",
+    "id": "riding",
+    "name": { "str": "riding" },
+    "description": "Your ability to mount, control, and fight from living mounts.  Higher levels improve mounting reliability, balance, speed, and weapon handling while mounted.",
+    "display_category": "display_interaction",
+    "sort_rank": 27500,
+    "level_descriptions_theory": [
+      { "level": 0, "description": "You know that riders usually sit on top of the animal." },
+      { "level": 1, "description": "You understand basic mounting and rein control." },
+      { "level": 3, "description": "You understand balance, gait changes, and safe mounted movement." },
+      { "level": 5, "description": "You understand demanding maneuvers and mounted combat principles." },
+      { "level": 8, "description": "You understand advanced riding as well as a professional trainer." }
+    ],
+    "level_descriptions_practice": [
+      { "level": 0, "description": "You are likely to fumble a mount or lose your balance." },
+      { "level": 1, "description": "You can ride a calm, properly equipped animal." },
+      { "level": 3, "description": "You remain composed through ordinary turns and changes of pace." },
+      { "level": 5, "description": "You can control a mount reliably during combat." },
+      { "level": 8, "description": "You and your mount move as a practiced team." }
+    ]
+  },
+  {
+    "type": "proficiency_category",
+    "id": "prof_riding",
+    "name": "Mounted Combat",
+    "description": "Proficiencies for controlling a mount and attacking while riding."
+  },
+  {
+    "type": "proficiency",
+    "id": "prof_mounted_combat",
+    "category": "prof_riding",
+    "name": { "str": "mounted combat" },
+    "description": "You can keep an effective fighting posture while controlling a living mount.",
+    "can_learn": true,
+    "time_to_learn": "30 m"
+  },
+  {
+    "type": "proficiency",
+    "id": "prof_mounted_archery",
+    "category": "prof_riding",
+    "name": { "str": "mounted shooting" },
+    "description": "You compensate for a mount's movement while aiming and firing ranged weapons.",
+    "can_learn": true,
+    "time_to_learn": "2 h",
+    "required_proficiencies": [ "prof_mounted_combat" ]
+  },
+  {
+    "type": "proficiency",
+    "id": "prof_mounted_piercing",
+    "category": "prof_riding",
+    "name": { "str": "mounted thrusting" },
+    "description": "You align thrusting attacks with the motion and reach of your mount.",
+    "can_learn": true,
+    "time_to_learn": "2 h",
+    "required_proficiencies": [ "prof_mounted_combat" ]
+  },
+  {
+    "type": "proficiency",
+    "id": "prof_mounted_cutting",
+    "category": "prof_riding",
+    "name": { "str": "mounted slashing" },
+    "description": "You deliver controlled cutting attacks without losing your seat.",
+    "can_learn": true,
+    "time_to_learn": "2 h",
+    "required_proficiencies": [ "prof_mounted_combat" ]
+  },
+  {
+    "type": "proficiency",
+    "id": "prof_mounted_bashing",
+    "category": "prof_riding",
+    "name": { "str": "mounted striking" },
+    "description": "You use the mount's momentum to deliver balanced blunt strikes.",
+    "can_learn": true,
+    "time_to_learn": "2 h",
+    "required_proficiencies": [ "prof_mounted_combat" ]
+  }
+]

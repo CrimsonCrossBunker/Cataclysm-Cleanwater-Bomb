@@ -3226,6 +3226,9 @@ void itype::load_slots( const JsonObject &jo, bool was_loaded, std::string_view 
         if( subtype == "PET_ARMOR" ) {
             Item_factory::load_slot( jo, was_loaded, pet_armor, src );
         }
+        if( subtype == "PET_EQUIPMENT" ) {
+            Item_factory::load_slot( jo, was_loaded, pet_equipment, src );
+        }
         if( subtype == "GUN" ) {
             Item_factory::load_slot( jo, was_loaded, gun, src );
         }
@@ -3744,6 +3747,16 @@ void islot_pet_armor::deserialize( const JsonObject &jo )
     optional( jo, was_loaded, "environmental_protection", env_resist, 0 );
     optional( jo, was_loaded, "environmental_protection_with_filter", env_resist_w_filter, 0 );
     optional( jo, was_loaded, "power_armor", power_armor, false );
+}
+
+void islot_pet_equipment::deserialize( const JsonObject &jo )
+{
+    mandatory( jo, was_loaded, "pet_slots", slots );
+    optional( jo, was_loaded, "pet_passive_effects", passive_effects );
+    optional( jo, was_loaded, "pet_mount_threshold_delta", mount_threshold_delta, 0 );
+    optional( jo, was_loaded, "pet_melee_hit_multiplier", melee_hit_multiplier, 1.0 );
+    optional( jo, was_loaded, "pet_melee_damage_multiplier", melee_damage_multiplier, 1.0 );
+    optional( jo, was_loaded, "pet_fear_multiplier", fear_multiplier, 1.0 );
 }
 
 void islot_tool::deserialize( const JsonObject &jo )
