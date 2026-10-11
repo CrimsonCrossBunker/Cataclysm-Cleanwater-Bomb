@@ -1,6 +1,7 @@
 #include <cstddef>
 #include <functional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "activity_handlers.h"
@@ -26,6 +27,7 @@
 #include "point.h"
 #include "ret_val.h"
 #include "type_id.h"
+#include "value_ptr.h"
 
 static const activity_id ACT_REPAIR_ITEM( "ACT_REPAIR_ITEM" );
 

@@ -1,14 +1,14 @@
 #include "veh_utils.h"
 
-#include <color.h>
-#include <type_id.h>
 #include <algorithm>
 #include <climits>
 #include <cmath>
+#include <color.h>
 #include <functional>
 #include <list>
 #include <map>
 #include <memory>
+#include <type_id.h>
 #include <utility>
 #include <vector>
 
@@ -35,6 +35,7 @@
 #include "units.h"
 #include "veh_type.h"
 #include "vehicle.h"
+#include "visitable.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
 

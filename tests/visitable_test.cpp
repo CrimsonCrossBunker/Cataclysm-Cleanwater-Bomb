@@ -1,13 +1,13 @@
 #include <climits>
 #include <functional>
+#include <string>
 
-#include "cata_catch.h"
 #include "avatar.h"
 #include "calendar.h"
+#include "cata_catch.h"
 #include "cata_utility.h"
 #include "character.h"
 #include "character_attire.h"
-#include "flag.h"
 #include "inventory.h"
 #include "item.h"
 #include "player_helpers.h"

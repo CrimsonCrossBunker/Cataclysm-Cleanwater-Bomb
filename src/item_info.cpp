@@ -1,4 +1,4 @@
-#include "item.h"
+#include "item.h" // IWYU pragma: associated
 
 #include <algorithm>
 #include <cmath>
@@ -28,7 +28,6 @@
 #include "bodygraph.h"
 #include "bodypart.h"
 #include "calendar.h"
-#include "lua_platform_runtime.h"
 #include "cata_utility.h"
 #include "character.h"
 #include "character_martial_arts.h"
@@ -57,6 +56,7 @@
 #include "iuse.h"
 #include "iuse_actor.h"
 #include "localized_comparator.h"
+#include "lua_platform_runtime.h"
 #include "magic_enchantment.h"
 #include "martialarts.h"
 #include "material.h"
@@ -87,6 +87,7 @@
 #include "units_utility.h"
 #include "value_ptr.h"
 #include "veh_type.h"
+#include "visitable.h"
 #include "vitamin.h"
 #include "weighted_list.h"
 

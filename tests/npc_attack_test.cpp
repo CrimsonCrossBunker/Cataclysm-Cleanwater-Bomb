@@ -2,7 +2,6 @@
 #include <memory>
 #include <optional>
 
-#include "calendar.h"
 #include "cata_catch.h"
 #include "character.h"
 #include "character_id.h"

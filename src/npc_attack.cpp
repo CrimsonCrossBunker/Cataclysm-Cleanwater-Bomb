@@ -10,6 +10,7 @@
 
 #include "cata_utility.h"
 #include "character.h"
+#include "coordinates.h"
 #include "creature.h"
 #include "creature_tracker.h"
 #include "damage.h"
@@ -17,12 +18,14 @@
 #include "dialogue.h"
 #include "dialogue_helpers.h"
 #include "flag.h"
+#include "gun_mode.h"
 #include "inventory.h"
 #include "item.h"
 #include "item_location.h"
 #include "magic.h"
 #include "magic_spell_effect_helpers.h"
 #include "map.h"
+#include "map_iterator.h"
 #include "mapdata.h"
 #include "messages.h"
 #include "npc.h"
@@ -33,6 +36,7 @@
 #include "ret_val.h"
 #include "rng.h"
 #include "talker.h"
+#include "type_id.h"
 
 static const bionic_id bio_hydraulics( "bio_hydraulics" );
 

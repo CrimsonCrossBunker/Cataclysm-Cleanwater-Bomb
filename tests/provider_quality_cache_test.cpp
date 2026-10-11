@@ -1,4 +1,6 @@
+#include <functional>
 #include <map>
+#include <string>
 #include <vector>
 
 #include "avatar.h"
