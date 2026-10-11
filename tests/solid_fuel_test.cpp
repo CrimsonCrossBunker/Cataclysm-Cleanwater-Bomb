@@ -1,9 +1,10 @@
+#include <cstddef>
 #include <sstream>
 #include <string>
 
-#include "calendar.h"
 #include "cata_catch.h"
 #include "coordinates.h"
+#include "enums.h"
 #include "flexbuffer_json.h"
 #include "item.h"
 #include "json.h"
@@ -69,9 +70,9 @@ TEST_CASE( "steam_engines_do_not_collect_unserved_fuel_demand", "[vehicle][fuel]
         JsonOut out( saved );
         veh->serialize( out );
         std::string text = saved.str();
-        const size_t begin = text.find( "\"fuel_remainder\"" );
+        const std::size_t begin = text.find( "\"fuel_remainder\"" );
         REQUIRE( begin != std::string::npos );
-        const size_t end = text.find( '}', begin );
+        const std::size_t end = text.find( '}', begin );
         REQUIRE( end != std::string::npos );
         text.replace( begin, end - begin + 1,
                       "\"fuel_remainder\":{\"charcoal\":\"-780000000 J\"}" );
