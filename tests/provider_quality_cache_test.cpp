@@ -4,9 +4,11 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "crafting.h"
 #include "inventory.h"
 #include "item.h"
 #include "player_helpers.h"
+#include "requirements.h"
 #include "type_id.h"
 #include "veh_interact.h"
 #include "veh_type.h"
@@ -84,14 +86,27 @@ TEST_CASE( "vehicle_installation_inventory_checks_are_bounded_and_refreshable",
     clear_avatar();
     counting_quality_inventory inv;
     for( int n = 0; n < 5000; ++n ) {
-        inv.add_item( item( itype_rock ) );
+        item cargo( itype_rock );
+        cargo.set_var( "cargo_index", n );
+        inv.add_item( cargo );
     }
+    REQUIRE( inv.size() == 5000 );
+    std::map<const vpart_info *, bool> uncached;
+    inv.traversals = 0;
+    for( const vpart_info &part : vehicles::parts::get_all() ) {
+        uncached.emplace( &part, part.install_requirements().can_make_with_inventory(
+                              &get_avatar(), inv, is_crafting_component, 1, craft_flags::none, false ) );
+    }
+    const int uncached_traversals = inv.traversals;
     inv.traversals = 0;
     const auto available = veh_interact::installation_requirement_availability( get_avatar(), inv );
+    CAPTURE( uncached_traversals, inv.traversals );
+    CHECK( available == uncached );
     REQUIRE( available.size() == vehicles::parts::get_all().size() );
     // Thousands of part definitions share a small set of quality queries.
     // The inventory must not be traversed once for every definition/cursor.
     CHECK( inv.traversals < 100 );
+    CHECK( uncached_traversals > inv.traversals * 10 );
     CHECK_FALSE( available.at( &vpart_frame_wood.obj() ) );
 
     inv.clear();

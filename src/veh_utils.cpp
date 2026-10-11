@@ -66,6 +66,7 @@ int calc_xp_gain( const vpart_info &vp, const skill_id &sk, const Character &who
 vehicle_part *most_repairable_part( vehicle &veh, Character &who )
 {
     const inventory &inv = who.crafting_inventory();
+    scoped_provider_quality_cache qualities( inv );
     vehicle_part *vp_broken = nullptr;
     vehicle_part *vp_most_damaged = nullptr;
     int most_damage = 0;
