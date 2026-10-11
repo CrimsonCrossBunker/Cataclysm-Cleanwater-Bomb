@@ -1929,8 +1929,7 @@ void veh_interact::calc_overview( map &here )
             auto no_tank_details = []( const vehicle_part & pt, const catacurses::window & w, int y ) {
                 if( !pt.ammo_current().is_null() ) {
                     const itype *pt_ammo_cur = item::find_type( pt.ammo_current() );
-                    double vol_L = to_liter( pt.ammo_remaining( ) * 250_ml /
-                                             pt_ammo_cur->stack_size );
+                    const double vol_L = to_liter( pt.base.legacy_front().volume() );
                     int offset = 1;
                     std::string fmtstring = "%s  %5.1fL";
                     if( pt.is_leaking() ) {
