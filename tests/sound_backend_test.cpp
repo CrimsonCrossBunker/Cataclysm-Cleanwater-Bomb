@@ -2,6 +2,7 @@
 
 #include "cached_options.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "sdlsound.h"
 #include "sound_backend.h"
 #include "sounds.h"
@@ -17,7 +18,7 @@ bool predicate_false()
     return false;
 }
 
-static bool flag = false;
+bool flag = false;
 bool predicate_flag()
 {
     return flag;
@@ -41,6 +42,7 @@ TEST_CASE( "sound_backend_slow_time_predicate_install_and_clear", "[sound_backen
 
 TEST_CASE( "sound_backend_slow_time_predicate_reflects_caller_state", "[sound_backend]" )
 {
+    const restore_on_out_of_scope restore_flag( flag );
     sound_backend::set_slow_time_predicate( &predicate_flag );
 
     flag = true;
@@ -67,6 +69,7 @@ TEST_CASE( "sound_backend_poll_is_safe_without_init", "[sound_backend]" )
 TEST_CASE( "sound_backend_slow_time_drives_reserved_track_frequency_ratio",
            "[sound_backend][slow_time]" )
 {
+    const restore_on_out_of_scope restore_flag( flag );
     // Memory-mixer init so the test does not touch an audio device.
     REQUIRE( sound_backend::init( 44100, 2, 1024,
                                   sound_backend::init_options{ /*memory_only=*/true } ) );
@@ -101,6 +104,7 @@ TEST_CASE( "sound_backend_slow_time_drives_reserved_track_frequency_ratio",
 TEST_CASE( "sound_backend_slow_time_composes_with_play_opts_pitch",
            "[sound_backend][slow_time]" )
 {
+    const restore_on_out_of_scope restore_flag( flag );
     REQUIRE( sound_backend::init( 44100, 2, 1024,
                                   sound_backend::init_options{ /*memory_only=*/true } ) );
 
@@ -171,9 +175,9 @@ TEST_CASE( "sfx_wrapper_routes_is_channel_playing_through_backend",
     // RAII guard: unblock the test_mode / sound_enabled / sound_init_success
     // early-returns in sfx:: and sdlsound wrappers for the duration
     // of the test, then restore.
-    const bool prev_test_mode = test_mode;
-    const bool prev_sound_enabled = sounds::sound_enabled;
-    const bool prev_init_success = sound_init_success;
+    const restore_on_out_of_scope restore_test_mode( test_mode );
+    const restore_on_out_of_scope restore_sound_enabled( sounds::sound_enabled );
+    const restore_on_out_of_scope restore_init_success( sound_init_success );
     test_mode = false;
     sounds::sound_enabled = true;
     sound_init_success = true;
@@ -202,9 +206,6 @@ TEST_CASE( "sfx_wrapper_routes_is_channel_playing_through_backend",
     sound_backend::free_sfx( a );
     sound_backend::shutdown();
 
-    test_mode = prev_test_mode;
-    sounds::sound_enabled = prev_sound_enabled;
-    sound_init_success = prev_init_success;
 }
 
 #endif // SDL_SOUND
