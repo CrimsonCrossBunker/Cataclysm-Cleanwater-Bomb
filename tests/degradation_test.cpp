@@ -35,6 +35,10 @@ static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_can_drink( "can_drink" );
 static const itype_id itype_canvas_patch( "canvas_patch" );
 static const itype_id itype_leather( "leather" );
+static const itype_id itype_magazine_battery_mod( "magazine_battery_mod" );
+static const itype_id itype_pan( "pan" );
+static const itype_id itype_scrap_cast_iron( "scrap_cast_iron" );
+static const itype_id itype_small_storage_battery( "small_storage_battery" );
 static const itype_id itype_tailors_kit( "tailors_kit" );
 static const itype_id itype_technician_shirt_gray( "technician_shirt_gray" );
 static const itype_id itype_test_baseball( "test_baseball" );
@@ -44,6 +48,7 @@ static const itype_id itype_test_glock_degrade( "test_glock_degrade" );
 static const itype_id itype_test_pipe( "test_pipe" );
 static const itype_id itype_test_steelball( "test_steelball" );
 static const itype_id itype_thread( "thread" );
+static const itype_id itype_welder( "welder" );
 
 static const skill_id skill_mechanics( "mechanics" );
 static const skill_id skill_tailor( "tailor" );
@@ -757,22 +762,21 @@ TEST_CASE( "damaged_frying_pan_can_be_repaired_without_a_fault", "[item][repair]
     clear_map_without_vision();
     set_time_to_day();
     Character &u = get_player_character();
-    const itype_id welder_type( "welder" );
     const repair_item_actor *actor = dynamic_cast<const repair_item_actor *>(
-                                         welder_type->get_use( "repair_metal" )->get_actor_ptr() );
+                                         itype_welder->get_use( "repair_metal" )->get_actor_ptr() );
     REQUIRE( actor != nullptr );
     u.set_skill_level( actor->used_skill, 10 );
-    item tool( welder_type );
-    REQUIRE( tool.put_in( item( itype_id( "magazine_battery_mod" ) ),
+    item tool( itype_welder );
+    REQUIRE( tool.put_in( item( itype_magazine_battery_mod ),
                           pocket_type::MOD ).success() );
-    item battery( itype_id( "small_storage_battery" ) );
+    item battery( itype_small_storage_battery );
     battery.ammo_set( battery.ammo_default(), 1000 );
     REQUIRE( tool.put_in( battery, pocket_type::MAGAZINE_WELL ).success() );
-    item pan( itype_id( "pan" ) );
+    item pan( itype_pan );
     REQUIRE( u.wield( pan ) );
     item_location target = u.get_wielded_item();
     for( int n = 0; n < 30; ++n ) {
-        get_map().add_item_or_charges( u.pos_bub(), item( itype_id( "scrap_cast_iron" ) ) );
+        get_map().add_item_or_charges( u.pos_bub(), item( itype_scrap_cast_iron ) );
     }
     u.invalidate_crafting_inventory();
 

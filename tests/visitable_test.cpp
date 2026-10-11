@@ -8,6 +8,7 @@
 #include "cata_utility.h"
 #include "character.h"
 #include "character_attire.h"
+#include "flag.h"
 #include "inventory.h"
 #include "item.h"
 #include "player_helpers.h"
@@ -55,10 +56,10 @@ TEST_CASE( "inventory_poison_queries_include_nested_components", "[visitable][cr
     item clean( itype_water, calendar::turn, 2 );
     item poisoned( itype_water, calendar::turn, 2 );
     SECTION( "poison" ) {
-        poisoned.set_flag( flag_id( "HIDDEN_POISON" ) );
+        poisoned.set_flag( flag_HIDDEN_POISON );
     }
     SECTION( "hallucinogen" ) {
-        poisoned.set_flag( flag_id( "HIDDEN_HALLU" ) );
+        poisoned.set_flag( flag_HIDDEN_HALLU );
     }
     item bottle( itype_bottle_plastic, calendar::turn );
     REQUIRE( bottle.put_in( poisoned, pocket_type::CONTAINER ).success() );

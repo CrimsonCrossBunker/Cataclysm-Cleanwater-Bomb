@@ -47,7 +47,7 @@ namespace cata::lua_platform
 {
 class content_transaction;
 class presentation_content_transaction;
-}
+} // namespace cata::lua_platform
 
 inline const faction_id your_fac( "your_followers" );
 const std::string type_fac_hash_str = "__FAC__";

@@ -45,32 +45,31 @@ static const itype_id itype_fat( "fat" );
 static const itype_id itype_hammer( "hammer" );
 static const itype_id itype_knife_hunting( "knife_hunting" );
 static const itype_id itype_rock( "rock" );
+static const itype_id itype_soldering_iron_portable( "soldering_iron_portable" );
 
 static const proficiency_id proficiency_prof_carving( "prof_carving" );
 static const proficiency_id proficiency_prof_food_prep( "prof_food_prep" );
 static const proficiency_id proficiency_prof_knapping( "prof_knapping" );
+static const proficiency_id proficiency_prof_test_step_required( "prof_test_step_required" );
 
+static const recipe_id recipe_cudgel_character_requirements_restricted(
+    "cudgel_character_requirements_restricted" );
 static const recipe_id recipe_cudgel_simple( "cudgel_simple" );
 static const recipe_id recipe_cudgel_slow( "cudgel_slow" );
+static const recipe_id recipe_cudgel_test_charged_fast_stepless(
+    "cudgel_test_charged_fast_stepless" );
 static const recipe_id recipe_cudgel_test_no_tools( "cudgel_test_no_tools" );
+static const recipe_id recipe_cudgel_test_steps_required_prof( "cudgel_test_steps_required_prof" );
 static const recipe_id recipe_meat_cooked_test_no_tools( "meat_cooked_test_no_tools" );
 static const recipe_id recipe_prac_knapping( "prac_knapping" );
 static const recipe_id recipe_test_longshirt_test_poor_fit( "test_longshirt_test_poor_fit" );
-static const recipe_id recipe_test_nested_weapons( "test_nested_weapons" );
-static const recipe_id recipe_test_tallow( "test_tallow" );
-static const recipe_id recipe_water_clean_test_in_jar( "water_clean_test_in_jar" );
-
-static const itype_id itype_soldering_iron_portable( "soldering_iron_portable" );
-static const proficiency_id proficiency_prof_test_step_required( "prof_test_step_required" );
-static const recipe_id recipe_cudgel_character_requirements_restricted(
-    "cudgel_character_requirements_restricted" );
-static const recipe_id recipe_cudgel_test_charged_fast_stepless(
-    "cudgel_test_charged_fast_stepless" );
-static const recipe_id recipe_cudgel_test_steps_required_prof( "cudgel_test_steps_required_prof" );
 static const recipe_id recipe_test_nested_gate_charged( "test_nested_gate_charged" );
 static const recipe_id recipe_test_nested_gate_charreq( "test_nested_gate_charreq" );
 static const recipe_id recipe_test_nested_gate_prof( "test_nested_gate_prof" );
 static const recipe_id recipe_test_nested_outer( "test_nested_outer" );
+static const recipe_id recipe_test_nested_weapons( "test_nested_weapons" );
+static const recipe_id recipe_test_tallow( "test_tallow" );
+static const recipe_id recipe_water_clean_test_in_jar( "water_clean_test_in_jar" );
 
 static const skill_id skill_cooking( "cooking" );
 static const skill_id skill_fabrication( "fabrication" );
@@ -1268,7 +1267,7 @@ TEST_CASE( "crafting_component_snapshot_preserves_counts_and_colors", "[crafting
     for( const int batch_size : {
              1, 2
          } ) {
-        const auto display = build_component_display( rec, guy, inv, batch_size );
+        const crafting_component_groups display = build_component_display( rec, guy, inv, batch_size );
         REQUIRE( display.size() == rec.simple_requirements().get_components().size() );
         for( const auto &group : display ) {
             const bool any_available = std::any_of( group.begin(), group.end(),

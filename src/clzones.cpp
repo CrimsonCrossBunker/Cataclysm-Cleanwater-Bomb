@@ -1699,7 +1699,7 @@ bool zone_manager::remove( zone_data &zone, map *pmap )
     if( !maybe_locator ) {
         return false;
     }
-    const vehicle_zone_locator locator = *maybe_locator;
+    const vehicle_zone_locator &locator = *maybe_locator;
     zone_data *current_zone = find_vehicle_zone( locator );
     if( current_zone == nullptr ) {
         return false;
@@ -2104,7 +2104,7 @@ bool zone_manager::zone_edited( zone_data &zone )
     const vehicle_zone_locator &locator = *maybe_locator;
 
     //Check if this zone has already been stored
-    for( auto &changed_vzone : changed_vzones ) {
+    for( const changed_vehicle_zone &changed_vzone : changed_vzones ) {
         if( changed_vzone.locator == locator ) {
             return true;
         }
@@ -2129,7 +2129,7 @@ void zone_manager::revert_vzones()
             cache_vzones();
         }
     }
-    for( const auto &changed_vzone : changed_vzones ) {
+    for( const changed_vehicle_zone &changed_vzone : changed_vzones ) {
         zone_data *zone = find_vehicle_zone( changed_vzone.locator );
         if( zone == nullptr ) {
             continue;
