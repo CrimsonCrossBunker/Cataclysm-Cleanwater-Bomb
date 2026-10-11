@@ -1,6 +1,7 @@
 #if defined(TILES)
 #include "cata_tiles.h"
 #include "tile_lookup.h"
+#include "tile_preparation.h"
 #include "tileset_loader.h"
 #include "uistate.h"
 
@@ -1355,15 +1356,93 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
             tinted_tile_scratch *tint = nullptr;
             unsigned sparse_layers = 0;
         };
-        enum sparse_layer : unsigned {
-            layer_graffiti = 1U << 0,
-            layer_trap = 1U << 1,
-            layer_part_con = 1U << 2,
-            layer_field_item = 1U << 3,
-            layer_vpart = 1U << 4,
-            layer_critter = 1U << 5,
-            layer_revival = 1U << 6
+        using tile_preparation::layer_graffiti;
+        using tile_preparation::layer_trap;
+        using tile_preparation::layer_part_con;
+        using tile_preparation::layer_field_item;
+        using tile_preparation::layer_vpart;
+        using tile_preparation::layer_critter;
+        using tile_preparation::layer_revival;
+        // Capture live queries only on the renderer owner. Pure preparation may
+        // run on workers; neither tile pointers nor cache references escape.
+        const auto capture_preparation = [&]( const tile_render_info & p,
+        const level_cache & level, bool colored ) {
+            tile_preparation::input values;
+            const auto *var = std::get_if<tile_render_info::sprite>( &p.var );
+            if( !var ) {
+                return values;
+            }
+            values.sprite = true;
+            values.invisible = var->invisible[0];
+            values.graffiti = !var->graffiti_content.empty();
+            values.graffiti_override = !graffiti_override.empty() &&
+                                       graffiti_override.find( p.view.pos ) != graffiti_override.end();
+            values.trap = static_cast<bool>( var->trap_content );
+            values.trap_override_active = !trap_override.empty();
+            values.construction = var->part_con_content;
+            values.field = static_cast<bool>( var->field_content );
+            values.visible_items = var->sees_items && var->item_count > 0;
+            values.field_override = !field_override.empty() &&
+                                    field_override.find( p.view.pos ) != field_override.end();
+            values.item_override = !item_override.empty() &&
+                                   item_override.find( p.view.pos ) != item_override.end();
+            values.vehicle = !var->vpart_content.is_null();
+            values.vehicle_override = !vpart_override.empty() &&
+                                      vpart_override.find( p.view.pos ) != vpart_override.end();
+            values.creature = m_creature_positions.find( p.view.pos ) != m_creature_positions.end();
+            values.shadow = do_draw_shadow &&
+                            m_creature_columns.find( p.view.pos.xy() ) != m_creature_columns.end();
+            values.creature_override = !monster_override.empty() &&
+                                       monster_override.find( p.view.pos ) != monster_override.end();
+            if( colored && var->ll != lit_level::DARK && var->ll != lit_level::BLANK &&
+                var->ll != lit_level::MEMORIZED ) {
+                const auto &light = level.light_color_cache[p.view.pos.x()][p.view.pos.y()];
+                values.tint_eligible = light.is_colored();
+                if( values.tint_eligible ) {
+                    values.light = {{ light.r, light.g, light.b }};
+                    values.scalar_light = level.lm[p.view.pos.x()][p.view.pos.y()].max();
+                }
+            }
+            return values;
         };
+        if( !preparation_ ) {
+            preparation_ = std::make_unique<tile_preparation::frame>(
+                               static_cast<unsigned>( get_option<int>( "RENDER_PREPARATION_WORKERS" ) ) );
+        }
+        std::size_t preparation_tiles = 0;
+        if( preparation_->worker_count() != 0 ) {
+            CATA_PROFILE_SCOPE_NAMED( "tiles.preparation_preflight" );
+            for( int z = cur_zlevel; z <= center.z(); ++z ) {
+                const auto &range = is_isometric() ? z_any_tile_range[center.z() - z] : top_any_tile_range;
+                for( int row = range.p_min.y; row < range.p_max.y; ++row ) {
+                    preparation_tiles += here.draw_points_cache.tiles[z][row].size();
+                }
+            }
+        }
+        // Small views keep direct serial preparation, including when workers
+        // were requested: avoid capturing/copying a frame that will not queue.
+        auto preparation_lease = preparation_->try_acquire( preparation_tiles );
+        const bool captured_frame = static_cast<bool>( preparation_lease );
+        if( captured_frame ) {
+            auto &inputs = preparation_->capture();
+            {
+                CATA_PROFILE_SCOPE_NAMED( "tiles.capture_preparation" );
+                for( int z = cur_zlevel; z <= center.z(); ++z ) {
+                    const auto &range = is_isometric() ? z_any_tile_range[center.z() - z] : top_any_tile_range;
+                    const level_cache &level = here.access_cache( z );
+                    const bool colored = level.has_colored_lights && !is_isometric();
+                    for( int row = range.p_min.y; row < range.p_max.y; ++row ) {
+                        for( const tile_render_info &tile : here.draw_points_cache.tiles[z][row] ) {
+                            inputs.push_back( capture_preparation( tile, level, colored ) );
+                        }
+                    }
+                }
+            }
+            preparation_->prepare();
+            CATA_PROFILE_PLOT( "tiles.preparation_inputs", static_cast<int64_t>( inputs.size() ) );
+            CATA_PROFILE_PLOT( "tiles.preparation_workers_used", preparation_->used_workers() ? 1 : 0 );
+        }
+        std::size_t preparation_index = 0;
         std::vector<row_sprite_entry> row_sprites;
         std::vector<tinted_tile_scratch> row_tinted;
         while( cur_zlevel <= center.z() && !draw_aborted ) {
@@ -1406,84 +1485,20 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                 }
                 for( tile_render_info &p : row_points ) {
                     p.scratch.height_3d = ( cur_zlevel - center.z() ) * zlevel_height;
-                    tile_render_info::sprite *const var =
-                        std::get_if<tile_render_info::sprite>( &p.var );
-                    if( !var ) {
+                    const tile_preparation::result prepared = captured_frame ?
+                            preparation_->results()[preparation_index++] :
+                            tile_preparation::prepare( capture_preparation( p, zlev_cache, zlev_has_color ) );
+                    if( !std::holds_alternative<tile_render_info::sprite>( p.var ) ) {
                         continue;
                     }
-                    unsigned sparse_layers = 0;
-                    if( !var->graffiti_content.empty() ||
-                        ( !graffiti_override.empty() &&
-                          graffiti_override.find( p.view.pos ) != graffiti_override.end() ) ) {
-                        sparse_layers |= layer_graffiti;
-                    }
-                    // Invisible traps may still be drawn from map memory.  Any
-                    // active trap override can also alter a neighboring tile's
-                    // connectivity, so retain the full trap pass in that rare mode.
-                    if( var->trap_content || var->invisible[0] || !trap_override.empty() ) {
-                        sparse_layers |= layer_trap;
-                    }
-                    if( var->part_con_content ) {
-                        sparse_layers |= layer_part_con;
-                    }
-                    if( var->field_content || ( var->sees_items && var->item_count > 0 ) ||
-                        ( !field_override.empty() && field_override.find( p.view.pos ) != field_override.end() ) ||
-                        ( !item_override.empty() && item_override.find( p.view.pos ) != item_override.end() ) ) {
-                        sparse_layers |= layer_field_item;
-                    }
-                    if( !var->vpart_content.is_null() ||
-                        ( !vpart_override.empty() && vpart_override.find( p.view.pos ) != vpart_override.end() ) ) {
-                        sparse_layers |= layer_vpart;
-                    }
-                    if( m_creature_positions.find( p.view.pos ) != m_creature_positions.end() ||
-                        ( do_draw_shadow && m_creature_columns.find( p.view.pos.xy() ) != m_creature_columns.end() ) ||
-                        ( !monster_override.empty() && monster_override.find( p.view.pos ) != monster_override.end() ) ) {
-                        sparse_layers |= layer_critter;
-                    }
-                    if( !var->invisible[0] && var->sees_items && var->item_count > 0 &&
-                        ( item_override.empty() || item_override.find( p.view.pos ) == item_override.end() ) ) {
-                        sparse_layers |= layer_revival;
-                    }
-                    row_sprites.push_back( { &p, nullptr, sparse_layers } );
-                    // Only visible sprite tiles can receive a tint.
-                    if( !zlev_has_color || var->ll == lit_level::DARK || var->ll == lit_level::BLANK ||
-                        var->ll == lit_level::MEMORIZED ) {
+                    row_sprites.push_back( { &p, nullptr, prepared.layers } );
+                    if( prepared.tint[3] == 0 ) {
                         continue;
                     }
-                    const light_color_rgb &lc =
-                        zlev_cache.light_color_cache[p.view.pos.x()][p.view.pos.y()];
-                    if( !lc.is_colored() ) {
-                        continue;
-                    }
-                    // Isolate the chromatic (saturated) component by subtracting
-                    // the achromatic floor (min channel). Pure white light (equal
-                    // RGB) produces zero saturation and no tint.
-                    const float min_ch = std::min( { lc.r, lc.g, lc.b } );
-                    const float sat_r = lc.r - min_ch;
-                    const float sat_g = lc.g - min_ch;
-                    const float sat_b = lc.b - min_ch;
-                    const float sat_mag = std::max( { sat_r, sat_g, sat_b } );
-                    if( sat_mag < 0.01f ) {
-                        continue;
-                    }
-                    // Alpha: ratio of saturated energy to total scalar light.
-                    // Effect is subtle under bright ambient, vivid in darkness.
-                    const float scalar = zlev_cache.lm[p.view.pos.x()][p.view.pos.y()].max();
-                    const float ratio = scalar > 0.1f ? std::min( 1.0f, sat_mag / scalar ) : 0.0f;
-                    const Uint8 alpha = static_cast<Uint8>( ratio * 80.0f );
-                    if( alpha == 0 ) {
-                        continue;
-                    }
-                    // Normalize saturated color to full brightness for the SDL tint.
                     row_tinted.emplace_back();
                     tinted_tile_scratch &tint = row_tinted.back();
                     tint.tile = &p;
-                    tint.color = {
-                        static_cast<Uint8>( sat_r / sat_mag * 255.0f ),
-                        static_cast<Uint8>( sat_g / sat_mag * 255.0f ),
-                        static_cast<Uint8>( sat_b / sat_mag * 255.0f ),
-                        alpha
-                    };
+                    tint.color = { prepared.tint[0], prepared.tint[1], prepared.tint[2], prepared.tint[3] };
                     row_sprites.back().tint = &tint;
                 }
                 // --- Layer loop ---

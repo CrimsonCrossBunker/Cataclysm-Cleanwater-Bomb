@@ -66,6 +66,10 @@ class vehicle;
 struct sprite_screen_bounds;
 struct tint_sprite_record;
 struct tile_render_info;
+namespace tile_preparation
+{
+class frame;
+}
 
 namespace catacurses
 {
@@ -1177,6 +1181,8 @@ class cata_tiles
         // Borrowed only while draw() owns its stack-local query frame. The
         // restoration guard also handles nested draws and exceptional exits.
         tile_lookup_frame *lookup_frame_ = nullptr;
+        // Synchronous preparation boundary; owns buffers/workers, never world data.
+        std::unique_ptr<tile_preparation::frame> preparation_;
         // Platform-owned sprite descriptors are populated during mod loading.
         // Keep the bound descriptor revision alongside the renderer revisions so
         // a cached atlas cannot outlive a descriptor change.

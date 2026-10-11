@@ -3429,6 +3429,15 @@ void options_manager::add_options_performance()
          0, 6, 2
        );
 
+#if defined(TILES)
+    add( "RENDER_PREPARATION_WORKERS", "performance",
+         to_translation( "Render preparation workers" ),
+         to_translation( "Prepare tile layers and lighting on dedicated workers. "
+                         "0 keeps serial preparation. Requires a restart." ),
+         0, 4, 0
+       );
+#endif
+
     add( "MULTITHREADING_ENABLED", "performance",
          to_translation( "Enable multithreading (highly unstable)" ),
          to_translation( "Enable the persistent worker thread pool for parallelizing "
