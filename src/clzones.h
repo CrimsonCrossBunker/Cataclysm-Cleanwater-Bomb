@@ -665,9 +665,9 @@ class zone_manager
         std::unordered_map<std::string, std::unordered_set<tripoint_abs_ms>> area_cache;
         // NOLINTNEXTLINE(cata-serialize)
         std::unordered_map<std::string, std::unordered_set<tripoint_abs_ms>> vzone_cache;
-        std::unordered_set<tripoint_abs_ms> get_point_set( const zone_type_id &type,
+        const std::unordered_set<tripoint_abs_ms> &get_point_set( const zone_type_id &type,
                 const faction_id &fac = your_fac ) const;
-        std::unordered_set<tripoint_abs_ms> get_vzone_set( const zone_type_id &type,
+        const std::unordered_set<tripoint_abs_ms> &get_vzone_set( const zone_type_id &type,
                 const faction_id &fac = your_fac ) const;
         static bool same_lifetime_identity( const std::weak_ptr<const void> &lhs,
                                             const std::weak_ptr<const void> &rhs );

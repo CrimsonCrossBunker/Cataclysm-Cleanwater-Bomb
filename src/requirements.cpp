@@ -108,7 +108,7 @@ int provider_quality_level( const item &cand, const quality_id &id, const Charac
     // screwdriver is not part of the backpack.
     for( int pk = 0; pk < static_cast<int>( pocket_type::LAST ); ++pk ) {
         const pocket_type pk_type = static_cast<pocket_type>( pk );
-        if( pk_type == pocket_type::CONTAINER ) {
+        if( pk_type == pocket_type::CONTAINER || !cand.has_pocket_type( pk_type ) ) {
             continue;
         }
         for( const item *nested : cand.all_items_ptr( pk_type ) ) {
@@ -1034,8 +1034,8 @@ bool quality_requirement::has(
     // Intrinsic only: has_quality also walks the actor's items, which crafting_inv has
     // already filtered.  A disjunction rather than a sum of the two counts, since a pseudo
     // item is reachable from both sides and would be counted twice.
-    return crafting_inv.has_provider_quality( type, level, count, actor ) ||
-           ( actor != nullptr && actor->has_intrinsic_quality( type, level, count ) );
+    return ( actor != nullptr && actor->has_intrinsic_quality( type, level, count ) ) ||
+           crafting_inv.has_provider_quality( type, level, count, actor );
 }
 
 nc_color quality_requirement::get_color( const Character *actor, bool has_one,

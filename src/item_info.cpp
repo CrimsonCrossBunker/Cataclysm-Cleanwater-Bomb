@@ -4357,6 +4357,7 @@ void item::final_info( std::vector<iteminfo> &info, const iteminfo_query *parts,
             info.emplace_back( "DESCRIPTION", _( "You know of nothing you could craft with it." ) );
         } else {
             std::vector<std::string> crafts;
+            scoped_provider_quality_cache qualities( get_player_character().crafting_inventory() );
             crafts.reserve( item_recipes.size() );
             for( const recipe *r : item_recipes ) {
                 const bool can_make = can_craft_recipe( r, crafting_inv );

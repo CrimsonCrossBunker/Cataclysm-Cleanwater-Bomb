@@ -152,7 +152,7 @@ static bool last_input_has_explicit_mouse_pos = false;
 #if defined(__ANDROID__)
     static hover_mouse_input_state android_hover_mouse_input;
 #endif
-static bool need_invalidate_framebuffers = false;
+[[maybe_unused]] static bool need_invalidate_framebuffers = false;
 palette_array windowsPalette;
 
 static Font_Ptr font;

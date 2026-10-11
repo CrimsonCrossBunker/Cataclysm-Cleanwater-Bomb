@@ -586,6 +586,7 @@ bool veh_interact::format_reqs( std::string &msg, const requirement_data &reqs,
 {
     Character &player_character = get_player_character();
     const inventory &inv = player_character.crafting_inventory();
+    scoped_provider_quality_cache qualities( inv );
     bool ok = reqs.can_make_with_inventory( &player_character, inv, is_crafting_component, 1,
                                             craft_flags::none, false );
 
@@ -781,6 +782,7 @@ void veh_interact::do_main_loop( map &here )
                 if( !finish ) {
                     // it's possible we just invalidated our crafting inventory
                     cache_tool_availability();
+                    move_cursor( here, point_rel_ms::zero );
                 }
             }
         } else if( action == "UNLOAD" ) {
@@ -1053,12 +1055,23 @@ std::optional<int> veh_interact::select_part_at_cursor( map &here )
 
 void veh_interact::cache_tool_availability()
 {
+    cached_most_repairable.reset();
     map &here = get_map();
 
     Character &player_character = get_player_character();
     crafting_inv = &player_character.crafting_inventory();
     install_requirements_available = installation_requirement_availability( player_character,
                                      *crafting_inv );
+    install_candidates_by_name.clear();
+    for( const vpart_info &vpi : vehicles::parts::get_all() ) {
+        if( !vpi.has_flag( "NO_INSTALL_HIDDEN" ) && !vpi.has_flag( VPFLAG_APPLIANCE ) ) {
+            install_candidates_by_name.push_back( &vpi );
+        }
+    }
+    std::sort( install_candidates_by_name.begin(), install_candidates_by_name.end(),
+    []( const vpart_info * a, const vpart_info * b ) {
+        return localized_compare( a->name(), b->name() );
+    } );
 
     cache_tool_availability_update_lifting( player_character.pos_bub() );
     int mech_jack = 0;
@@ -2237,7 +2250,10 @@ vehicle_part *veh_interact::get_most_damaged_part() const
 
 vehicle_part *veh_interact::get_most_repairable_part() const
 {
-    return veh_utils::most_repairable_part( *veh, get_player_character() );
+    if( !cached_most_repairable ) {
+        cached_most_repairable = veh_utils::most_repairable_part( *veh, get_player_character() );
+    }
+    return *cached_most_repairable;
 }
 
 bool veh_interact::can_remove_part( map &here, int idx, const Character &you )
@@ -2709,7 +2725,8 @@ void veh_interact::move_cursor( map &here, const point_rel_ms &d, int dstart_at 
     can_mount.clear();
     if( !obstruct || service_area_end ) {
         std::vector<const vpart_info *> req_missing;
-        for( const vpart_info &vpi : vehicles::parts::get_all() ) {
+        for( const vpart_info *candidate : install_candidates_by_name ) {
+            const vpart_info &vpi = *candidate;
             if( !service_area_end && has_critter && vpi.has_flag( VPFLAG_OBSTACLE ) ) {
                 continue;
             }
@@ -2732,11 +2749,6 @@ void veh_interact::move_cursor( map &here, const point_rel_ms &d, int dstart_at 
                 req_missing.push_back( &vpi );
             }
         }
-        auto vpart_localized_sort = []( const vpart_info * a, const vpart_info * b ) {
-            return localized_compare( a->name(), b->name() );
-        };
-        std::sort( can_mount.begin(), can_mount.end(), vpart_localized_sort );
-        std::sort( req_missing.begin(), req_missing.end(), vpart_localized_sort );
         can_mount.insert( can_mount.end(), req_missing.cbegin(), req_missing.cend() );
     }
 

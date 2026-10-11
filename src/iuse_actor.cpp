@@ -3337,6 +3337,11 @@ bool repair_item_actor::handle_components( Character &pl, const item &fix,
         return false;
     }
 
+    // A target-only check never needs component counts or a crafting inventory.
+    if( just_check && !check_consumed_available ) {
+        return true;
+    }
+
     const inventory &crafting_inv = pl.crafting_inventory();
 
     // Repairing or modifying items requires at least 1 repair item,

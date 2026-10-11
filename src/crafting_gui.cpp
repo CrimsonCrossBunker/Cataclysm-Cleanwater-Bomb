@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
-#include <climits>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -1553,7 +1552,8 @@ void crafting_ui_impl::draw_recipe_info_panel()
                 if( !available_recipes->contains( &child ) ) {
                     continue;
                 }
-                availability child_avail( *crafter, &child );
+                const availability &child_avail = cached_availability( *availability_cache, *crafter,
+                                                  child, camp_crafting, inventory_override );
                 nc_color col = child_avail.color();
                 std::string child_name = child.result_name( true );
                 ImGui::TextColored( cataimgui::imvec4_from_color( c_white ), "  \u2022 " );
@@ -2092,20 +2092,22 @@ void crafting_ui_impl::draw_requirement_tools( const requirement_data &req,
 
     // Quality requirements -- bullet per group, colored by availability
     for( const auto &qual_alts : qual_groups ) {
+        // Evaluate each alternative once; both the "any available" flag and the
+        // per-entry color are derived from the same results.
+        std::vector<bool> qual_has;
+        qual_has.reserve( qual_alts.size() );
         bool any_has = false;
         for( const quality_requirement &qr : qual_alts ) {
-            if( qr.has( &get_player_character(), crafting_inv, return_true<item>, 1 ) ) {
-                any_has = true;
-                break;
-            }
+            const bool has = qr.has( &get_player_character(), crafting_inv, return_true<item>, 1 );
+            qual_has.push_back( has );
+            any_has = any_has || has;
         }
         ImGui::TextColored( cataimgui::imvec4_from_color( c_white ), "  \u2022 " );
         ImGui::SameLine( 0, 0 );
         std::vector<std::string> req;
-        for( const quality_requirement &qr : qual_alts ) {
-            nc_color col = qr.has( &get_player_character(), crafting_inv, return_true<item>, 1 ) ? c_green :
-                           ( any_has ? c_dark_gray : c_red );
-            req.emplace_back( colorize( qr.to_string( 1 ), col ) );
+        for( size_t qi = 0; qi < qual_alts.size(); ++qi ) {
+            nc_color col = qual_has[qi] ? c_green : ( any_has ? c_dark_gray : c_red );
+            req.emplace_back( colorize( qual_alts[qi].to_string( 1 ), col ) );
         }
         const float avail_width = ImGui::GetContentRegionAvail().x;
         ImGui::BeginGroup();
@@ -2126,20 +2128,23 @@ void crafting_ui_impl::draw_requirement_tools( const requirement_data &req,
         const bool is_expanded = expanded_tool_groups.count( global_gi ) > 0;
 
         // Check availability per tool, dedup by type, sort available first
+        // Evaluate has() exactly once per unique tool. The flag travels with the
+        // pointer so the partition below -- and the color pass further down --
+        // reuse it instead of re-querying the inventory.
         bool any_available = false;
         std::set<itype_id> seen;
-        std::vector<const tool_comp *> unique_alts;
+        std::vector<std::pair<const tool_comp *, bool>> unique_alts;
         for( const tool_comp &tc : alts ) {
             if( seen.insert( tc.type ).second ) {
-                unique_alts.push_back( &tc );
-                if( tc.has( &get_player_character(), crafting_inv, return_true<item>, batch_size ) ) {
-                    any_available = true;
-                }
+                const bool has = tc.has( &get_player_character(), crafting_inv, return_true<item>,
+                                         batch_size );
+                unique_alts.emplace_back( &tc, has );
+                any_available = any_available || has;
             }
         }
         std::stable_partition( unique_alts.begin(), unique_alts.end(),
-        [&]( const tool_comp * tc ) {
-            return tc->has( &get_player_character(), crafting_inv, return_true<item>, batch_size );
+        []( const std::pair<const tool_comp *, bool> &entry ) {
+            return entry.second;
         } );
 
         // Label
@@ -2151,12 +2156,11 @@ void crafting_ui_impl::draw_requirement_tools( const requirement_data &req,
                                 label.c_str() );
             float indent = ImGui::CalcTextSize( "      " ).x;
             ImGui::Indent( indent );
-            for( const tool_comp *tc : unique_alts ) {
-                nc_color col = tc->has( &get_player_character(), crafting_inv, return_true<item>,
-                                        batch_size ) ? c_green :
+            for( const std::pair<const tool_comp *, bool> &entry : unique_alts ) {
+                nc_color col = entry.second ? c_green :
                                ( any_available ? c_dark_gray : c_red );
                 ImGui::TextColored( cataimgui::imvec4_from_color( col ), "%s",
-                                    tc->to_string( batch_size ).c_str() );
+                                    entry.first->to_string( batch_size ).c_str() );
             }
             if( nav_clickable( _( "show less" ), c_dark_gray ) ) {
                 expanded_tool_groups.erase( global_gi );
@@ -2172,7 +2176,7 @@ void crafting_ui_impl::draw_requirement_tools( const requirement_data &req,
             // Pre-measure how many fit
             int fits = 0;
             for( size_t i = 0; i < unique_alts.size(); ++i ) {
-                std::string text = unique_alts[i]->to_string( batch_size );
+                std::string text = unique_alts[i].first->to_string( batch_size );
                 float tw = ImGui::CalcTextSize( text.c_str() ).x;
                 float sep = ( i > 0 ) ? or_w : 0.f;
                 int rem = static_cast<int>( unique_alts.size() ) - fits - 1;
@@ -2199,9 +2203,8 @@ void crafting_ui_impl::draw_requirement_tools( const requirement_data &req,
                                         _( " or " ) );
                     ImGui::SameLine( 0, 0 );
                 }
-                const tool_comp *tc = unique_alts[i];
-                nc_color col = tc->has( &get_player_character(), crafting_inv, return_true<item>,
-                                        batch_size ) ? c_green :
+                const tool_comp *tc = unique_alts[i].first;
+                nc_color col = unique_alts[i].second ? c_green :
                                ( any_available ? c_dark_gray : c_red );
                 ImGui::TextColored( cataimgui::imvec4_from_color( col ), "%s",
                                     tc->to_string( batch_size ).c_str() );

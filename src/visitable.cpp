@@ -960,10 +960,9 @@ static void scan_tool_charges( const T &self, const itype_id &id,
 {
     map &here = get_map();
     self.visit_items( [&]( const item * e, item * ) {
-        if( filter( *e ) &&
-            ( id == e->typeId() || ( in_tools && id == e->ammo_current() ) ||
+        if( ( id == e->typeId() || ( in_tools && id == e->ammo_current() ) ||
               ( id == itype_UPS && e->has_flag( flag_IS_UPS ) ) ) &&
-            !e->is_broken() ) {
+            filter( *e ) && !e->is_broken() ) {
             if( id == itype_UPS && e->has_flag( flag_IS_UPS ) ) {
                 raw_ups_charges = sum_no_wrap( raw_ups_charges,
                                                e->ammo_remaining_linked( here, nullptr ) );
@@ -1170,10 +1169,10 @@ int inventory::charges_of( const itype_id &what, int limit,
                            const std::function<void( int )> &visitor, bool in_tools ) const
 {
     const itype_bin &binned = get_binned_items();
-    const auto iter = std::find_if( binned.begin(),
+    const auto iter = what == itype_UPS ? std::find_if( binned.begin(),
     binned.end(), [&what]( itype_bin::value_type const & it ) {
-        return it.first == what || ( what == itype_UPS && it.first->has_flag( flag_IS_UPS ) );
-    } );
+        return it.first == what || it.first->has_flag( flag_IS_UPS );
+    } ) : binned.find( what );
     if( iter == binned.end() ) {
         return 0;
     }
@@ -1210,8 +1209,8 @@ static int amount_of_internal( const T &self, const itype_id &id, bool pseudo, i
 {
     int qty = 0;
     self.visit_items( [&qty, &id, &pseudo, &limit, &filter]( const item * e, item * ) {
-        if( !e->has_flag( json_flag_ITEM_BROKEN ) &&
-            ( id == itype_any || e->typeId() == id ) && filter( *e ) &&
+        if( ( id == itype_any || e->typeId() == id ) &&
+            !e->has_flag( json_flag_ITEM_BROKEN ) && filter( *e ) &&
             ( pseudo || !e->has_flag( json_flag_PSEUDO ) ) ) {
             qty = sum_no_wrap( qty, 1 );
         }

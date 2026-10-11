@@ -14,6 +14,7 @@
 #include "item_location.h"
 #include "itype.h"
 #include "iuse.h"
+#include "iuse_actor.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
@@ -38,6 +39,7 @@ static const itype_id itype_test_baseball( "test_baseball" );
 static const itype_id itype_test_baseball_half_degradation( "test_baseball_half_degradation" );
 static const itype_id itype_test_baseball_x2_degradation( "test_baseball_x2_degradation" );
 static const itype_id itype_test_glock_degrade( "test_glock_degrade" );
+static const itype_id itype_test_pipe( "test_pipe" );
 static const itype_id itype_test_steelball( "test_steelball" );
 static const itype_id itype_thread( "thread" );
 
@@ -710,5 +712,83 @@ TEST_CASE( "refit_item_inside_spillable_container", "[item][repair][container]" 
             }
         }
 
+    }
+}
+
+TEST_CASE( "repair_target_check_without_consumption_ignores_material_availability",
+           "[item][repair]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    Character &u = get_player_character();
+    const repair_item_actor *actor = dynamic_cast<const repair_item_actor *>(
+                                         itype_tailors_kit->get_use( "repair_fabric" )->get_actor_ptr() );
+    REQUIRE( actor != nullptr );
+    item fix( itype_test_baseball );
+    fix.set_damage( 1000 );
+    REQUIRE( fix.damage() > fix.degradation() );
+
+    GIVEN( "no leather in reach" ) {
+        u.invalidate_crafting_inventory();
+        THEN( "bare check accepts target, material check refuses" ) {
+            CHECK( actor->can_repair_target( u, fix, false, false ) );
+            CHECK_FALSE( actor->can_repair_target( u, fix, false, true ) );
+        }
+    }
+    GIVEN( "damaged steel pipe, which a tailor's kit can't repair" ) {
+        item pipe( itype_test_pipe );
+        pipe.set_damage( 1000 );
+        REQUIRE( pipe.damage() > pipe.degradation() );
+        item leather( itype_leather );
+        u.i_add_or_drop( leather, 10 );
+        u.invalidate_crafting_inventory();
+        THEN( "even bare check refuses it" ) {
+            CHECK_FALSE( actor->can_repair_target( u, pipe, false, false ) );
+            CHECK_FALSE( actor->can_repair_target( u, pipe, false, true ) );
+        }
+    }
+}
+
+TEST_CASE( "damaged_frying_pan_can_be_repaired_without_a_fault", "[item][repair]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    set_time_to_day();
+    Character &u = get_player_character();
+    const itype_id welder_type( "welder" );
+    const repair_item_actor *actor = dynamic_cast<const repair_item_actor *>(
+                                         welder_type->get_use( "repair_metal" )->get_actor_ptr() );
+    REQUIRE( actor != nullptr );
+    u.set_skill_level( actor->used_skill, 10 );
+    item tool( welder_type );
+    REQUIRE( tool.put_in( item( itype_id( "magazine_battery_mod" ) ),
+                          pocket_type::MOD ).success() );
+    item battery( itype_id( "small_storage_battery" ) );
+    battery.ammo_set( battery.ammo_default(), 1000 );
+    REQUIRE( tool.put_in( battery, pocket_type::MAGAZINE_WELL ).success() );
+    item pan( itype_id( "pan" ) );
+    REQUIRE( u.wield( pan ) );
+    item_location target = u.get_wielded_item();
+    for( int n = 0; n < 30; ++n ) {
+        get_map().add_item_or_charges( u.pos_bub(), item( itype_id( "scrap_cast_iron" ) ) );
+    }
+    u.invalidate_crafting_inventory();
+
+    for( int cycle = 0; cycle < 2; ++cycle ) {
+        REQUIRE_FALSE( target->inc_damage() );
+        REQUIRE( target->faults.empty() );
+        REQUIRE( target->damage() > target->degradation() );
+        CAPTURE( actor->used_skill, u.get_skill_level( actor->used_skill ),
+                 actor->repair_chance( u, *target, repair_item_actor::RT_REPAIR ).first );
+        REQUIRE( actor->can_repair_target( u, *target, false, true ) );
+        const int before = target->damage();
+        REQUIRE( actor->repair_chance( u, *target, repair_item_actor::RT_REPAIR ).second == 0.0f );
+        repair_item_actor::attempt_hint result = repair_item_actor::AS_RETRY;
+        for( int attempt = 0; attempt < 100 && result == repair_item_actor::AS_RETRY; ++attempt ) {
+            result = actor->repair( u, tool, target );
+        }
+        REQUIRE( result == repair_item_actor::AS_SUCCESS );
+        CHECK( target->damage() < before );
+        CHECK( target->faults.empty() );
     }
 }

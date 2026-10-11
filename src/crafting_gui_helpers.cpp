@@ -13,6 +13,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -62,7 +63,7 @@ crafting_component_groups build_component_display( const recipe &rec, const Char
         }
         for( crafting_component_display &entry : group ) {
             entry.color = entry.component->get_color( &crafter, any_available, inv, filter,
-                batch_size );
+                          batch_size );
         }
         std::stable_sort( group.begin(), group.end(),
         []( const crafting_component_display & a, const crafting_component_display & b ) {
@@ -140,8 +141,6 @@ availability::availability( Character &_crafter, const recipe *r, int batch_size
     inv_override = inventory_override;
     const inventory &inv = camp_crafting ? *inv_override : crafter.crafting_inventory();
     auto all_items_filter = r->get_component_filter( recipe_filter_flags::none );
-    auto no_rotten_filter = r->get_component_filter( recipe_filter_flags::no_rotten );
-    auto no_favorite_filter = r->get_component_filter( recipe_filter_flags::no_favorite );
     const deduped_requirement_data &req = r->deduped_requirements();
     has_all_skills = r->skill_used.is_null() ||
                      crafter.get_skill_level( r->skill_used ) >= r->get_difficulty( crafter );
@@ -156,23 +155,32 @@ availability::availability( Character &_crafter, const recipe *r, int batch_size
     if( crafter.is_npc() && !r->npc_can_craft( reason ) && !camp_crafting ) {
         can_craft = false;
     } else if( r->is_nested() ) {
-        can_craft = check_can_craft_nested( _crafter, *r );
+        can_craft = check_can_craft_nested( _crafter, *r, camp_crafting, inventory_override );
     } else {
         can_craft = ( !r->is_practice() || has_all_skills ) && has_proficiencies &&
                     meets_character_requirements &&
                     req.can_make_with_inventory( &crafter, inv, all_items_filter, batch_size, flag );
     }
-    would_use_rotten = !req.can_make_with_inventory( &crafter, inv, no_rotten_filter, batch_size,
-                       flag );
-    would_use_favorite = !req.can_make_with_inventory( &crafter, inv, no_favorite_filter, batch_size,
-                         flag );
+    would_use_rotten = false;
+    would_use_favorite = false;
+    if( can_craft && !r->is_nested() ) {
+        const auto no_rotten_filter = r->get_component_filter( recipe_filter_flags::no_rotten );
+        const auto no_favorite_filter = r->get_component_filter( recipe_filter_flags::no_favorite );
+        would_use_rotten = !req.can_make_with_inventory( &crafter, inv, no_rotten_filter, batch_size,
+                           flag );
+        would_use_favorite = !req.can_make_with_inventory( &crafter, inv, no_favorite_filter, batch_size,
+                             flag );
+    }
     useless_practice = r->is_practice() && cannot_gain_skill_or_prof( crafter, *r );
     is_nested_category = r->is_nested();
-    const requirement_data &simple_req = r->simple_requirements();
-    apparently_craftable = ( !r->is_practice() || has_all_skills ) && has_proficiencies &&
-                           meets_character_requirements &&
-                           simple_req.can_make_with_inventory( &crafter, inv, all_items_filter,
-                                   batch_size, flag );
+    apparently_craftable = can_craft;
+    if( !can_craft && !r->is_nested() &&
+        ( !r->is_practice() || has_all_skills ) && has_proficiencies &&
+        meets_character_requirements && !( crafter.is_npc() && !camp_crafting &&
+                                           !r->npc_can_craft( reason ) ) ) {
+        apparently_craftable = r->simple_requirements().can_make_with_inventory(
+                                   &crafter, inv, all_items_filter, batch_size, flag );
+    }
     for( const auto &[skill, skill_lvl] : r->required_skills ) {
         if( crafter.get_skill_level( skill ) < skill_lvl ) {
             has_all_skills = false;
@@ -223,14 +231,46 @@ nc_color availability::color( bool ignore_missing_skills ) const
     }
 }
 
-bool availability::check_can_craft_nested( Character &_crafter, const recipe &r )
+// Adapted from CDDA #88781: nested categories only need a craftability answer,
+// not the rotten/favorite checks and display metadata for every descendant.
+bool availability::check_can_craft_nested( Character &crafter, const recipe &r,
+        bool camp_crafting, inventory *inventory_override )
 {
     for( const recipe_id &nested_r : r.nested_category_data ) {
-        if( availability( _crafter, &nested_r.obj() ).can_craft ) {
+        const recipe &child = nested_r.obj();
+        std::string reason;
+        if( !camp_crafting && crafter.is_npc() && !child.npc_can_craft( reason ) ) {
+            continue;
+        }
+        if( child.is_nested() ) {
+            if( check_can_craft_nested( crafter, child, camp_crafting, inventory_override ) ) {
+                return true;
+            }
+            continue;
+        }
+        const bool has_skill = child.skill_used.is_null() ||
+                               crafter.get_skill_level( child.skill_used ) >= child.get_difficulty( crafter );
+        if( ( child.is_practice() && !has_skill ) ||
+            !child.character_has_required_proficiencies( crafter ) ||
+            !child.character_meets_requirements( crafter ) ) {
+            continue;
+        }
+        const inventory &inv = camp_crafting ? *inventory_override : crafter.crafting_inventory();
+        if( child.deduped_requirements().can_make_with_inventory(
+                &crafter, inv, child.get_component_filter( recipe_filter_flags::none ), 1,
+                camp_crafting ? craft_flags::none : craft_flags::start_only ) ) {
             return true;
         }
     }
     return false;
+}
+
+const availability &cached_availability( std::map<const recipe *, availability> &cache,
+        Character &crafter, const recipe &rec, bool camp_crafting,
+        inventory *inventory_override )
+{
+    return cache.try_emplace( &rec, crafter, &rec, 1, camp_crafting,
+                              inventory_override ).first->second;
 }
 
 craft_confirm_result can_start_craft(
@@ -252,8 +292,17 @@ bool recipe_sort_compare(
     const availability &avail_a, const availability &avail_b,
     const Character &crafter, const crafting_cost_context &ctx,
     bool a_read, bool b_read,
-    bool unread_first )
+    bool unread_first,
+    std::unordered_map<const recipe *, std::string> &name_cache )
 {
+    const auto cached_name = [&name_cache]( const recipe * r ) -> const std::string & {
+        auto it = name_cache.find( r );
+        if( it == name_cache.end() )
+        {
+            it = name_cache.emplace( r, r->result_name() ).first;
+        }
+        return it->second;
+    };
     if( unread_first ) {
         if( a_read != b_read ) {
             return !a_read;
@@ -265,8 +314,8 @@ bool recipe_sort_compare(
     if( b->difficulty != a->difficulty ) {
         return b->difficulty < a->difficulty;
     }
-    const std::string a_name = a->result_name();
-    const std::string b_name = b->result_name();
+    const std::string &a_name = cached_name( a );
+    const std::string &b_name = cached_name( b );
     if( a_name != b_name ) {
         return localized_compare( a_name, b_name );
     }
@@ -954,24 +1003,22 @@ static void recursively_expand_recipes( std::vector<const recipe *> &current,
           ) {
             tmp.push_back( &nested.obj() );
             indent.insert( indent.begin() + i + 1, indent[i] + 2 );
-            if( !availability_cache.count( &nested.obj() ) ) {
-                availability_cache.emplace( &nested.obj(),
-                                            availability( crafter, &nested.obj(), 1,
-                                                    camp_crafting, inventory_override ) );
-            }
+            cached_availability( availability_cache, crafter, nested.obj(), camp_crafting,
+                                 inventory_override );
         }
     }
 
     const bool want_unread = highlight_unread_recipes && unread_recipes_first;
     const crafting_cost_context sort_ctx{ crafter.book_bonuses_nearby(), {} };
+    std::unordered_map<const recipe *, std::string> sort_name_cache;
     std::stable_sort( tmp.begin(), tmp.end(), [
-                       &crafter, &availability_cache, want_unread, &sort_ctx
+                       &crafter, &availability_cache, want_unread, &sort_ctx, &sort_name_cache
     ]( const recipe * const a, const recipe * const b ) {
         const bool a_read = !want_unread || uistate.read_recipes.count( a->ident() );
         const bool b_read = !want_unread || uistate.read_recipes.count( b->ident() );
         return recipe_sort_compare( a, b,
                                     availability_cache.at( a ), availability_cache.at( b ),
-                                    crafter, sort_ctx, a_read, b_read, want_unread );
+                                    crafter, sort_ctx, a_read, b_read, want_unread, sort_name_cache );
     } );
 
     current.insert( current.begin() + i + 1, tmp.begin(), tmp.end() );
@@ -1057,23 +1104,21 @@ recipe_list_data build_recipe_list(
 
     // Cache availability on first display
     for( const recipe *e : result.entries ) {
-        if( !availability_cache.count( e ) ) {
-            availability_cache.emplace( e,
-                                        availability( crafter, e, 1, camp_crafting, inventory_override ) );
-        }
+        cached_availability( availability_cache, crafter, *e, camp_crafting, inventory_override );
     }
 
     if( !skip_sort ) {
         const bool want_unread = highlight_unread && unread_first;
         const crafting_cost_context sort_ctx{ crafter.book_bonuses_nearby(), {} };
+        std::unordered_map<const recipe *, std::string> sort_name_cache;
         std::stable_sort( result.entries.begin(), result.entries.end(), [
-                       &crafter, &availability_cache, want_unread, &sort_ctx
+                       &crafter, &availability_cache, want_unread, &sort_ctx, &sort_name_cache
         ]( const recipe * const a, const recipe * const b ) {
             const bool a_read = !want_unread || uistate.read_recipes.count( a->ident() );
             const bool b_read = !want_unread || uistate.read_recipes.count( b->ident() );
             return recipe_sort_compare( a, b,
                                         availability_cache.at( a ), availability_cache.at( b ),
-                                        crafter, sort_ctx, a_read, b_read, want_unread );
+                                        crafter, sort_ctx, a_read, b_read, want_unread, sort_name_cache );
         } );
     }
 
