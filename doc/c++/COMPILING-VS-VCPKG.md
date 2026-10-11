@@ -10,6 +10,13 @@
 > This in-repository body is no longer maintained. The historical body is retained through `2027-02-02` and may then be removed; this bilingual entry banner remains permanently.
 > 本仓库正文不再维护；历史正文至少保留到上述日期，之后可删除，但本双语迁移入口永久保留。
 <!-- CCB-DOC-MOVED-END -->
+
+> CCB SDL3 migration (2026-10-07): tiles builds now require SDL3 >= 3.4.0;
+> the SDL2 backend and fallback switches have been removed. The checked-in
+> [CMake contract](../../CMakeLists.txt), [Make contract](../../Makefile), and
+> [CI SDK setup](../../.github/actions/setup-sdl3-stack/action.yml) define the
+> current requirements. Other parts of the historical body below may be stale.
+
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 *Contents*
@@ -73,7 +80,7 @@ git pull
 ./vcpkg.exe integrate install
 ```
 
-If during the compilation you're getting a vcpkg error along the lines of `error: no version database entry for sdl2 at 2.26.5`, that probably means that your vcpkg install is too old. Running a `git pull` in vcpkg directory should fix the issue.
+If during the compilation you're getting a vcpkg error along the lines of `error: no version database entry for sdl3`, that probably means that your vcpkg install is too old. Running a `git pull` in vcpkg directory should fix the issue.
 
 ## Cloning and compilation:
 

@@ -1,0 +1,363 @@
+{
+  "schema": 1,
+  "batch": 27,
+  "name": "sdl3-only-platform",
+  "saved_utc": "2026-10-07T14:05:48.451391+00:00",
+  "baseline_commit": "f0518554fb5f276af512c6a455f3ddff88a77b12",
+  "branch": "codex/sdl3-only",
+  "classification": "Platform consolidation and scaled-pointer correctness fix; no measured speedup claim.",
+  "status": "Local Linux acceptance complete; cross-platform and default GPU backend acceptance pending. Not published.",
+  "upstream_reference": [
+    "https://github.com/CleverRaven/Cataclysm-DDA/commit/c306363d822ea17d89804ca0ba284139def59de9",
+    "https://github.com/CleverRaven/Cataclysm-DDA/commit/6de37a343019a2db1ab13c046a6f9474d27d1ca1"
+  ],
+  "adaptation": "Adapted the upstream runtime/build cleanup to CCB; retained CCB render caches, native Lua Platform v1, shaders and Android integration.",
+  "changes": [
+    "Remove SDL2 runtime alternatives, audio backend, FindSDL2 modules and four obsolete ImGui SDL2 backend files.",
+    "Use SDL3 for CMake, Make, vcpkg/MSVC and active desktop release jobs; retain curses/headless entry points.",
+    "Keep constant USE_SDL3 build markers for existing cache compatibility; no first-party dual-backend conditional paths remain.",
+    "Reuse pinned Linux SDK setup and extracted macOS universal SDK setup; preserve all ten active release artifact names.",
+    "Reject explicit SDL2 tiles requests early and let localization-only Make goals avoid SDL dependency discovery.",
+    "Retire already-disabled legacy WebAssembly/MXE recipes; document old developer containers as terminal-only.",
+    "Propagate SDL_SOUND to native test consumers so audio regression cases are compiled and executed.",
+    "Invert CCB manual presentation rectangle for desktop pointer coordinates at integer display scales.",
+    "Read retired graphics option IDs without exposing or serializing them; keep active graphics settings serialized."
+  ],
+  "build": {
+    "configuration": "Ninja Multi-Config Release; clang; TILES/SOUND/Lua Platform v1 ON; TRACY/LOCALIZE OFF; private focused native acceptance target.",
+    "command": [
+      "cmake",
+      "--build",
+      "out/build/ccb-sdl3-perf",
+      "--config",
+      "Release",
+      "--target",
+      "cataclysm-tiles",
+      "ccb-sdl3-acceptance",
+      "--parallel",
+      "2"
+    ],
+    "runs": [
+      {
+        "manifest": "build.json",
+        "exit_code": 0,
+        "elapsed_seconds": 2077.249
+      },
+      {
+        "manifest": "build-final.json",
+        "exit_code": 0,
+        "elapsed_seconds": 540.971
+      },
+      {
+        "manifest": "build-repair.json",
+        "exit_code": 0,
+        "elapsed_seconds": 16.425
+      }
+    ],
+    "binary_sha256": "e11ff588ab3bbfafe9c186aef9ebaa8be23f928271da13d95d1d0ce0e397b40f",
+    "binary_bytes": 419906248,
+    "host_sdk_versions": {
+      "SDL3": "3.4.16",
+      "SDL3_image": "3.4.6",
+      "SDL3_ttf": "3.2.2",
+      "SDL3_mixer": "3.2.4"
+    },
+    "pinned_release_sdk_versions": {
+      "SDL3": "3.4.10",
+      "SDL3_image": "3.4.4",
+      "SDL3_ttf": "3.2.2",
+      "SDL3_mixer": "3.2.4"
+    },
+    "minimum_core_sdk": "3.4.0",
+    "linkage": "ldd and owned process mappings contain only SDL3 libraries; no missing dependency or SDL2 library.",
+    "version_note": "Existing worktree Git-version lookup emits HEAD-HASH fallback; commit and binary hashes identify this build."
+  },
+  "native_regression": {
+    "command": [
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-perf/Release/ccb-sdl3-acceptance",
+      "[tiles][sdl3],[tiles][renderer_recovery],[tiles][gpu],[sound_backend]",
+      "--rng-seed",
+      "20261008",
+      "--order",
+      "lex",
+      "--warn",
+      "NoTests",
+      "--user-dir",
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sdl3-migration-20261008/native-test-user-repair1",
+      "--reporter",
+      "xml",
+      "--out",
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sdl3-migration-20261008/native-tests.xml"
+    ],
+    "video_driver": "dummy",
+    "audio_driver": "dummy",
+    "test_sources": [
+      "tests/sdl_platform_test.cpp",
+      "tests/renderer_recovery_test.cpp",
+      "tests/gpu_variant_dispatch_test.cpp",
+      "tests/sound_backend_test.cpp"
+    ],
+    "test_cases": 45,
+    "assertions": 344,
+    "failures": 0,
+    "skips": 0,
+    "exit_code": 0,
+    "elapsed_seconds": 16.155,
+    "binary_sha256": "5722a2e230d2129cf72d4a4c43ed9eb29906e900347e85f9e893d74af355c42e",
+    "harness": "Private deferred CMake include links test_support_sources.txt plus the four source files to cataclysm-tiles-common. TESTS is OFF for the game build.",
+    "standard_reproduction": "Configure a normal TILES/SOUND/TESTS build, build cata_test-tiles, then run the recorded filter/seed/order with a fresh user directory.",
+    "first_failure_and_repair": [
+      "Initial native run: 45 cases, 43 passed and 2 failed; 4 assertions failed. Logs/XML retained.",
+      "Real SDL3 bug: SDL_RenderCoordinatesFromWindow did not invert CCB manual integer-scaled final blit; 2x/4x pointer coordinates were incorrect.",
+      "Invert get_display_buffer_render_rect from logical window coordinates through drawable pixels to display-buffer pixels; Android letterbox handling remains unchanged.",
+      "Expanded existing pointer regression to scales 1/2/4 and exact/3-pixel remainder borders for both text and map windows.",
+      "Corrected new legacy-options test: hidden retired IDs are read but intentionally omitted from existing serialization; active SCALING_MODE remains serialized."
+    ]
+  },
+  "headless": {
+    "configuration": "HEADLESS ON; TILES/SOUND/CURSES/Lua Platform OFF; Release; TESTS OFF.",
+    "configuration_passed": true,
+    "compile_commands_without_enabled_sdl_or_lua": 575,
+    "compiled_files": [
+      "src/cata_allocator.cpp",
+      "src/cata_imgui.cpp",
+      "src/cata_shader.cpp",
+      "src/options.cpp",
+      "src/sdl_wrappers.cpp",
+      "src/sdltiles.cpp",
+      "src/version.cpp",
+      "src/main.cpp"
+    ],
+    "passed": 8,
+    "total": 8,
+    "elapsed_seconds": 19.758,
+    "post_repair_sdltiles_recheck": {
+      "exit_code": 0,
+      "elapsed_seconds": 0.83,
+      "diagnostics": ""
+    },
+    "limitation": "Affected boundary compilation only; no full headless link or runtime test."
+  },
+  "build_contract_tests": {
+    "command": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest tools.test_sdl3_build_contract -v",
+    "passed": 3,
+    "total": 3,
+    "elapsed_seconds": 2.145,
+    "cases": [
+      "CMake rejects SDL2 before compiler discovery",
+      "Make rejects SDL2 tiles",
+      "Localization ignores inherited SDL/TILES/SOUND flags"
+    ]
+  },
+  "preprocessing": {
+    "method": "Normalize whitespace and location/time builtins in selected native SDL3 translation units, before versus after backend cleanup.",
+    "core_selected_files_equal_before_pointer_repair": "8/8",
+    "extra_files_equal": "2/2: pixel_minimap and Lua dialogue; captured before their own cleanup after core header cleanup.",
+    "final_boundary": "sdltiles.cpp intentionally differs after the pointer fix; remaining 9 selected files retain equivalence. This is not whole-program equivalence."
+  },
+  "other_checks": {
+    "cpp_style": "AStyle 3.1: 26 changed existing/new C++ files passed; 3 affected files rechecked after repair.",
+    "python_style": "Flake8 7.3.0: tools/test_sdl3_build_contract.py and tools/build_shaders.py passed using an isolated temporary uv environment.",
+    "workflows": "Actionlint 1.7.7: four changed workflows passed; shellcheck and pyflakes integrations disabled.",
+    "shell_syntax": "bash -n passed for changed Bash scripts and Linux/macOS workflow/action Bash blocks. PowerShell blocks not executed.",
+    "lua_cmake_contract": "python3 tools/lua_api/check_cmake_contract.py passed.",
+    "diff_whitespace": "git diff --check and git diff --cached --check passed with prohibited build cache excluded.",
+    "release_matrix": "All ten active artifact names unchanged; all eight tiles entries select SDL3; two curses entries retained."
+  },
+  "graphical_smoke": {
+    "state": "passed",
+    "pid": 46939,
+    "binary_sha256": "e11ff588ab3bbfafe9c186aef9ebaa8be23f928271da13d95d1d0ce0e397b40f",
+    "mapped_sdl_libraries": [
+      "/usr/lib/libSDL3.so.0.4.16",
+      "/usr/lib/libSDL3_image.so.0.4.6",
+      "/usr/lib/libSDL3_mixer.so.0.2.4",
+      "/usr/lib/libSDL3_ttf.so.0.2.2"
+    ],
+    "renderer_log": [
+      "21:40:01.058 INFO : SDL version used during compile is 3.4.16",
+      "21:40:01.058 INFO : SDL version used during linking and in runtime is 3.4.16",
+      "21:40:01.275 INFO : SDL renderer in use: opengl; backing GPU driver: n/a"
+    ],
+    "graphics_settings": {
+      "TILES": "UNDEAD_PEOPLE",
+      "USE_TILES": "true",
+      "FULLSCREEN": "fullscreen",
+      "RENDERER": "opengl"
+    },
+    "viewport_pixels": [
+      2880,
+      1800
+    ],
+    "loaded_world": "Damon",
+    "screenshot": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sdl3-migration-20261008/opengl-save-smoke/loaded-map.png",
+    "audible_audio_tested": false,
+    "performance_measured": false,
+    "log_offset_bytes": 19193,
+    "completed_utc": "2026-10-07T14:05:48.451391+00:00",
+    "steps": [
+      "Load independent Damon quiet-origin copy in fullscreen SDL3/OpenGL with UndeadPeople.",
+      "Save via native S/Y flow; inspect latest zzip footer and player state.",
+      "Select Damon and Mitchel Rice from the native load menu; visually inspect reloaded map.",
+      "Save again via S/Y, then quit through the native main-menu confirmation."
+    ],
+    "reloaded_screenshot": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sdl3-migration-20261008/opengl-save-smoke/reloaded-map.png",
+    "original_files_verified": 65,
+    "original_manifest_sha256": "e440a270103c0f7fa28d751aaae9fc9235d3b4a0c3ede9d24bfcbabfc51ba085",
+    "state_before": {
+      "turn": 5212812,
+      "lev": [
+        92,
+        255,
+        2
+      ],
+      "active_monsters": 0,
+      "player_pos": {
+        "location": [
+          5495,
+          7449,
+          2
+        ]
+      }
+    },
+    "state_after": {
+      "turn": 5212812,
+      "lev": [
+        92,
+        255,
+        2
+      ],
+      "active_monsters": 0,
+      "player_pos": {
+        "location": [
+          5495,
+          7449,
+          2
+        ]
+      },
+      "reader": {
+        "method": "active zzip footer entry, footer and payload XXH64 verified",
+        "entry": {
+          "len": 17286,
+          "offset": 24
+        }
+      }
+    },
+    "process_closed": true,
+    "exit_code": null,
+    "exit_code_note": "Native main-menu quit confirmed; launching parent did not retain a wait handle, numeric exit code unavailable.",
+    "scope": "Graphical load/save/reload smoke; quiet debug fixture has zero active monsters, not the original carrier stress scene.",
+    "input_note": "An initial uppercase Q was unbound and did not advance a turn; subsequent saves used the authoritative S binding.",
+    "replay_playback_tested": false
+  },
+  "performance": {
+    "measured": false,
+    "speedup_percent": null,
+    "reason": "No frozen-binary paired performance trial performed for this structural batch."
+  },
+  "documentation_impact": {
+    "affected_documentation_ids": [
+      "build-overview",
+      "build-cmake",
+      "build-windows-msys2",
+      "build-windows-msvc"
+    ],
+    "documentation_impact": "Updated compile entry-point banners and dependency guidance to name SDL3-only contract; historical bodies are not a complete fresh tutorial.",
+    "related_ccb_docs_pr": null,
+    "ccb_docs_status": "Counterpart pages have not been updated or published; prepare draft updates with any future source PR.",
+    "generated_reference_impact": "No generated public Lua/schema inventories changed; report is JSON in the existing performance-results directory."
+  },
+  "unverified_and_risks": [
+    "Windows, macOS universal, Android device/package and hosted release workflows have not been built or exercised on their target platforms.",
+    "Local core/image SDK versions are newer than pinned release versions; pinned-stack CI acceptance remains pending.",
+    "Prior native SDL3 GPU/Vulkan submission OOM and X11 fatal-exit/XIM spin remain unresolved; current smoke uses explicit OpenGL/X11.",
+    "No full native corpus, curses runtime, audible-audio/device, controller/IME/HiDPI hardware or long gameplay session acceptance.",
+    "No replay playback, multiplayer or whole save-state equivalence claim; only the recorded native save footer and selected state fields were checked.",
+    "Old compiler6/focal developer containers are retained as terminal-only references and were not built.",
+    "Legacy Emscripten/MXE SDL2 recipes now fail clearly; no new SDL3 browser/MXE package is provided."
+  ],
+  "commit_splitting": {
+    "basis": "Additions plus deletions from baseline to final, prohibited build cache excluded; no intermediate churn counted.",
+    "planned_local_commits": 2,
+    "actual_local_commits": 2,
+    "reason": "Most churn removes mutually exclusive legacy backend code and build paths. Keep implementation, build routing and regression tests coherent in one commit; keep documentation and acceptance record in the second. Do not create inconsistent intermediate states to reach the line-based reference.",
+    "changed_files": 67,
+    "added_lines": 1167,
+    "deleted_lines": 4881,
+    "changed_lines": 6048,
+    "wholly_removed_file_lines": 2609,
+    "reference_commits": 65
+  },
+  "source_inputs_manifest_sha256": "3674efacea45ea9b454690faeb981f60ea62d8dbf7cb6352614abcb5b1cde29f",
+  "private_evidence_root": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sdl3-migration-20261008",
+  "next_exact_action": "With a future source PR, run the affected Linux pinned-stack, Windows MSVC/vcpkg, macOS universal and Android gates; diagnose preserved Vulkan GPU-submit failure separately before default-backend release acceptance.",
+  "changed_files": [
+    ".github/ISSUE_TEMPLATE/bug_report.yml",
+    ".github/actions/setup-sdl3-stack-macos/action.yml",
+    ".github/workflows/clang-tidy.yml",
+    ".github/workflows/matrix.yml",
+    ".github/workflows/msvc-full-features.yml",
+    ".github/workflows/release.yml",
+    "CMakeLists.txt",
+    "CMakeModules/Find/FindSDL2.cmake",
+    "CMakeModules/Find/FindSDL2_image.cmake",
+    "CMakeModules/Find/FindSDL2_mixer.cmake",
+    "CMakeModules/Find/FindSDL2_ttf.cmake",
+    "Makefile",
+    "android/.gitignore",
+    "android/app/jni/CMakeLists.txt",
+    "build-scripts/Dockerfile.debian-build",
+    "build-scripts/SDL2-devel-2.26.2-mingw.tar.gz.sha256",
+    "build-scripts/gha_compile_only.sh",
+    "build-scripts/requirements.sh",
+    "build-scripts/windist.ps1",
+    "data/CMakeLists.txt",
+    "doc/c++/COMPILING-CMAKE.md",
+    "doc/c++/COMPILING-MSYS.md",
+    "doc/c++/COMPILING-VS-VCPKG.md",
+    "doc/c++/COMPILING.md",
+    "doc/c++/performance-results/2026-10-07-sdl3-only-validation.json",
+    "msvc-full-features/Cataclysm-common.props",
+    "msvc-full-features/ImGui-lib-vcpkg-static.vcxproj",
+    "msvc-full-features/vcpkg.json",
+    "src/CMakeLists.txt",
+    "src/cata_allocator.cpp",
+    "src/cata_imgui.cpp",
+    "src/cata_imgui.h",
+    "src/cata_shader.cpp",
+    "src/cata_shader.h",
+    "src/cata_tiles.cpp",
+    "src/cata_tiles.h",
+    "src/debug_menu.cpp",
+    "src/lua_platform_runtime_dialogue.cpp",
+    "src/options.cpp",
+    "src/pixel_minimap.cpp",
+    "src/screen_shake.h",
+    "src/sdl_gamepad.cpp",
+    "src/sdl_gamepad.h",
+    "src/sdl_version_wrappers.h",
+    "src/sdl_wrappers.cpp",
+    "src/sdl_wrappers.h",
+    "src/sdltiles.cpp",
+    "src/sdltiles.h",
+    "src/shockwave.h",
+    "src/sound_backend.h",
+    "src/sound_backend_sdl2.cpp",
+    "src/sound_backend_sdl3.cpp",
+    "src/third-party/CMakeLists.txt",
+    "src/third-party/imgui/imgui_impl_sdl2.cpp",
+    "src/third-party/imgui/imgui_impl_sdl2.h",
+    "src/third-party/imgui/imgui_impl_sdlrenderer2.cpp",
+    "src/third-party/imgui/imgui_impl_sdlrenderer2.h",
+    "src/version.cpp",
+    "tests/gpu_variant_dispatch_test.cpp",
+    "tests/renderer_recovery_test.cpp",
+    "tests/sdl_platform_test.cpp",
+    "tests/sound_backend_test.cpp",
+    "tools/build_shaders.py",
+    "tools/iwyu/sdl.imp",
+    "tools/llama/README.md",
+    "tools/llama/gcc-focal/Dockerfile",
+    "tools/test_sdl3_build_contract.py"
+  ]
+}

@@ -11,7 +11,7 @@ namespace cata_shader
 
 // Forces the next variant_pass::try_begin to drop cached shader artifacts
 // and re-run the activation probe. Used to pick up freshly rebuilt
-// .spv/.dxil/.msl without restarting. No-op on SDL2 / non-GPU renderer.
+// .spv/.dxil/.msl without restarting. No-op on a non-GPU renderer.
 void request_reprobe();
 bool reprobe_requested();
 void clear_reprobe();
@@ -19,9 +19,8 @@ void clear_reprobe();
 } // namespace cata_shader
 
 // SDL_SetGPURenderState and the SDL_GPU* surface this header wraps were added
-// in SDL 3.4.0 and have no SDL2 counterpart. The class types below are
+// in SDL 3.4.0. The class types below are
 // SDL3-only.
-#if SDL_MAJOR_VERSION >= 3
 
 #include <array>
 #include <memory>
@@ -264,7 +263,6 @@ class variant_pass
 
 } // namespace cata_shader
 
-#endif // SDL_MAJOR_VERSION >= 3
 
 #endif // TILES
 

@@ -44,7 +44,6 @@
 #include "weather.h"
 #include "weighted_list.h"
 
-#if SDL_MAJOR_VERSION >= 3
 #include "cata_shader.h"
 
 namespace cata_shader
@@ -56,7 +55,6 @@ class variant_pass;
 // consumes.
 enum class lit_level : uint8_t;
 cata_shader::variant_kind compute_variant_kind( lit_level ll, bool use_nv_tiles );
-#endif
 
 class Character;
 class memorized_tile;
@@ -1173,10 +1171,8 @@ class cata_tiles
         const GeometryRenderer_Ptr &geometry;
         tileset_cache &cache;
 
-#if SDL_MAJOR_VERSION >= 3
         // Variant pass is process-lifetime, owned alongside the renderer.
         // Consumers reach it via get_shared_variant_pass in sdltiles.h.
-#endif
         std::shared_ptr<const tileset> tileset_ptr;
         // Borrowed only while draw() owns its stack-local query frame. The
         // restoration guard also handles nested draws and exceptional exits.

@@ -32,8 +32,8 @@ RUN apt-fast -qq install --no-install-recommends gettext
 # CDDA: libraries for curses-based terminal cdda
 RUN apt-fast -qq install --no-install-recommends libncurses5-dev libncursesw5-dev
 
-# CDDA: libraries for tiles build
-RUN apt-fast -qq install --no-install-recommends  libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libsdl2-mixer-dev libfreetype6-dev
+# This legacy container supports terminal builds only. For SDL3 tiles builds,
+# use the dependencies and commands in doc/c++/COMPILING-CMAKE.md.
 
 # general packages for a much nicer time inside the container (we install psmisc for `killall`)
 RUN apt-fast -qq install --no-install-recommends tree watch tmux fish colormake vim emacs git silversearcher-ag lsof psmisc dstat
@@ -65,7 +65,7 @@ COPY --chown=cdda:cdda . .
 
 # we build in build dirs rather than at the repo root
 # TODO: move build dirs to a directory ABOVE the source so we can Docker mount in the source dir for 'live' builds of code you're hacking on the host
-RUN mkdir cmake-build-debug cmake-build-debug-tiles
+RUN mkdir cmake-build-debug
 
 WORKDIR /home/cdda/cmake-build-debug
 
@@ -75,13 +75,6 @@ WORKDIR /home/cdda/cmake-build-debug
 RUN env CC=clang-6.0 CXX=clang++-6.0 cmake ..
 
 RUN echo `pwd` configured for build; to actually build, run "make -j`nproc --all`" here
-
-WORKDIR /home/cdda/cmake-build-debug-tiles
-
-RUN env CC=clang-6.0 CXX=clang++-6.0 cmake -DTILES=ON ..
-
-RUN echo `pwd` configured for build; to actually build, run "make -j`nproc --all`" here
-
 
 ## ssh server stuff (experimental and not needed except for testing ssh stuff with CDDA! you don't need ssh to get a shell inside the container!)
 ## uncomment this to get ssh

@@ -2,6 +2,12 @@
 
 set -e
 
+# The former MXE archive only contained SDL2 and cannot build the SDL3 engine.
+if [ -n "${MXE_TARGET}" ]; then
+  echo "The legacy MXE SDL2 toolchain is retired; use the SDL3 MSVC or MSYS2 build." >&2
+  exit 1
+fi
+
 function just_json
 {
     for filename in $(./build-scripts/files_changed || echo UNKNOWN)
@@ -54,65 +60,8 @@ if [ -n "${CODE_COVERAGE}" ]; then
   export LDFLAGS="$LDFLAGS --coverage"
 fi
 
-# Influenced by https://github.com/zer0main/battleship/blob/master/build/windows/requirements.sh
-if [ -n "${MXE_TARGET}" ]; then
-  sudo apt update
-  $travis_retry sudo apt-get --yes install wine64
-
-  set +e
-  retry=0
-  until [[ "$retry" -ge 5 ]]; do
-    curl -L -o mxe-x86_64.tar.xz https://github.com/BrettDong/MXE-GCC/releases/download/mxe-sdl-2-0-20/mxe-x86_64.tar.xz && curl -L -o mxe-x86_64.tar.xz.sha256 https://github.com/BrettDong/MXE-GCC/releases/download/mxe-sdl-2-0-20/mxe-x86_64.tar.xz.sha256 && shasum -a 256 -c ./mxe-x86_64.tar.xz.sha256 && break
-    retry=$((retry+1))
-    rm -f mxe-x86_64.tar.xz mxe-x86_64.tar.xz.sha256
-    sleep 10
-  done
-  if [[ "$retry" -ge 5 ]]; then
-    echo "Error downloading or checksum failed for MXE x86_64"
-    exit 1
-  fi
-  set -e
-  sudo tar xJf mxe-x86_64.tar.xz -C /opt
-
-  export MXE_DIR=/opt/mxe
-  export CROSS_COMPILATION="${MXE_DIR}/usr/bin/${MXE_TARGET}-"
-  # Need to overwrite CXX to make the Makefile $CROSS logic work right.
-  export CXX="$COMPILER"
-  export CCACHE=1
-
-  set +e
-  retry=0
-  until [[ "$retry" -ge 5 ]]; do
-    curl -L -o SDL2-devel-2.26.2-mingw.tar.gz https://github.com/libsdl-org/SDL/releases/download/release-2.26.2/SDL2-devel-2.26.2-mingw.tar.gz && shasum -a 256 -c ./build-scripts/SDL2-devel-2.26.2-mingw.tar.gz.sha256 && break
-    retry=$((retry+1))
-    rm -f SDL2-devel-2.26.2-mingw.tar.gz
-    sleep 10
-  done
-  if [[ "$retry" -ge 5 ]]; then
-    echo "Error downloading or checksum failed for SDL2-devel-2.26.2-mingw.tar.gz"
-    exit 1
-  fi
-  set -e
-  sudo tar -xzf SDL2-devel-2.26.2-mingw.tar.gz -C ${MXE_DIR}/usr/${MXE_TARGET} --strip-components=2 SDL2-2.26.2/x86_64-w64-mingw32
-
-  set +e
-  retry=0
-  until [[ "$retry" -ge 5 ]]; do
-    curl -L -o libbacktrace-x86_64-w64-mingw32.tar.gz https://github.com/Qrox/libbacktrace/releases/download/2020-01-03/libbacktrace-x86_64-w64-mingw32.tar.gz && shasum -a 256 -c ./build-scripts/libbacktrace-x86_64-w64-mingw32-sha256 && break
-    retry=$((retry+1))
-    rm -f libbacktrace-x86_64-w64-mingw32.tar.gz
-    sleep 10
-  done
-  if [[ "$retry" -ge 5 ]]; then
-    echo "Error downloading or checksum failed for libbacktrace-x86_64-w64-mingw32.tar.gz"
-    exit 1
-  fi
-  set -e
-  sudo tar -xzf libbacktrace-x86_64-w64-mingw32.tar.gz --exclude=LICENSE -C ${MXE_DIR}/usr/${MXE_TARGET}
-fi
-
 if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-  HOMEBREW_NO_AUTO_UPDATE=yes HOMEBREW_NO_INSTALL_CLEANUP=yes brew install sdl2 sdl2_image sdl2_ttf sdl2_mixer gettext ncurses ccache parallel
+  HOMEBREW_NO_AUTO_UPDATE=yes HOMEBREW_NO_INSTALL_CLEANUP=yes brew install sdl3 sdl3_image sdl3_ttf sdl3_mixer gettext ncurses ccache parallel
 fi
 
 if [[ "$NATIVE" == "android" ]]; then
