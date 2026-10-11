@@ -65,6 +65,7 @@
 #include "memory_fast.h"
 #include "messages.h"
 #include "monster.h"
+#include "move_mode.h"
 #include "mtype.h"
 #include "npc.h"
 #include "options.h"
@@ -75,6 +76,7 @@
 #include "point.h"
 #include "projectile.h"
 #include "ret_val.h"
+#include "riding_config.h"
 #include "rng.h"
 #include "skill.h"
 #include "sounds.h"
@@ -185,6 +187,7 @@ static const skill_id skill_dodge( "dodge" );
 static const skill_id skill_driving( "driving" );
 static const skill_id skill_gun( "gun" );
 static const skill_id skill_launcher( "launcher" );
+static const skill_id skill_riding( "riding" );
 static const skill_id skill_swimming( "swimming" );
 static const skill_id skill_throw( "throw" );
 
@@ -1212,6 +1215,17 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, int shots, it
     if( shots <= 0 ) {
         debugmsg( "Attempted to fire zero or negative shots using %s", gun.tname() );
         return 0;
+    }
+
+    if( is_mounted() && get_steed_type() == steed_type::ANIMAL ) {
+        const riding_config &config = get_riding_config();
+        practice( skill_riding, config.ranged_practice );
+        const time_duration practice_time = time_duration::from_seconds(
+                                                config.proficiency_practice_seconds );
+        practice_proficiency( config.mounted_combat_proficiency, practice_time );
+        if( has_proficiency( config.mounted_combat_proficiency ) ) {
+            practice_proficiency( config.mounted_ranged_proficiency, practice_time );
+        }
     }
 
     // Cleanwater: 撤销 PR #86232 (Remove dumb gun cheese)
@@ -2965,6 +2979,19 @@ dispersion_sources Character::get_weapon_dispersion( const item &obj ) const
 
         /** @EFFECT_DRIVING reduces the inaccuracy penalty when using guns whilst driving */
         dispersion.add_range( std::max( vol - get_skill_level( skill_driving ), 1.0f ) * 20 );
+    }
+
+    if( is_mounted() && get_steed_type() == steed_type::ANIMAL ) {
+        const riding_config &config = get_riding_config();
+        int mounted_penalty = std::max( 0,
+                                        config.mounted_ranged_dispersion_penalty -
+                                        static_cast<int>( get_skill_level( skill_riding ) ) *
+                                        config.ranged_dispersion_skill_reduction );
+        if( has_proficiency( config.mounted_ranged_proficiency ) ) {
+            mounted_penalty = std::max( 0,
+                                        mounted_penalty - config.mounted_ranged_proficiency_bonus );
+        }
+        dispersion.add_range( mounted_penalty );
     }
 
     /** @EFFECT_GUN improves usage of accurate weapons and sights */

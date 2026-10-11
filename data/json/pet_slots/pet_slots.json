@@ -1,0 +1,44 @@
+[
+  {
+    "type": "pet_slot",
+    "id": "saddle",
+    "name": { "str": "saddle" },
+    "description": "Holds tack used to control and ride a mount.",
+    "required_flags": [ "TACK" ],
+    "mount_only": true,
+    "sub_slots": [ "saddlebag", "stirrup" ]
+  },
+  {
+    "type": "pet_slot",
+    "id": "saddlebag",
+    "name": { "str": "saddlebag" },
+    "description": "Holds a storage bag attached to an equipped saddle.",
+    "required_flags": [ "SADDLE_BAG" ],
+    "min_storage": "250 ml",
+    "mount_only": true
+  },
+  {
+    "type": "pet_slot",
+    "id": "stirrup",
+    "name": { "str": "stirrups" },
+    "description": "Holds stirrups that make mounting and mounted combat easier.",
+    "required_flags": [ "STIRRUP" ],
+    "mount_only": true
+  },
+  {
+    "type": "pet_slot",
+    "id": "armor",
+    "name": { "str": "armor" },
+    "description": "Holds fitted armor for the creature.",
+    "pet_armor": true,
+    "passive_effects": [ "monster_armor" ]
+  },
+  {
+    "type": "pet_slot",
+    "id": "storage",
+    "name": { "str": "storage" },
+    "description": "Holds a container used to carry items.",
+    "min_storage": "250 ml",
+    "passive_effects": [ "has_bag" ]
+  }
+]

@@ -27,6 +27,7 @@
 #include "game.h"
 #include "horde_entity.h"
 #include "item.h"
+#include "itype.h"
 #include "line.h"
 #include "map.h"
 #include "map_helpers.h"
@@ -58,6 +59,7 @@ static const furn_str_id furn_f_null( "f_null" );
 static const efftype_id effect_leashed( "leashed" );
 static const efftype_id effect_led_by_leash( "led_by_leash" );
 static const efftype_id effect_monster_saddled( "monster_saddled" );
+static const efftype_id effect_has_bag( "has_bag" );
 static const efftype_id effect_tied( "tied" );
 
 static const mtype_id mon_dog_zombie_brute( "mon_dog_zombie_brute" );
@@ -65,6 +67,11 @@ static const mtype_id mon_test_zombie( "mon_test_zombie" );
 static const mtype_id pseudo_dormant_mon_zombie_fat( "pseudo_dormant_mon_zombie_fat" );
 
 static const itype_id itype_rope_30( "rope_30" );
+static const itype_id itype_horse_stirrups( "horse_stirrups" );
+static const itype_id itype_horse_tack( "horse_tack" );
+static const itype_id itype_saddlebag( "saddlebag" );
+
+static const skill_id skill_riding( "riding" );
 
 static const oter_str_id oter_field( "field" );
 
@@ -695,6 +702,70 @@ TEST_CASE( "mounting_a_tied_mount_clears_its_leash_state", "[monster][mount]" )
     CHECK_FALSE( horse.has_effect( effect_leashed ) );
     CHECK_FALSE( horse.has_effect( effect_led_by_leash ) );
     CHECK( horse.has_effect( effect_monster_saddled ) );
+}
+
+TEST_CASE( "pet_equipment_slots_bridge_legacy_and_nested_equipment",
+           "[monster][pet_equipment]" )
+{
+    monster horse( mtype_id( "mon_horse" ) );
+    const pet_slot_id saddle_slot( "saddle" );
+    const pet_slot_id saddlebag_slot( "saddlebag" );
+    const pet_slot_id stirrup_slot( "stirrup" );
+
+    const item tack( itype_horse_tack );
+    const item stirrups( itype_horse_stirrups );
+    const item saddlebags( itype_saddlebag );
+    REQUIRE( tack.type->pet_equipment );
+    REQUIRE( stirrups.type->pet_equipment );
+    REQUIRE( saddlebags.type->pet_equipment );
+    CHECK( tack.type->pet_equipment->slots == std::vector<std::string> { "saddle" } );
+    CHECK( stirrups.type->pet_equipment->slots == std::vector<std::string> { "stirrup" } );
+    CHECK( saddlebags.type->pet_equipment->slots == std::vector<std::string> { "saddlebag" } );
+    CHECK( stirrup_slot.obj().mount_threshold_delta == 0 );
+    CHECK( stirrup_slot.obj().melee_hit_multiplier == Approx( 1.0 ) );
+    CHECK( stirrups.type->pet_equipment->mount_threshold_delta == -2 );
+    CHECK( stirrups.type->pet_equipment->melee_hit_multiplier == Approx( 1.1 ) );
+    CHECK( stirrups.type->pet_equipment->fear_multiplier == Approx( 0.75 ) );
+
+    REQUIRE_FALSE( horse.pet_slot_available( stirrup_slot ) );
+    REQUIRE( horse.equip_pet_equipment( saddle_slot, item( itype_horse_tack ) ) );
+    CHECK( horse.tack_item );
+    CHECK( horse.has_effect( effect_monster_saddled ) );
+    CHECK( horse.pet_slot_available( stirrup_slot ) );
+
+    REQUIRE( horse.equip_pet_equipment( stirrup_slot, item( itype_horse_stirrups ) ) );
+    CHECK( horse.pet_equipment_melee_hit_multiplier() == Approx( 1.1 ) );
+    CHECK_FALSE( horse.remove_pet_equipment( saddle_slot ) );
+
+    REQUIRE( horse.equip_pet_equipment( saddlebag_slot, item( itype_saddlebag ) ) );
+    CHECK( horse.get_pet_storage() != nullptr );
+    CHECK( horse.has_effect( effect_has_bag ) );
+
+    REQUIRE( horse.remove_pet_equipment( stirrup_slot ) );
+    REQUIRE( horse.remove_pet_equipment( saddlebag_slot ) );
+    REQUIRE( horse.remove_pet_equipment( saddle_slot ) );
+    CHECK_FALSE( horse.tack_item );
+    CHECK_FALSE( horse.has_effect( effect_monster_saddled ) );
+}
+
+TEST_CASE( "riding_skill_reduces_mounted_movement_cost", "[monster][mount][riding]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    clear_creatures();
+
+    avatar &player = get_avatar();
+    monster &horse = spawn_test_monster( "mon_horse", player.pos_bub() + tripoint::east );
+    horse.friendly = -1;
+    player.mount_creature( horse );
+
+    player.set_skill_level( skill_riding, 0 );
+    const int untrained_cost = player.run_cost( 100, false );
+    player.set_skill_level( skill_riding, 10 );
+    const int expert_cost = player.run_cost( 100, false );
+
+    CHECK( expert_cost < untrained_cost );
+    player.forced_dismount();
 }
 
 TEST_CASE( "monster_broken_verify", "[monster]" )
