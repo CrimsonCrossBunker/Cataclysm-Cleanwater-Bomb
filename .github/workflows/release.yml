@@ -145,12 +145,11 @@ jobs:
 
   # Compile GLSL -> spv/dxil/msl once on Linux and share with every SDL3
   # platform job. Runtime variant_pass picks the format matching its GPU
-  # backend (Vulkan/D3D12/Metal). Non-SDL3 builds ignore the artifact.
+  # backend (Vulkan/D3D12/Metal). Curses packages do not use the artifact.
   compile-shaders:
     name: Compile shaders
-    # SDL3 is opt-in / experimental; do not block non-SDL3 release builds if
-    # the shader toolchain is broken.
-    continue-on-error: true
+    # Every graphical package uses SDL3; a broken shader toolchain must stop
+    # publishing before any package is uploaded.
     runs-on: ubuntu-24.04
     steps:
     - name: checkout repository

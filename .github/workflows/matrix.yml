@@ -14,6 +14,11 @@ on:
         required: false
         type: boolean
         default: true
+      package_artifacts:
+        description: Validate and upload installable packages without publishing a release
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   actions: read
@@ -340,8 +345,8 @@ jobs:
       run: |
           HOMEBREW_NO_AUTO_UPDATE=yes HOMEBREW_NO_INSTALL_CLEANUP=yes brew install gettext ccache parallel
     - name: install PR dmgdist dependencies (mac)
-      if: ${{ env.SKIP == 'false' && github.event_name == 'pull_request' && github.event.pull_request.draft == false && runner.os == 'macOS' && matrix.tiles == 1 && matrix.sdl3 == 1 }}
-      continue-on-error: true
+      if: ${{ env.SKIP == 'false' && ((github.event_name == 'pull_request' && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' && inputs.package_artifacts)) && runner.os == 'macOS' && matrix.tiles == 1 && matrix.sdl3 == 1 }}
+      continue-on-error: ${{ github.event_name != 'workflow_dispatch' || !inputs.package_artifacts }}
       run: |
           HOMEBREW_NO_AUTO_UPDATE=yes HOMEBREW_NO_INSTALL_CLEANUP=yes brew install dylibbundler
           pip3 install --break-system-packages dmgbuild biplist
@@ -440,10 +445,10 @@ jobs:
         retention-days: 9
     - name: package PR Linux curses artifact
       id: package-pr-linux-curses
-      if: ${{ env.SKIP == 'false' && github.event_name == 'pull_request' && github.event.pull_request.draft == false && runner.os == 'Linux' && matrix.pr_artifact == 'linux-curses' && success() }}
-      continue-on-error: true
+      if: ${{ env.SKIP == 'false' && ((github.event_name == 'pull_request' && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' && inputs.package_artifacts)) && runner.os == 'Linux' && matrix.pr_artifact == 'linux-curses' && success() }}
+      continue-on-error: ${{ github.event_name != 'workflow_dispatch' || !inputs.package_artifacts }}
       env:
-        PR_NUMBER: ${{ github.event.pull_request.number }}
+        PR_NUMBER: ${{ github.event.pull_request.number || github.run_id }}
       shell: bash
       run: |
         set -eo pipefail
@@ -458,19 +463,19 @@ jobs:
     - name: upload PR Linux curses artifact
       id: upload-pr-linux-curses
       if: ${{ steps.package-pr-linux-curses.outcome == 'success' }}
-      continue-on-error: true
+      continue-on-error: ${{ github.event_name != 'workflow_dispatch' || !inputs.package_artifacts }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: ccb-pr-linux-curses-pr-${{ github.event.pull_request.number }}
-        path: ccb-pr-linux-curses-${{ github.event.pull_request.number }}.tar.gz
+        name: ccb-pr-linux-curses-pr-${{ github.event.pull_request.number || github.run_id }}
+        path: ccb-pr-linux-curses-${{ github.event.pull_request.number || github.run_id }}.tar.gz
         if-no-files-found: error
         retention-days: 14
     - name: package PR macOS tiles artifact
       id: package-pr-macos-tiles
-      if: ${{ env.SKIP == 'false' && github.event_name == 'pull_request' && github.event.pull_request.draft == false && runner.os == 'macOS' && matrix.tiles == 1 && matrix.sdl3 == 1 && success() }}
-      continue-on-error: true
+      if: ${{ env.SKIP == 'false' && ((github.event_name == 'pull_request' && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' && inputs.package_artifacts)) && runner.os == 'macOS' && matrix.tiles == 1 && matrix.sdl3 == 1 && success() }}
+      continue-on-error: ${{ github.event_name != 'workflow_dispatch' || !inputs.package_artifacts }}
       env:
-        PR_NUMBER: ${{ github.event.pull_request.number }}
+        PR_NUMBER: ${{ github.event.pull_request.number || github.run_id }}
       shell: bash
       run: |
         set -eo pipefail
@@ -479,19 +484,19 @@ jobs:
     - name: upload PR macOS tiles artifact
       id: upload-pr-macos-tiles
       if: ${{ steps.package-pr-macos-tiles.outcome == 'success' }}
-      continue-on-error: true
+      continue-on-error: ${{ github.event_name != 'workflow_dispatch' || !inputs.package_artifacts }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: ccb-pr-macos-tiles-pr-${{ github.event.pull_request.number }}
-        path: ccb-pr-macos-tiles-${{ github.event.pull_request.number }}.dmg
+        name: ccb-pr-macos-tiles-pr-${{ github.event.pull_request.number || github.run_id }}
+        path: ccb-pr-macos-tiles-${{ github.event.pull_request.number || github.run_id }}.dmg
         if-no-files-found: error
         retention-days: 14
     - name: package PR Android arm64-v8a artifact
       id: package-pr-android-arm64-v8a
-      if: ${{ env.SKIP == 'false' && github.event_name == 'pull_request' && github.event.pull_request.draft == false && runner.os == 'Linux' && matrix.android == 'arm64' && success() }}
-      continue-on-error: true
+      if: ${{ env.SKIP == 'false' && ((github.event_name == 'pull_request' && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' && inputs.package_artifacts)) && runner.os == 'Linux' && matrix.android == 'arm64' && success() }}
+      continue-on-error: ${{ github.event_name != 'workflow_dispatch' || !inputs.package_artifacts }}
       env:
-        PR_NUMBER: ${{ github.event.pull_request.number }}
+        PR_NUMBER: ${{ github.event.pull_request.number || github.run_id }}
       shell: bash
       run: |
         set -eo pipefail
@@ -506,11 +511,11 @@ jobs:
     - name: upload PR Android arm64-v8a artifact
       id: upload-pr-android-arm64-v8a
       if: ${{ steps.package-pr-android-arm64-v8a.outcome == 'success' }}
-      continue-on-error: true
+      continue-on-error: ${{ github.event_name != 'workflow_dispatch' || !inputs.package_artifacts }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: ccb-pr-android-arm64-v8a-pr-${{ github.event.pull_request.number }}
-        path: ccb-pr-android-arm64-v8a-${{ github.event.pull_request.number }}.apk
+        name: ccb-pr-android-arm64-v8a-pr-${{ github.event.pull_request.number || github.run_id }}
+        path: ccb-pr-android-arm64-v8a-${{ github.event.pull_request.number || github.run_id }}.apk
         if-no-files-found: error
         retention-days: 14
   #emscripten:

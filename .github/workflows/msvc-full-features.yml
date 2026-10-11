@@ -37,6 +37,11 @@ on:
         required: false
         type: boolean
         default: true
+      package_artifacts:
+        description: Validate and upload installable packages without publishing a release
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -252,10 +257,10 @@ jobs:
       shell: bash
     - name: package PR Windows tiles x64 artifact
       id: package-pr-windows-tiles-x64
-      if: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft == false && success() }}
-      continue-on-error: true
+      if: ${{ ((github.event_name == 'pull_request' && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' && inputs.package_artifacts)) && success() }}
+      continue-on-error: ${{ github.event_name != 'workflow_dispatch' || !inputs.package_artifacts }}
       env:
-        PR_NUMBER: ${{ github.event.pull_request.number }}
+        PR_NUMBER: ${{ github.event.pull_request.number || github.run_id }}
       shell: pwsh
       run: |
         @"
@@ -274,10 +279,10 @@ jobs:
     - name: upload PR Windows tiles x64 artifact
       id: upload-pr-windows-tiles-x64
       if: ${{ steps.package-pr-windows-tiles-x64.outcome == 'success' }}
-      continue-on-error: true
+      continue-on-error: ${{ github.event_name != 'workflow_dispatch' || !inputs.package_artifacts }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: ccb-pr-windows-tiles-x64-pr-${{ github.event.pull_request.number }}
-        path: ccb-pr-windows-tiles-x64-${{ github.event.pull_request.number }}.zip
+        name: ccb-pr-windows-tiles-x64-pr-${{ github.event.pull_request.number || github.run_id }}
+        path: ccb-pr-windows-tiles-x64-${{ github.event.pull_request.number || github.run_id }}.zip
         if-no-files-found: error
         retention-days: 14
