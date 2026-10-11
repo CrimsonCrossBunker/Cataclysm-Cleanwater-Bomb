@@ -755,26 +755,39 @@ TEST_CASE( "damaged_frying_pan_can_be_repaired_without_a_fault", "[item][repair]
     clear_map_without_vision();
     set_time_to_day();
     Character &u = get_player_character();
-    u.set_skill_level( skill_mechanics, 100 );
     const itype_id welder_type( "welder" );
     const repair_item_actor *actor = dynamic_cast<const repair_item_actor *>(
                                          welder_type->get_use( "repair_metal" )->get_actor_ptr() );
     REQUIRE( actor != nullptr );
+    u.set_skill_level( actor->used_skill, 10 );
     item tool( welder_type );
-    tool.ammo_set( itype_id( "battery" ), 1000 );
+    REQUIRE( tool.put_in( item( itype_id( "magazine_battery_mod" ) ),
+                          pocket_type::MOD ).success() );
+    item battery( itype_id( "small_storage_battery" ) );
+    battery.ammo_set( battery.ammo_default(), 1000 );
+    REQUIRE( tool.put_in( battery, pocket_type::MAGAZINE_WELL ).success() );
     item pan( itype_id( "pan" ) );
     REQUIRE( u.wield( pan ) );
     item_location target = u.get_wielded_item();
-    get_map().add_item_or_charges( u.pos_bub(), item( itype_id( "scrap" ), calendar::turn, 100 ) );
+    for( int n = 0; n < 30; ++n ) {
+        get_map().add_item_or_charges( u.pos_bub(), item( itype_id( "scrap_cast_iron" ) ) );
+    }
     u.invalidate_crafting_inventory();
 
     for( int cycle = 0; cycle < 2; ++cycle ) {
         REQUIRE_FALSE( target->inc_damage() );
         REQUIRE( target->faults.empty() );
         REQUIRE( target->damage() > target->degradation() );
+        CAPTURE( actor->used_skill, u.get_skill_level( actor->used_skill ),
+                 actor->repair_chance( u, *target, repair_item_actor::RT_REPAIR ).first );
         REQUIRE( actor->can_repair_target( u, *target, false, true ) );
         const int before = target->damage();
-        CHECK( actor->repair( u, tool, target ) == repair_item_actor::AS_SUCCESS );
+        REQUIRE( actor->repair_chance( u, *target, repair_item_actor::RT_REPAIR ).second == 0.0f );
+        repair_item_actor::attempt_hint result = repair_item_actor::AS_RETRY;
+        for( int attempt = 0; attempt < 100 && result == repair_item_actor::AS_RETRY; ++attempt ) {
+            result = actor->repair( u, tool, target );
+        }
+        REQUIRE( result == repair_item_actor::AS_SUCCESS );
         CHECK( target->damage() < before );
         CHECK( target->faults.empty() );
     }

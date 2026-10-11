@@ -245,11 +245,21 @@ TEST_CASE( "NPC_faces_zombies", "[npc_attack]" )
         }
 
         WHEN( "NPC only has a bunch of rocks" ) {
-            item weapon( itype_rock, calendar::turn, 5 );
+            // Make the intended ranged attack useful and explicitly allowed.
+            main_npc.set_skill_level( skill_id( "throw" ), 10 );
+            main_npc.rules.set_flag( ally_rule::use_guns );
+            REQUIRE( main_npc.wear_item( item( itype_id( "backpack" ) ) ) );
+            for( int n = 0; n < 4; ++n ) {
+                REQUIRE( main_npc.i_add( item( itype_rock ) ) );
+            }
+            item weapon( itype_rock );
             main_npc.set_wielded_item( weapon );
             REQUIRE( main_npc.get_wielded_item()->typeId() == itype_rock );
 
             THEN( "NPC throws rocks at the zombie" ) {
+                main_npc.regen_ai_cache();
+                REQUIRE( ( main_npc.amount_of( itype_rock ) > 1 ||
+                           main_npc.charges_of( itype_rock ) > 1 ) );
                 main_npc.evaluate_best_attack( zombie );
                 const std::shared_ptr<npc_attack> &attack = main_npc.get_current_attack();
                 npc_attack_throw *throw_attack = dynamic_cast<npc_attack_throw *>( attack.get() );

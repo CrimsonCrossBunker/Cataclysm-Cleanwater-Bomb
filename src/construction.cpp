@@ -75,6 +75,7 @@
 #include "veh_appliance.h"
 #include "veh_type.h"
 #include "vehicle.h"
+#include "visitable.h"
 #include "vpart_position.h"
 
 #if defined(TILES)
@@ -85,7 +86,6 @@
     #include "sdltiles.h"          // for tilecontext
 #endif
 
-class read_only_visitable;
 
 static const activity_id ACT_MULTIPLE_CONSTRUCTION( "ACT_MULTIPLE_CONSTRUCTION" );
 
