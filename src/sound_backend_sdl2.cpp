@@ -460,7 +460,7 @@ void play_oneshot( sfx_audio *a, const play_opts &opts )
                  opts.angle_deg, opts.positional, opts.pitch, false );
 }
 
-static music_finished_cb g_music_finished_cb = nullptr;
+[[maybe_unused]] static music_finished_cb g_music_finished_cb = nullptr;
 
 void set_music_finished_cb( music_finished_cb cb )
 {
