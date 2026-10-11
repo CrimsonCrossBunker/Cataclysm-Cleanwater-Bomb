@@ -260,7 +260,7 @@ units::volume vehicle_stack::stored_volume() const
 
 // Vehicle class methods.
 
-vehicle::vehicle( const vproto_id &proto_id ) : uid_()
+vehicle::vehicle( const vproto_id &proto_id )
 {
     face.init( 0_degrees );
     move.init( 0_degrees );
