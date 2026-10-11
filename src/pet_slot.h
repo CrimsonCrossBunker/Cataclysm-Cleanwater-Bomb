@@ -76,6 +76,11 @@ class pet_slot
         static void finalize_all();
 };
 
+template<>
+const pet_slot &string_id<pet_slot>::obj() const;
+template<>
+bool string_id<pet_slot>::is_valid() const;
+
 void load_pet_slots( const JsonObject &jo, const std::string &src );
 void reset_pet_slots();
 const std::vector<pet_slot> &get_all_pet_slots();
