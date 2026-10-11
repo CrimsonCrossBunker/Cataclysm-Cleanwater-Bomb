@@ -1277,21 +1277,18 @@ bool inventory::must_use_liq_container( const itype_id &id, int to_use ) const
 
 bool inventory::must_use_hallu_poison( const itype_id &id, int to_use ) const
 {
-    const int total = count_item( id );
-    int bad = 0;
-    for( const std::list<item> &item_list : items ) {
-        for( const item &it : item_list ) {
-            if( it.typeId() == id && ( it.has_flag( flag_HIDDEN_POISON ) ||
-                                       it.has_flag( flag_HIDDEN_HALLU ) ) ) {
-                if( it.count_by_charges() ) {
-                    bad += it.charges;
-                } else {
-                    bad += it.count();
-                }
+    const itype_bin &bin = get_binned_items();
+    const auto found = bin.find( id );
+    int safe = 0;
+    if( found != bin.end() ) {
+        // Match count_item's indexed range, including container contents.
+        for( const item *it : found->second ) {
+            if( !it->has_flag( flag_HIDDEN_POISON ) && !it->has_flag( flag_HIDDEN_HALLU ) ) {
+                safe += it->count();
             }
         }
     }
-    return total - bad < to_use;
+    return safe < to_use;
 }
 
 void inventory::replace_liq_container_count( const std::map<itype_id, int> &newmap, bool use_max )
