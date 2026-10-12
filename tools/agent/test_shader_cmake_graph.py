@@ -74,5 +74,51 @@ add_custom_target(cataclysm-tiles-common)
                 self.assertNotIn("shadercross.exe", graph)
 
 
+@unittest.skipUnless(shutil.which("cmake"), "CMake is required")
+class NativeScopeCMakeTest(unittest.TestCase):
+    def test_curses_batches_do_not_expand_the_lua_scope(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            tests = root / "tests"
+            tests.mkdir()
+            support = ROOT / "tests/test_support_sources.txt"
+            shutil.copyfile(support, tests / support.name)
+            shutil.copyfile(ROOT / "tests/CMakeLists.txt",
+                            tests / "CMakeLists.txt")
+            names = set(support.read_text().splitlines())
+            names.update(("lua_platform_scope_test.cpp", "other_test.cpp"))
+            for name in names:
+                (tests / name).touch()
+            (root / "CMakeLists.txt").write_text('''
+cmake_minimum_required(VERSION 3.20)
+project(NativeScope LANGUAGES CXX)
+enable_testing()
+set(BUILD_TESTING ON)
+set(CURSES ON)
+set(CATA_ENABLE_LUA_PLATFORM ON)
+add_library(cataclysm-common INTERFACE)
+add_subdirectory(tests)
+''')
+            for scope in ("all", "lua"):
+                with self.subTest(scope=scope):
+                    build = root / scope
+                    result = subprocess.run(
+                        ["cmake", "-S", str(root), "-B", str(build),
+                         "-DCATA_TEST_SUITE=" + scope],
+                        capture_output=True, text=True,
+                    )
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    registry = build / "tests/CTestTestfile.cmake"
+                    registered = registry.read_text()
+                    if scope == "lua":
+                        self.assertIn("[lua][platform]", registered)
+                        self.assertNotIn("cata.test-1", registered)
+                    else:
+                        self.assertIn("cata.test-1", registered)
+                        self.assertIn("cata.test-2", registered)
+                        self.assertIn("test_user_dir_1", registered)
+                        self.assertIn("test_user_dir_2", registered)
+
+
 if __name__ == "__main__":
     unittest.main()

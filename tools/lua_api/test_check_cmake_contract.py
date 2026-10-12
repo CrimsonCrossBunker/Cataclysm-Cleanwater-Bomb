@@ -64,7 +64,6 @@ class CMakeContractTests(unittest.TestCase):
             (fixture / "CMakeLists.txt").write_text('''
 cmake_minimum_required(VERSION 3.20)
 project(TestSelection LANGUAGES CXX)
-enable_testing()
 set(BUILD_TESTING ON)
 set(CURSES ON)
 add_library(cataclysm-common INTERFACE)
@@ -104,16 +103,6 @@ file(WRITE "${CMAKE_BINARY_DIR}/selected.txt" "${selected}")
                     self.assertEqual(
                         {Path(name).name for name in selected.splitlines()},
                         expected)
-                    registry = fixture / "build/tests/CTestTestfile.cmake"
-                    registered = registry.read_text()
-                    if scope == "lua":
-                        self.assertIn("[lua][platform]", registered)
-                        self.assertNotIn("cata.test-1", registered)
-                    else:
-                        self.assertIn("cata.test-1", registered)
-                        self.assertIn("cata.test-2", registered)
-                        self.assertIn("test_user_dir_1", registered)
-                        self.assertIn("test_user_dir_2", registered)
 
     def test_cpp_abi_for_bundled_lua_is_rejected(self) -> None:
         lua_source = self.lua_source.replace(
