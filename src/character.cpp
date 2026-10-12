@@ -80,8 +80,10 @@
 #include "inventory.h"
 #include "item_location.h"
 #include "item_pocket.h"
+#include "item_repair.h"
 #include "item_stack.h"
 #include "itype.h"
+#include "iuse_actor.h"
 #include "kill_tracker.h"
 #include "lightmap.h"
 #include "line.h"
@@ -4485,22 +4487,23 @@ void Character::mend_item( item_location &&obj, bool interactive )
         }
     }
 
-    if( mending_options.empty() ) {
+    const std::vector<item_repair::tool_option> repair_options = item_repair::tools_for( *this, obj );
+    if( mending_options.empty() && repair_options.empty() ) {
         if( interactive ) {
-            add_msg( m_info, _( "The %s doesn't have any faults to mend." ), obj->tname() );
+            add_msg( m_info, _( "No repair method is currently available for the %s." ), obj->tname() );
             if( obj->damage() > obj->degradation() ) {
                 const std::set<itype_id> &rep = obj->repaired_with();
                 if( rep.empty() ) {
                     add_msg( m_info, _( "It is damaged, but cannot be repaired." ) );
                 } else {
-                    const std::string repair_options =
+                    const std::string repair_tools =
                     enumerate_as_string( rep.begin(), rep.end(), []( const itype_id & e ) {
                         return item::nname( e );
                     }, enumeration_conjunction::or_ );
 
                     add_msg( m_info, _( "It is damaged, and could be repaired with %s.  "
                                         "%s to use one of those items." ),
-                             repair_options, press_x( ACTION_USE ) );
+                             repair_tools, press_x( ACTION_USE ) );
                 }
             }
         }
@@ -4510,7 +4513,7 @@ void Character::mend_item( item_location &&obj, bool interactive )
     int sel = 0;
     if( interactive ) {
         uilist menu;
-        menu.title = _( "Mend which fault?" );
+        menu.title = string_format( _( "Repair: %s" ), obj->tname() );
         menu.desc_enabled = true;
 
         constexpr int fold_width = 80;
@@ -4586,12 +4589,46 @@ void Character::mend_item( item_location &&obj, bool interactive )
 
             menu.addentry_desc( -1, true, -1, fix.name.translated(), colorize( descr, col ) );
         }
+        for( const item_repair::tool_option &opt : repair_options ) {
+            const auto [success, damage] = opt.actor->repair_chance( *this, *obj,
+                                           repair_item_actor::RT_REPAIR );
+            std::string descr = string_format( _( "Repair ordinary damage; no fault is required.\n"
+                                                 "Skill: %s\nTime per attempt: %s\n"
+                                                 "Success chance: %.1f%%\nDamage chance: %.1f%%\n" ),
+                                              opt.actor->used_skill->name(),
+                                              to_string_approx( time_duration::from_moves( opt.actor->move_cost ) ),
+                                              success * 100, damage * 100 );
+            descr += string_format( _( "Repair materials: %s\n" ), enumerate_as_string(
+                                        opt.actor->get_valid_repair_materials( *obj ), []( const itype_id & id ) {
+                return item::nname( id );
+            }, enumeration_conjunction::or_ ) );
+            if( !opt.available ) {
+                descr += _( "The tool or required materials are currently unavailable.\n" );
+            }
+            menu.addentry_desc( -1, true, -1,
+                               string_format( _( "Repair damage using %s" ), opt.tool->tname() ),
+                               colorize( descr, opt.available ? c_white : c_light_gray ) );
+        }
         menu.query();
         if( menu.ret < 0 ) {
             add_msg( _( "Never mind." ) );
             return;
         }
         sel = menu.ret;
+    } else if( mending_options.empty() ) {
+        const auto available = std::find_if( repair_options.begin(), repair_options.end(),
+        []( const item_repair::tool_option & opt ) {
+            return opt.available;
+        } );
+        if( available == repair_options.end() ) {
+            return;
+        }
+        sel = static_cast<int>( std::distance( repair_options.begin(), available ) );
+    }
+
+    if( sel >= static_cast<int>( mending_options.size() ) ) {
+        item_repair::start( *this, obj, repair_options[sel - mending_options.size()] );
+        return;
     }
 
     if( sel >= 0 ) {
