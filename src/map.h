@@ -58,6 +58,11 @@
 struct scent_block;
 struct terrain_growth_state;
 
+namespace vision_preparation
+{
+class frame;
+}
+
 namespace catacurses
 {
 class window;
@@ -2312,6 +2317,9 @@ class map
         mutable std::array< std::unique_ptr<level_cache, level_cache_free>, OVERMAP_LAYERS > caches;
 
         mutable std::array< std::unique_ptr<pathfinding_cache>, OVERMAP_LAYERS > pathfinding_caches;
+        // Owner-thread capture/merge; workers never retain map/cache references.
+        std::unique_ptr<vision_preparation::frame> vision_preparation_;
+        double vision_horizontal_cost_ms_ = 0.0;
         /**
          * Set of submaps that contain active items in absolute coordinates.
          */

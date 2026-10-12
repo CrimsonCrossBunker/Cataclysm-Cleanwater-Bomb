@@ -1,4 +1,5 @@
 #include "map.h"
+#include "vision_preparation.h"
 
 #define MP_ENABLED
 #include <algorithm>

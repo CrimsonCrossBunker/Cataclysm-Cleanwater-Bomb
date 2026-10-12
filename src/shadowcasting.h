@@ -134,6 +134,8 @@ using array_of_grids_of =
     >;
 
 // TODO: Generalize the floor check, allow semi-transparent floors
+// Optional owner-side horizontal cost observation affects scheduling only.
+// It excludes vertical work and never changes the legacy processing order.
 template< typename T, T( *calc )( const T &, const T &, const int & ),
           bool( *check )( const T &, const T & ),
           T( *accumulate )( const T &, const T &, const int & ) >
@@ -142,6 +144,6 @@ void cast_zlight(
     const array_of_grids_of<const T> &input_arrays,
     const array_of_grids_of<const bool> &floor_caches,
     const tripoint_bub_ms &origin, int offset_distance, T numerator,
-    vertical_direction dir = vertical_direction::BOTH );
+    vertical_direction dir = vertical_direction::BOTH, double *horizontal_cost_ms = nullptr );
 
 #endif // CATA_SRC_SHADOWCASTING_H

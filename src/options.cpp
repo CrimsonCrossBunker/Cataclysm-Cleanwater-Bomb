@@ -9,6 +9,7 @@
 #include <iterator>
 #include <limits>
 #include <stdexcept>
+#include <thread>
 
 #include "android_ui_mode.h"
 #include "cached_options.h"
@@ -3437,6 +3438,20 @@ void options_manager::add_options_performance()
          0, 4, 0
        );
 #endif
+
+    // Only the measured Linux SDL3 path has completed parallel acceptance.
+    int vision_workers_default = 0;
+#if defined(TILES) && defined(USE_SDL3) && defined(__linux__) && !defined(__ANDROID__)
+    if( std::thread::hardware_concurrency() >= 4 ) {
+        vision_workers_default = 4;
+    }
+#endif
+    add( "VISION_PREPARATION_WORKERS", "performance",
+         to_translation( "Visibility calculation workers" ),
+         to_translation( "Use workers for expensive visibility updates. "
+                         "Small updates and multiplayer stay serial. "
+                         "0 disables workers. Requires a restart." ),
+         0, 4, vision_workers_default );
 
     add( "MULTITHREADING_ENABLED", "performance",
          to_translation( "Enable multithreading (highly unstable)" ),
