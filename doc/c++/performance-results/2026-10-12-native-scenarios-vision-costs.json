@@ -1,0 +1,319 @@
+{
+  "schema": 1,
+  "batch": 31,
+  "date": "2026-10-12",
+  "name": "native-scenarios-and-3d-vision-costs",
+  "baseline": "1d4d9f12377895ce6c887109895b821585c12375",
+  "branch": "codex/multithreading-stage1-20261012",
+  "goal_state": "active; no high-cost parallel implementation or speedup yet",
+  "change": {
+    "file": "src/shadowcasting.cpp",
+    "added_lines": 3,
+    "purpose": "Existing CATA profiling scopes separate horizontal batches and vertical passes; no gameplay or default-option change."
+  },
+  "configuration": {
+    "compiler": "Clang23.1.1",
+    "mode": "Release C++17 SDL3 tiles/sound LuaPlatformv1 TRACY=ON LTO=OFF LOCALIZE=OFF",
+    "sdl_runtime": "3.4.18",
+    "backend": "X11 OpenGL over Wayland",
+    "window_pixels": [
+      2880,
+      1800
+    ],
+    "tile_pack": "UNDEAD_PEOPLE",
+    "zoom": 4,
+    "RENDER_PREPARATION_WORKERS": 0,
+    "MULTITHREADING_ENABLED": false,
+    "glx_server_device": "AMD Radeon Graphics renoir radeonsi ACO Mesa26.2.4, accelerated; queried after tests; not GPU-frame timing"
+  },
+  "native_gate": {
+    "build_seconds": 13.793228855007328,
+    "build_exit": 0,
+    "test_filter": "[shadowcasting]",
+    "seed": 20261012,
+    "cases": 14,
+    "assertions": 3740,
+    "failures": 0,
+    "skips": 0,
+    "test_seconds": 28.122950127988588,
+    "native_xml_sha256": "b366c58b15eae4ac528b9946a340b49b09310617178af5110f52cc8db38c6fed",
+    "previous58_case_gate": "Retained baseline30 evidence for unrelated renderer/sound inputs; not rerun and not claimed as current full corpus."
+  },
+  "scenarios": [
+    {
+      "name": "combat-wait8-pilot",
+      "binary_sha256": "1681bd90a29e0ea5e13864410dfa6c430cf5251593f0a86cb0cd9c24eb8bf070",
+      "fixture_manifest_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef",
+      "inputs": {
+        "key": ".",
+        "count": 8,
+        "cadence_s": 0.5,
+        "action": "pause"
+      },
+      "native_result": {
+        "exit_code": 0,
+        "turn": 5212820,
+        "location": [
+          5495,
+          7449,
+          2
+        ],
+        "monsters": 759,
+        "mutations": [
+          "DEBUG_NODMG"
+        ],
+        "active_player_xxh64_verified": true
+      },
+      "perf": {
+        "sampling_hz": 99,
+        "window_monotonic": [
+          115180.711443918,
+          115187.713746376
+        ],
+        "main_samples": 127,
+        "unresolved_leaf_percent": 40.94488188976378,
+        "all_process_30s_user_task_clock_ms": 40288.98,
+        "cpu_scope": "All process threads includes connected Tracy and idle; not turn-onlyCPU."
+      },
+      "cpu_zones": {
+        "plan": {
+          "count": 5134,
+          "mean_ms": 0.004461,
+          "max_ms": 3.34904
+        },
+        "tiles.draw": {
+          "count": 39,
+          "mean_ms": 30.030476,
+          "max_ms": 38.420744
+        },
+        "tiles.draw_cache_rebuild": {
+          "count": 8,
+          "mean_ms": 9.649082,
+          "max_ms": 10.575831
+        },
+        "tiles.dynamic_cache_refresh": {
+          "count": 39,
+          "mean_ms": 2.398836,
+          "max_ms": 3.622312
+        },
+        "monmove": {
+          "count": 8,
+          "mean_ms": 10.356342,
+          "max_ms": 14.784623
+        },
+        "rebuild_visibility_cache_grid": {
+          "count": 165,
+          "mean_ms": 0.323567,
+          "max_ms": 0.370675
+        },
+        "tiles.layer_loop": {
+          "count": 39,
+          "mean_ms": 25.035472,
+          "max_ms": 26.852461
+        },
+        "update_map_memory": {
+          "count": 8,
+          "mean_ms": 6.1232,
+          "max_ms": 8.186801
+        }
+      },
+      "raw_proof_index_sha256": "aee41cdaa3e054cdd5b88870aa23f6b9c06271940023d4ade0b883d37bb94bdc"
+    },
+    {
+      "name": "cold-north32-pilot",
+      "binary_sha256": "1681bd90a29e0ea5e13864410dfa6c430cf5251593f0a86cb0cd9c24eb8bf070",
+      "fixture_manifest_sha256": "7bda417f85d9decfe74c3837c293544a800098170b102bdac38af9bdb6280f13",
+      "inputs": {
+        "key": "k",
+        "count": 32,
+        "cadence_s": 0.5,
+        "action": "UP"
+      },
+      "native_result": {
+        "exit_code": 0,
+        "turn": 5212849,
+        "location": [
+          5495,
+          7417,
+          2
+        ],
+        "monsters": 0,
+        "mutations": [
+          "DEBUG_NODMG",
+          "DEBUG_CLOAK"
+        ],
+        "active_player_xxh64_verified": true
+      },
+      "perf": {
+        "sampling_hz": 999,
+        "window_monotonic": [
+          115811.837266653,
+          115830.845670835
+        ],
+        "main_samples": 3446,
+        "unresolved_leaf_percent": 32.44341265235055,
+        "all_process_30s_user_task_clock_ms": 40525.58,
+        "cpu_scope": "All process threads includes connected Tracy and idle; not turn-onlyCPU."
+      },
+      "cpu_zones": {
+        "update_map_memory": {
+          "count": 37,
+          "mean_ms": 5.625566,
+          "max_ms": 8.693658
+        },
+        "tiles.draw": {
+          "count": 116,
+          "mean_ms": 31.25997,
+          "max_ms": 56.822079
+        },
+        "tiles.draw_cache_rebuild": {
+          "count": 37,
+          "mean_ms": 9.852911,
+          "max_ms": 13.815165
+        },
+        "tiles.dynamic_cache_refresh": {
+          "count": 116,
+          "mean_ms": 2.809224,
+          "max_ms": 5.663023
+        },
+        "monmove": {
+          "count": 37,
+          "mean_ms": 0.003055,
+          "max_ms": 0.007073
+        },
+        "rebuild_visibility_cache_grid": {
+          "count": 814,
+          "mean_ms": 0.347621,
+          "max_ms": 0.747242
+        },
+        "tiles.layer_loop": {
+          "count": 116,
+          "mean_ms": 24.731503,
+          "max_ms": 40.132091
+        },
+        "cast_zlight": {
+          "count": 32,
+          "mean_ms": 4.106371,
+          "max_ms": 6.059266
+        }
+      },
+      "raw_proof_index_sha256": "e8d1b8a5468cd095ba7c5c5d2073c78c3de9a8d820efb3d31745437934dab19f"
+    },
+    {
+      "name": "cold-north32-vision-probes",
+      "binary_sha256": "bb3006927e2368506c77d87ce5113e0bfa35fbb745c5fbd76b2aa248b1f3ae38",
+      "fixture_manifest_sha256": "7bda417f85d9decfe74c3837c293544a800098170b102bdac38af9bdb6280f13",
+      "inputs": {
+        "key": "k",
+        "count": 32,
+        "cadence_s": 0.5,
+        "action": "UP"
+      },
+      "native_result": {
+        "exit_code": 0,
+        "turn": 5212849,
+        "location": [
+          5495,
+          7417,
+          2
+        ],
+        "monsters": 0,
+        "mutations": [
+          "DEBUG_NODMG",
+          "DEBUG_CLOAK"
+        ],
+        "active_player_xxh64_verified": true
+      },
+      "perf": {
+        "sampling_hz": 999,
+        "window_monotonic": [
+          118601.671449405,
+          118620.679168757
+        ],
+        "main_samples": 3396,
+        "unresolved_leaf_percent": 33.3922261484099,
+        "all_process_30s_user_task_clock_ms": 40053.91,
+        "cpu_scope": "All process threads includes connected Tracy and idle; not turn-onlyCPU."
+      },
+      "cpu_zones": {
+        "vision.horizontal_segments": {
+          "count": 64,
+          "mean_ms": 2.096161,
+          "max_ms": 3.097915
+        },
+        "rebuild_visibility_cache_grid": {
+          "count": 814,
+          "mean_ms": 0.354171,
+          "max_ms": 0.785013
+        },
+        "tiles.draw": {
+          "count": 116,
+          "mean_ms": 31.074029,
+          "max_ms": 66.741945
+        },
+        "vision.vertical_up": {
+          "count": 32,
+          "mean_ms": 0.022297,
+          "max_ms": 0.03744
+        },
+        "tiles.draw_cache_rebuild": {
+          "count": 37,
+          "mean_ms": 10.200057,
+          "max_ms": 15.551203
+        },
+        "monmove": {
+          "count": 37,
+          "mean_ms": 0.003348,
+          "max_ms": 0.007645
+        },
+        "vision.vertical_down": {
+          "count": 32,
+          "mean_ms": 0.002364,
+          "max_ms": 0.00584
+        },
+        "tiles.dynamic_cache_refresh": {
+          "count": 116,
+          "mean_ms": 2.842804,
+          "max_ms": 5.856413
+        },
+        "tiles.layer_loop": {
+          "count": 116,
+          "mean_ms": 24.413929,
+          "max_ms": 46.713168
+        },
+        "cast_zlight": {
+          "count": 32,
+          "mean_ms": 4.224608,
+          "max_ms": 5.555739
+        },
+        "update_map_memory": {
+          "count": 37,
+          "mean_ms": 5.621632,
+          "max_ms": 9.179351
+        }
+      },
+      "raw_proof_index_sha256": "5b28a2d2aa7339bdfb4ba327a9678e5d801e53fd50afada2e1f1f2585109c352"
+    }
+  ],
+  "save_comparison": {
+    "scope": "One fixed32north pilot pair, before/after only3 profiling scopes. Active player payload equal after exactly normalizing recipe ID ordering and game_save telemetry time_since_load/total_time_played; other state retained. Not broad old-save/replay/multiplayer proof.",
+    "normalized_sha256": "8f0d4e3095e8a415287b224de4367ff270f289139d90cbb8f94f48a47377fb35"
+  },
+  "candidate": {
+    "task": "3D vision horizontal shadowcasting segments",
+    "measured_cast_mean_ms": 4.2246080625,
+    "measured_horizontal_batch_mean_ms": 2.09616084375,
+    "horizontal_batches_per_cast": 2,
+    "interpretation": "Almost all captured cast cost is in the two horizontal batches. Their shared-output boundary and failure handling need independent-buffer/owner-merge design before enabling workers. Structural source review concern, not yet a TSan finding."
+  },
+  "limits": [
+    "Three diagnostic pilots, not5 alternating A/B/config and no speedup/default-enable claim.",
+    "Existing terrain/submaps retained when only3 memory archives were removed. Newly visible local carrier-map test; no ordinary-land/worldgen/disk-cold or seconds-long-stall reproduction claim.",
+    "Inclusive CPU zones overlap; input.acquire/do_turn human waits excluded. Draw zones include idle redraw, not frame p95/FPS/GPU timings.",
+    "Perf main-thread unresolved leaves32.4-40.9percent; leaf resolution is incomplete. Frequencies99/999Hz differ across pilots; do not compare their raw counts as performance.",
+    "Environment load was not recorded at pilot start; later GPU-server query is not retroactive load evidence. Record CPU/IO pressure and competing build activity before A/B.",
+    "No concurrent-worker/sanitizer acceptance in this batch because no concurrency behavior changed."
+  ],
+  "next_exact_action": "Implement safe3D sight preparation around the measured horizontal segments. First inspect only shadowcasting.cpp horizontal bounds175-360 and cata::list span allocation. Map-owner captures owned transparency/floor grids plus origin, distance policy and initial/cumulative visibility contract. Reuse cata_thread_pool with bounded persistent workers and worker-private float outputs, drain every submitted task on all failures before buffer reuse, and merge by owner in fixed order using unchanged max semantics. Vertical phases stay on owner. Do not use live map/cache/Avatar pointers or worker gameplay RNG/Lua/SDL. Add exact serial/parallel full-grid/RNG/lifecycle/partial-enqueue regressions and applicable sanitizers before5 alternating native A/B per config. Keep default serial until measured whole-boundary gain and small/quiet no regression. Main rendering still dominates; no game/build running.",
+  "private_evidence_root": "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined"
+}

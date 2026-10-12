@@ -552,6 +552,7 @@ void cast_zlight(
     const bool can_parallel = pool.num_workers() > 0;
 
     auto run_batch = [&pool, can_parallel]( const std::vector<std::function<void()>> &tasks ) {
+        CATA_PROFILE_SCOPE_NAMED( "vision.horizontal_segments" );
         if( can_parallel ) {
             simple_latch latch( tasks.size() );
             for( const auto &t : tasks ) {
@@ -612,6 +613,7 @@ void cast_zlight(
             },
         } );
 
+        CATA_PROFILE_SCOPE_NAMED( "vision.vertical_down" );
         cast_vertical_zlight_segment < 1, 1, -1, T, calc, is_transparent, accumulate > (
             output_caches, input_arrays, floor_caches, origin, offset_distance, numerator );
         cast_vertical_zlight_segment < 1, -1, -1, T, calc, is_transparent, accumulate > (
@@ -666,6 +668,7 @@ void cast_zlight(
             },
         } );
 
+        CATA_PROFILE_SCOPE_NAMED( "vision.vertical_up" );
         cast_vertical_zlight_segment < 1, 1, 1, T, calc, is_transparent, accumulate > (
             output_caches, input_arrays, floor_caches, origin, offset_distance, numerator );
         cast_vertical_zlight_segment < 1, -1, 1, T, calc, is_transparent, accumulate > (
