@@ -88,6 +88,7 @@
 #include "shockwave.h"
 #include "sounds.h"
 #include "sprite_geometry.h"
+#include "sprite_variation.h"
 #include "string_formatter.h"
 #include "submap.h"
 #include "tileray.h"
@@ -3112,10 +3113,70 @@ bool cata_tiles::draw_from_id_string_internal( const std::string &id, TILE_CATEG
         }
     }
 
-    // seed the PRNG to get a reproducible random int
-    // TODO: faster solution here
+    const bool has_choices = display_tile.fg.size() > 1 || display_tile.bg.size() > 1;
+    const unsigned int seed = sprite_variation::capture_seed(
+    { has_choices, category == TILE_CATEGORY::WEATHER }, [&]() {
+        return resolve_sprite_seed( here, found_id, category, pos );
+    } );
+
+    // make sure we aren't going to rotate the tile if it shouldn't be rotated.
+    // BULLET is exempt: projectile sprites are intentionally rotated to point
+    // along the trajectory even though the tile itself is flagged rotates:false.
+    if( !display_tile.rotates && !( category == TILE_CATEGORY::NONE )
+        && !( category == TILE_CATEGORY::MONSTER )
+        && !( category == TILE_CATEGORY::BULLET ) ) {
+        rota = 0;
+    }
+
+    unsigned int loc_rand = 0;
+    if( has_choices ) {
+        loc_rand = sprite_variation::mix_seed( seed );
+
+        // idle tile animations:
+        if( display_tile.animated ) {
+            has_animated_tiles_ = true;
+            // idle animations run during the user's turn, and the animation speed
+            // needs to be defined by the tileset to look good, so we use system clock:
+            std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+            auto now_ms = std::chrono::time_point_cast<std::chrono::milliseconds>( now );
+            std::chrono::milliseconds value = now_ms.time_since_epoch();
+            // aiming roughly at the standard 60 frames per second:
+            int animation_frame = value.count() / 17;
+            // offset by log_rand so that everything does not blink at the same time:
+            animation_frame += loc_rand;
+            int frames_in_loop = display_tile.fg.get_weight();
+            if( frames_in_loop == 1 ) {
+                frames_in_loop = display_tile.bg.get_weight();
+            }
+            // loc_rand is actually the weighed index of the selected tile, and
+            // for animations the "weight" is the number of frames to show the tile for:
+            loc_rand = animation_frame % frames_in_loop;
+        }
+    }
+
+    if( ! prevent_occlusion_retract ) {
+        retract = 0;
+    }
+
+    //draw it!
+    tile_render_params rp{ ll, nv_color_active };
+    // Vehicle parts carry a per-instance paint color via pending_part_tint_
+    // (set by draw_vpart). Only apply it to vehicle part sprites.
+    if( category == TILE_CATEGORY::VEHICLE_PART ) {
+        rp.tint = pending_part_tint_;
+    }
+    draw_tile_at( display_tile, screen_pos, loc_rand, rota, rp,
+                  retract, height_3d, offset, /*allow_diagonal_rota:*/ category == TILE_CATEGORY::BULLET );
+
+    return true;
+}
+
+// Owner-only live queries. Keep pointer-derived monster appearance and weather
+// RNG consumption compatible; only the returned integer enters pure preparation.
+unsigned int cata_tiles::resolve_sprite_seed( const map &here, const std::string &found_id,
+        TILE_CATEGORY category, const tripoint_bub_ms &pos ) const
+{
     unsigned int seed = 0;
-    creature_tracker &creatures = get_creature_tracker();
     // TODO: determine ways other than category to differentiate more types of sprites
     switch( category ) {
         case TILE_CATEGORY::TERRAIN:
@@ -3185,7 +3246,8 @@ bool cata_tiles::draw_from_id_string_internal( const std::string &id, TILE_CATEG
         case TILE_CATEGORY::MONSTER:
             // FIXME: add persistent id to Creature type, instead of using monster pointer address
             if( monster_override.find( tripoint_bub_ms( pos ) ) == monster_override.end() ) {
-                seed = reinterpret_cast<uintptr_t>( creatures.creature_at<monster>( pos ) );
+                seed = reinterpret_cast<uintptr_t>( get_creature_tracker().creature_at<monster>( here.get_abs(
+                                                        pos ) ) );
             }
             break;
         default:
@@ -3196,87 +3258,14 @@ bool cata_tiles::draw_from_id_string_internal( const std::string &id, TILE_CATEG
             }
             // NPC
             if( string_starts_with( found_id, "npc_" ) ) {
-                if( npc *const guy = creatures.creature_at<npc>( pos ) ) {
+                if( const npc *const guy = get_creature_tracker().creature_at<npc>( here.get_abs( pos ) ) ) {
                     seed = guy->getID().get_value();
                     break;
                 }
             }
     }
 
-    // make sure we aren't going to rotate the tile if it shouldn't be rotated.
-    // BULLET is exempt: projectile sprites are intentionally rotated to point
-    // along the trajectory even though the tile itself is flagged rotates:false.
-    if( !display_tile.rotates && !( category == TILE_CATEGORY::NONE )
-        && !( category == TILE_CATEGORY::MONSTER )
-        && !( category == TILE_CATEGORY::BULLET ) ) {
-        rota = 0;
-    }
-
-    unsigned int loc_rand = 0;
-    // only bother mixing up a hash/random value if the tile has some sprites to randomly pick
-    // between
-    if( display_tile.fg.size() > 1 || display_tile.bg.size() > 1 ) {
-        static const auto rot32 = []( const unsigned int x, const int k ) {
-            return ( x << k ) | ( x >> ( 32 - k ) );
-        };
-        // use a fair mix function to turn the "random" seed into a random int
-        // taken from public domain code at http://burtleburtle.net/bob/c/lookup3.c 2015/12/11
-        unsigned int a = seed;
-        unsigned int b = -seed;
-        unsigned int c = seed * seed;
-        c ^= b;
-        c -= rot32( b, 14 );
-        a ^= c;
-        a -= rot32( c, 11 );
-        b ^= a;
-        b -= rot32( a, 25 );
-        c ^= b;
-        c -= rot32( b, 16 );
-        a ^= c;
-        a -= rot32( c, 4 );
-        b ^= a;
-        b -= rot32( a, 14 );
-        c ^= b;
-        c -= rot32( b, 24 );
-        loc_rand = c;
-
-        // idle tile animations:
-        if( display_tile.animated ) {
-            has_animated_tiles_ = true;
-            // idle animations run during the user's turn, and the animation speed
-            // needs to be defined by the tileset to look good, so we use system clock:
-            std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-            auto now_ms = std::chrono::time_point_cast<std::chrono::milliseconds>( now );
-            std::chrono::milliseconds value = now_ms.time_since_epoch();
-            // aiming roughly at the standard 60 frames per second:
-            int animation_frame = value.count() / 17;
-            // offset by log_rand so that everything does not blink at the same time:
-            animation_frame += loc_rand;
-            int frames_in_loop = display_tile.fg.get_weight();
-            if( frames_in_loop == 1 ) {
-                frames_in_loop = display_tile.bg.get_weight();
-            }
-            // loc_rand is actually the weighed index of the selected tile, and
-            // for animations the "weight" is the number of frames to show the tile for:
-            loc_rand = animation_frame % frames_in_loop;
-        }
-    }
-
-    if( ! prevent_occlusion_retract ) {
-        retract = 0;
-    }
-
-    //draw it!
-    tile_render_params rp{ ll, nv_color_active };
-    // Vehicle parts carry a per-instance paint color via pending_part_tint_
-    // (set by draw_vpart). Only apply it to vehicle part sprites.
-    if( category == TILE_CATEGORY::VEHICLE_PART ) {
-        rp.tint = pending_part_tint_;
-    }
-    draw_tile_at( display_tile, screen_pos, loc_rand, rota, rp,
-                  retract, height_3d, offset, /*allow_diagonal_rota:*/ category == TILE_CATEGORY::BULLET );
-
-    return true;
+    return seed;
 }
 
 bool cata_tiles::draw_sprite_at(
