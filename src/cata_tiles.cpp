@@ -1441,7 +1441,8 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
             }
             preparation_->prepare();
             CATA_PROFILE_PLOT( "tiles.preparation_inputs", static_cast<int64_t>( inputs.size() ) );
-            CATA_PROFILE_PLOT( "tiles.preparation_workers_used", preparation_->used_workers() ? 1 : 0 );
+            CATA_PROFILE_PLOT( "tiles.preparation_workers_used",
+                               static_cast<int64_t>( preparation_->used_workers() ) );
         }
         std::size_t preparation_index = 0;
         std::vector<row_sprite_entry> row_sprites;
