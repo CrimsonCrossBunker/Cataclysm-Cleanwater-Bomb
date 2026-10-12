@@ -708,7 +708,8 @@ static void WinCreate()
 #endif
 #endif
 
-    ::window = CreateGameWindow( "", display, WindowWidth, WindowHeight, window_flags );
+    ::window = CreateGameWindow( _( "Cataclysm: Cleanwater Bomb" ), display, WindowWidth, WindowHeight,
+                                 window_flags );
     throwErrorIf( !::window, "CreateWindow failed" );
 
 #if defined(__ANDROID__)

@@ -5803,7 +5803,6 @@ bool mp_menu_start_host_session()
     g_pending_host_start = true;
     g_host_thread_actually_started = false;
     mp_log( "[cdda-mp] MENU: host armed on port 8080 (thread deferred to do_turn)" );
-    mp_update_window_title();
     return true;
 }
 
@@ -5815,12 +5814,7 @@ void mp_menu_cancel_host()
     g_pending_host_start = false;
     set_host_mode( false );
     mp_log( "[cdda-mp] MENU: host-mode cancelled from co-op chooser" );
-    mp_update_window_title();
 }
-
-// Defined here; declared extern in mp_gamestate.h.  main.cpp populates this
-// at startup from the binary's mtime.
-std::string g_mp_build_stamp = "?";
 
 void mp_tick_proxy_activity( npc &guy )
 {
@@ -5842,17 +5836,6 @@ void mp_tick_proxy_activity( npc &guy )
             "' before=" + before + " after=" + after +
             " hauling=" + std::to_string( guy.is_hauling() ) +
             " haul_list_size=" + std::to_string( guy.haul_list.size() ) );
-}
-
-void mp_update_window_title()
-{
-    const char *role = is_client_mode() ? "CLIENT"
-                       : ( is_host_mode() ? "HOST" : "SP" );
-    // Include the commit hash (getVersionString) in the title bar too, matching
-    // the main-menu version line, so a screenshot of any window shows the exact
-    // build both players are running — the #1 thing co-op bug reports need.
-    set_title( string_format( "CDDA co-op — %s — %s — build %s",
-                              role, getVersionString(), g_mp_build_stamp ) );
 }
 
 // Co-op section appended to the debug "Generate game report" output (debug.cpp).
@@ -6270,8 +6253,6 @@ bool mp_menu_join_session()
     // sends) so the client log shows what's actually executing — catches the
     // host/client commit-mismatch that strands a client in its own world.
     mp_log( std::string( "[cdda-mp] VERSION=" ) + getVersionString() + " (role=CLIENT)" );
-    mp_update_window_title();
-
     // Only ask for a label the first time we see this address.  Skipping is
     // fine — the address alone is also a useful identifier.
     std::string label_out = label_in;
