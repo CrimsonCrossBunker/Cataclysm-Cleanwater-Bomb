@@ -1,0 +1,510 @@
+{
+  "schema": 1,
+  "batch": 29,
+  "started_date": "2026-10-12",
+  "accepted_date": "2026-10-12",
+  "baseline": "757fc1e87d5bb5276d1879d3a7b464edbe773478",
+  "branch": "codex/render-preparation",
+  "delivery": "Owner-only sprite seed query separated from pure integer mixing. Skip non-weather live queries for a single weighted choice. No proven stable game speedup; no new worker dispatch. Local implementation and evidence only.",
+  "changes": [
+    "src/cata_tiles.cpp",
+    "src/cata_tiles.h",
+    "src/sprite_variation.h",
+    "tests/sprite_variation_test.cpp"
+  ],
+  "accepted_source_inputs": {
+    "src/cata_tiles.cpp": "702ba5114924a093973892dd264cad635185535eb31f7fab3d82d790312ac5f3",
+    "src/cata_tiles.h": "a7ddd019170b1fb714de5e1a0e83cae162a937a7f986adaf3f9a086d889ffbec",
+    "src/sprite_variation.h": "efa96303e89a2911a3fffe1812a5acae4a152d8541488fb5721368605de50bc6",
+    "tests/sprite_variation_test.cpp": "8d0dbe88bf44376aed63f22047bc9927f9bc8a59ef787c301a36bdcb8f68983a"
+  },
+  "binary_sha256": {
+    "compiler_matched_control": "9b751acca9a158db42cfc47cdb98f9a4101e3ce46ef26e267d47ae5f6d4f3d07",
+    "candidate": "ad5f15504bb03e720401176c4fd1808020a796a718dacd481cf1870ae4652c6f",
+    "acceptance_harness": "7e582815f1d6dc8921131dead472212e1f91ee74b103eba77b453a47d73ed194"
+  },
+  "ownership": {
+    "live_query": "Private cata_tiles::resolve_sprite_seed(const map&,found_id,category,pos) remains on the renderer owner. Creature lookup uses explicit absolute coordinates from that map; remaining global getters are owner-only legacy facades.",
+    "value_kernel": "sprite_variation::mix_seed(uint32_t) is inline, pure and independently usable on owned integer inputs. capture_seed executes its callback immediately and never retains or schedules it.",
+    "preserved": "Weather consumes gameplay RNG once per resolved draw even without variation. Legacy32bit mixing, pointer-based monster appearance, animation clock/signed modulo, rotation, light/height and SDL submission order retained. Save/API formats, Lua Platform v1 and settings unchanged.",
+    "workers": "Render preparation workers remain default0. This small kernel is not queued individually; no concurrent world/Lua/SDL access is introduced."
+  },
+  "compiler_matched_control": {
+    "artifact": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sprite-variation-20261012/matched-control-build.json",
+    "sha256": "6cd4862e8560a5af41b8b82652cfb924299f24f5aff1efebcf83b4e993354aed",
+    "summary": "Compiler-matched sprite-variation control. Only cata_tiles.cpp is rebuilt with the baseline eager seed query and legacy mixer; identical current headers, shared object files, SDKs, flags and default workers0. New private method declaration changes no class data layout and is unused by baseline cpp. Frozen earlier binary is not the authoritative comparison after shared-object compiler rebuilds. Restored candidate binary is byte-identical."
+  },
+  "build": {
+    "artifact": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sprite-variation-20261012/build.json",
+    "sha256": "ca9e5977319103fe066ec489e83fbb1978e791f66bf581099b5839e312a6e3f6",
+    "summary": {
+      "exit_code": 0,
+      "config": "Linux x86_64 Clang23 renderer TU and shared current cached objects, Release-O3, SDL3 Tiles/Sound/LuaON, TRACY/LOCALIZEOFF; game and focused native harness linked.",
+      "initial_seconds": 1446.823,
+      "final_incremental_seconds": 6.391,
+      "input_update": "Direct test header corrected during initial build; initial test had compiled at Ninja step5. Final6.391s incremental gate recompiled the corrected test and recaptured hashes before executing any test.",
+      "link_warning": "Existing vendored Lua tmpnam warning retained; no vendored code edited."
+    }
+  },
+  "format": {
+    "artifact": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sprite-variation-20261012/format-final.json",
+    "sha256": "52ea1b2ddd7f7a8944e00e934c80191ad99d8b16305ee95012e70f24ce4dcae6",
+    "summary": "Affected4files AStyle3.1 unchanged and scoped git diff --check passed."
+  },
+  "commands": {
+    "build": [
+      "cmake",
+      "--build",
+      "out/build/ccb-sdl3-perf",
+      "--config",
+      "Release",
+      "--target",
+      "cataclysm-tiles",
+      "ccb-sdl3-acceptance",
+      "--parallel",
+      "2"
+    ],
+    "native": [
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-perf/Release/ccb-sdl3-acceptance",
+      "[sprite_variation],[sprite_geometry],[tiles][preparation],[tiles][sdl3],[tiles][renderer_recovery],[tiles][gpu],[sound_backend]",
+      "--rng-seed",
+      "20261012",
+      "--order",
+      "lex",
+      "--warn",
+      "NoTests",
+      "--user-dir",
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sprite-variation-20261012/native-test-user",
+      "--benchmark-samples",
+      "8",
+      "--benchmark-resamples",
+      "1000",
+      "--benchmark-warmup-time",
+      "20",
+      "--reporter",
+      "xml",
+      "--out",
+      "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sprite-variation-20261012/native-tests.xml"
+    ],
+    "sanitizers": "g++ -std=c++17 -pthread -O1 -g1 -Isrc DRIVER -fno-omit-frame-pointer -fsanitize=address,undefined or thread; exact argv in value-safety.json; leak detection and halt_on_error enabled.",
+    "perf": "perf stat allprocess30s task-clock,cycles:u,instructions:u,cache-misses:u; perf record mainTID cycles:u99Hz,128pages,DWARF32768,monotonic. Exact argv in each workload.json. Period tables and official count-weighted folded/flamegraph exports are separate.",
+    "game": "Fresh userdir copy per trial; --seed CCB-carrier-20261005 --world Damon --replay-record TRIAL/inputs.jsonl; SDL_VIDEO_DRIVER=x11,SDL_RENDER_DRIVER=opengl."
+  },
+  "native_regression": {
+    "artifact": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sprite-variation-20261012/native-tests.json",
+    "sha256": "aae6bf1e1d939d9c0e76b0330cb178e2c785ac7ee5939a6e67971b31280a6d91",
+    "summary": {
+      "test_cases": 58,
+      "assertions": 519766,
+      "failures": 0,
+      "skips": 0,
+      "elapsed_seconds": 18.256,
+      "variation_contract": {
+        "cases": 3,
+        "checks": 22,
+        "unused_callback": "Throwing callback is not called for false,false; varying or weather cases resolve immediately.",
+        "gameplay_rng": "Actual rng_get_engine restored with restore_on_out_of_scope; both weather draws consume rng_bits and leave the exact baseline engine state, including the no-choice case.",
+        "legacy_mix": "Eight golden32bit keys and65536 extracted-baseline mixer comparisons; two parallel owned copies preserve outputs without world/registry/RNG/clock/SDL access."
+      },
+      "note": "Acceptance harness benchmark timings are correctness evidence, not a game speedup claim."
+    }
+  },
+  "sanitizers": {
+    "artifact": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sprite-variation-20261012/value-safety.json",
+    "sha256": "cb5a6defc0a56719bef083c1ba893da772477ac131a8894bb8e479cd98e03aaa",
+    "summary": "ASan/UBSan/leak and TSan passed:65536 original mixer outputs, two owned parallel copies, three owner-only callbacks and needed-resolver exception propagation. Standalone real header, not whole-engine sanitizers."
+  },
+  "reused_pool_safety": {
+    "artifact": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/render-preparation-20261011/lease-final-safety.json",
+    "sha256": "bc9fd5026194f8eb84bd47bc83901a8b8ae33185c1b31cf4e422c856b518c682",
+    "inputs_verified_unchanged": {
+      "src/tile_preparation.cpp": "f8ccc7559599c25f59849332016f77c3a8327586beecf51fb3b23382d81d85aa",
+      "src/tile_preparation.h": "597e3f95f2c0bae08d46fdec3a8449d878341a072ae55c1ddfa8a0b2bd207ac7",
+      "src/thread_pool.cpp": "d4bd8d633e0f580d9b2617bd654cfe2e6319314f5a1c44c5db10cf206a3eda44"
+    },
+    "scope": "Reuse passing real module/pool/lease, allocation failure and partial startup safety evidence; no pool change in batch29."
+  },
+  "headless": {
+    "artifact": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sprite-variation-20261012/headless-boundaries.json",
+    "sha256": "27160fa6dcd98c24b85f4e8c7783e6d2a772e5fe4f9f5dbc238433f0dac3f7a2",
+    "summary": "Changed renderer guard and new header compile with HEADLESS, SDL/Tiles/Sound/Lua off. No complete link/runtime. Initial extra probe included old SDL-private cata_tiles.h without TILES and failed; corrected test boundary, not product code. Original diagnostic retained privately."
+  },
+  "native_scene": {
+    "tileset": "UNDEAD_PEOPLE",
+    "fullscreen_pixels": [
+      2880,
+      1800
+    ],
+    "zoom": 4,
+    "options": {
+      "FULLSCREEN": "fullscreen",
+      "RENDERER": "opengl",
+      "RENDER_PREPARATION_WORKERS": "0",
+      "MULTITHREADING_ENABLED": "false"
+    },
+    "backend": "SDL3 X11/OpenGL; mapped libraries, renderer log and native amdgpu counters audited.",
+    "quiet": "No active monsters; corpses/items/map retained, DEBUG_CLOAK/DEBUG_NODMG, normal100speed. Four ABBA32north trials,0.5s cadence,3s drain, fresh immutable fixture each.",
+    "dense": "759active monsters, same debug traits and normal100speed. Two8pause trials,8simulated seconds, same position and100moves. Functional/low-sample observation, not dense AI/combat performance acceptance.",
+    "reload": "Both versions reload the exact same candidate-produced32move save, then native save and normal quit without simulation actions.",
+    "protocol": "Separate persistent game supervisor from guarded UI process; exact executable,starttick,userdir and owned X11window identity checked before input. Every8native launch saved and exited0. No concurrent task compiler or regression test during perf sampling.",
+    "state_contract": "Player compared after only learned_recipes pointer-set identity/count normalization,1127IDs. No inventory/monster/map array normalization. Native latest zzip footer and payload XXH64 validated.",
+    "pixel_scope": "Observed fullscreen native scene; notice content, quiet loaded HUD, same-fixture health rows and saved selected-world widget checked. No full image parity: animations are not phase-locked and legacy monster pointers change visual seeds between processes."
+  },
+  "originals": {
+    "artifact": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sprite-variation-20261012/originals-preserved.json",
+    "sha256": "56a6b0aca37341308b5814ef624f2af9892fd25e269eea6e0ba36e5264c9dd8b",
+    "summary": "Both65file original fixtures,65file reload fixture and65file candidate source preserved. Counts are separate sets, not a unique-file total."
+  },
+  "runtime_logs": {
+    "artifact": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sprite-variation-20261012/runtime-log-checks.json",
+    "sha256": "a9aaf27b6f3d8ad4fc032b3d4a1c537e5fa5f5c566c026b08852230e00e15c1e",
+    "summary": "Original log prefixes preserved in all8trials, each2013new bytes, no new ERROR/CRASH/error: matches. This is bounded diagnostic scanning, not every warning or device claim."
+  },
+  "native_trials": [
+    {
+      "trial": "quiet-control-a",
+      "baseline": true,
+      "task_clock_ms": 11136.21,
+      "saved_turn": 5212849,
+      "saved_location": [
+        5495,
+        7417,
+        2
+      ],
+      "saved_moves": 28,
+      "active_monsters": 0,
+      "actions": 32,
+      "key": "k",
+      "main_window_s": 19.009078899995075,
+      "unresolved_leaf_fraction": 0.3333333333333333,
+      "samples": 579,
+      "loss_record_counts": {
+        "LOST": 0,
+        "LOST_SAMPLES": 0
+      },
+      "native_exit": 0,
+      "exports": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sprite-variation-20261012/quiet-control-a/perf-exports.json",
+      "count_flamegraph": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sprite-variation-20261012/quiet-control-a/main-flamegraph.json"
+    },
+    {
+      "trial": "quiet-candidate-b",
+      "baseline": false,
+      "task_clock_ms": 10968.2,
+      "saved_turn": 5212849,
+      "saved_location": [
+        5495,
+        7417,
+        2
+      ],
+      "saved_moves": 28,
+      "active_monsters": 0,
+      "actions": 32,
+      "key": "k",
+      "main_window_s": 19.009063114004675,
+      "unresolved_leaf_fraction": 0.3327495621716287,
+      "samples": 571,
+      "loss_record_counts": {
+        "LOST": 0,
+        "LOST_SAMPLES": 0
+      },
+      "native_exit": 0,
+      "exports": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sprite-variation-20261012/quiet-candidate-b/perf-exports.json",
+      "count_flamegraph": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sprite-variation-20261012/quiet-candidate-b/main-flamegraph.json"
+    },
+    {
+      "trial": "quiet-candidate-c",
+      "baseline": false,
+      "task_clock_ms": 11182.06,
+      "saved_turn": 5212849,
+      "saved_location": [
+        5495,
+        7417,
+        2
+      ],
+      "saved_moves": 28,
+      "active_monsters": 0,
+      "actions": 32,
+      "key": "k",
+      "main_window_s": 19.00978985898837,
+      "unresolved_leaf_fraction": 0.3181818181818182,
+      "samples": 594,
+      "loss_record_counts": {
+        "LOST": 0,
+        "LOST_SAMPLES": 0
+      },
+      "native_exit": 0,
+      "exports": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sprite-variation-20261012/quiet-candidate-c/perf-exports.json",
+      "count_flamegraph": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sprite-variation-20261012/quiet-candidate-c/main-flamegraph.json"
+    },
+    {
+      "trial": "quiet-control-d",
+      "baseline": true,
+      "task_clock_ms": 11206.56,
+      "saved_turn": 5212849,
+      "saved_location": [
+        5495,
+        7417,
+        2
+      ],
+      "saved_moves": 28,
+      "active_monsters": 0,
+      "actions": 32,
+      "key": "k",
+      "main_window_s": 19.008451711997623,
+      "unresolved_leaf_fraction": 0.35144312393887944,
+      "samples": 589,
+      "loss_record_counts": {
+        "LOST": 0,
+        "LOST_SAMPLES": 0
+      },
+      "native_exit": 0,
+      "exports": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sprite-variation-20261012/quiet-control-d/perf-exports.json",
+      "count_flamegraph": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sprite-variation-20261012/quiet-control-d/main-flamegraph.json"
+    },
+    {
+      "trial": "dense-control",
+      "baseline": true,
+      "task_clock_ms": 9516.09,
+      "saved_turn": 5212820,
+      "saved_location": [
+        5495,
+        7449,
+        2
+      ],
+      "saved_moves": 100,
+      "active_monsters": 759,
+      "actions": 8,
+      "key": ".",
+      "main_window_s": 7.002580022002803,
+      "unresolved_leaf_fraction": 0.3641025641025641,
+      "samples": 195,
+      "loss_record_counts": {
+        "LOST": 0,
+        "LOST_SAMPLES": 0
+      },
+      "native_exit": 0,
+      "exports": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sprite-variation-20261012/dense-control/perf-exports.json",
+      "count_flamegraph": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sprite-variation-20261012/dense-control/main-flamegraph.json"
+    },
+    {
+      "trial": "dense-candidate",
+      "baseline": false,
+      "task_clock_ms": 9508.42,
+      "saved_turn": 5212820,
+      "saved_location": [
+        5495,
+        7449,
+        2
+      ],
+      "saved_moves": 100,
+      "active_monsters": 759,
+      "actions": 8,
+      "key": ".",
+      "main_window_s": 7.002239501001895,
+      "unresolved_leaf_fraction": 0.29441624365482233,
+      "samples": 197,
+      "loss_record_counts": {
+        "LOST": 0,
+        "LOST_SAMPLES": 0
+      },
+      "native_exit": 0,
+      "exports": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sprite-variation-20261012/dense-candidate/perf-exports.json",
+      "count_flamegraph": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sprite-variation-20261012/dense-candidate/main-flamegraph.json"
+    }
+  ],
+  "quiet_state": {
+    "artifact": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sprite-variation-20261012/state-quiet-control-a.json",
+    "sha256": "8e0fa438479a8128345c05ef36f52ef08fd55c45b896a27fa1e5d44cd5e9305a",
+    "summary": "Four full player-save JSON payloads equal after recipe-only normalization; turn5212849,position[5495,7417,2],moves28,zoom4."
+  },
+  "dense_state": {
+    "artifact": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sprite-variation-20261012/dense-state-proof.json",
+    "sha256": "90606f1ae2b9b0cf431fd50866ac44b7be9acd90a0f9f66c7308b68638fdfb72",
+    "summary": {
+      "raw_payload_equal_after_only_recipe_normalization": false,
+      "only_differing_top_field": "stats_tracker",
+      "only_differing_event_type": "game_save",
+      "player_equal": true,
+      "active_monster_rows_equal": 759,
+      "all_other_payload_fields_equal": true,
+      "other_stats_equal": true,
+      "historic_game_save_event_rows_equal_as_source_unordered_map": 3,
+      "current_save_event_count_and_simulation_timestamps_equal": true,
+      "control_save_event": [
+        {
+          "time_since_load": [
+            "chrono_seconds",
+            "36"
+          ],
+          "total_time_played": [
+            "chrono_seconds",
+            "1486"
+          ]
+        },
+        {
+          "count": 1,
+          "first": 5212820,
+          "last": 5212820
+        }
+      ],
+      "candidate_save_event": [
+        {
+          "time_since_load": [
+            "chrono_seconds",
+            "37"
+          ],
+          "total_time_played": [
+            "chrono_seconds",
+            "1487"
+          ]
+        },
+        {
+          "count": 1,
+          "first": 5212820,
+          "last": 5212820
+        }
+      ],
+      "wall_clock_difference_seconds": 1,
+      "source_contracts": [
+        "src/game_io.cpp:820-834 real steady_clock durations except playback",
+        "src/event.h:816-820 chrono_seconds fields",
+        "src/stats_tracker.h:61 unordered event summaries",
+        "src/savegame_json.cpp:6140-6144 copies summaries into serialized rows"
+      ],
+      "policy": "Do not rewrite saves or normalize wall-clock values. This artifact diagnoses the raw difference. Player and monster state equality are scoped claims, not full archive/replay/world equivalence."
+    }
+  },
+  "reload_state": {
+    "artifact": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sprite-variation-20261012/state-reload-control.json",
+    "sha256": "97c019f00e61a02861bbdbf54c33500829234a76e8da90141c0219d131558b32",
+    "summary": {
+      "both_native_exit": 0,
+      "both_player_and_payload_equal_after_only_recipe_normalization": true,
+      "turn": 5212849,
+      "position": [
+        5495,
+        7417,
+        2
+      ],
+      "moves": 28,
+      "calendar_advance": 0,
+      "source_vs_reload_body_changes": [
+        {
+          "field": "body/foot_r/temp_conv",
+          "source": 3650,
+          "reload": 3649
+        },
+        {
+          "field": "body/hand_l/temp_conv",
+          "source": 3650,
+          "reload": 3649
+        },
+        {
+          "field": "body/arm_l/temp_conv",
+          "source": 3650,
+          "reload": 3649
+        },
+        {
+          "field": "body/foot_l/temp_conv",
+          "source": 3650,
+          "reload": 3649
+        },
+        {
+          "field": "body/hand_r/temp_conv",
+          "source": 3650,
+          "reload": 3649
+        },
+        {
+          "field": "body/arm_r/temp_conv",
+          "source": 3650,
+          "reload": 3649
+        },
+        {
+          "field": "body/leg_r/temp_conv",
+          "source": 3650,
+          "reload": 3649
+        },
+        {
+          "field": "body/leg_l/temp_conv",
+          "source": 3650,
+          "reload": 3649
+        },
+        {
+          "field": "body/mouth/temp_conv",
+          "source": 3650,
+          "reload": 3649
+        },
+        {
+          "field": "body/head/temp_conv",
+          "source": 3650,
+          "reload": 3649
+        },
+        {
+          "field": "body/torso/temp_conv",
+          "source": 3650,
+          "reload": 3649
+        }
+      ],
+      "source_vs_reload_stamina": {
+        "source": 8770,
+        "baseline_reload": 8500,
+        "candidate_reload": 8500
+      },
+      "meaning": "Temperature conversion and stamina reload differences are also present in the original control; they were not normalized or changed by this batch."
+    }
+  },
+  "native_cpu_comparison": {
+    "quiet_abba": {
+      "baseline_task_clock_ms": [
+        11136.21,
+        11206.56
+      ],
+      "candidate_task_clock_ms": [
+        10968.2,
+        11182.06
+      ],
+      "baseline_median_ms": 11171.384999999998,
+      "candidate_median_ms": 11075.130000000001,
+      "median_change_percent": -0.8616210076010877,
+      "baseline_range_ms": [
+        11136.21,
+        11206.56
+      ],
+      "candidate_range_ms": [
+        10968.2,
+        11182.06
+      ]
+    },
+    "dense_single_pair": {
+      "baseline_task_clock_ms": [
+        9516.09
+      ],
+      "candidate_task_clock_ms": [
+        9508.42
+      ],
+      "baseline_median_ms": 9516.09,
+      "candidate_median_ms": 9508.42,
+      "median_change_percent": -0.08060033059796856,
+      "baseline_range_ms": [
+        9516.09,
+        9516.09
+      ],
+      "candidate_range_ms": [
+        9508.42,
+        9508.42
+      ]
+    },
+    "interpretation": "Quiet CPU median11171.385->11075.13ms(-0.8616percent), ranges overlap. Dense9516.09->9508.42ms(-0.0806percent), one pair. Neither establishes repeatable speedup. Self draw percentages drop but work also moves into a helper; do not infer whole-game gain from symbol shares.",
+    "scopes": "Whole-process user-filtered task-clock spans30s including idle tail; main function tables span input+3sdrain. Do not divide these scopes, sum overlapping inclusive percentages or treat sample counts as milliseconds.",
+    "limits": "TRACYOFF means no phase duration evidence. Unknownleaf fractions29.44–36.41percent. No FPS, GPU wait, frame latency/p95, dense combat or broad scene performance claim."
+  },
+  "limits": [
+    "No full native corpus, replay playback, multiplayer, whole save-world/archive parity, long gameplay, Windows/macOS/Android, pinned release SDK, audio/controller/IME/HiDPI device or hosted CI acceptance.",
+    "Prior SDL3 defaultGPU/Vulkan submission OOM and X11 fatal-exit/XIM spin remain unresolved; explicit OpenGL smoke does not close them.",
+    "Legacy monster sprite variation depends on pointers, and weather draw RNG remains coupled to rendering. Per-draw RNG sequence is preserved/tested; no broader weather/replay determinism claim."
+  ],
+  "next_exact_action": "Inspect dense-candidate/main-self-period.txt and main-inclusive-period.txt alongside quiet-candidate-c. Resolve the remaining creature-position hash lookup call sites within cata_tiles::draw and draw_from_id_string_internal, and SDL submission cost, before choosing a heavier snapshot/cache batch. This cloaked8wait scene does not establish monster-AI dominance; require a reproducible dense combat scenario before AI threading.",
+  "evidence_root": "/home/zhgpicg/.codex/worktrees/ccb-performance/Cataclysm-Cleanwater-Bomb/.ccb-performance-tiles-evidence/sprite-variation-20261012",
+  "memory_updates": "none",
+  "implementation_commit": "ce34ea5d946a64ac8a86648258f9b41ecd9d9e7d"
+}
