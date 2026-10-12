@@ -104,7 +104,8 @@ file(WRITE "${CMAKE_BINARY_DIR}/selected.txt" "${selected}")
                     self.assertEqual(
                         {Path(name).name for name in selected.splitlines()},
                         expected)
-                    registered = (fixture / "build/tests/CTestTestfile.cmake").read_text()
+                    registry = fixture / "build/tests/CTestTestfile.cmake"
+                    registered = registry.read_text()
                     if scope == "lua":
                         self.assertIn("[lua][platform]", registered)
                         self.assertNotIn("cata.test-1", registered)

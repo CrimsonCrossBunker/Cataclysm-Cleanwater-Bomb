@@ -15,17 +15,21 @@ class ShaderCMakeGraphTest(unittest.TestCase):
     def graph(self, windows, vcpkg):
         source = (ROOT / "src/CMakeLists.txt").read_text()
         start = source.index("        if(VCPKG_MANIFEST_MODE AND WIN32)")
-        stop = source.index("        add_dependencies(cataclysm-tiles-common compile_shaders)", start)
+        dependency = ("        add_dependencies(cataclysm-tiles-common "
+                      "compile_shaders)")
+        stop = source.index(dependency, start)
         stop = source.index("\n", stop)
         block = source[start:stop]
-        with tempfile.TemporaryDirectory(prefix="ccb shader graph ") as directory:
+        temporary = tempfile.TemporaryDirectory(prefix="ccb shader graph ")
+        with temporary as directory:
             path = Path(directory)
             shaders = path / "data/shaders"
             shaders.mkdir(parents=True)
             (shaders / "sample.frag").write_text("void main() {}\n")
             tools = path / "tools"
             tools.mkdir()
-            shutil.copyfile(ROOT / "tools/build_shaders.py", tools / "build_shaders.py")
+            shutil.copyfile(ROOT / "tools/build_shaders.py",
+                            tools / "build_shaders.py")
             (path / "CMakeLists.txt").write_text(f'''
 cmake_minimum_required(VERSION 3.20)
 project(ShaderGraph NONE)
@@ -41,7 +45,8 @@ add_custom_target(cataclysm-tiles-common)
 {block}
 ''')
             result = subprocess.run(
-                ["cmake", "-G", "Ninja", "-S", str(path), "-B", str(path / "build")],
+                ["cmake", "-G", "Ninja", "-S", str(path),
+                 "-B", str(path / "build")],
                 capture_output=True, text=True,
             )
             self.assertEqual(result.returncode, 0, result.stderr)
