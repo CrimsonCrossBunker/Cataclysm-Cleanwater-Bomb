@@ -1564,12 +1564,12 @@
     "type": "item_group",
     "container-item": "bottle_twoliter",
     "//": "32 oz, or 1L",
-    "items": [ { "item": "lye", "count": 20 } ]
+    "items": [ { "item": "lye_potassium", "count": 20 } ]
   },
   {
     "id": "lye_potassium_bottle_liter_part",
     "type": "item_group",
     "container-item": "bottle_twoliter",
-    "items": [ { "item": "lye", "count": [ 1, 20 ] } ]
+    "items": [ { "item": "lye_potassium", "count": [ 1, 20 ] } ]
   }
 ]
