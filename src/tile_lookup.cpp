@@ -1,6 +1,9 @@
 #if defined(TILES)
 #include "tile_lookup.h"
 
+#include <algorithm>
+#include <functional>
+
 #include <utility>
 
 #include "cata_assert.h"
@@ -18,6 +21,11 @@
 #include "type_id.h"
 #include "veh_type.h"
 
+const std::array<std::string, 8> tile_lookup_frame::subtile_keys = {{
+        "center", "corner", "edge", "t_connection", "end_piece", "unconnected", "open", "broken"
+    }
+};
+
 tile_lookup_frame::tile_lookup_frame( std::shared_ptr<const tileset> bundle,
                                       season_type season, bool cache_results ) :
     bundle_( std::move( bundle ) ), season_( season ), cache_results_( cache_results )
@@ -33,8 +41,51 @@ tile_lookup_frame::~tile_lookup_frame()
         const std::string counts = string_format( "requests=%zu;hits=%zu;ids=%zu",
                                    requests_, cache_hits_, results_.size() );
         CATA_PROFILE_TEXT( counts.c_str(), counts.size() );
+        CATA_PROFILE_PLOT( "tiles.subtile_requests", static_cast<int64_t>( subtile_requests_ ) );
+        CATA_PROFILE_PLOT( "tiles.subtile_cache_hits", static_cast<int64_t>( subtile_cache_hits_ ) );
     }
 #endif
+}
+
+bool tile_lookup_frame::subtile_key::operator==( const subtile_key &other ) const
+{
+    return base_id == other.base_id && category == other.category && subtile == other.subtile;
+}
+
+size_t tile_lookup_frame::subtile_key_hash::operator()( const subtile_key &key ) const
+{
+    // Bundle ids have stable addresses for the entire pinned frame.
+    return std::hash<const std::string *> {}( key.base_id ) ^
+           ( static_cast<size_t>( key.category ) * subtile_keys.size() + static_cast<size_t>( key.subtile ) );
+}
+
+tile_lookup_frame::subtile_result tile_lookup_frame::find_subtile( const tile_lookup_res &base,
+        TILE_CATEGORY category, int subtile )
+{
+    ++subtile_requests_;
+    if( subtile < 0 || static_cast<size_t>( subtile ) >= subtile_keys.size() ) {
+        return {};
+    }
+    const subtile_key key{ &base.id(), category, subtile };
+    if( cache_results_ ) {
+        const auto cached = subtiles_.find( key );
+        if( cached != subtiles_.end() ) {
+            ++subtile_cache_hits_;
+            return cached->second;
+        }
+    }
+    subtile_result result;
+    const auto &available = base.tile().available_subtiles;
+    result.available = base.tile().multitile &&
+                       std::find( available.begin(), available.end(), subtile_keys[subtile] ) != available.end();
+    if( result.available ) {
+        // Recursive draws reset variant and use the normal lookup depth.
+        result.resolved = find( base.id() + "_" + subtile_keys[subtile], category, "" );
+    }
+    if( cache_results_ ) {
+        subtiles_.emplace( key, result );
+    }
+    return result;
 }
 
 bool tile_lookup_frame::entry::matches( TILE_CATEGORY requested_category,

@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_TILE_LOOKUP_H
 #define CATA_SRC_TILE_LOOKUP_H
 
+#include <array>
 #include <cstddef>
 #include <memory>
 #include <optional>
@@ -27,6 +28,23 @@ class tile_lookup_frame
         tile_lookup_frame &operator=( const tile_lookup_frame & ) = delete;
         std::optional<tile_lookup_res> find( const std::string &id, TILE_CATEGORY category,
                                              const std::string &variant, int jumps_limit = 10 );
+        static const std::array<std::string, 8> subtile_keys;
+        struct subtile_result {
+            // Availability determines whether the legacy draw would recurse.
+            // A missing child still needs the owner's ASCII/unknown fallback.
+            bool available = false;
+            std::optional<tile_lookup_res> resolved;
+        };
+        // Base metadata must come from this frame's pinned bundle. The result
+        // borrows that same bundle; neither cache nor results escape the frame.
+        subtile_result find_subtile( const tile_lookup_res &base, TILE_CATEGORY category,
+                                     int subtile );
+        size_t subtile_requests() const {
+            return subtile_requests_;
+        }
+        size_t subtile_cache_hits() const {
+            return subtile_cache_hits_;
+        }
         size_t requests() const {
             return requests_;
         }
@@ -52,12 +70,24 @@ class tile_lookup_frame
             entry first;
             std::vector<entry> alternatives;
         };
+        struct subtile_key {
+            const std::string *base_id;
+            TILE_CATEGORY category;
+            int subtile;
+            bool operator==( const subtile_key &other ) const;
+        };
+        struct subtile_key_hash {
+            size_t operator()( const subtile_key &key ) const;
+        };
         const std::shared_ptr<const tileset> bundle_;
         const season_type season_;
         const bool cache_results_;
         size_t requests_ = 0;
         size_t cache_hits_ = 0;
         std::unordered_map<std::string, id_results> results_;
+        size_t subtile_requests_ = 0;
+        size_t subtile_cache_hits_ = 0;
+        std::unordered_map<subtile_key, subtile_result, subtile_key_hash> subtiles_;
         std::optional<tile_lookup_res> resolve( const std::string &id, TILE_CATEGORY category,
                                                 const std::string &variant, int jumps_limit );
         std::optional<tile_lookup_res> find_with_season( const std::string &id ) const;

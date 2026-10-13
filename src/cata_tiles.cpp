@@ -120,17 +120,7 @@ static const vpart_location_id vpart_location_structure( "structure" );
 static const std::string ITEM_HIGHLIGHT( "highlight_item" );
 static const std::string ZOMBIE_REVIVAL_INDICATOR( "zombie_revival_indicator" );
 
-static const std::array<std::string, 8> multitile_keys = {{
-        "center",
-        "corner",
-        "edge",
-        "t_connection",
-        "end_piece",
-        "unconnected",
-        "open",
-        "broken"
-    }
-};
+static const auto &multitile_keys = tile_lookup_frame::subtile_keys;
 
 static const std::string empty_string;
 static const std::array<std::string, 17> TILE_CATEGORY_IDS = {{
@@ -3100,24 +3090,39 @@ bool cata_tiles::draw_from_id_string_internal( const std::string &id, TILE_CATEG
         return false;
     }
 
-    const tile_type &display_tile = *tt;
-    // check to see if the display_tile is multitile, and if so if it has the key related to
-    // subtile
-    if( subtile != -1 && display_tile.multitile ) {
-        const auto &display_subtiles = display_tile.available_subtiles;
-        const auto end = std::end( display_subtiles );
-        if( std::find( begin( display_subtiles ), end, multitile_keys[subtile] ) != end ) {
-            // append subtile name to tile and re-find display_tile
+    const std::string *sprite_id = &found_id;
+    point render_offset = offset;
+    if( subtile != -1 && tt->multitile ) {
+        bool available = false;
+        if( lookup_frame_ && res ) {
+            const auto child = lookup_frame_->find_subtile( *res, category, subtile );
+            available = child.available;
+            if( child.resolved ) {
+                // A successfully resolved child skips the duplicate draw preamble.
+                // Keep the legacy child id, rotation, height and zero-offset policy.
+                tt = &child.resolved->tile();
+                sprite_id = &child.resolved->id();
+                render_offset = point::zero;
+                available = false;
+            }
+        } else {
+            const auto &display_subtiles = tt->available_subtiles;
+            available = std::find( display_subtiles.begin(), display_subtiles.end(),
+                                   multitile_keys[subtile] ) != display_subtiles.end();
+        }
+        if( available ) {
+            // Missing children retain all original ASCII/unknown fallback behavior.
             return draw_from_id_string_internal(
                        found_id + "_" + multitile_keys[subtile], category, subcategory, pos, -1, rota, ll,
                        retract, nv_color_active, height_3d, 0, "", point() );
         }
     }
 
+    const tile_type &display_tile = *tt;
     const bool has_choices = display_tile.fg.size() > 1 || display_tile.bg.size() > 1;
     const unsigned int seed = sprite_variation::capture_seed(
     { has_choices, category == TILE_CATEGORY::WEATHER }, [&]() {
-        return resolve_sprite_seed( here, found_id, category, pos );
+        return resolve_sprite_seed( here, *sprite_id, category, pos );
     } );
 
     // make sure we aren't going to rotate the tile if it shouldn't be rotated.
@@ -3167,7 +3172,7 @@ bool cata_tiles::draw_from_id_string_internal( const std::string &id, TILE_CATEG
         rp.tint = pending_part_tint_;
     }
     draw_tile_at( display_tile, screen_pos, loc_rand, rota, rp,
-                  retract, height_3d, offset, /*allow_diagonal_rota:*/ category == TILE_CATEGORY::BULLET );
+                  retract, height_3d, render_offset, /*allow_diagonal_rota:*/ category == TILE_CATEGORY::BULLET );
 
     return true;
 }
