@@ -5,12 +5,11 @@
 #include <cmath>
 #include <cstddef>
 #include <functional>
-#include <list>
 #include <limits>
+#include <list>
 #include <memory>
 #include <numeric>
 #include <optional>
-#include <set>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -61,8 +60,6 @@
 #include "value_ptr.h"
 #include "veh_type.h"
 #include "vehicle_price.h"
-#include "vpart_position.h"
-#include "vpart_range.h"
 #include "weather.h"
 #include "weather_gen.h"
 #include "weather_type.h"
