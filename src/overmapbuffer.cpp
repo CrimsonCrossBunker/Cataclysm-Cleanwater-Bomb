@@ -2,6 +2,7 @@
 
 #include <cata_path.h>
 #include <map_scale_constants.h>
+#include <monster_uid.h>
 #include <type_id.h>
 #include <algorithm>
 #include <cmath>

@@ -1,11 +1,13 @@
+#include <item_location.h>
+#include <map_iterator.h>
 #include <memory>
 #include <set>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "calendar.h"
 #include "avatar.h"
+#include "calendar.h"
 #include "cata_catch.h"
 #include "character.h"
 #include "character_attire.h"
@@ -13,7 +15,6 @@
 #include "creature.h"
 #include "enums.h"
 #include "explosion.h"
-#include "game.h"
 #include "flag.h"
 #include "item.h"
 #include "itype.h"
@@ -24,8 +25,8 @@
 #include "player_helpers.h"
 #include "pocket_type.h"
 #include "point.h"
-#include "ret_val.h"
 #include "ranged.h"
+#include "ret_val.h"
 #include "type_id.h"
 #include "units.h"
 #include "value_ptr.h"

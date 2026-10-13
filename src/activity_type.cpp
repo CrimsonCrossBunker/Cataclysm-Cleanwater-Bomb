@@ -1,5 +1,6 @@
 #include "activity_type.h"
 
+#include <translation.h>
 #include <functional>
 #include <map>
 #include <string>
@@ -10,6 +11,7 @@
 #include "activity_handlers.h"
 #include "debug.h"
 #include "enums.h"
+#include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "sounds.h"
 #include "string_formatter.h"

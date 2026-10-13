@@ -6,6 +6,8 @@
 * functions, which is intended.
 */
 
+#include <string_formatter.h>
+#include <translations.h>
 #include <algorithm>
 #include <cmath>
 #include <functional>

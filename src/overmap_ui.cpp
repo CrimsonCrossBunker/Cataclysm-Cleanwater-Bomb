@@ -1,5 +1,6 @@
 #include "overmap_ui.h"
 
+#include <map_scale_constants.h>
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -37,7 +38,7 @@
 #include "debug.h"
 #include "debug_menu.h"
 #include "display.h"
-#include "enum_conversions.h"
+#include "flexbuffer_json.h"
 #include "game.h"
 #include "game_constants.h"
 #include "game_ui.h"
@@ -58,8 +59,8 @@
 #include "mapgendata.h"
 #include "messages.h"
 #include "mission.h"
-#include "mp_gamestate.h"
 #include "mongroup.h"
+#include "mp_gamestate.h"
 #include "mtype.h"
 #include "npc.h"
 #include "omdata.h"
@@ -95,8 +96,8 @@
     #include "cached_options.h"
 #endif // TILES
 
-enum class cube_direction : int;
 class JsonObject;
+enum class cube_direction : int;
 
 static const activity_id ACT_TRAVELLING( "ACT_TRAVELLING" );
 

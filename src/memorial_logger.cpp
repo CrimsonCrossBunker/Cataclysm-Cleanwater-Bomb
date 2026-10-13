@@ -1,5 +1,6 @@
 #include "memorial_logger.h"
 
+#include <string_formatter.h>
 #include <cstddef>
 #include <istream>
 #include <list>

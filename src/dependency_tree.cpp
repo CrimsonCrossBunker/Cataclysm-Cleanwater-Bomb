@@ -1,5 +1,6 @@
 #include "dependency_tree.h"
 
+#include <type_id.h>
 #include <algorithm>
 #include <array>
 #include <ostream>

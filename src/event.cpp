@@ -1,5 +1,6 @@
 #include "event.h"
 
+#include <cata_variant.h>
 #include <string>
 
 #include "debug.h"

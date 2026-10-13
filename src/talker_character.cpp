@@ -1,3 +1,8 @@
+#include <bodypart.h>
+#include <character.h>
+#include <enums.h>
+#include <talker.h>
+#include <type_id.h>
 #include <algorithm>
 #include <bitset>
 #include <cmath>

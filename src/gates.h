@@ -3,6 +3,8 @@
 #define CATA_SRC_GATES_H
 
 #include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
 
 #include "coords_fwd.h"
@@ -20,6 +22,7 @@ class content_transaction;
 } // namespace cata::lua_platform
 
 struct gate_data;
+
 using gate_id = string_id<gate_data>;
 
 struct gate_data {

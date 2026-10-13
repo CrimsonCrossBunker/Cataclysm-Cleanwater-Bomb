@@ -1,3 +1,5 @@
+#include <type_id.h>
+#include <functional>
 #include <memory>
 
 #include "avatar.h"
@@ -6,7 +8,6 @@
 #include "dialogue.h"
 #include "math_parser.h"
 #include "math_parser_type.h"
-#include "morale_types.h"
 #include "npc.h"
 #include "player_helpers.h"
 #include "talker.h"

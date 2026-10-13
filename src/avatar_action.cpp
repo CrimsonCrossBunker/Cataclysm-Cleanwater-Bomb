@@ -1,8 +1,12 @@
 #include "avatar_action.h"
 
+#include <coordinates.h>
+#include <input_enums.h>
+#include <player_activity.h>
 #include <algorithm>
 #include <climits>
 #include <cstdlib>
+#include <functional>
 #include <map>
 #include <memory>
 #include <ostream>
@@ -51,8 +55,8 @@
 #include "options.h"
 #include "output.h"
 #include "pimpl.h"
-#include "popup.h"
 #include "point.h"
+#include "popup.h"
 #include "projectile.h"
 #include "ranged.h"
 #include "ret_val.h"

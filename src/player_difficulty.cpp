@@ -1,3 +1,4 @@
+#include <npc.h>
 #include <algorithm>
 #include <list>
 #include <memory>
@@ -9,9 +10,9 @@
 #include "bodypart.h"
 #include "character.h"
 #include "character_martial_arts.h"
-#include "inventory.h"
 #include "color.h"
 #include "debug.h"
+#include "inventory.h"
 #include "item.h"
 #include "mutation.h"
 #include "npc_opinion.h"

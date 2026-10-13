@@ -3,6 +3,7 @@
 #include <calendar.h>
 #include <color.h>
 #include <field_type.h>
+#include <lightmap.h>
 #include <translation.h>
 #include <type_id.h>
 #include <units.h>
