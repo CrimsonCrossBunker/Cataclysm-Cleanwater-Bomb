@@ -4,7 +4,7 @@
   "inventory_kind": "eoc_conditions",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:8073319d4d24caa9df79ef5adf2fd4a2262da9fefc1431585e8a2640f26f25b4",
+    "source_fingerprint": "sha256:83e1dd16d959f6d001d2e57f2066a49c9a2fd504bbe3cefbfae006bba75eff10",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -117,7 +117,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 5452,
+        "occurrences": 5453,
         "examples": [
           {
             "path": "data/json/bionics.json",
@@ -3171,7 +3171,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 22348,
+        "occurrences": 22350,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -3831,7 +3831,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 6762,
+        "occurrences": 6763,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -4491,7 +4491,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 96,
+        "occurrences": 98,
         "examples": [
           {
             "path": "data/json/techniques.json",
@@ -6727,7 +6727,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 434,
+        "occurrences": 435,
         "examples": [
           {
             "path": "data/json/effects_on_condition/general_conditions.json",
@@ -14258,7 +14258,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 1747,
+        "occurrences": 1748,
         "examples": [
           {
             "path": "data/json/bionics.json",
