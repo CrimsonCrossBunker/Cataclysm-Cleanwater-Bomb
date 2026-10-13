@@ -44,6 +44,7 @@
 #include "mongroup.h"
 #include "monster_destination_plan.h"
 #include "monster_oracle.h"
+#include "monster_planning_reaction.h"
 #include "monster_step_selection.h"
 #include "monster_target_selection.h"
 #include "mtype.h"
@@ -460,7 +461,9 @@ void monster::anger_hostile_seen( const monster_plan &mon_plan )
     }
 
     // Decide that the player is too annoying, less likely than the other triggers
-    if( mon_plan.angers_hostile_seen && x_in_y( anger, 200 ) ) {
+    const monster_planning_reaction reaction = react_to_hostile_sighting( { anger, morale },
+            mon_plan.angers_hostile_seen, mon_plan.fleeing );
+    if( reaction.draw_aggro && x_in_y( reaction.values.anger, reaction.denominator ) ) {
         if( mon_plan.target->is_avatar() ) {
             add_msg_debug( debugmode::DF_MONSTER, "%s's character aggro triggered by seeing you", name() );
         } else {
@@ -475,8 +478,10 @@ void monster::anger_mating_season( const monster_plan &mon_plan )
 {
     if( mon_plan.angers_mating_season > 0 && anger <= 30 ) {
         if( mating_angry() ) {
-            anger += mon_plan.angers_mating_season;
-            if( x_in_y( anger, 100 ) ) {
+            const monster_planning_reaction reaction = react_to_mating_season( { anger, morale },
+                    mon_plan.angers_mating_season, true );
+            anger = reaction.values.anger;
+            if( reaction.draw_aggro && x_in_y( anger, reaction.denominator ) ) {
                 add_msg_debug( debugmode::DF_MONSTER, "%s's character aggro triggered by season", name() );
                 aggro_character = true;
             }
@@ -516,8 +521,10 @@ void monster::anger_cub_threatened( monster_plan &mon_plan )
             mon_plan.dist = tmp.rate_target( *mon_plan.target, mon_plan.dist, mon_plan.smart_planning );
             if( mon_plan.dist <= 3 ) {
                 //proximity to baby; monster gets furious and less likely to flee
-                anger += mon_plan.angers_cub_threatened;
-                morale += mon_plan.angers_cub_threatened / 2;
+                const monster_planning_values reaction = react_to_threatened_cub( { anger, morale },
+                        mon_plan.angers_cub_threatened );
+                anger = reaction.anger;
+                morale = reaction.morale;
                 add_msg_debug( debugmode::DF_MONSTER, "%s's character aggro triggered by threatening %s", name(),
                                tmp.name() );
                 aggro_character = true;
@@ -562,21 +569,21 @@ void monster::plan()
         mon_plan.dist = rate_target( player_character, mon_plan.dist, mon_plan.smart_planning );
         mon_plan.fleeing = mon_plan.fleeing || is_fleeing( player_character );
         mon_plan.target = &player_character;
-        if( !mon_plan.fleeing && anger <= 20 ) {
-            anger += mon_plan.angers_hostile_seen;
-        }
+        const monster_planning_values seen_reaction = react_to_seen_hostile( { anger, morale },
+                mon_plan.angers_hostile_seen, 0, mon_plan.fleeing, true );
+        anger = seen_reaction.anger;
 
         anger_hostile_seen( mon_plan );
 
         if( mon_plan.dist <= 5 ) {
-            if( anger <= 30 ) {
-                anger += mon_plan.angers_hostile_near;
-            }
-            if( mon_plan.angers_hostile_near && x_in_y( anger, 100 ) ) {
+            const monster_planning_reaction near_reaction = react_to_near_hostile( { anger, morale },
+                    mon_plan.angers_hostile_near, mon_plan.fears_hostile_near );
+            anger = near_reaction.values.anger;
+            if( near_reaction.draw_aggro && x_in_y( anger, near_reaction.denominator ) ) {
                 add_msg_debug( debugmode::DF_MONSTER, "%s's character aggro triggered by proximity", name() );
                 aggro_character = true;
             }
-            morale -= mon_plan.fears_hostile_near;
+            morale = near_reaction.values.morale;
             anger_mating_season( mon_plan );
         }
         anger_cub_threatened( mon_plan );
@@ -644,22 +651,23 @@ void monster::plan()
         valid_targets = choice.state.valid_targets;
         mon_plan.fleeing = choice.state.fleeing;
         if( rating <= 5 ) {
-            if( anger <= 30 ) {
-                anger += mon_plan.angers_hostile_near;
-            }
-            if( mon_plan.angers_hostile_near && x_in_y( anger, 100 ) ) {
+            const monster_planning_reaction near_reaction = react_to_near_hostile( { anger, morale },
+                    mon_plan.angers_hostile_near, mon_plan.fears_hostile_near );
+            anger = near_reaction.values.anger;
+            if( near_reaction.draw_aggro && x_in_y( anger, near_reaction.denominator ) ) {
                 add_msg_debug( debugmode::DF_MONSTER, "%s's character aggro triggered by proximity to %s", name(),
                                who.name );
                 aggro_character = true;
             }
-            morale -= mon_plan.fears_hostile_near;
+            morale = near_reaction.values.morale;
             anger_mating_season( mon_plan );
         }
-        if( !mon_plan.fleeing && anger <= 20 && valid_targets != 0 ) {
-            anger += mon_plan.angers_hostile_seen;
-        }
+        const monster_planning_values seen_reaction = react_to_seen_hostile( { anger, morale },
+                mon_plan.angers_hostile_seen, mon_plan.fears_hostile_seen, mon_plan.fleeing,
+                valid_targets != 0 );
+        anger = seen_reaction.anger;
         if( !mon_plan.fleeing && valid_targets != 0 ) {
-            morale -= mon_plan.fears_hostile_seen;
+            morale = seen_reaction.morale;
             anger_hostile_seen( mon_plan );
         }
     }
@@ -700,16 +708,17 @@ void monster::plan()
             mon_plan.dist = choice.state.best;
             valid_targets = choice.state.valid_targets;
             if( rating <= 5 ) {
-                if( anger <= 30 ) {
-                    anger += mon_plan.angers_hostile_near;
-                }
-                morale -= mon_plan.fears_hostile_near;
+                const monster_planning_reaction near_reaction = react_to_near_hostile( { anger, morale },
+                        mon_plan.angers_hostile_near, mon_plan.fears_hostile_near );
+                anger = near_reaction.values.anger;
+                morale = near_reaction.values.morale;
             }
-            if( !mon_plan.fleeing && anger <= 20 && valid_targets != 0 ) {
-                anger += mon_plan.angers_hostile_seen;
-            }
+            const monster_planning_values seen_reaction = react_to_seen_hostile( { anger, morale },
+                    mon_plan.angers_hostile_seen, mon_plan.fears_hostile_seen, mon_plan.fleeing,
+                    valid_targets != 0 );
+            anger = seen_reaction.anger;
             if( !mon_plan.fleeing && valid_targets != 0 ) {
-                morale -= mon_plan.fears_hostile_seen;
+                morale = seen_reaction.morale;
             }
         } );
     }
@@ -760,11 +769,11 @@ void monster::plan()
             }
             monster &mon = *mon_ptr;
             float rating = rate_target( mon, mon_plan.dist, mon_plan.smart_planning );
-            if( mon_plan.group_morale && rating <= 10 ) {
-                morale += 10 - rating;
-            }
+            morale = morale_after_group_observation( morale, rating, mon_plan.group_morale );
+            const monster_swarm_action swarm_action = choose_monster_swarm_action( rating,
+                    mon_plan.dist, wandf, mon_plan.swarms );
             if( mon_plan.swarms ) {
-                if( rating < 5 ) { // Too crowded here
+                if( swarm_action == monster_swarm_action::disperse ) { // Too crowded here
                     wander_pos = pos_abs();
                     while( wander_pos == pos_abs() ) {
                         wander_pos += point( rng( -3, 3 ), rng( -3, 3 ) );
@@ -772,7 +781,7 @@ void monster::plan()
                     wandf = 2;
                     mon_plan.target = nullptr;
                     // Swarm to the furthest ally you can see
-                } else if( rating < FLT_MAX && rating > mon_plan.dist && wandf <= 0 ) {
+                } else if( swarm_action == monster_swarm_action::follow_ally ) {
                     mon_plan.target = &mon;
                     mon_plan.dist = rating;
                 }
@@ -834,19 +843,14 @@ void monster::plan()
               mon_plan.placate_hostile_weak ) &&
             att_to_target != Attitude::FRIENDLY ) {
             int hp_per = mon_plan.target->hp_percentage();
-            if( hp_per <= 70 ) {
-                if( mon_plan.angers_hostile_weak && anger <= 40 ) {
-                    anger += 10 - static_cast<int>( hp_per / 10 );
-                    if( x_in_y( anger, 100 ) ) {
-                        add_msg_debug( debugmode::DF_MONSTER, "%s's character aggro triggered by %s's weakness", name(),
-                                       mon_plan.target->disp_name() );
-                        aggro_character = true;
-                    }
-                } else if( mon_plan.fears_hostile_weak ) {
-                    morale -= 10 - static_cast<int>( hp_per / 10 );
-                } else if( mon_plan.placate_hostile_weak ) {
-                    anger -= 10 - static_cast<int>( hp_per / 10 );
-                }
+            const monster_planning_reaction reaction = react_to_weak_target( { anger, morale }, hp_per,
+                    mon_plan.angers_hostile_weak, mon_plan.fears_hostile_weak, mon_plan.placate_hostile_weak );
+            anger = reaction.values.anger;
+            morale = reaction.values.morale;
+            if( reaction.draw_aggro && x_in_y( anger, reaction.denominator ) ) {
+                add_msg_debug( debugmode::DF_MONSTER, "%s's character aggro triggered by %s's weakness", name(),
+                               mon_plan.target->disp_name() );
+                aggro_character = true;
             }
         }
     } else if( !patrol_route.empty() ) {
