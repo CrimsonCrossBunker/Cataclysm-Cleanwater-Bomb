@@ -257,7 +257,7 @@
     "price_postapoc": "1 cent",
     "material": [ "fruit" ],
     "volume": "175 ml",
-    "flags": [ "MYCUS_OK" ],
+    "flags": [ "MARLOSS", "MYCUS_OK" ],
     "fun": 30,
     "vitamins": [ [ "fruit_allergen", 1 ] ],
     "stackable": true
