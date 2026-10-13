@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_MAP_MEMORY_H
 #define CATA_SRC_MAP_MEMORY_H
 
+#include <array>
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -174,7 +175,11 @@ class map_memory
     private:
         std::map<tripoint_abs_sm, shared_ptr_fast<mm_submap>> submaps;
 
-        mutable std::map<int, std::vector<shared_ptr_fast<mm_submap>>> cached;
+        // Published only after a complete synchronous region preparation. Queries
+        // never allocate, insert missing levels or fetch data from storage.
+        using region_cache = std::array<std::vector<shared_ptr_fast<mm_submap>>, OVERMAP_LAYERS>;
+        region_cache cached;
+        mm_submap unavailable_submap{ false };
         tripoint_abs_sm cache_pos;
         point cache_size;
 
@@ -188,6 +193,8 @@ class map_memory
                                                 std::shared_ptr<zzip_stack> &reader );
         /** Allocate empty submap. @returns the submap. */
         shared_ptr_fast<mm_submap> allocate_submap( const tripoint_abs_sm &sm_pos );
+
+        mm_submap *cached_submap( const tripoint_abs_sm &sm_pos ) const;
 
         /** Get submap from within the cache */
         //@{
