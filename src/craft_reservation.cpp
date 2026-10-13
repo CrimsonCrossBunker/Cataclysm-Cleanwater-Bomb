@@ -1,5 +1,8 @@
 #include "craft_reservation.h"
 
+#include <calendar.h>
+#include <character_id.h>
+#include <coordinates.h>
 #include <algorithm>
 #include <functional>
 #include <iterator>

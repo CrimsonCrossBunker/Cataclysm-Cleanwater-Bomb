@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <functional>
 #include <initializer_list>
+#include <iterator>
 #include <list>
 #include <map>
 #include <memory>
@@ -9,11 +10,12 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "activity_actor_definitions.h"
-#include "activity_item_handling.h"
 #include "activity_handlers.h"
+#include "activity_item_handling.h"
 #include "avatar.h"
 #include "bionics.h"
 #include "cached_options.h"
@@ -32,12 +34,11 @@
 #include "crafting.h"
 #include "crafting_enums.h"
 #include "enums.h"
-#include "field_type.h"
 #include "faction.h"
+#include "field_type.h"
 #include "flag.h"
 #include "flexbuffer_json.h"
 #include "game.h"
-#include "game_constants.h"
 #include "inventory.h"
 #include "item.h"
 #include "item_components.h"

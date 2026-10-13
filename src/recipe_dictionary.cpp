@@ -1,8 +1,8 @@
 #include "recipe_dictionary.h"
 
-#include "recipe.h"
-#include "type_id.h"
-
+#include <input_context.h>
+#include <recipe.h>
+#include <type_id.h>
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -31,7 +31,6 @@
 #include "flexbuffer_json.h"
 #include "init.h"
 #include "input.h"
-#include "input_context.h"
 #include "item.h"
 #include "item_factory.h"
 #include "itype.h"

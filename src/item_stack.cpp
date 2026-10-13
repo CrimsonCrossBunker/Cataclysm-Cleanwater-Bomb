@@ -1,9 +1,12 @@
 #include "item_stack.h"
 
+#include <colony.h>
+#include <coords_fwd.h>
+#include <type_id.h>
 #include <algorithm>
 
-#include "debug.h"
 #include "craft_reservation.h"
+#include "debug.h"
 #include "enums.h"
 #include "item.h"
 #include "map.h"

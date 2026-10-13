@@ -1,5 +1,10 @@
-#include <algorithm>
+#include <coordinates.h>
+#include <flexbuffer_json.h>
+#include <mapdata.h>
+#include <units.h>
 #include <functional>
+#include <map>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <tuple>
@@ -7,26 +12,24 @@
 
 #include "calendar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "construction.h"
 #include "finite_water.h"
-#include "game_constants.h"
-#include "temp_crafting_inventory.h"
+#include "flexbuffer_json.h"
 #include "item.h"
 #include "json.h"
 #include "json_loader.h"
 #include "map.h"
-#include "mapbuffer.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
 #include "map_scale_constants.h"
+#include "mapbuffer.h"
 #include "npc.h"
-#include "omdata.h"
-#include "overmap.h"
 #include "overmapbuffer.h"
 #include "player_helpers.h"
 #include "point.h"
-#include "cata_scope_helpers.h"
 #include "submap.h"
+#include "temp_crafting_inventory.h"
 #include "type_id.h"
 
 static const construction_str_id construction_constr_water_channel( "constr_water_channel" );

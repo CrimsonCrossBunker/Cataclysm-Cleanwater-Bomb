@@ -1,6 +1,7 @@
+#include <flexbuffer_json.h>
 #include <algorithm>
-#include <cstddef>
 #include <climits>
+#include <cstddef>
 #include <functional>
 #include <initializer_list>
 #include <map>
@@ -17,18 +18,18 @@
 #include "color.h"
 #include "crafting_gui_helpers.h"
 #include "flat_set.h"
-#include "npc.h"
-#include "recipe_dictionary.h"
+#include "flexbuffer_json.h"
 #include "game.h"
 #include "item.h"
-#include "json.h"
 #include "json_loader.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "npc.h"
 #include "options_helpers.h"
 #include "player_helpers.h"
 #include "proficiency.h"
 #include "recipe.h"
+#include "recipe_dictionary.h"
 #include "requirements.h"
 #include "temp_crafting_inventory.h"
 #include "type_id.h"
@@ -1089,7 +1090,7 @@ TEST_CASE( "build_recipe_list_hides_hidden", "[crafting][gui][recipe_list]" )
 
     std::map<const recipe *, availability> cache;
     recipe_list_data result = build_recipe_list( picking, false, false,
-                              guy, false, nullptr, false, false, cache, available );
+        guy, false, nullptr, false, false, cache, available );
 
     for( const recipe *entry : result.entries ) {
         CHECK_FALSE( entry->ident() == recipe_cudgel_test_no_tools );
@@ -1110,7 +1111,7 @@ TEST_CASE( "build_recipe_list_skip_hidden_filter", "[crafting][gui][recipe_list]
 
     std::map<const recipe *, availability> cache;
     recipe_list_data result = build_recipe_list( picking, true, false,
-                              guy, false, nullptr, false, false, cache, available );
+        guy, false, nullptr, false, false, cache, available );
 
     CHECK_FALSE( result.entries.empty() );
     CHECK( result.entries[0]->ident() == recipe_cudgel_test_no_tools );
@@ -1135,7 +1136,7 @@ TEST_CASE( "build_recipe_list_sort_craftable_first", "[crafting][gui][recipe_lis
 
     std::map<const recipe *, availability> cache;
     recipe_list_data result = build_recipe_list( picking, false, false,
-                              guy, false, nullptr, false, false, cache, available );
+        guy, false, nullptr, false, false, cache, available );
 
     REQUIRE( result.available.size() == 2 );
     // Craftable recipes come first in sorted order
@@ -1166,7 +1167,7 @@ TEST_CASE( "build_recipe_list_expands_nested", "[crafting][gui][recipe_list]" )
 
     std::map<const recipe *, availability> cache;
     recipe_list_data result = build_recipe_list( picking, false, false,
-                              guy, false, nullptr, false, false, cache, available );
+        guy, false, nullptr, false, false, cache, available );
 
     // Expansion should have inserted the child after the nested category
     REQUIRE( result.entries.size() == 2 );
@@ -1203,7 +1204,7 @@ TEST_CASE( "nested_recipe_expansion_excludes_null_children", "[crafting][gui][re
     uistate.expanded_recipes.insert( nested.ident() );
     std::map<const recipe *, availability> cache;
     const recipe_list_data result = build_recipe_list( { &nested }, false, false,
-                                    guy, false, nullptr, false, false, cache, available );
+        guy, false, nullptr, false, false, cache, available );
     REQUIRE( result.entries.size() == 2 );
     CHECK( result.entries[0] == &nested );
     CHECK( result.entries[1] == cudgel );

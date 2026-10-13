@@ -1,5 +1,11 @@
 #include "craft_reservation_search.h"
 
+#include <character_id.h>
+#include <coordinates.h>
+#include <craft_reservation.h>
+#include <item.h>
+#include <point.h>
+#include <type_id.h>
 #include <algorithm>
 #include <climits>
 #include <map>
@@ -224,7 +230,7 @@ static std::optional<int> score_reservation_candidate(
     }
     if( req.req == craft_reservation::requirement_kind::quality ) {
         const int level = provider_quality_level( *cand.it, req.qual, who,
-                          true );
+            true );
         if( level < req.level ) {
             return std::nullopt;
         }
@@ -627,8 +633,8 @@ static std::string memo_key( size_t depth, const search_state &state )
 // Slots already held in one abstract multiset, keyed the way the multiset is: by
 // capability for an intrinsic quality, by type for everything else.
 static std::vector<std::pair<int, int>> abstract_slots_in_multiset(
-        const search_state &state, const provider_candidate &cand,
-        const craft_reservation::binding &req )
+    const search_state &state, const provider_candidate &cand,
+    const craft_reservation::binding &req )
 {
     std::vector<std::pair<int, int>> slots;
     for( const craft_reservation::binding &b : state.selected ) {
@@ -717,7 +723,7 @@ static selection_result take_one( selection_context &ctx, size_t depth, search_s
             int multiset_held = 0;
             if( cls.abstract && !cls.members.empty() ) {
                 const std::vector<std::pair<int, int>> slots =
-                                                        abstract_slots_in_multiset( state, *cls.members[0], req );
+                    abstract_slots_in_multiset( state, *cls.members[0], req );
                 std::set<int> own_slots;
                 std::set<int> distinct;
                 for( const std::pair<int, int> &held : slots ) {
