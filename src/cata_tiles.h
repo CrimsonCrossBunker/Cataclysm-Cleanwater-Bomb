@@ -27,6 +27,7 @@
 #include "cata_small_literal_vector.h"
 #include "coordinates.h"
 #include "creature.h"
+#include "tile_category.h"
 #include "cuboid_rectangle.h"
 #include "hsv_color.h"
 #include "mapdata.h"
@@ -67,6 +68,7 @@ class vehicle;
 struct sprite_screen_bounds;
 struct tint_sprite_record;
 struct tile_render_info;
+struct tile_layer_view;
 struct creature_render_view;
 struct entity_render_view;
 namespace tile_preparation
@@ -96,28 +98,6 @@ struct tile_type {
     float pixelscale = 1.0;
 
     std::vector<std::string> available_subtiles;
-};
-
-// Make sure to change TILE_CATEGORY_IDS if this changes!
-enum class TILE_CATEGORY {
-    NONE,
-    VEHICLE_PART,
-    TERRAIN,
-    ITEM,
-    FURNITURE,
-    TRAP,
-    FIELD,
-    LIGHTING,
-    MONSTER,
-    BULLET,
-    HIT_ENTITY,
-    WEATHER,
-    OVERMAP_TERRAIN,
-    OVERMAP_VISION_LEVEL,
-    OVERMAP_WEATHER,
-    MAP_EXTRA,
-    OVERMAP_NOTE,
-    last
 };
 
 const std::unordered_map<std::string, TILE_CATEGORY> to_TILE_CATEGORY = {
@@ -751,6 +731,7 @@ class cata_tiles
         bool would_apply_vision_effects( visibility_type visibility ) const;
         bool apply_vision_effects( const tripoint_bub_ms &pos, visibility_type visibility, int &height_3d );
         void draw_square_below( const point_bub_ms &p, const nc_color &col, int sizefactor );
+        bool draw_layer_view( const tile_layer_view &view, int &height_3d );
         bool draw_terrain( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
                            const std::array<bool, 5> &invisible );
         bool draw_furniture( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
