@@ -12,10 +12,11 @@ ROOT = Path(__file__).resolve().parents[2]
 @unittest.skipUnless(shutil.which("cmake") and shutil.which("ninja"),
                      "CMake and Ninja are required")
 class ShaderCMakeGraphTest(unittest.TestCase):
-    def graph(self, windows, vcpkg):
+    def graph(self, windows, vcpkg, formats="spv"):
         source = (ROOT / "src/CMakeLists.txt").read_text()
-        start = source.index("        if(VCPKG_MANIFEST_MODE AND WIN32)")
-        dependency = ("        add_dependencies(cataclysm-tiles-common "
+        start = source.index("if(VCPKG_MANIFEST_MODE AND WIN32)")
+        start = source.rfind("\n", 0, start) + 1
+        dependency = ("add_dependencies(cataclysm-tiles-common "
                       "compile_shaders)")
         stop = source.index(dependency, start)
         stop = source.index("\n", stop)
@@ -26,6 +27,8 @@ class ShaderCMakeGraphTest(unittest.TestCase):
             shaders = path / "data/shaders"
             shaders.mkdir(parents=True)
             (shaders / "sample.frag").write_text("void main() {}\n")
+            (shaders / "sample.vert").write_text("void main() {}\n")
+            (shaders / "common.glsl").write_text("// shared constants\n")
             tools = path / "tools"
             tools.mkdir()
             shutil.copyfile(ROOT / "tools/build_shaders.py",
@@ -37,9 +40,11 @@ set(WIN32 {"ON" if windows else "OFF"})
 set(VCPKG_MANIFEST_MODE {"ON" if vcpkg else "OFF"})
 set(VCPKG_INSTALLED_DIR "${{CMAKE_SOURCE_DIR}}/sdk with spaces")
 set(VCPKG_TARGET_TRIPLET x64-windows)
-set(CATA_SHADER_FORMATS spv)
+set(CATA_SHADER_FORMATS "{formats}")
 set(_SHADERS_DIR "${{CMAKE_SOURCE_DIR}}/data/shaders")
-set(_SHADER_SOURCES "${{_SHADERS_DIR}}/sample.frag")
+set(_SHADER_SOURCES "${{_SHADERS_DIR}}/sample.frag"
+                    "${{_SHADERS_DIR}}/sample.vert")
+set(_SHADER_INCLUDES "${{_SHADERS_DIR}}/common.glsl")
 set(_SHADERS_STAMP "${{_SHADERS_DIR}}/build-spv.stamp")
 add_custom_target(cataclysm-tiles-common)
 {block}
@@ -58,12 +63,24 @@ add_custom_target(cataclysm-tiles-common)
             return (path / "build/build.ninja").read_text()
 
     def test_vcpkg_windows_uses_shader_tools_and_spirv_dependency(self):
-        graph = self.graph(windows=True, vcpkg=True)
+        graph = self.graph(windows=True, vcpkg=True, formats="dxil")
         self.assertIn("glslangValidator.exe", graph)
         self.assertIn("shadercross.exe", graph)
         self.assertIn("sample.frag.spv", graph)
         self.assertIn("sample.frag.dxil", graph)
+        self.assertIn("sample.vert.dxil", graph)
+        self.assertIn("common.glsl", graph)
+        self.assertNotIn("-S frag", graph)
         self.assertNotIn("--stamp", graph)
+
+    def test_vcpkg_windows_respects_requested_shader_formats(self):
+        graph = self.graph(windows=True, vcpkg=True, formats="spv")
+        self.assertIn("sample.frag.spv", graph)
+        self.assertNotIn("shadercross.exe", graph)
+        self.assertNotIn("sample.frag.dxil", graph)
+        graph = self.graph(windows=True, vcpkg=True, formats="spv,dxil,msl")
+        self.assertIn("sample.frag.dxil", graph)
+        self.assertIn("sample.vert.msl", graph)
 
     def test_non_vcpkg_uses_existing_python_shader_builder(self):
         for windows in (True, False):
@@ -71,6 +88,7 @@ add_custom_target(cataclysm-tiles-common)
                 graph = self.graph(windows=windows, vcpkg=False)
                 self.assertIn("build_shaders.py", graph)
                 self.assertIn("--stamp", graph)
+                self.assertIn("common.glsl", graph)
                 self.assertNotIn("shadercross.exe", graph)
 
 

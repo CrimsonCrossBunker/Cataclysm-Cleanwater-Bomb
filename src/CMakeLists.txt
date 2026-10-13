@@ -295,20 +295,56 @@ if (TILES)
     set(_SHADERS_STAMP ${_SHADERS_DIR}/build-${_SHADER_STAMP_TAG}.stamp)
     file(GLOB _SHADER_SOURCES "${_SHADERS_DIR}/*.frag" "${_SHADERS_DIR}/*.vert")
     file(GLOB _SHADER_INCLUDES "${_SHADERS_DIR}/*.glsl")
-    find_package(Python3 COMPONENTS Interpreter REQUIRED)
-    add_custom_command(
-            OUTPUT ${_SHADERS_STAMP}
-            COMMAND ${Python3_EXECUTABLE}
-                ${CMAKE_SOURCE_DIR}/tools/build_shaders.py
-                --shader-dir ${_SHADERS_DIR}
-                --formats ${CATA_SHADER_FORMATS}
-                --stamp ${_SHADERS_STAMP}
-            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-            DEPENDS ${_SHADER_SOURCES} ${_SHADER_INCLUDES}
+    if(VCPKG_MANIFEST_MODE AND WIN32)
+        string(REPLACE "," ";" _SHADER_FORMAT_LIST "${CATA_SHADER_FORMATS}")
+        set(VCPKG_TOOLS_DIR "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/tools")
+        foreach(SHADER ${_SHADER_SOURCES})
+            get_filename_component(_filename ${SHADER} NAME)
+            set(_SPV "${_SHADERS_DIR}/${_filename}.spv")
+            list(APPEND COMPILED_SHADERS "${_SPV}")
+            add_custom_command(
+                OUTPUT "${_SPV}"
+                MAIN_DEPENDENCY ${SHADER}
+                DEPENDS ${_SHADER_INCLUDES}
+                COMMAND
+                    "${VCPKG_TOOLS_DIR}/glslang/glslangValidator.exe"
+                    --quiet -V -o "${_SPV}" "${SHADER}"
+            )
+            foreach(_format IN LISTS _SHADER_FORMAT_LIST)
+                if(_format STREQUAL "spv")
+                    continue()
+                elseif(NOT _format STREQUAL "dxil" AND NOT _format STREQUAL "msl")
+                    message(FATAL_ERROR "Unsupported shader format: ${_format}")
+                endif()
+                set(_COMPILED "${_SHADERS_DIR}/${_filename}.${_format}")
+                string(TOUPPER "${_format}" _DEST_FORMAT)
+                list(APPEND COMPILED_SHADERS "${_COMPILED}")
+                add_custom_command(
+                    OUTPUT "${_COMPILED}"
+                    MAIN_DEPENDENCY "${_SPV}"
+                    COMMAND
+                        "${VCPKG_TOOLS_DIR}/sdl3-shadercross/shadercross.exe"
+                        "${_SPV}" -s SPIRV -d ${_DEST_FORMAT} -o "${_COMPILED}"
+                )
+            endforeach()
+        endforeach()
+        add_custom_target(compile_shaders ALL DEPENDS ${COMPILED_SHADERS})
+    else()
+        find_package(Python3 COMPONENTS Interpreter REQUIRED)
+        add_custom_command(
+                OUTPUT ${_SHADERS_STAMP}
+                COMMAND ${Python3_EXECUTABLE}
                     ${CMAKE_SOURCE_DIR}/tools/build_shaders.py
-            COMMENT "Compiling shader artifacts (${CATA_SHADER_FORMATS})"
-    )
-    add_custom_target(compile_shaders ALL DEPENDS ${_SHADERS_STAMP})
+                    --shader-dir ${_SHADERS_DIR}
+                    --formats ${CATA_SHADER_FORMATS}
+                    --stamp ${_SHADERS_STAMP}
+                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+                DEPENDS ${_SHADER_SOURCES} ${_SHADER_INCLUDES}
+                        ${CMAKE_SOURCE_DIR}/tools/build_shaders.py
+                COMMENT "Compiling shader artifacts (${CATA_SHADER_FORMATS})"
+        )
+        add_custom_target(compile_shaders ALL DEPENDS ${_SHADERS_STAMP})
+    endif()
     add_dependencies(cataclysm-tiles-common compile_shaders)
 
 endif ()
