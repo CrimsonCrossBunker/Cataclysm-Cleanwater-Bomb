@@ -43,6 +43,7 @@
 #include "monfaction.h"
 #include "mongroup.h"
 #include "monster_destination_plan.h"
+#include "monster_movement_plan.h"
 #include "monster_oracle.h"
 #include "monster_planning_reaction.h"
 #include "monster_step_selection.h"
@@ -893,18 +894,6 @@ void monster::plan()
  * Since it incorporates the current distance metric,
  * it also scales for diagonal vs orthogonal movement.
  **/
-static float get_stagger_adjust( const tripoint_bub_ms &source, const tripoint_bub_ms &destination,
-                                 const tripoint_bub_ms &next_step )
-{
-    // TODO: push this down into rl_dist
-    const float initial_dist =
-        trigdist ? trig_dist( source, destination ) : rl_dist( source, destination );
-    const float new_dist =
-        trigdist ? trig_dist( next_step, destination ) : rl_dist( next_step, destination );
-    // If we return 0, it wil cancel the action.
-    return std::max( 0.01f, initial_dist - new_dist );
-}
-
 /**
  * Returns true if the given square presents a possibility of drowning for the monster: it's deep water, it's liquid,
  * the monster can drown, and there is no boardable vehicle part present.
@@ -1394,18 +1383,14 @@ void monster::move()
     // Finished logic section.  By this point, we should have chosen a square to
     //  move to (moved = true).
     if( moved ) { // Actual effects of moving to the square we've chosen
-        const tripoint_bub_ms local_next_step = here.get_bub( next_step );
-        const bool did_something =
-            ( !pacified && attack_at( local_next_step ) ) ||
-            ( !pacified && can_open_doors &&
-              here.open_door( *this, local_next_step, !here.is_outside( pos_bub() ) ) ) ||
-            ( !pacified && bash_at( local_next_step ) ) ||
-            ( !pacified && push_to( local_next_step, 0, 0 ) ) ||
-            move_to( local_next_step, false, false, get_stagger_adjust( pos_bub(), destination,
-                     local_next_step ) );
-
-        if( !did_something ) {
-            mod_moves( -get_speed() ); // If we don't do this, we'll get infinite loops.
+        monster_movement_plan movement_plan( *this, here,
+        { next_step, destination, pacified, can_open_doors } );
+        const monster_movement_result result = movement_plan.commit( movement_plan.proposal(), here );
+        if( result == monster_movement_result::stale || result == monster_movement_result::cancelled ) {
+            return;
+        }
+        if( result == monster_movement_result::blocked ) {
+            mod_moves( -get_speed() ); // Avoid retrying an unchanged blocked action forever.
         }
         if( has_effect( effect_dragging ) && dragged_foe != nullptr ) {
 
@@ -2105,6 +2090,7 @@ bool monster::move_to( const tripoint_bub_ms &p, bool force, bool step_on_critte
     const tripoint_bub_ms pos = pos_bub( here );
 
     if( cata::lua_platform::has_native_hook( "on_monster_try_move" ) ) {
+        const safe_reference<map> context = here.get_context_reference();
         const cata::lua_platform::native_callback_arguments payload = {
             { "monster", static_cast<const Creature *>( this ) },
             {
@@ -2120,7 +2106,8 @@ bool monster::move_to( const tripoint_bub_ms &p, bool force, bool step_on_critte
             { "force", force }
         };
         if( !cata::lua_platform::dispatch_native_hook(
-                "on_monster_try_move", payload ) ) {
+                "on_monster_try_move", payload ) || context.get() != &here ||
+            !get_creature_tracker().is_present( this ) ) {
             return false;
         }
     }

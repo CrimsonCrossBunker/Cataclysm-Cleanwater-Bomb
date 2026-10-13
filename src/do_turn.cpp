@@ -423,7 +423,8 @@ void monmove()
             critter.try_biosignature();
             critter.try_reproduce();
         }
-        while( critter.get_moves() > 0 && !critter.is_dead() && !critter.has_effect( effect_ridden ) ) {
+        while( critter.get_moves() > 0 && !critter.is_dead() &&
+               get_creature_tracker().is_present( &critter ) && !critter.has_effect( effect_ridden ) ) {
             critter.made_footstep = false;
             // Controlled critters don't make their own plans
             if( !critter.has_effect( effect_controlled ) ) {
@@ -433,7 +434,13 @@ void monmove()
                 critter.set_moves( 0 );
                 break;
             }
+            if( !critter.is_dead() && !get_creature_tracker().is_present( &critter ) ) {
+                break;
+            }
             critter.move(); // Move one square, possibly hit u
+            if( !critter.is_dead() && !get_creature_tracker().is_present( &critter ) ) {
+                break;
+            }
             critter.process_triggers();
             m.creature_in_field( critter );
         }
