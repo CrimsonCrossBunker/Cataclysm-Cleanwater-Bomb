@@ -201,7 +201,7 @@ void mp_log( const std::string &msg )
         // launch, never mid-session, so it never pulls live data out from under
         // a debugging run.
         constexpr std::uintmax_t LOG_CAP_BYTES = 10ULL * 1024 *
-                1024;  // 10 MB — keeps logs attachable to Discord (10MB free) / GitHub (25MB)
+            1024;  // 10 MB — keeps logs attachable to Discord (10MB free) / GitHub (25MB)
         std::error_code ec;
         const std::filesystem::path desired_fs_path = std::filesystem::u8path( desired_path );
         const std::uintmax_t sz =
@@ -3437,10 +3437,9 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
                 if( is_open ) {
                     m.open_door( *remote, bub, true, false );
                 } else {
-                    // doors::close_door handles vehicle parts (next_part_to_close →
-                    // veh->close()) as well as regular terrain/furniture doors.
-                    // map::close_door alone skips vehicle doors entirely.
-                    doors::close_door( m, *remote, bub );
+                    // Reuse the checked actor for terrain and vehicle doors while
+                    // applying the network result before acknowledging it.
+                    close_tile_activity_actor::close_immediately( *remote, bub );
                 }
             }
         } catch( const JsonError &e ) {
@@ -3771,7 +3770,7 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
                 veh.skidding = true;
                 add_msg( m_warning, _( "%s loses control of %s." ), remote->name, veh.name );
                 g_action_msgs_pending.push_back( string_format( _( "You lose control of %s." ),
-                                                 veh.name ) );
+                        veh.name ) );
                 veh.turn( veh.last_turn > 0_degrees ? 60_degrees : -60_degrees );
             } else {
                 int braking_power = std::abs( veh.velocity ) / 2 + 10 * 100;
@@ -8261,7 +8260,7 @@ static void client_capture_avatar_msgs()
         return;
     }
     const auto new_msgs = Messages::recent_messages( static_cast<size_t>( cur -
-                          g_client_msg_watermark ) );
+        g_client_msg_watermark ) );
     g_client_msg_watermark = cur;
     const std::string client_name = get_avatar().name;
     for( const auto &[time_str, text] : new_msgs ) {
@@ -10083,7 +10082,7 @@ static void apply_monster_sync( JsonObject &jo )
             seen_now[key] = strikes;
             phantom_log += mon->type->id.str() + "@dAvatar" +
                            std::to_string( std::max( std::abs( mp.x() - av.x() ),
-                                           std::abs( mp.y() - av.y() ) ) ) +
+                               std::abs( mp.y() - av.y() ) ) ) +
                            "(s" + std::to_string( strikes ) + ") ";
             if( strikes >= PHANTOM_CULL_SYNCS ) {
                 phantom_cull.push_back( mon );
@@ -10282,7 +10281,7 @@ void mp_handle_pass_item()
     }
 
     item_location loc = game_menus::inv::titled_menu( av,
-                        _( "Pass what?" ), _( "You have no items to pass." ) );
+        _( "Pass what?" ), _( "You have no items to pass." ) );
     if( !loc ) {
         return;
     }
@@ -10499,9 +10498,9 @@ void mp_sync_note_add( const tripoint_abs_omt &pos, std::string_view text )
         }
     }
     std::string payload = R"({"type":"note_sync","op":"add","x":)" + std::to_string( pos.x() ) + ","
-                          "\"y\":" + std::to_string( pos.y() ) + ","
-                          "\"z\":" + std::to_string( pos.z() ) + ","
-                          "\"text\":\"" + escaped + "\"}";
+                           "\"y\":" + std::to_string( pos.y() ) + ","
+                           "\"z\":" + std::to_string( pos.z() ) + ","
+                           "\"text\":\"" + escaped + "\"}";
     mp_send_note_msg( payload );
     mp_log( "[cdda-mp] note_sync send: add at " + std::to_string( pos.x() ) + ","
             + std::to_string( pos.y() ) );
@@ -10516,8 +10515,8 @@ void mp_sync_note_delete( const tripoint_abs_omt &pos )
         return;
     }
     std::string payload = R"({"type":"note_sync","op":"delete","x":)" + std::to_string( pos.x() ) + ","
-                          "\"y\":" + std::to_string( pos.y() ) + ","
-                          "\"z\":" + std::to_string( pos.z() ) + "}";
+                           "\"y\":" + std::to_string( pos.y() ) + ","
+                           "\"z\":" + std::to_string( pos.z() ) + "}";
     mp_send_note_msg( payload );
     mp_log( "[cdda-mp] note_sync send: delete at " + std::to_string( pos.x() ) + ","
             + std::to_string( pos.y() ) );
@@ -10532,10 +10531,10 @@ void mp_sync_note_danger( const tripoint_abs_omt &pos, int radius, bool dangerou
         return;
     }
     std::string payload = R"({"type":"note_sync","op":"danger","x":)" + std::to_string( pos.x() ) + ","
-                          "\"y\":" + std::to_string( pos.y() ) + ","
-                          "\"z\":" + std::to_string( pos.z() ) + ","
-                          "\"radius\":" + std::to_string( radius ) + ","
-                          "\"dangerous\":" + ( dangerous ? "true" : "false" ) + "}";
+                           "\"y\":" + std::to_string( pos.y() ) + ","
+                           "\"z\":" + std::to_string( pos.z() ) + ","
+                           "\"radius\":" + std::to_string( radius ) + ","
+                           "\"dangerous\":" + ( dangerous ? "true" : "false" ) + "}";
     mp_send_note_msg( payload );
     mp_log( "[cdda-mp] note_sync send: danger at " + std::to_string( pos.x() ) + ","
             + std::to_string( pos.y() ) + " r=" + std::to_string( radius ) );
@@ -10837,7 +10836,7 @@ std::string serialize_remote_player_state()
         const size_t new_count = static_cast<size_t>( current_msg_count - g_last_forwarded_msg_count );
         g_last_forwarded_msg_count = current_msg_count;
         const std::vector<std::pair<std::string, std::string>> new_msgs =
-                    Messages::recent_messages( new_count );
+            Messages::recent_messages( new_count );
         for( const auto &[time_str, text] : new_msgs ) {
             ( void )time_str;
             // Swap/push messages are rendered on the client via semantic flags
@@ -11140,12 +11139,12 @@ std::string serialize_remote_player_state()
     + ( []() -> std::string {
         // One-shot wake_client signal — emit on this broadcast then clear.
         if( g_pending_wake_client )
-        {
-            g_pending_wake_client = false;
-            return "\"wake_client\":true,";
-        }
-        return "";
-    }() ) +
+    {
+        g_pending_wake_client = false;
+        return "\"wake_client\":true,";
+    }
+    return "";
+}() ) +
     ( []() -> std::string {
         // One-shot host→client swap/push signals — client renders the
         // observer message locally from the proxy name (no text relay).
@@ -11166,32 +11165,32 @@ std::string serialize_remote_player_state()
     ",\"moves\":" + std::to_string( g_remote_moves ) +
     ",\"speed\":" + std::to_string( remote->get_speed() ) +
     R"(,"client_move_mode":")" + remote->move_mode.str() + "\""
-    ",\"client_stamina\":" + std::to_string( remote->get_stamina() ) +
-    ",\"client_stamina_max\":" + std::to_string( remote->get_stamina_max() ) +
-    ",\"client_ctrl_veh\":" + ( remote->controlling_vehicle ? "true" : "false" ) +
-    // Authoritative grab + hauling state for the client's character.
-    // Client mirrors these onto its local avatar each tick so the
-    // local SP grab/haul code (and its move-cost gating) reads the
-    // same values the host is enforcing.
-    // MP-FIXME: npc::get_grab_type stubbed for CCB
-    ",\"client_grab_type\":0 /* static_cast<int>(remote->get_grab_type()) */" +
-    ",\"client_grab_dx\":" + std::to_string( remote->grab_point.x() ) +
-    ",\"client_grab_dy\":" + std::to_string( remote->grab_point.y() ) +
-    ",\"client_grab_dz\":" + std::to_string( remote->grab_point.z() ) +
-    ",\"client_hauling\":" + ( remote->is_hauling() ? "true" : "false" ) +
+     ",\"client_stamina\":" + std::to_string( remote->get_stamina() ) +
+     ",\"client_stamina_max\":" + std::to_string( remote->get_stamina_max() ) +
+     ",\"client_ctrl_veh\":" + ( remote->controlling_vehicle ? "true" : "false" ) +
+            // Authoritative grab + hauling state for the client's character.
+            // Client mirrors these onto its local avatar each tick so the
+            // local SP grab/haul code (and its move-cost gating) reads the
+            // same values the host is enforcing.
+            // MP-FIXME: npc::get_grab_type stubbed for CCB
+     ",\"client_grab_type\":0 /* static_cast<int>(remote->get_grab_type()) */" +
+     ",\"client_grab_dx\":" + std::to_string( remote->grab_point.x() ) +
+     ",\"client_grab_dy\":" + std::to_string( remote->grab_point.y() ) +
+     ",\"client_grab_dz\":" + std::to_string( remote->grab_point.z() ) +
+     ",\"client_hauling\":" + ( remote->is_hauling() ? "true" : "false" ) +
     [&]() -> std::string {
         if( !remote->controlling_vehicle )
-        {
-            return "";
-        }
-        map &vmap = get_map();
-        const optional_vpart_position ovp = vmap.veh_at( remote->pos_bub() );
+    {
+        return "";
+    }
+    map &vmap = get_map();
+    const optional_vpart_position ovp = vmap.veh_at( remote->pos_bub() );
         if( !ovp )
-        {
-            return "";
-        }
-        const tripoint_abs_ms vabs = ovp->vehicle().pos_abs();
-        return R"(,"client_veh_pos":{"x":)" + std::to_string( vabs.x() )
+    {
+        return "";
+    }
+    const tripoint_abs_ms vabs = ovp->vehicle().pos_abs();
+    return R"(,"client_veh_pos":{"x":)" + std::to_string( vabs.x() )
         + ",\"y\":" + std::to_string( vabs.y() )
         + ",\"z\":" + std::to_string( vabs.z() ) + "}";
     }() +

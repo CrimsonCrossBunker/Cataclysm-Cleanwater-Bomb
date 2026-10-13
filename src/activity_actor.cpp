@@ -6064,7 +6064,6 @@ void open_tile_activity_actor::start( player_activity &act, Character &who )
 
     map &here = get_map();
 
-    avatar &player_character = get_avatar();
     if( !tile_location ) {
         tile_location = choose_adjacent_highlight( here, _( "Open where?" ),
             pgettext( "no door, gate, curtain, etc.", "There is nothing that can be opened nearby." ),
@@ -6126,8 +6125,8 @@ void open_tile_activity_actor::start( player_activity &act, Character &who )
         }
     } else {
         // Not a vehicle part, just a regular door
-        bool could_open_door = here.open_door( player_character, openp,
-                                               !here.is_outside( player_character.pos_bub() ), true );
+        bool could_open_door = here.open_door( who, openp,
+                                               !here.is_outside( who.pos_bub() ), true );
         if( !could_open_door ) {
             const ter_str_id tid = here.ter( openp ).id();
 
@@ -6210,6 +6209,19 @@ std::unique_ptr<activity_actor> open_tile_activity_actor::deserialize( JsonValue
     return actor.clone();
 }
 
+bool close_tile_activity_actor::close_immediately( Character &who, const tripoint_bub_ms &target )
+{
+    close_tile_activity_actor door( target );
+    player_activity pending( door );
+    door.start( pending, who );
+    if( pending.is_null() ) {
+        return false;
+    }
+    who.mod_moves( -pending.moves_total );
+    door.finish( pending, who );
+    return true;
+}
+
 void close_tile_activity_actor::start( player_activity &act, Character &who )
 {
     act.moves_total = 90; // TODO: Vary this? Based on strength, broken legs, and so on.
@@ -6232,7 +6244,7 @@ void close_tile_activity_actor::start( player_activity &act, Character &who )
         const int inside_closable = veh->next_part_to_close( vpart );
         const int openable = veh->next_part_to_open( vpart );
         if( closed_vehicle_part >= 0 ) {
-            if( !veh->handle_potential_theft( get_avatar() ) ) {
+            if( !veh->handle_potential_theft( who ) ) {
                 act.set_to_null();
                 return;
             }

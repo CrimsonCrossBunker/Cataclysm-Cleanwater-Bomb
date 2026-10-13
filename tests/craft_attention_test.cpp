@@ -701,7 +701,7 @@ TEST_CASE( "craft_data_root_alloc_shape_follows_timed_steps",
     REQUIRE( rec.steps()[0].attention != step_attention::unattended );
     REQUIRE( rec.steps()[1].attention == step_attention::unattended );
     const std::vector<std::vector<tool_comp>> &root_groups =
-            rec.root_requirements().get_tools();
+        rec.root_requirements().get_tools();
     REQUIRE( root_groups.size() == 1 );
     REQUIRE_FALSE( root_groups[0].empty() );
     const tool_comp root_tool = root_groups[0].front();
@@ -1920,7 +1920,7 @@ TEST_CASE( "craft_stamp_skips_env_check_when_step_has_no_env_requirements",
     REQUIRE( on_map.get_passive_started_at() == calendar::turn );
     CHECK( on_map.get_env_check_at() == calendar::before_time_starts );
     CHECK_FALSE( get_item_wakeups().is_scheduled( on_map.uid().get_value(),
-                 item_wakeup_kind::env_check ) );
+            item_wakeup_kind::env_check ) );
 }
 
 TEST_CASE( "craft_stamp_arms_env_check_and_debits_entry_for_charged_alloc",
@@ -2568,7 +2568,7 @@ TEST_CASE( "requirement_gate_counting_rules",
         stack.charges = 1;
         here.add_item( origin, stack );
         u.invalidate_crafting_inventory();
-        const temp_crafting_inventory &crafting_inv = u.crafting_inventory();
+        const auto &crafting_inv = u.crafting_inventory();
 
         THEN( "it cannot be both the tool and the material at once" ) {
             CHECK_FALSE( overlap.can_make_with_inventory( &u, crafting_inv, return_true<item> ) );
@@ -2580,7 +2580,7 @@ TEST_CASE( "requirement_gate_counting_rules",
         stack.charges = 2;
         here.add_item( origin, stack );
         u.invalidate_crafting_inventory();
-        const temp_crafting_inventory &crafting_inv = u.crafting_inventory();
+        const auto &crafting_inv = u.crafting_inventory();
 
         THEN( "one craft spends one charge and swings the other" ) {
             CHECK( overlap.can_make_with_inventory( &u, crafting_inv, return_true<item>, 1 ) );
@@ -2598,7 +2598,7 @@ TEST_CASE( "requirement_gate_counting_rules",
         stack.charges = 100;
         here.add_item( origin, stack );
         u.invalidate_crafting_inventory();
-        const temp_crafting_inventory &crafting_inv = u.crafting_inventory();
+        const auto &crafting_inv = u.crafting_inventory();
 
         THEN( "two providers before the craft" ) {
             CHECK( req.can_make_with_inventory( &u, crafting_inv, return_true<item> ) );
@@ -2606,7 +2606,7 @@ TEST_CASE( "requirement_gate_counting_rules",
 
         THEN( "but consuming the tool would leave only one, so two are refused" ) {
             CHECK_FALSE( overlap_two_tool.can_make_with_inventory( &u, crafting_inv,
-                         return_true<item> ) );
+                    return_true<item> ) );
         }
 
         // Over-strict, and deliberately left so.  Consuming one charge of a hundred destroys
@@ -2614,7 +2614,7 @@ TEST_CASE( "requirement_gate_counting_rules",
         // shipped requirement asks for more than one.
         THEN( "consuming a charge is refused too, though both providers would survive" ) {
             CHECK_FALSE( overlap_two_charge.can_make_with_inventory( &u, crafting_inv,
-                         return_true<item> ) );
+                    return_true<item> ) );
         }
     }
 }

@@ -1,6 +1,7 @@
 #include <utility>
 #include <vector>
 
+#include "activity_actor_definitions.h"
 #include "avatar.h"
 #include "avatar_action.h"
 #include "cata_catch.h"
@@ -8,6 +9,8 @@
 #include "map.h"
 #include "map_helpers.h"
 #include "mapdata.h"
+#include "npc.h"
+#include "player_activity.h"
 #include "player_helpers.h"
 #include "point.h"
 #include "sounds.h"
@@ -237,4 +240,34 @@ TEST_CASE( "character_should_lose_moves_when_opening_or_closing_doors_or_windows
             }
         }
     }
+}
+
+TEST_CASE( "synchronous_door_close_uses_the_actual_actor", "[gates][network]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    map &here = get_map();
+    avatar &you = get_avatar();
+    standard_npc remote;
+    remote.setpos( here, you.pos_bub() );
+    remote.set_moves( 1000 );
+    you.set_moves( 2000 );
+    const activity_id waiting( "ACT_WAIT" );
+    remote.activity = player_activity( waiting, 500 );
+    const tripoint_bub_ms target = you.pos_bub() + point::east;
+
+    SECTION( "close completes without replacing a remote activity" ) {
+        here.ter_set( target, ter_t_door_o );
+        REQUIRE( close_tile_activity_actor::close_immediately( remote, target ) );
+        CHECK( here.ter( target ) == ter_t_door_c );
+        CHECK( remote.get_moves() == 910 );
+    }
+    SECTION( "an invalid target costs no moves" ) {
+        here.ter_set( target, ter_t_door_c );
+        CHECK_FALSE( close_tile_activity_actor::close_immediately( remote, target ) );
+        CHECK( remote.get_moves() == 1000 );
+    }
+    CHECK( you.get_moves() == 2000 );
+    CHECK( remote.activity.id() == waiting );
+    CHECK( remote.activity.moves_left == 500 );
 }
