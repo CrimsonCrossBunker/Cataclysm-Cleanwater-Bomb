@@ -1,0 +1,29 @@
+Historical CDDA changelog excerpt, 2026-09-21 to 2026-09-28
+Source: https://github.com/CleverRaven/Cataclysm-DDA/pull/88842
+Upstream commit: 325f682298f6fe9ece6b8b7bdd7840244bc81741
+Author: David Seguin
+License: CC BY-SA 3.0, as upstream content.
+
+This is an upstream reference, not a list of released CCB changes.
+Individual entries may still require adaptation or may be excluded by review.
+
+Military & firefighter respirators work with SCBA
+Colored light tint inside the sprite shader, so isometric tilesets get it too
+Vehicle wheels gib corpses, smash stuff, throw items around
+Better 'Resume Construction' behavior
+Add a second blob singularity: the Reclaimer
+Convert canning and tinning recipes to use nested system
+Show environmental protection in bodygraph
+[Xedra Evolved] More changeling seasonal glamours
+[Xedra Evolved] Add Shell of the Four Winds nether sorcery spell
+More efficient sugar and rum from sugar beets
+Forest floors are now littered with stuff you would expect to find, in large quantities: Sticks, leaves, twigs, and rocks.
+Make device really optional in _has_software condition
+Speed up the crafting menu near large piles of items
+deprecate inventory class structure
+Moved the dead marloss code to eoc
+move open/close action to activity_actor
+Fix GCC 9 tiles build error in cataimgui::draw_texture
+Android apk with sounds
+MSVC C used to build third-party libs
+Publish translations archive with experimental releases
