@@ -225,7 +225,11 @@ double hunger_eval( const_dialogue const &d, char scope,
 void hunger_ass( double val, dialogue &d, char scope,
                  std::vector<diag_value> const & /* params */, diag_kwargs const & /* kwargs */ )
 {
-    d.actor( is_beta( scope ) )->set_hunger( val );
+    Character *const person = d.actor( is_beta( scope ) )->get_character();
+    if( person == nullptr ) {
+        throw math::runtime_error( "hunger() assignment requires a character" );
+    }
+    person->set_hunger( static_cast<int>( val ) );
 }
 
 double armor_eval( const_dialogue const &d, char scope, std::vector<diag_value> const &params,
