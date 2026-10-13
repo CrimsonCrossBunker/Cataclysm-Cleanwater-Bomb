@@ -53,12 +53,12 @@
 
 using move_statistics = statistics<int>;
 
-static const furn_str_id furn_f_null( "f_null" );
-
 static const efftype_id effect_leashed( "leashed" );
 static const efftype_id effect_led_by_leash( "led_by_leash" );
 static const efftype_id effect_monster_saddled( "monster_saddled" );
 static const efftype_id effect_tied( "tied" );
+
+static const furn_str_id furn_f_null( "f_null" );
 
 static const mtype_id mon_dog_zombie_brute( "mon_dog_zombie_brute" );
 static const mtype_id mon_test_zombie( "mon_test_zombie" );
@@ -78,17 +78,18 @@ TEST_CASE( "monster_uid_copy_and_move", "[monster]" )
     monster original( mon_test_zombie );
     original.ensure_uid();
     REQUIRE( original.uid().is_valid() );
-    const auto original_uid = original.uid().get_value();
+    const int64_t original_uid = original.uid().get_value();
 
     monster copy( original );
     REQUIRE( copy.uid().is_valid() );
     CHECK( copy.uid().get_value() != original_uid );
 
-    const auto copy_uid = copy.uid().get_value();
+    const int64_t copy_uid = copy.uid().get_value();
     monster moved( std::move( copy ) );
     CHECK( moved.uid().is_valid() );
     CHECK( moved.uid().get_value() == copy_uid );
-    CHECK( !copy.uid().is_valid() );
+    // The move contract explicitly invalidates the source UID.
+    CHECK( !copy.uid().is_valid() ); // NOLINT(bugprone-use-after-move)
 }
 
 TEST_CASE( "creature_tracker_find_monster_by_uid", "[monster][creature_tracker]" )
@@ -98,7 +99,7 @@ TEST_CASE( "creature_tracker_find_monster_by_uid", "[monster][creature_tracker]"
                               tripoint_bub_ms( 0, 0, 0 ) );
     REQUIRE( tracker.add( live_monster ) );
     REQUIRE( live_monster->uid().is_valid() );
-    const auto live_uid = live_monster->uid().get_value();
+    const int64_t live_uid = live_monster->uid().get_value();
 
     CHECK( tracker.find_by_uid( live_uid ) == live_monster );
     CHECK( tracker.find_by_uid( 0 ) == nullptr );
@@ -111,7 +112,7 @@ TEST_CASE( "creature_tracker_find_monster_by_uid", "[monster][creature_tracker]"
                               tripoint_bub_ms( 1, 0, 0 ) );
     REQUIRE( tracker.add( dead_monster ) );
     REQUIRE( dead_monster->uid().is_valid() );
-    const auto dead_uid = dead_monster->uid().get_value();
+    const int64_t dead_uid = dead_monster->uid().get_value();
     dead_monster->set_hp( 0 );
     REQUIRE( dead_monster->is_dead() );
     CHECK( tracker.find_by_uid( dead_uid ) == nullptr );

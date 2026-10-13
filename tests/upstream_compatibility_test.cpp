@@ -1,9 +1,12 @@
 #include <cstddef>
 #include <map>
+#include <memory>
+#include <utility>
 
 #include "cata_catch.h"
 #include "character.h"
 #include "coordinates.h"
+#include "enums.h"
 #include "item.h"
 #include "item_location.h"
 #include "itype.h"
@@ -13,7 +16,7 @@
 #include "point.h"
 #include "type_id.h"
 #include "units.h"
-#include "veh_type.h"
+#include "value_ptr.h"
 #include "vehicle.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
