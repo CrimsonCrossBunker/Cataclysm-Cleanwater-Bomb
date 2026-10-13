@@ -4,7 +4,7 @@
   "inventory_kind": "eoc_effects",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:0d2c64867ca5a2d0c5954b8a3f12a16edce6d30c65abc104f29f081e676a5cba",
+    "source_fingerprint": "sha256:3b81337a6bd796e49ab61ab7aa759a4cab785772b038a732c0ffa2d8ff3179f0",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -16,10 +16,10 @@
     "string_parser": "src/npctalk.cpp#talk_effect_t::parse_string_effect"
   },
   "summary": {
-    "object_parser_registrations": 137,
-    "string_parser_registrations": 117,
-    "public_keys": 311,
-    "keys_with_example_candidates": 230,
+    "object_parser_registrations": 145,
+    "string_parser_registrations": 123,
+    "public_keys": 329,
+    "keys_with_example_candidates": 240,
     "fully_classified_keys": 0
   },
   "global_contract": {
@@ -64,14 +64,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 166,
+          "registration_order": 174,
           "alias_role": "alpha",
           "alias_group": [
             "abandon_camp"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9036,
+            "line": 9180,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -153,14 +153,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 130,
+          "registration_order": 138,
           "alias_role": "alpha",
           "alias_group": [
             "add_debt"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8971,
+            "line": 9115,
             "symbol": "parsers"
           }
         }
@@ -241,14 +241,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 79,
+          "registration_order": 87,
           "alias_role": "alpha",
           "alias_group": [
             "add_mission"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8920,
+            "line": 9064,
             "symbol": "parsers"
           }
         }
@@ -329,14 +329,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 98,
+          "registration_order": 106,
           "alias_role": "alpha",
           "alias_group": [
             "alter_timed_events"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8939,
+            "line": 9083,
             "symbol": "parsers"
           }
         }
@@ -422,14 +422,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 165,
+          "registration_order": 173,
           "alias_role": "alpha",
           "alias_group": [
             "assign_camp"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9035,
+            "line": 9179,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -511,14 +511,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 164,
+          "registration_order": 172,
           "alias_role": "alpha",
           "alias_group": [
             "assign_guard"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9034,
+            "line": 9178,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -608,26 +608,26 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 109,
+          "registration_order": 117,
           "alias_role": "alpha",
           "alias_group": [
             "assign_mission"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8950,
+            "line": 9094,
             "symbol": "parsers"
           }
         },
         {
-          "registration_order": 137,
+          "registration_order": 145,
           "alias_role": "alpha",
           "alias_group": [
             "assign_mission"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9007,
+            "line": 9151,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -678,7 +678,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 346,
+        "occurrences": 347,
         "examples": [
           {
             "path": "data/json/effects_on_condition/nether_eocs/portal_storm_effect_on_condition.json",
@@ -715,14 +715,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 183,
+          "registration_order": 191,
           "alias_role": "alpha",
           "alias_group": [
             "barber_beard"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9053,
+            "line": 9197,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -809,14 +809,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 184,
+          "registration_order": 192,
           "alias_role": "alpha",
           "alias_group": [
             "barber_hair"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9054,
+            "line": 9198,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -903,14 +903,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 173,
+          "registration_order": 181,
           "alias_role": "alpha",
           "alias_group": [
             "basecamp_mission"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9043,
+            "line": 9187,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -997,14 +997,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 188,
+          "registration_order": 196,
           "alias_role": "alpha",
           "alias_group": [
             "bionic_install"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9058,
+            "line": 9202,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -1091,14 +1091,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 189,
+          "registration_order": 197,
           "alias_role": "alpha",
           "alias_group": [
             "bionic_install_allies"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9059,
+            "line": 9203,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -1180,14 +1180,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 190,
+          "registration_order": 198,
           "alias_role": "alpha",
           "alias_group": [
             "bionic_remove"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9060,
+            "line": 9204,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -1274,14 +1274,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 191,
+          "registration_order": 199,
           "alias_role": "alpha",
           "alias_group": [
             "bionic_remove_allies"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9061,
+            "line": 9205,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -1363,14 +1363,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 171,
+          "registration_order": 179,
           "alias_role": "alpha",
           "alias_group": [
             "buy_chicken"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9041,
+            "line": 9185,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -1447,14 +1447,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 170,
+          "registration_order": 178,
           "alias_role": "alpha",
           "alias_group": [
             "buy_cow"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9040,
+            "line": 9184,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -1531,14 +1531,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 185,
+          "registration_order": 193,
           "alias_role": "alpha",
           "alias_group": [
             "buy_haircut"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9055,
+            "line": 9199,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -1625,14 +1625,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 172,
+          "registration_order": 180,
           "alias_role": "alpha",
           "alias_group": [
             "buy_horse"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9042,
+            "line": 9186,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -1709,14 +1709,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 186,
+          "registration_order": 194,
           "alias_role": "alpha",
           "alias_group": [
             "buy_shave"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9056,
+            "line": 9200,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -1803,14 +1803,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 96,
+          "registration_order": 104,
           "alias_role": "alpha",
           "alias_group": [
             "clear_dimension"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8937,
+            "line": 9081,
             "symbol": "parsers"
           }
         }
@@ -1896,14 +1896,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 140,
+          "registration_order": 148,
           "alias_role": "alpha",
           "alias_group": [
             "clear_mission"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9010,
+            "line": 9154,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -1990,14 +1990,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 90,
+          "registration_order": 98,
           "alias_role": "alpha",
           "alias_group": [
             "clear_npc_rule"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8931,
+            "line": 9075,
             "symbol": "parsers"
           }
         }
@@ -2083,14 +2083,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 222,
+          "registration_order": 230,
           "alias_role": "alpha",
           "alias_group": [
             "clear_overrides"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9092,
+            "line": 9236,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -2167,14 +2167,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 74,
+          "registration_order": 82,
           "alias_role": "alpha",
           "alias_group": [
             "closest_city"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8915,
+            "line": 9059,
             "symbol": "parsers"
           }
         }
@@ -2255,14 +2255,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 69,
+          "registration_order": 77,
           "alias_role": "alpha",
           "alias_group": [
             "companion_mission"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8910,
+            "line": 9054,
             "symbol": "parsers"
           }
         }
@@ -2348,14 +2348,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 100,
+          "registration_order": 108,
           "alias_role": "alpha",
           "alias_group": [
             "copy_location"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8941,
+            "line": 9085,
             "symbol": "parsers"
           }
         }
@@ -2436,14 +2436,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 219,
+          "registration_order": 227,
           "alias_role": "alpha",
           "alias_group": [
             "copy_npc_rules"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9089,
+            "line": 9233,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -2520,14 +2520,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 70,
+          "registration_order": 78,
           "alias_role": "alpha",
           "alias_group": [
             "copy_var"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8911,
+            "line": 9055,
             "symbol": "parsers"
           }
         }
@@ -2614,14 +2614,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 120,
+          "registration_order": 128,
           "alias_role": "alpha",
           "alias_group": [
             "custom_light_level"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8961,
+            "line": 9105,
             "symbol": "parsers"
           }
         }
@@ -2671,7 +2671,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 11,
+        "occurrences": 12,
         "examples": [
           {
             "path": "data/json/effects_on_condition/nether_eocs/labyrinth_effect_on_condition.json",
@@ -2708,14 +2708,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 198,
+          "registration_order": 206,
           "alias_role": "alpha",
           "alias_group": [
             "deny_equipment"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9068,
+            "line": 9212,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -2792,14 +2792,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 196,
+          "registration_order": 204,
           "alias_role": "alpha",
           "alias_group": [
             "deny_follow"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9066,
+            "line": 9210,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -2886,14 +2886,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 197,
+          "registration_order": 205,
           "alias_role": "alpha",
           "alias_group": [
             "deny_lead"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9067,
+            "line": 9211,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -2975,14 +2975,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 200,
+          "registration_order": 208,
           "alias_role": "alpha",
           "alias_group": [
             "deny_personal_info"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9070,
+            "line": 9214,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -3064,14 +3064,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 199,
+          "registration_order": 207,
           "alias_role": "alpha",
           "alias_group": [
             "deny_train"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9069,
+            "line": 9213,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -3160,7 +3160,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8858,
+            "line": 8994,
             "symbol": "parsers"
           }
         }
@@ -3213,7 +3213,7 @@
         "examples": [
           {
             "path": "data/json/effects_on_condition/anomalous_mp3_eocs.json",
-            "pointer": "/2/effect/0/dimension_name"
+            "pointer": "/1/effect/0/dimension_name"
           }
         ],
         "confidence": "lexical_only",
@@ -3246,14 +3246,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 145,
+          "registration_order": 153,
           "alias_role": "alpha",
           "alias_group": [
             "dismount"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9015,
+            "line": 9159,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -3335,14 +3335,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 225,
+          "registration_order": 233,
           "alias_role": "alpha",
           "alias_group": [
             "distribute_food_auto"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9095,
+            "line": 9239,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -3429,14 +3429,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 162,
+          "registration_order": 170,
           "alias_role": "alpha",
           "alias_group": [
             "do_butcher"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9032,
+            "line": 9176,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -3518,14 +3518,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 146,
+          "registration_order": 154,
           "alias_role": "alpha",
           "alias_group": [
             "do_chop_plank"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9016,
+            "line": 9160,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -3607,14 +3607,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 152,
+          "registration_order": 160,
           "alias_role": "alpha",
           "alias_group": [
             "do_chop_trees"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9022,
+            "line": 9166,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -3696,14 +3696,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 154,
+          "registration_order": 162,
           "alias_role": "alpha",
           "alias_group": [
             "do_construction"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9024,
+            "line": 9168,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -3785,14 +3785,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 161,
+          "registration_order": 169,
           "alias_role": "alpha",
           "alias_group": [
             "do_craft"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9031,
+            "line": 9175,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -3874,14 +3874,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 224,
+          "registration_order": 232,
           "alias_role": "alpha",
           "alias_group": [
             "do_disassembly"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9094,
+            "line": 9238,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -3963,14 +3963,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 158,
+          "registration_order": 166,
           "alias_role": "alpha",
           "alias_group": [
             "do_eread"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9028,
+            "line": 9172,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -4052,14 +4052,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 163,
+          "registration_order": 171,
           "alias_role": "alpha",
           "alias_group": [
             "do_farming"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9033,
+            "line": 9177,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -4141,14 +4141,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 153,
+          "registration_order": 161,
           "alias_role": "alpha",
           "alias_group": [
             "do_fishing"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9023,
+            "line": 9167,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -4230,14 +4230,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 155,
+          "registration_order": 163,
           "alias_role": "alpha",
           "alias_group": [
             "do_mining"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9025,
+            "line": 9169,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -4319,14 +4319,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 156,
+          "registration_order": 164,
           "alias_role": "alpha",
           "alias_group": [
             "do_mopping"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9026,
+            "line": 9170,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -4408,14 +4408,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 157,
+          "registration_order": 165,
           "alias_role": "alpha",
           "alias_group": [
             "do_read"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9027,
+            "line": 9171,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -4497,14 +4497,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 159,
+          "registration_order": 167,
           "alias_role": "alpha",
           "alias_group": [
             "do_read_repeatedly"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9029,
+            "line": 9173,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -4586,14 +4586,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 160,
+          "registration_order": 168,
           "alias_role": "alpha",
           "alias_group": [
             "do_study"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9030,
+            "line": 9174,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -4675,14 +4675,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 147,
+          "registration_order": 155,
           "alias_role": "alpha",
           "alias_group": [
             "do_vehicle_deconstruct"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9017,
+            "line": 9161,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -4764,14 +4764,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 148,
+          "registration_order": 156,
           "alias_role": "alpha",
           "alias_group": [
             "do_vehicle_repair"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9018,
+            "line": 9162,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -4853,14 +4853,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 193,
+          "registration_order": 201,
           "alias_role": "alpha",
           "alias_group": [
             "drop_items_in_place"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9063,
+            "line": 9207,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -4942,14 +4942,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 211,
+          "registration_order": 219,
           "alias_role": "alpha",
           "alias_group": [
             "drop_stolen_item"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9081,
+            "line": 9225,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -5031,14 +5031,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 210,
+          "registration_order": 218,
           "alias_role": "alpha",
           "alias_group": [
             "drop_weapon"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9080,
+            "line": 9224,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -5125,14 +5125,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 176,
+          "registration_order": 184,
           "alias_role": "alpha",
           "alias_group": [
             "end_conversation"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9046,
+            "line": 9190,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -5219,14 +5219,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 144,
+          "registration_order": 152,
           "alias_role": "alpha",
           "alias_group": [
             "find_mount"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9014,
+            "line": 9158,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -5308,14 +5308,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 110,
+          "registration_order": 118,
           "alias_role": "alpha",
           "alias_group": [
             "finish_mission"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8951,
+            "line": 9095,
             "symbol": "parsers"
           }
         }
@@ -5401,14 +5401,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 202,
+          "registration_order": 210,
           "alias_role": "alpha",
           "alias_group": [
             "flee"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9072,
+            "line": 9216,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -5495,14 +5495,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 194,
+          "registration_order": 202,
           "alias_role": "alpha",
           "alias_group": [
             "follow"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9064,
+            "line": 9208,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -5589,14 +5589,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 195,
+          "registration_order": 203,
           "alias_role": "alpha",
           "alias_group": [
             "follow_only"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9065,
+            "line": 9209,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -5683,14 +5683,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 118,
+          "registration_order": 126,
           "alias_role": "alpha",
           "alias_group": [
             "foreach"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8959,
+            "line": 9103,
             "symbol": "parsers"
           }
         }
@@ -5776,14 +5776,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 108,
+          "registration_order": 116,
           "alias_role": "alpha",
           "alias_group": [
             "give_achievement"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8949,
+            "line": 9093,
             "symbol": "parsers"
           }
         }
@@ -5869,14 +5869,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 181,
+          "registration_order": 189,
           "alias_role": "alpha",
           "alias_group": [
             "give_aid"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9051,
+            "line": 9195,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -5963,14 +5963,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 182,
+          "registration_order": 190,
           "alias_role": "alpha",
           "alias_group": [
             "give_all_aid"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9052,
+            "line": 9196,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -6055,26 +6055,26 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 123,
+          "registration_order": 131,
           "alias_role": "alpha",
           "alias_group": [
             "give_equipment"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8964,
+            "line": 9108,
             "symbol": "parsers"
           }
         },
         {
-          "registration_order": 178,
+          "registration_order": 186,
           "alias_role": "alpha",
           "alias_group": [
             "give_equipment"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9048,
+            "line": 9192,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -6162,14 +6162,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 206,
+          "registration_order": 214,
           "alias_role": "alpha",
           "alias_group": [
             "goto_location"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9076,
+            "line": 9220,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -6251,14 +6251,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 201,
+          "registration_order": 209,
           "alias_role": "alpha",
           "alias_group": [
             "hostile"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9071,
+            "line": 9215,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -6308,7 +6308,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 1078,
+        "occurrences": 1079,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -6345,14 +6345,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 116,
+          "registration_order": 124,
           "alias_role": "alpha",
           "alias_group": [
             "if"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8957,
+            "line": 9101,
             "symbol": "parsers"
           }
         }
@@ -6401,7 +6401,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 1949,
+        "occurrences": 1985,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -6438,14 +6438,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 177,
+          "registration_order": 185,
           "alias_role": "alpha",
           "alias_group": [
             "insult_combat"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9047,
+            "line": 9191,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -6532,14 +6532,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 215,
+          "registration_order": 223,
           "alias_role": "alpha",
           "alias_group": [
             "lead_to_safety"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9085,
+            "line": 9229,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -6626,14 +6626,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 203,
+          "registration_order": 211,
           "alias_role": "alpha",
           "alias_group": [
             "leave"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9073,
+            "line": 9217,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -6720,14 +6720,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 179,
+          "registration_order": 187,
           "alias_role": "alpha",
           "alias_group": [
             "lesser_give_aid"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9049,
+            "line": 9193,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -6814,14 +6814,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 180,
+          "registration_order": 188,
           "alias_role": "alpha",
           "alias_group": [
             "lesser_give_all_aid"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9050,
+            "line": 9194,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -6901,14 +6901,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 233,
+          "registration_order": 241,
           "alias_role": "alpha",
           "alias_group": [
             "lightning"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9114,
+            "line": 9258,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -6958,11 +6958,11 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 15,
+        "occurrences": 16,
         "examples": [
           {
-            "path": "data/json/effects_on_condition/weather_eocs.json",
-            "pointer": "/0/condition/and/0/or/1/is_weather"
+            "path": "data/json/effects_on_condition/nether_eocs/scarlet_storm_effect_on_condition.json",
+            "pointer": "/6/effect/2"
           }
         ],
         "confidence": "lexical_only",
@@ -6995,14 +6995,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 103,
+          "registration_order": 111,
           "alias_role": "alpha",
           "alias_group": [
             "location_variable_adjust"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8944,
+            "line": 9088,
             "symbol": "parsers"
           }
         }
@@ -7051,7 +7051,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 20,
+        "occurrences": 44,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -7088,14 +7088,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 95,
+          "registration_order": 103,
           "alias_role": "alpha",
           "alias_group": [
             "map_spawn_item"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8936,
+            "line": 9080,
             "symbol": "parsers"
           }
         }
@@ -7181,14 +7181,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 97,
+          "registration_order": 105,
           "alias_role": "alpha",
           "alias_group": [
             "mapgen_update"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8938,
+            "line": 9082,
             "symbol": "parsers"
           }
         }
@@ -7274,14 +7274,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 119,
+          "registration_order": 127,
           "alias_role": "alpha",
           "alias_group": [
             "math"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8960,
+            "line": 9104,
             "symbol": "parsers"
           }
         }
@@ -7330,7 +7330,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 22126,
+        "occurrences": 22245,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -7367,7 +7367,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 136,
+          "registration_order": 144,
           "alias_role": "alpha",
           "alias_group": [
             "message",
@@ -7375,12 +7375,12 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8979,
+            "line": 9123,
             "symbol": "parsers"
           }
         },
         {
-          "registration_order": 136,
+          "registration_order": 144,
           "alias_role": "beta",
           "alias_group": [
             "message",
@@ -7388,7 +7388,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8979,
+            "line": 9123,
             "symbol": "parsers"
           }
         }
@@ -7437,7 +7437,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 2502,
+        "occurrences": 2501,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -7474,14 +7474,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 121,
+          "registration_order": 129,
           "alias_role": "alpha",
           "alias_group": [
             "mirror_coordinates"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8962,
+            "line": 9106,
             "symbol": "parsers"
           }
         }
@@ -7567,14 +7567,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 139,
+          "registration_order": 147,
           "alias_role": "alpha",
           "alias_group": [
             "mission_failure"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9009,
+            "line": 9153,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -7661,14 +7661,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 141,
+          "registration_order": 149,
           "alias_role": "alpha",
           "alias_group": [
             "mission_reward"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9011,
+            "line": 9155,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -7755,14 +7755,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 138,
+          "registration_order": 146,
           "alias_role": "alpha",
           "alias_group": [
             "mission_success"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9008,
+            "line": 9152,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -7849,14 +7849,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 187,
+          "registration_order": 195,
           "alias_role": "alpha",
           "alias_group": [
             "morale_chat_activity"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9057,
+            "line": 9201,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -7936,14 +7936,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 240,
+          "registration_order": 254,
           "alias_role": "alpha",
           "alias_group": [
             "next_weather"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9150,
+            "line": 9304,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -8030,14 +8030,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 226,
+          "registration_order": 234,
           "alias_role": "alpha",
           "alias_group": [
             "nothing"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9096,
+            "line": 9240,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -8125,7 +8125,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 58,
+          "registration_order": 66,
           "alias_role": "beta",
           "alias_group": [
             "u_activate",
@@ -8133,7 +8133,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8899,
+            "line": 9043,
             "symbol": "parsers"
           }
         }
@@ -8223,7 +8223,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8850,
+            "line": 8986,
             "symbol": "parsers"
           }
         }
@@ -8289,6 +8289,91 @@
       }
     },
     {
+      "key": "npc_add_addiction",
+      "syntaxes": [
+        "object_member"
+      ],
+      "accepted_json_shapes": [
+        "member"
+      ],
+      "handlers": [
+        "talk_effect_fun::f_add_addiction"
+      ],
+      "aliases": [
+        "npc_add_addiction",
+        "u_add_addiction"
+      ],
+      "parser_registrations": [
+        {
+          "registration_order": 41,
+          "alias_role": "beta",
+          "alias_group": [
+            "u_add_addiction",
+            "npc_add_addiction"
+          ],
+          "source": {
+            "path": "src/npctalk.cpp",
+            "line": 9018,
+            "symbol": "parsers"
+          }
+        }
+      ],
+      "parameters": {
+        "status": "unclassified",
+        "items": [],
+        "note": "Handler-specific members require source-backed review."
+      },
+      "value_types": {
+        "status": "partial",
+        "items": [
+          "member"
+        ],
+        "note": "Only parser dispatch shapes are proven here."
+      },
+      "defaults": {
+        "status": "unclassified",
+        "items": []
+      },
+      "nesting": {
+        "status": "unclassified",
+        "allows": []
+      },
+      "talker_semantics": {
+        "status": "legacy_alpha_beta_alias",
+        "talkers": [],
+        "note": "u_/npc_ identifies alpha/beta legacy routing; it does not prove that either talker is a concrete avatar or NPC."
+      },
+      "variables": {
+        "status": "unclassified",
+        "scopes": [],
+        "known_global_scopes": [
+          "u_val",
+          "npc_val",
+          "global_val",
+          "var_val",
+          "context_val"
+        ]
+      },
+      "context": {
+        "status": "unclassified",
+        "requirements": []
+      },
+      "contract_status": "partial",
+      "contract_kind": "effect",
+      "example_evidence": {
+        "status": "not_found",
+        "occurrences": 0,
+        "examples": [],
+        "confidence": "lexical_only",
+        "note": "A lexical match is evidence of use, not proof that the full surrounding object is a minimal valid example."
+      },
+      "documentation": {
+        "status": "not_found",
+        "evidence": [],
+        "confidence": "lexical_only"
+      }
+    },
+    {
       "key": "npc_add_bionic",
       "syntaxes": [
         "object_member"
@@ -8305,7 +8390,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 41,
+          "registration_order": 49,
           "alias_role": "beta",
           "alias_group": [
             "u_add_bionic",
@@ -8313,7 +8398,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8882,
+            "line": 9026,
             "symbol": "parsers"
           }
         }
@@ -8403,7 +8488,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8841,
+            "line": 8977,
             "symbol": "parsers"
           }
         }
@@ -8474,6 +8559,91 @@
       }
     },
     {
+      "key": "npc_add_memorial",
+      "syntaxes": [
+        "object_member"
+      ],
+      "accepted_json_shapes": [
+        "member"
+      ],
+      "handlers": [
+        "talk_effect_fun::f_add_memorial"
+      ],
+      "aliases": [
+        "npc_add_memorial",
+        "u_add_memorial"
+      ],
+      "parser_registrations": [
+        {
+          "registration_order": 48,
+          "alias_role": "beta",
+          "alias_group": [
+            "u_add_memorial",
+            "npc_add_memorial"
+          ],
+          "source": {
+            "path": "src/npctalk.cpp",
+            "line": 9025,
+            "symbol": "parsers"
+          }
+        }
+      ],
+      "parameters": {
+        "status": "unclassified",
+        "items": [],
+        "note": "Handler-specific members require source-backed review."
+      },
+      "value_types": {
+        "status": "partial",
+        "items": [
+          "member"
+        ],
+        "note": "Only parser dispatch shapes are proven here."
+      },
+      "defaults": {
+        "status": "unclassified",
+        "items": []
+      },
+      "nesting": {
+        "status": "unclassified",
+        "allows": []
+      },
+      "talker_semantics": {
+        "status": "legacy_alpha_beta_alias",
+        "talkers": [],
+        "note": "u_/npc_ identifies alpha/beta legacy routing; it does not prove that either talker is a concrete avatar or NPC."
+      },
+      "variables": {
+        "status": "unclassified",
+        "scopes": [],
+        "known_global_scopes": [
+          "u_val",
+          "npc_val",
+          "global_val",
+          "var_val",
+          "context_val"
+        ]
+      },
+      "context": {
+        "status": "unclassified",
+        "requirements": []
+      },
+      "contract_status": "partial",
+      "contract_kind": "effect",
+      "example_evidence": {
+        "status": "not_found",
+        "occurrences": 0,
+        "examples": [],
+        "confidence": "lexical_only",
+        "note": "A lexical match is evidence of use, not proof that the full surrounding object is a minimal valid example."
+      },
+      "documentation": {
+        "status": "not_found",
+        "evidence": [],
+        "confidence": "lexical_only"
+      }
+    },
+    {
       "key": "npc_add_morale",
       "syntaxes": [
         "object_member"
@@ -8498,7 +8668,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8880,
+            "line": 9016,
             "symbol": "parsers"
           }
         }
@@ -8593,7 +8763,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8845,
+            "line": 8981,
             "symbol": "parsers"
           }
         }
@@ -8688,7 +8858,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8843,
+            "line": 8979,
             "symbol": "parsers"
           }
         }
@@ -8784,7 +8954,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8870,
+            "line": 9006,
             "symbol": "parsers"
           }
         }
@@ -8867,7 +9037,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 85,
+          "registration_order": 93,
           "alias_role": "beta",
           "alias_group": [
             "u_add_wound",
@@ -8875,7 +9045,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8926,
+            "line": 9070,
             "symbol": "parsers"
           }
         }
@@ -8965,7 +9135,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8871,
+            "line": 9007,
             "symbol": "parsers"
           }
         }
@@ -9052,7 +9222,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 43,
+          "registration_order": 51,
           "alias_role": "beta",
           "alias_group": [
             "u_attack",
@@ -9060,7 +9230,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8884,
+            "line": 9028,
             "symbol": "parsers"
           }
         }
@@ -9144,7 +9314,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 64,
+          "registration_order": 72,
           "alias_role": "beta",
           "alias_group": [
             "u_bulk_donate",
@@ -9152,32 +9322,32 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8905,
+            "line": 9049,
             "symbol": "parsers"
           }
         },
         {
-          "registration_order": 230,
+          "registration_order": 238,
           "alias_role": "alpha",
           "alias_group": [
             "npc_bulk_donate"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9107,
+            "line": 9251,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
         },
         {
-          "registration_order": 232,
+          "registration_order": 240,
           "alias_role": "alpha",
           "alias_group": [
             "npc_bulk_donate"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9108,
+            "line": 9252,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -9263,7 +9433,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 62,
+          "registration_order": 70,
           "alias_role": "beta",
           "alias_group": [
             "u_bulk_trade_accept",
@@ -9271,32 +9441,32 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8903,
+            "line": 9047,
             "symbol": "parsers"
           }
         },
         {
-          "registration_order": 228,
+          "registration_order": 236,
           "alias_role": "alpha",
           "alias_group": [
             "npc_bulk_trade_accept"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9106,
+            "line": 9250,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
         },
         {
-          "registration_order": 231,
+          "registration_order": 239,
           "alias_role": "alpha",
           "alias_group": [
             "npc_bulk_trade_accept"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9108,
+            "line": 9252,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -9377,14 +9547,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 237,
+          "registration_order": 251,
           "alias_role": "alpha",
           "alias_group": [
             "npc_cancel_activity"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9134,
+            "line": 9288,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -9467,7 +9637,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 65,
+          "registration_order": 73,
           "alias_role": "beta",
           "alias_group": [
             "u_cast_spell",
@@ -9475,7 +9645,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8906,
+            "line": 9050,
             "symbol": "parsers"
           }
         }
@@ -9561,14 +9731,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 77,
+          "registration_order": 85,
           "alias_role": "alpha",
           "alias_group": [
             "npc_change_class"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8918,
+            "line": 9062,
             "symbol": "parsers"
           }
         }
@@ -9649,14 +9819,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 76,
+          "registration_order": 84,
           "alias_role": "alpha",
           "alias_group": [
             "npc_change_faction"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8917,
+            "line": 9061,
             "symbol": "parsers"
           }
         }
@@ -9751,7 +9921,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8863,
+            "line": 8999,
             "symbol": "parsers"
           }
         }
@@ -9838,7 +10008,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 59,
+          "registration_order": 67,
           "alias_role": "beta",
           "alias_group": [
             "u_consume_item",
@@ -9846,7 +10016,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8900,
+            "line": 9044,
             "symbol": "parsers"
           }
         }
@@ -9933,7 +10103,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 60,
+          "registration_order": 68,
           "alias_role": "beta",
           "alias_group": [
             "u_consume_item_sum",
@@ -9941,7 +10111,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8901,
+            "line": 9045,
             "symbol": "parsers"
           }
         }
@@ -10031,7 +10201,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8849,
+            "line": 8985,
             "symbol": "parsers"
           }
         }
@@ -10113,7 +10283,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 63,
+          "registration_order": 71,
           "alias_role": "beta",
           "alias_group": [
             "u_deal_damage",
@@ -10121,7 +10291,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8904,
+            "line": 9048,
             "symbol": "parsers"
           }
         }
@@ -10210,7 +10380,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 44,
+          "registration_order": 52,
           "alias_role": "beta",
           "alias_group": [
             "u_die",
@@ -10218,19 +10388,19 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8885,
+            "line": 9029,
             "symbol": "parsers"
           }
         },
         {
-          "registration_order": 235,
+          "registration_order": 249,
           "alias_role": "alpha",
           "alias_group": [
             "npc_die"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9124,
+            "line": 9278,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -10319,7 +10489,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 51,
+          "registration_order": 59,
           "alias_role": "beta",
           "alias_group": [
             "u_emit",
@@ -10327,7 +10497,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8892,
+            "line": 9036,
             "symbol": "parsers"
           }
         }
@@ -10422,7 +10592,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8860,
+            "line": 8996,
             "symbol": "parsers"
           }
         }
@@ -10488,6 +10658,180 @@
       }
     },
     {
+      "key": "npc_fall_asleep",
+      "syntaxes": [
+        "object_member"
+      ],
+      "accepted_json_shapes": [
+        "array",
+        "member"
+      ],
+      "handlers": [
+        "talk_effect_fun::f_fall_asleep"
+      ],
+      "aliases": [
+        "npc_fall_asleep",
+        "u_fall_asleep"
+      ],
+      "parser_registrations": [
+        {
+          "registration_order": 43,
+          "alias_role": "beta",
+          "alias_group": [
+            "u_fall_asleep",
+            "npc_fall_asleep"
+          ],
+          "source": {
+            "path": "src/npctalk.cpp",
+            "line": 9020,
+            "symbol": "parsers"
+          }
+        }
+      ],
+      "parameters": {
+        "status": "unclassified",
+        "items": [],
+        "note": "Handler-specific members require source-backed review."
+      },
+      "value_types": {
+        "status": "partial",
+        "items": [
+          "array",
+          "member"
+        ],
+        "note": "Only parser dispatch shapes are proven here."
+      },
+      "defaults": {
+        "status": "unclassified",
+        "items": []
+      },
+      "nesting": {
+        "status": "unclassified",
+        "allows": []
+      },
+      "talker_semantics": {
+        "status": "legacy_alpha_beta_alias",
+        "talkers": [],
+        "note": "u_/npc_ identifies alpha/beta legacy routing; it does not prove that either talker is a concrete avatar or NPC."
+      },
+      "variables": {
+        "status": "unclassified",
+        "scopes": [],
+        "known_global_scopes": [
+          "u_val",
+          "npc_val",
+          "global_val",
+          "var_val",
+          "context_val"
+        ]
+      },
+      "context": {
+        "status": "unclassified",
+        "requirements": []
+      },
+      "contract_status": "partial",
+      "contract_kind": "effect",
+      "example_evidence": {
+        "status": "not_found",
+        "occurrences": 0,
+        "examples": [],
+        "confidence": "lexical_only",
+        "note": "A lexical match is evidence of use, not proof that the full surrounding object is a minimal valid example."
+      },
+      "documentation": {
+        "status": "not_found",
+        "evidence": [],
+        "confidence": "lexical_only"
+      }
+    },
+    {
+      "key": "npc_fill_stomach",
+      "syntaxes": [
+        "object_member"
+      ],
+      "accepted_json_shapes": [
+        "array",
+        "member"
+      ],
+      "handlers": [
+        "talk_effect_fun::f_fill_stomach"
+      ],
+      "aliases": [
+        "npc_fill_stomach",
+        "u_fill_stomach"
+      ],
+      "parser_registrations": [
+        {
+          "registration_order": 46,
+          "alias_role": "beta",
+          "alias_group": [
+            "u_fill_stomach",
+            "npc_fill_stomach"
+          ],
+          "source": {
+            "path": "src/npctalk.cpp",
+            "line": 9023,
+            "symbol": "parsers"
+          }
+        }
+      ],
+      "parameters": {
+        "status": "unclassified",
+        "items": [],
+        "note": "Handler-specific members require source-backed review."
+      },
+      "value_types": {
+        "status": "partial",
+        "items": [
+          "array",
+          "member"
+        ],
+        "note": "Only parser dispatch shapes are proven here."
+      },
+      "defaults": {
+        "status": "unclassified",
+        "items": []
+      },
+      "nesting": {
+        "status": "unclassified",
+        "allows": []
+      },
+      "talker_semantics": {
+        "status": "legacy_alpha_beta_alias",
+        "talkers": [],
+        "note": "u_/npc_ identifies alpha/beta legacy routing; it does not prove that either talker is a concrete avatar or NPC."
+      },
+      "variables": {
+        "status": "unclassified",
+        "scopes": [],
+        "known_global_scopes": [
+          "u_val",
+          "npc_val",
+          "global_val",
+          "var_val",
+          "context_val"
+        ]
+      },
+      "context": {
+        "status": "unclassified",
+        "requirements": []
+      },
+      "contract_status": "partial",
+      "contract_kind": "effect",
+      "example_evidence": {
+        "status": "not_found",
+        "occurrences": 0,
+        "examples": [],
+        "confidence": "lexical_only",
+        "note": "A lexical match is evidence of use, not proof that the full surrounding object is a minimal valid example."
+      },
+      "documentation": {
+        "status": "not_found",
+        "evidence": [],
+        "confidence": "lexical_only"
+      }
+    },
+    {
       "key": "npc_first_topic",
       "syntaxes": [
         "object_member"
@@ -10503,14 +10847,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 106,
+          "registration_order": 114,
           "alias_role": "alpha",
           "alias_group": [
             "npc_first_topic"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8947,
+            "line": 9091,
             "symbol": "parsers"
           }
         }
@@ -10605,7 +10949,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8856,
+            "line": 8992,
             "symbol": "parsers"
           }
         }
@@ -10695,7 +11039,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8868,
+            "line": 9004,
             "symbol": "parsers"
           }
         }
@@ -10774,14 +11118,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 241,
+          "registration_order": 255,
           "alias_role": "alpha",
           "alias_group": [
             "npc_gets_item"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9155,
+            "line": 9309,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -10866,27 +11210,27 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 242,
+          "registration_order": 256,
           "alias_role": "alpha",
           "alias_group": [
             "npc_gets_item_to_use"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9155,
+            "line": 9309,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
         },
         {
-          "registration_order": 243,
+          "registration_order": 257,
           "alias_role": "alpha",
           "alias_group": [
             "npc_gets_item_to_use"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9156,
+            "line": 9310,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -10958,6 +11302,180 @@
       }
     },
     {
+      "key": "npc_heal_all",
+      "syntaxes": [
+        "object_member"
+      ],
+      "accepted_json_shapes": [
+        "array",
+        "member"
+      ],
+      "handlers": [
+        "talk_effect_fun::f_heal_all"
+      ],
+      "aliases": [
+        "npc_heal_all",
+        "u_heal_all"
+      ],
+      "parser_registrations": [
+        {
+          "registration_order": 44,
+          "alias_role": "beta",
+          "alias_group": [
+            "u_heal_all",
+            "npc_heal_all"
+          ],
+          "source": {
+            "path": "src/npctalk.cpp",
+            "line": 9021,
+            "symbol": "parsers"
+          }
+        }
+      ],
+      "parameters": {
+        "status": "unclassified",
+        "items": [],
+        "note": "Handler-specific members require source-backed review."
+      },
+      "value_types": {
+        "status": "partial",
+        "items": [
+          "array",
+          "member"
+        ],
+        "note": "Only parser dispatch shapes are proven here."
+      },
+      "defaults": {
+        "status": "unclassified",
+        "items": []
+      },
+      "nesting": {
+        "status": "unclassified",
+        "allows": []
+      },
+      "talker_semantics": {
+        "status": "legacy_alpha_beta_alias",
+        "talkers": [],
+        "note": "u_/npc_ identifies alpha/beta legacy routing; it does not prove that either talker is a concrete avatar or NPC."
+      },
+      "variables": {
+        "status": "unclassified",
+        "scopes": [],
+        "known_global_scopes": [
+          "u_val",
+          "npc_val",
+          "global_val",
+          "var_val",
+          "context_val"
+        ]
+      },
+      "context": {
+        "status": "unclassified",
+        "requirements": []
+      },
+      "contract_status": "partial",
+      "contract_kind": "effect",
+      "example_evidence": {
+        "status": "not_found",
+        "occurrences": 0,
+        "examples": [],
+        "confidence": "lexical_only",
+        "note": "A lexical match is evidence of use, not proof that the full surrounding object is a minimal valid example."
+      },
+      "documentation": {
+        "status": "not_found",
+        "evidence": [],
+        "confidence": "lexical_only"
+      }
+    },
+    {
+      "key": "npc_hurt_all",
+      "syntaxes": [
+        "object_member"
+      ],
+      "accepted_json_shapes": [
+        "array",
+        "member"
+      ],
+      "handlers": [
+        "talk_effect_fun::f_hurt_all"
+      ],
+      "aliases": [
+        "npc_hurt_all",
+        "u_hurt_all"
+      ],
+      "parser_registrations": [
+        {
+          "registration_order": 45,
+          "alias_role": "beta",
+          "alias_group": [
+            "u_hurt_all",
+            "npc_hurt_all"
+          ],
+          "source": {
+            "path": "src/npctalk.cpp",
+            "line": 9022,
+            "symbol": "parsers"
+          }
+        }
+      ],
+      "parameters": {
+        "status": "unclassified",
+        "items": [],
+        "note": "Handler-specific members require source-backed review."
+      },
+      "value_types": {
+        "status": "partial",
+        "items": [
+          "array",
+          "member"
+        ],
+        "note": "Only parser dispatch shapes are proven here."
+      },
+      "defaults": {
+        "status": "unclassified",
+        "items": []
+      },
+      "nesting": {
+        "status": "unclassified",
+        "allows": []
+      },
+      "talker_semantics": {
+        "status": "legacy_alpha_beta_alias",
+        "talkers": [],
+        "note": "u_/npc_ identifies alpha/beta legacy routing; it does not prove that either talker is a concrete avatar or NPC."
+      },
+      "variables": {
+        "status": "unclassified",
+        "scopes": [],
+        "known_global_scopes": [
+          "u_val",
+          "npc_val",
+          "global_val",
+          "var_val",
+          "context_val"
+        ]
+      },
+      "context": {
+        "status": "unclassified",
+        "requirements": []
+      },
+      "contract_status": "partial",
+      "contract_kind": "effect",
+      "example_evidence": {
+        "status": "not_found",
+        "occurrences": 0,
+        "examples": [],
+        "confidence": "lexical_only",
+        "note": "A lexical match is evidence of use, not proof that the full surrounding object is a minimal valid example."
+      },
+      "documentation": {
+        "status": "not_found",
+        "evidence": [],
+        "confidence": "lexical_only"
+      }
+    },
+    {
       "key": "npc_knockback",
       "syntaxes": [
         "object_member"
@@ -10974,7 +11492,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 122,
+          "registration_order": 130,
           "alias_role": "beta",
           "alias_group": [
             "u_knockback",
@@ -10982,7 +11500,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8963,
+            "line": 9107,
             "symbol": "parsers"
           }
         }
@@ -11072,7 +11590,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8855,
+            "line": 8991,
             "symbol": "parsers"
           }
         }
@@ -11162,7 +11680,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8867,
+            "line": 9003,
             "symbol": "parsers"
           }
         }
@@ -11252,7 +11770,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8866,
+            "line": 9002,
             "symbol": "parsers"
           }
         }
@@ -11342,7 +11860,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8857,
+            "line": 8993,
             "symbol": "parsers"
           }
         }
@@ -11413,6 +11931,91 @@
       }
     },
     {
+      "key": "npc_lose_addiction",
+      "syntaxes": [
+        "object_member"
+      ],
+      "accepted_json_shapes": [
+        "member"
+      ],
+      "handlers": [
+        "talk_effect_fun::f_lose_addiction"
+      ],
+      "aliases": [
+        "npc_lose_addiction",
+        "u_lose_addiction"
+      ],
+      "parser_registrations": [
+        {
+          "registration_order": 42,
+          "alias_role": "beta",
+          "alias_group": [
+            "u_lose_addiction",
+            "npc_lose_addiction"
+          ],
+          "source": {
+            "path": "src/npctalk.cpp",
+            "line": 9019,
+            "symbol": "parsers"
+          }
+        }
+      ],
+      "parameters": {
+        "status": "unclassified",
+        "items": [],
+        "note": "Handler-specific members require source-backed review."
+      },
+      "value_types": {
+        "status": "partial",
+        "items": [
+          "member"
+        ],
+        "note": "Only parser dispatch shapes are proven here."
+      },
+      "defaults": {
+        "status": "unclassified",
+        "items": []
+      },
+      "nesting": {
+        "status": "unclassified",
+        "allows": []
+      },
+      "talker_semantics": {
+        "status": "legacy_alpha_beta_alias",
+        "talkers": [],
+        "note": "u_/npc_ identifies alpha/beta legacy routing; it does not prove that either talker is a concrete avatar or NPC."
+      },
+      "variables": {
+        "status": "unclassified",
+        "scopes": [],
+        "known_global_scopes": [
+          "u_val",
+          "npc_val",
+          "global_val",
+          "var_val",
+          "context_val"
+        ]
+      },
+      "context": {
+        "status": "unclassified",
+        "requirements": []
+      },
+      "contract_status": "partial",
+      "contract_kind": "effect",
+      "example_evidence": {
+        "status": "not_found",
+        "occurrences": 0,
+        "examples": [],
+        "confidence": "lexical_only",
+        "note": "A lexical match is evidence of use, not proof that the full surrounding object is a minimal valid example."
+      },
+      "documentation": {
+        "status": "not_found",
+        "evidence": [],
+        "confidence": "lexical_only"
+      }
+    },
+    {
       "key": "npc_lose_bionic",
       "syntaxes": [
         "object_member"
@@ -11429,7 +12032,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 42,
+          "registration_order": 50,
           "alias_role": "beta",
           "alias_group": [
             "u_lose_bionic",
@@ -11437,7 +12040,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8883,
+            "line": 9027,
             "symbol": "parsers"
           }
         }
@@ -11527,7 +12130,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8847,
+            "line": 8983,
             "symbol": "parsers"
           }
         }
@@ -11617,7 +12220,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8842,
+            "line": 8978,
             "symbol": "parsers"
           }
         }
@@ -11712,7 +12315,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8881,
+            "line": 9017,
             "symbol": "parsers"
           }
         }
@@ -11802,7 +12405,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8848,
+            "line": 8984,
             "symbol": "parsers"
           }
         }
@@ -11887,7 +12490,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8846,
+            "line": 8982,
             "symbol": "parsers"
           }
         }
@@ -11982,7 +12585,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8844,
+            "line": 8980,
             "symbol": "parsers"
           }
         }
@@ -12066,14 +12669,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 250,
+          "registration_order": 264,
           "alias_role": "alpha",
           "alias_group": [
             "npc_make_radio_representative"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9187,
+            "line": 9341,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -12164,7 +12767,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8872,
+            "line": 9008,
             "symbol": "parsers"
           }
         }
@@ -12251,7 +12854,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 66,
+          "registration_order": 74,
           "alias_role": "beta",
           "alias_group": [
             "u_map_run_eocs",
@@ -12259,7 +12862,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8907,
+            "line": 9051,
             "symbol": "parsers"
           }
         }
@@ -12341,7 +12944,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 67,
+          "registration_order": 75,
           "alias_role": "beta",
           "alias_group": [
             "u_map_run_item_eocs",
@@ -12349,7 +12952,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8908,
+            "line": 9052,
             "symbol": "parsers"
           }
         }
@@ -12415,6 +13018,120 @@
       }
     },
     {
+      "key": "npc_marlossify",
+      "syntaxes": [
+        "effect_string",
+        "object_member"
+      ],
+      "accepted_json_shapes": [
+        "effect_string",
+        "object"
+      ],
+      "handlers": [
+        "talk_effect_fun::f_marlossify_location"
+      ],
+      "aliases": [
+        "npc_marlossify",
+        "u_marlossify"
+      ],
+      "parser_registrations": [
+        {
+          "registration_order": 47,
+          "alias_role": "beta",
+          "alias_group": [
+            "u_marlossify",
+            "npc_marlossify"
+          ],
+          "source": {
+            "path": "src/npctalk.cpp",
+            "line": 9024,
+            "symbol": "parsers"
+          }
+        },
+        {
+          "registration_order": 246,
+          "alias_role": "alpha",
+          "alias_group": [
+            "npc_marlossify"
+          ],
+          "source": {
+            "path": "src/npctalk.cpp",
+            "line": 9268,
+            "symbol": "talk_effect_t::parse_string_effect"
+          },
+          "registration_kind": "explicit_branch"
+        },
+        {
+          "registration_order": 247,
+          "alias_role": "alpha",
+          "alias_group": [
+            "npc_marlossify"
+          ],
+          "source": {
+            "path": "src/npctalk.cpp",
+            "line": 9269,
+            "symbol": "talk_effect_t::parse_string_effect"
+          },
+          "registration_kind": "explicit_branch"
+        }
+      ],
+      "parameters": {
+        "status": "unclassified",
+        "items": [],
+        "note": "Handler-specific members require source-backed review."
+      },
+      "value_types": {
+        "status": "partial",
+        "items": [
+          "effect_string",
+          "object"
+        ],
+        "note": "Only parser dispatch shapes are proven here."
+      },
+      "defaults": {
+        "status": "unclassified",
+        "items": []
+      },
+      "nesting": {
+        "status": "unclassified",
+        "allows": []
+      },
+      "talker_semantics": {
+        "status": "legacy_alpha_beta_alias",
+        "talkers": [],
+        "note": "u_/npc_ identifies alpha/beta legacy routing; it does not prove that either talker is a concrete avatar or NPC."
+      },
+      "variables": {
+        "status": "unclassified",
+        "scopes": [],
+        "known_global_scopes": [
+          "u_val",
+          "npc_val",
+          "global_val",
+          "var_val",
+          "context_val"
+        ]
+      },
+      "context": {
+        "status": "unclassified",
+        "requirements": []
+      },
+      "contract_status": "partial",
+      "contract_kind": "effect",
+      "example_evidence": {
+        "status": "not_found",
+        "occurrences": 0,
+        "examples": [],
+        "confidence": "lexical_only",
+        "note": "A lexical match is evidence of use, not proof that the full surrounding object is a minimal valid example."
+      },
+      "documentation": {
+        "status": "not_found",
+        "evidence": [],
+        "confidence": "lexical_only"
+      }
+    },
+    {
       "key": "npc_message",
       "syntaxes": [
         "object_member"
@@ -12439,7 +13156,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8869,
+            "line": 9005,
             "symbol": "parsers"
           }
         }
@@ -12535,7 +13252,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8851,
+            "line": 8987,
             "symbol": "parsers"
           }
         }
@@ -12626,7 +13343,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8852,
+            "line": 8988,
             "symbol": "parsers"
           }
         }
@@ -12721,7 +13438,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8853,
+            "line": 8989,
             "symbol": "parsers"
           }
         }
@@ -12803,7 +13520,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 84,
+          "registration_order": 92,
           "alias_role": "beta",
           "alias_group": [
             "u_pick_bodypart",
@@ -12811,7 +13528,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8925,
+            "line": 9069,
             "symbol": "parsers"
           }
         }
@@ -12893,7 +13610,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 68,
+          "registration_order": 76,
           "alias_role": "beta",
           "alias_group": [
             "u_pickup_items",
@@ -12901,7 +13618,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8909,
+            "line": 9053,
             "symbol": "parsers"
           }
         }
@@ -12980,14 +13697,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 239,
+          "registration_order": 253,
           "alias_role": "alpha",
           "alias_group": [
             "npc_prevent_death"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9145,
+            "line": 9299,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -13078,7 +13795,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8862,
+            "line": 8998,
             "symbol": "parsers"
           }
         }
@@ -13168,7 +13885,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8861,
+            "line": 8997,
             "symbol": "parsers"
           }
         }
@@ -13247,14 +13964,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 245,
+          "registration_order": 259,
           "alias_role": "alpha",
           "alias_group": [
             "npc_ranged_attack"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9166,
+            "line": 9320,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -13332,7 +14049,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 87,
+          "registration_order": 95,
           "alias_role": "beta",
           "alias_group": [
             "u_recalculate_enchantment_cache",
@@ -13340,7 +14057,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8928,
+            "line": 9072,
             "symbol": "parsers"
           }
         }
@@ -13422,7 +14139,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 61,
+          "registration_order": 69,
           "alias_role": "beta",
           "alias_group": [
             "u_remove_item_with",
@@ -13430,7 +14147,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8902,
+            "line": 9046,
             "symbol": "parsers"
           }
         }
@@ -13517,7 +14234,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 86,
+          "registration_order": 94,
           "alias_role": "beta",
           "alias_group": [
             "u_remove_wound",
@@ -13525,7 +14242,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8927,
+            "line": 9071,
             "symbol": "parsers"
           }
         }
@@ -13615,7 +14332,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8878,
+            "line": 9014,
             "symbol": "parsers"
           }
         }
@@ -13694,14 +14411,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 253,
+          "registration_order": 267,
           "alias_role": "alpha",
           "alias_group": [
             "npc_rules_menu"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9199,
+            "line": 9353,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -13792,7 +14509,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8876,
+            "line": 9012,
             "symbol": "parsers"
           }
         }
@@ -13882,7 +14599,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8877,
+            "line": 9013,
             "symbol": "parsers"
           }
         }
@@ -13977,7 +14694,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8874,
+            "line": 9010,
             "symbol": "parsers"
           }
         }
@@ -14072,7 +14789,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8873,
+            "line": 9009,
             "symbol": "parsers"
           }
         }
@@ -14162,7 +14879,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8875,
+            "line": 9011,
             "symbol": "parsers"
           }
         }
@@ -14247,7 +14964,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8879,
+            "line": 9015,
             "symbol": "parsers"
           }
         }
@@ -14329,7 +15046,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 56,
+          "registration_order": 64,
           "alias_role": "beta",
           "alias_group": [
             "u_set_fault",
@@ -14337,7 +15054,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8897,
+            "line": 9041,
             "symbol": "parsers"
           }
         }
@@ -14424,7 +15141,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 50,
+          "registration_order": 58,
           "alias_role": "beta",
           "alias_group": [
             "u_set_field",
@@ -14432,7 +15149,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8891,
+            "line": 9035,
             "symbol": "parsers"
           }
         }
@@ -14519,7 +15236,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 54,
+          "registration_order": 62,
           "alias_role": "beta",
           "alias_group": [
             "u_set_flag",
@@ -14527,7 +15244,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8895,
+            "line": 9039,
             "symbol": "parsers"
           }
         }
@@ -14622,7 +15339,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8864,
+            "line": 9000,
             "symbol": "parsers"
           }
         }
@@ -14712,7 +15429,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8865,
+            "line": 9001,
             "symbol": "parsers"
           }
         }
@@ -14794,7 +15511,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 57,
+          "registration_order": 65,
           "alias_role": "beta",
           "alias_group": [
             "u_set_random_fault_of_type",
@@ -14802,7 +15519,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8898,
+            "line": 9042,
             "symbol": "parsers"
           }
         }
@@ -14884,7 +15601,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 131,
+          "registration_order": 139,
           "alias_role": "beta",
           "alias_group": [
             "u_set_talker",
@@ -14892,7 +15609,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8972,
+            "line": 9116,
             "symbol": "parsers"
           }
         }
@@ -14982,7 +15699,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8854,
+            "line": 8990,
             "symbol": "parsers"
           }
         }
@@ -15064,7 +15781,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 45,
+          "registration_order": 53,
           "alias_role": "beta",
           "alias_group": [
             "u_spawn_monster",
@@ -15072,7 +15789,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8886,
+            "line": 9030,
             "symbol": "parsers"
           }
         }
@@ -15159,7 +15876,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 46,
+          "registration_order": 54,
           "alias_role": "beta",
           "alias_group": [
             "u_spawn_npc",
@@ -15167,7 +15884,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8887,
+            "line": 9031,
             "symbol": "parsers"
           }
         }
@@ -15249,7 +15966,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 52,
+          "registration_order": 60,
           "alias_role": "beta",
           "alias_group": [
             "u_teleport",
@@ -15257,7 +15974,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8893,
+            "line": 9037,
             "symbol": "parsers"
           }
         }
@@ -15343,14 +16060,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 221,
+          "registration_order": 229,
           "alias_role": "alpha",
           "alias_group": [
             "npc_thankful"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9091,
+            "line": 9235,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -15447,7 +16164,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8859,
+            "line": 8995,
             "symbol": "parsers"
           }
         }
@@ -15535,7 +16252,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 55,
+          "registration_order": 63,
           "alias_role": "beta",
           "alias_group": [
             "u_unset_flag",
@@ -15543,7 +16260,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8896,
+            "line": 9040,
             "symbol": "parsers"
           }
         }
@@ -15614,6 +16331,101 @@
       }
     },
     {
+      "key": "npc_vomit",
+      "syntaxes": [
+        "effect_string"
+      ],
+      "accepted_json_shapes": [
+        "effect_string"
+      ],
+      "handlers": [],
+      "aliases": [
+        "npc_vomit"
+      ],
+      "parser_registrations": [
+        {
+          "registration_order": 243,
+          "alias_role": "alpha",
+          "alias_group": [
+            "npc_vomit"
+          ],
+          "source": {
+            "path": "src/npctalk.cpp",
+            "line": 9263,
+            "symbol": "talk_effect_t::parse_string_effect"
+          },
+          "registration_kind": "explicit_branch"
+        },
+        {
+          "registration_order": 244,
+          "alias_role": "alpha",
+          "alias_group": [
+            "npc_vomit"
+          ],
+          "source": {
+            "path": "src/npctalk.cpp",
+            "line": 9264,
+            "symbol": "talk_effect_t::parse_string_effect"
+          },
+          "registration_kind": "explicit_branch"
+        }
+      ],
+      "parameters": {
+        "status": "unclassified",
+        "items": [],
+        "note": "Handler-specific members require source-backed review."
+      },
+      "value_types": {
+        "status": "partial",
+        "items": [
+          "effect_string"
+        ],
+        "note": "Only parser dispatch shapes are proven here."
+      },
+      "defaults": {
+        "status": "unclassified",
+        "items": []
+      },
+      "nesting": {
+        "status": "unclassified",
+        "allows": []
+      },
+      "talker_semantics": {
+        "status": "legacy_alpha_beta_alias",
+        "talkers": [],
+        "note": "u_/npc_ identifies alpha/beta legacy routing; it does not prove that either talker is a concrete avatar or NPC."
+      },
+      "variables": {
+        "status": "unclassified",
+        "scopes": [],
+        "known_global_scopes": [
+          "u_val",
+          "npc_val",
+          "global_val",
+          "var_val",
+          "context_val"
+        ]
+      },
+      "context": {
+        "status": "unclassified",
+        "requirements": []
+      },
+      "contract_status": "partial",
+      "contract_kind": "effect",
+      "example_evidence": {
+        "status": "not_found",
+        "occurrences": 0,
+        "examples": [],
+        "confidence": "lexical_only",
+        "note": "A lexical match is evidence of use, not proof that the full surrounding object is a minimal valid example."
+      },
+      "documentation": {
+        "status": "not_found",
+        "evidence": [],
+        "confidence": "lexical_only"
+      }
+    },
+    {
       "key": "npc_wants_to_talk",
       "syntaxes": [
         "effect_string"
@@ -15627,14 +16439,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 252,
+          "registration_order": 266,
           "alias_role": "alpha",
           "alias_group": [
             "npc_wants_to_talk"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9195,
+            "line": 9349,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -15712,14 +16524,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 112,
+          "registration_order": 120,
           "alias_role": "alpha",
           "alias_group": [
             "offer_mission"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8953,
+            "line": 9097,
             "symbol": "parsers"
           }
         }
@@ -15808,26 +16620,26 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 127,
+          "registration_order": 135,
           "alias_role": "alpha",
           "alias_group": [
             "open_dialogue"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8968,
+            "line": 9112,
             "symbol": "parsers"
           }
         },
         {
-          "registration_order": 246,
+          "registration_order": 260,
           "alias_role": "alpha",
           "alias_group": [
             "open_dialogue"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9171,
+            "line": 9325,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -15878,7 +16690,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 81,
+        "occurrences": 83,
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_eocs.json",
@@ -15915,14 +16727,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 223,
+          "registration_order": 231,
           "alias_role": "alpha",
           "alias_group": [
             "pick_style"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9093,
+            "line": 9237,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -16004,14 +16816,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 101,
+          "registration_order": 109,
           "alias_role": "alpha",
           "alias_group": [
             "place_override"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8942,
+            "line": 9086,
             "symbol": "parsers"
           }
         }
@@ -16097,14 +16909,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 209,
+          "registration_order": 217,
           "alias_role": "alpha",
           "alias_group": [
             "player_leaving"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9079,
+            "line": 9223,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -16186,14 +16998,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 213,
+          "registration_order": 221,
           "alias_role": "alpha",
           "alias_group": [
             "player_weapon_away"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9083,
+            "line": 9227,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -16280,14 +17092,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 214,
+          "registration_order": 222,
           "alias_role": "alpha",
           "alias_group": [
             "player_weapon_drop"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9084,
+            "line": 9228,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -16374,14 +17186,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 82,
+          "registration_order": 90,
           "alias_role": "alpha",
           "alias_group": [
             "quote_npc_trade_item"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8923,
+            "line": 9067,
             "symbol": "parsers"
           }
         }
@@ -16462,14 +17274,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 150,
+          "registration_order": 158,
           "alias_role": "alpha",
           "alias_group": [
             "quote_vehicle_full_repair"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9020,
+            "line": 9164,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -16551,14 +17363,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 111,
+          "registration_order": 119,
           "alias_role": "alpha",
           "alias_group": [
             "remove_active_mission"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8952,
+            "line": 9096,
             "symbol": "parsers"
           }
         }
@@ -16607,7 +17419,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 38,
+        "occurrences": 39,
         "examples": [
           {
             "path": "data/json/effects_on_condition/nether_eocs/portal_storm_effect_on_condition.json",
@@ -16644,14 +17456,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 212,
+          "registration_order": 220,
           "alias_role": "alpha",
           "alias_group": [
             "remove_stolen_status"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9082,
+            "line": 9226,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -16733,14 +17545,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 192,
+          "registration_order": 200,
           "alias_role": "alpha",
           "alias_group": [
             "repair_bionic_limbs"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9062,
+            "line": 9206,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -16827,14 +17639,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 168,
+          "registration_order": 176,
           "alias_role": "alpha",
           "alias_group": [
             "return_to_camp_duties"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9038,
+            "line": 9182,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -16916,14 +17728,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 72,
+          "registration_order": 80,
           "alias_role": "alpha",
           "alias_group": [
             "reveal_map"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8913,
+            "line": 9057,
             "symbol": "parsers"
           }
         }
@@ -17009,14 +17821,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 73,
+          "registration_order": 81,
           "alias_role": "alpha",
           "alias_group": [
             "reveal_route"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8914,
+            "line": 9058,
             "symbol": "parsers"
           }
         }
@@ -17102,14 +17914,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 175,
+          "registration_order": 183,
           "alias_role": "alpha",
           "alias_group": [
             "reveal_stats"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9045,
+            "line": 9189,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -17196,14 +18008,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 205,
+          "registration_order": 213,
           "alias_role": "alpha",
           "alias_group": [
             "revert_activity"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9075,
+            "line": 9219,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -17285,14 +18097,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 99,
+          "registration_order": 107,
           "alias_role": "alpha",
           "alias_group": [
             "revert_location"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8940,
+            "line": 9084,
             "symbol": "parsers"
           }
         }
@@ -17378,14 +18190,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 114,
+          "registration_order": 122,
           "alias_role": "alpha",
           "alias_group": [
             "run_eoc_selector"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8955,
+            "line": 9099,
             "symbol": "parsers"
           }
         }
@@ -17472,14 +18284,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 113,
+          "registration_order": 121,
           "alias_role": "alpha",
           "alias_group": [
             "run_eocs"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8954,
+            "line": 9098,
             "symbol": "parsers"
           }
         }
@@ -17529,7 +18341,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 5502,
+        "occurrences": 5524,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -17566,14 +18378,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 71,
+          "registration_order": 79,
           "alias_role": "alpha",
           "alias_group": [
             "sample_range"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8912,
+            "line": 9056,
             "symbol": "parsers"
           }
         }
@@ -17654,14 +18466,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 149,
+          "registration_order": 157,
           "alias_role": "alpha",
           "alias_group": [
             "select_vehicle_part_service"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9019,
+            "line": 9163,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -17743,14 +18555,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 135,
+          "registration_order": 143,
           "alias_role": "alpha",
           "alias_group": [
             "set_browsed"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8976,
+            "line": 9120,
             "symbol": "parsers"
           }
         }
@@ -17831,14 +18643,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 125,
+          "registration_order": 133,
           "alias_role": "alpha",
           "alias_group": [
             "set_condition"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8966,
+            "line": 9110,
             "symbol": "parsers"
           }
         }
@@ -17924,14 +18736,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 49,
+          "registration_order": 57,
           "alias_role": "alpha",
           "alias_group": [
             "set_furniture"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8890,
+            "line": 9034,
             "symbol": "parsers"
           }
         }
@@ -18013,14 +18825,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 126,
+          "registration_order": 134,
           "alias_role": "alpha",
           "alias_group": [
             "set_item_category_spawn_rates"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8967,
+            "line": 9111,
             "symbol": "parsers"
           }
         }
@@ -18102,14 +18914,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 92,
+          "registration_order": 100,
           "alias_role": "alpha",
           "alias_group": [
             "set_npc_aim_rule"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8933,
+            "line": 9077,
             "symbol": "parsers"
           }
         }
@@ -18190,14 +19002,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 94,
+          "registration_order": 102,
           "alias_role": "alpha",
           "alias_group": [
             "set_npc_cbm_recharge_rule"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8935,
+            "line": 9079,
             "symbol": "parsers"
           }
         }
@@ -18273,14 +19085,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 93,
+          "registration_order": 101,
           "alias_role": "alpha",
           "alias_group": [
             "set_npc_cbm_reserve_rule"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8934,
+            "line": 9078,
             "symbol": "parsers"
           }
         }
@@ -18356,14 +19168,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 91,
+          "registration_order": 99,
           "alias_role": "alpha",
           "alias_group": [
             "set_npc_engagement_rule"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8932,
+            "line": 9076,
             "symbol": "parsers"
           }
         }
@@ -18444,14 +19256,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 220,
+          "registration_order": 228,
           "alias_role": "alpha",
           "alias_group": [
             "set_npc_pickup"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9090,
+            "line": 9234,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -18533,14 +19345,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 89,
+          "registration_order": 97,
           "alias_role": "alpha",
           "alias_group": [
             "set_npc_rule"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8930,
+            "line": 9074,
             "symbol": "parsers"
           }
         }
@@ -18627,14 +19439,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 124,
+          "registration_order": 132,
           "alias_role": "alpha",
           "alias_group": [
             "set_string_var"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8965,
+            "line": 9109,
             "symbol": "parsers"
           }
         }
@@ -18721,14 +19533,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 48,
+          "registration_order": 56,
           "alias_role": "alpha",
           "alias_group": [
             "set_terrain"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8889,
+            "line": 9033,
             "symbol": "parsers"
           }
         }
@@ -18776,9 +19588,14 @@
       "contract_status": "partial",
       "contract_kind": "effect",
       "example_evidence": {
-        "status": "not_found",
-        "occurrences": 0,
-        "examples": [],
+        "status": "lexical_candidate",
+        "occurrences": 1,
+        "examples": [
+          {
+            "path": "data/json/effects_on_condition/comestible_eocs/marloss.json",
+            "pointer": "/17/effect/5/set_terrain"
+          }
+        ],
         "confidence": "lexical_only",
         "note": "A lexical match is evidence of use, not proof that the full surrounding object is a minimal valid example."
       },
@@ -18809,14 +19626,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 47,
+          "registration_order": 55,
           "alias_role": "alpha",
           "alias_group": [
             "set_trap"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8888,
+            "line": 9032,
             "symbol": "parsers"
           }
         }
@@ -18902,14 +19719,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 134,
+          "registration_order": 142,
           "alias_role": "alpha",
           "alias_group": [
             "signal_hordes"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8975,
+            "line": 9119,
             "symbol": "parsers"
           }
         }
@@ -18995,14 +19812,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 143,
+          "registration_order": 151,
           "alias_role": "alpha",
           "alias_group": [
             "sort_loot"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9013,
+            "line": 9157,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -19084,14 +19901,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 107,
+          "registration_order": 115,
           "alias_role": "alpha",
           "alias_group": [
             "sound_effect"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8948,
+            "line": 9092,
             "symbol": "parsers"
           }
         }
@@ -19140,7 +19957,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 17,
+        "occurrences": 19,
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_eocs.json",
@@ -19177,14 +19994,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 169,
+          "registration_order": 177,
           "alias_role": "alpha",
           "alias_group": [
             "start_camp"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9039,
+            "line": 9183,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -19271,14 +20088,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 208,
+          "registration_order": 216,
           "alias_role": "alpha",
           "alias_group": [
             "start_mugging"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9078,
+            "line": 9222,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -19365,14 +20182,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 142,
+          "registration_order": 150,
           "alias_role": "alpha",
           "alias_group": [
             "start_trade"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9012,
+            "line": 9156,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -19459,14 +20276,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 216,
+          "registration_order": 224,
           "alias_role": "alpha",
           "alias_group": [
             "start_training"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9086,
+            "line": 9230,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -19553,14 +20370,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 217,
+          "registration_order": 225,
           "alias_role": "alpha",
           "alias_group": [
             "start_training_npc"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9087,
+            "line": 9231,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -19647,14 +20464,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 218,
+          "registration_order": 226,
           "alias_role": "alpha",
           "alias_group": [
             "start_training_seminar"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9088,
+            "line": 9232,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -19741,14 +20558,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 151,
+          "registration_order": 159,
           "alias_role": "alpha",
           "alias_group": [
             "start_vehicle_full_repair"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9021,
+            "line": 9165,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -19830,14 +20647,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 204,
+          "registration_order": 212,
           "alias_role": "alpha",
           "alias_group": [
             "stop_following"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9074,
+            "line": 9218,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -19924,14 +20741,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 167,
+          "registration_order": 175,
           "alias_role": "alpha",
           "alias_group": [
             "stop_guard"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9037,
+            "line": 9181,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -20018,14 +20835,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 207,
+          "registration_order": 215,
           "alias_role": "alpha",
           "alias_group": [
             "stranger_neutral"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9077,
+            "line": 9221,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -20112,14 +20929,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 117,
+          "registration_order": 125,
           "alias_role": "alpha",
           "alias_group": [
             "switch"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8958,
+            "line": 9102,
             "symbol": "parsers"
           }
         }
@@ -20207,26 +21024,26 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 128,
+          "registration_order": 136,
           "alias_role": "alpha",
           "alias_group": [
             "take_control"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8969,
+            "line": 9113,
             "symbol": "parsers"
           }
         },
         {
-          "registration_order": 247,
+          "registration_order": 261,
           "alias_role": "alpha",
           "alias_group": [
             "take_control"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9175,
+            "line": 9329,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -20312,14 +21129,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 248,
+          "registration_order": 262,
           "alias_role": "alpha",
           "alias_group": [
             "take_control_menu"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9179,
+            "line": 9333,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -20406,14 +21223,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 88,
+          "registration_order": 96,
           "alias_role": "alpha",
           "alias_group": [
             "toggle_npc_rule"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8929,
+            "line": 9073,
             "symbol": "parsers"
           }
         }
@@ -20494,14 +21311,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 133,
+          "registration_order": 141,
           "alias_role": "alpha",
           "alias_group": [
             "transform_item"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8974,
+            "line": 9118,
             "symbol": "parsers"
           }
         }
@@ -20550,11 +21367,11 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 23,
+        "occurrences": 27,
         "examples": [
           {
             "path": "data/json/effects_on_condition/anomalous_mp3_eocs.json",
-            "pointer": "/3/effect/0/else/transform_item"
+            "pointer": "/2/effect/1/else/transform_item"
           }
         ],
         "confidence": "lexical_only",
@@ -20587,14 +21404,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 102,
+          "registration_order": 110,
           "alias_role": "alpha",
           "alias_group": [
             "transform_line"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8943,
+            "line": 9087,
             "symbol": "parsers"
           }
         }
@@ -20680,14 +21497,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 129,
+          "registration_order": 137,
           "alias_role": "alpha",
           "alias_group": [
             "trigger_event"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8970,
+            "line": 9114,
             "symbol": "parsers"
           }
         }
@@ -20736,11 +21553,11 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 1,
+        "occurrences": 4,
         "examples": [
           {
-            "path": "data/json/effects_on_condition/nether_eocs/portal_storm_effect_on_condition.json",
-            "pointer": "/11/effect/14/trigger_event"
+            "path": "data/json/effects_on_condition/comestible_eocs/marloss.json",
+            "pointer": "/4/effect/1/trigger_event"
           }
         ],
         "confidence": "lexical_only",
@@ -20768,14 +21585,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 132,
+          "registration_order": 140,
           "alias_role": "alpha",
           "alias_group": [
             "turn_cost"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8973,
+            "line": 9117,
             "symbol": "parsers"
           }
         }
@@ -20862,7 +21679,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 58,
+          "registration_order": 66,
           "alias_role": "alpha",
           "alias_group": [
             "u_activate",
@@ -20870,7 +21687,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8899,
+            "line": 9043,
             "symbol": "parsers"
           }
         }
@@ -20965,7 +21782,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8850,
+            "line": 8986,
             "symbol": "parsers"
           }
         }
@@ -21036,6 +21853,96 @@
       }
     },
     {
+      "key": "u_add_addiction",
+      "syntaxes": [
+        "object_member"
+      ],
+      "accepted_json_shapes": [
+        "member"
+      ],
+      "handlers": [
+        "talk_effect_fun::f_add_addiction"
+      ],
+      "aliases": [
+        "npc_add_addiction",
+        "u_add_addiction"
+      ],
+      "parser_registrations": [
+        {
+          "registration_order": 41,
+          "alias_role": "alpha",
+          "alias_group": [
+            "u_add_addiction",
+            "npc_add_addiction"
+          ],
+          "source": {
+            "path": "src/npctalk.cpp",
+            "line": 9018,
+            "symbol": "parsers"
+          }
+        }
+      ],
+      "parameters": {
+        "status": "unclassified",
+        "items": [],
+        "note": "Handler-specific members require source-backed review."
+      },
+      "value_types": {
+        "status": "partial",
+        "items": [
+          "member"
+        ],
+        "note": "Only parser dispatch shapes are proven here."
+      },
+      "defaults": {
+        "status": "unclassified",
+        "items": []
+      },
+      "nesting": {
+        "status": "unclassified",
+        "allows": []
+      },
+      "talker_semantics": {
+        "status": "legacy_alpha_beta_alias",
+        "talkers": [],
+        "note": "u_/npc_ identifies alpha/beta legacy routing; it does not prove that either talker is a concrete avatar or NPC."
+      },
+      "variables": {
+        "status": "unclassified",
+        "scopes": [],
+        "known_global_scopes": [
+          "u_val",
+          "npc_val",
+          "global_val",
+          "var_val",
+          "context_val"
+        ]
+      },
+      "context": {
+        "status": "unclassified",
+        "requirements": []
+      },
+      "contract_status": "partial",
+      "contract_kind": "effect",
+      "example_evidence": {
+        "status": "lexical_candidate",
+        "occurrences": 4,
+        "examples": [
+          {
+            "path": "data/json/effects_on_condition/comestible_eocs/marloss.json",
+            "pointer": "/5/effect/2/u_add_addiction"
+          }
+        ],
+        "confidence": "lexical_only",
+        "note": "A lexical match is evidence of use, not proof that the full surrounding object is a minimal valid example."
+      },
+      "documentation": {
+        "status": "not_found",
+        "evidence": [],
+        "confidence": "lexical_only"
+      }
+    },
+    {
       "key": "u_add_bionic",
       "syntaxes": [
         "object_member"
@@ -21052,7 +21959,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 41,
+          "registration_order": 49,
           "alias_role": "alpha",
           "alias_group": [
             "u_add_bionic",
@@ -21060,7 +21967,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8882,
+            "line": 9026,
             "symbol": "parsers"
           }
         }
@@ -21155,7 +22062,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8841,
+            "line": 8977,
             "symbol": "parsers"
           }
         }
@@ -21204,7 +22111,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 1356,
+        "occurrences": 1359,
         "examples": [
           {
             "path": "data/json/effects_on_condition/addictions_eocs.json",
@@ -21242,14 +22149,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 105,
+          "registration_order": 113,
           "alias_role": "alpha",
           "alias_group": [
             "u_add_faction_trust"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8946,
+            "line": 9090,
             "symbol": "parsers"
           }
         }
@@ -21321,7 +22228,7 @@
       }
     },
     {
-      "key": "u_add_morale",
+      "key": "u_add_memorial",
       "syntaxes": [
         "object_member"
       ],
@@ -21329,23 +22236,23 @@
         "member"
       ],
       "handlers": [
-        "talk_effect_fun::f_add_morale"
+        "talk_effect_fun::f_add_memorial"
       ],
       "aliases": [
-        "npc_add_morale",
-        "u_add_morale"
+        "npc_add_memorial",
+        "u_add_memorial"
       ],
       "parser_registrations": [
         {
-          "registration_order": 39,
+          "registration_order": 48,
           "alias_role": "alpha",
           "alias_group": [
-            "u_add_morale",
-            "npc_add_morale"
+            "u_add_memorial",
+            "npc_add_memorial"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8880,
+            "line": 9025,
             "symbol": "parsers"
           }
         }
@@ -21394,7 +22301,97 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 250,
+        "occurrences": 1,
+        "examples": [
+          {
+            "path": "data/json/effects_on_condition/comestible_eocs/marloss.json",
+            "pointer": "/15/effect/1/u_add_memorial"
+          }
+        ],
+        "confidence": "lexical_only",
+        "note": "A lexical match is evidence of use, not proof that the full surrounding object is a minimal valid example."
+      },
+      "documentation": {
+        "status": "not_found",
+        "evidence": [],
+        "confidence": "lexical_only"
+      }
+    },
+    {
+      "key": "u_add_morale",
+      "syntaxes": [
+        "object_member"
+      ],
+      "accepted_json_shapes": [
+        "member"
+      ],
+      "handlers": [
+        "talk_effect_fun::f_add_morale"
+      ],
+      "aliases": [
+        "npc_add_morale",
+        "u_add_morale"
+      ],
+      "parser_registrations": [
+        {
+          "registration_order": 39,
+          "alias_role": "alpha",
+          "alias_group": [
+            "u_add_morale",
+            "npc_add_morale"
+          ],
+          "source": {
+            "path": "src/npctalk.cpp",
+            "line": 9016,
+            "symbol": "parsers"
+          }
+        }
+      ],
+      "parameters": {
+        "status": "unclassified",
+        "items": [],
+        "note": "Handler-specific members require source-backed review."
+      },
+      "value_types": {
+        "status": "partial",
+        "items": [
+          "member"
+        ],
+        "note": "Only parser dispatch shapes are proven here."
+      },
+      "defaults": {
+        "status": "unclassified",
+        "items": []
+      },
+      "nesting": {
+        "status": "unclassified",
+        "allows": []
+      },
+      "talker_semantics": {
+        "status": "legacy_alpha_beta_alias",
+        "talkers": [],
+        "note": "u_/npc_ identifies alpha/beta legacy routing; it does not prove that either talker is a concrete avatar or NPC."
+      },
+      "variables": {
+        "status": "unclassified",
+        "scopes": [],
+        "known_global_scopes": [
+          "u_val",
+          "npc_val",
+          "global_val",
+          "var_val",
+          "context_val"
+        ]
+      },
+      "context": {
+        "status": "unclassified",
+        "requirements": []
+      },
+      "contract_status": "partial",
+      "contract_kind": "effect",
+      "example_evidence": {
+        "status": "lexical_candidate",
+        "occurrences": 254,
         "examples": [
           {
             "path": "data/json/effects_on_condition/addictions_eocs.json",
@@ -21440,7 +22437,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8845,
+            "line": 8981,
             "symbol": "parsers"
           }
         }
@@ -21489,7 +22486,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 723,
+        "occurrences": 727,
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_eocs.json",
@@ -21535,7 +22532,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8843,
+            "line": 8979,
             "symbol": "parsers"
           }
         }
@@ -21584,7 +22581,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 883,
+        "occurrences": 886,
         "examples": [
           {
             "path": "data/json/effects_on_condition/example_eocs.json",
@@ -21631,7 +22628,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8870,
+            "line": 9006,
             "symbol": "parsers"
           }
         }
@@ -21719,7 +22716,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 85,
+          "registration_order": 93,
           "alias_role": "alpha",
           "alias_group": [
             "u_add_wound",
@@ -21727,7 +22724,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8926,
+            "line": 9070,
             "symbol": "parsers"
           }
         }
@@ -21817,7 +22814,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8871,
+            "line": 9007,
             "symbol": "parsers"
           }
         }
@@ -21904,7 +22901,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 43,
+          "registration_order": 51,
           "alias_role": "alpha",
           "alias_group": [
             "u_attack",
@@ -21912,7 +22909,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8884,
+            "line": 9028,
             "symbol": "parsers"
           }
         }
@@ -22001,7 +22998,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 64,
+          "registration_order": 72,
           "alias_role": "alpha",
           "alias_group": [
             "u_bulk_donate",
@@ -22009,19 +23006,19 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8905,
+            "line": 9049,
             "symbol": "parsers"
           }
         },
         {
-          "registration_order": 229,
+          "registration_order": 237,
           "alias_role": "alpha",
           "alias_group": [
             "u_bulk_donate"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9107,
+            "line": 9251,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -22112,7 +23109,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 62,
+          "registration_order": 70,
           "alias_role": "alpha",
           "alias_group": [
             "u_bulk_trade_accept",
@@ -22120,19 +23117,19 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8903,
+            "line": 9047,
             "symbol": "parsers"
           }
         },
         {
-          "registration_order": 227,
+          "registration_order": 235,
           "alias_role": "alpha",
           "alias_group": [
             "u_bulk_trade_accept"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9106,
+            "line": 9250,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -22220,14 +23217,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 81,
+          "registration_order": 89,
           "alias_role": "alpha",
           "alias_group": [
             "u_buy_item"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8922,
+            "line": 9066,
             "symbol": "parsers"
           }
         }
@@ -22313,14 +23310,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 104,
+          "registration_order": 112,
           "alias_role": "alpha",
           "alias_group": [
             "u_buy_monster"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8945,
+            "line": 9089,
             "symbol": "parsers"
           }
         }
@@ -22404,14 +23401,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 236,
+          "registration_order": 250,
           "alias_role": "alpha",
           "alias_group": [
             "u_cancel_activity"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9129,
+            "line": 9283,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -22499,7 +23496,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 65,
+          "registration_order": 73,
           "alias_role": "alpha",
           "alias_group": [
             "u_cast_spell",
@@ -22507,7 +23504,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8906,
+            "line": 9050,
             "symbol": "parsers"
           }
         }
@@ -22556,7 +23553,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 231,
+        "occurrences": 232,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -22602,7 +23599,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8863,
+            "line": 8999,
             "symbol": "parsers"
           }
         }
@@ -22689,7 +23686,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 59,
+          "registration_order": 67,
           "alias_role": "alpha",
           "alias_group": [
             "u_consume_item",
@@ -22697,7 +23694,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8900,
+            "line": 9044,
             "symbol": "parsers"
           }
         }
@@ -22746,7 +23743,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 314,
+        "occurrences": 316,
         "examples": [
           {
             "path": "data/json/effects_on_condition/computer_eocs.json",
@@ -22784,7 +23781,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 60,
+          "registration_order": 68,
           "alias_role": "alpha",
           "alias_group": [
             "u_consume_item_sum",
@@ -22792,7 +23789,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8901,
+            "line": 9045,
             "symbol": "parsers"
           }
         }
@@ -22887,7 +23884,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8849,
+            "line": 8985,
             "symbol": "parsers"
           }
         }
@@ -22974,7 +23971,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 63,
+          "registration_order": 71,
           "alias_role": "alpha",
           "alias_group": [
             "u_deal_damage",
@@ -22982,7 +23979,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8904,
+            "line": 9048,
             "symbol": "parsers"
           }
         }
@@ -23071,7 +24068,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 44,
+          "registration_order": 52,
           "alias_role": "alpha",
           "alias_group": [
             "u_die",
@@ -23079,19 +24076,19 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8885,
+            "line": 9029,
             "symbol": "parsers"
           }
         },
         {
-          "registration_order": 234,
+          "registration_order": 248,
           "alias_role": "alpha",
           "alias_group": [
             "u_die"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9119,
+            "line": 9273,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -23180,7 +24177,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 51,
+          "registration_order": 59,
           "alias_role": "alpha",
           "alias_group": [
             "u_emit",
@@ -23188,7 +24185,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8892,
+            "line": 9036,
             "symbol": "parsers"
           }
         }
@@ -23283,7 +24280,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8860,
+            "line": 8996,
             "symbol": "parsers"
           }
         }
@@ -23370,14 +24367,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 78,
+          "registration_order": 86,
           "alias_role": "alpha",
           "alias_group": [
             "u_faction_rep"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8919,
+            "line": 9063,
             "symbol": "parsers"
           }
         }
@@ -23449,6 +24446,190 @@
       }
     },
     {
+      "key": "u_fall_asleep",
+      "syntaxes": [
+        "object_member"
+      ],
+      "accepted_json_shapes": [
+        "array",
+        "member"
+      ],
+      "handlers": [
+        "talk_effect_fun::f_fall_asleep"
+      ],
+      "aliases": [
+        "npc_fall_asleep",
+        "u_fall_asleep"
+      ],
+      "parser_registrations": [
+        {
+          "registration_order": 43,
+          "alias_role": "alpha",
+          "alias_group": [
+            "u_fall_asleep",
+            "npc_fall_asleep"
+          ],
+          "source": {
+            "path": "src/npctalk.cpp",
+            "line": 9020,
+            "symbol": "parsers"
+          }
+        }
+      ],
+      "parameters": {
+        "status": "unclassified",
+        "items": [],
+        "note": "Handler-specific members require source-backed review."
+      },
+      "value_types": {
+        "status": "partial",
+        "items": [
+          "array",
+          "member"
+        ],
+        "note": "Only parser dispatch shapes are proven here."
+      },
+      "defaults": {
+        "status": "unclassified",
+        "items": []
+      },
+      "nesting": {
+        "status": "unclassified",
+        "allows": []
+      },
+      "talker_semantics": {
+        "status": "legacy_alpha_beta_alias",
+        "talkers": [],
+        "note": "u_/npc_ identifies alpha/beta legacy routing; it does not prove that either talker is a concrete avatar or NPC."
+      },
+      "variables": {
+        "status": "unclassified",
+        "scopes": [],
+        "known_global_scopes": [
+          "u_val",
+          "npc_val",
+          "global_val",
+          "var_val",
+          "context_val"
+        ]
+      },
+      "context": {
+        "status": "unclassified",
+        "requirements": []
+      },
+      "contract_status": "partial",
+      "contract_kind": "effect",
+      "example_evidence": {
+        "status": "lexical_candidate",
+        "occurrences": 3,
+        "examples": [
+          {
+            "path": "data/json/effects_on_condition/comestible_eocs/marloss.json",
+            "pointer": "/16/effect/1/u_fall_asleep"
+          }
+        ],
+        "confidence": "lexical_only",
+        "note": "A lexical match is evidence of use, not proof that the full surrounding object is a minimal valid example."
+      },
+      "documentation": {
+        "status": "not_found",
+        "evidence": [],
+        "confidence": "lexical_only"
+      }
+    },
+    {
+      "key": "u_fill_stomach",
+      "syntaxes": [
+        "object_member"
+      ],
+      "accepted_json_shapes": [
+        "array",
+        "member"
+      ],
+      "handlers": [
+        "talk_effect_fun::f_fill_stomach"
+      ],
+      "aliases": [
+        "npc_fill_stomach",
+        "u_fill_stomach"
+      ],
+      "parser_registrations": [
+        {
+          "registration_order": 46,
+          "alias_role": "alpha",
+          "alias_group": [
+            "u_fill_stomach",
+            "npc_fill_stomach"
+          ],
+          "source": {
+            "path": "src/npctalk.cpp",
+            "line": 9023,
+            "symbol": "parsers"
+          }
+        }
+      ],
+      "parameters": {
+        "status": "unclassified",
+        "items": [],
+        "note": "Handler-specific members require source-backed review."
+      },
+      "value_types": {
+        "status": "partial",
+        "items": [
+          "array",
+          "member"
+        ],
+        "note": "Only parser dispatch shapes are proven here."
+      },
+      "defaults": {
+        "status": "unclassified",
+        "items": []
+      },
+      "nesting": {
+        "status": "unclassified",
+        "allows": []
+      },
+      "talker_semantics": {
+        "status": "legacy_alpha_beta_alias",
+        "talkers": [],
+        "note": "u_/npc_ identifies alpha/beta legacy routing; it does not prove that either talker is a concrete avatar or NPC."
+      },
+      "variables": {
+        "status": "unclassified",
+        "scopes": [],
+        "known_global_scopes": [
+          "u_val",
+          "npc_val",
+          "global_val",
+          "var_val",
+          "context_val"
+        ]
+      },
+      "context": {
+        "status": "unclassified",
+        "requirements": []
+      },
+      "contract_status": "partial",
+      "contract_kind": "effect",
+      "example_evidence": {
+        "status": "lexical_candidate",
+        "occurrences": 1,
+        "examples": [
+          {
+            "path": "data/json/effects_on_condition/comestible_eocs/marloss.json",
+            "pointer": "/10/effect/u_fill_stomach"
+          }
+        ],
+        "confidence": "lexical_only",
+        "note": "A lexical match is evidence of use, not proof that the full surrounding object is a minimal valid example."
+      },
+      "documentation": {
+        "status": "not_found",
+        "evidence": [],
+        "confidence": "lexical_only"
+      }
+    },
+    {
       "key": "u_forget_martial_art",
       "syntaxes": [
         "object_member"
@@ -23473,7 +24654,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8856,
+            "line": 8992,
             "symbol": "parsers"
           }
         }
@@ -23568,7 +24749,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8868,
+            "line": 9004,
             "symbol": "parsers"
           }
         }
@@ -23639,6 +24820,190 @@
       }
     },
     {
+      "key": "u_heal_all",
+      "syntaxes": [
+        "object_member"
+      ],
+      "accepted_json_shapes": [
+        "array",
+        "member"
+      ],
+      "handlers": [
+        "talk_effect_fun::f_heal_all"
+      ],
+      "aliases": [
+        "npc_heal_all",
+        "u_heal_all"
+      ],
+      "parser_registrations": [
+        {
+          "registration_order": 44,
+          "alias_role": "alpha",
+          "alias_group": [
+            "u_heal_all",
+            "npc_heal_all"
+          ],
+          "source": {
+            "path": "src/npctalk.cpp",
+            "line": 9021,
+            "symbol": "parsers"
+          }
+        }
+      ],
+      "parameters": {
+        "status": "unclassified",
+        "items": [],
+        "note": "Handler-specific members require source-backed review."
+      },
+      "value_types": {
+        "status": "partial",
+        "items": [
+          "array",
+          "member"
+        ],
+        "note": "Only parser dispatch shapes are proven here."
+      },
+      "defaults": {
+        "status": "unclassified",
+        "items": []
+      },
+      "nesting": {
+        "status": "unclassified",
+        "allows": []
+      },
+      "talker_semantics": {
+        "status": "legacy_alpha_beta_alias",
+        "talkers": [],
+        "note": "u_/npc_ identifies alpha/beta legacy routing; it does not prove that either talker is a concrete avatar or NPC."
+      },
+      "variables": {
+        "status": "unclassified",
+        "scopes": [],
+        "known_global_scopes": [
+          "u_val",
+          "npc_val",
+          "global_val",
+          "var_val",
+          "context_val"
+        ]
+      },
+      "context": {
+        "status": "unclassified",
+        "requirements": []
+      },
+      "contract_status": "partial",
+      "contract_kind": "effect",
+      "example_evidence": {
+        "status": "lexical_candidate",
+        "occurrences": 1,
+        "examples": [
+          {
+            "path": "data/json/effects_on_condition/comestible_eocs/marloss.json",
+            "pointer": "/21/effect/6/u_heal_all"
+          }
+        ],
+        "confidence": "lexical_only",
+        "note": "A lexical match is evidence of use, not proof that the full surrounding object is a minimal valid example."
+      },
+      "documentation": {
+        "status": "not_found",
+        "evidence": [],
+        "confidence": "lexical_only"
+      }
+    },
+    {
+      "key": "u_hurt_all",
+      "syntaxes": [
+        "object_member"
+      ],
+      "accepted_json_shapes": [
+        "array",
+        "member"
+      ],
+      "handlers": [
+        "talk_effect_fun::f_hurt_all"
+      ],
+      "aliases": [
+        "npc_hurt_all",
+        "u_hurt_all"
+      ],
+      "parser_registrations": [
+        {
+          "registration_order": 45,
+          "alias_role": "alpha",
+          "alias_group": [
+            "u_hurt_all",
+            "npc_hurt_all"
+          ],
+          "source": {
+            "path": "src/npctalk.cpp",
+            "line": 9022,
+            "symbol": "parsers"
+          }
+        }
+      ],
+      "parameters": {
+        "status": "unclassified",
+        "items": [],
+        "note": "Handler-specific members require source-backed review."
+      },
+      "value_types": {
+        "status": "partial",
+        "items": [
+          "array",
+          "member"
+        ],
+        "note": "Only parser dispatch shapes are proven here."
+      },
+      "defaults": {
+        "status": "unclassified",
+        "items": []
+      },
+      "nesting": {
+        "status": "unclassified",
+        "allows": []
+      },
+      "talker_semantics": {
+        "status": "legacy_alpha_beta_alias",
+        "talkers": [],
+        "note": "u_/npc_ identifies alpha/beta legacy routing; it does not prove that either talker is a concrete avatar or NPC."
+      },
+      "variables": {
+        "status": "unclassified",
+        "scopes": [],
+        "known_global_scopes": [
+          "u_val",
+          "npc_val",
+          "global_val",
+          "var_val",
+          "context_val"
+        ]
+      },
+      "context": {
+        "status": "unclassified",
+        "requirements": []
+      },
+      "contract_status": "partial",
+      "contract_kind": "effect",
+      "example_evidence": {
+        "status": "lexical_candidate",
+        "occurrences": 1,
+        "examples": [
+          {
+            "path": "data/json/effects_on_condition/comestible_eocs/marloss.json",
+            "pointer": "/15/effect/3/u_hurt_all"
+          }
+        ],
+        "confidence": "lexical_only",
+        "note": "A lexical match is evidence of use, not proof that the full surrounding object is a minimal valid example."
+      },
+      "documentation": {
+        "status": "not_found",
+        "evidence": [],
+        "confidence": "lexical_only"
+      }
+    },
+    {
       "key": "u_knockback",
       "syntaxes": [
         "object_member"
@@ -23655,7 +25020,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 122,
+          "registration_order": 130,
           "alias_role": "alpha",
           "alias_group": [
             "u_knockback",
@@ -23663,7 +25028,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8963,
+            "line": 9107,
             "symbol": "parsers"
           }
         }
@@ -23758,7 +25123,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8855,
+            "line": 8991,
             "symbol": "parsers"
           }
         }
@@ -23853,7 +25218,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8867,
+            "line": 9003,
             "symbol": "parsers"
           }
         }
@@ -23948,7 +25313,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8866,
+            "line": 9002,
             "symbol": "parsers"
           }
         }
@@ -24043,7 +25408,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8857,
+            "line": 8993,
             "symbol": "parsers"
           }
         }
@@ -24092,7 +25457,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 358,
+        "occurrences": 365,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -24114,6 +25479,96 @@
       }
     },
     {
+      "key": "u_lose_addiction",
+      "syntaxes": [
+        "object_member"
+      ],
+      "accepted_json_shapes": [
+        "member"
+      ],
+      "handlers": [
+        "talk_effect_fun::f_lose_addiction"
+      ],
+      "aliases": [
+        "npc_lose_addiction",
+        "u_lose_addiction"
+      ],
+      "parser_registrations": [
+        {
+          "registration_order": 42,
+          "alias_role": "alpha",
+          "alias_group": [
+            "u_lose_addiction",
+            "npc_lose_addiction"
+          ],
+          "source": {
+            "path": "src/npctalk.cpp",
+            "line": 9019,
+            "symbol": "parsers"
+          }
+        }
+      ],
+      "parameters": {
+        "status": "unclassified",
+        "items": [],
+        "note": "Handler-specific members require source-backed review."
+      },
+      "value_types": {
+        "status": "partial",
+        "items": [
+          "member"
+        ],
+        "note": "Only parser dispatch shapes are proven here."
+      },
+      "defaults": {
+        "status": "unclassified",
+        "items": []
+      },
+      "nesting": {
+        "status": "unclassified",
+        "allows": []
+      },
+      "talker_semantics": {
+        "status": "legacy_alpha_beta_alias",
+        "talkers": [],
+        "note": "u_/npc_ identifies alpha/beta legacy routing; it does not prove that either talker is a concrete avatar or NPC."
+      },
+      "variables": {
+        "status": "unclassified",
+        "scopes": [],
+        "known_global_scopes": [
+          "u_val",
+          "npc_val",
+          "global_val",
+          "var_val",
+          "context_val"
+        ]
+      },
+      "context": {
+        "status": "unclassified",
+        "requirements": []
+      },
+      "contract_status": "partial",
+      "contract_kind": "effect",
+      "example_evidence": {
+        "status": "lexical_candidate",
+        "occurrences": 7,
+        "examples": [
+          {
+            "path": "data/json/effects_on_condition/comestible_eocs/marloss.json",
+            "pointer": "/13/effect/0/else/else/2/u_lose_addiction"
+          }
+        ],
+        "confidence": "lexical_only",
+        "note": "A lexical match is evidence of use, not proof that the full surrounding object is a minimal valid example."
+      },
+      "documentation": {
+        "status": "not_found",
+        "evidence": [],
+        "confidence": "lexical_only"
+      }
+    },
+    {
       "key": "u_lose_bionic",
       "syntaxes": [
         "object_member"
@@ -24130,7 +25585,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 42,
+          "registration_order": 50,
           "alias_role": "alpha",
           "alias_group": [
             "u_lose_bionic",
@@ -24138,7 +25593,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8883,
+            "line": 9027,
             "symbol": "parsers"
           }
         }
@@ -24233,7 +25688,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8847,
+            "line": 8983,
             "symbol": "parsers"
           }
         }
@@ -24328,7 +25783,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8842,
+            "line": 8978,
             "symbol": "parsers"
           }
         }
@@ -24377,7 +25832,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 635,
+        "occurrences": 636,
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_active_eocs.json",
@@ -24423,7 +25878,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8881,
+            "line": 9017,
             "symbol": "parsers"
           }
         }
@@ -24518,7 +25973,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8848,
+            "line": 8984,
             "symbol": "parsers"
           }
         }
@@ -24608,7 +26063,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8846,
+            "line": 8982,
             "symbol": "parsers"
           }
         }
@@ -24657,7 +26112,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 949,
+        "occurrences": 953,
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_eocs.json",
@@ -24703,7 +26158,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8844,
+            "line": 8980,
             "symbol": "parsers"
           }
         }
@@ -24752,11 +26207,11 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 126,
+        "occurrences": 127,
         "examples": [
           {
-            "path": "data/json/effects_on_condition/npc_eocs/godco_npc_eocs.json",
-            "pointer": "/1/effect/1/u_lose_var"
+            "path": "data/json/effects_on_condition/comestible_eocs/marloss.json",
+            "pointer": "/5/effect/7/u_lose_var"
           }
         ],
         "confidence": "lexical_only",
@@ -24787,14 +26242,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 249,
+          "registration_order": 263,
           "alias_role": "alpha",
           "alias_group": [
             "u_make_radio_representative"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9183,
+            "line": 9337,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -24885,7 +26340,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8872,
+            "line": 9008,
             "symbol": "parsers"
           }
         }
@@ -24972,7 +26427,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 66,
+          "registration_order": 74,
           "alias_role": "alpha",
           "alias_group": [
             "u_map_run_eocs",
@@ -24980,7 +26435,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8907,
+            "line": 9051,
             "symbol": "parsers"
           }
         }
@@ -25029,11 +26484,11 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 16,
+        "occurrences": 18,
         "examples": [
           {
-            "path": "data/mods/BombasticPerks/perkdata/closetland.json",
-            "pointer": "/3/effect/4/u_map_run_eocs"
+            "path": "data/json/effects_on_condition/comestible_eocs/marloss.json",
+            "pointer": "/5/effect/6/u_map_run_eocs"
           }
         ],
         "confidence": "lexical_only",
@@ -25067,7 +26522,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 67,
+          "registration_order": 75,
           "alias_role": "alpha",
           "alias_group": [
             "u_map_run_item_eocs",
@@ -25075,7 +26530,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8908,
+            "line": 9052,
             "symbol": "parsers"
           }
         }
@@ -25146,6 +26601,112 @@
       }
     },
     {
+      "key": "u_marlossify",
+      "syntaxes": [
+        "effect_string",
+        "object_member"
+      ],
+      "accepted_json_shapes": [
+        "effect_string",
+        "object"
+      ],
+      "handlers": [
+        "talk_effect_fun::f_marlossify_location"
+      ],
+      "aliases": [
+        "npc_marlossify",
+        "u_marlossify"
+      ],
+      "parser_registrations": [
+        {
+          "registration_order": 47,
+          "alias_role": "alpha",
+          "alias_group": [
+            "u_marlossify",
+            "npc_marlossify"
+          ],
+          "source": {
+            "path": "src/npctalk.cpp",
+            "line": 9024,
+            "symbol": "parsers"
+          }
+        },
+        {
+          "registration_order": 245,
+          "alias_role": "alpha",
+          "alias_group": [
+            "u_marlossify"
+          ],
+          "source": {
+            "path": "src/npctalk.cpp",
+            "line": 9268,
+            "symbol": "talk_effect_t::parse_string_effect"
+          },
+          "registration_kind": "explicit_branch"
+        }
+      ],
+      "parameters": {
+        "status": "unclassified",
+        "items": [],
+        "note": "Handler-specific members require source-backed review."
+      },
+      "value_types": {
+        "status": "partial",
+        "items": [
+          "effect_string",
+          "object"
+        ],
+        "note": "Only parser dispatch shapes are proven here."
+      },
+      "defaults": {
+        "status": "unclassified",
+        "items": []
+      },
+      "nesting": {
+        "status": "unclassified",
+        "allows": []
+      },
+      "talker_semantics": {
+        "status": "legacy_alpha_beta_alias",
+        "talkers": [],
+        "note": "u_/npc_ identifies alpha/beta legacy routing; it does not prove that either talker is a concrete avatar or NPC."
+      },
+      "variables": {
+        "status": "unclassified",
+        "scopes": [],
+        "known_global_scopes": [
+          "u_val",
+          "npc_val",
+          "global_val",
+          "var_val",
+          "context_val"
+        ]
+      },
+      "context": {
+        "status": "unclassified",
+        "requirements": []
+      },
+      "contract_status": "partial",
+      "contract_kind": "effect",
+      "example_evidence": {
+        "status": "lexical_candidate",
+        "occurrences": 2,
+        "examples": [
+          {
+            "path": "data/json/effects_on_condition/comestible_eocs/marloss.json",
+            "pointer": "/6/effect/0/then/u_marlossify"
+          }
+        ],
+        "confidence": "lexical_only",
+        "note": "A lexical match is evidence of use, not proof that the full surrounding object is a minimal valid example."
+      },
+      "documentation": {
+        "status": "not_found",
+        "evidence": [],
+        "confidence": "lexical_only"
+      }
+    },
+    {
       "key": "u_message",
       "syntaxes": [
         "object_member"
@@ -25170,7 +26731,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8869,
+            "line": 9005,
             "symbol": "parsers"
           }
         }
@@ -25219,7 +26780,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 3243,
+        "occurrences": 3286,
         "examples": [
           {
             "path": "data/json/debug/quick_setup_eoc.json",
@@ -25266,7 +26827,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8851,
+            "line": 8987,
             "symbol": "parsers"
           }
         }
@@ -25316,11 +26877,11 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 22,
+        "occurrences": 24,
         "examples": [
           {
-            "path": "data/json/effects_on_condition/medicine_eocs/regen_serum_eoc.json",
-            "pointer": "/5/effect/0/else/u_mutate"
+            "path": "data/json/effects_on_condition/comestible_eocs/marloss.json",
+            "pointer": "/7/effect/1/u_mutate"
           }
         ],
         "confidence": "lexical_only",
@@ -25362,7 +26923,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8852,
+            "line": 8988,
             "symbol": "parsers"
           }
         }
@@ -25411,7 +26972,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 6,
+        "occurrences": 7,
         "examples": [
           {
             "path": "data/json/effects_on_condition/artifact_eocs.json",
@@ -25457,7 +27018,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8853,
+            "line": 8989,
             "symbol": "parsers"
           }
         }
@@ -25544,7 +27105,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 84,
+          "registration_order": 92,
           "alias_role": "alpha",
           "alias_group": [
             "u_pick_bodypart",
@@ -25552,7 +27113,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8925,
+            "line": 9069,
             "symbol": "parsers"
           }
         }
@@ -25634,7 +27195,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 68,
+          "registration_order": 76,
           "alias_role": "alpha",
           "alias_group": [
             "u_pickup_items",
@@ -25642,7 +27203,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8909,
+            "line": 9053,
             "symbol": "parsers"
           }
         }
@@ -25721,14 +27282,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 238,
+          "registration_order": 252,
           "alias_role": "alpha",
           "alias_group": [
             "u_prevent_death"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9140,
+            "line": 9294,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -25824,7 +27385,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8862,
+            "line": 8998,
             "symbol": "parsers"
           }
         }
@@ -25919,7 +27480,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8861,
+            "line": 8997,
             "symbol": "parsers"
           }
         }
@@ -26003,14 +27564,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 244,
+          "registration_order": 258,
           "alias_role": "alpha",
           "alias_group": [
             "u_ranged_attack"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9161,
+            "line": 9315,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -26093,7 +27654,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 87,
+          "registration_order": 95,
           "alias_role": "alpha",
           "alias_group": [
             "u_recalculate_enchantment_cache",
@@ -26101,7 +27662,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8928,
+            "line": 9072,
             "symbol": "parsers"
           }
         }
@@ -26183,7 +27744,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 61,
+          "registration_order": 69,
           "alias_role": "alpha",
           "alias_group": [
             "u_remove_item_with",
@@ -26191,7 +27752,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8902,
+            "line": 9046,
             "symbol": "parsers"
           }
         }
@@ -26278,7 +27839,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 86,
+          "registration_order": 94,
           "alias_role": "alpha",
           "alias_group": [
             "u_remove_wound",
@@ -26286,7 +27847,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8927,
+            "line": 9071,
             "symbol": "parsers"
           }
         }
@@ -26376,7 +27937,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8878,
+            "line": 9014,
             "symbol": "parsers"
           }
         }
@@ -26471,7 +28032,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8876,
+            "line": 9012,
             "symbol": "parsers"
           }
         }
@@ -26566,7 +28127,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8877,
+            "line": 9013,
             "symbol": "parsers"
           }
         }
@@ -26661,7 +28222,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8874,
+            "line": 9010,
             "symbol": "parsers"
           }
         }
@@ -26756,7 +28317,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8873,
+            "line": 9009,
             "symbol": "parsers"
           }
         }
@@ -26851,7 +28412,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8875,
+            "line": 9011,
             "symbol": "parsers"
           }
         }
@@ -26932,14 +28493,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 80,
+          "registration_order": 88,
           "alias_role": "alpha",
           "alias_group": [
             "u_sell_item"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8921,
+            "line": 9065,
             "symbol": "parsers"
           }
         }
@@ -27034,7 +28595,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8879,
+            "line": 9015,
             "symbol": "parsers"
           }
         }
@@ -27121,7 +28682,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 56,
+          "registration_order": 64,
           "alias_role": "alpha",
           "alias_group": [
             "u_set_fault",
@@ -27129,7 +28690,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8897,
+            "line": 9041,
             "symbol": "parsers"
           }
         }
@@ -27211,7 +28772,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 50,
+          "registration_order": 58,
           "alias_role": "alpha",
           "alias_group": [
             "u_set_field",
@@ -27219,7 +28780,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8891,
+            "line": 9035,
             "symbol": "parsers"
           }
         }
@@ -27306,7 +28867,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 54,
+          "registration_order": 62,
           "alias_role": "alpha",
           "alias_group": [
             "u_set_flag",
@@ -27314,7 +28875,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8895,
+            "line": 9039,
             "symbol": "parsers"
           }
         }
@@ -27404,7 +28965,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8864,
+            "line": 9000,
             "symbol": "parsers"
           }
         }
@@ -27499,7 +29060,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8865,
+            "line": 9001,
             "symbol": "parsers"
           }
         }
@@ -27586,7 +29147,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 57,
+          "registration_order": 65,
           "alias_role": "alpha",
           "alias_group": [
             "u_set_random_fault_of_type",
@@ -27594,7 +29155,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8898,
+            "line": 9042,
             "symbol": "parsers"
           }
         }
@@ -27681,7 +29242,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 131,
+          "registration_order": 139,
           "alias_role": "alpha",
           "alias_group": [
             "u_set_talker",
@@ -27689,7 +29250,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8972,
+            "line": 9116,
             "symbol": "parsers"
           }
         }
@@ -27738,11 +29299,11 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 2,
+        "occurrences": 5,
         "examples": [
           {
-            "path": "data/json/effects_on_condition/example_eocs.json",
-            "pointer": "/32/effect/0/u_set_talker"
+            "path": "data/json/effects_on_condition/comestible_eocs/marloss.json",
+            "pointer": "/4/effect/0/u_set_talker"
           }
         ],
         "confidence": "lexical_only",
@@ -27784,7 +29345,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8854,
+            "line": 8990,
             "symbol": "parsers"
           }
         }
@@ -27870,14 +29431,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 83,
+          "registration_order": 91,
           "alias_role": "alpha",
           "alias_group": [
             "u_spawn_item"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8924,
+            "line": 9068,
             "symbol": "parsers"
           }
         }
@@ -27926,7 +29487,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 828,
+        "occurrences": 829,
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_eocs.json",
@@ -27964,7 +29525,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 45,
+          "registration_order": 53,
           "alias_role": "alpha",
           "alias_group": [
             "u_spawn_monster",
@@ -27972,7 +29533,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8886,
+            "line": 9030,
             "symbol": "parsers"
           }
         }
@@ -28021,11 +29582,11 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 119,
+        "occurrences": 120,
         "examples": [
           {
-            "path": "data/json/effects_on_condition/effects_eocs.json",
-            "pointer": "/8/effect/0/then/3/u_spawn_monster"
+            "path": "data/json/effects_on_condition/comestible_eocs/marloss.json",
+            "pointer": "/6/effect/1/then/u_spawn_monster"
           }
         ],
         "confidence": "lexical_only",
@@ -28059,7 +29620,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 46,
+          "registration_order": 54,
           "alias_role": "alpha",
           "alias_group": [
             "u_spawn_npc",
@@ -28067,7 +29628,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8887,
+            "line": 9031,
             "symbol": "parsers"
           }
         }
@@ -28154,14 +29715,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 75,
+          "registration_order": 83,
           "alias_role": "alpha",
           "alias_group": [
             "u_spend_cash"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8916,
+            "line": 9060,
             "symbol": "parsers"
           }
         }
@@ -28249,7 +29810,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 52,
+          "registration_order": 60,
           "alias_role": "alpha",
           "alias_group": [
             "u_teleport",
@@ -28257,7 +29818,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8893,
+            "line": 9037,
             "symbol": "parsers"
           }
         }
@@ -28306,7 +29867,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 245,
+        "occurrences": 246,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -28353,7 +29914,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8859,
+            "line": 8995,
             "symbol": "parsers"
           }
         }
@@ -28440,14 +30001,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 53,
+          "registration_order": 61,
           "alias_role": "alpha",
           "alias_group": [
             "u_travel_to_dimension"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8894,
+            "line": 9038,
             "symbol": "parsers"
           }
         }
@@ -28496,7 +30057,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 62,
+        "occurrences": 64,
         "examples": [
           {
             "path": "data/json/debug/teleportation.json",
@@ -28534,7 +30095,7 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 55,
+          "registration_order": 63,
           "alias_role": "alpha",
           "alias_group": [
             "u_unset_flag",
@@ -28542,7 +30103,7 @@
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8896,
+            "line": 9040,
             "symbol": "parsers"
           }
         }
@@ -28608,6 +30169,93 @@
       }
     },
     {
+      "key": "u_vomit",
+      "syntaxes": [
+        "effect_string"
+      ],
+      "accepted_json_shapes": [
+        "effect_string"
+      ],
+      "handlers": [],
+      "aliases": [
+        "u_vomit"
+      ],
+      "parser_registrations": [
+        {
+          "registration_order": 242,
+          "alias_role": "alpha",
+          "alias_group": [
+            "u_vomit"
+          ],
+          "source": {
+            "path": "src/npctalk.cpp",
+            "line": 9263,
+            "symbol": "talk_effect_t::parse_string_effect"
+          },
+          "registration_kind": "explicit_branch"
+        }
+      ],
+      "parameters": {
+        "status": "unclassified",
+        "items": [],
+        "note": "Handler-specific members require source-backed review."
+      },
+      "value_types": {
+        "status": "partial",
+        "items": [
+          "effect_string"
+        ],
+        "note": "Only parser dispatch shapes are proven here."
+      },
+      "defaults": {
+        "status": "unclassified",
+        "items": []
+      },
+      "nesting": {
+        "status": "unclassified",
+        "allows": []
+      },
+      "talker_semantics": {
+        "status": "legacy_alpha_beta_alias",
+        "talkers": [],
+        "note": "u_/npc_ identifies alpha/beta legacy routing; it does not prove that either talker is a concrete avatar or NPC."
+      },
+      "variables": {
+        "status": "unclassified",
+        "scopes": [],
+        "known_global_scopes": [
+          "u_val",
+          "npc_val",
+          "global_val",
+          "var_val",
+          "context_val"
+        ]
+      },
+      "context": {
+        "status": "unclassified",
+        "requirements": []
+      },
+      "contract_status": "partial",
+      "contract_kind": "effect",
+      "example_evidence": {
+        "status": "lexical_candidate",
+        "occurrences": 2,
+        "examples": [
+          {
+            "path": "data/json/effects_on_condition/comestible_eocs/marloss.json",
+            "pointer": "/12/effect"
+          }
+        ],
+        "confidence": "lexical_only",
+        "note": "A lexical match is evidence of use, not proof that the full surrounding object is a minimal valid example."
+      },
+      "documentation": {
+        "status": "not_found",
+        "evidence": [],
+        "confidence": "lexical_only"
+      }
+    },
+    {
       "key": "u_wants_to_talk",
       "syntaxes": [
         "effect_string"
@@ -28621,14 +30269,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 251,
+          "registration_order": 265,
           "alias_role": "alpha",
           "alias_group": [
             "u_wants_to_talk"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9191,
+            "line": 9345,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "explicit_branch"
@@ -28710,14 +30358,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 174,
+          "registration_order": 182,
           "alias_role": "alpha",
           "alias_group": [
             "wake_up"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 9044,
+            "line": 9188,
             "symbol": "talk_effect_t::parse_string_effect"
           },
           "registration_kind": "static_map"
@@ -28804,14 +30452,14 @@
       ],
       "parser_registrations": [
         {
-          "registration_order": 115,
+          "registration_order": 123,
           "alias_role": "alpha",
           "alias_group": [
             "weighted_list_eocs"
           ],
           "source": {
             "path": "src/npctalk.cpp",
-            "line": 8956,
+            "line": 9100,
             "symbol": "parsers"
           }
         }
@@ -28860,11 +30508,11 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 71,
+        "occurrences": 72,
         "examples": [
           {
-            "path": "data/json/effects_on_condition/mapgen_eocs/furniture_eocs.json",
-            "pointer": "/2/effect/weighted_list_eocs"
+            "path": "data/json/effects_on_condition/comestible_eocs/marloss.json",
+            "pointer": "/4/effect/2/else/weighted_list_eocs"
           }
         ],
         "confidence": "lexical_only",
