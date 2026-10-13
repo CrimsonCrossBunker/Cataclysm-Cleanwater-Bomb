@@ -1,5 +1,4 @@
 #include <coordinates.h>
-#include <flexbuffer_json.h>
 #include <mapdata.h>
 #include <units.h>
 #include <functional>
