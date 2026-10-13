@@ -24,6 +24,7 @@ try:
         parse_json_registrations,
         parse_parser_vector,
         resolve_json_pointer,
+        source_fingerprint,
         validate_contracts,
         write_or_check,
     )
@@ -38,12 +39,22 @@ except ImportError:
         parse_json_registrations,
         parse_parser_vector,
         resolve_json_pointer,
+        source_fingerprint,
         validate_contracts,
         write_or_check,
     )
 
 
 class ParserFixtureTest(unittest.TestCase):
+    def test_source_fingerprint_is_independent_of_checkout_line_endings(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "sample.json"
+            source.write_bytes(b'{"id": "sample"}\n')
+            expected = source_fingerprint(root, ["sample.json"])
+            source.write_bytes(b'{"id": "sample"}\r\n')
+            self.assertEqual(source_fingerprint(root, ["sample.json"]), expected)
+
     def test_json_registration_preserves_variants_and_handlers(self) -> None:
         source = """
         void DynamicDataLoader::initialize()
