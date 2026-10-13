@@ -962,20 +962,8 @@ int set_platform_trap_area( const tripoint_abs_ms &absolute,
     }
 
     if( radius < 0 ) {
-        // A negative square's native tripoint_range starts at center-radius,
-        // sees that one point, then advances directly to its end sentinel.
-        // The circle predicate rejects its first point for every negative
-        // radius, so it has no setter calls.
-        if( !square ) {
-            return 0;
-        }
-        const tripoint_bub_ms destination( static_cast<int>( min_x ),
-                                           static_cast<int>( min_y ), center.z() );
-        if( !here.inbounds( destination ) ) {
-            return 0;
-        }
-        here.trap_set( destination, target_trap );
-        return 1;
+        // Reversed native ranges are empty for both square and circle modes.
+        return 0;
     }
 
     const float circle_radius = static_cast<float>( radius ) + 0.5f;
