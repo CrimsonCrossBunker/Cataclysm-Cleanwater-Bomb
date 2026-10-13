@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-14",
+  "batch": 42,
+  "baseline": "6a17fbdef01433061564c698e7cecf1528b1708f",
+  "scope": "Close real-actor pet-follow and moving-vehicle-driver sensing fixtures. No production source changes.",
+  "validation": {
+    "native": {
+      "assertions": {
+        "successes": "38",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "cases": {
+        "successes": "2",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "xml_sha256": "3bd9cca49fe076988a9a0ef44fd0a65a32d8d195aad042cb934d2ba85f5444de"
+    },
+    "scoped_asan_ubsan_lsan": {
+      "assertions": {
+        "successes": "38",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "cases": {
+        "successes": "2",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "xml_sha256": "5bc1e1e10862ef16a0e8a2ee65fcd14065fd8d3aeccdaeab2d68e5487d0d7d0f"
+    },
+    "commands": [
+      [
+        "/tmp/ccb-render-astyle31/astyle/build/gcc/bin/astyle",
+        "--options=.astylerc",
+        "--dry-run",
+        "-n",
+        "tests/monster_sensing_plan_test.cpp"
+      ],
+      [
+        "cmake",
+        "--build",
+        "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile",
+        "--config",
+        "Release",
+        "--target",
+        "ccb-sdl3-acceptance",
+        "ccb-goal-asan",
+        "--parallel",
+        "2"
+      ],
+      [
+        "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile/Release/ccb-sdl3-acceptance",
+        "monster_pet_follow_plan_keeps_visibility_and_stair_rules,monster_plan_can_select_a_cloaked_moving_vehicle_driver",
+        "--rng-seed",
+        "20261014",
+        "--order",
+        "lex",
+        "--warn",
+        "NoTests",
+        "--user-dir",
+        "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/planner-branch-stage4/native-user",
+        "--reporter",
+        "xml",
+        "--out",
+        "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/planner-branch-stage4/native.xml"
+      ],
+      [
+        "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile/Release/ccb-goal-asan",
+        "monster_pet_follow_plan_keeps_visibility_and_stair_rules,monster_plan_can_select_a_cloaked_moving_vehicle_driver",
+        "--rng-seed",
+        "20261014",
+        "--order",
+        "lex",
+        "--warn",
+        "NoTests",
+        "--user-dir",
+        "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/planner-branch-stage4/asan-user",
+        "--reporter",
+        "xml",
+        "--out",
+        "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/planner-branch-stage4/asan.xml"
+      ]
+    ],
+    "source_sha256": "e3fef62620718095cdb4a9ef19de5913c3dead6cec993d5a2b17078bcb7da2ee",
+    "reused": "Batch41 unchanged production implementation and8 actual SDL3 replay/reload plus full memory comparisons. The two additional branch fixtures run real monster::plan and vehicle-driver queries. No additional worker dispatch or performance claim."
+  },
+  "limits": [
+    "Source/receiver/world-query and deterministic owner action separation is synchronous. No permission for concurrent live world/actor access.",
+    "Scoped sanitizers instrument monmove/plan and receipts; common world/vehicle objects Release.",
+    "Stage4 scope audit and full renderer/combined real timing remain."
+  ],
+  "local_evidence": "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/planner-branch-stage4"
+}
