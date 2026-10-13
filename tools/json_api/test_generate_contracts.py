@@ -118,15 +118,15 @@ class RepositoryParityTest(unittest.TestCase):
         conditions = self.payloads["eoc_conditions"]
         effects = self.payloads["eoc_effects"]
         self.assertEqual(
-            conditions["summary"]["complex_parser_registrations"], 89)
+            conditions["summary"]["complex_parser_registrations"], 90)
         self.assertEqual(
             conditions["summary"]["simple_parser_registrations"], 77)
         self.assertEqual(
-            effects["summary"]["object_parser_registrations"], 137)
+            effects["summary"]["object_parser_registrations"], 145)
         self.assertEqual(
-            effects["summary"]["string_parser_registrations"], 117)
-        self.assertEqual(conditions["summary"]["public_keys"], 275)
-        self.assertEqual(effects["summary"]["public_keys"], 311)
+            effects["summary"]["string_parser_registrations"], 123)
+        self.assertEqual(conditions["summary"]["public_keys"], 276)
+        self.assertEqual(effects["summary"]["public_keys"], 329)
         self.assertEqual({entry["key"] for entry in conditions["entries"]} & {
             "and", "or", "not"}, {"and", "or", "not"}, )
         self.assertEqual(
