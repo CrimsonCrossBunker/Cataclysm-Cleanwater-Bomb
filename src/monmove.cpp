@@ -43,6 +43,7 @@
 #include "monfaction.h"
 #include "mongroup.h"
 #include "monster_oracle.h"
+#include "monster_step_selection.h"
 #include "mtype.h"
 #include "npc.h"
 #include "options.h"
@@ -1230,7 +1231,18 @@ void monster::move()
     if( moved ) {
         // Implement both avoiding obstacles and staggering.
         moved = false;
-        float switch_chance = 0.0f;
+        monster_step_selection selection;
+        // Resolve only the RNG request made by this value proposal, before the
+        // next owner query/effect. Eagerly scanning candidates changes gameplay.
+        const auto consider = [&]( const monster_step_candidate & candidate ) {
+            const monster_step_proposal proposal = propose_monster_step( selection, candidate,
+                                                   staggers, pathed );
+            const bool selected = proposal.select_without_draw ||
+                                  ( proposal.needs_draw && x_in_y( proposal.numerator,
+                                          proposal.next.switch_chance ) );
+            selection = resolve_monster_step( proposal, selected );
+            return selected && proposal.stop_if_selected;
+        };
         const bool can_bash = !bash_skill().empty();
         // This is a float and using trig_dist() because that Does the Right Thing(tm)
         // in both circular and roguelike distance modes.
@@ -1318,8 +1330,7 @@ void monster::move()
                 if( att == Attitude::HOSTILE &&
                     ( !is_z_move || here.on_matching_stairs( pos_bub(), candidate ) ) ) {
                     // When attacking an adjacent enemy, we're direct.
-                    moved = true;
-                    next_step = candidate_abs;
+                    consider( { candidate_abs, monster_step_kind::attack } );
                     break;
                 }
                 if( att == Attitude::FRIENDLY && ( target->is_avatar() || target->is_npc() ||
@@ -1339,13 +1350,11 @@ void monster::move()
             // is there an openable door?
             if( can_open_doors &&
                 here.open_door( *this, candidate, !here.is_outside( pos_bub() ), true ) ) {
-                moved = true;
-                next_step = candidate_abs;
+                consider( { candidate_abs, monster_step_kind::door } );
                 continue;
             } else if( can_open_doors && doors::can_unlock_door( here, *this, candidate ) ) {
                 doors::unlock_door( here, *this, candidate );
-                moved = true;
-                next_step = candidate_abs;
+                consider( { candidate_abs, monster_step_kind::door } );
                 continue;
             }
 
@@ -1372,22 +1381,14 @@ void monster::move()
 
             const float progress = distance_to_target - trig_dist( tripoint_bub_ms( candidate.xy(),
                                    candidate.z() + rampPos ), destination );
-            // The x2 makes the first (and most direct) path twice as likely,
-            // since the chance of switching is 1/1, 1/4, 1/6, 1/8
-            switch_chance += progress * 2;
-            // Randomly pick one of the viable squares to move to weighted by distance.
-            if( progress > 0 && ( !moved || x_in_y( progress, switch_chance ) ) ) {
-                moved = true;
-                next_step = candidate_abs;
-                // If we stumble, pick a random square, otherwise take the first one,
-                // which is the most direct path.
-                // Except if the direct path is bad, then check others
-                // Or if the path is given by pathfinder
-                if( !staggers && ( !bad_choice || pathed ) ) {
-                    break;
-                }
+            // Weighted choice is pure until the owner resolves its lazy RNG
+            // request. Stop at exactly the same accepted candidate as before.
+            if( consider( { candidate_abs, monster_step_kind::weighted, progress, bad_choice } ) ) {
+                break;
             }
         }
+        moved = selection.selected;
+        next_step = selection.destination;
     }
     // Finished logic section.  By this point, we should have chosen a square to
     //  move to (moved = true).
