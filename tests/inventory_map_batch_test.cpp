@@ -5,7 +5,7 @@
 #include "calendar.h"
 #include "cata_catch.h"
 #include "coordinates.h"
-#include "inventory.h"
+#include "temp_crafting_inventory.h"
 #include "item.h"
 #include "map.h"
 #include "map_helpers.h"
@@ -16,7 +16,6 @@ TEST_CASE( "inventory_form_from_map_bulk_batching", "[inventory][map][upstream_p
 {
     clear_map_without_vision();
     map &here = get_map();
-    const bool assign_invlet = GENERATE( false, true );
     const std::vector<tripoint_bub_ms> positions = { { 60, 60, 0 }, { 61, 60, 0 }, { 62, 60, 0 } };
     for( int i = 0; i < 5; ++i ) {
         here.add_item_or_charges( positions[0], item( itype_id( "rock" ) ) );
@@ -26,9 +25,9 @@ TEST_CASE( "inventory_form_from_map_bulk_batching", "[inventory][map][upstream_p
         here.add_item_or_charges( positions[1], item( itype_id( "string_36" ) ) );
         here.add_item_or_charges( positions[2], item( itype_id( "rock" ) ) );
     }
-    inventory inv;
+    temp_crafting_inventory inv;
     for( int refresh = 0; refresh < 2; ++refresh ) {
-        inv.form_from_map( here, positions, nullptr, assign_invlet );
+        inv.form_from_map( here, positions, nullptr );
         CHECK( inv.count_item( itype_id( "rock" ) ) == 10 );
         CHECK( inv.count_item( itype_id( "stick" ) ) == 15 );
         CHECK( inv.count_item( itype_id( "string_36" ) ) == 5 );
@@ -52,9 +51,9 @@ BENCHMARK_TEST_CASE( "inventory_multitile_bulk_and_count_benchmark", "[inventory
             }
         }
     }
-    inventory inv;
+    temp_crafting_inventory inv;
     BENCHMARK( "form inventory from 100 tiles / 1000 distinct rocks" ) {
-        inv.form_from_map( here, positions, nullptr, false );
+        inv.form_from_map( here, positions, nullptr );
         return inv.count_item( itype_id( "rock" ) );
     };
     REQUIRE( inv.count_item( itype_id( "rock" ) ) == 1000 );

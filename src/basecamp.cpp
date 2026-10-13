@@ -635,13 +635,13 @@ struct detached_recipe_item {
     item value;
 };
 
-inventory make_detached_recipe_inventory(
+temp_crafting_inventory make_detached_recipe_inventory(
     const std::vector<detached_recipe_item> &values )
 {
-    inventory result;
+    temp_crafting_inventory result;
     for( const detached_recipe_item &entry : values ) {
         if( !entry.value.is_null() ) {
-            result.add_item( entry.value, false, false, false );
+            result.add_item_copy( entry.value );
         }
     }
     return result;
@@ -704,13 +704,13 @@ bool consume_detached_requirement_data(
     std::vector<detached_recipe_item> &values,
     item_components &consumed, std::string &error )
 {
-    const inventory all_items = make_detached_recipe_inventory( values );
+    const temp_crafting_inventory all_items = make_detached_recipe_inventory( values );
     if( !requirements.can_make_with_inventory( nullptr, all_items, component_filter, batch ) ) {
         error = std::string( label ) + " does not satisfy authoritative requirements";
         return false;
     }
     for( const std::vector<item_comp> &alternatives : requirements.get_components() ) {
-        const inventory component_items = make_detached_recipe_inventory( values );
+        const temp_crafting_inventory component_items = make_detached_recipe_inventory( values );
         const item_comp *choice = nullptr;
         for( const item_comp &candidate : alternatives ) {
             if( candidate.requirement ) {
@@ -742,7 +742,7 @@ bool consume_detached_requirement_data(
     }
 
     for( const std::vector<tool_comp> &alternatives : requirements.get_tools() ) {
-        const inventory tool_items = make_detached_recipe_inventory( values );
+        const temp_crafting_inventory tool_items = make_detached_recipe_inventory( values );
         const tool_comp *choice = nullptr;
         for( const tool_comp &candidate : alternatives ) {
             if( candidate.has( nullptr, tool_items, return_true<item>, batch ) ) {
@@ -787,7 +787,7 @@ bool select_and_consume_detached_recipe_requirements(
 {
     const std::function<bool( const item & )> component_filter =
         making.get_component_filter();
-    const inventory all_items = make_detached_recipe_inventory( values );
+    const temp_crafting_inventory all_items = make_detached_recipe_inventory( values );
     const requirement_data *selected = making.deduped_requirements().select_alternative(
                                            worker, all_items, component_filter, work.batch );
     if( selected == nullptr ) {
@@ -881,7 +881,7 @@ bool recipe_escrow_matches_work( const basecamp_platform_recipe_work &work,
         return false;
     }
 
-    inventory escrow_inventory;
+    temp_crafting_inventory escrow_inventory;
     for( const basecamp_platform_recipe_escrow_item &entry : escrow ) {
         item value;
         std::string item_error;
@@ -889,7 +889,7 @@ bool recipe_escrow_matches_work( const basecamp_platform_recipe_work &work,
             error = item_error;
             return false;
         }
-        escrow_inventory.add_item( std::move( value ), false, false, false );
+        escrow_inventory.add_item_copy( value );
     }
     if( !making.deduped_requirements().can_make_with_inventory(
             worker, escrow_inventory, making.get_component_filter(), work.batch ) ) {
@@ -965,7 +965,7 @@ bool upgrade_escrow_matches_work( const basecamp_platform_upgrade_work &work,
         error = "upgrade_work worker does not meet the blueprint skills";
         return false;
     }
-    inventory escrow_inventory;
+    temp_crafting_inventory escrow_inventory;
     for( const basecamp_platform_recipe_escrow_item &entry : escrow ) {
         item value;
         std::string item_error;
@@ -973,7 +973,7 @@ bool upgrade_escrow_matches_work( const basecamp_platform_upgrade_work &work,
             error = item_error;
             return false;
         }
-        escrow_inventory.add_item( std::move( value ), false, false, false );
+        escrow_inventory.add_item_copy( value );
     }
     if( !requirements->second.consolidated_reqs.can_make_with_inventory(
             worker, escrow_inventory, upgrade.get_component_filter(), 1 ) ) {
@@ -2732,7 +2732,7 @@ std::string basecamp::om_upgrade_description( const std::string &bldg, const map
     const int pane = FULL_SCREEN_WIDTH;
     const auto tools = reqs->get_folded_tools_list( nullptr, pane, c_white, _inv, 1 );
     const auto comps = reqs->get_folded_components_list( nullptr, pane, c_white, _inv,
-                       making.get_component_filter(), 1 );
+        making.get_component_filter(), 1 );
     component_print_buffer.insert( component_print_buffer.end(), tools.begin(), tools.end() );
     component_print_buffer.insert( component_print_buffer.end(), comps.begin(), comps.end() );
 
@@ -4306,8 +4306,8 @@ bool basecamp::platform_finish_task( const std::uint64_t task_id,
     context.now = now;
     context.complete = complete;
     const basecamp_platform_task_operation operation = complete ?
-            basecamp_platform_task_operation::complete :
-            basecamp_platform_task_operation::cancel;
+        basecamp_platform_task_operation::complete :
+        basecamp_platform_task_operation::cancel;
     if( !dispatch_basecamp_platform_task( staged_it->kind, operation, context, error ) ) {
         return false;
     }
@@ -5303,7 +5303,7 @@ bool basecamp::platform_retire_tasks_for_camp( const bool owner_change )
     for( const npc_ptr &candidate : assigned_npcs ) {
         const bool is_platform_reservation = candidate &&
                                              std::any_of( released_workers.begin(),
-                                                     released_workers.end(),
+                                                 released_workers.end(),
         [&candidate]( const std::pair<character_id, std::uint64_t> &identity ) {
             return candidate->getID() == identity.first &&
                    candidate->platform_identity_generation() == identity.second;
@@ -5433,7 +5433,7 @@ bool basecamp::platform_reconcile_task_reservations(
         }
         const npc *manager_as_npc = manager->as_npc();
         const std::uint64_t manager_generation = manager_as_npc == nullptr ? 0 :
-                manager_as_npc->platform_identity_generation();
+            manager_as_npc->platform_identity_generation();
         if( manager_generation != task.manager_identity_generation ) {
             if( rebind_actor_generations ) {
                 task.manager_identity_generation = manager_generation;
@@ -5577,7 +5577,7 @@ void basecamp::form_storage_zones( map &here, const tripoint_abs_ms &abspos )
     std::vector<tripoint_abs_ms> possible_liquid_dumps;
     if( mgr.has_near( zone_type_CAMP_STORAGE, abspos, MAX_VIEW_DISTANCE ) ) {
         const std::vector<const zone_data *> zones = mgr.get_near_zones( zone_type_CAMP_STORAGE, abspos,
-                MAX_VIEW_DISTANCE, get_owner() );
+            MAX_VIEW_DISTANCE, get_owner() );
         // Find the nearest unsorted zone to dump objects at
         if( !zones.empty() ) {
             std::unordered_set<tripoint_abs_ms> src_set;
@@ -5749,7 +5749,7 @@ void basecamp::handle_takeover_by( faction_id new_owner, bool violent_takeover )
     bool captured_food = false;
     const bool transitioned = platform_transition_owner( new_owner, [&]() {
         get_event_bus().send<event_type::camp_taken_over>( get_owner(), new_owner, name,
-                violent_takeover );
+            violent_takeover );
         assigned_npcs.clear();
         camp_workers.clear();
         add_msg_debug( debugmode::DF_CAMPS,
@@ -5911,7 +5911,7 @@ bool basecamp_action_components::choose_components()
     for( const auto &it : req->get_components() ) {
         comp_selection<item_comp> is =
             player_character.select_item_component( it, batch_size_, base_._inv, true, filter,
-                    !base_.by_radio );
+                !base_.by_radio );
         if( is.use_from == usage_from::cancel ) {
             return false;
         }
@@ -5921,7 +5921,7 @@ bool basecamp_action_components::choose_components()
     for( const auto &it : req->get_tools() ) {
         comp_selection<tool_comp> ts =
             player_character.select_tool_component( it, batch_size_, base_._inv, true,
-                    !base_.by_radio );
+                !base_.by_radio );
         if( ts.use_from == usage_from::cancel ) {
             return false;
         }
@@ -5941,7 +5941,7 @@ void basecamp_action_components::consume_components()
     }
     for( const comp_selection<item_comp> &sel : item_selections_ ) {
         std::list<item> consumed = player_character.consume_items( target_map, sel, batch_size_,
-                                   is_crafting_component, src );
+            is_crafting_component, src );
         for( item &comp : consumed ) {
             consumed_components_.add( comp );
         }

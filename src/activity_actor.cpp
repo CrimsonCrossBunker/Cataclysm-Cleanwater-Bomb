@@ -10670,6 +10670,17 @@ void fertilize_plant_activity_actor::finish( player_activity &act, Character &wh
         return;
     }
 
+    // A reservation may have claimed the fertilizer after the action began.
+    const bool available = fertilizer->count_by_charges()
+                           ? who.has_charges( fertilizer, 1, craft_reservation::usable_by_automation )
+                           : who.has_amount( fertilizer, 1, false, craft_reservation::usable_by_automation );
+    if( !available ) {
+        who.add_msg_if_player( m_info, _( "You no longer have any available %s." ),
+                               fertilizer->nname( 1 ) );
+        act.set_to_null();
+        return;
+    }
+
     // Now that we know the plant can actually benefit, consume the fertilizer.
     std::list<item> planted;
     if( fertilizer->count_by_charges() ) {
@@ -15340,6 +15351,7 @@ bool zone_sort_activity_actor::stage_think( player_activity &act, Character &you
             if( zone_sorting::sorter_out_of_bounds( you, zone_sort_activity_actor() ) ) {
                 return false;
             }
+            zero_move_dispatches = 0;
             if( !zone_sorting::route_to_destination( you, act, src_bub, stage ) ) {
                 unreachable_sources.emplace( src );
                 continue;
@@ -15391,6 +15403,7 @@ bool zone_sort_activity_actor::stage_think( player_activity &act, Character &you
                            src.x(), src.y(), src.z(),
                            you.pos_bub().x(), you.pos_bub().y() );
             // Route to source. Can't skip: post-cutoff fallback tiles weren't pre-evaluated by route_length.
+            zero_move_dispatches = 0;
             if( !zone_sorting::route_to_destination( you, act, src_bub, stage ) ) {
                 add_msg_debug( debugmode::DF_ACTIVITY,
                                "zone_sort THINK: route to source FAILED, trying next" );

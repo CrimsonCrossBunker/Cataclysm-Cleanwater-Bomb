@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:0d2c64867ca5a2d0c5954b8a3f12a16edce6d30c65abc104f29f081e676a5cba",
+    "source_fingerprint": "sha256:7064377edec8027586a62e31af5d3451d6bb413bc20ba8b2b348d2b3eec849bd",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -29,8 +29,8 @@
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6766,
-    "top_level_objects": 94749,
+    "tracked_json_files": 6767,
+    "top_level_objects": 94796,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -113,7 +113,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 15119,
+        "occurrences": 15136,
         "examples": [
           {
             "path": "data/json/artifact/artifact_item_types.json",
@@ -4155,7 +4155,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 1062,
+        "occurrences": 1065,
         "examples": [
           {
             "path": "data/json/furniture_and_terrain/LIXA_furniture_and_terrain.json",
@@ -5750,7 +5750,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 2991,
+        "occurrences": 2993,
         "examples": [
           {
             "path": "data/json/items/relics/highland_censer.json",
@@ -7431,7 +7431,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 8203,
+        "occurrences": 8222,
         "examples": [
           {
             "path": "data/json/items/armor/jewelry.json",
@@ -8429,7 +8429,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 761,
+        "occurrences": 763,
         "examples": [
           {
             "path": "data/json/recipes/basecamps/components.json",
@@ -9874,7 +9874,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 106,
+        "occurrences": 107,
         "examples": [
           {
             "path": "data/json/tool_qualities.json",
@@ -10395,7 +10395,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 601,
+        "occurrences": 604,
         "examples": [
           {
             "path": "data/json/debug/teleportation.json",

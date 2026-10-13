@@ -4633,7 +4633,7 @@ sol::table consume_inventory_sum(
     if( character == nullptr ) {
         return make_game_error_result( state, *error );
     }
-    const inventory &available_inventory =
+    const temp_crafting_inventory &available_inventory =
         character->crafting_inventory();
     double coverage = 0.0;
     for( weighted_entry &entry : entries ) {

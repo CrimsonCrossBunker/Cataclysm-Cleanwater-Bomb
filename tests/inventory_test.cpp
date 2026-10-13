@@ -14,7 +14,7 @@ static const itype_id itype_rock( "rock" );
 static const itype_id itype_stick( "stick" );
 static const itype_id itype_string_36( "string_36" );
 
-TEST_CASE( "inventory_form_from_map_bulk_batching", "[inventory][map]" )
+TEST_CASE( "temp_crafting_inventory_form_from_map_bulk_batching", "[inventory][map]" )
 {
     clear_map_without_vision();
     map &m = get_map();

@@ -719,10 +719,15 @@ const temp_crafting_inventory &Character::crafting_inventory( map *here,
     std::map<itype_id, int> tmp_liq_list;
 
     visit_items(
-    [&]( item * it, item * parent ) {
-        // Only roots: a reserved provider takes the container carrying it along.
-        if( parent == nullptr && craft_reservation::contains_reserved( *it ) ) {
+    [&]( item * it, item * ) {
+        // Worn storage is a carrier, not one indivisible tool unit. Its
+        // independent contents stay available while a claimed tool and its
+        // attached contents remain hidden together.
+        if( get_craft_reservations().is_reserved_uid( it->uid().get_value() ) ) {
             return VisitResponse::SKIP;
+        }
+        if( craft_reservation::contains_reserved( *it ) ) {
+            return is_worn( *it ) ? VisitResponse::NEXT : VisitResponse::SKIP;
         }
         if( !it->empty_container() ) {
             // is the non-empty container used for BOIL?
@@ -1262,15 +1267,6 @@ static Character *resolve_crafter( const character_id &cid )
 
 namespace
 {
-// Where a step's tools and charges are sourced.  origin is the craft tile;
-// present_char is the holder (held craft) or the crafter when standing within
-// radius (map craft), else null when only the map at the craft is reachable.
-struct step_source_context {
-    tripoint_bub_ms origin;
-    int radius;
-    Character *present_char = nullptr;
-};
-
 enum class acquire_outcome : uint8_t {
     ok,             // every group covered; bindings committed or revalidated
     provider_lost,  // an established binding's provider left the admitted set
@@ -1477,9 +1473,14 @@ static std::vector<provider_candidate> enumerate_admitted_providers(
     const std::vector<tripoint_bub_ms> reachable =
         m.reachable_flood_steps( src.origin, src.radius, 1, 100 );
 
-    const auto admit_tree = [&out]( const item & root, bool carried ) {
+    const auto admit_tree = [&out]( const item & root, bool carried,
+    const std::set<const item *> *independent_contents = nullptr ) {
         const int64_t root_uid = root.uid().get_value();
-        root.visit_items( [&out, root_uid, carried]( const item * node, const item * parent ) {
+        root.visit_items( [&out, root_uid, carried, independent_contents]( const item * node,
+        const item * parent ) {
+            if( parent != nullptr && independent_contents && independent_contents->count( node ) ) {
+                return VisitResponse::SKIP;
+            }
             provider_candidate cand;
             cand.kind = craft_reservation::provider_kind::item;
             cand.it = node;
@@ -1513,7 +1514,20 @@ static std::vector<provider_candidate> enumerate_admitted_providers(
     if( src.present_char != nullptr ) {
         for( const item_location &carried : src.present_char->all_items_loc() ) {
             if( carried && carried.parent_item() == item_location::nowhere ) {
-                admit_tree( *carried, true );
+                if( src.present_char->is_worn( *carried ) ) {
+                    // A worn backpack can carry multiple independent providers.
+                    // Magazine/mod pockets still belong to the worn item's unit.
+                    std::set<const item *> contents;
+                    for( const item *child : carried->all_items_top( pocket_type::CONTAINER ) ) {
+                        contents.insert( child );
+                    }
+                    admit_tree( *carried, true, &contents );
+                    for( const item *child : contents ) {
+                        admit_tree( *child, true );
+                    }
+                } else {
+                    admit_tree( *carried, true );
+                }
             }
         }
     }

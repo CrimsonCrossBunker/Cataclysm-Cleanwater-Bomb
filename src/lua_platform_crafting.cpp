@@ -845,7 +845,7 @@ sol::table snapshot_requirement(
     sol::state_view lua, const Character *actor,
     const requirement_data &value,
     const int batch,
-    const read_only_visitable &crafting_inventory,
+    const temp_crafting_inventory &crafting_inventory,
     const std::function<bool( const item & )> &filter )
 {
     const bool can_make = value.can_make_with_inventory(

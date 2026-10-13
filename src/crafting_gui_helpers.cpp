@@ -43,7 +43,7 @@
 #include "uistate.h"
 
 crafting_component_groups build_component_display( const recipe &rec, const Character &crafter,
-        const inventory &inv, int batch_size )
+        const temp_crafting_inventory &inv, int batch_size )
 {
     crafting_component_groups result;
     const requirement_data &req = rec.simple_requirements();

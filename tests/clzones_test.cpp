@@ -4074,7 +4074,7 @@ static vehicle *setup_drag_limited_sort( avatar &dummy, map &here,
     vehicle *cart = setup_grabbed_cart( dummy, here, start_pos, tripoint_rel_ms::east );
 
     const tripoint_bub_ms src_pos = start_pos + tripoint::south;
-    const tripoint_bub_ms dest_pos = start_pos + tripoint( 0, 8, 0 );
+    const tripoint_bub_ms dest_pos = start_pos + tripoint( 0, pickup_range + 8, 0 );
     here.ter_set( start_pos, ter_t_floor );
     here.ter_set( src_pos, ter_t_floor );
     here.ter_set( dest_pos, ter_t_floor );
@@ -4123,7 +4123,10 @@ TEST_CASE( "zone_sorting_drag_refused_items_reach_the_inventory",
         setup_drag_limited_sort( dummy, here, start_pos, boulders );
 
         dummy.assign_activity( zone_sort_activity_actor() );
-        REQUIRE( process_activity_bounded( dummy, 100, 2000 ) );
+        // CCB delivers the batch directly on the next dispatch. Observe the
+        // pickup dispatch before that delivery, while the drag/carry gate applies.
+        dummy.set_moves( 100000 );
+        dummy.activity.do_turn( dummy );
 
         const int at_source = count_items_or_charges( src_pos, itype_test_heavy_boulder,
             std::nullopt );
@@ -4142,7 +4145,10 @@ TEST_CASE( "zone_sorting_drag_refused_items_reach_the_inventory",
         REQUIRE_FALSE( dummy.can_stash( item( itype_test_heavy_boulder ) ) );
 
         dummy.assign_activity( zone_sort_activity_actor() );
-        REQUIRE( process_activity_bounded( dummy, 100, 2000 ) );
+        // CCB delivers the batch directly on the next dispatch. Observe the
+        // pickup dispatch before that delivery, while the drag/carry gate applies.
+        dummy.set_moves( 100000 );
+        dummy.activity.do_turn( dummy );
 
         const int at_source = count_items_or_charges( src_pos, itype_test_heavy_boulder,
             std::nullopt );
@@ -4166,7 +4172,10 @@ TEST_CASE( "zone_sorting_drag_refused_items_reach_the_inventory",
         const int carried_before = count_carried( dummy, itype_test_heavy_boulder );
 
         dummy.assign_activity( zone_sort_activity_actor() );
-        REQUIRE( process_activity_bounded( dummy, 100, 2000 ) );
+        // CCB delivers the batch directly on the next dispatch. Observe the
+        // pickup dispatch before that delivery, while the drag/carry gate applies.
+        dummy.set_moves( 100000 );
+        dummy.activity.do_turn( dummy );
 
         CHECK( count_carried( dummy, itype_test_heavy_boulder ) == carried_before );
         CHECK( count_items_or_charges( src_pos, itype_test_heavy_boulder,
@@ -4255,6 +4264,11 @@ class stall_count_probe_actor : public zone_sort_activity_actor
         }
         std::unique_ptr<activity_actor> clone() const override {
             return std::make_unique<stall_count_probe_actor>( *this );
+        }
+
+        bool stage_think( player_activity &act, Character &you ) override {
+            zero_move_dispatches = preset_count;
+            return zone_sort_activity_actor::stage_think( act, you );
         }
 
         void stage_do( player_activity &act, Character &you ) override {
@@ -4356,9 +4370,9 @@ TEST_CASE( "zone_activity_zero_move_passes_are_bounded",
         dummy.clear_destination();
         dummy.worn.wear_item( dummy, item( itype_backpack ), false, false );
 
-        const tripoint_bub_ms src_pos = start_pos + tripoint::south;
-        const tripoint_bub_ms dest_pos = start_pos + tripoint( 0, 8, 0 );
-        build_open_area( here, start_pos, 12 );
+        const tripoint_bub_ms src_pos = start_pos + tripoint( 0, 8, 0 );
+        const tripoint_bub_ms dest_pos = src_pos + tripoint::south;
+        build_open_area( here, start_pos, pickup_range + 10 );
         create_tile_zone( "Unsorted", zone_type_LOOT_UNSORTED, here.get_abs( src_pos ) );
         create_tile_zone( "Food", zone_type_LOOT_FOOD, here.get_abs( dest_pos ) );
         here.add_item_or_charges( src_pos, item( itype_test_apple ) );

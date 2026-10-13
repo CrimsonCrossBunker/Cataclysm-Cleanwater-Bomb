@@ -15,7 +15,7 @@
 #include "character_id.h"
 #include "coordinates.h"
 #include "craft_reservation.h"
-#include "game_constants.h"
+#include "cached_options.h"
 #include "item.h"
 #include "point.h"
 #include "type_id.h"
@@ -33,7 +33,7 @@ class vehicle;
 // radius (map craft), else null when only the map at the craft is reachable.
 struct step_source_context {
     tripoint_bub_ms origin;
-    int radius = PICKUP_RANGE;
+    int radius = pickup_range;
     Character *present_char = nullptr;
 };
 

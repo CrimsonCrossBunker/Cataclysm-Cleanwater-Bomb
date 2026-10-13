@@ -111,7 +111,7 @@ class veh_interact
 
         // Inventory requirements are independent of the selected vehicle tile.
         static std::map<const vpart_info *, bool> installation_requirement_availability(
-            const Character &actor, const inventory &inv );
+            const Character &actor, const temp_crafting_inventory &inv );
 
         /** Prompt for a part matching the selector function */
         static std::optional<vpart_reference> select_part( map &here, const vehicle &veh,

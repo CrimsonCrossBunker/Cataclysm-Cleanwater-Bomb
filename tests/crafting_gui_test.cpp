@@ -30,7 +30,7 @@
 #include "proficiency.h"
 #include "recipe.h"
 #include "requirements.h"
-#include "inventory.h"
+#include "temp_crafting_inventory.h"
 #include "type_id.h"
 #include "uistate.h"
 #include "weather_type.h"
@@ -1238,7 +1238,7 @@ TEST_CASE( "crafting_component_snapshot_preserves_counts_and_colors", "[crafting
     guy.i_add( wood );
     guy.invalidate_crafting_inventory();
     const recipe &rec = recipe_cudgel_test_no_tools.obj();
-    const inventory &inv = guy.crafting_inventory();
+    const temp_crafting_inventory &inv = guy.crafting_inventory();
     const auto filter = rec.get_component_filter();
     for( const int batch_size : {
              1, 2

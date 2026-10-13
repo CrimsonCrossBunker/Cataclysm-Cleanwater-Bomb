@@ -2269,10 +2269,11 @@ TEST_CASE( "unattended_craft_missing_fire_warns_only_when_first_paused",
 
     Messages::clear_messages();
     const auto warning_count = []() {
-        const auto messages = Messages::recent_messages( 0 );
+        const auto messages = Messages::recent_messages( 32 );
         return std::count_if( messages.begin(), messages.end(),
         []( const std::pair<std::string, std::string> &msg ) {
-            return msg.second.find( "continue crafting" ) != std::string::npos;
+            return msg.second.find( "continue crafting" ) != std::string::npos ||
+                   msg.second.find( "The tools in reach cannot cover every part" ) != std::string::npos;
         } );
     };
     craft_actualize_scheduled( on_map, item_wakeup_kind::ready_check,
@@ -4199,7 +4200,7 @@ TEST_CASE( "reservation_revalidates_non_item_providers",
                  craft_reservation::provider_kind::intrinsic );
 
         WHEN( "the crafter walks out of range" ) {
-            u.setpos( here, tripoint_bub_ms( 60 + PICKUP_RANGE + 5, 60, 0 ) );
+            u.setpos( here, tripoint_bub_ms( 60 + pickup_range + 5, 60, 0 ) );
             craft_actualize_scheduled( on_map, item_wakeup_kind::env_check, t0 + 1_minutes, loc );
 
             THEN( "the step pauses, since an intrinsic source is admitted by range too" ) {
@@ -5303,7 +5304,7 @@ TEST_CASE( "reservation_discovery_skips_an_unreachable_provider",
         here.build_map_cache( 0, true );
 
         temp_crafting_inventory reachable;
-        reachable.form_from_map( &here, origin, PICKUP_RANGE, &u );
+        reachable.form_from_map( &here, origin, pickup_range, &u );
         REQUIRE_FALSE( reachable.has_quality( qual_BOIL, 1, 1 ) );
 
         WHEN( "the step is entered" ) {
@@ -5448,6 +5449,7 @@ TEST_CASE( "reservation_counts_liquid_providers_post_merge",
     clear_avatar();
     clear_map();
     avatar &u = get_avatar();
+    u.worn.wear_item( u, item( itype_backpack ), false, false );
     map &here = get_map();
     const tripoint_bub_ms origin( 60, 60, 0 );
     const tripoint_bub_ms east( 61, 60, 0 );
@@ -5484,7 +5486,9 @@ TEST_CASE( "reservation_counts_liquid_providers_post_merge",
 
     GIVEN( "a keg and a carried container holding the same liquid" ) {
         here.furn_set( east, furn_f_standing_tank );
-        here.add_item( east, item( itype_test_reserve_liquid, calendar::turn, 10 ) );
+        item keg_liquid( itype_test_reserve_liquid, calendar::turn, 10 );
+        keg_liquid.set_owner( u );
+        here.add_item( east, keg_liquid );
         item canteen( itype_canteen, calendar::turn );
         REQUIRE( canteen.put_in( item( itype_test_reserve_liquid, calendar::turn, 10 ),
                                  pocket_type::CONTAINER ).success() );
@@ -5531,6 +5535,7 @@ TEST_CASE( "reservation_pauses_when_two_bound_liquids_become_merge_equivalent",
     clear_avatar();
     clear_map();
     avatar &u = get_avatar();
+    u.worn.wear_item( u, item( itype_backpack ), false, false );
     map &here = get_map();
     const tripoint_bub_ms origin( 60, 60, 0 );
     u.setpos( here, origin );
@@ -5585,6 +5590,7 @@ TEST_CASE( "reservation_prefers_a_free_member_of_a_liquid_merge_class",
     clear_avatar();
     clear_map();
     avatar &u = get_avatar();
+    u.worn.wear_item( u, item( itype_backpack ), false, false );
     map &here = get_map();
     const tripoint_bub_ms origin( 60, 60, 0 );
     u.setpos( here, origin );
@@ -6473,7 +6479,7 @@ TEST_CASE( "reserved_providers_are_hidden_from_crafting_inventory",
 
     GIVEN( "ground pot bound by a live step" ) {
         here.add_item( pot_pos, item( itype_pot ) );
-        REQUIRE( u.crafting_inventory( origin, PICKUP_RANGE ).has_quality( qual_BOIL, 1, 1 ) );
+        REQUIRE( u.crafting_inventory( origin, pickup_range ).has_quality( qual_BOIL, 1, 1 ) );
 
         craft_stamp_passive_entry( on_map, u, calendar::turn, loc );
         REQUIRE( on_map.get_reservations().size() == 1 );
@@ -6481,14 +6487,14 @@ TEST_CASE( "reserved_providers_are_hidden_from_crafting_inventory",
         THEN( "it is gone from the crafting inventory, including the owner's own" ) {
             u.invalidate_crafting_inventory();
             CHECK_FALSE( u.crafting_inventory( origin,
-                                               PICKUP_RANGE ).has_quality( qual_BOIL, 1, 1 ) );
+                                               pickup_range ).has_quality( qual_BOIL, 1, 1 ) );
         }
     }
 
     GIVEN( "a carried pot bound by a live step" ) {
         u.i_add( item( itype_pot ) );
         u.invalidate_crafting_inventory();
-        REQUIRE( u.crafting_inventory( origin, PICKUP_RANGE ).has_quality( qual_BOIL, 1, 1 ) );
+        REQUIRE( u.crafting_inventory( origin, pickup_range ).has_quality( qual_BOIL, 1, 1 ) );
 
         craft_stamp_passive_entry( on_map, u, calendar::turn, loc );
         REQUIRE( on_map.get_reservations().size() == 1 );
@@ -6496,7 +6502,7 @@ TEST_CASE( "reserved_providers_are_hidden_from_crafting_inventory",
         THEN( "crafter's own carried provider is hidden too" ) {
             u.invalidate_crafting_inventory();
             CHECK_FALSE( u.crafting_inventory( origin,
-                                               PICKUP_RANGE ).has_quality( qual_BOIL, 1, 1 ) );
+                                               pickup_range ).has_quality( qual_BOIL, 1, 1 ) );
         }
     }
 
@@ -6505,7 +6511,7 @@ TEST_CASE( "reserved_providers_are_hidden_from_crafting_inventory",
         REQUIRE( backpack.put_in( item( itype_pot ), pocket_type::CONTAINER ).success() );
         u.worn.wear_item( u, backpack, false, false );
         u.invalidate_crafting_inventory();
-        REQUIRE( u.crafting_inventory( origin, PICKUP_RANGE ).has_quality( qual_BOIL, 1, 1 ) );
+        REQUIRE( u.crafting_inventory( origin, pickup_range ).has_quality( qual_BOIL, 1, 1 ) );
 
         craft_stamp_passive_entry( on_map, u, calendar::turn, loc );
         REQUIRE( on_map.get_reservations().size() == 1 );
@@ -6513,7 +6519,7 @@ TEST_CASE( "reserved_providers_are_hidden_from_crafting_inventory",
         THEN( "whole container is pruned, since the guard cuts at the root" ) {
             u.invalidate_crafting_inventory();
             CHECK_FALSE( u.crafting_inventory( origin,
-                                               PICKUP_RANGE ).has_quality( qual_BOIL, 1, 1 ) );
+                                               pickup_range ).has_quality( qual_BOIL, 1, 1 ) );
         }
     }
 
@@ -6526,7 +6532,7 @@ TEST_CASE( "reserved_providers_are_hidden_from_crafting_inventory",
 
         THEN( "the free one is still offered" ) {
             u.invalidate_crafting_inventory();
-            CHECK( u.crafting_inventory( origin, PICKUP_RANGE ).has_quality( qual_BOIL, 1, 1 ) );
+            CHECK( u.crafting_inventory( origin, pickup_range ).has_quality( qual_BOIL, 1, 1 ) );
         }
     }
 }
@@ -6562,7 +6568,7 @@ TEST_CASE( "reserved_providers_are_hidden_from_automation_sources",
             std::vector<item_location> no_activity_items;
             item &still_there = *here.i_at( pot_pos ).begin();
             CHECK( zone_sorting::sort_skip_item( u, &still_there, no_activity_items, false,
-                                                 here.get_abs( pot_pos ), nullptr ) );
+                                                 here.get_abs( pot_pos ), 1.0f, nullptr ) );
         }
     }
 
@@ -6574,7 +6580,7 @@ TEST_CASE( "reserved_providers_are_hidden_from_automation_sources",
         THEN( "the craft itself is not sorted away from its providers" ) {
             std::vector<item_location> no_activity_items;
             CHECK( zone_sorting::sort_skip_item( u, &on_map, no_activity_items, false,
-                                                 here.get_abs( origin ), nullptr ) );
+                                                 here.get_abs( origin ), 1.0f, nullptr ) );
         }
     }
 }
@@ -6627,7 +6633,7 @@ TEST_CASE( "automation_leaves_a_container_holding_a_live_craft",
         THEN( "zone sorting leaves the container where it is" ) {
             std::vector<item_location> no_activity_items;
             CHECK( zone_sorting::sort_skip_item( u, &bag_on_map, no_activity_items, false,
-                                                 here.get_abs( bag_pos ), nullptr ) );
+                                                 here.get_abs( bag_pos ), 1.0f, nullptr ) );
         }
     }
 
@@ -6638,7 +6644,7 @@ TEST_CASE( "automation_leaves_a_container_holding_a_live_craft",
             CHECK_FALSE( craft_reservation::contains_live_craft( bag_on_map ) );
             std::vector<item_location> no_activity_items;
             CHECK_FALSE( zone_sorting::sort_skip_item( u, &bag_on_map, no_activity_items, false,
-                    here.get_abs( bag_pos ), nullptr ) );
+                    here.get_abs( bag_pos ), 1.0f, nullptr ) );
         }
     }
 }
@@ -7147,13 +7153,15 @@ TEST_CASE( "reservation_keeps_direct_quality_selection_off_a_bound_tool",
     GIVEN( "a bound high-level provider beside a free lower-level one" ) {
         item better( itype_test_reserve_tool_a_good );
         REQUIRE( u.wield( better ) );
-        item_location worse = u.i_add( item( itype_test_reserve_tool_a ) );
-        REQUIRE( worse );
-
+        // Establish the high-level binding before offering a cheaper provider.
         craft_stamp_passive_entry( on_map, u, calendar::turn, loc );
         REQUIRE( on_map.get_reservations().size() == 1 );
         REQUIRE( get_craft_reservations().is_reserved_uid(
                      on_map.get_reservations()[0].provider_uid ) );
+        REQUIRE( on_map.get_reservations()[0].provider_uid ==
+                 u.get_wielded_item()->uid().get_value() );
+        item_location worse = u.i_add( item( itype_test_reserve_tool_a ) );
+        REQUIRE( worse );
 
         THEN( "planning still passes on the free one" ) {
             CHECK( u.has_unreserved_quality( qual_TEST_RESERVE_A, 1, 1 ) );
