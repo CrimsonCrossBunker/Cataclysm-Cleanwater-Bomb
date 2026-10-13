@@ -1,5 +1,8 @@
 #include "recipe_dictionary.h"
 
+#include <input_context.h>
+#include <recipe.h>
+#include <type_id.h>
 #include <algorithm>
 #include <array>
 #include <cctype>

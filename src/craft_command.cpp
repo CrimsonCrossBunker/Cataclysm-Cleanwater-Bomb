@@ -1,5 +1,6 @@
 #include "craft_command.h"
 
+#include <coordinates.h>
 #include <algorithm>
 #include <climits>
 #include <cstdint>
@@ -23,7 +24,6 @@
 #include "enum_traits.h"
 #include "flag.h"
 #include "flexbuffer_json.h"
-#include "game_constants.h"
 #include "item.h"
 #include "item_components.h"
 #include "item_contents.h"

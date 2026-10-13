@@ -1,5 +1,8 @@
 #include "temp_crafting_inventory.h"
 
+#include <item.h>
+#include <item_location.h>
+#include <visitable.h>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -12,8 +15,8 @@
 #include "coordinates.h"
 #include "craft_reservation.h"
 #include "enums.h"
-#include "flag.h"
 #include "finite_water.h"
+#include "flag.h"
 #include "iexamine.h"
 #include "inventory.h"
 #include "itype.h"

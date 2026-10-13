@@ -1,5 +1,9 @@
 #include "npc_attack.h"
 
+#include <coordinates.h>
+#include <gun_mode.h>
+#include <map_iterator.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -535,7 +539,7 @@ npc_attack_rating npc_attack_gun::evaluate(
     for( const tripoint_bub_ms &targetable_point : targetable_points( source ) ) {
         if( creatures.creature_at( targetable_point ) ) {
             npc_attack_rating effectiveness_at_point = evaluate_tripoint( source, target,
-                    targetable_point );
+                targetable_point );
             effectiveness_at_point -= time_penalty;
             if( effectiveness_at_point > effectiveness ) {
                 effectiveness = effectiveness_at_point;
@@ -557,7 +561,7 @@ std::vector<npc_attack_rating> npc_attack_gun::all_evaluations( const npc &sourc
     for( const tripoint_bub_ms &targetable_point : targetable_points( source ) ) {
         if( creatures.creature_at( targetable_point ) ) {
             npc_attack_rating effectiveness_at_point = evaluate_tripoint( source, target,
-                    targetable_point );
+                targetable_point );
             effectiveness_at_point -= time_penalty;
             effectiveness.push_back( effectiveness_at_point );
         }
@@ -625,7 +629,7 @@ bool npc_attack_activate_item::can_use( const npc &source ) const
         return false;
     }
     const bool can_use_grenades = !source.is_hallucination() && ( !source.is_player_ally() ||
-                                  source.rules.has_flag( ally_rule::use_grenades ) );
+        source.rules.has_flag( ally_rule::use_grenades ) );
     return can_use_grenades;
 }
 
@@ -782,7 +786,7 @@ npc_attack_rating npc_attack_throw::evaluate(
         return effectiveness;
     }
     const temp_crafting_inventory &available_weapons = source.crafting_inventory( tripoint_bub_ms::zero,
-            -1 );
+        -1 );
     if( &thrown_item == source.evaluate_best_weapon() &&
         available_weapons.amount_of( thrown_item.typeId() ) <= 1 &&
         available_weapons.charges_of( thrown_item.typeId() ) <= 1 ) {
@@ -815,7 +819,7 @@ npc_attack_rating npc_attack_throw::evaluate(
                 continue;
             }
             npc_attack_rating effectiveness_at_point = evaluate_tripoint( source, target,
-                    potential );
+                potential );
             effectiveness_at_point -= penalty;
             if( effectiveness_at_point > effectiveness ) {
                 effectiveness = effectiveness_at_point;
@@ -842,7 +846,7 @@ std::vector<npc_attack_rating> npc_attack_throw::all_evaluations( const npc &sou
                 continue;
             }
             npc_attack_rating effectiveness_at_point = evaluate_tripoint( source, target,
-                    potential );
+                potential );
             effectiveness_at_point -= penalty;
             effectiveness.push_back( effectiveness_at_point );
         }

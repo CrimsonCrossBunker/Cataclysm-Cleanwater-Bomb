@@ -1,5 +1,6 @@
 #include "item_tname.h"
 
+#include <enum_bitset.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -249,10 +250,10 @@ std::string craft( item const &it, unsigned int /* quantity */,
                 elapsed = step_dur;
             }
             const int64_t step_dur_moves = std::max( static_cast<int64_t>( 1 ),
-                                           to_moves<int64_t>( step_dur ) );
+                to_moves<int64_t>( step_dur ) );
             const double fraction = static_cast<double>( to_moves<int64_t>( elapsed ) ) / step_dur_moves;
             const int projected = static_cast<int>( std::round( start_counter +
-                                                    fraction * ( end_counter - start_counter ) ) );
+                fraction * ( end_counter - start_counter ) ) );
             effective_counter = std::max( effective_counter, projected );
         }
         const int percent_progress = effective_counter / 100000;
@@ -720,7 +721,7 @@ std::string ememory( item const &it, unsigned int /* quantity */,
 
 // function type that prints an element of tname::segments
 using decl_f_print_segment = std::string( item const &it, unsigned int quantity,
-                             segment_bitset const &segments );
+    segment_bitset const &segments );
 constexpr size_t num_segments = static_cast<size_t>( tname::segments::last_segment );
 
 constexpr std::array<decl_f_print_segment *, num_segments> get_segs_array()

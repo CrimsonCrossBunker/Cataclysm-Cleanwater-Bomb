@@ -27,7 +27,6 @@ extern "C" {
 #include "character.h"
 #include "crafting_gui.h"
 #include "creature.h"
-#include "temp_crafting_inventory.h"
 #include "item.h"
 #include "itype.h"
 #include "lua_platform_bindings_values.h"
@@ -37,10 +36,10 @@ extern "C" {
 #include "requirements.h"
 #include "type_id.h"
 
+class temp_crafting_inventory;
+
 static const activity_id ACT_CRAFT( "ACT_CRAFT" );
 static const activity_id ACT_CRAFT_WAIT( "ACT_CRAFT_WAIT" );
-
-class read_only_visitable;
 
 
 namespace cata::lua_platform

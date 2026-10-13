@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
-#include <climits>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -23,7 +22,6 @@
 #include "bonuses.h"
 #include "calendar.h"
 #include "cata_imgui.h"
-#include "lua_platform_content.h"
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
@@ -47,6 +45,7 @@
 #include "item_location.h"
 #include "itype.h"
 #include "localized_comparator.h"
+#include "lua_platform_content.h"
 #include "magic_type.h"
 #include "mutation.h"
 #include "options.h"
@@ -69,8 +68,8 @@
 #include "ui_manager.h"
 #include "uilist.h"
 #include "uistate.h"
-#include "vitamin.h"
 #include "visitable.h"
+#include "vitamin.h"
 
 static const efftype_id effect_contacts( "contacts" );
 static const json_character_flag json_flag_HYPEROPIC( "HYPEROPIC" );
