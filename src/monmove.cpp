@@ -556,6 +556,14 @@ void monster::plan()
     monster_plan mon_plan( *this );
 
     map &here = get_map();
+    const auto follow_goal = [&]( Creature & target ) {
+        monster_destination_plan goal( *this, target, here );
+        return goal.commit( propose_monster_destination( goal.view() ), here );
+    };
+    const auto point_goal = [&]( const tripoint_abs_ms & destination, monster_point_goal kind ) {
+        monster_destination_plan goal( *this, here, destination, kind );
+        return goal.commit( propose_monster_destination( goal.view() ), here );
+    };
     std::bitset<OVERMAP_LAYERS> seen_levels = here.get_inter_level_visibility( posz() );
     monster_attitude mood = attitude();
     Character &player_character = get_player_character();
@@ -606,7 +614,7 @@ void monster::plan()
 
     if( mon_plan.docile ) {
         if( friendly != 0 && mon_plan.target != nullptr ) {
-            set_dest( mon_plan.target->pos_abs() );
+            follow_goal( *mon_plan.target );
         }
 
         return;
@@ -827,7 +835,9 @@ void monster::plan()
                 anger = 0;
                 remove_effect( effect_dragging );
             } else {
-                set_dest( here.get_abs( couch_loc ) );
+                if( !point_goal( here.get_abs( couch_loc ), monster_point_goal::furniture ) ) {
+                    return;
+                }
             }
         }
 
@@ -861,15 +871,19 @@ void monster::plan()
         // if there is more than one patrol point, advance to the next one if we're almost there
         // this handles impassable obstacles but patrollers can still get stuck
         if( ( patrol_route.size() > 1 ) && rl_dist( next_stop, pos_abs() ) < 2 ) {
-            next_patrol_point = ( next_patrol_point + 1 ) % patrol_route.size();
+            next_patrol_point = choose_monster_patrol_index( next_patrol_point, patrol_route.size(), true );
             next_stop = patrol_route.at( next_patrol_point );
         }
-        set_dest( next_stop );
+        if( !point_goal( next_stop, monster_point_goal::patrol ) ) {
+            return;
+        }
     } else if( friendly != 0 && has_effect( effect_led_by_leash ) &&
                pos_abs().z() == get_dest().z() ) {
         // visibility doesn't matter, we're getting pulled by a leash
         // To use stairs smoothly, if the destination is on a different Z-level, move there first.
-        set_dest( player_character.pos_abs() );
+        if( !follow_goal( player_character ) ) {
+            return;
+        }
         if( friendly > 0 && one_in( 3 ) ) {
             // Grow restless with no targets
             friendly--;
@@ -882,18 +896,12 @@ void monster::plan()
                  pos_abs().z() == get_dest().z() ) ) {
         // Simpleminded animals are too dumb to follow the player.
         // To use stairs smoothly, if the destination is on a different Z-level, move there first.
-        set_dest( player_character.pos_abs() );
+        if( !follow_goal( player_character ) ) {
+            return;
+        }
     }
 }
 
-/**
- * Method to make monster movement speed consistent in the face of staggering behavior and
- * differing distance metrics.
- * It works by scaling the cost to take a step by
- * how much that step reduces the distance to your goal.
- * Since it incorporates the current distance metric,
- * it also scales for diagonal vs orthogonal movement.
- **/
 /**
  * Returns true if the given square presents a possibility of drowning for the monster: it's deep water, it's liquid,
  * the monster can drown, and there is no boardable vehicle part present.

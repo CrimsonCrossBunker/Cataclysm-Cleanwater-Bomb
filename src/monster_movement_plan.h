@@ -30,6 +30,14 @@ enum class monster_movement_result {
     cancelled
 };
 
+/**
+ * Method to make monster movement speed consistent in the face of staggering behavior and
+ * differing distance metrics.
+ * It works by scaling the cost to take a step by
+ * how much that step reduces the distance to your goal.
+ * Since it incorporates the current distance metric,
+ * it also scales for diagonal vs orthogonal movement.
+ **/
 float monster_stagger_adjustment( const tripoint_bub_ms &source, const tripoint_bub_ms &goal,
                                   const tripoint_bub_ms &step, bool use_trig_distance );
 
