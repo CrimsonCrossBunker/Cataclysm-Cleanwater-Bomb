@@ -42,6 +42,7 @@
 #include "messages.h"
 #include "monfaction.h"
 #include "mongroup.h"
+#include "monster_destination_plan.h"
 #include "monster_oracle.h"
 #include "monster_step_selection.h"
 #include "mtype.h"
@@ -809,29 +810,12 @@ void monster::plan()
 
     } else if( mon_plan.target != nullptr ) {
 
-        const tripoint_abs_ms dest = mon_plan.target->pos_abs();
-        Creature::Attitude att_to_target = attitude_to( *mon_plan.target );
-        if( att_to_target == Attitude::HOSTILE && !mon_plan.fleeing ) {
-            set_dest( dest );
-        } else if( mon_plan.fleeing ) {
-            tripoint_abs_ms away = pos_abs() - dest + pos_abs();
-            // Aloft fliers descend, grounded fliers take off; non-fliers stay
-            // at current z. Mirror in monster::hear_sound.
-            int chosen_z = posz();
-            if( flies() ) {
-                map &here = get_map();
-                const tripoint_bub_ms here_bub = pos_bub();
-                const bool grounded = here.has_floor_or_water( here_bub );
-                if( !grounded &&
-                    here.valid_move( here_bub, here_bub + tripoint::below, false, true ) ) {
-                    chosen_z = posz() - 1;
-                } else if( grounded &&
-                           here.valid_move( here_bub, here_bub + tripoint::above, false, true ) ) {
-                    chosen_z = posz() + 1;
-                }
-            }
-            away.z() = chosen_z;
-            set_dest( away );
+        const Creature::Attitude att_to_target = attitude_to( *mon_plan.target );
+        monster_destination_plan destination_plan( *this, *mon_plan.target, here,
+                att_to_target == Attitude::HOSTILE, mon_plan.fleeing );
+        const auto destination = propose_monster_destination( destination_plan.view() );
+        if( !destination_plan.commit( destination, here ) ) {
+            return; // Discard an invalid receipt; the owner will plan again.
         }
         if( ( mon_plan.angers_hostile_weak || mon_plan.fears_hostile_weak ||
               mon_plan.placate_hostile_weak ) &&

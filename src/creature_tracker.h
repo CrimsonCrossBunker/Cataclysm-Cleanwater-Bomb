@@ -43,6 +43,10 @@ class creature_tracker
          */
         shared_ptr_fast<monster> find_by_uid( int64_t uid ) const;
 
+        // Owner-only membership query. Callers must already hold a valid lifetime
+        // reference; removed-this-turn objects may remain alive but not present.
+        bool is_present( const Creature *creature ) const;
+
         /**
          * Returns the reachable creature matching the given predicate.
          *  - CreaturePredicateFn: bool(Creature*)
@@ -162,8 +166,7 @@ class creature_tracker
         /** Rebuild the passability bitmap from level caches. Called when dirty_ is set. */
         void rebuild_passability_bitmap();
 
-        // If the creature is in the tracker.
-        bool is_present( Creature *creature ) const;
+
 
         std::list<shared_ptr_fast<npc>> active_npc; // NOLINT(cata-serialize)
         std::vector<shared_ptr_fast<monster>> monsters_list;

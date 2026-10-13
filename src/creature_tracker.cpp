@@ -233,8 +233,11 @@ void creature_tracker::rebuild_cache()
     }
 }
 
-bool creature_tracker::is_present( Creature *creature ) const
+bool creature_tracker::is_present( const Creature *creature ) const
 {
+    if( !creature ) {
+        return false;
+    }
     if( creature->is_monster() ) {
         if( const auto iter = monsters_by_location.find( creature->pos_abs() );
             iter != monsters_by_location.end() ) {
