@@ -2724,7 +2724,7 @@ TEST_CASE( "requirement_gate_counting_rules",
         stack.charges = 1;
         here.add_item( origin, stack );
         u.invalidate_crafting_inventory();
-        const temp_crafting_inventory &crafting_inv = u.crafting_inventory();
+        const auto &crafting_inv = u.crafting_inventory();
 
         THEN( "it cannot be both the tool and the material at once" ) {
             CHECK_FALSE( overlap.can_make_with_inventory( &u, crafting_inv, return_true<item> ) );
@@ -2736,7 +2736,7 @@ TEST_CASE( "requirement_gate_counting_rules",
         stack.charges = 2;
         here.add_item( origin, stack );
         u.invalidate_crafting_inventory();
-        const temp_crafting_inventory &crafting_inv = u.crafting_inventory();
+        const auto &crafting_inv = u.crafting_inventory();
 
         THEN( "one craft spends one charge and swings the other" ) {
             CHECK( overlap.can_make_with_inventory( &u, crafting_inv, return_true<item>, 1 ) );
@@ -2754,7 +2754,7 @@ TEST_CASE( "requirement_gate_counting_rules",
         stack.charges = 100;
         here.add_item( origin, stack );
         u.invalidate_crafting_inventory();
-        const temp_crafting_inventory &crafting_inv = u.crafting_inventory();
+        const auto &crafting_inv = u.crafting_inventory();
 
         THEN( "two providers before the craft" ) {
             CHECK( req.can_make_with_inventory( &u, crafting_inv, return_true<item> ) );
@@ -2762,7 +2762,7 @@ TEST_CASE( "requirement_gate_counting_rules",
 
         THEN( "but consuming the tool would leave only one, so two are refused" ) {
             CHECK_FALSE( overlap_two_tool.can_make_with_inventory( &u, crafting_inv,
-                         return_true<item> ) );
+                    return_true<item> ) );
         }
 
         // Over-strict, and deliberately left so.  Consuming one charge of a hundred destroys
@@ -2770,7 +2770,7 @@ TEST_CASE( "requirement_gate_counting_rules",
         // shipped requirement asks for more than one.
         THEN( "consuming a charge is refused too, though both providers would survive" ) {
             CHECK_FALSE( overlap_two_charge.can_make_with_inventory( &u, crafting_inv,
-                         return_true<item> ) );
+                    return_true<item> ) );
         }
     }
 }

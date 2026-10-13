@@ -34,13 +34,17 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
             path for path in entry["evidence"]
             if path != "tools/migrate_lua_first.py"
         ]
-        with mock.patch.object(validator.yaml, "safe_load", return_value=ledger):
+        with mock.patch.object(
+            validator.yaml, "safe_load", return_value=ledger
+        ):
             validator.check()
             # Advertising the complete selector still requires its migration.
             entry["status"] = "implemented_unverified"
             ledger["summary"]["primitive_available_unverified"] -= 1
             ledger["summary"]["implemented_unverified"] += 1
-            with self.assertRaisesRegex(RuntimeError, "lacks migration evidence"):
+            with self.assertRaisesRegex(
+                RuntimeError, "lacks migration evidence"
+            ):
                 validator.check()
 
     def test_primitive_evidence_still_requires_a_native_test(self):
@@ -53,7 +57,9 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
         entry["evidence"] = [
             path for path in entry["evidence"] if not path.startswith("tests/")
         ]
-        with mock.patch.object(validator.yaml, "safe_load", return_value=ledger):
+        with mock.patch.object(
+            validator.yaml, "safe_load", return_value=ledger
+        ):
             with self.assertRaisesRegex(RuntimeError, "lacks Platform source"):
                 validator.check()
 

@@ -97,7 +97,6 @@
     #include "cata_tiles.h"
 #endif // TILES
 
-class JsonObject;
 enum class cube_direction : int;
 
 static const activity_id ACT_TRAVELLING( "ACT_TRAVELLING" );
