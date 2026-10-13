@@ -29,6 +29,7 @@ if(GIT_VERSION)
     string(REPLACE "-NOTFOUND" "" GIT_VERSION ${GIT_VERSION})
     file(READ  ${CMAKE_SOURCE_DIR}/src/version.h VERSION_H)
     string(REGEX MATCH "#define VERSION \"(.+)\"" VERSION_H "${VERSION_H}")
+    set(VERSION_H "${CMAKE_MATCH_1}")
 
     if(NOT GIT_VERSION STREQUAL VERSION_H)
         file(WRITE ${CMAKE_SOURCE_DIR}/src/version.h
