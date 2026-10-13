@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:ed89dbb3cc77249139bd975080d6f02aefe0a1b3f597aeeb6effd7aad96e3927",
+    "source_fingerprint": "sha256:8d1b413ea1b44d4cd09ceae7bd912235037f00eee6c7beb7d38c2d236d1005fb",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -29,8 +29,8 @@
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6811,
-    "top_level_objects": 95240,
+    "tracked_json_files": 6814,
+    "top_level_objects": 95248,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -113,7 +113,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 15173,
+        "occurrences": 15176,
         "examples": [
           {
             "path": "data/json/artifact/artifact_item_types.json",
@@ -339,7 +339,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 1108,
+        "occurrences": 1111,
         "examples": [
           {
             "path": "data/json/items/comestibles/irradiated_fruit_migration.json",
@@ -9525,7 +9525,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 348,
+        "occurrences": 350,
         "examples": [
           {
             "path": "data/json/martialarts_fictional.json",
