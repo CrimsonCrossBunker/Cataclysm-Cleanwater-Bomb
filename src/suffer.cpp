@@ -244,7 +244,7 @@ void suffer::water_damage( Character &you )
     for( const std::pair<const bodypart_str_id, bodypart> &elem : you.get_body() ) {
         const float wetness_percentage = elem.second.get_wetness_percentage();
         float dmg_float = you.enchantment_cache->modify_value( enchant_vals::mod::WEAKNESS_TO_WATER,
-                          0 ) * wetness_percentage / 100;
+            0 ) * wetness_percentage / 100;
         const int dmg = roll_remainder( dmg_float );
         if( dmg > 0 ) {
             you.apply_damage( nullptr, elem.first, dmg );
@@ -348,7 +348,9 @@ void suffer::while_underwater( Character &you )
         you.oxygen--;
     }
     if( you.oxygen < 12 && ( you.worn_with_flag( flag_REBREATHER ) ||
-                             you.has_flag( json_flag_REBREATHER_INTERNAL ) ) ) {
+                             you.has_flag( json_flag_REBREATHER_INTERNAL ) ||
+                             ( you.worn_with_flag( flag_SCBA_ON ) &&
+                               you.has_item_with_flag( flag_SCBA_TANK_ON ) ) ) ) {
         you.oxygen += 12;
     }
     if( you.oxygen <= 5 ) {
@@ -422,7 +424,7 @@ void suffer::while_grabbed( Character &you )
         you.add_msg_if_player( m_bad, _( "You're crushed against the walls!" ) );
         crowd += impassable_ter;
         crowd_pressure += impassable_ter * std::max( 1.0f,
-                          crowd_pressure / ( crowd - impassable_ter ) );
+            crowd_pressure / ( crowd - impassable_ter ) );
     }
 
     const float pressure_per_part = crowd_pressure / 3;
@@ -478,7 +480,7 @@ void suffer::while_grabbed( Character &you )
         }
         // your characters chest is being crushed and you are dying
         you.apply_damage( nullptr, you.get_random_body_part_of_type( bp_type::torso ), rng( 1,
-                          4 ) );
+                4 ) );
     } else if( you.oxygen <= 15 ) {
         you.add_msg_if_player( m_bad, _( "You can't breathe with all this weight!" ) );
     } else if( you.oxygen <= 25 ) {
@@ -748,9 +750,9 @@ void suffer::from_asthma( Character &you, const int current_stim )
                 you.add_msg_if_player( m_bad, _( "You use your last inhaler charge." ) );
             } else {
                 you.add_msg_if_player( m_info, n_gettext( "You use your inhaler; "
-                                       "only %d charge left.",
-                                       "You use your inhaler; "
-                                       "only %d charges left.", charges ),
+                                                          "only %d charge left.",
+                                                          "You use your inhaler; "
+                                                          "only %d charges left.", charges ),
                                        charges );
             }
             you.add_effect( effect_took_antiasthmatic, rng( 6_hours, 12_hours ) );
@@ -763,9 +765,9 @@ void suffer::from_asthma( Character &you, const int current_stim )
                                                  "from the tank." ) );
             } else {
                 you.add_msg_if_player( m_info, n_gettext( "You take a deep breath from your oxygen "
-                                       "tank; only %d charge left.",
-                                       "You take a deep breath from your oxygen "
-                                       "tank; only %d charges left.", charges ),
+                                                          "tank; only %d charge left.",
+                                                          "You take a deep breath from your oxygen "
+                                                          "tank; only %d charges left.", charges ),
                                        charges );
             }
         }
@@ -796,9 +798,9 @@ void suffer::in_sunlight( Character &you )
         const double sleeve_factor = you.armwear_factor();
         const bool has_hat = you.wearing_something_on( bodypart_id( "head" ) );
         const float weather_factor = std::min( incident_sun_irradiance( get_weather().weather_id,
-                                               calendar::turn ) / irradiance::moderate, 1.f );
+            calendar::turn ) / irradiance::moderate, 1.f );
         const int player_local_temp = units::to_fahrenheit( get_weather().get_temperature(
-                                          position ) );
+                position ) );
         const int flux = ( player_local_temp - 65 ) / 2;
         if( !has_hat ) {
             sunlight_nutrition += ( 100 + flux ) * weather_factor;
@@ -938,8 +940,8 @@ void suffer::from_sunburn( Character &you, bool severe )
     };
     auto medium_sunburn = [severe, &you] {
         if( severe )
-        {
-            you.mod_pain( 1 );
+    {
+        you.mod_pain( 1 );
             return Pain;
         } else
         {
@@ -949,8 +951,8 @@ void suffer::from_sunburn( Character &you, bool severe )
     };
     auto light_sunburn = [severe, &you] {
         if( severe )
-        {
-            you.mod_focus( -1 );
+    {
+        you.mod_focus( -1 );
             return Focus_Loss;
         } else
         {
@@ -979,16 +981,16 @@ void suffer::from_sunburn( Character &you, bool severe )
             // If no UV-/glare-protection gear is worn the eyes should be treated as unprotected
             exposure = 1.0;
         } else if( !you.has_flag( json_flag_SUNBURN_SUPERNATURAL ) && ( ( you.get_wielded_item() &&
-                   you.get_wielded_item()->has_flag( flag_RAIN_PROTECT ) )
-                   || ( ( bp == body_part_hand_l || bp == body_part_hand_r )
-                        && you.worn_with_flag( flag_POCKETS )
-                        && you.can_use_pockets() )
-                   || ( bp == body_part_head
-                        && you.worn_with_flag( flag_HOOD )
-                        && you.can_use_hood() )
-                   || ( bp == body_part_mouth
-                        && you.worn_with_flag( flag_COLLAR )
-                        && you.can_use_collar() ) ) ) {
+                you.get_wielded_item()->has_flag( flag_RAIN_PROTECT ) )
+                || ( ( bp == body_part_hand_l || bp == body_part_hand_r )
+                     && you.worn_with_flag( flag_POCKETS )
+                     && you.can_use_pockets() )
+                || ( bp == body_part_head
+                     && you.worn_with_flag( flag_HOOD )
+                     && you.can_use_hood() )
+                || ( bp == body_part_mouth
+                     && you.worn_with_flag( flag_COLLAR )
+                     && you.can_use_collar() ) ) ) {
             // Eyes suffer even in the presence of the checks in this branch!
             // Umbrellas can keep the sun off all bodyparts
             // Pockets can keep the sun off your hands if you don't wield a too large item
@@ -1241,7 +1243,7 @@ void suffer::from_radiation( Character &you )
     // Spread less radiation when sleeping (slower metabolism etc.)
     // Otherwise it can quickly get to the point where you simply can't sleep at all
     const bool rad_mut_proc = rad_mut > 0 && x_in_y( rad_mut, to_turns<int>( you.in_sleep_state() ?
-                              3_hours : 30_minutes ) );
+        3_hours : 30_minutes ) );
 
     bool has_helmet = false;
     const bool power_armored = you.is_wearing_power_armor( &has_helmet );
@@ -1776,7 +1778,7 @@ void Character::suffer()
     }
 
     units::energy trickle = enchantment_cache->modify_value( enchant_vals::mod::POWER_TRICKLE,
-                            0_J );
+        0_J );
     if( trickle != 0_J ) {
         mod_power_level( trickle );
     }
@@ -1976,7 +1978,7 @@ void Character::mend( int rate_multiplier )
     bool needs_splint = true;
 
     healing_factor = enchantment_cache->modify_value( enchant_vals::mod::MENDING_MODIFIER,
-                     healing_factor );
+        healing_factor );
 
     add_msg_debug( debugmode::DF_CHAR_HEALTH, "Limb mend healing factor: %.2f", healing_factor );
     if( healing_factor <= 0.0f ) {
@@ -2160,7 +2162,7 @@ void Character::apply_wetness_morale( units::temperature temperature )
 
     // Sensitivity scales how much being wet affects morale, ±50% across 0..500.
     const double sens_mult = clamp( 1.0 + 0.5 * std::log( std::clamp( get_sensitive(), 1,
-                                    500 ) / 100.0 ) / std::log( 5.0 ), 0.5, 1.5 );
+        500 ) / 100.0 ) / std::log( 5.0 ), 0.5, 1.5 );
     const int scaled_effect = round( morale_effect * sens_mult );
     if( scaled_effect != 0 || morale_effect == 0 ) {
         morale_effect = scaled_effect;

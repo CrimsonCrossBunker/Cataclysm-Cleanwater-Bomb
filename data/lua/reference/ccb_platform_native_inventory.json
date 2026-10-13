@@ -446,7 +446,8 @@
     { "type": "uses_debug_menu" },
     { "type": "u_var_changed" },
     { "type": "vehicle_moves" },
-    { "type": "character_butchered_corpse" }
+    { "type": "character_butchered_corpse" },
+    { "type": "character_effect_intensity_changed" }
   ],
   "native_domains": [
     { "id": "achievements", "requirement": "Inspect achievement definitions and world progress." },

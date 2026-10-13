@@ -1,5 +1,6 @@
 #include "dependency_tree.h"
 
+#include <type_id.h>
 #include <algorithm>
 #include <array>
 #include <ostream>
@@ -156,44 +157,23 @@ std::vector<mod_id> dependency_node::get_dependencies_as_strings()
 
 std::vector<dependency_node *> dependency_node::get_dependencies_as_nodes()
 {
-    std::vector<dependency_node *> dependencies;
     std::vector<dependency_node *> ret;
-    std::set<mod_id> found;
-
-    std::stack<dependency_node *> nodes_to_check;
-    for( dependency_node *&elem : parents ) {
-        nodes_to_check.push( elem );
+    std::set<mod_id> found{ key };
+    const auto visit = [&]( const auto & self, dependency_node * node ) -> void {
+        if( !found.insert( node->key ).second )
+    {
+        return;
     }
-    found.insert( key );
-
-    while( !nodes_to_check.empty() ) {
-        dependency_node *check = nodes_to_check.top();
-        nodes_to_check.pop();
-
-        // make sure that the one we are checking is not THIS one
-        if( found.find( check->key ) != found.end() ) {
-            continue; // just keep going, we aren't really caring about availability right now
+for( dependency_node *parent : node->parents )
+    {
+        self( self, parent );
         }
-
-        // add check to dependencies
-        dependencies.push_back( check );
-
-        // add parents to check list
-        for( dependency_node *&elem : check->parents ) {
-            nodes_to_check.push( elem );
-        }
-        found.insert( check->key );
+        // Postorder keeps shared prerequisites before every dependent.
+        ret.push_back( node );
+    };
+    for( dependency_node *parent : parents ) {
+        visit( visit, parent );
     }
-
-    // sort from the back!
-    for( std::vector<dependency_node *>::reverse_iterator it =
-             dependencies.rbegin();
-         it != dependencies.rend(); ++it ) {
-        if( std::find( ret.begin(), ret.end(), *it ) == ret.end() ) {
-            ret.push_back( *it );
-        }
-    }
-
     return ret;
 }
 

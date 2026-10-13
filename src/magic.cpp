@@ -317,6 +317,53 @@ bool string_id<spell_type>::is_valid() const
     return spell_factory.is_valid( *this );
 }
 
+std::pair<int, int> spell_type::damage_at_max_level() const
+{
+    avatar guy;
+    const_dialogue d( get_const_talker_for( guy ), nullptr );
+
+    spell cur_spell( id );
+    cur_spell.gain_levels( guy, 84 ); // 84 is just max possible spell level
+
+    const int min = std::min( static_cast<float>( cur_spell.min_leveled_damage( guy ) ),
+                              static_cast<float>( max_damage.evaluate( d ) ) ) * cur_spell.get_eoc_damage_multiplier();
+
+    const int max = std::max( static_cast<float>( cur_spell.min_leveled_damage( guy ) ),
+                              static_cast<float>( max_damage.evaluate( d ) ) ) * cur_spell.get_eoc_damage_multiplier();
+
+    return std::make_pair( min, max );
+}
+
+std::pair<float, float> spell_type::calculate_damage_increment() const
+{
+    avatar min_guy;
+    const_dialogue min_d( get_const_talker_for( min_guy ), nullptr );
+
+    avatar max_guy;
+    const_dialogue max_d( get_const_talker_for( max_guy ), nullptr );
+
+    spell spell_0( id );
+    spell spell_1( id );
+    spell_1.gain_level( max_guy );
+
+    const float spell_0_leveled = min_damage.evaluate( min_d ) + spell_0.get_effective_level() *
+                                  damage_increment.evaluate( min_d );
+    const float spell_1_leveled = min_damage.evaluate( max_d ) + spell_1.get_effective_level() *
+                                  damage_increment.evaluate( max_d );
+
+    const float min_0 = std::min( static_cast<float>( spell_0_leveled ),
+                                  static_cast<float>( max_damage.evaluate( min_d ) ) ) * spell_0.get_eoc_damage_multiplier();
+    const float min_1 = std::min( static_cast<float>( spell_1_leveled ),
+                                  static_cast<float>( max_damage.evaluate( max_d ) ) ) * spell_1.get_eoc_damage_multiplier();
+
+    const float max_0 = std::max( static_cast<float>( spell_0_leveled ),
+                                  static_cast<float>( max_damage.evaluate( min_d ) ) ) * spell_0.get_eoc_damage_multiplier();
+    const float max_1 = std::max( static_cast<float>( spell_1_leveled ),
+                                  static_cast<float>( max_damage.evaluate( max_d ) ) ) * spell_1.get_eoc_damage_multiplier();
+
+    return std::make_pair( min_1 - min_0, max_1 - max_0 );
+}
+
 void spell_type::load_spell( const JsonObject &jo, const std::string &src )
 {
     spell_factory.load( jo, src );
@@ -685,6 +732,11 @@ double spell::bash_scaling( const Creature &caster ) const
             return std::max( leveled_scaling, static_cast<double>( type->max_bash_scaling.evaluate( d ) ) );
         }
     }
+}
+
+float spell::get_eoc_damage_multiplier() const
+{
+    return temp_damage_multiplyer;
 }
 
 int spell::min_leveled_damage( const Creature &caster ) const
@@ -1458,20 +1510,7 @@ void spell::set_exp( int nxp )
 
 std::string spell::energy_string() const
 {
-    switch( type->get_energy_source() ) {
-        case magic_energy_type::hp:
-            return _( "health" );
-        case magic_energy_type::mana:
-            return _( "mana" );
-        case magic_energy_type::stamina:
-            return _( "stamina" );
-        case magic_energy_type::bionic:
-            return _( "kJ" );
-        case magic_energy_type::vitamin:
-            return to_lower_case( vitamin_energy_source().value().obj().name() );
-        default:
-            return "";
-    }
+    return type->energy_string();
 }
 
 std::string spell::energy_cost_string( const Character &guy ) const
@@ -1801,6 +1840,24 @@ nc_color spell_type::energy_color() const
         return magic_type.value()->energy_color_.value();
     } else {
         return c_cyan;
+    }
+}
+
+std::string spell_type::energy_string() const
+{
+    switch( get_energy_source() ) {
+        case magic_energy_type::hp:
+            return _( "health" );
+        case magic_energy_type::mana:
+            return _( "mana" );
+        case magic_energy_type::stamina:
+            return _( "stamina" );
+        case magic_energy_type::bionic:
+            return _( "kJ" );
+        case magic_energy_type::vitamin:
+            return to_lower_case( vitamin_energy_source()->name() );
+        default:
+            return "";
     }
 }
 
@@ -3549,11 +3606,23 @@ static std::string color_number( const int num )
     }
 }
 
+static std::string color_string_from_number( const int num, const std::string &text,
+        bool add_plus_sign = false )
+{
+    if( num > 0 ) {
+        return colorize( add_plus_sign ? "+" : "" + text, c_light_green );
+    } else if( num < 0 ) {
+        return colorize( text, c_light_red );
+    } else {
+        return colorize( text, c_white );
+    }
+}
+
 static std::string color_number( const float num )
 {
-    if( num > 100 ) {
+    if( num > 10 ) {
         return colorize( string_format( "+%.0f", num ), c_light_green );
-    } else if( num < -100 ) {
+    } else if( num < -10 ) {
         return colorize( string_format( "%.0f", num ), c_light_red );
     } else if( num > 0 ) {
         return colorize( string_format( "+%.2f", num ), c_light_green );
@@ -3562,6 +3631,87 @@ static std::string color_number( const float num )
     } else {
         return colorize( "0", c_white );
     }
+}
+
+namespace
+{
+
+enum class minmax_row_type {
+    DURATION,
+    ENERGY,
+    DEFAULT
+};
+
+} // namespace
+
+static void draw_minmax_row( const dialogue &d, const std::string &label, const dbl_or_var &min_d,
+                             const dbl_or_var &inc_d, const dbl_or_var &max_d, minmax_row_type type = minmax_row_type::DEFAULT,
+                             bool check_minmax = false, bool absolute = false, const spell_type *sp = nullptr )
+{
+    const int min = absolute ? std::abs( static_cast<int>( min_d.evaluate( d ) ) ) : static_cast<int>
+                    ( min_d.evaluate( d ) );
+    const float inc = absolute ? std::abs( static_cast<float>( inc_d.evaluate(
+            d ) ) ) : static_cast<float>( inc_d.evaluate( d ) );
+    const int max = absolute ? std::abs( static_cast<int>( max_d.evaluate( d ) ) ) : static_cast<int>
+                    ( max_d.evaluate( d ) );
+    if( check_minmax && ( min == 0 || max == 0 ) ) {
+        return;
+    }
+
+    std::string min_str;
+    std::string inc_str;
+    std::string max_str;
+
+    switch( type ) {
+        case minmax_row_type::DURATION:
+
+            // if less than a second, handle separately
+            if( min < 100 ) {
+                // ideally time_duration itself will handle time smaller than 100 moves, but not a thing yet
+                min_str = color_string_from_number( min, string_format( _( "%.2f seconds" ), min / 100.f ) );
+            } else {
+                min_str = color_string_from_number( min, to_string( time_duration::from_moves( min ), true ) ) ;
+            }
+
+            if( inc < 100 ) {
+                inc_str = color_string_from_number( inc, string_format( _( "%.2f seconds" ), inc / 100.f ), true );
+            } else {
+                inc_str = color_string_from_number( inc, to_string( time_duration::from_moves( inc ), true ) );
+            }
+
+            if( max < 100 ) {
+                max_str = color_string_from_number( max, string_format( _( "%.2f seconds" ), max / 100.f ) );
+            } else {
+                max_str = color_string_from_number( max, to_string( time_duration::from_moves( max ), true ) );
+            }
+
+            break;
+
+        case minmax_row_type::ENERGY:
+
+            min_str = color_string_from_number( min, string_format( "%d %s", min, sp->energy_string() ) );
+            inc_str = color_number( inc );
+            max_str = color_number( max );
+
+            break;
+        default:
+            min_str = color_number( min );
+            inc_str = color_number( inc );
+            max_str = color_number( max );
+            break;
+    }
+
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::TextColored( c_light_gray, "%s", label.c_str() );
+    ImGui::TableNextColumn();
+    cataimgui::draw_colored_text( min_str );
+    ImGui::TableNextColumn();
+    if( inc != 0 ) {
+        cataimgui::draw_colored_text( inc_str );
+    }
+    ImGui::TableNextColumn();
+    cataimgui::draw_colored_text( max_str );
 }
 
 static void draw_spellbook_info( const spell_type &sp )
@@ -3626,47 +3776,57 @@ static void draw_spellbook_info( const spell_type &sp )
     }
 
     if( ImGui::BeginTable( "stats", 4,
-                           ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_BordersOuter |
+                           ImGuiTableFlags_SizingStretchSame | ImGuiTableFlags_BordersOuter |
                            ImGuiTableFlags_BordersInnerV ) ) {
-        ImGui::TableSetupColumn( _( "Stat Gain" ), 0, 10 );
-        ImGui::TableSetupColumn( _( "lvl 0" ), 0, 7 );
-        ImGui::TableSetupColumn( _( "per lvl" ), 0, 7 );
-        ImGui::TableSetupColumn( _( "max lvl" ), 0, 7 );
+        ImGui::TableSetupColumn( _( "Stat Gain" ), 0 );
+        ImGui::TableSetupColumn( _( "lvl 0" ), 0 );
+        ImGui::TableSetupColumn( _( "per lvl" ), 0 );
+        ImGui::TableSetupColumn( _( "max lvl" ), 0 );
         ImGui::TableHeadersRow();
 
-        const auto row = [&]( const std::string & label, const dbl_or_var & min_d,
-        const dbl_or_var & inc_d, const dbl_or_var & max_d, bool check_minmax = false ) {
-            const int min = static_cast<int>( min_d.evaluate( d ) );
-            const float inc = static_cast<float>( inc_d.evaluate( d ) );
-            const int max = static_cast<int>( max_d.evaluate( d ) );
-            if( check_minmax && ( min == 0 || max == 0 ) ) {
-                return;
-            }
-            ImGui::TableNextRow();
-            ImGui::TableNextColumn();
-            ImGui::TextColored( c_light_gray, "%s", label.c_str() );
-            ImGui::TableNextColumn();
-            cataimgui::draw_colored_text( color_number( min ) );
-            ImGui::TableNextColumn();
-            cataimgui::draw_colored_text( color_number( inc ) );
-            ImGui::TableNextColumn();
-            cataimgui::draw_colored_text( color_number( max ) );
-        };
-
         if( !damage_string.empty() ) {
-            row( damage_string, sp.min_damage, sp.damage_increment, sp.max_damage, true );
+            if( damage_string == _( "Damage" ) && ( sp.min_damage.evaluate( d ) < 0 ||
+                                                    sp.max_damage.evaluate( d ) < 0 ) ) {
+                damage_string = _( "Healing" );
+            }
+            if( fake_spell.has_flag( spell_flag::RANDOM_DAMAGE ) ) {
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::TextColored( c_light_gray, "%s", damage_string.c_str() );
+                ImGui::TableNextColumn();
+                ImGui::TextColored( c_light_green, "%d-%d",
+                                    static_cast<int>( std::abs( sp.min_damage.evaluate( d ) ) ),
+                                    std::abs( static_cast<int>( sp.max_damage.evaluate( d ) ) ) );
+                ImGui::TableNextColumn();
+                const std::pair<float, float> increment = sp.calculate_damage_increment();
+                ImGui::TextColored( c_light_green, "%.2f - %.2f", std::min( std::abs( increment.first ),
+                                    std::abs( increment.second ) ), std::max( std::abs( increment.first ),
+                                            std::abs( increment.second ) ) );
+                ImGui::TableNextColumn();
+                const std::pair<int, int> max_damage = sp.damage_at_max_level();
+                ImGui::TextColored( c_light_green, "%d-%d", std::min( std::abs( max_damage.first ),
+                                    std::abs( max_damage.second ) ), std::max( std::abs( max_damage.first ),
+                                            std::abs( max_damage.second ) ) );
+            } else {
+                draw_minmax_row( d, damage_string, sp.min_damage, sp.damage_increment, sp.max_damage,
+                                 minmax_row_type::DEFAULT, true );
+            }
         }
 
-        row( _( "Range" ), sp.min_range, sp.range_increment, sp.max_range, true );
+        draw_minmax_row( d, _( "Range" ), sp.min_range, sp.range_increment, sp.max_range,
+                         minmax_row_type::DEFAULT, true );
 
         if( !aoe_string.empty() ) {
-            row( aoe_string, sp.min_aoe, sp.aoe_increment, sp.max_aoe, true );
+            draw_minmax_row( d, aoe_string, sp.min_aoe, sp.aoe_increment, sp.max_aoe, minmax_row_type::DEFAULT,
+                             true );
         }
 
-        row( _( "Duration" ), sp.min_duration, sp.duration_increment, sp.max_duration, true );
-        row( _( "Cast Cost" ), sp.base_energy_cost, sp.energy_increment, sp.final_energy_cost, false );
-        row( _( "Cast Time" ), sp.base_casting_time, sp.casting_time_increment, sp.final_casting_time,
-             false );
+        draw_minmax_row( d, _( "Duration" ), sp.min_duration, sp.duration_increment, sp.max_duration,
+                         minmax_row_type::DURATION, true, false );
+        draw_minmax_row( d, _( "Cast Cost" ), sp.base_energy_cost, sp.energy_increment,
+                         sp.final_energy_cost, minmax_row_type::ENERGY, false, false, &sp );
+        draw_minmax_row( d, _( "Cast Time" ), sp.base_casting_time, sp.casting_time_increment,
+                         sp.final_casting_time, minmax_row_type::DURATION, false );
 
         ImGui::EndTable();
     }

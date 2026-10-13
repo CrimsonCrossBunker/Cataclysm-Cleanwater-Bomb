@@ -287,13 +287,13 @@ class selection_column_preset : public inventory_selector_preset
             const size_t available_count = entry.get_available_count();
             const item_location &item = entry.any_item();
 
-            if( !item->count_by_charges() && entry.chosen_count > 0 &&
-                entry.chosen_count < available_count ) {
-                //~ %1$d: chosen count, %2$d: available count
-                res += string_format( pgettext( "count", "%1$d of %2$d" ), entry.chosen_count,
-                                      available_count ) + " ";
+            if( !item->count_by_charges() && entry.chosen_count > 0 && entry.chosen_count < available_count ) {
+                //~ %1$s: chosen count, %2$s: available count. The replaced string is an item measure prefix, so this entire sentence would be something like "1.25kg canned beans of 2kg canned beans"
+                res += string_format( pgettext( "count", "%1$s of %2$s" ),
+                                      entry.any_item()->type->item_measure_prefix( entry.chosen_count ),
+                                      entry.any_item()->type->item_measure_prefix( available_count ) ) + " ";
             } else if( available_count != 1 && !item->count_by_charges() ) {
-                res += string_format( "%d ", available_count );
+                res += string_format( "%s ", entry.any_item()->type->item_measure_prefix( available_count ) );
             }
             if( item->is_money() ) {
                 cata_assert( available_count == entry.get_stack_size() );
@@ -309,7 +309,9 @@ class selection_column_preset : public inventory_selector_preset
                     const size_t selected = entry.get_stack_size() > 1 ?
                                             entry.get_selected_charges() : entry.chosen_count;
                     res += string_format( "%s (%s)", item->display_name( total, false, false ),
-                                          string_format( pgettext( "count", "%1$d of %2$d" ), selected, total ) );
+                                          string_format( pgettext( "count", "%1$s of %2$s" ),
+                                                         item->type->item_measure_prefix( selected ),
+                                                         item->type->item_measure_prefix( total ) ) );
                 } else {
                     res += item->display_name_with_count( total );
                 }
@@ -431,7 +433,7 @@ void uistatedata::serialize( JsonOut &json ) const
     json.member( "overmap_debug_weather", overmap_debug_weather );
     json.member( "overmap_visible_weather", overmap_visible_weather );
     json.member( "overmap_debug_mongroup", overmap_debug_mongroup );
-    json.member( "overmap_fast_travel", overmap_fast_travel );
+    json.member( "overmap_fast_travel", overmap_only_auto_travel );
     json.member( "overmap_fast_scroll", overmap_fast_scroll );
     json.member( "tileset_zoom", tileset_zoom );
     json.member( "overmap_tileset_zoom", overmap_tileset_zoom );
@@ -525,7 +527,7 @@ void uistatedata::deserialize( const JsonObject &jo )
     jo.read( "overmap_debug_weather", overmap_debug_weather );
     jo.read( "overmap_visible_weather", overmap_visible_weather );
     jo.read( "overmap_debug_mongroup", overmap_debug_mongroup );
-    jo.read( "overmap_fast_travel", overmap_fast_travel );
+    jo.read( "overmap_fast_travel", overmap_only_auto_travel );
     jo.read( "overmap_fast_scroll", overmap_fast_scroll );
     jo.read( "tileset_zoom", tileset_zoom );
     jo.read( "overmap_tileset_zoom", overmap_tileset_zoom );
@@ -1199,7 +1201,7 @@ void inventory_column::expand_to_fit( inventory_entry &entry, bool with_denial )
 
     if( with_denial && !denial.empty() ) {
         reserved_width = std::max( get_entry_cell_width( entry, 0 ) + min_denial_gap + utf8_width( denial,
-                                   true ),
+            true ),
                                    reserved_width );
     }
 }
@@ -1225,7 +1227,7 @@ size_t inventory_column::page_of( size_t index ) const
 size_t inventory_column::page_of( const inventory_entry &entry ) const
 {
     return page_of( std::distance( entries.begin(), std::find( entries.begin(), entries.end(),
-                                   entry ) ) );
+            entry ) ) );
 }
 bool inventory_column::has_available_choices() const
 {
@@ -1502,10 +1504,10 @@ bool inventory_column::collated_sort_compare( inventory_entry const &lhs,
 
     inventory_entry ep_lhs(
     { p_lhs }, nullptr, lhs.is_collated() ? lhs.collation_meta->enabled : lhs.is_selectable(),
-    0, lhs.generation );
+                       0, lhs.generation );
     inventory_entry ep_rhs(
     { p_rhs }, nullptr, rhs.is_collated() ? rhs.collation_meta->enabled : rhs.is_selectable(),
-    0, rhs.generation );
+                       0, rhs.generation );
     ep_lhs.update_cache();
     ep_rhs.update_cache();
     if( indent_entries() ) {
@@ -1760,7 +1762,7 @@ void inventory_column::draw( const catacurses::window &win, const point &p,
 
         const int hx_max = p.x + get_width();
         inclusive_rectangle<point> rect = inclusive_rectangle<point>( point( x1, yy ),
-                                          point( hx_max - 1, yy ) );
+            point( hx_max - 1, yy ) );
         rect_entry_map.emplace_back( rect,
                                      &entry );
 
@@ -1774,11 +1776,11 @@ void inventory_column::draw( const catacurses::window &win, const point &p,
         if( !denial.empty() ) {
             // Determine the width available for the first cell to print, then use that to trim the denial
             const size_t first_cell_width = std::min( get_entry_cell_width( entry, 0 ),
-                                            x2 + cells[0].current_width - min_denial_gap );
+                x2 + cells[0].current_width - min_denial_gap );
             const size_t max_denial_width = std::max( static_cast<int>( get_width() - ( min_denial_gap +
-                                            first_cell_width ) ), 0 );
+                first_cell_width ) ), 0 );
             const size_t denial_width = std::min( max_denial_width, static_cast<size_t>( utf8_width( denial,
-                                                  true ) ) );
+                true ) ) );
 
             if( denial_width > 0 ) {
                 /* Need to determine exact point to start printing from the left, since just trimming produces
@@ -1983,7 +1985,7 @@ const item_category *inventory_selector::naturalize_category( const item_categor
     if( dist != 0 ) {
         const std::string suffix = direction_suffix( u.pos_bub(), pos );
         const item_category_id id = item_category_id( string_format( "%s_%s", category.get_id().c_str(),
-                                    suffix.c_str() ) );
+            suffix.c_str() ) );
 
         const auto *existing = find_cat_by_id( id );
         if( existing != nullptr ) {
@@ -2050,7 +2052,7 @@ bool inventory_selector::add_entry_rec( inventory_column &entry_column,
                                  preset.is_shown( loc ) ? indent + 2 : indent, add_efiles );
     }
     inventory_entry *const nentry = add_entry( entry_column, std::vector<item_location>( 1, loc ),
-                                    entry_category, 0, topmost_parent );
+        entry_category, 0, topmost_parent );
     if( nentry != nullptr ) {
         nentry->chevron = vis_contents;
         nentry->indent = indent;
@@ -2083,8 +2085,8 @@ bool inventory_selector::drag_drop_item( item *sourceItem, item *destItem )
     bool any_containable = false;
     for( item_pocket *pocket : pockets ) {
         std::string pocket_text = string_format( _( "%s - %s/%s | %d moves" ),
-                                  pocket->get_description().translated(), vol_to_info( "", "", pocket->contents_volume() ).sValue,
-                                  vol_to_info( "", "", pocket->volume_capacity() ).sValue, pocket->moves() + base_move_cost );
+            pocket->get_description().translated(), vol_to_info( "", "", pocket->contents_volume() ).sValue,
+            vol_to_info( "", "", pocket->volume_capacity() ).sValue, pocket->moves() + base_move_cost );
         action_menu.addentry( index++, true, std::optional<input_event>(), pocket_text );
         ret_val<item_pocket::contain_code> contain = pocket->can_contain( *sourceItem );
         if( contain.success() ) {
@@ -2286,7 +2288,7 @@ void inventory_selector::add_vehicle_tank_items()
     const auto add_tank = [this]( vehicle & veh, int part_index ) {
         item_location base_loc = veh.part_base( part_index );
         add_entry( map_column, std::vector<item_location>( 1, item_location( base_loc,
-                   &base_loc->only_item() ) ) );
+                &base_loc->only_item() ) ) );
     };
 
     // Preserve the existing behavior for the vehicle the character is standing on: a hose or a
@@ -2847,7 +2849,7 @@ inventory_selector::header_stats inventory_selector::get_pocket_summary_header_s
                                                            other_spaces[i].first->is_restricted()
                                                          );
                     other_space_strings.push_back( string_format( "%s %s%s", str1, str2,
-                                                   ( other_spaces_copies[i] > 1 ? string_format( " (%d)", other_spaces_copies[i] ) : "" ) )
+                            ( other_spaces_copies[i] > 1 ? string_format( " (%d)", other_spaces_copies[i] ) : "" ) )
                                                  );
                 }
                 if( other_spaces_display_truncated ) {
@@ -2862,7 +2864,7 @@ inventory_selector::header_stats inventory_selector::get_pocket_summary_header_s
             // 'ignore_restrict' check makes it so we don't report a smaller 'max' space than 'free' space if we selected a restricted pocket for that.
             if( show_unconstrained_max_space ) {
                 std::sort( pockets.begin(), pockets.end(), [ignore_restrict = large_free_space.first &&
-                                           large_free_space.first->is_restricted()]( const pocket_with_constraint & a,
+                    large_free_space.first->is_restricted()]( const pocket_with_constraint & a,
                 const pocket_with_constraint & b ) {
                     return std::tuple( ignore_restrict || a.first->is_restricted(), b.first->volume_capacity() )
                            < std::tuple( ignore_restrict || b.first->is_restricted(), a.first->volume_capacity() );
@@ -2870,7 +2872,7 @@ inventory_selector::header_stats inventory_selector::get_pocket_summary_header_s
                 large_max_space = pockets[0];
 
                 std::sort( pockets.begin(), pockets.end(), [ignore_restrict = long_free_space.first &&
-                                           long_free_space.first->is_restricted()]( const pocket_with_constraint & a,
+                    long_free_space.first->is_restricted()]( const pocket_with_constraint & a,
                 const pocket_with_constraint & b ) {
                     return std::tuple( ignore_restrict ||
                                        a.first->is_restricted(), b.first->max_containable_length(), b.first->volume_capacity() )
@@ -2880,7 +2882,7 @@ inventory_selector::header_stats inventory_selector::get_pocket_summary_header_s
                 long_max_space = pockets[0];
             } else {
                 std::sort( pockets.begin(), pockets.end(), [ignore_restrict = large_free_space.first &&
-                                           large_free_space.first->is_restricted()]( const pocket_with_constraint & a,
+                    large_free_space.first->is_restricted()]( const pocket_with_constraint & a,
                 const pocket_with_constraint & b ) {
                     return std::tuple( ignore_restrict || a.first->is_restricted(), b.second.volume_capacity )
                            < std::tuple( ignore_restrict || b.first->is_restricted(), a.second.volume_capacity );
@@ -2888,7 +2890,7 @@ inventory_selector::header_stats inventory_selector::get_pocket_summary_header_s
                 large_max_space = pockets[0];
 
                 std::sort( pockets.begin(), pockets.end(), [ignore_restrict = long_free_space.first &&
-                                           long_free_space.first->is_restricted()]( const pocket_with_constraint & a,
+                    long_free_space.first->is_restricted()]( const pocket_with_constraint & a,
                 const pocket_with_constraint & b ) {
                     return std::tuple( ignore_restrict ||
                                        a.first->is_restricted(), b.second.max_containable_length, b.second.volume_capacity )
@@ -2902,12 +2904,12 @@ inventory_selector::header_stats inventory_selector::get_pocket_summary_header_s
 
     inventory_selector::header_stats ret = {
         build_weight_and_volume_stats_line( weight_carried,
-                                            weight_capacity,
-                                            weight_label_override ? *weight_label_override : _( "Total Weight:" ),
-                                            volume_in_pockets,
-                                            volume_of_pockets,
-                                            volume_label_override ? *volume_label_override : _( "Total Volume:" )
-                                          )
+        weight_capacity,
+        weight_label_override ? *weight_label_override : _( "Total Weight:" ),
+        volume_in_pockets,
+        volume_of_pockets,
+        volume_label_override ? *volume_label_override : _( "Total Volume:" )
+        )
     };
     bool show_large_max = show_max_space_opt &&
                           large_free_space.second.remaining_volume != large_max_space.second.volume_capacity;
@@ -3037,8 +3039,8 @@ inventory_selector::header_stats_line inventory_selector::build_pocket_stats_lin
 {
     const nc_color &color_label = c_dark_gray;
     auto [free_pocket_str1, free_pocket_str2] = free_pocket ? build_space_stats( free_pocket_volume,
-            free_pocket->min_containable_length(), free_pocket_length,
-            free_pocket->is_restricted() ) : build_invalid_space_stats();
+        free_pocket->min_containable_length(), free_pocket_length,
+        free_pocket->is_restricted() ) : build_invalid_space_stats();
     return {
         prefix.empty() ? "" : ( prefix + " " ) + colorize( _( "Free: " ), color_label ),
         header_stats_tab_stop,
@@ -3066,11 +3068,11 @@ inventory_selector::header_stats_line inventory_selector::build_pocket_stats_lin
 {
     const nc_color &color_label = c_dark_gray;
     auto [free_pocket_str1, free_pocket_str2] = free_pocket ? build_space_stats( free_pocket_volume,
-            free_pocket->min_containable_length(), free_pocket_length,
-            free_pocket->is_restricted() ) : build_invalid_space_stats();
+        free_pocket->min_containable_length(), free_pocket_length,
+        free_pocket->is_restricted() ) : build_invalid_space_stats();
     auto [max_pocket_str1, max_pocket_str2] = max_pocket ? build_space_stats( max_pocket_volume,
-            max_pocket->min_containable_length(), max_pocket_length,
-            max_pocket->is_restricted() ) : build_invalid_space_stats();
+        max_pocket->min_containable_length(), max_pocket_length,
+        max_pocket->is_restricted() ) : build_invalid_space_stats();
     return {
         prefix.empty() ? "" : ( prefix + " " ) + colorize( _( "Free: " ), color_label ),
         header_stats_tab_stop,
@@ -3131,7 +3133,7 @@ inventory_selector::header_stats inventory_selector::get_raw_stats() const
                && item_pocket::ok_for_solids( pocket );
     },
     check_pocket_tree
-            );
+        );
 
     std::string volume_label_override = _( "Bulk Volume:" );
     return get_pocket_summary_header_stats(
@@ -3366,7 +3368,7 @@ void inventory_selector::draw_columns( const catacurses::window &w )
 
     const int free_space = screen_width - get_columns_width( columns );
     const int max_gap = ( columns.size() > 1 ) ? free_space / ( static_cast<int>
-                        ( columns.size() ) - 1 ) :
+        ( columns.size() ) - 1 ) :
                         free_space;
     const int gap = centered ? max_gap : std::min<int>( max_gap, normal_column_gap );
     const int gap_rounding_error = centered && columns.size() > 1
@@ -5253,7 +5255,7 @@ bool pickup_selector::wear()
     if( u.can_wear( *items.front() ).success() ) {
         remove_from_to_use( items.front() );
         const item_location next_item = get_item_to_highlight_after_use( get_active_column(),
-                                        items.front() );
+            items.front() );
         reopen_menu( next_item );
         u.assign_activity( wear_activity_actor( items, quantities ) );
         return true;

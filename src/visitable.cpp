@@ -116,19 +116,19 @@ static T sum_no_wrap( T a, T b )
     return a + b;
 }
 
-// `measure` decides what quality an item supplies and `tally` how many providers it
-// counts as.  Empty falls back to get_quality and item::count().
+// `measure` decides what quality an item supplies, `count` how many providers it is worth.
+// Empty falls back to get_quality and item::count().
 template <typename T>
 static int has_quality_internal( const T &self, const quality_id &qual, int level, int limit,
                                  const std::function<int( const item & )> &measure = {},
-                                 const std::function<int( const item & )> &tally = {} )
+                                 const std::function<int( const item & )> &count = {} )
 {
     int qty = 0;
 
-    self.visit_items( [&qual, level, &limit, &qty, &measure, &tally]( item * e, item * ) {
+    self.visit_items( [&qual, level, &limit, &qty, &measure, &count]( item * e, item * ) {
         const int supplied = measure ? measure( *e ) : e->get_quality( qual );
         if( supplied >= level ) {
-            qty = sum_no_wrap( qty, tally ? tally( *e ) : static_cast<int>( e->count() ) );
+            qty = sum_no_wrap( qty, count ? count( *e ) : static_cast<int>( e->count() ) );
             if( qty >= limit ) {
                 // found sufficient items
                 return VisitResponse::ABORT;
@@ -180,14 +180,14 @@ scoped_provider_quality_cache::~scoped_provider_quality_cache()
 }
 
 bool read_only_visitable::has_provider_quality( const quality_id &qual, int level, int qty,
-        const Character *who ) const
+        const Character *who, const quality_count mode ) const
 {
     const auto check = [&]() {
         const std::function<int( const item & )> measure = [&qual, who]( const item & it ) {
             return provider_quality_level( it, qual, who, true );
         };
-        const std::function<int( const item & )> tally = []( const item & ) {
-            return 1;
+        const std::function<int( const item & )> tally = [mode]( const item & it ) {
+            return mode == quality_count::units ? it.count() : 1;
         };
         return has_quality_internal( *this, qual, level, qty, measure, tally ) == qty;
     };
@@ -195,7 +195,7 @@ bool read_only_visitable::has_provider_quality( const quality_id &qual, int leve
          scope = scope->previous ) {
         if( &scope->source == this ) {
             auto &results = scope->results[who];
-            const auto key = std::make_tuple( qual, level, qty );
+            const auto key = std::make_tuple( qual, level, qty, mode );
             const auto found = results.find( key );
             if( found != results.end() ) {
                 return found->second;
@@ -1142,11 +1142,11 @@ static int apply_external_pools_legacy( const M &main,
     // bio_ups: USE_UPS tools also drain active bio_ups bionic energy.
     if( any_ups && qty < limit && get_player_character().has_active_bionic( bio_ups ) ) {
         qty = sum_no_wrap( qty, static_cast<int>( units::to_kilojoule(
-                               get_player_character().get_power_level() ) ) );
+                get_player_character().get_power_level() ) ) );
     }
     if( any_bionic ) {
         qty = sum_no_wrap( qty, static_cast<int>( units::to_kilojoule(
-                               get_player_character().get_power_level() ) ) );
+                get_player_character().get_power_level() ) ) );
     }
     if( qty < limit && any_ups ) {
         const int used_ups = main.charges_of( itype_UPS, limit - qty );
@@ -1173,12 +1173,12 @@ static int apply_external_pools_multimag( const M &main,
     int external = 0;
     if( any_bionic ) {
         external = sum_no_wrap( external, static_cast<int>( units::to_kilojoule(
-                                    get_player_character().get_power_level() ) ) );
+                get_player_character().get_power_level() ) ) );
     }
     if( any_ups ) {
         if( get_player_character().has_active_bionic( bio_ups ) ) {
             external = sum_no_wrap( external, static_cast<int>( units::to_kilojoule(
-                                        get_player_character().get_power_level() ) ) );
+                    get_player_character().get_power_level() ) ) );
         }
         external = sum_no_wrap( external, main.charges_of( itype_UPS, INT_MAX ) );
     }

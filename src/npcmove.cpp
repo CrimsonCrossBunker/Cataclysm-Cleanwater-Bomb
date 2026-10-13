@@ -24,6 +24,7 @@
 
 #include "active_item_cache.h"
 #include "activity_actor_definitions.h"
+#include "activity_type.h"
 #include "avatar.h"
 #include "basecamp.h"
 #include "behavior.h"
@@ -189,6 +190,7 @@ static const efftype_id effect_stunned( "stunned" );
 static const field_type_str_id field_fd_last_known( "fd_last_known" );
 
 static const flag_id json_flag_FIRESTARTER( "FIRESTARTER" );
+static const flag_id json_flag_MARLOSS( "MARLOSS" );
 
 static const item_category_id item_category_food( "food" );
 
@@ -3967,7 +3969,7 @@ void npc::move_to( const tripoint_bub_ms &pt, bool no_bashing, std::set<tripoint
 
         // Close doors behind self (if you can)
         if( ( rules.has_flag( ally_rule::close_doors ) && is_player_ally() ) && !is_hallucination() ) {
-            doors::close_door( here, *this, old_pos );
+            assign_activity( close_tile_activity_actor( old_pos ) );
         }
         // Lock doors as well
         if( ( rules.has_flag( ally_rule::lock_doors ) && is_player_ally() ) && !is_hallucination() ) {
@@ -4839,6 +4841,8 @@ bool npc::can_do_pulp()
 
 bool npc::do_player_activity()
 {
+    const bool mute_activity = activity.is_null() ? false :
+                               activity.id()->mute_npc_completion_message();
     int old_moves = moves;
     add_msg_debug( debugmode::DF_NPC, "do_player_activity: %s id=%s moves=%d multi=%s",
                    get_name(), activity ? activity.id().c_str() : "null", moves,
@@ -4872,7 +4876,7 @@ bool npc::do_player_activity()
             backlog.pop_front();
             current_activity_id = activity.id();
         } else {
-            if( is_player_ally() && attitude == NPCATT_ACTIVITY ) {
+            if( is_player_ally() && attitude == NPCATT_ACTIVITY && !mute_activity ) {
                 add_msg( m_info, string_format( _( "%s completed the assigned task." ), disp_name() ) );
             }
             current_activity_id = activity_id::NULL_ID();
@@ -5319,11 +5323,8 @@ static float rate_food( const Character &who, const item &it, int want_nutr,
         return 0.0f;
     }
 
-    // Reject marloss/mycus items -- player should control the fungal path
-    if( it.has_flag( flag_MYCUS_OK ) ||
-        it.type->use_methods.count( "MARLOSS" ) ||
-        it.type->use_methods.count( "MARLOSS_SEED" ) ||
-        it.type->use_methods.count( "MARLOSS_GEL" ) ) {
+    // Let the player decide whether to use Marloss or Mycus foods.
+    if( it.has_flag( flag_MYCUS_OK ) || it.has_flag( json_flag_MARLOSS ) ) {
         return 0.0f;
     }
 

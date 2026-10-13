@@ -2,6 +2,7 @@
 #include <array>
 #include <cstddef>
 #include <functional>
+#include <string>
 #include <vector>
 
 #include "cata_catch.h"
@@ -139,6 +140,59 @@ TEST_CASE( "tripoint_range_iteration_order", "[tripoint_range]" )
     }
 }
 
+// Capped so a range that never reaches its end still gives a finite result to check.
+static std::vector<tripoint> visit_up_to_64_points( const tripoint_range<tripoint> &range )
+{
+    std::vector<tripoint> visited;
+    for( const tripoint &pt : range ) {
+        visited.push_back( pt );
+        if( visited.size() == 64 ) {
+            break;
+        }
+    }
+    return visited;
+}
+
+static bool tripoint_range_inverted_bounds_test_func( const tripoint & )
+{
+    return true;
+}
+
+TEST_CASE( "tripoint_range_with_inverted_bounds_is_empty", "[tripoint_range]" )
+{
+    SECTION( "min x above max x" ) {
+        tripoint_range<tripoint> tested( tripoint( 5, 0, 0 ), tripoint( 3, 2, 0 ) );
+        CHECK( visit_up_to_64_points( tested ).empty() );
+        CHECK( tested.size() == 0 );
+        CHECK( tested.empty() );
+    }
+    SECTION( "min y above max y" ) {
+        tripoint_range<tripoint> tested( tripoint( 0, 5, 0 ), tripoint( 2, 3, 0 ) );
+        CHECK( visit_up_to_64_points( tested ).empty() );
+        CHECK( tested.size() == 0 );
+        CHECK( tested.empty() );
+    }
+    SECTION( "min x and min y above max x and max y" ) {
+        tripoint_range<tripoint> tested( tripoint( 5, 5, 0 ), tripoint( 3, 3, 0 ) );
+        CHECK( visit_up_to_64_points( tested ).empty() );
+        CHECK( tested.size() == 0 );
+        CHECK( tested.empty() );
+    }
+    SECTION( "min z two levels above max z" ) {
+        tripoint_range<tripoint> tested( tripoint( 0, 0, 5 ), tripoint( 2, 2, 3 ) );
+        CHECK( visit_up_to_64_points( tested ).empty() );
+        CHECK( tested.size() == 0 );
+        CHECK( tested.empty() );
+    }
+    SECTION( "min x above max x with a predicate" ) {
+        tripoint_range<tripoint> tested( tripoint( 5, 0, 0 ), tripoint( 3, 2, 0 ),
+                                         tripoint_range_inverted_bounds_test_func );
+        CHECK( visit_up_to_64_points( tested ).empty() );
+        CHECK( tested.size() == 0 );
+        CHECK( tested.empty() );
+    }
+}
+
 // Using static functions instead of lambdas to suppress -Wmaybe-uninitialized
 // false positives triggered by lambda's implicit anonymous data structure in
 // debug builds
@@ -249,7 +303,7 @@ static bool tripoint_range_predicates_radius_test_func( const tripoint &pt )
 TEST_CASE( "tripoint_range_predicates_radius", "[tripoint_range]" )
 {
     tripoint_range<tripoint> tested = points_in_radius_where( tripoint::zero, 2,
-                                      tripoint_range_predicates_radius_test_func, 2 );
+        tripoint_range_predicates_radius_test_func, 2 );
     std::vector<tripoint> expected = {
         { -2, -2, -2 }, { -1, -2, -2 }, { 0, -2, -2 }, { 1, -2, -2 }, { 2, -2, -2 },
         { -2, -1, -2 }, { -1, -1, -2 }, { 0, -1, -2 }, { 1, -1, -2 }, { 2, -1, -2 },

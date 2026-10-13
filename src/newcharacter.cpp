@@ -411,7 +411,7 @@ point_pool_status::point_pool_status( const Character &u ):
     pure_trait_points( trait_point_pool() - trait_points_used( u ) ),
     pure_skill_points( skill_point_pool() - skill_points_used( u ) ),
     stat_points_left( pure_stat_points + std::min( 0, pure_trait_points + std::min( 0,
-                      pure_skill_points ) ) ),
+            pure_skill_points ) ) ),
     trait_points_left( pure_stat_points + pure_trait_points + std::min( 0, pure_skill_points ) ),
     skill_points_left( pure_stat_points + pure_trait_points + pure_skill_points )
 {
@@ -1013,7 +1013,7 @@ bool avatar::create( character_type type, const std::string &tempname )
                                      type == character_type::TEMPLATE;
 
     const std::vector<pool_type> world_pools = allowed_point_pools(
-                get_option<std::string>( "CHARACTER_POINT_POOLS" ) );
+            get_option<std::string>( "CHARACTER_POINT_POOLS" ) );
     pool_type pool = world_pools.front();
 
     switch( type ) {
@@ -1059,8 +1059,8 @@ bool avatar::create( character_type type, const std::string &tempname )
     auto nameExists = [&]( const std::string & name ) {
         return world_generator->active_world->save_exists( save_t::from_save_id( name ) ) &&
                !query_yn( _( "A save with the name '%s' already exists in this world.\n"
-                             "Saving will overwrite the already existing character.\n\n"
-                             "Continue anyways?" ), name );
+                      "Saving will overwrite the already existing character.\n\n"
+                      "Continue anyways?" ), name );
     };
     set_body();
 
@@ -1345,7 +1345,7 @@ void draw_character_stats( const Character &who, bool draw_effective_stats,
                 effective_stat_color = c_light_red;
             }
             cataimgui::draw_colored_text( colorize( string_format( "%s (%s)",
-                                                    effective_stat, base_stat ), effective_stat_color ), c_light_gray );
+                    effective_stat, base_stat ), effective_stat_color ), c_light_gray );
         } else {
             cataimgui::draw_colored_text( string_format( "%d", base_stat ), c_light_gray );
         }
@@ -1358,7 +1358,7 @@ void draw_character_stats( const Character &who, bool draw_effective_stats,
         const int stat_count = static_cast<int>( character_stat::DUMMY_STAT );
         for( int i = 0; i < stat_count; i++ ) {
             cataimgui::draw_colored_text( string_format( "%s:",
-                                          get_character_stat_name( i ) ), c_light_gray );
+                get_character_stat_name( i ) ), c_light_gray );
         }
         ImGui::NewLine();
         ImGui::TableNextColumn();
@@ -1539,7 +1539,7 @@ void draw_stat_details( avatar &u )
                                                   u.throw_dispersion_per_dodge( false ) ), COL_STAT_PENALTY );
             if( u.ranged_dex_mod() != 0 ) {
                 description_str += colorize( string_format( _( "\nRanged penalty: -%d" ),
-                                             std::abs( u.ranged_dex_mod() ) ), COL_STAT_PENALTY );
+                    std::abs( u.ranged_dex_mod() ) ), COL_STAT_PENALTY );
             } else {
                 description_str += "\n";
             }
@@ -1880,7 +1880,7 @@ void draw_profession_details()
                 req_names.emplace_back( req->name().translated() );
             }
             draw_colored_text_wrap( string_format( n_gettext( _( "Completed \"%s\"\n" ), _( "Completed: %s\n" ),
-                                                   req_names.size() ), enumerate_as_string( req_names ) ),
+                    req_names.size() ), enumerate_as_string( req_names ) ),
                                     COL_NOTE_MINOR );
         } else { // fail, can't pick so display ret_val's reason
             draw_colored_text_wrap( can_pick_prof.str(), c_red );
@@ -2324,9 +2324,9 @@ void draw_time_game_start()
 void draw_location( const avatar &you )
 {
     std::string random_start_location_text = string_format( n_gettext(
-                "<color_red>* Random location *</color> (<color_white>%d</color> variant)",
-                "<color_red>* Random location *</color> (<color_white>%d</color> variants)",
-                get_scenario()->start_location_targets_count() ), get_scenario()->start_location_targets_count() );
+            "<color_red>* Random location *</color> (<color_white>%d</color> variant)",
+            "<color_red>* Random location *</color> (<color_white>%d</color> variants)",
+            get_scenario()->start_location_targets_count() ), get_scenario()->start_location_targets_count() );
 
     if( get_scenario()->start_location_targets_count() == 1 ) {
         random_start_location_text = get_scenario()->start_location().obj().name();
@@ -2339,8 +2339,8 @@ void draw_location( const avatar &you )
     } else {
         // ::find will return empty location if id was not found. Debug msg will be printed too.
         cataimgui::draw_colored_text( string_format( n_gettext( "%s (%d variant)", "%s (%d variants)",
-                                      you.start_location.obj().targets_count() ),
-                                      you.start_location.obj().name(), you.start_location.obj().targets_count() ),
+                you.start_location.obj().targets_count() ),
+                you.start_location.obj().name(), you.start_location.obj().targets_count() ),
                                       you.random_start_location ? c_red : c_white );
     }
 }
@@ -2961,7 +2961,7 @@ void character_creator_ui::update_uilist_entries()
             const int skill_count = cc_uistate.sorted_skills.size();
             for( int i = 0; i < skill_count; i++ ) {
                 uilist_entry skill_entry = get_uilist_entry( get_skill_entry_text(
-                                               cc_uistate.sorted_skills[i]->ident(), u ) );
+                        cc_uistate.sorted_skills[i]->ident(), u ) );
                 skill_entry.retval = i;
                 menu->addentry( skill_entry );
             }
@@ -3044,9 +3044,9 @@ void character_creator_ui_impl::draw_controls()
     bool &top_bar_is_open = cc_uistate.top_bar_is_open;
     ImGui::SetNextItemOpen( top_bar_is_open );
     if( ( top_bar_is_open = ImGui::CollapsingHeader( string_format(
-                                _( "General Info (Click or %s to %s)" ),
-                                ui_parent->get_current_tab_input().get_desc( "TOGGLE_TOP_BAR" ),
-                                top_bar_is_open ? _( "collapse" ) : _( "open" ) ).c_str() ) ) ) {
+            _( "General Info (Click or %s to %s)" ),
+            ui_parent->get_current_tab_input().get_desc( "TOGGLE_TOP_BAR" ),
+            top_bar_is_open ? _( "collapse" ) : _( "open" ) ).c_str() ) ) ) {
         draw_top_bar( pc );
     }
 
@@ -3225,7 +3225,7 @@ static SDL_Texture *character_preview_texture( const avatar &u, int &out_w, int 
         avatar preview_av;
         build_preview_avatar( u, preview_av );
         cached_tex = tilecontext->render_character_preview( preview_av, preview_scale, cached_w,
-                     cached_h );
+            cached_h );
         last_sig = sig;
     }
 
@@ -3501,7 +3501,7 @@ bool character_creator_ui::display( pool_type &pool )
         cc_uistate.compatibility_pool = pool;
     }
     cc_uistate.selected_pool_index = std::distance( cc_uistate.sorted_pools.begin(),
-                                     std::find( cc_uistate.sorted_pools.begin(), cc_uistate.sorted_pools.end(), pool ) );
+        std::find( cc_uistate.sorted_pools.begin(), cc_uistate.sorted_pools.end(), pool ) );
 
     std::unique_ptr<character_creator_ui_impl> standard_ccui;
 #if defined(__ANDROID__)
@@ -4152,9 +4152,9 @@ static int choose_location( const avatar &you )
     select_location.text = _( "Select a starting location." );
     int offset = 1;
     const std::string random_start_location_text = string_format( n_gettext(
-                "<color_red>* Random location *</color> (<color_white>%d</color> variant)",
-                "<color_red>* Random location *</color> (<color_white>%d</color> variants)",
-                get_scenario()->start_location_targets_count() ), get_scenario()->start_location_targets_count() );
+            "<color_red>* Random location *</color> (<color_white>%d</color> variant)",
+            "<color_red>* Random location *</color> (<color_white>%d</color> variants)",
+            get_scenario()->start_location_targets_count() ), get_scenario()->start_location_targets_count() );
     uilist_entry entry_random_start_location( RANDOM_START_LOC_ENTRY, true, -1,
             random_start_location_text );
     select_location.entries.emplace_back( entry_random_start_location );
@@ -4265,8 +4265,8 @@ bool character_creator_ui::handle_action( const std::string &action )
         character_stat selected_stat = static_cast<character_stat>( cc_uistate.selected_stat_index );
         const int maximum = character_creation_stat_max( cc_uistate.pool );
         cc_uistate.stats[cc_uistate.selected_stat_index] = std::clamp(
-                    cc_uistate.stats[cc_uistate.selected_stat_index] + mod_value,
-                    CHARACTER_STAT_MIN, maximum );
+                cc_uistate.stats[cc_uistate.selected_stat_index] + mod_value,
+                CHARACTER_STAT_MIN, maximum );
         set_stat_base( you, selected_stat, cc_uistate.stats[cc_uistate.selected_stat_index] );
     };
     auto mod_skill = [&you]( int mod_value ) {
@@ -4277,7 +4277,7 @@ bool character_creator_ui::handle_action( const std::string &action )
             return;
         }
         const int new_level = character_creation_adjust_skill( cc_uistate.pool, current_level,
-                              mod_value );
+            mod_value );
         you.set_skill_level( selected_skill, new_level );
         you.set_knowledge_level( selected_skill, new_level );
     };
@@ -4301,19 +4301,25 @@ bool character_creator_ui::handle_action( const std::string &action )
             if( !legacy_character_is_valid( you ) ) {
                 return true;
             }
+            std::string query = _( "Are you finished creating your character?" );
+            const std::map<rating_category, OP_level> ratings =
+                player_difficulty::getInstance().get_ratings();
+            for( const auto &rating : ratings ) {
+                query += "\n";
+                //~ A character creation rating, for example "Defense: overpowered".
+                query += string_format( _( "%1$s: %2$s" ),
+                                        io::enum_to_string( rating.first ),
+                                        player_difficulty::format_text_for( rating.second ) );
+            }
             if( you.name.empty() ) {
-                if( confirm_character_action( _( "Finish Character" ),
-                                              _( "Are you SURE you're finished?  Your name will be randomly generated." ),
-                                              _( "Finish" ), false ) ) {
+                query += "\n\n" + std::string( _( "Your name will be randomly generated." ) );
+            }
+            if( confirm_character_action( _( "Finish Character" ), query,
+                                          _( "Finish" ), false ) ) {
+                if( you.name.empty() ) {
                     you.pick_name();
-                    cc_uistate.finished_character_creator = true;
                 }
-            } else {
-                if( confirm_character_action( _( "Finish Character" ),
-                                              _( "Are you SURE you're finished?" ),
-                                              _( "Finish" ), false ) ) {
-                    cc_uistate.finished_character_creator = true;
-                }
+                cc_uistate.finished_character_creator = true;
             }
         } else {
             ++cc_uistate.selected_tab;
@@ -4366,11 +4372,11 @@ bool character_creator_ui::handle_action( const std::string &action )
     } else if( action == "CHANGE_START_OF_CATACLYSM" ) {
         const scenario *scen = get_scenario();
         scen->change_start_of_cataclysm( calendar_ui::select_time_point( scen->start_of_cataclysm(),
-                                         _( "Select cataclysm start date" ), calendar_ui::granularity::hour, true ) );
+                _( "Select cataclysm start date" ), calendar_ui::granularity::hour, true ) );
     } else if( action == "CHANGE_START_OF_GAME" ) {
         const scenario *scen = get_scenario();
         scen->change_start_of_game( calendar_ui::select_time_point( scen->start_of_game(),
-                                    _( "Select game start date" ), calendar_ui::granularity::hour, true ) );
+                _( "Select game start date" ), calendar_ui::granularity::hour, true ) );
     } else if( action == "RESET_CALENDAR" ) {
         get_scenario()->reset_calendar();
     } else if( action == "CHOOSE_CITY" ) {
@@ -4446,7 +4452,7 @@ bool character_creator_ui::handle_action( const std::string &action )
                 }
             }
             const std::optional<int> location_choice = adaptive_imgui_dialog::select(
-                        _( "Starting Location" ), location_entries, std::string(), initial_selection );
+                    _( "Starting Location" ), location_entries, std::string(), initial_selection );
             selected_location_index = location_choice ? location_ids[*location_choice] : -1;
         } else
 #endif
@@ -4549,7 +4555,7 @@ void character_creator_callback::confirm( uilist *menu )
                 cc_uistate.selected_pool_index = std::distance(
                                                      cc_uistate.sorted_pools.begin(),
                                                      std::find( cc_uistate.sorted_pools.begin(), cc_uistate.sorted_pools.end(),
-                                                             selected_pool ) );
+                                                         selected_pool ) );
             }
             break;
         }
@@ -4668,12 +4674,12 @@ void character_creator_callback::confirm( uilist *menu )
             const int stat_queried = cc_uistate.stats[selected_stat_index];
             const int maximum = character_creation_stat_max( cc_uistate.pool );
             number_input_popup<int> stat_query( 0, stat_queried,
-                                                string_format( "Set new %s (between %d and %d):",
-                                                        io::enum_to_full_string( selected_stat ),
+                                                string_format( _( "Set new %s (between %d and %d):" ),
+                                                        _( io::enum_to_full_string( selected_stat ) ),
                                                         CHARACTER_STAT_MIN, maximum ) );
             int stat_queried_result = stat_query.query();
             const int stat_result_clamped = std::clamp( stat_queried_result, CHARACTER_STAT_MIN,
-                                            maximum );
+                maximum );
             if( stat_result_clamped != stat_queried ) {
                 set_stat_base( u, selected_stat, stat_result_clamped );
                 cc_uistate.stats[selected_stat_index] = stat_result_clamped;
@@ -4837,5 +4843,5 @@ void character_creator_callback::select( uilist *menu )
 void character_creator_callback::refresh( uilist *menu )
 {
     menu->footer_text = !menu->filter.empty() ? string_format( "Filter: %s",
-                        menu->filter ) : std::string();
+        menu->filter ) : std::string();
 }
