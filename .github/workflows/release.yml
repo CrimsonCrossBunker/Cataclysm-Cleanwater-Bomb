@@ -166,7 +166,7 @@ jobs:
           set -euo pipefail
           archive="ccb-translations-${RELEASE_TIMESTAMP}.tar.gz"
           (cd translations && tar --sort=name --owner=0 --group=0 --numeric-owner -czf "../${archive}" -- *)
-          gh release upload "$RELEASE_TAG" "$archive" --clobber
+          gh release upload "$RELEASE_TAG" "$archive"
 
   # Compile GLSL -> spv/dxil/msl once on Linux and share with every SDL3
   # platform job. Runtime variant_pass picks the format matching its GPU
