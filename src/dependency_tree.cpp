@@ -9,6 +9,7 @@
 
 #include "debug.h"
 #include "output.h"
+#include "type_id.h"
 
 static std::array<std::string, 3> error_keyvals = {{ "Missing Dependency(ies): ", "", "" }};
 
