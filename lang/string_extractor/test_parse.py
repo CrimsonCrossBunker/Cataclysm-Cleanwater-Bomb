@@ -26,6 +26,7 @@ except ImportError:
             parse_json_file,
         )
 
+
 class JsonFileParsingTest(unittest.TestCase):
     def test_mounted_data_extracts_pet_slot_text(self):
         root = Path(__file__).resolve().parents[2]
