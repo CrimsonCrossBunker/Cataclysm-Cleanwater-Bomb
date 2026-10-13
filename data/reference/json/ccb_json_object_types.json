@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:2883732811c35b0fad1383eaf09590031e6bc7c370eb4f4c5bbe0a69b90aa573",
+    "source_fingerprint": "sha256:8073319d4d24caa9df79ef5adf2fd4a2262da9fefc1431585e8a2640f26f25b4",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -29,8 +29,8 @@
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6778,
-    "top_level_objects": 95017,
+    "tracked_json_files": 6786,
+    "top_level_objects": 95057,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -113,7 +113,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 15129,
+        "occurrences": 15132,
         "examples": [
           {
             "path": "data/json/artifact/artifact_item_types.json",
@@ -2752,7 +2752,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 27,
+        "occurrences": 28,
         "examples": [
           {
             "path": "data/json/region_settings/region_settings/dimensions/dimensions.json",
@@ -2811,7 +2811,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 27,
+        "occurrences": 28,
         "examples": [
           {
             "path": "data/json/region_settings/region_settings/dimensions/dimension_regions.json",
@@ -3047,7 +3047,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 5600,
+        "occurrences": 5603,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -4971,7 +4971,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 9605,
+        "occurrences": 9617,
         "examples": [
           {
             "path": "data/json/effects_on_condition/npc_eocs/ref_center_exodii_updater.json",
@@ -6556,7 +6556,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 97,
+        "occurrences": 98,
         "examples": [
           {
             "path": "data/json/npcs/destination_locations.json",
@@ -6615,7 +6615,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 533,
+        "occurrences": 534,
         "examples": [
           {
             "path": "data/json/mapgen/debug.json",
@@ -6733,7 +6733,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 2720,
+        "occurrences": 2723,
         "examples": [
           {
             "path": "data/json/mapgen/debug.json",
@@ -7603,7 +7603,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 42,
+        "occurrences": 43,
         "examples": [
           {
             "path": "data/json/region_settings/region_settings/dimensions/highland_dimension.json",
@@ -8134,7 +8134,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 4,
+        "occurrences": 5,
         "examples": [
           {
             "path": "data/json/region_settings/region_settings/dimensions/highland_dimension.json",
@@ -8252,7 +8252,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 9,
+        "occurrences": 10,
         "examples": [
           {
             "path": "data/json/region_settings/region_settings/dimensions/highland_dimension.json",
@@ -8311,7 +8311,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 156,
+        "occurrences": 157,
         "examples": [
           {
             "path": "data/json/region_settings/region_settings/dimensions/highland_dimension.json",
@@ -9466,7 +9466,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 4658,
+        "occurrences": 4664,
         "examples": [
           {
             "path": "data/json/effects_on_condition/mapgen_eocs/furniture_eocs.json",
@@ -9702,7 +9702,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 183,
+        "occurrences": 184,
         "examples": [
           {
             "path": "data/json/effects_on_condition/mutation_eocs/mutation_sleep_eocs.json",
@@ -9761,7 +9761,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 1642,
+        "occurrences": 1646,
         "examples": [
           {
             "path": "data/json/furniture_and_terrain/LIXA_furniture_and_terrain.json",

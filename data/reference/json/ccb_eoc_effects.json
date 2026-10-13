@@ -4,7 +4,7 @@
   "inventory_kind": "eoc_effects",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:2883732811c35b0fad1383eaf09590031e6bc7c370eb4f4c5bbe0a69b90aa573",
+    "source_fingerprint": "sha256:8073319d4d24caa9df79ef5adf2fd4a2262da9fefc1431585e8a2640f26f25b4",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -385,7 +385,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 18,
+        "occurrences": 19,
         "examples": [
           {
             "path": "data/json/effects_on_condition/nether_eocs/LIXA_EOCs_spells_traps.json",
@@ -1859,7 +1859,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 19,
+        "occurrences": 25,
         "examples": [
           {
             "path": "data/json/effects_on_condition/example_eocs.json",
@@ -2675,7 +2675,7 @@
         "examples": [
           {
             "path": "data/json/effects_on_condition/nether_eocs/labyrinth_effect_on_condition.json",
-            "pointer": "/6/effect/3/custom_light_level"
+            "pointer": "/8/effect/3/custom_light_level"
           }
         ],
         "confidence": "lexical_only",
@@ -5368,7 +5368,7 @@
         "examples": [
           {
             "path": "data/json/effects_on_condition/nether_eocs/labyrinth_effect_on_condition.json",
-            "pointer": "/2/effect/0/else/0/then/3/finish_mission"
+            "pointer": "/2/effect/0/else/0/then/8/finish_mission"
           }
         ],
         "confidence": "lexical_only",
@@ -6401,7 +6401,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 1968,
+        "occurrences": 1979,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -7330,7 +7330,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 22327,
+        "occurrences": 22348,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -7437,7 +7437,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 2551,
+        "occurrences": 2552,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -15878,7 +15878,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 81,
+        "occurrences": 86,
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_eocs.json",
@@ -17434,7 +17434,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 122,
+        "occurrences": 124,
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_eocs.json",
@@ -17529,7 +17529,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 5550,
+        "occurrences": 5554,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -21113,7 +21113,7 @@
         "examples": [
           {
             "path": "data/json/effects_on_condition/nether_eocs/labyrinth_effect_on_condition.json",
-            "pointer": "/2/effect/0/else/0/then/1/u_add_bionic"
+            "pointer": "/2/effect/0/else/0/then/6/u_add_bionic"
           }
         ],
         "confidence": "lexical_only",
@@ -21584,7 +21584,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 883,
+        "occurrences": 891,
         "examples": [
           {
             "path": "data/json/effects_on_condition/example_eocs.json",
@@ -24092,7 +24092,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 365,
+        "occurrences": 377,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -24191,7 +24191,7 @@
         "examples": [
           {
             "path": "data/json/effects_on_condition/nether_eocs/labyrinth_effect_on_condition.json",
-            "pointer": "/61/effect/0/else/1/u_lose_bionic"
+            "pointer": "/63/effect/0/else/1/u_lose_bionic"
           }
         ],
         "confidence": "lexical_only",
@@ -25219,7 +25219,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 3265,
+        "occurrences": 3277,
         "examples": [
           {
             "path": "data/json/debug/quick_setup_eoc.json",
@@ -27926,7 +27926,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 829,
+        "occurrences": 831,
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_eocs.json",
@@ -28306,7 +28306,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 249,
+        "occurrences": 257,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -28403,7 +28403,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 69,
+        "occurrences": 70,
         "examples": [
           {
             "path": "data/json/effects_on_condition/item_eocs.json",
@@ -28496,7 +28496,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 62,
+        "occurrences": 72,
         "examples": [
           {
             "path": "data/json/debug/teleportation.json",
