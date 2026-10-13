@@ -53,18 +53,18 @@
 
 using move_statistics = statistics<int>;
 
-static const furn_str_id furn_f_null( "f_null" );
-
 static const efftype_id effect_leashed( "leashed" );
 static const efftype_id effect_led_by_leash( "led_by_leash" );
 static const efftype_id effect_monster_saddled( "monster_saddled" );
 static const efftype_id effect_tied( "tied" );
 
+static const furn_str_id furn_f_null( "f_null" );
+
+static const itype_id itype_rope_30( "rope_30" );
+
 static const mtype_id mon_dog_zombie_brute( "mon_dog_zombie_brute" );
 static const mtype_id mon_test_zombie( "mon_test_zombie" );
 static const mtype_id pseudo_dormant_mon_zombie_fat( "pseudo_dormant_mon_zombie_fat" );
-
-static const itype_id itype_rope_30( "rope_30" );
 
 static const oter_str_id oter_field( "field" );
 
@@ -78,17 +78,18 @@ TEST_CASE( "monster_uid_copy_and_move", "[monster]" )
     monster original( mon_test_zombie );
     original.ensure_uid();
     REQUIRE( original.uid().is_valid() );
-    const auto original_uid = original.uid().get_value();
+    const int64_t original_uid = original.uid().get_value();
 
     monster copy( original );
     REQUIRE( copy.uid().is_valid() );
     CHECK( copy.uid().get_value() != original_uid );
 
-    const auto copy_uid = copy.uid().get_value();
+    const int64_t copy_uid = copy.uid().get_value();
     monster moved( std::move( copy ) );
     CHECK( moved.uid().is_valid() );
     CHECK( moved.uid().get_value() == copy_uid );
-    CHECK( !copy.uid().is_valid() );
+    // The move contract explicitly invalidates the source UID.
+    CHECK( !copy.uid().is_valid() ); // NOLINT(bugprone-use-after-move)
 }
 
 TEST_CASE( "creature_tracker_find_monster_by_uid", "[monster][creature_tracker]" )
@@ -98,7 +99,7 @@ TEST_CASE( "creature_tracker_find_monster_by_uid", "[monster][creature_tracker]"
                               tripoint_bub_ms( 0, 0, 0 ) );
     REQUIRE( tracker.add( live_monster ) );
     REQUIRE( live_monster->uid().is_valid() );
-    const auto live_uid = live_monster->uid().get_value();
+    const int64_t live_uid = live_monster->uid().get_value();
 
     CHECK( tracker.find_by_uid( live_uid ) == live_monster );
     CHECK( tracker.find_by_uid( 0 ) == nullptr );
@@ -111,7 +112,7 @@ TEST_CASE( "creature_tracker_find_monster_by_uid", "[monster][creature_tracker]"
                               tripoint_bub_ms( 1, 0, 0 ) );
     REQUIRE( tracker.add( dead_monster ) );
     REQUIRE( dead_monster->uid().is_valid() );
-    const auto dead_uid = dead_monster->uid().get_value();
+    const int64_t dead_uid = dead_monster->uid().get_value();
     dead_monster->set_hp( 0 );
     REQUIRE( dead_monster->is_dead() );
     CHECK( tracker.find_by_uid( dead_uid ) == nullptr );
@@ -1007,10 +1008,13 @@ TEST_CASE( "monster_can_navigate_from_overmap_to_reality_bubble_following_sound"
     // Place monster on the local overmap.monster_map just outside the reality bubble.
     map &m = get_map();
     tripoint_abs_ms entity_spawn_location( m.get_abs( { -12, 66, 0 } ) );
-    horde_entity &test_mon_initial = overmap_buffer.spawn_monster( entity_spawn_location,
-                                     mon_test_zombie );
+    horde_entity *test_mon_initial = nullptr;
+    capture_debugmsg_during( [&]() {
+        test_mon_initial = &overmap_buffer.spawn_monster( entity_spawn_location,
+                           mon_test_zombie );
+    } );
     // Assert monster is not wandering
-    REQUIRE( test_mon_initial.tracking_intensity == 0 );
+    REQUIRE( test_mon_initial->tracking_intensity == 0 );
     // Give the monster a goal location inside the bubble by making a loud noise.
     std::string test_sound( "test sound" );
     sound( destination, 200, sounds::sound_t::combat, test_sound );
@@ -1083,6 +1087,7 @@ TEST_CASE( "monster_cant_enter_reality_bubble_because_wall", "[monster][hordes]"
 {
     // Remove interacting with the player as a complication.
     clear_map_and_put_player_underground();
+    sounds::process_sounds();
     const tripoint_bub_ms destination{ 11 * 6, 11 * 6, 0 };
     // Place monster on the local overmap.monster_map just outside the reality bubble.
     map &m = get_map();

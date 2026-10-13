@@ -1,5 +1,8 @@
 #include "recipe_dictionary.h"
 
+#include "recipe.h"
+#include "type_id.h"
+
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -28,6 +31,7 @@
 #include "flexbuffer_json.h"
 #include "init.h"
 #include "input.h"
+#include "input_context.h"
 #include "item.h"
 #include "item_factory.h"
 #include "itype.h"
@@ -240,7 +244,7 @@ static Unit can_contain_filter( std::string_view hint, std::string_view txt, Uni
 
 std::vector<const recipe *> recipe_subset::search(
     std::string_view txt, const search_type key,
-    std::optional<std::reference_wrapper<const Character>> crafter,
+    const Character *crafter,
     const std::function<void( size_t, size_t )> &progress_callback ) const
 {
     auto predicate = [&]( const recipe * r ) {
@@ -317,7 +321,7 @@ std::vector<const recipe *> recipe_subset::search(
                 return lcmatch( r->recipe_proficiencies_string(), txt );
 
             case search_type::book: {
-                if( !crafter.has_value() ) {
+                if( crafter == nullptr ) {
                     debugmsg( "search_type::book requires a crafter to be provided, since it checks crafting group and crafters inventory" );
                     return false;
                 }
@@ -516,14 +520,14 @@ recipe_subset recipe_subset::reduce(
     std::string_view txt, const search_type key,
     const std::function<void( size_t, size_t )> &progress_callback ) const
 {
-    return recipe_subset( *this, search( txt, key, std::nullopt, progress_callback ) );
+    return recipe_subset( *this, search( txt, key, nullptr, progress_callback ) );
 }
 
 recipe_subset recipe_subset::reduce(
     std::string_view txt, const Character &crafter, const search_type key,
     const std::function<void( size_t, size_t )> &progress_callback ) const
 {
-    return recipe_subset( *this, search( txt, key, crafter, progress_callback ) );
+    return recipe_subset( *this, search( txt, key, &crafter, progress_callback ) );
 }
 recipe_subset recipe_subset::intersection( const recipe_subset &subset ) const
 {
