@@ -1,5 +1,6 @@
 #if defined(TILES)
 #include "cata_tiles.h"
+#include "creature_render_view.h"
 #include "tile_lookup.h"
 #include "tile_preparation.h"
 #include "tileset_loader.h"
@@ -105,11 +106,9 @@
 #include "weather_type.h"
 #include "weighted_list.h"
 
-static const efftype_id effect_ridden( "ridden" );
 
 static const itype_id itype_corpse( "corpse" );
 
-static const trait_id trait_INATTENTIVE( "INATTENTIVE" );
 
 static const trap_str_id tr_unfinished_construction( "tr_unfinished_construction" );
 
@@ -4490,6 +4489,27 @@ SDL_Texture *cata_tiles::render_character_preview( const Character &ch, const in
     return result;
 }
 
+std::optional<creature_render_view> cata_tiles::capture_critter_view(
+    const tripoint_bub_ms &p, bool invisible ) const
+{
+    const auto override = monster_override.find( p );
+    if( override != monster_override.end() ) {
+        const mtype_id id = std::get<0>( override->second );
+        if( !id ) {
+            return std::nullopt;
+        }
+        creature_render_view view;
+        view.overridden = true;
+        view.body = id.str();
+        view.species = id->species.empty() ? empty_string : id->species.begin()->str();
+        view.rotation = 0;
+        view.disposition = "overlay_" + Creature::attitude_raw_string( std::get<3>( override->second ) );
+        return view;
+    }
+    return capture_creature_render_view( get_map(), get_player_character(),
+                                         get_creature_tracker().creature_at( p, true ), p, invisible );
+}
+
 bool cata_tiles::draw_critter_at( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
                                   const std::array<bool, 5> &invisible )
 {
@@ -4579,167 +4599,43 @@ bool cata_tiles::draw_critter_at( const tripoint_bub_ms &p, lit_level ll, int &h
         }
     }
 
-    bool result;
-    bool is_player;
-    bool sees_player;
-    Creature::Attitude attitude;
-    Character &you = get_player_character();
-    const Creature *pcritter = get_creature_tracker().creature_at( p, true );
-    // creature_at returns monsters first. If the monster is underwater beneath a
-    // solid surface (invisible), fall back to the player/NPC sharing the tile.
-    if( pcritter != nullptr && pcritter->is_underwater() &&
-        here.has_flag( ter_furn_flag::TFLAG_SWIM_UNDER, p ) &&
-        !you.is_underwater() ) {
-        if( you.pos_bub() == p ) {
-            pcritter = &you;
-        } else {
-            pcritter = get_creature_tracker().creature_at<npc>( p );
-        }
+    const std::optional<creature_render_view> captured = capture_critter_view( p, invisible[0] );
+    if( !captured ) {
+        return false;
     }
-    const bool always_visible = pcritter && pcritter->has_flag( mon_flag_ALWAYS_VISIBLE );
-    const auto override = monster_override.find( p );
-    if( override != monster_override.end() ) {
-        const mtype_id id = std::get<0>( override->second );
-        if( !id ) {
-            return false;
-        }
-        is_player = false;
-        sees_player = false;
-        attitude = std::get<3>( override->second );
-        const std::string &chosen_id = id.str();
-        const std::string &ent_subcategory = id.obj().species.empty() ?
-                                             empty_string : id.obj().species.begin()->str();
-        result = draw_from_id_string( chosen_id, TILE_CATEGORY::MONSTER, ent_subcategory, p,
-                                      corner, 0, lit_level::LIT, false, height_3d );
-    } else if( !invisible[0] || always_visible ) {
-        if( pcritter == nullptr ) {
-            return false;
-        }
-        const Creature &critter = *pcritter;
-
-        if( !you.sees( here, critter ) ) {
-            const_dialogue d( get_const_talker_for( you ), get_const_talker_for( critter ) );
-            enchant_cache::special_vision sees_with_special = you.enchantment_cache->get_vision( d );
-            if( !sees_with_special.is_empty() ) {
-                const enchant_cache::special_vision_descriptions special_vis_desc =
-                    you.enchantment_cache->get_vision_description_struct( sees_with_special, d );
-                return draw_from_id_string( special_vis_desc.id, TILE_CATEGORY::NONE, empty_string, p, 0, 0,
-                                            lit_level::LIT, false, height_3d );
-            }
-            return false;
-        }
-        result = false;
-        sees_player = false;
-        is_player = false;
-        attitude = Creature::Attitude::ANY;
-        const monster *m = dynamic_cast<const monster *>( &critter );
-        if( m != nullptr ) {
-            const TILE_CATEGORY ent_category = TILE_CATEGORY::MONSTER;
-            std::string ent_subcategory = empty_string;
-            if( !m->type->species.empty() ) {
-                ent_subcategory = m->type->species.begin()->str();
-            }
-            const int subtile = corner;
-            // depending on the toggle flip sprite left or right
-            int rot_facing = -2;
-            if( m->facing == FacingDirection::RIGHT ) {
-                rot_facing = 0;
-            } else if( m->facing == FacingDirection::LEFT ) {
-                rot_facing = -1;
-            }
-            if( rot_facing >= -1 ) {
-                std::string chosen_id = m->type->id.str();
-                if( m->has_effect( effect_ridden ) ) {
-                    int pl_under_height = 6;
-                    if( m->mounted_player ) {
-                        draw_entity_with_overlays( *m->mounted_player, p, ll, pl_under_height );
-                    }
-                    const std::string prefix = "rid_";
-                    std::string copy_id = chosen_id;
-                    const std::string ridden_id = copy_id.insert( 0, prefix );
-                    const tile_type *tt = tileset_ptr->find_tile_type( ridden_id );
-                    if( tt ) {
-                        chosen_id = ridden_id;
-                    }
-                }
-
-                if( m->has_flag( mon_flag_COPY_SUMMONER_LOOK ) && m->get_summoner() != nullptr ) {
-                    const Character *caster_char = m->get_summoner()->as_character();
-                    if( caster_char != nullptr ) {
-                        // caster is character
-                        draw_entity_with_overlays( *caster_char, p, ll, height_3d, m->facing );
-                        result = true;
-                    }
-                    const monster *caster_mon = m->get_summoner()->as_monster();
-                    if( caster_mon != nullptr ) {
-                        // caster is another monster
-                        result = draw_from_id_string( caster_mon->type->id.str(), ent_category, ent_subcategory, p,
-                                                      subtile, rot_facing, ll, false, height_3d );
-                    }
-                } else if( m->has_flag( mon_flag_COPY_AVATAR_LOOK ) ) {
-                    draw_entity_with_overlays( *get_avatar().as_character(), p, ll, height_3d, m->facing );
-                } else {
-                    result = draw_from_id_string( chosen_id, ent_category, ent_subcategory, p,
-                                                  subtile, rot_facing, ll, false, height_3d );
-                }
-
-                draw_entity_with_overlays( *m, p, ll, height_3d );
-                sees_player = m->sees( here, you );
-                attitude = m->attitude_to( you );
-            }
-        }
-        const Character *pl = dynamic_cast<const Character *>( &critter );
-        if( pl != nullptr ) {
-            draw_entity_with_overlays( *pl, p, ll, height_3d );
-            result = true;
-            if( pl->is_avatar() ) {
-                is_player = true;
-            } else {
-                sees_player = pl->sees( here, you );
-                attitude = pl->attitude_to( you );
-            }
-        }
-    } else {
-        // invisible
-        if( pcritter == nullptr ) {
-            return false;
-        }
-        const_dialogue d( get_const_talker_for( you ), get_const_talker_for( *pcritter ) );
-        const enchant_cache::special_vision sees_with_special = you.enchantment_cache->get_vision( d );
-        if( !sees_with_special.is_empty() ) {
-
-            const bool scope_is_blocking = you.is_avatar() && ( you.as_avatar()->cant_see( p ) ||
-                                           sees_with_special.ignores_aiming_cone );
-            if( !scope_is_blocking ) {
-                const enchant_cache::special_vision_descriptions special_vis_desc =
-                    you.enchantment_cache->get_vision_description_struct( sees_with_special, d );
-                return draw_from_id_string( special_vis_desc.id, TILE_CATEGORY::NONE, empty_string, p,
-                                            0, 0, lit_level::LIT, false, height_3d );
-            } else {
-                return false;
-            }
-        } else {
-            return false;
-        }
+    const creature_render_view &view = *captured;
+    if( view.special ) {
+        return draw_from_id_string( view.body, TILE_CATEGORY::NONE, empty_string, p, 0, 0,
+                                    lit_level::LIT, false, height_3d );
     }
-
-    if( result && !is_player && show_creature_overlay_icons ) {
-        // Attitude/sees-player icons are UI overlays, not body sprites.
-        // Exclude from tint bounds and tint replay tracking.
-        sprite_screen_bounds *saved_bounds = m_cur_bounds;
-        auto *saved_tint = m_cur_tint_sprites;
+    bool result = false;
+    if( view.rider ) {
+        int rider_height = 6;
+        draw_entity_view( *view.rider, p, ll, rider_height );
+    }
+    if( !view.body.empty() && view.rotation >= -1 ) {
+        const std::string &id = !view.ridden_body.empty() &&
+                                tileset_ptr->find_tile_type( view.ridden_body ) ?
+                                view.ridden_body : view.body;
+        result = draw_from_id_string( id, TILE_CATEGORY::MONSTER, view.species, p, corner,
+                                      view.rotation, view.overridden ? lit_level::LIT : ll, false, height_3d );
+    }
+    if( view.character ) {
+        draw_entity_view( *view.character, p, ll, height_3d );
+        result = view.character_result;
+    }
+    if( view.monster_overlays ) {
+        draw_entity_view( *view.monster_overlays, p, ll, height_3d );
+    }
+    if( result && !view.disposition.empty() && show_creature_overlay_icons ) {
+        restore_on_out_of_scope bounds( m_cur_bounds );
+        restore_on_out_of_scope tint( m_cur_tint_sprites );
         m_cur_bounds = nullptr;
         m_cur_tint_sprites = nullptr;
-        std::string draw_id = "overlay_" + Creature::attitude_raw_string( attitude );
-        if( sees_player && !you.has_trait( trait_INATTENTIVE ) ) {
-            draw_id += "_sees_player";
-        }
-        if( tileset_ptr->find_tile_type( draw_id ) ) {
-            draw_from_id_string( draw_id, TILE_CATEGORY::NONE, empty_string, p, 0, 0,
+        if( tileset_ptr->find_tile_type( view.disposition ) ) {
+            draw_from_id_string( view.disposition, TILE_CATEGORY::NONE, empty_string, p, 0, 0,
                                  lit_level::LIT, false, height_3d );
         }
-        m_cur_bounds = saved_bounds;
-        m_cur_tint_sprites = saved_tint;
     }
     return result;
 }
@@ -4788,38 +4684,10 @@ bool cata_tiles::draw_critter_above( const tripoint_bub_ms &p, lit_level ll, int
     if( draw_from_id_string( "shadow", TILE_CATEGORY::NONE, empty_string, p,
                              0, 0, ll, false, height_3d ) && scan_p.z() - 1 > you.posz() && you.sees( here, critter ) ) {
 
-        bool is_player = false;
-        bool sees_player = false;
-        Creature::Attitude attitude = Creature::Attitude::ANY;
-
-        // Get critter status disposition if monster
-        const monster *m = dynamic_cast<const monster *>( &critter );
-        if( m != nullptr ) {
-            sees_player = m->sees( here, you );
-            attitude = m->attitude_to( you );
-        }
-
-        // Get critter status disposition if character
-        const Character *pl = dynamic_cast<const Character *>( &critter );
-        if( pl != nullptr ) {
-            if( pl->is_avatar() ) {
-                is_player = true;
-            } else {
-                sees_player = pl->sees( here, you );
-                attitude = pl->attitude_to( you );
-            }
-        }
-
-        // Draw overlay for shadow owner
-        if( !is_player ) {
-            std::string draw_id = "overlay_" + Creature::attitude_raw_string( attitude );
-            if( sees_player && !you.has_trait( trait_INATTENTIVE ) ) {
-                draw_id += "_sees_player";
-            }
-            if( tileset_ptr->find_tile_type( draw_id ) ) {
-                draw_from_id_string( draw_id, TILE_CATEGORY::NONE, empty_string, p, 0, 0,
-                                     lit_level::LIT, false, height_3d );
-            }
+        const std::string disposition = capture_creature_disposition( here, you, critter );
+        if( !disposition.empty() && tileset_ptr->find_tile_type( disposition ) ) {
+            draw_from_id_string( disposition, TILE_CATEGORY::NONE, empty_string, p, 0, 0,
+                                 lit_level::LIT, false, height_3d );
         }
         m_cur_bounds = saved_bounds;
         m_cur_tint_sprites = saved_tint;
@@ -4929,97 +4797,43 @@ void cata_tiles::draw_zlevel_overlay( const tripoint_bub_ms &p, const lit_level 
     SetRenderDrawBlendMode( renderer, SDL_BLENDMODE_NONE );
 }
 
+void cata_tiles::draw_entity_view( const entity_render_view &view, const tripoint_bub_ms &p,
+                                   lit_level ll, int &height_3d )
+{
+    const int base_height = height_3d;
+    if( !view.body.empty() ) {
+        const auto category = to_TILE_CATEGORY.find( view.category );
+        if( category == to_TILE_CATEGORY.end() ) {
+            debugmsg( "invalid tile category %s", view.category );
+        }
+        if( view.rotation >= -1 ) {
+            draw_from_id_string( view.body, category == to_TILE_CATEGORY.end() ? TILE_CATEGORY::NONE :
+                                 category->second, empty_string, p, corner, view.rotation, ll, false, height_3d );
+        }
+    }
+    for( const auto &overlay : view.overlays ) {
+        std::string id = overlay.first;
+        if( find_overlay_looks_like( view.male, overlay.first, overlay.second, id ) ) {
+            int overlay_height = view.stack_overlays ? height_3d : base_height;
+            if( view.rotation >= -1 ) {
+                draw_from_id_string( id, TILE_CATEGORY::NONE, empty_string, p, corner,
+                                     view.rotation, ll, false, overlay_height );
+            }
+            height_3d = std::max( height_3d, overlay_height );
+        }
+    }
+}
+
 void cata_tiles::draw_entity_with_overlays( const Character &ch, const tripoint_bub_ms &p,
         lit_level ll, int &height_3d, const FacingDirection facing_override )
 {
-    std::vector<trait_id> override_look_muts = ch.get_functioning_mutations( true,
-    false, []( const mutation_branch & mut ) {
-        return mut.override_look.has_value();
-    } );
-
-    // TODO: make monster show proper effects instead of inheriting the one of a character
-    const FacingDirection facing = facing_override == FacingDirection::NONE ? ch.facing :
-                                   facing_override;
-
-    // first draw the character itself(i guess this means a tileset that
-    // takes this seriously needs a naked sprite)
-    int prev_height_3d = height_3d;
-    if( override_look_muts.empty() ) {
-        std::string ent_name;
-
-        if( ch.is_npc() ) {
-            ent_name = ch.male ? "npc_male" : "npc_female";
-        } else {
-            ent_name = ch.male ? "player_male" : "player_female";
-        }
-        // depending on the toggle flip sprite left or right
-        if( facing == FacingDirection::RIGHT ) {
-            draw_from_id_string( ent_name, TILE_CATEGORY::NONE, "", p, corner, 0, ll, false,
-                                 height_3d );
-        } else if( facing == FacingDirection::LEFT ) {
-            draw_from_id_string( ent_name, TILE_CATEGORY::NONE, "", p, corner, -1, ll, false,
-                                 height_3d );
-        }
-    } else {
-        mutation_branch::OverrideLook override_look = override_look_muts.at(
-                    0 ).obj().override_look.value();
-        TILE_CATEGORY category;
-        if( to_TILE_CATEGORY.find( override_look.tile_category ) != to_TILE_CATEGORY.end() ) {
-            category = to_TILE_CATEGORY.at( override_look.tile_category );
-        } else {
-            debugmsg( "invalid tile category %s", override_look.tile_category );
-            category = TILE_CATEGORY::NONE;
-        }
-        if( facing == FacingDirection::RIGHT ) {
-            draw_from_id_string( override_look.id, category, "", p, corner, 0, ll, false,
-                                 height_3d );
-        } else if( facing == FacingDirection::LEFT ) {
-            draw_from_id_string( override_look.id, category, "", p, corner, -1, ll, false,
-                                 height_3d );
-        }
-    }
-
-    // next up, draw all the overlays
-    std::vector<std::pair<std::string, std::string>> overlays = override_look_muts.empty() ?
-            ch.get_overlay_ids() : ch.get_overlay_ids_when_override_look();
-    for( const std::pair<std::string, std::string> &overlay : overlays ) {
-        std::string draw_id = overlay.first;
-        if( find_overlay_looks_like( ch.male, overlay.first, overlay.second, draw_id ) ) {
-            int overlay_height_3d = prev_height_3d;
-            if( facing == FacingDirection::RIGHT ) {
-                draw_from_id_string( draw_id, TILE_CATEGORY::NONE, "", p, corner, /*rota:*/ 0, ll,
-                                     false, overlay_height_3d );
-            } else if( facing == FacingDirection::LEFT ) {
-                draw_from_id_string( draw_id, TILE_CATEGORY::NONE, "", p, corner, /*rota:*/ -1, ll,
-                                     false, overlay_height_3d );
-            }
-            // the tallest height-having overlay is the one that counts
-            height_3d = std::max( height_3d, overlay_height_3d );
-        }
-    }
+    draw_entity_view( capture_character_render_view( ch, facing_override ), p, ll, height_3d );
 }
 
 void cata_tiles::draw_entity_with_overlays( const monster &mon, const tripoint_bub_ms &p,
         lit_level ll, int &height_3d )
 {
-    // TODO: move drawing the monster from draw_critter_at() here
-
-    std::vector<std::pair<std::string, std::string>> overlays = mon.get_overlay_ids();
-    for( const std::pair<std::string, std::string> &overlay : overlays ) {
-        std::string draw_id = overlay.first;
-        if( find_overlay_looks_like( true, overlay.first, overlay.second, draw_id ) ) {
-            int overlay_height_3d = height_3d;
-            if( mon.facing == FacingDirection::RIGHT ) {
-                draw_from_id_string( draw_id, TILE_CATEGORY::NONE, "", p, corner, /*rota:*/ 0, ll,
-                                     false, overlay_height_3d );
-            } else if( mon.facing == FacingDirection::LEFT ) {
-                draw_from_id_string( draw_id, TILE_CATEGORY::NONE, "", p, corner, /*rota:*/ -1, ll,
-                                     false, overlay_height_3d );
-            }
-
-            height_3d = std::max( height_3d, overlay_height_3d );
-        }
-    }
+    draw_entity_view( capture_monster_overlay_view( mon ), p, ll, height_3d );
 }
 
 bool cata_tiles::draw_item_highlight( const tripoint_bub_ms &pos, int &height_3d )

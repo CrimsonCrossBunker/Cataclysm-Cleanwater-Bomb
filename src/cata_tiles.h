@@ -67,6 +67,8 @@ class vehicle;
 struct sprite_screen_bounds;
 struct tint_sprite_record;
 struct tile_render_info;
+struct creature_render_view;
+struct entity_render_view;
 namespace tile_preparation
 {
 class frame;
@@ -771,6 +773,10 @@ class cata_tiles
         // or nullopt when it is unpainted or the VEHICLE_PART_COLOR option is off.
         std::optional<RGBColor> get_vpart_tint( const vehicle &veh,
                                                 const point_rel_ms &mount ) const;
+        std::optional<creature_render_view> capture_critter_view( const tripoint_bub_ms &p,
+                bool invisible ) const;
+        void draw_entity_view( const entity_render_view &view, const tripoint_bub_ms &p,
+                               lit_level ll, int &height_3d );
         bool draw_critter_at( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
                               const std::array<bool, 5> &invisible );
         bool draw_critter_above( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
