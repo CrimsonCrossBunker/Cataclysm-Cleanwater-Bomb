@@ -1632,7 +1632,8 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                             const SDL_Rect draw_rect = {
                                 screen.x, screen.y - zlev_base, tile_width, tile_height
                             };
-                            geometry->rect( renderer, draw_rect, tint.color );
+                            geometry->rect( renderer, draw_rect,
+                                            SDL_Color{ tint.color.r, tint.color.g, tint.color.b, tint.color.a } );
                         }
                         SetRenderDrawBlendMode( renderer, SDL_BLENDMODE_NONE );
                     } else {
@@ -1807,7 +1808,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                             // Accumulate into the current batch or start a new one.
 
                             // Color change forces a new batch.
-                            const SDL_Color tile_tc = tint.color;
+                            const SDL_Color tile_tc = { tint.color.r, tint.color.g, tint.color.b, tint.color.a };
                             if( batch_tiles.empty() ||
                                 std::memcmp( &batch_color, &tile_tc, sizeof( SDL_Color ) ) != 0 ) {
                                 flush_tint_batch();
@@ -2282,7 +2283,7 @@ void cata_tiles::render_lit_sprite( const texture &tex, const SDL_Rect &dst,
                                     const bool standing )
 {
     SDL_Texture *const atlas = tex.get_texture_ptr().get();
-    const SDL_Rect &src = tex.get_srcrect();
+    const SDL_Rect &src = tex.get_source_rect();
     // vertex colors address the light map by this cell
     cata_assert( lit_extent.covers( pos ) );
     smooth_lighting::lit_quad_params q;
@@ -3745,9 +3746,10 @@ bool cata_tiles::draw_sprite_at(
             footprint.flip_vertical = ( render_flip & SDL_FLIP_VERTICAL ) != 0;
             footprint.turn = render_turn;
             footprint.pixelscale = tile.pixelscale;
-            footprint.top = tile_offset.y + offset.y - ( height_3d - lit_level_height_3d );
+            footprint.top = ( retract > 0 ? tile.offset_retracted.y : tile.offset.y ) + offset.y -
+                            ( height_3d - lit_level_height_3d );
             const smooth_lighting::tile_geometry geometry{ tileset_ptr->get_tile_width(),
-                    tileset_ptr->get_tile_height(), iso };
+                    tileset_ptr->get_tile_height(), is_isometric() };
             standing = anchor ? *anchor == smooth_lighting::light_anchor::base :
                        smooth_lighting::sprite_stands( footprint, geometry );
         }

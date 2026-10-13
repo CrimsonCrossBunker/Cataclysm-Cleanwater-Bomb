@@ -188,9 +188,8 @@ SDL_Color &pixel_minimap::submap_cache::color_at( const point &p )
 }
 
 pixel_minimap::pixel_minimap( const SDL_Renderer_Ptr &renderer,
-                              const GeometryRenderer_Ptr &geometry ) :
+                              const GeometryRenderer_Ptr &/* geometry */ ) :
     renderer( renderer ),
-    geometry( geometry ),
     type( pixel_minimap_type::ortho ),
     screen_rect{ 0, 0, 0, 0 }
 {
