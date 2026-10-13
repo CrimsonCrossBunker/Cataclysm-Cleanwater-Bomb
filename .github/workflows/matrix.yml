@@ -55,10 +55,10 @@ concurrency:
 # At the time of writing (June 2025), the feature matrix for the above criteria looks like this:
 # | name                                 | OS       | compiler | newest/ oldest | tiles | sound | localize | cmake | backtrace | lto | sanitize | mods |
 # | ------------------------------------ | -------- | -------- | -------------- | ----- | ----- | -------- | ----- | --------- | --- | -------- | ---- |
-# | Basic Build                          | ubuntu   | clang-13 | oldest (clang) |       |       | yes      |       |           |     |          | yes  |
-# | Clang 18, Ubuntu, Tiles, ASan        | ubuntu   | clang-18 | newest (clang) | yes   |       | yes      |       | yes       |     | address  |      |
+# | Basic Build                          | ubuntu   | clang-14 | oldest (clang) |       |       | yes      |       |           |     |          | yes  |
+# | Clang 22, Ubuntu, Tiles, ASan        | ubuntu   | clang-22 | newest (clang) | yes   |       | yes      |       | yes       |     | address  |      |
 # | GCC 9, Curses, LTO                   | ubuntu   | gcc-9    | oldest   (gcc) |       |       | yes      |       | yes       | yes |          |      |
-# | GCC 14, Ubuntu, Curses               | ubuntu   | gcc-14   | newest   (gcc) |       |       | yes      |       |           |     |          |      |
+# | GCC 16, Ubuntu, Curses               | ubuntu   | gcc-16   | newest   (gcc) |       |       | yes      |       |           |     |          |      |
 # | GCC 9, Ubuntu, Tiles, Sound, CMake   | ubuntu   | gcc-9    | oldest   (gcc) | yes   | yes   |          | yes   |           |     |          |      |
 # | macOS 15, Apple Clang 17             | macOS 15 | apple clang-17  |  N/A    | yes   | yes   | yes      |       |           |     |          |      |
 # | Windows (in msvc-full-features.yml)  | windows  | msvc     |     N/A        | yes   | yes   | yes      |       | yes?      |     |          |      |
@@ -140,8 +140,8 @@ jobs:
       max-parallel: ${{ fromJSON(needs.matrix-variables.outputs.max_parallel) }}
       matrix:
         include:
-          - compiler: clang++-13
-            os: ubuntu-22.04
+          - compiler: clang++-14
+            os: ubuntu-24.04
             tiles: 0
             sound: 0
             cmake: 0
@@ -155,7 +155,8 @@ jobs:
             mods: magiclysm|xedra_evolved
             title: Basic Build (Clang oldest supported, Ubuntu, Curses)
             ccache_limit: 4.5G
-            ccache_key: linux-llvm-13
+            ccache_key: linux-llvm-14
+            extra_package: clang-14
 
           - compiler: clang++
             os: macos-15
@@ -200,8 +201,8 @@ jobs:
             ccache_key: linux-gcc-9-lto
             extra_package: g++-9
 
-          - compiler: clang++-18
-            os: ubuntu-24.04
+          - compiler: clang++-22
+            os: ubuntu-26.04
             cmake: 0
             tiles: 1
             sound: 0
@@ -211,13 +212,13 @@ jobs:
             native: linux64
             pch: 1
             sanitize: address
-            title: Clang 18, Ubuntu, Tiles, ASan
+            title: Clang 22, Ubuntu, Tiles, ASan
             native_tests: true
             ccache_limit: 6G
-            ccache_key: linux-llvm-18-asan
+            ccache_key: linux-llvm-22-asan
 
-          - compiler: g++-14
-            os: ubuntu-latest
+          - compiler: g++-16
+            os: ubuntu-26.04
             cmake: 0
             tiles: 0
             sound: 0
@@ -232,9 +233,10 @@ jobs:
             pch: 1
             semantic_acceptance: true
             native_tests: true
-            title: GCC 14, Ubuntu, Curses, Lua API
+            title: GCC 16, Ubuntu, Curses, Lua API
             ccache_limit: 6.5G
-            ccache_key: linux-gcc-14
+            ccache_key: linux-gcc-16
+            extra_package: g++-16
 
           - compiler: g++-9
             os: ubuntu-24.04
@@ -416,11 +418,11 @@ jobs:
       run: bash ./build-scripts/gha_test_only.sh
     # Activity re-entry must preserve AIM's UI even when broad tests are skipped.
     - name: run advanced inventory activity regressions
-      if: ${{ env.SKIP == 'false' && env.SKIP_TESTS == 'true' && matrix.compiler == 'clang++-18' }}
+      if: ${{ env.SKIP == 'false' && env.SKIP_TESTS == 'true' && matrix.compiler == 'clang++-22' }}
       run: ./tests/cata_test '[advanced_inv][activity]' --rng-seed 1001 --order lex --user-dir=test_user_dir_advanced_inventory --error-format=github-action
     # This hidden test clears global session state; keep its process isolated.
     - name: run isolated wait popup cleanup regression
-      if: ${{ env.SKIP == 'false' && matrix.compiler == 'clang++-18' }}
+      if: ${{ env.SKIP == 'false' && matrix.compiler == 'clang++-22' }}
       run: ./tests/cata_test '[.wait_popup_cleanup]' --rng-seed 20260921 --order lex --user-dir=test_user_dir_wait_popup --error-format=github-action
     # Run both focused batches in one process to load game data once.
     - name: run Lua and horde map regressions
