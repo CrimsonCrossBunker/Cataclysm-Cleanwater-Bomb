@@ -68,6 +68,7 @@ class vehicle;
 struct sprite_screen_bounds;
 struct tint_sprite_record;
 struct tile_render_info;
+class sprite_command_frame;
 struct tile_layer_view;
 struct creature_render_view;
 struct entity_render_view;
@@ -1212,6 +1213,8 @@ class cata_tiles
         // must not include map.h (map.h includes this header). Null outside the
         // sprite branch of the layer loop.
         const tile_render_info *m_cur_tile = nullptr;
+        // Owner-only frame binding. Commands carry values; resource handles stay here.
+        sprite_command_frame *command_frame_ = nullptr;
 
         // Set by draw_vpart around its draw_from_id_string call so the vehicle
         // part sprite gets recolored with the part's paint color; nullopt

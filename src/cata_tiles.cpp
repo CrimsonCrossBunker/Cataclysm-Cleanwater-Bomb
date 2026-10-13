@@ -1,5 +1,7 @@
 #if defined(TILES)
 #include "cata_tiles.h"
+#include "sprite_submission.h"
+#include "sprite_command_frame.h"
 #include "tile_layer_capture.h"
 #include "creature_render_view.h"
 #include "tile_lookup.h"
@@ -624,6 +626,9 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
     tile_lookup_frame lookup( tileset_ptr, season_of_year( calendar::turn ) );
     restore_on_out_of_scope restore_lookup( lookup_frame_ );
     lookup_frame_ = &lookup;
+    sprite_command_frame command_frame( tileset_ptr );
+    restore_on_out_of_scope restore_commands( command_frame_ );
+    command_frame_ = &command_frame;
 
     {
         //set clipping to prevent drawing over stuff we shouldn't
@@ -1337,7 +1342,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         int cur_zlevel = std::max( center.z() - fov_3d_z_range, -OVERMAP_DEPTH );
         bool draw_aborted = false;
         struct tinted_tile_scratch {
-            tile_render_info *tile = nullptr;
+            tripoint_bub_ms position;
             sprite_screen_bounds bounds;
             small_literal_vector<tint_sprite_record, 4> sprites;
             SDL_Color color = { 0, 0, 0, 0 };
@@ -1451,7 +1456,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
             // is available.
             const bool zlev_has_color = zlev_cache.has_colored_lights && !iso;
             for( int row = cur_any_tile_range.p_min.y; row < cur_any_tile_range.p_max.y; row ++ ) {
-                if( renderer_should_abort_frame() ) {
+                if( renderer_should_abort_frame() || command_frame.order().cancelled() ) {
                     // Abort emitting tiles mid-draw. Post-loop bookkeeping still runs
                     // so map memory and overrides stay consistent; invalidation kept
                     // for the next frame.
@@ -1489,7 +1494,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                     }
                     row_tinted.emplace_back();
                     tinted_tile_scratch &tint = row_tinted.back();
-                    tint.tile = &p;
+                    tint.position = p.view.pos;
                     tint.color = { prepared.tint[0], prepared.tint[1], prepared.tint[2], prepared.tint[3] };
                     row_sprites.back().tint = &tint;
                 }
@@ -1591,6 +1596,10 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                 // dawn/dusk light, etc). Tint eligibility and color were precomputed
                 // in the per-tile prepass above; row_tinted holds only eligible tiles.
                 if( !row_tinted.empty() ) {
+                    if( !command_frame.valid( tileset_ptr ) ) {
+                        draw_aborted = true;
+                        break;
+                    }
                     // Sprite rendering can leave a variant shader bound across same-variant
                     // runs. The tint overlay is plain renderer geometry/copy work, so it must
                     // start from null GPU render state or SDL3 may apply the sprite shader to
@@ -1608,8 +1617,11 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                         // from the original tint overlay code).
                         SetRenderDrawBlendMode( renderer, SDL_BLENDMODE_BLEND );
                         for( const tinted_tile_scratch &tint : row_tinted ) {
-                            const tile_render_info *const tp = tint.tile;
-                            const point screen = player_to_screen( tp->view.pos.xy() );
+                            if( !command_frame.valid( tileset_ptr ) ) {
+                                draw_aborted = true;
+                                break;
+                            }
+                            const point screen = player_to_screen( tint.position.xy() );
                             const SDL_Rect draw_rect = {
                                 screen.x, screen.y - zlev_base, tile_width, tile_height
                             };
@@ -1737,8 +1749,11 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
 
                         SetRenderDrawBlendMode( renderer, SDL_BLENDMODE_BLEND );
                         for( const tinted_tile_scratch &tint : row_tinted ) {
-                            const tile_render_info *const tp = tint.tile;
-                            const point screen = player_to_screen( tp->view.pos.xy() );
+                            if( !command_frame.valid( tileset_ptr ) ) {
+                                draw_aborted = true;
+                                break;
+                            }
+                            const point screen = player_to_screen( tint.position.xy() );
                             const SDL_Rect tile_rect = {
                                 screen.x, screen.y - zlev_base, tile_width, tile_height
                             };
@@ -3289,7 +3304,6 @@ bool cata_tiles::draw_sprite_at(
         return true;
     }
 
-    int ret = 0;
     // blit foreground based on rotation
     bool rotate_sprite = false;
     int sprite_num = 0;
@@ -3311,6 +3325,21 @@ bool cata_tiles::draw_sprite_at(
     }
 
     const int sprite_index = spritelist[sprite_num];
+    std::optional<sprite_command_frame> direct_frame;
+    if( !command_frame_ ) {
+        direct_frame.emplace( tileset_ptr );
+    }
+    sprite_command_frame &frame = command_frame_ ? *command_frame_ : *direct_frame;
+    const auto ticket = frame.issue( tileset_ptr );
+    if( !ticket ) {
+        return false;
+    }
+    bool submitted = false;
+    on_out_of_scope cancel_unsubmitted( [&]() {
+        if( !submitted ) {
+            frame.cancel();
+        }
+    } );
     const texture *sprite_tex = tileset_ptr->get_tile( sprite_index );
 
     bool shader_bound = false;
@@ -3416,43 +3445,37 @@ bool cata_tiles::draw_sprite_at(
             render_angle, static_cast<int>( render_flip ) } );
     }
 
-#if defined(_WIN32) && defined(CROSS_LINUX)
-    // Preserve the cross-compiled Direct3D workaround only at submission time.
-    // Tint bounds and mask replay above use the unadjusted screen destination.
-    if( direct3d_mode ) {
-        if( geometry.rotation_code == 1 ) {
-            destination.y -= 1;
-        } else if( geometry.rotation_code == 3 ) {
-            destination.x -= 1;
-        }
-    }
-#endif
-    ret = sprite_tex->render_copy_ex( renderer, &destination, render_angle, nullptr, render_flip );
-
-    // Shape-exact gray overlay: blend the sprite's own silhouette over it so
-    // the gray effect never tints neighboring sprites that overflow this tile.
+    sprite_draw_command command;
+    command.ticket = *ticket;
+    command.sprite_index = sprite_index;
+    command.geometry = geometry;
+    command.height_delta = tile.height_3d;
     if( pending_gray_overlay_ ) {
-        if( const texture *silhouette = tileset_ptr->get_silhouette_tile( sprite_index ) ) {
-            const SDL_Color ov = *pending_gray_overlay_;
-            const std::shared_ptr<SDL_Texture> &tex = silhouette->get_texture_ptr();
-            SetTextureBlendMode( tex, SDL_BLENDMODE_BLEND );
-            SetTextureColorMod( tex, ov.r, ov.g, ov.b );
-            SetTextureAlphaMod( tex, ov.a );
-            silhouette->render_copy_ex( renderer, &destination, render_angle, nullptr,
-                                        render_flip );
-            SetTextureAlphaMod( tex, 255 );
-            SetTextureColorMod( tex, 255, 255, 255 );
-            SetTextureBlendMode( tex, SDL_BLENDMODE_NONE );
-        }
+        const SDL_Color &color = *pending_gray_overlay_;
+        command.gray_overlay = std::array<std::uint8_t, 4> { color.r, color.g, color.b, color.a };
     }
-
-    printErrorIf( ret != 0, "SDL_RenderCopyEx() failed" );
-    // variant_pass unbinds on frame-end flush; nothing to do per-sprite.
+    if( !frame.valid( tileset_ptr ) ) {
+        return false;
+    }
+    bool d3d_adjustment = false;
+#if defined(_WIN32) && defined(CROSS_LINUX)
+    d3d_adjustment = direct3d_mode;
+#endif
+    // All world queries, asset selection and pure geometry are complete. The
+    // backend sees only an owned command and this immediate owner binding.
+    const sprite_asset_binding binding{ renderer, *sprite_tex,
+                                        command.gray_overlay ? tileset_ptr->get_silhouette_tile( sprite_index ) : nullptr,
+                                        d3d_adjustment };
+    submitted = submit_sprite_command( command, binding, frame.order(),
+                                       sprite_command_frame::current_resources(), height_3d );
+    if( !submitted ) {
+        return false;
+    }
+    // variant_pass unbinds on frame-end flush, as before.
     ( void )shader_bound;
     // this reference passes all the way back up the call chain back to
     // cata_tiles::draw() here.draw_points_cache.tiles[z][row][col].scratch.height_3d
     // where we are accumulating the height of every sprite stacked up in a tile
-    height_3d += tile.height_3d;
     return true;
 }
 
