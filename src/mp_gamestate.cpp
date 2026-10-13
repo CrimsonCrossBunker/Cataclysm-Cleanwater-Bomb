@@ -31,7 +31,6 @@
 #include "flexbuffer_json.h"
 #include "game.h"
 #include "game_inventory.h"
-#include "gates.h"
 #include "get_version.h"
 #include "input.h"
 #include "inventory.h"
