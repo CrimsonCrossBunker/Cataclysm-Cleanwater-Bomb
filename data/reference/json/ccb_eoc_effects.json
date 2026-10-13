@@ -4,7 +4,7 @@
   "inventory_kind": "eoc_effects",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:0d2c64867ca5a2d0c5954b8a3f12a16edce6d30c65abc104f29f081e676a5cba",
+    "source_fingerprint": "sha256:2883732811c35b0fad1383eaf09590031e6bc7c370eb4f4c5bbe0a69b90aa573",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -385,7 +385,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 16,
+        "occurrences": 18,
         "examples": [
           {
             "path": "data/json/effects_on_condition/nether_eocs/LIXA_EOCs_spells_traps.json",
@@ -1859,7 +1859,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 17,
+        "occurrences": 19,
         "examples": [
           {
             "path": "data/json/effects_on_condition/example_eocs.json",
@@ -5832,7 +5832,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 32,
+        "occurrences": 34,
         "examples": [
           {
             "path": "data/json/effects_on_condition/nether_eocs/LIXA_EOCs_spells_traps.json",
@@ -6308,7 +6308,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 1078,
+        "occurrences": 1080,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -6401,7 +6401,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 1949,
+        "occurrences": 1968,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -7330,7 +7330,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 22126,
+        "occurrences": 22327,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -7437,7 +7437,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 2502,
+        "occurrences": 2551,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -10559,7 +10559,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 68,
+        "occurrences": 71,
         "examples": [
           {
             "path": "data/json/npcs/Lighthouse_Family/NPC_lighthouse_girl.json",
@@ -17529,7 +17529,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 5502,
+        "occurrences": 5550,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -20168,7 +20168,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 458,
+        "occurrences": 459,
         "examples": [
           {
             "path": "data/json/effects_on_condition/dream_eocs.json",
@@ -21204,7 +21204,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 1356,
+        "occurrences": 1364,
         "examples": [
           {
             "path": "data/json/effects_on_condition/addictions_eocs.json",
@@ -21489,7 +21489,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 723,
+        "occurrences": 724,
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_eocs.json",
@@ -22556,7 +22556,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 231,
+        "occurrences": 237,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -23902,7 +23902,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 528,
+        "occurrences": 530,
         "examples": [
           {
             "path": "data/json/effects_on_condition/mutation_eocs/mutation_effect_eocs.json",
@@ -24092,7 +24092,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 358,
+        "occurrences": 365,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -24282,7 +24282,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 1,
+        "occurrences": 6,
         "examples": [
           {
             "path": "data/mods/Xedra_Evolved/effects/effect_on_condition.json",
@@ -24377,7 +24377,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 635,
+        "occurrences": 642,
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_active_eocs.json",
@@ -24657,7 +24657,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 949,
+        "occurrences": 829,
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_eocs.json",
@@ -25219,7 +25219,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 3243,
+        "occurrences": 3265,
         "examples": [
           {
             "path": "data/json/debug/quick_setup_eoc.json",
@@ -26240,7 +26240,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 226,
+        "occurrences": 227,
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_eocs.json",
@@ -26710,7 +26710,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 19,
+        "occurrences": 44,
         "examples": [
           {
             "path": "data/json/effects_on_condition/scenario_specific_eocs.json",
@@ -27926,7 +27926,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 828,
+        "occurrences": 829,
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_eocs.json",
@@ -28021,7 +28021,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 119,
+        "occurrences": 133,
         "examples": [
           {
             "path": "data/json/effects_on_condition/effects_eocs.json",
@@ -28306,7 +28306,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 245,
+        "occurrences": 249,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
