@@ -3,6 +3,7 @@
 #include "sprite_submission.h"
 #include "sprite_command_frame.h"
 #include "tile_layer_capture.h"
+#include "dynamic_tile_capture.h"
 #include "creature_render_view.h"
 #include "tile_lookup.h"
 #include "tile_preparation.h"
@@ -3720,22 +3721,28 @@ bool cata_tiles::draw_field_or_item( const tripoint_bub_ms &p, const lit_level l
         return false;
     }
 
-    // The full field object is needed only when a displayable live field was
-    // captured.  Avoid resolving a submap for item-only and empty tiles.
-    map &here = get_map();
-    field *const f = !fld_overridden && cached_fld ? &here.field_at( p ) : nullptr;
+    const auto fields = capture_field_render_views( get_map(), p, cached_fld, invisible,
+                        field_override );
+    std::optional<dynamic_tile_context> context;
+    const auto &get_context = [&]() -> const dynamic_tile_context & {
+        if( !context )
+        {
+            context.emplace( capture_dynamic_tile_context( get_map(), p ) );
+        }
+        return *context;
+    };
+    std::optional<std::vector<item_layer_view>> layer_items;
 
     bool ret_draw_field = false;
     bool ret_draw_items = false;
 
     auto draw_layer_field = [&]( const std::string & terfurn_key,
-    const lit_level & ll, const field_entry & fe, const std::array<int, 4> &neighborhood ) {
+    const lit_level & ll, const field_render_view & view ) {
         auto itt = tileset_ptr->field_layer_data.find( terfurn_key );
         if( itt != tileset_ptr->field_layer_data.end() ) {
             const bool nv = nv_goggles_activated;
-            int subtile = 0;
-            int rotation = 0;
-            map::get_tile_values( fld.to_i(), neighborhood, subtile, rotation, 0 );
+            const int subtile = view.context_subtile;
+            const int rotation = view.context_rotation;
 
             // go through all the layer variants
             for( const layer_context_sprites &layer_var : itt->second ) {
@@ -3755,7 +3762,7 @@ bool cata_tiles::draw_field_or_item( const tripoint_bub_ms &p, const lit_level l
 
                     // if we have found info on the item go through and draw its stuff
                     ret_draw_field = draw_from_id_string( sprite_to_draw, TILE_CATEGORY::FIELD, empty_string, p,
-                                                          subtile, rotation, ll, nv, height_3d, fe.get_field_intensity(), "", layer_var.offset );
+                                                          subtile, rotation, ll, nv, height_3d, view.intensity, "", layer_var.offset );
                     break;
                 }
             }
@@ -3764,16 +3771,18 @@ bool cata_tiles::draw_field_or_item( const tripoint_bub_ms &p, const lit_level l
         return false;
     };
 
-    auto draw_layer_item = [&]( const std::string & terfurn_key, const maptile & tile,
-    bool & drawtop ) {
+    auto draw_layer_item = [&]( const std::string & terfurn_key, bool & drawtop ) {
         // go through all the layer variants
         auto itt = tileset_ptr->item_layer_data.find( terfurn_key );
         if( itt != tileset_ptr->item_layer_data.end() ) {
+            if( !layer_items ) {
+                layer_items.emplace( capture_item_layer_views( get_map(), p ) );
+            }
             for( const layer_context_sprites &layer_var : itt->second ) {
-                for( const item &i : tile.get_items() ) {
-                    if( i.typeId().str() == layer_var.id ) {
+                for( const item_layer_view &i : *layer_items ) {
+                    if( i.id == layer_var.id ) {
                         // if an item matches draw it and break
-                        const std::string layer_it_category = i.typeId()->get_item_type_string();
+                        const std::string layer_it_category = i.category;
                         const lit_level layer_lit = ll;
                         const bool layer_nv = nv_goggles_activated;
 
@@ -3789,8 +3798,7 @@ bool cata_tiles::draw_field_or_item( const tripoint_bub_ms &p, const lit_level l
                             }
                         }
 
-                        std::string layer_variant = i.has_itype_variant() ?
-                                                    i.itype_variant().id : std::string{};
+                        std::string layer_variant = i.variant;
                         if( !layer_var.append_suffix.empty() ) {
                             layer_variant += layer_var.append_suffix;
                         }
@@ -3809,7 +3817,7 @@ bool cata_tiles::draw_field_or_item( const tripoint_bub_ms &p, const lit_level l
                                              layer_var.offset );
 
                         // if the top item is already being layered don't draw it later
-                        if( i.typeId() == tile.get_uppermost_item().typeId() ) {
+                        if( i.same_type_as_uppermost ) {
                             drawtop = false;
                         }
 
@@ -3822,85 +3830,22 @@ bool cata_tiles::draw_field_or_item( const tripoint_bub_ms &p, const lit_level l
         return false;
     };
 
-    // go through each field and draw it
-    if( !fld_overridden && f ) {
-        const maptile &tile = here.maptile_at( p );
-
-        for( const std::pair<const field_type_id, field_entry> &fd_pr : *f ) {
-            const field_type_id &fld = fd_pr.first;
-            if( !invisible[0] && fld.obj().display_field ) {
-                const lit_level lit = ll;
-
-                auto has_field = [&]( field_type_id fld, const tripoint_bub_ms & q,
-                const bool invis ) -> field_type_id {
-                    // go through the fields and see if they are equal
-                    field_type_id found = fd_null;
-                    for( std::pair<const field_type_id, field_entry> &this_fld : here.field_at( q ) )
-                    {
-                        if( this_fld.first == fld ) {
-                            found = fld;
-                        }
-                    }
-                    const auto it = field_override.find( q );
-                    return it != field_override.end() ? it->second :
-                           ( !fld_overridden || !invis ) ?  found : fd_null;
-                };
-                // for rotation information
-                const std::array<int, 4> neighborhood = { {
-                        static_cast<int>( has_field( fld, p + point::south, invisible[1] ) ),
-                        static_cast<int>( has_field( fld, p + point::east, invisible[2] ) ),
-                        static_cast<int>( has_field( fld, p + point::west, invisible[3] ) ),
-                        static_cast<int>( has_field( fld, p + point::north, invisible[4] ) )
-                    }
-                };
-
-                int subtile = 0;
-                int rotation = 0;
-                map::get_tile_values( fld.to_i(), neighborhood, subtile, rotation, 0 );
-
-                //get field intensity
-                int intensity = fd_pr.second.get_field_intensity();
-
-                // start by drawing the layering data if available
-                bool has_drawn_field = draw_layer_field( tile.get_furn_t().id.str(), lit, fd_pr.second,
-                                       neighborhood );
-                if( !has_drawn_field ) {
-                    has_drawn_field = draw_layer_field( tile.get_ter_t().id.str(), lit, fd_pr.second,
-                                                        neighborhood );
-                }
-                if( !has_drawn_field ) {
-                    draw_from_id_string( fld.id().str(), TILE_CATEGORY::FIELD, empty_string,
-                                         p, subtile, rotation, ll, nv_goggles_activated, height_3d, intensity );
-                }
-            }
+    for( const field_render_view &view : fields ) {
+        if( fld_overridden ) {
+            ret_draw_field = draw_from_id_string( view.id, TILE_CATEGORY::FIELD, empty_string,
+                                                  p, view.subtile, view.rotation, lit_level::LIT,
+                                                  false, height_3d, view.intensity );
+            continue;
         }
-    } else if( fld_overridden ) {
-        // draw the override
-        const field_type_id &fld = fld_override->second;
-        if( fld.obj().display_field ) {
-            const lit_level lit = lit_level::LIT;
-
-            auto field_at = [&]( const tripoint_bub_ms & q, const bool invis ) -> field_type_id {
-                const auto it = field_override.find( q );
-                return it != field_override.end() ? it->second :
-                ( !fld_overridden || !invis ) ? here.field_at( q ).displayed_field_type() : fd_null;
-            };
-            // for rotation information
-            const std::array<int, 4> neighborhood = {
-                static_cast<int>( field_at( p + point::south, invisible[1] ) ),
-                static_cast<int>( field_at( p + point::east, invisible[2] ) ),
-                static_cast<int>( field_at( p + point::west, invisible[3] ) ),
-                static_cast<int>( field_at( p + point::north, invisible[4] ) )
-            };
-
-            int subtile = 0;
-            int rotation = 0;
-            map::get_tile_values( fld.to_i(), neighborhood, subtile, rotation, 0 );
-
-            //get field intensity
-            int intensity = fld_overridden ? 0 : here.field_at( p ).displayed_intensity();
-            ret_draw_field = draw_from_id_string( fld.id().str(), TILE_CATEGORY::FIELD, empty_string,
-                                                  p, subtile, rotation, lit, false, height_3d, intensity );
+        const dynamic_tile_context &tile = get_context();
+        bool has_drawn_field = draw_layer_field( tile.furniture, ll, view );
+        if( !has_drawn_field ) {
+            has_drawn_field = draw_layer_field( tile.terrain, ll, view );
+        }
+        if( !has_drawn_field ) {
+            draw_from_id_string( view.id, TILE_CATEGORY::FIELD, empty_string,
+                                 p, view.subtile, view.rotation, ll, nv_goggles_activated,
+                                 height_3d, view.intensity );
         }
     }
 
@@ -3911,21 +3856,21 @@ bool cata_tiles::draw_field_or_item( const tripoint_bub_ms &p, const lit_level l
         bool hilite = false;
         bool drawtop = true;
         const itype *it_type;
-        const maptile &tile = here.maptile_at( p );
 
         if( !invisible[0] ) {
-            bool has_drawn_item = draw_layer_item( tile.get_furn_t().id.str(), tile, drawtop );
+            const dynamic_tile_context &tile = get_context();
+            bool has_drawn_item = draw_layer_item( tile.furniture, drawtop );
             // start by drawing the layering data if available
             // attempt furniture ids, then flags, then terrain ids, then flags
             if( !has_drawn_item ) {
-                for( const std::string &f : tile.get_furn_t().get_flags() ) {
-                    has_drawn_item |= draw_layer_item( f, tile, drawtop );
+                for( const std::string &f : tile.furniture_flags ) {
+                    has_drawn_item |= draw_layer_item( f, drawtop );
                 }
                 if( !has_drawn_item ) {
-                    has_drawn_item = draw_layer_item( tile.get_ter_t().id.str(), tile, drawtop );
+                    has_drawn_item = draw_layer_item( tile.terrain, drawtop );
                     if( !has_drawn_item ) {
-                        for( const std::string &f : tile.get_ter_t().get_flags() ) {
-                            draw_layer_item( f, tile, drawtop );
+                        for( const std::string &f : tile.terrain_flags ) {
+                            draw_layer_item( f, drawtop );
                         }
                     }
                 }
