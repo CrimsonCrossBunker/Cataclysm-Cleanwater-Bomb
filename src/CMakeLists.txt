@@ -310,14 +310,14 @@ if (TILES)
                     "${VCPKG_TOOLS_DIR}/glslang/glslangValidator.exe"
                     --quiet -V -o "${_SPV}" "${SHADER}"
             )
-            foreach(_format IN LISTS _SHADER_FORMAT_LIST)
-                if(_format STREQUAL "spv")
+            foreach(SHADER_FORMAT IN LISTS _SHADER_FORMAT_LIST)
+                if(SHADER_FORMAT STREQUAL "spv")
                     continue()
-                elseif(NOT _format STREQUAL "dxil" AND NOT _format STREQUAL "msl")
-                    message(FATAL_ERROR "Unsupported shader format: ${_format}")
+                elseif(NOT SHADER_FORMAT STREQUAL "dxil" AND NOT SHADER_FORMAT STREQUAL "msl")
+                    message(FATAL_ERROR "Unsupported shader format: ${SHADER_FORMAT}")
                 endif()
-                set(_COMPILED "${_SHADERS_DIR}/${_filename}.${_format}")
-                string(TOUPPER "${_format}" _DEST_FORMAT)
+                set(_COMPILED "${_SHADERS_DIR}/${_filename}.${SHADER_FORMAT}")
+                string(TOUPPER "${SHADER_FORMAT}" _DEST_FORMAT)
                 list(APPEND COMPILED_SHADERS "${_COMPILED}")
                 add_custom_command(
                     OUTPUT "${_COMPILED}"
