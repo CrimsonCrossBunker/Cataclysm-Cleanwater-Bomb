@@ -1,4 +1,3 @@
-#include <type_id.h>
 #include <functional>
 #include <memory>
 
@@ -11,6 +10,7 @@
 #include "npc.h"
 #include "player_helpers.h"
 #include "talker.h"
+#include "type_id.h"
 
 TEST_CASE( "upstream_hunger_math_preserves_character_scopes", "[upstream_math]" )
 {
