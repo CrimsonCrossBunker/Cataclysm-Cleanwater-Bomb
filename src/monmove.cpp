@@ -45,6 +45,7 @@
 #include "monster_destination_plan.h"
 #include "monster_oracle.h"
 #include "monster_step_selection.h"
+#include "monster_target_selection.h"
 #include "mtype.h"
 #include "npc.h"
 #include "options.h"
@@ -390,12 +391,11 @@ float monster::rate_target( Creature &c, float best, bool smart ) const
     float power = c.power_rating();
     monster *mon = dynamic_cast< monster * >( &c );
     // Their attitude to us and not ours to them, so that bobcats won't get gunned down
-    if( mon != nullptr && mon->attitude_to( *this ) == Attitude::HOSTILE ) {
-        power += 2;
-    }
+    power = observed_monster_target_power( power,
+                                           mon != nullptr && mon->attitude_to( *this ) == Attitude::HOSTILE );
 
     if( power > 0 ) {
-        return static_cast<int>( d ) / power;
+        return score_visible_monster_target( static_cast<int>( d ), power );
     }
 
     return FLT_MAX;
@@ -585,10 +585,13 @@ void monster::plan()
             if( tmp.friendly == 0 && tmp.attitude_to( *this ) == Attitude::HOSTILE &&
                 seen_levels.test( tmp.posz() + OVERMAP_DEPTH ) ) {
                 float rating = rate_target( tmp, mon_plan.dist, mon_plan.smart_planning );
-                if( rating < mon_plan.dist ) {
+                const monster_target_selection selection( { mon_plan.dist, 0, mon_plan.fleeing },
+                        monster_target_kind::friendly_monster, rating );
+                const monster_target_choice choice = selection.result();
+                if( choice.selected ) {
                     mon_plan.target = &tmp;
-                    mon_plan.dist = rating;
                 }
+                mon_plan.dist = choice.state.best;
             }
         }
     }
@@ -613,23 +616,33 @@ void monster::plan()
 
         float rating = rate_target( who, mon_plan.dist, mon_plan.smart_planning );
         bool fleeing_from = is_fleeing( who );
-        if( rating == mon_plan.dist && ( mon_plan.fleeing || attitude( &who ) == MATT_ATTACK ||
-                                         attitude( &who ) == MATT_FOLLOW ) ) {
-            ++valid_targets;
-            if( one_in( valid_targets ) ) {
-                mon_plan.target = &who;
+        monster_target_selection selection( { mon_plan.dist, valid_targets, mon_plan.fleeing },
+                                            monster_target_kind::npc, rating, fleeing_from, faction_att == MFA_HATE );
+        while( selection.request() != monster_target_request::none ) {
+            bool accepted = false;
+            switch( selection.request() ) {
+                case monster_target_request::tie_attack:
+                case monster_target_request::replacement_attack:
+                    accepted = attitude( &who ) == MATT_ATTACK;
+                    break;
+                case monster_target_request::tie_follow:
+                    accepted = attitude( &who ) == MATT_FOLLOW;
+                    break;
+                case monster_target_request::tie_draw:
+                    accepted = one_in( selection.tie_chance() );
+                    break;
+                case monster_target_request::none:
+                    break;
             }
+            selection.answer( accepted );
         }
-        // Switch targets if closer and hostile or scarier than current target
-        if( ( rating < mon_plan.dist && mon_plan.fleeing ) ||
-            ( faction_att == MFA_HATE ) ||
-            ( rating < mon_plan.dist && attitude( &who ) == MATT_ATTACK ) ||
-            ( !mon_plan.fleeing && fleeing_from ) ) {
+        const monster_target_choice choice = selection.result();
+        if( choice.selected ) {
             mon_plan.target = &who;
-            mon_plan.dist = rating;
-            valid_targets = 1;
         }
-        mon_plan.fleeing = mon_plan.fleeing || fleeing_from;
+        mon_plan.dist = choice.state.best;
+        valid_targets = choice.state.valid_targets;
+        mon_plan.fleeing = choice.state.fleeing;
         if( rating <= 5 ) {
             if( anger <= 30 ) {
                 anger += mon_plan.angers_hostile_near;
@@ -675,17 +688,17 @@ void monster::plan()
             }
             monster &mon = *mon_ptr;
             float rating = rate_target( mon, mon_plan.dist, mon_plan.smart_planning );
-            if( rating == mon_plan.dist ) {
-                ++valid_targets;
-                if( one_in( valid_targets ) ) {
-                    mon_plan.target = &mon;
-                }
+            monster_target_selection selection( { mon_plan.dist, valid_targets, mon_plan.fleeing },
+                                                monster_target_kind::reachable_monster, rating );
+            if( selection.request() == monster_target_request::tie_draw ) {
+                selection.answer( one_in( selection.tie_chance() ) );
             }
-            if( rating < mon_plan.dist ) {
+            const monster_target_choice choice = selection.result();
+            if( choice.selected ) {
                 mon_plan.target = &mon;
-                mon_plan.dist = rating;
-                valid_targets = 1;
             }
+            mon_plan.dist = choice.state.best;
+            valid_targets = choice.state.valid_targets;
             if( rating <= 5 ) {
                 if( anger <= 30 ) {
                     anger += mon_plan.angers_hostile_near;

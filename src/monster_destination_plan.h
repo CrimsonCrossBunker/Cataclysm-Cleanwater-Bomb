@@ -37,7 +37,7 @@ class monster_destination_plan
         monster_destination_plan( const monster_destination_plan & ) = delete;
         monster_destination_plan &operator=( const monster_destination_plan & ) = delete;
 
-        const monster_destination_view &view() const {
+        monster_destination_view view() const {
             return view_;
         }
         bool commit( const std::optional<tripoint_abs_ms> &proposal, map &here );
