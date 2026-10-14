@@ -2,6 +2,7 @@
 #include "cata_tiles.h"
 #include "sprite_submission.h"
 #include "sprite_command_frame.h"
+#include "draw_cache_rebuild_guard.h"
 #include "tile_layer_capture.h"
 #include "dynamic_tile_capture.h"
 #include "creature_render_view.h"
@@ -618,6 +619,16 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
 
     has_animated_tiles_ = false;
 
+    // Borrowed row/tint pointers belong to this draw scope. Restore an
+    // enclosing owner scope on return or exception; subsequent direct UI
+    // draws must not retain bindings to this frame's local row sidecars.
+    restore_on_out_of_scope restore_tile_binding( m_cur_tile );
+    restore_on_out_of_scope restore_bounds_binding( m_cur_bounds );
+    restore_on_out_of_scope restore_tint_binding( m_cur_tint_sprites );
+    m_cur_tile = nullptr;
+    m_cur_bounds = nullptr;
+    m_cur_tint_sprites = nullptr;
+
     // Advance all real-time transient effects (explosion lights, bullet
     // tracers, creature glides, SCT labels, highlights, screen shake)
     // by the elapsed wall-clock time before drawing so every sprite
@@ -779,7 +790,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
 
     if( here.draw_points_cache_dirty ) {
         CATA_PROFILE_SCOPE_NAMED( "tiles.draw_cache_rebuild" );
-        here.draw_points_cache_dirty = false;
+        draw_cache_rebuild_guard cache_rebuild( here.draw_points_cache_dirty );
         // overlay_strings and color_blocks are generated with draw_points and thus are cleared together
         // Soft clear: keep the per-z/per-row buffers and each row's vector capacity
         // so the per-move rebuild reuses last frame's buffers instead of freeing and
@@ -1150,6 +1161,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                 }
             }
         }
+        cache_rebuild.complete();
     }
     overlay_strings = here.overlay_strings_cache;
     color_blocks = here.color_blocks_cache;

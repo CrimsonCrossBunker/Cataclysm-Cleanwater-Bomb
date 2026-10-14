@@ -5,6 +5,8 @@
 #include "coordinates.h"
 #include "lightmap.h"
 #include "view_snapshot.h"
+#include "draw_cache_rebuild_guard.h"
+#include "cata_scope_helpers.h"
 
 static int fail_after = -1;
 static unsigned attempts = 0;
@@ -48,6 +50,37 @@ int main()
     draw_points_cache_t::row_vec warm;
     sprite( warm );
     warm.clear();
+    bool dirty = true;
+    {
+        draw_cache_rebuild_guard rebuild( dirty );
+        assert( !dirty );
+        dirty = true; // A new owner invalidation must survive successful build.
+        rebuild.complete();
+    }
+    assert( dirty );
+    {
+        draw_cache_rebuild_guard rebuild( dirty );
+        rebuild.complete();
+    }
+    assert( !dirty );
+    sprite_screen_bounds outer_bounds;
+    sprite_screen_bounds inner_bounds;
+    sprite_screen_bounds *binding = &outer_bounds;
+    try {
+        restore_on_out_of_scope restore( binding );
+        binding = &inner_bounds;
+        throw std::bad_alloc();
+    } catch( const std::bad_alloc & ) {
+    }
+    assert( binding == &outer_bounds );
+    binding = nullptr;
+    try {
+        restore_on_out_of_scope restore( binding );
+        binding = &inner_bounds;
+        throw std::bad_alloc();
+    } catch( const std::bad_alloc & ) {
+    }
+    assert( binding == nullptr );
     // This uses the actual production row implementation. The allocator is
     // armed only around one append, after every fixture value is initialized.
     // First failure is entry-vector growth; second is index-vector publication.
@@ -57,18 +90,28 @@ int main()
         attempts = 0;
         fail_after = fail;
         bool caught = false;
+        bool dirty = true;
         try {
+            draw_cache_rebuild_guard rebuild( dirty );
+            assert( !dirty );
             sprite( row );
+            rebuild.complete();
         } catch( const std::bad_alloc & ) {
             caught = true;
         }
         fail_after = -1;
         assert( caught );
+        assert( dirty );
         assert( attempts == static_cast<unsigned>( fail + 1 ) );
         assert( row.size() == 1 );
         assert( row.sprite_indices().empty() );
         assert( std::holds_alternative<tile_render_info::vision_effect>( row[0].var ) );
-        sprite( row );
+        {
+            draw_cache_rebuild_guard retry( dirty );
+            sprite( row );
+            retry.complete();
+        }
+        assert( !dirty );
         assert( row.size() == 2 );
         assert( row.sprite_indices().size() == 1 && row.sprite_indices()[0] == 1 );
         assert( std::holds_alternative<tile_render_info::sprite>( row[1].var ) );
