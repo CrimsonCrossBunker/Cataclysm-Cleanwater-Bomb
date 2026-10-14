@@ -1,0 +1,575 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-15",
+  "scope": "Final local acceptance of original remaining visibility/exploration/creature-planning/renderer boundaries. Not an engine-wide rewrite, AI-worker activation, whole-old-save-fleet or cross-platform/device release acceptance.",
+  "source_head": "b678d27ec2fa6764b25d8a940c68a7bc3dd4b35f",
+  "remaining_task_baseline": "2f4a0c2dd71a0ea4b0bbe08418d7ccffd3e5a171",
+  "original_plan": {
+    "path": "doc/c++/performance-results/2026-10-11-render-preparation-plan.json",
+    "sha256": "0aa8b135b88aaf827f6e9eb05b23afaf5d8c03f31a1f04cf4287e97fb0f5741f"
+  },
+  "requirements": [
+    {
+      "stage": "visibility",
+      "original_requirement": {
+        "batch": "visibility",
+        "entry": "Use fixed carrier views/aiming and rebuild counts to establish repeated work or expensive independent scan segments.",
+        "deliverable": "Freeze observer inputs and cache dependencies; version invalidation explicitly; parallelize only independent read-only work after duplicate rebuilds are removed.",
+        "acceptance": "Two-map ownership, walls/traps/local changes, observer changes and repeat-view parity; native fixed action trials. Keep observer and gameplay RNG order."
+      },
+      "disposition": "Complete locally within original boundary; admitted read-only horizontal vision work only.",
+      "implemented": [
+        "Map-owned observer/captured dependencies and versioned cache preparation; independent immutable inputs/private output blocks; deterministic owner merge.",
+        "At most4persistent workers after radius/cost admission; first/cheap/nested/stale/cancelled requests serial; active multiplayer refuses admission; vertical casting and gameplay RNG stay on owner."
+      ],
+      "evidence": [
+        "2026-10-13-owned-vision-preparation.json",
+        "final-corrected51/visibility-native.xml",
+        "draw-row-index-stage5/owner-domains.xml"
+      ],
+      "safety": "Reuse unchanged actual vision/shadowcasting/thread-pool ASan/UBSan/LSan/TSan, allocation/span/task/thread-start/cancel/drain and concurrent initialization evidence; current map integration rerun20/5329. This is not whole-game race proof.",
+      "performance": "Earlier isolated0/4worker trial showed vision.total -27.108%carrier/-17.868%field, with CPU/memory and combat-cost tradeoffs retained. Final34–51 comparison holds VISION4 on both sides and does not remeasure that gain."
+    },
+    {
+      "stage": "exploration",
+      "original_requirement": {
+        "batch": "exploration",
+        "entry": "First distinguish missing-map generation, existing-map read/deserialization, memory preparation and SDL texture upload on a fixed unexplored route.",
+        "deliverable": "Start with the measured blocking stage. Background IO can return owned byte buffers; only proven-safe value decoding may run away from the world owner. Validate location/revision before applying results.",
+        "acceptance": "Cold/warm/saved-memory scenes, repeated movement, save/reload and unload during pending work. Preserve Lua hooks, IDs and generation randomness; do not move arbitrary map generation to workers."
+      },
+      "disposition": "Complete local measured memory ownership/correctness batch; reported several-second symptom remains unreplicated.",
+      "implemented": [
+        "Bounded indexed instance-owned21layer map-memory view; const queries do not allocate; invalid writes cannot pollute a process-global fallback.",
+        "Transactional region publication preserves previous region on allocation failure; JSON loading, storage, memorization and Lua/map generation remain synchronous on owner.",
+        "No async IO introduced because fixed cold/warm routes did not establish a blocking several-second memory stage; there is no pending result to apply or unload/cancel."
+      ],
+      "evidence": [
+        "2026-10-13-owned-map-memory-region.json",
+        "draw-row-index-stage5/owner-domains.xml",
+        "final-corrected51/combined-audit.json"
+      ],
+      "safety": "Actual map_memory.cpp scoped ASan/UBSan/LSan/TSan unchanged inputs; original cross-map defect reproduced,13actual allocation failures recover. Cold/warm/current memory semantic JSON, disk reads, shifted bounds and save/reload covered.",
+      "performance": "10file-cold64north trials,538private pages evicted to0resident before launch; current prepare maximum1.805732ms. Broader generation/hardware-cache/texture-upload time is not claimed isolated or fixed; no memory/whole-game speedup claim."
+    },
+    {
+      "stage": "creature-planning",
+      "original_requirement": {
+        "batch": "creature-planning",
+        "entry": "Dense-monster fixed carrier scenario with completed turns; measure sensing, path search/scoring and movement separately.",
+        "deliverable": "Read-only proposals from fixed inputs; deterministic main-thread movement/combat commit in existing entity order. Recompute or reject stale proposals.",
+        "acceptance": "Same seed/input produces matching decisions and selected state; collision/conflicting proposals/death/lifecycle tests and scoped race checks. Gameplay and Lua mutations stay on the owner."
+      },
+      "disposition": "Complete fixed-value policy/proposal plus deterministic owner commit boundary; no AI workers enabled.",
+      "implemented": [
+        "Owned/reentrant ordinary and grabbed routing scratch; numeric step/target/reaction/group/swarm/follow/furniture/patrol policies retain lazy queries, tie choices and conditional RNG.",
+        "Single-use owner destination and movement receipts pin lifetime/context and revalidate actual inputs; stale/conflicting/dead/removed/replaced proposals reject or recompute before effects.",
+        "Original entity/action order maintained; world sensing, anger/effects, door unlock, shove, combat, Lua Platform v1 callbacks and movement stay on owner."
+      ],
+      "evidence": [
+        "2026-10-14-owned-routing-workspaces.json",
+        "2026-10-14-monster-step-proposals.json",
+        "2026-10-14-owned-destination-proposals.json",
+        "2026-10-14-value-target-selection.json",
+        "2026-10-14-value-planning-reactions.json",
+        "2026-10-14-owned-movement-intents.json",
+        "2026-10-14-owned-general-goals.json",
+        "2026-10-14-planner-sensing-branches.json",
+        "draw-row-index-stage5/owner-domains.xml",
+        "final-corrected51/combined-audit.json"
+      ],
+      "safety": "Current36/171297owner regressions with matched inputs; actual pet/stair/cloaked-driver fixtures; current general-goal/movement/target/reaction scoped ASan within reported unchanged boundaries; routing scoped TSan is for independent scratch/leases, never concurrent live-map querying.",
+      "performance": "Final759-monster scene monmove +0.355990425ms with paired95[0.112749224,0.599231626]. Individual plan ~0.004123ms and route ~0.211249ms; intervals cross0. Keep adverse cost, no AI gain or justified worker admission."
+    },
+    {
+      "stage": "renderer-boundary",
+      "original_requirement": {
+        "batch": "renderer-boundary",
+        "entry": "Value preparation has safe lifecycle and representative cost evidence; identify remaining live creature/light/memory queries.",
+        "deliverable": "Complete pointer-free semantic views and stable ordered commands; keep backend asset lookup/submission separate. This supplies a boundary for a future 3D renderer without replacing simulation.",
+        "acceptance": "Orthogonal/isometric views, colored lights, overrides, map memory, renderer recovery and asset reload. Verify output/lifetime before considering asynchronous frames."
+      },
+      "disposition": "Complete local semantic value/ordered command and backend binding boundary; future3D foundation, no asynchronous world/frame transport.",
+      "implemented": [
+        "Owned creature/rider/summoner/avatar/overlay/light/memory/static/dynamic appearance values; SDL/world/lifetime references remain outside semantic DTOs.",
+        "Stable value resource-epoch/frame-identity/sequence tickets and owned sprite geometry/overlay commands; owner lookup/pinned asset binding and backend submit separate, single-use FIFO, stale-before-dereference, cancel/reset/reload checks.",
+        "Owned row sprite indices avoid repeated variant scans; sparse layer selection, empty-preview work removal and in-place capture; exceptional rebuild dirties cache for retry and restores enclosing owner tile/bounds/tint bindings."
+      ],
+      "evidence": [
+        "2026-10-14-owned-creature-views.json",
+        "2026-10-14-owned-memory-layer-views.json",
+        "2026-10-14-owned-ordered-render-commands.json",
+        "2026-10-14-owned-dynamic-render-layers.json",
+        "2026-10-14-render-owner-validation-overhead.json",
+        "2026-10-14-sprite-command-hotpath.json",
+        "2026-10-14-render-empty-work.json",
+        "2026-10-14-owned-draw-row-indices.json",
+        "2026-10-14-draw-row-allocation-failures.json",
+        "2026-10-14-renderer-owner-unwind.json",
+        "renderer-unwind-stage5/native.xml",
+        "renderer-unwind-stage5/asan.xml",
+        "renderer-unwind-stage5/fault-progress.json",
+        "renderer-unwind-stage5/replay-progress.json",
+        "final-corrected51/combined-audit.json"
+      ],
+      "safety": "Actual complete renderer software ortho/iso/color/overrides/memory/recovery/reload and worker-output parity73/5787; affected implementation scoped ASan29/2923; actual entry/index allocation2failures native+2sanitizer, retry and invalidation preservation/nested borrowed-binding restore. No whole-game OOM, physicalGPU or arbitrary nested-world draw claim.",
+      "performance": "Final reused combat draw +0.602191071ms paired95[0.030663784,1.173718358]. No demonstrated total drawing/CPU improvement for remaining34–51batch. Offline hotspots include unchanged occlusion interpolation and required frame validation; low samples do not establish an avoidable causal cost. Renderer workers remain0."
+    }
+  ],
+  "current_validation": {
+    "renderer_native": {
+      "cases": 73,
+      "assertions": 5787,
+      "failures": 0,
+      "xml": ".ccb-pr-evidence/native-combined/renderer-unwind-stage5/native.xml",
+      "sha256": "9cccdf96767d20a877ea3d38441e6868323cb02cee29aa960b7d76e62b86b645"
+    },
+    "renderer_scoped_asan_ubsan_lsan": {
+      "cases": 29,
+      "assertions": 2923,
+      "failures": 0,
+      "xml": ".ccb-pr-evidence/native-combined/renderer-unwind-stage5/asan.xml",
+      "sha256": "3a062ea9b213e30563d394a0fb4a764ff7088dea31096973748abfdcef72eaf0"
+    },
+    "owner_domains_reused": {
+      "cases": 36,
+      "assertions": 171297,
+      "failures": 0,
+      "xml": ".ccb-pr-evidence/native-combined/draw-row-index-stage5/owner-domains.xml",
+      "sha256": "efd5c053120e4884ceda4b398a52ba12868ef922175dab9002ab4f510205f20e"
+    },
+    "owner_domain_inputs": "All50 recorded inputs unchanged except cata_tiles.cpp; renderer-only exception scope covered by51gates. Existing36named-case owner evidence and input hashes reviewed.",
+    "current_vision_integration": {
+      "cases": 20,
+      "assertions": 5329,
+      "failures": 0,
+      "xml": ".ccb-pr-evidence/native-combined/final-corrected51/visibility-native.xml",
+      "sha256": "56627f7e5111de9294e91a95e2d0ff121a537b89ed67b7233a46068dbe96189c"
+    },
+    "renderer_actual_replay_reload_runs": 8,
+    "combined_native_games": 40,
+    "allocation_faults": {
+      "native": 2,
+      "scoped_asan_ubsan_lsan": 2,
+      "proof": ".ccb-pr-evidence/native-combined/renderer-unwind-stage5/fault-progress.json"
+    }
+  },
+  "combined_protocol": {
+    "scenes": [
+      "carrier0monster32north",
+      "ordinary-field0monster32north",
+      "carrier759monster8pause",
+      "metal-room0monster32h/l"
+    ],
+    "pairs_per_scene": 5,
+    "runs": 40,
+    "ordering": "Reverse baseline/candidate order on even pairs; original fixed fixtures and fresh copies.",
+    "configuration": "Linux Clang23 C++17 Release g1/LTOOFF,SDL3OpenGL,X11,UNDEAD_PEOPLE,2880x1800 fullscreen,zoom4; VISION4/RENDER0,legacyMULTI=false,TRACY_NO_SYS_TRACE1.",
+    "sampling": "Main-TID cycles:u125Hz DWARF32768, input+3sdrain; all-game-thread user task-clock:u30s includes idle/Tracy workers.",
+    "admission": "20consecutive quiet preflight; no own build/capture/export overlap. External forbiddenprocess pairs excluded under predeclared rule; retain raw. Pressure recorded, not timing-based exclusion.",
+    "quality": "All40collector exits0 and lost-event scans0. External-process violation pairs discarded per predeclared rule and retained raw. Passing run input and complete state checked independently of timing. Low-sample functions do not establish a precise function speedup.",
+    "accepted_state": "Matrix full normalized player/active_monsters payload SHA matches across all10runs per scene; only learned-recipe/event row ordering, save wall-time metadata and exact verified build version identities normalized. Event count/first/last totals preserved.",
+    "complete_memory_semantic_sha256": {
+      "carrier": "9a04a5bbf58cefe47ecdbc3e648e9dde9b3462d11481fd79a02a2d03769cdae4",
+      "field": "f2a2da11960b15c2a849b12d268e29b7a52db4b898c7926c61fffa302aa81cba",
+      "combat": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488",
+      "room": "8d7811c8c299161465803708af20bb8d1ab3fab140729a21911e37c3a1002b74"
+    },
+    "discarded_pairs": [
+      {
+        "scene": "carrier",
+        "pair": 1,
+        "attempt": 0,
+        "failed_trial": "fixed51quiet-carrier-baseline-01",
+        "reason": "Original frozen baseline native game exited0 before save-state acceptance. Process absent; strict owned-input guard refused further save input. No completed payload/timing accepted. Cause not proven; terminal raw record preserved and complete pair retried independently of timing."
+      }
+    ],
+    "early_failure": "First unchanged baseline exited0 before saved-state acceptance; collector exits0 and loss0 were not sufficient. Raw failure retained and same fresh pair repeated, no crash/candidate attribution."
+  },
+  "final_metrics": {
+    "carrier": {
+      "draw.rebuilt": {
+        "unit": "ms",
+        "means": {
+          "baseline": 34.70000972972973,
+          "candidate": 35.128003054054055
+        },
+        "candidate_minus_baseline_paired95_ms": [
+          -1.2708357637921037,
+          2.1268224124407507
+        ],
+        "mean_reduction_percent": -1.2334098107114944,
+        "interpretation": "interval crosses zero; no demonstrated change"
+      },
+      "draw.reused": {
+        "unit": "ms",
+        "means": {
+          "baseline": 24.423350396960352,
+          "candidate": 25.05039679376593
+        },
+        "candidate_minus_baseline_paired95_ms": [
+          -0.2938953577302764,
+          1.5479881513414293
+        ],
+        "mean_reduction_percent": -2.5674053175096745,
+        "interpretation": "interval crosses zero; no demonstrated change"
+      },
+      "monmove": {
+        "unit": "ms",
+        "means": {
+          "baseline": 0.0025740972972972975,
+          "candidate": 0.0026344
+        },
+        "candidate_minus_baseline_paired95_ms": [
+          -0.0005510307748827294,
+          0.0006716361802881348
+        ],
+        "mean_reduction_percent": -2.3426737896045324,
+        "interpretation": "interval crosses zero; no demonstrated change"
+      },
+      "map_memory.prepare_region": {
+        "unit": "ms",
+        "means": {
+          "baseline": 0.9033449,
+          "candidate": 1.0494124666666667
+        },
+        "candidate_minus_baseline_paired95_ms": [
+          -0.12395414541174396,
+          0.4160892787450773
+        ],
+        "mean_reduction_percent": -16.16963428549456,
+        "interpretation": "interval crosses zero; no demonstrated change"
+      },
+      "all_process30s_user_task_clock_ms": {
+        "unit": "ms",
+        "means": {
+          "baseline": 9849.892,
+          "candidate": 9980.768
+        },
+        "candidate_minus_baseline_paired95_ms": [
+          -48.342600020474435,
+          310.09460002047484
+        ],
+        "mean_reduction_percent": -1.328704923871249,
+        "interpretation": "interval crosses zero; no demonstrated change"
+      }
+    },
+    "field": {
+      "draw.rebuilt": {
+        "unit": "ms",
+        "means": {
+          "baseline": 25.475762664864863,
+          "candidate": 24.582116443243244
+        },
+        "candidate_minus_baseline_paired95_ms": [
+          -1.7915093356021399,
+          0.004216892358897217
+        ],
+        "mean_reduction_percent": 3.5078291212615964,
+        "interpretation": "interval crosses zero; no demonstrated change"
+      },
+      "monmove": {
+        "unit": "ms",
+        "means": {
+          "baseline": 0.0024776216216216215,
+          "candidate": 0.0030600972972972974
+        },
+        "candidate_minus_baseline_paired95_ms": [
+          -0.00018851779885573105,
+          0.0013534691502070824
+        ],
+        "mean_reduction_percent": -23.509468540012236,
+        "interpretation": "interval crosses zero; no demonstrated change"
+      },
+      "map_memory.prepare_region": {
+        "unit": "ms",
+        "means": {
+          "baseline": 1.0186253333333333,
+          "candidate": 0.9270464333333334
+        },
+        "candidate_minus_baseline_paired95_ms": [
+          -0.36210932421777126,
+          0.17895152421777133
+        ],
+        "mean_reduction_percent": 8.99044005712273,
+        "interpretation": "interval crosses zero; no demonstrated change"
+      },
+      "all_process30s_user_task_clock_ms": {
+        "unit": "ms",
+        "means": {
+          "baseline": 3625.266,
+          "candidate": 3562.58
+        },
+        "candidate_minus_baseline_paired95_ms": [
+          -165.42987873285136,
+          40.05787873285124
+        ],
+        "mean_reduction_percent": 1.729142082263757,
+        "interpretation": "interval crosses zero; no demonstrated change"
+      }
+    },
+    "combat": {
+      "draw.rebuilt": {
+        "unit": "ms",
+        "means": {
+          "baseline": 34.743714,
+          "candidate": 35.0289305
+        },
+        "candidate_minus_baseline_paired95_ms": [
+          -0.5348796203181356,
+          1.1053126203181356
+        ],
+        "mean_reduction_percent": -0.8209154035748956,
+        "interpretation": "interval crosses zero; no demonstrated change"
+      },
+      "draw.reused": {
+        "unit": "ms",
+        "means": {
+          "baseline": 25.616945703225806,
+          "candidate": 26.21913677419355
+        },
+        "candidate_minus_baseline_paired95_ms": [
+          0.03066378435981776,
+          1.1737183575756678
+        ],
+        "mean_reduction_percent": -2.3507528100507047,
+        "interpretation": "supported higher cost"
+      },
+      "monmove": {
+        "unit": "ms",
+        "means": {
+          "baseline": 8.7797237,
+          "candidate": 9.135714125
+        },
+        "candidate_minus_baseline_paired95_ms": [
+          0.11274922367102261,
+          0.5992316263289765
+        ],
+        "mean_reduction_percent": -4.054688247193927,
+        "interpretation": "supported higher cost"
+      },
+      "plan": {
+        "unit": "ms",
+        "means": {
+          "baseline": 0.004009141799766264,
+          "candidate": 0.00412340747954811
+        },
+        "candidate_minus_baseline_paired95_ms": [
+          -9.725831083258642e-05,
+          0.00032578967039627934
+        ],
+        "mean_reduction_percent": -2.850128169288202,
+        "interpretation": "interval crosses zero; no demonstrated change"
+      },
+      "route": {
+        "unit": "ms",
+        "means": {
+          "baseline": 0.2074758023809524,
+          "candidate": 0.21124891666666668
+        },
+        "candidate_minus_baseline_paired95_ms": [
+          -0.008296220512007655,
+          0.015842449083436225
+        ],
+        "mean_reduction_percent": -1.818580404275938,
+        "interpretation": "interval crosses zero; no demonstrated change"
+      },
+      "all_process30s_user_task_clock_ms": {
+        "unit": "ms",
+        "means": {
+          "baseline": 9623.454,
+          "candidate": 9737.318
+        },
+        "candidate_minus_baseline_paired95_ms": [
+          -36.63707461603252,
+          264.3650746160324
+        ],
+        "mean_reduction_percent": -1.183192645800557,
+        "interpretation": "interval crosses zero; no demonstrated change"
+      }
+    },
+    "room": {
+      "draw.rebuilt": {
+        "unit": "ms",
+        "means": {
+          "baseline": 17.047198654054053,
+          "candidate": 17.068198437837836
+        },
+        "candidate_minus_baseline_paired95_ms": [
+          -1.414387196976024,
+          1.45638676454359
+        ],
+        "mean_reduction_percent": -0.12318612699915299,
+        "interpretation": "interval crosses zero; no demonstrated change"
+      },
+      "monmove": {
+        "unit": "ms",
+        "means": {
+          "baseline": 0.0020664702702702705,
+          "candidate": 0.0021785135135135134
+        },
+        "candidate_minus_baseline_paired95_ms": [
+          -0.00017299778824604259,
+          0.00039708427473252885
+        ],
+        "mean_reduction_percent": -5.4219625055911935,
+        "interpretation": "interval crosses zero; no demonstrated change"
+      },
+      "map_memory.prepare_region": {
+        "unit": "ms",
+        "means": {
+          "baseline": 0.8135812,
+          "candidate": 1.0951168
+        },
+        "candidate_minus_baseline_paired95_ms": [
+          -0.3554744402611112,
+          0.9185456402611112
+        ],
+        "mean_reduction_percent": -34.604486927672376,
+        "interpretation": "interval crosses zero; no demonstrated change"
+      },
+      "all_process30s_user_task_clock_ms": {
+        "unit": "ms",
+        "means": {
+          "baseline": 2162.63,
+          "candidate": 2182.246
+        },
+        "candidate_minus_baseline_paired95_ms": [
+          -39.56023520981788,
+          78.79223520981785
+        ],
+        "mean_reduction_percent": -0.9070437384111063,
+        "interpretation": "interval crosses zero; no demonstrated change"
+      }
+    }
+  },
+  "performance_disposition": "Remaining34–51ownership refactoring is independently delivered. Final51matrix does not prove a general draw/AI/CPU gain. Preserve the small supported combat reused-draw and monmove regressions; do not remove readiness/lifetime/stale guards or activate workers on an ambiguous result. Historical50gains are not reused as51gains.",
+  "function_evidence": {
+    "raw_per_trial": "40 main.folded/self-period.txt/complete-function-hotspots.json files retained privately; complete symbols and unresolved leaves, no fabricated function names.",
+    "aggregate": ".ccb-pr-evidence/native-combined/final-corrected51/combined-audit.json",
+    "annotation": ".ccb-pr-evidence/native-combined/final-corrected51/instruction-review/progress.json",
+    "annotation_source_lines": ".ccb-pr-evidence/native-combined/final-corrected51/instruction-review/source-lines.json",
+    "annotation_scope": "Exact matched functions from stopped accepted candidate3captures; period counts diagnostic, not CPU ms. Prefix-only annotate emitted no samples; corrected with exact full symbol and enforced nonempty output. Monster::move had no matching samples; no inferred function cost.",
+    "flamegraph": "/home/zhgpicg/.codex/visualizations/2026/09/05/01a07029-25bd-75f0-9123-3a41b57edb5f/ccb-function-flamegraph.html",
+    "flamegraph_width": "Main-thread sample-count width, inclusive call stacks, not milliseconds/FPS. All8scene/version datasets sum to recorded samples.",
+    "flamegraph_sha256": "e4e004198f175aca7b6e1071588944e183abc2ae441da455bf3c5f7db6714ed0",
+    "preview_acceptance": {
+      "736px": "8datasets,drill-down,parent,sample totals passed; image inspected. CSS-only narrow-bar padding correction applied subsequently.",
+      "320px": {
+        "state": "passed",
+        "width": 320,
+        "checks": "PASS: eight datasets, drill-down, parent, sample totals, width 320"
+      },
+      "initial_false_narrow_test": "Standard headless --window-size320 was clamped to500; not accepted as320evidence. Explicit CDP viewport320 rerun and2px narrow-bar padding overflow repaired.",
+      "scope": "Isolated headless browser with task-only profile; no game sampling/build overlap or user browser access."
+    }
+  },
+  "visual_review": [
+    {
+      "scene": "carrier",
+      "path": ".ccb-pr-evidence/native-combined/trials/fixed51quiet-carrier-candidate-01-r1/setup.png",
+      "sha256": "4aaf58e5bf17c540663bd6789785dd468ca599bf709e28cebaca68b415e0a560",
+      "review": "Actual SDL3 fullscreen setup image visually inspected; no blank/missing scene, HUD and minimap present. Not a full-image deterministic pixel oracle."
+    },
+    {
+      "scene": "field",
+      "path": ".ccb-pr-evidence/native-combined/trials/fixed51quiet-field-candidate-01/setup.png",
+      "sha256": "65388fab901b57503d81459cc0ad3f9902dcbdf45486893893a64b7daa8b8d8f",
+      "review": "Actual SDL3 fullscreen setup image visually inspected; no blank/missing scene, HUD and minimap present. Not a full-image deterministic pixel oracle."
+    },
+    {
+      "scene": "combat",
+      "path": ".ccb-pr-evidence/native-combined/trials/fixed51quiet-combat-candidate-01/setup.png",
+      "sha256": "efc683663ec78fc5b08e2b85ba18646caa0eb318a4f35edd2c5d534b74f83d11",
+      "review": "Actual SDL3 fullscreen setup image visually inspected; no blank/missing scene, HUD and minimap present. Not a full-image deterministic pixel oracle."
+    },
+    {
+      "scene": "room",
+      "path": ".ccb-pr-evidence/native-combined/trials/fixed51quiet-room-candidate-01/setup.png",
+      "sha256": "a1b1b1aab81e46cade411ba0fe9008a9b7acf150f9cb9ab6022ec2d6ebb8b53a",
+      "review": "Actual SDL3 fullscreen setup image visually inspected; no blank/missing scene, HUD and minimap present. Not a full-image deterministic pixel oracle."
+    }
+  ],
+  "compatibility": {
+    "sole_runtime": "require(\"ccb\") / Lua Platform v1; no API/schema/generated-contract change.",
+    "determinism": "Focused exact seed/RNG sequence/oracles, native actions/replay/reload and complete normalized active player/monster state; normalization limited to verified recipe/event serialization order, exact wall-save time and build-event identity.",
+    "map_memory": "Native archive footerXXH64 and complete decoded regionJSON semantic SHA; not compressed-byte equality.",
+    "multiplayer": "Workers deny active multiplayer; no live multiplayer device acceptance. Owner mutations and original order maintained."
+  },
+  "limits": [
+    "Reported several-second unexplored-area stall not reproduced or claimed fixed. New-terrain generation/hardware storage stalls may need a supplied reproduction; arbitrary Lua/mapgen never moved to workers.",
+    "No Windows/macOS/Android/physicalGPU/Vulkan,controller/IME/HiDPI,long-session or full-old-save-fleet acceptance. Linux/OpenGL/software pixel evidence is bounded.",
+    "No whole-game sanitizer or race proof. Each scoped instrumented unit/linked Release dependency is stated in its batch report; workers independent value inputs only.",
+    "No complete pointer-free transportable world/frame protocol or actual3D renderer; semantic DTO/backend boundary is the planned foundation.",
+    "Short125Hz functions and unresolved stacks limit precise attribution; inclusive percentages overlap and do not sum to CPU time.",
+    "No push,new PR,merge,release or modifications of originalDamon/primary/other-task work."
+  ],
+  "batch_reports_sha256": {
+    "doc/c++/performance-results/2026-10-13-owned-vision-preparation.json": "96ee0f37c3ac19a6aa84738f5674976791c7cb91611a8dc9b4eb5bcae9156383",
+    "doc/c++/performance-results/2026-10-13-connected-tile-resolution.json": "df993511b0739d563c9a787880905e9c8bfeb5d89931db79e80a7734ab5f9119",
+    "doc/c++/performance-results/2026-10-13-owned-map-memory-region.json": "9ca622d62313b01b943e7ab5d717df88f61808034f512b6314979ce166eb26e2",
+    "doc/c++/performance-results/2026-10-14-owned-routing-workspaces.json": "ceefa9b2988a7b5d548b8b6d9f6a5dd5ca6c913f461dec148f79e4de8040ede8",
+    "doc/c++/performance-results/2026-10-14-monster-step-proposals.json": "5ca400bc9e3a2b174ae550ab5380481d0e38ea125a64e117744afa273dacc334",
+    "doc/c++/performance-results/2026-10-14-owned-destination-proposals.json": "7a072bda4525da08150d336f559b7b0ff49a08816f36152b7a920ca9e67013f4",
+    "doc/c++/performance-results/2026-10-14-value-target-selection.json": "4d81347e22cadf2e197166bf41ea91e38d40bce80ee98e02d845f12129306543",
+    "doc/c++/performance-results/2026-10-14-value-planning-reactions.json": "627ea2b2f36191376e386cc89ecf56d3e0af4800ac46a2a4334cb818919d6b0c",
+    "doc/c++/performance-results/2026-10-14-owned-movement-intents.json": "bdff0f185c611c8860d11f2ce13b8f076440ef58c655f083403115992c4389b5",
+    "doc/c++/performance-results/2026-10-14-owned-general-goals.json": "fb689baa49fd9fa93fdc110d4d92844e6157e1b2447ec0de8fed224a19ff42b4",
+    "doc/c++/performance-results/2026-10-14-planner-sensing-branches.json": "a998304ffc757b3d828ae6f6af09a81c6280ea9b5bb787ae3e0f69adc0706ef5",
+    "doc/c++/performance-results/2026-10-14-owned-creature-views.json": "df827e39873f0b904bf447813638d4897fec44e2d6a819e2d57478d478027714",
+    "doc/c++/performance-results/2026-10-14-owned-memory-layer-views.json": "c4e25dc4768ba2da24ada07e36041279203a3ab6e1c1728834681177ade8cf8a",
+    "doc/c++/performance-results/2026-10-14-owned-ordered-render-commands.json": "1a93cc571c5191af804cf0c9d2b3c1567fba37766009cebd3a8303e3a2e394e8",
+    "doc/c++/performance-results/2026-10-14-owned-dynamic-render-layers.json": "b91ec5182ea87e71dd980094de8e67251bc3083eeaf256724ce0e61821258de0",
+    "doc/c++/performance-results/2026-10-14-render-owner-validation-overhead.json": "faf94612f47f7973da5fcaa62aa54bc0af5ed74cdded8185f43a254c09689f63",
+    "doc/c++/performance-results/2026-10-14-sprite-command-hotpath.json": "44a9f54a9b8aa95872785deb95e858c168d9a857611442096a952f6de4d51653",
+    "doc/c++/performance-results/2026-10-14-render-empty-work.json": "4726e1401e0f8744d47ae1904ded54a8cb20226b724aa0fa042ccd10e82844a5",
+    "doc/c++/performance-results/2026-10-14-owned-draw-row-indices.json": "96a6ae22abf0eecc4f7bc023c415376a043076853acdf0449a1c22d65b010ece",
+    "doc/c++/performance-results/2026-10-14-draw-row-allocation-failures.json": "eaae048617b6d8daa5b32e53257217bef35e44ad7a221c16296c1ba331d9737c",
+    "doc/c++/performance-results/2026-10-14-renderer-owner-unwind.json": "978bfb711eb080577b665be118538207542ca55f05df170645d0dfbec8bec445"
+  },
+  "private_evidence_sha256": {
+    ".ccb-pr-evidence/native-combined/final-corrected51/matrix-progress.json": "3a659a413b221e8b8871a5cef4431622a431c283899fec0e09db0285a65d5292",
+    ".ccb-pr-evidence/native-combined/final-corrected51/combined-audit.json": "0f0aea6bbe2288dcaeb0e884e006c8e097ddcbb7e940df95fb77500c8a51f64d",
+    ".ccb-pr-evidence/native-combined/final-corrected51/dispatch-progress.json": "ac776721779e4964558d1bad19091575dcdd8f9ac0c053f2e929bbdccf69ae84",
+    ".ccb-pr-evidence/native-combined/final-corrected51/visibility-dispatch-progress.json": "aff1ccc61662053603ff59b6a8d60ad05268536cf02556e93cb0d3fa7faf7678",
+    ".ccb-pr-evidence/native-combined/renderer-unwind-stage5/candidate/build-progress.json": "7180efb9d7bd85c1be9a6ed535605f180cfe8082302d570c168153e6a9e25a28",
+    ".ccb-pr-evidence/native-combined/renderer-unwind-stage5/replay-progress.json": "52c7352718a4efc5f806ad40b1a4a38948dd2379726fa56ff0167f0ac65066d1",
+    ".ccb-pr-evidence/native-combined/final-owner-domain-case-audit.json": "9e57de86409102c18cdd3984097671b5312630c25e2ab6dfe1d95d1d72a37b0d",
+    ".ccb-pr-evidence/native-combined/final-planning-owner-source-review.json": "fc8c1cac3544d39c93e7885ba5c0dd29f851e203007aa44d4b263e968018d5a9",
+    ".ccb-pr-evidence/native-combined/final-lua-contract-scope-review.json": "ac7cb9efe21d2a3330fd25fe4d0a2a3cf6bfbd3701ab1f2b00792328ca39d466"
+  },
+  "frozen_binaries_sha256": {
+    "baseline": {
+      "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/memory-cache-stage3/baseline/cataclysm-tiles": "4ed57b48528fe65a237810ac69dd6a08c669ae13cf820d84e9cf5660242e1488"
+    },
+    "candidate": {
+      "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/renderer-unwind-stage5/candidate/bin/cataclysm-tiles": "9224dd0b63fa0d94bde6c70ac947b21d17e11c3c6626dbcac302677269de13f7",
+      "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/renderer-unwind-stage5/candidate/bin/ccb-sdl3-acceptance": "2e23723ba68de4b9bbf64cd8fdbf4592136d19301b9d8e641a9d160a86140624"
+    }
+  },
+  "source_freeze_verification": {
+    "candidate_recorded_inputs": 80,
+    "current_equals_frozen": true,
+    "source_only_changed_after50": "src/cata_tiles.cpp; verified unchanged owner-domain dependencies",
+    "additional_coupled_fault_source_inputs_current": 6
+  },
+  "commit_scope_before_this_final_report": {
+    "files": 86,
+    "added": 12034,
+    "deleted": 933,
+    "changed_lines": 12967,
+    "actual_commits": 36,
+    "reference_commits": "Approximately115–117 for this13k-scale task (interpolated skill table); reference only.",
+    "split_reason": "36existing coherent implementation+regression/acceptance commits, final evidence separately. Prefer testable batches and reuse gates; no empty/filler commits or unrelated shared-history rewrite."
+  },
+  "publication": "Local only; no automatic push/PR/merge/release.",
+  "final_commit_scope": {
+    "files": 87,
+    "added": 12609,
+    "deleted": 933,
+    "changed_lines": 13542,
+    "actual_commits": 37,
+    "reference_commits": "About118, interpolated10k100/20k150 skill table.",
+    "split_reason": "37coherent local implementation/regression/evidence commits. No filler or unrelated history rewrite; all original remaining stages verified as bounded batches."
+  }
+}
