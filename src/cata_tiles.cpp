@@ -3335,12 +3335,7 @@ bool cata_tiles::draw_sprite_at(
     if( !ticket ) {
         return false;
     }
-    bool submitted = false;
-    on_out_of_scope cancel_unsubmitted( [&]() {
-        if( !submitted ) {
-            frame.cancel();
-        }
-    } );
+    sprite_command_frame::submission_guard cancel_unsubmitted( frame );
     const texture *sprite_tex = tileset_ptr->get_tile( sprite_index );
 
     bool shader_bound = false;
@@ -3424,14 +3419,9 @@ bool cata_tiles::draw_sprite_at(
             point( opaque.x, opaque.y ), point( opaque.w, opaque.h )
         };
     }
-    const sprite_geometry_result geometry = prepare_sprite_geometry( geometry_input );
-    SDL_Rect destination = { geometry.destination.origin.x, geometry.destination.origin.y,
-                             geometry.destination.size.x, geometry.destination.size.y
-                           };
-    const double render_angle = geometry.angle;
-    const CataFlipMode render_flip = static_cast<CataFlipMode>(
-                                         ( geometry.flip_horizontal ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE ) |
-                                         ( geometry.flip_vertical ? SDL_FLIP_VERTICAL : SDL_FLIP_NONE ) );
+    sprite_draw_command command{ *ticket, sprite_index,
+                                 prepare_sprite_geometry( geometry_input ), tile.height_3d, std::nullopt };
+    const sprite_geometry_result &geometry = command.geometry;
     if( geometry.opaque_bounds ) {
         const sprite_rectangle &bounds = *geometry.opaque_bounds;
         m_cur_bounds->expand( bounds.origin.x, bounds.origin.y, bounds.size.x, bounds.size.y );
@@ -3441,16 +3431,14 @@ bool cata_tiles::draw_sprite_at(
     // actual render because the render path may modify destination (d3d offset
     // workaround). Only active for ortho tiles that need tinting.
     if( m_cur_tint_sprites ) {
+        const sprite_rectangle &destination = geometry.destination;
+        const CataFlipMode render_flip = static_cast<CataFlipMode>(
+                                             ( geometry.flip_horizontal ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE ) |
+                                             ( geometry.flip_vertical ? SDL_FLIP_VERTICAL : SDL_FLIP_NONE ) );
         m_cur_tint_sprites->push_back( { sprite_index,
-            { destination.x, destination.y, destination.w, destination.h },
-            render_angle, static_cast<int>( render_flip ) } );
+            { destination.origin.x, destination.origin.y, destination.size.x, destination.size.y },
+            geometry.angle, static_cast<int>( render_flip ) } );
     }
-
-    sprite_draw_command command;
-    command.ticket = *ticket;
-    command.sprite_index = sprite_index;
-    command.geometry = geometry;
-    command.height_delta = tile.height_3d;
     if( pending_gray_overlay_ ) {
         const SDL_Color &color = *pending_gray_overlay_;
         command.gray_overlay = std::array<std::uint8_t, 4> { color.r, color.g, color.b, color.a };
@@ -3464,10 +3452,10 @@ bool cata_tiles::draw_sprite_at(
     const sprite_asset_binding binding{ renderer, sprite_tex,
                                         command.gray_overlay ? tileset_ptr->get_silhouette_tile( sprite_index ) : nullptr,
                                         d3d_adjustment };
-    submitted = frame.submit( command, binding, tileset_ptr, height_3d );
-    if( !submitted ) {
+    if( !frame.submit( command, binding, tileset_ptr, height_3d ) ) {
         return false;
     }
+    cancel_unsubmitted.accepted();
     // variant_pass unbinds on frame-end flush, as before.
     ( void )shader_bound;
     // this reference passes all the way back up the call chain back to

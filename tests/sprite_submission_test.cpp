@@ -8,6 +8,7 @@
 #include "sdltiles.h"
 #include "sdl_renderer_recovery.h"
 #include "sprite_command_frame.h"
+#include <stdexcept>
 #include "sprite_submission.h"
 
 static std::array<std::uint32_t, 64> sprite_pixels( const SDL_Renderer_Ptr &renderer )
@@ -237,6 +238,40 @@ TEST_CASE( "owner_submission_rechecks_late_changes_without_painting_or_height_ch
         CHECK_FALSE( other.submit( command, binding, bundle, height ) );
         CHECK( height == 12 );
         CHECK( sprite_pixels( renderer ) == before );
+    }
+}
+TEST_CASE( "issued_sprite_scope_closes_on_early_exit_and_exception", "[tiles][render_commands]" )
+{
+    software_render_fixture fixture;
+    REQUIRE( fixture.available() );
+    auto bundle = std::make_shared<const tileset>();
+    sprite_command_frame frame( bundle );
+    const auto ticket = frame.issue( bundle );
+    REQUIRE( ticket );
+    SECTION( "ordinary unsubmitted exit cancels" ) {
+        {
+            sprite_command_frame::submission_guard scope( frame );
+        }
+        CHECK( frame.order().cancelled() );
+        CHECK_FALSE( frame.issue( bundle ) );
+    }
+    SECTION( "exception unwinds the concrete scope" ) {
+        try {
+            sprite_command_frame::submission_guard scope( frame );
+            throw std::runtime_error( "test sprite preparation failure" );
+        } catch( const std::runtime_error & ) {
+        }
+        CHECK( frame.order().cancelled() );
+        CHECK_FALSE( frame.issue( bundle ) );
+    }
+    SECTION( "accepted scope leaves later commands available" ) {
+        {
+            sprite_command_frame::submission_guard scope( frame );
+            REQUIRE( frame.order().accept( *ticket, sprite_command_frame::current_resources() ) );
+            scope.accepted();
+        }
+        CHECK_FALSE( frame.order().cancelled() );
+        CHECK( frame.issue( bundle ) );
     }
 }
 #endif // TILES

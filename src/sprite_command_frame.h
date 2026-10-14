@@ -34,6 +34,26 @@ class sprite_command_frame
         void cancel() {
             order_.cancel();
         }
+        // One issued command must either submit or close its stream. Keep this
+        // hot owner scope concrete rather than type-erasing a callback per sprite.
+        class submission_guard
+        {
+            public:
+                explicit submission_guard( sprite_command_frame &frame ) noexcept : frame_( frame ) {}
+                ~submission_guard() {
+                    if( !accepted_ ) {
+                        frame_.cancel();
+                    }
+                }
+                submission_guard( const submission_guard & ) = delete;
+                submission_guard &operator=( const submission_guard & ) = delete;
+                void accepted() noexcept {
+                    accepted_ = true;
+                }
+            private:
+                sprite_command_frame &frame_;
+                bool accepted_ = false;
+        };
         static render_resource_stamp current_resources();
     private:
         bool valid( const std::shared_ptr<const tileset> &current,
