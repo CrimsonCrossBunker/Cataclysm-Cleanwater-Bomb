@@ -1179,12 +1179,11 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         auto &vp_ov = vpart_override;
         for( int zlevel = center.z(); zlevel >= draw_min_z; zlevel-- ) {
             for( int row = min_row; row < max_row; row++ ) {
-                for( tile_render_info &tri : here.draw_points_cache.tiles[zlevel][row] ) {
+                auto &points = here.draw_points_cache.tiles[zlevel][row];
+                for( const std::size_t index : points.sprite_indices() ) {
+                    tile_render_info &tri = points[index];
                     tile_render_info::sprite *const var =
-                        std::get_if<tile_render_info::sprite>( &tri.var );
-                    if( !var ) {
-                        continue;
-                    }
+                        &std::get<tile_render_info::sprite>( tri.var );
 
                     if( !var->invisible[0] ) {
                         const field &f = here.field_at( tri.view.pos );
@@ -1481,18 +1480,11 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                     // sidecars are appended during this row's prepass.
                     row_tinted.reserve( row_points.size() );
                 }
-                for( tile_render_info &p : row_points ) {
+                for( const std::size_t index : row_points.sprite_indices() ) {
+                    tile_render_info &p = row_points[index];
                     p.scratch.height_3d = ( cur_zlevel - center.z() ) * zlevel_height;
-                    if( !std::holds_alternative<tile_render_info::sprite>( p.var ) ) {
-                        // Captured jobs retain every cache entry in their original
-                        // order. This entry has no semantic layers or tint to consume.
-                        if( captured_frame ) {
-                            ++preparation_index;
-                        }
-                        continue;
-                    }
                     const tile_preparation::result prepared = captured_frame ?
-                            preparation_->results()[preparation_index++] :
+                            preparation_->results()[preparation_index + index] :
                             tile_preparation::prepare( capture_preparation( p, zlev_cache, zlev_has_color ) );
                     row_sprites.push_back( { &p, nullptr, prepared.layers } );
                     if( prepared.tint[3] == 0 ) {
@@ -1504,6 +1496,9 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                     tint.color = { prepared.tint[0], prepared.tint[1], prepared.tint[2], prepared.tint[3] };
                     row_sprites.back().tint = &tint;
                 }
+                // Worker capture still contains every entry. The row's owned
+                // indices select results without changing that original order.
+                preparation_index += row_points.size();
                 // --- Layer loop ---
                 // Draw all layers (terrain, furniture, items, creatures, etc.).
                 // For ortho tinted tiles, we wire up m_cur_bounds and m_cur_tint_sprites
@@ -1512,6 +1507,15 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                 // indicators are UI overlays that shouldn't affect tint bounds.
                 for( std::size_t layer_index = 0; layer_index < drawing_layer_count; ++layer_index ) {
                     const draw_layer f = drawing_layers[layer_index];
+                    const unsigned required_layer =
+                        f == &cata_tiles::draw_graffiti ? layer_graffiti :
+                        f == &cata_tiles::draw_trap ? layer_trap :
+                        f == &cata_tiles::draw_part_con ? layer_part_con :
+                        f == &cata_tiles::draw_field_or_item ? layer_field_item :
+                        ( f == &cata_tiles::draw_vpart_no_roof || f == &cata_tiles::draw_vpart_roof ) ?
+                        layer_vpart :
+                        f == &cata_tiles::draw_critter_at ? layer_critter :
+                        f == &cata_tiles::draw_zombie_revival_indicators ? layer_revival : 0;
                     const bool track_bounds = !iso &&
                                               f != &cata_tiles::draw_zone_mark &&
                                               f != &cata_tiles::draw_zombie_revival_indicators;
@@ -1567,6 +1571,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                                     std::get_if<tile_render_info::vision_effect>( &p.var ) ) {
                                 m_cur_bounds = nullptr;
                                 m_cur_tint_sprites = nullptr;
+                                p.scratch.height_3d = ( cur_zlevel - center.z() ) * zlevel_height;
                                 apply_vision_effects( p.view.pos, var->vis, p.scratch.height_3d );
                             } else {
                                 row_sprite_entry &entry = row_sprites[sprite_index++];
@@ -1575,16 +1580,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                         }
                     } else {
                         for( row_sprite_entry &entry : row_sprites ) {
-                            const unsigned candidates = entry.sparse_layers;
-                            if( ( f == &cata_tiles::draw_graffiti && !( candidates & layer_graffiti ) ) ||
-                                ( f == &cata_tiles::draw_trap && !( candidates & layer_trap ) ) ||
-                                ( f == &cata_tiles::draw_part_con && !( candidates & layer_part_con ) ) ||
-                                ( f == &cata_tiles::draw_field_or_item && !( candidates & layer_field_item ) ) ||
-                                ( ( f == &cata_tiles::draw_vpart_no_roof || f == &cata_tiles::draw_vpart_roof ) &&
-                                  !( candidates & layer_vpart ) ) ||
-                                ( f == &cata_tiles::draw_critter_at && !( candidates & layer_critter ) ) ||
-                                ( f == &cata_tiles::draw_zombie_revival_indicators &&
-                                  !( candidates & layer_revival ) ) ) {
+                            if( required_layer && !( entry.sparse_layers & required_layer ) ) {
                                 continue;
                             }
                             draw_sprite( entry,
@@ -1883,12 +1879,9 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
     if( !monster_override.empty() ) {
         // display number of monsters to spawn in mapgen preview
         for( int row = top_any_tile_range.p_min.y; row < top_any_tile_range.p_max.y; row ++ ) {
-            for( const tile_render_info &p : here.draw_points_cache.tiles[center.z()][row] ) {
-                const tile_render_info::sprite *const
-                var = std::get_if<tile_render_info::sprite>( &p.var );
-                if( !var ) {
-                    continue;
-                }
+            auto &points = here.draw_points_cache.tiles[center.z()][row];
+            for( const std::size_t index : points.sprite_indices() ) {
+                const tile_render_info &p = points[index];
                 const auto mon_override = monster_override.find( p.view.pos );
                 if( mon_override != monster_override.end() ) {
                     const int count = std::get<1>( mon_override->second );

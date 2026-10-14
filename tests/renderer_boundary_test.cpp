@@ -167,6 +167,51 @@ TEST_CASE( "complete_renderer_consumes_values_across_projection_and_resource_lif
         CHECK( here.ter( hidden ) == ter_id( "t_floor" ) );
     }
 }
+TEST_CASE( "draw_cache_sprite_indices_follow_append_relocation_and_rebuild",
+           "[tiles][renderer_boundary]" )
+{
+    draw_points_cache_t cache;
+    const tripoint_bub_ms origin( 50, 50, 0 );
+    const auto add = [&]( draw_points_cache_t::row_vec & row, int x, bool sprite ) {
+        const tile_render_info::tile_view_data view{ origin + point( x, 0 ) };
+        if( sprite ) {
+            row.emplace_back( view, tile_render_info::tile_render_scratch{},
+                              tile_render_info::sprite{ lit_level::LIT, {} } );
+        } else {
+            row.emplace_back( view, tile_render_info::tile_render_scratch{},
+                              tile_render_info::vision_effect{ visibility_type::HIDDEN } );
+        }
+    };
+    auto &row = cache[0][10];
+    for( int i = 0; i < 80; ++i ) {
+        add( row, i, i % 3 == 1 );
+    }
+    const auto verify = [&]( draw_points_cache_t::row_vec & values ) {
+        std::vector<std::size_t> expected;
+        std::size_t index = 0;
+        for( const auto &entry : values ) {
+            if( std::holds_alternative<tile_render_info::sprite>( entry.var ) ) {
+                expected.push_back( index );
+            }
+            ++index;
+        }
+        CHECK( values.sprite_indices() == expected );
+        for( const std::size_t i : values.sprite_indices() ) {
+            CHECK( values[i].view.pos == origin + point( static_cast<int>( i ), 0 ) );
+        }
+    };
+    verify( row );
+    // Prepending rows moves their storage; indices must still address this row.
+    add( cache[0][5], 0, false );
+    verify( cache[0][10] );
+    cache.soft_clear();
+    CHECK( cache[0][10].size() == 0 );
+    CHECK( cache[0][10].sprite_indices().empty() );
+    add( cache[0][10], 0, false );
+    add( cache[0][10], 1, true );
+    verify( cache[0][10] );
+}
+
 TEST_CASE( "renderer_mixed_cache_keeps_worker_indices_and_preview_counts",
            "[tiles][renderer_boundary]" )
 {
