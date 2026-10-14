@@ -46,8 +46,9 @@ std::optional<tile_layer_view> capture_terrain_layer( map &here, const avatar &y
         if( input.legacy_no_fog && cap.ter_content.id().str() == "t_open_air" ) {
             return std::nullopt;
         }
-        return tile_layer_view( cap.ter_content.id().str(), TILE_CATEGORY::TERRAIN, std::string{}, p,
-                                cap.ter_content_subtile, cap.ter_content_rotation, ll, input.night_vision, here.get_abs( p ) );
+        return std::optional<tile_layer_view>( std::in_place, cap.ter_content.id().str(),
+                                               TILE_CATEGORY::TERRAIN, std::string{}, p,
+                                               cap.ter_content_subtile, cap.ter_content_rotation, ll, input.night_vision, here.get_abs( p ) );
     }
     // Override / memory / invisible path: live-read from the map because
     // override previews and memory tiles are not captured into the cache.
@@ -80,16 +81,18 @@ std::optional<tile_layer_view> capture_terrain_layer( map &here, const avatar &y
             // tile overrides are always shown with full visibility
             const lit_level lit = overridden ? lit_level::LIT : ll;
             const bool nv = overridden ? false : input.night_vision;
-            return tile_layer_view( tname, TILE_CATEGORY::TERRAIN, std::string{}, p, subtile, rotation, lit, nv,
-                                    here.get_abs( p ) );
+            return std::optional<tile_layer_view>( std::in_place, tname, TILE_CATEGORY::TERRAIN, std::string{},
+                                                   p, subtile, rotation, lit, nv,
+                                                   here.get_abs( p ) );
         }
     } else if( invisible[0] ) {
         // try drawing memory if invisible and not overridden
         const memorized_tile &mt = you.get_memorized_tile( here.get_abs( p ) );
         if( !mt.get_ter_id().empty() ) {
-            return tile_layer_view( mt.get_ter_id(), TILE_CATEGORY::TERRAIN, std::string{}, p,
-                                    mt.get_ter_subtile(), mt.get_ter_rotation(), lit_level::MEMORIZED, input.night_vision,
-                                    here.get_abs( p ) );
+            return std::optional<tile_layer_view>( std::in_place, mt.get_ter_id(), TILE_CATEGORY::TERRAIN,
+                                                   std::string{}, p,
+                                                   mt.get_ter_subtile(), mt.get_ter_rotation(), lit_level::MEMORIZED, input.night_vision,
+                                                   here.get_abs( p ) );
         }
     }
     return std::nullopt;
@@ -142,8 +145,9 @@ std::optional<tile_layer_view> capture_furniture_layer( map &here, const avatar 
         if( !cap.furn_content ) {
             return std::nullopt;
         }
-        return tile_layer_view( cap.furn_content.id().str(), TILE_CATEGORY::FURNITURE, std::string{}, p,
-                                cap.furn_content_subtile, cap.furn_content_rotation, ll, input.night_vision, here.get_abs( p ) );
+        return std::optional<tile_layer_view>( std::in_place, cap.furn_content.id().str(),
+                                               TILE_CATEGORY::FURNITURE, std::string{}, p,
+                                               cap.furn_content_subtile, cap.furn_content_rotation, ll, input.night_vision, here.get_abs( p ) );
     }
     // Override / memory / invisible path: live-read from the map because
     // override previews and memory tiles are not captured into the cache.
@@ -183,16 +187,18 @@ std::optional<tile_layer_view> capture_furniture_layer( map &here, const avatar 
             // tile overrides are always shown with full visibility
             const lit_level lit = explicitly_overridden ? lit_level::LIT : ll;
             const bool nv = explicitly_overridden ? false : input.night_vision;
-            return tile_layer_view( fname, TILE_CATEGORY::FURNITURE, std::string{}, p, subtile, rotation, lit,
-                                    nv, here.get_abs( p ) );
+            return std::optional<tile_layer_view>( std::in_place, fname, TILE_CATEGORY::FURNITURE, std::string{},
+                                                   p, subtile, rotation, lit,
+                                                   nv, here.get_abs( p ) );
         }
     } else if( invisible[0] ) {
         // try drawing memory if invisible and not overridden
         const memorized_tile &mt = you.get_memorized_tile( here.get_abs( p ) );
         if( string_starts_with( mt.get_dec_id(), "f_" ) ) {
-            return tile_layer_view( mt.get_dec_id(), TILE_CATEGORY::FURNITURE, std::string{}, p,
-                                    mt.get_dec_subtile(), mt.get_dec_rotation(), lit_level::MEMORIZED, input.night_vision,
-                                    here.get_abs( p ) );
+            return std::optional<tile_layer_view>( std::in_place, mt.get_dec_id(), TILE_CATEGORY::FURNITURE,
+                                                   std::string{}, p,
+                                                   mt.get_dec_subtile(), mt.get_dec_rotation(), lit_level::MEMORIZED, input.night_vision,
+                                                   here.get_abs( p ) );
         }
     }
     return std::nullopt;
@@ -229,8 +235,9 @@ std::optional<tile_layer_view> capture_trap_layer( map &here, const avatar &you,
         if( !cap.trap_content ) {
             return std::nullopt;
         }
-        return tile_layer_view( cap.trap_content.id().str(), TILE_CATEGORY::TRAP, std::string{}, p,
-                                cap.trap_content_subtile, cap.trap_content_rotation, ll, input.night_vision, here.get_abs( p ) );
+        return std::optional<tile_layer_view>( std::in_place, cap.trap_content.id().str(),
+                                               TILE_CATEGORY::TRAP, std::string{}, p,
+                                               cap.trap_content_subtile, cap.trap_content_rotation, ll, input.night_vision, here.get_abs( p ) );
     }
     // Override / memory / invisible path: live-read from the map because
     // override previews and memory tiles are not captured into the cache.
@@ -261,16 +268,18 @@ std::optional<tile_layer_view> capture_trap_layer( map &here, const avatar &you,
             // tile overrides are always shown with full visibility
             const lit_level lit = overridden ? lit_level::LIT : ll;
             const bool nv = overridden ? false : input.night_vision;
-            return tile_layer_view( trname, TILE_CATEGORY::TRAP, std::string{}, p, subtile, rotation, lit, nv,
-                                    here.get_abs( p ) );
+            return std::optional<tile_layer_view>( std::in_place, trname, TILE_CATEGORY::TRAP, std::string{}, p,
+                                                   subtile, rotation, lit, nv,
+                                                   here.get_abs( p ) );
         }
     } else if( invisible[0] ) {
         // try drawing memory if invisible and not overridden
         const memorized_tile &mt = you.get_memorized_tile( here.get_abs( p ) );
         if( string_starts_with( mt.get_dec_id(), "tr_" ) ) {
-            return tile_layer_view( mt.get_dec_id(), TILE_CATEGORY::TRAP, std::string{}, p,
-                                    mt.get_dec_subtile(), mt.get_dec_rotation(), lit_level::MEMORIZED, input.night_vision,
-                                    here.get_abs( p ) );
+            return std::optional<tile_layer_view>( std::in_place, mt.get_dec_id(), TILE_CATEGORY::TRAP,
+                                                   std::string{}, p,
+                                                   mt.get_dec_subtile(), mt.get_dec_rotation(), lit_level::MEMORIZED, input.night_vision,
+                                                   here.get_abs( p ) );
         }
     }
     return std::nullopt;

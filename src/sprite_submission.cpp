@@ -7,6 +7,10 @@
 bool submit_sprite_command( const sprite_draw_command &command, const sprite_asset_binding &binding,
                             render_command_order &order, render_resource_stamp current, int &height_3d )
 {
+    if( !binding.sprite ) {
+        order.cancel();
+        return false;
+    }
     if( !order.accept( command.ticket, current ) ) {
         return false;
     }
@@ -25,7 +29,7 @@ bool submit_sprite_command( const sprite_draw_command &command, const sprite_ass
         }
     }
 #endif
-    const int result = binding.sprite.render_copy_ex( binding.renderer, &destination,
+    const int result = binding.sprite->render_copy_ex( binding.renderer, &destination,
                        geometry.angle, nullptr, flip );
     if( command.gray_overlay && binding.silhouette ) {
         const auto &color = *command.gray_overlay;

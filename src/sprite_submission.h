@@ -13,7 +13,8 @@ class texture;
 // This binding is not a worker input and never appears in a semantic view.
 struct sprite_asset_binding {
     const SDL_Renderer_Ptr &renderer;
-    const texture &sprite;
+    // A pointer allows the frame to reject a stale binding before dereference.
+    const texture *sprite;
     const texture *silhouette;
     bool direct3d = false;
 };

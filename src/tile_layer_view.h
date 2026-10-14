@@ -25,10 +25,12 @@ struct tile_layer_view {
     lit_level light;
     bool night_vision;
 
-    tile_layer_view( std::string id, TILE_CATEGORY category, std::string subcategory,
+    template<typename Id, typename Subcategory>
+    tile_layer_view( Id &&id, TILE_CATEGORY category, Subcategory &&subcategory,
                      const tripoint_bub_ms &position, int subtile, int rotation,
                      lit_level light, bool night_vision, const tripoint_abs_ms &absolute_position ) :
-        id( std::move( id ) ), category( category ), subcategory( std::move( subcategory ) ),
+        id( std::forward<Id>( id ) ), category( category ),
+        subcategory( std::forward<Subcategory>( subcategory ) ),
         position( position ), absolute_position( absolute_position ), subtile( subtile ),
         rotation( rotation ), light( light ),
         night_vision( night_vision ) {}

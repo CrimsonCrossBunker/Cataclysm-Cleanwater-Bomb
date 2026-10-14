@@ -9,6 +9,8 @@
 #include "render_command_order.h"
 
 class tileset;
+struct sprite_draw_command;
+struct sprite_asset_binding;
 
 // Immediate owner binding for one draw frame. Metadata lifetime is pinned here;
 // tickets/commands contain values only. SDL calls and validity checks stay on
@@ -22,6 +24,10 @@ class sprite_command_frame
         sprite_command_frame &operator=( const sprite_command_frame & ) = delete;
         bool valid( const std::shared_ptr<const tileset> &current ) const;
         std::optional<render_command_ticket> issue( const std::shared_ptr<const tileset> &current );
+        // Validate the immediate binding once at the last owner boundary and
+        // pass that exact stamp into the ordered backend acceptance.
+        bool submit( const sprite_draw_command &command, const sprite_asset_binding &binding,
+                     const std::shared_ptr<const tileset> &current, int &height_3d );
         render_command_order &order() {
             return order_;
         }
@@ -30,6 +36,8 @@ class sprite_command_frame
         }
         static render_resource_stamp current_resources();
     private:
+        bool valid( const std::shared_ptr<const tileset> &current,
+                    render_resource_stamp resources ) const;
         std::shared_ptr<const tileset> bundle_;
         render_resource_stamp resources_;
         render_command_order order_;

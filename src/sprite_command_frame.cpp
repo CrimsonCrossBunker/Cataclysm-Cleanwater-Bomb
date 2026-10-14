@@ -8,6 +8,7 @@
 #include "cata_tiles.h"
 #include "sdltiles.h"
 #include "mod_tileset.h"
+#include "sprite_submission.h"
 
 namespace
 {
@@ -44,7 +45,13 @@ sprite_command_frame::~sprite_command_frame()
 
 bool sprite_command_frame::valid( const std::shared_ptr<const tileset> &current ) const
 {
-    return !order_.cancelled() && bundle_ == current && resources_ == current_resources() &&
+    return valid( current, current_resources() );
+}
+
+bool sprite_command_frame::valid( const std::shared_ptr<const tileset> &current,
+                                  const render_resource_stamp resources ) const
+{
+    return !order_.cancelled() && bundle_ == current && resources_ == resources &&
            !renderer_should_abort_frame();
 }
 
@@ -56,5 +63,16 @@ std::optional<render_command_ticket> sprite_command_frame::issue(
         return std::nullopt;
     }
     return order_.issue();
+}
+bool sprite_command_frame::submit( const sprite_draw_command &command,
+                                   const sprite_asset_binding &binding,
+                                   const std::shared_ptr<const tileset> &current, int &height_3d )
+{
+    const render_resource_stamp stamp = current_resources();
+    if( !valid( current, stamp ) ) {
+        cancel();
+        return false;
+    }
+    return submit_sprite_command( command, binding, order_, stamp, height_3d );
 }
 #endif // TILES

@@ -28,7 +28,7 @@ static void legacy_submit( const sprite_draw_command &command, const sprite_asse
     const CataFlipMode flip = static_cast<CataFlipMode>(
                                   ( g.flip_horizontal ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE ) |
                                   ( g.flip_vertical ? SDL_FLIP_VERTICAL : SDL_FLIP_NONE ) );
-    binding.sprite.render_copy_ex( binding.renderer, &dst, g.angle, nullptr, flip );
+    binding.sprite->render_copy_ex( binding.renderer, &dst, g.angle, nullptr, flip );
     if( command.gray_overlay && binding.silhouette ) {
         const auto &color = *command.gray_overlay;
         const auto &tex = binding.silhouette->get_texture_ptr();
@@ -62,7 +62,7 @@ TEST_CASE( "sprite_command_backend_matches_legacy_pixels_and_gray_reset",
     REQUIRE( SDL_UpdateTexture( mask.get(), nullptr, white.data(), 8 ) );
     texture sprite( raw, SDL_Rect{ 0, 0, 2, 2 } );
     texture silhouette( mask, SDL_Rect{ 0, 0, 2, 2 } );
-    const sprite_asset_binding binding{ renderer, sprite, &silhouette, false };
+    const sprite_asset_binding binding{ renderer, &sprite, &silhouette, false };
     const render_resource_stamp stamp{ 7, 11 };
     for( bool iso : {
              false, true
@@ -161,6 +161,82 @@ TEST_CASE( "sprite_frames_pin_metadata_and_expire_on_reload_or_recovery",
     SECTION( "caller release does not retire pinned metadata" ) {
         bundle.reset();
         CHECK_FALSE( weak.expired() );
+    }
+}
+TEST_CASE( "owner_submission_rechecks_late_changes_without_painting_or_height_changes",
+           "[tiles][render_commands]" )
+{
+    software_render_fixture fixture;
+    REQUIRE( fixture.available() );
+    const auto &renderer = get_sdl_renderer();
+    auto raw = std::shared_ptr<SDL_Texture>( SDL_CreateTexture( renderer.get(),
+               SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, 2, 2 ), SDL_DestroyTexture );
+    REQUIRE( raw );
+    const std::array<std::uint32_t, 4> pixels{ 0xff0000ff, 0xff00ff00, 0xffff0000, 0xffffffff };
+    REQUIRE( SDL_UpdateTexture( raw.get(), nullptr, pixels.data(), 8 ) );
+    texture sprite( raw, SDL_Rect{ 0, 0, 2, 2 } );
+    const sprite_asset_binding binding{ renderer, &sprite, nullptr, false };
+    auto bundle = std::make_shared<const tileset>();
+    sprite_command_frame frame( bundle );
+    const auto ticket = frame.issue( bundle );
+    REQUIRE( ticket );
+    sprite_draw_command command;
+    command.ticket = *ticket;
+    command.geometry.destination = { point( 2, 2 ), point( 2, 2 ) };
+    command.height_delta = 5;
+    SetRenderDrawColor( renderer, 0, 0, 0, 255 );
+    RenderClear( renderer );
+    const auto before = sprite_pixels( renderer );
+    int height = 12;
+    SECTION( "ordinary command accepts exactly once" ) {
+        REQUIRE( frame.submit( command, binding, bundle, height ) );
+        CHECK( height == 17 );
+        CHECK( sprite_pixels( renderer ) != before );
+        const auto rendered = sprite_pixels( renderer );
+        CHECK_FALSE( frame.submit( command, binding, bundle, height ) );
+        CHECK( height == 17 );
+        CHECK( sprite_pixels( renderer ) == rendered );
+    }
+    SECTION( "pending reset after issuing cancels before SDL" ) {
+        renderer_coordinator.request_recovery( renderer_recovery_severity::targets_reset );
+        CHECK_FALSE( frame.submit( command, binding, bundle, height ) );
+        CHECK( height == 12 );
+        CHECK( sprite_pixels( renderer ) == before );
+        CHECK( frame.order().cancelled() );
+    }
+    SECTION( "different bundle after issuing cancels before SDL" ) {
+        const auto other = std::make_shared<const tileset>();
+        CHECK_FALSE( frame.submit( command, binding, other, height ) );
+        CHECK( height == 12 );
+        CHECK( sprite_pixels( renderer ) == before );
+    }
+    SECTION( "stale texture pointer is rejected before dereference" ) {
+        auto transient = std::make_unique<texture>( raw, SDL_Rect{ 0, 0, 2, 2 } );
+        const sprite_asset_binding stale{ renderer, transient.get(), nullptr, false };
+        transient.reset();
+        const auto other = std::make_shared<const tileset>();
+        CHECK_FALSE( frame.submit( command, stale, other, height ) );
+        CHECK( height == 12 );
+        CHECK( sprite_pixels( renderer ) == before );
+    }
+    SECTION( "missing owner asset cancels without painting" ) {
+        const sprite_asset_binding missing{ renderer, nullptr, nullptr, false };
+        CHECK_FALSE( frame.submit( command, missing, bundle, height ) );
+        CHECK( frame.order().cancelled() );
+        CHECK( height == 12 );
+        CHECK( sprite_pixels( renderer ) == before );
+    }
+    SECTION( "pause after issuing cancels before SDL" ) {
+        renderer_coordinator.notify_lifecycle( lifecycle_state::paused );
+        CHECK_FALSE( frame.submit( command, binding, bundle, height ) );
+        CHECK( height == 12 );
+        CHECK( sprite_pixels( renderer ) == before );
+    }
+    SECTION( "other owner cannot accept the same-resource command" ) {
+        sprite_command_frame other( bundle );
+        CHECK_FALSE( other.submit( command, binding, bundle, height ) );
+        CHECK( height == 12 );
+        CHECK( sprite_pixels( renderer ) == before );
     }
 }
 #endif // TILES

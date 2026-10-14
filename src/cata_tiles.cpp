@@ -3455,20 +3455,16 @@ bool cata_tiles::draw_sprite_at(
         const SDL_Color &color = *pending_gray_overlay_;
         command.gray_overlay = std::array<std::uint8_t, 4> { color.r, color.g, color.b, color.a };
     }
-    if( !frame.valid( tileset_ptr ) ) {
-        return false;
-    }
     bool d3d_adjustment = false;
 #if defined(_WIN32) && defined(CROSS_LINUX)
     d3d_adjustment = direct3d_mode;
 #endif
     // All world queries, asset selection and pure geometry are complete. The
     // backend sees only an owned command and this immediate owner binding.
-    const sprite_asset_binding binding{ renderer, *sprite_tex,
+    const sprite_asset_binding binding{ renderer, sprite_tex,
                                         command.gray_overlay ? tileset_ptr->get_silhouette_tile( sprite_index ) : nullptr,
                                         d3d_adjustment };
-    submitted = submit_sprite_command( command, binding, frame.order(),
-                                       sprite_command_frame::current_resources(), height_3d );
+    submitted = frame.submit( command, binding, tileset_ptr, height_3d );
     if( !submitted ) {
         return false;
     }
