@@ -29,7 +29,8 @@
 #include "sdltiles.h"
 #include "type_id.h"
 
-static std::array<std::uint32_t, 4096> draw_boundary_pixels( const tripoint_bub_ms &center )
+static std::array<std::uint32_t, 4096> draw_boundary_pixels( const tripoint_bub_ms &center,
+        int extent = 64, std::multimap<point, formatted_text> *annotations = nullptr )
 {
     display_buffer_draw_scope scope;
     REQUIRE_FALSE( display_buffer_scope_is_invalid() );
@@ -38,7 +39,10 @@ static std::array<std::uint32_t, 4096> draw_boundary_pixels( const tripoint_bub_
     RenderClear( renderer );
     std::multimap<point, formatted_text> text;
     color_block_overlay_container blocks;
-    tilecontext->draw( point::zero, center, 64, 64, text, blocks );
+    tilecontext->draw( point::zero, center, extent, extent, text, blocks );
+    if( annotations ) {
+        *annotations = text;
+    }
     std::array<std::uint32_t, 4096> pixels{};
     const SDL_Rect area{ 0, 0, 64, 64 };
     REQUIRE( RenderReadPixels( renderer, &area, SDL_PIXELFORMAT_ABGR8888, pixels.data(), 256 ) );
@@ -161,6 +165,77 @@ TEST_CASE( "complete_renderer_consumes_values_across_projection_and_resource_lif
         const auto refreshed = draw_boundary_pixels( center );
         CHECK( remembered != refreshed );
         CHECK( here.ter( hidden ) == ter_id( "t_floor" ) );
+    }
+}
+TEST_CASE( "renderer_mixed_cache_keeps_worker_indices_and_preview_counts",
+           "[tiles][renderer_boundary]" )
+{
+    clear_map_without_vision();
+    clear_avatar();
+    map &here = get_map();
+    avatar &you = get_avatar();
+    const tripoint_bub_ms center( 50, 50, 0 );
+    you.setpos( here, center );
+    set_time_to_day();
+    you.recalc_sight_limits();
+    software_render_fixture fixture;
+    REQUIRE( fixture.available() );
+    on_out_of_scope release_context( [] { tilecontext.reset(); } );
+    restore_on_out_of_scope restore_tilesets( TILESETS );
+    restore_on_out_of_scope restore_x( POSX );
+    restore_on_out_of_scope restore_y( POSY );
+    POSX = POSY = 8;
+    const std::string id = "boundary_worker_indices";
+    TILESETS[id] = cata_path( cata_path::root_path::base, "tests/data/render-boundary/ortho" );
+    here.invalidate_map_cache( 0 );
+    here.build_map_cache( 0, true );
+    here.invalidate_visibility_cache();
+    here.update_visibility_cache( 0 );
+    std::array<std::uint32_t, 4096> serial{};
+    for( const int workers : {
+             0, 2
+         } ) {
+        INFO( workers );
+        override_option preparation( "RENDER_PREPARATION_WORKERS", std::to_string( workers ) );
+        renderer_recovery_test_support::remove_character_preview_context();
+        REQUIRE( renderer_recovery_test_support::install_character_preview_targets() );
+        tilecontext->load_tileset( id );
+        tilecontext->set_draw_scale( 16 );
+        here.draw_points_cache_dirty = true;
+        // A real mixed visible/vision-effect frame, above the production16384
+        // threshold. Read the same physical64x64 region of its actual SDL target.
+        const auto pixels = draw_boundary_pixels( center, 1024 );
+        CHECK( renderer_recovery_test_support::tile_preparation_used_workers() == ( workers != 0 ) );
+        std::size_t sprites = 0;
+        std::size_t effects = 0;
+        for( const auto &row : here.draw_points_cache.tiles[0] ) {
+            for( const auto &tile : row ) {
+                if( std::holds_alternative<tile_render_info::sprite>( tile.var ) ) {
+                    ++sprites;
+                } else {
+                    ++effects;
+                }
+            }
+        }
+        CHECK( sprites > 0 );
+        CHECK( effects > 0 );
+        if( workers == 0 ) {
+            serial = pixels;
+        } else {
+            CHECK( pixels == serial );
+        }
+        tilecontext->init_draw_monster_override( center + point::east, mtype_id( "mon_zombie" ),
+                3, false, Creature::Attitude::HOSTILE );
+        std::multimap<point, formatted_text> annotations;
+        draw_boundary_pixels( center, 1024, &annotations );
+        CHECK( std::any_of( annotations.begin(), annotations.end(), []( const auto & entry ) {
+            return entry.second.text == "x3";
+        } ) );
+        annotations.clear();
+        draw_boundary_pixels( center, 1024, &annotations );
+        CHECK( std::none_of( annotations.begin(), annotations.end(), []( const auto & entry ) {
+            return entry.second.text == "x3";
+        } ) );
     }
 }
 #endif // TILES

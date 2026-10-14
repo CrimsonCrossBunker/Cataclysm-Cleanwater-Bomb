@@ -1483,12 +1483,17 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                 }
                 for( tile_render_info &p : row_points ) {
                     p.scratch.height_3d = ( cur_zlevel - center.z() ) * zlevel_height;
+                    if( !std::holds_alternative<tile_render_info::sprite>( p.var ) ) {
+                        // Captured jobs retain every cache entry in their original
+                        // order. This entry has no semantic layers or tint to consume.
+                        if( captured_frame ) {
+                            ++preparation_index;
+                        }
+                        continue;
+                    }
                     const tile_preparation::result prepared = captured_frame ?
                             preparation_->results()[preparation_index++] :
                             tile_preparation::prepare( capture_preparation( p, zlev_cache, zlev_has_color ) );
-                    if( !std::holds_alternative<tile_render_info::sprite>( p.var ) ) {
-                        continue;
-                    }
                     row_sprites.push_back( { &p, nullptr, prepared.layers } );
                     if( prepared.tint[3] == 0 ) {
                         continue;
@@ -1874,26 +1879,29 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         m_deferred_glide_critters.clear();
     }
 
-    // display number of monsters to spawn in mapgen preview
-    for( int row = top_any_tile_range.p_min.y; row < top_any_tile_range.p_max.y; row ++ ) {
-        for( const tile_render_info &p : here.draw_points_cache.tiles[center.z()][row] ) {
-            const tile_render_info::sprite *const
-            var = std::get_if<tile_render_info::sprite>( &p.var );
-            if( !var ) {
-                continue;
-            }
-            const auto mon_override = monster_override.find( p.view.pos );
-            if( mon_override != monster_override.end() ) {
-                const int count = std::get<1>( mon_override->second );
-                const bool more = std::get<2>( mon_override->second );
-                if( count > 1 || more ) {
-                    std::string text = "x" + std::to_string( count );
-                    if( more ) {
-                        text += "+";
+    // An ordinary frame has no preview counts; avoid walking every tile.
+    if( !monster_override.empty() ) {
+        // display number of monsters to spawn in mapgen preview
+        for( int row = top_any_tile_range.p_min.y; row < top_any_tile_range.p_max.y; row ++ ) {
+            for( const tile_render_info &p : here.draw_points_cache.tiles[center.z()][row] ) {
+                const tile_render_info::sprite *const
+                var = std::get_if<tile_render_info::sprite>( &p.var );
+                if( !var ) {
+                    continue;
+                }
+                const auto mon_override = monster_override.find( p.view.pos );
+                if( mon_override != monster_override.end() ) {
+                    const int count = std::get<1>( mon_override->second );
+                    const bool more = std::get<2>( mon_override->second );
+                    if( count > 1 || more ) {
+                        std::string text = "x" + std::to_string( count );
+                        if( more ) {
+                            text += "+";
+                        }
+                        overlay_strings.emplace( player_to_screen( p.view.pos.xy() ) + half_tile,
+                                                 formatted_text( text, catacurses::red,
+                                                         direction::NORTH ) );
                     }
-                    overlay_strings.emplace( player_to_screen( p.view.pos.xy() ) + half_tile,
-                                             formatted_text( text, catacurses::red,
-                                                     direction::NORTH ) );
                 }
             }
         }
