@@ -1213,6 +1213,9 @@ class cata_tiles
         // must not include map.h (map.h includes this header). Null outside the
         // sprite branch of the layer loop.
         const tile_render_info *m_cur_tile = nullptr;
+        // Immediate owner scratch; values still own their strings. Each root
+        // draw binds its own buffer and restores any enclosing draw on unwind.
+        tile_layer_view *layer_capture_ = nullptr;
         // Owner-only frame binding. Commands carry values; resource handles stay here.
         sprite_command_frame *command_frame_ = nullptr;
 

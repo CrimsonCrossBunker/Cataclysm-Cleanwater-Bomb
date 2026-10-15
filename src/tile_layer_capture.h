@@ -32,5 +32,16 @@ std::optional<tile_layer_view> capture_furniture_layer( map &here, const avatar 
         const tile_layer_capture_input &input, const std::map<tripoint_bub_ms, furn_id> &overrides );
 std::optional<tile_layer_view> capture_trap_layer( map &here, const avatar &observer,
         const tile_layer_capture_input &input, const std::map<tripoint_bub_ms, trap_id> &overrides );
+// Reusable owner output. Read only when capture succeeds; a failed/throwing
+// capture does not publish a new value. It never memoizes world decisions.
+bool capture_terrain_layer( map &here, const avatar &observer,
+                            const tile_layer_capture_input &input, const std::map<tripoint_bub_ms, ter_id> &overrides,
+                            tile_layer_view &output );
+bool capture_furniture_layer( map &here, const avatar &observer,
+                              const tile_layer_capture_input &input, const std::map<tripoint_bub_ms, furn_id> &overrides,
+                              tile_layer_view &output );
+bool capture_trap_layer( map &here, const avatar &observer,
+                         const tile_layer_capture_input &input, const std::map<tripoint_bub_ms, trap_id> &overrides,
+                         tile_layer_view &output );
 #endif // TILES
 #endif // CATA_SRC_TILE_LAYER_CAPTURE_H

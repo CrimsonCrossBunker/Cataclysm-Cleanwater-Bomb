@@ -3883,6 +3883,17 @@ std::optional<tripoint_bub_ms> map::vehicle_ladder_destination( const tripoint_b
 
 std::optional<furn_id> map::vehicle_ladder_furniture_at( const tripoint_bub_ms &pt ) const
 {
+    // The same occupancy bits used by veh_at are authoritative negatives.
+    // With no projected ladders anywhere, an empty in-bounds vehicle square
+    // cannot produce ladder furniture. Avoid the submap/furniture lookup here;
+    // occupied squares, projected ladders and unknown bounds keep the full path.
+    if( cached_veh_ladders.empty() && inbounds( pt ) ) {
+        const level_cache &cache = get_cache( pt.z() );
+        if( !cache.get_veh_in_active_range() || !cache.get_veh_exists_at( pt ) ) {
+            return std::nullopt;
+        }
+    }
+
     if( has_furn( pt ) ) {
         return std::nullopt;
     }

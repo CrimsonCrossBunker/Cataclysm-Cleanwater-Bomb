@@ -12,6 +12,8 @@
 #include "rng.h"
 #include "tile_layer_capture.h"
 #include "type_id.h"
+#include "vehicle.h"
+#include "vpart_position.h"
 
 TEST_CASE( "static_layer_values_keep_cached_content_after_world_changes", "[tiles][layer_view]" )
 {
@@ -122,4 +124,124 @@ TEST_CASE( "explicit_layer_overrides_keep_full_light_and_do_not_memorize", "[til
         CHECK( you.get_memorized_tile( absolute ) == before );
     }
 }
+TEST_CASE( "reused_layer_capture_keeps_owned_values_and_refreshes_every_field",
+           "[tiles][layer_view]" )
+{
+    clear_map_without_vision();
+    clear_avatar();
+    map &here = get_map();
+    avatar &you = get_avatar();
+    const tripoint_bub_ms pos( 50, 50, 0 );
+    const tripoint_abs_ms absolute = here.get_abs( pos );
+    you.prepare_map_memory_region( absolute - tripoint( 2, 2, 0 ), absolute + tripoint( 2, 2, 0 ) );
+    tile_render_info::sprite cached{ lit_level::LOW, {} };
+    cached.set_ter_content( ter_id( "t_floor" ), 3, 1 );
+    cached.set_furn_content( furn_id( "f_chair" ), 2, 2 );
+    cached.set_trap_content( trap_id( "tr_beartrap" ), 1, 0 );
+    tile_layer_capture_input input{ pos, lit_level::LOW, {}, cached, true, false };
+    tile_layer_view output{ std::string( 128, 'x' ), TILE_CATEGORY::NONE,
+                            "obsolete subcategory", pos, 99, 99, lit_level::DARK, false,
+                            tripoint_abs_ms( 1, 2, 3 ) };
+    const std::size_t capacity = output.id.capacity();
+    const auto engine = rng_get_engine();
+    REQUIRE( capture_terrain_layer( here, you, input, {}, output ) );
+    CHECK( output.id == "t_floor" );
+    CHECK( output.category == TILE_CATEGORY::TERRAIN );
+    CHECK( output.subcategory.empty() );
+    CHECK( output.subtile == 3 );
+    CHECK( output.rotation == 1 );
+    CHECK( output.position == pos );
+    CHECK( output.absolute_position == here.get_abs( pos ) );
+    CHECK( output.light == lit_level::LOW );
+    CHECK( output.night_vision );
+    const tile_layer_view retained = output;
+    REQUIRE( capture_furniture_layer( here, you, input, {}, output ) );
+    CHECK( output.id == "f_chair" );
+    CHECK( output.category == TILE_CATEGORY::FURNITURE );
+    CHECK( output.subtile == 2 );
+    CHECK( output.rotation == 2 );
+    input.light = lit_level::LIT;
+    input.night_vision = false;
+    REQUIRE( capture_trap_layer( here, you, input, {}, output ) );
+    CHECK( output.id == "tr_beartrap" );
+    CHECK( output.category == TILE_CATEGORY::TRAP );
+    CHECK( output.subtile == 1 );
+    CHECK( output.rotation == 0 );
+    CHECK( output.light == lit_level::LIT );
+    CHECK_FALSE( output.night_vision );
+    CHECK( output.id.capacity() >= capacity );
+    CHECK( retained.id == "t_floor" );
+    CHECK( retained.category == TILE_CATEGORY::TERRAIN );
+    CHECK( retained.light == lit_level::LOW );
+    CHECK( retained.night_vision );
+    // Reusing storage must still query this capture's preview/memory state.
+    // Seed existing memory explicitly; clear_avatar need not clear every region.
+    you.memorize_terrain( here.get_abs( pos ), "t_floor", 2, 1 );
+    const memorized_tile before_preview = you.get_memorized_tile( here.get_abs( pos ) );
+    input.invisible.fill( true );
+    REQUIRE( capture_terrain_layer( here, you, input,
+    { { pos, ter_id( "t_wall" ) } }, output ) );
+    CHECK( output.id == "t_wall" );
+    CHECK( output.light == lit_level::LIT );
+    CHECK_FALSE( output.night_vision );
+    CHECK( you.get_memorized_tile( here.get_abs( pos ) ).get_ter_id() == before_preview.get_ter_id() );
+    CHECK( you.get_memorized_tile( here.get_abs( pos ) ).get_ter_subtile() ==
+           before_preview.get_ter_subtile() );
+    CHECK( you.get_memorized_tile( here.get_abs( pos ) ).get_ter_rotation() ==
+           before_preview.get_ter_rotation() );
+    you.memorize_terrain( here.get_abs( pos ), "t_grass", 4, 3 );
+    REQUIRE( capture_terrain_layer( here, you, input, {}, output ) );
+    CHECK( output.id == "t_grass" );
+    CHECK( output.subtile == 4 );
+    CHECK( output.rotation == 3 );
+    CHECK( output.light == lit_level::MEMORIZED );
+    you.memorize_terrain( here.get_abs( pos ), "", 0, 0 );
+    CHECK_FALSE( capture_terrain_layer( here, you, input, {}, output ) );
+    CHECK( rng_get_engine() == engine );
+}
+
+TEST_CASE( "vehicle_ladder_visuals_follow_real_cache_lifecycle",
+           "[tiles][layer_view][vehicle][zlevel]" )
+{
+    clear_map_without_vision();
+    clear_avatar();
+    map &here = get_map();
+    avatar &you = get_avatar();
+    const tripoint_bub_ms top( 60, 60, 2 );
+    const tripoint_bub_ms below = top + tripoint::below;
+    here.ter_set( top, ter_id( "t_open_air" ) );
+    here.ter_set( below, ter_id( "t_open_air" ) );
+    here.furn_set( top, furn_id( "f_null" ) );
+    here.furn_set( below, furn_id( "f_null" ) );
+    CHECK_FALSE( here.vehicle_ladder_furniture_at( below ) );
+    CHECK_FALSE( here.vehicle_ladder_furniture_at( tripoint_bub_ms( 0, 0, 2 ) ) );
+    vehicle *veh = here.add_vehicle( vproto_id( "test_turret_rig" ), top, 0_degrees,
+                                     0, veh_spawn_status::PRISTINE, false, true );
+    REQUIRE( veh );
+    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_id( "aisle" ) ) >= 0 );
+    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_id( "ladder_3" ) ) >= 0 );
+    veh->refresh();
+    here.add_vehicle_to_cache( veh );
+    const auto visual = here.vehicle_ladder_furniture_at( below );
+    REQUIRE( visual );
+    CHECK( *visual == furn_id( "f_rope_up" ) );
+    CHECK_FALSE( here.vehicle_ladder_furniture_at( top ) );
+    tile_render_info::sprite cached{ lit_level::LOW, {} };
+    const tile_layer_capture_input input{ below, lit_level::LOW, {}, cached, true, false };
+    const auto layer = capture_furniture_layer( here, you, input, {} );
+    REQUIRE( layer );
+    CHECK( layer->id == "f_rope_up" );
+    CHECK( layer->position == below );
+    here.ter_set( below, ter_id( "t_floor" ) );
+    here.furn_set( below, furn_id( "f_chair" ) );
+    CHECK_FALSE( here.vehicle_ladder_furniture_at( below ) );
+    here.furn_set( below, furn_id( "f_null" ) );
+    here.ter_set( below, ter_id( "t_open_air" ) );
+    CHECK( here.vehicle_ladder_furniture_at( below ) == visual );
+    here.destroy_vehicle( veh );
+    CHECK_FALSE( here.vehicle_ladder_furniture_at( below ) );
+    CHECK_FALSE( capture_furniture_layer( here, you, input, {} ) );
+    CHECK( layer->id == "f_rope_up" );
+}
+
 #endif // TILES

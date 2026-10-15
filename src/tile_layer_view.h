@@ -34,6 +34,24 @@ struct tile_layer_view {
         position( position ), absolute_position( absolute_position ), subtile( subtile ),
         rotation( rotation ), light( light ),
         night_vision( night_vision ) {}
+
+    // Reuse owned string capacity for immediate owner capture. Values remain
+    // independent of the world; callers retain a copy if they need an older view.
+    template<typename Id, typename Subcategory>
+    void assign( Id &&new_id, TILE_CATEGORY new_category, Subcategory &&new_subcategory,
+                 const tripoint_bub_ms &new_position, int new_subtile, int new_rotation,
+                 lit_level new_light, bool new_night_vision,
+                 const tripoint_abs_ms &new_absolute_position ) {
+        id = std::forward<Id>( new_id );
+        category = new_category;
+        subcategory = std::forward<Subcategory>( new_subcategory );
+        position = new_position;
+        absolute_position = new_absolute_position;
+        subtile = new_subtile;
+        rotation = new_rotation;
+        light = new_light;
+        night_vision = new_night_vision;
+    }
 };
 
 #endif // CATA_SRC_TILE_LAYER_VIEW_H

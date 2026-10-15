@@ -657,6 +657,10 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
 
     init_light();
     map &here = get_map();
+    tile_layer_view layer_capture{ std::string{}, TILE_CATEGORY::NONE, std::string{}, center,
+                                   0, 0, lit_level::LIT, false, here.get_abs( center ) };
+    restore_on_out_of_scope restore_layer_capture( layer_capture_ );
+    layer_capture_ = &layer_capture;
     const visibility_variables &cache = here.get_visibility_variables_cache();
 
     o = is_isometric() ? center.xy().raw() : center.xy().raw() - point( POSX, POSY );
@@ -3617,8 +3621,8 @@ bool cata_tiles::draw_terrain( const tripoint_bub_ms &p, const lit_level ll, int
     const tile_render_info::sprite &cached = std::get<tile_render_info::sprite>( m_cur_tile->var );
     const tile_layer_capture_input input{ p, ll, invisible, cached, nv_goggles_activated,
                                           fov_3d_z_range == 0 };
-    const auto view = capture_terrain_layer( get_map(), get_avatar(), input, terrain_override );
-    return view && draw_layer_view( *view, height_3d );
+    return capture_terrain_layer( get_map(), get_avatar(), input, terrain_override, *layer_capture_ ) &&
+           draw_layer_view( *layer_capture_, height_3d );
 }
 
 bool cata_tiles::draw_furniture( const tripoint_bub_ms &p, const lit_level ll, int &height_3d,
@@ -3627,8 +3631,9 @@ bool cata_tiles::draw_furniture( const tripoint_bub_ms &p, const lit_level ll, i
     const tile_render_info::sprite &cached = std::get<tile_render_info::sprite>( m_cur_tile->var );
     const tile_layer_capture_input input{ p, ll, invisible, cached, nv_goggles_activated,
                                           fov_3d_z_range == 0 };
-    const auto view = capture_furniture_layer( get_map(), get_avatar(), input, furniture_override );
-    return view && draw_layer_view( *view, height_3d );
+    return capture_furniture_layer( get_map(), get_avatar(), input, furniture_override,
+                                    *layer_capture_ ) &&
+           draw_layer_view( *layer_capture_, height_3d );
 }
 
 bool cata_tiles::draw_trap( const tripoint_bub_ms &p, const lit_level ll, int &height_3d,
@@ -3637,8 +3642,8 @@ bool cata_tiles::draw_trap( const tripoint_bub_ms &p, const lit_level ll, int &h
     const tile_render_info::sprite &cached = std::get<tile_render_info::sprite>( m_cur_tile->var );
     const tile_layer_capture_input input{ p, ll, invisible, cached, nv_goggles_activated,
                                           fov_3d_z_range == 0 };
-    const auto view = capture_trap_layer( get_map(), get_avatar(), input, trap_override );
-    return view && draw_layer_view( *view, height_3d );
+    return capture_trap_layer( get_map(), get_avatar(), input, trap_override, *layer_capture_ ) &&
+           draw_layer_view( *layer_capture_, height_3d );
 }
 
 bool cata_tiles::draw_part_con( const tripoint_bub_ms &p, const lit_level ll, int &height_3d,
