@@ -178,6 +178,13 @@ TEST_CASE( "monster_movement_rejects_stale_inputs_without_side_effects",
     SECTION( "actor removed but retained this turn" ) {
         get_creature_tracker().remove( source );
     }
+    SECTION( "another live actor replaced the source registration" ) {
+        get_creature_tracker().remove( source );
+        spawn_test_monster( "mon_zombie", { 50, 50, 0 } );
+    }
+    SECTION( "actor still registered at a different position" ) {
+        source.setpos( here, tripoint_bub_ms( 49, 50, 0 ) );
+    }
     SECTION( "actor dead" ) {
         source.set_hp( 0 );
     }

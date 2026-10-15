@@ -74,8 +74,11 @@ monster_movement_result monster_movement_plan::commit( const monster_movement_pr
     creature_tracker &tracker = get_creature_tracker();
     // Pin only on the owner. A Lua hook may remove an actor during an action;
     // removed actors cannot continue the fall-through sequence.
+    // find pins the live registered actor at the captured position. No owner
+    // mutation occurs before the identity/position checks below, so a second
+    // is_present lookup would validate the same registration again.
     const auto pin = tracker.find( source_position_ );
-    if( !source || pin.get() != source || source->is_dead() || !tracker.is_present( source ) ||
+    if( !source || pin.get() != source || source->is_dead() ||
         source->pos_abs() != source_position_ || current_goal( *source ) != previous_goal_ ||
         source->type != source_type_ || source->get_moves() != moves_ || source->anger != anger_ ||
         source->morale != morale_ || source->friendly != friendly_ || source->get_hp() != hp_ ||
