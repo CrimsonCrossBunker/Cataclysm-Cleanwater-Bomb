@@ -1098,8 +1098,8 @@ void game::simulate_turn_suffix()
     // consider a stripped down cache just for monsters.
     m.build_map_cache( levz, true );
 
-    // Eagerly compute reachability zones for all creatures in parallel so
-    // that individual monster::plan() / find_reachable() calls hit the cache.
+    // Compute zones in original creature order. Optional workers prepare only
+    // owned geometry values; no worker reads or mutates a live creature.
     get_creature_tracker().precompute_all_zones();
 
     // process monster and npc turn

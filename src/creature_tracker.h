@@ -19,6 +19,12 @@
 #include "memory_fast.h"
 #include "type_id.h"
 
+namespace ai_reachability
+{
+class frame;
+struct output;
+}
+
 class JsonArray;
 class JsonOut;
 class game;
@@ -143,16 +149,13 @@ class creature_tracker
         // This must be called when persistent visibility from terrain or furniture changes
         // (this excludes vehicles and fields) or when persistent traversability changes,
         // which means walls and floors.
-        void invalidate_reachability_cache() {
-            dirty_ = true;
-        }
+        void invalidate_reachability_cache();
 
-        /**
-         * Eagerly compute reachability zones for all creatures in parallel.
-         * Call this before the monster AI loop so that per-creature
-         * find_reachable() calls hit the cache instead of triggering
-         * individual flood fills.
-         */
+        // Geometry inputs may change without invalidating the existing lazy
+        // zones (e.g. stairs with the same transparency and movement cost).
+        void invalidate_reachability_preparation();
+
+        // Preserve original creature/flood order; workers only prepare values.
         void precompute_all_zones();
 
     private:
@@ -168,6 +171,9 @@ class creature_tracker
 
         /** Rebuild the passability bitmap from level caches. Called when dirty_ is set. */
         void rebuild_passability_bitmap();
+        const ai_reachability::output *prepare_reachability_geometry();
+        std::unique_ptr<ai_reachability::frame> reachability_preparation_; // NOLINT(cata-serialize)
+        double reachability_flood_cost_ms_ = 0.0; // NOLINT(cata-serialize)
 
 
 

@@ -22,6 +22,7 @@
 #include "cata_utility.h"
 #include "character.h"
 #include "colony.h"
+#include "creature_tracker.h"
 #include "cuboid_rectangle.h"
 #include "debug.h"
 #include "field.h"
@@ -152,6 +153,10 @@ bool map::build_transparency_cache( const int zlev )
 
     if( map_cache.transparency_cache_dirty.none() ) {
         return false;
+    }
+
+    if( g ) {
+        get_creature_tracker().invalidate_reachability_preparation();
     }
 
     // if true, all submaps are invalid (can use batch init)

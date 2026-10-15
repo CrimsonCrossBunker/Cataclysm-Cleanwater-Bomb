@@ -6,6 +6,7 @@
 #include <memory_fast.h>
 #include <monster_uid.h>
 #include <algorithm>
+#include <chrono>
 #include <functional>
 #include <limits>
 #include <ostream>
@@ -13,6 +14,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "ai_reachability.h"
 #include "avatar.h"
 #include "cata_assert.h"
 #include "debug.h"
@@ -26,7 +28,10 @@
 #include "monster.h"
 #include "mtype.h"
 #include "npc.h"
+#include "options.h"
+#include "mp_gamestate.h"
 #include "point.h"
+#include "profiling.h"
 #include "string_formatter.h"
 #include "submap.h"  // IWYU pragma: keep
 #include "thread_pool.h"
@@ -257,6 +262,8 @@ void creature_tracker::clear()
     location_filter_.reset();
     location_filter_updates_ = 0;
     removed_this_turn_.clear();
+    reachability_flood_cost_ms_ = 0.0;
+    reachability_preparation_.reset();
     creatures_by_zone_and_faction_.clear();
     invalidate_reachability_cache();
 }
@@ -416,8 +423,58 @@ T *creature_tracker::creature_at( const tripoint_abs_ms &p, bool allow_hallucina
     return nullptr;
 }
 
+void creature_tracker::invalidate_reachability_preparation()
+{
+    if( reachability_preparation_ ) {
+        reachability_preparation_->invalidate();
+    }
+}
+void creature_tracker::invalidate_reachability_cache()
+{
+    dirty_ = true;
+    invalidate_reachability_preparation();
+}
+
+const ai_reachability::output *creature_tracker::prepare_reachability_geometry()
+{
+    const int workers = get_option<int>( "AI_REACHABILITY_WORKERS" );
+    if( workers == 0 || cata_mp::is_session_active() || is_pool_worker_thread() ) {
+        return nullptr;
+    }
+    if( reachability_preparation_ ) {
+        if( const auto *result = reachability_preparation_->result() ) {
+            return result;
+        }
+    }
+    if( !ai_reachability::should_prepare( monsters_list.size(), reachability_flood_cost_ms_, true ) ) {
+        return nullptr;
+    }
+    try {
+        if( !reachability_preparation_ ) {
+            reachability_preparation_ = std::make_unique<ai_reachability::frame>( workers == 1 ? 0 : workers );
+        }
+        auto request = reachability_preparation_->try_acquire();
+        if( !request ) {
+            return nullptr;
+        }
+        {
+            CATA_PROFILE_SCOPE_NAMED( "ai.reachability.capture" );
+            if( !ai_reachability::capture_geometry( get_map(), reachability_preparation_->capture() ) ) {
+                return nullptr;
+            }
+        }
+        if( reachability_preparation_->prepare( request ) ) {
+            return reachability_preparation_->result();
+        }
+    } catch( const std::bad_alloc & ) {
+        // No partial result is published; retain the original owner query.
+    }
+    return nullptr;
+}
+
 void creature_tracker::rebuild_passability_bitmap()
 {
+    CATA_PROFILE_SCOPE_NAMED( "ai.reachability.passability" );
     map &here = get_map();
     for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; z++ ) {
         const level_cache &cache = here.get_cache_ref( z );
@@ -458,14 +515,22 @@ void creature_tracker::flood_fill_zone( const Creature &origin )
         return;
     }
 
+    CATA_PROFILE_SCOPE_NAMED( "ai.reachability.flood" );
+    const auto start = std::chrono::steady_clock::now();
+    const ai_reachability::output *prepared = prepare_reachability_geometry();
     map &here = get_map();
     ff::flood_fill_visit_10_connected( origin.pos_bub(),
-    [this, &here]( const tripoint_bub_ms & loc, int direction ) {
+    [this, &here, prepared]( const tripoint_bub_ms & loc, int direction ) {
         if( direction == 0 ) {
             return loc.z() >= -OVERMAP_DEPTH && loc.z() <= OVERMAP_HEIGHT &&
                    loc.y() >= 0 && loc.y() < MAPSIZE_Y &&
                    loc.x() >= 0 && loc.x() < MAPSIZE_X &&
                    passability_bitmap_[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()];
+        }
+
+        if( prepared ) {
+            return direction == 1 ? prepared->up[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()] :
+                   prepared->down[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()];
         }
 
         auto check_location_passable_down = [loc, &here]( const maptile & mt, const ter_t & ter ) {
@@ -511,6 +576,9 @@ void creature_tracker::flood_fill_zone( const Creature &origin )
             }
         }
     } );
+    reachability_flood_cost_ms_ = std::max( reachability_flood_cost_ms_ * 0.9,
+                                            std::chrono::duration<double, std::milli>(
+                                                    std::chrono::steady_clock::now() - start ).count() );
     if( zone_number_ == std::numeric_limits<int>::max() ) {
         zone_number_ = 1;
     } else {
@@ -520,6 +588,7 @@ void creature_tracker::flood_fill_zone( const Creature &origin )
 
 void creature_tracker::precompute_all_zones()
 {
+    CATA_PROFILE_SCOPE_NAMED( "ai.reachability.precompute" );
     if( dirty_ ) {
         creatures_by_zone_and_faction_.clear();
         zone_tick_ = zone_tick_ > 0 ? -1 : 1;
@@ -527,131 +596,21 @@ void creature_tracker::precompute_all_zones()
         rebuild_passability_bitmap();
         dirty_ = false;
     }
-
-    // Collect all creatures whose zone has not been computed this cycle.
-    std::vector<std::pair<Creature *, tripoint_bub_ms>> needs_zone;
-    for( const shared_ptr_fast<monster> &m : monsters_list ) {
-        if( m && !m->is_dead() ) {
-            if( !( m->get_reachable_zone() * zone_tick_ > 0 ) ) {
-                needs_zone.emplace_back( m.get(), m->pos_bub() );
-            }
+    // Snapshot the original order, as before. No worker reads a live creature,
+    // runs a flood visitor or assigns zones; later origins observe prior floods.
+    std::vector<Creature *> needs_zone;
+    for( const auto &m : monsters_list ) {
+        if( m && !m->is_dead() && !( m->get_reachable_zone() * zone_tick_ > 0 ) ) {
+            needs_zone.push_back( m.get() );
         }
     }
-    for( const shared_ptr_fast<npc> &n : active_npc ) {
-        if( n && !n->is_dead() ) {
-            if( !( n->get_reachable_zone() * zone_tick_ > 0 ) ) {
-                needs_zone.emplace_back( n.get(), n->pos_bub() );
-            }
+    for( const auto &n : active_npc ) {
+        if( n && !n->is_dead() && !( n->get_reachable_zone() * zone_tick_ > 0 ) ) {
+            needs_zone.push_back( n.get() );
         }
     }
-
-    if( needs_zone.empty() ) {
-        return;
-    }
-
-    cata_thread_pool &pool = get_thread_pool();
-    if( pool.num_workers() == 0 ) {
-        // Sequential fallback: use the existing per-creature flood_fill_zone.
-        for( auto &entry : needs_zone ) {
-            flood_fill_zone( *entry.first );
-        }
-        return;
-    }
-
-    // Parallel path: each creature gets its own flood_fill on a worker thread.
-    // Workers share the read-only passability_bitmap_ and write to per-worker
-    // buffers.  After all complete, the main thread merges with first-write-wins
-    // semantics for zone assignment.
-    struct worker_result {
-        int assigned_zone = 0;
-        std::vector<std::pair<shared_ptr_fast<Creature>, int>> found;
-    };
-
-    std::vector<worker_result> results( needs_zone.size() );
-    for( size_t i = 0; i < needs_zone.size(); i++ ) {
-        results[i].assigned_zone = zone_number_ * zone_tick_;
-        if( zone_number_ == std::numeric_limits<int>::max() ) {
-            zone_number_ = 1;
-        } else {
-            zone_number_++;
-        }
-    }
-
-    simple_latch latch( needs_zone.size() );
-    for( size_t i = 0; i < needs_zone.size(); i++ ) {
-        tripoint_bub_ms pos = needs_zone[i].second;
-        int zn = results[i].assigned_zone;
-        worker_result *res = &results[i];
-        pool.submit( [this, pos, zn, res, &latch]() {
-            map &here = get_map();
-            ff::flood_fill_visit_10_connected( pos,
-            [this, &here]( const tripoint_bub_ms & loc, int direction ) {
-                if( direction == 0 ) {
-                    return loc.z() >= -OVERMAP_DEPTH && loc.z() <= OVERMAP_HEIGHT &&
-                           loc.y() >= 0 && loc.y() < MAPSIZE_Y &&
-                           loc.x() >= 0 && loc.x() < MAPSIZE_X &&
-                           passability_bitmap_[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()];
-                }
-
-                auto check_location_passable_down = [loc, &here]( const maptile & mt,
-                const ter_t & ter ) {
-                    return ( ( ter.movecost != 0 && mt.get_furn_t().movecost >= 0 ) ||
-                             here.is_transparent_wo_fields( loc ) ) &&
-                           ( ter.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) ||
-                             ter.has_flag( ter_furn_flag::TFLAG_GOES_DOWN ) );
-                };
-
-                if( direction == 1 ) {
-                    const maptile &up = here.maptile_at( loc );
-                    const ter_t &up_ter = up.get_ter_t();
-                    if( up_ter.id.is_null() ) {
-                        return false;
-                    }
-                    if( check_location_passable_down( up, up_ter ) ) {
-                        return true;
-                    }
-                }
-                if( direction == -1 ) {
-                    const maptile &up = here.maptile_at( loc + tripoint::above );
-                    const ter_t &up_ter = up.get_ter_t();
-                    if( up_ter.id.is_null() ) {
-                        return false;
-                    }
-                    const maptile &down = here.maptile_at( loc );
-                    const ter_t &down_ter = up.get_ter_t();
-                    if( down_ter.id.is_null() ) {
-                        return false;
-                    }
-                    if( check_location_passable_down( down, down_ter ) ) {
-                        return true;
-                    }
-                }
-                return false;
-            },
-            [this, zn, res]( const tripoint_bub_ms & loc ) {
-                if( Creature *creature = this->creature_at<Creature>( loc, true ) ) {
-                    if( shared_ptr_fast<Creature> ptr = g->shared_from( *creature ) ) {
-                        res->found.emplace_back( std::move( ptr ), zn );
-                    }
-                }
-            } );
-            latch.count_down();
-        } );
-    }
-    latch.wait();
-
-    // Merge: first-write-wins.  If two workers explored the same zone (because
-    // their origin creatures were connected), the first result processed
-    // claims all shared creatures; later results skip already-assigned ones.
-    for( worker_result &wr : results ) {
-        for( auto &[ptr, zn] : wr.found ) {
-            Creature *c = ptr.get();
-            if( c && !( c->get_reachable_zone() * zone_tick_ > 0 ) ) {
-                c->set_reachable_zone( zn );
-                creatures_by_zone_and_faction_[zn][c->get_monster_faction()].emplace_back(
-                    std::move( ptr ) );
-            }
-        }
+    for( Creature *creature : needs_zone ) {
+        flood_fill_zone( *creature );
     }
 }
 
