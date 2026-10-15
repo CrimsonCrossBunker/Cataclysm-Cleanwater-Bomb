@@ -1,0 +1,36 @@
+#pragma once
+#ifndef CATA_SRC_AI_REACHABILITY_OWNER_H
+#define CATA_SRC_AI_REACHABILITY_OWNER_H
+
+#include "ai_reachability.h"
+
+class map;
+namespace ai_reachability
+{
+// Owner-thread boundary; unsupported maps or invalid storage identities refuse
+// admission. No borrowed map/submap pointers enter snapshot or worker outputs.
+bool capture_geometry( const map &world, snapshot &values );
+bool geometry_matches( const map &world, const snapshot &values );
+
+// One internal, mutation-free flood owns this view. It must not escape that
+// call or invoke gameplay callbacks. Check only touched blocks, then validate
+// the queried transparency bit; changed cells use the original owner predicate.
+class geometry_view
+{
+    public:
+        geometry_view( const map &world, const snapshot &values );
+        geometry_view( const geometry_view & ) = delete;
+        geometry_view &operator=( const geometry_view & ) = delete;
+        bool matches_at( const tripoint_bub_ms &position, int direction );
+        bool stale() const;
+    private:
+        bool matches_block( int layer, int x, int y );
+        const std::thread::id owner_thread_;
+        const map &world_;
+        const snapshot &values_;
+        std::array<unsigned char, OVERMAP_LAYERS * MAPSIZE * MAPSIZE> checked_{};
+        bool catalogs_match_ = false;
+        bool stale_ = false;
+};
+} // namespace ai_reachability
+#endif // CATA_SRC_AI_REACHABILITY_OWNER_H

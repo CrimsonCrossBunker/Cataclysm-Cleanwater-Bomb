@@ -110,6 +110,14 @@ struct wrapped_vehicle {
 
 using VehicleList = std::vector<wrapped_vehicle>;
 class map;
+namespace ai_reachability
+{
+class geometry_view;
+struct snapshot;
+bool capture_geometry( const map &world, snapshot &values );
+bool geometry_matches( const map &world, const snapshot &values );
+} // namespace ai_reachability
+
 
 class weather_generator;
 
@@ -383,6 +391,10 @@ class map
 
         // for testing
         friend class map_meddler;
+        // Owner-only snapshot boundary. Workers receive values, never map/grid pointers.
+        friend class ai_reachability::geometry_view;
+        friend bool ai_reachability::capture_geometry( const map &, ai_reachability::snapshot & );
+        friend bool ai_reachability::geometry_matches( const map &, const ai_reachability::snapshot & );
         friend void clear_fields( int zlevel );
 
     protected:

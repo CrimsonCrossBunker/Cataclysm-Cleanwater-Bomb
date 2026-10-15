@@ -151,10 +151,6 @@ class creature_tracker
         // which means walls and floors.
         void invalidate_reachability_cache();
 
-        // Geometry inputs may change without invalidating the existing lazy
-        // zones (e.g. stairs with the same transparency and movement cost).
-        void invalidate_reachability_preparation();
-
         // Preserve original creature/flood order; workers only prepare values.
         void precompute_all_zones();
 
@@ -171,9 +167,8 @@ class creature_tracker
 
         /** Rebuild the passability bitmap from level caches. Called when dirty_ is set. */
         void rebuild_passability_bitmap();
+        void invalidate_reachability_preparation();
         const ai_reachability::output *prepare_reachability_geometry();
-        std::unique_ptr<ai_reachability::frame> reachability_preparation_; // NOLINT(cata-serialize)
-        double reachability_flood_cost_ms_ = 0.0; // NOLINT(cata-serialize)
 
 
 
@@ -210,6 +205,10 @@ class creature_tracker
         // caching which is itself a lazy approximation.
         std::array<std::array<std::bitset<MAPSIZE_Y>, MAPSIZE_X>, OVERMAP_LAYERS>
         passability_bitmap_{};  // NOLINT(cata-serialize)
+
+        // Preserve the offsets of the authoritative location and zone caches.
+        std::unique_ptr<ai_reachability::frame> reachability_preparation_; // NOLINT(cata-serialize)
+        double reachability_flood_cost_ms_ = 0.0; // NOLINT(cata-serialize)
 
         friend game;
 };

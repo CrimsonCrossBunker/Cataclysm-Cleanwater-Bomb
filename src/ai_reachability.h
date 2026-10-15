@@ -8,13 +8,13 @@
 #include <cstdint>
 #include <memory>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include "coordinates.h"
 #include "map_scale_constants.h"
 
 class cata_thread_pool;
-class map;
 
 namespace ai_reachability
 {
@@ -29,6 +29,7 @@ struct cell {
     int furniture = 0;
 };
 struct block {
+    std::pair<std::uint64_t, std::uint64_t> version{};
     bool uniform = true;
     std::array<cell, SEEX * SEEY> cells{};
     const cell &at( int x, int y ) const;
@@ -42,9 +43,6 @@ struct snapshot {
     std::vector<unsigned char> furniture_nonblocking;
     const cell &at( int z, int x, int y ) const;
 };
-// Owner-thread boundary; returns false for a map of unsupported dimensions.
-bool capture_geometry( const map &world, snapshot &values );
-
 struct output {
     grid up;
     grid down;
@@ -82,6 +80,7 @@ class frame
         snapshot &capture();
         bool prepare( const lease &request );
         const output *result() const;
+        const snapshot *captured() const;
         void invalidate();
         void cancel() noexcept;
         unsigned worker_count() const;

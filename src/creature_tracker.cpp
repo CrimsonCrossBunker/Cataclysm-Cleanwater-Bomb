@@ -10,11 +10,12 @@
 #include <functional>
 #include <limits>
 #include <ostream>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <utility>
 
-#include "ai_reachability.h"
+#include "ai_reachability_owner.h"
 #include "avatar.h"
 #include "cata_assert.h"
 #include "debug.h"
@@ -442,8 +443,10 @@ const ai_reachability::output *creature_tracker::prepare_reachability_geometry()
         return nullptr;
     }
     if( reachability_preparation_ ) {
-        if( const auto *result = reachability_preparation_->result() ) {
-            return result;
+        if( const auto *ready = reachability_preparation_->result() ) {
+            // A local owner view validates each input block before its first use
+            // during this flood; tiny zones need not scan the entire bubble.
+            return ready;
         }
     }
     if( !ai_reachability::should_prepare( monsters_list.size(), reachability_flood_cost_ms_, true ) ) {
@@ -464,7 +467,11 @@ const ai_reachability::output *creature_tracker::prepare_reachability_geometry()
             }
         }
         if( reachability_preparation_->prepare( request ) ) {
-            return reachability_preparation_->result();
+            const auto *values = reachability_preparation_->captured();
+            if( values && ai_reachability::geometry_matches( get_map(), *values ) ) {
+                return reachability_preparation_->result();
+            }
+            reachability_preparation_->invalidate();
         }
     } catch( const std::bad_alloc & ) {
         // No partial result is published; retain the original owner query.
@@ -519,8 +526,12 @@ void creature_tracker::flood_fill_zone( const Creature &origin )
     const auto start = std::chrono::steady_clock::now();
     const ai_reachability::output *prepared = prepare_reachability_geometry();
     map &here = get_map();
+    std::optional<ai_reachability::geometry_view> geometry;
+    if( prepared ) {
+        geometry.emplace( here, *reachability_preparation_->captured() );
+    }
     ff::flood_fill_visit_10_connected( origin.pos_bub(),
-    [this, &here, prepared]( const tripoint_bub_ms & loc, int direction ) {
+    [this, &here, prepared, &geometry]( const tripoint_bub_ms & loc, int direction ) {
         if( direction == 0 ) {
             return loc.z() >= -OVERMAP_DEPTH && loc.z() <= OVERMAP_HEIGHT &&
                    loc.y() >= 0 && loc.y() < MAPSIZE_Y &&
@@ -528,7 +539,7 @@ void creature_tracker::flood_fill_zone( const Creature &origin )
                    passability_bitmap_[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()];
         }
 
-        if( prepared ) {
+        if( prepared && geometry->matches_at( loc, direction ) ) {
             return direction == 1 ? prepared->up[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()] :
                    prepared->down[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()];
         }
@@ -576,6 +587,11 @@ void creature_tracker::flood_fill_zone( const Creature &origin )
             }
         }
     } );
+    if( geometry && geometry->stale() ) {
+        // Reads already fell back cell-by-cell, so no partial zone rollback is
+        // needed. Rebuild the value preparation before its next admitted use.
+        reachability_preparation_->invalidate();
+    }
     reachability_flood_cost_ms_ = std::max( reachability_flood_cost_ms_ * 0.9,
                                             std::chrono::duration<double, std::milli>(
                                                     std::chrono::steady_clock::now() - start ).count() );

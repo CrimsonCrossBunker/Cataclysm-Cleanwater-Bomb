@@ -763,9 +763,6 @@ void map::update_map_memory( avatar &you )
 void map::invalidate_map_cache( const int zlev )
 {
     if( inbounds_z( zlev ) ) {
-        if( g ) {
-            get_creature_tracker().invalidate_reachability_preparation();
-        }
         level_cache &ch = get_cache( zlev );
         ch.floor_cache_dirty = true;
         ch.seen_cache_dirty = true;
@@ -2388,9 +2385,6 @@ bool map::furn_set( const tripoint_bub_ms &p, const furn_id &new_furniture, cons
         // TODO: Consider evaluating whether this is a "meaningful" adjustment instead of just any edit.
         current_submap->player_adjusted_map = true;
     }
-    if( g && !mapgen_in_progress ) {
-        get_creature_tracker().invalidate_reachability_preparation();
-    }
     current_submap->set_furn( l, new_target_furniture );
     current_submap->set_map_damage( point_sm_ms( l ), 0 );
     clear_original_terrain_at( p );
@@ -3289,9 +3283,6 @@ bool map::ter_set( const tripoint_bub_ms &p, const ter_id &new_terrain, bool avo
     if( !mapgen_in_progress ) {
         // TODO: Consider evaluating whether this is a "meaningful" adjustment instead of just any edit.
         current_submap->player_adjusted_map = true;
-    }
-    if( g && !mapgen_in_progress ) {
-        get_creature_tracker().invalidate_reachability_preparation();
     }
     current_submap->set_ter( l, new_terrain );
     current_submap->clear_terrain_growth( l );

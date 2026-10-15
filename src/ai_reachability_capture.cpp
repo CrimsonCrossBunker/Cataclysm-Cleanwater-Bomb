@@ -1,4 +1,7 @@
-#include "ai_reachability.h"
+#include "ai_reachability_owner.h"
+
+#include "cata_assert.h"
+#include "thread_pool.h"
 
 #include "map.h"
 #include "mapdata.h"
@@ -8,6 +11,18 @@
 
 namespace ai_reachability
 {
+namespace
+{
+bool matches_block( const submap *sm, const block &captured )
+{
+    if( !sm ) {
+        return captured.version.first == 0;
+    }
+    const auto stamp = sm->geometry_stamp();
+    return stamp.first != 0 && stamp == captured.version && sm->is_uniform() == captured.uniform;
+}
+} // namespace
+
 bool capture_geometry( const map &here, snapshot &values )
 {
     if( here.getmapsize() != MAPSIZE ) {
@@ -32,7 +47,11 @@ bool capture_geometry( const map &here, snapshot &values )
         for( int sx = 0; sx < MAPSIZE; ++sx ) {
             for( int sy = 0; sy < MAPSIZE; ++sy ) {
                 auto &block = values.blocks[( layer * MAPSIZE + sx ) * MAPSIZE + sy];
-                const submap *sm = here.maptile_at( tripoint_bub_ms{ sx * SEEX, sy * SEEY, z } ).wrapped_submap();
+                const submap *sm = here.get_submap_at_grid( tripoint_rel_sm{ sx, sy, z } );
+                block.version = sm ? sm->geometry_stamp() : std::pair<std::uint64_t, std::uint64_t> {};
+                if( sm && block.version.first == 0 ) {
+                    return false;
+                }
                 block.uniform = !sm || sm->is_uniform();
                 if( !sm ) {
                     block.cells[0] = {};
@@ -51,5 +70,83 @@ bool capture_geometry( const map &here, snapshot &values )
         }
     }
     return true;
+}
+bool geometry_matches( const map &here, const snapshot &values )
+{
+    if( here.getmapsize() != MAPSIZE || values.terrain.size() != ter_t::count() ||
+        values.furniture_nonblocking.size() != furn_t::count() ) {
+        return false;
+    }
+    for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; ++z ) {
+        const int layer = z + OVERMAP_DEPTH;
+        if( values.transparent[layer] != here.get_cache_ref( z ).transparent_cache_wo_fields ) {
+            return false;
+        }
+        for( int sx = 0; sx < MAPSIZE; ++sx ) {
+            for( int sy = 0; sy < MAPSIZE; ++sy ) {
+                const auto &block = values.blocks[( layer * MAPSIZE + sx ) * MAPSIZE + sy];
+                const submap *sm = here.get_submap_at_grid( tripoint_rel_sm{ sx, sy, z } );
+                if( !matches_block( sm, block ) ) {
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+geometry_view::geometry_view( const map &world, const snapshot &values ) :
+    owner_thread_( std::this_thread::get_id() ), world_( world ), values_( values )
+{
+    if( is_pool_worker_thread() ) {
+        return;
+    }
+    catalogs_match_ = world.getmapsize() == MAPSIZE && values.terrain.size() == ter_t::count() &&
+                      values.furniture_nonblocking.size() == furn_t::count();
+}
+bool geometry_view::matches_block( int layer, int x, int y )
+{
+    const int sx = x / SEEX;
+    const int sy = y / SEEY;
+    const int index = ( layer * MAPSIZE + sx ) * MAPSIZE + sy;
+    auto &checked = checked_[index];
+    if( checked == 0 ) {
+        const submap *sm = world_.get_submap_at_grid( tripoint_rel_sm{ sx, sy, layer - OVERMAP_DEPTH } );
+        checked = ai_reachability::matches_block( sm, values_.blocks[index] ) ? 1 : 2;
+    }
+    if( checked == 2 ) {
+        stale_ = true;
+    }
+    return checked == 1;
+}
+bool geometry_view::matches_at( const tripoint_bub_ms &position, int direction )
+{
+    if( owner_thread_ != std::this_thread::get_id() || is_pool_worker_thread() ) {
+        return false;
+    }
+    if( !catalogs_match_ ) {
+        stale_ = true;
+        return false;
+    }
+    const int z = position.z() + OVERMAP_DEPTH;
+    const int x = position.x();
+    const int y = position.y();
+    if( z < 0 || z >= OVERMAP_LAYERS || x < 0 || x >= MAPSIZE_X || y < 0 || y >= MAPSIZE_Y ||
+        ( direction != 1 && direction != -1 ) || ( direction == -1 && z + 1 >= OVERMAP_LAYERS ) ) {
+        return false;
+    }
+    if( !matches_block( z, x, y ) || ( direction == -1 && !matches_block( z + 1, x, y ) ) ) {
+        return false;
+    }
+    if( values_.transparent[z][x][y] !=
+        world_.get_cache_ref( position.z() ).transparent_cache_wo_fields[x][y] ) {
+        stale_ = true;
+        return false;
+    }
+    return true;
+}
+bool geometry_view::stale() const
+{
+    cata_assert( owner_thread_ == std::this_thread::get_id() );
+    return stale_;
 }
 } // namespace ai_reachability

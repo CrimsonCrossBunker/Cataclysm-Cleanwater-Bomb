@@ -171,6 +171,11 @@ const output *frame::result() const
     return ready_generation_ != 0 && ready_generation_ == generation_ &&
            !cancelled_.load( std::memory_order_relaxed ) ? output_.get() : nullptr;
 }
+const snapshot *frame::captured() const
+{
+    assert_owner();
+    return snapshot_.get();
+}
 void frame::invalidate()
 {
     assert_owner();
