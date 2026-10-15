@@ -124,11 +124,13 @@ class submap
         }
 
         void set_furn( const point_sm_ms &p, furn_id furn ) {
+            geometry_version_.changed();
             ensure_nonuniform();
             m->frn[p.x()][p.y()] = furn;
         }
 
         void set_all_furn( const furn_id &furn ) {
+            geometry_version_.changed();
             ensure_nonuniform();
             std::uninitialized_fill_n( &m->frn[0][0], elements, furn );
         }
@@ -184,11 +186,13 @@ class submap
         }
 
         void set_ter( const point_sm_ms &p, ter_id terr ) {
+            geometry_version_.changed();
             ensure_nonuniform();
             m->ter[p.x()][p.y()] = terr;
         }
 
         void set_all_ter( const ter_id &terr, bool uniform_ok = false ) {
+            geometry_version_.changed();
             if( !uniform_ok ) {
                 ensure_nonuniform();
             }
@@ -324,6 +328,13 @@ class submap
         void store( JsonOut &jsout ) const;
         void load( const JsonValue &jv, const std::string &member_name, int version );
 
+        // Runtime-only identity follows the geometry through moves. A moved-from
+        // storage has no valid stamp until its next geometry write. No pointer,
+        // save field, gameplay RNG or turn number is used for cache freshness.
+        std::pair<std::uint64_t, std::uint64_t> geometry_stamp() const noexcept {
+            return { geometry_version_.identity, geometry_version_.revision };
+        }
+
         // If is_uniform is true, this submap is a solid block of terrain
         // Uniform submaps aren't saved/loaded, because regenerating them is faster
         bool is_uniform() const {
@@ -364,6 +375,28 @@ class submap
         };
 
     private:
+        static std::uint64_t next_geometry_identity() noexcept;
+        struct geometry_version {
+            std::uint64_t identity = next_geometry_identity();
+            std::uint64_t revision = 0;
+            geometry_version() = default;
+            geometry_version( geometry_version &&other ) noexcept :
+                identity( std::exchange( other.identity, 0 ) ),
+                revision( std::exchange( other.revision, 0 ) ) {}
+            geometry_version &operator=( geometry_version &&other ) noexcept {
+                if( this != &other ) {
+                    identity = std::exchange( other.identity, 0 );
+                    revision = std::exchange( other.revision, 0 );
+                }
+                return *this;
+            }
+            void changed() noexcept {
+                if( identity == 0 || ++revision == 0 ) {
+                    identity = next_geometry_identity();
+                    revision = 0;
+                }
+            }
+        };
         std::map<point_sm_ms, tile_data> ephemeral_data;
         std::map<point_sm_ms, terrain_growth_state> terrain_growth;
         // Liquid belonging to finite source terrain is map state, not a
@@ -376,6 +409,9 @@ class submap
         int temperature_mod = 0; // delta in F
         // Tracks original terrain for tiles transformed by phase logic
         std::map<point_sm_ms, ter_id> original_terrain;
+
+        // Keep runtime cache metadata after existing terrain storage fields.
+        geometry_version geometry_version_; // NOLINT(cata-serialize)
 
     public:
         bool has_original_ter( const point_sm_ms &p ) const;

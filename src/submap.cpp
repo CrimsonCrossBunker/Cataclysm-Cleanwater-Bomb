@@ -1,5 +1,8 @@
 #include "submap.h"
 
+#include <atomic>
+#include <limits>
+
 #include <active_item_cache.h>
 #include <calendar.h>
 #include <compatibility.h>
@@ -41,6 +44,20 @@ void maptile_soa::swap_soa_tile( const point_sm_ms &p1, const point_sm_ms &p2 )
     std::swap( fld[p1.x()][p1.y()], fld[p2.x()][p2.y()] );
     std::swap( trp[p1.x()][p1.y()], trp[p2.x()][p2.y()] );
     std::swap( rad[p1.x()][p1.y()], rad[p2.x()][p2.y()] );
+}
+
+std::uint64_t submap::next_geometry_identity() noexcept
+{
+    // Saturate instead of wrapping: zero permanently refuses cache admission.
+    // The counter only allocates identities; per-tile writes use a local revision.
+    static std::atomic<std::uint64_t> next{ 1 };
+    std::uint64_t candidate = next.load( std::memory_order_relaxed );
+    while( candidate != std::numeric_limits<std::uint64_t>::max() ) {
+        if( next.compare_exchange_weak( candidate, candidate + 1, std::memory_order_relaxed ) ) {
+            return candidate;
+        }
+    }
+    return 0;
 }
 
 submap::submap( submap && ) noexcept( map_is_noexcept ) = default;
@@ -226,6 +243,8 @@ void submap::rotate( int turns )
         return;
     }
 
+    geometry_version_.changed();
+
     const auto rotate_point = [turns]( const point_sm_ms & p ) {
         return p.rotate( turns, { SEEX, SEEY } );
     };
@@ -309,6 +328,7 @@ void submap::mirror( bool horizontally )
     if( is_uniform() ) {
         return;
     }
+    geometry_version_.changed();
     std::map<point_sm_ms, computer> mirror_comp;
 
     if( horizontally ) {
@@ -378,6 +398,7 @@ void submap::mirror( bool horizontally )
 
 void submap::revert_submap( submap &sr )
 {
+    geometry_version_.changed();
     reverted = true;
     if( sr.is_uniform() ) {
         m.reset();
@@ -451,6 +472,7 @@ void submap::update_lum_rem( const point_sm_ms &p, const item &i )
 
 void submap::merge_submaps( submap *copy_from, bool copy_from_is_overlay )
 {
+    geometry_version_.changed();
     this->field_count = 0;
 
     for( int x = 0; x < SEEX; x++ ) {
