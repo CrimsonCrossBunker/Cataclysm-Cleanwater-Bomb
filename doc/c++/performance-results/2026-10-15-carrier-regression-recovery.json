@@ -1,0 +1,547 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-15",
+  "batch": "regression-recovery52–53",
+  "baseline": "5f19f56ecb66202c79f94dcea23a3a63460cbac9",
+  "source_head": "1b5d31bd701c17aaa731a6f5c5191c838c0b38bb",
+  "source_commits": [
+    "1b5d31bd701c17aaa731a6f5c5191c838c0b38bb perf: reuse live registration pin during movement validation",
+    "7112b604bbee926a02f363237f02a7259565075d perf: reuse owned layer captures and reject absent ladder visuals"
+  ],
+  "scope": "Fix measured render regression while retaining owned semantic data, ordered owner commands, resource/exception/stale/lifetime checks and sole Lua Platform v1. Dense759monster carrier is primary.",
+  "diagnosis": {
+    "evidence": "Existing125Hz samples undersampled monmove. Two diagnostic3999Hz captures, native state verified; no timing claim from high-frequency runs. Full symbols/unknown frames retained.",
+    "causes_and_opportunities": [
+      "Owned layer views were freshly constructed/destroyed per tile/layer. Preserve their value boundary while reusing frame-local string capacity; terrain/trap empty override maps also avoid impossible neighbor probes.",
+      "Furniture capture repeatedly asks about vehicle ladder visuals. When the existing projected-ladder index is empty and the authoritative in-bounds vehicle occupancy bits are clear, ladder visuals are impossible; skip submap/furniture reads. Occupied, projected-ladder and unknown-bounds cases keep complete legacy validation.",
+      "Movement commit already obtains the live tracker registration pin at its captured position. An additional is_present query before any owner mutation repeats that same check; consolidate into the retained pin identity/position/liveness check. All later action/Lua/context stale checks remain."
+    ],
+    "attribution_limit": "The combined candidate is measured, not an independent speedup for each line. Do not attribute the entire historical monmove delta to one validation query or infer exact function timings from sparse samples."
+  },
+  "implementation": {
+    "semantic_values": "IDs/text/coordinates/light/category remain owned values. Existing optional-return captures remain available; reusable output is read only on success and refreshes every semantic field.",
+    "frame_lifetime": "Each root draw binds its own capacity buffer and restores enclosing binding on return/exception. No borrowed world/SDL pointer enters semantic DTOs or worker output.",
+    "no_decision_cache": "Only string storage is reused, never visibility/preview/memory/world decisions. The map fast rejection uses the existing live map-owned cache; no second invalidation mechanism.",
+    "safety": "Renderer epoch/frame/sequence checks, early/late validation, cancel/unwind, cache readiness, owner ordering, identity/liveness and post-hook membership checks are retained. Registration predicate is consolidated, not bypassed.",
+    "threading": "No new AI/render worker activation. VISION4/RENDER0 unchanged; gameplay/Lua/RNG/SDL stay on their prior owners.",
+    "public_contract": "No save/schema/JSON/Lua/API/generated contract change; require(\"ccb\") Platform v1 only."
+  },
+  "allocation_evidence": {
+    "source": "tests/standalone/tile_layer_reuse_test.cpp",
+    "case": "Actual production view;1000longID/subcategory fresh constructions vs1000warm assignments, assertions enabled.",
+    "fresh_allocations": 2000,
+    "warm_reuse_allocations": 0,
+    "native_and_scoped_asan_ubsan_lsan": "passed; owned retained copy and every semantic field checked",
+    "limit": "Not a game timing or whole-game allocator proof. Longer future values may still allocate; normal exception propagation/owner unwind retained.",
+    "reuse": "52allocation proof and all relevant source hashes unchanged in53."
+  },
+  "validation": {
+    "native": {
+      "assertions": {
+        "successes": "177164",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "cases": {
+        "successes": "111",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "xml_sha256": "88423a5ba39f6ae9c6b33e5642777ee7575072f13ff2b132c57e83b29fb0881d"
+    },
+    "renderer_scoped_asan_ubsan_lsan": {
+      "assertions": {
+        "successes": "2980",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "cases": {
+        "successes": "31",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "xml_sha256": "1b34f3a11a64dd2c5caf8194e5d668df7ad18fe9eb99d28bef1f09d7d728a42d"
+    },
+    "actual_map_scoped_asan_ubsan_lsan": {
+      "assertions": {
+        "successes": "344",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "cases": {
+        "successes": "14",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "xml_sha256": "366354aa272f1c6bd797b4e33397adae576b152dd164fd3b7b5ea0d842c77840"
+    },
+    "unchanged52movement_scoped_asan_ubsan_lsan": {
+      "assertions": {
+        "successes": "1254",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "cases": {
+        "successes": "17",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "xml_sha256": "884dacf46a4bb0b047c8b0b15cb32859ec33f7b5b5aaef07c7ee3a786e1aa181"
+    },
+    "sanitizer_limits": "Actual affected units instrumented within recorded private CMake scopes; other common modules linked Release. Map target includes actual map.cpp and layer/destination tests. No whole-game or live-map concurrent safety proof.",
+    "coverage": [
+      "Visible/memory/preview capture reuse updates all fields without corrupting retained values or consuming RNG.",
+      "Actual air vehicle ladder visual creation, top/below identity, furniture blocking, restoration and vehicle destruction.",
+      "Source replacement at same position and source moved while still registered reject; existing conflict/dead/removed/target/Platform v1 callback/recovery/reload/pixel cases retained."
+    ],
+    "native_sdl3_timing_games": 37,
+    "native_replay_reload_games": 8,
+    "full_gameplay": "Matrix full normalized player/active_monsters payload SHA matches across all15combat/all10carrier/all6field/all6room runs; only learned-recipe/event row ordering, save wall-time metadata and exact verified build version identities normalized. Event count/first/last totals preserved.",
+    "memory_semantic_sha256": {
+      "combat": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488",
+      "carrier": "9a04a5bbf58cefe47ecdbc3e648e9dde9b3462d11481fd79a02a2d03769cdae4",
+      "field": "f2a2da11960b15c2a849b12d268e29b7a52db4b898c7926c61fffa302aa81cba",
+      "room": "8d7811c8c299161465803708af20bb8d1ab3fab140729a21911e37c3a1002b74"
+    },
+    "replay_memory_sha256": {
+      "recovery53-replay-combat": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488",
+      "recovery53-reload-combat": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488",
+      "recovery53-replay-room": "8d7811c8c299161465803708af20bb8d1ab3fab140729a21911e37c3a1002b74",
+      "recovery53-reload-room": "8d7811c8c299161465803708af20bb8d1ab3fab140729a21911e37c3a1002b74"
+    },
+    "profile_quality": "All37collector exits0 and lost-event scans0. External-process violation pairs discarded per predeclared rule and retained raw. Passing run input and complete state checked independently of timing. Low-sample functions do not establish a precise function speedup."
+  },
+  "protocol": {
+    "primary": "5balanced three-version blocks,15combat games: pre34old baseline, regressed51, candidate53.",
+    "controls": "5carrier exploration pairs,3ordinary-field pairs,3room pairs:51vs53;22games.",
+    "configuration": "Linux Clang23 Release g1 LTOOFF, SDL3OpenGL/X11,2880x1800fullscreen UNDEAD_PEOPLE zoom4/tile8;VISION4/RENDER0/legacyMULTI=false,TRACY_NO_SYS_TRACE1.",
+    "samples": "MainTID cycles:u125Hz,DWARF32768,input+3sdrain. All-process user-task-clock:u30s includes profiling/idle; not GPU/FPS or frame-p95.",
+    "admission": "20consecutive quiet seconds, no compiler/ninja/indexer, no overlapping own build/game/export. Pressure recorded; only predeclared external-process interference rejects whole paired block, raw retained.",
+    "discarded_blocks": [],
+    "statistics": "Scene-local paired t95 intervals across5 or3per-run means. Cross-zero does not prove improvement/equivalence. All positive/negative rows retained.",
+    "normalization": "Only verified recipe/event serialization ordering, save wall-time fields and exact build-identity event keys/count bucket aggregation. Preserve counts/first/last and all other selected gameplay arrays/stats. Native save footers and full decoded memory JSON independently audited.",
+    "pilot_exclusion": "12two-triplet prototype games and2high-frequency diagnostic games retained, excluded from37formal games; prototype52alone did not establish rendering gain."
+  },
+  "measured_results": {
+    "combat": {
+      "pre34": {
+        "draw.rebuilt": {
+          "means_ms": {
+            "pre34": 33.81138075,
+            "candidate53": 32.495484725
+          },
+          "delta95_ms": [
+            -2.4220798785960755,
+            -0.20971217140392318
+          ],
+          "mean_reduction_percent": 3.891873078859698,
+          "interpretation": "supported lower cost"
+        },
+        "draw.reused": {
+          "means_ms": {
+            "pre34": 25.032971225806453,
+            "candidate53": 23.748044527217743
+          },
+          "delta95_ms": [
+            -1.9596995221634375,
+            -0.6101538750139809
+          ],
+          "mean_reduction_percent": 5.132937225062917,
+          "interpretation": "supported lower cost"
+        },
+        "monmove": {
+          "means_ms": {
+            "pre34": 8.806154225,
+            "candidate53": 8.78728715
+          },
+          "delta95_ms": [
+            -0.2612338805526043,
+            0.2234997305526043
+          ],
+          "mean_reduction_percent": 0.2142487460239928,
+          "interpretation": "crosses zero; no demonstrated change/equivalence"
+        },
+        "plan": {
+          "means_ms": {
+            "pre34": 0.004013941059602649,
+            "candidate53": 0.003973657654850019
+          },
+          "delta95_ms": [
+            -0.00017328088988461342,
+            9.271408037935409e-05
+          ],
+          "mean_reduction_percent": 1.0035873510464088,
+          "interpretation": "crosses zero; no demonstrated change/equivalence"
+        },
+        "route": {
+          "means_ms": {
+            "pre34": 0.21040269047619048,
+            "candidate53": 0.19980968333333335
+          },
+          "delta95_ms": [
+            -0.023013045970659667,
+            0.0018270316849454075
+          ],
+          "mean_reduction_percent": 5.0346348323220935,
+          "interpretation": "crosses zero; no demonstrated change/equivalence"
+        },
+        "simulate_turn_suffix": {
+          "means_ms": {
+            "pre34": 19.266315125,
+            "candidate53": 19.09260945
+          },
+          "delta95_ms": [
+            -0.5731706111569754,
+            0.22575926115697817
+          ],
+          "mean_reduction_percent": 0.9016029991879226,
+          "interpretation": "crosses zero; no demonstrated change/equivalence"
+        },
+        "all_process30s_user_task_clock_ms": {
+          "means_ms": {
+            "pre34": 9473.544,
+            "candidate53": 9381.49
+          },
+          "delta95_ms": [
+            -314.1404487266126,
+            130.03244872661242
+          ],
+          "mean_reduction_percent": 0.9716954922043941,
+          "interpretation": "crosses zero; no demonstrated change/equivalence"
+        }
+      },
+      "regressed51": {
+        "draw.rebuilt": {
+          "means_ms": {
+            "regressed51": 34.29437895,
+            "candidate53": 32.495484725
+          },
+          "delta95_ms": [
+            -2.942146861018399,
+            -0.6556415889815999
+          ],
+          "mean_reduction_percent": 5.245449196274199,
+          "interpretation": "supported lower cost"
+        },
+        "draw.reused": {
+          "means_ms": {
+            "regressed51": 25.688960477419354,
+            "candidate53": 23.748044527217743
+          },
+          "delta95_ms": [
+            -2.790215185429394,
+            -1.0916167149738323
+          ],
+          "mean_reduction_percent": 7.555447609130306,
+          "interpretation": "supported lower cost"
+        },
+        "monmove": {
+          "means_ms": {
+            "regressed51": 8.93356485,
+            "candidate53": 8.78728715
+          },
+          "delta95_ms": [
+            -0.3431207107466696,
+            0.05056531074666981
+          ],
+          "mean_reduction_percent": 1.6373945055091932,
+          "interpretation": "crosses zero; no demonstrated change/equivalence"
+        },
+        "plan": {
+          "means_ms": {
+            "regressed51": 0.003987034670821971,
+            "candidate53": 0.003973657654850019
+          },
+          "delta95_ms": [
+            -0.00013747277034328967,
+            0.00011071873839938659
+          ],
+          "mean_reduction_percent": 0.3355129081231256,
+          "interpretation": "crosses zero; no demonstrated change/equivalence"
+        },
+        "route": {
+          "means_ms": {
+            "regressed51": 0.2071345880952381,
+            "candidate53": 0.19980968333333335
+          },
+          "delta95_ms": [
+            -0.012231623897541413,
+            -0.0024181856262680953
+          ],
+          "mean_reduction_percent": 3.536302087093657,
+          "interpretation": "supported lower cost"
+        },
+        "simulate_turn_suffix": {
+          "means_ms": {
+            "regressed51": 19.267695175,
+            "candidate53": 19.09260945
+          },
+          "delta95_ms": [
+            -0.5871849309205972,
+            0.2370134809205981
+          ],
+          "mean_reduction_percent": 0.9087009287295222,
+          "interpretation": "crosses zero; no demonstrated change/equivalence"
+        },
+        "all_process30s_user_task_clock_ms": {
+          "means_ms": {
+            "regressed51": 9604.202,
+            "candidate53": 9381.49
+          },
+          "delta95_ms": [
+            -433.759693007533,
+            -11.664306992466834
+          ],
+          "mean_reduction_percent": 2.3189016640841165,
+          "interpretation": "supported lower cost"
+        }
+      }
+    },
+    "carrier": {
+      "regressed51": {
+        "draw.rebuilt": {
+          "means_ms": {
+            "regressed51": 35.19734721081081,
+            "candidate53": 32.55338992432433
+          },
+          "delta95_ms": [
+            -3.276179324877262,
+            -2.011735248095709
+          ],
+          "mean_reduction_percent": 7.511808406044862,
+          "interpretation": "supported lower cost"
+        },
+        "draw.reused": {
+          "means_ms": {
+            "regressed51": 25.03855639506173,
+            "candidate53": 22.772041507168264
+          },
+          "delta95_ms": [
+            -2.4171614151661105,
+            -2.11586836062082
+          ],
+          "mean_reduction_percent": 9.052098899521543,
+          "interpretation": "supported lower cost"
+        },
+        "monmove": {
+          "means_ms": {
+            "regressed51": 0.002366735135135135,
+            "candidate53": 0.0021595027027027027
+          },
+          "delta95_ms": [
+            -0.0005749804526254222,
+            0.00016051558776055742
+          ],
+          "mean_reduction_percent": 8.756046646537818,
+          "interpretation": "crosses zero; no demonstrated change/equivalence"
+        },
+        "simulate_turn_suffix": {
+          "means_ms": {
+            "regressed51": 8.68624874054054,
+            "candidate53": 8.603037951351352
+          },
+          "delta95_ms": [
+            -0.4938312343430541,
+            0.3274096559646753
+          ],
+          "mean_reduction_percent": 0.9579600086839113,
+          "interpretation": "crosses zero; no demonstrated change/equivalence"
+        },
+        "all_process30s_user_task_clock_ms": {
+          "means_ms": {
+            "regressed51": 9946.72,
+            "candidate53": 9664.868
+          },
+          "delta95_ms": [
+            -401.53957428798645,
+            -162.16442571201293
+          ],
+          "mean_reduction_percent": 2.8336175141151942,
+          "interpretation": "supported lower cost"
+        }
+      }
+    },
+    "field": {
+      "regressed51": {
+        "draw.rebuilt": {
+          "means_ms": {
+            "regressed51": 24.481100963963964,
+            "candidate53": 24.047658333333334
+          },
+          "delta95_ms": [
+            -1.0593739022238502,
+            0.19248864096258828
+          ],
+          "mean_reduction_percent": 1.770519353964739,
+          "interpretation": "crosses zero; no demonstrated change/equivalence"
+        },
+        "monmove": {
+          "means_ms": {
+            "regressed51": 0.002298414414414414,
+            "candidate53": 0.0021253423423423425
+          },
+          "delta95_ms": [
+            -0.0004698924377957833,
+            0.00012374829365163946
+          ],
+          "mean_reduction_percent": 7.530063812107035,
+          "interpretation": "crosses zero; no demonstrated change/equivalence"
+        },
+        "simulate_turn_suffix": {
+          "means_ms": {
+            "regressed51": 7.109295441441441,
+            "candidate53": 7.0568932072072075
+          },
+          "delta95_ms": [
+            -0.7815531039885152,
+            0.6767486355200468
+          ],
+          "mean_reduction_percent": 0.7370946202175155,
+          "interpretation": "crosses zero; no demonstrated change/equivalence"
+        },
+        "all_process30s_user_task_clock_ms": {
+          "means_ms": {
+            "regressed51": 3586.5733333333333,
+            "candidate53": 3567.5166666666664
+          },
+          "delta95_ms": [
+            -116.24768505341582,
+            78.13435172008245
+          ],
+          "mean_reduction_percent": 0.5313335291252996,
+          "interpretation": "crosses zero; no demonstrated change/equivalence"
+        }
+      }
+    },
+    "room": {
+      "regressed51": {
+        "draw.rebuilt": {
+          "means_ms": {
+            "regressed51": 16.43851436936937,
+            "candidate53": 16.204641972972972
+          },
+          "delta95_ms": [
+            -2.3098753034250734,
+            1.842130510632283
+          ],
+          "mean_reduction_percent": 1.4227100523888092,
+          "interpretation": "crosses zero; no demonstrated change/equivalence"
+        },
+        "monmove": {
+          "means_ms": {
+            "regressed51": 0.001958936936936937,
+            "candidate53": 0.0021186666666666667
+          },
+          "delta95_ms": [
+            -0.0002231738261710189,
+            0.0005426332856304786
+          ],
+          "mean_reduction_percent": -8.153898510867275,
+          "interpretation": "crosses zero; no demonstrated change/equivalence"
+        },
+        "simulate_turn_suffix": {
+          "means_ms": {
+            "regressed51": 5.3417966846846845,
+            "candidate53": 5.484292675675675
+          },
+          "delta95_ms": [
+            0.07496562172354015,
+            0.21002636025844157
+          ],
+          "mean_reduction_percent": -2.667566727118942,
+          "interpretation": "supported higher cost"
+        },
+        "all_process30s_user_task_clock_ms": {
+          "means_ms": {
+            "regressed51": 2118.3566666666666,
+            "candidate53": 2135.9933333333333
+          },
+          "delta95_ms": [
+            -82.88005855809449,
+            118.15339189142743
+          ],
+          "mean_reduction_percent": -0.8325636066951247,
+          "interpretation": "crosses zero; no demonstrated change/equivalence"
+        }
+      }
+    }
+  },
+  "delivery_conclusion": "Dense carrier drawing is faster than both regressed51 and pre34 with both rebuilt/reused paired95 below0. Exploration carrier also improves vs51. Dense monmove is back near pre34, no demonstrated AI acceleration or equivalence. Ordinary field/room intervals cross0, no stable change claim.",
+  "failures_and_repairs": [
+    {
+      "scope": "52standalone first compile",
+      "failure": "Missing actual lit_level definition header",
+      "repair": "Include production lightmap.h, no stubs; same gate passed."
+    },
+    {
+      "scope": "52rendererASan first attempt",
+      "failure": "29cases passed,1newtest assertion assumed empty preexisting memory; no sanitizer diagnostic.",
+      "repair": "Explicitly seed previous memory and assert unchanged id/subtile/rotation; native110 and renderer30 rerun, movement17passed. RawXML/log retained."
+    },
+    {
+      "scope": "53native first attempt",
+      "failure": "All111case assertions passed but global error-log gate correctly rejected placing chair on open-air terrain.",
+      "repair": "Build a supporting floor for furniture, then restore air after removing it. No production change. Incremental native111/renderer31/map14 allpass; rawXML/log retained."
+    }
+  ],
+  "visual_review": {
+    "path": ".ccb-pr-evidence/native-combined/trials/recovery53-fixed-combat-candidate53-01/setup.png",
+    "sha256": "2e732180583ac65c2022352f6093e193dd719657991d8f52df2f7c9a52c5754f",
+    "review": "Actual fullscreen UNDEAD carrier image inspected: scene/actors/HUD/minimap present. Full renderer pixel oracle remains separate native software fixtures, not complete-image equality for time/pointer-dependent cosmetic animation."
+  },
+  "binary_sha256": {
+    "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/regression-recovery53/candidate/bin/cataclysm-tiles": "6c0e62709d47e86d30748eaffb3a90cdbb89b2b6410da78cbe068e5e6a065f76",
+    "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/regression-recovery53/candidate/bin/ccb-sdl3-acceptance": "5c4f2837f73e92b3011a7d4e5ae634635a54d0153d67e20651de09eca5e71ef2"
+  },
+  "private_evidence_sha256": {
+    ".ccb-pr-evidence/native-combined/regression-recovery53/primary-progress.json": "bb59242df1b1ac57dc86f7cf34393189131f13f553ea0ed63c8f06178f3d5d8a",
+    ".ccb-pr-evidence/native-combined/regression-recovery53/controls-progress.json": "23954a25eacd6d89dffc6f801c2f0d60b418f52dc025f02aae81df44ded2b077",
+    ".ccb-pr-evidence/native-combined/regression-recovery53/primary-gate-review.json": "b7034d88f14ca4b0ff8abd4dabac66e300c954aceb2eec40c6f1565d54a175a9",
+    ".ccb-pr-evidence/native-combined/regression-recovery53/formal-policy.json": "2ad391931e1601239b6b0082ed1d1caddcb5dd47a6f06dca68adea113e66ad50",
+    ".ccb-pr-evidence/native-combined/regression-recovery53/combined-audit.json": "11c590f32faa7f6bad8b11facdd711b6e964c3979ed5bb37fe42e2d14c9b55f7",
+    ".ccb-pr-evidence/native-combined/regression-recovery53/replay-progress.json": "5b8814fa0c856bbacc5383ede3f12bd5ce625f83fbe1bb4ae5a6db9e28a8f9ba",
+    ".ccb-pr-evidence/native-combined/regression-recovery53/remaining-gates-progress.json": "90096d28bb7f689b9fe6f4c34c2ebd437e4482d975056379a0eeb74ea20712fb",
+    ".ccb-pr-evidence/native-combined/regression-recovery53/candidate/build-progress.json": "bd8d350a6a18a970c8eda62b6664287a202cc4d9535c5f8c6c0e1f06f53acba4",
+    ".ccb-pr-evidence/native-combined/regression-recovery53/candidate/validation-harness.json": "ff4565cb0d8c5036877e3be4c5cdbfc00a75e61de3a5095aecc4a6a505b5479c",
+    ".ccb-pr-evidence/native-combined/regression-recovery53/build-before-ladder-fixture-fix.json": "8c9b3735a4b0f24ce752d57b1af0d2f634d6e30bc3a6e92779457bc03e82635e",
+    ".ccb-pr-evidence/native-combined/regression-recovery53/native-before-ladder-fixture-fix.xml": "23e680b8158171b031bda64399e5c9b3f718b1f2ac4f06bb4ba2bdb70027f695"
+  },
+  "unchanged_evidence_reuse": {
+    "52to53_changed_recorded_inputs": [
+      "src/map.cpp",
+      "tests/tile_layer_capture_test.cpp"
+    ],
+    "movement_and_allocation": "Relevant production/test inputs byte-identical; reuse17movementASan/1254assertions and actual-view allocation proof. Native111 refreshes integrated behavior after map-only visual early exit.",
+    "51row_fault": "Unchanged actual row/rebuild guard/scope helper and test source; existing2native+2sanitizer allocation-failure/retry proof retained."
+  },
+  "scope_limits": [
+    "No whole-game FPS/p95/physicalGPU/Vulkan,cross-platform,long-session,old-save-fleet or live multiplayer device acceptance.",
+    "Reported several-second brand-new-region stall remains a separate unreproduced issue; no broad exploration-stall fix claim.",
+    "Main-thread capture/simulation remains serial; no new AI/render worker or 3D transport activation.",
+    "Do not sum inclusive function percentages or convert sample shares to milliseconds; complete raw self/stack reports kept privately."
+  ],
+  "publication": "Local commits only; no push,new PR,merge or release. OriginalDamon/other-task work preserved; obj-lua untouched.",
+  "commit_scope_before_report": {
+    "files": 11,
+    "added": 364,
+    "deleted": 53,
+    "changed_lines": 417,
+    "source_test_commits": 2,
+    "reference": "<=15commits for <=1000changed lines; logical source/test batches plus final evidence commit."
+  },
+  "source_hashes": {
+    "verified_count": 82,
+    "all_current_equal_frozen": true,
+    "authoritative_record": ".ccb-pr-evidence/native-combined/regression-recovery53/candidate/build-progress.json",
+    "record_sha256": "bd8d350a6a18a970c8eda62b6664287a202cc4d9535c5f8c6c0e1f06f53acba4"
+  },
+  "final_commit_scope": {
+    "files": 12,
+    "added": 911,
+    "deleted": 53,
+    "changed_lines": 964,
+    "actual_commits": 3,
+    "reference_commits": "<=15",
+    "split": "Render/capture+ladder regression batch; movement registration batch; final evidence. Implementation and its regression tests kept together."
+  }
+}
