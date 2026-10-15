@@ -32,7 +32,7 @@ void prepare_reachability_rooms()
             for( int y = 48; y <= 62; ++y ) {
                 const bool wall = x == 48 || x == 64 || y == 48 || y == 62 || x == 56;
                 here.ter_set( tripoint_bub_ms{ x, y, z }, ter_id( z == -1 ? "t_rock" :
-                              wall ? "t_wall" : "t_floor" ) );
+                        wall ? "t_wall" : "t_floor" ) );
             }
         }
     }
