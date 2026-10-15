@@ -161,6 +161,7 @@
     "extend": {
       "allowed_tools": [
         "chemistry_set",
+        "chemistry_set_basic",
         "closed_loop_extractor_large",
         "closed_loop_extractor_small",
         "dehydrator",
