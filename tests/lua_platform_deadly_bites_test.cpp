@@ -10,6 +10,7 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "character_id.h"
 #include "effect.h"
 #include "flexbuffer_json.h"
 #include "inventory.h"
@@ -109,6 +110,8 @@ TEST_CASE( "deadly_bites_lua_infection_and_medicine_survive_character_save_load"
     patient.serialize( json );
 
     clear_avatar();
+    // Loading restores the saved ID into a character without a prior identity.
+    patient.setID( character_id(), true );
     patient.deserialize( json_loader::from_string( stream.str() ).get_object() );
     cata::lua_platform::runtime_world_ready( false );
     REQUIRE( patient.get_effect_int( effect_zombie_virus ) == 3 );

@@ -1373,10 +1373,9 @@ void start_runtime_event_bridge()
 
 void stop_runtime_event_bridge()
 {
-    if( event_bridge ) {
-        get_event_bus().unsubscribe( event_bridge.get() );
-        event_bridge.reset();
-    }
+    // event_subscriber releases its own bus subscription.  The global game
+    // pointer may already be null while game::~game() shuts down Lua.
+    event_bridge.reset();
 }
 
 

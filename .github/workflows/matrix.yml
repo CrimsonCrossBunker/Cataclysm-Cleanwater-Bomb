@@ -437,6 +437,15 @@ jobs:
     - name: run Lua and horde map regressions
       if: ${{ env.SKIP == 'false' && env.SKIP_TESTS == 'true' && matrix.semantic_acceptance == true }}
       run: ./tests/cata_test '[lua][platform][semantic],horde_map_*' --rng-seed 4902 --order lex --warn NoTests --user-dir=test_user_dir_lua --error-format=github-action
+    - name: run Railroads spawn regression
+      if: ${{ env.SKIP == 'false' && matrix.semantic_acceptance == true }}
+      run: ./tests/cata_test 'railroad_end_vehicle_spawns' --mods=railroads --rng-seed 3404 --order lex --user-dir=test_user_dir_railroad_spawns --drop-world --error-format=github-action
+    - name: run Lua effect definition and packaging regressions
+      if: ${{ env.SKIP == 'false' && matrix.semantic_acceptance == true }}
+      run: ./tests/cata_test 'lua_platform_effect_definitions_*,lua_platform_medicine_group_wraps_counted_doses_once,lua_platform_effect_modifier_fingerprints_retain_fractional_precision' --rng-seed 965 --order lex --warn NoTests --user-dir=test_user_dir_lua_effects --drop-world --error-format=github-action
+    - name: run isolated deadly bites gameplay and save regressions
+      if: ${{ env.SKIP == 'false' && matrix.semantic_acceptance == true }}
+      run: ./tests/cata_test 'deadly_bites_*' --mods=deadly_bites --rng-seed 965 --order lex --warn NoTests --user-dir=test_user_dir_deadly_bites --drop-world --error-format=github-action
     - name: run mounted equipment save and inventory regressions
       if: ${{ env.SKIP == 'false' && matrix.semantic_acceptance == true }}
       run: ./tests/cata_test '[monster][mount],[monster][pet_equipment],physical_stack_merging_preserves_item_state,inventory_restack_preserves_charge_items_that_cannot_physically_merge,liquids_at_different_temperatures' --rng-seed 939 --order lex --warn NoTests --user-dir=test_user_dir_mounted_equipment --drop-world --error-format=github-action

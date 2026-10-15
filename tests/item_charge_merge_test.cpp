@@ -14,7 +14,9 @@
 
 TEST_CASE( "physical_stack_merging_preserves_item_state", "[item][stacking][charges]" )
 {
-    item lhs( itype_id( "9mm" ), calendar::turn, 10 );
+    item lhs( itype_id( "string_6" ), calendar::turn, 10 );
+    REQUIRE( lhs.count_by_charges() );
+    REQUIRE( lhs.max_damage() > 1002 );
     item rhs = lhs;
     SECTION( "different_damage_in_same_display_bucket" ) {
         lhs.force_set_damage( 1001 );
@@ -48,7 +50,9 @@ TEST_CASE( "inventory_restack_preserves_charge_items_that_cannot_physically_merg
 {
     clear_avatar();
     avatar &player = get_avatar();
-    item lhs( itype_id( "9mm" ), calendar::turn, 10 );
+    item lhs( itype_id( "string_6" ), calendar::turn, 10 );
+    REQUIRE( lhs.count_by_charges() );
+    REQUIRE( lhs.max_damage() > 1002 );
     item rhs = lhs;
     rhs.charges = 20;
     lhs.force_set_damage( 1001 );
