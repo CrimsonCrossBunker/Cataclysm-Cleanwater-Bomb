@@ -44,6 +44,11 @@ creature_tracker::~creature_tracker() = default;
 
 shared_ptr_fast<monster> creature_tracker::find( const tripoint_abs_ms &pos ) const
 {
+    // For small populations, the container's direct lookup is already cheap.
+    // The conservative filter only rejects locations that cannot be registered.
+    if( monsters_by_location.size() >= 64 && !location_filter_.test( location_bucket( pos ) ) ) {
+        return nullptr;
+    }
     const auto iter = monsters_by_location.find( pos );
     if( iter != monsters_by_location.end() ) {
         const shared_ptr_fast<monster> &mon_ptr = iter->second;
@@ -130,8 +135,37 @@ bool creature_tracker::add( const shared_ptr_fast<monster> &critter_ptr )
     }
 
     monsters_list.emplace_back( critter_ptr );
-    monsters_by_location[critter.pos_abs()] = critter_ptr;
+    cache_location( critter.pos_abs(), critter_ptr );
     return true;
+}
+
+size_t creature_tracker::location_bucket( const tripoint_abs_ms &pos ) const
+{
+    return std::hash<tripoint_abs_ms> {}( pos ) % location_filter_.size();
+}
+
+void creature_tracker::rebuild_location_filter()
+{
+    // Publish a complete replacement.  Stale set bits are harmless, but a
+    // registered location must never have a clear bit, including after failure.
+    decltype( location_filter_ ) rebuilt;
+    for( const auto &entry : monsters_by_location ) {
+        rebuilt.set( location_bucket( entry.first ) );
+    }
+    location_filter_ = rebuilt;
+    location_filter_updates_ = 0;
+}
+
+void creature_tracker::cache_location( const tripoint_abs_ms &pos,
+                                       const shared_ptr_fast<monster> &critter )
+{
+    // Set the bit before the authoritative insertion.  A failed allocation
+    // can leave a false positive, never a false negative for an existing entry.
+    location_filter_.set( location_bucket( pos ) );
+    monsters_by_location[pos] = critter;
+    if( ++location_filter_updates_ >= std::max<size_t>( 1024, monsters_by_location.size() * 4 ) ) {
+        rebuild_location_filter();
+    }
 }
 
 size_t creature_tracker::size() const
@@ -168,7 +202,7 @@ bool creature_tracker::update_pos( const monster &critter, const tripoint_abs_ms
     } );
     if( iter != monsters_list.end() ) {
         monsters_by_location.erase( old_pos );
-        monsters_by_location[new_pos] = *iter;
+        cache_location( new_pos, *iter );
         return true;
     } else {
         // We're changing the x/y/z coordinates of a zombie that hasn't been added
@@ -220,6 +254,8 @@ void creature_tracker::clear()
 {
     monsters_list.clear();
     monsters_by_location.clear();
+    location_filter_.reset();
+    location_filter_updates_ = 0;
     removed_this_turn_.clear();
     creatures_by_zone_and_faction_.clear();
     invalidate_reachability_cache();
@@ -229,8 +265,9 @@ void creature_tracker::rebuild_cache()
 {
     monsters_by_location.clear();
     for( const shared_ptr_fast<monster> &mon_ptr : monsters_list ) {
-        monsters_by_location[mon_ptr->pos_abs()] = mon_ptr;
+        cache_location( mon_ptr->pos_abs(), mon_ptr );
     }
+    rebuild_location_filter();
 }
 
 bool creature_tracker::is_present( const Creature *creature ) const
@@ -291,10 +328,10 @@ void creature_tracker::swap_positions( monster &first, monster &second )
 
     // If the pointers have been taken out of the list, put them back in.
     if( first_ptr ) {
-        monsters_by_location[first.pos_abs()] = first_ptr;
+        cache_location( first.pos_abs(), first_ptr );
     }
     if( second_ptr ) {
-        monsters_by_location[second.pos_abs()] = second_ptr;
+        cache_location( second.pos_abs(), second_ptr );
     }
 }
 
