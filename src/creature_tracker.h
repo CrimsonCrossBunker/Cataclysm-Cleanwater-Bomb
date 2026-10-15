@@ -209,6 +209,7 @@ class creature_tracker
         // Preserve the offsets of the authoritative location and zone caches.
         std::unique_ptr<ai_reachability::frame> reachability_preparation_; // NOLINT(cata-serialize)
         double reachability_flood_cost_ms_ = 0.0; // NOLINT(cata-serialize)
+        double reachability_bitmap_cost_ms_ = 0.0; // NOLINT(cata-serialize)
 
         friend game;
 };

@@ -264,6 +264,7 @@ void creature_tracker::clear()
     location_filter_updates_ = 0;
     removed_this_turn_.clear();
     reachability_flood_cost_ms_ = 0.0;
+    reachability_bitmap_cost_ms_ = 0.0;
     reachability_preparation_.reset();
     creatures_by_zone_and_faction_.clear();
     invalidate_reachability_cache();
@@ -449,7 +450,8 @@ const ai_reachability::output *creature_tracker::prepare_reachability_geometry()
             return ready;
         }
     }
-    if( !ai_reachability::should_prepare( monsters_list.size(), reachability_flood_cost_ms_, true ) ) {
+    if( !ai_reachability::should_prepare( monsters_list.size(),
+                                          std::max( reachability_flood_cost_ms_, reachability_bitmap_cost_ms_ ), true ) ) {
         return nullptr;
     }
     try {
@@ -483,6 +485,20 @@ void creature_tracker::rebuild_passability_bitmap()
 {
     CATA_PROFILE_SCOPE_NAMED( "ai.reachability.passability" );
     map &here = get_map();
+    // Preserve the original dirty-cache publication point. Geometry-only stamps
+    // do not track fields or vehicles: a horizontal result must always come
+    // from a fresh capture in this owner interval, never a cached ready frame.
+    invalidate_reachability_preparation();
+    if( const auto *prepared = prepare_reachability_geometry() ) {
+        const auto *values = reachability_preparation_->captured();
+        if( values && ai_reachability::geometry_matches( here, *values ) ) {
+            CATA_PROFILE_SCOPE_NAMED( "ai.reachability.publish_bitmap" );
+            passability_bitmap_ = prepared->passable;
+            return;
+        }
+        invalidate_reachability_preparation();
+    }
+    const auto start = std::chrono::steady_clock::now();
     for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; z++ ) {
         const level_cache &cache = here.get_cache_ref( z );
         const auto &transparent_wo_fields = cache.transparent_cache_wo_fields;
@@ -495,6 +511,11 @@ void creature_tracker::rebuild_passability_bitmap()
             }
         }
     }
+    // This is a measured serial alternative, not the parallel wait cost. Keep
+    // it until a later serial rebuild or world reset; tiny individual floods
+    // must not hide the cost of rebuilding the whole passability bitmap.
+    reachability_bitmap_cost_ms_ = std::chrono::duration<double, std::milli>(
+                                       std::chrono::steady_clock::now() - start ).count();
 }
 
 /** This is lazily evaluated on demand. Each creature in a zone is visited

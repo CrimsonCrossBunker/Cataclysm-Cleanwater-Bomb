@@ -24,6 +24,7 @@ void prepare_columns( const snapshot &values, output &result, int begin_x, int e
 {
     for( int z = 0; z < OVERMAP_LAYERS; ++z ) {
         for( int x = begin_x; x < end_x; ++x ) {
+            result.passable[z][x] = values.transparent[z][x] | values.opaque_passable[z][x];
             auto &up = result.up[z][x];
             auto &down = result.down[z][x];
             up.reset();

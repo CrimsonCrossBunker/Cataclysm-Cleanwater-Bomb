@@ -28,6 +28,7 @@ bool capture_geometry( const map &here, snapshot &values )
     if( here.getmapsize() != MAPSIZE ) {
         return false;
     }
+    values.opaque_passable = {};
     values.terrain.resize( ter_t::count() );
     for( std::size_t i = 0; i < values.terrain.size(); ++i ) {
         const ter_id id( static_cast<int>( i ) );
@@ -63,6 +64,21 @@ bool capture_geometry( const map &here, snapshot &values )
                         for( int y = 0; y < SEEY; ++y ) {
                             const point_sm_ms p{ x, y };
                             block.cells[x * SEEY + y] = { sm->get_ter( p ).to_i(), sm->get_furn( p ).to_i() };
+                        }
+                    }
+                }
+                // Resolve fields and vehicle parts on the owner. A zero terrain
+                // cost is an unconditional rejection in move_cost_internal, so
+                // uniform rock/wall blocks need no per-cell world queries.
+                // All remaining opaque cells use the complete original rule.
+                if( block.uniform && !( values.terrain.at( block.cells[0].terrain ) & movable ) ) {
+                    continue;
+                }
+                for( int x = sx * SEEX; x < ( sx + 1 ) * SEEX; ++x ) {
+                    for( int y = sy * SEEY; y < ( sy + 1 ) * SEEY; ++y ) {
+                        if( !values.transparent[layer][x][y] &&
+                            ( values.terrain.at( block.at( x % SEEX, y % SEEY ).terrain ) & movable ) ) {
+                            values.opaque_passable[layer][x][y] = here.passable( tripoint_bub_ms{ x, y, z } );
                         }
                     }
                 }

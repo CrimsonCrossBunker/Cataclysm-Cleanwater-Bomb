@@ -77,6 +77,11 @@ struct maptile_soa {
 
 class submap
 {
+    private:
+        // Keep the hot tile storage and its uniform fallback in the same cache line.
+        std::unique_ptr<maptile_soa> m;
+        ter_id uniform_ter = t_null;
+
     public:
         submap() = default;
         submap( submap && ) noexcept( map_is_noexcept );
@@ -404,13 +409,11 @@ class submap
         // rules from leaking through the water surface.
         std::map<point_sm_ms, int> finite_liquids;
         std::map<point_sm_ms, computer> computers;
-        std::unique_ptr<maptile_soa> m;
-        ter_id uniform_ter = t_null;
         int temperature_mod = 0; // delta in F
         // Tracks original terrain for tiles transformed by phase logic
         std::map<point_sm_ms, ter_id> original_terrain;
 
-        // Keep runtime cache metadata after existing terrain storage fields.
+        // Runtime cache metadata is separate from serialized terrain state.
         geometry_version geometry_version_; // NOLINT(cata-serialize)
 
     public:

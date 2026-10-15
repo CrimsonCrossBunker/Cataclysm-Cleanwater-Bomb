@@ -19,7 +19,7 @@ std::unique_ptr<ai_reachability::snapshot> geometry_fixture()
                         ai_reachability::present | ai_reachability::vertical
                       };
     values->furniture_nonblocking = { 1, 0 };
-    std::mt19937 random( 20261015 );
+    std::mt19937 random( 20261015 ); // NOLINT(cata-determinism)
     for( auto &block : values->blocks ) {
         block.uniform = random() % 3 == 0;
         for( auto &cell : block.cells ) {
@@ -33,6 +33,13 @@ std::unique_ptr<ai_reachability::snapshot> geometry_fixture()
             }
         }
     }
+    for( auto &layer : values->opaque_passable ) {
+        for( auto &column : layer ) {
+            for( int y = 0; y < MAPSIZE_Y; ++y ) {
+                column[y] = random() % 5 == 0;
+            }
+        }
+    }
     return values;
 }
 std::unique_ptr<ai_reachability::output> independent_predicate(
@@ -42,6 +49,8 @@ std::unique_ptr<ai_reachability::output> independent_predicate(
     for( int z = 0; z < OVERMAP_LAYERS; ++z ) {
         for( int x = 0; x < MAPSIZE_X; ++x ) {
             for( int y = 0; y < MAPSIZE_Y; ++y ) {
+                result->passable[z][x][y] = values.transparent[z][x][y] ||
+                                            values.opaque_passable[z][x][y];
                 // The legacy down predicate takes terrain from above, furniture
                 // and transparency from the destination. Preserve that asymmetry.
                 for( int direction : {
@@ -82,6 +91,7 @@ TEST_CASE( "ai_reachability_geometry_retains_vertical_predicate_and_partition_ed
     const cata_default_random_engine rng_before = rng_get_engine();
     REQUIRE( frame.prepare( request ) );
     REQUIRE( frame.result() != nullptr );
+    CHECK( frame.result()->passable == expected->passable );
     CHECK( frame.result()->up == expected->up );
     CHECK( frame.result()->down == expected->down );
     CHECK( frame.used_workers() == ( workers > 0 ) );
@@ -143,6 +153,7 @@ TEST_CASE( "ai_reachability_failed_task_drains_and_recovers_without_partial_resu
     frame.capture() = *geometry_fixture();
     const auto expected = independent_predicate( frame.capture() );
     REQUIRE( frame.prepare( retry ) );
+    CHECK( frame.result()->passable == expected->passable );
     CHECK( frame.result()->up == expected->up );
 }
 

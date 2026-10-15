@@ -3,6 +3,9 @@
 #include "ai_reachability_owner.h"
 #include "avatar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
+#include "field.h"
+#include "field_type.h"
 #include "creature_tracker.h"
 #include "flexbuffer_json.h"
 #include "json_loader.h"
@@ -18,6 +21,8 @@
 #include "rng.h"
 #include "submap.h"
 #include "type_id.h"
+#include "units.h"
+#include "vehicle.h"
 
 namespace
 {
@@ -28,6 +33,8 @@ std::unique_ptr<ai_reachability::output> original_map_predicate( const map &here
         for( int x = 0; x < MAPSIZE_X; ++x ) {
             for( int y = 0; y < MAPSIZE_Y; ++y ) {
                 const tripoint_bub_ms loc{ x, y, z };
+                result->passable[z + OVERMAP_DEPTH][x][y] =
+                    here.is_transparent_wo_fields( loc ) || here.passable( loc );
                 const auto passable_down = [&]( const auto & tile, const ter_t & ter ) {
                     return ( ( ter.movecost != 0 && tile.get_furn_t().movecost >= 0 ) ||
                              here.is_transparent_wo_fields( loc ) ) &&
@@ -86,6 +93,7 @@ TEST_CASE( "ai_reachability_captured_geometry_matches_actual_map_and_owns_its_in
     CHECK_FALSE( ai_reachability::geometry_matches( here, *frame.captured() ) );
     REQUIRE( frame.used_workers() );
     REQUIRE( frame.result() != nullptr );
+    CHECK( frame.result()->passable == expected->passable );
     CHECK( frame.result()->up == expected->up );
     CHECK( frame.result()->down == expected->down );
     CHECK( rng_get_engine() == rng_before );
@@ -269,7 +277,72 @@ TEST_CASE( "ai_reachability_geometry_freshness_observes_direct_bulk_and_storage_
     REQUIRE( frame.prepare( request ) );
     const auto expected = original_map_predicate( here );
     REQUIRE( frame.result() != nullptr );
+    CHECK( frame.result()->passable == expected->passable );
     CHECK( frame.result()->up == expected->up );
     CHECK( frame.result()->down == expected->down );
     CHECK( rng_get_engine() == rng_before );
+}
+
+TEST_CASE( "ai_reachability_passability_captures_full_vehicle_and_field_rules",
+           "[monster][ai_reachability][owner]" )
+{
+    clear_map_without_vision();
+    clear_avatar();
+    map &here = get_map();
+    get_avatar().setpos( here, { 115, 115, 0 } );
+    const tripoint_bub_ms door_pos{ 60, 60, 0 };
+    const tripoint_bub_ms field_pos{ 50, 50, 0 };
+    here.ter_set( door_pos, ter_id( "t_floor" ) );
+    here.ter_set( field_pos, ter_id( "t_floor" ) );
+    vehicle *veh = here.add_vehicle( vproto_id( "none" ), door_pos, 0_degrees, 0,
+                                     veh_spawn_status::UNDAMAGED );
+    REQUIRE( veh != nullptr );
+    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
+    const int door = veh->install_part( here, point_rel_ms::zero, vpart_id( "door" ) );
+    REQUIRE( door >= 0 );
+    veh->refresh();
+    here.add_vehicle_to_cache( veh );
+    const field_type_id web( "fd_web" );
+    REQUIRE( here.add_field( field_pos, web, 1 ) );
+    field_entry *entry = here.field_at( field_pos ).find_field( web );
+    REQUIRE( entry != nullptr );
+    int &field_cost = const_cast<field_intensity_level &>( entry->get_intensity_level() ).move_cost;
+    restore_on_out_of_scope restore_cost( field_cost );
+    ai_reachability::frame frame( 4 );
+    const auto verify_fresh = [&]() {
+        // Use the actual cached transparency that the original bitmap reads,
+        // including opaque but otherwise movable floor cells.
+        auto &cache = const_cast<level_cache &>( here.get_cache_ref( 0 ) );
+        cache.transparent_cache_wo_fields[door_pos.x()].reset( door_pos.y() );
+        cache.transparent_cache_wo_fields[field_pos.x()].reset( field_pos.y() );
+        auto request = frame.try_acquire();
+        auto &values = frame.capture();
+        const auto before = rng_get_engine();
+        REQUIRE( ai_reachability::capture_geometry( here, values ) );
+        const auto expected = original_map_predicate( here );
+        REQUIRE( frame.prepare( request ) );
+        REQUIRE( frame.result() != nullptr );
+        CHECK( frame.result()->passable == expected->passable );
+        CHECK( frame.result()->up == expected->up );
+        CHECK( frame.result()->down == expected->down );
+        CHECK( rng_get_engine() == before );
+    };
+    veh->close( here, door );
+    field_cost = -1;
+    REQUIRE_FALSE( here.passable( door_pos ) );
+    REQUIRE_FALSE( here.passable( field_pos ) );
+    verify_fresh();
+    // Fields and vehicle doors can change without terrain/furniture versions.
+    // Every horizontal publication must recapture these complete decisions.
+    veh->open( here, door );
+    field_cost = 2;
+    REQUIRE( here.passable( door_pos ) );
+    REQUIRE( here.passable( field_pos ) );
+    verify_fresh();
+    REQUIRE( here.furn_set( field_pos, furn_id( "f_bookcase" ), false, false, true ) );
+    REQUIRE_FALSE( here.passable( field_pos ) );
+    verify_fresh();
+    here.ter_set( door_pos, ter_id( "t_wall" ) );
+    REQUIRE_FALSE( here.passable( door_pos ) );
+    verify_fresh();
 }

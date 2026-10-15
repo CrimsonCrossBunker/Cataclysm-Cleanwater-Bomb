@@ -39,11 +39,16 @@ struct block {
 struct snapshot {
     std::array<block, OVERMAP_LAYERS * MAPSIZE * MAPSIZE> blocks;
     grid transparent;
+    // Owner-resolved complete map::passable for opaque, potentially movable cells.
+    grid opaque_passable;
     std::vector<unsigned char> terrain;
     std::vector<unsigned char> furniture_nonblocking;
     const cell &at( int z, int x, int y ) const;
 };
 struct output {
+    // Publish only in the fresh capture interval of the original bitmap rebuild.
+    // Vehicles and fields may change later without a geometry stamp change.
+    grid passable;
     grid up;
     grid down;
 };
