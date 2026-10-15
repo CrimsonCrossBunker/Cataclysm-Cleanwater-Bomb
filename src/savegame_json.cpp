@@ -3636,6 +3636,12 @@ void item::io( Archive &archive )
     has_item_vars_ = !item_vars.empty();
 
     current_phase = static_cast<phase_id>( cur_phase );
+    // Liquids that no longer track temperature cannot thaw themselves after loading.
+    // Restore their declared phase even if an older save recorded them as frozen.
+    if( !has_temperature() && type->phase == phase_id::LIQUID ) {
+        unset_flag( flag_FROZEN );
+        current_phase = type->phase;
+    }
     // override phase if frozen, needed for legacy save
     if( has_own_flag( flag_FROZEN ) && current_phase == phase_id::LIQUID ) {
         current_phase = phase_id::SOLID;
