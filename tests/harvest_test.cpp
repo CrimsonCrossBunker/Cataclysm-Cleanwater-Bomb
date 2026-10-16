@@ -1,8 +1,10 @@
+#include <initializer_list>
 #include <string>
 #include <vector>
 
 #include "activity_actor_definitions.h"
 #include "butchery.h"
+#include "calendar.h"
 #include "cata_catch.h"
 #include "character.h"
 #include "character_attire.h"
