@@ -14,9 +14,11 @@
 #include "map_scale_constants.h"
 #include "map_selector.h"
 #include "monster.h"
+#include "options_helpers.h"
 #include "player_activity.h"
 #include "player_helpers.h"
 #include "point.h"
+#include "proficiency.h"
 #include "type_id.h"
 
 static const item_group_id
@@ -36,6 +38,7 @@ static const mtype_id mon_civilian_panic( "mon_civilian_panic" );
 static const mtype_id mon_deer( "mon_deer" );
 static const mtype_id mon_feral_human_pipe( "mon_feral_human_pipe" );
 static const mtype_id mon_human( "mon_human" );
+static const mtype_id mon_mutant_antler( "mon_mutant_antler" );
 static const mtype_id mon_mutant_experimental( "mon_mutant_experimental" );
 static const mtype_id mon_test_CBM( "mon_test_CBM" );
 static const mtype_id mon_test_bovine( "mon_test_bovine" );
@@ -128,34 +131,39 @@ TEST_CASE( "zombie_corpses_do_not_trigger_butchery_empathy", "[harvest][butchery
 
 TEST_CASE( "human_autopsy_proficiency_from_dissection", "[harvest][butchery]" )
 {
+    const override_option training_speed( "PROFICIENCY_TRAINING_SPEED", "1" );
     Character &u = get_player_character();
     map &here = get_map();
     const tripoint_abs_ms orig_pos = u.pos_abs();
 
-    const auto dissect_and_check = [&]( const mtype_id & monid, bool has_prerequisite ) {
+    const auto harvest_progress = [&]( const mtype_id & monid, bool has_prerequisite,
+    butcher_type action = butcher_type::DISSECT, bool almost_learned = false ) {
+        CAPTURE( monid, has_prerequisite, action, almost_learned );
         clear_character( u, true );
         u.set_skill_level( skill_firstaid, 10 );
-        u.wield( item( itype_scalpel ) );
+        u.set_skill_level( skill_survival, 10 );
+        u.set_focus( 100 );
+        item scalpel( itype_scalpel );
+        REQUIRE( u.wield( scalpel ) );
         if( has_prerequisite ) {
-            u.add_proficiency( proficiency_prof_physiology, true );
+            u.add_proficiency( proficiency_prof_physiology, false, true );
         }
+        if( almost_learned ) {
+            u.set_proficiency_practice( proficiency_prof_dissect_humans,
+                                        proficiency_prof_dissect_humans->time_to_learn() - 1_seconds );
+        }
+        REQUIRE_FALSE( u.has_proficiency( proficiency_prof_dissect_humans ) );
 
         here.i_clear( mon_pos );
-        monster target( monid, mon_pos );
-        target.die( &here, nullptr );
-        u.move_to( target.pos_abs() );
-        item_location loc;
-        for( item &candidate : here.i_at( mon_pos ) ) {
-            if( candidate.is_corpse() ) {
-                loc = item_location( map_cursor( u.pos_abs() ), &candidate );
-                break;
-            }
-        }
+        u.move_to( here.get_abs( mon_pos ) );
+        item_location loc = here.add_item_or_charges_ret_loc( mon_pos, item::make_corpse( monid ) );
         REQUIRE( loc );
-        butchery_data bd( loc, butcher_type::DISSECT );
+        butchery_data bd( loc, action );
         butchery_activity_actor act( bd );
         act.calculate_butchery_data( u, bd );
         destroy_the_carcass( bd, u );
+        CHECK_FALSE( loc );
+        CHECK( u.has_proficiency( proficiency_prof_dissect_humans ) == almost_learned );
 
         const float progress = u.get_proficiency_practice( proficiency_prof_dissect_humans );
         here.i_clear( mon_pos );
@@ -163,11 +171,18 @@ TEST_CASE( "human_autopsy_proficiency_from_dissection", "[harvest][butchery]" )
         return progress;
     };
 
-    CHECK( dissect_and_check( mon_human, true ) > 0.0f );
-    CHECK( dissect_and_check( mon_feral_human_pipe, true ) > 0.0f );
-    CHECK( dissect_and_check( mon_mutant_experimental, true ) > 0.0f );
-    CHECK( dissect_and_check( mon_zombie, true ) == 0.0f );
-    CHECK( dissect_and_check( mon_human, false ) == 0.0f );
+    for( const mtype_id &monid : {
+             mon_human, mon_civilian_panic, mon_feral_human_pipe,
+             mon_mutant_experimental, mon_mutant_antler
+         } ) {
+        CAPTURE( monid );
+        CHECK( harvest_progress( monid, true ) > 0.0f );
+        CHECK( harvest_progress( monid, true, butcher_type::DISSECT, true ) == 1.0f );
+    }
+    CHECK( harvest_progress( mon_zombie, true ) == 0.0f );
+    CHECK( harvest_progress( mon_deer, true ) == 0.0f );
+    CHECK( harvest_progress( mon_human, false ) == 0.0f );
+    CHECK( harvest_progress( mon_human, true, butcher_type::QUICK ) == 0.0f );
 }
 
 static void do_butchery_timing( int expected_turns, butcher_type butchery_type,
