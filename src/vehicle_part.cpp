@@ -1,5 +1,13 @@
 #include "vehicle.h" // IWYU pragma: associated
 
+#include "calendar.h"
+#include "character_id.h"
+#include "coordinates.h"
+#include "map.h"
+#include "point.h"
+#include "type_id.h"
+#include "vpart_position.h"
+
 #include <algorithm>
 #include <memory>
 #include <set>

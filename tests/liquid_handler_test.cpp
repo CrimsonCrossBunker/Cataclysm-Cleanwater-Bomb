@@ -1,5 +1,9 @@
 #include <utility>
 
+#include "enums.h"
+#include "flexbuffer_json.h"
+#include <initializer_list>
+
 #include "avatar.h"
 #include "cached_options.h"
 #include "cata_catch.h"
@@ -185,13 +189,13 @@ TEST_CASE( "saved_frozen_fuel_recovers_its_liquid_phase", "[liquid][save]" )
 TEST_CASE( "hydrocarbon_fuels_remain_liquid_in_cold_weather", "[liquid][temperature]" )
 {
     for( const std::pair<itype_id, int> &fuel : {
-             std::pair<itype_id, int>{ itype_id( "diesel" ), -20 },
-             { itype_id( "jp8" ), -47 }, { itype_id( "avgas" ), -58 },
-             { itype_id( "biodiesel" ), -10 }, { itype_id( "gasoline" ), -60 },
-             { itype_id( "lamp_oil" ), -47 }, { itype_id( "crude_lamp_oil" ), -40 },
-             { itype_id( "motor_oil" ), -30 }, { itype_id( "crude_oil" ), -40 },
-             { itype_id( "napalm" ), -40 }, { itype_id( "gelled_gasoline" ), -60 },
-             { itype_id( "flamethrower_fuel" ), -60 }
+    std::pair<itype_id, int> { itype_id( "diesel" ), -20 },
+    { itype_id( "jp8" ), -47 }, { itype_id( "avgas" ), -58 },
+    { itype_id( "biodiesel" ), -10 }, { itype_id( "gasoline" ), -60 },
+    { itype_id( "lamp_oil" ), -47 }, { itype_id( "crude_lamp_oil" ), -40 },
+    { itype_id( "motor_oil" ), -30 }, { itype_id( "crude_oil" ), -40 },
+    { itype_id( "napalm" ), -40 }, { itype_id( "gelled_gasoline" ), -60 },
+    { itype_id( "flamethrower_fuel" ), -60 }
          } ) {
         CAPTURE( fuel.first.str() );
         item liquid( fuel.first );
