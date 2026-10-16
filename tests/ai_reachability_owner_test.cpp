@@ -346,3 +346,47 @@ TEST_CASE( "ai_reachability_passability_captures_full_vehicle_and_field_rules",
     REQUIRE_FALSE( here.passable( door_pos ) );
     verify_fresh();
 }
+
+TEST_CASE( "ai_reachability_flood_view_scopes_transparency_validation_to_its_lifetime",
+           "[monster][ai_reachability][owner]" )
+{
+    clear_map_without_vision();
+    map &here = get_map();
+    const tripoint_bub_ms first{ 50, 50, 0 };
+    const tripoint_bub_ms second{ 75, 75, 0 };
+    here.ter_set( first, ter_id( "t_floor" ) );
+    here.ter_set( second, ter_id( "t_floor" ) );
+    here.invalidate_map_cache( 0 );
+    here.build_map_cache( 0 );
+    auto values = std::make_unique<ai_reachability::snapshot>();
+    REQUIRE( ai_reachability::capture_geometry( here, *values ) );
+    const auto rng_before = rng_get_engine();
+    {
+        // A view never crosses a world mutation or gameplay callback.
+        ai_reachability::geometry_view initial( here, *values );
+        CHECK( initial.matches_at( first, 1 ) );
+        CHECK( initial.matches_at( second, 1 ) );
+        CHECK_FALSE( initial.stale() );
+    }
+    auto &cache = const_cast<level_cache &>( here.get_cache_ref( 0 ) );
+    cache.transparent_cache_wo_fields[first.x()].flip( first.y() );
+    {
+        ai_reachability::geometry_view changed( here, *values );
+        // A changed bit elsewhere in the layer must not reject a matching cell.
+        CHECK( changed.matches_at( second, 1 ) );
+        CHECK_FALSE( changed.stale() );
+        CHECK_FALSE( changed.matches_at( first, 1 ) );
+        CHECK( changed.stale() );
+        CHECK( changed.matches_at( second, 1 ) );
+    }
+    cache.transparent_cache_wo_fields[first.x()].flip( first.y() );
+    {
+        ai_reachability::geometry_view restored( here, *values );
+        CHECK( restored.matches_at( first, 1 ) );
+        CHECK( restored.matches_at( second, 1 ) );
+        CHECK_FALSE( restored.stale() );
+        CHECK_FALSE( restored.matches_at( first, 0 ) );
+        CHECK_FALSE( restored.matches_at( tripoint_bub_ms{ -1, 50, 0 }, 1 ) );
+    }
+    CHECK( rng_get_engine() == rng_before );
+}

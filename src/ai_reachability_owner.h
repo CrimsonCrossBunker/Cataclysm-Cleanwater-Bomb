@@ -13,8 +13,9 @@ bool capture_geometry( const map &world, snapshot &values );
 bool geometry_matches( const map &world, const snapshot &values );
 
 // One internal, mutation-free flood owns this view. It must not escape that
-// call or invoke gameplay callbacks. Check only touched blocks, then validate
-// the queried transparency bit; changed cells use the original owner predicate.
+// call or invoke gameplay callbacks. Check touched blocks and validate each
+// unchanged transparency layer once. A mismatching layer keeps per-cell checks;
+// changed cells use the original owner predicate.
 class geometry_view
 {
     public:
@@ -29,6 +30,7 @@ class geometry_view
         const map &world_;
         const snapshot &values_;
         std::array<unsigned char, OVERMAP_LAYERS * MAPSIZE * MAPSIZE> checked_{};
+        std::array<unsigned char, OVERMAP_LAYERS> transparency_checked_{};
         bool catalogs_match_ = false;
         bool stale_ = false;
 };

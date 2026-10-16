@@ -98,13 +98,13 @@ void flood_fill_visit_10_connected( const tripoint_bub_ms &starting_point, Unary
               starting_point.y(), 1, starting_point.z(), 0 );
     add_span( spans_to_process[current_z + OVERMAP_DEPTH], starting_point.x(), starting_point.x(),
               starting_point.y() - 1, -1, starting_point.z(), 0 );
-    auto check = [&predicate, &visited]( const tripoint_bub_ms loc, int dir ) {
+    auto check = [&predicate, &visited]( const tripoint_bub_ms & loc, int dir ) {
         return loc.z() >= -OVERMAP_DEPTH && loc.z() <= OVERMAP_HEIGHT &&
                loc.y() >= 0 && loc.y() < MAPSIZE_Y &&
                loc.x() >= 0 && loc.x() < MAPSIZE_X &&
                !visited[loc.z() + OVERMAP_DEPTH][loc.y()][loc.x()] && predicate( loc, dir );
     };
-    auto check_vertical = [&predicate, &visited_vertically]( const tripoint_bub_ms loc,
+    auto check_vertical = [&predicate, &visited_vertically]( const tripoint_bub_ms & loc,
     int dir ) {
         return loc.z() >= -OVERMAP_DEPTH && loc.z() <= OVERMAP_HEIGHT &&
                loc.y() >= 0 && loc.y() < MAPSIZE_Y &&
