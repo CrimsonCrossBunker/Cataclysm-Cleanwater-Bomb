@@ -34,9 +34,15 @@ static const itype_id itype_scalpel( "scalpel" );
 static const mtype_id mon_chicken( "mon_chicken" );
 static const mtype_id mon_civilian_panic( "mon_civilian_panic" );
 static const mtype_id mon_deer( "mon_deer" );
+static const mtype_id mon_feral_human_pipe( "mon_feral_human_pipe" );
+static const mtype_id mon_human( "mon_human" );
+static const mtype_id mon_mutant_experimental( "mon_mutant_experimental" );
 static const mtype_id mon_test_CBM( "mon_test_CBM" );
 static const mtype_id mon_test_bovine( "mon_test_bovine" );
 static const mtype_id mon_zombie( "mon_zombie" );
+
+static const proficiency_id proficiency_prof_dissect_humans( "prof_dissect_humans" );
+static const proficiency_id proficiency_prof_physiology( "prof_physiology" );
 
 static const skill_id skill_firstaid( "firstaid" );
 static const skill_id skill_survival( "survival" );
@@ -118,6 +124,50 @@ TEST_CASE( "zombie_corpses_do_not_trigger_butchery_empathy", "[harvest][butchery
 
     // NPC corpses use the null monster id and remain human for butchery purposes.
     CHECK( character_has_butchery_empathy( u, mtype_id::NULL_ID() ) );
+}
+
+TEST_CASE( "human_autopsy_proficiency_from_dissection", "[harvest][butchery]" )
+{
+    Character &u = get_player_character();
+    map &here = get_map();
+    const tripoint_abs_ms orig_pos = u.pos_abs();
+
+    const auto dissect_and_check = [&]( const mtype_id & monid, bool has_prerequisite ) {
+        clear_character( u, true );
+        u.set_skill_level( skill_firstaid, 10 );
+        u.wield( item( itype_scalpel ) );
+        if( has_prerequisite ) {
+            u.add_proficiency( proficiency_prof_physiology, true );
+        }
+
+        here.i_clear( mon_pos );
+        monster target( monid, mon_pos );
+        target.die( &here, nullptr );
+        u.move_to( target.pos_abs() );
+        item_location loc;
+        for( item &candidate : here.i_at( mon_pos ) ) {
+            if( candidate.is_corpse() ) {
+                loc = item_location( map_cursor( u.pos_abs() ), &candidate );
+                break;
+            }
+        }
+        REQUIRE( loc );
+        butchery_data bd( loc, butcher_type::DISSECT );
+        butchery_activity_actor act( bd );
+        act.calculate_butchery_data( u, bd );
+        destroy_the_carcass( bd, u );
+
+        const float progress = u.get_proficiency_practice( proficiency_prof_dissect_humans );
+        here.i_clear( mon_pos );
+        u.move_to( orig_pos );
+        return progress;
+    };
+
+    CHECK( dissect_and_check( mon_human, true ) > 0.0f );
+    CHECK( dissect_and_check( mon_feral_human_pipe, true ) > 0.0f );
+    CHECK( dissect_and_check( mon_mutant_experimental, true ) > 0.0f );
+    CHECK( dissect_and_check( mon_zombie, true ) == 0.0f );
+    CHECK( dissect_and_check( mon_human, false ) == 0.0f );
 }
 
 static void do_butchery_timing( int expected_turns, butcher_type butchery_type,

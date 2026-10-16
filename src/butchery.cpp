@@ -70,6 +70,8 @@ static const harvest_drop_type_id harvest_drop_offal( "offal" );
 static const harvest_drop_type_id harvest_drop_skin( "skin" );
 
 static const itype_id itype_burnt_out_bionic( "burnt_out_bionic" );
+static const itype_id itype_human_flesh( "human_flesh" );
+static const itype_id itype_mutant_human_flesh( "mutant_human_flesh" );
 
 static const json_character_flag json_flag_INSENSITIVITY( "INSENSITIVITY" );
 static const json_character_flag json_flag_INSTANT_BLEED( "INSTANT_BLEED" );
@@ -90,6 +92,17 @@ static const skill_id skill_survival( "survival" );
 
 static const species_id species_HUMAN( "HUMAN" );
 static const species_id species_ZOMBIE( "ZOMBIE" );
+
+static bool is_human_autopsy_corpse( const mtype &corpse )
+{
+    for( const harvest_entry &entry : corpse.harvest->entries() ) {
+        if( entry.type == harvest_drop_flesh &&
+            ( entry.drop == itype_human_flesh.str() || entry.drop == itype_mutant_human_flesh.str() ) ) {
+            return true;
+        }
+    }
+    return false;
+}
 
 namespace io
 {
@@ -979,6 +992,10 @@ bool butchery_drops_harvest( butchery_data bt, Character &you )
     if( action == butcher_type::DISSECT ) {
         you.practice( skill_firstaid, std::max( 0, practice ), mt.size + std::min( tool_quality, 3 ) + 2 );
         mt.families.practice_dissect( you );
+        if( is_human_autopsy_corpse( mt ) ) {
+            you.practice_proficiency( proficiency_prof_dissect_humans, 15_minutes );
+            you.practice_proficiency( proficiency_prof_dissect_humans, 15_minutes );
+        }
     } else {
         you.practice( skill_survival, std::max( 0, practice ), std::max( mt.size - creature_size::medium,
                       0 ) + 4 );
