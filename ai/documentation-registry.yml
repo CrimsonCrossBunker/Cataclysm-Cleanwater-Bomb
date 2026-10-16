@@ -1,21 +1,10 @@
 schema_version: 1
 kind: documentation_registry
-source_commit: fc5dbcc76c2d950dcdc10be55551c1cbbeb13adf
+source_commit: 85433228b650d633177ebb9c9bd98325488f5f42
 scope: Tracked documentation and machine contracts from the Git index; untracked build caches are never
   traversed.
-entry_count: 242
+entry_count: 241
 entries:
-- id: repo.deepcode-plans-sim-render-decoupling-plan-md
-  path: .deepcode/plans/sim-render-decoupling-plan.md
-  category: historical_document
-  status: historical
-  authority: historical
-  source_of_truth: false
-  stable_document_id: null
-  ccb_docs_ids: []
-  generated: false
-  generated_by: null
-  include_in_ai_index: false
 - id: repo.github-agents-md
   path: .github/AGENTS.md
   category: agent_instruction

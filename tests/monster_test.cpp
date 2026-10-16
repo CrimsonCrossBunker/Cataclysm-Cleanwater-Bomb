@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <fstream>
 #include <functional>
+#include <list>
 #include <map>
 #include <memory>
 #include <optional>
@@ -51,6 +52,7 @@
 #include "pocket_type.h"
 #include "point.h"
 #include "rng.h"
+#include "ret_val.h"
 #include "sounds.h"
 #include "submap.h"
 #include "test_statistics.h"

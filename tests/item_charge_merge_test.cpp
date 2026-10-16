@@ -8,6 +8,7 @@
 #include "inventory.h"
 #include "item.h"
 #include "item_components.h"
+#include "pimpl.h"
 #include "player_helpers.h"
 #include "requirements.h"
 #include "type_id.h"
