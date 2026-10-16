@@ -1,0 +1,356 @@
+{
+  "date": "2026-10-17",
+  "status": "DELIVERY_BATCH_ACCEPTED;HISTORICAL_REGRESSION_CAUSE_UNRESOLVED;GOAL_ACTIVE",
+  "baseline_commit": "2a78ea9e091b2058a87ba64bef5b4d25dd5427b6",
+  "baseline_PR": 1011,
+  "responsible_human": "LYHGLYTX",
+  "change": {
+    "owner_query": "One noncopyable synchronous map_movement_query borrows a tile, lazily resolves terrain/furniture/vehicle once, and expires before any world mutation. Missing/out-of-bounds queries retain original map fallbacks. No cross-query or cross-turn cache.",
+    "field_work": "Avoid allocated impassable-field ID vectors; scan field blocking metadata once, retain original field-key lookup, block priority, terrain short circuit and immunity order.",
+    "geometry": "Expose the original pure sprite geometry arithmetic through existing CATA_FORCEINLINE. Original arithmetic body verified identical after whitespace normalization; preserve floating-point expression order and legacy Y-scale/tint behavior. Earlier zero/full-opaque arithmetic shortcuts rejected.",
+    "fixture": "A cloaked moving-driver sensing test now clears setup-loaded ambient monsters, asserts one source and one driver tile, and uses a minimal valid vehicle. Production target priority unchanged.",
+    "threading": "No additional production threads or default worker changes. Query reads live owner-owned state and must not be sent to workers. Existing owned reachability jobs remain opt-in at4 for the measurements; default AI workers remains0. Lua Platform v1 remains sole authoring boundary."
+  },
+  "actual_game_protocol": {
+    "runtime": "Independent SDL3/OpenGL graphical game, Undead People, fullscreen2880x1800, high view; actual latest startup segments and screenshots audited.",
+    "hardware": "AMD Ryzen7 5800H,8cores16threads; Linux/clang23 local acceptance only.",
+    "fixture": "Damon aircraft carrier, many monsters/items; fixed isolated userdir copy, debug no-damage, deterministic seed CCB-carrier-20261005.",
+    "fixture_manifest_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef",
+    "worker_settings": {
+      "AI": 4,
+      "VISION": 4,
+      "RENDER": 0,
+      "global_pool": 0,
+      "MULTITHREADING": false
+    },
+    "accepted_games": 132,
+    "controls": "24 games:carrier/field/room,4AB/BA pairs each,base62 versus candidate66.",
+    "dense": "108 games:36 groups of61/62/66,all6permutations repeated6times;32wait inputs,448route scopes/32primary turns each.",
+    "stats": "Paired two-sided Student95 intervals over36group differences. Durations are inclusive owner scope wall time; do not add overlapping zones. CPU30s is separately sampled process attachment, not isolated AI CPU.",
+    "rules": "Six primary candidate-vs-both-baseline95 upper<0; confirmed regression requires positive paired95 plus original3percent mean/5percenttail-or-CPU/128MiBHWM threshold. No absolute floors, waivers or timing-selected exclusions.",
+    "discarded_blocks": 0,
+    "raw": "Complete main-TID perf functions with0percent threshold and all captured stacks/unknowns retained; worker execution via all-thread Tracy. Lossless archives verified by decoded SHA/bytes."
+  },
+  "dense_results": {
+    "base62": {
+      "route.perturn": {
+        "baseline_mean": 1.5308562022569445,
+        "candidate_mean": 1.063501712673611,
+        "reduction_percent": 30.52896077987676,
+        "paired95": [
+          -0.47958883718551726,
+          -0.4551201419811495
+        ]
+      },
+      "monmove.mean": {
+        "baseline_mean": 9.618191894097222,
+        "candidate_mean": 9.068464210069445,
+        "reduction_percent": 5.715499233958421,
+        "paired95": [
+          -0.6300978282028419,
+          -0.46935753985271333
+        ]
+      },
+      "simulate_turn_suffix.mean": {
+        "baseline_mean": 18.29717938454861,
+        "candidate_mean": 17.710980075520833,
+        "reduction_percent": 3.203768715973798,
+        "paired95": [
+          -0.6948489316969881,
+          -0.47754968635856737
+        ]
+      },
+      "tiles.draw.mean": {
+        "baseline_mean": 25.332159651195838,
+        "candidate_mean": 25.752609397544866,
+        "reduction_percent": -1.6597469467202641,
+        "paired95": [
+          0.22204561090544536,
+          0.6188538817926101
+        ]
+      },
+      "draw.rebuilt.mean": {
+        "baseline_mean": 31.367067254340277,
+        "candidate_mean": 31.942154247395834,
+        "reduction_percent": -1.8334101444437145,
+        "paired95": [
+          0.3507697080256137,
+          0.799404278085497
+        ]
+      },
+      "draw.reused.mean": {
+        "baseline_mean": 22.90799480090981,
+        "candidate_mean": 23.265546544932313,
+        "reduction_percent": -1.5608164185906936,
+        "paired95": [
+          0.16497256596717322,
+          0.5501309220778332
+        ]
+      },
+      "CPU30s_ms": {
+        "baseline_mean": 9920.137777777778,
+        "candidate_mean": 9979.78,
+        "reduction_percent": -0.6012237285234923,
+        "paired95": [
+          11.83705462827428,
+          107.4473898161705
+        ]
+      },
+      "memory.VmHWM": {
+        "baseline_mean": 1632779.888888889,
+        "candidate_mean": 1636056.2222222222,
+        "reduction_percent": -0.20065982902097712,
+        "paired95": [
+          -96.73904524990212,
+          6649.405711916569
+        ]
+      }
+    },
+    "base61": {
+      "route.perturn": {
+        "baseline_mean": 1.4861610078125,
+        "candidate_mean": 1.063501712673611,
+        "reduction_percent": 28.439670595382317,
+        "paired95": [
+          -0.4356516381935334,
+          -0.4096669520842445
+        ]
+      },
+      "monmove.mean": {
+        "baseline_mean": 10.63396622048611,
+        "candidate_mean": 9.068464210069445,
+        "reduction_percent": 14.721713215533438,
+        "paired95": [
+          -1.6491779295968403,
+          -1.481826091236493
+        ]
+      },
+      "simulate_turn_suffix.mean": {
+        "baseline_mean": 19.394816787326388,
+        "candidate_mean": 17.710980075520833,
+        "reduction_percent": 8.681890271352621,
+        "paired95": [
+          -1.805199926658116,
+          -1.562473496952995
+        ]
+      },
+      "tiles.draw.mean": {
+        "baseline_mean": 25.7490334742488,
+        "candidate_mean": 25.752609397544866,
+        "reduction_percent": -0.013887602032292001,
+        "paired95": [
+          -0.22382717895857573,
+          0.23097902555070443
+        ]
+      },
+      "draw.rebuilt.mean": {
+        "baseline_mean": 31.8519882890625,
+        "candidate_mean": 31.942154247395834,
+        "reduction_percent": -0.2830779589489296,
+        "paired95": [
+          -0.17131725941689063,
+          0.35164917608355667
+        ]
+      },
+      "draw.reused.mean": {
+        "baseline_mean": 23.290564447899087,
+        "candidate_mean": 23.265546544932313,
+        "reduction_percent": 0.10741647340809513,
+        "paired95": [
+          -0.24118866966628805,
+          0.19115286373274315
+        ]
+      },
+      "CPU30s_ms": {
+        "baseline_mean": 10047.023333333333,
+        "candidate_mean": 9979.78,
+        "reduction_percent": 0.6692861268694061,
+        "paired95": [
+          -117.99982226689706,
+          -16.48684439976931
+        ]
+      },
+      "memory.VmHWM": {
+        "baseline_mean": 1636174.6666666667,
+        "candidate_mean": 1636056.2222222222,
+        "reduction_percent": 0.0072391075878086575,
+        "paired95": [
+          -3309.9666792607527,
+          3073.077790371864
+        ]
+      }
+    }
+  },
+  "interpretation": [
+    "All six primary gains passed. Compared with accepted PR1011, route -30.529percent, monmove -5.715percent and simulation suffix -3.204percent.",
+    "Adverse draw +1.660percent, reused draw +1.561percent, rebuilt draw +1.833percent and processCPU +0.601percent have positive intervals and remain reported. None hits original material threshold. No FPS or all-session CPU speedup claim.",
+    "Combined batch comparison does not isolate the individual speed contribution of query coalescing versus geometry inlining.",
+    "The known repeated map/field/vehicle lookups in will_move_to were removed and actual route slowdown is more than recovered in accepted66. Exact causal attribution of the previous2.71percent route regression remains unresolved;this goal is not marked complete."
+  ],
+  "behavior_and_safety": {
+    "native": {
+      "cases": 95,
+      "assertions": 201348,
+      "seconds": 26.48336005100282,
+      "seed": 20261016,
+      "order": "lex"
+    },
+    "ASan_UBSan_LSan": {
+      "cases": 33,
+      "assertions": 8916,
+      "seconds": 46.32669056003215,
+      "scope": "Actual modified monmove/pathfinding/geometry and test translation units instrumented first; common engine object coverage is partial."
+    },
+    "geometry_TSan": {
+      "result_comparisons": 65536,
+      "scope": "Actual pure geometry/cata_utility source closure,4owned jobs; producer destroyed before workers begin. Not whole-engine TSan."
+    },
+    "existing_worker_TSan": "Reuse unchanged pure9 source/toolchain/runtime evidence8cases341assertions and real allocation-failure/recovery proof; closure hashes checked.",
+    "actual_state": "All132complete ordered normalized player/monster/stat payloads and decoded map memory match across variants. Route-call counts are not by themselves proof of equal route vectors; native path rules and separate67fullvectors complement them.",
+    "replay_reload": "8actual cross-version replay/reload sessions passed full endpoint save/state/MM. Existing EOF one-turn endpoint convention documented separately; not a performance sample.",
+    "worker_audit": "FIFO pool does not promise one distinct thread per job. Corrected invariant:4jobs per batch, actual overlap, all4threads across game, no same-thread interval overlap, all jobs within owner wait/suffix. Original failed distinct-thread-per-batch audit retained. All36candidate games pass;3of684batches used3threads, minimum peak overlap3.",
+    "source_checks": "Affected astyle,git diff --check,agent metadata,generated JSON/EOC contract --check and native inventory passed.107frozen compiled inputs,36batch inputs,2ELFs checked. Reuse while source/build inputs unchanged.",
+    "limits": "No whole-engine race proof, live multiplayer, other platforms, GPU/FPS latency, old-save corpus or release acceptance claimed. No save/RNG/Lua contract changes.",
+    "commands": {
+      "native": [
+        "out/build/ccb-sdl3-profile/Release/ccb-sdl3-acceptance",
+        "[sprite_geometry]~[benchmark],[pathfinding]~[benchmark],[ai_reachability]~[benchmark],[reachability]~[benchmark],[goal_policy],[movement_plan],[target_selection],[planning_reaction],[destination_plan],[step_selection],[determinism],[submap]",
+        "--rng-seed",
+        "20261016",
+        "--order",
+        "lex",
+        "--warn",
+        "NoTests",
+        "--user-dir",
+        ".ccb-pr-evidence/native-combined/monster-ai66/native-user",
+        "--reporter",
+        "xml",
+        "--out",
+        ".ccb-pr-evidence/native-combined/monster-ai66/native.xml"
+      ],
+      "ASan_UBSan_LSan": [
+        "out/build/ccb-sdl3-profile/Release/ccb-path66-asan-ordered",
+        "[pathfinding]~[benchmark],[movement_plan]~[benchmark],[sprite_geometry]~[benchmark]",
+        "--rng-seed",
+        "20261016",
+        "--order",
+        "lex",
+        "--warn",
+        "NoTests",
+        "--user-dir",
+        ".ccb-pr-evidence/native-combined/monster-ai66/asan-user",
+        "--reporter",
+        "xml",
+        "--out",
+        ".ccb-pr-evidence/native-combined/monster-ai66/asan.xml"
+      ],
+      "source_checks": [
+        [
+          "git",
+          "diff",
+          "--check",
+          "2a78ea9e091b2058a87ba64bef5b4d25dd5427b6",
+          "--",
+          ".",
+          ":(exclude)obj-lua",
+          ":(exclude)obj-lua/**"
+        ],
+        [
+          "python3",
+          "tools/agent/check_project_metadata.py"
+        ],
+        [
+          "python3",
+          "tools/json_api/generate_contracts.py",
+          "--check"
+        ],
+        [
+          "python3",
+          "tools/lua_api/check_platform_native_inventory.py"
+        ]
+      ]
+    }
+  },
+  "root_investigation": {
+    "prior_slowdown": "Previous route +2.710509percent independently replicated in66 as+3.007426percent with paired95[+0.0321596055,+0.0572307834]ms/turn. All108dense runs have same32turns/448routes.",
+    "hotspot": "Full route subtree is dominated by monster avoidance/will_move_to/map facts; generic frontier replacement was not justified by the captured hotspot.",
+    "source_and_layout": "Old/new route and27related hot bodies normalized equal; previous reachability change relocated the chain by160text bytes. Whole-chain restore uses uncalled private160byte pad with identical normalized bodies/literal bytes. No padding enters production.",
+    "fixed_layout48": {
+      "games": 48,
+      "pairs": 24,
+      "route_change_percent": -1.8169915092116184,
+      "paired95_ms_perturn": [
+        -0.05649548978913317,
+        0.0009470366641331288
+      ],
+      "conclusion": "Inconclusive. Do not claim code alignment/cache cause proved. Earlier partial8also inconclusive; no pooling or expansion."
+    },
+    "mechanism67": {
+      "games": 24,
+      "pairs": 12,
+      "pilot_games_excluded": 4,
+      "same_one_ELF_and_448fullpaths_per_game": true,
+      "same_ordered_state_and_map_memory": true,
+      "CPU_ns_per_instruction_paired_percent": 1.4297052972980477,
+      "CPU_ns_per_instruction_paired95_percent": [
+        -2.829403585035326,
+        5.6888141796314216
+      ],
+      "instruction_count_paired95_percent": [
+        -0.011708684055359407,
+        0.015297200318240665
+      ],
+      "secondary_Holm_5_significant": 0,
+      "frequency": "Not qualified:matched eligible instruction weight71.2-89.7percent, below predeclared90percent in both modes; no frequency inference.",
+      "conclusion": "Inconclusive;does not support the hypothesis that transparency-layer reuse causes route context slowdown. Do not declare equivalence or a causal cache/alignment/frequency root. No extra samples or pooling.",
+      "observer_repair": "First pilot startup overflow invalid; all failed data preserved. Shared mapped control word enables only fixed input window, avoiding route filesystem calls. Actual immediate67rows plus gated1row ASan/UBSan/LSan checks passed."
+    }
+  },
+  "failed_or_rejected_work": [
+    "63fixed96:route improved but monmove/suffix not proved and emptycarrier regression gate failed; excluded.",
+    "64fixed132:primary AI gains passed but reused draw+3.268percent exceeded original3percent gate; excluded.",
+    "65pilot8:zero/fullopaque arithmetic shortcuts caused reused draw+5.192percent; rejected without formal collection.",
+    "66original worker audit rejected valid FIFO scheduling; original failure preserved, source-grounded corrected audit separate. No performance gate or sample selection changed.",
+    "67first pilot invalid: startup calls filled observer buffer before32inputs. All raw data/binary retained; none enters hardware inference. Subsequent build invocation/path/proof-name failures preserved; source unchanged."
+  ],
+  "source_sha256": {
+    "src/map.h": "da5766b48df690d1191e9d1ef2c69e7c9c4c1f50d955498db29741b3e43d7621",
+    "src/map_movement_query.h": "b9c73d6ea72d00208ad603ffcc4fb5eb8580ddb616bb629961c1be62f84b0f79",
+    "src/monmove.cpp": "4b4e0e2b43fb42d2455003206ddeb420d7d7bd6a7aa8852a130c66fdcb6454b4",
+    "src/sprite_geometry.cpp": "c06e0f1a16f0572b01a9b2100d01bd71adf550e2733e6778215dd8bbcdac5ff5",
+    "src/sprite_geometry.h": "17ba11e7bc1373cb9ce175f3e300ad2b9d97f1f8a73bfcb8c8a017e16473e90d",
+    "tests/monster_movement_plan_test.cpp": "9b551a97421b5ef391e58fb256d58c1a031140d073d6b899f38104abc20a7517",
+    "tests/monster_sensing_plan_test.cpp": "a341c047bd91b00d7c8acb466938591d0f13a63628a38c6c1a143cb9f58fc87e",
+    "tests/sprite_geometry_test.cpp": "7da17366828df4253a4b2c8a6048cbd2c070caa7398586bc0ccdfb4d881b26f5"
+  },
+  "local_evidence": {
+    "delivery": ".ccb-pr-evidence/native-combined/monster-ai66",
+    "root_mechanism": ".ccb-pr-evidence/native-combined/monster-ai67",
+    "hashes": {
+      "monster-ai66/formal-protocol.json": "f4cca3d3fffa05ccdff3cedd8931c27d1ffef8da3226f134fd178df4ce2224b7",
+      "monster-ai66/formal-progress.json": "44849f9e20657bbc7b28c0de412601cb5cf8a7f918d22ca2472ed1fccc0f03af",
+      "monster-ai66/postformal-repair-progress.json": "5c95913280dc43ee8a24b94d9c45cd29f93a9b85a0a07702a8cadf0d515d1621",
+      "monster-ai66/route-work-identity.json": "5b0682a84fc5afd8b7cb456551d7917f54ee87c047d02dd117cadec51fe02edb",
+      "monster-ai66/full-layout-progress.json": "85c764fac0914ffc69200dd87798962918489556fcc4fbeda41a0007c282370c",
+      "monster-ai66/full-layout-literal-identity.json": "8b6828994622f9a1bda0c6d390368bddfd9eafafd669e176a9c466d469da8f64",
+      "monster-ai66/geometry-algorithm-identity.json": "3a29386235e4e41db2e27d712b090e587b550a50401b76c24a01435c50b0597f",
+      "monster-ai67/mechanism-protocol.json": "71adb0d000add619852dafde24a1f1deaf3290503acca770338b2432a35ff7bc",
+      "monster-ai67/mechanism-result.json": "5d21d228f56d3073d95ee03be050b2f69c71dae92dcc9b93c5569ff1d7dfac2c",
+      "monster-ai67/mechanism-formal-progress.json": "4f35894b07678e890a5d7af6c226453cbaf92fa2eb9ea0fcdae5dbd57569d1a4",
+      "monster-ai67/counter-safety-window-progress.json": "61d5dc25489ba02741fec2b62d120c0bde4a554f9b0f3e16cf5821fc11f5e1b4",
+      "monster-ai67/closure-audit.json": "470073dce6d7502d13dca26ea198969fa14aa34c5defa8002295728c064d7e09"
+    }
+  },
+  "documentation_impact": "Internal measured performance record only; no user-facing behavior/config/API changes. No CCB-Docs PR, documentation IDs or generated references changed.",
+  "runtime_dependencies": [
+    [
+      "3.4.18",
+      "3.4.18"
+    ]
+  ],
+  "restored_build_cache": {
+    "path": "out/build/ccb-sdl3-profile/src/Release/cataclysm-tiles",
+    "sha256": "13006d6b65e1e89005993255b3229006403ed9fb0a2bdd693d95e310f2b160c8",
+    "decoded_archive_bytes_verified": true
+  }
+}
