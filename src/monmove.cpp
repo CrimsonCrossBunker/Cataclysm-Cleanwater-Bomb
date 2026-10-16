@@ -35,6 +35,7 @@
 #include "line.h"
 #include "lua_platform_hooks.h"
 #include "map.h"
+#include "map_movement_query.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
 #include "mapdata.h"
@@ -168,46 +169,56 @@ static bool z_is_valid( int z )
 
 bool monster::will_move_to( map *here, const tripoint_bub_ms &p ) const
 {
-    const std::vector<field_type_id> impassable_field_ids = here->get_impassable_field_type_ids_at( p );
-
-    for( const std::pair<const int_id<field_type>, field_entry> &pair : here->field_at( p ) ) {
-        const field_type_id &fid = pair.first;
-        const field_type &ft = fid.obj();
-        if( ft.block_mtypes.count( type->id ) > 0 ) {
+    const map_movement_query tile( *here, p );
+    const field &fields = tile.fields();
+    bool has_impassable_fields = false;
+    for( const auto &pair : fields ) {
+        has_impassable_fields |= pair.second.get_intensity_level().move_cost < 0;
+        if( pair.first.obj().block_mtypes.count( type->id ) > 0 ) {
             return false;
         }
     }
+    // Keep immunity checks after terrain passability, in the original field
+    // order. Most tiles need neither a second scan nor an allocated ID vector.
+    const auto immune_to_impassable_fields = [&]() {
+        for( const auto &pair : fields ) {
+            if( pair.second.get_intensity_level().move_cost < 0 &&
+                !is_immune_field( pair.first ) ) {
+                return false;
+            }
+        }
+        return true;
+    };
 
-    if( here->has_flag( ter_furn_flag::TFLAG_MON_AVOID_STRICT, p ) ) {
+    if( tile.has_flag( ter_furn_flag::TFLAG_MON_AVOID_STRICT ) ) {
         return false;
     }
 
-    if( !here->passable_skip_fields( p ) || here->has_flag( ter_furn_flag::TFLAG_CLIMBABLE, p ) ||
-        ( !impassable_field_ids.empty() &&
-          !is_immune_fields( impassable_field_ids ) ) ) {
+    if( !tile.passable_skip_fields() || tile.has_flag( ter_furn_flag::TFLAG_CLIMBABLE ) ||
+        ( has_impassable_fields && !immune_to_impassable_fields() ) ) {
         if( digging() ) {
-            if( !here->has_flag( ter_furn_flag::TFLAG_BURROWABLE, p ) ) {
+            if( !tile.has_flag( ter_furn_flag::TFLAG_BURROWABLE ) ) {
                 return false;
             }
-        } else if( !( can_climb() && here->has_flag( ter_furn_flag::TFLAG_CLIMBABLE, p ) ) ) {
+        } else if( !( can_climb() && tile.has_flag( ter_furn_flag::TFLAG_CLIMBABLE ) ) ) {
             return false;
         }
     }
 
-    if( !here->has_vehicle_floor( p ) ) {
-        if( !can_submerge() && !flies() && here->has_flag( ter_furn_flag::TFLAG_DEEP_WATER, p ) ) {
+    if( !tile.has_vehicle_floor() ) {
+        if( !can_submerge() && !flies() && tile.has_flag( ter_furn_flag::TFLAG_DEEP_WATER ) ) {
             return false;
         }
     }
 
     // digging monster can ONLY move underground?
-    if( digs() && !here->has_flag( ter_furn_flag::TFLAG_DIGGABLE, p ) &&
-        !here->has_flag( ter_furn_flag::TFLAG_BURROWABLE, p ) ) {
+    if( digs() && !tile.has_flag( ter_furn_flag::TFLAG_DIGGABLE ) &&
+        !tile.has_flag( ter_furn_flag::TFLAG_BURROWABLE ) ) {
         return false;
     }
     // one dimensional creatures can ONLY move in their home dimension
     if( has_flag( mon_flag_ONE_DIMENSIONAL_X ) && (
-            !here->has_flag( ter_furn_flag::TFLAG_ONE_DIMENSIONAL_X, p ) ||
+            !tile.has_flag( ter_furn_flag::TFLAG_ONE_DIMENSIONAL_X ) ||
             // In the off chance a multidimensional vehicle enters a one dimensional tile
             ( here->veh_at( p ) && !here->veh_at( pos_bub() ) )
         ) ) {
@@ -215,14 +226,14 @@ bool monster::will_move_to( map *here, const tripoint_bub_ms &p ) const
     }
 
     if( has_flag( mon_flag_ONE_DIMENSIONAL_Y ) && (
-            !here->has_flag( ter_furn_flag::TFLAG_ONE_DIMENSIONAL_Y, p ) ||
+            !tile.has_flag( ter_furn_flag::TFLAG_ONE_DIMENSIONAL_Y ) ||
             // In the off chance a multidimensional vehicle enters a one dimensional tile
             ( here->veh_at( p ) && !here->veh_at( pos_bub() ) )
         ) ) {
         return false;
     }
     if( has_flag( mon_flag_ONE_DIMENSIONAL_Z ) && (
-            !here->has_flag( ter_furn_flag::TFLAG_ONE_DIMENSIONAL_Z, p ) ||
+            !tile.has_flag( ter_furn_flag::TFLAG_ONE_DIMENSIONAL_Z ) ||
             // In the off chance a multidimensional vehicle enters a one dimensional tile
             ( here->veh_at( p ) && !here->veh_at( pos_bub() ) )
         ) ) {
@@ -230,8 +241,8 @@ bool monster::will_move_to( map *here, const tripoint_bub_ms &p ) const
     }
 
     if( has_flag( mon_flag_AQUATIC ) && (
-            !( here->has_flag( ter_furn_flag::TFLAG_SWIMMABLE, p ) ||
-               here->has_flag( ter_furn_flag::TFLAG_SWIM_UNDER, p ) ) ||
+            !( tile.has_flag( ter_furn_flag::TFLAG_SWIMMABLE ) ||
+               tile.has_flag( ter_furn_flag::TFLAG_SWIM_UNDER ) ) ||
             // AQUATIC (confined to water) monster avoid vehicles, unless they are already underneath one
             ( here->veh_at( p ) && !here->veh_at( pos_bub() ) )
         ) ) {
@@ -243,7 +254,7 @@ bool monster::will_move_to( map *here, const tripoint_bub_ms &p ) const
     }
 
     if( get_size() > creature_size::medium &&
-        here->has_flag_ter( ter_furn_flag::TFLAG_SMALL_PASSAGE, p ) ) {
+        tile.has_terrain_flag( ter_furn_flag::TFLAG_SMALL_PASSAGE ) ) {
         return false; // if a large critter, can't move through tight passages
     }
 

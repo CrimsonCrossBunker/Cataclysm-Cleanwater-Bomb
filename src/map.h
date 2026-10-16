@@ -388,6 +388,7 @@ class map
         // (JSON mapgen and monster reproduction). Mapgen code should use place_spawns() instead.
         friend class jmapgen_monster;
         friend class monster;
+        friend class map_movement_query;
 
         // for testing
         friend class map_meddler;

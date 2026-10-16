@@ -6,11 +6,16 @@
 #include "cached_options.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "character.h"
 #include "creature_tracker.h"
+#include "field.h"
+#include "field_type.h"
 #include "line.h"
 #include "map.h"
+#include "map_movement_query.h"
+#include "mapdata.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
 #include "monster.h"
@@ -222,4 +227,143 @@ TEST_CASE( "monster_movement_rejects_replaced_or_destroyed_target",
         clear_creatures();
     }
     CHECK( plan.commit( plan.proposal(), here ) == monster_movement_result::stale );
+}
+
+TEST_CASE( "monster_movement_query_refreshes_tiles_between_calls_and_maps",
+           "[monster][movement_plan][pathfinding]" )
+{
+    fake_map floor_storage( ter_id( "t_floor" ) );
+    fake_map wall_storage( ter_id( "t_wall_metal" ) );
+    map &floor = *floor_storage.cast_to_map();
+    map &wall = *wall_storage.cast_to_map();
+    const tripoint_bub_ms target{ 8, 8, fake_map::fake_map_z };
+    monster subject( mtype_id( "mon_zombie" ) );
+    subject.spawn( floor.get_abs( target + tripoint::west ) );
+    const auto rng_before = rng_get_engine();
+    for( int repeat = 0; repeat < 3; ++repeat ) {
+        CHECK( subject.will_move_to( &floor, target ) );
+        CHECK_FALSE( subject.will_move_to( &wall, target ) );
+    }
+    floor.ter_set( target, ter_id( "t_wall_metal" ) );
+    CHECK_FALSE( subject.will_move_to( &floor, target ) );
+    floor.ter_set( target, ter_id( "t_floor" ) );
+    CHECK( subject.will_move_to( &floor, target ) );
+    floor.furn_set( target, furn_id( "f_safe_c" ) );
+    CHECK_FALSE( subject.will_move_to( &floor, target ) );
+    floor.furn_set( target, furn_id( "f_null" ) );
+    CHECK( subject.will_move_to( &floor, target ) );
+    CHECK( rng_get_engine() == rng_before );
+}
+
+TEST_CASE( "monster_movement_query_preserves_strict_and_size_restrictions",
+           "[monster][movement_plan][pathfinding]" )
+{
+    fake_map storage( ter_id( "t_floor" ) );
+    map &here = *storage.cast_to_map();
+    const tripoint_bub_ms target{ 8, 8, fake_map::fake_map_z };
+    monster ordinary( mtype_id( "mon_zombie" ) );
+    monster large( mtype_id( "mon_zombie_hulk" ) );
+    ordinary.spawn( here.get_abs( target + tripoint::west ) );
+    large.spawn( here.get_abs( target + tripoint::west ) );
+    const auto rng_before = rng_get_engine();
+    here.ter_set( target, ter_id( "t_window_no_curtains_open" ) );
+    REQUIRE( here.has_flag_ter( ter_furn_flag::TFLAG_SMALL_PASSAGE, target ) );
+    CHECK( ordinary.will_move_to( &here, target ) );
+    CHECK_FALSE( large.will_move_to( &here, target ) );
+    here.ter_set( target, ter_id( "t_nl_chasm_no_trap" ) );
+    REQUIRE( here.has_flag( ter_furn_flag::TFLAG_MON_AVOID_STRICT, target ) );
+    CHECK_FALSE( ordinary.will_move_to( &here, target ) );
+    CHECK_FALSE( large.will_move_to( &here, target ) );
+    here.ter_set( target, ter_id( "t_floor" ) );
+    CHECK( ordinary.will_move_to( &here, target ) );
+    CHECK( large.will_move_to( &here, target ) );
+    CHECK_FALSE( ordinary.will_move_to( &here, tripoint_bub_ms{ -1, 8, target.z() } ) );
+    CHECK_FALSE( large.will_move_to( &here, tripoint_bub_ms{ -1, 8, target.z() } ) );
+    CHECK( rng_get_engine() == rng_before );
+}
+
+TEST_CASE( "map_movement_query_matches_map_rules_and_refreshes",
+           "[monster][movement_plan][pathfinding]" )
+{
+    fake_map storage( ter_id( "t_floor" ) );
+    map &here = *storage.cast_to_map();
+    const tripoint_bub_ms target{ 8, 8, fake_map::fake_map_z };
+    for( const char *terrain : {
+             "t_floor", "t_wall_metal", "t_water_dp"
+         } ) {
+        for( const char *furniture : {
+                 "f_null", "f_safe_c"
+             } ) {
+            here.ter_set( target, ter_id( terrain ) );
+            here.furn_set( target, furn_id( furniture ) );
+            const map_movement_query query( here, target );
+            CHECK( &query.fields() == &here.field_at( target ) );
+            CHECK( query.passable_skip_fields() == here.passable_skip_fields( target ) );
+            CHECK( query.has_vehicle_floor() == here.has_vehicle_floor( target ) );
+            for( ter_furn_flag flag : {
+                     ter_furn_flag::TFLAG_CLIMBABLE,
+                     ter_furn_flag::TFLAG_DEEP_WATER, ter_furn_flag::TFLAG_MON_AVOID_STRICT
+                 } ) {
+                CHECK( query.has_flag( flag ) == here.has_flag( flag, target ) );
+                CHECK( query.has_terrain_flag( flag ) == here.has_flag_ter( flag, target ) );
+            }
+        }
+    }
+    const tripoint_bub_ms outside{ -1, 8, target.z() };
+    const map_movement_query query( here, outside );
+    CHECK( query.passable_skip_fields() == here.passable_skip_fields( outside ) );
+    CHECK( query.has_flag( ter_furn_flag::TFLAG_DEEP_WATER ) ==
+           here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, outside ) );
+}
+
+TEST_CASE( "map_movement_query_reacquires_vehicle_facts_after_removal",
+           "[monster][movement_plan][pathfinding]" )
+{
+    clear_map_without_vision();
+    map &here = get_map();
+    const tripoint_bub_ms target{ 54, 50, 0 };
+    vehicle *veh = here.add_vehicle( vproto_id( "none" ), target, 0_degrees, 0,
+                                     veh_spawn_status::PRISTINE, false, true );
+    REQUIRE( veh );
+    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
+    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_id( "seat" ) ) >= 0 );
+    veh->refresh();
+    here.add_vehicle_to_cache( veh );
+    {
+        const map_movement_query query( here, target );
+        CHECK( query.passable_skip_fields() == here.passable_skip_fields( target ) );
+        CHECK( query.has_vehicle_floor() );
+    }
+    here.destroy_vehicle( veh );
+    const map_movement_query query( here, target );
+    CHECK_FALSE( query.has_vehicle_floor() );
+    CHECK( query.passable_skip_fields() == here.passable_skip_fields( target ) );
+}
+
+TEST_CASE( "monster_movement_query_preserves_field_immunity_and_block_priority",
+           "[monster][movement_plan][pathfinding]" )
+{
+    fake_map storage( ter_id( "t_floor" ) );
+    map &here = *storage.cast_to_map();
+    const tripoint_bub_ms target{ 8, 8, fake_map::fake_map_z };
+    monster subject( mtype_id( "mon_zombie" ) );
+    subject.spawn( here.get_abs( target + tripoint::west ) );
+    field_type &slime = const_cast<field_type &>( fd_slime.obj() );
+    restore_on_out_of_scope cost( slime.intensity_levels.front().move_cost );
+    restore_on_out_of_scope immune( slime.immune_mtypes );
+    restore_on_out_of_scope block( slime.block_mtypes );
+    slime.intensity_levels.front().move_cost = -1;
+    slime.immune_mtypes.clear();
+    slime.block_mtypes.clear();
+    here.add_field( target, fd_slime, 1 );
+    REQUIRE( here.get_impassable_field_type_ids_at( target ).size() == 1 );
+    const auto rng_before = rng_get_engine();
+    CHECK_FALSE( subject.will_move_to( &here, target ) );
+    slime.immune_mtypes.insert( mtype_id( "mon_zombie" ) );
+    CHECK( subject.will_move_to( &here, target ) );
+    slime.block_mtypes.insert( mtype_id( "mon_zombie" ) );
+    CHECK_FALSE( subject.will_move_to( &here, target ) );
+    here.clear_fields( target );
+    CHECK( subject.will_move_to( &here, target ) );
+    CHECK( rng_get_engine() == rng_before );
 }
