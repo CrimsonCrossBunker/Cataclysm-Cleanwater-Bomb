@@ -1,4 +1,5 @@
 #include <monster_uid.h>
+
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -19,11 +20,13 @@
 #include "calendar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
+#include "cata_utility.h"
 #include "character.h"
 #include "coordinates.h"
 #include "creature.h"
 #include "creature_tracker.h"
 #include "debug.h"
+#include "flexbuffer_json.h"
 #include "game.h"
 #include "horde_entity.h"
 #include "item.h"
@@ -43,7 +46,9 @@
 #include "options_helpers.h"
 #include "overmap_map_data_cache.h"
 #include "overmapbuffer.h"
+#include "pet_slot.h"
 #include "player_helpers.h"
+#include "pocket_type.h"
 #include "point.h"
 #include "rng.h"
 #include "sounds.h"
@@ -51,29 +56,33 @@
 #include "test_statistics.h"
 #include "trap.h"
 #include "type_id.h"
+#include "value_ptr.h"
 
 using move_statistics = statistics<int>;
 
-static const furn_str_id furn_f_null( "f_null" );
-
+static const efftype_id effect_has_bag( "has_bag" );
 static const efftype_id effect_leashed( "leashed" );
 static const efftype_id effect_led_by_leash( "led_by_leash" );
 static const efftype_id effect_monster_saddled( "monster_saddled" );
-static const efftype_id effect_has_bag( "has_bag" );
 static const efftype_id effect_tied( "tied" );
 
+static const furn_str_id furn_f_null( "f_null" );
+
+static const itype_id itype_backpack( "backpack" );
+static const itype_id itype_horse_stirrups( "horse_stirrups" );
+static const itype_id itype_horse_tack( "horse_tack" );
+static const itype_id itype_rock( "rock" );
+static const itype_id itype_rope_30( "rope_30" );
+static const itype_id itype_saddlebag( "saddlebag" );
+
 static const mtype_id mon_dog_zombie_brute( "mon_dog_zombie_brute" );
+static const mtype_id mon_mech_recon( "mon_mech_recon" );
 static const mtype_id mon_test_zombie( "mon_test_zombie" );
 static const mtype_id pseudo_dormant_mon_zombie_fat( "pseudo_dormant_mon_zombie_fat" );
 
-static const itype_id itype_rope_30( "rope_30" );
-static const itype_id itype_horse_stirrups( "horse_stirrups" );
-static const itype_id itype_horse_tack( "horse_tack" );
-static const itype_id itype_saddlebag( "saddlebag" );
+static const oter_str_id oter_field( "field" );
 
 static const skill_id skill_riding( "riding" );
-
-static const oter_str_id oter_field( "field" );
 
 static const ter_str_id ter_t_fence( "t_fence" );
 static const ter_str_id ter_t_grass( "t_grass" );
@@ -746,6 +755,98 @@ TEST_CASE( "pet_equipment_slots_bridge_legacy_and_nested_equipment",
     REQUIRE( horse.remove_pet_equipment( saddle_slot ) );
     CHECK_FALSE( horse.tack_item );
     CHECK_FALSE( horse.has_effect( effect_monster_saddled ) );
+}
+
+TEST_CASE( "mech_mounting_does_not_require_animal_riding", "[monster][mount][riding]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    clear_creatures();
+    avatar &player = get_avatar();
+    monster &mech = spawn_test_monster( mon_mech_recon.str(),
+                                        player.pos_bub() + tripoint::east );
+    mech.friendly = -1;
+    REQUIRE_FALSE( mech.has_flag( mon_flag_PET_MOUNTABLE ) );
+    player.set_skill_level( skill_riding, 0 );
+
+    REQUIRE( player.try_mount_creature( mech ) );
+    CHECK( player.is_mounted() );
+    CHECK( player.mounted_creature.get() == &mech );
+    CHECK( player.get_skill_level( skill_riding ) == 0 );
+    player.forced_dismount();
+}
+
+TEST_CASE( "unrestorable_pet_equipment_survives_loading", "[monster][pet_equipment][save]" )
+{
+    monster original( mtype_id( "mon_horse" ) );
+    item bag( itype_saddlebag );
+    REQUIRE( bag.put_in( item( itype_rock ), pocket_type::CONTAINER ).success() );
+    original.inv.push_back( item( itype_rope_30 ) );
+    pet_slot_id slot( "saddlebag" );
+    SECTION( "removed_slot" ) {
+        slot = pet_slot_id( "removed_pet_slot" );
+    }
+    SECTION( "missing_parent_equipment" ) {
+        REQUIRE_FALSE( original.pet_slot_available( slot ) );
+    }
+    original.custom_pet_equipment[slot] = cata::make_value<item>( bag );
+
+    monster loaded;
+    deserialize_wrapper( [&loaded]( const JsonValue & value ) {
+        loaded.deserialize( value.get_object() );
+    }, serialize( original ) );
+
+    REQUIRE( loaded.inv.size() == 2 );
+    CHECK( loaded.custom_pet_equipment.empty() );
+    bool found_rope = false;
+    bool found_bag = false;
+    for( const item &cargo : loaded.inv ) {
+        if( cargo.typeId() == itype_rope_30 ) {
+            found_rope = true;
+        } else if( cargo.typeId() == itype_saddlebag ) {
+            found_bag = true;
+            REQUIRE( cargo.all_items_top( pocket_type::CONTAINER ).size() == 1 );
+            CHECK( cargo.all_items_top( pocket_type::CONTAINER ).front()->typeId() == itype_rock );
+        }
+    }
+    CHECK( found_rope );
+    CHECK( found_bag );
+}
+
+TEST_CASE( "pet_cargo_uses_all_equipped_storage", "[monster][pet_equipment]" )
+{
+    monster horse( mtype_id( "mon_horse" ) );
+    REQUIRE( horse.equip_pet_equipment( pet_slot_id( "saddle" ), item( itype_horse_tack ) ) );
+    REQUIRE( horse.equip_pet_equipment( pet_slot_id( "saddlebag" ), item( itype_saddlebag ) ) );
+    REQUIRE( horse.equip_pet_equipment( pet_slot_id( "storage" ), item( itype_backpack ) ) );
+    REQUIRE( horse.get_pet_storages().size() == 2 );
+
+    item *backpack = horse.get_pet_equipment( pet_slot_id( "storage" ) );
+    item *saddlebags = horse.get_pet_equipment( pet_slot_id( "saddlebag" ) );
+    const item cargo( itype_rock );
+    REQUIRE( horse.find_pet_storage( cargo ) == backpack );
+    int stored = 0;
+    while( backpack->can_contain_directly( cargo ).success() ) {
+        REQUIRE( ++stored < 200 );
+        REQUIRE( backpack->put_in( cargo, pocket_type::CONTAINER ).success() );
+    }
+    REQUIRE( stored > 0 );
+    REQUIRE( horse.find_pet_storage( cargo ) == saddlebags );
+    REQUIRE( saddlebags->put_in( cargo, pocket_type::CONTAINER ).success() );
+
+    monster loaded;
+    deserialize_wrapper( [&loaded]( const JsonValue & value ) {
+        loaded.deserialize( value.get_object() );
+    }, serialize( horse ) );
+    REQUIRE( loaded.get_pet_storages().size() == 2 );
+    int loaded_items = 0;
+    for( const item *storage : loaded.get_pet_storages() ) {
+        for( const item *stored_item : storage->all_items_top( pocket_type::CONTAINER ) ) {
+            loaded_items += stored_item->count();
+        }
+    }
+    CHECK( loaded_items == stored + 1 );
+    CHECK( loaded.find_pet_storage( cargo ) == loaded.get_pet_equipment( pet_slot_id( "saddlebag" ) ) );
 }
 
 TEST_CASE( "riding_skill_reduces_mounted_movement_cost", "[monster][mount][riding]" )

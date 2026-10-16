@@ -1,24 +1,24 @@
 #include "monster.h"
 
+#include <algorithm>
 #include <calendar.h>
 #include <character_id.h>
+#include <cmath>
 #include <color.h>
 #include <compatibility.h>
 #include <creature.h>
-#include <monster_uid.h>
-#include <value_ptr.h>
-#include <algorithm>
-#include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <list>
 #include <memory>
+#include <monster_uid.h>
 #include <optional>
 #include <set>
 #include <sstream>
 #include <string>
 #include <tuple>
 #include <unordered_map>
+#include <value_ptr.h>
 
 #include "ascii_art.h"
 #include "avatar.h"
@@ -80,6 +80,7 @@
 #include "output.h"
 #include "overmapbuffer.h"
 #include "pathfinding.h"
+#include "pet_slot.h"
 #include "pimpl.h"
 #include "pocket_type.h"
 #include "point.h"
@@ -144,9 +145,6 @@ static const efftype_id effect_onfire( "onfire" );
 static const efftype_id effect_pacified( "pacified" );
 static const efftype_id effect_paralyzepoison( "paralyzepoison" );
 static const efftype_id effect_pet( "pet" );
-static const pet_slot_id pet_slot_armor( "armor" );
-static const pet_slot_id pet_slot_saddle( "saddle" );
-static const pet_slot_id pet_slot_storage( "storage" );
 static const efftype_id effect_photophobia( "photophobia" );
 static const efftype_id effect_poison( "poison" );
 static const efftype_id effect_psi_stunned( "psi_stunned" );
@@ -203,6 +201,10 @@ static const mfaction_str_id monfaction_ant( "ant" );
 static const mfaction_str_id monfaction_bee( "bee" );
 static const mfaction_str_id monfaction_nether_player_hate( "nether_player_hate" );
 static const mfaction_str_id monfaction_wasp( "wasp" );
+
+static const pet_slot_id pet_slot_armor( "armor" );
+static const pet_slot_id pet_slot_saddle( "saddle" );
+static const pet_slot_id pet_slot_storage( "storage" );
 
 static const species_id species_AMPHIBIAN( "AMPHIBIAN" );
 static const species_id species_CYBORG( "CYBORG" );
@@ -2873,6 +2875,46 @@ const item *monster::get_pet_storage() const
 item *monster::get_pet_storage()
 {
     return const_cast<item *>( std::as_const( *this ).get_pet_storage() );
+}
+
+std::vector<const item *> monster::get_pet_storages() const
+{
+    std::vector<const item *> result;
+    if( storage_item ) {
+        result.push_back( storage_item.get() );
+    }
+    for( const pet_slot &slot : get_all_pet_slots() ) {
+        if( slot.id != pet_slot_storage && slot.min_storage > 0_ml ) {
+            if( const item *equipment = get_pet_equipment( slot.id ) ) {
+                result.push_back( equipment );
+            }
+        }
+    }
+    return result;
+}
+
+std::vector<item *> monster::get_pet_storages()
+{
+    std::vector<item *> result;
+    for( const item *storage : std::as_const( *this ).get_pet_storages() ) {
+        result.push_back( const_cast<item *>( storage ) );
+    }
+    return result;
+}
+
+const item *monster::find_pet_storage( const item &cargo ) const
+{
+    for( const item *storage : get_pet_storages() ) {
+        if( storage->can_contain_directly( cargo ).success() ) {
+            return storage;
+        }
+    }
+    return nullptr;
+}
+
+item *monster::find_pet_storage( const item &cargo )
+{
+    return const_cast<item *>( std::as_const( *this ).find_pet_storage( cargo ) );
 }
 
 std::optional<pet_slot_id> monster::get_pet_storage_slot() const

@@ -3,7 +3,10 @@
 #include <algorithm>
 #include <cstddef>
 #include <functional>
+#include <iterator>
 #include <list>
+#include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <utility>
@@ -18,22 +21,25 @@
 #include "input_context.h"
 #include "inventory.h"
 #include "item.h"
-#include "item_pocket.h"
 #include "item_location.h"
-#include "messages.h"
+#include "item_pocket.h"
 #include "monster.h"
 #include "mtype.h"
 #include "output.h"
 #include "pet_slot.h"
+#include "pimpl.h"
 #include "pocket_type.h"
 #include "point.h"
-#include "popup.h"
+#include "ret_val.h"
 #include "string_formatter.h"
+#include "string_id.h"
+#include "translation.h"
 #include "translations.h"
 #include "ui_manager.h"
 #include "uilist.h"
 #include "units.h"
 #include "units_utility.h"
+#include "value_ptr.h"
 
 namespace pet_inventory_ui
 {
@@ -204,11 +210,6 @@ bool is_transferable_cargo( const item &candidate )
 
 void migrate_legacy_pet_cargo( monster &pet )
 {
-    item *storage = pet.get_pet_storage();
-    if( storage == nullptr ) {
-        return;
-    }
-
     auto iter = pet.inv.begin();
     while( iter != pet.inv.end() ) {
         if( iter->typeId().is_empty() || iter->typeId().is_null() ) {
@@ -219,7 +220,9 @@ void migrate_legacy_pet_cargo( monster &pet )
             ++iter;
             continue;
         }
-        if( storage->put_in( *iter, pocket_type::CONTAINER, false, nullptr, true ).success() ) {
+        item *storage = pet.find_pet_storage( *iter );
+        if( storage != nullptr &&
+            storage->put_in( *iter, pocket_type::CONTAINER, false, nullptr, true ).success() ) {
             iter = pet.inv.erase( iter );
         } else {
             ++iter;
@@ -230,8 +233,7 @@ void migrate_legacy_pet_cargo( monster &pet )
 std::vector<pet_cargo_entry> transferable_pet_items( monster &pet )
 {
     std::vector<pet_cargo_entry> result;
-    item *storage = pet.get_pet_storage();
-    if( storage != nullptr ) {
+    for( item *storage : pet.get_pet_storages() ) {
         const std::vector<item_pocket *> pockets = storage->get_container_pockets();
         for( std::size_t pocket_index = 0; pocket_index < pockets.size(); ++pocket_index ) {
             item_pocket *pocket = pockets[pocket_index];
@@ -396,7 +398,7 @@ bool can_pet_carry( const monster &pet, const item &candidate, std::string &reas
         reason = _( "The animal cannot carry that much additional weight." );
         return false;
     }
-    if( !storage->can_contain_directly( candidate ).success() ) {
+    if( pet.find_pet_storage( candidate ) == nullptr ) {
         reason = _( "The equipped storage has no pocket that can contain this item." );
         return false;
     }
@@ -416,7 +418,7 @@ bool move_character_item_to_pet( Character &who, monster &pet, item_location sou
         }
         return false;
     }
-    item *storage = pet.get_pet_storage();
+    item *storage = pet.find_pet_storage( *source );
     if( storage == nullptr ) {
         return false;
     }
@@ -744,7 +746,7 @@ void show_equipment( monster &pet )
         } else if( action == "CONFIRM" ) {
             bool changed = false;
             if( active == pane_side::left && !candidates.empty() ) {
-                const equipment_candidate candidate = candidates[item_cursor.selected];
+                const equipment_candidate &candidate = candidates[item_cursor.selected];
                 const std::optional<pet_slot_id> target = choose_slot_for_candidate( candidate );
                 changed = target && install_candidate( candidate, *target );
             } else if( active == pane_side::right && !slots.empty() ) {
@@ -755,7 +757,7 @@ void show_equipment( monster &pet )
                     changed = remove_from_slot( slot_id );
                 } else if( !candidates.empty() &&
                            candidate_supports_slot( candidates[item_cursor.selected], slot_id ) ) {
-                    const equipment_candidate candidate = candidates[item_cursor.selected];
+                    const equipment_candidate &candidate = candidates[item_cursor.selected];
                     changed = install_candidate( candidate, slot_id );
                 } else if( !select_first_candidate_for_slot( slot_id ) ) {
                     popup( _( "You have no compatible equipment for this slot." ) );
@@ -873,13 +875,16 @@ void show_transfer( monster &pet )
         }
         draw_detail_box( layout.details, left_title, left_text, right_title, right_text );
 
-        const item *storage = pet.get_pet_storage();
+        units::volume total_capacity = 0_ml;
+        for( const item *storage : pet.get_pet_storages() ) {
+            total_capacity += storage->get_volume_capacity();
+        }
         werase( layout.controls );
         center_print( layout.controls, 0, c_light_gray,
                       string_format(
                           _( "Cargo %1$s/%2$s %3$s, %4$d/%5$d g   [%6$s] switch  [%7$s] move  [%8$s] move all  [%9$s] exit" ),
                           format_volume( pet_cargo_volume( pet_items ) ),
-                          format_volume( storage->get_volume_capacity() ), volume_units_abbr(),
+                          format_volume( total_capacity ), volume_units_abbr(),
                           units::to_gram( pet_cargo_weight( pet_items ) ),
                           units::to_gram( pet.weight_capacity() ),
                           context.get_desc( "NEXT_TAB" ), context.get_desc( "CONFIRM" ),

@@ -2678,19 +2678,6 @@ void monster::load( const JsonObject &data )
         newitem.deserialize( storage_item_json );
         storage_item = cata::make_value<item>( newitem );
     }
-    if( data.has_array( "pet_equipment" ) ) {
-        JsonArray equipment_entries = data.get_array( "pet_equipment" );
-        while( equipment_entries.has_more() ) {
-            JsonObject entry = equipment_entries.next_object();
-            const pet_slot_id slot( entry.get_string( "slot" ) );
-            item equipment;
-            equipment.deserialize( entry.get_member( "item" ) );
-            if( !slot.is_valid() || !equip_pet_equipment( slot, equipment ) ) {
-                // Preserve equipment from removed or incompatible mods instead of deleting it.
-                inv.push_back( std::move( equipment ) );
-            }
-        }
-    }
     if( data.has_object( "battery_item" ) ) {
         JsonValue battery_item_json = data.get_member( "battery_item" );
         item newitem;
@@ -2788,6 +2775,19 @@ void monster::load( const JsonObject &data )
     horde_attraction = static_cast<monster_horde_attraction>( data.get_int( "horde_attraction", 0 ) );
 
     data.read( "inv", inv );
+    if( data.has_array( "pet_equipment" ) ) {
+        JsonArray equipment_entries = data.get_array( "pet_equipment" );
+        while( equipment_entries.has_more() ) {
+            JsonObject entry = equipment_entries.next_object();
+            const pet_slot_id slot( entry.get_string( "slot" ) );
+            item equipment;
+            equipment.deserialize( entry.get_member( "item" ) );
+            if( !slot.is_valid() || !equip_pet_equipment( slot, equipment ) ) {
+                // Preserve equipment from removed or incompatible mods instead of deleting it.
+                inv.push_back( std::move( equipment ) );
+            }
+        }
+    }
     data.read( "dissectable_inv", dissectable_inv );
     data.read( "dragged_foe_id", dragged_foe_id );
 

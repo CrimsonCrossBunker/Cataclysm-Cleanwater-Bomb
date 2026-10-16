@@ -248,7 +248,6 @@ static const efftype_id effect_paincysts( "paincysts" );
 static const efftype_id effect_recover( "recover" );
 static const efftype_id effect_ridden( "ridden" );
 static const efftype_id effect_riding( "riding" );
-static const skill_id skill_riding( "riding" );
 static const efftype_id effect_sleep( "sleep" );
 static const efftype_id effect_stumbled_into_invisible( "stumbled_into_invisible" );
 static const efftype_id effect_stunned( "stunned" );
@@ -368,6 +367,7 @@ static const skill_id skill_dodge( "dodge" );
 static const skill_id skill_driving( "driving" );
 static const skill_id skill_melee( "melee" );
 static const skill_id skill_pistol( "pistol" );
+static const skill_id skill_riding( "riding" );
 static const skill_id skill_swimming( "swimming" );
 static const skill_id skill_throw( "throw" );
 
@@ -1655,6 +1655,10 @@ void Character::mount_creature( monster &z )
 
 bool Character::try_mount_creature( monster &z )
 {
+    if( z.has_flag( mon_flag_RIDEABLE_MECH ) ) {
+        mount_creature( z );
+        return mounted_creature.get() == &z;
+    }
     if( !can_mount( z ) ) {
         return false;
     }

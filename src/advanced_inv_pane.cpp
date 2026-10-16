@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "advanced_inv_area.h"
+#include "advanced_inv_listitem.h"
 #include "advanced_inv_pagination.h"
 #include "avatar.h"
 #include "cata_assert.h"
@@ -15,6 +16,7 @@
 #include "enums.h"
 #include "flag.h"
 #include "item.h"
+#include "item_location.h"
 #include "item_search.h"
 #include "map.h"
 #include "map_selector.h"

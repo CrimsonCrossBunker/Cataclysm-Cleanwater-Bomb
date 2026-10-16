@@ -1,6 +1,8 @@
 #include "riding_config.h"
 
-#include "json.h"
+#include "flexbuffer_json.h"
+#include "type_id.h"
+
 
 namespace
 {

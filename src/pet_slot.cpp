@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <map>
+#include <memory>
 #include <optional>
 #include <set>
 #include <string>
@@ -14,9 +15,12 @@
 #include "generic_factory.h"
 #include "item.h"
 #include "itype.h"
-#include "json.h"
 #include "monster.h"
 #include "mtype.h"
+#include "translation.h"
+#include "type_id.h"
+#include "units.h"
+#include "value_ptr.h"
 
 namespace
 {

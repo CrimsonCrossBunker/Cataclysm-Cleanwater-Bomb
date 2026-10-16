@@ -576,6 +576,10 @@ class monster : public Creature
         item *get_pet_equipment( const pet_slot_id &slot );
         const item *get_pet_storage() const;
         item *get_pet_storage();
+        std::vector<const item *> get_pet_storages() const;
+        std::vector<item *> get_pet_storages();
+        const item *find_pet_storage( const item &cargo ) const;
+        item *find_pet_storage( const item &cargo );
         std::optional<pet_slot_id> get_pet_storage_slot() const;
         int pet_storage_count() const;
         bool has_pet_equipment( const pet_slot_id &slot ) const;

@@ -3,6 +3,7 @@
 #include <list>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <utility>
@@ -37,6 +38,7 @@
 #include "output.h"
 #include "pathfinding.h"
 #include "pet_inventory_ui.h"
+#include "pet_slot.h"
 #include "point.h"
 #include "rng.h"
 #include "string_formatter.h"
@@ -50,10 +52,8 @@
 static const efftype_id effect_bleed( "bleed" );
 static const efftype_id effect_controlled( "controlled" );
 static const efftype_id effect_harnessed( "harnessed" );
-static const efftype_id effect_has_bag( "has_bag" );
 static const efftype_id effect_leashed( "leashed" );
 static const efftype_id effect_led_by_leash( "led_by_leash" );
-static const efftype_id effect_monster_armor( "monster_armor" );
 static const efftype_id effect_monster_saddled( "monster_saddled" );
 static const efftype_id effect_paid( "paid" );
 static const efftype_id effect_pet( "pet" );
@@ -69,13 +69,13 @@ static const flag_id json_flag_TIE_UP( "TIE_UP" );
 static const itype_id itype_cash_card( "cash_card" );
 static const itype_id itype_id_military( "id_military" );
 
-static const quality_id qual_CUT( "CUT" );
-static const quality_id qual_SHEAR( "SHEAR" );
-
-static const skill_id skill_survival( "survival" );
 static const pet_slot_id pet_slot_armor( "armor" );
 static const pet_slot_id pet_slot_saddle( "saddle" );
 static const pet_slot_id pet_slot_storage( "storage" );
+
+static const quality_id qual_CUT( "CUT" );
+static const quality_id qual_SHEAR( "SHEAR" );
+
 
 namespace
 {

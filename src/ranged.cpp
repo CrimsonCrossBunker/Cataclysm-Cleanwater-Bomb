@@ -176,8 +176,6 @@ static const flag_id json_flag_SINGLE_ACTION( "SINGLE_ACTION" );
 
 static const material_id material_glass( "glass" );
 
-static const std::string gun_mechanical_simple( "gun_mechanical_simple" );
-
 static const proficiency_id proficiency_prof_bow_basic( "prof_bow_basic" );
 static const proficiency_id proficiency_prof_bow_expert( "prof_bow_expert" );
 static const proficiency_id proficiency_prof_bow_master( "prof_bow_master" );
@@ -196,6 +194,8 @@ static const trait_id trait_GUNSHY( "GUNSHY" );
 
 static const trap_str_id tr_practice_target( "tr_practice_target" );
 static const trap_str_id tr_target_spinner( "tr_target_spinner" );
+
+static const std::string gun_mechanical_simple( "gun_mechanical_simple" );
 
 // Returns whether the target is currently ignoring the attacker.
 static bool target_ignores_projectile_attacker( const Creature &target, const Creature &attacker )
