@@ -367,6 +367,10 @@ class veh_interact
          * Updated whenever the cursor moves. */
         std::vector<const vpart_info *> can_mount;
         std::map<const vpart_info *, bool> install_requirements_available;
+        // Names and definitions do not change while this menu is open.
+        std::vector<const vpart_info *> install_candidates_by_name;
+        // Invalidated together with the crafting inventory after menu actions.
+        mutable std::optional<vehicle_part *> cached_most_repairable;
 
         /* Vector of vparts in the current square that can be repaired. Strictly a
          * subset of parts_here.

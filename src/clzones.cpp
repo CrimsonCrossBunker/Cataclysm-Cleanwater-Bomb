@@ -1156,12 +1156,13 @@ void zone_manager::cache_vzones( map *pmap )
     }
 }
 
-std::unordered_set<tripoint_abs_ms> zone_manager::get_point_set( const zone_type_id &type,
+const std::unordered_set<tripoint_abs_ms> &zone_manager::get_point_set( const zone_type_id &type,
         const faction_id &fac ) const
 {
+    static const std::unordered_set<tripoint_abs_ms> empty_set;
     const auto &type_iter = area_cache.find( zone_data::make_type_hash( type, fac ) );
     if( type_iter == area_cache.end() ) {
-        return std::unordered_set<tripoint_abs_ms>();
+        return empty_set;
     }
 
     return type_iter->second;
@@ -1178,25 +1179,28 @@ std::unordered_set<tripoint_bub_ms> zone_manager::get_point_set_loot( const trip
 {
     std::unordered_set<tripoint_bub_ms> res;
     map &here = get_map();
+    // The cache key is "<type>__FAC__<faction>", so the zone type prefix can be
+    // tested directly on the key without unhashing or allocating a substring.
+    // Only entries that clear that cheap test pay for constructing the faction id.
     for( const auto &cache : area_cache ) {
-        zone_type_id type = zone_data::unhash_type( cache.first );
-        faction_id z_fac = zone_data::unhash_fac( cache.first );
-        if( fac == z_fac && type.str().substr( 0, 4 ) == "LOOT" ) {
-            for( const tripoint_abs_ms &point : cache.second ) {
-                if( square_dist( where, point ) <= radius ) {
-                    res.emplace( here.get_bub( point ) );
-                }
+        if( !string_starts_with( cache.first, "LOOT" ) ||
+            fac != zone_data::unhash_fac( cache.first ) ) {
+            continue;
+        }
+        for( const tripoint_abs_ms &point : cache.second ) {
+            if( square_dist( where, point ) <= radius ) {
+                res.emplace( here.get_bub( point ) );
             }
         }
     }
     for( const auto &cache : vzone_cache ) {
-        zone_type_id type = zone_data::unhash_type( cache.first );
-        faction_id z_fac = zone_data::unhash_fac( cache.first );
-        if( fac == z_fac && type.str().substr( 0, 4 ) == "LOOT" ) {
-            for( const tripoint_abs_ms &point : cache.second ) {
-                if( square_dist( where, point ) <= radius ) {
-                    res.emplace( here.get_bub( point ) );
-                }
+        if( !string_starts_with( cache.first, "LOOT" ) ||
+            fac != zone_data::unhash_fac( cache.first ) ) {
+            continue;
+        }
+        for( const tripoint_abs_ms &point : cache.second ) {
+            if( square_dist( where, point ) <= radius ) {
+                res.emplace( here.get_bub( point ) );
             }
         }
     }
@@ -1215,13 +1219,14 @@ std::unordered_set<tripoint_bub_ms> zone_manager::get_point_set_loot( const trip
     return res;
 }
 
-std::unordered_set<tripoint_abs_ms> zone_manager::get_vzone_set( const zone_type_id &type,
+const std::unordered_set<tripoint_abs_ms> &zone_manager::get_vzone_set( const zone_type_id &type,
         const faction_id &fac ) const
 {
+    static const std::unordered_set<tripoint_abs_ms> empty_set;
     //Only regenerate the vehicle zone cache if any vehicles have moved
     const auto &type_iter = vzone_cache.find( zone_data::make_type_hash( type, fac ) );
     if( type_iter == vzone_cache.end() ) {
-        return std::unordered_set<tripoint_abs_ms>();
+        return empty_set;
     }
 
     return type_iter->second;
@@ -1729,7 +1734,7 @@ bool zone_manager::remove( zone_data &zone, map *pmap )
     if( !maybe_locator ) {
         return false;
     }
-    const vehicle_zone_locator locator = *maybe_locator;
+    const vehicle_zone_locator &locator = *maybe_locator;
     zone_data *current_zone = find_vehicle_zone( locator );
     if( current_zone == nullptr ) {
         return false;
@@ -2134,7 +2139,7 @@ bool zone_manager::zone_edited( zone_data &zone )
     const vehicle_zone_locator &locator = *maybe_locator;
 
     //Check if this zone has already been stored
-    for( auto &changed_vzone : changed_vzones ) {
+    for( const changed_vehicle_zone &changed_vzone : changed_vzones ) {
         if( changed_vzone.locator == locator ) {
             return true;
         }
@@ -2159,7 +2164,7 @@ void zone_manager::revert_vzones()
             cache_vzones();
         }
     }
-    for( const auto &changed_vzone : changed_vzones ) {
+    for( const changed_vehicle_zone &changed_vzone : changed_vzones ) {
         zone_data *zone = find_vehicle_zone( changed_vzone.locator );
         if( zone == nullptr ) {
             continue;

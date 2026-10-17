@@ -1,14 +1,14 @@
 #include "veh_utils.h"
 
-#include <color.h>
-#include <type_id.h>
 #include <algorithm>
 #include <climits>
 #include <cmath>
+#include <color.h>
 #include <functional>
 #include <list>
 #include <map>
 #include <memory>
+#include <type_id.h>
 #include <utility>
 #include <vector>
 
@@ -35,6 +35,7 @@
 #include "units.h"
 #include "veh_type.h"
 #include "vehicle.h"
+#include "visitable.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
 
@@ -66,6 +67,7 @@ int calc_xp_gain( const vpart_info &vp, const skill_id &sk, const Character &who
 vehicle_part *most_repairable_part( vehicle &veh, Character &who )
 {
     const temp_crafting_inventory &inv = who.crafting_inventory();
+    scoped_provider_quality_cache qualities( inv );
     vehicle_part *vp_broken = nullptr;
     vehicle_part *vp_most_damaged = nullptr;
     int most_damage = 0;

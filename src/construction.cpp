@@ -75,6 +75,7 @@
 #include "veh_appliance.h"
 #include "veh_type.h"
 #include "vehicle.h"
+#include "visitable.h"
 #include "vpart_position.h"
 
 #if defined(TILES)
@@ -575,6 +576,7 @@ construction_id construction_menu( const bool blueprint )
     const temp_crafting_inventory &total_inv = player_character.crafting_inventory();
 
     input_context ctxt( "CONSTRUCTION" );
+    auto quality_cache = std::make_unique<scoped_provider_quality_cache>( total_inv );
     ctxt.register_navigate_ui_list();
     ctxt.register_leftright();
     ctxt.register_action( "NEXT_TAB" );
@@ -1135,6 +1137,7 @@ construction_id construction_menu( const bool blueprint )
                         restore_view.reset();
                         restore_ui.reset();
                         ui.reset();
+                        quality_cache.reset();
                         place_construction( { constructs[select] } );
                         uistate.last_construction = constructs[select];
                     }

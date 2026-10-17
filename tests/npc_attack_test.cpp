@@ -2,7 +2,6 @@
 #include <memory>
 #include <optional>
 
-#include "calendar.h"
 #include "cata_catch.h"
 #include "character.h"
 #include "character_id.h"
@@ -29,6 +28,7 @@ class Creature;
 
 static const faction_id faction_your_followers( "your_followers" );
 
+static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_combat_exoskeleton_medium( "combat_exoskeleton_medium" );
 static const itype_id itype_combat_exoskeleton_medium_on( "combat_exoskeleton_medium_on" );
 static const itype_id itype_heavy_battery_cell( "heavy_battery_cell" );
@@ -38,6 +38,8 @@ static const itype_id itype_rock( "rock" );
 static const itype_id itype_wearable_light( "wearable_light" );
 
 static const mtype_id mon_zombie( "mon_zombie" );
+
+static const skill_id skill_throw( "throw" );
 
 static const string_id<npc_template> npc_template_test_talker( "test_talker" );
 
@@ -245,11 +247,21 @@ TEST_CASE( "NPC_faces_zombies", "[npc_attack]" )
         }
 
         WHEN( "NPC only has a bunch of rocks" ) {
-            item weapon( itype_rock, calendar::turn, 5 );
+            // Make the intended ranged attack useful and explicitly allowed.
+            main_npc.set_skill_level( skill_throw, 10 );
+            main_npc.rules.set_flag( ally_rule::use_guns );
+            REQUIRE( main_npc.wear_item( item( itype_backpack ) ) );
+            for( int n = 0; n < 4; ++n ) {
+                REQUIRE( main_npc.i_add( item( itype_rock ) ) );
+            }
+            item weapon( itype_rock );
             main_npc.set_wielded_item( weapon );
             REQUIRE( main_npc.get_wielded_item()->typeId() == itype_rock );
 
             THEN( "NPC throws rocks at the zombie" ) {
+                main_npc.regen_ai_cache();
+                REQUIRE( ( main_npc.amount_of( itype_rock ) > 1 ||
+                           main_npc.charges_of( itype_rock ) > 1 ) );
                 main_npc.evaluate_best_attack( zombie );
                 const std::shared_ptr<npc_attack> &attack = main_npc.get_current_attack();
                 npc_attack_throw *throw_attack = dynamic_cast<npc_attack_throw *>( attack.get() );

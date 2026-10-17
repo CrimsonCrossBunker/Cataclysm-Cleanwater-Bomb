@@ -14,6 +14,7 @@
 
 #include "cata_utility.h"
 #include "character.h"
+#include "coordinates.h"
 #include "creature.h"
 #include "creature_tracker.h"
 #include "damage.h"
@@ -21,11 +22,14 @@
 #include "dialogue.h"
 #include "dialogue_helpers.h"
 #include "flag.h"
+#include "gun_mode.h"
+#include "inventory.h"
 #include "item.h"
 #include "item_location.h"
 #include "magic.h"
 #include "magic_spell_effect_helpers.h"
 #include "map.h"
+#include "map_iterator.h"
 #include "mapdata.h"
 #include "messages.h"
 #include "npc.h"
@@ -37,6 +41,7 @@
 #include "rng.h"
 #include "talker.h"
 #include "temp_crafting_inventory.h"
+#include "type_id.h"
 
 static const bionic_id bio_hydraulics( "bio_hydraulics" );
 
@@ -785,9 +790,8 @@ npc_attack_rating npc_attack_throw::evaluate(
         // please don't throw your pants...
         return effectiveness;
     }
-    const temp_crafting_inventory &available_weapons = source.crafting_inventory( tripoint_bub_ms::zero,
-        -1 );
-    if( &thrown_item == source.evaluate_best_weapon() &&
+    const temp_crafting_inventory &available_weapons = source.crafting_inventory( tripoint_bub_ms::zero, -1 );
+    if( &thrown_item == best_weapon &&
         available_weapons.amount_of( thrown_item.typeId() ) <= 1 &&
         available_weapons.charges_of( thrown_item.typeId() ) <= 1 ) {
         // Don't throw if it's the best individual killy-thing we've got
@@ -882,7 +886,7 @@ npc_attack_rating npc_attack_throw::evaluate_tripoint(
         return npc_attack_rating( std::nullopt, location );
     }
 
-    const float throw_mult = throw_cost( source, single_item ) * source.speed_rating() / 100.0f;
+    const float throw_mult = throw_cost( source, single_item ) * source_speed_rating / 100.0f;
     const int damage = source.thrown_item_total_damage_raw( single_item );
     float dps = damage / throw_mult;
     const int distance_to_me = rl_dist( location, source.pos_bub() );

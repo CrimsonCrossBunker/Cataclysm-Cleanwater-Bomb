@@ -1,3 +1,5 @@
+#include "item.h" // IWYU pragma: associated
+
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -27,7 +29,6 @@
 #include "bodygraph.h"
 #include "bodypart.h"
 #include "calendar.h"
-#include "lua_platform_runtime.h"
 #include "cata_utility.h"
 #include "character.h"
 #include "character_id.h"
@@ -47,7 +48,6 @@
 #include "game_constants.h"
 #include "global_vars.h"
 #include "gun_mode.h"
-#include "item.h"
 #include "item_category.h"
 #include "item_components.h"
 #include "item_contents.h"
@@ -59,6 +59,7 @@
 #include "iuse.h"
 #include "iuse_actor.h"
 #include "localized_comparator.h"
+#include "lua_platform_runtime.h"
 #include "magic_enchantment.h"
 #include "martialarts.h"
 #include "material.h"
@@ -90,6 +91,7 @@
 #include "units_utility.h"
 #include "value_ptr.h"
 #include "veh_type.h"
+#include "visitable.h"
 #include "vitamin.h"
 #include "weighted_list.h"
 
@@ -4391,6 +4393,7 @@ void item::final_info( std::vector<iteminfo> &info, const iteminfo_query *parts,
             info.emplace_back( "DESCRIPTION", _( "You know of nothing you could craft with it." ) );
         } else {
             std::vector<std::string> crafts;
+            scoped_provider_quality_cache qualities( get_player_character().crafting_inventory() );
             crafts.reserve( item_recipes.size() );
             for( const recipe *r : item_recipes ) {
                 const bool can_make = can_craft_recipe( r, crafting_inv );
