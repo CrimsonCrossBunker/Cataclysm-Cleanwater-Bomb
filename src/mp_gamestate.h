@@ -149,12 +149,6 @@ void client_resolve_pending_ui();
 // Times out after ~5 seconds if no position arrives.
 void client_wait_for_initial_position();
 
-// Cached at main() startup from the binary's on-disk mtime, e.g.
-// "May 25 19:26:00". Used to keep the build identifier in the window
-// title across mp_update_window_title() calls (mode changes) without
-// re-stat'ing argv[0] every time.
-extern std::string g_mp_build_stamp;
-
 // Host-only: tick any player_activity the proxy NPC holds (e.g. a
 // move_items_activity_actor assigned by the post-step hauling hook).
 // do_turn.cpp's main NPC loop continues past remote-player NPCs so they
@@ -346,11 +340,6 @@ bool mp_menu_join_session();
 // Main-menu integration: disarm a previously armed (but not-yet-started)
 // host session.  No-op if host mode isn't armed.
 void mp_menu_cancel_host();
-
-// Refresh the SDL window title to reflect the current MP role (SP/HOST/CLIENT).
-// main.cpp sets it once at startup from CLI flags; menu-armed mode changes
-// need to call this so the title updates after Host/Join is picked from the UI.
-void mp_update_window_title();
 
 // Co-op block appended to the debug "Generate game report" output (debug.cpp).
 std::string mp_game_report_section();
