@@ -565,6 +565,25 @@ TEST_CASE( "verify_vehicle_tank_refill", "[vehicle]" )
     check_part_ammo_capacity( vpart_tank_test, itype_metal_tank_test, ammo_test_liquid, 60000 );
 }
 
+TEST_CASE( "vehicle_tank_respects_requested_liquid_amount", "[vehicle][liquid]" )
+{
+    vehicle_part tank( vpart_tank_test, item( itype_metal_tank_test ) );
+    item gasoline( itype_gasoline );
+    gasoline.charges = 100;
+
+    REQUIRE( tank.fill_with( gasoline, 10 ) );
+    CHECK( tank.ammo_remaining() == 10 );
+    CHECK( gasoline.charges == 90 );
+
+    REQUIRE( tank.fill_with( gasoline, 5 ) );
+    CHECK( tank.ammo_remaining() == 15 );
+    CHECK( gasoline.charges == 85 );
+
+    CHECK_FALSE( tank.fill_with( gasoline, 0 ) );
+    CHECK( tank.ammo_remaining() == 15 );
+    CHECK( gasoline.charges == 85 );
+}
+
 TEST_CASE( "check_capacity_fueltype_handling", "[vehicle]" )
 {
     GIVEN( "tank is empty" ) {

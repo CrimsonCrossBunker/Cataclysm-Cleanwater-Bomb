@@ -792,6 +792,10 @@ int item::get_remaining_capacity_for_liquid( const item &liquid, bool allow_buck
         return 0;
     };
 
+    if( has_flag( flag_NO_RELOAD ) && !has_flag( flag_VEHICLE ) ) {
+        return error( string_format( _( "That %s cannot be refilled." ), tname() ) );
+    }
+
     int remaining_capacity = 0;
 
     if( can_contain_partial( liquid ).success() ) {

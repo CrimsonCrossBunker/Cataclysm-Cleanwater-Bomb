@@ -1,5 +1,13 @@
 #include "vehicle.h" // IWYU pragma: associated
 
+#include "calendar.h"
+#include "character_id.h"
+#include "coordinates.h"
+#include "map.h"
+#include "point.h"
+#include "type_id.h"
+#include "vpart_position.h"
+
 #include <algorithm>
 #include <memory>
 #include <set>
@@ -564,15 +572,14 @@ bool vehicle_part::fill_with( item &liquid, int qty )
         // Nothing in tank
         charges_max = ammo_capacity( liquid.ammo_type() );
     }
-    qty = qty < liquid.charges ? qty : liquid.charges;
-
-    if( charges_max < liquid.charges ) {
-        qty = charges_max;
+    qty = std::min( { qty, liquid.charges, charges_max } );
+    if( qty <= 0 ) {
+        return false;
     }
 
-    liquid.charges -= base.fill_with( liquid, qty );
-
-    return true;
+    const int transferred = base.fill_with( liquid, qty );
+    liquid.charges -= transferred;
+    return transferred > 0;
 }
 
 const std::set<fault_id> &vehicle_part::faults() const
