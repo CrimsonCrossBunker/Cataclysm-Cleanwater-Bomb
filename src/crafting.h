@@ -70,9 +70,9 @@ inflight_alarm_choices compute_inflight_alarm_choices(
 // the remaining runtime so resume timers do not anchor to a stale step
 // start.
 std::optional<std::vector<attention_plan>> show_craft_planning_modal(
-        const recipe &rec, const Character &crafter, int batch, int from_step,
-        const std::vector<attention_plan> &existing,
-        const item *current_craft = nullptr );
+    const recipe &rec, const Character &crafter, int batch, int from_step,
+    const std::vector<attention_plan> &existing,
+    const item *current_craft = nullptr );
 
 // Interrupts the avatar's current activity with a craft_step_complete
 // distraction when the avatar can read time; falls back to a vague flavor
@@ -86,6 +86,9 @@ void fire_step_complete_distraction( const std::string &interrupt_msg,
 // dispatchers when the item is a craft.
 std::vector<desired_wakeup> craft_enumerate_scheduled_wakeups(
     const item &craft, const item_location &loc );
+// `landed` may be any item in the copied tree, not necessarily its top.
+void craft_relocated( const item_location &landed );
+
 void craft_actualize_scheduled( item &craft, item_wakeup_kind kind,
                                 time_point now, const item_location &loc );
 

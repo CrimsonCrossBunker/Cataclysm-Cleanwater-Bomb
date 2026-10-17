@@ -1,9 +1,11 @@
 schema_version: 1
 kind: documentation_registry
-source_commit: 28de57c833d431a6dfd20abc4e6695e410348c7f
+
+source_commit: 97b3926c8a56d501f10fa6a9a02e23b045af6e0e
 scope: Tracked documentation and machine contracts from the Git index; untracked build caches are never
   traversed.
-entry_count: 241
+entry_count: 243
+
 entries:
 - id: repo.github-agents-md
   path: .github/AGENTS.md
@@ -834,6 +836,17 @@ entries:
   authority: explanatory
   source_of_truth: false
   stable_document_id: mods.mind-over-matter.no-knacks
+  ccb_docs_ids: []
+  generated: false
+  generated_by: null
+  include_in_ai_index: false
+- id: repo.data-mods-monkey-king-readme-md
+  path: data/mods/Monkey_King/README.md
+  category: historical_document
+  status: historical
+  authority: historical
+  source_of_truth: false
+  stable_document_id: null
   ccb_docs_ids: []
   generated: false
   generated_by: null
@@ -2705,6 +2718,17 @@ entries:
   generated: false
   generated_by: null
   include_in_ai_index: true
+- id: repo.tests-standalone-readme-md
+  path: tests/standalone/README.md
+  category: historical_document
+  status: historical
+  authority: historical
+  source_of_truth: false
+  stable_document_id: null
+  ccb_docs_ids: []
+  generated: false
+  generated_by: null
+  include_in_ai_index: false
 - id: repo.tools-agents-md
   path: tools/AGENTS.md
   category: agent_instruction

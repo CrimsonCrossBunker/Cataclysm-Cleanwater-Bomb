@@ -40,7 +40,6 @@
 #include "game_constants.h"
 #include "generic_factory.h"
 #include "gun_mode.h"
-#include "inventory.h"
 #include "item.h"
 #include "item_category.h"
 #include "item_contents.h"
@@ -71,6 +70,7 @@
 #include "rng.h"
 #include "safe_reference.h"
 #include "string_formatter.h"
+#include "temp_crafting_inventory.h"
 #include "translation.h"
 #include "translations.h"
 #include "type_id.h"
@@ -295,7 +295,7 @@ static external_power_reservation reserve_firing_requirement_external_power(
     }
     if( host.has_flag( flag_USES_BIONIC_POWER ) ) {
         reservation.bionic_kj = static_cast<int>( std::min<int64_t>(
-                                    remaining, units::to_kilojoule( carrier->get_power_level() ) ) );
+                remaining, units::to_kilojoule( carrier->get_power_level() ) ) );
     }
     return reservation;
 }
@@ -549,7 +549,7 @@ double item::effective_dps( const Character &guy, Creature &mon ) const
      * only some small percent of them actually become critical hits.
      */
     const int rng_high_mean = std::max( std::min( static_cast<int>( base_hit - 1.5 * mon_dodge ),
-                                        20 ), -20 ) + 20;
+        20 ), -20 ) + 20;
     double num_high_hits = hits_by_accuracy[ rng_high_mean ] * num_all_hits / hit_trials;
     double double_crit_chance = guy.crit_chance( 4, 0, *this );
     double crit_chance = guy.crit_chance( 0, 0, *this );
@@ -810,7 +810,7 @@ std::string item::overheat_symbol() const
         return string_format( _( "<color_light_green>\u2588VNT </color>" ) );
     }
     switch( std::min( 5, static_cast<int>( get_var( "gun_heat",
-                                           0 ) / std::max( type->gun->overheat_threshold * multiplier + modifier, 5.0 ) * 5.0 ) ) ) {
+            0 ) / std::max( type->gun->overheat_threshold * multiplier + modifier, 5.0 ) * 5.0 ) ) ) {
         case 1:
             return "";
         case 2:
@@ -944,7 +944,7 @@ std::pair<int, int> item::reach_range( const Character &guy ) const
 
     if( !is_gun() ) {
         res = std::max( 1, static_cast<int>( guy.calculate_by_enchantment( res,
-                                             enchant_vals::mod::MELEE_RANGE_MODIFIER ) ) );
+            enchant_vals::mod::MELEE_RANGE_MODIFIER ) ) );
     }
 
     // for guns consider any attached gunmods
@@ -957,7 +957,7 @@ std::pair<int, int> item::reach_range( const Character &guy ) const
                 res = std::max( {
                     res, 1,
                     static_cast<int>( guy.calculate_by_enchantment( m.second.qty + reach_attack_add,
-                                      enchant_vals::mod::MELEE_RANGE_MODIFIER ) )
+                    enchant_vals::mod::MELEE_RANGE_MODIFIER ) )
                 } );
             }
         }
@@ -980,7 +980,7 @@ std::pair<int, int> item::current_reach_range( const Character &guy ) const
 
     if( !is_gun() || ( is_gun() && !is_gunmod() && gun_current_mode().melee() ) ) {
         res = std::max( 1, static_cast<int>( guy.calculate_by_enchantment( res,
-                                             enchant_vals::mod::MELEE_RANGE_MODIFIER ) ) );
+            enchant_vals::mod::MELEE_RANGE_MODIFIER ) ) );
     }
 
     if( is_gun() && !is_gunmod() ) {
@@ -1444,7 +1444,7 @@ int item::gun_recoil( const Character &p, bool bipod, bool ideal_strength ) cons
     // we consider only base weight to avoid exploits
     // now we need to add weight of receiver
     double wt = ideal_strength ? gun_base_weight() / 333.0_gram : std::min( gun_base_weight(),
-                p.get_arm_str() * 333_gram ) / 333.0_gram;
+        p.get_arm_str() * 333_gram ) / 333.0_gram;
 
     double handling = type->gun->handling;
     for( const item *mod : gunmods() ) {
@@ -1555,7 +1555,7 @@ int item::ammo_remaining( const map &here, const std::set<ammotype> &ammo, const
     const bool is_tool_with_carrier = carrier != nullptr && is_tool();
 
     if( is_tool_with_carrier && has_flag( flag_USES_NEARBY_AMMO ) && !ammo.empty() ) {
-        const inventory &crafting_inventory = carrier->crafting_inventory();
+        const temp_crafting_inventory &crafting_inventory = carrier->crafting_inventory();
         const ammotype &a = *ammo.begin();
         return crafting_inventory.charges_of( a->default_ammotype(), INT_MAX );
     }
@@ -1962,7 +1962,7 @@ int item::ammo_consume( int qty, map &here, const tripoint_bub_ms &pos, Characte
     if( is_tool_with_carrier && has_flag( flag_USES_NEARBY_AMMO ) ) {
         const ammotype ammo = ammo_type();
         if( !ammo.is_null() ) {
-            const inventory &carrier_inventory = carrier->crafting_inventory( &here );
+            const temp_crafting_inventory &carrier_inventory = carrier->crafting_inventory( &here );
             itype_id ammo_type = ammo->default_ammotype();
             const int charges_avalable = carrier_inventory.charges_of( ammo_type, INT_MAX );
 
@@ -3277,8 +3277,8 @@ std::map<gun_mode_id, gun_mode> item::gun_all_modes() const
                 const int qty = m.second.qty();
 
                 res.emplace( gun_mode_id( prefix + m.first.str() ), gun_mode( m.second.name(),
-                             const_cast<item *>( e ),
-                             qty, m.second.flags() ) );
+                        const_cast<item *>( e ),
+                        qty, m.second.flags() ) );
             }
 
             // non-auxiliary gunmods may provide additional modes for the base item
@@ -3896,11 +3896,11 @@ ret_val<void> item::link_to( vehicle &veh, const point_rel_ms &mount, link_state
 
     // Prepare target tripoints for the cable parts that'll be added to the selected/previous vehicles
     const std::pair<tripoint_abs_ms, tripoint_abs_ms> prev_part_target = std::make_pair(
-                veh.pos_abs() + veh.coord_translate( mount ),
-                veh.pos_abs() );
+            veh.pos_abs() + veh.coord_translate( mount ),
+            veh.pos_abs() );
     const std::pair<tripoint_abs_ms, tripoint_abs_ms> sel_part_target = std::make_pair(
-                link().t_abs_pos + prev_veh->coord_translate( link().t_mount ),
-                link().t_abs_pos );
+            link().t_abs_pos + prev_veh->coord_translate( link().t_mount ),
+            link().t_abs_pos );
 
     for( const vpart_reference &vpr : prev_veh->get_any_parts( VPFLAG_POWER_TRANSFER ) ) {
         if( vpr.part().target.first == prev_part_target.first &&
@@ -4200,7 +4200,7 @@ bool item::process_link( map &here, Character *carrier, const tripoint_bub_ms &p
 
     if( link().last_processed <= t_veh->part( link_vp_index ).last_disconnected ) {
         add_msg_if_player_sees( pos, m_warning, string_format( _( "You detached the %s." ),
-                                type_name() ) );
+                type_name() ) );
         return reset_link( true, carrier, -2 );
     }
     t_veh->part( link_vp_index ).set_flag( vp_flag::linked_flag );
@@ -4467,7 +4467,7 @@ units::energy item::energy_per_second() const
     units::energy energy_to_burn;
     if( type->tool->turns_per_charge > 0 ) {
         energy_to_burn += units::from_kilojoule( std::max<int64_t>( ammo_required(),
-                          1 ) ) / type->tool->turns_per_charge;
+            1 ) ) / type->tool->turns_per_charge;
     } else if( type->tool->power_draw > 0_mW ) {
         energy_to_burn += type->tool->power_draw * 1_seconds;
     }
@@ -4556,7 +4556,7 @@ bool item::process_blackpowder_fouling( Character *carrier )
     // Rust is deterministic. At a total modifier of 1 (the max): 12 hours for first rust, then 24 (36 total), then 36 (72 total) and finally 48 (120 hours to go to XX)
     // this speeds up by the amount the gun is dirty, 2-6x as fast depending on dirt level. At minimum dirt, the modifier is 0.3x the speed of the above mentioned figures.
     set_var( "rust_timer", get_var( "rust_timer", 0 ) + std::min( 0.3 + get_var( "dirt", 0 ) / 200,
-             1.0 ) );
+            1.0 ) );
     double time_mult = 1.0 + ( 4.0 * static_cast<double>( damage() ) ) / static_cast<double>
                        ( max_damage() );
     if( damage() < max_damage() && get_var( "rust_timer", 0 ) > 43200.0 * time_mult ) {

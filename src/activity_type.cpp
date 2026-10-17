@@ -1,5 +1,6 @@
 #include "activity_type.h"
 
+#include <translation.h>
 #include <functional>
 #include <map>
 #include <string>
@@ -10,6 +11,7 @@
 #include "activity_handlers.h"
 #include "debug.h"
 #include "enums.h"
+#include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "sounds.h"
 #include "string_formatter.h"
@@ -115,6 +117,7 @@ void activity_type::load( const JsonObject &jo )
     optional( jo, was_loaded, "fetch_items_to_zone", fetch_items_to_zone_, true );
     optional( jo, was_loaded, "refuel_fires", refuel_fires, false );
     optional( jo, was_loaded, "auto_needs", auto_needs, false );
+    optional( jo, was_loaded, "mute_npc_completion", mute_npc_completion, false );
     optional( jo, was_loaded, "completion_eoc", completion_EOC );
     optional( jo, was_loaded, "do_turn_eoc", do_turn_EOC );
     optional( jo, was_loaded, "ignored_distractions", default_ignored_distractions_ );

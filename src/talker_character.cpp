@@ -1,3 +1,8 @@
+#include <bodypart.h>
+#include <character.h>
+#include <enums.h>
+#include <talker.h>
+#include <type_id.h>
 #include <algorithm>
 #include <bitset>
 #include <cmath>
@@ -971,6 +976,11 @@ void talker_character::mod_daily_health( int amount, int cap )
     me_chr->mod_daily_health( amount, cap );
 }
 
+void talker_character::set_hunger( int amount )
+{
+    me_chr->set_hunger( amount );
+}
+
 void talker_character::mod_livestyle( int amount )
 {
     me_chr->mod_livestyle( amount );
@@ -1193,6 +1203,11 @@ int talker_character_const::get_health() const
     return me_chr_const->get_lifestyle();
 }
 
+int talker_character_const::get_daily_health() const
+{
+    return me_chr_const->get_daily_health();
+}
+
 static std::pair<bodypart_id, bodypart_id> temp_delta( const Character *u )
 {
     bodypart_id current_bp_extreme = u->get_all_body_parts().front();
@@ -1320,7 +1335,7 @@ std::string talker_character_const::proficiency_training_text( const_talker cons
     const float pct_before = current_time * 100.0f / time_needed;
     const float pct_after = ( current_time + 15_minutes ) * 100.0f / time_needed;
     const std::string after_str = pct_after >= 100.0f ? pgettext( "NPC training: proficiency learned",
-                                  "done" ) : string_format( "%2.0f%%", pct_after );
+        "done" ) : string_format( "%2.0f%%", pct_after );
 
     if( cost > 0 ) {
         //~ Proficiency name: (current_practice) -> (next_practice) (cost in dollars)
@@ -1373,7 +1388,7 @@ std::string talker_character_const::spell_training_text( const_talker const &stu
     const spell &temp_spell = me_chr_const->magic->get_spell( sp );
     const bool knows = pupil->magic->knows_spell( sp );
     const int cost = me_chr_const->calc_spell_training_cost( knows, temp_spell.get_difficulty( *pupil ),
-                     temp_spell.get_level() );
+        temp_spell.get_level() );
     std::string text;
     if( cost == 0 && ( !me_chr_const->is_npc() || me_chr_const->as_npc()->is_ally( *pupil ) ) ) {
         text = temp_spell.name();
@@ -1453,9 +1468,9 @@ matec_id talker_character_const::get_random_technique( Creature const &t, bool c
         bool dodge_counter, bool block_counter, const std::vector<matec_id> &blacklist ) const
 {
     return std::get<0>( me_chr_const->pick_technique( t, me_chr_const->used_weapon(), crit,
-                        dodge_counter,
-                        block_counter,
-                        blacklist ) );
+            dodge_counter,
+            block_counter,
+            blacklist ) );
 }
 
 bool talker_character_const::is_in_vehicle() const

@@ -1,0 +1,627 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-15",
+  "scope": "Owner-maintained conservative creature location index. Bounded follow-up to PR1001, not new AI workers, engine-wide rewrite, whole-game/FPS or release acceptance.",
+  "responsible_human": "@LYHGLYTX",
+  "baseline": {
+    "pr": 1001,
+    "source_head": "ac255ad8fb90bf079c6a24a158fd54eee6c98555",
+    "frozen_build_record_head": "5f19f56ecb66202c79f94dcea23a3a63460cbac9",
+    "identity": "All82 frozen baseline inputs matched tracked ac255 blobs; record head differs but effective baseline source is verified. Production compile commands for tracker/map/tiles match candidate."
+  },
+  "candidate_source_head": "b8a4e7bf6c067662719c2c9505181cce7b6cd609",
+  "changed_source": [
+    "src/creature_tracker.cpp",
+    "src/creature_tracker.h",
+    "tests/creature_reachability_test.cpp"
+  ],
+  "implementation": [
+    "Per-creature_tracker bitset8192/1024-byte payload rejects definitely empty locations when authoritative location map contains at least64 registrations. Smaller populations retain direct lookup.",
+    "All5 insertion sites use cache_location, marking before authoritative insertion; hash collisions, removed entries and failed allocation may only leave false positives. Original map lookup and dead-creature test remain authoritative.",
+    "Removals never clear a shared bit. After max(1024,4*N) writes rebuild into a local bitset before publication; full rebuild/clear maintain the same owner lifecycle. No whole-world snapshot or per-query64KiB bitmap.",
+    "No workers, world access, entity iteration, action order, RNG calls, Lua Platform v1 contracts, save format or network messages changed. This cache has the same owner-only access requirement as its map; it is not a concurrent container."
+  ],
+  "build": {
+    "configuration": "Linux Clang 23 Release SDL3 tiles/sound, Lua v1, TRACY=ON, jobs=2",
+    "details": "Clang23 C++17 Release g1, SDL3 sound and TRACY=ON, existing CMake configuration reused, jobs2; full common/game plus focused native/scoped sanitizer targets. No LTO or compile-flag change in compared production units.",
+    "command": "cmake --build out/build/ccb-sdl3-profile --config Release --target cataclysm-tiles ccb-sdl3-acceptance ccb-reachability-asan ccb-reachability-baseline --parallel 2",
+    "exit": 0,
+    "seconds": 536.91,
+    "frozen_baseline_inputs": 82,
+    "frozen_candidate_inputs": 83,
+    "binaries": {
+      "baseline": [
+        {
+          "name": "cataclysm-tiles",
+          "sha256": "6c0e62709d47e86d30748eaffb3a90cdbb89b2b6410da78cbe068e5e6a065f76"
+        },
+        {
+          "name": "ccb-sdl3-acceptance",
+          "sha256": "5c4f2837f73e92b3011a7d4e5ae634635a54d0153d67e20651de09eca5e71ef2"
+        }
+      ],
+      "candidate": [
+        {
+          "name": "cataclysm-tiles",
+          "sha256": "a5ad1011d2af1581325e19e7e6794debff1833e62f4081a677a0576e79783f1e"
+        },
+        {
+          "name": "ccb-sdl3-acceptance",
+          "sha256": "edec1781a8520621c32c77c0a6cad4bb73f098ac9c8c1f0765706f396dce9bfb"
+        }
+      ]
+    }
+  },
+  "native_validation": [
+    {
+      "name": "native",
+      "exit": 0,
+      "cases": 32,
+      "assertions": 189035,
+      "seconds": 25.31935425195843,
+      "command": [
+        "$WORKTREE/out/build/ccb-sdl3-profile/Release/ccb-sdl3-acceptance",
+        "[reachability]~[benchmark],[goal_policy],[movement_plan],[target_selection],[planning_reaction],[destination_plan],[step_selection]",
+        "--rng-seed",
+        "20261015",
+        "--order",
+        "lex",
+        "--warn",
+        "NoTests",
+        "--user-dir",
+        "$WORKTREE/.ccb-pr-evidence/native-combined/reachability56/native-user",
+        "--reporter",
+        "xml",
+        "--out",
+        "$WORKTREE/.ccb-pr-evidence/native-combined/reachability56/native.xml"
+      ]
+    },
+    {
+      "name": "baseline-contract",
+      "exit": 0,
+      "cases": 4,
+      "assertions": 16715,
+      "seconds": 18.25554545398336,
+      "command": [
+        "$WORKTREE/out/build/ccb-sdl3-profile/Release/ccb-reachability-baseline",
+        "[reachability]~[benchmark]",
+        "--rng-seed",
+        "20261015",
+        "--order",
+        "lex",
+        "--warn",
+        "NoTests",
+        "--user-dir",
+        "$WORKTREE/.ccb-pr-evidence/native-combined/reachability56/baseline-contract-user",
+        "--reporter",
+        "xml",
+        "--out",
+        "$WORKTREE/.ccb-pr-evidence/native-combined/reachability56/baseline-contract.xml"
+      ]
+    },
+    {
+      "name": "tracker-asan",
+      "exit": 0,
+      "cases": 4,
+      "assertions": 16715,
+      "seconds": 45.36450742301531,
+      "command": [
+        "$WORKTREE/out/build/ccb-sdl3-profile/Release/ccb-reachability-asan",
+        "[reachability]~[benchmark]",
+        "--rng-seed",
+        "20261015",
+        "--order",
+        "lex",
+        "--warn",
+        "NoTests",
+        "--user-dir",
+        "$WORKTREE/.ccb-pr-evidence/native-combined/reachability56/tracker-asan-user",
+        "--reporter",
+        "xml",
+        "--out",
+        "$WORKTREE/.ccb-pr-evidence/native-combined/reachability56/tracker-asan.xml"
+      ]
+    },
+    {
+      "name": "baseline-benchmark",
+      "exit": 0,
+      "cases": 1,
+      "assertions": 7592,
+      "seconds": 21.416553357965313,
+      "command": [
+        "$WORKTREE/out/build/ccb-sdl3-profile/Release/ccb-reachability-baseline",
+        "creature_reachability_zone_collection_benchmark",
+        "--rng-seed",
+        "20261015",
+        "--order",
+        "lex",
+        "--warn",
+        "NoTests",
+        "--user-dir",
+        "$WORKTREE/.ccb-pr-evidence/native-combined/reachability56/baseline-benchmark-user",
+        "--reporter",
+        "xml",
+        "--out",
+        "$WORKTREE/.ccb-pr-evidence/native-combined/reachability56/baseline-benchmark.xml",
+        "--benchmark-samples",
+        "30",
+        "--benchmark-warmup-time",
+        "100"
+      ]
+    },
+    {
+      "name": "candidate-benchmark",
+      "exit": 0,
+      "cases": 1,
+      "assertions": 7592,
+      "seconds": 21.011896134004928,
+      "command": [
+        "$WORKTREE/out/build/ccb-sdl3-profile/Release/ccb-sdl3-acceptance",
+        "creature_reachability_zone_collection_benchmark",
+        "--rng-seed",
+        "20261015",
+        "--order",
+        "lex",
+        "--warn",
+        "NoTests",
+        "--user-dir",
+        "$WORKTREE/.ccb-pr-evidence/native-combined/reachability56/candidate-benchmark-user",
+        "--reporter",
+        "xml",
+        "--out",
+        "$WORKTREE/.ccb-pr-evidence/native-combined/reachability56/candidate-benchmark.xml",
+        "--benchmark-samples",
+        "30",
+        "--benchmark-warmup-time",
+        "100"
+      ]
+    }
+  ],
+  "safety_scope": "Actual creature_tracker.cpp and focused support/test code compiled with ASan/UBSan -O1 -g1 -fno-omit-frame-pointer; detect_leaks=1, abort_on_error=1, halt_on_error=1. Other shared engine objects uninstrumented. No new TSan run or whole-engine memory/race proof; no new concurrency introduced. Unchanged preceding owner-boundary gates reused.",
+  "regression_coverage": [
+    "Lifecycle/replacement/death, owner lookup and ordered traversal, doors, vertical and map-edge occupancy, separate subsequent zones, RNG preservation.",
+    "80 registered creatures and4096 moves exercise repeated maintenance; swaps, removals, clear, serialization/deserialization and deliberate bucket collision preserve authoritative lookup.",
+    "Same4 contract cases pass with old tracker implementation linked against the same support, independently checking compatibility expectations."
+  ],
+  "kernel_benchmark": {
+    "method": "Native Catch2,30 samples,100ms warmup,759 actors, baseline then candidate single AB; illustrative mechanism coverage, not a balanced game performance claim.",
+    "results": {
+      "baseline-benchmark": [
+        {
+          "scene": "759 creatures in one open zone",
+          "mean_ms": 4.80523,
+          "mean95_ms": [
+            4.74232,
+            4.91191
+          ]
+        },
+        {
+          "scene": "759 creatures in small isolated zones",
+          "mean_ms": 6.70557,
+          "mean95_ms": [
+            6.47917,
+            7.03757
+          ]
+        }
+      ],
+      "candidate-benchmark": [
+        {
+          "scene": "759 creatures in one open zone",
+          "mean_ms": 4.90368,
+          "mean95_ms": [
+            4.83573,
+            4.97753
+          ]
+        },
+        {
+          "scene": "759 creatures in small isolated zones",
+          "mean_ms": 4.94203,
+          "mean95_ms": [
+            4.91026,
+            4.98669
+          ]
+        }
+      ]
+    },
+    "interpretation": "Open-zone candidate mean slightly adverse with overlapping intervals; fragmented-zone mean lower. Retain both, never substitute kernel timing for native game evidence."
+  },
+  "runtime_protocol": {
+    "platform": "Linux SDL3 tiles, fullscreen2880x1800, UNDEAD_PEOPLE, OpenGL; independent frozen Damon copies.",
+    "workers": "VISION_PREPARATION_WORKERS=4; RENDER_PREPARATION_WORKERS=0; MULTITHREADING_ENABLED=false; THREAD_POOL_WORKERS=0 on both sides. No additional AI workers.",
+    "fixture": "combat-origin starts759 active monsters at [5495,7449,2]; fixed32wait-input endpoint turn5212844, same position,758 active monsters. Saved player contains DEBUG_NODMG; controlled dense-carrier workload, not worst-case hostile combat.",
+    "fixture_manifest_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef",
+    "timing": "Native CATA_PROFILE zones exported from Tracy;32wait inputs at0.5s cadence. perf125Hz samples main thread with user call stacks; separate30s all-thread user task-clock. Main action window and scope means are different from full-session CPU.",
+    "admission": "20s quiet preflight; no own compilation or other game/export. Reject entire block only for declared forbidden-process interference, max4attempts; no timing rejection. Neither formal cohort discarded any block. Resource floor6GiB free, owned raw-evidence cap4GiB.",
+    "statistics": "Each game is a repeated unit. Alternate AB/BA order. Paired t95 on per-game mean deltas, fixed6pairs/df5/t2.5705818356. No pooled cohorts, optional stopping or post-hoc timing exclusions."
+  },
+  "original_8_input_cohort": {
+    "games": 28,
+    "design": "5dense pairs plus3pairs each carrier exploration/field/room controls.",
+    "dense_monmove": {
+      "paired95_delta_ms": [
+        -3.4775564479699335,
+        0.5342435479699339
+      ],
+      "inference": "Crosses0: inconclusive despite all5 directional improvements. Kept separate from independent confirmation."
+    },
+    "controls_rule": "Prespecified >3%adverse mean AND paired95delta interval above0. Crosszero is not equivalence. Missing frame groups not applicable, not zero. All adverse means retained.",
+    "controls": [
+      {
+        "scene": "combat",
+        "metric": "draw.rebuilt",
+        "candidate_change_percent": -3.0126451188759895,
+        "paired95_delta_ms": [
+          -2.3921130986683705,
+          0.30991184866836785
+        ],
+        "confirmed_material_regression": false
+      },
+      {
+        "scene": "combat",
+        "metric": "draw.reused",
+        "candidate_change_percent": -3.1879832353405857,
+        "paired95_delta_ms": [
+          -2.000804103937001,
+          0.3926024652273178
+        ],
+        "confirmed_material_regression": false
+      },
+      {
+        "scene": "combat",
+        "metric": "all_process30s_user_task_clock_ms",
+        "candidate_change_percent": -1.1811455758277356,
+        "paired95_delta_ms": [
+          -315.4674123762692,
+          88.62741237626904
+        ],
+        "confirmed_material_regression": false
+      },
+      {
+        "scene": "carrier",
+        "metric": "draw.rebuilt",
+        "candidate_change_percent": -1.459927151209861,
+        "paired95_delta_ms": [
+          -5.2924912544955065,
+          4.280568245486497
+        ],
+        "confirmed_material_regression": false
+      },
+      {
+        "scene": "carrier",
+        "metric": "draw.reused",
+        "candidate_change_percent": -4.165307987424538,
+        "paired95_delta_ms": [
+          -4.985424015752316,
+          2.9393468176679356
+        ],
+        "confirmed_material_regression": false
+      },
+      {
+        "scene": "carrier",
+        "metric": "all_process30s_user_task_clock_ms",
+        "candidate_change_percent": -0.7231649592452372,
+        "paired95_delta_ms": [
+          -545.1145502416834,
+          401.7878835750181
+        ],
+        "confirmed_material_regression": false
+      },
+      {
+        "scene": "field",
+        "metric": "draw.rebuilt",
+        "candidate_change_percent": -7.405258434254803,
+        "paired95_delta_ms": [
+          -5.39630475575105,
+          1.4832439629582583
+        ],
+        "confirmed_material_regression": false
+      },
+      {
+        "scene": "field",
+        "metric": "all_process30s_user_task_clock_ms",
+        "candidate_change_percent": -2.7595221313157503,
+        "paired95_delta_ms": [
+          -259.49826173582915,
+          53.30492840249583
+        ],
+        "confirmed_material_regression": false
+      },
+      {
+        "scene": "room",
+        "metric": "draw.rebuilt",
+        "candidate_change_percent": 4.362052281401407,
+        "paired95_delta_ms": [
+          -2.459225312465524,
+          3.9209793124655232
+        ],
+        "confirmed_material_regression": false
+      },
+      {
+        "scene": "room",
+        "metric": "all_process30s_user_task_clock_ms",
+        "candidate_change_percent": 1.7135785039211537,
+        "paired95_delta_ms": [
+          -37.389113556177584,
+          112.80244688951115
+        ],
+        "confirmed_material_regression": false
+      }
+    ],
+    "unavailable_metrics": "Room and field have only rebuilt frames; reused-frame metrics unavailable, never zero. No confirmed material draw/CPU control regression; intervals crossing0 do not establish equivalence."
+  },
+  "independent_confirmation": {
+    "games": 12,
+    "predeclared_policy": "reachability56/independent-confirmation-policy.json; fixed6new pairs32wait inputs, source unchanged. Chosen to exercise sustained movement/periodic maintenance after original short cohort was inconclusive.",
+    "primary_monmove_ms": {
+      "baseline_mean": 13.510408807291666,
+      "candidate_mean": 12.93677590625,
+      "reduction_percent": 4.245858946415238,
+      "paired95_candidate_minus_baseline_ms": [
+        -0.8959535365736022,
+        -0.2513122655097306
+      ],
+      "per_pair_ms": {
+        "baseline53": [
+          13.6830156875,
+          13.20240803125,
+          13.7172846875,
+          13.5133491875,
+          13.80692890625,
+          13.13946634375
+        ],
+        "candidate56": [
+          12.75304478125,
+          12.617235625,
+          12.89969684375,
+          13.332965,
+          13.11181946875,
+          12.90589371875
+        ]
+      }
+    },
+    "simulate_turn_suffix_ms": {
+      "baseline_mean": 22.966935239583332,
+      "candidate_mean": 22.277262541666666,
+      "reduction_percent": 3.0028939025700807,
+      "paired95_candidate_minus_baseline_ms": [
+        -1.1360249584415987,
+        -0.24332043739173442
+      ]
+    },
+    "secondary_metrics": {
+      "plan": {
+        "baseline_mean": 0.011639755736090596,
+        "candidate_mean": 0.010826737994419825,
+        "reduction_percent": 6.984835078195861,
+        "paired95_candidate_minus_baseline_ms": [
+          -0.00096845009561632,
+          -0.0006575853877252194
+        ]
+      },
+      "route": {
+        "baseline_mean": 0.1061238787202381,
+        "candidate_mean": 0.11215743787202381,
+        "reduction_percent": -5.685392603950401,
+        "paired95_candidate_minus_baseline_ms": [
+          0.0012808318239871863,
+          0.010786286479584243
+        ]
+      },
+      "draw.rebuilt": {
+        "baseline_mean": 33.855166473958334,
+        "candidate_mean": 34.216776088541664,
+        "reduction_percent": -1.0681076250547594,
+        "paired95_candidate_minus_baseline_ms": [
+          -0.9630162207788355,
+          1.6862354499454997
+        ]
+      },
+      "draw.reused": {
+        "baseline_mean": 24.560627864978905,
+        "candidate_mean": 24.651227852320673,
+        "reduction_percent": -0.3688830262802645,
+        "paired95_candidate_minus_baseline_ms": [
+          -0.5106579178368879,
+          0.6918578925204307
+        ]
+      },
+      "all_process30s_user_task_clock_ms": {
+        "baseline_mean": 10472.491666666667,
+        "candidate_mean": 10502.366666666667,
+        "reduction_percent": -0.28527117472043617,
+        "paired95_candidate_minus_baseline_ms": [
+          -211.5239697738578,
+          271.2739697738566
+        ]
+      }
+    },
+    "conclusion": "Primary monmove -4.2459% and suffix -3.0029%, paired95 deltas below0. Route +5.6854% (~0.006034ms/call), positive interval: retained secondary adverse cost despite net primary gain. Confirmation draw/CPU means slightly adverse, intervals cross0. No FPS, all-game CPU or universal AI speedup claim."
+  },
+  "state_and_replay": {
+    "formal_native_games": 40,
+    "independent_raw_audit": "Every formal saved player and complete memory archive re-decoded and rehashed; all same-scene variants agree.83 candidate source inputs and both frozen binary sets rehashed; exact options and viewport checked.",
+    "normalization": "Sort unordered learned_recipes and game_save event buckets; omit time_since_load/total_time_played walltime in game_save; map exactly enumerated Oct12/13/14/15 test-build version strings and merge their identical event buckets. No actor decisions/moves/damage/locations or ordered gameplay arrays normalized.",
+    "collectors": "All40 games exit0, all3collectors per trial exit0, recorded lost-event lines0; quiet admission passed.",
+    "replay_reload": "8native games: dense8-input replay and ordinary room32-input replay, both versions, then saved-state reload. Turn/position/actor endpoints checked; same-variant replay and reload cross-version full gameplay hashes agree, map-memory hashes agree. Reload-specific event statistics retained.",
+    "memory_semantic_hashes": {
+      "reach56-replay-combat": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488",
+      "reach56-reload-combat": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488",
+      "reach56-replay-room": "8d7811c8c299161465803708af20bb8d1ab3fab140729a21911e37c3a1002b74",
+      "reach56-reload-room": "8d7811c8c299161465803708af20bb8d1ab3fab140729a21911e37c3a1002b74"
+    }
+  },
+  "function_level_perf": {
+    "captured_trials": 40,
+    "complete_self_export": "perf report --no-children --percent-type local-period --sort dso,symbol --call-graph none --show-nr-samples --show-total-period --percent-limit 0 --no-inline, same recorded action time window.",
+    "complete_stacks": "All main.folded symbol/stack rows exported into per-trial JSON, inclusive and leaf sample counts separately; unknown/address rows retained. Self-row periods sum exactly to event count in all40 traces.",
+    "samples_per_game_range": [
+      179,
+      716
+    ],
+    "max_unknown_leaf_percent": 40.416666666666664,
+    "confirmation_mean_percentages": {
+      "baseline53": {
+        "find_self_period": 0.0,
+        "flood_self_period": 2.1990750645350503,
+        "flood_inclusive_samples": 5.493268803530477,
+        "unknown_leaf": 31.166524354325706
+      },
+      "candidate56": {
+        "find_self_period": 0.617544719306387,
+        "flood_self_period": 2.4121628574637684,
+        "flood_inclusive_samples": 4.966026517195129,
+        "unknown_leaf": 30.990533478544556
+      }
+    },
+    "limits": "Optimized/inlined code and roughly31% unresolved confirmation leaf samples prevent precise per-function causal accounting. Baseline find has no separately attributed leaf; zero attribution is not zero work. Inclusive percentages overlap and are not summed; percentages are never converted to elapsed ms or used as primary speedup evidence."
+  },
+  "rejected_work_and_failures": [
+    "Prototype54 combined transient per-search bitmap and pre-existing reachability generation alias fix; native tests caught old defect, but carrier actor state differed. Preserved separate diagnostic/fix branches; behavior change excluded from this strict performance batch.",
+    "Prototype55 removed alias fix and retained per-search bitmap; exact build-version metadata initially caused comparison failure. Independent raw audit confirmed gameplay/memory equality after narrow declared metadata normalization. Native fragmented benchmark ~11.2% slower and first game pair adverse; prototype abandoned, not pooled.",
+    "Current56 first build missed json_loader.h include; fixed explicit include and reran same build gate. Failed build logs retained.",
+    "Original28game driver had leftover15game terminal assertion after every native game passed; preserved old summary, repaired postprocessing only. No valid games excluded or resampled.",
+    "Current56 four-run pilot excluded from formal inference; original short5pairs remain inconclusive. All adverse means and unknown attribution retained."
+  ],
+  "private_evidence": {
+    "root": ".ccb-pr-evidence/native-combined",
+    "retention": "Raw saves, tiles, binaries, perf/Tracy and detailed per-trial reports remain local; none uploaded. Relative paths below are local evidence locators.",
+    "files": [
+      {
+        "path": "reachability56/candidate/build-progress.json",
+        "sha256": "d413b277d7da6666ff20fe9cfc12147bad70824a6a5b4a94251276b8ab9aa107"
+      },
+      {
+        "path": "reachability56/baseline-source-identity-audit.json",
+        "sha256": "472ae16459052ac7f8ac0b6fa01c6ad2be097b62522e345d382efa32a780834f"
+      },
+      {
+        "path": "reachability56/validation-progress.json",
+        "sha256": "f60c8027416ecc9684c6dab94f1ce5bc5286e1d5cb93c03e37c028f27ded5666"
+      },
+      {
+        "path": "reachability56/native.xml",
+        "sha256": "c220d6923bc0da2af6c76313c0e524552f1b92f21794795206be3ed320f51c8e"
+      },
+      {
+        "path": "reachability56/baseline-contract.xml",
+        "sha256": "1e82e6bcb912fe4f57da66a8874ef4067f1ed346d00d595eaadbe04930aa98d5"
+      },
+      {
+        "path": "reachability56/tracker-asan.xml",
+        "sha256": "3f81146f29f58ce00b9c0d0aa50c2240f45d5a6a1c94c00d07b9afdd6855a464"
+      },
+      {
+        "path": "reachability56/baseline-benchmark.xml",
+        "sha256": "ec3f13eb3aa5f07ed991ebb2b75d15365720259512db65cb6e7256e0a9f79206"
+      },
+      {
+        "path": "reachability56/candidate-benchmark.xml",
+        "sha256": "bc35e89c993ac28c20ff4f2b4de0a179ab99f024574a5e4706596d4e3bf3df6f"
+      },
+      {
+        "path": "reachability56/pilot-progress.json",
+        "sha256": "36ee9442a7b7b1586e25ab9f80fb80410576cb523bacb9be781eb0101d5a9d98"
+      },
+      {
+        "path": "reachability56/primary-progress.json",
+        "sha256": "07d277e6370a44f48bd68dcfd03d5ccc8b9621a7d3bbb1d9486107865d46a66c"
+      },
+      {
+        "path": "reachability56/primary-five-pair-review.json",
+        "sha256": "26d88efc69d39a9a31da21219ace94bc698bbafd86312a962204ad94e08c6090"
+      },
+      {
+        "path": "reachability56/control-review.json",
+        "sha256": "730e0e280ccbd6ae8b23cb0e74c77abb2d91f5059a7e66ce9469db798b457f60"
+      },
+      {
+        "path": "reachability56/independent-confirmation-policy.json",
+        "sha256": "f6e6048ca148fad4c83e2823eddd42da852f9b984f30fc3058ff089fdf06ebc2"
+      },
+      {
+        "path": "reachability56-confirm32/primary-progress.json",
+        "sha256": "3ac267c1b4e5d33fe8756b21c62f47283d0dd6e9448f3fb3ec7b9756aae1b4b3"
+      },
+      {
+        "path": "reachability56/replay-progress.json",
+        "sha256": "9a1852f69a7a7b1439673af2580f5e463149455cde10f76e5bb33392bb7974ed"
+      },
+      {
+        "path": "reachability56/complete-function-audit.json",
+        "sha256": "014115e853064b066769efc9a024b83f507746e2f2441c096ddecd365d3f67aa"
+      },
+      {
+        "path": "reachability56/function-hotspot-review.json",
+        "sha256": "29dd9df2126cfd8d26884b82d4d259f4541ea5cb892f91ddb0c25643b5a1841f"
+      },
+      {
+        "path": "reachability56/final-runtime-audit.json",
+        "sha256": "2ec58f5c270f61896ecd9b758a3e3fb68f914576206a674f6c24e0b59069c695"
+      },
+      {
+        "path": "reachability56/matrix.py",
+        "sha256": "0a193e7a8903e4eb6f88dacac540b1700c339b12b3b9bd7ca151c6115b1a672e"
+      },
+      {
+        "path": "reachability56-confirm32/matrix.py",
+        "sha256": "908556e9dc2e4c44bab61558184ec712b3d6628df4b37c42f4b768194d79c562"
+      },
+      {
+        "path": "reachability56/record-helpers.py",
+        "sha256": "2920367af33f725238839758a477ba65b1ec8094f70166dd52304624b048886c"
+      },
+      {
+        "path": "reachability56/replay.py",
+        "sha256": "cc8d0b0b3582676fedb95c87b8a29a37960029b9e0891aab6ae81cbc24efca93"
+      },
+      {
+        "path": "reachability56/replay-session.py",
+        "sha256": "dc56159c0a5cafa51c281b462591d1e950f426d9f115e018ce36063f8dc88044"
+      },
+      {
+        "path": "reachability56/export-complete-functions.py",
+        "sha256": "bf5de48815af3d6337cb9cf9ade1d6b198861dd786d591c364bc732d8bdefd72"
+      },
+      {
+        "path": "reachability56/final-runtime-audit.py",
+        "sha256": "28f936b47798a9428cf44d99df6a7472bfc922a9e766601a56207776b146e336"
+      },
+      {
+        "path": "reachability56/attach.cmake",
+        "sha256": "dd857cc72aab6cc8021d1300ac28bd4fdbb10c33ce29905fd96b54c5a67019b1"
+      },
+      {
+        "path": "reachability56/build.py",
+        "sha256": "b13717770dfd8fadd353bfc22ad2c5b3357403fdd84fabbe1cd5b2f38948dbf1"
+      },
+      {
+        "path": "reachability56/validate.py",
+        "sha256": "a5f8f3757461ed1ae4480706c15f1e2b60a96a9d8dd1417f23314585423d7bee"
+      },
+      {
+        "path": "/tmp/ccb-recovery53-lowload-trial.py",
+        "sha256": "0482852a131cd11cdcb050d570bae93a2af602a79197b3de3028c6e17f6f5bdf"
+      },
+      {
+        "path": "/tmp/ccb-mt-native-session.py",
+        "sha256": "7bd6d34609a88dbb0b8659d3451dd7cae3f5428b37bd1e2fff4a5c3b0114c03d"
+      },
+      {
+        "path": "/tmp/ccb-memory-archive-audit.py",
+        "sha256": "87903d9f507d4e05924881697b2050f593ea197370462aeca04328ba642b7b09"
+      },
+      {
+        "path": "reachability56/delivery-source-audit.json",
+        "sha256": "32ba28b6e5c58601a5aa948d9fa53fb451831898df0441d23a93dacc88dd95a4"
+      }
+    ]
+  },
+  "unverified": [
+    "Hosted CI at delivery head, Windows/Android/other GPUs and devices.",
+    "Physical display FPS/frame p95, long sessions, all old saves or live multiplayer. No altered wire/save/RNG code, native deterministic fixtures and exact state parity are bounded evidence, not universal compatibility proof.",
+    "User-reported unknown-region multi-second stall remains unreplicated; this batch does not claim to fix it.",
+    "No new AI concurrency or 3D renderer; future work must use owned snapshots/private outputs and deterministic owner commit, with new measurements."
+  ],
+  "delivery": "Dependent draft PR on codex/performance-remaining-stages-20261013 (PR1001); no automatic merge/release. Source/tests and this evidence report are separate logical commits.",
+  "post_freeze_formatting": "Final astyle dry-run found one test continuation-line indentation. Fixed only whitespace; delivery-source-audit verifies82byte-identical frozen inputs and identical whitespace-separated byte tokens for the one test. Implementation/headers/configuration unchanged; native/sanitizer/runtime evidence reused. Original83-input raw audit remains immutable."
+}

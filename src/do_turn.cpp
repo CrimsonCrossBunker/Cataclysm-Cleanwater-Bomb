@@ -34,6 +34,7 @@
     #include "cata_imgui.h"
 #endif
 #include "cata_variant.h"
+#include "craft_reservation.h"
 #include "clzones.h"
 #include "coordinates.h"
 #include "creature_tracker.h"
@@ -174,7 +175,7 @@ bool cleanup_at_end()
         std::vector<std::string> characters = g->list_active_saves();
         // remove current player from the active characters list, as they are dead
         std::vector<std::string>::iterator curchar = std::find( characters.begin(),
-                characters.end(), u.get_save_id() );
+            characters.end(), u.get_save_id() );
         if( curchar != characters.end() ) {
             characters.erase( curchar );
         }
@@ -423,7 +424,8 @@ void monmove()
             critter.try_biosignature();
             critter.try_reproduce();
         }
-        while( critter.get_moves() > 0 && !critter.is_dead() && !critter.has_effect( effect_ridden ) ) {
+        while( critter.get_moves() > 0 && !critter.is_dead() &&
+               get_creature_tracker().is_present( &critter ) && !critter.has_effect( effect_ridden ) ) {
             critter.made_footstep = false;
             // Controlled critters don't make their own plans
             if( !critter.has_effect( effect_controlled ) ) {
@@ -433,7 +435,13 @@ void monmove()
                 critter.set_moves( 0 );
                 break;
             }
+            if( !critter.is_dead() && !get_creature_tracker().is_present( &critter ) ) {
+                break;
+            }
             critter.move(); // Move one square, possibly hit u
+            if( !critter.is_dead() && !get_creature_tracker().is_present( &critter ) ) {
+                break;
+            }
             critter.process_triggers();
             m.creature_in_field( critter );
         }
@@ -588,7 +596,7 @@ void overmap_npc_move()
             }
             if( elem->omt_path.empty() ) {
                 elem->omt_path = overmap_buffer.get_travel_path( elem->pos_abs_omt(), elem->goal,
-                                 overmap_path_params::for_npc() ).points;
+                    overmap_path_params::for_npc() ).points;
                 if( elem->omt_path.empty() ) { // goal is unreachable, or already reached goal, reset it
                     elem->goal = npc::no_goal_point;
                 }
@@ -661,11 +669,11 @@ void game::handle_progress_ui()
         const bool ff_active = cata_mp::should_fast_forward();
         const bool ff_redraw_due = [&] {
             if( !ff_active )
-            {
-                return false;
-            }
-            const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-            if( first_redraw_since_waiting_started ||
+        {
+            return false;
+        }
+        const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+        if( first_redraw_since_waiting_started ||
                 std::chrono::duration_cast<std::chrono::milliseconds>( now - s_last_ff_redraw ).count() >= 100 )
             {
                 s_last_ff_redraw = now;
@@ -781,6 +789,9 @@ void game::simulate_turn_prefix()
     timed_event_manager &timed_events = get_timed_events();
     timed_events.process();
     get_item_wakeups().process( calendar::turn );
+    if( calendar::once_every( 1_hours ) ) {
+        get_craft_reservations().sweep_expired_records();
+    }
     mission::process_all();
     avatar &u = get_avatar();
     map &m = get_map();
@@ -1091,8 +1102,8 @@ void game::simulate_turn_suffix()
     // consider a stripped down cache just for monsters.
     m.build_map_cache( levz, true );
 
-    // Eagerly compute reachability zones for all creatures in parallel so
-    // that individual monster::plan() / find_reachable() calls hit the cache.
+    // Compute zones in original creature order. Optional workers prepare only
+    // owned geometry values; no worker reads or mutates a live creature.
     get_creature_tracker().precompute_all_zones();
 
     // process monster and npc turn

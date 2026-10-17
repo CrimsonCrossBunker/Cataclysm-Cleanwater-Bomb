@@ -1,4 +1,6 @@
-#include "lightmap.h" // IWYU pragma: associated
+#include "lightmap.h"
+#include "vision_preparation.h"
+#include <system_error> // IWYU pragma: associated
 #include "shadowcasting.h" // IWYU pragma: associated
 
 #include <algorithm>
@@ -99,6 +101,25 @@ static light_color_rgb cached_twilight_color()
     const float ease = std::sin( progress * M_PI );
     const float tint_strength = ease * 0.35f;
     cached_color = light_color_rgb::from_hsv( hue, 0.8f, 1.0f ) * tint_strength;
+    return cached_color;
+}
+
+static light_color_rgb cached_weather_color()
+{
+    static time_point cached_turn = calendar::before_time_starts;
+    static light_color_rgb cached_color{};
+    if( cached_turn == calendar::turn ) {
+        return cached_color;
+    }
+    cached_turn = calendar::turn;
+
+    const weather_type_id &wid = get_weather().weather_id;
+    if( !wid->tint_color.is_colored() || wid->tint_strength <= 0.0f ) {
+        cached_color = {};
+        return cached_color;
+    }
+
+    cached_color = wid->tint_color * wid->tint_strength;
     return cached_color;
 }
 
@@ -255,11 +276,11 @@ bool map::build_vision_transparency_cache( int zlev )
     const tripoint_bub_ms p = player_character.pos_bub();
     const bool is_player_z = p.z() == zlev;
     const bool low_profile = is_player_z && ( player_character.is_crouching() ||
-                             player_character.is_prone() ||
-                             ( player_character.has_effect( effect_quadruped_full ) &&
-                               player_character.is_running() ) );
+        player_character.is_prone() ||
+        ( player_character.has_effect( effect_quadruped_full ) &&
+          player_character.is_running() ) );
     const std::optional<tripoint_bub_ms> override_origin = is_player_z ?
-            std::make_optional( p ) : std::nullopt;
+        std::make_optional( p ) : std::nullopt;
     const bool observer_changed = override_origin != map_cache.vision_transparency_override_origin ||
                                   low_profile != map_cache.vision_transparency_low_profile;
     if( map_cache.transparency_cache_dirty.none() && !observer_changed ) {
@@ -513,6 +534,7 @@ void map::generate_lightmap( const int zlev )
     map_cache.lightmap_dirty = false;
     // Apparent visibility depends on the rebuilt lighting, even if sight is unchanged.
     invalidate_visibility_cache();
+    map_cache.lightmap_generation = next_cache_generation();
 
     auto &lm = map_cache.lm;
     auto &sm = map_cache.sm;
@@ -554,8 +576,15 @@ void map::generate_lightmap( const int zlev )
     // Dawn/dusk tint: color sunlit tiles during twilight. At this point lm
     // contains only sunlight (no artificial sources yet), so any excess over
     // the indoor baseline is sunlight that reached the tile.
-    const light_color_rgb ddc =
+    // Weather tint: sunlight can be tinted by active weather, respecting dawn/dusk
+    const light_color_rgb twilight_tint =
         dawn_dusk_color_for_lightmap( g->get_dimension_prefix() );
+    const light_color_rgb weather_tint = cached_weather_color();
+    const light_color_rgb ddc = {
+        std::max( twilight_tint.r, weather_tint.r ),
+        std::max( twilight_tint.g, weather_tint.g ),
+        std::max( twilight_tint.b, weather_tint.b )
+    };
     if( ddc.is_colored() ) {
         const float outside_light = g->natural_light_level( 0 );
         const float inside_light = ( zlev >= 0 && outside_light > LIGHT_SOURCE_BRIGHT )
@@ -669,7 +698,7 @@ void map::generate_lightmap( const int zlev )
             // TODO: [lightmap] Allow creatures to have light attacks (i.e.: eyebot)
             // TODO: [lightmap] Allow creatures to have facing and arc lights
             float critter_luminance = critter.calculate_by_enchantment( critter.type->luminance,
-                                      enchant_vals::mod::LUMINATION, true );
+                enchant_vals::mod::LUMINATION, true );
             if( critter_luminance > 0 ) {
                 apply_light_source( mp, critter_luminance );
             }
@@ -1218,7 +1247,7 @@ void castLight( cata::mdarray<Out, point_bub_ms> &output_cache,
         bool started_row = false;
         T current_transparency( 0.0 );
         float away = start - ( -distance + 0.5f ) / ( -distance -
-                     0.5f ); //The distance between our first leadingEdge and start
+            0.5f ); //The distance between our first leadingEdge and start
 
         //We initialize delta.x to -distance adjusted so that the commented start < leadingEdge condition below is never false
         delta.x = -distance + std::max( static_cast<int>( std::ceil( away * ( -distance - 0.5f ) ) ), 0 );
@@ -1394,10 +1423,56 @@ void map::build_seen_cache( const tripoint_bub_ms &origin, const int target_z, i
         ( *seen_caches[ target_z + OVERMAP_DEPTH ] )[origin.x()][origin.y()] = VISIBILITY_FULL;
     }
 
-    cast_zlight<float, sight_calc, sight_check, accumulate_transparency>(
-        seen_caches, transparency_caches, floor_caches, origin, penalty, 1.0,
-        directions_to_cast );
+    {
+        CATA_PROFILE_SCOPE_NAMED( "vision.total" );
+        bool prepared = false;
+        const int workers = get_option<int>( "VISION_PREPARATION_WORKERS" );
+        if( workers > 0 && vision_preparation::should_prepare(
+                MAX_VIEW_DISTANCE - penalty, vision_horizontal_cost_ms_, static_cast<unsigned>( workers ),
+                !cata_mp::is_session_active() ) ) {
+            try {
+                if( !vision_preparation_ ) {
+                    vision_preparation_ = std::make_unique<vision_preparation::frame>( workers );
+                }
+                auto request = vision_preparation_->try_acquire( MAX_VIEW_DISTANCE - penalty );
+                if( request ) {
+                    {
+                        CATA_PROFILE_SCOPE_NAMED( "vision.capture" );
+                        auto &values = vision_preparation_->capture();
+                        values.origin = origin;
+                        values.offset_distance = penalty;
+                        values.numerator = 1.0f;
+                        values.direction = directions_to_cast;
+                        values.trig_distance = trigdist;
+                        for( int z = 0; z < OVERMAP_LAYERS; ++z ) {
+                            values.transparency[z] = *transparency_caches[z];
+                            values.floors[z] = *floor_caches[z];
+                        }
+                    }
+                    if( vision_preparation_->prepare() && vision_preparation_->apply( seen_caches, request ) ) {
+                        prepared = true;
+                        vision_horizontal_cost_ms_ = vision_preparation_->horizontal_cost_ms();
+                    }
+                }
+            } catch( const std::bad_alloc & ) {
+                // No result has been applied; retain the normal serial path.
+            }
+        }
+        if( prepared ) {
+            // Vertical casting remains on the owner; its original exception
+            // semantics are not hidden by the parallel allocation fallback.
+            vision_preparation::cast_vertical( seen_caches, transparency_caches, floor_caches,
+                                               origin, penalty, 1.0f, directions_to_cast, trigdist );
+        } else {
+            cast_zlight<float, sight_calc, sight_check, accumulate_transparency>(
+                seen_caches, transparency_caches, floor_caches, origin, penalty, 1.0,
+                directions_to_cast, workers > 0 ? &vision_horizontal_cost_ms_ : nullptr );
+        }
+    }
     seen_cache_process_ledges( seen_caches, floor_caches, std::nullopt );
+    // set here too: the early return below skips the final set after the
+    // mirror pass
+    seen_cache_generation = next_cache_generation();
 
     const optional_vpart_position vp = veh_at( origin );
     if( !vp ) {
@@ -1463,6 +1538,7 @@ void map::build_seen_cache( const tripoint_bub_ms &origin, const int target_z, i
         castLightAll<float, float, sight_calc, sight_check, update_light, accumulate_transparency>(
             *mocache, transparency_cache, mirror_pos.xy(), offsetDistance );
     }
+    seen_cache_generation = next_cache_generation();
 }
 
 void map::seen_cache_process_ledges( array_of_grids_of<float> &seen_caches,

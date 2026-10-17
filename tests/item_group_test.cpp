@@ -269,3 +269,18 @@ TEST_CASE( "Event-based_item_spawns_do_not_spawn_outside_event", "[item_group]" 
         CHECK( items[0].typeId() == test_rock );
     }
 }
+
+TEST_CASE( "bleach_groups_produce_one_filled_jug", "[item_group][sync]" )
+{
+    const item_group_id group = GENERATE( item_group_id( "bleach_jug" ),
+                                          item_group_id( "bleach_jug_part" ) );
+    for( int sample = 0; sample < 20; ++sample ) {
+        const item_group::ItemList items = item_group::items_from( group );
+        REQUIRE( items.size() == 1 );
+        CHECK( items.front().typeId() == itype_id( "jug_plastic" ) );
+        const auto contents = items.front().all_items_top();
+        REQUIRE( contents.size() == 1 );
+        CHECK( contents.front()->typeId() == itype_id( "bleach" ) );
+        CHECK( contents.front()->charges > 0 );
+    }
+}

@@ -26,6 +26,8 @@
 #include "calendar.h"
 #include "catacharset.h"
 #include "character.h"
+#include "craft_reservation.h"
+#include "crafting.h"
 #include "character_attire.h"
 #include "character_martial_arts.h"
 #include "color.h"
@@ -466,7 +468,7 @@ item_location Character::i_add( item it, bool /* should_stack */, const item *av
         if( !allow_wield || !wield( it ) ) {
             if( allow_drop ) {
                 return item_location( map_cursor( pos_abs() ), &get_map().add_item_or_charges( pos_bub(),
-                                      it ) );
+                        it ) );
             } else {
                 return added;
             }
@@ -527,7 +529,7 @@ ret_val<item_location> Character::i_add_or_fill( item &it, bool should_stack, co
             if( !allow_wield || !wield( it ) ) {
                 if( allow_drop ) {
                     loc = item_location( map_cursor( pos_abs() ), &get_map().add_item_or_charges( pos_bub(),
-                                         it ) );
+                        it ) );
                 }
             } else {
                 loc = item_location( *this, &weapon );
@@ -899,16 +901,16 @@ bool Character::dispose_item( item_location &&obj, const std::string &prompt )
         item_handling_cost( *obj ),
         [this, bucket, &obj] {
             if( bucket && !obj->spill_open_pockets( *this, obj.get_item() ) )
-            {
-                return false;
-            }
-
-            mod_moves( -item_handling_cost( *obj ) );
-            this->i_add( *obj, true, &*obj, &*obj );
-            obj.remove_item();
-            return true;
+        {
+            return false;
         }
-    } );
+
+        mod_moves( -item_handling_cost( *obj ) );
+        craft_relocated( this->i_add( *obj, true, &*obj, &*obj ) );
+        obj.remove_item();
+        return true;
+    }
+} );
 
     opts.emplace_back( dispose_option{
         _( "Drop item" ), true, '2', 0, [this, &obj] {
@@ -923,13 +925,18 @@ bool Character::dispose_item( item_location &&obj, const std::string &prompt )
         can_wear( *obj ).success(), '3', item_wear_cost( *obj ),
         [this, bucket, &obj] {
             if( bucket && !obj->spill_contents( *this ) )
-            {
-                return false;
-            }
+        {
+            return false;
+        }
 
-            item it = *obj;
-            obj.remove_item();
-            return !!wear_item( it );
+        item it = *obj;
+        obj.remove_item();
+        const std::optional<std::list<item>::iterator> worn_it = wear_item( it );
+        if( worn_it )
+        {
+            craft_relocated( item_location( *this, & **worn_it ) );
+            }
+            return !!worn_it;
         }
     } );
 
@@ -956,7 +963,7 @@ bool Character::dispose_item( item_location &&obj, const std::string &prompt )
             min_moves_i = index;
         }
         menu.addentry( -1, e.enabled, e.invlet, string_format( e.enabled ? "%s | %-7d" : "%s |",
-                       e.prompt, e.moves ) );
+                e.prompt, e.moves ) );
         index++;
     }
 
@@ -1117,7 +1124,7 @@ std::vector<intrinsic_quality_source> Character::intrinsic_quality_sources(
         for( const item *pseudo : bio.get_available_pseudo_items( false ) ) {
             // Crafter-aware, or a charged quality resolves through the avatar.
             const int supplied = provider_quality_level( *pseudo, qual, this,
-                                 false );
+                false );
             if( supplied >= level ) {
                 intrinsic_quality_source src;
                 src.owner = intrinsic_quality_source::owner_kind::bionic;
@@ -1132,7 +1139,7 @@ std::vector<intrinsic_quality_source> Character::intrinsic_quality_sources(
         const item weapon = bio.get_weapon();
         if( !weapon.is_null() ) {
             const int supplied = provider_quality_level( weapon, qual, this,
-                                 false );
+                false );
             if( supplied >= level ) {
                 intrinsic_quality_source src;
                 src.owner = intrinsic_quality_source::owner_kind::bionic;
@@ -1267,8 +1274,8 @@ units::mass Character::weight_carried_with_tweaks( const std::vector<std::pair<i
 units::mass Character::weight_carried_with_tweaks( const item_tweaks &tweaks ) const
 {
     const std::map<const item *, int> empty;
-    const std::map<const item *, int> &without = tweaks.without_items ? tweaks.without_items->get() :
-            empty;
+    const std::map<const item *, int> &without = tweaks.without_items ? *tweaks.without_items :
+        empty;
 
     // Worn items
     units::mass ret = worn.weight_carried_with_tweaks( without );
@@ -1824,7 +1831,7 @@ std::string Character::weapname_ammo() const
                     charges_color = c_light_green;
                 }
                 mag_ammo = string_format( "(%s)", colorize( string_format( "%i/%i", cur_ammo, max_ammo ),
-                                          charges_color ) );
+                    charges_color ) );
             }
         }
 
@@ -1906,13 +1913,13 @@ units::volume Character::volume_capacity_recursive(
     // discard, currently don't care if inventory has to grow in overall volume
     units::volume expansion = 0_ml;
     volume_capacity += weapon.get_volume_capacity_recursive( include_pocket,
-                       check_pocket_tree,
-                       expansion
+        check_pocket_tree,
+        expansion
                                                            );
     for( const item &it : worn.worn ) {
         volume_capacity += it.get_volume_capacity_recursive( include_pocket,
-                           check_pocket_tree,
-                           expansion
+            check_pocket_tree,
+            expansion
                                                            );
     }
     return volume_capacity;
@@ -2489,6 +2496,27 @@ void Character::on_item_acquire( const item &it )
     }
 }
 
+item &Character::best_unreserved_item_with_quality( const quality_id &qid )
+{
+    int max_lvl_found = INT_MIN;
+    std::vector<item *> items = items_with( [qid, &max_lvl_found, this]( const item & it ) {
+        if( !craft_reservation::usable_by_automation( it ) ) {
+            return false;
+        }
+        // same metric has_unreserved_quality plans with, so the two can't disagree
+        const int qlvl = provider_quality_level( it, qid, this, false );
+        if( qlvl > max_lvl_found ) {
+            max_lvl_found = qlvl;
+            return true;
+        }
+        return false;
+    } );
+    if( max_lvl_found > INT_MIN ) {
+        return *items.back();
+    }
+    return null_item_reference();
+}
+
 item &Character::best_item_with_quality( const quality_id &qid )
 {
     int max_lvl_found = INT_MIN;
@@ -2546,7 +2574,7 @@ bool Character::add_or_drop_with_msg( item &it, const bool /*unloading*/, const 
         }
         const std::vector<item *> wielded_mags = weapon.magazines_current();
         const bool wielded_mag_collision = std::find( wielded_mags.begin(), wielded_mags.end(),
-                                           &it ) != wielded_mags.end();
+            &it ) != wielded_mags.end();
         const bool allow_wield = !wielded_has_it && !wielded_mag_collision;
         const int prev_charges = it.charges;
         item_location ni = i_add( it, true, avoid,
@@ -2759,7 +2787,7 @@ bool Character::unload( item_location &loc, bool bypass_activity,
             }
         }
         const int total_sources = static_cast<int>( mags_to_eject.size() +
-                                  integral_sources.size() );
+            integral_sources.size() );
         if( !bypass_activity && total_sources > 1 ) {
             std::vector<std::string> msgs_v;
             msgs_v.reserve( total_sources + 1 );
@@ -3071,7 +3099,7 @@ bool Character::wield( item &it, std::optional<int> obtain_cost, bool combat )
 
     // Ideally the cost should be calculated from wield(item_location), but as backup try it here.
     const int mv = obtain_cost.value_or( item_handling_cost( it, true,
-                                         INVENTORY_HANDLING_PENALTY / ( worn ? 2 : 1 ) ) );
+        INVENTORY_HANDLING_PENALTY / ( worn ? 2 : 1 ) ) );
 
     if( worn ) {
         it.on_takeoff( *this );
@@ -3096,6 +3124,10 @@ bool Character::wield( item &it, std::optional<int> obtain_cost, bool combat )
 
     // set_wielded_item invalidates the weapon item_location, so get it again
     wielded = get_wielded_item();
+    // Copy-assigned into the weapon slot, so every uid under it is fresh.
+    if( wielded ) {
+        craft_relocated( wielded );
+    }
     recoil = MAX_RECOIL;
 
     // if fists are wielded get_wielded_item returns item_location::nowhere, which is a nullptr
@@ -3234,7 +3266,7 @@ void Character::store( item &container, item &put, bool penalties, int base_cost
             item contained_copy( put );
             contained_copy.charges = 1;
             ret_val<void> can_store = container_loc->can_contain( contained_copy, false, false,
-                                      use_best_pocket, false, item_location(), 10000000_ml, use_best_pocket );
+                use_best_pocket, false, item_location(), 10000000_ml, use_best_pocket );
             if( !can_store.success() ) {
                 break;
             }
@@ -3261,6 +3293,7 @@ void Character::store( item &container, item &put, bool penalties, int base_cost
                 }
                 break;
             }
+            craft_relocated( target );
             total_stored += stored;
         }
         if( total_stored <= 0 ) {
@@ -3307,7 +3340,7 @@ void Character::store( item &container, item &put, bool penalties, int base_cost
         // Bypass pocket settings (assuming the item is manually stored)
         const int charges = put.count_by_charges() ? put.charges : 1;
         const int charges_stored = target_container->fill_with( put, charges, false, false, true, false,
-                                   true, this );
+            true, this );
         if( charges_stored <= 0 ) {
             rollback_split();
             return;
@@ -3327,6 +3360,7 @@ void Character::store( item &container, item &put, bool penalties, int base_cost
         mod_moves( -item_store_cost( put, container, penalties, base_cost ) );
         i_rem( &put );
     }
+    craft_relocated( item_location( *this, target_container ) );
     calc_encumbrance();
 }
 
@@ -3338,7 +3372,7 @@ void Character::store( item_pocket *pocket, item &put, bool penalties, int base_
 
     item_location char_item( *this, &null_item_reference() );
     item_pocket *pkt_best = pocket->best_pocket_in_contents( char_item, put, nullptr, false,
-                            false ).second;
+        false ).second;
     if( !!pkt_best && pocket->better_pocket( *pkt_best, put, true ) ) {
         pocket = pkt_best;
     }
@@ -3350,5 +3384,6 @@ void Character::store( item_pocket *pocket, item &put, bool penalties, int base_
                           pocket->obtain_cost( put ) ) );
     i_rem( &put );
     result.value()->on_pickup( *this );
+    craft_relocated( item_location( *this, result.value() ) );
     calc_encumbrance();
 }

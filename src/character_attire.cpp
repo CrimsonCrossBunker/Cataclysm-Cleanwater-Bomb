@@ -25,6 +25,7 @@
 #include "cata_utility.h"
 #include "character.h"
 #include "coordinates.h"
+#include "craft_reservation.h"
 #include "creature.h"
 #include "damage.h"
 #include "debug.h"
@@ -792,6 +793,9 @@ bool outfit::one_per_layer_change_side( item &it, const Character &guy ) const
 
     const bool item_one_per_layer = it_copy.has_flag( json_flag_ONE_PER_LAYER );
     for( const item &worn_item : worn ) {
+        if( &worn_item == &it ) {
+            continue;
+        }
         if( item_one_per_layer && worn_item.has_flag( json_flag_ONE_PER_LAYER ) ) {
             const std::optional<side> sidedness_conflict = it_copy.covers_overlaps( worn_item );
             if( sidedness_conflict ) {
@@ -1367,7 +1371,7 @@ bool outfit::is_wearing_active_optcloak() const
     return false;
 }
 
-static ret_val<void> test_only_one_conflicts( const item &clothing, const item &i )
+ret_val<void> outfit::only_one_conflicts( const item &clothing ) const
 {
     const bool this_restricts_only_one = clothing.has_flag( json_flag_ONE_PER_LAYER );
 
@@ -1387,24 +1391,25 @@ static ret_val<void> test_only_one_conflicts( const item &clothing, const item &
         return ret;
     };
 
-    if( i.max_worn() == 1 && i.typeId() == clothing.typeId() ) {
-        return ret_val<void>::make_failure( _( "Can't wear more than one %s!" ), clothing.tname() );
-    }
-
-    if( this_restricts_only_one || i.has_flag( json_flag_ONE_PER_LAYER ) ) {
-        std::optional<side> overlaps = clothing.covers_overlaps( i );
-        if( overlaps && sidedness_conflicts( *overlaps ) ) {
-            return ret_val<void>::make_failure( _( "%1$s conflicts with %2$s!" ), clothing.tname(), i.tname() );
+    const auto test_conflicts = [&]( const item & i ) -> ret_val<void> {
+        if( i.max_worn() == 1 && i.typeId() == clothing.typeId() )
+        {
+            return ret_val<void>::make_failure( _( "Can't wear more than one %s!" ), clothing.tname() );
         }
-    }
 
-    return ret_val<void>::make_success();
-}
+        if( this_restricts_only_one || i.has_flag( json_flag_ONE_PER_LAYER ) )
+        {
+            std::optional<side> overlaps = clothing.covers_overlaps( i );
+            if( overlaps && sidedness_conflicts( *overlaps ) ) {
+                return ret_val<void>::make_failure( _( "%1$s conflicts with %2$s!" ), clothing.tname(), i.tname() );
+            }
+        }
 
-ret_val<void> outfit::only_one_conflicts( const item &clothing ) const
-{
+        return ret_val<void>::make_success();
+    };
+
     for( const item &i : worn ) {
-        ret_val<void> result = test_only_one_conflicts( clothing, i );
+        ret_val<void> result = test_conflicts( i );
         if( !result.success() ) {
             return result;
         }
@@ -1412,7 +1417,7 @@ ret_val<void> outfit::only_one_conflicts( const item &clothing ) const
         if( i.is_ablative() ) {
             // if item has ablative armor we should check those too.
             for( const item *ablative_armor : i.all_ablative_armor() ) {
-                result = test_only_one_conflicts( clothing, *ablative_armor );
+                result = test_conflicts( *ablative_armor );
                 if( !result.success() ) {
                     return result;
                 }
@@ -1511,6 +1516,10 @@ ret_val<void> outfit::check_rigid_conflicts( const item &clothing ) const
 void outfit::one_per_layer_sidedness( item &clothing ) const
 {
     const bool item_one_per_layer = clothing.has_flag( json_flag_ONE_PER_LAYER );
+    if( item_one_per_layer && clothing.is_sided() && clothing.get_side() == side::BOTH ) {
+        clothing.set_side( side::LEFT );
+    }
+
     for( const item &worn_item : worn ) {
         const std::optional<side> sidedness_conflict = clothing.covers_overlaps( worn_item );
         if( sidedness_conflict && ( item_one_per_layer ||
@@ -1568,7 +1577,7 @@ bool outfit::takeoff( item_location loc, std::list<item> *res, Character &guy )
 
     it.on_takeoff( guy );
     cata::event e = cata::event::make<event_type::character_takeoff_item>( guy.getID(),
-                    it.typeId() );
+        it.typeId() );
     get_event_bus().send_with_talker( &guy, &loc, e );
     // Catching eoc of character_takeoff_item event may cause item to be invalid.
     // If so, skip worn.erase and guy.i_add or res->push_back.
@@ -1755,7 +1764,8 @@ std::list<item> outfit::use_amount( const itype_id &it, int quantity,
                                     Character &wearer )
 {
     for( auto a = worn.begin(); a != worn.end() && quantity > 0; ) {
-        if( a->use_amount( it, quantity, used, filter ) ) {
+        if( !craft_reservation::contains_reserved( *a ) &&
+            a->use_amount( it, quantity, used, filter ) ) {
             a->on_takeoff( wearer );
             a = worn.erase( a );
         } else {
@@ -1929,7 +1939,7 @@ void outfit::absorb_damage( Character &guy, damage_unit &elem, bodypart_id bp,
 
             item_location loc = item_location( guy, &armor );
             cata::event e = cata::event::make<event_type::character_armor_destroyed>( guy.getID(),
-                            armor.typeId() );
+                armor.typeId() );
             get_event_bus().send_with_talker( &guy, &loc, e );
             for( const item *it : armor.all_items_top( pocket_type::CONTAINER ) ) {
                 worn_remains.push_back( *it );
@@ -2234,6 +2244,7 @@ void outfit::prepare_bodymap_info( bodygraph_info &info, const bodypart_id &bp,
     // general body part stats
     info.part_hp_cur = person.get_part_hp_cur( bp );
     info.part_hp_max = person.get_part_hp_max( bp );
+    info.avg_env_protection = person.get_env_resist( bp );
     info.wetness = person.get_part_wetness_percentage( bp );
     info.temperature = { units::to_legacy_bodypart_temp( person.get_part_temp_conv( bp ) ), display::bodytemp_color( person, bp ) };
     std::pair<std::string, nc_color> tmp_approx = display::temp_text_color( person, bp.id() );
@@ -2392,7 +2403,7 @@ static int fill_empty_stackable_containers( item_location loc, const item &newit
             contained_copy.charges = 1;
         }
         ret_val<void> can_contain = loc->can_contain( contained_copy, false, false,
-                                    ignore_settings, false, item_location(), 10000000_ml, allow_nested );
+            ignore_settings, false, item_location(), 10000000_ml, allow_nested );
         if( !can_contain.success() ) {
             break;
         }
@@ -2432,7 +2443,7 @@ void outfit::pickup_stash( Character &guy, const item &newit, int &remaining_cha
         item_location loc( guy, &i );
         if( is_empty_stackable_container( loc ) ) {
             const int used_charges = fill_empty_stackable_containers( loc, newit, remaining_charges,
-                                     guy, false, false, ignore_pkt_settings, false, true );
+                guy, false, false, ignore_pkt_settings, false, true );
             remaining_charges -= used_charges;
         } else if( i.can_contain_partial( newit ).success() ) {
             const int used_charges =
@@ -2479,10 +2490,10 @@ static std::vector<pocket_with_constraint> get_all_pockets_with_constraints_recu
     for( const item *contained : pocket->all_items_top() ) {
         for( const item_pocket *inner_pocket : contained->get_pockets( check_pocket_tree ) ) {
             std::vector<pocket_with_constraint> children = get_all_pockets_with_constraints_recursive(
-                        inner_pocket,
-                        include_pocket,
-                        check_pocket_tree
-                    );
+                    inner_pocket,
+                    include_pocket,
+                    check_pocket_tree
+                );
             for( auto &c : children ) {
                 c.second.constrain_by( pocket );
             }
@@ -2499,7 +2510,7 @@ static void get_all_pockets_with_constraints_in_loc_recursive( const item_locati
 {
     for( const item_pocket *pocket : loc->get_pockets( check_pocket_tree ) ) {
         std::vector<pocket_with_constraint> children = get_all_pockets_with_constraints_recursive( pocket,
-                include_pocket, check_pocket_tree );
+            include_pocket, check_pocket_tree );
         insert_in.insert( insert_in.end(), children.begin(), children.end() );
     }
 }
@@ -2617,14 +2628,14 @@ void outfit::add_stash( Character &guy, const item &newit, int &remaining_charge
         } else if( carried_item && !carried_item->has_pocket_type( pocket_type::MAGAZINE ) &&
                    is_empty_stackable_container( carried_item ) ) {
             int used_charges = fill_empty_stackable_containers( carried_item, newit, remaining_charges,
-                               guy, /*unseal_pockets=*/false, /*allow_sealed=*/false, /*ignore_settings=*/false,
-                               /*into_bottom*/false, /*allow_nested*/true );
+                guy, /*unseal_pockets=*/false, /*allow_sealed=*/false, /*ignore_settings=*/false,
+                /*into_bottom*/false, /*allow_nested*/true );
             remaining_charges -= used_charges;
         } else if( carried_item && !carried_item->has_pocket_type( pocket_type::MAGAZINE ) &&
                    carried_item->can_contain_partial( newit ).success() ) {
             int used_charges = carried_item->fill_with( newit, remaining_charges,
-                               /*unseal_pockets=*/false, /*allow_sealed=*/false, /*ignore_settings=*/false,
-                               /*into_bottom*/false, /*allow_nested*/true, &guy );
+                /*unseal_pockets=*/false, /*allow_sealed=*/false, /*ignore_settings=*/false,
+                /*into_bottom*/false, /*allow_nested*/true, &guy );
             remaining_charges -= used_charges;
         }
         // Crawl Next : worn items

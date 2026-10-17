@@ -1,0 +1,242 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-14",
+  "batch": 40,
+  "baseline": "f1da50b13de2cc9d249aaa3d5b30293e303fbc47",
+  "scope": "Value-only selected movement intent and single-use owner action commit. Capture after candidate unlock/shove effects; validate source/map/occupant/terrain/furniture/vehicle and execute attack/open/bash/push/move in original lazy order. Real Platform v1 move-hook cancellation/removal/context replacement is revalidated before native movement.",
+  "changes": [
+    "src/do_turn.cpp",
+    "src/monmove.cpp",
+    "src/monster_movement_plan.cpp",
+    "src/monster_movement_plan.h",
+    "tests/monster_movement_plan_test.cpp",
+    "tests/monster_movement_lua_test.cpp"
+  ],
+  "contracts": [
+    "Only coordinates and captured policy booleans enter the intent; lifetime/world references stay in owner envelope.",
+    "Failed stale/conflicting/reused/cancelled intents change neither source budget/position nor RNG.",
+    "Commit pins source only on owner and checks map context/turn, source inputs and goal, destination occupant identity and terrain/furniture/vehicle witnesses.",
+    "After failed actions, removal/death/context retirement stops fall-through; successful actions stop immediately. Stagger adjustment reads current owner position and distance mode only at movement fallback.",
+    "Turn loop stops unregistered living actors, retaining previous dead-actor post-move trigger/field processing.",
+    "on_monster_try_move retains existing allow/cancel semantics and rechecks source membership/map context after callback so a removed actor does not continue moving. Sole Lua Platform v1 retained."
+  ],
+  "validation": {
+    "configuration": "Linux Clang 23 Release SDL3 tiles/sound, Lua v1, TRACY=ON, jobs=2",
+    "native": {
+      "assertions": {
+        "successes": "2401",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "cases": {
+        "successes": "18",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "xml_sha256": "2b0bdf6fa42117c422255121ee5496dd0371aff6cb85d1f6b5e8e706c2415d16"
+    },
+    "scoped_asan_ubsan_lsan": {
+      "assertions": {
+        "successes": "1231",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "cases": {
+        "successes": "17",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "xml_sha256": "2f5ed98e1b68ad7dc2e6cee1bec1ac73deab702c46a07e85c19edaf58cc35ef2"
+    },
+    "sanitizer_scope": "Value movement intent and ordered owner attack/open/bash/push/move commit, conflict/stale/lifetime validation and real Platform v1 hook cancellation/removal/context-retirement. Actual do_turn.cpp, monmove.cpp, monster_movement_plan.cpp, destination plan and affected tests/support instrumented ASan/UBSan/LSan; other common world objects Release. Unchanged reaction/target/context evidence reused, not whole-game proof. No new worker dispatch.",
+    "commands": [
+      [
+        "cmake",
+        "--build",
+        "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile",
+        "--config",
+        "Release",
+        "--target",
+        "cataclysm-tiles",
+        "ccb-sdl3-acceptance",
+        "ccb-movement-asan",
+        "--parallel",
+        "2"
+      ],
+      [
+        "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile/Release/ccb-sdl3-acceptance",
+        "[movement_plan],[destination_plan],[step_selection],[determinism],monster_attack",
+        "--rng-seed",
+        "20261014",
+        "--order",
+        "lex",
+        "--warn",
+        "NoTests",
+        "--user-dir",
+        "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/movement-plan-stage4/native-user",
+        "--reporter",
+        "xml",
+        "--out",
+        "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/movement-plan-stage4/native.xml"
+      ],
+      [
+        "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile/Release/ccb-movement-asan",
+        "[movement_plan],[destination_plan],[step_selection],[determinism]",
+        "--rng-seed",
+        "20261014",
+        "--order",
+        "lex",
+        "--warn",
+        "NoTests",
+        "--user-dir",
+        "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/movement-plan-stage4/asan-user",
+        "--reporter",
+        "xml",
+        "--out",
+        "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/movement-plan-stage4/asan.xml"
+      ]
+    ],
+    "regression": "Real legacy/new action chain under both distance modes checks move/open-door/blocked/attack state and exact RNG; two contenders for one initially-empty destination enforce owner order; stale terrain/furniture/new vehicle/goal/budget/turn/context/death/removal/replacement and one-shot cancellation covered. Actual Platform v1 hook deny/removal/context retirement covered.",
+    "source_sha256": {
+      "src/do_turn.cpp": "d2d585bee3a0ff0ae18359eab8cd8e547d1142565535d2916d930add50edcae4",
+      "src/monmove.cpp": "e45db7f063504bfa8353fb51e7545fa4191bb9c7f193a38b8e4fa5369cbcad8f",
+      "src/monster_movement_plan.cpp": "e2db5b8ce648af318627e2ba0c5166dd3bfa4fdfa87cc5da24a825fb5b38d446",
+      "src/monster_movement_plan.h": "37c6e36039c20819d0b7f00c42357cdcc3ed8171b6e1a333f18a3259156a1737",
+      "tests/monster_movement_plan_test.cpp": "37a26069139110ab3c3c1c58650bf5a92bfc7d701bfd1ae9cd27cd9732ac2dee",
+      "tests/monster_movement_lua_test.cpp": "71966eb670725cbe1aca860624cb6240a8d79625ba0c17efe157fa4c2051a526"
+    },
+    "candidate_binary_sha256": {
+      "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile/src/Release/cataclysm-tiles": "a95adf6bab0aaadcfcb4be7cf022cedb44761c4ade13fd11c5dcaa0445666800",
+      "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile/Release/ccb-sdl3-acceptance": "b10a68d7df15a551b8974b4ba4b3822ce45e0d84ddf5d2d2212e52e4669ed1ba"
+    },
+    "actual_sdl3_replay_reload": [
+      {
+        "name": "movement-replay-combat-baseline",
+        "variant": "baseline",
+        "exit": 0,
+        "turn": 5212819,
+        "position": [
+          5495,
+          7449,
+          2
+        ],
+        "monsters": 759,
+        "normalized_sha256": "58af4b5158d3802f0b3cd27784f71b32ee5f2e9260002d33d8c26b8150a6547f",
+        "footer_verified": true
+      },
+      {
+        "name": "movement-reload-combat-baseline",
+        "variant": "baseline",
+        "exit": 0,
+        "turn": 5212819,
+        "position": [
+          5495,
+          7449,
+          2
+        ],
+        "monsters": 759,
+        "normalized_sha256": "c065d369013f70f86eeb92198e39908433258a9a45f416d620e3e0653a6b35ff",
+        "footer_verified": true
+      },
+      {
+        "name": "movement-replay-combat-candidate",
+        "variant": "candidate",
+        "exit": 0,
+        "turn": 5212819,
+        "position": [
+          5495,
+          7449,
+          2
+        ],
+        "monsters": 759,
+        "normalized_sha256": "58af4b5158d3802f0b3cd27784f71b32ee5f2e9260002d33d8c26b8150a6547f",
+        "footer_verified": true
+      },
+      {
+        "name": "movement-reload-combat-candidate",
+        "variant": "candidate",
+        "exit": 0,
+        "turn": 5212819,
+        "position": [
+          5495,
+          7449,
+          2
+        ],
+        "monsters": 759,
+        "normalized_sha256": "c065d369013f70f86eeb92198e39908433258a9a45f416d620e3e0653a6b35ff",
+        "footer_verified": true
+      },
+      {
+        "name": "movement-replay-room-baseline",
+        "variant": "baseline",
+        "exit": 0,
+        "turn": 5212848,
+        "position": [
+          5489,
+          7448,
+          0
+        ],
+        "monsters": 0,
+        "normalized_sha256": "8151bb75dee10193f9f6a1bafa067a4936abe0d372263068b5753d97ac96592b",
+        "footer_verified": true
+      },
+      {
+        "name": "movement-reload-room-baseline",
+        "variant": "baseline",
+        "exit": 0,
+        "turn": 5212848,
+        "position": [
+          5489,
+          7448,
+          0
+        ],
+        "monsters": 0,
+        "normalized_sha256": "34b92cad78cd95eacda0597f7b63ab7d80227ac8793cf4858e10c58157a1f2e2",
+        "footer_verified": true
+      },
+      {
+        "name": "movement-replay-room-candidate",
+        "variant": "candidate",
+        "exit": 0,
+        "turn": 5212848,
+        "position": [
+          5489,
+          7448,
+          0
+        ],
+        "monsters": 0,
+        "normalized_sha256": "8151bb75dee10193f9f6a1bafa067a4936abe0d372263068b5753d97ac96592b",
+        "footer_verified": true
+      },
+      {
+        "name": "movement-reload-room-candidate",
+        "variant": "candidate",
+        "exit": 0,
+        "turn": 5212848,
+        "position": [
+          5489,
+          7448,
+          0
+        ],
+        "monsters": 0,
+        "normalized_sha256": "34b92cad78cd95eacda0597f7b63ab7d80227ac8793cf4858e10c58157a1f2e2",
+        "footer_verified": true
+      }
+    ],
+    "memory_region_semantic_hashes": {
+      "movement-replay-combat": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488",
+      "movement-reload-combat": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488",
+      "movement-replay-room": "8d7811c8c299161465803708af20bb8d1ab3fab140729a21911e37c3a1002b74",
+      "movement-reload-room": "8d7811c8c299161465803708af20bb8d1ab3fab140729a21911e37c3a1002b74"
+    },
+    "reused_evidence": "Unchanged reaction/target policy oracles and map-context fault acceptance retained. Common world objects are Release; no whole-game sanitizer claim.",
+    "normalization": "Unordered recipe/event row order, game_save two wall-time fields and exact verified12/13/14 build identities only; all gameplay/event counts preserved, latest footer and xxh64 verified."
+  },
+  "performance_claim": "None. Structural owner/intent boundary with defensive checks; repeated quiet timing remains unproved after external interference stopped routing matrix.",
+  "remaining_and_limits": [
+    "General sensing/goal paths and full planner completion audit remain; this movement boundary is not completion of the entire Goal.",
+    "No asynchronous live-world access, full-game race/sanitizer, cross-platform/GPU-device or multiplayer gameplay acceptance claim.",
+    "Full semantic renderer/ordered asset-backend boundary and final combined scope acceptance remain."
+  ],
+  "local_raw_evidence": "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/movement-plan-stage4"
+}

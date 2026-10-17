@@ -58,6 +58,7 @@
 #include "json.h"
 #include "lua_platform_hooks.h"
 #include "lua_platform_runtime.h"
+#include "level_cache.h"
 #include "map.h"
 #include "map_memory.h"
 #include "map_scale_constants.h"
@@ -116,6 +117,7 @@ static const itype_id itype_guidebook( "guidebook" );
 static const itype_id itype_mut_longpull( "mut_longpull" );
 
 static const json_character_flag json_flag_ALARMCLOCK( "ALARMCLOCK" );
+static const json_character_flag json_flag_CANNOT_READ_SPELLBOOKS( "CANNOT_READ_SPELLBOOKS" );
 static const json_character_flag json_flag_PAIN_IMMUNE( "PAIN_IMMUNE" );
 static const json_character_flag json_flag_WEBBED_HANDS( "WEBBED_HANDS" );
 
@@ -531,10 +533,13 @@ bool avatar::read( item_location &book, item_location ereader )
     // spells are handled in a different place
     // src/iuse_actor.cpp -> learn_spell_actor::use
     if( book->get_use( "learn_spell" ) ) {
+        if( has_flag( json_flag_CANNOT_READ_SPELLBOOKS ) ) {
+            return false;
+        }
+
         book->get_use( "learn_spell" )->call( this, *book, pos_bub() );
         return true;
     }
-
     bool continuous = false;
     const time_duration time_taken = time_to_read( *book, *reader );
     add_msg_debug( debugmode::DF_ACT_READ, "avatar::read time_taken = %s",
@@ -1232,6 +1237,12 @@ bool avatar::cant_see( const tripoint_bub_ms &p ) const
     return aim_cache[p.x()][p.y()];
 }
 
+void avatar::mark_aim_cache_dirty()
+{
+    aim_cache_dirty = true;
+    aim_cache_generation = next_cache_generation();
+}
+
 void avatar::rebuild_aim_cache() const
 {
     map &here = get_map();
@@ -1242,7 +1253,7 @@ void avatar::rebuild_aim_cache() const
     double pi = 2 * acos( 0.0 );
 
     const tripoint_bub_ms local_last_target = here.get_bub(
-                last_target_pos.value() );
+            last_target_pos.value() );
     const tripoint_bub_ms pos = pos_bub( here );
     float base_angle = atan2f( local_last_target.y() - pos.y(),
                                local_last_target.x() - pos.x() );

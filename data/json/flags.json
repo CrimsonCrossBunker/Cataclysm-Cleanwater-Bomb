@@ -2057,7 +2057,31 @@
     "type": "json_flag"
   },
   {
+    "id": "SADDLE_BAG",
+    "type": "json_flag"
+  },
+  {
     "id": "SAFECRACK",
+    "type": "json_flag"
+  },
+  {
+    "id": "SCBA",
+    "info": "If paired with an air source and activated, this item can be used to breathe from a self-contained breathing apparatus.",
+    "type": "json_flag"
+  },
+  {
+    "id": "SCBA_ON",
+    "info": "This item is active and can be used to breathe from self-contained breathing apparatus.",
+    "type": "json_flag"
+  },
+  {
+    "id": "SCBA_TANK",
+    "info": "When activated, this item can fuel a self-contained breathing apparatus.",
+    "type": "json_flag"
+  },
+  {
+    "id": "SCBA_TANK_ON",
+    "info": "This item is active and can be used to fuel a self-contained breathing apparatus.",
     "type": "json_flag"
   },
   {
@@ -2090,6 +2114,10 @@
   },
   {
     "id": "SPLINT",
+    "type": "json_flag"
+  },
+  {
+    "id": "STIRRUP",
     "type": "json_flag"
   },
   {
@@ -2934,12 +2962,12 @@
   {
     "id": "PREFIX_XL",
     "type": "json_flag",
-    "item_prefix": "XL "
+    "item_suffix": " XL"
   },
   {
     "id": "PREFIX_XS",
     "type": "json_flag",
-    "item_prefix": "XS "
+    "item_suffix": " XS"
   },
   {
     "id": "DECAYS_IN_AIR",
@@ -3193,5 +3221,9 @@
     "type": "json_flag",
     "//": "Furniture with this flag prevents plants growing on it from becoming overgrown.",
     "info": "This planting facility can prevent crops from over-ripening and wilting."
+  },
+  {
+    "id": "MARLOSS",
+    "type": "json_flag"
   }
 ]

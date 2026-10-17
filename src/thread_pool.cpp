@@ -19,10 +19,24 @@ bool is_pool_worker_thread()
 cata_thread_pool::cata_thread_pool( unsigned int num_workers )
 {
     workers_.reserve( num_workers );
-    for( unsigned int i = 0; i < num_workers; ++i ) {
-        workers_.emplace_back( [this]() {
-            worker_loop();
-        } );
+    try {
+        for( unsigned int i = 0; i < num_workers; ++i ) {
+            workers_.emplace_back( [this]() {
+                worker_loop();
+            } );
+        }
+    } catch( ... ) {
+        // A later thread creation may fail after earlier workers started. Stop
+        // and join them before unwinding their joinable std::thread objects.
+        {
+            std::scoped_lock lock( mutex_ );
+            stop_ = true;
+        }
+        cv_.notify_all();
+        for( std::thread &worker : workers_ ) {
+            worker.join();
+        }
+        throw;
     }
 }
 
@@ -92,15 +106,15 @@ cata_thread_pool &get_thread_pool()
         // get_option<bool>() directly (not the cached parallel_enabled global)
         // because cache_to_globals() has not yet run at pool-init time.
         if( !has_option( "MULTITHREADING_ENABLED" ) ||
-            !get_option<bool>( "MULTITHREADING_ENABLED" ) )
-        {
-            return 0u;
-        }
-        const int workers_opt = has_option( "THREAD_POOL_WORKERS" ) ?
-        get_option<int>( "THREAD_POOL_WORKERS" ) : 0;
-        if( workers_opt > 0 )
-        {
-            return static_cast<unsigned int>( workers_opt );
+        !get_option<bool>( "MULTITHREADING_ENABLED" ) )
+    {
+        return 0u;
+    }
+    const int workers_opt = has_option( "THREAD_POOL_WORKERS" ) ?
+    get_option<int>( "THREAD_POOL_WORKERS" ) : 0;
+    if( workers_opt > 0 )
+    {
+        return static_cast<unsigned int>( workers_opt );
         }
         // 0 = auto: hardware_concurrency()-1, leaving one core for the main/SDL thread.
         const unsigned int hc = std::thread::hardware_concurrency();

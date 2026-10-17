@@ -230,7 +230,7 @@ static void migrate_mag_from_pockets( itype &def )
 }
 
 static std::optional<std::reference_wrapper<const itype>> find_template_list_const(
-            const itype_id &it_id )
+    const itype_id &it_id )
 
 {
     generic_factory<itype> &factory = item_controller->get_generic_factory();
@@ -530,7 +530,7 @@ void Item_factory::finalize_pre( itype &obj )
         int mat_total = 0;
 
         auto add_spi = [&is_not_boring, &specific_heat_solid, &specific_heat_liquid, &latent_heat,
-                        &mat_total]( const material_id & m, int portion ) {
+        &mat_total]( const material_id & m, int portion ) {
             specific_heat_solid += m->specific_heat_solid() * portion;
             specific_heat_liquid += m->specific_heat_liquid() * portion;
             latent_heat += m->latent_heat() * portion;
@@ -1349,7 +1349,7 @@ void Item_factory::finalize_post_armor( itype &obj )
                 mat.cover = 100;
             } else {
                 mat.cover = std::round( static_cast<float>( mat.cover ) / ( static_cast<float>
-                                        ( it.coverage ) / 100.0f ) );
+                    ( it.coverage ) / 100.0f ) );
             }
         }
     }
@@ -1836,7 +1836,7 @@ void Item_factory::finalize_item_blacklist()
             for( std::pair<itype_id, std::string> &spawn_pair : vis.item_ids ) {
                 itype_id &type_to_spawn = spawn_pair.first;
                 std::map<itype_id, std::vector<migration>>::iterator replacement =
-                        migrations.find( type_to_spawn );
+                    migrations.find( type_to_spawn );
                 if( replacement == migrations.end() ) {
                     continue;
                 }
@@ -2133,8 +2133,6 @@ void Item_factory::init()
     add_iuse( "CROWBAR_WEAK", &iuse::crowbar_weak );
     add_iuse( "DATURA", &iuse::datura );
     add_iuse( "DIG", &iuse::dig );
-    add_iuse( "DIVE_TANK", &iuse::dive_tank );
-    add_iuse( "DIVE_TANK_ACTIVATE", &iuse::dive_tank_activate );
     add_iuse( "DIRECTIONAL_ANTENNA", &iuse::directional_antenna );
     add_iuse( "DISASSEMBLE", &iuse::disassemble );
     add_iuse( "CRAFT", &iuse::craft );
@@ -2235,6 +2233,9 @@ void Item_factory::init()
     add_iuse( "REMOTEVEH_TICK", &iuse::remoteveh_tick );
     add_iuse( "REMOVE_ALL_MODS", &iuse::remove_all_mods );
     add_iuse( "ROBOTCONTROL", &iuse::robotcontrol );
+    add_iuse( "SCBA_MASK", &iuse::scba_mask );
+    add_iuse( "SCBA_MASK_ACTIVATE", &iuse::scba_mask_activate );
+    add_iuse( "SCBA_TANK_ACTIVATE", &iuse::scba_tank_activate );
     add_iuse( "SEED", &iuse::seed );
     add_iuse( "SEWAGE", &iuse::sewage );
     add_iuse( "SIPHON", &iuse::siphon );
@@ -3226,6 +3227,9 @@ void itype::load_slots( const JsonObject &jo, bool was_loaded, std::string_view 
         if( subtype == "PET_ARMOR" ) {
             Item_factory::load_slot( jo, was_loaded, pet_armor, src );
         }
+        if( subtype == "PET_EQUIPMENT" ) {
+            Item_factory::load_slot( jo, was_loaded, pet_equipment, src );
+        }
         if( subtype == "GUN" ) {
             Item_factory::load_slot( jo, was_loaded, gun, src );
         }
@@ -3746,6 +3750,16 @@ void islot_pet_armor::deserialize( const JsonObject &jo )
     optional( jo, was_loaded, "power_armor", power_armor, false );
 }
 
+void islot_pet_equipment::deserialize( const JsonObject &jo )
+{
+    mandatory( jo, was_loaded, "pet_slots", slots );
+    optional( jo, was_loaded, "pet_passive_effects", passive_effects );
+    optional( jo, was_loaded, "pet_mount_threshold_delta", mount_threshold_delta, 0 );
+    optional( jo, was_loaded, "pet_melee_hit_multiplier", melee_hit_multiplier, 1.0 );
+    optional( jo, was_loaded, "pet_melee_damage_multiplier", melee_damage_multiplier, 1.0 );
+    optional( jo, was_loaded, "pet_fear_multiplier", fear_multiplier, 1.0 );
+}
+
 void islot_tool::deserialize( const JsonObject &jo )
 {
     numeric_bound_reader not_negative{ 0 };
@@ -3824,7 +3838,7 @@ class vitamins_reader : public generic_typed_reader<vitamins_reader>
 {
     public:
         std::pair<vitamin_id, std::variant<int, vitamin_units::mass>> get_next(
-        const JsonValue &val ) const {
+            const JsonValue &val ) const {
             if( val.test_array() ) {
                 JsonArray arr = val.get_array();
                 if( arr.size() == 2 ) {
@@ -3935,7 +3949,6 @@ void islot_compostable::deserialize( const JsonObject &jo )
 
 void islot_seed::deserialize( const JsonObject &jo, std::string_view src )
 {
-    optional( jo, was_loaded, "fruit_div", fruit_div, 1 );
     mandatory( jo, was_loaded, "plant_name", plant_name );
     mandatory( jo, was_loaded, "fruit", fruit_id );
     mandatory( jo, was_loaded, "growth_stages", growth_stages,
@@ -5554,7 +5567,7 @@ Item_factory::get_armor_containers( units::volume min_volume ) const
     // Iterator in volumes coresponds to iterator in armor_containers.
     // Binary find the first holster that has enough volume.
     return { armor_containers.begin() + static_cast<size_t>( lower_bound(
-                 volumes.begin(), volumes.end(), min_volume ) - volumes.begin() ),
+                volumes.begin(), volumes.end(), min_volume ) - volumes.begin() ),
              armor_containers.end()};
 }
 

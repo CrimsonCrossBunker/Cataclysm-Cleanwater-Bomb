@@ -3,7 +3,7 @@
 [llama](https://github.com/nelhage/llama) is a CLI for outsourcing computation to AWS Lambda.
 
 You can use llama to accelerate your CDDA builds.  To help you set that up,
-this directory contains a suitable image for compiling CDDA on.
+this directory contains a legacy image for terminal compilation.
 
 After bootstrapping llama, you can use for example
 
@@ -14,25 +14,17 @@ llama update-function --create --timeout=120s --memory=4096 --build=tools/llama/
 This will configure llama to use the `gcc-focal` image here.  Note that it's
 important to have larger-than-default timeout and memory settings.
 
-### Troubleshooting
+### SDL3 tiles builds
 
-If, when building, you get errors about failed includes of SDL2 headers, then
-you can work around these via a hack I discovered, by setting a carefully
-chosen CXXFLAGS.  Your build command might look something like this:
+The legacy `gcc-focal` image is retained for terminal builds only; its SDL2
+packages and header workaround have been removed. It does not provide the SDL3
+stack required by the current tiles backend.
 
-```bash
-CXXFLAGS=-I/x/../../../../usr/include/SDL2 CXX=llamac++ make PCH=0 TILES=1 -j100
-```
-
-Or, if using cmake, something like this:
-```bash
-cmake \
-    -DTILES=ON \
-    -DSOUND=ON \
-    -DCMAKE_C_COMPILER=llamacc \
-    -DCMAKE_CXX_COMPILER=llamac++ \
-    -DCMAKE_CXX_FLAGS="-I/x/../../../../usr/include/SDL2" \
-    ..
-```
-
-(`/x` has to be a directory that doesn't exist on your system)
+To use llama for tiles, build a custom compiler image with SDL3 >= 3.4.0,
+SDL3_image, SDL3_ttf and SDL3_mixer development libraries matching the local
+build environment. Follow the [native build requirements](../../doc/c++/COMPILING-CMAKE.md)
+and the pinned Linux SDK recipe in
+[setup-sdl3-stack](../../.github/actions/setup-sdl3-stack/action.yml).
+The distributed compiler and local linker must use compatible headers,
+libraries and compiler versions. This migration has not validated a distributed
+SDL3 build.

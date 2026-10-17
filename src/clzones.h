@@ -23,6 +23,7 @@
 #include "point.h"
 #include "safe_reference.h"
 #include "translation.h"
+#include "translation_cache.h"
 #include "type_id.h"
 
 class cata_path;
@@ -47,7 +48,7 @@ namespace cata::lua_platform
 {
 class content_transaction;
 class presentation_content_transaction;
-}
+} // namespace cata::lua_platform
 
 inline const faction_id your_fac( "your_followers" );
 const std::string type_fac_hash_str = "__FAC__";
@@ -665,9 +666,9 @@ class zone_manager
         std::unordered_map<std::string, std::unordered_set<tripoint_abs_ms>> area_cache;
         // NOLINTNEXTLINE(cata-serialize)
         std::unordered_map<std::string, std::unordered_set<tripoint_abs_ms>> vzone_cache;
-        std::unordered_set<tripoint_abs_ms> get_point_set( const zone_type_id &type,
+        const std::unordered_set<tripoint_abs_ms> &get_point_set( const zone_type_id &type,
                 const faction_id &fac = your_fac ) const;
-        std::unordered_set<tripoint_abs_ms> get_vzone_set( const zone_type_id &type,
+        const std::unordered_set<tripoint_abs_ms> &get_vzone_set( const zone_type_id &type,
                 const faction_id &fac = your_fac ) const;
         static bool same_lifetime_identity( const std::weak_ptr<const void> &lhs,
                                             const std::weak_ptr<const void> &rhs );
@@ -676,6 +677,16 @@ class zone_manager
         static std::optional<vehicle_zone_locator> make_vehicle_zone_locator( zone_data &zone,
                 map *pmap );
         bool rebind_vehicle_zone_locators( const vehicle_zone_locator &locator );
+
+        // compiled zone filters, keyed by filter string. compiling costs far
+        // more than running. cleared on a language change, which rebakes
+        // translated body part and layer names, and by clear()
+        // NOLINTNEXTLINE(cata-serialize)
+        mutable std::unordered_map<std::string, std::function<bool( const item & )>> filter_cache;
+        mutable int filter_cache_lang_version = INVALID_LANGUAGE_VERSION; // NOLINT(cata-serialize)
+
+        const std::function<bool( const item & )> &cached_item_filter(
+            const std::string &filter ) const;
     public:
         zone_manager();
         ~zone_manager() = default;
@@ -740,9 +751,12 @@ class zone_manager
         bool has_near( const zone_type_id &type, const tripoint_abs_ms &where,
                        int range = MAX_DISTANCE, const faction_id &fac = your_fac ) const;
         bool has_loot_dest_near( const tripoint_abs_ms &where ) const;
+        // `memo` stores per-zone filter results for one query, so a multi-tile
+        // zone is only matched against `it` once
         bool custom_loot_has( const tripoint_abs_ms &where, const item *it,
                               const zone_type_id &ztype, const faction_id &fac = your_fac,
-                              std::optional<bool> from_vehicle = std::nullopt ) const;
+                              std::optional<bool> from_vehicle = std::nullopt,
+                              std::unordered_map<const zone_data *, bool> *memo = nullptr ) const;
         std::vector<zone_data const *> get_near_zones( const zone_type_id &type,
                 const tripoint_abs_ms &where, int range,
                 const faction_id &fac = your_fac ) const;

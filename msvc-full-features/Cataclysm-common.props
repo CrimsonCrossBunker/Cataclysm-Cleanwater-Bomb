@@ -26,14 +26,11 @@
     <_CDDA_USE_LLD_LINK>false</_CDDA_USE_LLD_LINK>
     <_CDDA_USE_LLD_LINK Condition="'$(CDDA_USE_LLD_LINK)'!='' Or $(_CDDA_ENABLE_THIN_ARCHIVES)">true</_CDDA_USE_LLD_LINK>
     <_UseSDL3>false</_UseSDL3>
-    <_UseSDL3 Condition="'$(UseSDL3)'=='' And !$(Configuration.Contains(NoTiles))">true</_UseSDL3>
-    <_UseSDL3 Condition="'$(UseSDL3)'=='true'">true</_UseSDL3>
-    <_UseSDL3 Condition="'$(UseSDL3)'=='false'">false</_UseSDL3>
+    <_UseSDL3 Condition="!$(Configuration.Contains(NoTiles))">true</_UseSDL3>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg">
     <VcpkgAdditionalInstallOptions>--clean-after-build</VcpkgAdditionalInstallOptions>
     <VcpkgAdditionalInstallOptions Condition="$(_UseSDL3)">$(VcpkgAdditionalInstallOptions) --x-feature=sdl3</VcpkgAdditionalInstallOptions>
-    <VcpkgAdditionalInstallOptions Condition="!$(_UseSDL3) And !$(Configuration.Contains(NoTiles))">$(VcpkgAdditionalInstallOptions) --x-feature=sdl2</VcpkgAdditionalInstallOptions>
     <VcpkgAdditionalInstallOptions Condition="$(_CDDA_ENABLE_TRACY)">$(VcpkgAdditionalInstallOptions) --x-feature=tracy</VcpkgAdditionalInstallOptions>
     <CustomBuildAfterTargets>VcpkgInstallManifestDependencies</CustomBuildAfterTargets>
   </PropertyGroup>
@@ -49,7 +46,7 @@
     <LinkToolExe>lld-link.exe</LinkToolExe>
     <!-- vcpkg passes dependecy libs via a glob pattern which lld-link doesn't accept. We have to manually enumerate the deps now. -->
     <VcpkgAutoLink>false</VcpkgAutoLink>
-    <!-- debug versions of libs often (but not always) use `d` suffix, as a convention. E.g. "SDL2-staticd.lib" -->
+    <!-- debug versions of libs often (but not always) use `d` suffix, as a convention. E.g. "SDL3-staticd.lib" -->
     <VcpkgLibSuffix></VcpkgLibSuffix>
     <VcpkgLibSuffix Condition="$(Configuration.StartsWith(Debug))">d</VcpkgLibSuffix>
   </PropertyGroup>
@@ -80,9 +77,6 @@
     </ClCompile>
     <ClCompile Condition="!$(Configuration.Contains(NoTiles))">
       <PreprocessorDefinitions>TILES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-    <ClCompile Condition="!$(Configuration.Contains(NoTiles)) And $(_UseSDL3)">
-      <PreprocessorDefinitions>USE_SDL3;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <ClCompile Condition="$(Configuration.Contains(NoTiles)) And !$(Configuration.Contains(Headless))">
       <PreprocessorDefinitions>USE_PDCURSES;PDC_NCMOUSE;PDC_WIDE;IMTUI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -176,46 +170,6 @@
         Winmm.lib;
         %(AdditionalDependencies)
       </AdditionalDependencies>
-      <AdditionalDependencies Condition="!$(_UseSDL3) And !$(Configuration.Contains(NoTiles))">
-        brotlicommon.lib;
-        brotlidec.lib;
-        brotlienc.lib;
-        bz2$(VcpkgLibSuffix).lib;
-        FLAC.lib;
-        FLAC++.lib;
-        freetype$(VcpkgLibSuffix).lib;
-        jpeg.lib;
-        libpng16$(VcpkgLibSuffix).lib;
-        libwavpack.lib;
-        mpg123.lib;
-        ogg.lib;
-        out123.lib;
-        pdcurses.lib;
-        SDL2_image-static$(VcpkgLibSuffix).lib;
-        SDL2_mixer-static$(VcpkgLibSuffix).lib;
-        SDL2_ttf$(VcpkgLibSuffix).lib;
-        SDL2-static$(VcpkgLibSuffix).lib;
-        syn123.lib;
-        turbojpeg.lib;
-        vorbis.lib;
-        vorbisenc.lib;
-        vorbisfile.lib;
-        zlib$(VcpkgLibSuffix).lib;
-        <!-- win32 deps of the vcpkg deps -->
-        Advapi32.lib;
-        Cfgmgr32.lib;
-        Gdi32.lib;
-        Imm32.lib;
-        Ole32.lib;
-        OleAut32.lib;
-        Setupapi.lib;
-        Shell32.lib;
-        Shlwapi.lib;
-        User32.lib;
-        Version.lib;
-        Winmm.lib;
-        %(AdditionalDependencies)
-      </AdditionalDependencies>
       <AdditionalDependencies Condition="$(Configuration.Contains(NoTiles)) And !$(Configuration.Contains(Headless))">
         pdcurses.lib;
         %(AdditionalDependencies)
@@ -228,4 +182,8 @@
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
     </ProjectReference>
   </ItemDefinitionGroup>
+  <Target Name="RejectRemovedSDL2Backend" BeforeTargets="PrepareForBuild;VcpkgInstallManifestDependencies"
+          Condition="!$(Configuration.Contains(NoTiles)) And '$(UseSDL3)'=='false'">
+    <Error Text="UseSDL3=false is no longer supported: SDL3 is the only tiles backend." />
+  </Target>
 </Project>

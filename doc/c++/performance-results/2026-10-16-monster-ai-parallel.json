@@ -1,0 +1,959 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-16",
+  "status": "Local bounded acceptance passed; draft PR delivery is audited separately. No merge or release.",
+  "scope": "Monster AI reachability preparation; world simulation, decisions, Lua, combat and RNG stay on the owner. This is not parallel execution of the complete monster planner.",
+  "source": {
+    "base_pr": 1005,
+    "dependency_pr": 1001,
+    "base_sha": "72a5d9661f20c3372b52cbf50b90b8c54c2ebdf6",
+    "branch": "codex/monster-ai-parallel-20261015",
+    "compiled_freeze_head": "db6753fecd92c61689328a3e7aa5e2e6bbfb0c5a",
+    "compiled_source_snapshot_files": 98,
+    "changed_delivery_source_sha256": {
+      "src/ai_reachability.cpp": "f5e18fe92ac8d3bf6edf3aa3c1c79b72c1c9f2af30f0074e76ba8bebc9a130ed",
+      "src/ai_reachability.h": "4cd8071d51e3580b9382886045449d62ba3a76ae688c8fdfd0706782ff5ab469",
+      "src/ai_reachability_capture.cpp": "80858d70772dc6d64a322e97aeb912482fbed6e6f0e7b9ad762234fb3d97ee86",
+      "src/ai_reachability_owner.h": "65df2d686c2478aae1fc60ec37244d7b2198527c4d2aa2d20c95bb9ef2646833",
+      "src/creature_tracker.cpp": "e3326796c8c3135f328d0530662c514029f583ac3b5ec821abb8341a0ac4ce15",
+      "src/creature_tracker.h": "800881e173ff74c4fe3b8f623cf6c81d9f3172d2c58b9ee1a25f532410799b91",
+      "src/do_turn.cpp": "8b1da687e562342b1c963ceceddbab29d917f7aa3e649fbd945e7fd5e15fc6c5",
+      "src/map.h": "0880552067b29c05803688763608bf4ba2abafaa5b427ca19ecaf1509fc5b5f2",
+      "src/options.cpp": "abc2e49817492b0327d3f6ca0d6e5b606d6d3bb5897584944e4c5e01979a9ca5",
+      "src/savegame_json.cpp": "9a35996ec71f4256505e44aaf9a4557157cbf6d710824b21f6e14fdc9e425e35",
+      "src/submap.cpp": "6a41ef7277ca2acb5f914cd9e081a305fb19719466f1d42acc1c3a8f66c64b37",
+      "src/submap.h": "24f1378da574e27365b86154c92fa7c728dd767b7833d53be1de8bfd1582740a",
+      "tests/ai_reachability_owner_test.cpp": "b2006067d66830f5f2eaa852d253b5f269a5ccaa628ab7f7f45cca923120c1a8",
+      "tests/ai_reachability_test.cpp": "4fc7719941c5b98c26f969e3b3eb5d92c625fb4745255cdd9a9418b4cf34999c",
+      "tests/standalone/ai_reachability_fault_test.cpp": "6b7dde68268e74f14d17df2ec4b0941199d7d364b04701129b8424b5e6f0a7b1",
+      "tests/submap_geometry_test.cpp": "9dec98723284f3cc7c19d4e22a7ea3862ceb46a53eb812784512a549342b15b5"
+    },
+    "frozen_binary_sha256": {
+      "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/monster-ai61/candidate/bin/cataclysm-tiles": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f",
+      "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/monster-ai61/candidate/bin/ccb-sdl3-acceptance": "70069a3ffc51aab10d0c1b895291c1d57455f44218a575c6f86d15288bbaa0f0"
+    }
+  },
+  "architecture": [
+    "A tracker owns its executor, reusable value snapshot and result. Workers read terrain/furniture IDs and owner-resolved descriptors/bitmaps and write exclusive complete columns. No borrowed world, vehicle, field, creature, Lua or SDL pointers enter tasks.",
+    "The owner resolves original map::passable for opaque cells whose terrain cost is nonzero. Terrain cost zero is an unconditional rejection in the authoritative move_cost_internal. Furniture, fields and vehicle obstacles retain the complete original rule.",
+    "Horizontal and vertical value preparation share one kernel. Only the original dirty bitmap rebuild point can publish horizontal results: invalidate any ready result, capture fresh, synchronously drain all tasks, validate geometry and copy the bitmap on the owner. Fields/vehicles have no geometry stamp, so a cached vertical result never authorizes horizontal republication.",
+    "Storage identity/revision covers direct and bulk terrain/furniture setters, rotate, mirror, revert, merge and load. Moves invalidate the source; address reuse obtains a fresh identity. The allocator saturates to refused admission instead of wrapping. Counters are runtime only and do not consume RNG or enter saves.",
+    "Vertical reuse checks touched geometry blocks and the queried transparency in one internal mutation-free flood, with no gameplay callbacks. A stale cell uses the exact original owner predicate and invalidates later preparation. Legacy down-predicate asymmetry and existing zone alias behavior are deliberately preserved.",
+    "The owner retains original flood, creature and faction insertion order and every random decision. First unmeasured/cheap work, populations below64, nested pool workers, unsupported maps, active multiplayer, cancellation and failures refuse admission or fall back. Measured serial bitmap cost and decaying flood cost admit expensive work; clearing the world resets both.",
+    "The hot submap terrain pointer and uniform fallback are adjacent at the object prefix. Version metadata and tracker preparation state stay at class tails. All serialized fields and value semantics are unchanged. Performance is established by the new independent cohort, not inferred from layout.",
+    "AI_REACHABILITY_WORKERS defaults to0. 0 is the original query path,1 is the owned serial kernel,2-4 use dedicated workers. Changing it requires a restart. Lua require(\"ccb\") / Platform v1 remains the sole authoring contract."
+  ],
+  "experiment": {
+    "configuration": "Linux Clang 23 Release SDL3 tiles/sound, Lua v1, TRACY=ON, jobs=2",
+    "graphics": "Independent SDL3 fullscreen2880x1800, UNDEAD_PEOPLE, OpenGL; VISION4, RENDER0, MULTITHREADING_ENABLED=false, global THREAD_POOL_WORKERS=0 in every run.",
+    "scenario": "Damon carrier fixture:759 active monsters,32wait inputs; final turn5212844 at[5495,7449,2] with758monsters. Saved DEBUG_NODMG bounds the workload; this does not prove all live combat faster.",
+    "design": "Fresh12 triples of legacy1005 / owned serial1 / parallel4; all6orders twice, each variant4times per position. Four paired controls each for carrier exploration, open field and room:24more games,60accepted total. No pilot/failed source timings pooled.",
+    "primary": "Mean per-run simulate_turn_suffix elapsed; both AI4-serial1 and AI4-legacy paired two-sided Student95 intervals must lie below0. n12,df11,t2.200985160082949. Preparation time before monmove remains inside this primary stage.",
+    "secondary": "All adverse stage means, per-run stage p95 estimates,draw rebuilt/reused,30suserCPU,whole-session memory and worker costs are retained below. Nested scopes overlap; do not add them. Stage p95 is the mean of per-run interpolated stage estimates:32scopes in the dense wait case, observed actual turn counts in movement controls.32input actions can advance more than32turns. These are not display presentation/FPS/GPU latency estimates.",
+    "sampling": "125Hz cycles:u mainTID perf with complete captured symbols at0threshold; worker execution comes from all-threadTracy. Separate30s process user task-clock includes profiling and idle.1s RSS observations and VmHWM include setup/load and are not isolated AI heap costs.",
+    "normalization": "Retain full ordered player/active_monsters/stats. Sort learned recipes and declared unordered save-event buckets, omit only save-event wall-clock fields, normalize declared build version metadata. Decode every map-memory JSON region before semantic hashing.",
+    "environment": "20s quiet admission; no owned build/game/export overlap. Record pressure; reject an entire block only for predeclared forbidden external process interference,max4attempts. Never select by elapsed time.",
+    "protocol_sha256": "1f55d0c6f3983780aef7bcaf6ad711ae97f3c759c3e438425b107799380ff6a4",
+    "discarded_blocks": [],
+    "predeclared_regression_rules": {
+      "controls": "Confirmed material regression if suffix/monmove/draw mean increases>3percent AND paired95 lowerbound>0. n4paired,df3,t=3.182446305284263. Thresholdunchanged; nearzero adverse timings retained. Crossing0 does not prove equivalence.",
+      "dense_tail": "Confirmed adverse suffix ormonmove meanper-runp95>5percent AND paired95 lowerbound>0 requiresfix. Dense32scopes;movementcontrol37actualsuffix/monmove scopes. Stagep95notFPS.",
+      "cpu": "Confirmed30suserCPU increase>5percent AND paired95 lowerbound>0 requires review/fix; all costs retained evenif thresholds notmet.",
+      "memory": "Observed whole-sessionVmHWM increase>128MiB AND paired95 lowerbound>0 requiresreview/fix; 1sRSS not isolated AIheap."
+    }
+  },
+  "primary_gates": {
+    "dense_suffix_AI4_vs_legacy1005": true,
+    "dense_suffix_AI4_vs_serial1": true
+  },
+  "confirmed_material_regressions": [],
+  "comparisons": [
+    {"scene": "carrier","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "simulate_turn_suffix.mean","unit": "ms","pairs": 4,"baseline_mean": 9.093594,"candidate_mean": 8.8189455,"paired_delta": -0.2746485,"paired95": [-0.7014853,0.1521883],"reduction_percent": 3.0202411,"paired_differences": [-0.0499995,-0.0981784,-0.6392326,-0.3111834]},
+    {"scene": "carrier","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "monmove.mean","unit": "ms","pairs": 4,"baseline_mean": 0.0026156,"candidate_mean": 0.0023289,"paired_delta": -0.0002866,"paired95": [-0.0006661,9.29e-05],"reduction_percent": 10.9585255,"paired_differences": [-0.0001207,-0.0002178,-0.0006394,-0.0001687]},
+    {"scene": "carrier","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "simulate_turn_suffix.p95","unit": "ms","pairs": 4,"baseline_mean": 10.1738083,"candidate_mean": 9.825134,"paired_delta": -0.3486744,"paired95": [-1.286785,0.5894363],"reduction_percent": 3.4271763,"paired_differences": [-0.3626684,0.4741776,-0.6146978,-0.8915088]},
+    {"scene": "carrier","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "monmove.p95","unit": "ms","pairs": 4,"baseline_mean": 0.003918,"candidate_mean": 0.0033733,"paired_delta": -0.0005448,"paired95": [-0.0020721,0.0009826],"reduction_percent": 13.9036,"paired_differences": [-0.0001168,0.0001458,-0.0019638,-0.0002442]},
+    {"scene": "carrier","baseline_variant": "legacy1005","metric": "plan.mean","available": false,"reason": "At least one run has no matching scope; never replace unavailable values with0."},
+    {"scene": "carrier","baseline_variant": "legacy1005","metric": "route.mean","available": false,"reason": "At least one run has no matching scope; never replace unavailable values with0."},
+    {"scene": "carrier","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "tiles.draw.mean","unit": "ms","pairs": 4,"baseline_mean": 25.282297,"candidate_mean": 24.8392748,"paired_delta": -0.4430221,"paired95": [-2.0416887,1.1556444],"reduction_percent": 1.7523018,"paired_differences": [0.4078401,-1.785847,0.2388339,-0.6329156]},
+    {"scene": "carrier","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "draw.rebuilt.mean","unit": "ms","pairs": 4,"baseline_mean": 32.0231007,"candidate_mean": 31.7915315,"paired_delta": -0.2315692,"paired95": [-2.2680315,1.804893],"reduction_percent": 0.7231318,"paired_differences": [0.6632843,-1.9190023,0.8544493,-0.5250082]},
+    {"scene": "carrier","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "draw.reused.mean","unit": "ms","pairs": 4,"baseline_mean": 22.3434459,"candidate_mean": 21.8736027,"paired_delta": -0.4698432,"paired95": [-1.6910362,0.7513497],"reduction_percent": 2.1028235,"paired_differences": [0.2966467,-1.4770956,-0.0887742,-0.6101499]},
+    {"scene": "carrier","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "CPU30s_ms","unit": "ms","pairs": 4,"baseline_mean": 9638.345,"candidate_mean": 9599.865,"paired_delta": -38.48,"paired95": [-161.9351369,84.9751369],"reduction_percent": 0.3992387,"paired_differences": [70.66,-88.81,-98.58,-37.19]},
+    {"scene": "carrier","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "memory.VmRSS","unit": "KiB","pairs": 4,"baseline_mean": 1675904,"candidate_mean": 1690168,"paired_delta": 14264,"paired95": [-142136.0391304,170664.0391304],"reduction_percent": -0.8511227,"paired_differences": [19472,-47428,151028,-66016]},
+    {"scene": "carrier","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "memory.VmHWM","unit": "KiB","pairs": 4,"baseline_mean": 1678291,"candidate_mean": 1694635,"paired_delta": 16344,"paired95": [-137198.0461634,169886.0461634],"reduction_percent": -0.9738478,"paired_differences": [19472,-47428,151588,-58256]},
+    {"scene": "carrier","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "memory.RssAnon","unit": "KiB","pairs": 4,"baseline_mean": 1535399,"candidate_mean": 1550375,"paired_delta": 14976,"paired95": [-142789.9614067,172741.9614067],"reduction_percent": -0.9753816,"paired_differences": [21048,-47844,152660,-65960]},
+    {"scene": "carrier","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "memory.Threads","unit": "threads","pairs": 4,"baseline_mean": 26.25,"candidate_mean": 26.75,"paired_delta": 0.5,"paired95": [-1.5542603,2.5542603],"reduction_percent": -1.9047619,"paired_differences": [0,-1,2,1]},
+    {"scene": "field","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "simulate_turn_suffix.mean","unit": "ms","pairs": 4,"baseline_mean": 7.1679642,"candidate_mean": 7.1252497,"paired_delta": -0.0427145,"paired95": [-0.405753,0.3203239],"reduction_percent": 0.595909,"paired_differences": [0.297527,-0.1821397,-0.1232395,-0.1630061]},
+    {"scene": "field","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "monmove.mean","unit": "ms","pairs": 4,"baseline_mean": 0.0025968,"candidate_mean": 0.0024953,"paired_delta": -0.0001016,"paired95": [-0.0006521,0.0004489],"reduction_percent": 3.9117323,"paired_differences": [0.0003506,-2.45e-05,-0.0004316,-0.0003009]},
+    {"scene": "field","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "simulate_turn_suffix.p95","unit": "ms","pairs": 4,"baseline_mean": 8.5811534,"candidate_mean": 8.5372807,"paired_delta": -0.0438727,"paired95": [-1.445719,1.3579736],"reduction_percent": 0.5112681,"paired_differences": [1.2377234,-0.2911622,-0.3490394,-0.7730126]},
+    {"scene": "field","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "monmove.p95","unit": "ms","pairs": 4,"baseline_mean": 0.0053158,"candidate_mean": 0.0047006,"paired_delta": -0.0006153,"paired95": [-0.0019738,0.0007433],"reduction_percent": 11.5738781,"paired_differences": [-0.0005548,7.1e-05,-0.0018352,-0.000142]},
+    {"scene": "field","baseline_variant": "legacy1005","metric": "plan.mean","available": false,"reason": "At least one run has no matching scope; never replace unavailable values with0."},
+    {"scene": "field","baseline_variant": "legacy1005","metric": "route.mean","available": false,"reason": "At least one run has no matching scope; never replace unavailable values with0."},
+    {"scene": "field","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "tiles.draw.mean","unit": "ms","pairs": 4,"baseline_mean": 24.1112011,"candidate_mean": 24.2601165,"paired_delta": 0.1489154,"paired95": [-1.2650775,1.5629084],"reduction_percent": -0.6176194,"paired_differences": [-1.0125999,0.385839,1.12902,0.0934026]},
+    {"scene": "field","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "draw.rebuilt.mean","unit": "ms","pairs": 4,"baseline_mean": 24.1112011,"candidate_mean": 24.2601165,"paired_delta": 0.1489154,"paired95": [-1.2650775,1.5629084],"reduction_percent": -0.6176194,"paired_differences": [-1.0125999,0.385839,1.12902,0.0934026]},
+    {"scene": "field","baseline_variant": "legacy1005","metric": "draw.reused.mean","available": false,"reason": "At least one run has no matching scope; never replace unavailable values with0."},
+    {"scene": "field","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "CPU30s_ms","unit": "ms","pairs": 4,"baseline_mean": 3612.58,"candidate_mean": 3621.6375,"paired_delta": 9.0575,"paired95": [-60.9869339,79.1019339],"reduction_percent": -0.2507211,"paired_differences": [24.62,-35.81,63.26,-15.84]},
+    {"scene": "field","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "memory.VmRSS","unit": "KiB","pairs": 4,"baseline_mean": 1620193,"candidate_mean": 1625704,"paired_delta": 5511,"paired95": [-27424.101962,38446.101962],"reduction_percent": -0.3401447,"paired_differences": [-19648,5192,31048,5452]},
+    {"scene": "field","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "memory.VmHWM","unit": "KiB","pairs": 4,"baseline_mean": 1624650,"candidate_mean": 1632533,"paired_delta": 7883,"paired95": [-27614.5591754,43380.5591754],"reduction_percent": -0.4852122,"paired_differences": [-21976,11176,32068,10264]},
+    {"scene": "field","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "memory.RssAnon","unit": "KiB","pairs": 4,"baseline_mean": 1483180,"candidate_mean": 1489731,"paired_delta": 6551,"paired95": [-30181.1525507,43283.1525507],"reduction_percent": -0.4416861,"paired_differences": [-24524,9956,31308,9464]},
+    {"scene": "field","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "memory.Threads","unit": "threads","pairs": 4,"baseline_mean": 26.75,"candidate_mean": 26,"paired_delta": -0.75,"paired95": [-3.1368347,1.6368347],"reduction_percent": 2.8037383,"paired_differences": [0,0,0,-3]},
+    {"scene": "room","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "simulate_turn_suffix.mean","unit": "ms","pairs": 4,"baseline_mean": 5.5390928,"candidate_mean": 5.5665098,"paired_delta": 0.027417,"paired95": [-0.2719452,0.3267793],"reduction_percent": -0.4949731,"paired_differences": [0.2611725,-0.1601814,0.0917528,-0.0830758]},
+    {"scene": "room","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "monmove.mean","unit": "ms","pairs": 4,"baseline_mean": 0.0019495,"candidate_mean": 0.0023716,"paired_delta": 0.0004222,"paired95": [-0.0009537,0.001798],"reduction_percent": -21.655541,"paired_differences": [0.0001929,0.0016955,8.9e-06,-0.0002087]},
+    {"scene": "room","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "simulate_turn_suffix.p95","unit": "ms","pairs": 4,"baseline_mean": 6.9685037,"candidate_mean": 7.1692827,"paired_delta": 0.200779,"paired95": [-0.5219183,0.9234763],"reduction_percent": -2.8812354,"paired_differences": [0.2456562,0.7773478,-0.3235882,0.1037002]},
+    {"scene": "room","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "monmove.p95","unit": "ms","pairs": 4,"baseline_mean": 0.0028659,"candidate_mean": 0.0026398,"paired_delta": -0.0002261,"paired95": [-0.0013188,0.0008666],"reduction_percent": 7.8893192,"paired_differences": [0.0005418,-0.0003464,-1.8e-06,-0.001098]},
+    {"scene": "room","baseline_variant": "legacy1005","metric": "plan.mean","available": false,"reason": "At least one run has no matching scope; never replace unavailable values with0."},
+    {"scene": "room","baseline_variant": "legacy1005","metric": "route.mean","available": false,"reason": "At least one run has no matching scope; never replace unavailable values with0."},
+    {"scene": "room","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "tiles.draw.mean","unit": "ms","pairs": 4,"baseline_mean": 16.984625,"candidate_mean": 16.3745663,"paired_delta": -0.6100587,"paired95": [-1.2420044,0.0218871],"reduction_percent": 3.5918291,"paired_differences": [-1.1970792,-0.4610582,-0.3187762,-0.4633212]},
+    {"scene": "room","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "draw.rebuilt.mean","unit": "ms","pairs": 4,"baseline_mean": 16.984625,"candidate_mean": 16.3745663,"paired_delta": -0.6100587,"paired95": [-1.2420044,0.0218871],"reduction_percent": 3.5918291,"paired_differences": [-1.1970792,-0.4610582,-0.3187762,-0.4633212]},
+    {"scene": "room","baseline_variant": "legacy1005","metric": "draw.reused.mean","available": false,"reason": "At least one run has no matching scope; never replace unavailable values with0."},
+    {"scene": "room","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "CPU30s_ms","unit": "ms","pairs": 4,"baseline_mean": 2165.655,"candidate_mean": 2133.7725,"paired_delta": -31.8825,"paired95": [-61.5412701,-2.2237299],"reduction_percent": 1.4721874,"paired_differences": [-5.15,-43.55,-45.66,-33.17]},
+    {"scene": "room","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "memory.VmRSS","unit": "KiB","pairs": 4,"baseline_mean": 1647653,"candidate_mean": 1645676,"paired_delta": -1977,"paired95": [-10807.9780837,6853.9780837],"reduction_percent": 0.1199889,"paired_differences": [-10108,-476,2352,324]},
+    {"scene": "room","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "memory.VmHWM","unit": "KiB","pairs": 4,"baseline_mean": 1647653,"candidate_mean": 1649180,"paired_delta": 1527,"paired95": [-9345.2617888,12399.2617888],"reduction_percent": -0.0926773,"paired_differences": [-7668,6744,6708,324]},
+    {"scene": "room","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "memory.RssAnon","unit": "KiB","pairs": 4,"baseline_mean": 1504787,"candidate_mean": 1506747,"paired_delta": 1960,"paired95": [-8293.9203548,12213.9203548],"reduction_percent": -0.130251,"paired_differences": [-6404,7064,7000,180]},
+    {"scene": "room","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "memory.Threads","unit": "threads","pairs": 4,"baseline_mean": 21.25,"candidate_mean": 21,"paired_delta": -0.25,"paired95": [-1.0456116,0.5456116],"reduction_percent": 1.1764706,"paired_differences": [0,0,0,-1]},
+    {"scene": "combat32","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "simulate_turn_suffix.mean","unit": "ms","pairs": 12,"baseline_mean": 21.7087487,"candidate_mean": 19.7077944,"paired_delta": -2.0009543,"paired95": [-2.2389798,-1.7629287],"reduction_percent": 9.2172713,"paired_differences": [-2.3041229,-2.0949623,-1.4178505,-2.0046652,-1.6290217,-2.4685528,-1.863819,-2.529751,-2.3793982,-2.0870457,-1.6359827,-1.5962789]},
+    {"scene": "combat32","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "monmove.mean","unit": "ms","pairs": 12,"baseline_mean": 12.6359152,"candidate_mean": 10.754653,"paired_delta": -1.8812622,"paired95": [-2.0059841,-1.7565403],"reduction_percent": 14.8882149,"paired_differences": [-2.0285295,-2.0351755,-1.5887274,-1.8512024,-1.6651744,-1.8783358,-1.7695768,-2.286794,-2.0583423,-1.9140224,-1.724237,-1.7750289]},
+    {"scene": "combat32","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "simulate_turn_suffix.p95","unit": "ms","pairs": 12,"baseline_mean": 40.2624044,"candidate_mean": 35.0840248,"paired_delta": -5.1783796,"paired95": [-5.7710662,-4.5856929],"reduction_percent": 12.8615756,"paired_differences": [-5.3880061,-6.1659758,-5.6909625,-4.4262077,-4.8652245,-6.7873981,-4.833063,-5.5201283,-6.1366301,-4.3192936,-4.4428597,-3.5648055]},
+    {"scene": "combat32","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "monmove.p95","unit": "ms","pairs": 12,"baseline_mean": 30.3582935,"candidate_mean": 23.4365063,"paired_delta": -6.9217873,"paired95": [-7.2978801,-6.5456945],"reduction_percent": 22.8003173,"paired_differences": [-6.7429452,-7.3536486,-6.9824766,-6.1443814,-6.3053555,-7.4502223,-6.6729753,-8.2270743,-7.2708255,-6.914153,-6.2508901,-6.7464991]},
+    {"scene": "combat32","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "plan.mean","unit": "ms","pairs": 12,"baseline_mean": 0.0106134,"candidate_mean": 0.0076635,"paired_delta": -0.0029499,"paired95": [-0.0030282,-0.0028716],"reduction_percent": 27.7943283,"paired_differences": [-0.0030241,-0.0030688,-0.0029267,-0.0028869,-0.0027823,-0.0030177,-0.002856,-0.0031734,-0.0030432,-0.0029476,-0.0027446,-0.0029276]},
+    {"scene": "combat32","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "route.mean","unit": "ms","pairs": 12,"baseline_mean": 0.1102601,"candidate_mean": 0.1077857,"paired_delta": -0.0024744,"paired95": [-0.0044836,-0.0004652],"reduction_percent": 2.2441232,"paired_differences": [-0.0064347,-0.0059444,-0.002238,-0.0037174,0.0021545,-0.0033683,-0.0009706,-0.0061886,-0.004486,-0.0019008,0.0029551,0.0004468]},
+    {"scene": "combat32","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "tiles.draw.mean","unit": "ms","pairs": 12,"baseline_mean": 26.6541731,"candidate_mean": 25.9723256,"paired_delta": -0.6818476,"paired95": [-1.1866309,-0.1770642],"reduction_percent": 2.5581269,"paired_differences": [-0.7296604,-0.4192387,-0.1918685,-1.591247,-1.4038027,-0.3350999,-0.5004659,-0.6843072,1.338603,-1.4553557,-1.3192526,-0.8904751]},
+    {"scene": "combat32","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "draw.rebuilt.mean","unit": "ms","pairs": 12,"baseline_mean": 32.7666581,"candidate_mean": 32.1944611,"paired_delta": -0.572197,"paired95": [-1.2318317,0.0874378],"reduction_percent": 1.7462781,"paired_differences": [-0.9111747,-1.079512,-0.1195781,-1.3567245,-1.404787,0.3461896,-0.0730592,-1.2489833,1.9065031,-1.9127667,-0.9910094,-0.0214613]},
+    {"scene": "combat32","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "draw.reused.mean","unit": "ms","pairs": 12,"baseline_mean": 24.1810235,"candidate_mean": 23.4647494,"paired_delta": -0.7162741,"paired95": [-1.1984259,-0.2341223],"reduction_percent": 2.962133,"paired_differences": [-0.6561357,-0.1551293,-0.2211507,-1.655025,-1.3724638,-0.6110653,-0.6735927,-0.4555776,1.1085675,-1.2403112,-1.4209245,-1.2424807]},
+    {"scene": "combat32","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "CPU30s_ms","unit": "ms","pairs": 12,"baseline_mean": 10251.7483333,"candidate_mean": 10121.6475,"paired_delta": -130.1008333,"paired95": [-242.8846007,-17.3170659],"reduction_percent": 1.26906,"paired_differences": [-63.32,-112.03,-73.58,-359.89,-231.61,-144.88,14.59,-162.51,326.45,-240.94,-272.71,-240.78]},
+    {"scene": "combat32","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "memory.VmRSS","unit": "KiB","pairs": 12,"baseline_mean": 1633401.6666667,"candidate_mean": 1625122,"paired_delta": -8279.6666667,"paired95": [-21435.8241408,4876.4908074],"reduction_percent": 0.5068972,"paired_differences": [-9520,5272,-5728,-11456,-7008,1056,-68580,-360,-3244,-11808,-5836,17856]},
+    {"scene": "combat32","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "memory.VmHWM","unit": "KiB","pairs": 12,"baseline_mean": 1635645.3333333,"candidate_mean": 1631861.3333333,"paired_delta": -3784,"paired95": [-15135.8403346,7567.8403346],"reduction_percent": 0.231346,"paired_differences": [-9248,7584,3956,-1524,-7008,1056,-55724,-360,-3244,-3140,4092,18152]},
+    {"scene": "combat32","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "memory.RssAnon","unit": "KiB","pairs": 12,"baseline_mean": 1492758.6666667,"candidate_mean": 1488076,"paired_delta": -4682.6666667,"paired95": [-18231.2389479,8865.9056145],"reduction_percent": 0.3136921,"paired_differences": [-9312,7664,4712,-1512,-7212,948,-68620,-636,-3324,-600,4288,17412]},
+    {"scene": "combat32","baseline_variant": "legacy1005","candidate_variant": "parallel4","metric": "memory.Threads","unit": "threads","pairs": 12,"baseline_mean": 21.5,"candidate_mean": 25.0833333,"paired_delta": 3.5833333,"paired95": [3.0112867,4.1553799],"reduction_percent": -16.6666667,"paired_differences": [4,4,4,4,3,4,4,1,4,4,4,3]},
+    {"scene": "combat32","baseline_variant": "serial1","candidate_variant": "parallel4","metric": "simulate_turn_suffix.mean","unit": "ms","pairs": 12,"baseline_mean": 19.9954072,"candidate_mean": 19.7077944,"paired_delta": -0.2876127,"paired95": [-0.5329474,-0.042278],"reduction_percent": 1.4383939,"paired_differences": [-0.8245795,-0.5111838,0.3264022,-0.5318008,0.2726008,-0.6466536,-0.6006015,-0.432823,-0.3168242,-0.300197,0.2368144,-0.1225067]},
+    {"scene": "combat32","baseline_variant": "serial1","candidate_variant": "parallel4","metric": "monmove.mean","unit": "ms","pairs": 12,"baseline_mean": 11.0924944,"candidate_mean": 10.754653,"paired_delta": -0.3378414,"paired95": [-0.4710588,-0.204624],"reduction_percent": 3.0456759,"paired_differences": [-0.6653436,-0.4691491,0.0016382,-0.478633,-0.0043789,-0.4348212,-0.4083684,-0.4870252,-0.2751003,-0.4540234,-0.1037277,-0.2751645]},
+    {"scene": "combat32","baseline_variant": "serial1","candidate_variant": "parallel4","metric": "simulate_turn_suffix.p95","unit": "ms","pairs": 12,"baseline_mean": 35.6137992,"candidate_mean": 35.0840248,"paired_delta": -0.5297744,"paired95": [-1.1208721,0.0613234],"reduction_percent": 1.4875537,"paired_differences": [-1.2169759,-1.1144491,0.0070135,-0.8914783,-0.5521173,-1.9061564,0.3527022,-0.2949959,-2.1361811,0.4201241,0.4346999,0.5405216]},
+    {"scene": "combat32","baseline_variant": "serial1","candidate_variant": "parallel4","metric": "monmove.p95","unit": "ms","pairs": 12,"baseline_mean": 25.1967689,"candidate_mean": 23.4365063,"paired_delta": -1.7602627,"paired95": [-2.1292579,-1.3912675],"reduction_percent": 6.9860651,"paired_differences": [-2.9754656,-1.7757729,-1.3087606,-1.4428099,-0.6657573,-2.1462515,-2.1227894,-1.9339426,-1.7121473,-2.1947108,-1.4390008,-1.4057435]},
+    {"scene": "combat32","baseline_variant": "serial1","candidate_variant": "parallel4","metric": "plan.mean","unit": "ms","pairs": 12,"baseline_mean": 0.0083533,"candidate_mean": 0.0076635,"paired_delta": -0.0006898,"paired95": [-0.0007872,-0.0005924],"reduction_percent": 8.2578467,"paired_differences": [-0.0008056,-0.000826,-0.0006073,-0.0008577,-0.0004435,-0.000886,-0.0007183,-0.0007965,-0.0006399,-0.0005795,-0.0004342,-0.0006831]},
+    {"scene": "combat32","baseline_variant": "serial1","candidate_variant": "parallel4","metric": "route.mean","unit": "ms","pairs": 12,"baseline_mean": 0.1044486,"candidate_mean": 0.1077857,"paired_delta": 0.0033371,"paired95": [0.0010694,0.0056049],"reduction_percent": -3.1950165,"paired_differences": [0.0003376,0.0014519,0.0033896,8.64e-05,0.0073134,0.0029778,0.0012398,0.0019717,0.0032137,-0.00092,0.0088195,0.0101645]},
+    {"scene": "combat32","baseline_variant": "serial1","candidate_variant": "parallel4","metric": "tiles.draw.mean","unit": "ms","pairs": 12,"baseline_mean": 26.1127583,"candidate_mean": 25.9723256,"paired_delta": -0.1404327,"paired95": [-0.7258881,0.4450226],"reduction_percent": 0.5377936,"paired_differences": [-0.0417331,-0.7041981,1.6380703,-1.2146254,-1.1385924,0.1014876,0.0516011,0.8555357,1.0127426,-0.9955579,-0.8259276,-0.4239957]},
+    {"scene": "combat32","baseline_variant": "serial1","candidate_variant": "parallel4","metric": "draw.rebuilt.mean","unit": "ms","pairs": 12,"baseline_mean": 32.2858213,"candidate_mean": 32.1944611,"paired_delta": -0.0913602,"paired95": [-0.7481056,0.5653852],"reduction_percent": 0.2829731,"paired_differences": [0.303163,-0.7348987,1.8877355,-1.3881518,-1.5813566,0.4935187,0.4954048,0.5400222,0.614659,-1.2236708,-0.7243473,0.2216]},
+    {"scene": "combat32","baseline_variant": "serial1","candidate_variant": "parallel4","metric": "draw.reused.mean","unit": "ms","pairs": 12,"baseline_mean": 23.6173802,"candidate_mean": 23.4647494,"paired_delta": -0.1526308,"paired95": [-0.7208643,0.4156028],"reduction_percent": 0.6462646,"paired_differences": [-0.1814379,-0.6615816,1.5067161,-1.1131178,-0.9283047,-0.0573098,-0.1281675,0.9523256,1.1739917,-0.8733937,-0.8357868,-0.6855029]},
+    {"scene": "combat32","baseline_variant": "serial1","candidate_variant": "parallel4","metric": "CPU30s_ms","unit": "ms","pairs": 12,"baseline_mean": 10138.6291667,"candidate_mean": 10121.6475,"paired_delta": -16.9816667,"paired95": [-137.8528317,103.8894984],"reduction_percent": 0.1674947,"paired_differences": [81.25,-179.54,324.75,-224.97,-220.52,24.47,-119.49,242.85,203.59,-161.34,-113.87,-60.96]},
+    {"scene": "combat32","baseline_variant": "serial1","candidate_variant": "parallel4","metric": "memory.VmRSS","unit": "KiB","pairs": 12,"baseline_mean": 1633400.6666667,"candidate_mean": 1625122,"paired_delta": -8278.6666667,"paired95": [-26488.2201456,9930.8868122],"reduction_percent": 0.5068362,"paired_differences": [-16360,5628,-27000,-276,3116,6412,-87936,9752,2316,-16388,-4268,25660]},
+    {"scene": "combat32","baseline_variant": "serial1","candidate_variant": "parallel4","metric": "memory.VmHWM","unit": "KiB","pairs": 12,"baseline_mean": 1638400.3333333,"candidate_mean": 1631861.3333333,"paired_delta": -6539,"paired95": [-23082.5692496,10004.5692496],"reduction_percent": 0.3991088,"paired_differences": [-16328,5236,-26692,-544,-936,-1016,-75080,472,2316,-6788,5660,35232]},
+    {"scene": "combat32","baseline_variant": "serial1","candidate_variant": "parallel4","metric": "memory.RssAnon","unit": "KiB","pairs": 12,"baseline_mean": 1495447.3333333,"candidate_mean": 1488076,"paired_delta": -7371.3333333,"paired95": [-25997.3852088,11254.7185421],"reduction_percent": 0.4929183,"paired_differences": [-15520,5956,-26824,-284,-1408,-1344,-87956,-804,2380,-4980,6292,36036]},
+    {"scene": "combat32","baseline_variant": "serial1","candidate_variant": "parallel4","metric": "memory.Threads","unit": "threads","pairs": 12,"baseline_mean": 21.5833333,"candidate_mean": 25.0833333,"paired_delta": 3.5,"paired95": [2.581257,4.418743],"reduction_percent": -16.2162162,"paired_differences": [4,4,1,4,5,4,4,4,4,0,4,4]}
+  ],
+  "native_trial_manifest": [
+    {"name": "ai61-formal-carrier-legacy1005-01","scene": "carrier","pair": 1,"variant": "legacy1005","binary_sha256": "a5ad1011d2af1581325e19e7e6794debff1833e62f4081a677a0576e79783f1e","fixture_sha256": "7bda417f85d9decfe74c3837c293544a800098170b102bdac38af9bdb6280f13","full_gameplay_sha256": "9c2546efb072060cb31d826f957fac53c3d4a46c54bb60a9af3e69ef1b92cefc","complete_memory_sha256": "9a04a5bbf58cefe47ecdbc3e648e9dde9b3462d11481fd79a02a2d03769cdae4","actions": 32,"suffix_scopes": 37,"monmove_scopes": 37,"suffix_mean_ms": 9.0127518,"monmove_mean_ms": 0.0026899,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 35.7698289,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-carrier-parallel4-01","scene": "carrier","pair": 1,"variant": "parallel4","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "7bda417f85d9decfe74c3837c293544a800098170b102bdac38af9bdb6280f13","full_gameplay_sha256": "9c2546efb072060cb31d826f957fac53c3d4a46c54bb60a9af3e69ef1b92cefc","complete_memory_sha256": "9a04a5bbf58cefe47ecdbc3e648e9dde9b3462d11481fd79a02a2d03769cdae4","actions": 32,"suffix_scopes": 37,"monmove_scopes": 37,"suffix_mean_ms": 8.9627524,"monmove_mean_ms": 0.0025692,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 31.3084112,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-carrier-parallel4-02","scene": "carrier","pair": 2,"variant": "parallel4","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "7bda417f85d9decfe74c3837c293544a800098170b102bdac38af9bdb6280f13","full_gameplay_sha256": "9c2546efb072060cb31d826f957fac53c3d4a46c54bb60a9af3e69ef1b92cefc","complete_memory_sha256": "9a04a5bbf58cefe47ecdbc3e648e9dde9b3462d11481fd79a02a2d03769cdae4","actions": 32,"suffix_scopes": 37,"monmove_scopes": 37,"suffix_mean_ms": 9.1091594,"monmove_mean_ms": 0.0023009,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 35.1309707,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-carrier-legacy1005-02","scene": "carrier","pair": 2,"variant": "legacy1005","binary_sha256": "a5ad1011d2af1581325e19e7e6794debff1833e62f4081a677a0576e79783f1e","fixture_sha256": "7bda417f85d9decfe74c3837c293544a800098170b102bdac38af9bdb6280f13","full_gameplay_sha256": "9c2546efb072060cb31d826f957fac53c3d4a46c54bb60a9af3e69ef1b92cefc","complete_memory_sha256": "9a04a5bbf58cefe47ecdbc3e648e9dde9b3462d11481fd79a02a2d03769cdae4","actions": 32,"suffix_scopes": 37,"monmove_scopes": 37,"suffix_mean_ms": 9.2073378,"monmove_mean_ms": 0.0025186,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 36.1669243,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-carrier-legacy1005-03","scene": "carrier","pair": 3,"variant": "legacy1005","binary_sha256": "a5ad1011d2af1581325e19e7e6794debff1833e62f4081a677a0576e79783f1e","fixture_sha256": "7bda417f85d9decfe74c3837c293544a800098170b102bdac38af9bdb6280f13","full_gameplay_sha256": "9c2546efb072060cb31d826f957fac53c3d4a46c54bb60a9af3e69ef1b92cefc","complete_memory_sha256": "9a04a5bbf58cefe47ecdbc3e648e9dde9b3462d11481fd79a02a2d03769cdae4","actions": 32,"suffix_scopes": 37,"monmove_scopes": 37,"suffix_mean_ms": 9.1852896,"monmove_mean_ms": 0.0027685,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 34.5852895,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-carrier-parallel4-03","scene": "carrier","pair": 3,"variant": "parallel4","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "7bda417f85d9decfe74c3837c293544a800098170b102bdac38af9bdb6280f13","full_gameplay_sha256": "9c2546efb072060cb31d826f957fac53c3d4a46c54bb60a9af3e69ef1b92cefc","complete_memory_sha256": "9a04a5bbf58cefe47ecdbc3e648e9dde9b3462d11481fd79a02a2d03769cdae4","actions": 32,"suffix_scopes": 37,"monmove_scopes": 37,"suffix_mean_ms": 8.546057,"monmove_mean_ms": 0.0021291,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 34.2902711,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-carrier-parallel4-04","scene": "carrier","pair": 4,"variant": "parallel4","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "7bda417f85d9decfe74c3837c293544a800098170b102bdac38af9bdb6280f13","full_gameplay_sha256": "9c2546efb072060cb31d826f957fac53c3d4a46c54bb60a9af3e69ef1b92cefc","complete_memory_sha256": "9a04a5bbf58cefe47ecdbc3e648e9dde9b3462d11481fd79a02a2d03769cdae4","actions": 32,"suffix_scopes": 37,"monmove_scopes": 37,"suffix_mean_ms": 8.6578134,"monmove_mean_ms": 0.0023165,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 35.4134165,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-carrier-legacy1005-04","scene": "carrier","pair": 4,"variant": "legacy1005","binary_sha256": "a5ad1011d2af1581325e19e7e6794debff1833e62f4081a677a0576e79783f1e","fixture_sha256": "7bda417f85d9decfe74c3837c293544a800098170b102bdac38af9bdb6280f13","full_gameplay_sha256": "9c2546efb072060cb31d826f957fac53c3d4a46c54bb60a9af3e69ef1b92cefc","complete_memory_sha256": "9a04a5bbf58cefe47ecdbc3e648e9dde9b3462d11481fd79a02a2d03769cdae4","actions": 32,"suffix_scopes": 37,"monmove_scopes": 37,"suffix_mean_ms": 8.9689968,"monmove_mean_ms": 0.0024852,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 37.96875,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-field-legacy1005-01","scene": "field","pair": 1,"variant": "legacy1005","binary_sha256": "a5ad1011d2af1581325e19e7e6794debff1833e62f4081a677a0576e79783f1e","fixture_sha256": "1c2d0fcdff02b908921f8c19534109fe46f843e3f69eecd42ffe62dce090f11d","full_gameplay_sha256": "991955a143044e94b3e0536106c8e3bffb696ad56bfedb94037ab2b0eb165964","complete_memory_sha256": "f2a2da11960b15c2a849b12d268e29b7a52db4b898c7926c61fffa302aa81cba","actions": 32,"suffix_scopes": 37,"monmove_scopes": 37,"suffix_mean_ms": 7.0371037,"monmove_mean_ms": 0.0023628,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 33.3333333,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-field-parallel4-01","scene": "field","pair": 1,"variant": "parallel4","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "1c2d0fcdff02b908921f8c19534109fe46f843e3f69eecd42ffe62dce090f11d","full_gameplay_sha256": "991955a143044e94b3e0536106c8e3bffb696ad56bfedb94037ab2b0eb165964","complete_memory_sha256": "f2a2da11960b15c2a849b12d268e29b7a52db4b898c7926c61fffa302aa81cba","actions": 32,"suffix_scopes": 37,"monmove_scopes": 37,"suffix_mean_ms": 7.3346308,"monmove_mean_ms": 0.0027135,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 29.739777,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-field-parallel4-02","scene": "field","pair": 2,"variant": "parallel4","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "1c2d0fcdff02b908921f8c19534109fe46f843e3f69eecd42ffe62dce090f11d","full_gameplay_sha256": "991955a143044e94b3e0536106c8e3bffb696ad56bfedb94037ab2b0eb165964","complete_memory_sha256": "f2a2da11960b15c2a849b12d268e29b7a52db4b898c7926c61fffa302aa81cba","actions": 32,"suffix_scopes": 37,"monmove_scopes": 37,"suffix_mean_ms": 7.1141791,"monmove_mean_ms": 0.0025109,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 29.6992481,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-field-legacy1005-02","scene": "field","pair": 2,"variant": "legacy1005","binary_sha256": "a5ad1011d2af1581325e19e7e6794debff1833e62f4081a677a0576e79783f1e","fixture_sha256": "1c2d0fcdff02b908921f8c19534109fe46f843e3f69eecd42ffe62dce090f11d","full_gameplay_sha256": "991955a143044e94b3e0536106c8e3bffb696ad56bfedb94037ab2b0eb165964","complete_memory_sha256": "f2a2da11960b15c2a849b12d268e29b7a52db4b898c7926c61fffa302aa81cba","actions": 32,"suffix_scopes": 37,"monmove_scopes": 37,"suffix_mean_ms": 7.2963188,"monmove_mean_ms": 0.0025354,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 29.4339623,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-field-legacy1005-03","scene": "field","pair": 3,"variant": "legacy1005","binary_sha256": "a5ad1011d2af1581325e19e7e6794debff1833e62f4081a677a0576e79783f1e","fixture_sha256": "1c2d0fcdff02b908921f8c19534109fe46f843e3f69eecd42ffe62dce090f11d","full_gameplay_sha256": "991955a143044e94b3e0536106c8e3bffb696ad56bfedb94037ab2b0eb165964","complete_memory_sha256": "f2a2da11960b15c2a849b12d268e29b7a52db4b898c7926c61fffa302aa81cba","actions": 32,"suffix_scopes": 37,"monmove_scopes": 37,"suffix_mean_ms": 7.2914026,"monmove_mean_ms": 0.002909,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 28.9473684,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-field-parallel4-03","scene": "field","pair": 3,"variant": "parallel4","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "1c2d0fcdff02b908921f8c19534109fe46f843e3f69eecd42ffe62dce090f11d","full_gameplay_sha256": "991955a143044e94b3e0536106c8e3bffb696ad56bfedb94037ab2b0eb165964","complete_memory_sha256": "f2a2da11960b15c2a849b12d268e29b7a52db4b898c7926c61fffa302aa81cba","actions": 32,"suffix_scopes": 37,"monmove_scopes": 37,"suffix_mean_ms": 7.1681632,"monmove_mean_ms": 0.0024774,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 30.9433962,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-field-parallel4-04","scene": "field","pair": 4,"variant": "parallel4","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "1c2d0fcdff02b908921f8c19534109fe46f843e3f69eecd42ffe62dce090f11d","full_gameplay_sha256": "991955a143044e94b3e0536106c8e3bffb696ad56bfedb94037ab2b0eb165964","complete_memory_sha256": "f2a2da11960b15c2a849b12d268e29b7a52db4b898c7926c61fffa302aa81cba","actions": 32,"suffix_scopes": 37,"monmove_scopes": 37,"suffix_mean_ms": 6.8840258,"monmove_mean_ms": 0.0022792,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 28.1954887,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-field-legacy1005-04","scene": "field","pair": 4,"variant": "legacy1005","binary_sha256": "a5ad1011d2af1581325e19e7e6794debff1833e62f4081a677a0576e79783f1e","fixture_sha256": "1c2d0fcdff02b908921f8c19534109fe46f843e3f69eecd42ffe62dce090f11d","full_gameplay_sha256": "991955a143044e94b3e0536106c8e3bffb696ad56bfedb94037ab2b0eb165964","complete_memory_sha256": "f2a2da11960b15c2a849b12d268e29b7a52db4b898c7926c61fffa302aa81cba","actions": 32,"suffix_scopes": 37,"monmove_scopes": 37,"suffix_mean_ms": 7.0470319,"monmove_mean_ms": 0.0025801,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 30.3030303,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-room-legacy1005-01","scene": "room","pair": 1,"variant": "legacy1005","binary_sha256": "a5ad1011d2af1581325e19e7e6794debff1833e62f4081a677a0576e79783f1e","fixture_sha256": "f5a27a86ddaefa359d6c45836ea5b3c62fab0b03746170d3c594ce6b5d56f780","full_gameplay_sha256": "38172fc456777f39b42e62e3cdf36db9e53dda0961b9981ce375ade5d6a550de","complete_memory_sha256": "8d7811c8c299161465803708af20bb8d1ab3fab140729a21911e37c3a1002b74","actions": 32,"suffix_scopes": 37,"monmove_scopes": 37,"suffix_mean_ms": 5.4714574,"monmove_mean_ms": 0.0019568,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 33.1606218,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-room-parallel4-01","scene": "room","pair": 1,"variant": "parallel4","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "f5a27a86ddaefa359d6c45836ea5b3c62fab0b03746170d3c594ce6b5d56f780","full_gameplay_sha256": "38172fc456777f39b42e62e3cdf36db9e53dda0961b9981ce375ade5d6a550de","complete_memory_sha256": "8d7811c8c299161465803708af20bb8d1ab3fab140729a21911e37c3a1002b74","actions": 32,"suffix_scopes": 37,"monmove_scopes": 37,"suffix_mean_ms": 5.7326299,"monmove_mean_ms": 0.0021497,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 29.4117647,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-room-parallel4-02","scene": "room","pair": 2,"variant": "parallel4","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "f5a27a86ddaefa359d6c45836ea5b3c62fab0b03746170d3c594ce6b5d56f780","full_gameplay_sha256": "38172fc456777f39b42e62e3cdf36db9e53dda0961b9981ce375ade5d6a550de","complete_memory_sha256": "8d7811c8c299161465803708af20bb8d1ab3fab140729a21911e37c3a1002b74","actions": 32,"suffix_scopes": 37,"monmove_scopes": 37,"suffix_mean_ms": 5.423824,"monmove_mean_ms": 0.0035831,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 26.4550265,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-room-legacy1005-02","scene": "room","pair": 2,"variant": "legacy1005","binary_sha256": "a5ad1011d2af1581325e19e7e6794debff1833e62f4081a677a0576e79783f1e","fixture_sha256": "f5a27a86ddaefa359d6c45836ea5b3c62fab0b03746170d3c594ce6b5d56f780","full_gameplay_sha256": "38172fc456777f39b42e62e3cdf36db9e53dda0961b9981ce375ade5d6a550de","complete_memory_sha256": "8d7811c8c299161465803708af20bb8d1ab3fab140729a21911e37c3a1002b74","actions": 32,"suffix_scopes": 37,"monmove_scopes": 37,"suffix_mean_ms": 5.5840054,"monmove_mean_ms": 0.0018876,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 32.0652174,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-room-legacy1005-03","scene": "room","pair": 3,"variant": "legacy1005","binary_sha256": "a5ad1011d2af1581325e19e7e6794debff1833e62f4081a677a0576e79783f1e","fixture_sha256": "f5a27a86ddaefa359d6c45836ea5b3c62fab0b03746170d3c594ce6b5d56f780","full_gameplay_sha256": "38172fc456777f39b42e62e3cdf36db9e53dda0961b9981ce375ade5d6a550de","complete_memory_sha256": "8d7811c8c299161465803708af20bb8d1ab3fab140729a21911e37c3a1002b74","actions": 32,"suffix_scopes": 37,"monmove_scopes": 37,"suffix_mean_ms": 5.4517495,"monmove_mean_ms": 0.0018226,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 31.8681319,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-room-parallel4-03","scene": "room","pair": 3,"variant": "parallel4","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "f5a27a86ddaefa359d6c45836ea5b3c62fab0b03746170d3c594ce6b5d56f780","full_gameplay_sha256": "38172fc456777f39b42e62e3cdf36db9e53dda0961b9981ce375ade5d6a550de","complete_memory_sha256": "8d7811c8c299161465803708af20bb8d1ab3fab140729a21911e37c3a1002b74","actions": 32,"suffix_scopes": 37,"monmove_scopes": 37,"suffix_mean_ms": 5.5435023,"monmove_mean_ms": 0.0018315,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 28.1081081,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-room-parallel4-04","scene": "room","pair": 4,"variant": "parallel4","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "f5a27a86ddaefa359d6c45836ea5b3c62fab0b03746170d3c594ce6b5d56f780","full_gameplay_sha256": "38172fc456777f39b42e62e3cdf36db9e53dda0961b9981ce375ade5d6a550de","complete_memory_sha256": "8d7811c8c299161465803708af20bb8d1ab3fab140729a21911e37c3a1002b74","actions": 32,"suffix_scopes": 37,"monmove_scopes": 37,"suffix_mean_ms": 5.5660829,"monmove_mean_ms": 0.0019222,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 34.6938776,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-room-legacy1005-04","scene": "room","pair": 4,"variant": "legacy1005","binary_sha256": "a5ad1011d2af1581325e19e7e6794debff1833e62f4081a677a0576e79783f1e","fixture_sha256": "f5a27a86ddaefa359d6c45836ea5b3c62fab0b03746170d3c594ce6b5d56f780","full_gameplay_sha256": "38172fc456777f39b42e62e3cdf36db9e53dda0961b9981ce375ade5d6a550de","complete_memory_sha256": "8d7811c8c299161465803708af20bb8d1ab3fab140729a21911e37c3a1002b74","actions": 32,"suffix_scopes": 37,"monmove_scopes": 37,"suffix_mean_ms": 5.6491588,"monmove_mean_ms": 0.0021309,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 30.4347826,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-legacy1005-01","scene": "combat32","pair": 1,"variant": "legacy1005","binary_sha256": "a5ad1011d2af1581325e19e7e6794debff1833e62f4081a677a0576e79783f1e","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 21.432756,"monmove_mean_ms": 12.466863,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 35.8381503,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-serial1-01","scene": "combat32","pair": 1,"variant": "serial1","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 19.9532126,"monmove_mean_ms": 11.1036771,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 17,"unknown_leaf_percent": 32.8335832,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-parallel4-01","scene": "combat32","pair": 1,"variant": "parallel4","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 19.1286331,"monmove_mean_ms": 10.4383335,"worker_jobs": 76,"worker_threads": 4,"bitmap_publications": 17,"unknown_leaf_percent": 30.952381,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-parallel4-02","scene": "combat32","pair": 2,"variant": "parallel4","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 19.5140107,"monmove_mean_ms": 10.5974363,"worker_jobs": 76,"worker_threads": 4,"bitmap_publications": 17,"unknown_leaf_percent": 31.3069909,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-serial1-02","scene": "combat32","pair": 2,"variant": "serial1","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 20.0251945,"monmove_mean_ms": 11.0665854,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 17,"unknown_leaf_percent": 29.8798799,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-legacy1005-02","scene": "combat32","pair": 2,"variant": "legacy1005","binary_sha256": "a5ad1011d2af1581325e19e7e6794debff1833e62f4081a677a0576e79783f1e","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 21.608973,"monmove_mean_ms": 12.6326118,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 29.9401198,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-serial1-03","scene": "combat32","pair": 3,"variant": "serial1","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 19.5577786,"monmove_mean_ms": 10.8712378,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 17,"unknown_leaf_percent": 29.8165138,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-parallel4-03","scene": "combat32","pair": 3,"variant": "parallel4","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 19.8841807,"monmove_mean_ms": 10.872876,"worker_jobs": 76,"worker_threads": 4,"bitmap_publications": 17,"unknown_leaf_percent": 32.5443787,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-legacy1005-03","scene": "combat32","pair": 3,"variant": "legacy1005","binary_sha256": "a5ad1011d2af1581325e19e7e6794debff1833e62f4081a677a0576e79783f1e","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 21.3020312,"monmove_mean_ms": 12.4616034,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 33.2361516,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-legacy1005-04","scene": "combat32","pair": 4,"variant": "legacy1005","binary_sha256": "a5ad1011d2af1581325e19e7e6794debff1833e62f4081a677a0576e79783f1e","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 21.6074003,"monmove_mean_ms": 12.5866982,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 32.2206096,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-parallel4-04","scene": "combat32","pair": 4,"variant": "parallel4","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 19.6027351,"monmove_mean_ms": 10.7354958,"worker_jobs": 76,"worker_threads": 4,"bitmap_publications": 17,"unknown_leaf_percent": 32.3708207,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-serial1-04","scene": "combat32","pair": 4,"variant": "serial1","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 20.1345359,"monmove_mean_ms": 11.2141288,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 17,"unknown_leaf_percent": 30.6213018,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-parallel4-05","scene": "combat32","pair": 5,"variant": "parallel4","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 19.8887237,"monmove_mean_ms": 10.8869251,"worker_jobs": 76,"worker_threads": 4,"bitmap_publications": 17,"unknown_leaf_percent": 31.2594841,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-legacy1005-05","scene": "combat32","pair": 5,"variant": "legacy1005","binary_sha256": "a5ad1011d2af1581325e19e7e6794debff1833e62f4081a677a0576e79783f1e","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 21.5177455,"monmove_mean_ms": 12.5520995,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 30.8588064,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-serial1-05","scene": "combat32","pair": 5,"variant": "serial1","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 19.6161229,"monmove_mean_ms": 10.891304,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 17,"unknown_leaf_percent": 32.3529412,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-serial1-06","scene": "combat32","pair": 6,"variant": "serial1","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 19.9681025,"monmove_mean_ms": 11.0761994,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 17,"unknown_leaf_percent": 29.985229,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-legacy1005-06","scene": "combat32","pair": 6,"variant": "legacy1005","binary_sha256": "a5ad1011d2af1581325e19e7e6794debff1833e62f4081a677a0576e79783f1e","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 21.7900018,"monmove_mean_ms": 12.519714,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 32.3699422,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-parallel4-06","scene": "combat32","pair": 6,"variant": "parallel4","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 19.321449,"monmove_mean_ms": 10.6413782,"worker_jobs": 76,"worker_threads": 4,"bitmap_publications": 17,"unknown_leaf_percent": 31.25,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-legacy1005-07","scene": "combat32","pair": 7,"variant": "legacy1005","binary_sha256": "a5ad1011d2af1581325e19e7e6794debff1833e62f4081a677a0576e79783f1e","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 21.5711066,"monmove_mean_ms": 12.5406049,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 29.2151163,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-serial1-07","scene": "combat32","pair": 7,"variant": "serial1","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 20.3078891,"monmove_mean_ms": 11.1793965,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 17,"unknown_leaf_percent": 31.3521545,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-parallel4-07","scene": "combat32","pair": 7,"variant": "parallel4","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 19.7072877,"monmove_mean_ms": 10.7710281,"worker_jobs": 76,"worker_threads": 4,"bitmap_publications": 17,"unknown_leaf_percent": 32.2533137,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-parallel4-08","scene": "combat32","pair": 8,"variant": "parallel4","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 19.5771294,"monmove_mean_ms": 10.6382651,"worker_jobs": 76,"worker_threads": 4,"bitmap_publications": 17,"unknown_leaf_percent": 32.8335832,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-serial1-08","scene": "combat32","pair": 8,"variant": "serial1","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 20.0099525,"monmove_mean_ms": 11.1252903,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 17,"unknown_leaf_percent": 30.8396947,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-legacy1005-08","scene": "combat32","pair": 8,"variant": "legacy1005","binary_sha256": "a5ad1011d2af1581325e19e7e6794debff1833e62f4081a677a0576e79783f1e","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 22.1068805,"monmove_mean_ms": 12.9250591,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 34.5875543,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-serial1-09","scene": "combat32","pair": 9,"variant": "serial1","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 19.9452786,"monmove_mean_ms": 11.0005114,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 17,"unknown_leaf_percent": 30.5882353,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-parallel4-09","scene": "combat32","pair": 9,"variant": "parallel4","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 19.6284544,"monmove_mean_ms": 10.7254111,"worker_jobs": 76,"worker_threads": 4,"bitmap_publications": 17,"unknown_leaf_percent": 29.3430657,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-legacy1005-09","scene": "combat32","pair": 9,"variant": "legacy1005","binary_sha256": "a5ad1011d2af1581325e19e7e6794debff1833e62f4081a677a0576e79783f1e","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 22.0078527,"monmove_mean_ms": 12.7837534,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 34.3703704,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-legacy1005-10","scene": "combat32","pair": 10,"variant": "legacy1005","binary_sha256": "a5ad1011d2af1581325e19e7e6794debff1833e62f4081a677a0576e79783f1e","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 22.0188264,"monmove_mean_ms": 12.7442353,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 30.994152,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-parallel4-10","scene": "combat32","pair": 10,"variant": "parallel4","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 19.9317807,"monmove_mean_ms": 10.8302129,"worker_jobs": 76,"worker_threads": 4,"bitmap_publications": 17,"unknown_leaf_percent": 29.6520424,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-serial1-10","scene": "combat32","pair": 10,"variant": "serial1","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 20.2319777,"monmove_mean_ms": 11.2842363,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 17,"unknown_leaf_percent": 28.2962963,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-parallel4-11","scene": "combat32","pair": 11,"variant": "parallel4","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 20.1067504,"monmove_mean_ms": 10.9240055,"worker_jobs": 76,"worker_threads": 4,"bitmap_publications": 17,"unknown_leaf_percent": 33.9421613,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-legacy1005-11","scene": "combat32","pair": 11,"variant": "legacy1005","binary_sha256": "a5ad1011d2af1581325e19e7e6794debff1833e62f4081a677a0576e79783f1e","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 21.7427331,"monmove_mean_ms": 12.6482425,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 32.8467153,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-serial1-11","scene": "combat32","pair": 11,"variant": "serial1","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 19.869936,"monmove_mean_ms": 11.0277332,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 17,"unknown_leaf_percent": 31.0708899,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-serial1-12","scene": "combat32","pair": 12,"variant": "serial1","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 20.3249051,"monmove_mean_ms": 11.2696323,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 17,"unknown_leaf_percent": 32.7917282,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-legacy1005-12","scene": "combat32","pair": 12,"variant": "legacy1005","binary_sha256": "a5ad1011d2af1581325e19e7e6794debff1833e62f4081a677a0576e79783f1e","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 21.7986774,"monmove_mean_ms": 12.7694967,"worker_jobs": 0,"worker_threads": 0,"bitmap_publications": 0,"unknown_leaf_percent": 30.8802309,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0},
+    {"name": "ai61-formal-combat32-parallel4-12","scene": "combat32","pair": 12,"variant": "parallel4","binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f","fixture_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef","full_gameplay_sha256": "edd0e2fb69f83529d3a627833bce1b2d4d899f66d8c05c90e22c9de6a0c147fc","complete_memory_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488","actions": 32,"suffix_scopes": 32,"monmove_scopes": 32,"suffix_mean_ms": 20.2023984,"monmove_mean_ms": 10.9944678,"worker_jobs": 76,"worker_threads": 4,"bitmap_publications": 17,"unknown_leaf_percent": 31.3253012,"native_exit": 0,"collector_exits": [0,0,0],"recorded_loss": 0}
+  ],
+  "validation": {
+    "checks": [
+      {
+        "name": "ordered-sanitizer-link",
+        "command": [
+          "python3",
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/monster-ai61/link-sanitizers-ordered.py"
+        ],
+        "exit": 0,
+        "seconds": 9.2904707
+      },
+      {
+        "name": "native",
+        "command": [
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile/Release/ccb-sdl3-acceptance",
+          "[ai_reachability]~[benchmark],[reachability]~[benchmark],[goal_policy],[movement_plan],[target_selection],[planning_reaction],[destination_plan],[step_selection],[determinism],[submap]",
+          "--rng-seed",
+          "20261015",
+          "--order",
+          "lex",
+          "--warn",
+          "NoTests",
+          "--user-dir",
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/monster-ai61/native-user",
+          "--reporter",
+          "xml",
+          "--out",
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/monster-ai61/native.xml"
+        ],
+        "exit": 0,
+        "seconds": 26.1810056,
+        "cases": {
+          "successes": "64",
+          "failures": "0",
+          "expectedFailures": "0"
+        },
+        "assertions": {
+          "successes": "192750",
+          "failures": "0",
+          "expectedFailures": "0"
+        }
+      },
+      {
+        "name": "asan",
+        "command": [
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile/Release/ccb-ai61-asan-ordered",
+          "[ai_reachability]~[benchmark],[reachability]~[benchmark],[submap_geometry]",
+          "--rng-seed",
+          "20261015",
+          "--order",
+          "lex",
+          "--warn",
+          "NoTests",
+          "--user-dir",
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/monster-ai61/asan-user",
+          "--reporter",
+          "xml",
+          "--out",
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/monster-ai61/asan.xml"
+        ],
+        "exit": 0,
+        "seconds": 49.6366068,
+        "cases": {
+          "successes": "16",
+          "failures": "0",
+          "expectedFailures": "0"
+        },
+        "assertions": {
+          "successes": "18639",
+          "failures": "0",
+          "expectedFailures": "0"
+        }
+      },
+      {
+        "name": "tsan",
+        "command": [
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile/Release/ccb-ai61-tsan-ordered",
+          "[ai_reachability]~[benchmark],[submap_geometry]",
+          "--rng-seed",
+          "20261015",
+          "--order",
+          "lex",
+          "--warn",
+          "NoTests",
+          "--user-dir",
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/monster-ai61/tsan-user",
+          "--reporter",
+          "xml",
+          "--out",
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/monster-ai61/tsan.xml"
+        ],
+        "exit": 0,
+        "seconds": 50.3891452,
+        "cases": {
+          "successes": "8",
+          "failures": "0",
+          "expectedFailures": "0"
+        },
+        "assertions": {
+          "successes": "341",
+          "failures": "0",
+          "expectedFailures": "0"
+        }
+      },
+      {
+        "name": "kernel-benchmark",
+        "command": [
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile/Release/ccb-sdl3-acceptance",
+          "ai_reachability_geometry_preparation_benchmark",
+          "--rng-seed",
+          "20261015",
+          "--order",
+          "lex",
+          "--warn",
+          "NoTests",
+          "--user-dir",
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/monster-ai61/kernel-benchmark-user",
+          "--reporter",
+          "xml",
+          "--out",
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/monster-ai61/kernel-benchmark.xml",
+          "--benchmark-samples",
+          "30",
+          "--benchmark-warmup-time",
+          "100"
+        ],
+        "exit": 0,
+        "seconds": 20.8196261,
+        "cases": {
+          "successes": "1",
+          "failures": "0",
+          "expectedFailures": "0"
+        },
+        "assertions": {
+          "successes": "3",
+          "failures": "0",
+          "expectedFailures": "0"
+        }
+      },
+      {
+        "name": "diff-check",
+        "command": [
+          "git",
+          "diff",
+          "--check",
+          "72a5d9661f20c3372b52cbf50b90b8c54c2ebdf6",
+          "--",
+          ".",
+          ":(exclude)obj-lua",
+          ":(exclude)obj-lua/**"
+        ],
+        "exit": 0,
+        "seconds": 0.0317862
+      },
+      {
+        "name": "metadata-check",
+        "command": [
+          "python3",
+          "tools/agent/check_project_metadata.py"
+        ],
+        "exit": 0,
+        "seconds": 3.7222996
+      },
+      {
+        "name": "json-contract-inventory",
+        "command": [
+          "python3",
+          "tools/json_api/generate_contracts.py",
+          "--check"
+        ],
+        "exit": 0,
+        "seconds": 14.1943302
+      },
+      {
+        "name": "native-inventory",
+        "command": [
+          "python3",
+          "tools/lua_api/check_platform_native_inventory.py"
+        ],
+        "exit": 0,
+        "seconds": 1.8186957
+      }
+    ],
+    "replay_reload": {
+      "state": "passed",
+      "runs": [
+        {
+          "name": "ai61-replay-combat32-legacy1005",
+          "variant": "legacy1005",
+          "exit": 0,
+          "turn": 5212819,
+          "location": [
+            5495,
+            7449,
+            2
+          ],
+          "monsters": 759,
+          "normalized_player_sha256": "58af4b5158d3802f0b3cd27784f71b32ee5f2e9260002d33d8c26b8150a6547f",
+          "complete_memory_json_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488",
+          "binary_sha256": "a5ad1011d2af1581325e19e7e6794debff1833e62f4081a677a0576e79783f1e"
+        },
+        {
+          "name": "ai61-reload-combat32-legacy1005",
+          "variant": "legacy1005",
+          "exit": 0,
+          "turn": 5212819,
+          "location": [
+            5495,
+            7449,
+            2
+          ],
+          "monsters": 759,
+          "normalized_player_sha256": "c065d369013f70f86eeb92198e39908433258a9a45f416d620e3e0653a6b35ff",
+          "complete_memory_json_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488",
+          "binary_sha256": "a5ad1011d2af1581325e19e7e6794debff1833e62f4081a677a0576e79783f1e"
+        },
+        {
+          "name": "ai61-replay-combat32-parallel4",
+          "variant": "parallel4",
+          "exit": 0,
+          "turn": 5212819,
+          "location": [
+            5495,
+            7449,
+            2
+          ],
+          "monsters": 759,
+          "normalized_player_sha256": "58af4b5158d3802f0b3cd27784f71b32ee5f2e9260002d33d8c26b8150a6547f",
+          "complete_memory_json_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488",
+          "binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f"
+        },
+        {
+          "name": "ai61-reload-combat32-parallel4",
+          "variant": "parallel4",
+          "exit": 0,
+          "turn": 5212819,
+          "location": [
+            5495,
+            7449,
+            2
+          ],
+          "monsters": 759,
+          "normalized_player_sha256": "c065d369013f70f86eeb92198e39908433258a9a45f416d620e3e0653a6b35ff",
+          "complete_memory_json_sha256": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488",
+          "binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f"
+        },
+        {
+          "name": "ai61-replay-room-legacy1005",
+          "variant": "legacy1005",
+          "exit": 0,
+          "turn": 5212848,
+          "location": [
+            5489,
+            7448,
+            0
+          ],
+          "monsters": 0,
+          "normalized_player_sha256": "8151bb75dee10193f9f6a1bafa067a4936abe0d372263068b5753d97ac96592b",
+          "complete_memory_json_sha256": "8d7811c8c299161465803708af20bb8d1ab3fab140729a21911e37c3a1002b74",
+          "binary_sha256": "a5ad1011d2af1581325e19e7e6794debff1833e62f4081a677a0576e79783f1e"
+        },
+        {
+          "name": "ai61-reload-room-legacy1005",
+          "variant": "legacy1005",
+          "exit": 0,
+          "turn": 5212848,
+          "location": [
+            5489,
+            7448,
+            0
+          ],
+          "monsters": 0,
+          "normalized_player_sha256": "34b92cad78cd95eacda0597f7b63ab7d80227ac8793cf4858e10c58157a1f2e2",
+          "complete_memory_json_sha256": "8d7811c8c299161465803708af20bb8d1ab3fab140729a21911e37c3a1002b74",
+          "binary_sha256": "a5ad1011d2af1581325e19e7e6794debff1833e62f4081a677a0576e79783f1e"
+        },
+        {
+          "name": "ai61-replay-room-parallel4",
+          "variant": "parallel4",
+          "exit": 0,
+          "turn": 5212848,
+          "location": [
+            5489,
+            7448,
+            0
+          ],
+          "monsters": 0,
+          "normalized_player_sha256": "8151bb75dee10193f9f6a1bafa067a4936abe0d372263068b5753d97ac96592b",
+          "complete_memory_json_sha256": "8d7811c8c299161465803708af20bb8d1ab3fab140729a21911e37c3a1002b74",
+          "binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f"
+        },
+        {
+          "name": "ai61-reload-room-parallel4",
+          "variant": "parallel4",
+          "exit": 0,
+          "turn": 5212848,
+          "location": [
+            5489,
+            7448,
+            0
+          ],
+          "monsters": 0,
+          "normalized_player_sha256": "34b92cad78cd95eacda0597f7b63ab7d80227ac8793cf4858e10c58157a1f2e2",
+          "complete_memory_json_sha256": "8d7811c8c299161465803708af20bb8d1ab3fab140729a21911e37c3a1002b74",
+          "binary_sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f"
+        }
+      ],
+      "scope": "Actual SDL3 replay and save/reload cross legacy1005 and parallel4; identical replay seeds,fullordered gameplay payload andcomplete decodedMM checked. Replay EOF handling uses established lower-by-one endpoint versus interactive32 inputs; no timing comparison."
+    },
+    "observed_worker_overlap": {
+      "state": "passed",
+      "dense_parallel_games": 12,
+      "all_parallel_batches_inside_primary_suffix": true,
+      "scope": "Observed overlap of complete ai.reachability.worker wall-time intervals inside each owner queue-to-wait preparation interval. This verifies concurrent thread execution scopes, not physical CPU utilization or speed by itself; speed acceptance comes from the independent fixed paired cohort.",
+      "minimum_batch_peak_overlap": 3,
+      "maximum_batch_peak_overlap": 4
+    },
+    "effective_native_runtime": {
+      "state": "passed",
+      "trials": 60,
+      "SDL_versions": [
+        [
+          "3.4.18",
+          "3.4.18"
+        ]
+      ],
+      "actual_tileset": "UNDEAD_PEOPLE",
+      "renderer": "opengl",
+      "actual_fullscreen_dimensions": [
+        2880,
+        1800
+      ],
+      "scope": "Latest startup segment only; fixture debug logs contain historical SDL2/other runs that must not be attributed to the current native process. Actual SDL3/OpenGL/Undead loading and fullscreen screenshot dimensions checked, not just option names. No GPU acceleration/FPS claim.",
+      "binary_dependencies": [
+        {
+          "binary": "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/reachability56/candidate/bin/cataclysm-tiles",
+          "sha256": "a5ad1011d2af1581325e19e7e6794debff1833e62f4081a677a0576e79783f1e",
+          "needed": [
+            "libfreetype.so.6",
+            "libSDL3_image.so.0",
+            "libSDL3_ttf.so.0",
+            "libSDL3_mixer.so.0",
+            "libSDL3.so.0",
+            "libz.so.1",
+            "libstdc++.so.6",
+            "libm.so.6",
+            "libgcc_s.so.1",
+            "libc.so.6"
+          ],
+          "command": [
+            "readelf",
+            "-d",
+            "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/reachability56/candidate/bin/cataclysm-tiles"
+          ]
+        },
+        {
+          "binary": "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/monster-ai61/candidate/bin/cataclysm-tiles",
+          "sha256": "1050abb24732fdd32955310c099d394a0887abe24167004783ae01eebe982b8f",
+          "needed": [
+            "libfreetype.so.6",
+            "libSDL3_image.so.0",
+            "libSDL3_ttf.so.0",
+            "libSDL3_mixer.so.0",
+            "libSDL3.so.0",
+            "libz.so.1",
+            "libstdc++.so.6",
+            "libm.so.6",
+            "libgcc_s.so.1",
+            "libc.so.6"
+          ],
+          "command": [
+            "readelf",
+            "-d",
+            "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/monster-ai61/candidate/bin/cataclysm-tiles"
+          ]
+        }
+      ]
+    },
+    "complete_captured_functions": {
+      "state": "passed",
+      "trials": 60,
+      "all_period_totals_verified": true,
+      "unknown_leaf_percent_range": [
+        26.4550265,
+        37.96875
+      ],
+      "scope": "All captured mainTID self cycles period rows at0threshold and complete captured inclusive/leaf stacks with unknowns preserved. MainTIDonly perf, not workerprofiling; actual worker kernels from allthreadTracy. Percentages are sample/periodweighted, inclusive overlaps, never converted to elapsedtime. Pertrial oldpilot label is inherited exporter text; formal inference uses fixed60cohort."
+    },
+    "real_allocation_failures": {
+      "steps": [
+        {
+          "name": "native-compile",
+          "command": [
+            "clang++",
+            "-std=c++17",
+            "-pthread",
+            "-O1",
+            "-g1",
+            "-UNDEBUG",
+            "-ffunction-sections",
+            "-fdata-sections",
+            "-I/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/src",
+            "-I/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/src/third-party",
+            "tests/standalone/ai_reachability_fault_test.cpp",
+            "src/ai_reachability.cpp",
+            "src/thread_pool.cpp",
+            "-Wl,--gc-sections",
+            "-fno-omit-frame-pointer",
+            "-o",
+            "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/monster-ai60/early-allocation-native"
+          ],
+          "exit": 0,
+          "seconds": 5.1777543
+        },
+        {
+          "name": "native-run",
+          "command": [
+            "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/monster-ai60/early-allocation-native"
+          ],
+          "exit": 0,
+          "seconds": 0.1142023,
+          "result": {
+            "constructor_failures": 8,
+            "partial_start_failures": 3,
+            "snapshot_allocation_failures": 8,
+            "preparation_failures": 5,
+            "partial_submission_failures": 3,
+            "recovery_matches_serial": true,
+            "live_workers_after_drain": 0
+          }
+        },
+        {
+          "name": "asan-compile",
+          "command": [
+            "clang++",
+            "-std=c++17",
+            "-pthread",
+            "-O1",
+            "-g1",
+            "-UNDEBUG",
+            "-ffunction-sections",
+            "-fdata-sections",
+            "-I/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/src",
+            "-I/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/src/third-party",
+            "tests/standalone/ai_reachability_fault_test.cpp",
+            "src/ai_reachability.cpp",
+            "src/thread_pool.cpp",
+            "-Wl,--gc-sections",
+            "-fno-omit-frame-pointer",
+            "-fsanitize=address,undefined",
+            "-o",
+            "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/monster-ai60/early-allocation-asan"
+          ],
+          "exit": 0,
+          "seconds": 5.4301037
+        },
+        {
+          "name": "asan-run",
+          "command": [
+            "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/monster-ai60/early-allocation-asan"
+          ],
+          "exit": 0,
+          "seconds": 0.4151127,
+          "result": {
+            "constructor_failures": 8,
+            "partial_start_failures": 3,
+            "snapshot_allocation_failures": 8,
+            "preparation_failures": 5,
+            "partial_submission_failures": 3,
+            "recovery_matches_serial": true,
+            "live_workers_after_drain": 0
+          }
+        },
+        {
+          "name": "tsan-compile",
+          "command": [
+            "clang++",
+            "-std=c++17",
+            "-pthread",
+            "-O1",
+            "-g1",
+            "-UNDEBUG",
+            "-ffunction-sections",
+            "-fdata-sections",
+            "-I/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/src",
+            "-I/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/src/third-party",
+            "tests/standalone/ai_reachability_fault_test.cpp",
+            "src/ai_reachability.cpp",
+            "src/thread_pool.cpp",
+            "-Wl,--gc-sections",
+            "-fno-omit-frame-pointer",
+            "-fsanitize=thread",
+            "-shared-libsan",
+            "-Wl,-rpath,/usr/lib/clang/23/lib/linux",
+            "-o",
+            "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/monster-ai60/early-allocation-tsan"
+          ],
+          "exit": 0,
+          "seconds": 4.9294603
+        },
+        {
+          "name": "tsan-run",
+          "command": [
+            "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/monster-ai60/early-allocation-tsan"
+          ],
+          "exit": 0,
+          "seconds": 1.0162236,
+          "result": {
+            "constructor_failures": 8,
+            "partial_start_failures": 3,
+            "snapshot_allocation_failures": 8,
+            "preparation_failures": 5,
+            "partial_submission_failures": 3,
+            "recovery_matches_serial": true,
+            "live_workers_after_drain": 0
+          }
+        }
+      ],
+      "source_sha256": {
+        "tests/standalone/ai_reachability_fault_test.cpp": "6b7dde68268e74f14d17df2ec4b0941199d7d364b04701129b8424b5e6f0a7b1",
+        "src/ai_reachability.cpp": "f5e18fe92ac8d3bf6edf3aa3c1c79b72c1c9f2af30f0074e76ba8bebc9a130ed",
+        "src/ai_reachability.h": "4cd8071d51e3580b9382886045449d62ba3a76ae688c8fdfd0706782ff5ab469",
+        "src/thread_pool.cpp": "d4bd8d633e0f580d9b2617bd654cfe2e6319314f5a1c44c5db10cf206a3eda44",
+        "src/thread_pool.h": "4c698a975c944ba76be8ca51b32c38789d13c56f7ebe8faefb6899b5b2e217f7"
+      },
+      "toolchain_sha256": {
+        "/usr/bin/clang++": "3d9ccf167693aa81f7e99dee0ff87691edda3f2d65d1f127f25f6c46bb8e8744",
+        "/usr/lib/clang/23/lib/linux/libclang_rt.tsan-x86_64.so": "ca755cc8d832200597905643961e96984a96cdd93a5e1e998a2d8eaa50a9d7a7"
+      },
+      "reused_from": "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/monster-ai61/early-allocation-progress.json",
+      "scope": "Actualproduction AI valuekernel andcata_thread_pool; independent standaloneowner allocationfailures. Only startupcrash and workerRNG hooks replaced. Nativefullservicehook checks separate. TSan sharedruntime avoids customoperatornew staticruntime linkcollision, no suppressions."
+    },
+    "source_format": {
+      "affected_regressions": 0,
+      "files": [
+        {
+          "file": "src/ai_reachability.cpp",
+          "new": true,
+          "format_edits_total": 0,
+          "affected_format_regressions": [],
+          "outside_changed_ranges": 0,
+          "exact_formatted": true
+        },
+        {
+          "file": "src/ai_reachability.h",
+          "new": true,
+          "format_edits_total": 0,
+          "affected_format_regressions": [],
+          "outside_changed_ranges": 0,
+          "exact_formatted": true
+        },
+        {
+          "file": "src/ai_reachability_capture.cpp",
+          "new": true,
+          "format_edits_total": 0,
+          "affected_format_regressions": [],
+          "outside_changed_ranges": 0,
+          "exact_formatted": true
+        },
+        {
+          "file": "src/ai_reachability_owner.h",
+          "new": true,
+          "format_edits_total": 0,
+          "affected_format_regressions": [],
+          "outside_changed_ranges": 0,
+          "exact_formatted": true
+        },
+        {
+          "file": "src/creature_tracker.cpp",
+          "new": false,
+          "format_edits_total": 0,
+          "affected_format_regressions": [],
+          "outside_changed_ranges": 0,
+          "exact_formatted": true
+        },
+        {
+          "file": "src/creature_tracker.h",
+          "new": false,
+          "format_edits_total": 0,
+          "affected_format_regressions": [],
+          "outside_changed_ranges": 0,
+          "exact_formatted": true
+        },
+        {
+          "file": "src/do_turn.cpp",
+          "new": false,
+          "format_edits_total": 3,
+          "affected_format_regressions": [],
+          "outside_changed_ranges": 3,
+          "exact_formatted": false
+        },
+        {
+          "file": "src/map.h",
+          "new": false,
+          "format_edits_total": 0,
+          "affected_format_regressions": [],
+          "outside_changed_ranges": 0,
+          "exact_formatted": true
+        },
+        {
+          "file": "src/options.cpp",
+          "new": false,
+          "format_edits_total": 17,
+          "affected_format_regressions": [],
+          "outside_changed_ranges": 17,
+          "exact_formatted": false
+        },
+        {
+          "file": "src/savegame_json.cpp",
+          "new": false,
+          "format_edits_total": 14,
+          "affected_format_regressions": [],
+          "outside_changed_ranges": 14,
+          "exact_formatted": false
+        },
+        {
+          "file": "src/submap.cpp",
+          "new": false,
+          "format_edits_total": 1,
+          "affected_format_regressions": [],
+          "outside_changed_ranges": 1,
+          "exact_formatted": false
+        },
+        {
+          "file": "src/submap.h",
+          "new": false,
+          "format_edits_total": 0,
+          "affected_format_regressions": [],
+          "outside_changed_ranges": 0,
+          "exact_formatted": true
+        },
+        {
+          "file": "tests/ai_reachability_owner_test.cpp",
+          "new": true,
+          "format_edits_total": 0,
+          "affected_format_regressions": [],
+          "outside_changed_ranges": 0,
+          "exact_formatted": true
+        },
+        {
+          "file": "tests/ai_reachability_test.cpp",
+          "new": true,
+          "format_edits_total": 0,
+          "affected_format_regressions": [],
+          "outside_changed_ranges": 0,
+          "exact_formatted": true
+        },
+        {
+          "file": "tests/standalone/ai_reachability_fault_test.cpp",
+          "new": true,
+          "format_edits_total": 0,
+          "affected_format_regressions": [],
+          "outside_changed_ranges": 0,
+          "exact_formatted": true
+        },
+        {
+          "file": "tests/submap_geometry_test.cpp",
+          "new": true,
+          "format_edits_total": 0,
+          "affected_format_regressions": [],
+          "outside_changed_ranges": 0,
+          "exact_formatted": true
+        }
+      ],
+      "compiled_identity": "Every current compiled source hash matches the frozen candidate; the2indent changes and narrow fixed-seed fixture annotation were applied before61build and allmeasurements. No post-measurement source exception."
+    }
+  },
+  "safety_limits": [
+    "ASan/UBSan/LSan instruments actual AI/capture/tracker/submap/savegame_json/threadpool objects; remaining common engine objects are not wholly instrumented.",
+    "TSan covers actual pure AI/threadpool/submap identity and independent empty ownership tests; this is not a whole-engine, mutable-world or live multiplayer race proof.",
+    "Scoped sanitizer links use the same objects/flags with instrumented template definitions first. A controlled std::future reproduction passed fully instrumented and failed mixed common-first due weak COMDAT selection. No reports were suppressed and no cases removed.",
+    "The standalone actual kernel/threadpool allocation probe stubs only unrelated startup crash-handler and worker RNG hooks. Native owner gates separately use real hooks. Shared TSan runtime avoids the documented static operator-new collision.",
+    "No current-head hosted CI, cross-platform/device, long session, all old saves, live multiplayer network, GPU/FPS or unknown-region multi-second-stutter acceptance is claimed. The multiplayer early fallback is code guarded and covered at its scoped policy boundary."
+  ],
+  "retained_failures_and_diagnostics": [
+    {
+      "round": "57/58",
+      "failure": "Initial compile/type/fixture errors, scoped future instrumentation reports,staticTSan operator-new collision and a new SECTION RNG baseline assertion.",
+      "resolution": "Focused fixes and controlled instrumentation diagnosis; all failed logs/repros remain local. Catch reseeds each section; the fixture baseline was aligned to the configured seed."
+    },
+    {
+      "round": "58",
+      "accepted_games": 42,
+      "full_state_and_memory_equal": true,
+      "delivery_rejected": true,
+      "reason": "Net suffix gain vslegacy not proved:paired95[-0.3643152476,0.0224794742]ms. Draw mean3.339% and reused draw3.593% slower with adverse intervals. Four-worker vsownedserial gain alone did not satisfy delivery.",
+      "complete_function_period_audits": 42
+    },
+    {
+      "round": "59",
+      "games": 4,
+      "full_state_and_memory_equal": true,
+      "reason": "Move cold cache state toclass tails; actual compiler layout restored all original direct-field offsets. Draw point costs improved, but suffixAI4=21.77117vslegacy21.78119ms diagnostic gave no meaningful net gain. No formal59cohort was started."
+    },
+    {
+      "round": "60",
+      "games": 4,
+      "full_state_and_memory_equal": true,
+      "reason": "Fuse original horizontal bitmap work with value preparation while retaining owner-complete field/vehicle decisions and fresh publication. Actual17bitmap publications observed forAI1/AI4; AI4executed76jobs on4threads. Diagnostic excluded from all formal inference."
+    },
+    {
+      "round": "60formal",
+      "accepted_games": 54,
+      "full_state_and_memory_equal": true,
+      "delivery_rejected": true,
+      "reason": "Dense suffix9.33694percent fastervslegacy andAI4component2.90910percent fastervsAI1, but carrier exploration suffix3.57662734percent slower; paired95[+.01062771847,+.61750089414]ms. All54completefunctionperiodaudits passed; raw retainedlosslessly. This round is notpooled with61."
+    },
+    {
+      "round": "61audit",
+      "failure": "Inherited54run cardinality assertion stopped worker overlap auditing before anyoutput.",
+      "resolution": "Read unchanged predeclared60count fromprotocol; originalscript/log retained. Same12AI4games passed everybatch overlapping>=2threads andinsideprimarysuffix. No game/build/sourcekernel repeated orchanged."
+    },
+    {
+      "round": "61pilot",
+      "games": 11,
+      "full_state_and_memory_equal": true,
+      "reason": "Fourfixed explorationAB/BApairs then one dense legacy/AI1/AI4 triple,after moving hot terrain/uniform storage tosubmap prefix. Diagnostic only; notpooled."
+    },
+    {
+      "round": "60preflight",
+      "reason": "An old round name in an assertion message stopped protocol wiring before formal games. The already-written protocol was preserved; the controller was repaired before sampling."
+    }
+  ],
+  "storage_and_isolation": {
+    "free_floor_GiB": 6,
+    "current_round_raw_cap_GiB": 4,
+    "combined_owned_round_raw_cap_GiB": 6,
+    "policy": "Only stopped task-owned redundant CSV and fully exported failed58/60 rawperf are losslessly zstd packed. Decoded byte counts and SHA are checked before retiring redundant uncompressed representations; per-trial restore commands retain the exact original stream. Original saves/gfx remain unchanged. Other tasks and obj-lua are never scanned or changed.",
+    "evidence_root": ".ccb-pr-evidence/native-combined/monster-ai61",
+    "artifact_sha256": {
+      "formal-protocol.json": "1f55d0c6f3983780aef7bcaf6ad711ae97f3c759c3e438425b107799380ff6a4",
+      "formal-progress.json": "0299145f49969833d627188e93120a9326fbd5ad55a9ffe574e51c515982095d",
+      "acceptance-progress.json": "54649ae9701bf0bdf737033d01f6c2b4a42b908f68acbe47a0257f16041cae6e",
+      "replay-progress.json": "21f7ee951f540d740b280635aef0dc7de15a1d6066efb65131025badfb1b068d",
+      "complete-function-audit.json": "83844efd754f7ebf0f1204369ab9e20a00e2707ce41f210de80de06985e8ab98",
+      "early-allocation-progress.json": "243bd055d8e2a5462a24b0b53a69263cee63e1d497bfaa825c39f67e0a426847",
+      "final-allocation-progress.json": "69b93b3ae86fd6b96d7aa7d791d1a16deac523597e3607cee3acbdfd389e2dec",
+      "final-source-checks.json": "1e84b47ef85be33f75db498a234b8691f1d20616382b03e60fbc1ea55d1ce154",
+      "effective-runtime-audit.json": "af09c75a829fea1cba17efeb1ec2c8bfe0f1894967184ca01911b52f386492fb",
+      "worker-overlap-audit.json": "f1faa2add8a367f56d2fb23411f20b943f36750fff553b6b76d925d59ad7fdc9",
+      "worker-audit-count-repair.json": "8b2dfa9278c2ba99472b64f743fe76f81edad42b8896a41a75964f5dbd684a4a",
+      "final-source-reuse-proof.json": "99d21520b05faf2b991c1e794c8b269842ac4ecbe2c40fe2e2aeb784037e5585"
+    },
+    "original_saves_and_tiles_uploaded": false
+  },
+  "delivery": {
+    "responsible_human": "@LYHGLYTX",
+    "draft_base": "codex/performance-creature-reachability-20261015",
+    "documentation_impact": "Internal scoped architecture/measurement acceptance report. No Lua/JSON public contract change.",
+    "related_CCB_Docs_PR": "None",
+    "affected_documentation_IDs": "None",
+    "generated_reference_impact": "None; inventories checked, no schema/LuaLS/registration edits.",
+    "commit_policy": "Six coherent responsibilities: owned value kernel and regression; runtime geometry lifetime/version; owner freshness boundary; fused horizontal/vertical preparation and hot terrain locality; actual allocation failure regression; bounded acceptance. Baseline-to-head changed lines and exact count are recorded at PR creation. No filler commits or shared-history rewriting.",
+    "no_auto_merge_or_release": true
+  }
+}

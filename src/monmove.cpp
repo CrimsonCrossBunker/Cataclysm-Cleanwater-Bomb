@@ -35,6 +35,7 @@
 #include "line.h"
 #include "lua_platform_hooks.h"
 #include "map.h"
+#include "map_movement_query.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
 #include "mapdata.h"
@@ -42,7 +43,12 @@
 #include "messages.h"
 #include "monfaction.h"
 #include "mongroup.h"
+#include "monster_destination_plan.h"
+#include "monster_movement_plan.h"
 #include "monster_oracle.h"
+#include "monster_planning_reaction.h"
+#include "monster_step_selection.h"
+#include "monster_target_selection.h"
 #include "mtype.h"
 #include "npc.h"
 #include "options.h"
@@ -163,46 +169,56 @@ static bool z_is_valid( int z )
 
 bool monster::will_move_to( map *here, const tripoint_bub_ms &p ) const
 {
-    const std::vector<field_type_id> impassable_field_ids = here->get_impassable_field_type_ids_at( p );
-
-    for( const std::pair<const int_id<field_type>, field_entry> &pair : here->field_at( p ) ) {
-        const field_type_id &fid = pair.first;
-        const field_type &ft = fid.obj();
-        if( ft.block_mtypes.count( type->id ) > 0 ) {
+    const map_movement_query tile( *here, p );
+    const field &fields = tile.fields();
+    bool has_impassable_fields = false;
+    for( const auto &pair : fields ) {
+        has_impassable_fields |= pair.second.get_intensity_level().move_cost < 0;
+        if( pair.first.obj().block_mtypes.count( type->id ) > 0 ) {
             return false;
         }
     }
+    // Keep immunity checks after terrain passability, in the original field
+    // order. Most tiles need neither a second scan nor an allocated ID vector.
+    const auto immune_to_impassable_fields = [&]() {
+        for( const auto &pair : fields ) {
+            if( pair.second.get_intensity_level().move_cost < 0 &&
+                !is_immune_field( pair.first ) ) {
+                return false;
+            }
+        }
+        return true;
+    };
 
-    if( here->has_flag( ter_furn_flag::TFLAG_MON_AVOID_STRICT, p ) ) {
+    if( tile.has_flag( ter_furn_flag::TFLAG_MON_AVOID_STRICT ) ) {
         return false;
     }
 
-    if( !here->passable_skip_fields( p ) || here->has_flag( ter_furn_flag::TFLAG_CLIMBABLE, p ) ||
-        ( !impassable_field_ids.empty() &&
-          !is_immune_fields( impassable_field_ids ) ) ) {
+    if( !tile.passable_skip_fields() || tile.has_flag( ter_furn_flag::TFLAG_CLIMBABLE ) ||
+        ( has_impassable_fields && !immune_to_impassable_fields() ) ) {
         if( digging() ) {
-            if( !here->has_flag( ter_furn_flag::TFLAG_BURROWABLE, p ) ) {
+            if( !tile.has_flag( ter_furn_flag::TFLAG_BURROWABLE ) ) {
                 return false;
             }
-        } else if( !( can_climb() && here->has_flag( ter_furn_flag::TFLAG_CLIMBABLE, p ) ) ) {
+        } else if( !( can_climb() && tile.has_flag( ter_furn_flag::TFLAG_CLIMBABLE ) ) ) {
             return false;
         }
     }
 
-    if( !here->has_vehicle_floor( p ) ) {
-        if( !can_submerge() && !flies() && here->has_flag( ter_furn_flag::TFLAG_DEEP_WATER, p ) ) {
+    if( !tile.has_vehicle_floor() ) {
+        if( !can_submerge() && !flies() && tile.has_flag( ter_furn_flag::TFLAG_DEEP_WATER ) ) {
             return false;
         }
     }
 
     // digging monster can ONLY move underground?
-    if( digs() && !here->has_flag( ter_furn_flag::TFLAG_DIGGABLE, p ) &&
-        !here->has_flag( ter_furn_flag::TFLAG_BURROWABLE, p ) ) {
+    if( digs() && !tile.has_flag( ter_furn_flag::TFLAG_DIGGABLE ) &&
+        !tile.has_flag( ter_furn_flag::TFLAG_BURROWABLE ) ) {
         return false;
     }
     // one dimensional creatures can ONLY move in their home dimension
     if( has_flag( mon_flag_ONE_DIMENSIONAL_X ) && (
-            !here->has_flag( ter_furn_flag::TFLAG_ONE_DIMENSIONAL_X, p ) ||
+            !tile.has_flag( ter_furn_flag::TFLAG_ONE_DIMENSIONAL_X ) ||
             // In the off chance a multidimensional vehicle enters a one dimensional tile
             ( here->veh_at( p ) && !here->veh_at( pos_bub() ) )
         ) ) {
@@ -210,14 +226,14 @@ bool monster::will_move_to( map *here, const tripoint_bub_ms &p ) const
     }
 
     if( has_flag( mon_flag_ONE_DIMENSIONAL_Y ) && (
-            !here->has_flag( ter_furn_flag::TFLAG_ONE_DIMENSIONAL_Y, p ) ||
+            !tile.has_flag( ter_furn_flag::TFLAG_ONE_DIMENSIONAL_Y ) ||
             // In the off chance a multidimensional vehicle enters a one dimensional tile
             ( here->veh_at( p ) && !here->veh_at( pos_bub() ) )
         ) ) {
         return false;
     }
     if( has_flag( mon_flag_ONE_DIMENSIONAL_Z ) && (
-            !here->has_flag( ter_furn_flag::TFLAG_ONE_DIMENSIONAL_Z, p ) ||
+            !tile.has_flag( ter_furn_flag::TFLAG_ONE_DIMENSIONAL_Z ) ||
             // In the off chance a multidimensional vehicle enters a one dimensional tile
             ( here->veh_at( p ) && !here->veh_at( pos_bub() ) )
         ) ) {
@@ -225,8 +241,8 @@ bool monster::will_move_to( map *here, const tripoint_bub_ms &p ) const
     }
 
     if( has_flag( mon_flag_AQUATIC ) && (
-            !( here->has_flag( ter_furn_flag::TFLAG_SWIMMABLE, p ) ||
-               here->has_flag( ter_furn_flag::TFLAG_SWIM_UNDER, p ) ) ||
+            !( tile.has_flag( ter_furn_flag::TFLAG_SWIMMABLE ) ||
+               tile.has_flag( ter_furn_flag::TFLAG_SWIM_UNDER ) ) ||
             // AQUATIC (confined to water) monster avoid vehicles, unless they are already underneath one
             ( here->veh_at( p ) && !here->veh_at( pos_bub() ) )
         ) ) {
@@ -238,7 +254,7 @@ bool monster::will_move_to( map *here, const tripoint_bub_ms &p ) const
     }
 
     if( get_size() > creature_size::medium &&
-        here->has_flag_ter( ter_furn_flag::TFLAG_SMALL_PASSAGE, p ) ) {
+        tile.has_terrain_flag( ter_furn_flag::TFLAG_SMALL_PASSAGE ) ) {
         return false; // if a large critter, can't move through tight passages
     }
 
@@ -388,12 +404,11 @@ float monster::rate_target( Creature &c, float best, bool smart ) const
     float power = c.power_rating();
     monster *mon = dynamic_cast< monster * >( &c );
     // Their attitude to us and not ours to them, so that bobcats won't get gunned down
-    if( mon != nullptr && mon->attitude_to( *this ) == Attitude::HOSTILE ) {
-        power += 2;
-    }
+    power = observed_monster_target_power( power,
+                                           mon != nullptr && mon->attitude_to( *this ) == Attitude::HOSTILE );
 
     if( power > 0 ) {
-        return static_cast<int>( d ) / power;
+        return score_visible_monster_target( static_cast<int>( d ), power );
     }
 
     return FLT_MAX;
@@ -458,7 +473,9 @@ void monster::anger_hostile_seen( const monster_plan &mon_plan )
     }
 
     // Decide that the player is too annoying, less likely than the other triggers
-    if( mon_plan.angers_hostile_seen && x_in_y( anger, 200 ) ) {
+    const monster_planning_reaction reaction = react_to_hostile_sighting( { anger, morale },
+        mon_plan.angers_hostile_seen, mon_plan.fleeing );
+    if( reaction.draw_aggro && x_in_y( reaction.values.anger, reaction.denominator ) ) {
         if( mon_plan.target->is_avatar() ) {
             add_msg_debug( debugmode::DF_MONSTER, "%s's character aggro triggered by seeing you", name() );
         } else {
@@ -473,8 +490,10 @@ void monster::anger_mating_season( const monster_plan &mon_plan )
 {
     if( mon_plan.angers_mating_season > 0 && anger <= 30 ) {
         if( mating_angry() ) {
-            anger += mon_plan.angers_mating_season;
-            if( x_in_y( anger, 100 ) ) {
+            const monster_planning_reaction reaction = react_to_mating_season( { anger, morale },
+                mon_plan.angers_mating_season, true );
+            anger = reaction.values.anger;
+            if( reaction.draw_aggro && x_in_y( anger, reaction.denominator ) ) {
                 add_msg_debug( debugmode::DF_MONSTER, "%s's character aggro triggered by season", name() );
                 aggro_character = true;
             }
@@ -514,8 +533,10 @@ void monster::anger_cub_threatened( monster_plan &mon_plan )
             mon_plan.dist = tmp.rate_target( *mon_plan.target, mon_plan.dist, mon_plan.smart_planning );
             if( mon_plan.dist <= 3 ) {
                 //proximity to baby; monster gets furious and less likely to flee
-                anger += mon_plan.angers_cub_threatened;
-                morale += mon_plan.angers_cub_threatened / 2;
+                const monster_planning_values reaction = react_to_threatened_cub( { anger, morale },
+                    mon_plan.angers_cub_threatened );
+                anger = reaction.anger;
+                morale = reaction.morale;
                 add_msg_debug( debugmode::DF_MONSTER, "%s's character aggro triggered by threatening %s", name(),
                                tmp.name() );
                 aggro_character = true;
@@ -546,6 +567,14 @@ void monster::plan()
     monster_plan mon_plan( *this );
 
     map &here = get_map();
+    const auto follow_goal = [&]( Creature & target ) {
+        monster_destination_plan goal( *this, target, here );
+        return goal.commit( propose_monster_destination( goal.view() ), here );
+    };
+    const auto point_goal = [&]( const tripoint_abs_ms & destination, monster_point_goal kind ) {
+        monster_destination_plan goal( *this, here, destination, kind );
+        return goal.commit( propose_monster_destination( goal.view() ), here );
+    };
     std::bitset<OVERMAP_LAYERS> seen_levels = here.get_inter_level_visibility( posz() );
     monster_attitude mood = attitude();
     Character &player_character = get_player_character();
@@ -560,21 +589,21 @@ void monster::plan()
         mon_plan.dist = rate_target( player_character, mon_plan.dist, mon_plan.smart_planning );
         mon_plan.fleeing = mon_plan.fleeing || is_fleeing( player_character );
         mon_plan.target = &player_character;
-        if( !mon_plan.fleeing && anger <= 20 ) {
-            anger += mon_plan.angers_hostile_seen;
-        }
+        const monster_planning_values seen_reaction = react_to_seen_hostile( { anger, morale },
+            mon_plan.angers_hostile_seen, 0, mon_plan.fleeing, true );
+        anger = seen_reaction.anger;
 
         anger_hostile_seen( mon_plan );
 
         if( mon_plan.dist <= 5 ) {
-            if( anger <= 30 ) {
-                anger += mon_plan.angers_hostile_near;
-            }
-            if( mon_plan.angers_hostile_near && x_in_y( anger, 100 ) ) {
+            const monster_planning_reaction near_reaction = react_to_near_hostile( { anger, morale },
+                mon_plan.angers_hostile_near, mon_plan.fears_hostile_near );
+            anger = near_reaction.values.anger;
+            if( near_reaction.draw_aggro && x_in_y( anger, near_reaction.denominator ) ) {
                 add_msg_debug( debugmode::DF_MONSTER, "%s's character aggro triggered by proximity", name() );
                 aggro_character = true;
             }
-            morale -= mon_plan.fears_hostile_near;
+            morale = near_reaction.values.morale;
             anger_mating_season( mon_plan );
         }
         anger_cub_threatened( mon_plan );
@@ -583,17 +612,20 @@ void monster::plan()
             if( tmp.friendly == 0 && tmp.attitude_to( *this ) == Attitude::HOSTILE &&
                 seen_levels.test( tmp.posz() + OVERMAP_DEPTH ) ) {
                 float rating = rate_target( tmp, mon_plan.dist, mon_plan.smart_planning );
-                if( rating < mon_plan.dist ) {
+                const monster_target_selection selection( { mon_plan.dist, 0, mon_plan.fleeing },
+                        monster_target_kind::friendly_monster, rating );
+                const monster_target_choice choice = selection.result();
+                if( choice.selected ) {
                     mon_plan.target = &tmp;
-                    mon_plan.dist = rating;
                 }
+                mon_plan.dist = choice.state.best;
             }
         }
     }
 
     if( mon_plan.docile ) {
         if( friendly != 0 && mon_plan.target != nullptr ) {
-            set_dest( mon_plan.target->pos_abs() );
+            follow_goal( *mon_plan.target );
         }
 
         return;
@@ -611,40 +643,51 @@ void monster::plan()
 
         float rating = rate_target( who, mon_plan.dist, mon_plan.smart_planning );
         bool fleeing_from = is_fleeing( who );
-        if( rating == mon_plan.dist && ( mon_plan.fleeing || attitude( &who ) == MATT_ATTACK ||
-                                         attitude( &who ) == MATT_FOLLOW ) ) {
-            ++valid_targets;
-            if( one_in( valid_targets ) ) {
-                mon_plan.target = &who;
+        monster_target_selection selection( { mon_plan.dist, valid_targets, mon_plan.fleeing },
+                                            monster_target_kind::npc, rating, fleeing_from, faction_att == MFA_HATE );
+        while( selection.request() != monster_target_request::none ) {
+            bool accepted = false;
+            switch( selection.request() ) {
+                case monster_target_request::tie_attack:
+                case monster_target_request::replacement_attack:
+                    accepted = attitude( &who ) == MATT_ATTACK;
+                    break;
+                case monster_target_request::tie_follow:
+                    accepted = attitude( &who ) == MATT_FOLLOW;
+                    break;
+                case monster_target_request::tie_draw:
+                    accepted = one_in( selection.tie_chance() );
+                    break;
+                case monster_target_request::none:
+                    break;
             }
+            selection.answer( accepted );
         }
-        // Switch targets if closer and hostile or scarier than current target
-        if( ( rating < mon_plan.dist && mon_plan.fleeing ) ||
-            ( faction_att == MFA_HATE ) ||
-            ( rating < mon_plan.dist && attitude( &who ) == MATT_ATTACK ) ||
-            ( !mon_plan.fleeing && fleeing_from ) ) {
+        const monster_target_choice choice = selection.result();
+        if( choice.selected ) {
             mon_plan.target = &who;
-            mon_plan.dist = rating;
-            valid_targets = 1;
         }
-        mon_plan.fleeing = mon_plan.fleeing || fleeing_from;
+        mon_plan.dist = choice.state.best;
+        valid_targets = choice.state.valid_targets;
+        mon_plan.fleeing = choice.state.fleeing;
         if( rating <= 5 ) {
-            if( anger <= 30 ) {
-                anger += mon_plan.angers_hostile_near;
-            }
-            if( mon_plan.angers_hostile_near && x_in_y( anger, 100 ) ) {
+            const monster_planning_reaction near_reaction = react_to_near_hostile( { anger, morale },
+                mon_plan.angers_hostile_near, mon_plan.fears_hostile_near );
+            anger = near_reaction.values.anger;
+            if( near_reaction.draw_aggro && x_in_y( anger, near_reaction.denominator ) ) {
                 add_msg_debug( debugmode::DF_MONSTER, "%s's character aggro triggered by proximity to %s", name(),
                                who.name );
                 aggro_character = true;
             }
-            morale -= mon_plan.fears_hostile_near;
+            morale = near_reaction.values.morale;
             anger_mating_season( mon_plan );
         }
-        if( !mon_plan.fleeing && anger <= 20 && valid_targets != 0 ) {
-            anger += mon_plan.angers_hostile_seen;
-        }
+        const monster_planning_values seen_reaction = react_to_seen_hostile( { anger, morale },
+            mon_plan.angers_hostile_seen, mon_plan.fears_hostile_seen, mon_plan.fleeing,
+            valid_targets != 0 );
+        anger = seen_reaction.anger;
         if( !mon_plan.fleeing && valid_targets != 0 ) {
-            morale -= mon_plan.fears_hostile_seen;
+            morale = seen_reaction.morale;
             anger_hostile_seen( mon_plan );
         }
     }
@@ -655,7 +698,7 @@ void monster::plan()
     constexpr double max_turns_to_skip = 600.0;
     // Outputs a range from 0.0 - 1.0.
     float rate_limiting_factor = 1.0 - logarithmic_range( 0, max_turns_for_rate_limiting,
-                                 turns_since_target );
+        turns_since_target );
     int turns_to_skip = max_turns_to_skip * rate_limiting_factor;
     creature_tracker &tracker = get_creature_tracker();
     if( friendly == 0 && ( turns_to_skip == 0 || turns_since_target % turns_to_skip == 0 ) ) {
@@ -673,28 +716,29 @@ void monster::plan()
             }
             monster &mon = *mon_ptr;
             float rating = rate_target( mon, mon_plan.dist, mon_plan.smart_planning );
-            if( rating == mon_plan.dist ) {
-                ++valid_targets;
-                if( one_in( valid_targets ) ) {
-                    mon_plan.target = &mon;
-                }
+            monster_target_selection selection( { mon_plan.dist, valid_targets, mon_plan.fleeing },
+                                                monster_target_kind::reachable_monster, rating );
+            if( selection.request() == monster_target_request::tie_draw ) {
+                selection.answer( one_in( selection.tie_chance() ) );
             }
-            if( rating < mon_plan.dist ) {
+            const monster_target_choice choice = selection.result();
+            if( choice.selected ) {
                 mon_plan.target = &mon;
-                mon_plan.dist = rating;
-                valid_targets = 1;
             }
+            mon_plan.dist = choice.state.best;
+            valid_targets = choice.state.valid_targets;
             if( rating <= 5 ) {
-                if( anger <= 30 ) {
-                    anger += mon_plan.angers_hostile_near;
-                }
-                morale -= mon_plan.fears_hostile_near;
+                const monster_planning_reaction near_reaction = react_to_near_hostile( { anger, morale },
+                    mon_plan.angers_hostile_near, mon_plan.fears_hostile_near );
+                anger = near_reaction.values.anger;
+                morale = near_reaction.values.morale;
             }
-            if( !mon_plan.fleeing && anger <= 20 && valid_targets != 0 ) {
-                anger += mon_plan.angers_hostile_seen;
-            }
+            const monster_planning_values seen_reaction = react_to_seen_hostile( { anger, morale },
+                mon_plan.angers_hostile_seen, mon_plan.fears_hostile_seen, mon_plan.fleeing,
+                valid_targets != 0 );
+            anger = seen_reaction.anger;
             if( !mon_plan.fleeing && valid_targets != 0 ) {
-                morale -= mon_plan.fears_hostile_seen;
+                morale = seen_reaction.morale;
             }
         } );
     }
@@ -745,11 +789,11 @@ void monster::plan()
             }
             monster &mon = *mon_ptr;
             float rating = rate_target( mon, mon_plan.dist, mon_plan.smart_planning );
-            if( mon_plan.group_morale && rating <= 10 ) {
-                morale += 10 - rating;
-            }
+            morale = morale_after_group_observation( morale, rating, mon_plan.group_morale );
+            const monster_swarm_action swarm_action = choose_monster_swarm_action( rating,
+                mon_plan.dist, wandf, mon_plan.swarms );
             if( mon_plan.swarms ) {
-                if( rating < 5 ) { // Too crowded here
+                if( swarm_action == monster_swarm_action::disperse ) { // Too crowded here
                     wander_pos = pos_abs();
                     while( wander_pos == pos_abs() ) {
                         wander_pos += point( rng( -3, 3 ), rng( -3, 3 ) );
@@ -757,7 +801,7 @@ void monster::plan()
                     wandf = 2;
                     mon_plan.target = nullptr;
                     // Swarm to the furthest ally you can see
-                } else if( rating < FLT_MAX && rating > mon_plan.dist && wandf <= 0 ) {
+                } else if( swarm_action == monster_swarm_action::follow_ally ) {
                     mon_plan.target = &mon;
                     mon_plan.dist = rating;
                 }
@@ -802,53 +846,33 @@ void monster::plan()
                 anger = 0;
                 remove_effect( effect_dragging );
             } else {
-                set_dest( here.get_abs( couch_loc ) );
+                if( !point_goal( here.get_abs( couch_loc ), monster_point_goal::furniture ) ) {
+                    return;
+                }
             }
         }
 
     } else if( mon_plan.target != nullptr ) {
 
-        const tripoint_abs_ms dest = mon_plan.target->pos_abs();
-        Creature::Attitude att_to_target = attitude_to( *mon_plan.target );
-        if( att_to_target == Attitude::HOSTILE && !mon_plan.fleeing ) {
-            set_dest( dest );
-        } else if( mon_plan.fleeing ) {
-            tripoint_abs_ms away = pos_abs() - dest + pos_abs();
-            // Aloft fliers descend, grounded fliers take off; non-fliers stay
-            // at current z. Mirror in monster::hear_sound.
-            int chosen_z = posz();
-            if( flies() ) {
-                map &here = get_map();
-                const tripoint_bub_ms here_bub = pos_bub();
-                const bool grounded = here.has_floor_or_water( here_bub );
-                if( !grounded &&
-                    here.valid_move( here_bub, here_bub + tripoint::below, false, true ) ) {
-                    chosen_z = posz() - 1;
-                } else if( grounded &&
-                           here.valid_move( here_bub, here_bub + tripoint::above, false, true ) ) {
-                    chosen_z = posz() + 1;
-                }
-            }
-            away.z() = chosen_z;
-            set_dest( away );
+        const Creature::Attitude att_to_target = attitude_to( *mon_plan.target );
+        monster_destination_plan destination_plan( *this, *mon_plan.target, here,
+                att_to_target == Attitude::HOSTILE, mon_plan.fleeing );
+        const auto destination = propose_monster_destination( destination_plan.view() );
+        if( !destination_plan.commit( destination, here ) ) {
+            return; // Discard an invalid receipt; the owner will plan again.
         }
         if( ( mon_plan.angers_hostile_weak || mon_plan.fears_hostile_weak ||
               mon_plan.placate_hostile_weak ) &&
             att_to_target != Attitude::FRIENDLY ) {
             int hp_per = mon_plan.target->hp_percentage();
-            if( hp_per <= 70 ) {
-                if( mon_plan.angers_hostile_weak && anger <= 40 ) {
-                    anger += 10 - static_cast<int>( hp_per / 10 );
-                    if( x_in_y( anger, 100 ) ) {
-                        add_msg_debug( debugmode::DF_MONSTER, "%s's character aggro triggered by %s's weakness", name(),
-                                       mon_plan.target->disp_name() );
-                        aggro_character = true;
-                    }
-                } else if( mon_plan.fears_hostile_weak ) {
-                    morale -= 10 - static_cast<int>( hp_per / 10 );
-                } else if( mon_plan.placate_hostile_weak ) {
-                    anger -= 10 - static_cast<int>( hp_per / 10 );
-                }
+            const monster_planning_reaction reaction = react_to_weak_target( { anger, morale }, hp_per,
+                mon_plan.angers_hostile_weak, mon_plan.fears_hostile_weak, mon_plan.placate_hostile_weak );
+            anger = reaction.values.anger;
+            morale = reaction.values.morale;
+            if( reaction.draw_aggro && x_in_y( anger, reaction.denominator ) ) {
+                add_msg_debug( debugmode::DF_MONSTER, "%s's character aggro triggered by %s's weakness", name(),
+                               mon_plan.target->disp_name() );
+                aggro_character = true;
             }
         }
     } else if( !patrol_route.empty() ) {
@@ -858,15 +882,19 @@ void monster::plan()
         // if there is more than one patrol point, advance to the next one if we're almost there
         // this handles impassable obstacles but patrollers can still get stuck
         if( ( patrol_route.size() > 1 ) && rl_dist( next_stop, pos_abs() ) < 2 ) {
-            next_patrol_point = ( next_patrol_point + 1 ) % patrol_route.size();
+            next_patrol_point = choose_monster_patrol_index( next_patrol_point, patrol_route.size(), true );
             next_stop = patrol_route.at( next_patrol_point );
         }
-        set_dest( next_stop );
+        if( !point_goal( next_stop, monster_point_goal::patrol ) ) {
+            return;
+        }
     } else if( friendly != 0 && has_effect( effect_led_by_leash ) &&
                pos_abs().z() == get_dest().z() ) {
         // visibility doesn't matter, we're getting pulled by a leash
         // To use stairs smoothly, if the destination is on a different Z-level, move there first.
-        set_dest( player_character.pos_abs() );
+        if( !follow_goal( player_character ) ) {
+            return;
+        }
         if( friendly > 0 && one_in( 3 ) ) {
             // Grow restless with no targets
             friendly--;
@@ -879,28 +907,10 @@ void monster::plan()
                  pos_abs().z() == get_dest().z() ) ) {
         // Simpleminded animals are too dumb to follow the player.
         // To use stairs smoothly, if the destination is on a different Z-level, move there first.
-        set_dest( player_character.pos_abs() );
+        if( !follow_goal( player_character ) ) {
+            return;
+        }
     }
-}
-
-/**
- * Method to make monster movement speed consistent in the face of staggering behavior and
- * differing distance metrics.
- * It works by scaling the cost to take a step by
- * how much that step reduces the distance to your goal.
- * Since it incorporates the current distance metric,
- * it also scales for diagonal vs orthogonal movement.
- **/
-static float get_stagger_adjust( const tripoint_bub_ms &source, const tripoint_bub_ms &destination,
-                                 const tripoint_bub_ms &next_step )
-{
-    // TODO: push this down into rl_dist
-    const float initial_dist =
-        trigdist ? trig_dist( source, destination ) : rl_dist( source, destination );
-    const float new_dist =
-        trigdist ? trig_dist( next_step, destination ) : rl_dist( next_step, destination );
-    // If we return 0, it wil cancel the action.
-    return std::max( 0.01f, initial_dist - new_dist );
 }
 
 /**
@@ -1230,7 +1240,18 @@ void monster::move()
     if( moved ) {
         // Implement both avoiding obstacles and staggering.
         moved = false;
-        float switch_chance = 0.0f;
+        monster_step_selection selection;
+        // Resolve only the RNG request made by this value proposal, before the
+        // next owner query/effect. Eagerly scanning candidates changes gameplay.
+        const auto consider = [&]( const monster_step_candidate & candidate ) {
+            const monster_step_proposal proposal = propose_monster_step( selection, candidate,
+                staggers, pathed );
+            const bool selected = proposal.select_without_draw ||
+                                  ( proposal.needs_draw && x_in_y( proposal.numerator,
+                                      proposal.next.switch_chance ) );
+            selection = resolve_monster_step( proposal, selected );
+            return selected && proposal.stop_if_selected;
+        };
         const bool can_bash = !bash_skill().empty();
         // This is a float and using trig_dist() because that Does the Right Thing(tm)
         // in both circular and roguelike distance modes.
@@ -1318,8 +1339,7 @@ void monster::move()
                 if( att == Attitude::HOSTILE &&
                     ( !is_z_move || here.on_matching_stairs( pos_bub(), candidate ) ) ) {
                     // When attacking an adjacent enemy, we're direct.
-                    moved = true;
-                    next_step = candidate_abs;
+                    consider( { candidate_abs, monster_step_kind::attack } );
                     break;
                 }
                 if( att == Attitude::FRIENDLY && ( target->is_avatar() || target->is_npc() ||
@@ -1339,13 +1359,11 @@ void monster::move()
             // is there an openable door?
             if( can_open_doors &&
                 here.open_door( *this, candidate, !here.is_outside( pos_bub() ), true ) ) {
-                moved = true;
-                next_step = candidate_abs;
+                consider( { candidate_abs, monster_step_kind::door } );
                 continue;
             } else if( can_open_doors && doors::can_unlock_door( here, *this, candidate ) ) {
                 doors::unlock_door( here, *this, candidate );
-                moved = true;
-                next_step = candidate_abs;
+                consider( { candidate_abs, monster_step_kind::door } );
                 continue;
             }
 
@@ -1371,39 +1389,27 @@ void monster::move()
             }
 
             const float progress = distance_to_target - trig_dist( tripoint_bub_ms( candidate.xy(),
-                                   candidate.z() + rampPos ), destination );
-            // The x2 makes the first (and most direct) path twice as likely,
-            // since the chance of switching is 1/1, 1/4, 1/6, 1/8
-            switch_chance += progress * 2;
-            // Randomly pick one of the viable squares to move to weighted by distance.
-            if( progress > 0 && ( !moved || x_in_y( progress, switch_chance ) ) ) {
-                moved = true;
-                next_step = candidate_abs;
-                // If we stumble, pick a random square, otherwise take the first one,
-                // which is the most direct path.
-                // Except if the direct path is bad, then check others
-                // Or if the path is given by pathfinder
-                if( !staggers && ( !bad_choice || pathed ) ) {
-                    break;
-                }
+                candidate.z() + rampPos ), destination );
+            // Weighted choice is pure until the owner resolves its lazy RNG
+            // request. Stop at exactly the same accepted candidate as before.
+            if( consider( { candidate_abs, monster_step_kind::weighted, progress, bad_choice } ) ) {
+                break;
             }
         }
+        moved = selection.selected;
+        next_step = selection.destination;
     }
     // Finished logic section.  By this point, we should have chosen a square to
     //  move to (moved = true).
     if( moved ) { // Actual effects of moving to the square we've chosen
-        const tripoint_bub_ms local_next_step = here.get_bub( next_step );
-        const bool did_something =
-            ( !pacified && attack_at( local_next_step ) ) ||
-            ( !pacified && can_open_doors &&
-              here.open_door( *this, local_next_step, !here.is_outside( pos_bub() ) ) ) ||
-            ( !pacified && bash_at( local_next_step ) ) ||
-            ( !pacified && push_to( local_next_step, 0, 0 ) ) ||
-            move_to( local_next_step, false, false, get_stagger_adjust( pos_bub(), destination,
-                     local_next_step ) );
-
-        if( !did_something ) {
-            mod_moves( -get_speed() ); // If we don't do this, we'll get infinite loops.
+        monster_movement_plan movement_plan( *this, here,
+        { next_step, destination, pacified, can_open_doors } );
+        const monster_movement_result result = movement_plan.commit( movement_plan.proposal(), here );
+        if( result == monster_movement_result::stale || result == monster_movement_result::cancelled ) {
+            return;
+        }
+        if( result == monster_movement_result::blocked ) {
+            mod_moves( -get_speed() ); // Avoid retrying an unchanged blocked action forever.
         }
         if( has_effect( effect_dragging ) && dragged_foe != nullptr ) {
 
@@ -1501,7 +1507,7 @@ void monster::nursebot_operate( Character *dragged_foe )
 
             //8 intelligence*4 + 8 first aid*4 + 3 computer *3 + 4 electronic*1 = 77
             const float adjusted_skill = static_cast<float>( 77 ) - std::min( static_cast<float>( 40 ),
-                                         static_cast<float>( 77 ) - static_cast<float>( 77 ) / static_cast<float>( 10.0 ) );
+                static_cast<float>( 77 ) - static_cast<float>( 77 ) / static_cast<float>( 10.0 ) );
 
             dragged_foe->cancel_activity();
             get_player_character().uninstall_bionic( real_target, *this, *dragged_foe, adjusted_skill );
@@ -2103,6 +2109,7 @@ bool monster::move_to( const tripoint_bub_ms &p, bool force, bool step_on_critte
     const tripoint_bub_ms pos = pos_bub( here );
 
     if( cata::lua_platform::has_native_hook( "on_monster_try_move" ) ) {
+        const safe_reference<map> context = here.get_context_reference();
         const cata::lua_platform::native_callback_arguments payload = {
             { "monster", static_cast<const Creature *>( this ) },
             {
@@ -2118,7 +2125,8 @@ bool monster::move_to( const tripoint_bub_ms &p, bool force, bool step_on_critte
             { "force", force }
         };
         if( !cata::lua_platform::dispatch_native_hook(
-                "on_monster_try_move", payload ) ) {
+                "on_monster_try_move", payload ) || context.get() != &here ||
+            !get_creature_tracker().is_present( this ) ) {
             return false;
         }
     }
@@ -2145,7 +2153,7 @@ bool monster::move_to( const tripoint_bub_ms &p, bool force, bool step_on_critte
     // Allows climbing monsters to move on terrain with movecost <= 0
     Creature *critter = get_creature_tracker().creature_at( destination, is_hallucination() );
     const std::vector<field_type_id> impassable_field_ids = here.get_impassable_field_type_ids_at(
-                destination );
+            destination );
 
     // Check for permanent blockers. Includes terrain, impassable fieldeffects, traps and other.
     if( !force && !can_move_to( destination ) ) {
@@ -2204,9 +2212,9 @@ bool monster::move_to( const tripoint_bub_ms &p, bool force, bool step_on_critte
                                     has_flag( mon_flag_AQUATIC ) ? _( "leaps" ) : _( "emerges" ), here.tername( pos ) );
         } else if( !was_water && will_be_water ) {
             add_msg_if_player_sees( *this, m_warning, pgettext( "monster movement",
-                                    //~ Message when a monster enters water
-                                    //~ %1$s: monster name, %2$s: dives/sinks, %3$s: terrain name
-                                    "A %1$s %2$s into the %3$s!" ),
+                    //~ Message when a monster enters water
+                    //~ %1$s: monster name, %2$s: dives/sinks, %3$s: terrain name
+                    "A %1$s %2$s into the %3$s!" ),
                                     name(), swims() ||
                                     has_flag( mon_flag_AQUATIC ) ? _( "dives" ) : _( "sinks" ), here.tername( destination ) );
         }
@@ -2570,14 +2578,14 @@ void monster::stumble_base( const bool is_voluntary )
         // (Unless they can swim/are aquatic)
         // But let them wander OUT of water if they are there.
         const bool avoiding_stepping_into_water = avoid_water &&
-                here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, dest ) &&
-                !here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, pos_bub() );
+            here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, dest ) &&
+            !here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, pos_bub() );
 
 
         // If the stumble is voluntary (just moving around), don't step into water or known danger tiles
         // If monster is made to stumble, they might walk into them even if they wouldn't normally
         const bool safe_for_voluntary_step = !is_voluntary || ( !avoiding_stepping_into_water &&
-                                             know_danger_at( &here, dest ) );
+            know_danger_at( &here, dest ) );
 
 
         if( can_move_to( dest ) &&

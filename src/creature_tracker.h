@@ -19,6 +19,12 @@
 #include "memory_fast.h"
 #include "type_id.h"
 
+namespace ai_reachability
+{
+class frame;
+struct output;
+}
+
 class JsonArray;
 class JsonOut;
 class game;
@@ -42,6 +48,10 @@ class creature_tracker
          * If there is no such monster, or the UID is invalid, returns nullptr.
          */
         shared_ptr_fast<monster> find_by_uid( int64_t uid ) const;
+
+        // Owner-only membership query. Callers must already hold a valid lifetime
+        // reference; removed-this-turn objects may remain alive but not present.
+        bool is_present( const Creature *creature ) const;
 
         /**
          * Returns the reachable creature matching the given predicate.
@@ -139,16 +149,9 @@ class creature_tracker
         // This must be called when persistent visibility from terrain or furniture changes
         // (this excludes vehicles and fields) or when persistent traversability changes,
         // which means walls and floors.
-        void invalidate_reachability_cache() {
-            dirty_ = true;
-        }
+        void invalidate_reachability_cache();
 
-        /**
-         * Eagerly compute reachability zones for all creatures in parallel.
-         * Call this before the monster AI loop so that per-creature
-         * find_reachable() calls hit the cache instead of triggering
-         * individual flood fills.
-         */
+        // Preserve original creature/flood order; workers only prepare values.
         void precompute_all_zones();
 
     private:
@@ -158,17 +161,27 @@ class creature_tracker
         void flood_fill_zone( const Creature &origin );
 
         void rebuild_cache();
+        size_t location_bucket( const tripoint_abs_ms &pos ) const;
+        void rebuild_location_filter();
+        void cache_location( const tripoint_abs_ms &pos, const shared_ptr_fast<monster> &critter );
 
         /** Rebuild the passability bitmap from level caches. Called when dirty_ is set. */
         void rebuild_passability_bitmap();
+        void invalidate_reachability_preparation();
+        const ai_reachability::output *prepare_reachability_geometry();
 
-        // If the creature is in the tracker.
-        bool is_present( Creature *creature ) const;
+
 
         std::list<shared_ptr_fast<npc>> active_npc; // NOLINT(cata-serialize)
         std::vector<shared_ptr_fast<monster>> monsters_list;
         // NOLINTNEXTLINE(cata-serialize)
         std::unordered_map<tripoint_abs_ms, shared_ptr_fast<monster>> monsters_by_location;
+
+        // Owner-only conservative index of location-map keys. Collisions and
+        // removed positions may keep bits set; every insertion marks its key.
+        // Periodic rebuilding bounds false positives during sustained movement.
+        std::bitset<8192> location_filter_; // NOLINT(cata-serialize)
+        size_t location_filter_updates_ = 0; // NOLINT(cata-serialize)
 
         /**
          * Creatures that get removed via @ref remove are stored here until the end of the turn.
@@ -192,6 +205,11 @@ class creature_tracker
         // caching which is itself a lazy approximation.
         std::array<std::array<std::bitset<MAPSIZE_Y>, MAPSIZE_X>, OVERMAP_LAYERS>
         passability_bitmap_{};  // NOLINT(cata-serialize)
+
+        // Preserve the offsets of the authoritative location and zone caches.
+        std::unique_ptr<ai_reachability::frame> reachability_preparation_; // NOLINT(cata-serialize)
+        double reachability_flood_cost_ms_ = 0.0; // NOLINT(cata-serialize)
+        double reachability_bitmap_cost_ms_ = 0.0; // NOLINT(cata-serialize)
 
         friend game;
 };

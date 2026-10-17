@@ -1,23 +1,24 @@
 #include "monster.h"
 
+#include <algorithm>
 #include <calendar.h>
 #include <character_id.h>
+#include <cmath>
 #include <color.h>
 #include <compatibility.h>
 #include <creature.h>
-#include <monster_uid.h>
-#include <value_ptr.h>
-#include <algorithm>
-#include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <list>
 #include <memory>
+#include <monster_uid.h>
 #include <optional>
+#include <set>
 #include <sstream>
 #include <string>
 #include <tuple>
 #include <unordered_map>
+#include <value_ptr.h>
 
 #include "ascii_art.h"
 #include "avatar.h"
@@ -79,6 +80,7 @@
 #include "output.h"
 #include "overmapbuffer.h"
 #include "pathfinding.h"
+#include "pet_slot.h"
 #include "pimpl.h"
 #include "pocket_type.h"
 #include "point.h"
@@ -199,6 +201,10 @@ static const mfaction_str_id monfaction_ant( "ant" );
 static const mfaction_str_id monfaction_bee( "bee" );
 static const mfaction_str_id monfaction_nether_player_hate( "nether_player_hate" );
 static const mfaction_str_id monfaction_wasp( "wasp" );
+
+static const pet_slot_id pet_slot_armor( "armor" );
+static const pet_slot_id pet_slot_saddle( "saddle" );
+static const pet_slot_id pet_slot_storage( "storage" );
 
 static const species_id species_AMPHIBIAN( "AMPHIBIAN" );
 static const species_id species_CYBORG( "CYBORG" );
@@ -343,7 +349,7 @@ monster::monster( const mtype_id &id ) : monster()
             itype_id storage_item_id = itype_id( type->mount_items.storage );
             item storage_item_item = item( storage_item_id, calendar::turn_zero );
             add_effect( effect_has_bag, 1_turns, true );
-            tack_item = cata::make_value<item>( storage_item_item );
+            storage_item = cata::make_value<item>( storage_item_item );
         }
     }
     aggro_character = type->aggro_character;
@@ -661,8 +667,8 @@ void monster::try_reproduce()
             }
             if( !type->baby_type.baby_monster_group.is_null() ) {
                 std::vector<MonsterGroupResult> babies = MonsterGroupManager::GetResultFromGroup(
-                            type->baby_type.baby_monster_group, &spawn_cnt,
-                            nullptr, false, nullptr, true );
+                        type->baby_type.baby_monster_group, &spawn_cnt,
+                        nullptr, false, nullptr, true );
                 for( const MonsterGroupResult &mgr : babies ) {
                     here.add_spawn( mgr.id, std::max( 1, spawn_cnt * mgr.pack_size ), pos_bub(), friendly );
                 }
@@ -917,7 +923,9 @@ int monster::print_info( const catacurses::window &w, int vStart, int vLines, in
     // Therefore the header is intentionally *neutral* on the language.
     mvwprintz( w, point( column, vStart++ ), c_light_blue, _( "-----CREATURE-----" ) );
 
-    oss << get_tag_from_color( c_white ) << get_origin( type->src ) << "</color>" << "\n";
+    if( debug_mode ) {
+        oss << get_tag_from_color( c_white ) << get_origin( type->src ) << "</color>" << "\n";
+    }
 
     if( debug_mode ) {
         oss << colorize( type->id.str(), c_white );
@@ -977,7 +985,7 @@ int monster::print_info( const catacurses::window &w, int vStart, int vLines, in
     if( !mission_fused.empty() ) {
         // Mission monsters fused into this monster
         const std::string fused_desc = string_format( _( "Parts of %s protrude from its body." ),
-                                       enumerate_as_string( mission_fused ) );
+            enumerate_as_string( mission_fused ) );
         lines = foldstring( fused_desc, max_width );
         numlines = lines.size();
         for( int i = 0; i < numlines && vStart < vEnd; i++ ) {
@@ -1028,8 +1036,9 @@ void monster::print_info_imgui() const
 {
     const map &here = get_map();
 
-    ImGui::TextUnformatted( get_origin( type->src ).c_str() );
-
+    if( debug_mode ) {
+        ImGui::TextUnformatted( get_origin( type->src ).c_str() );
+    }
     if( debug_mode ) {
         ImGui::TextUnformatted( type->id.c_str() );
     }
@@ -1087,7 +1096,7 @@ void monster::print_info_imgui() const
     if( !mission_fused.empty() ) {
         // Mission monsters fused into this monster
         const std::string fused_desc = string_format( _( "Parts of %s protrude from its body." ),
-                                       enumerate_as_string( mission_fused ) );
+            enumerate_as_string( mission_fused ) );
         ImGui::TextWrapped( "%s", fused_desc.c_str() );
     }
 
@@ -1123,11 +1132,11 @@ std::vector<std::string> monster::extended_description() const
     // exponential growth.
     tmp.reserve( 12 );
 
-    tmp.emplace_back( get_origin( type->src ) );
-    tmp.emplace_back( "--" );
-
     if( debug_mode ) {
+        tmp.emplace_back( get_origin( type->src ) );
+        tmp.emplace_back( "--" );
         tmp.emplace_back( colorize( type->id.str(), c_white ) );
+
         const std::vector<std::pair<std::string, std::string>> overlays = get_overlay_ids();
         const std::string overlay_str = enumerate_as_string(
                                             overlays.begin(), overlays.end(),
@@ -1153,7 +1162,7 @@ std::vector<std::string> monster::extended_description() const
     std::string att_colored = colorize( att.first, att.second );
 
     tmp.emplace_back( string_format( _( "This is a %s %s. %s" ), hpbar, colorize( name(),
-                                     basic_symbol_color() ), player_knows ? att_colored : std::string() ) );
+            basic_symbol_color() ), player_knows ? att_colored : std::string() ) );
     tmp.emplace_back( "--" );
 
     std::string difficulty_str;
@@ -1205,7 +1214,7 @@ std::vector<std::string> monster::extended_description() const
     if( !mission_fused.empty() ) {
         // Mission monsters fused into this monster
         const std::string fused_desc = string_format( _( "Parts of %s protrude from its body." ),
-                                       enumerate_as_string( mission_fused ) );
+            enumerate_as_string( mission_fused ) );
         tmp.emplace_back( string_format( "<dark>%s</dark>", fused_desc ) );
         tmp.emplace_back( "--" );
     }
@@ -1646,6 +1655,16 @@ void monster::set_patrol_route( const std::vector<point_rel_ms> &patrol_pts_rel_
         patrol_route.push_back( base_abs_ms + patrol_pt );
     }
     next_patrol_point = 0;
+}
+
+monster_patrol_view monster::patrol_view() const
+{
+    monster_patrol_view view{ patrol_route.size(), next_patrol_point, std::nullopt };
+    if( next_patrol_point >= 0 &&
+        static_cast<std::size_t>( next_patrol_point ) < patrol_route.size() ) {
+        view.goal = patrol_route[next_patrol_point];
+    }
+    return view;
 }
 
 void monster::shift( const point_rel_sm & )
@@ -2420,14 +2439,14 @@ bool monster::melee_attack( Creature &target, float accuracy )
             if( target.is_avatar() ) {
                 //~ 1$s is attacker name, 2$s is bodypart name in accusative, 3$s is armor name
                 add_msg( _( "%1$s hits your %2$s, but your %3$s protects you." ), u_see_me ? disp_name( false,
-                         true ) : _( "Something" ),
+                        true ) : _( "Something" ),
                          body_part_name_accusative( dealt_dam.bp_hit ), target.skin_name() );
             } else if( target.is_npc() ) {
                 //~ $1s is monster name, %2$s is that monster target name,
                 //~ $3s is target bodypart name in accusative, $4s is the monster target name,
                 //~ 5$s is target armor name.
                 add_msg( _( "%1$s hits %2$s %3$s but is stopped by %4$s %5$s." ), u_see_me ? disp_name( false,
-                         true ) : _( "Something" ),
+                        true ) : _( "Something" ),
                          target.disp_name( true ),
                          body_part_name_accusative( dealt_dam.bp_hit ),
                          target.disp_name( true ),
@@ -2469,8 +2488,8 @@ bool monster::melee_attack( Creature &target, float accuracy )
         if( x_in_y( eff.chance, 100 ) ) {
             const bodypart_id affected_bp = eff.affect_hit_bp ? dealt_dam.bp_hit :  eff.bp.id();
             target.add_effect( eff.id, time_duration::from_turns( rng( eff.duration.first,
-                               eff.duration.second ) ), affected_bp, eff.permanent, rng( eff.intensity.first,
-                                       eff.intensity.second ) );
+                    eff.duration.second ) ), affected_bp, eff.permanent, rng( eff.intensity.first,
+                            eff.intensity.second ) );
             target.add_msg_if_player( m_mixed, eff.message, name() );
         }
     }
@@ -2661,7 +2680,7 @@ bool monster::move_effects( bool )
         } else {
             if( tied_item ) {
                 const bool broken = rng( type->melee_dice * type->melee_sides, std::min( 10000,
-                                         type->melee_dice * type->melee_sides * 250 ) ) > 800;
+                    type->melee_dice * type->melee_sides * 250 ) ) > 800;
                 if( !broken ) {
                     here.add_item_or_charges( pos_bub(), *tied_item );
                 }
@@ -2831,6 +2850,274 @@ int monster::get_worn_armor_val( const damage_type_id &dt ) const
     return 0;
 }
 
+const item *monster::get_pet_equipment( const pet_slot_id &slot ) const
+{
+    if( slot == pet_slot_saddle ) {
+        return tack_item.get();
+    }
+    if( slot == pet_slot_armor ) {
+        return armor_item.get();
+    }
+    if( slot == pet_slot_storage ) {
+        return storage_item.get();
+    }
+    const auto iter = custom_pet_equipment.find( slot );
+    return iter == custom_pet_equipment.end() ? nullptr : iter->second.get();
+}
+
+item *monster::get_pet_equipment( const pet_slot_id &slot )
+{
+    return const_cast<item *>( std::as_const( *this ).get_pet_equipment( slot ) );
+}
+
+const item *monster::get_pet_storage() const
+{
+    if( storage_item ) {
+        return storage_item.get();
+    }
+    for( const pet_slot &slot : get_all_pet_slots() ) {
+        if( slot.min_storage > 0_ml ) {
+            if( const item *equipment = get_pet_equipment( slot.id ) ) {
+                return equipment;
+            }
+        }
+    }
+    return nullptr;
+}
+
+item *monster::get_pet_storage()
+{
+    return const_cast<item *>( std::as_const( *this ).get_pet_storage() );
+}
+
+std::vector<const item *> monster::get_pet_storages() const
+{
+    std::vector<const item *> result;
+    if( storage_item ) {
+        result.push_back( storage_item.get() );
+    }
+    for( const pet_slot &slot : get_all_pet_slots() ) {
+        if( slot.id != pet_slot_storage && slot.min_storage > 0_ml ) {
+            if( const item *equipment = get_pet_equipment( slot.id ) ) {
+                result.push_back( equipment );
+            }
+        }
+    }
+    return result;
+}
+
+std::vector<item *> monster::get_pet_storages()
+{
+    std::vector<item *> result;
+    for( const item *storage : std::as_const( *this ).get_pet_storages() ) {
+        result.push_back( const_cast<item *>( storage ) );
+    }
+    return result;
+}
+
+const item *monster::find_pet_storage( const item &cargo ) const
+{
+    for( const item *storage : get_pet_storages() ) {
+        if( storage->can_contain_directly( cargo ).success() ) {
+            return storage;
+        }
+    }
+    return nullptr;
+}
+
+item *monster::find_pet_storage( const item &cargo )
+{
+    return const_cast<item *>( std::as_const( *this ).find_pet_storage( cargo ) );
+}
+
+std::optional<pet_slot_id> monster::get_pet_storage_slot() const
+{
+    if( storage_item ) {
+        return pet_slot_storage;
+    }
+    for( const pet_slot &slot : get_all_pet_slots() ) {
+        if( slot.id == pet_slot_storage ) {
+            continue;
+        }
+        if( slot.min_storage > 0_ml && has_pet_equipment( slot.id ) ) {
+            return slot.id;
+        }
+    }
+    return std::nullopt;
+}
+
+int monster::pet_storage_count() const
+{
+    int result = 0;
+    for( const pet_slot &slot : get_all_pet_slots() ) {
+        if( slot.min_storage > 0_ml && has_pet_equipment( slot.id ) ) {
+            ++result;
+        }
+    }
+    return result;
+}
+
+bool monster::has_pet_equipment( const pet_slot_id &slot ) const
+{
+    return get_pet_equipment( slot ) != nullptr;
+}
+
+bool monster::pet_slot_available( const pet_slot_id &slot ) const
+{
+    if( !slot.is_valid() ) {
+        return false;
+    }
+    const std::optional<pet_slot_id> parent = get_pet_slot_parent( slot );
+    return !parent || has_pet_equipment( *parent );
+}
+
+bool monster::equip_pet_equipment( const pet_slot_id &slot, const item &equipment )
+{
+    if( !pet_slot_available( slot ) || has_pet_equipment( slot ) ||
+        !slot.obj().accepts( equipment, *this ) ) {
+        return false;
+    }
+
+    cata::value_ptr<item> equipped = cata::make_value<item>( equipment );
+    if( slot == pet_slot_saddle ) {
+        tack_item = std::move( equipped );
+    } else if( slot == pet_slot_armor ) {
+        equipped->set_var( "pet_armor", "true" );
+        armor_item = std::move( equipped );
+    } else if( slot == pet_slot_storage ) {
+        storage_item = std::move( equipped );
+    } else {
+        custom_pet_equipment[slot] = std::move( equipped );
+    }
+
+    std::set<efftype_id> passive_effects( slot.obj().passive_effects.begin(),
+                                          slot.obj().passive_effects.end() );
+    if( equipment.type->pet_equipment ) {
+        passive_effects.insert( equipment.type->pet_equipment->passive_effects.begin(),
+                                equipment.type->pet_equipment->passive_effects.end() );
+    }
+    for( const efftype_id &effect : passive_effects ) {
+        add_effect( effect, 1_turns, true );
+    }
+    return true;
+}
+
+cata::value_ptr<item> monster::remove_pet_equipment( const pet_slot_id &slot )
+{
+    if( !slot.is_valid() || !has_pet_equipment( slot ) ) {
+        return {};
+    }
+    for( const pet_slot_id &child : slot.obj().sub_slots ) {
+        if( has_pet_equipment( child ) ) {
+            return {};
+        }
+    }
+
+    const item *installed = get_pet_equipment( slot );
+    std::set<efftype_id> removed_effects( slot.obj().passive_effects.begin(),
+                                          slot.obj().passive_effects.end() );
+    if( installed->type->pet_equipment ) {
+        removed_effects.insert( installed->type->pet_equipment->passive_effects.begin(),
+                                installed->type->pet_equipment->passive_effects.end() );
+    }
+
+    cata::value_ptr<item> removed;
+    if( slot == pet_slot_saddle ) {
+        removed = std::move( tack_item );
+    } else if( slot == pet_slot_armor ) {
+        armor_item->erase_var( "pet_armor" );
+        removed = std::move( armor_item );
+    } else if( slot == pet_slot_storage ) {
+        removed = std::move( storage_item );
+    } else {
+        auto iter = custom_pet_equipment.find( slot );
+        removed = std::move( iter->second );
+        custom_pet_equipment.erase( iter );
+    }
+
+    for( const efftype_id &effect : removed_effects ) {
+        const bool supplied_elsewhere = std::any_of(
+                                            get_all_pet_slots().begin(), get_all_pet_slots().end(),
+        [this, &slot, &effect]( const pet_slot & other ) {
+            if( other.id == slot ) {
+                return false;
+            }
+            const item *other_equipment = get_pet_equipment( other.id );
+            if( other_equipment == nullptr ) {
+                return false;
+            }
+            if( std::find( other.passive_effects.begin(), other.passive_effects.end(), effect ) !=
+                other.passive_effects.end() ) {
+                return true;
+            }
+            const islot_pet_equipment *item_data = other_equipment->type->pet_equipment.get();
+            return item_data != nullptr &&
+                   std::find( item_data->passive_effects.begin(), item_data->passive_effects.end(),
+                              effect ) != item_data->passive_effects.end();
+        } );
+        if( !supplied_elsewhere ) {
+            remove_effect( effect );
+        }
+    }
+    return removed;
+}
+
+int monster::pet_equipment_mount_threshold_delta() const
+{
+    int result = 0;
+    for( const pet_slot &slot : get_all_pet_slots() ) {
+        if( const item *equipment = get_pet_equipment( slot.id ) ) {
+            result += slot.mount_threshold_delta;
+            if( equipment->type->pet_equipment ) {
+                result += equipment->type->pet_equipment->mount_threshold_delta;
+            }
+        }
+    }
+    return result;
+}
+
+double monster::pet_equipment_melee_hit_multiplier() const
+{
+    double result = 1.0;
+    for( const pet_slot &slot : get_all_pet_slots() ) {
+        if( const item *equipment = get_pet_equipment( slot.id ) ) {
+            result *= slot.melee_hit_multiplier;
+            if( equipment->type->pet_equipment ) {
+                result *= equipment->type->pet_equipment->melee_hit_multiplier;
+            }
+        }
+    }
+    return result;
+}
+
+double monster::pet_equipment_melee_damage_multiplier() const
+{
+    double result = 1.0;
+    for( const pet_slot &slot : get_all_pet_slots() ) {
+        if( const item *equipment = get_pet_equipment( slot.id ) ) {
+            result *= slot.melee_damage_multiplier;
+            if( equipment->type->pet_equipment ) {
+                result *= equipment->type->pet_equipment->melee_damage_multiplier;
+            }
+        }
+    }
+    return result;
+}
+
+double monster::pet_equipment_fear_multiplier() const
+{
+    double result = 1.0;
+    for( const pet_slot &slot : get_all_pet_slots() ) {
+        if( const item *equipment = get_pet_equipment( slot.id ) ) {
+            result *= slot.fear_multiplier;
+            if( equipment->type->pet_equipment ) {
+                result *= equipment->type->pet_equipment->fear_multiplier;
+            }
+        }
+    }
+    return result;
+}
+
 int monster::get_armor_type( const damage_type_id &dt, bodypart_id /*bp*/ ) const
 {
     return get_worn_armor_val( dt ) + type->armor.type_resist( dt ) + get_armor_res_bonus( dt );
@@ -2985,13 +3272,13 @@ int monster::impact( const int force, const tripoint_bub_ms &p )
     int total_dealt = 0;
     if( get_map().has_flag( ter_furn_flag::TFLAG_SHARP, p ) ) {
         const int cut_damage = std::max( 0.0f, 10 * mod - get_armor_type( damage_cut,
-                                         bodypart_id( "torso" ) ) );
+            bodypart_id( "torso" ) ) );
         apply_damage( nullptr, bodypart_id( "torso" ), cut_damage );
         total_dealt += 10 * mod;
     }
 
     const int bash_damage = std::max( 0.0f, force * mod - get_armor_type( damage_bash,
-                                      bodypart_id( "torso" ) ) );
+        bodypart_id( "torso" ) ) );
     apply_damage( nullptr, bodypart_id( "torso" ), bash_damage );
     total_dealt += force * mod;
 
@@ -3038,14 +3325,14 @@ void monster::disable_special( const std::string &special_name )
 bool monster::special_available( std::string_view special_name ) const
 {
     std::map<std::string, mon_special_attack>::const_iterator iter = special_attacks.find(
-                special_name );
+            special_name );
     return iter != special_attacks.end() && iter->second.enabled && iter->second.cooldown == 0;
 }
 
 bool monster::has_special( const std::string &special_name ) const
 {
     std::map<std::string, mon_special_attack>::const_iterator iter = special_attacks.find(
-                special_name );
+            special_name );
     return iter != special_attacks.end() && iter->second.enabled;
 }
 
@@ -3198,7 +3485,7 @@ void monster::die( map *here, Creature *nkiller )
             // Cleanwater: 撤销 PR #86067 — 恢复无条件击杀经验
             const int kill_xp = compute_kill_xp( type->id );
             cata::event e = cata::event::make<event_type::character_kills_monster>( ch->getID(), type->id,
-                            kill_xp );
+                kill_xp );
             get_event_bus().send_with_talker( ch, this, e );
         }
     }
@@ -3335,6 +3622,10 @@ void monster::die( map *here, Creature *nkiller )
         move_special_item_to_inv( armor_item );
         move_special_item_to_inv( storage_item );
         move_special_item_to_inv( tied_item );
+        for( auto &[slot, equipment] : custom_pet_equipment ) {
+            move_special_item_to_inv( equipment );
+        }
+        custom_pet_equipment.clear();
 
         if( has_effect( effect_heavysnare ) ) {
             add_item( item( itype_rope_6, calendar::turn_zero ) );
@@ -3463,8 +3754,8 @@ void monster::generate_inventory( bool disableDrops )
     }
 
     std::vector<item> new_items = item_group::items_from( type->death_drops,
-                                  calendar::start_of_cataclysm,
-                                  spawn_flags::use_spawn_rate );
+        calendar::start_of_cataclysm,
+        spawn_flags::use_spawn_rate );
 
     for( item &it : new_items ) {
         if( has_flag( mon_flag_FILTHY ) ) {
@@ -3491,8 +3782,8 @@ void monster::drop_items_on_death( map *here, item *corpse ) const
     }
 
     std::vector<item> new_items = item_group::items_from( type->death_drops,
-                                  calendar::start_of_cataclysm,
-                                  spawn_flags::use_spawn_rate );
+        calendar::start_of_cataclysm,
+        spawn_flags::use_spawn_rate );
 
     for( item &e : new_items ) {
         e.randomize_rot();
@@ -3564,8 +3855,8 @@ void monster::spawn_dissectables_on_death( item *corpse ) const
 
     for( const harvest_entry &entry : *type->dissect ) {
         std::vector<item> dissectables = item_group::items_from( item_group_id( entry.drop ),
-                                         calendar::turn,
-                                         spawn_flags::use_spawn_rate );
+            calendar::turn,
+            spawn_flags::use_spawn_rate );
         for( item &dissectable : dissectables ) {
             dissectable.dropped_from = entry.type;
             for( const flag_id &flg : entry.flags ) {
@@ -3674,7 +3965,7 @@ void monster::process_one_effect( effect &it, bool is_new )
     }
     //Reset max speed
     set_speed_bonus( calculate_by_enchantment( get_speed_base(), enchant_vals::mod::SPEED,
-                     true ) - get_speed_base() );
+            true ) - get_speed_base() );
 
     if( !is_new ) {
         return;
@@ -3737,7 +4028,7 @@ void monster::process_effects()
                     _effect_it.second.get_id().str(),
                     body_part == bodypart_str_id::NULL_ID() ?
                     std::string() : body_part.id().str(),
-                    _effect_it.second.get_intensity()
+                                             _effect_it.second.get_intensity()
                 } );
             }
         }
@@ -3780,7 +4071,7 @@ void monster::process_effects()
     }
     //Apply enchantment modifiers
     regeneration_amount = calculate_by_enchantment( regeneration_amount, enchant_vals::mod::REGEN_HP,
-                          true );
+        true );
     //Prevent negative regeneration
     if( regeneration_amount < 0 ) {
         regeneration_amount = 0;
@@ -4059,6 +4350,11 @@ units::mass monster::get_carried_weight() const
     if( armor_item ) {
         total_weight += armor_item->weight();
     }
+    for( const auto &[slot, equipment] : custom_pet_equipment ) {
+        if( equipment ) {
+            total_weight += equipment->weight();
+        }
+    }
     for( const item &it : inv ) {
         total_weight += it.weight();
     }
@@ -4295,7 +4591,7 @@ void monster::hear_sound( const tripoint_bub_ms &source, const int vol, const in
     }
 
     tripoint_abs_ms target = get_map().get_abs( source ) + point( rng( -max_error, max_error ),
-                             rng( -max_error, max_error ) );
+        rng( -max_error, max_error ) );
     // target_z will require some special check due to soil muffling sounds
 
     const int wander_turns = volume * ( goodhearing ? 6 : 1 );
@@ -4598,6 +4894,11 @@ std::vector<std::pair<std::string, std::string>> monster::get_overlay_ids() cons
     }
     if( storage_item ) {
         add_generic_overlay_id( "worn_storage", rval, overlay_suffixes );
+    }
+    for( const auto &[slot, equipment] : custom_pet_equipment ) {
+        if( equipment ) {
+            add_item_overlay_id( *equipment, rval, overlay_suffixes );
+        }
     }
 
     return rval;

@@ -1,0 +1,89 @@
+{
+  "schema": 1,
+  "batch": 28,
+  "date": "2026-10-11",
+  "branch": "codex/render-preparation",
+  "baseline": "1d634ab24a7c172796548dd146c2d1f43ac113de",
+  "objective": "Make rendering preparation an explicit, testable value-only boundary and evaluate bounded parallel computation without changing simulation state or draw order.",
+  "ownership": {
+    "world": "main simulation thread",
+    "lua_platform_v1": "main thread only",
+    "randomness": "existing main-thread gameplay order",
+    "sdl": "main thread only",
+    "inputs": "value copies captured by renderer owner",
+    "outputs": "Fixed-index frame-local results; all submitted tasks completed before owner submission. Persistent workers joined at renderer teardown.",
+    "worker_pool": "dedicated renderer-owned instance of existing cata_thread_pool; no global experimental switch",
+    "reentrancy": "Owner-thread RAII lease protects captured results until outer draw consumption ends. Nested requests use the direct serial kernel; leases release on exceptions and move without double release."
+  },
+  "batch28_scope": [
+    "Extract sparse-layer decisions and colored-light tint math into a graphics-backend-independent module.",
+    "Capture transient overrides, creature/shadow presence and light scalars on the main thread.",
+    "Use the same pure kernel for serial and bounded worker batches. Preserve z/row/tile/layer order.",
+    "Keep default worker count zero until paired full-pipeline measurements establish a benefit. Small batches fall back to serial.",
+    "Test legacy output parity, independent inputs, output ownership, empty/small/large batches and worker teardown.",
+    "Avoid full-frame copies for fewer than16384 entries, and preserve parent result buffers during nested draws."
+  ],
+  "acceptance": [
+    "Formatting and focused regression; reuse other unchanged evidence.",
+    "Release SDL3 game and focused native test build.",
+    "Focused memory/safety checks of the new value boundary; report actual sanitizer support.",
+    "Fixed input-size/lighting-distribution before/after kernel and full capture/preparation timings.",
+    "Actual fullscreen UndeadPeople/OpenGL Damon test copies; fixed inputs, native save/reload and original file hashes.",
+    "No speedup claim from hotspot share, microbenchmark alone, or incomplete simulation trials."
+  ],
+  "later_batches": [
+    {
+      "batch": "visibility",
+      "entry": "Use fixed carrier views/aiming and rebuild counts to establish repeated work or expensive independent scan segments.",
+      "deliverable": "Freeze observer inputs and cache dependencies; version invalidation explicitly; parallelize only independent read-only work after duplicate rebuilds are removed.",
+      "acceptance": "Two-map ownership, walls/traps/local changes, observer changes and repeat-view parity; native fixed action trials. Keep observer and gameplay RNG order."
+    },
+    {
+      "batch": "exploration",
+      "entry": "First distinguish missing-map generation, existing-map read/deserialization, memory preparation and SDL texture upload on a fixed unexplored route.",
+      "deliverable": "Start with the measured blocking stage. Background IO can return owned byte buffers; only proven-safe value decoding may run away from the world owner. Validate location/revision before applying results.",
+      "acceptance": "Cold/warm/saved-memory scenes, repeated movement, save/reload and unload during pending work. Preserve Lua hooks, IDs and generation randomness; do not move arbitrary map generation to workers."
+    },
+    {
+      "batch": "creature-planning",
+      "entry": "Dense-monster fixed carrier scenario with completed turns; measure sensing, path search/scoring and movement separately.",
+      "deliverable": "Read-only proposals from fixed inputs; deterministic main-thread movement/combat commit in existing entity order. Recompute or reject stale proposals.",
+      "acceptance": "Same seed/input produces matching decisions and selected state; collision/conflicting proposals/death/lifecycle tests and scoped race checks. Gameplay and Lua mutations stay on the owner."
+    },
+    {
+      "batch": "renderer-boundary",
+      "entry": "Value preparation has safe lifecycle and representative cost evidence; identify remaining live creature/light/memory queries.",
+      "deliverable": "Complete pointer-free semantic views and stable ordered commands; keep backend asset lookup/submission separate. This supplies a boundary for a future 3D renderer without replacing simulation.",
+      "acceptance": "Orthogonal/isometric views, colored lights, overrides, map memory, renderer recovery and asset reload. Verify output/lifetime before considering asynchronous frames."
+    }
+  ],
+  "stop_rules": [
+    "Do not enable worker path by default after a slowdown or ambiguous end-to-end result.",
+    "Keep Lua, gameplay RNG, shared map mutation and SDL outside workers.",
+    "Record cross-platform/device and replay/multiplayer limits."
+  ],
+  "baseline_binary_sha256": "e11ff588ab3bbfafe9c186aef9ebaa8be23f928271da13d95d1d0ce0e397b40f",
+  "estimated_changed_lines": "948 changed lines; reference<=15 commits; planned3coherent local commits for compiler compatibility, implementation/regression and plan/evidence.",
+  "publication": "local commits only; no automatic merge or release",
+  "architecture": {
+    "style": "Modular monolith. Preserve existing game model and save identities; extract real responsibilities in bounded batches, not an engine-wide ECS or replacement universal context.",
+    "boundary": "Owner captures immutable values -> bounded jobs compute fixed-index results -> owner validates and applies in original order.",
+    "scheduler_growth": "Start with renderer-owned synchronous work. Consolidate bounded scheduling only when a second proven batch needs it; do not create one unbounded pool per subsystem.",
+    "three_dimensional_rendering": "Extend semantic views and ordered render commands behind a backend interface. Current mask/tint values are only a small preparation boundary; they are not a complete world snapshot or 3D renderer."
+  },
+  "measurement_protocol": {
+    "baseline": "Freeze binary and source commit; copy the same native save for each trial. Keep seed, mods, UndeadPeople, fullscreen dimensions, zoom, rendering backend and input sequence fixed.",
+    "pairing": "Control/candidate/candidate/control where practical, without a concurrent build. Record actual native saved turns and positions before comparing.",
+    "diagnosis": "Function-level perf cycles/call stacks identify CPU execution. Record capture, value preparation, SDL submission, IO/cache rebuild boundaries separately. A sampled share is not frame latency or GPU time.",
+    "acceptance": "Default-on requires repeatable representative full-pipeline benefit, unchanged selected simulation/save state and no material regression in smaller scenes. Microbenchmarks alone do not qualify.",
+    "disclosure": "Report medians/tails, sample counts, collector losses, unknown symbols, per-thread scope, configuration and artifact hashes. Explicitly retain pending gameplay/replay/multiplayer/device gates.",
+    "control": "Compile original renderer source with the current shared header/layout and current objects/options/pool safety. Recompile the renderer withClang23 for both paths; restore final source and verify byte-identical candidate. OldClang22 frozen baseline remains useful for behavior, not source-attributable CPU delta."
+  },
+  "safety_acceptance": {
+    "value_parity": "Legacy decisions and exact RGBA; independent frames, repeated capture, odd partitions and worker counts0/1/2/4.",
+    "failure_lifecycle": "Drain submitted tasks on allocation failure; stop/join partial pool startup; lease release on successful, moved and exceptional owner exits.",
+    "native_state": "Native saved route endpoint and player fields; normalize only learned_recipes using its pointer-set serialization contract, never arbitrary ordered arrays.",
+    "performance_default": "Workers remain0 unless the complete scene shows repeatable benefit; no default-on claim from a copied-value microbenchmark."
+  },
+  "next_batch_decision": "Use final function-level perf tables to choose between live render-command preparation and visibility cache scans. This batch isolates layer/tint values only; it does not claim that this small kernel is the dominant hotspot."
+}

@@ -102,6 +102,7 @@
 #include "overmap_location.h"
 #include "overmap_map_data_cache.h"
 #include "overmap_worldgen.h"
+#include "pet_slot.h"
 #include "profession.h"
 #include "profession_group.h"
 #include "proficiency.h"
@@ -110,6 +111,7 @@
 #include "regional_settings.h"
 #include "relic.h"
 #include "requirements.h"
+#include "riding_config.h"
 #include "rotatable_symbols.h"
 #include "scenario.h"
 #include "scent_map.h"
@@ -316,6 +318,8 @@ void DynamicDataLoader::initialize()
     add( "proficiency", &proficiency::load_proficiencies );
     add( "proficiency_category", &proficiency_category::load_proficiency_categories );
     add( "proficiency_migration", &proficiency_migration::load );
+    add( "pet_slot", &load_pet_slots );
+    add( "riding_config", &load_riding_config );
     add( "speed_description", &speed_description::load_speed_descriptions );
     add( "mood_face", &mood_face::load_mood_faces );
     add( "skill", &Skill::load_skill );
@@ -581,7 +585,7 @@ void DynamicDataLoader::load_mod_data_from_path( const cata_path &path, const st
     // if give path is a directory
     if( dir_exist( path.get_unrelative_path() ) ) {
         const std::vector<cata_path> dir_files = get_files_from_path_with_path_exclusion( ".json",
-                "mod_interactions", path, true, true );
+            "mod_interactions", path, true, true );
         files.insert( files.end(), dir_files.begin(), dir_files.end() );
         // if given path is an individual file
     } else if( file_exist( path.get_unrelative_path() ) ) {
@@ -619,7 +623,7 @@ void DynamicDataLoader::load_mod_interaction_files_from_path( const cata_path &p
 
         for( const cata_path &f : interaction_folders ) {
             const mod_id associated_mod = canonical_mod_id( mod_id(
-                                              f.get_unrelative_path().filename().string() ) );
+                    f.get_unrelative_path().filename().string() ) );
             bool is_mod_loaded = std::find( loaded_mods.begin(), loaded_mods.end(),
                                             associated_mod ) != loaded_mods.end();
 
@@ -749,6 +753,8 @@ void DynamicDataLoader::unload_data()
     proficiency::reset();
     proficiency_category::reset();
     proficiency_migration::reset();
+    reset_pet_slots();
+    reset_riding_config();
     mood_face::reset();
     speed_description::reset();
     quality::reset();
@@ -937,6 +943,7 @@ void DynamicDataLoader::finalize_loaded_data()
             { _( "Professions" ), &profession::finalize_all },
             { _( "Proficiencies" ), &proficiency::finalize_all },
             { _( "Proficiency Categories" ), &proficiency_category::finalize_all },
+            { _( "Pet slots" ), &pet_slot::finalize_all },
             { _( "Qualities" ), &quality::finalize_all },
             { _( "Recipe Groups" ), &recipe_group::finalize },
             { _( "Region Settings" ), &region_settings::finalize_all },
@@ -1010,6 +1017,7 @@ void DynamicDataLoader::check_consistency()
             { _( "Faults" ), &faults::check_consistency },
             { _( "Post-process generators" ), &pp_generators::check_consistency },
             { _( "Proficiency migration" ), &proficiency_migration::check },
+            { _( "Pet slots" ), &pet_slot::check_consistency },
             { _( "Vehicle parts" ), &vehicles::parts::check },
             { _( "Vehicle part locations" ), &vpart_location::check_all },
             { _( "Vehicle part migrations" ), &vpart_migration::check },

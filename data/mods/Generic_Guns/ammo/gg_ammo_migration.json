@@ -440,11 +440,6 @@
     "replace": "rifle_huge_ball"
   },
   {
-    "id": [ "reloaded_50_incendiary", "reloaded_458wm", "reloaded_50bmg" ],
-    "type": "MIGRATION",
-    "replace": "reloaded_rifle_huge_ball"
-  },
-  {
     "id": [ "50ss" ],
     "type": "MIGRATION",
     "replace": "rifle_huge_AP"
@@ -458,11 +453,6 @@
     "id": [ "bp_50ss", "bp_700nx" ],
     "type": "MIGRATION",
     "replace": "bp_rifle_huge_AP"
-  },
-  {
-    "id": [ "bp_50_incendiary", "bp_458wm", "bp_50match" ],
-    "type": "MIGRATION",
-    "replace": "bp_rifle_huge_ball"
   },
   {
     "id": [ "12mm" ],
@@ -534,7 +524,7 @@
     "replace": "grenade_ammo_teargas"
   },
   {
-    "id": [ "shot_00", "shot_paper_00", "410shot_000", "20x66_exp", "20x66_frag", "20x66_shot", "20x66_flare" ],
+    "id": [ "shot_00", "shot_paper_00", "410shot_000", "20x66_exp", "20x66_frag", "20x66_shot", "20x66_flare", "20shot_buck" ],
     "type": "MIGRATION",
     "replace": "shot_buck"
   },
@@ -544,12 +534,12 @@
     "replace": "shot_bean"
   },
   {
-    "id": [ "shot_bird", "410shot_bird", "shot_paper_bird" ],
+    "id": [ "shot_bird", "410shot_bird", "shot_paper_bird", "20shot_bird" ],
     "type": "MIGRATION",
     "replace": "shot_fowl"
   },
   {
-    "id": [ "shot_slug", "shot_paper_slug", "410shot_slug", "20x66_slug" ],
+    "id": [ "shot_slug", "shot_paper_slug", "410shot_slug", "20x66_slug", "20shot_slug" ],
     "type": "MIGRATION",
     "replace": "shot_foster"
   },
@@ -660,5 +650,15 @@
     "id": [ "33naval_ball" ],
     "type": "MIGRATION",
     "replace": "rifle_ball_cannon"
+  },
+  {
+    "id": [ "reloaded_50_incendiary", "reloaded_458wm", "reloaded_50bmg", "reloaded_50bmgfmj" ],
+    "type": "MIGRATION",
+    "replace": "reloaded_rifle_huge_ball"
+  },
+  {
+    "id": [ "bp_50_incendiary", "bp_458wm", "bp_50match", "bp_50bmgfmj" ],
+    "type": "MIGRATION",
+    "replace": "bp_rifle_huge_ball"
   }
 ]

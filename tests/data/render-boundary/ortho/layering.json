@@ -1,0 +1,28 @@
+{
+  "variants": [
+    {
+      "context": "t_floor",
+      "item_variants": [
+        {
+          "item": "rock",
+          "layer": 0,
+          "sprite": [
+            {
+              "id": "item_context"
+            }
+          ]
+        }
+      ],
+      "field_variants": [
+        {
+          "field": "fd_smoke",
+          "sprite": [
+            {
+              "id": "field_context"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

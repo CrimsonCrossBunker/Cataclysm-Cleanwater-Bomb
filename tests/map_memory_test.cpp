@@ -2,6 +2,7 @@
 #include <lightmap.h>
 #include <array>
 #include <functional>
+#include <future>
 #include <map>
 #include <optional>
 #include <cstddef>
@@ -182,7 +183,7 @@ BENCHMARK_TEST_CASE( "map_memory_first_exploration_compressed_archive",
             ( PATH_INFO::world_base_save_path() / "mmr.dict" ).get_unrelative_path();
         {
             const std::shared_ptr<zzip_stack> packed = zzip_stack::create_from_folder(
-                        archive, source, dictionary );
+                    archive, source, dictionary );
             REQUIRE( packed != nullptr );
             REQUIRE( packed->get_entries().size() == archive_regions );
         }
@@ -231,6 +232,94 @@ TEST_CASE( "map_memory_defaults", "[map_memory]" )
     CHECK( default_tile.get_dec_id().empty() );
     CHECK( default_tile.get_dec_subtile() == 0 );
     CHECK( default_tile.get_dec_rotation() == 0 );
+}
+
+TEST_CASE( "map_memory_rejects_outside_writes_without_cross_map_leaks", "[map_memory]" )
+{
+    map_memory first;
+    map_memory second;
+    REQUIRE( first.prepare_region( p1, p2 ) );
+    REQUIRE( second.prepare_region( p1, p2 ) );
+    first.set_tile_symbol( p2, U'A' );
+    second.set_tile_symbol( p2, U'B' );
+
+    // These share local tile coordinates with p2, making contamination of the
+    // former process-wide writable fallback observable in another memory map.
+    const std::array<tripoint_abs_ms, 6> outside = {{
+            p2 + point( -SEEX * 20, 0 ), p2 + point( 0, SEEY * 20 ),
+            tripoint_abs_ms( p2.xy(), -OVERMAP_DEPTH - 1 ),
+            tripoint_abs_ms( p2.xy(), OVERMAP_HEIGHT + 1 ),
+            tripoint_abs_ms( -SEEX * 3 + 5, p2.y(), p2.z() ),
+            tripoint_abs_ms( p2.x(), -SEEY * 3 + 7, p2.z() )
+        }
+    };
+    for( const tripoint_abs_ms &pos : outside ) {
+        INFO( pos );
+        first.set_tile_symbol( pos, U'X' );
+        first.set_tile_terrain( pos, "t_floor", 3, 2 );
+        first.set_tile_decoration( pos, "f_chair", 4, 1 );
+        CHECK( first.get_tile( pos ) == mm_submap::default_tile );
+        CHECK( second.get_tile( pos ) == mm_submap::default_tile );
+        first.clear_tile_decoration( pos );
+        CHECK( first.get_tile( pos ) == mm_submap::default_tile );
+    }
+    CHECK( first.get_tile( p2 ).symbol == U'A' );
+    CHECK( second.get_tile( p2 ).symbol == U'B' );
+    first.clear();
+    CHECK( first.get_tile( p2 ) == mm_submap::default_tile );
+    first.set_tile_symbol( p2, U'X' );
+    CHECK( first.get_tile( p2 ) == mm_submap::default_tile );
+    CHECK( second.get_tile( p2 ).symbol == U'B' );
+}
+
+TEST_CASE( "map_memory_indexed_levels_preserve_region_and_reload_bounds", "[map_memory]" )
+{
+    map_memory memory;
+    const tripoint_abs_ms center( -5, -7, 0 );
+    REQUIRE( memory.prepare_region( center, center ) );
+    const map_memory &view = memory;
+    for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; ++z ) {
+        const tripoint_abs_ms pos( center.xy(), z );
+        memory.set_tile_symbol( pos, U'a' + z + OVERMAP_DEPTH );
+        CHECK( view.get_tile( pos ).symbol == U'a' + z + OVERMAP_DEPTH );
+    }
+
+    const tripoint_abs_ms upper( center.xy(), OVERMAP_HEIGHT );
+    REQUIRE( memory.prepare_region( upper, upper ) );
+    CHECK( view.get_tile( center ).symbol == U'a' + OVERMAP_DEPTH );
+    CHECK( view.get_tile( tripoint_abs_ms( center.xy(), -OVERMAP_DEPTH ) ) ==
+           mm_submap::default_tile );
+    memory.set_tile_symbol( tripoint_abs_ms( center.xy(), -OVERMAP_DEPTH ), U'X' );
+    REQUIRE( memory.prepare_region( center, center ) );
+    // A query outside the previous view never changes the durable submap.
+    CHECK( view.get_tile( tripoint_abs_ms( center.xy(), -OVERMAP_DEPTH ) ).symbol == U'a' );
+    const tripoint_abs_ms distant = center + point( SEEX * 30, SEEY * 30 );
+    REQUIRE( memory.prepare_region( distant, distant ) );
+    CHECK( view.get_tile( center ) == mm_submap::default_tile );
+    REQUIRE( memory.prepare_region( center, center ) );
+    CHECK( view.get_tile( center ).symbol == U'a' + OVERMAP_DEPTH );
+}
+
+TEST_CASE( "map_memory_published_region_supports_independent_const_queries", "[map_memory]" )
+{
+    map_memory memory;
+    REQUIRE( memory.prepare_region( p1, p2 ) );
+    memory.set_tile_symbol( p2, U'Q' );
+    const map_memory &view = memory;
+    const auto query = [&view]() {
+        unsigned sum = 0;
+        for( int i = 0; i < 1000; ++i ) {
+            sum += view.get_tile( p2 ).symbol;
+            sum += view.get_tile( tripoint_abs_ms( p2.xy(), OVERMAP_HEIGHT + 1 ) ).symbol;
+            sum += view.get_tile( p2 + point( SEEX * 20, 0 ) ).symbol;
+        }
+        return sum;
+    };
+    auto first = std::async( std::launch::async, query );
+    auto second = std::async( std::launch::async, query );
+    CHECK( first.get() == 1000 * U'Q' );
+    CHECK( second.get() == 1000 * U'Q' );
+    CHECK( view.get_tile( p2 ).symbol == U'Q' );
 }
 
 TEST_CASE( "map_memory_remembers", "[map_memory]" )

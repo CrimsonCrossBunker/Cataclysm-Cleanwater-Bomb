@@ -32040,7 +32040,7 @@
         "lua_name": "ComputerAccessContext",
         "registration": {
           "installer": "platform_v1.install_runtime_api",
-          "line": 2194,
+          "line": 2182,
           "namespace": "ccb",
           "path": "src/lua_platform_runtime_services.cpp"
         },
@@ -32600,7 +32600,7 @@
         "lua_name": "ItemUseContext",
         "registration": {
           "installer": "platform_v1.install_runtime_api",
-          "line": 2184,
+          "line": 2172,
           "namespace": "ccb",
           "path": "src/lua_platform_runtime_services.cpp"
         },
@@ -33230,7 +33230,7 @@
         "lua_name": "PlatformCanvasContext",
         "registration": {
           "installer": "platform_v1.install_runtime_dialogue_presentation_api",
-          "line": 789,
+          "line": 783,
           "namespace": "ccb",
           "path": "src/lua_platform_runtime_dialogue.cpp"
         },
@@ -33244,7 +33244,7 @@
         "lua_name": "PlatformDialogueContext",
         "registration": {
           "installer": "platform_v1.install_runtime_dialogue_presentation_api",
-          "line": 806,
+          "line": 800,
           "namespace": "ccb",
           "path": "src/lua_platform_runtime_dialogue.cpp"
         },

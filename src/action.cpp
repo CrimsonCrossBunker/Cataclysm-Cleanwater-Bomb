@@ -28,7 +28,6 @@
 #include "game.h"
 #include "input_context.h"
 #include "input_enums.h"
-#include "inventory.h"
 #include "item.h"
 #include "item_location.h"
 #include "iuse.h"
@@ -56,6 +55,8 @@ static const itype_id itype_swim_fins( "swim_fins" );
 
 static const quality_id qual_BUTCHER( "BUTCHER" );
 static const quality_id qual_CUT_FINE( "CUT_FINE" );
+
+class temp_crafting_inventory;
 
 static void parse_keymap( std::istream &keymap_txt, std::map<char, action_id> &kmap,
                           std::set<action_id> &unbound_keymap );
@@ -622,8 +623,8 @@ std::optional<input_event> hotkey_for_action( const action_id action,
         const int maximum_modifier_count, const bool restrict_to_printable )
 {
     const std::vector<input_event> keys = keys_bound_to( action,
-                                          maximum_modifier_count,
-                                          restrict_to_printable );
+        maximum_modifier_count,
+        restrict_to_printable );
     if( keys.empty() ) {
         return std::nullopt;
     } else {
@@ -645,7 +646,7 @@ bool can_butcher_at( map &here, const tripoint_bub_ms &p )
     bool has_item = false;
     bool has_corpse = false;
 
-    const inventory &crafting_inv = player_character.crafting_inventory();
+    const temp_crafting_inventory &crafting_inv = player_character.crafting_inventory();
 
     static const std::string salvage_string = "salvage";
     const auto salvage_filter = []( const item & it ) {
@@ -1352,11 +1353,11 @@ std::optional<tripoint_bub_ms> choose_adjacent( const tripoint_bub_ms &pos,
             const input_context &ctxt, const std::string &action )> &action_cb )
 {
     const std::optional<tripoint_rel_ms> dir = choose_direction(
-                message, allow_vertical, /*allow_mouse=*/true, timeout,
+            message, allow_vertical, /*allow_mouse=*/true, timeout,
     [&]( const input_context & ctxt, const std::string & action ) {
         if( action == "SELECT" ) {
             const std::optional<tripoint_bub_ms> mouse_pos = ctxt.get_coordinates(
-                        g->w_terrain, g->ter_view_p.raw().xy(), true );
+                    g->w_terrain, g->ter_view_p.raw().xy(), true );
             if( mouse_pos ) {
                 const tripoint_rel_ms vec = *mouse_pos - pos;
                 if( vec.x() >= -1 && vec.x() <= 1
@@ -1388,7 +1389,7 @@ std::optional<tripoint_bub_ms> choose_adjacent_highlight( map &here, const std::
         const bool allow_vertical, const bool allow_autoselect )
 {
     const std::function<bool( const tripoint_bub_ms & )> f = [&action,
-    &here]( const tripoint_bub_ms & p ) {
+        &here]( const tripoint_bub_ms & p ) {
         return can_interact_at( action, here, p );
     };
     return choose_adjacent_highlight( here, message, failure_message, f, allow_vertical,

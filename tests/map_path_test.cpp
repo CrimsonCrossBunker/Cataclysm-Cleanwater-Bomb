@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -558,7 +559,7 @@ TEST_CASE( "map_route_player_into_unreachable_tiles", "[map][pathfinding]" )
         }
         WHEN( "map::route does pathfinding to any adjacent tile of an unpassable tile" ) {
             const std::vector<tripoint_bub_ms> path = m.route( pc,
-                    pathfinding_target::adjacent( not_passable ) );
+                pathfinding_target::adjacent( not_passable ) );
             THEN( "route ends on one of the adjacent tiles" ) {
                 const std::vector<tripoint_bub_ms> expected_path = {
                     { 66, 65, 0 }, { 67, 65, 0 }
@@ -582,7 +583,7 @@ TEST_CASE( "map_route_player_into_unreachable_tiles", "[map][pathfinding]" )
         place_obstacle( m, obstacles );
         WHEN( "map::route does pathfinding" ) {
             const std::vector<tripoint_bub_ms> path = m.route( pc,
-                    pathfinding_target::adjacent( not_passable ) );
+                pathfinding_target::adjacent( not_passable ) );
             THEN( "it does not find any route" ) {
                 CHECK( path.empty() );
             }
@@ -649,4 +650,91 @@ TEST_CASE( "map_route_mon_around_danger", "[map][pathfinding]" )
         }
     }
     clear_map_without_vision();
+}
+
+TEST_CASE( "map_route_preserves_outer_search_during_nested_route", "[map][pathfinding][workspace]" )
+{
+    clear_map_without_vision();
+    map &here = get_map();
+    const tripoint_bub_ms start( 60, 60, 0 );
+    const tripoint_bub_ms target( 70, 60, 0 );
+    const tripoint_bub_ms inner_start( 90, 90, 0 );
+    const tripoint_bub_ms inner_target( 100, 90, 0 );
+    const ter_id wall( "t_wall_metal" );
+    for( int y = 55; y <= 65; ++y ) {
+        here.ter_set( tripoint_bub_ms( 65, y, 0 ), wall );
+    }
+    for( int y = 85; y <= 95; ++y ) {
+        here.ter_set( tripoint_bub_ms( 95, y, 0 ), wall );
+    }
+    pathfinding_settings settings;
+    settings.max_dist = 40;
+    settings.max_length = 200;
+    settings.allow_climb_stairs = false;
+    const auto outer_reference = here.route( start, pathfinding_target::point( target ), settings );
+    const auto inner_reference = here.route( inner_start, pathfinding_target::point( inner_target ),
+        settings );
+    REQUIRE_FALSE( outer_reference.empty() );
+    REQUIRE_FALSE( inner_reference.empty() );
+    bool nested = false;
+    const auto result = here.route( start, pathfinding_target::point( target ), settings,
+    [&]( const tripoint_bub_ms & ) {
+        if( !nested ) {
+            nested = true;
+            CHECK( here.route( inner_start, pathfinding_target::point( inner_target ),
+                               settings ) == inner_reference );
+        }
+        return false;
+    } );
+    REQUIRE( nested );
+    CHECK( result == outer_reference );
+    CHECK( here.route( start, pathfinding_target::point( target ), settings ) == outer_reference );
+}
+
+TEST_CASE( "map_route_nested_other_map_isolated_and_exception_recovers",
+           "[map][pathfinding][workspace]" )
+{
+    fake_map first_storage( ter_id( "t_floor" ) );
+    fake_map second_storage( ter_id( "t_floor" ) );
+    map &first = *first_storage.cast_to_map();
+    map &second = *second_storage.cast_to_map();
+    const int z = fake_map::fake_map_z;
+    const tripoint_bub_ms start( 4, 10, z );
+    const tripoint_bub_ms target( 18, 10, z );
+    const ter_id wall( "t_wall_metal" );
+    for( int y = 0; y < SEEY * 2; ++y ) {
+        if( y != 20 ) {
+            first.ter_set( tripoint_bub_ms( 12, y, z ), wall );
+        }
+        if( y != 3 ) {
+            second.ter_set( tripoint_bub_ms( 9, y, z ), wall );
+        }
+    }
+    pathfinding_settings settings;
+    settings.max_dist = 40;
+    settings.max_length = 200;
+    settings.allow_climb_stairs = false;
+    const auto reference = first.route( start, pathfinding_target::point( target ), settings );
+    const auto other_reference = second.route( start, pathfinding_target::point( target ), settings );
+    REQUIRE_FALSE( reference.empty() );
+    REQUIRE_FALSE( other_reference.empty() );
+    REQUIRE( reference != other_reference );
+    bool nested = false;
+    const auto result = first.route( start, pathfinding_target::point( target ), settings,
+    [&]( const tripoint_bub_ms & ) {
+        if( !nested ) {
+            nested = true;
+            CHECK( second.route( start, pathfinding_target::point( target ), settings ) == other_reference );
+        }
+        return false;
+    } );
+    REQUIRE( nested );
+    CHECK( result == reference );
+    CHECK( second.route( start, pathfinding_target::point( target ), settings ) == other_reference );
+
+    REQUIRE_THROWS_AS( first.route( start, pathfinding_target::point( target ), settings,
+    []( const tripoint_bub_ms & ) -> bool {
+        throw std::runtime_error( "cancelled owner-side search" );
+    } ), std::runtime_error );
+    CHECK( first.route( start, pathfinding_target::point( target ), settings ) == reference );
 }

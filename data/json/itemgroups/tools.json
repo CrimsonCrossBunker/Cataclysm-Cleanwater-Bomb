@@ -346,6 +346,7 @@
     "//": "Portable tools for earthworking or farming",
     "entries": [
       { "item": "ax", "prob": 80 },
+      { "item": "hatchet", "prob": 120 },
       { "item": "bucket_5gal", "prob": 40 },
       {
         "distribution": [
@@ -531,6 +532,7 @@
       { "item": "tinyweldtank", "prob": 60, "count": [ 1, 3 ] },
       { "item": "polisher", "prob": 70, "charges": [ 0, 100 ] },
       { "item": "angle_grinder", "prob": 5, "charges": [ 0, 500 ] },
+      { "item": "dremel", "prob": 15 },
       { "item": "grinder_cutoff_disc", "prob": 2 },
       { "item": "welder", "prob": 10 },
       { "item": "small_propane_tank", "prob": 10, "count": [ 1, 5 ], "charges": [ 1000, 3000 ] },
@@ -642,10 +644,11 @@
     "container-item": "1st_aid_box",
     "entries": [
       { "group": "medical_tape_roll_part" },
+      { "item": "gloves_medical", "count": 2 },
       { "group": "bottle_otc_painkiller_10" },
       { "item": "disinfectant" },
       { "item": "saline" },
-      { "item": "adhesive_bandages", "count": 6 },
+      { "item": "adhesive_bandages", "count": 16 },
       { "item": "bandages", "count": 3 },
       { "item": "medical_gauze", "count": 6 },
       { "item": "booklet_firstaid" },
@@ -671,10 +674,11 @@
     "container-item": "1st_aid_box",
     "entries": [
       { "group": "medical_tape_roll_part", "prob": 70 },
+      { "item": "gloves_medical", "count": [ 0, 2 ] },
       { "group": "bottle_otc_painkiller_0_10" },
       { "item": "disinfectant", "charges": [ 0, 5 ] },
       { "item": "saline", "prob": 60 },
-      { "item": "adhesive_bandages", "count": [ 0, 6 ] },
+      { "item": "adhesive_bandages", "count": [ 0, 16 ] },
       { "item": "bandages", "count": [ 0, 3 ] },
       { "item": "medical_gauze", "count": [ 0, 6 ] },
       { "item": "booklet_firstaid", "prob": 50 },
@@ -1033,6 +1037,7 @@
       { "item": "multitool", "prob": 20 },
       { "item": "vac_mold", "prob": 2 },
       { "item": "screwdriver_set", "prob": 20 },
+      { "item": "dremel", "prob": 40 },
       { "item": "socket_screwdriver_set", "prob": 20 },
       { "item": "flashlight", "prob": 20, "charges": [ 0, 300 ] },
       { "item": "memory_card_science", "prob": 40 },
@@ -1075,6 +1080,7 @@
       { "item": "pin_reamer", "prob": 10 },
       { "item": "metal_file", "prob": 10 },
       { "item": "clamp", "prob": 20 },
+      { "item": "dremel", "prob": 20 },
       { "item": "bench_vise", "prob": 30 }
     ]
   },
@@ -1097,6 +1103,7 @@
       { "item": "cordless_drill", "prob": 20, "charges": [ 0, 500 ] },
       { "item": "corded_powerdrill", "prob": 30 },
       { "item": "circsaw_off", "prob": 10, "charges": [ 0, 500 ] },
+      { "item": "dremel", "prob": 40 },
       { "item": "angle_grinder", "prob": 20, "charges": [ 0, 500 ] },
       { "item": "corded_demolition_hammer", "prob": 25 },
       { "item": "grinder_cutoff_disc", "prob": 10 },
@@ -1114,6 +1121,7 @@
     "//": "Axes and saws.",
     "entries": [
       { "item": "ax", "prob": 100 },
+      { "item": "hatchet", "prob": 120 },
       { "item": "chainsaw_off", "prob": 80, "charges": [ 0, 400 ] },
       { "item": "polesaw_off", "prob": 75, "charges": [ 0, 400 ] },
       { "item": "saw", "prob": 100 },

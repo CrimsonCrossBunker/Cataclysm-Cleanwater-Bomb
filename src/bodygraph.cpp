@@ -370,7 +370,7 @@ void bodygraph_display::draw_borders()
     // body part subtitle
     if( id->parent_bp.has_value() ) {
         const std::string bpname = string_format( "\\_ %s _/",
-                                   colorize( to_upper_case( id->parent_bp.value()->name.translated() ), c_yellow ) );
+            colorize( to_upper_case( id->parent_bp.value()->name.translated() ), c_yellow ) );
         trim_and_print( w_border, point( center_txt_start( bpname ), 1 ),
                         BPGRAPH_MAXCOLS, c_white, bpname );
     }
@@ -551,7 +551,7 @@ void bodygraph_display::prepare_infotext( bool reset_pos )
         if( eff.get_id()->is_show_in_info() ) {
             game_message_type rt = eff.get_id()->get_rating( eff.get_intensity() );
             info_txt.emplace_back( string_format( "  %s", colorize( eff.disp_name(),
-                                                  rt == m_good ? c_green : rt == m_bad ? c_red : c_yellow ) ) );
+                    rt == m_good ? c_green : rt == m_bad ? c_red : c_yellow ) ) );
         }
     }
     info_txt.emplace_back( "--" );
@@ -566,6 +566,18 @@ void bodygraph_display::prepare_infotext( bool reset_pos )
                                           colorize( info.specific_sublimb ? _( "Coverage" ) : _( "Coverage (Avg.)" ), c_magenta ),
                                           info.avg_coverage ) );
     info_txt.emplace_back( "--" );
+    // Env protection
+    info_txt.emplace_back(
+        string_format(
+            "%s: %d",
+            colorize(
+                info.specific_sublimb ? _( "Environmental protection" ) : _( "Environmental protection (Avg.)" ),
+                c_magenta
+            ),
+            info.avg_env_protection
+        )
+    );
+    info_txt.emplace_back( "--" );
     // encumbrance
     info_txt.emplace_back( string_format( "%s: %d", colorize( _( "Encumbrance" ), c_magenta ),
                                           info.total_encumbrance ) );
@@ -574,7 +586,7 @@ void bodygraph_display::prepare_infotext( bool reset_pos )
     info_txt.emplace_back( string_format( "%s:",
                                           colorize( info.specific_sublimb ? _( "Protection" ) : _( "Protection (Avg.)" ), c_magenta ) ) );
     std::string prot_legend = string_format( "%s %s %s", colorize( _( "worst" ), c_red ),
-                              colorize( _( "median" ), c_yellow ), colorize( _( "best" ), c_light_green ) );
+        colorize( _( "median" ), c_yellow ), colorize( _( "best" ), c_light_green ) );
     int wavail = clamp( ( info_width - 2 ) - utf8_width( prot_legend, true ), 0, info_width - 2 );
     prot_legend.insert( prot_legend.begin(), wavail > 4 ? 4 : wavail, ' ' );
     info_txt.emplace_back( prot_legend );

@@ -1,5 +1,6 @@
 #include "item_location.h"
 
+#include <veh_type.h>
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -18,6 +19,7 @@
 #include "character_id.h"
 #include "color.h"
 #include "coordinates.h"
+#include "crafting.h"
 #include "debug.h"
 #include "enums.h"
 #include "flexbuffer_json.h"
@@ -960,7 +962,7 @@ class item_location::impl::item_in_container : public item_location::impl
 
             int primary_cost = ch.item_handling_cost( *target(), true, container_mv, qty );
             primary_cost = ch.enchantment_cache->modify_value( enchant_vals::mod::OBTAIN_COST_MULTIPLIER,
-                           primary_cost );
+                primary_cost );
             int parent_obtain_cost = container.obtain_cost( ch, qty );
             if( container->get_use( "holster" ) ) {
                 if( ch.is_worn( *container ) ) {
@@ -1322,7 +1324,10 @@ item_location item_location::obtain( Character &ch, int qty )
         debugmsg( "item location does not point to valid item" );
         return item_location();
     }
-    return ptr->obtain( ch, qty );
+    const item_location landed = ptr->obtain( ch, qty );
+    // Every backend copies through i_add, which re-uids the whole tree.
+    craft_relocated( landed );
+    return landed;
 }
 
 item_location item_location::split_stack( const int qty )
@@ -1533,19 +1538,19 @@ item_location find_item_by_uid( int64_t uid, const item_locator_hint &hint )
     // in-bounds.  Owners must call rebuild_for_item once back in range.
     auto try_map_at = [uid, &here]( const tripoint_abs_ms & abs ) -> item_location {
         if( !here.inbounds( here.get_bub( abs ) ) )
-        {
-            return item_location::nowhere;
-        }
-        map_cursor mc( abs );
-        item *found = retrieve_by_uid( mc, uid );
-        if( found == nullptr )
-        {
-            return item_location::nowhere;
-        }
-        return item_location( mc, found );
-    };
+    {
+        return item_location::nowhere;
+    }
+    map_cursor mc( abs );
+    item *found = retrieve_by_uid( mc, uid );
+    if( found == nullptr )
+    {
+        return item_location::nowhere;
+    }
+    return item_location( mc, found );
+};
 
-    switch( hint.where ) {
+switch( hint.where ) {
         case item_locator_hint::place::character: {
             const character_id *cid = std::get_if<character_id>( &hint.location );
             if( cid != nullptr && cid->is_valid() ) {

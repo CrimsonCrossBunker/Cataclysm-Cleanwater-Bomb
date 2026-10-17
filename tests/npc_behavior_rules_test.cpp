@@ -77,7 +77,7 @@ TEST_CASE( "NPC-rules-avoid-doors", "[npc_rules]" )
     */
     const ally_rule rule_to_test = ally_rule::avoid_doors;
     const shared_ptr_fast<npc> &test_subject = setup_generic_rules_test( rule_to_test,
-            update_mapgen_debug_npc_rules_test_avoid_doors );
+        update_mapgen_debug_npc_rules_test_avoid_doors );
     map &here = get_map();
     tripoint_bub_ms chair_target = test_subject->pos_bub();
     for( const tripoint_bub_ms &furn_loc : here.points_in_radius( test_subject->pos_bub(), 60 ) ) {
@@ -94,7 +94,7 @@ TEST_CASE( "NPC-rules-avoid-doors", "[npc_rules]" )
     int path_position = 0;
     for( tripoint_bub_ms &loc : test_subject->path ) {
         std::string debug_log_msg = string_format( "Terrain at path position %d was %s",
-                                    path_position, here.ter( loc ).id().c_str() );
+            path_position, here.ter( loc ).id().c_str() );
         path_position++;
         CAPTURE( debug_log_msg );
         CHECK( here.ter( loc ).id() != ter_t_door_c );
@@ -111,7 +111,7 @@ TEST_CASE( "NPC-rules-close-doors", "[npc_rules]" )
     */
     const ally_rule rule_to_test = ally_rule::close_doors;
     const shared_ptr_fast<npc> &test_subject = setup_generic_rules_test( rule_to_test,
-            update_mapgen_debug_npc_rules_test_close_doors );
+        update_mapgen_debug_npc_rules_test_close_doors );
     // Some sanity checking to make sure we can even do this test
     REQUIRE( !test_subject->rules.has_flag( ally_rule::avoid_doors ) );
     REQUIRE( !test_subject->rules.has_flag( ally_rule::avoid_locks ) );
@@ -150,6 +150,7 @@ TEST_CASE( "NPC-rules-close-doors", "[npc_rules]" )
     int turns_taken = 0;
     while( turns_taken++ < 100 && test_subject->pos_bub() != chair_target ) {
         test_subject->set_moves( 100 );
+        test_subject->process_activity();
         test_subject->move();
     }
 
@@ -180,7 +181,7 @@ TEST_CASE( "NPC-rules-avoid-locks", "[npc_rules]" )
     */
     const ally_rule rule_to_test = ally_rule::avoid_locks;
     const shared_ptr_fast<npc> &test_subject = setup_generic_rules_test( rule_to_test,
-            update_mapgen_debug_npc_rules_test_close_doors );
+        update_mapgen_debug_npc_rules_test_close_doors );
     // Some sanity checking to make sure we can even do this test
     REQUIRE( !test_subject->rules.has_flag( ally_rule::avoid_doors ) );
     map &here = get_map();
@@ -214,11 +215,11 @@ TEST_CASE( "NPC-rules-avoid-locks", "[npc_rules]" )
 
 
     vehicle *test_vehicle = here.add_vehicle( vehicle_prototype_locked_as_hell_car,
-                            car_center_pos, 0_degrees, 0, veh_spawn_status::UNDAMAGED );
+        car_center_pos, 0_degrees, 0, veh_spawn_status::UNDAMAGED );
 
     // vehicle is a 5x5 grid, car_door_pos is the only door/exit
     std::vector<vehicle_part *> door_parts_at_target = test_vehicle->get_parts_at(
-                &here, car_door_pos, "LOCKABLE_DOOR", part_status_flag::available );
+            &here, car_door_pos, "LOCKABLE_DOOR", part_status_flag::available );
     REQUIRE( !door_parts_at_target.empty() );
     vehicle_part *door = door_parts_at_target.front();
     // The door must be closed for the lock to be effective.
@@ -228,7 +229,7 @@ TEST_CASE( "NPC-rules-avoid-locks", "[npc_rules]" )
 
     // NOTE: The door lock is a separate part. We must ensure both the door exists and the door lock exists for this test.
     std::vector<vehicle_part *> door_lock_parts_at_target = test_vehicle->get_parts_at(
-                &here, car_door_pos, "DOOR_LOCKING", part_status_flag::available );
+            &here, car_door_pos, "DOOR_LOCKING", part_status_flag::available );
     REQUIRE( !door_lock_parts_at_target.empty() );
     vehicle_part *door_lock = door_lock_parts_at_target.front();
     door_lock->locked = true;

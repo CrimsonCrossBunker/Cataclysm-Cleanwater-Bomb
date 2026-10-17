@@ -115,6 +115,7 @@ static const flag_id json_flag_ALLERGEN_EGG( "ALLERGEN_EGG" );
 static const flag_id json_flag_ALLERGEN_MEAT( "ALLERGEN_MEAT" );
 static const flag_id json_flag_ALLERGEN_MILK( "ALLERGEN_MILK" );
 static const flag_id json_flag_ANIMAL_PRODUCT( "ANIMAL_PRODUCT" );
+static const flag_id json_flag_MARLOSS( "MARLOSS" );
 
 static const item_category_id item_category_chems( "chems" );
 
@@ -185,6 +186,7 @@ static const trait_id trait_GOURMAND( "GOURMAND" );
 static const trait_id trait_HIBERNATE( "HIBERNATE" );
 static const trait_id trait_LACTOSE( "LACTOSE" );
 static const trait_id trait_LIGHTWEIGHT( "LIGHTWEIGHT" );
+static const trait_id trait_MARLOSS_AVOID( "MARLOSS_AVOID" );
 static const trait_id trait_MEATARIAN( "MEATARIAN" );
 static const trait_id trait_M_DEPENDENT( "M_DEPENDENT" );
 static const trait_id trait_M_IMMUNE( "M_IMMUNE" );
@@ -204,6 +206,7 @@ static const trait_id trait_THRESH_CATTLE( "THRESH_CATTLE" );
 static const trait_id trait_THRESH_FELINE( "THRESH_FELINE" );
 static const trait_id trait_THRESH_LUPINE( "THRESH_LUPINE" );
 static const trait_id trait_THRESH_MOUSE( "THRESH_MOUSE" );
+static const trait_id trait_THRESH_MYCUS( "THRESH_MYCUS" );
 static const trait_id trait_THRESH_PLANT( "THRESH_PLANT" );
 static const trait_id trait_THRESH_RABBIT( "THRESH_RABBIT" );
 static const trait_id trait_THRESH_RAT( "THRESH_RAT" );
@@ -315,7 +318,7 @@ static std::map<vitamin_id, int> compute_default_effective_vitamins(
     }
     for( std::pair<const vitamin_id, int> &vit : res ) {
         vit.second = you.enchantment_cache->modify_value( enchant_vals::mod::VITAMIN_ABSORB_MOD,
-                     vit.second );
+            vit.second );
         vit.second = std::max( 0, vit.second );
     }
     return res;
@@ -810,7 +813,7 @@ float Character::metabolic_rate_base() const
     static const std::string hunger_rate_string( "PLAYER_HUNGER_RATE" );
     float hunger_rate = get_option< float >( hunger_rate_string );
     const float final_hunger_rate = enchantment_cache->modify_value( enchant_vals::mod::METABOLISM,
-                                    hunger_rate );
+        hunger_rate );
     return std::clamp( final_hunger_rate, 0.0f, std::numeric_limits<float>::max() );
 }
 
@@ -833,7 +836,7 @@ float Character::metabolic_rate() const
     // Penalize fast survivors
     // TODO: Have cold temperature increase, not decrease, metabolism
     const float effective_hunger = ( get_hunger() + get_starvation() ) * 100.0f / std::max( 50,
-                                   get_speed() );
+        get_speed() );
     const float modifier = multi_lerp( thresholds, effective_hunger );
 
     return modifier * metabolic_rate_base();
@@ -910,6 +913,20 @@ ret_val<edible_rating> Character::can_eat( const item &food ) const
     }
 
     if( edible || drinkable ) {
+        // Consumption EOCs run too late to refuse the food without ingesting it.
+        if( food.has_flag( json_flag_MARLOSS ) ) {
+            if( is_npc() ) {
+                return ret_val<edible_rating>::make_failure( _( "That doesn't look edible to you." ) );
+            }
+            if( has_trait( trait_MARLOSS_AVOID ) ) {
+                return ret_val<edible_rating>::make_failure( INEDIBLE_MUTATION,
+                        _( "After what happened that last time?  Nuh-uh.  You're not eating that alien poison." ) );
+            }
+            if( has_trait( trait_THRESH_MYCUS ) ) {
+                return ret_val<edible_rating>::make_failure( INEDIBLE_MUTATION,
+                        _( "we no longer require this scaffolding.  we reserve it for other uses." ) );
+            }
+        }
         // For all those folks who loved eating Marloss berries.  D:< mwuhahaha
         if( has_trait( trait_M_DEPENDENT ) && !food.has_flag( flag_MYCUS_OK ) ) {
             return ret_val<edible_rating>::make_failure( INEDIBLE_MUTATION,
@@ -928,15 +945,16 @@ ret_val<edible_rating> Character::can_eat( const item &food ) const
     }
 
     const use_function *consume_drug = food.type->get_use( "consume_drug" );
-    if( has_flag( json_flag_CANNOT_CONSUME_DRUGS ) ) {
-        return ret_val<edible_rating>::make_failure( _( "That would have no effect on you." ) );
-    }
-    if( has_flag( json_flag_TEMPORARY_SHAPESHIFT_NO_HANDS ) ) {
-        return ret_val<edible_rating>::make_failure( _( "You cannot use that while shapeshifted." ) );
-    }
+
     if( consume_drug != nullptr ) { //its a drug)
+        if( has_flag( json_flag_CANNOT_CONSUME_DRUGS ) ) {
+            return ret_val<edible_rating>::make_failure( _( "That would have no effect on you." ) );
+        }
+        if( has_flag( json_flag_TEMPORARY_SHAPESHIFT_NO_HANDS ) ) {
+            return ret_val<edible_rating>::make_failure( _( "You cannot use that while shapeshifted." ) );
+        }
         const consume_drug_iuse *consume_drug_use = dynamic_cast<const consume_drug_iuse *>
-                ( consume_drug->get_actor_ptr() );
+            ( consume_drug->get_actor_ptr() );
         for( const auto &tool : consume_drug_use->tools_needed ) {
             const bool has = item::count_by_charges( tool.first )
                              ? has_charges( tool.first, ( tool.second == -1 ) ? 1 : tool.second )
@@ -1224,7 +1242,7 @@ static bool eat( item &food, Character &you, bool force )
             !you.has_trait( trait_SAPROVORE ) ) {
             const std::string tname = food.tname( 1,
                                                   tname::segment_bitset( tname::default_tname_bits & ~( 1ULL << static_cast<size_t>
-                                                          ( tname::segments::FOOD_STATUS ) ) ) );
+                                                      ( tname::segments::FOOD_STATUS ) ) ) );
 
             add_msg( m_bad, _( "Ick, this %s (rotten) doesn't taste so good…" ), tname );
             add_msg( _( "You drink your %s (rotten)." ), tname );
@@ -1237,7 +1255,7 @@ static bool eat( item &food, Character &you, bool force )
             !you.has_trait( trait_SAPROVORE ) ) {
             const std::string tname = food.tname( 1,
                                                   tname::segment_bitset( tname::default_tname_bits & ~( 1ULL << static_cast<size_t>
-                                                          ( tname::segments::FOOD_STATUS ) ) ) );
+                                                      ( tname::segments::FOOD_STATUS ) ) ) );
             add_msg( m_bad, _( "Ick, this %s (rotten) doesn't taste so good…" ), tname );
             add_msg( _( "You eat your %s (rotten)." ), tname );
         } else {
@@ -1255,7 +1273,7 @@ static bool eat( item &food, Character &you, bool force )
         you.get_power_level() > units::from_kilojoule( static_cast<std::int64_t>( std::abs(
                     food.get_comestible_fun() ) ) ) ) {
         you.mod_power_level( units::from_kilojoule( static_cast<std::int64_t>
-                             ( food.get_comestible_fun() ) ) );
+                ( food.get_comestible_fun() ) ) );
     }
 
     if( food.has_flag( flag_FUNGAL_VECTOR ) && !you.has_trait( trait_M_IMMUNE ) ) {
@@ -1888,19 +1906,19 @@ time_duration Character::get_consume_time( const item &it ) const
         volume = units::to_milliliter( it.type->volume );
     }
     time_duration time = time_duration::from_seconds( std::max( ( volume /
-                         5 ), 1 ) );  //Default 5 mL (1 tablespoon) per second
+        5 ), 1 ) );  //Default 5 mL (1 tablespoon) per second
     float consume_time_modifier = 1.0f;//only for food and drinks
     const bool eat_verb = it.has_flag( flag_USE_EAT_VERB );
     const std::string comest_type = it.get_comestible() ? it.get_comestible()->comesttype : "";
     if( eat_verb || comest_type == "FOOD" ) {
         time = time_duration::from_seconds( volume / 5 ); //Eat 5 mL (1 teaspoon) per second
         consume_time_modifier = enchantment_cache->modify_value( enchant_vals::mod::CONSUME_TIME_MOD,
-                                consume_time_modifier );
+            consume_time_modifier );
         consume_time_modifier *= get_modifier( character_modifier_solid_consume_mod );
     } else if( !eat_verb && comest_type == "DRINK" ) {
         time = time_duration::from_seconds( volume / 15 ); //Drink 15 mL (1 tablespoon) per second
         consume_time_modifier = enchantment_cache->modify_value( enchant_vals::mod::CONSUME_TIME_MOD,
-                                consume_time_modifier );
+            consume_time_modifier );
         consume_time_modifier *= get_modifier( character_modifier_liquid_consume_mod );
     } else if( use_function const *fun = it.type->get_use( "heal" ) ) {
         time = time_duration::from_moves( dynamic_cast<heal_actor const *>
@@ -1911,7 +1929,7 @@ time_duration Character::get_consume_time( const item &it ) const
         const use_function *adrenaline_injector = it.type->get_use( "ADRENALINE_INJECTOR" );
         if( consume_drug != nullptr ) { //its a drug
             const consume_drug_iuse *consume_drug_use = dynamic_cast<const consume_drug_iuse *>
-                    ( consume_drug->get_actor_ptr() );
+                ( consume_drug->get_actor_ptr() );
             if( consume_drug_use->tools_needed.find( itype_syringe ) != consume_drug_use->tools_needed.end() &&
                 has_bionic( bio_syringe ) ) {
                 time = time_duration::from_seconds(
@@ -1936,9 +1954,9 @@ time_duration Character::get_consume_time( const item &it ) const
         }
     } else if( it.get_category_shallow().get_id() == item_category_chems ) {
         time = time_duration::from_seconds( std::max( ( volume / 15 ),
-                                            1 ) ); //Consume 15 mL (1 tablespoon) per second
+            1 ) ); //Consume 15 mL (1 tablespoon) per second
         consume_time_modifier = enchantment_cache->modify_value( enchant_vals::mod::CONSUME_TIME_MOD,
-                                consume_time_modifier );
+            consume_time_modifier );
         consume_time_modifier *=  it.made_of_from_type( phase_id::LIQUID ) ?
                                   get_modifier( character_modifier_liquid_consume_mod ) :
                                   get_modifier( character_modifier_solid_consume_mod );

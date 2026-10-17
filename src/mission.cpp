@@ -26,7 +26,6 @@
 #include "dialogue_chatbin.h"
 #include "enum_conversions.h"
 #include "game.h"
-#include "inventory.h"
 #include "item.h"
 #include "item_group.h"
 #include "kill_tracker.h"
@@ -40,6 +39,7 @@
 #include "point.h"
 #include "requirements.h"
 #include "talker.h"
+#include "temp_crafting_inventory.h"
 #include "visitable.h"
 
 #define dbg(x) DebugLog((x),D_GAME) << __FILE__ << ":" << __LINE__ << ": "
@@ -225,7 +225,7 @@ void mission::process_all()
     // Activity blocks MGOAL_FIND_ITEM before it searches any items.
     const bool use_item_filter = !targets.empty() && !player_character.activity;
     const std::unordered_set<itype_id> present = use_item_filter ? present_mission_items( targets ) :
-            std::unordered_set<itype_id>();
+        std::unordered_set<itype_id>();
     bool item_filter_valid = use_item_filter;
 
     for( auto &e : world_missions ) {
@@ -537,7 +537,7 @@ void mission::wrap_up( avatar &player_character )
     std::vector<item_comp> comps;
     switch( type->goal ) {
         case MGOAL_FIND_ITEM_GROUP: {
-            inventory tmp_inv = player_character.crafting_inventory();
+            temp_crafting_inventory tmp_inv = player_character.crafting_inventory();
             std::vector<item *> items = std::vector<item *>();
             tmp_inv.dump( items );
             item_group_id grp_type = type->group_id;
@@ -655,7 +655,7 @@ bool mission::is_complete( const character_id &_npc_id,
         }
 
         case MGOAL_FIND_ITEM_GROUP: {
-            inventory tmp_inv = player_character.crafting_inventory();
+            temp_crafting_inventory tmp_inv = player_character.crafting_inventory();
             std::vector<item *> items = std::vector<item *>();
             tmp_inv.dump( items );
             item_group_id grp_type = type->group_id;

@@ -31,7 +31,6 @@
 #include "flexbuffer_json.h"
 #include "game.h"
 #include "game_inventory.h"
-#include "gates.h"
 #include "get_version.h"
 #include "input.h"
 #include "inventory.h"
@@ -201,7 +200,7 @@ void mp_log( const std::string &msg )
         // launch, never mid-session, so it never pulls live data out from under
         // a debugging run.
         constexpr std::uintmax_t LOG_CAP_BYTES = 10ULL * 1024 *
-                1024;  // 10 MB — keeps logs attachable to Discord (10MB free) / GitHub (25MB)
+            1024;  // 10 MB — keeps logs attachable to Discord (10MB free) / GitHub (25MB)
         std::error_code ec;
         const std::filesystem::path desired_fs_path = std::filesystem::u8path( desired_path );
         const std::uintmax_t sz =
@@ -581,7 +580,7 @@ static bool g_client_acted_this_turn = false;
 // Server: elapsed wait time (ms) in the last wait_for_client_action() call.
 static int g_wait_elapsed_ms = 0;
 // Server: duration (ms) of the last monmove() (AI turn) call; set by do_turn.cpp.
-static int g_last_monmove_ms = 0;
+[[maybe_unused]] static int g_last_monmove_ms = 0;
 
 // Server: short label for the last action type received from the client this turn.
 // Reset to em-dash by grant_client_turn() at the start of each host turn.
@@ -669,7 +668,7 @@ static std::pair<int, int> mp_worst_limb_hp( const Character &c )
 // Co-op panel: drift = local calendar - partner calendar.  Under lockstep
 // both sides should always advance together; nonzero drift is a useful sanity
 // indicator for the player.
-static int g_partner_calendar_turn = 0;
+[[maybe_unused]] static int g_partner_calendar_turn = 0;
 // Last name the partner reported.  Used by the Co-op panel as a fallback when
 // the local proxy NPC isn't (yet) resolvable — proxy spawn races the panel on
 // first connect; this lets the panel still show *something* instead of
@@ -3437,10 +3436,9 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
                 if( is_open ) {
                     m.open_door( *remote, bub, true, false );
                 } else {
-                    // doors::close_door handles vehicle parts (next_part_to_close →
-                    // veh->close()) as well as regular terrain/furniture doors.
-                    // map::close_door alone skips vehicle doors entirely.
-                    doors::close_door( m, *remote, bub );
+                    // Reuse the checked actor for terrain and vehicle doors while
+                    // applying the network result before acknowledging it.
+                    close_tile_activity_actor::close_immediately( *remote, bub );
                 }
             }
         } catch( const JsonError &e ) {
@@ -3771,7 +3769,7 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
                 veh.skidding = true;
                 add_msg( m_warning, _( "%s loses control of %s." ), remote->name, veh.name );
                 g_action_msgs_pending.push_back( string_format( _( "You lose control of %s." ),
-                                                 veh.name ) );
+                        veh.name ) );
                 veh.turn( veh.last_turn > 0_degrees ? 60_degrees : -60_degrees );
             } else {
                 int braking_power = std::abs( veh.velocity ) / 2 + 10 * 100;
@@ -5803,7 +5801,6 @@ bool mp_menu_start_host_session()
     g_pending_host_start = true;
     g_host_thread_actually_started = false;
     mp_log( "[cdda-mp] MENU: host armed on port 8080 (thread deferred to do_turn)" );
-    mp_update_window_title();
     return true;
 }
 
@@ -5815,12 +5812,7 @@ void mp_menu_cancel_host()
     g_pending_host_start = false;
     set_host_mode( false );
     mp_log( "[cdda-mp] MENU: host-mode cancelled from co-op chooser" );
-    mp_update_window_title();
 }
-
-// Defined here; declared extern in mp_gamestate.h.  main.cpp populates this
-// at startup from the binary's mtime.
-std::string g_mp_build_stamp = "?";
 
 void mp_tick_proxy_activity( npc &guy )
 {
@@ -5842,17 +5834,6 @@ void mp_tick_proxy_activity( npc &guy )
             "' before=" + before + " after=" + after +
             " hauling=" + std::to_string( guy.is_hauling() ) +
             " haul_list_size=" + std::to_string( guy.haul_list.size() ) );
-}
-
-void mp_update_window_title()
-{
-    const char *role = is_client_mode() ? "CLIENT"
-                       : ( is_host_mode() ? "HOST" : "SP" );
-    // Include the commit hash (getVersionString) in the title bar too, matching
-    // the main-menu version line, so a screenshot of any window shows the exact
-    // build both players are running — the #1 thing co-op bug reports need.
-    set_title( string_format( "CDDA co-op — %s — %s — build %s",
-                              role, getVersionString(), g_mp_build_stamp ) );
 }
 
 // Co-op section appended to the debug "Generate game report" output (debug.cpp).
@@ -6270,8 +6251,6 @@ bool mp_menu_join_session()
     // sends) so the client log shows what's actually executing — catches the
     // host/client commit-mismatch that strands a client in its own world.
     mp_log( std::string( "[cdda-mp] VERSION=" ) + getVersionString() + " (role=CLIENT)" );
-    mp_update_window_title();
-
     // Only ask for a label the first time we see this address.  Skipping is
     // fine — the address alone is also a useful identifier.
     std::string label_out = label_in;
@@ -8261,7 +8240,7 @@ static void client_capture_avatar_msgs()
         return;
     }
     const auto new_msgs = Messages::recent_messages( static_cast<size_t>( cur -
-                          g_client_msg_watermark ) );
+        g_client_msg_watermark ) );
     g_client_msg_watermark = cur;
     const std::string client_name = get_avatar().name;
     for( const auto &[time_str, text] : new_msgs ) {
@@ -10083,7 +10062,7 @@ static void apply_monster_sync( JsonObject &jo )
             seen_now[key] = strikes;
             phantom_log += mon->type->id.str() + "@dAvatar" +
                            std::to_string( std::max( std::abs( mp.x() - av.x() ),
-                                           std::abs( mp.y() - av.y() ) ) ) +
+                               std::abs( mp.y() - av.y() ) ) ) +
                            "(s" + std::to_string( strikes ) + ") ";
             if( strikes >= PHANTOM_CULL_SYNCS ) {
                 phantom_cull.push_back( mon );
@@ -10282,7 +10261,7 @@ void mp_handle_pass_item()
     }
 
     item_location loc = game_menus::inv::titled_menu( av,
-                        _( "Pass what?" ), _( "You have no items to pass." ) );
+        _( "Pass what?" ), _( "You have no items to pass." ) );
     if( !loc ) {
         return;
     }
@@ -10499,9 +10478,9 @@ void mp_sync_note_add( const tripoint_abs_omt &pos, std::string_view text )
         }
     }
     std::string payload = R"({"type":"note_sync","op":"add","x":)" + std::to_string( pos.x() ) + ","
-                          "\"y\":" + std::to_string( pos.y() ) + ","
-                          "\"z\":" + std::to_string( pos.z() ) + ","
-                          "\"text\":\"" + escaped + "\"}";
+                           "\"y\":" + std::to_string( pos.y() ) + ","
+                           "\"z\":" + std::to_string( pos.z() ) + ","
+                           "\"text\":\"" + escaped + "\"}";
     mp_send_note_msg( payload );
     mp_log( "[cdda-mp] note_sync send: add at " + std::to_string( pos.x() ) + ","
             + std::to_string( pos.y() ) );
@@ -10516,8 +10495,8 @@ void mp_sync_note_delete( const tripoint_abs_omt &pos )
         return;
     }
     std::string payload = R"({"type":"note_sync","op":"delete","x":)" + std::to_string( pos.x() ) + ","
-                          "\"y\":" + std::to_string( pos.y() ) + ","
-                          "\"z\":" + std::to_string( pos.z() ) + "}";
+                           "\"y\":" + std::to_string( pos.y() ) + ","
+                           "\"z\":" + std::to_string( pos.z() ) + "}";
     mp_send_note_msg( payload );
     mp_log( "[cdda-mp] note_sync send: delete at " + std::to_string( pos.x() ) + ","
             + std::to_string( pos.y() ) );
@@ -10532,10 +10511,10 @@ void mp_sync_note_danger( const tripoint_abs_omt &pos, int radius, bool dangerou
         return;
     }
     std::string payload = R"({"type":"note_sync","op":"danger","x":)" + std::to_string( pos.x() ) + ","
-                          "\"y\":" + std::to_string( pos.y() ) + ","
-                          "\"z\":" + std::to_string( pos.z() ) + ","
-                          "\"radius\":" + std::to_string( radius ) + ","
-                          "\"dangerous\":" + ( dangerous ? "true" : "false" ) + "}";
+                           "\"y\":" + std::to_string( pos.y() ) + ","
+                           "\"z\":" + std::to_string( pos.z() ) + ","
+                           "\"radius\":" + std::to_string( radius ) + ","
+                           "\"dangerous\":" + ( dangerous ? "true" : "false" ) + "}";
     mp_send_note_msg( payload );
     mp_log( "[cdda-mp] note_sync send: danger at " + std::to_string( pos.x() ) + ","
             + std::to_string( pos.y() ) + " r=" + std::to_string( radius ) );
@@ -10837,7 +10816,7 @@ std::string serialize_remote_player_state()
         const size_t new_count = static_cast<size_t>( current_msg_count - g_last_forwarded_msg_count );
         g_last_forwarded_msg_count = current_msg_count;
         const std::vector<std::pair<std::string, std::string>> new_msgs =
-                    Messages::recent_messages( new_count );
+            Messages::recent_messages( new_count );
         for( const auto &[time_str, text] : new_msgs ) {
             ( void )time_str;
             // Swap/push messages are rendered on the client via semantic flags
@@ -11140,12 +11119,12 @@ std::string serialize_remote_player_state()
     + ( []() -> std::string {
         // One-shot wake_client signal — emit on this broadcast then clear.
         if( g_pending_wake_client )
-        {
-            g_pending_wake_client = false;
-            return "\"wake_client\":true,";
-        }
-        return "";
-    }() ) +
+    {
+        g_pending_wake_client = false;
+        return "\"wake_client\":true,";
+    }
+    return "";
+}() ) +
     ( []() -> std::string {
         // One-shot host→client swap/push signals — client renders the
         // observer message locally from the proxy name (no text relay).
@@ -11166,32 +11145,32 @@ std::string serialize_remote_player_state()
     ",\"moves\":" + std::to_string( g_remote_moves ) +
     ",\"speed\":" + std::to_string( remote->get_speed() ) +
     R"(,"client_move_mode":")" + remote->move_mode.str() + "\""
-    ",\"client_stamina\":" + std::to_string( remote->get_stamina() ) +
-    ",\"client_stamina_max\":" + std::to_string( remote->get_stamina_max() ) +
-    ",\"client_ctrl_veh\":" + ( remote->controlling_vehicle ? "true" : "false" ) +
-    // Authoritative grab + hauling state for the client's character.
-    // Client mirrors these onto its local avatar each tick so the
-    // local SP grab/haul code (and its move-cost gating) reads the
-    // same values the host is enforcing.
-    // MP-FIXME: npc::get_grab_type stubbed for CCB
-    ",\"client_grab_type\":0 /* static_cast<int>(remote->get_grab_type()) */" +
-    ",\"client_grab_dx\":" + std::to_string( remote->grab_point.x() ) +
-    ",\"client_grab_dy\":" + std::to_string( remote->grab_point.y() ) +
-    ",\"client_grab_dz\":" + std::to_string( remote->grab_point.z() ) +
-    ",\"client_hauling\":" + ( remote->is_hauling() ? "true" : "false" ) +
+     ",\"client_stamina\":" + std::to_string( remote->get_stamina() ) +
+     ",\"client_stamina_max\":" + std::to_string( remote->get_stamina_max() ) +
+     ",\"client_ctrl_veh\":" + ( remote->controlling_vehicle ? "true" : "false" ) +
+            // Authoritative grab + hauling state for the client's character.
+            // Client mirrors these onto its local avatar each tick so the
+            // local SP grab/haul code (and its move-cost gating) reads the
+            // same values the host is enforcing.
+            // MP-FIXME: npc::get_grab_type stubbed for CCB
+     ",\"client_grab_type\":0 /* static_cast<int>(remote->get_grab_type()) */" +
+     ",\"client_grab_dx\":" + std::to_string( remote->grab_point.x() ) +
+     ",\"client_grab_dy\":" + std::to_string( remote->grab_point.y() ) +
+     ",\"client_grab_dz\":" + std::to_string( remote->grab_point.z() ) +
+     ",\"client_hauling\":" + ( remote->is_hauling() ? "true" : "false" ) +
     [&]() -> std::string {
         if( !remote->controlling_vehicle )
-        {
-            return "";
-        }
-        map &vmap = get_map();
-        const optional_vpart_position ovp = vmap.veh_at( remote->pos_bub() );
+    {
+        return "";
+    }
+    map &vmap = get_map();
+    const optional_vpart_position ovp = vmap.veh_at( remote->pos_bub() );
         if( !ovp )
-        {
-            return "";
-        }
-        const tripoint_abs_ms vabs = ovp->vehicle().pos_abs();
-        return R"(,"client_veh_pos":{"x":)" + std::to_string( vabs.x() )
+    {
+        return "";
+    }
+    const tripoint_abs_ms vabs = ovp->vehicle().pos_abs();
+    return R"(,"client_veh_pos":{"x":)" + std::to_string( vabs.x() )
         + ",\"y\":" + std::to_string( vabs.y() )
         + ",\"z\":" + std::to_string( vabs.z() ) + "}";
     }() +

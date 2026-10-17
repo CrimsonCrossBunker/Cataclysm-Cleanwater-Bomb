@@ -14,6 +14,11 @@ on:
         required: false
         type: boolean
         default: true
+      package_artifacts:
+        description: Validate and upload installable packages without publishing a release
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   actions: read
@@ -50,10 +55,10 @@ concurrency:
 # At the time of writing (June 2025), the feature matrix for the above criteria looks like this:
 # | name                                 | OS       | compiler | newest/ oldest | tiles | sound | localize | cmake | backtrace | lto | sanitize | mods |
 # | ------------------------------------ | -------- | -------- | -------------- | ----- | ----- | -------- | ----- | --------- | --- | -------- | ---- |
-# | Basic Build                          | ubuntu   | clang-13 | oldest (clang) |       |       | yes      |       |           |     |          | yes  |
-# | Clang 18, Ubuntu, Tiles, ASan        | ubuntu   | clang-18 | newest (clang) | yes   |       | yes      |       | yes       |     | address  |      |
+# | Basic Build                          | ubuntu   | clang-14 | oldest (clang) |       |       | yes      |       |           |     |          | yes  |
+# | Clang 22, Ubuntu, Tiles, ASan        | ubuntu   | clang-22 | newest (clang) | yes   |       | yes      |       | yes       |     | address  |      |
 # | GCC 9, Curses, LTO                   | ubuntu   | gcc-9    | oldest   (gcc) |       |       | yes      |       | yes       | yes |          |      |
-# | GCC 14, Ubuntu, Curses               | ubuntu   | gcc-14   | newest   (gcc) |       |       | yes      |       |           |     |          |      |
+# | GCC 16, Ubuntu, Curses               | ubuntu   | gcc-16   | newest   (gcc) |       |       | yes      |       |           |     |          |      |
 # | GCC 9, Ubuntu, Tiles, Sound, CMake   | ubuntu   | gcc-9    | oldest   (gcc) | yes   | yes   |          | yes   |           |     |          |      |
 # | macOS 15, Apple Clang 17             | macOS 15 | apple clang-17  |  N/A    | yes   | yes   | yes      |       |           |     |          |      |
 # | Windows (in msvc-full-features.yml)  | windows  | msvc     |     N/A        | yes   | yes   | yes      |       | yes?      |     |          |      |
@@ -135,8 +140,8 @@ jobs:
       max-parallel: ${{ fromJSON(needs.matrix-variables.outputs.max_parallel) }}
       matrix:
         include:
-          - compiler: clang++-13
-            os: ubuntu-22.04
+          - compiler: clang++-14
+            os: ubuntu-24.04
             tiles: 0
             sound: 0
             cmake: 0
@@ -150,7 +155,8 @@ jobs:
             mods: magiclysm|xedra_evolved
             title: Basic Build (Clang oldest supported, Ubuntu, Curses)
             ccache_limit: 4.5G
-            ccache_key: linux-llvm-13
+            ccache_key: linux-llvm-14
+            extra_package: clang-14
 
           - compiler: clang++
             os: macos-15
@@ -159,14 +165,14 @@ jobs:
             pch: 0
             tiles: 1
             sound: 1
-            sdl3: 0
+            sdl3: 1
             localize: 1
             lua_platform: 1
             # Preserve universal Lua game-link and DMG coverage; other matrix
             # legs cover test compilation.
-            title: macOS 15, Apple Clang 17, Tiles, Sound, SDL2
+            title: macOS 15, Apple Clang 17, Tiles, Sound, SDL3
             ccache_limit: 12G
-            ccache_key: macos-llvm-17-sdl2
+            ccache_key: macos-llvm-17-sdl3
 
           - title: Android arm64-v8a (build only)
             os: ubuntu-latest
@@ -195,24 +201,24 @@ jobs:
             ccache_key: linux-gcc-9-lto
             extra_package: g++-9
 
-          - compiler: clang++-18
-            os: ubuntu-24.04
+          - compiler: clang++-22
+            os: ubuntu-26.04
             cmake: 0
             tiles: 1
             sound: 0
-            sdl3: 0
+            sdl3: 1
             localize: 1
             lua_platform: 1
             native: linux64
             pch: 1
             sanitize: address
-            title: Clang 18, Ubuntu, Tiles, ASan
+            title: Clang 22, Ubuntu, Tiles, ASan
             native_tests: true
             ccache_limit: 6G
-            ccache_key: linux-llvm-18-asan
+            ccache_key: linux-llvm-22-asan
 
-          - compiler: g++-14
-            os: ubuntu-latest
+          - compiler: g++-16
+            os: ubuntu-26.04
             cmake: 0
             tiles: 0
             sound: 0
@@ -227,16 +233,17 @@ jobs:
             pch: 1
             semantic_acceptance: true
             native_tests: true
-            title: GCC 14, Ubuntu, Curses, Lua API
+            title: GCC 16, Ubuntu, Curses, Lua API
             ccache_limit: 6.5G
-            ccache_key: linux-gcc-14
+            ccache_key: linux-gcc-16
+            extra_package: g++-16
 
           - compiler: g++-9
             os: ubuntu-24.04
             cmake: 1
             tiles: 1
             sound: 1
-            sdl3: 0
+            sdl3: 1
             localize: 0
             lua_platform: 1
             native: linux64
@@ -308,7 +315,7 @@ jobs:
         persist-credentials: false
     - name: download prebuilt shader artifacts
       if: ${{ env.SKIP == 'false' && ((matrix.tiles == 1 && matrix.sdl3 == 1) || matrix.android != '') }}
-      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
       with:
         name: cdda-shaders
         path: data/shaders
@@ -322,10 +329,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install libncursesw5-dev ccache gettext parallel ${{ matrix.extra_package }}
           sudo locale-gen en_US.UTF-8 de_DE.UTF-8
-    - name: install SDL2 dependencies (ubuntu)
-      if: ${{ env.SKIP == 'false' && runner.os == 'Linux' && matrix.tiles == 1 && matrix.sdl3 != 1 && matrix.android == '' }}
-      run: |
-          sudo apt-get install libflac-dev libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libsdl2-mixer-dev libpulse-dev
     - name: setup SDL3 stack (ubuntu)
       if: ${{ env.SKIP == 'false' && runner.os == 'Linux' && matrix.tiles == 1 && matrix.sdl3 == 1 }}
       uses: ./.github/actions/setup-sdl3-stack
@@ -344,37 +347,25 @@ jobs:
       run: |
           HOMEBREW_NO_AUTO_UPDATE=yes HOMEBREW_NO_INSTALL_CLEANUP=yes brew install gettext ccache parallel
     - name: install PR dmgdist dependencies (mac)
-      if: ${{ env.SKIP == 'false' && github.event_name == 'pull_request' && github.event.pull_request.draft == false && runner.os == 'macOS' && matrix.tiles == 1 && matrix.sdl3 != 1 }}
-      continue-on-error: true
+      if: ${{ env.SKIP == 'false' && ((github.event_name == 'pull_request' && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' && inputs.package_artifacts)) && runner.os == 'macOS' && matrix.tiles == 1 && matrix.sdl3 == 1 }}
+      continue-on-error: ${{ github.event_name != 'workflow_dispatch' || !inputs.package_artifacts }}
       run: |
           HOMEBREW_NO_AUTO_UPDATE=yes HOMEBREW_NO_INSTALL_CLEANUP=yes brew install dylibbundler
           pip3 install --break-system-packages dmgbuild biplist
-    - name: install SDL2 frameworks (mac)
-      if: ${{ env.SKIP == 'false' && runner.os == 'macOS' && matrix.tiles == 1 && matrix.sdl3 != 1 }}
-      uses: BrettDong/setup-sdl2-frameworks@a8ca795ef904417e9ddcb010ef6bf2d11779dbe3 # v2
+    - name: Setup universal SDL3 stack (mac)
+      if: ${{ env.SKIP == 'false' && runner.os == 'macOS' && matrix.tiles == 1 }}
+      uses: ./.github/actions/setup-sdl3-stack-macos
       with:
-        sdl2: 2.30.11
-        sdl2-ttf: 2.24.0
-        sdl2-image: 2.8.4
-        sdl2-mixer: 2.8.0
-    - name: install macports (mac, SDL2)
-      if: ${{ env.SKIP == 'false' && runner.os == 'macOS' && matrix.tiles == 1 && matrix.sdl3 != 1 }}
-      uses: melusina-org/setup-macports@c7eb59386def259a274627092566a7f7b8d219b1 # v1
-    - name: install macports packages (mac, SDL2)
-      if: ${{ env.SKIP == 'false' && runner.os == 'macOS' && matrix.tiles == 1 && matrix.sdl3 != 1 }}
-      run: |
-        sudo port install freetype +universal pkgconfig +universal
-    - name: install SDL3 dependencies (mac)
-      if: ${{ env.SKIP == 'false' && runner.os == 'macOS' && matrix.tiles == 1 && matrix.sdl3 == 1 }}
-      run: |
-          HOMEBREW_NO_AUTO_UPDATE=yes HOMEBREW_NO_INSTALL_CLEANUP=yes \
-              brew install pkgconf sdl3 sdl3_image sdl3_ttf sdl3_mixer
+        prefix: ${{ github.workspace }}/../sdl3_prefix
+    - name: Verify SDL3 build contract
+      if: ${{ env.SKIP == 'false' && runner.os == 'Linux' && matrix.test-stage == 1 }}
+      run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest tools.test_sdl3_build_contract -v
     - name: prepare
       if: ${{ env.SKIP == 'false' }}
       run: bash ./build-scripts/requirements.sh
     - name: Fetch translations artifact into build
       if: ${{ env.SKIP == 'false' }}
-      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
       with:
         name: translations
     - name: Get ccache vars
@@ -398,7 +389,7 @@ jobs:
 
     - name: Set up JDK (android)
       if: ${{ env.SKIP == 'false' && runner.os == 'Linux' && matrix.android != '' }}
-      uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+      uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
       with:
         java-version: '17'
         distribution: 'temurin'
@@ -427,11 +418,11 @@ jobs:
       run: bash ./build-scripts/gha_test_only.sh
     # Activity re-entry must preserve AIM's UI even when broad tests are skipped.
     - name: run advanced inventory activity regressions
-      if: ${{ env.SKIP == 'false' && env.SKIP_TESTS == 'true' && matrix.compiler == 'clang++-18' }}
+      if: ${{ env.SKIP == 'false' && env.SKIP_TESTS == 'true' && matrix.compiler == 'clang++-22' }}
       run: ./tests/cata_test '[advanced_inv][activity]' --rng-seed 1001 --order lex --user-dir=test_user_dir_advanced_inventory --error-format=github-action
     # This hidden test clears global session state; keep its process isolated.
     - name: run isolated wait popup cleanup regression
-      if: ${{ env.SKIP == 'false' && matrix.compiler == 'clang++-18' }}
+      if: ${{ env.SKIP == 'false' && matrix.compiler == 'clang++-22' }}
       run: ./tests/cata_test '[.wait_popup_cleanup]' --rng-seed 20260921 --order lex --user-dir=test_user_dir_wait_popup --error-format=github-action
     # Run both focused batches in one process to load game data once.
     - name: run Lua and horde map regressions
@@ -447,7 +438,7 @@ jobs:
       if: ${{ env.SKIP == 'false' && matrix.semantic_acceptance == true }}
       run: ./tests/cata_test 'deadly_bites_*' --mods=deadly_bites --rng-seed 965 --order lex --warn NoTests --user-dir=test_user_dir_deadly_bites --drop-world --error-format=github-action
     - name: upload artifacts if failed
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       if: failure()
       with:
         name: cata_test
@@ -456,10 +447,10 @@ jobs:
         retention-days: 9
     - name: package PR Linux curses artifact
       id: package-pr-linux-curses
-      if: ${{ env.SKIP == 'false' && github.event_name == 'pull_request' && github.event.pull_request.draft == false && runner.os == 'Linux' && matrix.pr_artifact == 'linux-curses' && success() }}
-      continue-on-error: true
+      if: ${{ env.SKIP == 'false' && ((github.event_name == 'pull_request' && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' && inputs.package_artifacts)) && runner.os == 'Linux' && matrix.pr_artifact == 'linux-curses' && success() }}
+      continue-on-error: ${{ github.event_name != 'workflow_dispatch' || !inputs.package_artifacts }}
       env:
-        PR_NUMBER: ${{ github.event.pull_request.number }}
+        PR_NUMBER: ${{ github.event.pull_request.number || github.run_id }}
       shell: bash
       run: |
         set -eo pipefail
@@ -474,40 +465,40 @@ jobs:
     - name: upload PR Linux curses artifact
       id: upload-pr-linux-curses
       if: ${{ steps.package-pr-linux-curses.outcome == 'success' }}
-      continue-on-error: true
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      continue-on-error: ${{ github.event_name != 'workflow_dispatch' || !inputs.package_artifacts }}
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
-        name: ccb-pr-linux-curses-pr-${{ github.event.pull_request.number }}
-        path: ccb-pr-linux-curses-${{ github.event.pull_request.number }}.tar.gz
+        name: ccb-pr-linux-curses-pr-${{ github.event.pull_request.number || github.run_id }}
+        path: ccb-pr-linux-curses-${{ github.event.pull_request.number || github.run_id }}.tar.gz
         if-no-files-found: error
         retention-days: 14
     - name: package PR macOS tiles artifact
       id: package-pr-macos-tiles
-      if: ${{ env.SKIP == 'false' && github.event_name == 'pull_request' && github.event.pull_request.draft == false && runner.os == 'macOS' && matrix.tiles == 1 && matrix.sdl3 != 1 && success() }}
-      continue-on-error: true
+      if: ${{ env.SKIP == 'false' && ((github.event_name == 'pull_request' && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' && inputs.package_artifacts)) && runner.os == 'macOS' && matrix.tiles == 1 && matrix.sdl3 == 1 && success() }}
+      continue-on-error: ${{ github.event_name != 'workflow_dispatch' || !inputs.package_artifacts }}
       env:
-        PR_NUMBER: ${{ github.event.pull_request.number }}
+        PR_NUMBER: ${{ github.event.pull_request.number || github.run_id }}
       shell: bash
       run: |
         set -eo pipefail
-        make -j1 CCACHE=1 LINTJSON=0 DEBUG_SYMBOLS=1 NATIVE=osx TILES=1 SOUND=1 SDL3=0 RELEASE=1 LOCALIZE=1 LANGUAGES=all BACKTRACE=1 PCH=0 FRAMEWORK=1 UNIVERSAL_BINARY=1 WARN_STALE_DATA=0 dmgdist
+        make -j1 CCACHE=1 LINTJSON=0 DEBUG_SYMBOLS=1 NATIVE=osx TILES=1 SOUND=1 SDL3=1 RELEASE=1 LOCALIZE=1 LANGUAGES=all BACKTRACE=1 PCH=0 UNIVERSAL_BINARY=1 WARN_STALE_DATA=0 dmgdist
         cp -- Cataclysm.dmg "ccb-pr-macos-tiles-${PR_NUMBER}.dmg"
     - name: upload PR macOS tiles artifact
       id: upload-pr-macos-tiles
       if: ${{ steps.package-pr-macos-tiles.outcome == 'success' }}
-      continue-on-error: true
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      continue-on-error: ${{ github.event_name != 'workflow_dispatch' || !inputs.package_artifacts }}
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
-        name: ccb-pr-macos-tiles-pr-${{ github.event.pull_request.number }}
-        path: ccb-pr-macos-tiles-${{ github.event.pull_request.number }}.dmg
+        name: ccb-pr-macos-tiles-pr-${{ github.event.pull_request.number || github.run_id }}
+        path: ccb-pr-macos-tiles-${{ github.event.pull_request.number || github.run_id }}.dmg
         if-no-files-found: error
         retention-days: 14
     - name: package PR Android arm64-v8a artifact
       id: package-pr-android-arm64-v8a
-      if: ${{ env.SKIP == 'false' && github.event_name == 'pull_request' && github.event.pull_request.draft == false && runner.os == 'Linux' && matrix.android == 'arm64' && success() }}
-      continue-on-error: true
+      if: ${{ env.SKIP == 'false' && ((github.event_name == 'pull_request' && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' && inputs.package_artifacts)) && runner.os == 'Linux' && matrix.android == 'arm64' && success() }}
+      continue-on-error: ${{ github.event_name != 'workflow_dispatch' || !inputs.package_artifacts }}
       env:
-        PR_NUMBER: ${{ github.event.pull_request.number }}
+        PR_NUMBER: ${{ github.event.pull_request.number || github.run_id }}
       shell: bash
       run: |
         set -eo pipefail
@@ -522,11 +513,11 @@ jobs:
     - name: upload PR Android arm64-v8a artifact
       id: upload-pr-android-arm64-v8a
       if: ${{ steps.package-pr-android-arm64-v8a.outcome == 'success' }}
-      continue-on-error: true
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      continue-on-error: ${{ github.event_name != 'workflow_dispatch' || !inputs.package_artifacts }}
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
-        name: ccb-pr-android-arm64-v8a-pr-${{ github.event.pull_request.number }}
-        path: ccb-pr-android-arm64-v8a-${{ github.event.pull_request.number }}.apk
+        name: ccb-pr-android-arm64-v8a-pr-${{ github.event.pull_request.number || github.run_id }}
+        path: ccb-pr-android-arm64-v8a-${{ github.event.pull_request.number || github.run_id }}.apk
         if-no-files-found: error
         retention-days: 14
   #emscripten:
