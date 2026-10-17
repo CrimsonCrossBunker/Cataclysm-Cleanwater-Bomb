@@ -260,7 +260,7 @@ units::volume vehicle_stack::stored_volume() const
 
 // Vehicle class methods.
 
-vehicle::vehicle( const vproto_id &proto_id ) : uid_()
+vehicle::vehicle( const vproto_id &proto_id )
 {
     face.init( 0_degrees );
     move.init( 0_degrees );
@@ -5531,11 +5531,16 @@ void vehicle::consume_fuel( map &here, int load, bool idling )
         to_consume *= load * ( 1 + st * st * 100 ) / 1000;
         auto inserted = fuel_used_last_turn.insert( { ft, 0_J } );
         inserted.first->second += to_consume;
-        units::energy remainder = fuel_remainder[ ft ];
+        // Only a fraction of a charge can carry over.  Unserved demand after
+        // running out of fuel must not be collected when the engine is refilled.
+        // Clamp old saved remainders too, before consuming the new fuel supply.
+        const units::energy minimum_remainder = std::min( 0_J, 1_J - item( ft ).fuel_energy() );
+        units::energy remainder = std::max( fuel_remainder[ ft ], minimum_remainder );
         to_consume -= remainder;
 
         if( to_consume > 0_J ) {
-            fuel_remainder[ ft ] = drain_energy( ft, to_consume ) - to_consume;
+            fuel_remainder[ ft ] = std::max( drain_energy( ft, to_consume ) - to_consume,
+                                             minimum_remainder );
         } else {
             fuel_remainder[ ft ] = -to_consume;
         }
