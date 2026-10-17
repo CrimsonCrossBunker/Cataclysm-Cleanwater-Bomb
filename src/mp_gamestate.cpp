@@ -581,7 +581,7 @@ static bool g_client_acted_this_turn = false;
 // Server: elapsed wait time (ms) in the last wait_for_client_action() call.
 static int g_wait_elapsed_ms = 0;
 // Server: duration (ms) of the last monmove() (AI turn) call; set by do_turn.cpp.
-static int g_last_monmove_ms = 0;
+[[maybe_unused]] static int g_last_monmove_ms = 0;
 
 // Server: short label for the last action type received from the client this turn.
 // Reset to em-dash by grant_client_turn() at the start of each host turn.
@@ -669,7 +669,7 @@ static std::pair<int, int> mp_worst_limb_hp( const Character &c )
 // Co-op panel: drift = local calendar - partner calendar.  Under lockstep
 // both sides should always advance together; nonzero drift is a useful sanity
 // indicator for the player.
-static int g_partner_calendar_turn = 0;
+[[maybe_unused]] static int g_partner_calendar_turn = 0;
 // Last name the partner reported.  Used by the Co-op panel as a fallback when
 // the local proxy NPC isn't (yet) resolvable — proxy spawn races the panel on
 // first connect; this lets the panel still show *something* instead of

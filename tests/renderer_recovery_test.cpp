@@ -703,48 +703,54 @@ TEST_CASE( "scaled_pointer_coordinates_cover_the_complete_text_and_map_windows",
     for( const int display_scale : {
              1, 2, 4
          } ) {
-        const int terminal_w = std::max( min_term_w, 100 );
-        const int terminal_h = std::max( min_term_h, 60 );
-        renderer_recovery_test_support::set_scaling_and_resize_window(
-            display_scale, terminal_w * font_w * display_scale,
-            terminal_h * font_h * display_scale );
-        renderer_coordinator.drain_pending();
-        REQUIRE( renderer_coordinator.is_render_allowed() );
+        // Exercise both exact multiples and a remainder border in the
+        // explicit display-buffer presentation rectangle.
+        for( const int extra_pixels : {
+                 0, 3
+             } ) {
+            const int terminal_w = std::max( min_term_w, 100 );
+            const int terminal_h = std::max( min_term_h, 60 );
+            renderer_recovery_test_support::set_scaling_and_resize_window(
+                display_scale, terminal_w * font_w * display_scale + extra_pixels,
+                terminal_h * font_h * display_scale + extra_pixels );
+            renderer_coordinator.drain_pending();
+            REQUIRE( renderer_coordinator.is_render_allowed() );
 
-        int window_w = 0;
-        int window_h = 0;
-        int current_font_w = 0;
-        int current_font_h = 0;
-        int current_scaling = 0;
-        renderer_recovery_test_support::current_window_metrics(
-            window_w, window_h, current_font_w, current_font_h, current_scaling,
-            min_term_w, min_term_h );
-        CAPTURE( display_scale, window_w, window_h, current_font_w,
-                 current_font_h, current_scaling );
-        REQUIRE( current_scaling == display_scale );
+            int window_w = 0;
+            int window_h = 0;
+            int current_font_w = 0;
+            int current_font_h = 0;
+            int current_scaling = 0;
+            renderer_recovery_test_support::current_window_metrics(
+                window_w, window_h, current_font_w, current_font_h, current_scaling,
+                min_term_w, min_term_h );
+            CAPTURE( display_scale, extra_pixels, window_w, window_h, current_font_w,
+                     current_font_h, current_scaling );
+            REQUIRE( current_scaling == display_scale );
 
-        // Aim at the centre of the bottom-right cell. At 2x/4x this is far
-        // outside the upper-left fraction that a second scale division leaves
-        // reachable.
-        const point target_buffer_pixel(
-            ( window_origin_cells.x + target_cell.x ) * current_font_w +
-            current_font_w / 2,
-            ( window_origin_cells.y + target_cell.y ) * current_font_h +
-            current_font_h / 2 );
-        const point target_window_pixel = target_buffer_pixel * display_scale;
+            // Aim at the centre of the bottom-right cell. At 2x/4x this is far
+            // outside the upper-left fraction that a second scale division leaves
+            // reachable.
+            const point target_buffer_pixel(
+                ( window_origin_cells.x + target_cell.x ) * current_font_w +
+                current_font_w / 2,
+                ( window_origin_cells.y + target_cell.y ) * current_font_h +
+                current_font_h / 2 );
+            const point target_window_pixel = target_buffer_pixel * display_scale;
 
-        const std::optional<point> text_cell =
-            renderer_recovery_test_support::text_cell_at_window_point(
-                target_window_pixel, capture_win );
-        REQUIRE( text_cell );
-        CHECK( *text_cell == target_cell );
+            const std::optional<point> text_cell =
+                renderer_recovery_test_support::text_cell_at_window_point(
+                    target_window_pixel, capture_win );
+            REQUIRE( text_cell );
+            CHECK( *text_cell == target_cell );
 
-        const std::optional<point> map_cell =
-            renderer_recovery_test_support::map_cell_at_window_point(
-                target_window_pixel, capture_win, map_center );
-        REQUIRE( map_cell );
-        CHECK( *map_cell == map_center + target_cell -
-               window_size_cells / 2 );
+            const std::optional<point> map_cell =
+                renderer_recovery_test_support::map_cell_at_window_point(
+                    target_window_pixel, capture_win, map_center );
+            REQUIRE( map_cell );
+            CHECK( *map_cell == map_center + target_cell -
+                   window_size_cells / 2 );
+        }
     }
 }
 

@@ -27,7 +27,6 @@ void clear_reprobe()
 
 } // namespace cata_shader
 
-#if SDL_MAJOR_VERSION >= 3
 
 #include <array>
 #include <cstdlib>
@@ -784,6 +783,5 @@ void variant_pass::rebind_renderer( SDL_Renderer *renderer )
 
 } // namespace cata_shader
 
-#endif // SDL_MAJOR_VERSION >= 3
 
 #endif // TILES

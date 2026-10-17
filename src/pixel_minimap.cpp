@@ -276,11 +276,7 @@ bool pixel_minimap::flush_cache_updates()
             "pixel_minimap::flush_cache_updates: renderer boundary recovery pending" );
     }
 
-#if SDL_MAJOR_VERSION >= 3
     cata_shader::variant_pass *const vp = get_shared_variant_pass();
-#else
-    cata_shader::variant_pass *const vp = nullptr;
-#endif
 
     // Capture the prior target once; every chunk shares the same caller target.
     SDL_Texture *const prior_target = SDL_GetRenderTarget( renderer.get() );
@@ -530,9 +526,7 @@ void pixel_minimap::render( const tripoint_bub_ms &center, const bool chunks_rep
     }
 
     scoped_render_target main_scope( renderer, main_tex.get()
-#if SDL_MAJOR_VERSION >= 3
                                      , get_shared_variant_pass()
-#endif
                                    );
     if( !main_scope.is_valid() ) {
         if( !main_scope.boundary_intact() ) {

@@ -10,6 +10,13 @@
 > This in-repository body is no longer maintained. The historical body is retained through `2027-02-02` and may then be removed; this bilingual entry banner remains permanently.
 > 本仓库正文不再维护；历史正文至少保留到上述日期，之后可删除，但本双语迁移入口永久保留。
 <!-- CCB-DOC-MOVED-END -->
+
+> CCB SDL3 migration (2026-10-07): tiles builds now require SDL3 >= 3.4.0;
+> the SDL2 backend and fallback switches have been removed. The checked-in
+> [CMake contract](../../CMakeLists.txt), [Make contract](../../Makefile), and
+> [CI SDK setup](../../.github/actions/setup-sdl3-stack/action.yml) define the
+> current requirements. Other parts of the historical body below may be stale.
+
 # Compiling
 * [General Linux Guide](#general-linux-guide)
   * [Compiler](#compiler)
@@ -92,7 +99,7 @@ Given you're building from source you have a number of choices to make:
   * `RELEASE=1` - without this you'll get a debug build (see note below)
   * `LTO=1` - enables link-time optimization with GCC/Clang
   * `TILES=1` - with this you'll get the tiles version, without it the curses version. Tiles builds use SDL3 by default.
-  * `SDL3=0` - use the SDL2 fallback for tiles builds
+  * `SDL3=0 TILES=1` - rejected; SDL3 is the only supported tiles backend
   * `SOUND=1` - if you want sound
   * `LOCALIZE=0` - this disables localizations so `gettext` is not needed
   * `CLANG=1` - use Clang instead of GCC
@@ -183,13 +190,10 @@ A more comprehensive alternative is:
 
     make -j2 TILES=1 SOUND=1 RELEASE=1 USE_HOME_DIR=1
 
-To build the SDL2 fallback explicitly, pass `SDL3=0`:
 
-    make -j2 TILES=1 SOUND=1 SDL3=0 RELEASE=1 USE_HOME_DIR=1
+CMake tiles builds require SDL3. `USE_SDL3=OFF` with `TILES=ON` is an error. Windows MSVC tiled configurations also use SDL3; `UseSDL3=false` is rejected.
 
-For CMake, `-DTILES=ON` also defaults to SDL3; pass `-DUSE_SDL3=OFF` to build the SDL2 fallback. For Windows MSVC, tiled configurations default to SDL3; pass `-p:UseSDL3=false` to build the SDL2 fallback.
-
-The Windows release builds use the same MSVC project for both variants: pass `-p:UseSDL3=false` for the SDL2 package and `-p:UseSDL3=true` for the SDL3 package.
+The Windows release builds use the SDL3 MSVC project and package the required mpg123 runtime DLLs and license.
 
 The -j2 flag means it will compile with two parallel processes. It can be omitted or changed to -j4 in a more modern processor. If there is no desire to have sound, those flags can also be omitted. The USE_HOME_DIR flag places the user files, like configurations and saves, into the home folder, making it easier for backups, and can also be omitted.
 
@@ -200,7 +204,6 @@ Once the above libraries are installed, compile the default SDL3 tiles build wit
 
     make -j$(nproc) TILES=1 SOUND=1 RELEASE=1
 
-If you still want to use the SDL2 fallback, install the SDL2 libraries instead and pass `SDL3=0`.
 
 
 # Debian
@@ -243,7 +246,7 @@ Install:
 
     sudo apt-get install libsdl3-dev libsdl3-ttf-dev libsdl3-image-dev libsdl3-mixer-dev libfreetype6-dev glslang-tools build-essential
 
-If your Debian/Ubuntu release does not package SDL3 >= 3.4.0 and the SDL3 satellite libraries, build them from the upstream SDL release branches. To use the SDL2 fallback with the older SDL2 packages, pass `SDL3=0` when building.
+If your Debian/Ubuntu release does not package SDL3 >= 3.4.0 and the SDL3 satellite libraries, build them from the upstream SDL release branches.
 
 ### Building
 
@@ -278,61 +281,9 @@ Run:
 
 ## Cross-compile to Windows from Linux
 
-To cross-compile to Windows from Linux, you will need MXE, which changes your `make` command slightly. These instructions were written from Ubuntu 20.04, but should be applicable to any Debian-based environment. Please adjust all package manager instructions to match your environment.
-
-Dependencies:
-
-  * [MXE](http://mxe.cc)
-  * [MXE Requirements](http://mxe.cc/#requirements)
-
-Installation
-
-<!-- astyle and lzip added to initial sudo apt install string to forestall complaints from MinGW and make -->
-<!-- ncurses removed from make MXE_TARGETS because we're not gonna be cross-compiling ncurses -->
-
-```bash
-sudo apt install astyle autoconf automake autopoint bash bison bzip2 cmake flex gettext git g++ gperf intltool libffi-dev libgdk-pixbuf2.0-dev libtool libltdl-dev libssl-dev libxml-parser-perl lzip make mingw-w64 openssl p7zip-full patch perl pkg-config python3 ruby scons sed unzip wget xz-utils g++-multilib libc6-dev-i386 libtool-bin
-mkdir -p ~/src/libbacktrace
-cd ~/src
-git clone https://github.com/CleverRaven/Cataclysm-DDA.git
-git clone https://github.com/mxe/mxe.git
-cd mxe
-make -j$((`nproc`+0)) MXE_TARGETS='x86_64-w64-mingw32.static i686-w64-mingw32.static' MXE_PLUGIN_DIRS=plugins/gcc11 sdl2 sdl2_ttf sdl2_image sdl2_mixer gettext
-cd ../libbacktrace/
-wget https://github.com/Qrox/libbacktrace/releases/download/2020-01-03/libbacktrace-x86_64-w64-mingw32.tar.gz
-wget https://github.com/Qrox/libbacktrace/releases/download/2020-01-03/libbacktrace-i686-w64-mingw32.tar.gz
-tar -xzf libbacktrace-x86_64-w64-mingw32.tar.gz --exclude=LICENSE -C ~/src/mxe/usr/x86_64-w64-mingw32.static
-tar -xzf libbacktrace-i686-w64-mingw32.tar.gz --exclude=LICENSE -C ~/src/mxe/usr/i686-w64-mingw32.static
-```
-
-Building all these packages from MXE might take a while, even on a fast computer. Be patient; the `-j` flag will take advantage of all your processor cores. If you are not planning on building for both 32-bit and 64-bit, you might want to adjust your MXE_TARGETS.  Additionally if not building for a particular target you can skip the curl and tar commands for the targets NOT being built.
-
-An additional note: With C:DDA switching to gcc 11.2 with MXE (MingW), if you've previously built MXE you'll need to "make clean" and rebuild it to get gcc11.
-
-Edit your `~/.profile` as follows:
-
-```bash
-export PLATFORM_32="~/src/mxe/usr/bin/i686-w64-mingw32.static-"
-export PLATFORM_64="~/src/mxe/usr/bin/x86_64-w64-mingw32.static-"
-```
-
-This is to ensure that the variables for the `make` command will not get reset after a power cycle.
-
-### Building (SDL)
-
-These MXE instructions build the SDL2 fallback. SDL3 cross-compilation requires equivalent SDL3, SDL3_image, SDL3_ttf, SDL3_mixer, and shader toolchain packages.
-
-    cd ~/src/Cataclysm-DDA
-
-Run one of the following commands based on your targeted environment:
-
-```bash
-make -j$((`nproc`+0)) CROSS="${PLATFORM_32}" TILES=1 SOUND=1 SDL3=0 RELEASE=1 LOCALIZE=1 bindist
-make -j$((`nproc`+0)) CROSS="${PLATFORM_64}" TILES=1 SOUND=1 SDL3=0 RELEASE=1 LOCALIZE=1 bindist
-```
-
-
-<!-- Building ncurses for Windows is a nonstarter, so the directions were removed. -->
+The former SDL2 MXE toolchain is retired. A maintained SDL3 cross toolchain is
+required; use [MSYS2](COMPILING-MSYS.md) or [MSVC/vcpkg](COMPILING-VS-VCPKG.md)
+for native Windows builds.
 
 ## Cross-compile to Mac OS X from Linux
 
@@ -378,7 +329,6 @@ Populated with respective frameworks, dylibs and headers.
 Tested lib versions are libintl.8.dylib for gettext and libncurses.5.4.dylib for ncurses.
 These libs were obtained from `homebrew` binary distribution at OS X 10.11.
 Frameworks were obtained from the SDL official website as described in the next [section](#sdl).
-If you use SDL2 frameworks instead, add `SDL3=0` to the build command.
 
 ### Building (SDL)
 
@@ -416,10 +366,10 @@ The Gradle project lives under `android/`. Build it from the command line or ope
   * Android NDK 28.1.13356709 (r28b) - bundled 16 KB page-size alignment is required for Play under targetSdk 35
   * AGP 8.7 and Gradle 8.9 (Gradle wrapper auto-downloads)
   * SDL3 Android AARs (auto-downloaded with SHA256 pinning by the `fetchSdl3Aars` Gradle task):
-    * SDL3 3.4.8
+    * SDL3 3.4.10
     * SDL3_image 3.4.4
     * SDL3_ttf 3.2.2
-    * SDL3_mixer 3.2.2
+    * SDL3_mixer 3.2.4
 
 ### Setup
 
@@ -529,7 +479,7 @@ For most people, the simple Homebrew installation is enough. For developers, her
 
 ### SDL
 
-SDL3, SDL3_image, and SDL3_ttf are needed for the default tiles build. Optionally, you can add SDL3_mixer for sound support. Cataclysm can be built using either the SDL framework or shared libraries built from source. To build the SDL2 fallback, install the SDL2 libraries instead and pass `SDL3=0`.
+SDL3, SDL3_image, and SDL3_ttf are needed for the default tiles build. Optionally, you can add SDL3_mixer for sound support. Cataclysm can be built using either the SDL framework or shared libraries built from source.
 
 The SDL framework files can be downloaded here:
 
@@ -562,7 +512,6 @@ For MacPorts:
 
 Build the SDL3 libraries from the upstream SDL release branches if your MacPorts tree does not provide recent enough SDL3 ports.
 
-For SDL2 fallback builds, use the SDL2 packages and add `SDL3=0` to the `make` command.
 
 ### ncurses and gettext
 
@@ -741,9 +690,6 @@ Install the following with pkg (or from Ports):
 
 Default tiles builds also require SDL3, SDL3_image, SDL3_ttf, and SDL3_mixer if building with sound. If your FreeBSD packages do not provide SDL3 >= 3.4.0, build the SDL3 stack from the upstream release branches.
 
-For SDL2 fallback builds, install the SDL2 packages and pass `SDL3=0`:
-
-    pkg install sdl20 sdl2_image sdl2_mixer sdl2_ttf
 
 Then you should be able to build with something like this:
 
@@ -760,9 +706,6 @@ Install necessary dependencies:
 
 Default tiles builds also require SDL3, SDL3_image, SDL3_ttf, and SDL3_mixer if building with sound. If those are not available from packages, build the SDL3 stack from the upstream release branches.
 
-For SDL2 fallback builds, install the SDL2 packages and pass `SDL3=0`:
-
-    pkg_add sdl2 sdl2-image sdl2-mixer sdl2-ttf
 
 Compiling:
 
@@ -796,9 +739,7 @@ Then you should be able to build with something like:
 
     CXX=eg++ gmake
 
-Only an ncurses build is possible on 5.8-release, as SDL2 is broken. On recent -current or snapshots, use SDL3 packages if they are available, or build the SDL3 stack from the upstream release branches. For SDL2 fallback builds, install the SDL2 packages and pass `SDL3=0`:
-
-    pkg_add sdl2 sdl2-image sdl2-mixer sdl2-ttf
+On recent snapshots, use SDL3 packages if available, or build the SDL3 stack from upstream release branches.
 
 and build with:
 
@@ -818,6 +759,6 @@ gmake # ncurses builds
 LDFLAGS="-L/usr/pkg/lib" gmake TILES=1 # tiles builds
 ```
 
-If only SDL2 packages are available, add `SDL3=0` to the tiles build command.
+Tiles builds require SDL3 packages or a source installation; there is no SDL2 fallback.
 
 SDL builds currently compile, but did not run in my testing - not only do they segfault, but gdb segfaults when reading the debug symbols! Perhaps your mileage will vary.
