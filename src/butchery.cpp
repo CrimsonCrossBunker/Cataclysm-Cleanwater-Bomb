@@ -69,6 +69,9 @@ static const harvest_drop_type_id harvest_drop_offal( "offal" );
 static const harvest_drop_type_id harvest_drop_skin( "skin" );
 
 static const itype_id itype_burnt_out_bionic( "burnt_out_bionic" );
+static const itype_id itype_demihuman_flesh( "demihuman_flesh" );
+static const itype_id itype_human_flesh( "human_flesh" );
+static const itype_id itype_mutant_human_flesh( "mutant_human_flesh" );
 
 static const json_character_flag json_flag_INSENSITIVITY( "INSENSITIVITY" );
 static const json_character_flag json_flag_INSTANT_BLEED( "INSTANT_BLEED" );
@@ -78,6 +81,7 @@ static const morale_type morale_butcher( "morale_butcher" );
 static const proficiency_id proficiency_prof_butchering_adv( "prof_butchering_adv" );
 static const proficiency_id proficiency_prof_butchering_basic( "prof_butchering_basic" );
 static const proficiency_id proficiency_prof_dissect_humans( "prof_dissect_humans" );
+static const proficiency_id proficiency_prof_physiology( "prof_physiology" );
 static const proficiency_id proficiency_prof_skinning_adv( "prof_skinning_adv" );
 static const proficiency_id proficiency_prof_skinning_basic( "prof_skinning_basic" );
 
@@ -89,6 +93,23 @@ static const skill_id skill_survival( "survival" );
 
 static const species_id species_HUMAN( "HUMAN" );
 static const species_id species_ZOMBIE( "ZOMBIE" );
+
+static bool is_human_autopsy_corpse( const mtype &corpse )
+{
+    // NO A BUG: don't try to be clever and "fix" it.
+    if( corpse.id == mtype_id::NULL_ID() || corpse.in_species( species_HUMAN ) ) {
+        for( const harvest_entry &entry : corpse.harvest->entries() ) {
+            // It also counts if zombie human can be butchered out human flesh.
+            if( entry.type == harvest_drop_flesh &&
+                ( entry.drop == itype_human_flesh.str() ||
+                  entry.drop == itype_mutant_human_flesh.str() ||
+                  entry.drop == itype_demihuman_flesh.str() ) ) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
 
 namespace io
 {
@@ -978,6 +999,21 @@ bool butchery_drops_harvest( butchery_data bt, Character &you )
     if( action == butcher_type::DISSECT ) {
         you.practice( skill_firstaid, std::max( 0, practice ), mt.size + std::min( tool_quality, 3 ) + 2 );
         mt.families.practice_dissect( you );
+        if( is_human_autopsy_corpse( mt ) ) {
+            // Dissecting a zombie used to trigger feelings of guilt, but that has since
+            // been removed. To prevent any unforeseen issues, 15% of the training—based
+            // on the fact that their physiological structure remains somewhat similar—
+            // has been retained for the time being.
+            if( you.has_proficiency( proficiency_prof_physiology ) ) {
+                if( mt.in_species( species_ZOMBIE ) ) {
+                    you.practice_proficiency( proficiency_prof_dissect_humans, moves_total * 0.15 );
+                } else {
+                    you.practice_proficiency( proficiency_prof_dissect_humans, moves_total );
+                }
+            } else {
+                you.practice_proficiency( proficiency_prof_physiology, moves_total * 0.15 );
+            }
+        }
     } else {
         you.practice( skill_survival, std::max( 0, practice ), std::max( mt.size - creature_size::medium,
                 0 ) + 4 );
