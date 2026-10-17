@@ -209,11 +209,11 @@
     "color": "light_gray",
     "required_level": 6,
     "max_level": 8,
-    "intelligence": 11,
+    "intelligence": 10,
     "proficiencies": [ { "proficiency": "prof_dissect_humans", "time_factor": 0.75, "fail_factor": 0.5 } ],
     "time": "45 m",
     "melee_damage": { "bash": 6 },
     "read_skill": "firstaid",
-    "read_fun": -2
+    "read_fun": -4
   }
 ]
