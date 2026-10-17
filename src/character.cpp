@@ -7989,7 +7989,7 @@ int Character::insensitivity_score() const
     const int days_survived = std::max( to_days<int>( calendar::turn - calendar::start_of_cataclysm ),
                                         0 );
     return mental_metric_guilt_kills * 5 +
-           std::min( mental_metric_human_dissections, 100 ) * 10 +
+           std::max( std::min( mental_metric_human_dissections, 100 ) * 10, has_proficiency( proficiency_prof_dissect_humans ) ? 125 : 0 ) +
            std::min( g->get_kill_tracker().monster_kill_count(), 5000 ) / 10 +
            days_survived * 2 +
            std::min( mental_metric_cannibalism, 100 );
