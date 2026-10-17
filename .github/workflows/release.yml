@@ -240,7 +240,7 @@ jobs:
                 data/shaders/build-msl.stamp
 
     - name: upload shader artifacts
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: cdda-shaders
         path: |
@@ -375,13 +375,13 @@ jobs:
           mv '${{ github.workspace }}/CDDA-Soundpacks/sound/CC-Sounds' '${{ github.workspace }}/data/sound'
       - name: Fetch tileset artifact into build
         if: matrix.tiles == 1
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: tileset-*
           path: gfx
           merge-multiple: true
       - name: Fetch translations artifact into build
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: translations
       - name: Verify translations are present
@@ -403,7 +403,7 @@ jobs:
           echo "Found $count translation .po file(s)."
       - name: Fetch shader artifacts into build (SDL3)
         if: matrix.sdl3 == 1
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: cdda-shaders
           path: data/shaders
