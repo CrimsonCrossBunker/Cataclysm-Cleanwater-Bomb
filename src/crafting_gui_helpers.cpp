@@ -234,7 +234,7 @@ nc_color availability::color( bool ignore_missing_skills ) const
 // Adapted from CDDA #88781: nested categories only need a craftability answer,
 // not the rotten/favorite checks and display metadata for every descendant.
 bool availability::check_can_craft_nested( Character &crafter, const recipe &r,
-        bool camp_crafting, inventory *inventory_override )
+        bool camp_crafting, temp_crafting_inventory *inventory_override )
 {
     for( const recipe_id &nested_r : r.nested_category_data ) {
         const recipe &child = nested_r.obj();
@@ -255,7 +255,8 @@ bool availability::check_can_craft_nested( Character &crafter, const recipe &r,
             !child.character_meets_requirements( crafter ) ) {
             continue;
         }
-        const inventory &inv = camp_crafting ? *inventory_override : crafter.crafting_inventory();
+        const temp_crafting_inventory &inv = camp_crafting ? *inventory_override :
+                                             crafter.crafting_inventory();
         if( child.deduped_requirements().can_make_with_inventory(
                 &crafter, inv, child.get_component_filter( recipe_filter_flags::none ), 1,
                 camp_crafting ? craft_flags::none : craft_flags::start_only ) ) {
@@ -267,7 +268,7 @@ bool availability::check_can_craft_nested( Character &crafter, const recipe &r,
 
 const availability &cached_availability( std::map<const recipe *, availability> &cache,
         Character &crafter, const recipe &rec, bool camp_crafting,
-        inventory *inventory_override )
+        temp_crafting_inventory *inventory_override )
 {
     return cache.try_emplace( &rec, crafter, &rec, 1, camp_crafting,
                               inventory_override ).first->second;
