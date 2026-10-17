@@ -1000,9 +1000,9 @@ bool butchery_drops_harvest( butchery_data bt, Character &you )
             // Dissecting a zombie used to trigger feelings of guilt, but that has since been removed. To prevent any unforeseen issues, 15% of the training—based on the fact that their physiological structure remains somewhat similar—has been retained for the time being.
             if( you.has_proficiency( proficiency_prof_physiology ) ) {
                 if( mt.in_species( species_ZOMBIE ) ) {
-                    you.practice_proficiency( proficiency_prof_dissect_humans, moves_total );
-                } else {
                     you.practice_proficiency( proficiency_prof_dissect_humans, moves_total * 0.15 );
+                } else {
+                    you.practice_proficiency( proficiency_prof_dissect_humans, moves_total);
                 }
             } else {
                 you.practice_proficiency( proficiency_prof_physiology, moves_total * 0.15 );
