@@ -1553,7 +1553,7 @@ void crafting_ui_impl::draw_recipe_info_panel()
                     continue;
                 }
                 const availability &child_avail = cached_availability( *availability_cache, *crafter,
-                                                  child, camp_crafting, inventory_override );
+                    child, camp_crafting, inventory_override );
                 nc_color col = child_avail.color();
                 std::string child_name = child.result_name( true );
                 ImGui::TextColored( cataimgui::imvec4_from_color( c_white ), "  \u2022 " );

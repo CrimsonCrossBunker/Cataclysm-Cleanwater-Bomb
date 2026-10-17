@@ -100,7 +100,7 @@ reaction_run proposed_reactions( monster_planning_values values, reaction_flags 
     }
     if( kind != 0 ) {
         const auto seen = react_to_seen_hostile( run.values, flags.anger_seen, flags.fear_seen,
-                          fleeing, has_target );
+            fleeing, has_target );
         run.values.anger = seen.anger;
         if( !fleeing && has_target ) {
             run.values.morale = seen.morale;
@@ -128,10 +128,10 @@ TEST_CASE( "monster_planning_reactions_preserve_effect_and_rng_sequence",
          } ) {
         for( int anger : {
                  -10, 0, 19, 20, 21, 29, 30, 31, 39, 40, 41, 99
-                 } ) {
+             } ) {
             for( int morale : {
                      -11, 20
-                     } ) {
+                 } ) {
                 for( int kind : {
                          0, 1, 2
                      } ) {
@@ -151,7 +151,7 @@ TEST_CASE( "monster_planning_reactions_preserve_effect_and_rng_sequence",
                                         CAPTURE( seed, anger, morale, kind, fleeing, has_target, nearby, season );
                                         rng_set_engine_seed( seed );
                                         const auto expected = original_reactions( { anger, morale }, flags, kind,
-                                                              fleeing, has_target, nearby, season );
+                                            fleeing, has_target, nearby, season );
                                         const auto engine = rng_get_engine();
                                         rng_set_engine_seed( seed );
                                         const auto actual = proposed_reactions( { anger, morale }, flags, kind,
@@ -177,10 +177,10 @@ TEST_CASE( "monster_weak_target_reaction_preserves_priority_and_thresholds",
 {
     for( int anger : {
              -1, 20, 40, 41, 99
-             } ) {
+         } ) {
         for( int morale : {
                  -10, 0, 20
-                 } ) {
+             } ) {
             for( int hp : {
                      0, 9, 10, 69, 70, 71, 100
                  } ) {
@@ -226,7 +226,7 @@ TEST_CASE( "monster_group_morale_and_swarm_preserve_float_and_branch_semantics",
     const auto engine = rng_get_engine();
     for( int morale : {
              -100, -10, -1, 0, 10, 99
-             } ) {
+         } ) {
         for( float rating : {
                  0.5f, 4.99f, 5.0f, 8.6f, 10.0f, 10.1f, FLT_MAX
              } ) {
@@ -244,7 +244,7 @@ TEST_CASE( "monster_group_morale_and_swarm_preserve_float_and_branch_semantics",
                  } ) {
                 for( int wandering : {
                          -1, 0, 1
-                         } ) {
+                     } ) {
                     monster_swarm_action expected = monster_swarm_action::none;
                     if( swarms ) {
                         if( rating < 5 ) {

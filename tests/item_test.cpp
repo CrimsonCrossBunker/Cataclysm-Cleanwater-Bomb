@@ -343,7 +343,7 @@ static void assert_minimum_length_to_volume_ratio( const item &target )
     }
     // Minimum possible length is if the item is a sphere.
     const float minimal_diameter = std::cbrt( ( 3.0 * units::to_milliliter( target.base_volume() ) ) /
-                                   ( 4.0 * M_PI ) );
+        ( 4.0 * M_PI ) );
     CHECK( units::to_millimeter( target.length() ) >= minimal_diameter * 10.0 );
 }
 
@@ -1350,7 +1350,7 @@ TEST_CASE( "item_relative_rot_after_is_non_mutating", "[item][rot]" )
     const double initial_rot = butter.get_relative_rot();
 
     const double simulated_rot = butter.get_relative_rot_after( temperatures::normal, 1.0f,
-                                 1_hours );
+        1_hours );
 
     CHECK( butter.get_relative_rot() == initial_rot );
     CHECK( simulated_rot > initial_rot );

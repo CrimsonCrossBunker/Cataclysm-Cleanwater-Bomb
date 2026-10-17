@@ -523,11 +523,11 @@ void show_equipment( monster &pet )
 
     const auto selected_slot = [&]() -> std::optional<pet_slot_id> {
         if( slots.empty() )
-        {
-            return std::nullopt;
-        }
-        slot_cursor.selected = std::clamp( slot_cursor.selected, 0,
-                                           static_cast<int>( slots.size() ) - 1 );
+    {
+        return std::nullopt;
+    }
+    slot_cursor.selected = std::clamp( slot_cursor.selected, 0,
+                                       static_cast<int>( slots.size() ) - 1 );
         return slots[slot_cursor.selected];
     };
 
@@ -816,7 +816,7 @@ void show_transfer( monster &pet )
             player_rows.push_back( {
                 entry->display_name(),
                 string_format( _( "%1$d g  %2$s %3$s" ), units::to_gram( entry->weight() ),
-                               format_volume( entry->volume() ), volume_units_abbr() ),
+                format_volume( entry->volume() ), volume_units_abbr() ),
                 c_white
             } );
         }
@@ -833,7 +833,7 @@ void show_transfer( monster &pet )
             pet_rows.push_back( {
                 string_format( _( "%1$s: %2$s" ), location, entry.display_name() ),
                 string_format( _( "%1$s / %2$d g" ), format_volume( entry.volume() ),
-                               units::to_gram( entry.weight() ) ),
+                units::to_gram( entry.weight() ) ),
                 c_white
             } );
         }

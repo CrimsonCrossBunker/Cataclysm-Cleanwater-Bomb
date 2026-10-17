@@ -290,7 +290,7 @@ static void split_loaded_stackable_container_contents( std::list<item> &items )
 static void split_loaded_stackable_container_contents( std::vector<item> &items )
 {
     const size_t split_count = static_cast<size_t>( std::count_if(
-                                   items.begin(), items.end(), stackable_container_contents_need_split ) );
+            items.begin(), items.end(), stackable_container_contents_need_split ) );
     if( split_count == 0 ) {
         return;
     }
@@ -798,7 +798,7 @@ void Character::load( const JsonObject &data )
             temp_selected_style = style_none;
         }
         *martial_arts_data = character_martial_arts( temp_styles, temp_selected_style,
-                             temp_keep_hands_free );
+            temp_keep_hands_free );
     } else {
         data.read( "martial_arts_data", martial_arts_data );
     }
@@ -1168,7 +1168,7 @@ void Character::load( const JsonObject &data )
         const int converted_level = std::min(
                                         config.legacy_survival_conversion_cap,
                                         static_cast<int>( std::ceil( get_skill_level( skill_survival ) *
-                                                config.legacy_survival_conversion_ratio ) ) );
+                                            config.legacy_survival_conversion_ratio ) ) );
         set_skill_level( skill_riding, converted_level );
     }
 
@@ -3132,7 +3132,7 @@ static bool bindings_fit_recipe( const recipe &making, int step_index,
             // step's allocation order, so the step's own tool groups come first and the
             // recipe-root ones after them.
             const std::vector<std::vector<tool_comp>> &root_tools =
-                    making.root_requirements().get_tools();
+                making.root_requirements().get_tools();
             int tool_group = b.group_index - static_cast<int>( quals.size() );
             if( tool_group < 0 ) {
                 return false;
@@ -3173,7 +3173,7 @@ static bool step_tool_allocs_fit_recipe(
     }
     const int batch_mult = std::max( batch, 1 );
     const std::vector<std::vector<tool_comp>> &root_groups =
-            making.root_requirements().get_tools();
+        making.root_requirements().get_tools();
     int64_t total_time = 0;
     for( const recipe_step &step : making.steps() ) {
         total_time += std::max<int64_t>( step.time, 0 );
@@ -3185,7 +3185,7 @@ static bool step_tool_allocs_fit_recipe(
     for( size_t s = 0; s < allocs.size(); ++s ) {
         const recipe_step &step = making.steps()[s];
         const std::vector<std::vector<tool_comp>> &step_groups =
-                step.requirements.get_tools();
+            step.requirements.get_tools();
         const bool step_timed = total_time > 0 && step.time > 0;
         std::vector<const step_tool_alloc *> owned;
         std::vector<const step_tool_alloc *> root;
@@ -3289,7 +3289,7 @@ void item::craft_data::deserialize( const JsonObject &obj )
         if( stepless_ok ) {
             const int batch_mult = std::max( batch_size, 1 );
             const std::vector<std::vector<tool_comp>> &tool_groups =
-                    making->simple_requirements().get_tools();
+                making->simple_requirements().get_tools();
             // An empty list means no implicit-step row; treat it as a zero-length
             // row so the bijection below rejects it when the recipe has tools.
             const std::vector<step_tool_alloc> empty_row;
@@ -3989,8 +3989,8 @@ void vehicle_part::deserialize( const JsonObject &data )
                                          ? migration->variant.value()
                                          : migration->part_id_new->variant_default;
         DebugLog( D_WARNING, D_MAIN ) << "vehicle_part::deserialize migrating " <<
-                                      "vpid '" << pid.str() << "' to '" << migration->part_id_new.str() << "' "
-                                      "variant '" << variant << "' to '" << new_variant << "'";
+                                         "vpid '" << pid.str() << "' to '" << migration->part_id_new.str() << "' "
+                                         "variant '" << variant << "' to '" << new_variant << "'";
         pid = migration->part_id_new;
         variant = new_variant;
     }
@@ -5420,7 +5420,7 @@ void basecamp::deserialize( const JsonObject &data )
     platform_expansions_.clear();
     platform_retired_expansion_generations_.clear();
     const auto read_platform_resource_changes = [](
-                JsonObject & source, const char *member,
+            JsonObject & source, const char *member,
     std::vector<basecamp_platform_resource_change> &changes ) {
         if( !source.has_array( member ) ) {
             return false;
@@ -6139,8 +6139,8 @@ void basecamp::deserialize( const JsonObject &data )
                                 }
                                 () &&
                                 restored.uid().get_value() == entry.stable_uid &&
-                                ( restored.count_by_charges() ? restored.charges : 1 ) ==
-                                entry.charges;
+                                        ( restored.count_by_charges() ? restored.charges : 1 ) ==
+                                        entry.charges;
                                 if( !valid ) {
                                     break;
                                 }
@@ -6392,14 +6392,14 @@ void stats_tracker::deserialize( const JsonObject &jo )
                 // we don't know when they took over, so just use current time point
                 if( u.getID() != gs_data["avatar_id"].get<cata_variant_type::character_id>() ) {
                     get_event_bus().send( cata::event::make<event_type::game_avatar_new>( false, false,
-                                          u.getID(), u.name, u.custom_profession ) );
+                            u.getID(), u.name, u.custom_profession ) );
                 }
             } else {
                 // last ditch effort for really old saves that don't even have event_type::game_start
                 // treat current avatar as the starting avatar; abuse is_new_game=false to flag such cases
                 std::swap( calendar::turn, calendar::start_of_game );
                 get_event_bus().send( cata::event::make<event_type::game_avatar_new>( false, false,
-                                      u.getID(), u.name, u.custom_profession ) );
+                        u.getID(), u.name, u.custom_profession ) );
                 std::swap( calendar::turn, calendar::start_of_game );
             }
         }
@@ -6532,7 +6532,7 @@ void cata::lua_platform::detail::erase_platform_savegame_migration(
 }
 
 std::vector<std::pair<std::string, std::string>>
-        cata::lua_platform::detail::terrain_migration_snapshot()
+cata::lua_platform::detail::terrain_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( ter_migrations.size() );
@@ -6544,7 +6544,7 @@ std::vector<std::pair<std::string, std::string>>
 }
 
 std::vector<std::pair<std::string, std::string>>
-        cata::lua_platform::detail::furniture_migration_snapshot()
+cata::lua_platform::detail::furniture_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( furn_migrations.size() );
@@ -6556,7 +6556,7 @@ std::vector<std::pair<std::string, std::string>>
 }
 
 std::vector<std::pair<std::string, std::string>>
-        cata::lua_platform::detail::trap_migration_snapshot()
+cata::lua_platform::detail::trap_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( tr_migrations.size() );
@@ -7243,7 +7243,7 @@ void submap::load( const JsonValue &jv, const std::string &member_name, int vers
                 point_sm_ms loc;
                 computers_json.next_value().read( loc );
                 auto new_comp_it = computers.emplace( loc, computer( "BUGGED_COMPUTER", -100,
-                                                      tripoint_abs_ms::invalid ) ).first;
+                    tripoint_abs_ms::invalid ) ).first;
                 computers_json.next_value().read( new_comp_it->second );
             }
         }

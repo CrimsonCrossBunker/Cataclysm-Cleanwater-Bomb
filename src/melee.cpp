@@ -234,7 +234,7 @@ bool Character::handle_melee_wear( item_location shield, float wear_multiplier )
 
     // Percentage chance that item takes damage divided by 100.
     double enchant_multiplier = calculate_by_enchantment( 1,
-                                enchant_vals::mod::EQUIPMENT_DAMAGE_CHANCE );
+        enchant_vals::mod::EQUIPMENT_DAMAGE_CHANCE );
     if( enchant_multiplier <= 0.0f ) {
         return false;
     }
@@ -469,7 +469,7 @@ static void practice_mounted_melee( Character &character, const item &weapon )
             continue;
         }
         const int seconds = std::max( 1, static_cast<int>( std::round(
-                                          config.proficiency_practice_seconds * amount / total ) ) );
+                config.proficiency_practice_seconds * amount / total ) ) );
         character.practice_proficiency( proficiency, time_duration::from_seconds( seconds ) );
     }
 }
@@ -658,7 +658,7 @@ damage_instance Creature::modify_damage_dealt_with_enchantments( const damage_in
         if( dmg_mod != 0 ) {
             modified.add_damage( dt.id, dmg_mod );
             modified.add_damage( dt.id, enchantment_cache->modify_value( enchant_vals::mod::MELEE_DAMAGE,
-                                 0.0f ) );
+                    0.0f ) );
         }
     }
 
@@ -783,7 +783,7 @@ bool Character::melee_attack_abstract( Creature &t, bool allow_special,
         const std::string &action = query_popup()
                                     .context( "CANCEL_ACTIVITY_OR_IGNORE_QUERY" )
                                     .message( _( "<color_light_red>Attacking with your %1$s will take a long time.  "
-                                              "Are you sure you want to continue?</color>" ),
+                     "Are you sure you want to continue?</color>" ),
                                               cur_weap.display_name() )
                                     .option( "YES" )
                                     .option( "NO" )
@@ -805,11 +805,11 @@ bool Character::melee_attack_abstract( Creature &t, bool allow_special,
 
     if( monster *m = t.as_monster() ) {
         cata::event e = cata::event::make<event_type::character_melee_attacks_monster>( getID(),
-                        cur_weap.typeId(), hits, m->type->id );
+            cur_weap.typeId(), hits, m->type->id );
         get_event_bus().send_with_talker( this, m, e );
     } else if( Character *c = t.as_character() ) {
         cata::event e = cata::event::make<event_type::character_melee_attacks_character>( getID(),
-                        cur_weap.typeId(), hits, c->getID(), c->get_name() );
+            cur_weap.typeId(), hits, c->getID(), c->get_name() );
         get_event_bus().send_with_talker( this, c, e );
     }
 
@@ -884,7 +884,7 @@ bool Character::melee_attack_abstract( Creature &t, bool allow_special,
         }
         // select target body part
         const bodypart_id &target_bp = t.select_body_part( -1, -1, can_attack_high(),
-                                       hit_spread );
+            hit_spread );
 
         const bool has_force_technique = !force_technique.str().empty();
 
@@ -1127,7 +1127,7 @@ int Character::get_total_melee_stamina_cost( const item *weap ) const
     // Quadrupeds don't mind crouching, squids and slimes hardly care about even being prone
     const int stance_malus = ( is_on_ground() &&
                                !has_flag( json_flag_PSEUDOPOD_GRASP ) ) ? 50 : ( !has_flag( json_flag_PSEUDOPOD_GRASP ) &&
-                                       ( !has_effect( effect_natural_stance ) && ( !unarmed_attack() ) ) && is_crouching() ? 20 : 0 );
+                                   ( !has_effect( effect_natural_stance ) && ( !unarmed_attack() ) ) && is_crouching() ? 20 : 0 );
 
     float proficiency_multiplier = 1.f;
     for( const weapon_category_id &cat : wielded_weapon_categories( *this ) ) {
@@ -1637,11 +1637,11 @@ std::tuple<matec_id, attack_vector_id, sub_bodypart_str_id> Character::pick_tech
     }
 
     return random_entry( possible, std::make_tuple( tec_none, attack_vector_id::NULL_ID(),
-                         sub_bodypart_str_id::NULL_ID() ) );
+            sub_bodypart_str_id::NULL_ID() ) );
 }
 std::optional<std::tuple<matec_id, attack_vector_id, sub_bodypart_str_id>>
-        Character::evaluate_technique( const matec_id &tec_id, Creature const &t, const item_location &weap,
-                                       bool crit, bool dodge_counter, bool block_counter ) const
+Character::evaluate_technique( const matec_id &tec_id, Creature const &t, const item_location &weap,
+                               bool crit, bool dodge_counter, bool block_counter ) const
 {
     // this could be more robust but for now it should work fine
     bool is_loaded = weap && weap->is_magazine_full();
@@ -2329,7 +2329,7 @@ bool Character::block_hit( Creature *source, bodypart_id &bp_hit, damage_instanc
             if( source != nullptr && !source->is_hallucination() ) {
                 for( damage_unit &du : dam.damage_units ) {
                     shield->damage_armor_durability( du, du, bp_hit, calculate_by_enchantment( 1,
-                                                     enchant_vals::mod::EQUIPMENT_DAMAGE_CHANCE ),
+                            enchant_vals::mod::EQUIPMENT_DAMAGE_CHANCE ),
                                                      this );
                 }
             }

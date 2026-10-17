@@ -353,8 +353,8 @@ struct basecamp_platform_task_execution_context {
 };
 
 using basecamp_platform_task_executor_dispatch = bool ( * )(
-            basecamp_platform_task_operation operation,
-            basecamp_platform_task_execution_context &context, std::string &error );
+        basecamp_platform_task_operation operation,
+        basecamp_platform_task_execution_context &context, std::string &error );
 
 /**
  * The single native registry entry for a Platform camp-task kind.

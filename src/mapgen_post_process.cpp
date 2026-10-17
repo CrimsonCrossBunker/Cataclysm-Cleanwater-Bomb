@@ -661,7 +661,7 @@ static void execute_place_blood( map &md,
 
             if( behavior_roll <= 20 ) {
                 if( tile_can_have_blood( md, current_tile, md.has_flag_ter( ter_furn_flag::TFLAG_WALL,
-                                         current_tile ), days_since_cataclysm ) ) {
+                        current_tile ), days_since_cataclysm ) ) {
                     md.add_field( current_tile, field_fd_blood );
                 }
             } else if( behavior_roll <= 60 ) {
@@ -685,9 +685,9 @@ static void execute_aftershock_ruin( map &md, const tripoint_abs_omt &p,
         }
     }
     bool above_open_air = overmap_buffer.ter( tripoint_abs_omt( p.x(), p.y(),
-                          p.z() + 1 ) ) == oter_open_air;
+        p.z() + 1 ) ) == oter_open_air;
     bool above_ruined = overmap_buffer.ter( tripoint_abs_omt( p.x(), p.y(),
-                                            p.z() + 1 ) ) == oter_afs_ruins_dynamic;
+        p.z() + 1 ) ) == oter_afs_ruins_dynamic;
 
     // applied -> fully ruined, skipped -> smashed-up, otherwise 50% roll.
     bool full_ruin_roll;

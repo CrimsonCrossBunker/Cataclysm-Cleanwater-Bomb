@@ -267,7 +267,7 @@ struct CataListener : Catch::TestEventListenerBase {
         if( !sectionStats.assertions.allPassed() ||
             m_config->includeSuccessfulResults() ) {
             std::vector<std::pair<std::string, std::string>> messages =
-                        Messages::recent_messages( 0 );
+                Messages::recent_messages( 0 );
             if( !messages.empty() ) {
                 if( !sectionStats.assertions.allPassed() ) {
                     std::cerr << "Log messages during failed test:\n";
@@ -500,7 +500,7 @@ int main( int argc, const char *argv[] )
     } catch( const std::exception &err ) {
         DebugLog( D_ERROR, DC_ALL ) << "Terminated:\n" << err.what();
         DebugLog( D_INFO, DC_ALL ) <<
-                                   "Make sure that you're in the correct working directory and your data isn't corrupted.";
+        "Make sure that you're in the correct working directory and your data isn't corrupted.";
         return EXIT_FAILURE;
     }
 
@@ -532,7 +532,7 @@ int main( int argc, const char *argv[] )
 
     if( error_during_initialization ) {
         DebugLog( D_INFO, DC_ALL ) <<
-                                   "Treating result as failure due to error logged during initialization.";
+        "Treating result as failure due to error logged during initialization.";
         return 1;
     }
 

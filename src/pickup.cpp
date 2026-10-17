@@ -273,7 +273,7 @@ static bool pick_one_up( item_location &loc, int quantity, bool &got_water, bool
     } else if( newit.is_bucket_nonempty() ) {
         if( !autopickup ) {
             const std::string &explain = string_format( _( "Can't stash %s while it's not empty" ),
-                                         newit.display_name() );
+                newit.display_name() );
             option = handle_problematic_pickup( newit, explain );
             did_prompt = true;
         } else {
@@ -315,7 +315,7 @@ static bool pick_one_up( item_location &loc, int quantity, bool &got_water, bool
         case STASH: {
             int last_charges = newit.charges;
             ret_val<item_location> ret = player_character.i_add_or_fill( newit, true, nullptr, &it,
-                                         /*allow_drop=*/false, /*allow_wield=*/false, false );
+                /*allow_drop=*/false, /*allow_wield=*/false, false );
             item_location added_it = ret.value();
             if( ret.success() ) {
                 craft_relocated( added_it );
@@ -357,12 +357,12 @@ static bool pick_one_up( item_location &loc, int quantity, bool &got_water, bool
         if( !is_bulk_load( pre_info, info ) ) {
             // Cost to take an item from a container or map
             player_character.mod_moves( -( loc.obtain_cost( player_character,
-                                           quantity ) + ( distance * info.extra_moves_per_distance ) ) );
+                    quantity ) + ( distance * info.extra_moves_per_distance ) ) );
         } else {
             // Pure cost to handling item excluding overhead.
             player_character.mod_moves( ( -std::max( player_character.item_handling_cost( *loc, true, 0,
-                                          quantity,
-                                          true ), 1 ) + ( distance * info.extra_moves_per_distance ) ) );
+                    quantity,
+                    true ), 1 ) + ( distance * info.extra_moves_per_distance ) ) );
         }
         contents_change_handler handler;
         handler.unseal_pocket_containing( loc );

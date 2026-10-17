@@ -378,7 +378,7 @@ static void do_blast( map *m, const Creature *source, const tripoint_bub_ms &p, 
         Character *pl = critter->as_character();
         if( pl == nullptr ) {
             const double dmg = std::max( force - critter->get_armor_type( damage_bash,
-                                         bodypart_id( "torso" ) ) / 2.0, 0.0 );
+                bodypart_id( "torso" ) ) / 2.0, 0.0 );
             const int actual_dmg = rng_float( dmg * 2, dmg * 3 );
             critter->apply_damage( mutable_source, bodypart_id( "torso" ), actual_dmg );
             critter->check_dead_state( m );
@@ -517,7 +517,7 @@ static std::vector<tripoint_bub_ms> shrapnel( map *m, const Creature *source,
             if( reality_bubble().inbounds(
                     abs_target ) ) { // Only report on critters in the reality bubble. Should probably be only for visible critters...
                 multi_projectile_hit_message( critter, it.first, it.second, n_gettext( "bomb fragment",
-                                              "bomb fragments", it.first ) );
+                        "bomb fragments", it.first ) );
             }
         }
         if( m->impassable( target ) ) {
@@ -633,7 +633,7 @@ void _make_explosion( map *m, const Creature *source, const tripoint_bub_ms &p,
     const shrapnel_data &shr = ex.shrapnel;
     if( shr.casing_mass > 0 ) {
         std::vector<tripoint_bub_ms> shrapnel_locations = shrapnel( m, source, p, ex.power, shr.casing_mass,
-                shr.fragment_mass );
+            shr.fragment_mass );
 
         // If explosion drops shrapnel...
         if( shr.recovery > 0 && !shr.drop.is_null() ) {
@@ -900,7 +900,7 @@ void emp_blast( const tripoint_bub_ms &p )
             int max_drain = ( player_character.get_power_level() > 1000_kJ ? 1000 : units::to_kilojoule(
                                   player_character.get_power_level() ) );
             player_character.mod_power_level( units::from_kilojoule( static_cast<std::int64_t>( -rng(
-                                                  1 + max_drain / 3, max_drain ) ) ) );
+                        1 + max_drain / 3, max_drain ) ) ) );
         }
         // TODO: More effects?
         //e-handcuffs effects
@@ -953,10 +953,10 @@ void resonance_cascade( const tripoint_bub_ms &p )
 {
     Character &player_character = get_player_character();
     const time_duration maxglow = time_duration::from_turns( 100 - 5 * trig_dist( p,
-                                  player_character.pos_bub() ) );
+        player_character.pos_bub() ) );
     if( maxglow > 0_turns ) {
         const time_duration minglow = std::max( 0_turns, time_duration::from_turns( 60 - 5 * trig_dist( p,
-                                                player_character.pos_bub() ) ) );
+            player_character.pos_bub() ) ) );
         player_character.add_effect( effect_teleglow, rng( minglow, maxglow ) * 100 );
     }
     int startx = p.x() < 8 ? 0 : p.x() - 8;
@@ -1114,8 +1114,8 @@ fragment_cloud shrapnel_calc( const fragment_cloud &initial,
     constexpr float Cd = 1.5f;
     fragment_cloud new_cloud;
     new_cloud.velocity = initial.velocity * std::exp( -cloud.velocity * ( (
-                             Cd * fragment_area * distance ) /
-                         ( 2.0f * fragment_mass ) ) );
+            Cd * fragment_area * distance ) /
+        ( 2.0f * fragment_mass ) ) );
     // Two effects, the accumulated proportion of blocked fragments,
     // and the inverse-square dilution of fragments with distance.
     new_cloud.density = ( initial.density * cloud.density ) / ( distance * distance );

@@ -118,7 +118,7 @@ static std::vector<std::pair<bodypart_id, bool>> list_and_combine_bps( const Cha
         // assuming that a body part has at most one other half
         if( should_combine_bps( p, bp, bp->opposite_part.id(), selected_clothing ) ) {
             if( std::find( bps.begin(), bps.end(), std::pair<bodypart_id, bool>( bp->opposite_part.id(),
-                           true ) ) == bps.end() ) {
+                    true ) ) == bps.end() ) {
                 // only add one
                 bps.emplace_back( bp, true );
             }
@@ -134,7 +134,7 @@ void Character::print_encumbrance( ui_adaptor &ui, const catacurses::window &win
 {
     // bool represents whether the part has been combined with its other half
     const std::vector<std::pair<bodypart_id, bool>> bps = list_and_combine_bps( *this,
-            selected_clothing );
+        selected_clothing );
 
     // width/height excluding title & scrollbar
     const int height = getmaxy( win ) - 1;
@@ -142,7 +142,7 @@ void Character::print_encumbrance( ui_adaptor &ui, const catacurses::window &win
     const int width = getmaxx( win ) - ( do_draw_scrollbar ? 1 : 0 );
     // index of the first printed bodypart from `bps`
     const int firstline = clamp( line - height / 2, 0, std::max( 0,
-                                 static_cast<int>( bps.size() ) - height ) );
+        static_cast<int>( bps.size() ) - height ) );
 
     /*** I chose to instead only display X+Y instead of X+Y=Z. More room was needed ***
      *** for displaying triple digit encumbrance, due to new encumbrance system.    ***
@@ -222,7 +222,7 @@ static std::string get_score_text( const std::string &sc_name, float cur_score, 
 
     nc_color score_c = limb_score_current_color( cur_score, bp_score );
     std::string sc_txt = colorize( string_format( "%.2f (%.f%%)", cur_score,
-                                   cur_score * 100.f / bp_score ), score_c );
+        cur_score * 100.f / bp_score ), score_c );
     //~ 1$ = name of the limb score (ex: Balance), 2$ = current score value (colored)
     return string_format( _( "%1$s score: %2$s" ), sc_name, sc_txt );
 }
@@ -266,7 +266,7 @@ static std::vector<std::string> get_encumbrance_description( const Character &yo
             std::string desc = mod.description().translated();
             std::string valstr = colorize( string_format( "%.2f", mod.modifier( you ) ),
                                            limb_score_current_color( part->get_limb_score( you, sc.first ) * sc.second,
-                                                   bp->get_limb_score( sc.first ) * sc.second ) );
+                                               bp->get_limb_score( sc.first ) * sc.second ) );
             s.emplace_back( string_format( "%s: %s%s", desc, mod.mod_type_str(), valstr ) );
         }
     }
@@ -331,9 +331,9 @@ static void draw_proficiencies_tab( ui_adaptor &ui, const catacurses::window &wi
         ui.set_cursor( win, point::zero );
     }
     center_print( win, 0, title_color, string_format( "[<color_yellow>%s</color>] %s",
-                  ctxt.get_desc( "VIEW_PROFICIENCIES" ), _( title_PROFICIENCIES ) ) );
+            ctxt.get_desc( "VIEW_PROFICIENCIES" ), _( title_PROFICIENCIES ) ) );
     right_print( win, 0, 0, title_color, string_format( "[<color_yellow>%s</color>]",
-                 ctxt.get_desc( "SELECT_PROFICIENCIES_TAB" ) ) );
+            ctxt.get_desc( "SELECT_PROFICIENCIES_TAB" ) ) );
 
     const int height = getmaxy( win ) - 1;
     const bool do_draw_scrollbar = height < static_cast<int>( profs.size() );
@@ -404,7 +404,7 @@ static void draw_stats_tab( ui_adaptor &ui, const catacurses::window &w_stats, c
                   string_format( "[<color_yellow>%s</color>] %s",
                                  ctxt.get_desc( "VIEW_BODYSTAT" ), _( title_STATS ) ) );
     right_print( w_stats, 0, 0, title_col, string_format( "[<color_yellow>%s</color>]",
-                 ctxt.get_desc( "SELECT_STATS_TAB" ) ) );
+            ctxt.get_desc( "SELECT_STATS_TAB" ) ) );
 
     const auto highlight_line = [is_current_tab, line]( const unsigned line_to_draw ) {
         return is_current_tab && line == line_to_draw;
@@ -475,7 +475,7 @@ static void draw_stats_tab( ui_adaptor &ui, const catacurses::window &w_stats, c
     set_highlight_cursor( 8 );
     mvwprintz( w_stats, point( 1, 9 ), line_color( 8 ), _( "Blood type:" ) );
     mvwprintz( w_stats, point( 25 - utf8_width( io::enum_to_string( you.my_blood_type ) +
-                               ( you.blood_rh_factor ? "+" : "-" ) ), 9 ),
+            ( you.blood_rh_factor ? "+" : "-" ) ), 9 ),
                c_light_gray,
                io::enum_to_string( you.my_blood_type ) + ( you.blood_rh_factor ? "+" : "-" ) );
 
@@ -580,7 +580,7 @@ static void draw_encumbrance_tab( ui_adaptor &ui, const catacurses::window &w_en
     const nc_color title_col = is_current_tab ? h_light_gray : c_light_gray;
     center_print( w_encumb, 0, title_col, _( title_ENCUMB ) );
     right_print( w_encumb, 0, 0, title_col, string_format( "[<color_yellow>%s</color>]",
-                 ctxt.get_desc( "SELECT_ENCUMBRANCE_TAB" ) ) );
+            ctxt.get_desc( "SELECT_ENCUMBRANCE_TAB" ) ) );
     if( is_current_tab ) {
         ui.set_cursor( w_encumb, point::zero );
         you.print_encumbrance( ui, w_encumb, line );
@@ -616,13 +616,13 @@ static void draw_traits_tab( ui_adaptor &ui, const catacurses::window &w_traits,
     }
     center_print( w_traits, 0, title_col, _( title_TRAITS ) );
     right_print( w_traits, 0, 0, title_col, string_format( "[<color_yellow>%s</color>]",
-                 ctxt.get_desc( "SELECT_TRAITS_TAB" ) ) );
+            ctxt.get_desc( "SELECT_TRAITS_TAB" ) ) );
 
     const int height = getmaxy( w_traits ) - 1;
     const bool do_draw_scrollbar = height < static_cast<int>( traitslist.size() );
     const int width = getmaxx( w_traits ) - 1 - ( do_draw_scrollbar ? 1 : 0 );
     const auto& [i_start, i_end] = subindex_around_cursor( traitslist.size(), height, line,
-                                   is_current_tab );
+        is_current_tab );
 
     for( size_t i = i_start; i < static_cast<size_t>( i_end ); ++i ) {
         const trait_and_var &cur = traitslist[i];
@@ -680,7 +680,7 @@ static void draw_bionics_tab( ui_adaptor &ui, const catacurses::window &w_bionic
     const nc_color title_col = is_current_tab ? h_light_gray : c_light_gray;
     center_print( w_bionics, 0, title_col, _( title_BIONICS ) );
     right_print( w_bionics, 0, 0, title_col, string_format( "[<color_yellow>%s</color>]",
-                 ctxt.get_desc( "SELECT_BIONICS_TAB" ) ) );
+            ctxt.get_desc( "SELECT_BIONICS_TAB" ) ) );
     int power_amount;
     std::string power_unit;
     if( you.get_power_level() < 1_J ) {
@@ -706,7 +706,7 @@ static void draw_bionics_tab( ui_adaptor &ui, const catacurses::window &w_bionic
     const bool do_draw_scrollbar = height < static_cast<int>( bionicslist.size() );
     const int width = getmaxx( w_bionics ) - 1 - ( do_draw_scrollbar ? 1 : 0 );
     const auto& [i_start, i_end] = subindex_around_cursor( bionicslist.size(), height, line,
-                                   is_current_tab );
+        is_current_tab );
 
     for( size_t i = i_start; i < static_cast<size_t>( i_end ); ++i ) {
         const bool highlight_line = is_current_tab && i == line;
@@ -756,12 +756,12 @@ static void draw_effects_tab( ui_adaptor &ui, const catacurses::window &w_effect
     }
     center_print( w_effects, 0, title_col, _( title_EFFECTS ) );
     right_print( w_effects, 0, 0, title_col, string_format( "[<color_yellow>%s</color>]",
-                 ctxt.get_desc( "SELECT_EFFECTS_TAB" ) ) );
+            ctxt.get_desc( "SELECT_EFFECTS_TAB" ) ) );
     const int height = getmaxy( w_effects ) - 1;
     const bool do_draw_scrollbar = height < static_cast<int>( effect_name_and_text.size() );
     const int width = getmaxx( w_effects ) - 1 - ( do_draw_scrollbar ? 1 : 0 );
     const auto& [i_start, i_end] = subindex_around_cursor( effect_name_and_text.size(), height, line,
-                                   is_current_tab );
+        is_current_tab );
 
     for( size_t i = i_start; i < static_cast<size_t>( i_end ); ++i ) {
         const bool highlight_line = is_current_tab && i == line;
@@ -803,14 +803,14 @@ static void draw_skills_tab( ui_adaptor &ui, const catacurses::window &w_skills,
     }
     center_print( w_skills, 0, cstatus, _( title_SKILLS ) );
     right_print( w_skills, 0, 0, c_light_gray, string_format( "[<color_yellow>%s</color>]",
-                 ctxt.get_desc( "SELECT_SKILLS_TAB" ) ) );
+            ctxt.get_desc( "SELECT_SKILLS_TAB" ) ) );
 
     const int height = getmaxy( w_skills ) - 1;
     const bool do_draw_scrollbar = height < static_cast<int>( skillslist.size() );
     const int width = getmaxx( w_skills ) - 1 - ( do_draw_scrollbar ? 1 : 0 );
 
     const auto& [i_start, i_end] = subindex_around_cursor( skillslist.size(), height, line,
-                                   is_current_tab );
+        is_current_tab );
 
     int y_pos = 1;
     for( int i = i_start; i < i_end; ++i, ++y_pos ) {
@@ -940,7 +940,7 @@ static void draw_skills_info( const catacurses::window &w_info, const Character 
             level_gap = 150.0f;
         }
         float learning_bonus = 100.0f * std::max( ( 1.0f + you.get_int() / 40.0f ) - 0.1f *
-                               level.exercise() / level.knowledgeExperience(), 1.0f );
+            level.exercise() / level.knowledgeExperience(), 1.0f );
         if( level.isRusty() ) {
             info_text = string_format( _( "%s\n\nPractical level: %d (%d%%) " ), info_text,
                                        level.level(), level.exercise() );
@@ -1006,15 +1006,15 @@ static void draw_speed_tab( ui_adaptor &ui, const catacurses::window &w_speed,
 
     const int speed = you.get_speed();
     center_print( w_speed, 0, c_light_gray, string_format( "%s: <color_%s>%d</color>",
-                  _( title_SPEED ), speed >= 100 ? "light_green" : "red", speed ) );
+            _( title_SPEED ), speed >= 100 ? "light_green" : "red", speed ) );
     center_print( w_speed, 1, c_light_gray, string_format( "%s: <color_%s>%d</color>",
-                  _( title_MOVE_COST ), move_cost <= 100 ? "light_green" : "red", move_cost ) );
+            _( title_MOVE_COST ), move_cost <= 100 ? "light_green" : "red", move_cost ) );
 
     const int height = getmaxy( w_speed ) - 2;
     const bool do_draw_scrollbar = height < static_cast<int>( speedlist.size() );
     const int width = getmaxx( w_speed ) - 1 - ( do_draw_scrollbar ? 1 : 0 );
     const auto& [i_start, i_end] = subindex_around_cursor( speedlist.size(), height, line,
-                                   is_current_tab );
+        is_current_tab );
 
     for( size_t i = i_start; i < static_cast<size_t>( i_end ); ++i ) {
         const bool highlight_line = is_current_tab && i == line;
@@ -1193,10 +1193,10 @@ static void change_armor_sprite( Character &you )
                 return i.is_armor();
             };
             sprite_loc = game_menus::inv::titled_filter_menu( armor_filter,
-                         you,
-                         _( "Select appearance of this armor:" ),
-                         -1,
-                         _( "You have nothing to wear." ) );
+                you,
+                _( "Select appearance of this armor:" ),
+                -1,
+                _( "You have nothing to wear." ) );
             if( sprite_loc && sprite_loc.get_item() ) {
                 const item *sprite_item = sprite_loc.get_item();
                 const std::string variant = sprite_item->has_itype_variant() ? sprite_item->itype_variant().id : "";
@@ -1290,7 +1290,7 @@ static bool handle_player_display_action( Character &you, unsigned int &line,
     };
 
     unsigned int line_count = get_line_count( curtab, you, speedlist, traitslist, bionicslist,
-                              effect_name_and_text, skillslist );
+        effect_name_and_text, skillslist );
 
     if( line_count > 0 ) {
         line = std::clamp( line, 0U, line_count - 1 );
@@ -1427,10 +1427,10 @@ static bool handle_player_display_action( Character &you, unsigned int &line,
     } else if( action == "CHANGE_PROFESSION_NAME" ) {
         string_input_popup popup;
         popup.title( _( "Profession Name: " ) )
-        .width( 25 )
-        .text( "" )
-        .max_length( 25 )
-        .query();
+             .width( 25 )
+             .text( "" )
+             .max_length( 25 )
+             .query();
 
         you.custom_profession = popup.text();
         ui_tip.invalidate_ui();
@@ -1585,11 +1585,11 @@ void Character::disp_info( bool customize_character )
         if( bmi < character_weight_category::normal ) {
             const stat_mod wpen = get_weight_penalty();
             starvation_text += std::string( _( "Strength" ) ) + " -" + string_format( "%d\n",
-                               wpen.strength );
+                wpen.strength );
             starvation_text += std::string( _( "Dexterity" ) ) + " -" + string_format( "%d\n",
-                               wpen.dexterity );
+                wpen.dexterity );
             starvation_text += std::string( _( "Intelligence" ) ) + " -" + string_format( "%d",
-                               wpen.intelligence );
+                wpen.intelligence );
         }
 
         effect_name_and_text.emplace_back( starvation_name, starvation_text );
@@ -1790,7 +1790,7 @@ void Character::disp_info( bool customize_character )
     ui_adaptor ui_traits;
     ui_traits.on_screen_resize( [&]( ui_adaptor & ui_traits ) {
         std::tie( trait_win_size_y, bionics_win_size_y ) = calculate_shared_column_win_height(
-                    TERMY - infooffsetybottom, trait_win_size_y_max, bionics_win_size_y_max );
+                TERMY - infooffsetybottom, trait_win_size_y_max, bionics_win_size_y_max );
         w_traits = catacurses::newwin( trait_win_size_y, grid_width,
                                        point( grid_width + 1, infooffsetybottom ) );
         w_traits_border = catacurses::newwin( trait_win_size_y + 1, grid_width + 2,
@@ -1814,7 +1814,7 @@ void Character::disp_info( bool customize_character )
     ui_adaptor ui_bionics;
     ui_bionics.on_screen_resize( [&]( ui_adaptor & ui_bionics ) {
         std::tie( trait_win_size_y, bionics_win_size_y ) = calculate_shared_column_win_height(
-                    TERMY - infooffsetybottom, trait_win_size_y_max, bionics_win_size_y_max );
+                TERMY - infooffsetybottom, trait_win_size_y_max, bionics_win_size_y_max );
         w_bionics = catacurses::newwin( bionics_win_size_y, grid_width,
                                         point( grid_width + 1,
                                                infooffsetybottom + trait_win_size_y + 1 ) );
@@ -1861,7 +1861,7 @@ void Character::disp_info( bool customize_character )
     ui_adaptor ui_effects;
     ui_effects.on_screen_resize( [&]( ui_adaptor & ui_effects ) {
         std::tie( effect_win_size_y, proficiency_win_size_y ) = calculate_shared_column_win_height(
-                    TERMY - infooffsetybottom, effect_win_size_y_max, proficiency_win_size_y_max );
+                TERMY - infooffsetybottom, effect_win_size_y_max, proficiency_win_size_y_max );
         w_effects = catacurses::newwin( effect_win_size_y, grid_width,
                                         point( grid_width * 2 + 2, infooffsetybottom ) );
         w_effects_border = catacurses::newwin( effect_win_size_y + 1, grid_width + 2,
@@ -1885,14 +1885,14 @@ void Character::disp_info( bool customize_character )
     ui_adaptor ui_proficiencies;
     ui_proficiencies.on_screen_resize( [&]( ui_adaptor & ui_proficiencies ) {
         std::tie( effect_win_size_y, proficiency_win_size_y ) = calculate_shared_column_win_height(
-                    TERMY - infooffsetybottom, effect_win_size_y_max, proficiency_win_size_y_max );
+                TERMY - infooffsetybottom, effect_win_size_y_max, proficiency_win_size_y_max );
         const point profstart = point( grid_width * 2 + 2, infooffsetybottom + effect_win_size_y + 1 );
         w_proficiencies = catacurses::newwin( proficiency_win_size_y, grid_width,
                                               profstart );
         w_proficiencies_border = catacurses::newwin( proficiency_win_size_y + 1, grid_width + 2,
-                                 profstart + point::west );
+            profstart + point::west );
         border_proficiencies.set( profstart + point::north_west, point( grid_width + 2,
-                                  proficiency_win_size_y + 2 ) );
+                proficiency_win_size_y + 2 ) );
         ui_proficiencies.position_from_window( w_proficiencies_border );
     } );
     ui_proficiencies.mark_resize();

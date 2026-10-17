@@ -190,13 +190,13 @@ TEST_CASE( "hydrocarbon_fuels_remain_liquid_in_cold_weather", "[liquid][temperat
 {
     for( const std::pair<itype_id, int> &fuel : {
     std::pair<itype_id, int> { itype_id( "diesel" ), -20 },
-    { itype_id( "jp8" ), -47 }, { itype_id( "avgas" ), -58 },
+{ itype_id( "jp8" ), -47 }, { itype_id( "avgas" ), -58 },
     { itype_id( "biodiesel" ), -10 }, { itype_id( "gasoline" ), -60 },
     { itype_id( "lamp_oil" ), -47 }, { itype_id( "crude_lamp_oil" ), -40 },
     { itype_id( "motor_oil" ), -30 }, { itype_id( "crude_oil" ), -40 },
     { itype_id( "napalm" ), -40 }, { itype_id( "gelled_gasoline" ), -60 },
     { itype_id( "flamethrower_fuel" ), -60 }
-         } ) {
+       } ) {
         CAPTURE( fuel.first.str() );
         item liquid( fuel.first );
         liquid.set_item_temperature( units::from_celsius( fuel.second + 10 ) );

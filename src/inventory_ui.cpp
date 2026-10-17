@@ -2064,7 +2064,7 @@ bool inventory_selector::add_entry_rec( inventory_column &entry_column,
     }
     inventory_entry *const nentry = shown
                                     ? add_shown_entry( entry_column, std::vector<item_location>( 1, loc ),
-                                            entry_category, 0, topmost_parent )
+                                        entry_category, 0, topmost_parent )
                                     : nullptr;
     if( nentry != nullptr ) {
         nentry->chevron = vis_contents;

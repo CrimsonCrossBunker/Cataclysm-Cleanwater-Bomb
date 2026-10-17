@@ -137,9 +137,9 @@ static float get_avg_bullet_dmg( const itype_id &clothing_id )
     map &here = get_map();
     clear_map_without_vision();
     std::unique_ptr<standard_npc> badguy = std::make_unique<standard_npc>( "TestBaddie",
-                                           badguy_pos, std::vector<itype_id>(), 0, 8, 8, 8, 8 );
+        badguy_pos, std::vector<itype_id>(), 0, 8, 8, 8, 8 );
     std::unique_ptr<standard_npc> dude = std::make_unique<standard_npc>( "TestCharacter",
-                                         dude_pos, std::vector<itype_id>(), 0, 8, 8, 8, 8 );
+        dude_pos, std::vector<itype_id>(), 0, 8, 8, 8, 8 );
     item cloth( clothing_id );
     projectile proj;
     proj.speed = 1000;
@@ -319,7 +319,7 @@ TEST_CASE( "body_temperature_clothing_coverage_performance", "[.][performance][b
     bool all_worn = true;
     for( int i = 0; i < 20; ++i ) {
         all_worn &= static_cast<bool>( dude.worn.wear_item( dude, item( itype_test_consolidate ), false,
-                                       false, false, true ) );
+            false, false, true ) );
     }
     REQUIRE( all_worn );
 

@@ -191,9 +191,9 @@ TEST_CASE( "vision_admission_keeps_cheap_and_short_casts_serial", "[vision][prep
     CHECK( vision_preparation::should_prepare( MAX_VIEW_DISTANCE, 4.2 ) );
     CHECK_FALSE( vision_preparation::should_prepare( 31, 4.2 ) );
     CHECK_FALSE( vision_preparation::should_prepare( MAX_VIEW_DISTANCE,
-                 std::numeric_limits<double>::quiet_NaN() ) );
+            std::numeric_limits<double>::quiet_NaN() ) );
     CHECK_FALSE( vision_preparation::should_prepare( MAX_VIEW_DISTANCE,
-                 std::numeric_limits<double>::infinity() ) );
+            std::numeric_limits<double>::infinity() ) );
 }
 
 TEST_CASE( "vision_serial_cost_observation_preserves_visibility", "[vision][preparation]" )

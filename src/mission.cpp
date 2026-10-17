@@ -225,7 +225,7 @@ void mission::process_all()
     // Activity blocks MGOAL_FIND_ITEM before it searches any items.
     const bool use_item_filter = !targets.empty() && !player_character.activity;
     const std::unordered_set<itype_id> present = use_item_filter ? present_mission_items( targets ) :
-            std::unordered_set<itype_id>();
+        std::unordered_set<itype_id>();
     bool item_filter_valid = use_item_filter;
 
     for( auto &e : world_missions ) {

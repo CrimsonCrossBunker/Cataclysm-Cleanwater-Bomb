@@ -158,7 +158,7 @@ static void eff_fun_onfire( Character &u, effect &it )
 {
     const int intense = it.get_intensity();
     u.deal_damage( it.get_source().resolve_creature(), it.get_bp(), damage_instance( damage_heat,
-                   rng( intense, intense * 2 ) ) );
+            rng( intense, intense * 2 ) ) );
     if( u.is_limb_broken( it.get_bp() ) ) {
         // Set effect to be cleaned up during effect processing instead of endlessly burning broken limb.
         // TODO: Transfer damage towards core instead? (e.g. broken feet --> try legs, if broken --> try torso etc)
@@ -255,7 +255,7 @@ static void eff_fun_fungus( Character &u, effect &it )
                 u.mod_thirst( awfulness );
                 ///\EFFECT_STR decreases damage taken by fungus effect
                 u.apply_damage( nullptr, bodypart_id( "torso" ), awfulness / std::max( u.get_str(),
-                                1 ) ); // can't be healthy
+                        1 ) ); // can't be healthy
             }
             break;
         case 3:
@@ -835,10 +835,10 @@ static void eff_fun_hypovolemia( Character &u, effect &it )
     // bleed out lambda
     auto bleed_out = [&] {
         if( u.has_effect( effect_bleed ) )
-        {
-            u.add_msg_player_or_npc( m_bad,
-                                     _( "You bleed to death!" ),
-                                     _( "<npcname> bleeds to death!" ) );
+    {
+        u.add_msg_player_or_npc( m_bad,
+                                 _( "You bleed to death!" ),
+                                 _( "<npcname> bleeds to death!" ) );
             get_event_bus().send<event_type::dies_from_bleeding>( u.getID() );
         } else
         {
@@ -1194,7 +1194,7 @@ static void eff_fun_sleep( Character &u, effect &it )
                     woke_up = true;
                 }
             } else if( tirednessVal < here.ambient_light_at( u.pos_bub() ) && ( u.get_sleepiness() < 10 ||
-                       one_in( u.get_sleepiness() / 2 ) ) ) {
+                    one_in( u.get_sleepiness() / 2 ) ) ) {
                 u.add_msg_if_player( _( "It's too bright to sleep." ) );
                 // Set ourselves up for removal
                 it.set_duration( 0_turns );
@@ -1218,7 +1218,7 @@ static void eff_fun_sleep( Character &u, effect &it )
         for( const bodypart_id &bp : u.get_all_body_parts() ) {
             const units::temperature curr_temp = u.get_part_temp_cur( bp );
             const units::temperature_delta sleepiness_modifier = units::from_celsius_delta(
-                        u.get_sleepiness() / 1000.0 );
+                    u.get_sleepiness() / 1000.0 );
             if( curr_temp < BODYTEMP_VERY_COLD - sleepiness_modifier ) {
                 if( one_in( 30000 ) ) {
                     u.add_msg_if_player( _( "You toss and turn trying to keep warm." ) );

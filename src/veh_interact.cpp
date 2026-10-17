@@ -1063,7 +1063,7 @@ void veh_interact::cache_tool_availability()
     Character &player_character = get_player_character();
     crafting_inv = &player_character.crafting_inventory();
     install_requirements_available = installation_requirement_availability( player_character,
-                                     *crafting_inv );
+        *crafting_inv );
     install_candidates_by_name.clear();
     for( const vpart_info &vpi : vehicles::parts::get_all() ) {
         if( !vpi.has_flag( "NO_INSTALL_HIDDEN" ) && !vpi.has_flag( VPFLAG_APPLIANCE ) ) {

@@ -339,7 +339,7 @@ std::string medical_ui::get_limb_scores_and_modifiers( const bodypart_id &part )
                 score_c.second = c_dark_gray;
             }
             detail_str += string_format( _( "%s: %s\n" ), sc.name().translated(), colorize( score_c.first,
-                                         score_c.second ) );
+                score_c.second ) );
         } else {
             detail_str += string_format( _( "%s: %s\n" ), sc.name().translated(), colorize( "OK", c_green ) );
         }
@@ -404,7 +404,7 @@ std::string medical_ui::get_modified_limb_name( const bodypart_id &part ) const
     const std::string bp_name = uppercase_first_letter( body_part_name( part, 1 ) );
     header += colorize( bp_name,
                         display::limb_color( *you,
-                                part, true, true, true ) ) + " " + hp_str;
+                            part, true, true, true ) ) + " " + hp_str;
 
     // BLEEDING block
     if( bleeding ) {
@@ -434,12 +434,12 @@ static std::string draw_speed_summary( Character &you )
     const int newmoves = you.get_speed();
 
     const std::string runcost_colored = colorize( string_format( _( "%d" ), runcost ),
-                                        ( runcost <= 100 ? c_green : c_red ) );
+        ( runcost <= 100 ? c_green : c_red ) );
     desc += string_format( _( "Base Move Cost: %s" ), runcost_colored );
     desc += "\n";
 
     const std::string speed_colored = colorize( string_format( _( "%d" ), newmoves ),
-                                      ( newmoves >= 100 ? c_green : c_red ) );
+        ( newmoves >= 100 ? c_green : c_red ) );
     desc += string_format( _( "Current Speed: %s" ), speed_colored );
     desc += "\n";
 
@@ -567,10 +567,10 @@ void medical_ui::summary_tab() const
     const diag_value *last_weighting_time = you->maybe_get_value( "last_weighting_time" );
     if( last_weighting_time != nullptr ) {
         const std::string last_weighting_weight = string_format( "%.0f %s",
-                convert_weight( units::from_kilogram( you->get_value( "last_weighting_weight_kg" ).dbl() ) ),
-                weight_units() );
+            convert_weight( units::from_kilogram( you->get_value( "last_weighting_weight_kg" ).dbl() ) ),
+            weight_units() );
         const std::string last_weighted_time = string_format( _( "last weighed %s ago." ),
-                                               to_string_approx( calendar::turn - time_point( last_weighting_time->dbl() ) ) );
+            to_string_approx( calendar::turn - time_point( last_weighting_time->dbl() ) ) );
         const std::string weight_desc = string_format(
                                             "%s: %s (%s)",
                                             _( "Weight" ),
@@ -743,7 +743,7 @@ bool Character::pick_wound_fix( const bodypart_id &bp_id )
                 for( const auto& [wound, weight] : bp_id->potential_wounds ) {
                     opts.emplace_back( wound.id, bp->has_wound( wound.id ) );
                     menu.addentry( -1, true, -1, string_format( opts.back().second ? "Treat: %s" : "Set: %s",
-                                   wound.id.str() ) );
+                            wound.id.str() ) );
                 }
                 if( opts.empty() ) {
                     popup( string_format( "The %s doesn't have any wounds to toggle.", bp_id->name ) );
@@ -787,7 +787,7 @@ bool Character::pick_wound_fix( const bodypart_id &bp_id )
             }
 
             opt.doable &= fix_id->get_requirements().can_make_with_inventory( this, inv,
-                          is_crafting_component );
+                is_crafting_component );
 
             healing_options.emplace_back( opt );
         }
@@ -828,7 +828,7 @@ bool Character::pick_wound_fix( const bodypart_id &bp_id )
 
         const std::vector<std::string> tools = reqs.get_folded_tools_list( this, fold_width, col, inv );
         const std::vector<std::string> comps = reqs.get_folded_components_list( this, fold_width, col, inv,
-                                               is_crafting_component );
+            is_crafting_component );
 
         std::string descr = word_rewrap( fix.get_description(), 80 ) + "\n\n";
 

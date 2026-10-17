@@ -63,7 +63,7 @@ crafting_component_groups build_component_display( const recipe &rec, const Char
         }
         for( crafting_component_display &entry : group ) {
             entry.color = entry.component->get_color( &crafter, any_available, inv, filter,
-                          batch_size );
+                batch_size );
         }
         std::stable_sort( group.begin(), group.end(),
         []( const crafting_component_display & a, const crafting_component_display & b ) {
@@ -167,9 +167,9 @@ availability::availability( Character &_crafter, const recipe *r, int batch_size
         const auto no_rotten_filter = r->get_component_filter( recipe_filter_flags::no_rotten );
         const auto no_favorite_filter = r->get_component_filter( recipe_filter_flags::no_favorite );
         would_use_rotten = !req.can_make_with_inventory( &crafter, inv, no_rotten_filter, batch_size,
-                           flag );
+            flag );
         would_use_favorite = !req.can_make_with_inventory( &crafter, inv, no_favorite_filter, batch_size,
-                             flag );
+            flag );
     }
     useless_practice = r->is_practice() && cannot_gain_skill_or_prof( crafter, *r );
     is_nested_category = r->is_nested();
@@ -1013,7 +1013,7 @@ static void recursively_expand_recipes( std::vector<const recipe *> &current,
     const crafting_cost_context sort_ctx{ crafter.book_bonuses_nearby(), {} };
     std::unordered_map<const recipe *, std::string> sort_name_cache;
     std::stable_sort( tmp.begin(), tmp.end(), [
-                       &crafter, &availability_cache, want_unread, &sort_ctx, &sort_name_cache
+                          &crafter, &availability_cache, want_unread, &sort_ctx, &sort_name_cache
     ]( const recipe * const a, const recipe * const b ) {
         const bool a_read = !want_unread || uistate.read_recipes.count( a->ident() );
         const bool b_read = !want_unread || uistate.read_recipes.count( b->ident() );
@@ -1113,7 +1113,7 @@ recipe_list_data build_recipe_list(
         const crafting_cost_context sort_ctx{ crafter.book_bonuses_nearby(), {} };
         std::unordered_map<const recipe *, std::string> sort_name_cache;
         std::stable_sort( result.entries.begin(), result.entries.end(), [
-                       &crafter, &availability_cache, want_unread, &sort_ctx, &sort_name_cache
+                              &crafter, &availability_cache, want_unread, &sort_ctx, &sort_name_cache
         ]( const recipe * const a, const recipe * const b ) {
             const bool a_read = !want_unread || uistate.read_recipes.count( a->ident() );
             const bool b_read = !want_unread || uistate.read_recipes.count( b->ident() );

@@ -558,7 +558,7 @@ void recipe::load( const JsonObject &jo, const std::string_view src )
                 jo.throw_error( "Recipe cannot be reversible and have byproducts" );
             }
             byproduct_group = item_group::load_item_group( jo.get_member( "byproduct_group" ),
-                              "collection", "byproducts of recipe " + id.str() );
+                "collection", "byproducts of recipe " + id.str() );
         }
         optional( jo, was_loaded, "construction_blueprint", blueprint );
         if( !blueprint.is_empty() ) {
@@ -635,7 +635,7 @@ void recipe::load( const JsonObject &jo, const std::string_view src )
                 jo.throw_error( "Recipe cannot be reversible and have byproducts" );
             }
             byproduct_group = item_group::load_item_group( jo.get_member( "byproduct_group" ),
-                              "collection", "byproducts of recipe " + id.str() );
+                "collection", "byproducts of recipe " + id.str() );
         }
     } else if( type == "uncraft" ) {
         reversible = true;
@@ -1023,7 +1023,7 @@ void recipe::finalize()
     // ensure result name is always in front of the name for searching in crafting menu
     if( !name_.empty() && !is_practice() && !is_nested() && result_ ) {
         name_ = translation::to_translation( string_format( name_.translated(),
-                                             result_->nname( makes_amount() ) ) );
+            result_->nname( makes_amount() ) ) );
     }
 
     if( is_nested() ) {
@@ -1944,7 +1944,7 @@ std::function<bool( const item & )> recipe::get_component_filter(
     }
 
     return [ rotten_filter, favorite_filter, frozen_filter,
-                   magazine_filter ]( const item & component ) {
+    magazine_filter ]( const item & component ) {
         return is_crafting_component( component ) &&
                rotten_filter( component ) &&
                favorite_filter( component ) &&

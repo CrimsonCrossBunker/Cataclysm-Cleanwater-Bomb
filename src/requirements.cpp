@@ -945,11 +945,11 @@ std::vector<std::string> requirement_data::get_folded_tools_list( const Characte
     }
 
     std::vector<std::string> folded_qualities = get_folded_list( actor, width, crafting_inv,
-            return_true<item>, qualities );
+        return_true<item>, qualities );
     output_buffer.insert( output_buffer.end(), folded_qualities.begin(), folded_qualities.end() );
 
     std::vector<std::string> folded_tools = get_folded_list( actor, width, crafting_inv,
-                                            return_true<item>, tools, batch );
+        return_true<item>, tools, batch );
     output_buffer.insert( output_buffer.end(), folded_tools.begin(), folded_tools.end() );
     return output_buffer;
 }
@@ -1501,7 +1501,7 @@ requirement_data requirement_data::continue_requirements( const std::vector<item
 
 template<typename T, typename Accum>
 static std::vector<std::vector<T>> consolidate( std::vector<std::vector<T>> old_vec,
-                                const Accum &accum )
+        const Accum &accum )
 {
     const auto type_lt = []( const T & lhs, const T & rhs ) -> bool {
         //TODO change to use localized sorting
@@ -1519,7 +1519,7 @@ static std::vector<std::vector<T>> consolidate( std::vector<std::vector<T>> old_
     std::sort( old_vec.begin(), old_vec.end(),
     [&type_lt]( const std::vector<T> &lhs, const std::vector<T> &rhs ) -> bool {
         return std::lexicographical_compare( lhs.begin(), lhs.end(), rhs.begin(), rhs.end(),
-                                             type_lt );
+        type_lt );
     } );
 
     std::vector<std::vector<T>> new_vec;

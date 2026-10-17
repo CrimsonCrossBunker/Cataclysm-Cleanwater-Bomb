@@ -114,7 +114,7 @@ TEST_CASE( "creature_tracker_find_monster_by_uid", "[monster][creature_tracker]"
 {
     creature_tracker tracker;
     const auto live_monster = make_shared_fast<monster>( mon_test_zombie,
-                              tripoint_bub_ms( 0, 0, 0 ) );
+        tripoint_bub_ms( 0, 0, 0 ) );
     REQUIRE( tracker.add( live_monster ) );
     REQUIRE( live_monster->uid().is_valid() );
     const int64_t live_uid = live_monster->uid().get_value();
@@ -127,7 +127,7 @@ TEST_CASE( "creature_tracker_find_monster_by_uid", "[monster][creature_tracker]"
     CHECK( tracker.find_by_uid( live_uid ) == nullptr );
 
     const auto dead_monster = make_shared_fast<monster>( mon_test_zombie,
-                              tripoint_bub_ms( 1, 0, 0 ) );
+        tripoint_bub_ms( 1, 0, 0 ) );
     REQUIRE( tracker.add( dead_monster ) );
     REQUIRE( dead_monster->uid().is_valid() );
     const int64_t dead_uid = dead_monster->uid().get_value();
@@ -185,9 +185,9 @@ struct track {
 std::ostream &operator<<( std::ostream &os, track const &value )
 {
     os << value.participant <<
-       " l:" << value.location <<
-       " d:" << value.distance <<
-       " m:" << value.moves;
+    " l:" << value.location <<
+    " d:" << value.distance <<
+    " m:" << value.moves;
     return os;
 }
 
@@ -286,7 +286,7 @@ static void check_shamble_speed( const std::string &monster_type,
     // Scale the scaling factor based on the ratio of diagonal to cardinal steps.
     const float slope = get_normalized_angle( point::zero, destination.xy().raw() );
     const float diagonal_multiplier = 1.0 + ( get_option<bool>( "CIRCLEDIST" ) ?
-                                      ( slope * 0.41 ) : 0.0 );
+        ( slope * 0.41 ) : 0.0 );
     INFO( monster_type << " " << destination );
     // Wandering makes things nondeterministic, so look at the distribution rather than a target number.
     move_statistics move_stats;
@@ -332,7 +332,7 @@ static void test_moves_to_squares( const std::string &monster_type, const bool w
                 // Scale the scaling factor based on the ratio of diagonal to cardinal steps.
                 const float slope = get_normalized_angle( {50, 50}, {x, y} );
                 const float diagonal_multiplier = 1.0 + ( get_option<bool>( "CIRCLEDIST" ) ?
-                                                  ( slope * 0.41 ) : 0.0 );
+                    ( slope * 0.41 ) : 0.0 );
                 turns_at_angle[angle * 100].new_type();
                 turns_at_slope[slope].new_type();
                 for( int i = 0; i < 5; ++i ) {
@@ -372,7 +372,7 @@ static void test_moves_to_squares( const std::string &monster_type, const bool w
     if( write_data ) {
         std::ofstream data;
         data.open( std::filesystem::u8path( "slope_test_data_" + std::string( (
-                                                trigdist ? "trig_" : "square_" ) ) +
+                    trigdist ? "trig_" : "square_" ) ) +
                                             monster_type ) );
         for( const auto &stat_pair : turns_at_angle ) {
             data << stat_pair.first << " " << stat_pair.second.avg() << "\n";
@@ -1185,7 +1185,7 @@ TEST_CASE( "monster_can_navigate_from_overmap_to_reality_bubble_following_sound"
     horde_entity *test_mon_initial = nullptr;
     capture_debugmsg_during( [&]() {
         test_mon_initial = &overmap_buffer.spawn_monster( entity_spawn_location,
-                           mon_test_zombie );
+            mon_test_zombie );
     } );
     // Assert monster is not wandering
     REQUIRE( test_mon_initial->tracking_intensity == 0 );
@@ -1532,7 +1532,7 @@ TEST_CASE( "obstacles_placed_on_map_are_present_in_overmap", "[map][hordes]" )
     tripoint_bub_ms obstacle_origin{ 30, 30, 0 };
     int obstacle_radius = 10;
     tripoint_abs_ms obstacle_eastern_border = here.get_abs( obstacle_origin + point::east *
-            obstacle_radius );
+        obstacle_radius );
     std::set<tripoint_abs_omt> edited_omts;
     std::set<tripoint_abs_ms> obstacle_locations;
     std::set<tripoint_abs_ms> passable_locations;
@@ -1596,7 +1596,7 @@ TEST_CASE( "dormant_zombie_places_corpse_and_trap", "[monster][map]" )
     monster dormant_monster( pseudo_dormant_mon_zombie_fat );
     REQUIRE( dormant_monster.can_move_to( spawn_point ) );
     monster *const placed_monster = g->place_critter_at( make_shared_fast<monster>( dormant_monster ),
-                                    spawn_point );
+        spawn_point );
     REQUIRE( placed_monster != nullptr );
     REQUIRE( placed_monster->pos_bub() == spawn_point );
     REQUIRE( placed_monster->type->id == dormant_monster.type->id );

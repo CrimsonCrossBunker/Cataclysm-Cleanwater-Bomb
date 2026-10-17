@@ -19,7 +19,7 @@ TEST_CASE( "smelting_requires_each_tool_group", "[requirements][smelting][upstre
     const int missing = GENERATE( -1, 0, 1, 2, 3 );
     const std::array<itype_id, 4> tools = alternatives ?
                                           std::array<itype_id, 4> { itype_id( "oxy_torch" ), itype_id( "crucible_clay" ),
-                                                  itype_id( "metalworking_tongs_bronze" ), itype_id( "casting_mold" )
+                                              itype_id( "metalworking_tongs_bronze" ), itype_id( "casting_mold" )
                                                                   } :
                                           std::array<itype_id, 4> { itype_id( "oxy_torch" ), itype_id( "crucible" ),
                                                   itype_id( "metalworking_tongs" ), itype_id( "casting_mold" )

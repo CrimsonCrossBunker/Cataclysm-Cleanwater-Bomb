@@ -651,7 +651,7 @@ void effect_type::verify() const
 {
     if( death_event.has_value() ) {
         const std::unordered_map<std::string, cata_variant_type> &fields = cata::event::get_fields(
-                    *death_event );
+                *death_event );
         // Only allow events inheriting from event_spec_character at the moment.
         if( fields.size() != 1 || fields.count( "character" ) != 1 ) {
             debugmsg( "Invalid death event type %s in effect_type %s", "lol",
@@ -840,7 +840,7 @@ std::string effect::disp_name() const
     std::string ret;
     if( eff_type->use_name_ints() ) {
         const translation &d_name = eff_type->name[ std::min<size_t>( intensity,
-                                                      eff_type->name.size() ) - 1 ];
+            eff_type->name.size() ) - 1 ];
         if( d_name.empty() ) {
             return std::string();
         }
@@ -1382,7 +1382,7 @@ int effect::get_avg_mod( const std::string &arg, bool reduced ) const
 int effect::get_amount( const std::string &arg, bool reduced ) const
 {
     return static_cast<int>( eff_type->get_mod_value( arg, mod_action::AMOUNT, reduced,
-                             get_effective_intensity() ) );
+            get_effective_intensity() ) );
 }
 
 int effect::get_min_val( const std::string &arg, bool reduced ) const
@@ -1649,7 +1649,7 @@ void load_effect_type( const JsonObject &jo, std::string_view src )
 
     if( jo.has_string( "int_dur_factor" ) ) {
         new_etype.int_dur_factor = read_from_json_string<time_duration>( jo.get_member( "int_dur_factor" ),
-                                   time_duration::units );
+            time_duration::units );
     } else {
         new_etype.int_dur_factor = time_duration::from_turns( jo.get_int( "int_dur_factor", 0 ) );
     }
@@ -1718,7 +1718,7 @@ std::vector<effect_dur_mod> effect::get_effect_dur_scaling() const
 bool effect::kill_roll( bool reduced ) const
 {
     const std::vector<std::pair<int, int>> &chances = reduced ? eff_type->red_kill_chance :
-                                        eff_type->kill_chance;
+        eff_type->kill_chance;
     if( chances.empty() ) {
         return false;
     }
@@ -1821,7 +1821,7 @@ void cata::lua_platform::detail::erase_platform_effect_migration(
 }
 
 std::vector<std::pair<std::string, std::string>>
-        cata::lua_platform::detail::effect_migration_snapshot()
+cata::lua_platform::detail::effect_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( effect_migrations.size() );

@@ -221,7 +221,7 @@ void attach_bag_to( monster &z )
 
     avatar &player_character = get_avatar();
     item_location loc = game_menus::inv::titled_filter_menu( filter, player_character,
-                        _( "Bag item" ) );
+        _( "Bag item" ) );
 
     if( !loc ) {
         add_msg( _( "Never mind." ) );
@@ -583,7 +583,7 @@ void milk_source( monster &source_mon )
             source_mon.add_effect( effect_tied, 1_turns, true );
         }
         player_character.assign_activity( milk_activity_actor( moves, moves_per_unit, coords, liquid_target,
-                                          temp_tie ) );
+                temp_tie ) );
 
         add_msg( _( "You milk the %s." ), source_mon.get_name() );
     } else {

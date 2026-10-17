@@ -275,7 +275,7 @@ Highway_path overmap::place_highway_reserved_path( const tripoint_om_omt &p1,
                 tripoint_om_omt bend_midpoint = midpoint( p1, p2 );
                 bend_points.emplace_back( closest_corner_in_direction( p1, bend_midpoint, direction1 ) );
                 bend_points.emplace_back( closest_corner_in_direction( bend_midpoint, p2,
-                                          bend_points.back().second ) );
+                        bend_points.back().second ) );
             } else {
                 bend_draw_mode = false;
             }
@@ -310,7 +310,7 @@ Highway_path overmap::place_highway_reserved_path( const tripoint_om_omt &p1,
             std::vector<overmap_special_locations> locs = node.placed_special->required_locations();
             for( overmap_special_locations &loc : locs ) {
                 const oter_type_str_id z0_terrain_to_place = reserve_water ?
-                        reserved_terrain_water_id : reserved_terrain_id;
+                    reserved_terrain_water_id : reserved_terrain_id;
                 om_direction::type reserved_direction = node.get_effective_dir();
 
                 tripoint_om_omt rotated = node.path_node.pos +
@@ -394,7 +394,7 @@ Highway_path overmap::place_highway_line(
         }
         //leave space for ramps
         bool next_slant_on_water = special_on_water( this, selected_slant,
-                                   current_point + slant_scaled_direction_vector + slant_clockwise_vector, draw_direction );
+            current_point + slant_scaled_direction_vector + slant_clockwise_vector, draw_direction );
         bool z_change =
             special_on_water( this, selected_slant, current_point, draw_direction ) != next_slant_on_water;
         place_special_at = tripoint_om_omt( current_point.xy(), base_z );
@@ -407,14 +407,14 @@ Highway_path overmap::place_highway_line(
                 clockwise = !clockwise;
                 slant_clockwise_vector = tripoint_rel_omt(
                                              point_rel_omt( four_adjacent_offsets[static_cast<int>( clockwise ?
-                                                                       om_direction::turn_right( draw_direction ) :
-                                                                       om_direction::turn_left( draw_direction ) )] ), 0 );
+                                                 om_direction::turn_right( draw_direction ) :
+                                                 om_direction::turn_left( draw_direction ) )] ), 0 );
             }
             //because highways are locked to N/E, account for S/W offset
             if( draw_direction == om_direction::type::south ||
                 draw_direction == om_direction::type::west ) {
                 place_special_at += tripoint_rel_omt( point_rel_omt( four_adjacent_offsets[
-                static_cast<int>( om_direction::turn_left( draw_direction ) )] ), 0 );
+                        static_cast<int>( om_direction::turn_left( draw_direction ) )] ), 0 );
             }
 
             selected_special = selected_slant;
@@ -423,7 +423,7 @@ Highway_path overmap::place_highway_line(
             minimum_slants--;
         } else {
             bool is_segment_water = special_on_water( this, highway_settings.segment_flat, current_point,
-                                    draw_direction );
+                draw_direction );
             new_z = is_segment_water ? base_z + 1 : base_z;
 
             selected_special = segment_special( highway_settings, is_segment_water );
@@ -495,8 +495,8 @@ void overmap::place_highway_lines_with_bends( Highway_path &highway_path,
         if( draw_bend ) {
             //end of segment
             path_points[i].second = tripoint_om_omt( path_points[i].second.xy() +
-                                    truncate_segment( current_direction, last_bend_length ),
-                                    path_points[i].second.z() );
+                truncate_segment( current_direction, last_bend_length ),
+                path_points[i].second.z() );
         }
         Highway_path path = place_highway_line( path_points[i].first,
                                                 path_points[i].second, current_direction, base_z );
@@ -687,7 +687,7 @@ bool overmap::highway_select_end_points( const std::vector<const overmap *> &nei
             if( neighbor_overmaps[i] != nullptr ) {
                 //neighboring overmap highway edge connects to this overmap
                 const tripoint_om_omt opposite_edge = neighbor_overmaps[i]->highway_connections[( i + 2 ) %
-                                                      HIGHWAY_MAX_CONNECTIONS];
+                    HIGHWAY_MAX_CONNECTIONS];
                 if( opposite_edge == tripoint_om_omt::zero ||
                     opposite_edge == tripoint_om_omt::invalid ) {
                     // Neighbor has no highway data -- drop this connection.
@@ -714,7 +714,7 @@ bool overmap::highway_select_end_points( const std::vector<const overmap *> &nei
                 if( !x_in_y( highway_settings.straightness_chance, 1.0 ) ) {
                     tripoint_om_omt wrapped_point = wrap_point( to_wrap );
                     std::vector<tripoint_om_omt> border_points = get_border( point_rel_om( four_adjacent_offsets[i] ),
-                            base_z, SAFE_DEVIANCE );
+                        base_z, SAFE_DEVIANCE );
                     std::vector<tripoint_om_omt> border_points_in_radius;
                     for( const tripoint_om_omt &p : border_points ) {
                         if( rl_dist( p, wrapped_point ) < HIGHWAY_MAX_DEVIANCE &&
@@ -799,7 +799,7 @@ std::vector<Highway_path> overmap::place_highways(
                     int next_edge = ( i + 1 ) % HIGHWAY_MAX_CONNECTIONS;
                     if( neighbor_connections[i] && neighbor_connections[next_edge] ) {
                         paths.emplace_back( place_highway_reserved_path( end_points[i], end_points[next_edge], i, next_edge,
-                                            base_z ) );
+                                base_z ) );
                     }
                 }
             }
@@ -821,7 +821,7 @@ std::vector<Highway_path> overmap::place_highways(
             for( int i = 0; i < HIGHWAY_MAX_CONNECTIONS; i++ ) {
                 if( i != static_cast<int>( empty_direction ) ) {
                     paths.emplace_back( place_highway_reserved_path( end_points[i], three_point, i, ( i + 2 ) % 4,
-                                        RIVER_Z ) );
+                        RIVER_Z ) );
                 }
             }
             fallback_special = highway_settings.fallback_three_way_intersection;
@@ -846,8 +846,8 @@ std::vector<Highway_path> overmap::place_highways(
                 for( int i = 0; i < HIGHWAY_MAX_CONNECTIONS; i++ ) {
                     if( corners_close[i] ) {
                         four_point = closest_corner_in_direction( end_points[i],
-                                     end_points[( i + 1 ) % HIGHWAY_MAX_CONNECTIONS],
-                                     om_direction::opposite( om_direction::all[i] ) ).first;
+                            end_points[( i + 1 ) % HIGHWAY_MAX_CONNECTIONS],
+                            om_direction::opposite( om_direction::all[i] ) ).first;
                     }
                 }
             } else if( corners_close.count() == 2 ) {
@@ -867,17 +867,17 @@ std::vector<Highway_path> overmap::place_highways(
                         om_direction::type opposite_dir = om_direction::opposite( om_direction::all[dir1] );
                         three_way_direction[three_way_index] = opposite_dir;
                         three_way_intersections[three_way_index] = find_highway_intersection_point( special,
-                                closest_corner_in_direction( end1, end2, opposite_dir ).first, opposite_dir, HIGHWAY_MAX_DEVIANCE );
+                            closest_corner_in_direction( end1, end2, opposite_dir ).first, opposite_dir, HIGHWAY_MAX_DEVIANCE );
                         paths.emplace_back( place_highway_reserved_path( end1,
-                                            three_way_intersections[three_way_index], dir1, ( dir1 + 2 ) % HIGHWAY_MAX_CONNECTIONS, RIVER_Z ) );
+                                three_way_intersections[three_way_index], dir1, ( dir1 + 2 ) % HIGHWAY_MAX_CONNECTIONS, RIVER_Z ) );
                         paths.emplace_back( place_highway_reserved_path( end2,
-                                            three_way_intersections[three_way_index], dir2, ( dir2 + 2 ) % HIGHWAY_MAX_CONNECTIONS, RIVER_Z ) );
+                                three_way_intersections[three_way_index], dir2, ( dir2 + 2 ) % HIGHWAY_MAX_CONNECTIONS, RIVER_Z ) );
                     }
                 }
                 paths.emplace_back( place_highway_reserved_path( three_way_intersections[0],
-                                    three_way_intersections[1],
-                                    static_cast<int>( om_direction::turn_left( three_way_direction[0] ) ),
-                                    static_cast<int>( om_direction::turn_left( three_way_direction[1] ) ), base_z ) );
+                        three_way_intersections[1],
+                        static_cast<int>( om_direction::turn_left( three_way_direction[0] ) ),
+                        static_cast<int>( om_direction::turn_left( three_way_direction[1] ) ), base_z ) );
 
                 for( int i = 0; i < THREE_WAY_COUNT; i++ ) {
                     highway_special_offset( three_way_intersections[i], three_way_direction[i] );
@@ -893,12 +893,12 @@ std::vector<Highway_path> overmap::place_highways(
             }
             om_direction::type intersection_dir = om_direction::type::north;
             four_point = find_highway_intersection_point( special, four_point, intersection_dir,
-                         HIGHWAY_MAX_DEVIANCE );
+                HIGHWAY_MAX_DEVIANCE );
 
             //draw end-to-end from end points to 4-way intersection
             for( int i = 0; i < HIGHWAY_MAX_CONNECTIONS; i++ ) {
                 paths.emplace_back( place_highway_reserved_path( end_points[i], four_point, i, ( i + 2 ) % 4,
-                                    base_z ) );
+                    base_z ) );
             }
             place_highway_supported_special( special, four_point, om_direction::type::north );
             break;
@@ -910,7 +910,7 @@ std::vector<Highway_path> overmap::place_highways(
             for( int i = 0; i < HIGHWAY_MAX_CONNECTIONS; i++ ) {
                 if( !end_points[i].is_invalid() ) {
                     paths.emplace_back( place_highway_reserved_path( end_points[i], dummy_point, i, ( i + 2 ) % 4,
-                                        base_z ) );
+                        base_z ) );
                 }
             }
     }
@@ -925,7 +925,7 @@ overmap::get_highway_segment_points( const pf::directed_node<tripoint_om_omt> &n
     //highway segments can only draw N/E
     om_direction::type draw_dir = om_direction::type( static_cast<int>( node.dir ) % 2 );
     const tripoint_rel_omt draw_point_dir( point_rel_omt( four_adjacent_offsets[static_cast<int>
-                                           ( om_direction::turn_right( draw_dir ) )] ), 0 );
+            ( om_direction::turn_right( draw_dir ) )] ), 0 );
     const tripoint_om_omt z0( node.pos.xy(), RIVER_Z );
     std::vector<tripoint_om_omt> draw_points = { z0, z0 + draw_point_dir };
     return std::make_pair( draw_points, draw_dir );
@@ -960,7 +960,7 @@ void overmap::finalize_highways( std::vector<Highway_path> &paths )
             bool is_special = false;
             for( overmap_special_locations &loc : locs ) {
                 if( is_highway_special( ter( node.path_node.pos + om_direction::rotate( loc.p,
-                                             effective_dir ) ) ) ) {
+                        effective_dir ) ) ) ) {
                     is_special = true;
                     break;
                 }
@@ -1036,7 +1036,7 @@ std::optional<std::bitset<HIGHWAY_MAX_CONNECTIONS>> overmap::is_highway_overmap(
         for( const overmap_feature_grid_node &intersection : highway_grid.find_grid_adjacent_features(
                  bound_intersection.get_grid_pos() ) ) {
             highway_oms.emplace_back( check_on_path( bound_intersection.get_offset_pos(),
-                                      intersection.get_offset_pos() ) );
+                    intersection.get_offset_pos() ) );
         }
     }
 
@@ -1148,7 +1148,7 @@ void overmap::place_highway_interchanges( std::vector<Highway_path> &highway_pat
     const int HIGHWAY_INTERCHANGE_VARIANCE = HIGHWAY_INTERCHANGE_SPACING / 10;
     for( Highway_path &path : highway_path ) {
         int node_count = HIGHWAY_INTERCHANGE_SPACING + rng( -HIGHWAY_INTERCHANGE_VARIANCE,
-                         HIGHWAY_INTERCHANGE_VARIANCE );
+            HIGHWAY_INTERCHANGE_VARIANCE );
         for( intrahighway_node &node : path ) {
             if( node.is_segment && node_count == 0 ) {
                 const overmap_special_id interchange = highway_settings.interchanges.pick();

@@ -1577,7 +1577,7 @@ bool outfit::takeoff( item_location loc, std::list<item> *res, Character &guy )
 
     it.on_takeoff( guy );
     cata::event e = cata::event::make<event_type::character_takeoff_item>( guy.getID(),
-                    it.typeId() );
+        it.typeId() );
     get_event_bus().send_with_talker( &guy, &loc, e );
     // Catching eoc of character_takeoff_item event may cause item to be invalid.
     // If so, skip worn.erase and guy.i_add or res->push_back.
@@ -1939,7 +1939,7 @@ void outfit::absorb_damage( Character &guy, damage_unit &elem, bodypart_id bp,
 
             item_location loc = item_location( guy, &armor );
             cata::event e = cata::event::make<event_type::character_armor_destroyed>( guy.getID(),
-                            armor.typeId() );
+                armor.typeId() );
             get_event_bus().send_with_talker( &guy, &loc, e );
             for( const item *it : armor.all_items_top( pocket_type::CONTAINER ) ) {
                 worn_remains.push_back( *it );
@@ -2403,7 +2403,7 @@ static int fill_empty_stackable_containers( item_location loc, const item &newit
             contained_copy.charges = 1;
         }
         ret_val<void> can_contain = loc->can_contain( contained_copy, false, false,
-                                    ignore_settings, false, item_location(), 10000000_ml, allow_nested );
+            ignore_settings, false, item_location(), 10000000_ml, allow_nested );
         if( !can_contain.success() ) {
             break;
         }
@@ -2443,7 +2443,7 @@ void outfit::pickup_stash( Character &guy, const item &newit, int &remaining_cha
         item_location loc( guy, &i );
         if( is_empty_stackable_container( loc ) ) {
             const int used_charges = fill_empty_stackable_containers( loc, newit, remaining_charges,
-                                     guy, false, false, ignore_pkt_settings, false, true );
+                guy, false, false, ignore_pkt_settings, false, true );
             remaining_charges -= used_charges;
         } else if( i.can_contain_partial( newit ).success() ) {
             const int used_charges =
@@ -2490,10 +2490,10 @@ static std::vector<pocket_with_constraint> get_all_pockets_with_constraints_recu
     for( const item *contained : pocket->all_items_top() ) {
         for( const item_pocket *inner_pocket : contained->get_pockets( check_pocket_tree ) ) {
             std::vector<pocket_with_constraint> children = get_all_pockets_with_constraints_recursive(
-                        inner_pocket,
-                        include_pocket,
-                        check_pocket_tree
-                    );
+                    inner_pocket,
+                    include_pocket,
+                    check_pocket_tree
+                );
             for( auto &c : children ) {
                 c.second.constrain_by( pocket );
             }
@@ -2510,7 +2510,7 @@ static void get_all_pockets_with_constraints_in_loc_recursive( const item_locati
 {
     for( const item_pocket *pocket : loc->get_pockets( check_pocket_tree ) ) {
         std::vector<pocket_with_constraint> children = get_all_pockets_with_constraints_recursive( pocket,
-                include_pocket, check_pocket_tree );
+            include_pocket, check_pocket_tree );
         insert_in.insert( insert_in.end(), children.begin(), children.end() );
     }
 }
@@ -2628,14 +2628,14 @@ void outfit::add_stash( Character &guy, const item &newit, int &remaining_charge
         } else if( carried_item && !carried_item->has_pocket_type( pocket_type::MAGAZINE ) &&
                    is_empty_stackable_container( carried_item ) ) {
             int used_charges = fill_empty_stackable_containers( carried_item, newit, remaining_charges,
-                               guy, /*unseal_pockets=*/false, /*allow_sealed=*/false, /*ignore_settings=*/false,
-                               /*into_bottom*/false, /*allow_nested*/true );
+                guy, /*unseal_pockets=*/false, /*allow_sealed=*/false, /*ignore_settings=*/false,
+                /*into_bottom*/false, /*allow_nested*/true );
             remaining_charges -= used_charges;
         } else if( carried_item && !carried_item->has_pocket_type( pocket_type::MAGAZINE ) &&
                    carried_item->can_contain_partial( newit ).success() ) {
             int used_charges = carried_item->fill_with( newit, remaining_charges,
-                               /*unseal_pockets=*/false, /*allow_sealed=*/false, /*ignore_settings=*/false,
-                               /*into_bottom*/false, /*allow_nested*/true, &guy );
+                /*unseal_pockets=*/false, /*allow_sealed=*/false, /*ignore_settings=*/false,
+                /*into_bottom*/false, /*allow_nested*/true, &guy );
             remaining_charges -= used_charges;
         }
         // Crawl Next : worn items

@@ -1671,7 +1671,7 @@ bool Character::try_mount_creature( monster &z )
     const bool saddled = z.has_effect( effect_monster_saddled );
     const double difficulty = std::max( 0.0,
                                         static_cast<double>( saddled ? config.saddled_mount_difficulty :
-                                                config.unsaddled_mount_difficulty ) +
+                                            config.unsaddled_mount_difficulty ) +
                                         z.pet_equipment_mount_threshold_delta() );
     const double ability = get_skill_level( skill_riding ) * config.mount_skill_weight +
                            get_dex() * config.mount_dexterity_weight;
@@ -4674,23 +4674,23 @@ void Character::mend_item( item_location &&obj, bool interactive )
         }
         for( const item_repair::tool_option &opt : repair_options ) {
             const auto [success, damage] = opt.actor->repair_chance( *this, *obj,
-                                           repair_item_actor::RT_REPAIR );
+                repair_item_actor::RT_REPAIR );
             std::string descr = string_format( _( "Repair ordinary damage; no fault is required.\n"
-                                                 "Skill: %s\nTime per attempt: %s\n"
-                                                 "Success chance: %.1f%%\nDamage chance: %.1f%%\n" ),
-                                              opt.actor->used_skill->name(),
-                                              to_string_approx( time_duration::from_moves( opt.actor->move_cost ) ),
-                                              success * 100, damage * 100 );
+                                                  "Skill: %s\nTime per attempt: %s\n"
+                                                  "Success chance: %.1f%%\nDamage chance: %.1f%%\n" ),
+                                               opt.actor->used_skill->name(),
+                                               to_string_approx( time_duration::from_moves( opt.actor->move_cost ) ),
+                                               success * 100, damage * 100 );
             descr += string_format( _( "Repair materials: %s\n" ), enumerate_as_string(
-                                        opt.actor->get_valid_repair_materials( *obj ), []( const itype_id & id ) {
+            opt.actor->get_valid_repair_materials( *obj ), []( const itype_id & id ) {
                 return item::nname( id );
             }, enumeration_conjunction::or_ ) );
             if( !opt.available ) {
                 descr += _( "The tool or required materials are currently unavailable.\n" );
             }
             menu.addentry_desc( -1, true, -1,
-                               string_format( _( "Repair damage using %s" ), opt.tool->tname() ),
-                               colorize( descr, opt.available ? c_white : c_light_gray ) );
+                                string_format( _( "Repair damage using %s" ), opt.tool->tname() ),
+                                colorize( descr, opt.available ? c_white : c_light_gray ) );
         }
         menu.query();
         if( menu.ret < 0 ) {

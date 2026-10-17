@@ -568,7 +568,7 @@ static void prep_craft( const recipe_id &rid, const std::vector<item> &tools,
     REQUIRE( can_craft_with_crafting_inv == expect_craftable );
     bool can_craft_with_temp_inv = r.deduped_requirements()
                                    .can_make_with_inventory( &player_character, temp_crafting_inventory( crafting_inv ),
-                                           r.get_component_filter() );
+                                       r.get_component_filter() );
     REQUIRE( can_craft_with_temp_inv == expect_craftable );
 }
 
@@ -1335,7 +1335,7 @@ TEST_CASE( "select_step_tool_allocs_resume_reselects_only_current_step",
         u.i_add( tool_with_ammo( itype_soldering_iron_portable, 50 ) );
         u.invalidate_crafting_inventory();
         const std::vector<std::vector<step_tool_alloc>> allocs =
-                    select_step_tool_allocs( u, r, 1, map_inv, cancelled, -1 );
+            select_step_tool_allocs( u, r, 1, map_inv, cancelled, -1 );
         CHECK_FALSE( cancelled );
         REQUIRE( allocs.size() == 3 );
         CHECK_FALSE( allocs[1].empty() );
@@ -1345,7 +1345,7 @@ TEST_CASE( "select_step_tool_allocs_resume_reselects_only_current_step",
         u.i_add( tool_with_ammo( itype_soldering_iron_portable, 50 ) );
         u.invalidate_crafting_inventory();
         const std::vector<std::vector<step_tool_alloc>> allocs =
-                    select_step_tool_allocs( u, r, 1, map_inv, cancelled, 0 );
+            select_step_tool_allocs( u, r, 1, map_inv, cancelled, 0 );
         CHECK_FALSE( cancelled );
         REQUIRE( allocs.size() == 3 );
         CHECK( allocs[1].empty() );
@@ -1356,7 +1356,7 @@ TEST_CASE( "select_step_tool_allocs_resume_reselects_only_current_step",
         // missing tool.
         u.invalidate_crafting_inventory();
         const std::vector<std::vector<step_tool_alloc>> allocs =
-                    select_step_tool_allocs( u, r, 1, map_inv, cancelled, 0 );
+            select_step_tool_allocs( u, r, 1, map_inv, cancelled, 0 );
         CHECK_FALSE( cancelled );
         REQUIRE( allocs.size() == 3 );
         CHECK( allocs[1].empty() );
@@ -1707,7 +1707,7 @@ static int resume_craft()
     item *craft = crafts.front();
     set_time( midday ); // Ensure light for crafting
     REQUIRE( player_character.crafting_speed_multiplier( *craft,
-             std::optional<tripoint_bub_ms>( std::nullopt ) ) == 1.0 );
+            std::optional<tripoint_bub_ms>( std::nullopt ) ) == 1.0 );
     REQUIRE( !player_character.activity );
     player_character.use( player_character.get_item_position( craft ) );
     REQUIRE( player_character.activity );

@@ -145,7 +145,7 @@ void Character::update_body_wetness( const w_point &weather )
     // Weather slows down drying
     float weather_mult = 1.0;
     weather_mult += ( ( weather.humidity - 66.0f ) - ( units::to_fahrenheit(
-                          weather.temperature ) - 65.0f ) ) / 100.0f;
+            weather.temperature ) - 65.0f ) ) / 100.0f;
     weather_mult = std::max( 0.1f, weather_mult );
 
     for( const bodypart_id &bp : get_all_body_parts() ) {
@@ -259,7 +259,7 @@ void Character::update_body( const time_point &from, const time_point &to )
     if( five_mins > 0 ) {
         float sleepiness_mod = enchantment_cache->modify_value( enchant_vals::mod::SLEEPINESS, 1 );
         float sleepiness_regen_mod = enchantment_cache->modify_value( enchant_vals::mod::SLEEPINESS_REGEN,
-                                     1 );
+            1 );
         activity_history.try_reduce_weariness( base_bmr(), sleepiness_mod, sleepiness_regen_mod );
 
         check_needs_extremes();
@@ -446,7 +446,7 @@ void Character::update_bodytemp()
     const oter_id &cur_om_ter = overmap_buffer.ter( pos_abs_omt() );
     bool sheltered = g->is_sheltered( pos_bub() );
     const int windpower = get_local_windpower( weather_man.windspeed + vehwindspeed, cur_om_ter,
-                          pos_abs(), weather_man.winddirection, sheltered );
+        pos_abs(), weather_man.winddirection, sheltered );
     // Let's cache this not to check it for every bodyparts
     const bool has_bark = has_flag( json_flag_BARKY );
     const bool has_sleep = has_effect( effect_sleep );
@@ -480,21 +480,21 @@ void Character::update_bodytemp()
     const float scaled_sleepiness = clamp( get_sleepiness(), 0,
                                            900 ) / static_cast<float>( sleepiness_levels::EXHAUSTED );
     const units::temperature_delta sleepiness_warmth = has_sleep ? 0_C_delta : -1.725_C_delta *
-            scaled_sleepiness;
+        scaled_sleepiness;
 
     // Sunlight
     const float scaled_sun_irradiance = incident_sun_irradiance( weather_man.weather_id,
-                                        calendar::turn ) / max_sun_irradiance();
+        calendar::turn ) / max_sun_irradiance();
     // Reuse the cached `sheltered` computed above instead of recomputing
     // is_sheltered() (which queries veh_at + is_outside) for the same position.
     const units::temperature_delta sunlight_warmth = !sheltered ? 3_C_delta *
-            scaled_sun_irradiance :
-            0_C_delta;
+        scaled_sun_irradiance :
+        0_C_delta;
 
     const int best_fire = get_best_fire( pos_bub() );
 
     const units::temperature_delta lying_warmth = use_floor_warmth ? floor_warmth(
-                pos_bub() ) : 0_C_delta;
+            pos_bub() ) : 0_C_delta;
     const units::temperature water_temperature =
         get_weather().get_cur_weather_gen().get_water_temperature();
 
@@ -510,13 +510,13 @@ void Character::update_bodytemp()
     // 111F (44C) is a temperature in which proteins break down: https://en.wikipedia.org/wiki/Burn
     // Blisters arbitrarily scale with the sqrt of the temperature difference in fahrenheit.
     const int radiation_blister_count = h_radiation > 44_C_delta ? static_cast<int>( std::sqrt(
-                                            units::to_fahrenheit_delta( h_radiation - 44_C_delta ) ) ) : 0;
+            units::to_fahrenheit_delta( h_radiation - 44_C_delta ) ) ) : 0;
 
     // fat insulates and increases total heat production of body, but it should have a diminishing effect.
     // at 5 over healthy bmi (obese), it is ~5 warmth, at 20 over healthy bmi (morbid obesity) it is ~12 warmth
     // effects start to kick in halfway through overweightness
     const units::temperature_delta bmi_heat_bonus = 0.1_C_delta * std::sqrt( std::max( 0.0f,
-            ( get_bmi_fat() - 8.0f ) ) );
+        ( get_bmi_fat() - 8.0f ) ) );
     std::map<bodypart_id, int> warmth_per_bp = worn.warmth( *this );
     std::map<bodypart_id, int> bonus_warmth_per_bp = bonus_item_warmth();
     std::map<bodypart_id, int> wind_res_per_bp = get_wind_resistance();
@@ -526,7 +526,7 @@ void Character::update_bodytemp()
     // Local humidity depends only on loop-invariant inputs (weather humidity,
     // weather type and shelter), so compute it once instead of per body part.
     const int local_humidity = get_local_humidity( weather.humidity, weather_man.weather_id,
-                               sheltered );
+        sheltered );
 
     // Current temperature and converging temperature calculations
     for( const bodypart_id &bp : get_all_body_parts() ) {
@@ -538,21 +538,21 @@ void Character::update_bodytemp()
         // Represents the fact that the body generates heat when it is cold.
         // TODO: : should this increase hunger?
         const double scaled_temperature = logarithmic_range( units::to_celsius( BODYTEMP_VERY_COLD ),
-                                          units::to_celsius( BODYTEMP_VERY_HOT ),
-                                          units::to_celsius( get_part_temp_cur( bp ) ) );
+            units::to_celsius( BODYTEMP_VERY_HOT ),
+            units::to_celsius( get_part_temp_cur( bp ) ) );
         // Produces a smooth curve between 0.06C and 0.12C.
         const units::temperature_delta homeostasis_adjustment = 0.06_C_delta * ( 1.0 + scaled_temperature );
         const units::temperature_delta clothing_warmth_adjustment = homeostasis_adjustment *
-                warmth_per_bp[bp];
+            warmth_per_bp[bp];
         const units::temperature_delta clothing_warmth_adjusted_bonus = homeostasis_adjustment *
-                bonus_warmth_per_bp[bp];
+            bonus_warmth_per_bp[bp];
         // WINDCHILL
 
         const int bp_windpower = static_cast<int>( static_cast<float>( windpower ) *
-                                 ( 1 - wind_res_per_bp[bp] / 100.0 ) );
+            ( 1 - wind_res_per_bp[bp] / 100.0 ) );
         // Calculate windchill (local_humidity precomputed above; loop-invariant)
         units::temperature_delta windchill = get_local_windchill( player_local_temp,
-                                             local_humidity, bp_windpower );
+            local_humidity, bp_windpower );
 
 
         static const auto is_lower = []( const bodypart_id & bp ) {
@@ -581,7 +581,7 @@ void Character::update_bodytemp()
         // This results in needing to preserve those bugs for game balance, which is why we are doing this
         // odd scaling of windchill.
         const units::temperature_delta bugged_windchill = units::from_celsius_delta(
-                    units::to_fahrenheit_delta( windchill ) * 100.0 / 500.0 );
+                units::to_fahrenheit_delta( windchill ) * 100.0 / 500.0 );
 
         // Convergent temperature is affected by ambient temperature,
         // clothing warmth, and body wetness.
@@ -643,7 +643,7 @@ void Character::update_bodytemp()
         // Climate Control eases the effects of high and low ambient temps
         if( climate_control_heat || climate_control_chill ) {
             set_part_temp_conv( bp, temp_corrected_by_climate_control( get_part_temp_conv( bp ),
-                                climate_control_heat, climate_control_chill ) );
+                    climate_control_heat, climate_control_chill ) );
         }
 
         // FINAL CALCULATION : Increments current body temperature towards convergent.
@@ -672,7 +672,7 @@ void Character::update_bodytemp()
 
         const units::temperature_delta comfortable_warmth = bonus_fire_warmth + lying_warmth;
         const units::temperature_delta bonus_warmth = comfortable_warmth + metabolism_warmth +
-                mutation_heat_bonus + bp_temp_bonus;
+            mutation_heat_bonus + bp_temp_bonus;
         if( bonus_warmth > 0_C_delta ) {
             // Approximate temp_conv needed to reach comfortable temperature in this very turn
             // Basically inverted formula for temp_cur below
@@ -769,28 +769,28 @@ void Character::update_bodytemp()
         // time has passed since the last message for that part. See temp_message_record.
         const auto temp_tier = []( const units::temperature & t ) -> int {
             if( t < BODYTEMP_FREEZING )
-            {
-                return -3;
-            } else if( t < BODYTEMP_VERY_COLD )
-            {
-                return -2;
-            } else if( t < BODYTEMP_COLD )
-            {
-                return -1;
-            } else if( t > BODYTEMP_SCORCHING )
-            {
-                return 3;
-            } else if( t > BODYTEMP_VERY_HOT )
-            {
-                return 2;
-            } else if( t > BODYTEMP_HOT )
-            {
-                return 1;
-            }
-            return 0;
-        };
+        {
+            return -3;
+        } else if( t < BODYTEMP_VERY_COLD )
+        {
+            return -2;
+        } else if( t < BODYTEMP_COLD )
+        {
+            return -1;
+        } else if( t > BODYTEMP_SCORCHING )
+        {
+            return 3;
+        } else if( t > BODYTEMP_VERY_HOT )
+        {
+            return 2;
+        } else if( t > BODYTEMP_HOT )
+        {
+            return 1;
+        }
+        return 0;
+    };
 
-        const int tier_before = temp_tier( temp_before );
+    const int tier_before = temp_tier( temp_before );
         const int tier_after = temp_tier( temp_after );
         // Only warn when crossing a threshold in the worsening direction (further from comfort).
         const bool worsening = ( tier_after > 0 && tier_after > tier_before ) ||

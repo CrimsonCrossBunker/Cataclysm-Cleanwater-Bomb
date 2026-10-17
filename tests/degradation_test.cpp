@@ -671,7 +671,7 @@ static player_activity setup_repair_activity( item_location &tailorloc, item_loc
 static item_location put_in_container( item_location &container, const itype_id &type )
 {
     ret_val<item *> inserted = container->get_contents().insert_item( item( type ),
-                               pocket_type::CONTAINER );
+        pocket_type::CONTAINER );
     REQUIRE( inserted.success() );
     return item_location( container, inserted.value() );
 }

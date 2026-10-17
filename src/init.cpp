@@ -585,7 +585,7 @@ void DynamicDataLoader::load_mod_data_from_path( const cata_path &path, const st
     // if give path is a directory
     if( dir_exist( path.get_unrelative_path() ) ) {
         const std::vector<cata_path> dir_files = get_files_from_path_with_path_exclusion( ".json",
-                "mod_interactions", path, true, true );
+            "mod_interactions", path, true, true );
         files.insert( files.end(), dir_files.begin(), dir_files.end() );
         // if given path is an individual file
     } else if( file_exist( path.get_unrelative_path() ) ) {
@@ -623,7 +623,7 @@ void DynamicDataLoader::load_mod_interaction_files_from_path( const cata_path &p
 
         for( const cata_path &f : interaction_folders ) {
             const mod_id associated_mod = canonical_mod_id( mod_id(
-                                              f.get_unrelative_path().filename().string() ) );
+                    f.get_unrelative_path().filename().string() ) );
             bool is_mod_loaded = std::find( loaded_mods.begin(), loaded_mods.end(),
                                             associated_mod ) != loaded_mods.end();
 

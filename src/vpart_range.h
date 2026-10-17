@@ -206,7 +206,7 @@ class vehicle_part_with_feature_range : public
     public:
         vehicle_part_with_feature_range( ::vehicle &v, feature_type f, part_status_flag r ) :
             generic_vehicle_part_range<vehicle_part_with_feature_range<feature_type>>( v ),
-                    feature_( std::move( f ) ), required_( r ) { }
+            feature_( std::move( f ) ), required_( r ) { }
 
         bool matches( size_t part ) const;
 };

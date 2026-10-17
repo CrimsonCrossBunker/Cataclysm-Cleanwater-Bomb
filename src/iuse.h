@@ -269,7 +269,7 @@ heating_requirements heating_requirements_for_weight( const units::mass &,
         const units::mass &, const units::volume & );
 
 using use_function_pointer = std::optional<int> ( * )( Character *, item *,
-                             const tripoint_bub_ms & );
+    const tripoint_bub_ms & );
 
 class iuse_actor
 {

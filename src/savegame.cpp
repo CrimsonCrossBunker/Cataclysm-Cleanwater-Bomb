@@ -256,7 +256,7 @@ void game::unserialize_impl( const JsonObject &data )
     data.read( "debug_mode", debug_mode );
     data.read( "calendar_start", tmpcalstart );
     calendar::initial_season = static_cast<season_type>( data.get_int( "initial_season",
-                               static_cast<int>( SPRING ) ) );
+        static_cast<int>( SPRING ) ) );
 
     dimension_id loaded_dimension_prefix;
     if( data.read( "dimension_prefix", loaded_dimension_prefix ) ) {
@@ -672,7 +672,7 @@ void overmap::unserialize( const JsonObject &jsobj )
                 point_abs_om omp;
                 tripoint_om_sm monster_submap;
                 std::tie( omp, monster_submap ) = project_remain<coords::om>( project_to<coords::sm>
-                                                  ( monster_location ) );
+                    ( monster_location ) );
                 if( monster_map_json.test_string() ) {
                     mtype_id monster_id( monster_map_json.next_string() );
                     result = hordes.spawn_entity( monster_location, monster_id );
@@ -1589,7 +1589,7 @@ void overmap::serialize( std::ostream &fout ) const
     fout << std::endl;
 
     std::vector<std::pair<om_pos_dir, std::string>> flattened_joins_used(
-                joins_used.begin(), joins_used.end() );
+        joins_used.begin(), joins_used.end() );
     json.member( "joins_used", flattened_joins_used );
     fout << std::endl;
 
@@ -2007,7 +2007,7 @@ void cata::lua_platform::detail::erase_platform_var_migration(
 }
 
 std::vector<std::pair<std::string, std::string>>
-        cata::lua_platform::detail::var_migration_snapshot()
+cata::lua_platform::detail::var_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     const std::map<std::string, std::string> &migrations =

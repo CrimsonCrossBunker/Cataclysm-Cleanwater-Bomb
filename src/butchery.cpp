@@ -659,7 +659,7 @@ bool butchery_drops_harvest( butchery_data bt, Character &you )
     const time_duration moves_total = bt.time_to_butcher;
 
     const int tool_quality = you.max_quality( action == butcher_type::DISSECT ? qual_CUT_FINE :
-                             qual_BUTCHER, pickup_range );
+        qual_BUTCHER, pickup_range );
 
     //all BUTCHERY types - FATAL FAILURE
     if( action != butcher_type::DISSECT &&
@@ -700,7 +700,7 @@ bool butchery_drops_harvest( butchery_data bt, Character &you )
         for( item *item : corpse_item.all_items_top( pocket_type::CORPSE ) ) {
             dissectable_num++;
             const int skill_level = butchery_dissect_skill_level( you, tool_quality,
-                                    item->dropped_from );
+                item->dropped_from );
             const int butchery = roll_butchery_dissect( skill_level, you.get_dex(), tool_quality );
             dissectable_practice += ( 4 + butchery );
             int roll = butchery - corpse_item.damage_level();
@@ -957,7 +957,7 @@ bool butchery_drops_harvest( butchery_data bt, Character &you )
         }
         const itype_id &leftover_id = mt.harvest->leftovers;
         const int item_charges = monster_weight_remaining / to_gram( item::find_type(
-                                     leftover_id )->weight );
+                leftover_id )->weight );
         if( item_charges > 0 ) {
             item ruined_parts( leftover_id, calendar::turn );
             ruined_parts.set_mtype( &mt );
@@ -980,7 +980,7 @@ bool butchery_drops_harvest( butchery_data bt, Character &you )
         mt.families.practice_dissect( you );
     } else {
         you.practice( skill_survival, std::max( 0, practice ), std::max( mt.size - creature_size::medium,
-                      0 ) + 4 );
+                0 ) + 4 );
     }
 
     // handle our prof training
@@ -1102,7 +1102,7 @@ void destroy_the_carcass( const butchery_data &bd, Character &you )
 
     if( action == butcher_type::DISMEMBER ) {
         here.add_splatter( type_gib, corpse_pos, rng( corpse->size + 2,
-                           ( corpse->size + 1 ) * 2 ) );
+                ( corpse->size + 1 ) * 2 ) );
     }
 
     // all action types - yields
@@ -1119,10 +1119,10 @@ void destroy_the_carcass( const butchery_data &bd, Character &you )
         for( int i = 1; i <= corpse->size; i++ ) {
             here.add_splatter_trail( type_gib, corpse_pos,
                                      random_entry( here.points_in_radius( corpse_pos,
-                                                   corpse->size + 1 ) ) );
+                                         corpse->size + 1 ) ) );
             here.add_splatter_trail( type_blood, corpse_pos,
                                      random_entry( here.points_in_radius( corpse_pos,
-                                                   corpse->size + 1 ) ) );
+                                             corpse->size + 1 ) ) );
         }
 
         return;
@@ -1158,10 +1158,10 @@ void destroy_the_carcass( const butchery_data &bd, Character &you )
             for( int i = 1; i <= corpse->size; i++ ) {
                 here.add_splatter_trail( type_gib, corpse_pos,
                                          random_entry( here.points_in_radius( corpse_pos,
-                                                       corpse->size + 1 ) ) );
+                                             corpse->size + 1 ) ) );
                 here.add_splatter_trail( type_blood, corpse_pos,
                                          random_entry( here.points_in_radius( corpse_pos,
-                                                       corpse->size + 1 ) ) );
+                                                 corpse->size + 1 ) ) );
             }
             break;
         }
