@@ -191,5 +191,29 @@
     "time": "45 m",
     "read_skill": "firstaid",
     "read_fun": -2
+  },
+  {
+    "id": "book_forensic_reports",
+    "type": "ITEM",
+    "subtypes": [ "BOOK" ],
+    "category": "manuals",
+    "name": { "str": "Forensic Autopsy Reports", "str_pl": "copies of Forensic Autopsy Reports" },
+    "description": "A thick stack of binders holding police autopsy and casework records.  It is packed with specialized jargon, extremely long Latin words, and photographs of human dissection procedures that are horrifying or outright nauseating.  To a layperson it might as well be text from hell; even to a professional it is boring.",
+    "weight": "2300 g",
+    "volume": "3 L",
+    "price": "120 USD",
+    "price_postapoc": "25 USD",
+    "material": [ "paper", "cardboard" ],
+    "symbol": "?",
+    "looks_like": "textbook_firstaid",
+    "color": "light_gray",
+    "required_level": 6,
+    "max_level": 8,
+    "intelligence": 10,
+    "proficiencies": [ { "proficiency": "prof_dissect_humans", "time_factor": 0.75, "fail_factor": 0.5 } ],
+    "time": "45 m",
+    "melee_damage": { "bash": 6 },
+    "read_skill": "firstaid",
+    "read_fun": -4
   }
 ]
