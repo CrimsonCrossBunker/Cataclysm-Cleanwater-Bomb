@@ -80,13 +80,13 @@ struct availability {
         nc_color color( bool ignore_missing_skills = false ) const;
 
         static bool check_can_craft_nested( Character &_crafter, const recipe &r,
-                                            bool camp_crafting = false, inventory *inventory_override = nullptr );
+                                            bool camp_crafting = false, temp_crafting_inventory *inventory_override = nullptr );
 };
 
 // One cache serves one crafter and one inventory context in a paused menu session.
 const availability &cached_availability( std::map<const recipe *, availability> &cache,
         Character &crafter, const recipe &rec, bool camp_crafting,
-        inventory *inventory_override );
+        temp_crafting_inventory *inventory_override );
 
 enum class craft_confirm_result {
     ok,

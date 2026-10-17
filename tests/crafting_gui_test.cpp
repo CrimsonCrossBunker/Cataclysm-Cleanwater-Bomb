@@ -20,7 +20,6 @@
 #include "flat_set.h"
 #include "flexbuffer_json.h"
 #include "game.h"
-#include "inventory.h"
 #include "item.h"
 #include "json_loader.h"
 #include "map.h"
@@ -1298,8 +1297,8 @@ TEST_CASE( "nested_availability_follows_the_camp_inventory", "[crafting][gui]" )
     guy.set_skill_level( skill_melee, 1 );
 
     GIVEN( "camp inventory has child's component, crafter doesn't" ) {
-        inventory camp_inv;
-        camp_inv.add_item( item( itype_2x4 ) );
+        temp_crafting_inventory camp_inv;
+        camp_inv.add_item_copy( item( itype_2x4 ) );
         WHEN( "camp crafter looks at the nested category" ) {
             const availability avail( guy, &recipe_test_nested_weapons.obj(), 1, true, &camp_inv );
             THEN( "craftable" ) {
@@ -1310,7 +1309,7 @@ TEST_CASE( "nested_availability_follows_the_camp_inventory", "[crafting][gui]" )
     GIVEN( "crafter carries component, camp inventory empty" ) {
         guy.i_add( item( itype_2x4 ) );
         guy.invalidate_crafting_inventory();
-        inventory camp_inv;
+        temp_crafting_inventory camp_inv;
         WHEN( "camp crafter looks at the nested category" ) {
             const availability avail( guy, &recipe_test_nested_weapons.obj(), 1, true, &camp_inv );
             THEN( "not craftable" ) {
@@ -1325,9 +1324,9 @@ TEST_CASE( "nested_availability_follows_the_camp_inventory", "[crafting][gui]" )
         guy.i_add( tool_with_ammo( itype_soldering_iron_portable, 25 ) );
         guy.invalidate_crafting_inventory();
         REQUIRE( guy.crafting_inventory().charges_of( itype_soldering_iron_portable ) == 25 );
-        inventory camp_inv;
-        camp_inv.add_item( item( itype_2x4 ) );
-        camp_inv.add_item( tool_with_ammo( itype_soldering_iron_portable, 25 ) );
+        temp_crafting_inventory camp_inv;
+        camp_inv.add_item_copy( item( itype_2x4 ) );
+        camp_inv.add_item_copy( tool_with_ammo( itype_soldering_iron_portable, 25 ) );
         REQUIRE( camp_inv.charges_of( itype_soldering_iron_portable ) == 25 );
         WHEN( "crafter looks at the nested category outside a camp" ) {
             const availability avail( guy, &nested );
@@ -1403,8 +1402,8 @@ TEST_CASE( "nested_child_display_reuses_camp_availability", "[crafting][gui]" )
     Character &guy = setup_character();
     guy.set_skill_level( skill_fabrication, 2 );
     guy.set_skill_level( skill_melee, 1 );
-    inventory camp_inv;
-    camp_inv.add_item( item( itype_2x4 ) );
+    temp_crafting_inventory camp_inv;
+    camp_inv.add_item_copy( item( itype_2x4 ) );
     std::map<const recipe *, availability> cache;
     const recipe &child = recipe_cudgel_test_no_tools.obj();
     const availability &first = cached_availability( cache, guy, child, true, &camp_inv );
