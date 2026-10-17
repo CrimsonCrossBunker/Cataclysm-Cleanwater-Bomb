@@ -11,8 +11,10 @@
 #include "coordinates.h"
 #include "map_scale_constants.h"
 #include "point.h"
+#include "pixel_minimap_geometry.h"
 #include "sdl_wrappers.h"
 #include "sdl_geometry.h"
+#include "sdl_quad_batch.h"
 
 class pixel_minimap_projector;
 
@@ -131,7 +133,6 @@ class pixel_minimap
         std::unique_ptr<pixel_minimap_projector> create_projector( const SDL_Rect &max_screen_rect ) const;
 
         const SDL_Renderer_Ptr &renderer;
-        const GeometryRenderer_Ptr &geometry;
 
         pixel_minimap_type type;
         pixel_minimap_settings settings;
@@ -154,6 +155,7 @@ class pixel_minimap
 
         std::unordered_map<tripoint_abs_sm, submap_cache> cache;
 
+        quad_batch geometry_batch_;
         bool has_blinking_beacons_ = false;
 
         // State of the last main_tex paint, used to skip re-rendering when the

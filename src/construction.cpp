@@ -25,6 +25,7 @@
 #include "construction_category.h"
 #include "construction_group.h"
 #include "coordinates.h"
+#include "craft_reservation.h"
 #include "crafting.h"
 #include "creature.h"
 #include "cursesdef.h"
@@ -41,7 +42,6 @@
 #include "input.h"
 #include "input_context.h"
 #include "input_popup.h"
-#include "inventory.h"
 #include "item.h"
 #include "item_group.h"
 #include "iteminfo_query.h"
@@ -84,8 +84,6 @@
     #include "cursesport.h"        // for get_scaling_factor (??)
     #include "sdltiles.h"          // for tilecontext
 #endif
-
-class read_only_visitable;
 
 static const activity_id ACT_MULTIPLE_CONSTRUCTION( "ACT_MULTIPLE_CONSTRUCTION" );
 
@@ -288,8 +286,8 @@ int_id<construction>::int_id( const string_id<construction> &id ) : _id( id.id()
 // Helper functions, nobody but us needs to call these.
 static bool can_construct( const construction &con );
 static std::vector<const construction *> player_can_build_valid_constructions( Character &you,
-        const read_only_visitable &inv, const construction_group_str_id &group );
-static bool player_can_build( Character &you, const read_only_visitable &inv,
+        const temp_crafting_inventory &inv, const construction_group_str_id &group );
+static bool player_can_build( Character &you, const temp_crafting_inventory &inv,
                               const construction_group_str_id &group );
 static bool player_can_see_to_build( Character &you, const construction_group_str_id &group );
 
@@ -468,7 +466,7 @@ static std::string furniture_qualities_string( const furn_id &fid )
 
 static std::pair<std::map<tripoint_bub_ms, const construction *>, std::vector<const construction *>>
         valid_constructions_near_player( const std::vector<construction_group_str_id> &groups,
-                const inventory &total_inv, avatar &player_character );
+                const temp_crafting_inventory &total_inv, avatar &player_character );
 
 static shared_ptr_fast<game::draw_callback_t> construction_preview_callback(
     const std::map<tripoint_bub_ms, const construction *> &valid,
@@ -574,7 +572,7 @@ construction_id construction_menu( const bool blueprint )
     int total_project_breakpoints = 0;
     int current_construct_breakpoint = 0;
     avatar &player_character = get_avatar();
-    const inventory &total_inv = player_character.crafting_inventory();
+    const temp_crafting_inventory &total_inv = player_character.crafting_inventory();
 
     input_context ctxt( "CONSTRUCTION" );
     ctxt.register_navigate_ui_list();
@@ -1165,7 +1163,7 @@ construction_id construction_menu( const bool blueprint )
 }
 
 std::vector<const construction *> player_can_build_valid_constructions( Character &you,
-        const read_only_visitable &inv,
+        const temp_crafting_inventory &inv,
         const construction_group_str_id &group )
 {
     std::vector<const construction *> result;
@@ -1181,7 +1179,7 @@ std::vector<const construction *> player_can_build_valid_constructions( Characte
     return result;
 }
 
-bool player_can_build( Character &you, const read_only_visitable &inv,
+bool player_can_build( Character &you, const temp_crafting_inventory &inv,
                        const construction_group_str_id &group )
 {
     // check all with the same group to see if player can build any
@@ -1194,7 +1192,7 @@ bool player_can_build( Character &you, const read_only_visitable &inv,
     return false;
 }
 
-bool player_can_build( Character &you, const read_only_visitable &inv, const construction &con,
+bool player_can_build( Character &you, const temp_crafting_inventory &inv, const construction &con,
                        const bool can_construct_skip )
 {
     if( you.has_trait( trait_DEBUG_HS ) ) {
@@ -1307,6 +1305,12 @@ static std::string has_pre_flags_colorize( const construction &con )
 bool can_construct( const construction &con, const tripoint_bub_ms &p )
 {
     const map &here = get_map();
+    // Both lock kinds: a craft's own tile and any tile supplying it a provider.
+    const tripoint_abs_ms abs_p = here.get_abs( p );
+    if( get_craft_reservations().craft_site_reserved( abs_p ) ||
+        get_craft_reservations().provider_tile_reserved( abs_p ) ) {
+        return false;
+    }
     const furn_id &f = here.furn( p );
     const ter_id &t = here.ter( p );
     // pre-functions
@@ -1342,7 +1346,7 @@ bool can_construct( const construction &con )
 
 std::pair<std::map<tripoint_bub_ms, const construction *>, std::vector<const construction *>>
         valid_constructions_near_player( const std::vector<construction_group_str_id> &groups,
-                const inventory &total_inv, avatar &player_character )
+                const temp_crafting_inventory &total_inv, avatar &player_character )
 {
     std::pair<std::map<tripoint_bub_ms, const construction *>, std::vector<const construction *>> ret;
     std::map<tripoint_bub_ms, const construction *> &valid = ret.first;
@@ -1366,7 +1370,7 @@ std::pair<std::map<tripoint_bub_ms, const construction *>, std::vector<const con
 void place_construction( std::vector<construction_group_str_id> const &groups )
 {
     avatar &player_character = get_avatar();
-    const inventory &total_inv = player_character.crafting_inventory();
+    const temp_crafting_inventory &total_inv = player_character.crafting_inventory();
 
     std::pair<std::map<tripoint_bub_ms, const construction *>, std::vector<const construction *>>
             valid_pair = valid_constructions_near_player( groups, total_inv, player_character );
@@ -1428,8 +1432,7 @@ void place_construction( std::vector<construction_group_str_id> const &groups )
     // This shouldn't normally happen, unless it's a spike pit being built on a pit for example.
     partial_con *pre_c = here.partial_con_at( pnt );
     if( pre_c ) {
-        add_msg( m_info,
-                 _( "There is already an unfinished construction there, examine it to continue working on it." ) );
+        prompt_partial_construction( player_character, pnt );
         return;
     }
     std::list<item> used;
@@ -2622,6 +2625,56 @@ void finalize_constructions()
     }
 
     construction_factory.finalize();
+}
+
+
+void prompt_partial_construction( Character &you, tripoint_bub_ms const &examp )
+{
+    map &here = get_map();
+    if( partial_con *const pc = here.partial_con_at( examp ) ) {
+        if( you.fine_detail_vision_mod() > 4 &&
+            !you.has_trait( trait_DEBUG_HS ) ) {
+            add_msg( m_info, _( "It is too dark to construct right now." ) );
+            return;
+        }
+        const construction &built = pc->id.obj();
+        // windows.h defines IGNORE; use lower-case local enumerators.
+        enum options {
+            resume,
+            cancel,
+            ignore,
+        };
+        uilist selectmenu;
+        //~ $1 - task name, $2 - percentage complete
+        selectmenu.text = string_format( _( "%1$s    %2$d%% complete" ),
+                                         built.group->name(), pc->counter / 100000 );
+        selectmenu.addentry( resume, true, MENU_AUTOASSIGN,
+                             _( "Resume %s" ), built.group->name() );
+        selectmenu.addentry( cancel, true, MENU_AUTOASSIGN,
+                             _( "Cancel %s" ), built.group->name() );
+        selectmenu.addentry( ignore, true, MENU_AUTOASSIGN, _( "Ignore" ) );
+        selectmenu.query();
+
+        switch( selectmenu.ret ) {
+            case resume: {
+                you.assign_activity( build_construction_activity_actor( here.get_abs( examp ) ) );
+                return;
+            }
+
+            case cancel: {
+                for( const item &it : pc->components ) {
+                    here.add_item_or_charges( you.pos_bub(), it );
+                }
+                here.partial_con_remove( examp );
+                return;
+            }
+
+            case ignore:
+                [[fallthrough]];
+            default:
+                return;
+        }
+    }
 }
 
 void construction::finalize()

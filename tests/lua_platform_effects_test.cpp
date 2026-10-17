@@ -2351,10 +2351,12 @@ TEST_CASE( "lua_platform_visible_allies_matches_scene_visibility_and_order",
             get_avatar().remove_effect( effect_blind );
             clear_npcs();
             calendar::turn = turn;
+            get_avatar().recalc_sight_limits();
         }
     } cleanup{ previous_turn };
     calendar::turn = calendar::turn_zero + 12_hours;
     avatar &player = get_avatar();
+    player.recalc_sight_limits();
     npc &first = spawn_npc( player.pos_bub().xy() + point( 2, 0 ), "test_talker" );
     npc &second = spawn_npc( player.pos_bub().xy() + point( 0, 2 ), "test_talker" );
     npc &stranger = spawn_npc( player.pos_bub().xy() + point( -2, 0 ), "test_talker" );
@@ -2399,6 +2401,8 @@ TEST_CASE( "lua_platform_visible_allies_matches_scene_visibility_and_order",
         CHECK_FALSE( handle.validation_error( fixture.runtime, fixture.world ).has_value() );
     }
     player.add_effect( effect_blind, 1_hours );
+    // Direct fixture mutations must refresh the cache normally updated by a turn.
+    player.recalc_sight_limits();
     REQUIRE_FALSE( get_player_view().sees( get_map(), first ) );
     REQUIRE_FALSE( get_player_view().sees( get_map(), second ) );
     sol::protected_function_result blind_call = query();

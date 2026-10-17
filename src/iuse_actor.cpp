@@ -56,7 +56,6 @@
 #include "hsv_color.h"
 #include "iexamine.h"
 #include "input_popup.h"
-#include "inventory.h"
 #include "item.h"
 #include "item_components.h"
 #include "item_contents.h"
@@ -98,6 +97,7 @@
 #include "sounds.h"
 #include "string_formatter.h"
 #include "talker.h"
+#include "temp_crafting_inventory.h"
 #include "translations.h"
 #include "trap.h"
 #include "type_id.h"
@@ -187,6 +187,7 @@ static const skill_id skill_traps( "traps" );
 static const trait_id trait_DEBUG_BIONICS( "DEBUG_BIONICS" );
 static const trait_id trait_ILLITERATE( "ILLITERATE" );
 static const trait_id trait_LIGHTWEIGHT( "LIGHTWEIGHT" );
+static const trait_id trait_SORCERER( "SORCERER" );
 static const trait_id trait_TOLERANCE( "TOLERANCE" );
 
 static const trap_str_id tr_firewood_source( "tr_firewood_source" );
@@ -263,7 +264,7 @@ static ret_val<void> transform_fits_parent_pocket( const Character &p, const ite
         const item &result, map *here, const tripoint_bub_ms &pos )
 {
     const std::optional<item_location> loc = try_form_loc(
-                const_cast<Character &>( p ), here, pos, const_cast<item &>( it ) );
+            const_cast<Character &>( p ), here, pos, const_cast<item &>( it ) );
     if( !loc || !loc->has_parent() ) {
         return ret_val<void>::make_success();
     }
@@ -277,7 +278,7 @@ static ret_val<void> transform_fits_parent_pocket( const Character &p, const ite
     const std::vector<const item_pocket *> innermost = loc->get_item()->get_standard_pockets();
     const item_pocket *current_pocket = innermost.empty() ? nullptr : innermost.front();
     const pocket_data *current_pocket_data = current_pocket ? current_pocket->get_pocket_data()
-            : nullptr;
+        : nullptr;
 
     item_location current = *loc;
     while( current.has_parent() ) {
@@ -512,8 +513,8 @@ ret_val<void> iuse_transform::can_use( const Character &p, const item &it,
     }
 
     std::map<quality_id, int> unmet_reqs;
-    inventory inv;
-    inv.form_from_map( p.pos_bub( *here ), 1, &p, true, true );
+    temp_crafting_inventory inv;
+    inv.form_from_map( p.pos_bub( *here ), 1, &p, true );
     for( const auto &quality : qualities_needed ) {
         if( !p.has_quality( quality.first, quality.second ) &&
             !inv.has_quality( quality.first, quality.second ) ) {
@@ -528,8 +529,8 @@ ret_val<void> iuse_transform::can_use( const Character &p, const item &it,
         return string_format( "%s %d", unmet_req.first.obj().name, unmet_req.second );
     } );
     return ret_val<void>::make_failure( n_gettext( "You need a tool with %s.",
-                                        "You need tools with %s.",
-                                        unmet_reqs.size() ), unmet_reqs_string );
+            "You need tools with %s.",
+            unmet_reqs.size() ), unmet_reqs_string );
 }
 
 std::string iuse_transform::get_name() const
@@ -728,7 +729,7 @@ std::optional<int> paint_vehicle::use( Character *p, item &it, map *here,
     }
     popup.message( "%s", _( "Select second corner." ) );
     const look_around_result second = g->look_around( false, center, first.position.value(), true, true,
-                                      false );
+        false );
     if( !second.position ) {
         return std::nullopt;
     }
@@ -1000,7 +1001,7 @@ void explosion_iuse::info( const item &, std::vector<iteminfo> &dump ) const
     if( sd.casing_mass > 0 ) {
         dump.emplace_back( "TOOL", _( "Casing mass: " ), sd.casing_mass );
         dump.emplace_back( "TOOL", _( "Fragment mass: " ), string_format( "%.2f",
-                           sd.fragment_mass ) );
+                sd.fragment_mass ) );
     }
 }
 
@@ -1322,8 +1323,8 @@ std::optional<int> place_npc_iuse::use( Character *p, item &, map *here,
                                         const tripoint_bub_ms & ) const
 {
     const tripoint_range<tripoint_bub_ms> target_range = place_randomly ?
-            points_in_radius( p->pos_bub( *here ), radius ) :
-            points_in_radius( choose_adjacent( _( "Place NPC where?" ) ).value_or( p->pos_bub( *here ) ), 0 );
+        points_in_radius( p->pos_bub( *here ), radius ) :
+        points_in_radius( choose_adjacent( _( "Place NPC where?" ) ).value_or( p->pos_bub( *here ) ), 0 );
 
     const std::optional<tripoint_bub_ms> target_pos =
     random_point( target_range, [here]( const tripoint_bub_ms & t ) {
@@ -1577,7 +1578,7 @@ void reveal_map_actor::reveal_targets( const tripoint_abs_omt &center,
                                        int reveal_distance ) const
 {
     const auto places = overmap_buffer.find_all( center, target.first, radius, false,
-                        target.second );
+        target.second );
     for( const tripoint_abs_omt &place : places ) {
         if( overmap_buffer.seen( place ) != om_vision_level::full ) {
             // Should be replaced with the character using the item passed as an argument if NPCs ever learn to use maps
@@ -1791,8 +1792,8 @@ ret_val<void> firestarter_actor::can_use( const Character &p, const item &it,
     }
 
     std::map<quality_id, int> unmet_reqs;
-    inventory inv;
-    inv.form_from_map( p.pos_bub( *here ), 1, &p, true, true );
+    temp_crafting_inventory inv;
+    inv.form_from_map( p.pos_bub( *here ), 1, &p, true );
     for( const auto &quality : qualities_needed ) {
         if( !p.has_quality( quality.first, quality.second ) &&
             !inv.has_quality( quality.first, quality.second ) ) {
@@ -1807,8 +1808,8 @@ ret_val<void> firestarter_actor::can_use( const Character &p, const item &it,
         return string_format( "%s %d", unmet_req.first.obj().name, unmet_req.second );
     } );
     return ret_val<void>::make_failure( n_gettext( "You need a tool with %s.",
-                                        "You need tools with %s.",
-                                        unmet_reqs.size() ), unmet_reqs_string );
+            "You need tools with %s.",
+            unmet_reqs.size() ), unmet_reqs_string );
 
     return ret_val<void>::make_success();
 }
@@ -1892,7 +1893,7 @@ std::optional<int> firestarter_actor::use( Character *p, item &it,
     // skill gains are handled by the activity, but stored here in the index field
     const int potential_skill_gain = moves_modifier * ( std::min( 10.0, moves_cost_fast / 100.0 ) + 2 );
     p->assign_activity( fire_start_activity_actor( here->get_abs( pos ), form_loc( *p, here, pos, it ),
-                        potential_skill_gain, moves ) );
+            potential_skill_gain, moves ) );
     // charges to use are handled by the activity
     return 0;
 }
@@ -1923,8 +1924,8 @@ bool firestarter_actor::npc_start_fire( npc &who, item &tool,
         item_location tinder;
         who.visit_items( [&tinder, &who]( item * it, item * ) -> VisitResponse {
             if( it->has_flag( flag_TINDER ) )
-            {
-                tinder = item_location( who, it );
+        {
+            tinder = item_location( who, it );
                 return VisitResponse::ABORT;
             }
             return VisitResponse::NEXT;
@@ -2161,11 +2162,13 @@ static std::optional<recipe> find_uncraft_recipe( const item &x )
     return std::nullopt;
 }
 
-void salvage_actor::cut_up( Character &p, item_location &cut ) const
+std::map<itype_id, int> salvage_actor::salvage_results( item_location cut, double efficiency )
 {
-    map &here = get_map();
+    if( efficiency > 1.0 ) {
+        debugmsg( "Salvaging for more materials than exists in item.  Salvage eff %f%% item %s",
+                  efficiency * 100.0, cut.get_item()->tname() );
+    }
 
-    // Map of salvaged items (id, count)
     std::map<itype_id, int> salvage;
     std::map<material_id, units::mass> mat_to_weight;
     std::set<material_id> mat_set;
@@ -2173,29 +2176,11 @@ void salvage_actor::cut_up( Character &p, item_location &cut ) const
         mat_set.insert( mat.first );
     }
 
-    // Calculate efficiency losses
-    float efficiency = 1.0;
-    // Higher fabrication, less chance of entropy, but still a chance.
-    /** @EFFECT_FABRICATION reduces chance of losing components when cutting items up */
-    int entropy_threshold = std::max( 0,
-                                      5 - static_cast<int>( round( p.get_skill_level( skill_fabrication ) ) ) );
-    if( rng( 1, 10 ) <= entropy_threshold ) {
-        efficiency *= 0.9;
-    }
-
-    // Fail dex roll, potentially lose more parts.
-    /** @EFFECT_DEX randomly reduces component loss when cutting items up */
-    if( dice( 3, 4 ) > p.get_dex() ) {
-        efficiency *= 0.95;
-    }
-
-    // If the item being cut is damaged, additional losses will be incurred.
-    efficiency *= std::pow( 0.8, cut.get_item()->damage_level() );
 
     auto distribute_uniformly = [&mat_to_weight]( const item & x, float num_adjusted ) -> void {
-        for( const auto &type : x.made_of() )
-        {
-            mat_to_weight[type.first] += proportional_weight( x, type.second ) * num_adjusted;
+for( const auto &type : x.made_of() )
+    {
+        mat_to_weight[type.first] += proportional_weight( x, type.second ) * num_adjusted;
         }
     };
 
@@ -2207,8 +2192,8 @@ void salvage_actor::cut_up( Character &p, item_location &cut ) const
 
         // If it is one of the basic components, add it into the list
         if( curr.type->is_basic_component() )
-        {
-            int num_actual = static_cast<int>( num_adjusted );
+    {
+        int num_actual = static_cast<int>( num_adjusted );
             salvage[curr.typeId()] += num_actual;
             return;
         }
@@ -2216,22 +2201,22 @@ void salvage_actor::cut_up( Character &p, item_location &cut ) const
         // Discard invalid component
         // Non-salvageable items are discarded even if made of appropriate material
         if( !curr.made_of_any( mat_set ) || !curr.is_salvageable() )
-        {
-            return;
-        }
+    {
+        return;
+    }
 
-        // Items count by charges are not always smaller than base materials
-        // Necessary for e.g. bones -> bone splinters
-        if( curr.count_by_charges() )
-        {
-            distribute_uniformly( curr, num_adjusted );
+    // Items count by charges are not always smaller than base materials
+    // Necessary for e.g. bones -> bone splinters
+    if( curr.count_by_charges() )
+    {
+        distribute_uniformly( curr, num_adjusted );
             return;
         }
 
         // All intact components are also cut up and destroyed
         if( !curr.components.empty() )
-        {
-            for( const item_components::type_vector_pair &tvp : curr.components ) {
+    {
+        for( const item_components::type_vector_pair &tvp : curr.components ) {
                 for( const item &iter : tvp.second ) {
                     cut_up_component( iter, num_adjusted );
                 }
@@ -2242,8 +2227,8 @@ void salvage_actor::cut_up( Character &p, item_location &cut ) const
         // Try to find an available recipe and "restore" its components
         std::optional<recipe> uncraft = find_uncraft_recipe( curr );
         if( uncraft )
-        {
-            const requirement_data requirements = uncraft->simple_requirements();
+    {
+        const requirement_data requirements = uncraft->simple_requirements();
 
             units::mass ingredient_weight = 0_gram;
             for( const auto &altercomps : requirements.get_components() ) {
@@ -2275,15 +2260,43 @@ void salvage_actor::cut_up( Character &p, item_location &cut ) const
     // Decompose the item into irreducible parts
     cut_up_component( *cut.get_item(), efficiency );
 
-    // Not much practice, and you won't get very far ripping things up.
-    p.practice( skill_fabrication, rng( 0, 5 ), 1 );
-
     // Add the uniformly distributed mass to the relevant salvage items
     for( const auto &iter : mat_to_weight ) {
         if( const std::optional<itype_id> id = iter.first->salvaged_into() ) {
             salvage[*id] += iter.second / id->obj().weight;
         }
     }
+
+    return salvage;
+}
+
+void salvage_actor::cut_up( Character &p, item_location &cut ) const
+{
+    map &here = get_map();
+
+    // Calculate efficiency losses
+    float efficiency = 1.0;
+    // Higher fabrication, less chance of entropy, but still a chance.
+    /** @EFFECT_FABRICATION reduces chance of losing components when cutting items up */
+    int entropy_threshold = std::max( 0,
+                                      5 - static_cast<int>( round( p.get_skill_level( skill_fabrication ) ) ) );
+    if( rng( 1, 10 ) <= entropy_threshold ) {
+        efficiency *= 0.9;
+    }
+
+    // Fail dex roll, potentially lose more parts.
+    /** @EFFECT_DEX randomly reduces component loss when cutting items up */
+    if( dice( 3, 4 ) > p.get_dex() ) {
+        efficiency *= 0.95;
+    }
+
+    // If the item being cut is damaged, additional losses will be incurred.
+    efficiency *= std::pow( 0.8, cut.get_item()->damage_level() );
+
+    // Not much practice, and you won't get very far ripping things up.
+    p.practice( skill_fabrication, rng( 0, 5 ), 1 );
+
+    std::map<itype_id, int> salvage = salvage_results( cut, efficiency );
 
     add_msg( m_info, _( "You try to salvage materials from the %s." ),
              cut.get_item()->tname() );
@@ -2406,7 +2419,7 @@ bool inscribe_actor::item_inscription( item &tool, item &cut ) const
     std::string messageprefix = ( hasnote ? _( "(To delete, clear the text and confirm)\n" ) : "" ) +
                                 //~ %1$s: gerund (e.g. carved), %2$s: item name
                                 string_format( pgettext( "carving", "%1$s on the %2$s is: " ),
-                                        gerund, cut.type_name() );
+                                    gerund, cut.type_name() );
 
     string_input_popup_imgui popup( 50, hasnote ? cut.get_var( carving ) : std::string() );
     popup.set_label( string_format( _( "%s what?" ), verb ) );
@@ -2909,6 +2922,10 @@ std::optional<int> learn_spell_actor::use( Character *p, item &, map *,
         p->add_msg_if_player( m_bad, _( "You can't read." ) );
         return std::nullopt;
     }
+    if( p->has_trait( trait_SORCERER ) ) {
+        p->add_msg_if_player( m_bad, _( "Sorcerers cannot learn spells from books or scrolls." ) );
+        return std::nullopt;
+    }
     if( !p->has_morale_to_read() ) {
         p->add_msg_if_player( m_bad, _( "What's the point of studying?  (Your morale is too low!)" ) );
         return std::nullopt;
@@ -2976,7 +2993,7 @@ std::optional<int> learn_spell_actor::use( Character *p, item &, map *,
         }
         if( ui_index == 5 ) {
             p->assign_activity( study_spell_activity_actor( selected_spell,
-                                p->magic->get_spell( selected_spell ).get_level() + 1 ) );
+                    p->magic->get_spell( selected_spell ).get_level() + 1 ) );
             return 0;
         }
         time_duration study_time = ui_times[ui_index];
@@ -3011,12 +3028,12 @@ void cast_spell_actor::info( const item &, std::vector<iteminfo> &dump ) const
 {
     if( mundane ) {
         const std::string message = string_format( _( "This item when activated: %1$s" ),
-                                    item_spell->description );
+            item_spell->description );
         dump.emplace_back( "DESCRIPTION", message );
     } else {
         //~ %1$s: spell name, %2$i: spell level
         const std::string message = string_format( _( "This item casts %1$s at level %2$i." ),
-                                    item_spell->name, spell_level );
+            item_spell->name, spell_level );
         dump.emplace_back( "DESCRIPTION", message );
         if( no_fail ) {
             dump.emplace_back( "DESCRIPTION", _( "This item never fails." ) );
@@ -3195,7 +3212,7 @@ void ammobelt_actor::load( const JsonObject &obj, const std::string & )
 void ammobelt_actor::info( const item &, std::vector<iteminfo> &dump ) const
 {
     dump.emplace_back( "AMMO", string_format( _( "Can be used to assemble: %s" ),
-                       item::nname( belt ) ) );
+            item::nname( belt ) ) );
 }
 
 
@@ -3337,7 +3354,7 @@ bool repair_item_actor::handle_components( Character &pl, const item &fix,
         return false;
     }
 
-    const inventory &crafting_inv = pl.crafting_inventory();
+    const temp_crafting_inventory &crafting_inv = pl.crafting_inventory();
 
     // Repairing or modifying items requires at least 1 repair item,
     //  otherwise number is related to size of item
@@ -3936,7 +3953,7 @@ int heal_actor::get_bandaged_level( const Character &healer ) const
         /** @EFFECT_FIRSTAID increases healing item effects */
         float total_bonus = bandages_power + bandages_scaling * prof_bonus;
         total_bonus = healer.enchantment_cache->modify_value( enchant_vals::mod::BANDAGE_BONUS,
-                      total_bonus );
+            total_bonus );
         return round( total_bonus );
     }
 
@@ -3954,7 +3971,7 @@ int heal_actor::get_disinfected_level( const Character &healer ) const
                      prof_bonus + 2 : prof_bonus;
         float total_bonus = disinfectant_power + disinfectant_scaling * prof_bonus;
         total_bonus = healer.enchantment_cache->modify_value( enchant_vals::mod::DISINFECTANT_BONUS,
-                      total_bonus );
+            total_bonus );
         return round( total_bonus );
     }
 
@@ -3972,7 +3989,7 @@ int heal_actor::get_stopbleed_level( const Character &healer ) const
                      prof_bonus + 2 : prof_bonus;
         float total_bonus = bleed * prof_bonus;
         total_bonus = healer.enchantment_cache->modify_value( enchant_vals::mod::BLEED_STOP_BONUS,
-                      total_bonus );
+            total_bonus );
         return round( total_bonus );
     }
 
@@ -4022,7 +4039,7 @@ int heal_actor::finish_using( Character &healer, Character &patient, item &it,
         if( pwr > patient.get_effect_int( effect_bleed, healed ) ) {
             effect &wound = patient.get_effect( effect_bleed, healed );
             time_duration dur = wound.get_duration() - ( get_stopbleed_level( healer ) *
-                                wound.get_int_dur_factor() );
+                wound.get_int_dur_factor() );
             wound.set_duration( std::max( 0_turns, dur ) );
             if( wound.get_duration() == 0_turns ) {
                 heal_msg( m_good, _( "You stop the bleeding." ), _( "The bleeding is stopped." ) );
@@ -4152,8 +4169,8 @@ static bodypart_id pick_part_to_heal(
                            healer.get_per() >= 20 );
     while( true ) {
         bodypart_id healed_part = patient.body_window( menu_header, force, precise,
-                                  limb_power, head_bonus, torso_bonus,
-                                  bleed_stop, bite_chance, infect_chance, bandage_power, disinfectant_power );
+            limb_power, head_bonus, torso_bonus,
+            bleed_stop, bite_chance, infect_chance, bandage_power, disinfectant_power );
         if( healed_part == bodypart_str_id::NULL_ID() ) {
             return healed_part;
         }
@@ -4244,9 +4261,9 @@ bodypart_id heal_actor::use_healing_item( Character &healer, Character &patient,
         // Player healing NPC
         // TODO: Remove this hack, allow using activities on NPCs
         const std::string menu_header = string_format( pgettext( "healing",
-                                        //~ %1$s: patient name, %2$s: healing item name
-                                        "Select a body part of %1$s for %2$s:" ),
-                                        patient.disp_name(), it.tname() );
+            //~ %1$s: patient name, %2$s: healing item name
+            "Select a body part of %1$s for %2$s:" ),
+            patient.disp_name(), it.tname() );
         healed = pick_part_to_heal( healer, patient, menu_header, limb_power, head_bonus, torso_bonus,
                                     get_stopbleed_level( healer ), bite, infect, force, get_bandaged_level( healer ),
                                     get_disinfected_level( healer ) );
@@ -4275,7 +4292,7 @@ void heal_actor::info( const item &, std::vector<iteminfo> &dump ) const
             dump.emplace_back( "HEAL_ACT", _( "  Torso: " ), "", iteminfo::no_newline,
                                get_heal_value( player_character, bodypart_id( "torso" ) ) );
             dump.emplace_back( "HEAL_ACT", _( "  Limbs: " ), get_heal_value( player_character,
-                               bodypart_id( "arm_l" ) ) );
+                    bodypart_id( "arm_l" ) ) );
         }
     }
 
@@ -4447,8 +4464,8 @@ std::optional<int> place_trap_actor::use( Character *p, item &it, map *here,
         return std::nullopt;
     }
     const std::optional<tripoint_bub_ms> pos_ = choose_adjacent( string_format(
-                _( "Place %s where?" ),
-                it.tname() ) );
+            _( "Place %s where?" ),
+            it.tname() ) );
     if( !pos_ ) {
         return std::nullopt;
     }
@@ -4493,8 +4510,8 @@ std::optional<int> place_trap_actor::use( Character *p, item &it, map *here,
 
     //Total time to set the trap will be determined by player's skills and proficiencies
     int move_cost_final = std::round( ( data.moves * std::min( 1,
-                                        ( data.practice ^ 2 ) ) ) / ( p->get_skill_level( skill_traps ) <= 1 ? 1 : p->get_skill_level(
-                                                skill_traps ) ) );
+        ( data.practice ^ 2 ) ) ) / ( p->get_skill_level( skill_traps ) <= 1 ? 1 : p->get_skill_level(
+                                          skill_traps ) ) );
     if( !p->has_proficiency( proficiency_prof_trapsetting ) ) {
         move_cost_final = move_cost_final * 2;
     }
@@ -4958,7 +4975,7 @@ std::optional<int> modify_gunmods_actor::use( Character *p, item &it,
 
     for( size_t i = 0; i != mods.size(); ++i ) {
         prompt.addentry( i, true, -1, string_format( "%s: %s", mods[i]->tname(),
-                         mods[i]->get_use( "transform" )->get_name() ) );
+            mods[i]->get_use( "transform" )->get_name() ) );
     }
 
     prompt.query();
@@ -5079,15 +5096,15 @@ void link_up_actor::info( const item &it, std::vector<iteminfo> &dump ) const
     dummy.update_link_traits();
 
     std::string length_all_info = string_format( _( "<bold>Cable length</bold>: %d" ),
-                                  dummy.max_link_length() );
+        dummy.max_link_length() );
     std::string length_solo_info = no_extensions ? "" : string_format( _( " (%d without extensions)" ),
-                                   cable_length != -1 ? cable_length : dummy.type->maximum_charges() );
+        cable_length != -1 ? cable_length : dummy.type->maximum_charges() );
     dump.emplace_back( "TOOL", length_all_info, length_solo_info );
 
     if( charge_rate != 0_W ) {
         //~ Power in Watts. %+4.1f is a 4 digit number with 1 decimal point (ex: 4737.3 W)
         dump.emplace_back( "TOOL", _( "<bold>Wattage</bold>: " ), string_format( _( "%+4.1f W" ),
-                           units::to_milliwatt( charge_rate ) / 1000.f ) );
+                units::to_milliwatt( charge_rate ) / 1000.f ) );
     }
 
     if( !can_extend.empty() ) {
@@ -5301,7 +5318,7 @@ std::optional<int> link_up_actor::use( Character *p, item &it, map *here,
             return 0;
         } else {
             p->add_msg_if_player( m_info, string_format( is_cable_item ? _( "You detach the %s." ) :
-                                  _( "You gather the %s up with it." ), it.link_name() ) );
+                    _( "You gather the %s up with it." ), it.link_name() ) );
         }
         return 0;
     }
@@ -5431,8 +5448,8 @@ std::optional<int> link_up_actor::link_to_veh_app( Character *p, item &it,
         return ovp && ovp->vehicle().avail_linkable_part( ovp->mount_pos(), to_ports ) != -1;
     };
     const std::optional<tripoint_bub_ms> pnt_ = choose_adjacent_highlight(
-                here, _( "Attach the cable where?" ),
-                "", can_link, false, false );
+            here, _( "Attach the cable where?" ),
+            "", can_link, false, false );
     if( !pnt_ ) {
         p->add_msg_if_player( _( "Never mind." ) );
         return std::nullopt;
@@ -5494,8 +5511,8 @@ std::optional<int> link_up_actor::link_to_veh_app( Character *p, item &it,
         if( using_power_cord && it.link().t_veh->is_powergrid() && sel_vp->vehicle().is_powergrid() ) {
             // If both vehicles are adjacent power grids, try to merge them together first.
             const point_bub_ms prev_pos = here.get_bub( it.link().t_veh->coord_translate(
-                                              it.link().t_mount ) +
-                                          it.link().t_abs_pos ).xy();
+                    it.link().t_mount ) +
+                it.link().t_abs_pos ).xy();
             if( selection.xy().raw().distance( prev_pos.raw() ) <= 1.5f &&
                 it.link().t_veh->merge_appliance_into_grid( &here,  sel_vp->vehicle() ) ) {
                 it.link().t_veh->part_removal_cleanup( here );
@@ -5534,8 +5551,8 @@ std::optional<int> link_up_actor::link_tow_cable( Character *p, item &it,
     };
 
     const std::optional<tripoint_bub_ms> pnt_ = choose_adjacent_highlight(
-                here, to_towing ? _( "Attach cable to the vehicle that will do the towing." ) :
-                _( "Attach cable to the vehicle that will be towed." ), "", can_link, false, false );
+            here, to_towing ? _( "Attach cable to the vehicle that will do the towing." ) :
+            _( "Attach cable to the vehicle that will be towed." ), "", can_link, false, false );
     if( !pnt_ ) {
         p->add_msg_if_player( _( "Never mind." ) );
         return std::nullopt;
@@ -5608,7 +5625,7 @@ std::optional<int> link_up_actor::link_extend_cable( Character *p, item &it,
             return can_extend.find( inv.typeId().c_str() ) != can_extend.end() && &inv != &it;
         };
         selected = game_menus::inv::titled_filter_menu( filter, *you, _( "Extend which cable?" ), -1,
-                   _( "You don't have a compatible cable." ) );
+            _( "You don't have a compatible cable." ) );
     } else {
         const auto filter = []( const item & inv ) {
             if( !inv.can_link_up() || inv.link_has_state( link_state::needs_reeling ) ||
@@ -5620,7 +5637,7 @@ std::optional<int> link_up_actor::link_extend_cable( Character *p, item &it,
             return actor->can_extend.find( "ELECTRICAL_DEVICES" ) != actor->can_extend.end();
         };
         selected = game_menus::inv::titled_filter_menu( filter, *you, _( "Extend with which cable?" ), -1,
-                   _( "You don't have a compatible cable." ) );
+            _( "You don't have a compatible cable." ) );
     }
     if( !selected ) {
         p->add_msg_if_player( m_info, _( "Never mind." ) );
@@ -5772,7 +5789,7 @@ std::optional<int> deploy_tent_actor::use( Character *p, item &it, map *here,
         return std::nullopt;
     }
     const std::optional<tripoint_rel_ms> dir = choose_direction( string_format(
-                _( "Put up the %s where (%dx%d clear area)?" ), it.tname(), diam, diam ) );
+            _( "Put up the %s where (%dx%d clear area)?" ), it.tname(), diam, diam ) );
     if( !dir ) {
         return std::nullopt;
     }
@@ -5782,7 +5799,7 @@ std::optional<int> deploy_tent_actor::use( Character *p, item &it, map *here,
     // spaces away from the player.
     // First check there's enough room.
     const tripoint_bub_ms center = p->pos_bub( *here ) + point_rel_ms( ( radius + 1 ) * direction.x(),
-                                   ( radius + 1 ) * direction.y() );
+        ( radius + 1 ) * direction.y() );
     creature_tracker &creatures = get_creature_tracker();
     for( const tripoint_bub_ms &dest : here->points_in_radius( center, radius ) ) {
         if( const optional_vpart_position vp = here->veh_at( dest ) ) {
@@ -5936,13 +5953,13 @@ std::optional<int> sew_advanced_actor::use( Character *p, item &it, map *here,
     // Cache available materials
     std::map< itype_id, bool > has_enough;
     const int items_needed = mod.base_volume() / 750_ml + 1;
-    const inventory &crafting_inv = p->crafting_inventory( here );
+    const temp_crafting_inventory &crafting_inv = p->crafting_inventory( here );
     const std::function<bool( const item & )> is_filthy_filter = is_crafting_component;
 
     // Go through all discovered repair items and see if we have any of them available
     for( const clothing_mod &cm : clothing_mods::get_all() ) {
         has_enough[cm.item_string] = crafting_inv.has_amount( cm.item_string, items_needed, false,
-                                     is_filthy_filter );
+            is_filthy_filter );
     }
 
     int mod_count = 0;
@@ -6007,26 +6024,26 @@ std::optional<int> sew_advanced_actor::use( Character *p, item &it, map *here,
         // FIXME: Remove sew_advanced_actor, no longer used since before 0.G
         desc += colorize( string_format( "%s: %.2f->%.2f\n", _( "Bash" ), mod.resist( damage_bash ),
                                          temp_item.resist( damage_bash ) ), get_compare_color( mod.resist( damage_bash ),
-                                                 temp_item.resist( damage_bash ), true ) );
+                                             temp_item.resist( damage_bash ), true ) );
         desc += colorize( string_format( "%s: %.2f->%.2f\n", _( "Cut" ), mod.resist( damage_cut ),
                                          temp_item.resist( damage_cut ) ), get_compare_color( mod.resist( damage_cut ),
-                                                 temp_item.resist( damage_cut ), true ) );
+                                             temp_item.resist( damage_cut ), true ) );
         desc += colorize( string_format( "%s: %.2f->%.2f\n", _( "Ballistic" ),
                                          mod.resist( damage_bullet ),
                                          temp_item.resist( damage_bullet ) ), get_compare_color( mod.resist( damage_bullet ),
-                                                 temp_item.resist( damage_bullet ),
-                                                 true ) );
+                                             temp_item.resist( damage_bullet ),
+                                             true ) );
         desc += colorize( string_format( "%s: %.2f->%.2f\n", _( "Acid" ), mod.resist( damage_acid ),
                                          temp_item.resist( damage_acid ) ), get_compare_color( mod.resist( damage_acid ),
-                                                 temp_item.resist( damage_acid ), true ) );
+                                             temp_item.resist( damage_acid ), true ) );
         desc += colorize( string_format( "%s: %.2f->%.2f\n", _( "Fire" ), mod.resist( damage_heat ),
                                          temp_item.resist( damage_heat ) ), get_compare_color( mod.resist( damage_heat ),
-                                                 temp_item.resist( damage_heat ), true ) );
+                                             temp_item.resist( damage_heat ), true ) );
         desc += colorize( string_format( "%s: %d->%d\n", _( "Warmth" ), mod.get_warmth(),
                                          temp_item.get_warmth() ), get_compare_color( mod.get_warmth(), temp_item.get_warmth(), true ) );
         desc += colorize( string_format( "%s: %d->%d\n", _( "Encumbrance" ), mod.get_avg_encumber( *p ),
                                          temp_item.get_avg_encumber( *p ) ), get_compare_color( mod.get_avg_encumber( *p ),
-                                                 temp_item.get_avg_encumber( *p ), false ) );
+                                             temp_item.get_avg_encumber( *p ), false ) );
 
         tmenu.addentry_desc( index++, enab, MENU_AUTOASSIGN, prompt, desc );
     }

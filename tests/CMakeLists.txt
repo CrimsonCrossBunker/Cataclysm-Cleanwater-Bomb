@@ -74,8 +74,20 @@ if (BUILD_TESTING)
             add_dependencies(cata_test test_mo)
         endif()
         target_link_libraries(cata_test PRIVATE cataclysm-common)
-        add_test(NAME test
-                COMMAND cata_test ${_test_filter} --rng-seed time --warn NoTests
-                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+        if (CATA_TEST_SUITE STREQUAL "all")
+            # Keep broad batches in separate processes, as in the hosted suite.
+            set(_curses_numbers 1 2)
+            set(_curses_filters "[slow] ~starting_items" "~[slow] ~[.],starting_items")
+            foreach(n args IN ZIP_LISTS _curses_numbers _curses_filters)
+                add_test(NAME cata.test-${n}
+                        COMMAND cata_test --min-duration 20 --rng-seed time --order lex
+                        --user-dir=${CMAKE_CURRENT_BINARY_DIR}/test_user_dir_${n} ${args}
+                        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+            endforeach()
+        else()
+            add_test(NAME test
+                    COMMAND cata_test ${_test_filter} --rng-seed time --warn NoTests
+                    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+        endif()
     endif ()
 endif ()

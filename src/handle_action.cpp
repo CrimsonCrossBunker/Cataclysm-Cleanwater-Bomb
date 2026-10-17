@@ -58,7 +58,6 @@
 #include "game_constants.h"
 #include "game_inventory.h"
 #include "gamemode.h"
-#include "gates.h"
 #include "gun_mode.h"
 #include "help.h"
 #include "input_context.h"
@@ -338,7 +337,7 @@ input_context game::get_player_input( std::string &action )
         //x% of the Viewport, only shown on visible areas
         const weather_animation_t weather_info = weather.weather_id->weather_animation;
         point offset( u.view_offset.xy().raw() + point( -getmaxx( w_terrain ) / 2 + pos.x(),
-                      -getmaxy( w_terrain ) / 2 + pos.y() ) );
+                -getmaxy( w_terrain ) / 2 + pos.y() ) );
 
 #if defined(TILES)
         if( g->is_tileset_isometric() ) {
@@ -756,96 +755,6 @@ static void pldrive( point_rel_ms d )
     pldrive( tripoint_rel_ms( d, 0 ) );
 }
 
-static void open( const std::optional<tripoint_bub_ms> &p = std::nullopt )
-{
-    map &here = get_map();
-
-    avatar &player_character = get_avatar();
-    std::optional<tripoint_bub_ms> openp_ = p;
-    if( !openp_ ) {
-        openp_ = choose_adjacent_highlight( here, _( "Open where?" ),
-                                            pgettext( "no door, gate, curtain, etc.", "There is nothing that can be opened nearby." ),
-                                            ACTION_OPEN, false );
-    }
-
-    if( !openp_ ) {
-        return;
-    }
-    const tripoint_bub_ms openp = *openp_;
-
-    player_character.mod_moves( -to_moves<int>( 1_seconds ) );
-
-    // Is a vehicle part here?
-    if( const optional_vpart_position vp = here.veh_at( openp ) ) {
-        vehicle *const veh = &vp->vehicle();
-        // Check for potential thievery, and restore moves if action is canceled
-        if( !veh->handle_potential_theft( player_character ) ) {
-            player_character.mod_moves( to_moves<int>( 1_seconds ) );
-            return;
-        }
-        // Check if vehicle has a part here that can be opened
-        int openable = veh->next_part_to_open( vp->part_index() );
-        if( openable >= 0 ) {
-            // If player is inside vehicle, open the door/window/curtain
-            const vehicle *player_veh = veh_pointer_or_null( here.veh_at( player_character.pos_bub() ) );
-            const std::string part_name = veh->part( openable ).name();
-            bool outside = !player_veh || player_veh != veh;
-            if( !outside ) {
-                veh->open( here, openable );
-                //~ %1$s - vehicle name, %2$s - part name
-                player_character.add_msg_if_player( _( "You open the %1$s's %2$s." ), veh->name, part_name );
-            } else {
-                // Outside means we check if there's anything in that tile outside-openable.
-                // If there is, we open everything on tile. This means opening a closed,
-                // curtained door from outside is possible, but it will magically open the
-                // curtains as well.
-                int outside_openable = veh->next_part_to_open( vp->part_index(), true );
-                if( outside_openable == -1 ) {
-                    add_msg( m_info, _( "That %s can only be opened from the inside." ), part_name );
-                    player_character.mod_moves( to_moves<int>( 1_seconds ) );
-                } else {
-                    veh->open_all_at( here, openable );
-                    //~ %1$s - vehicle name, %2$s - part name
-                    player_character.add_msg_if_player( _( "You open the %1$s's %2$s." ), veh->name, part_name );
-                }
-            }
-        } else {
-            // If there are any OPENABLE parts here, they must be already open or locked
-            if( const std::optional<vpart_reference> openable_part = vp.part_with_feature( "OPENABLE",
-                    true ); openable_part.has_value() ) {
-                const std::string name = openable_part->info().name();
-                if( vp->vehicle().part( openable_part->part_index() ).locked ) {
-                    add_msg( m_info, _( "That %s is locked." ), name );
-                } else {
-                    add_msg( m_info, _( "That %s is already open." ), name );
-                }
-            }
-            player_character.mod_moves( to_moves<int>( 1_seconds ) );
-        }
-        return;
-    }
-    // Not a vehicle part, just a regular door
-    bool didit = here.open_door( player_character, openp,
-                                 !here.is_outside( player_character.pos_bub() ) );
-    if( didit ) {
-        player_character.add_msg_if_player( _( "You open the %s." ), here.name( openp ) );
-    } else {
-        const ter_str_id tid = here.ter( openp ).id();
-
-        if( here.has_flag( ter_furn_flag::TFLAG_LOCKED, openp ) ) {
-            add_msg( m_info, _( "The door is locked!" ) );
-            return;
-        } else if( tid.obj().close ) {
-            // if the following message appears unexpectedly, the prior check was for t_door_o
-            add_msg( m_info, _( "The door is already open." ) );
-            player_character.mod_moves( to_moves<int>( 1_seconds ) );
-            return;
-        }
-        add_msg( m_info, _( "No door there." ) );
-        player_character.mod_moves( to_moves<int>( 1_seconds ) );
-    }
-}
-
 static void close( const std::optional<tripoint_bub_ms> &p = std::nullopt )
 {
     map &here = get_map();
@@ -859,7 +768,7 @@ static void close( const std::optional<tripoint_bub_ms> &p = std::nullopt )
     }
 
     if( pnt ) {
-        doors::close_door( here, get_player_character(), *pnt );
+        get_player_character().assign_activity( close_tile_activity_actor( *pnt ) );
     }
 }
 
@@ -957,7 +866,7 @@ static void grab( const std::optional<tripoint_bub_ms> &p = std::nullopt )
         }
         if( vp->has_loaded_furniture() ) {
             furn_str_id furn( vp->part_with_feature( "FURNITURE_TIEDOWN",
-                              true )->part().get_base().get_var( "tied_down_furniture" ) );
+                    true )->part().get_base().get_var( "tied_down_furniture" ) );
             //~ %1$s - furniture name, %2$s - vehicle name
             if( query_yn( _( "Grab %1$s on %2$s?" ), furn->name(), veh_name ) ) {
                 you.grab( object_type::FURNITURE_ON_VEHICLE, grabp - you.pos_bub() );
@@ -1005,7 +914,7 @@ static void haul()
     bool autohaul = player_character.is_autohauling();
     std::vector<item_location> &haul_list = player_character.haul_list;
     std::vector<item_location> haulable_items = get_map().get_haulable_items(
-                player_character.pos_bub() );
+            player_character.pos_bub() );
     int haul_qty = haul_list.size();
     std::string &haul_filter = player_character.hauling_filter;
 
@@ -1177,7 +1086,7 @@ void game::execute_contextual_action( const action_id action, const tripoint_bub
 
     switch( action ) {
         case ACTION_OPEN:
-            open( target );
+            player_character.assign_activity( open_tile_activity_actor( target ) );
             break;
         case ACTION_CLOSE:
             if( player_character.is_mounted() &&
@@ -1361,12 +1270,12 @@ avatar::smash_result avatar::smash( tripoint_bub_ms &smashp )
                     sounds::sound( pos_bub(), 24, sounds::sound_t::combat, "CRACK!", true, "smash",
                                    "glass" );
                     deal_damage( nullptr, bodypart_id( "hand_r" ), damage_instance( damage_cut,
-                                 rng( 0,
-                                      vol ) ) );
+                            rng( 0,
+                                 vol ) ) );
                     if( vol > 20 ) {
                         // Hurt left arm too, if it was big
                         deal_damage( nullptr, bodypart_id( "hand_l" ), damage_instance( damage_cut,
-                                     rng( 0, static_cast<int>( vol * .5 ) ) ) );
+                                rng( 0, static_cast<int>( vol * .5 ) ) ) );
                     }
                     remove_weapon();
                     check_dead_state( &here );
@@ -1707,7 +1616,7 @@ static void sleep()
         as_m.reset();
         as_m.text = can_hibernate ?
                     _( "You're engorged to hibernate.  The alarm would only attract attention.  "
-                       "Set an alarm anyway?" ) :
+           "Set an alarm anyway?" ) :
                     _( "You have an alarm clock.  Set an alarm?" );
         as_m.text += deaf_text;
 
@@ -2062,7 +1971,7 @@ static void fire()
     }
     if( !weapon &&
         static_cast<int>( you.calculate_by_enchantment( 1,
-                          enchant_vals::mod::MELEE_RANGE_MODIFIER ) ) > 1 ) {
+                enchant_vals::mod::MELEE_RANGE_MODIFIER ) ) > 1 ) {
         reach_attack( you );
         return;
     }
@@ -2310,8 +2219,8 @@ static void handle_debug_mode()
     // returns if entry became active
     auto debugmode_entry_setup = []( uilist_entry & entry, bool active ) -> void {
         if( active )
-        {
-            entry.extratxt.txt = entry.hotkey->short_description() + " " + _( "A" );
+    {
+        entry.extratxt.txt = entry.hotkey->short_description() + " " + _( "A" );
             entry.extratxt.color = c_white_green;
             entry.text_color = c_green;
         } else
@@ -2356,7 +2265,7 @@ static void handle_debug_mode()
         entry.extratxt.left = 1;
 
         const bool active = debugmode::enabled_filters.count( static_cast<debugmode::debug_filter>
-                            ( i ) ) == 1;
+            ( i ) ) == 1;
 
         if( toggle_value && active ) {
             toggle_value = false;
@@ -2399,7 +2308,7 @@ static void handle_debug_mode()
             uilist_entry &entry = dbmenu.entries[dbmenu.ret];
 
             const auto filter_iter = debugmode::enabled_filters.find( static_cast<debugmode::debug_filter>
-                                     ( dbmenu.ret - 2 ) );
+                ( dbmenu.ret - 2 ) );
 
             const bool active = filter_iter != debugmode::enabled_filters.end();
 
@@ -2787,7 +2696,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 } else if( delta.y != 0 ) {
                     const std::string full =
                         std::string( "{\"type\":\"action\",\"action\":\"cruise\""
-                                     ",\"dy\":" ) + std::to_string( delta.y )
+                                 ",\"dy\":" ) + std::to_string( delta.y )
                         + R"(,"move_mode":")" + player_character.move_mode.str() + "\"}";
                     cata_mp::client_send( cata_mp::client_enrich_action( full ) );
                     map &pvmap = get_map();
@@ -3028,7 +2937,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             if( !doorpos ) {
                 return true;
             }
-            doors::close_door( get_map(), player_character, *doorpos );
+            close_tile_activity_actor::close_immediately( player_character, *doorpos );
             const tripoint_abs_ms abs_target = get_map().get_abs( *doorpos );
             const std::string json =
                 R"({"type":"action","action":"close","x":)" + std::to_string( abs_target.x() ) +
@@ -3272,14 +3181,14 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
 
     const std::vector<action_id> actions_move_mode = get_actions_move_mode();
     const bool is_actions_move_mode = std::find( actions_move_mode.begin(),
-                                      actions_move_mode.end(), act ) != actions_move_mode.end();
+        actions_move_mode.end(), act ) != actions_move_mode.end();
     // Are we performing an action that is not a move mode action?
     int desired_move_mode_cost = 0;
     if( player_character.is_waiting_to_change_mode_mode() && !is_actions_move_mode ) {
         move_mode_id desired_move = player_character.get_desired_move_mode();
         if( player_character.can_switch_to( desired_move ) ) {
             desired_move_mode_cost = player_character.move_mode_switch_cost( player_character.move_mode,
-                                     desired_move );
+                desired_move );
             player_character.set_movement_mode( desired_move );
             if( player_character.move_mode == desired_move ) {
                 player_character.mod_moves( -desired_move_mode_cost );
@@ -3641,7 +3550,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             break;
 
         case ACTION_OPEN:
-            open( mouse_target );
+            player_character.assign_activity( open_tile_activity_actor( std::nullopt ) );
             break;
 
         case ACTION_CLOSE:
@@ -4632,8 +4541,8 @@ bool game::handle_action()
             }
 
             const std::optional<tripoint_bub_ms> mouse_pos = ctxt.get_coordinates( w_terrain,
-                    ter_view_p.raw().xy(),
-                    true );
+                ter_view_p.raw().xy(),
+                true );
             if( !mouse_pos ) {
                 return false;
             }
@@ -4738,7 +4647,7 @@ bool game::handle_action()
     gamemode->post_action( act );
 
     player_character.movecounter = ( !player_character.is_dead_state() ? ( before_action_moves -
-                                     player_character.get_moves() ) : 0 );
+        player_character.get_moves() ) : 0 );
     dbg( D_INFO ) << string_format( "%s: [%d] %d - %d = %d", action_ident( act ),
                                     to_turn<int>( calendar::turn ), before_action_moves, player_character.movecounter,
                                     player_character.get_moves() );

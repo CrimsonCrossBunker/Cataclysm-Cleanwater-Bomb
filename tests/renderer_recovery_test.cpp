@@ -703,48 +703,54 @@ TEST_CASE( "scaled_pointer_coordinates_cover_the_complete_text_and_map_windows",
     for( const int display_scale : {
              1, 2, 4
          } ) {
-        const int terminal_w = std::max( min_term_w, 100 );
-        const int terminal_h = std::max( min_term_h, 60 );
-        renderer_recovery_test_support::set_scaling_and_resize_window(
-            display_scale, terminal_w * font_w * display_scale,
-            terminal_h * font_h * display_scale );
-        renderer_coordinator.drain_pending();
-        REQUIRE( renderer_coordinator.is_render_allowed() );
+        // Exercise both exact multiples and a remainder border in the
+        // explicit display-buffer presentation rectangle.
+        for( const int extra_pixels : {
+                 0, 3
+             } ) {
+            const int terminal_w = std::max( min_term_w, 100 );
+            const int terminal_h = std::max( min_term_h, 60 );
+            renderer_recovery_test_support::set_scaling_and_resize_window(
+                display_scale, terminal_w * font_w * display_scale + extra_pixels,
+                terminal_h * font_h * display_scale + extra_pixels );
+            renderer_coordinator.drain_pending();
+            REQUIRE( renderer_coordinator.is_render_allowed() );
 
-        int window_w = 0;
-        int window_h = 0;
-        int current_font_w = 0;
-        int current_font_h = 0;
-        int current_scaling = 0;
-        renderer_recovery_test_support::current_window_metrics(
-            window_w, window_h, current_font_w, current_font_h, current_scaling,
-            min_term_w, min_term_h );
-        CAPTURE( display_scale, window_w, window_h, current_font_w,
-                 current_font_h, current_scaling );
-        REQUIRE( current_scaling == display_scale );
+            int window_w = 0;
+            int window_h = 0;
+            int current_font_w = 0;
+            int current_font_h = 0;
+            int current_scaling = 0;
+            renderer_recovery_test_support::current_window_metrics(
+                window_w, window_h, current_font_w, current_font_h, current_scaling,
+                min_term_w, min_term_h );
+            CAPTURE( display_scale, extra_pixels, window_w, window_h, current_font_w,
+                     current_font_h, current_scaling );
+            REQUIRE( current_scaling == display_scale );
 
-        // Aim at the centre of the bottom-right cell. At 2x/4x this is far
-        // outside the upper-left fraction that a second scale division leaves
-        // reachable.
-        const point target_buffer_pixel(
-            ( window_origin_cells.x + target_cell.x ) * current_font_w +
-            current_font_w / 2,
-            ( window_origin_cells.y + target_cell.y ) * current_font_h +
-            current_font_h / 2 );
-        const point target_window_pixel = target_buffer_pixel * display_scale;
+            // Aim at the centre of the bottom-right cell. At 2x/4x this is far
+            // outside the upper-left fraction that a second scale division leaves
+            // reachable.
+            const point target_buffer_pixel(
+                ( window_origin_cells.x + target_cell.x ) * current_font_w +
+                current_font_w / 2,
+                ( window_origin_cells.y + target_cell.y ) * current_font_h +
+                current_font_h / 2 );
+            const point target_window_pixel = target_buffer_pixel * display_scale;
 
-        const std::optional<point> text_cell =
-            renderer_recovery_test_support::text_cell_at_window_point(
-                target_window_pixel, capture_win );
-        REQUIRE( text_cell );
-        CHECK( *text_cell == target_cell );
+            const std::optional<point> text_cell =
+                renderer_recovery_test_support::text_cell_at_window_point(
+                    target_window_pixel, capture_win );
+            REQUIRE( text_cell );
+            CHECK( *text_cell == target_cell );
 
-        const std::optional<point> map_cell =
-            renderer_recovery_test_support::map_cell_at_window_point(
-                target_window_pixel, capture_win, map_center );
-        REQUIRE( map_cell );
-        CHECK( *map_cell == map_center + target_cell -
-               window_size_cells / 2 );
+            const std::optional<point> map_cell =
+                renderer_recovery_test_support::map_cell_at_window_point(
+                    target_window_pixel, capture_win, map_center );
+            REQUIRE( map_cell );
+            CHECK( *map_cell == map_center + target_cell -
+                   window_size_cells / 2 );
+        }
     }
 }
 
@@ -1028,6 +1034,24 @@ TEST_CASE( "renderer_coordinator_mode2_interrupt_disposes_quarantine",
         // never receive SDL_DestroyTexture for the old handles.
         CHECK( gate->load() );
     }
+
+    SECTION( "shader boundary loss abandons the candidate and recovers through device loss" ) {
+        atlas_replay_quarantine quarantine;
+        const atlas_replay_quarantine::gate gate =
+            renderer_recovery_test_support::populate_mode2_quarantine( quarantine );
+        REQUIRE_FALSE( quarantine.empty() );
+        REQUIRE( gate );
+        const uint64_t inst = renderer_coordinator.instance_generation();
+
+        // no recovery queued up front, interrupt itself must request it
+        const bool recovered = service_mode2_upload_interrupt(
+                                   atlas_upload_interrupt::shader_boundary_lost, quarantine, inst );
+
+        CHECK( recovered );
+        CHECK( quarantine.empty() );
+        CHECK( gate->load() );
+        CHECK( renderer_coordinator.instance_generation() == inst + 1 );
+    }
 }
 
 TEST_CASE( "renderer_coordinator_retries_from_any_phase", "[tiles][renderer_recovery]" )
@@ -1072,6 +1096,91 @@ TEST_CASE( "renderer_coordinator_retries_from_any_phase", "[tiles][renderer_reco
         }
         CHECK( gates_swept >= 3 );
     }
+}
+
+TEST_CASE( "replay_reaches_every_live_bundle_published_under_one_key",
+           "[tiles][renderer_recovery]" )
+{
+    software_render_fixture fx;
+    if( !fx.available() ) {
+        WARN( "dummy SDL video backend unavailable; skipping" );
+        return;
+    }
+    const uint64_t inst = renderer_coordinator.instance_generation();
+    const uint64_t tex = renderer_coordinator.textures_generation();
+    // When you force reload you publish a second object with the same key, and
+    // un-reloaded context still refers to the first one
+    const std::shared_ptr<const tileset> older =
+        renderer_recovery_test_support::install_synthetic_bundle(
+            "synthetic_shared_key_ts", "color_pixel_sepia_light", inst, tex );
+    const std::shared_ptr<const tileset> newer =
+        renderer_recovery_test_support::install_synthetic_bundle(
+            "synthetic_shared_key_ts", "color_pixel_sepia_light", inst, tex );
+    REQUIRE( older );
+    REQUIRE( newer );
+    REQUIRE( older != newer );
+
+    WHEN( "device reset replays the cache" ) {
+        renderer_coordinator.request_recovery( renderer_recovery_severity::device_reset );
+        renderer_coordinator.drain_pending();
+        const uint64_t tex_now = renderer_coordinator.textures_generation();
+        REQUIRE( tex_now == tex + 1 );
+        THEN( "both have new texture generation" ) {
+            CHECK( older->get_gpu_textures_generation_at_upload() == tex_now );
+            CHECK( newer->get_gpu_textures_generation_at_upload() == tex_now );
+        }
+        THEN( "but still the lookup returns the newer object" ) {
+            CHECK( renderer_recovery_test_support::fetch_cached_bundle(
+                       "synthetic_shared_key_ts", "color_pixel_sepia_light",
+                       renderer_coordinator.instance_generation(), tex_now ) == newer );
+        }
+    }
+    WHEN( "device loss replays the cache on a new renderer" ) {
+        renderer_coordinator.request_recovery( renderer_recovery_severity::device_lost );
+        renderer_coordinator.drain_pending();
+        const uint64_t inst_now = renderer_coordinator.instance_generation();
+        REQUIRE( inst_now == inst + 1 );
+        THEN( "both have new instance generation" ) {
+            CHECK( older->get_renderer_instance_generation_at_upload() == inst_now );
+            CHECK( newer->get_renderer_instance_generation_at_upload() == inst_now );
+        }
+    }
+}
+
+TEST_CASE( "lookup_skips_a_bundle_superseded_by_a_forced_reload",
+           "[tiles][renderer_recovery]" )
+{
+    software_render_fixture fx;
+    if( !fx.available() ) {
+        WARN( "dummy SDL video backend unavailable; skipping" );
+        return;
+    }
+    const uint64_t inst = renderer_coordinator.instance_generation();
+    const uint64_t tex = renderer_coordinator.textures_generation();
+    const std::shared_ptr<const tileset> older =
+        renderer_recovery_test_support::install_synthetic_bundle(
+            "synthetic_superseded_ts", "color_pixel_sepia_light", inst, tex );
+    std::shared_ptr<const tileset> newer =
+        renderer_recovery_test_support::install_synthetic_bundle(
+            "synthetic_superseded_ts", "color_pixel_sepia_light", inst, tex );
+    REQUIRE( older );
+    REQUIRE( newer );
+
+    // all contexts that did the reload let go, one still has the superseded object
+    newer.reset();
+    // Hit can only be a superseded object, this helper does no load
+    CHECK_FALSE( renderer_recovery_test_support::cache_lookup_is_fresh(
+                     "synthetic_superseded_ts", "color_pixel_sepia_light", inst, tex ) );
+
+    renderer_coordinator.request_recovery( renderer_recovery_severity::device_reset );
+    renderer_coordinator.drain_pending();
+    // Recovery still reaches the superseded object when held
+    CHECK( older->get_gpu_textures_generation_at_upload()
+           == renderer_coordinator.textures_generation() );
+    CHECK_FALSE( renderer_recovery_test_support::cache_lookup_is_fresh(
+                     "synthetic_superseded_ts", "color_pixel_sepia_light",
+                     renderer_coordinator.instance_generation(),
+                     renderer_coordinator.textures_generation() ) );
 }
 
 #endif // TILES

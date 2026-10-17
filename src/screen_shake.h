@@ -9,7 +9,7 @@
 // present-time blit transform — here a few-pixel translation of display_buffer
 // rather than a mesh warp — and it decays over real wall-clock time (the same
 // per-frame steady_clock advance the explosion-light overlay uses). No GPU shader,
-// works on SDL2/SDL3, and is fully gated by a settings toggle + threshold.
+// works on SDL3, and is fully gated by a settings toggle + threshold.
 
 // Live shake parameters. A single global impulse (concurrent triggers take the
 // stronger one rather than summing, so a chain of blasts doesn't fling the view).

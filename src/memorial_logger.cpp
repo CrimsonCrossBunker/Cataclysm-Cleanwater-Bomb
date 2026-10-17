@@ -1,5 +1,6 @@
 #include "memorial_logger.h"
 
+#include <string_formatter.h>
 #include <cstddef>
 #include <istream>
 #include <list>
@@ -231,7 +232,7 @@ void memorial_logger::write_text_memorial( std::ostream &file,
     //~ First parameter is a pronoun ("He"/"She"), second parameter is a description
     //~ that designates the location relative to its surroundings.
     const std::string kill_place = string_format( _( "%1$s was killed in a %2$s." ),
-                                   pronoun, locdesc );
+        pronoun, locdesc );
 
     //Header
     file << string_format( _( "Cataclysm: Cleanwater Bomb version %s memorial file" ),
@@ -571,6 +572,8 @@ void memorial_logger::notify( const cata::event &e )
             }
             break;
         }
+        case event_type::character_effect_intensity_changed:
+            break;
         case event_type::character_kills_character: {
             character_id ch = e.get<character_id>( "killer" );
             if( ch == avatar_id ) {

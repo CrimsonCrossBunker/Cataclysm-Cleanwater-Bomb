@@ -16,9 +16,10 @@
 #include "translation.h"
 
 class Character;
-class inventory;
 class recipe;
 class recipe_subset;
+class temp_crafting_inventory;
+
 struct crafting_cost_context;
 struct tool_comp;
 struct item_comp;
@@ -34,7 +35,7 @@ using crafting_component_groups = std::vector<std::vector<crafting_component_dis
 
 // Snapshot quantities, availability and colors before sorting or drawing.
 crafting_component_groups build_component_display( const recipe &rec, const Character &crafter,
-        const inventory &inv, int batch_size );
+        const temp_crafting_inventory &inv, int batch_size );
 
 // Returns true if the character cannot gain any skill or proficiency from this recipe.
 // Used to mark practice recipes as "useless" when the crafter already exceeds
@@ -45,7 +46,7 @@ bool cannot_gain_skill_or_prof( const Character &crafter, const recipe &recp );
 // Stores craftability flags, color-coding, and lazy-cached proficiency maluses.
 struct availability {
         explicit availability( Character &_crafter, const recipe *r, int batch_size = 1,
-                               bool camp_crafting = false, inventory *inventory_override = nullptr );
+                               bool camp_crafting = false, temp_crafting_inventory *inventory_override = nullptr );
         Character &crafter;
         bool can_craft;
         // group can introduce recipe this crafter cannot craft because of low primary skill
@@ -59,7 +60,7 @@ struct availability {
         bool is_nested_category;
         // Used as an indicator to see if crafting is called via camp.
         // If not nullptr, we must be camp crafting.
-        inventory *inv_override;
+        temp_crafting_inventory *inv_override;
     private:
         const recipe *rec;
         mutable float proficiency_time_maluses = -1.0f;
@@ -174,7 +175,7 @@ recipe_list_data build_recipe_list(
     bool skip_sort,
     Character &crafter,
     bool camp_crafting,
-    inventory *inventory_override,
+    temp_crafting_inventory *inventory_override,
     bool highlight_unread,
     bool unread_first,
     std::map<const recipe *, availability> &availability_cache,

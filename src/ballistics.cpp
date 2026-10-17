@@ -1,5 +1,6 @@
 #include "ballistics.h"
 
+#include <weakpoint.h>
 #include <algorithm>
 #include <cmath>
 #include <functional>
@@ -12,6 +13,7 @@
 
 #include "character.h"
 #include "coordinates.h"
+#include "crafting.h"
 #include "creature.h"
 #include "creature_tracker.h"
 #include "damage.h"
@@ -22,6 +24,7 @@
 #include "explosion_light.h"
 #include "game.h"
 #include "item.h"
+#include "item_location.h"
 #include "itype.h"
 #include "line.h"
 #include "map.h"
@@ -182,7 +185,7 @@ static void drop_or_embed_projectile( map *here, const dealt_projectile_attack &
 
         map &here = get_map();
         if( do_drop ) {
-            here.add_item_or_charges( attack.end_point, dropped_item );
+            craft_relocated( here.add_item_or_charges_ret_loc( attack.end_point, dropped_item ) );
         }
 
         if( effects.count( ammo_effect_HEAVY_HIT ) ) {
@@ -522,7 +525,7 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
         // Continue line is very "stiff" when the original range is short
         // TODO: Make it use a more distant point for more realistic extended lines
         std::vector<tripoint_bub_ms> trajectory_extension = continue_line( trajectory,
-                extend_to_range - range );
+            extend_to_range - range );
         trajectory.reserve( trajectory.size() + trajectory_extension.size() );
         trajectory.insert( trajectory.end(), trajectory_extension.begin(), trajectory_extension.end() );
     }
@@ -566,7 +569,7 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
                 t_copy.insert( t_copy.begin(), source );
                 if( !no_overshoot && range < extend_to_range ) {
                     std::vector<tripoint_bub_ms> extension = continue_line( t_copy,
-                            extend_to_range - range );
+                        extend_to_range - range );
                     t_copy.reserve( t_copy.size() + extension.size() );
                     t_copy.insert( t_copy.end(), extension.begin(), extension.end() );
                 }

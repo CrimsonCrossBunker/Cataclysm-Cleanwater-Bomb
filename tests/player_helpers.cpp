@@ -23,6 +23,7 @@
 #include "item_location.h"
 #include "itype.h"
 #include "magic.h"
+#include "map_helpers.h"
 #include "map.h"
 #include "npc.h"
 #include "pimpl.h"
@@ -34,6 +35,7 @@
 #include "ret_val.h"
 #include "skill.h"
 #include "stomach.h"
+#include "temp_crafting_inventory.h"
 #include "type_id.h"
 #include "value_ptr.h"
 
@@ -46,7 +48,7 @@ static const move_mode_id move_mode_walk( "walk" );
 
 int get_remaining_charges( const itype_id &tool_id )
 {
-    const inventory crafting_inv = get_player_character().crafting_inventory();
+    const temp_crafting_inventory crafting_inv = get_player_character().crafting_inventory();
     std::vector<const item *> items =
     crafting_inv.items_with( [tool_id]( const item & i ) {
         return i.typeId() == tool_id;
@@ -148,6 +150,7 @@ void clear_character( Character &dummy, bool skip_nutrition )
 
     // Make sure we don't carry around weird effects.
     dummy.clear_effects();
+    dummy.set_dodges_left( dummy.get_num_dodges() );
     dummy.set_underwater( false );
 
     // Make stats nominal.
@@ -230,6 +233,8 @@ void clear_avatar()
     avatar.clear_identified();
     avatar.clear_nutrition();
     avatar.reset_all_missions();
+    // Records outlive the items they claim.
+    clear_reservations();
 }
 
 void equip_shooter( npc &shooter, const std::vector<itype_id> &apparel )
@@ -253,6 +258,23 @@ void process_activity( Character &dummy, bool pass_time )
             }
         }
     } while( dummy.activity );
+}
+
+bool process_activity_bounded( Character &dummy, const int max_turns, const int max_dispatches )
+{
+    int turns = 0;
+    int dispatches = 0;
+    while( dummy.activity && turns < max_turns ) {
+        dummy.mod_moves( dummy.get_speed() );
+        while( dummy.get_moves() > 0 && dummy.activity ) {
+            dummy.activity.do_turn( dummy );
+            if( ++dispatches >= max_dispatches ) {
+                return false;
+            }
+        }
+        ++turns;
+    }
+    return !dummy.activity;
 }
 
 npc &spawn_npc( const point_bub_ms &p, const std::string &npc_class )

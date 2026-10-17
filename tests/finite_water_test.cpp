@@ -1,5 +1,9 @@
-#include <algorithm>
+#include <coordinates.h>
+#include <mapdata.h>
+#include <units.h>
 #include <functional>
+#include <map>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <tuple>
@@ -7,26 +11,24 @@
 
 #include "calendar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "construction.h"
 #include "finite_water.h"
-#include "game_constants.h"
-#include "inventory.h"
+#include "flexbuffer_json.h"
 #include "item.h"
 #include "json.h"
 #include "json_loader.h"
 #include "map.h"
-#include "mapbuffer.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
 #include "map_scale_constants.h"
+#include "mapbuffer.h"
 #include "npc.h"
-#include "omdata.h"
-#include "overmap.h"
 #include "overmapbuffer.h"
 #include "player_helpers.h"
 #include "point.h"
-#include "cata_scope_helpers.h"
 #include "submap.h"
+#include "temp_crafting_inventory.h"
 #include "type_id.h"
 
 static const construction_str_id construction_constr_water_channel( "constr_water_channel" );
@@ -137,7 +139,7 @@ void set_finite_charges( const tripoint_bub_ms &p, int charges )
     const int current = finite_charges( p );
     if( current > charges ) {
         REQUIRE( finite_water::withdraw_finite_liquid( get_map().get_abs( p ),
-                 current - charges ) == current - charges );
+                current - charges ) == current - charges );
     } else if( current < charges ) {
         item added = water_item( charges - current );
         REQUIRE( finite_water::pour_into_finite_water( get_map().get_abs( p ), added ) ==
@@ -262,8 +264,8 @@ TEST_CASE( "finite_sewage_uses_one_connected_water_level", "[finite_water]" )
     here.ter_set( second, ter_sewage );
 
     CHECK( finite_charges( first, itype_water_sewage ) == 800 );
-    inventory crafting_sources;
-    crafting_sources.form_from_map( here, { first, second }, nullptr, false );
+    temp_crafting_inventory crafting_sources;
+    crafting_sources.form_from_map( here, { first, second }, nullptr );
     CHECK( crafting_sources.charges_of( itype_water_sewage ) == 800 );
     REQUIRE( finite_water::withdraw_finite_liquid( here.get_abs( first ), 1 ) == 1 );
     CHECK( here.ter( first ) == ter_sewage );

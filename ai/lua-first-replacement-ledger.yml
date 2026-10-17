@@ -31,25 +31,25 @@ sources:
 - id: json-object-types
   path: data/reference/json/ccb_json_object_types.json
   selector: type
-  source_fingerprint: sha256:0d2c64867ca5a2d0c5954b8a3f12a16edce6d30c65abc104f29f081e676a5cba
+  source_fingerprint: sha256:055af434c91a2d9f42274f86b9ac1a945f99a19e9aeeb263521af0ce0b425d4f
   entry_count: 190
 - id: eoc-conditions
   path: data/reference/json/ccb_eoc_conditions.json
   selector: key
-  source_fingerprint: sha256:0d2c64867ca5a2d0c5954b8a3f12a16edce6d30c65abc104f29f081e676a5cba
-  entry_count: 275
+  source_fingerprint: sha256:055af434c91a2d9f42274f86b9ac1a945f99a19e9aeeb263521af0ce0b425d4f
+  entry_count: 276
 - id: eoc-effects
   path: data/reference/json/ccb_eoc_effects.json
   selector: key
-  source_fingerprint: sha256:0d2c64867ca5a2d0c5954b8a3f12a16edce6d30c65abc104f29f081e676a5cba
-  entry_count: 311
+  source_fingerprint: sha256:055af434c91a2d9f42274f86b9ac1a945f99a19e9aeeb263521af0ce0b425d4f
+  entry_count: 329
 summary:
-  total: 776
+  total: 795
   implemented_verified: 1
   implemented_unverified: 89
   bounded_implemented_verified: 0
   bounded_implemented_unverified: 672
-  primitive_available_unverified: 4
+  primitive_available_unverified: 23
   planned: 0
   private_adapter: 0
   reviewed_not_applicable: 10
@@ -489,6 +489,19 @@ entries:
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
   - tools/test_migrate_lua_first.py
+  verification: source_only
+- inventory: eoc-conditions
+  selector: map_is_passable
+  target_kind: shared_service
+  target: services.map
+  status: primitive_available_unverified
+  legacy_dependency: none
+  evidence:
+  - data/lua/types/ccb_platform_v1.d.lua
+  - data/reference/json/ccb_eoc_conditions.json
+  - src/lua_platform_handle.cpp
+  - src/lua_platform_runtime.cpp
+  - tests/lua_platform_test.cpp
   verification: source_only
 - inventory: eoc-conditions
   selector: map_terrain_id
@@ -5242,6 +5255,19 @@ entries:
   - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
+  selector: npc_add_addiction
+  target_kind: shared_service
+  target: services.characters
+  status: primitive_available_unverified
+  legacy_dependency: none
+  evidence:
+  - data/lua/types/ccb_platform_v1.d.lua
+  - data/reference/json/ccb_eoc_effects.json
+  - src/lua_platform_handle.cpp
+  - src/lua_platform_runtime.cpp
+  - tests/lua_platform_test.cpp
+  verification: source_only
+- inventory: eoc-effects
   selector: npc_add_bionic
   target_kind: shared_service
   target: services.bionics
@@ -5268,6 +5294,19 @@ entries:
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
   - tools/test_migrate_lua_first.py
+  verification: source_only
+- inventory: eoc-effects
+  selector: npc_add_memorial
+  target_kind: shared_service
+  target: services.characters
+  status: primitive_available_unverified
+  legacy_dependency: none
+  evidence:
+  - data/lua/types/ccb_platform_v1.d.lua
+  - data/reference/json/ccb_eoc_effects.json
+  - src/lua_platform_handle.cpp
+  - src/lua_platform_runtime.cpp
+  - tests/lua_platform_test.cpp
   verification: source_only
 - inventory: eoc-effects
   selector: npc_add_morale
@@ -5574,6 +5613,32 @@ entries:
   - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
+  selector: npc_fall_asleep
+  target_kind: shared_service
+  target: services.characters
+  status: primitive_available_unverified
+  legacy_dependency: none
+  evidence:
+  - data/lua/types/ccb_platform_v1.d.lua
+  - data/reference/json/ccb_eoc_effects.json
+  - src/lua_platform_handle.cpp
+  - src/lua_platform_runtime.cpp
+  - tests/lua_platform_test.cpp
+  verification: source_only
+- inventory: eoc-effects
+  selector: npc_fill_stomach
+  target_kind: shared_service
+  target: services.characters
+  status: primitive_available_unverified
+  legacy_dependency: none
+  evidence:
+  - data/lua/types/ccb_platform_v1.d.lua
+  - data/reference/json/ccb_eoc_effects.json
+  - src/lua_platform_handle.cpp
+  - src/lua_platform_runtime.cpp
+  - tests/lua_platform_test.cpp
+  verification: source_only
+- inventory: eoc-effects
   selector: npc_first_topic
   target_kind: shared_service
   target: services.characters
@@ -5642,6 +5707,32 @@ entries:
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
   - tools/test_migrate_lua_first.py
+  verification: source_only
+- inventory: eoc-effects
+  selector: npc_heal_all
+  target_kind: shared_service
+  target: services.characters
+  status: primitive_available_unverified
+  legacy_dependency: none
+  evidence:
+  - data/lua/types/ccb_platform_v1.d.lua
+  - data/reference/json/ccb_eoc_effects.json
+  - src/lua_platform_handle.cpp
+  - src/lua_platform_runtime.cpp
+  - tests/lua_platform_test.cpp
+  verification: source_only
+- inventory: eoc-effects
+  selector: npc_hurt_all
+  target_kind: shared_service
+  target: services.characters
+  status: primitive_available_unverified
+  legacy_dependency: none
+  evidence:
+  - data/lua/types/ccb_platform_v1.d.lua
+  - data/reference/json/ccb_eoc_effects.json
+  - src/lua_platform_handle.cpp
+  - src/lua_platform_runtime.cpp
+  - tests/lua_platform_test.cpp
   verification: source_only
 - inventory: eoc-effects
   selector: npc_knockback
@@ -5713,6 +5804,19 @@ entries:
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
   - tools/test_migrate_lua_first.py
+  verification: source_only
+- inventory: eoc-effects
+  selector: npc_lose_addiction
+  target_kind: shared_service
+  target: services.characters
+  status: primitive_available_unverified
+  legacy_dependency: none
+  evidence:
+  - data/lua/types/ccb_platform_v1.d.lua
+  - data/reference/json/ccb_eoc_effects.json
+  - src/lua_platform_handle.cpp
+  - src/lua_platform_runtime.cpp
+  - tests/lua_platform_test.cpp
   verification: source_only
 - inventory: eoc-effects
   selector: npc_lose_bionic
@@ -5873,6 +5977,19 @@ entries:
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
   - tools/test_migrate_lua_first.py
+  verification: source_only
+- inventory: eoc-effects
+  selector: npc_marlossify
+  target_kind: shared_service
+  target: services.characters
+  status: primitive_available_unverified
+  legacy_dependency: none
+  evidence:
+  - data/lua/types/ccb_platform_v1.d.lua
+  - data/reference/json/ccb_eoc_effects.json
+  - src/lua_platform_handle.cpp
+  - src/lua_platform_runtime.cpp
+  - tests/lua_platform_test.cpp
   verification: source_only
 - inventory: eoc-effects
   selector: npc_message
@@ -6374,6 +6491,19 @@ entries:
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
   - tools/test_migrate_lua_first.py
+  verification: source_only
+- inventory: eoc-effects
+  selector: npc_vomit
+  target_kind: shared_service
+  target: services.characters
+  status: primitive_available_unverified
+  legacy_dependency: none
+  evidence:
+  - data/lua/types/ccb_platform_v1.d.lua
+  - data/reference/json/ccb_eoc_effects.json
+  - src/lua_platform_handle.cpp
+  - src/lua_platform_runtime.cpp
+  - tests/lua_platform_test.cpp
   verification: source_only
 - inventory: eoc-effects
   selector: npc_wants_to_talk
@@ -7208,6 +7338,19 @@ entries:
   - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
+  selector: u_add_addiction
+  target_kind: shared_service
+  target: services.characters
+  status: primitive_available_unverified
+  legacy_dependency: none
+  evidence:
+  - data/lua/types/ccb_platform_v1.d.lua
+  - data/reference/json/ccb_eoc_effects.json
+  - src/lua_platform_handle.cpp
+  - src/lua_platform_runtime.cpp
+  - tests/lua_platform_test.cpp
+  verification: source_only
+- inventory: eoc-effects
   selector: u_add_bionic
   target_kind: shared_service
   target: services.bionics
@@ -7251,6 +7394,19 @@ entries:
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
   - tools/test_migrate_lua_first.py
+  verification: source_only
+- inventory: eoc-effects
+  selector: u_add_memorial
+  target_kind: shared_service
+  target: services.characters
+  status: primitive_available_unverified
+  legacy_dependency: none
+  evidence:
+  - data/lua/types/ccb_platform_v1.d.lua
+  - data/reference/json/ccb_eoc_effects.json
+  - src/lua_platform_handle.cpp
+  - src/lua_platform_runtime.cpp
+  - tests/lua_platform_test.cpp
   verification: source_only
 - inventory: eoc-effects
   selector: u_add_morale
@@ -7571,6 +7727,32 @@ entries:
   - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
+  selector: u_fall_asleep
+  target_kind: shared_service
+  target: services.characters
+  status: primitive_available_unverified
+  legacy_dependency: none
+  evidence:
+  - data/lua/types/ccb_platform_v1.d.lua
+  - data/reference/json/ccb_eoc_effects.json
+  - src/lua_platform_handle.cpp
+  - src/lua_platform_runtime.cpp
+  - tests/lua_platform_test.cpp
+  verification: source_only
+- inventory: eoc-effects
+  selector: u_fill_stomach
+  target_kind: shared_service
+  target: services.characters
+  status: primitive_available_unverified
+  legacy_dependency: none
+  evidence:
+  - data/lua/types/ccb_platform_v1.d.lua
+  - data/reference/json/ccb_eoc_effects.json
+  - src/lua_platform_handle.cpp
+  - src/lua_platform_runtime.cpp
+  - tests/lua_platform_test.cpp
+  verification: source_only
+- inventory: eoc-effects
   selector: u_forget_martial_art
   target_kind: shared_service
   target: services.martial_arts
@@ -7599,6 +7781,32 @@ entries:
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
   - tools/test_migrate_lua_first.py
+  verification: source_only
+- inventory: eoc-effects
+  selector: u_heal_all
+  target_kind: shared_service
+  target: services.characters
+  status: primitive_available_unverified
+  legacy_dependency: none
+  evidence:
+  - data/lua/types/ccb_platform_v1.d.lua
+  - data/reference/json/ccb_eoc_effects.json
+  - src/lua_platform_handle.cpp
+  - src/lua_platform_runtime.cpp
+  - tests/lua_platform_test.cpp
+  verification: source_only
+- inventory: eoc-effects
+  selector: u_hurt_all
+  target_kind: shared_service
+  target: services.characters
+  status: primitive_available_unverified
+  legacy_dependency: none
+  evidence:
+  - data/lua/types/ccb_platform_v1.d.lua
+  - data/reference/json/ccb_eoc_effects.json
+  - src/lua_platform_handle.cpp
+  - src/lua_platform_runtime.cpp
+  - tests/lua_platform_test.cpp
   verification: source_only
 - inventory: eoc-effects
   selector: u_knockback
@@ -7672,6 +7880,19 @@ entries:
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
   - tools/test_migrate_lua_first.py
+  verification: source_only
+- inventory: eoc-effects
+  selector: u_lose_addiction
+  target_kind: shared_service
+  target: services.characters
+  status: primitive_available_unverified
+  legacy_dependency: none
+  evidence:
+  - data/lua/types/ccb_platform_v1.d.lua
+  - data/reference/json/ccb_eoc_effects.json
+  - src/lua_platform_handle.cpp
+  - src/lua_platform_runtime.cpp
+  - tests/lua_platform_test.cpp
   verification: source_only
 - inventory: eoc-effects
   selector: u_lose_bionic
@@ -7834,6 +8055,19 @@ entries:
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
   - tools/test_migrate_lua_first.py
+  verification: source_only
+- inventory: eoc-effects
+  selector: u_marlossify
+  target_kind: shared_service
+  target: services.characters
+  status: primitive_available_unverified
+  legacy_dependency: none
+  evidence:
+  - data/lua/types/ccb_platform_v1.d.lua
+  - data/reference/json/ccb_eoc_effects.json
+  - src/lua_platform_handle.cpp
+  - src/lua_platform_runtime.cpp
+  - tests/lua_platform_test.cpp
   verification: source_only
 - inventory: eoc-effects
   selector: u_message
@@ -8363,6 +8597,19 @@ entries:
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
   - tools/test_migrate_lua_first.py
+  verification: source_only
+- inventory: eoc-effects
+  selector: u_vomit
+  target_kind: shared_service
+  target: services.characters
+  status: primitive_available_unverified
+  legacy_dependency: none
+  evidence:
+  - data/lua/types/ccb_platform_v1.d.lua
+  - data/reference/json/ccb_eoc_effects.json
+  - src/lua_platform_handle.cpp
+  - src/lua_platform_runtime.cpp
+  - tests/lua_platform_test.cpp
   verification: source_only
 - inventory: eoc-effects
   selector: u_wants_to_talk

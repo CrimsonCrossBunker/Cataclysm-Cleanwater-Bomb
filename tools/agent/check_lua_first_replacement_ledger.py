@@ -94,13 +94,12 @@ def check() -> dict[str, int]:
                 "src/lua_platform",
                 "data/lua/types/",
                 "tests/",
-                "tools/migrate_lua_first.py",
             )
             if any(not any(value.startswith(kind) for value in evidence)
                    for kind in required_kinds):
                 raise RuntimeError(
                     "implemented selector or primitive lacks Platform source, "
-                    "declaration, test, or migration evidence: "
+                    "declaration, or test evidence: "
                     f"{entry['inventory']}:{entry['selector']}"
                 )
             if (

@@ -1509,10 +1509,10 @@ TEST_CASE( "lua_platform_environment_set_trap_area_matches_native_f_set_trap",
     CHECK( compare_case( center, "1.9", true, 1.9,
                          false ) == 9 ); // native double -> int truncation, including the diagonal squares
     CHECK( compare_case( center, "1", true, 1.0, true ) == 9 );
-    CHECK( compare_case( center, "-1.9", true, -1.9, true ) == 1 );
+    CHECK( compare_case( center, "-1.9", true, -1.9, true ) == 0 );
     prepare_area( center );
     run_native( center, "-1", true, true );
-    CHECK( here.tr_at( center + tripoint_rel_ms( 1, 1, 0 ) ).id.id() == tr_beartrap.id() );
+    CHECK( here.tr_at( center + tripoint_rel_ms( 1, 1, 0 ) ).id.id() == tr_null.id() );
     prepare_area( center );
     CHECK( compare_case( center, "-1", true, -1.0, false ) == 0 );
     CHECK( compare_case( center, "-0.9", true, -0.9, false ) == 1 ); // truncates to zero

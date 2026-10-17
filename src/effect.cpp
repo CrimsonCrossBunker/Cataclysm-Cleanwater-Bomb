@@ -1087,6 +1087,10 @@ std::string effect::disp_short_desc( bool reduced ) const
 }
 std::string effect::disp_mod_source_info() const
 {
+    if( !debug_mode ) {
+        return {};
+    }
+
     return get_origin( eff_type->src );
 }
 

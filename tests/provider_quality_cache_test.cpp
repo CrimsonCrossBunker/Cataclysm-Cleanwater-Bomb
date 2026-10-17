@@ -4,13 +4,13 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
-#include "inventory.h"
 #include "item.h"
 #include "player_helpers.h"
 #include "type_id.h"
 #include "veh_interact.h"
 #include "veh_type.h"
 #include "visitable.h"
+#include "temp_crafting_inventory.h"
 
 static const itype_id itype_frame_wood( "frame_wood" );
 static const itype_id itype_hammer( "hammer" );
@@ -25,14 +25,14 @@ static const vpart_id vpart_frame_wood( "frame_wood" );
 
 namespace
 {
-class counting_quality_inventory : public inventory
+class counting_quality_inventory : public temp_crafting_inventory
 {
     public:
         mutable int traversals = 0;
         VisitResponse visit_items( const std::function<VisitResponse( item *, item * )> &func ) const
         override {
             ++traversals;
-            return inventory::visit_items( func );
+            return temp_crafting_inventory::visit_items( func );
         }
 };
 } // namespace
@@ -41,7 +41,7 @@ TEST_CASE( "provider_quality_cache_is_scoped_and_actor_specific", "[craft][quali
 {
     clear_avatar();
     counting_quality_inventory inv;
-    inv.add_item( item( itype_test_reserve_tool_a ) );
+    inv.add_item_copy( item( itype_test_reserve_tool_a ) );
     inv.traversals = 0;
     {
         scoped_provider_quality_cache cache( inv );
@@ -71,7 +71,7 @@ TEST_CASE( "provider_quality_cache_is_scoped_and_actor_specific", "[craft][quali
     const int before = inv.traversals;
     CHECK_FALSE( inv.has_provider_quality( qual_TEST_RESERVE_A, 1, 1, nullptr ) );
     CHECK( inv.traversals == before + 1 );
-    inv.add_item( item( itype_test_reserve_tool_a ) );
+    inv.add_item_copy( item( itype_test_reserve_tool_a ) );
     {
         scoped_provider_quality_cache reopened( inv );
         CHECK( inv.has_provider_quality( qual_TEST_RESERVE_A, 1, 1, nullptr ) );
@@ -84,7 +84,7 @@ TEST_CASE( "vehicle_installation_inventory_checks_are_bounded_and_refreshable",
     clear_avatar();
     counting_quality_inventory inv;
     for( int n = 0; n < 5000; ++n ) {
-        inv.add_item( item( itype_rock ) );
+        inv.add_item_copy( item( itype_rock ) );
     }
     inv.traversals = 0;
     const auto available = veh_interact::installation_requirement_availability( get_avatar(), inv );
@@ -95,9 +95,9 @@ TEST_CASE( "vehicle_installation_inventory_checks_are_bounded_and_refreshable",
     CHECK_FALSE( available.at( &vpart_frame_wood.obj() ) );
 
     inv.clear();
-    inv.add_item( item( itype_frame_wood ) );
-    inv.add_item( item( itype_hammer ) );
-    inv.add_item( item( itype_nail, calendar::turn, 100 ) );
+    inv.add_item_copy( item( itype_frame_wood ) );
+    inv.add_item_copy( item( itype_hammer ) );
+    inv.add_item_copy( item( itype_nail, calendar::turn, 100 ) );
     const auto refreshed = veh_interact::installation_requirement_availability( get_avatar(), inv );
     CHECK( refreshed.at( &vpart_frame_wood.obj() ) );
 }

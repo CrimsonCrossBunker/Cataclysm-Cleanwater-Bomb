@@ -1294,10 +1294,6 @@ struct islot_seed {
         void deserialize( const JsonObject &jo, std::string_view src );
 
         /**
-         * Amount of harvested charges of fruits is divided by this number.
-         */
-        int fruit_div = 1;
-        /**
          * Name of the plant.
          */
         translation plant_name;
