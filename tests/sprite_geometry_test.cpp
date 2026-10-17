@@ -218,3 +218,70 @@ TEST_CASE( "sprite_geometry_owned_batches_prepare_identically_in_parallel",
         }
     }
 }
+
+TEST_CASE( "sprite_geometry_preserves_zero_offsets_and_full_opaque_rectangles",
+           "[sprite_geometry][tiles]" )
+{
+    struct scale_case {
+        float scale;
+        point size;
+    };
+    const std::array<scale_case, 4> scales = {{
+            { 0.5f, point( 8, 4 ) }, { 0.75f, point( 12, 6 ) },
+            { 1.0f, point( 16, 9 ) }, { 1.5f, point( 24, 13 ) }
+        }
+    };
+    struct offset_case {
+        point extra;
+        point screen_delta;
+    };
+    const std::array<offset_case, 4> offsets = {{
+            { point( -4, -1 ), point::zero }, { point( -5, -1 ), point( -1, 0 ) },
+            { point( -4, -4 ), point( 0, -2 ) }, { point( -5, -4 ), point( -1, -2 ) }
+        }
+    };
+    for( const scale_case &scale : scales ) {
+        for( const offset_case &offset : offsets ) {
+            for( int rotation : {
+                     -5, -1, 0, 1, 2, 3, 5, 6, 7, 8
+                 } ) {
+                for( bool isometric : {
+                         false, true
+                     } ) {
+                    for( bool diagonal : {
+                             false, true
+                         } ) {
+                        CAPTURE( scale.scale, offset.extra, rotation, isometric, diagonal );
+                        sprite_geometry_input input = ordinary_sprite();
+                        input.screen_position = point( -101, 203 );
+                        input.sprite_size = point( 32, 48 );
+                        input.tileset_tile_size = point( 32, 48 );
+                        input.screen_tile_size = point( 16, 9 );
+                        input.pixelscale = scale.scale;
+                        input.offset = point( 4, 3 );
+                        input.extra_offset = offset.extra;
+                        input.stacked_height = 2;
+                        input.rotate_sprite = true;
+                        input.rotation = rotation;
+                        input.isometric = isometric;
+                        input.allow_diagonal_rotation = diagonal;
+                        input.source_opaque_bounds = { point::zero, input.sprite_size };
+                        const sprite_geometry_result actual = prepare_sprite_geometry( input );
+                        CHECK( actual.destination.origin == input.screen_position + offset.screen_delta );
+                        CHECK( actual.destination.size == scale.size );
+                        REQUIRE( actual.opaque_bounds );
+                        CHECK( actual.opaque_bounds->origin == actual.destination.origin );
+                        CHECK( actual.opaque_bounds->size == actual.destination.size );
+                        // Requesting a tint footprint must not change the transform.
+                        input.calculate_opaque_bounds = false;
+                        const sprite_geometry_result without_bounds = prepare_sprite_geometry( input );
+                        CHECK( actual.angle == without_bounds.angle );
+                        CHECK( actual.flip_horizontal == without_bounds.flip_horizontal );
+                        CHECK( actual.flip_vertical == without_bounds.flip_vertical );
+                        CHECK( actual.rotation_code == without_bounds.rotation_code );
+                    }
+                }
+            }
+        }
+    }
+}
