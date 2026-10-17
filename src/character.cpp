@@ -349,6 +349,7 @@ static const mod_id MOD_INFORMATION_catalegacy_future( "catalegacy_future" );
 static const move_mode_id move_mode_run( "run" );
 static const move_mode_id move_mode_walk( "walk" );
 
+static const proficiency_id proficiency_prof_dissect_humans( "prof_dissect_humans" );
 static const proficiency_id proficiency_prof_parkour( "prof_parkour" );
 static const proficiency_id proficiency_prof_spotting( "prof_spotting" );
 static const proficiency_id proficiency_prof_wound_care( "prof_wound_care" );
@@ -8003,7 +8004,7 @@ void Character::maybe_gain_insensitivity()
     const int days_survived = std::max( to_days<int>( calendar::turn - calendar::start_of_cataclysm ),
                                         0 );
     if( days_survived < 30 || g->get_kill_tracker().monster_kill_count() < 100 ||
-        mental_metric_guilt_kills < 50 || mental_metric_human_dissections < 1 ) {
+        mental_metric_guilt_kills < 50 || ( mental_metric_human_dissections < 1 && has_proficiency( proficiency_prof_dissect_humans ) ) ) {
         return;
     }
 
