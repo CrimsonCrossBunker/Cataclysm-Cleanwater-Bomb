@@ -997,6 +997,7 @@ bool butchery_drops_harvest( butchery_data bt, Character &you )
         you.practice( skill_firstaid, std::max( 0, practice ), mt.size + std::min( tool_quality, 3 ) + 2 );
         mt.families.practice_dissect( you );
         if( is_human_autopsy_corpse( mt ) ) {
+            // Dissecting a zombie used to trigger feelings of guilt, but that has since been removed. To prevent any unforeseen issues, 15% of the training—based on the fact that their physiological structure remains somewhat similar—has been retained for the time being.
             if( you.has_proficiency( proficiency_prof_physiology ) ) {
                 if( mt.in_species( species_ZOMBIE ) ) {
                     you.practice_proficiency( proficiency_prof_dissect_humans, moves_total );
