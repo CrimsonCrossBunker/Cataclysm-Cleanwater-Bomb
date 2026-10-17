@@ -598,6 +598,7 @@ enum class rem_cap_return {
     NO_SPACE_IN_PARENT,
     BUCKET_FAIL, // when item is bucket, and is not on ground/held
     ANOTHER_LIQUID_INSIDE,
+    CANNOT_REFILL,
     LAST
 };
 
