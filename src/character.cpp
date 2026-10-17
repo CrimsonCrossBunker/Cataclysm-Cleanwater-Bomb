@@ -8005,7 +8005,9 @@ void Character::maybe_gain_insensitivity()
     const int days_survived = std::max( to_days<int>( calendar::turn - calendar::start_of_cataclysm ),
                                         0 );
     if( days_survived < 30 || g->get_kill_tracker().monster_kill_count() < 100 ||
-        mental_metric_guilt_kills < 50 || ( mental_metric_human_dissections < 1 && has_proficiency( proficiency_prof_dissect_humans ) ) ) {
+        mental_metric_guilt_kills < 50 ||
+        ( mental_metric_human_dissections < 1 &&
+          !has_proficiency( proficiency_prof_dissect_humans ) ) ) {
         return;
     }
 
