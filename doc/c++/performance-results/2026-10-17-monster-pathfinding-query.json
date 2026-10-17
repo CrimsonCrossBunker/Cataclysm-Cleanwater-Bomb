@@ -1,6 +1,6 @@
 {
   "date": "2026-10-17",
-  "status": "DELIVERY_BATCH_ACCEPTED;HISTORICAL_REGRESSION_CAUSE_UNRESOLVED;GOAL_ACTIVE",
+  "status": "DELIVERY_BATCH_ACCEPTED;LINK_PLACEMENT_CONTRIBUTION_CONFIRMED;MICROARCHITECTURE_NOT_ATTRIBUTED",
   "baseline_commit": "2a78ea9e091b2058a87ba64bef5b4d25dd5427b6",
   "baseline_PR": 1011,
   "responsible_human": "LYHGLYTX",
@@ -185,7 +185,7 @@
     "All six primary gains passed. Compared with accepted PR1011, route -30.529percent, monmove -5.715percent and simulation suffix -3.204percent.",
     "Adverse draw +1.660percent, reused draw +1.561percent, rebuilt draw +1.833percent and processCPU +0.601percent have positive intervals and remain reported. None hits original material threshold. No FPS or all-session CPU speedup claim.",
     "Combined batch comparison does not isolate the individual speed contribution of query coalescing versus geometry inlining.",
-    "The known repeated map/field/vehicle lookups in will_move_to were removed and actual route slowdown is more than recovered in accepted66. Exact causal attribution of the previous2.71percent route regression remains unresolved;this goal is not marked complete."
+    "Repeated map/field/vehicle lookups in will_move_to were removed and accepted66 more than recovers the measured route slowdown. Independent73 confirms a code/link-placement contribution under the fixed carrier workload: restored old layout reduces route4.212percent with paired99[0.0232623076,0.1037189242]ms/turn for base-minus-restored. It does not partition every point of the original2.71percent or establish a specific cache/branch mechanism."
   ],
   "behavior_and_safety": {
     "native": {
@@ -304,6 +304,33 @@
       "frequency": "Not qualified:matched eligible instruction weight71.2-89.7percent, below predeclared90percent in both modes; no frequency inference.",
       "conclusion": "Inconclusive;does not support the hypothesis that transparency-layer reuse causes route context slowdown. Do not declare equivalence or a causal cache/alignment/frequency root. No extra samples or pooling.",
       "observer_repair": "First pilot startup overflow invalid; all failed data preserved. Shared mapped control word enables only fixed input window, avoiding route filesystem calls. Actual immediate67rows plus gated1row ASan/UBSan/LSan checks passed."
+    },
+    "copy68": "Four diagnostic games using complete old/new flood headers in one ELF retained equal ordered work/paths/state/MM;96shapes27346predicatechecks/5758visits and exception modes passed ASan/UBSan/LSan. Work diagnostic only;no causal timing claim.",
+    "hardware70_72": {
+      "discovery70": "Four exploratory games;weak predicateIcMiss2/132 versus0/93,excluded from both confirmations.",
+      "incomplete71": "Stopped at7captures(6valid) after2in-window fetchTHROTTLE/UNTHROTTLE records. All retained,neverpooled;no statistical conclusion. Ownfetchperiod reduced200Kto500K forNEW72;global kernel settings unchanged.",
+      "formal72_games": 32,
+      "formal72_route_change_percent": -2.720084046434179,
+      "predicate_IcMiss_p": 0.07505827505827506,
+      "predeclared_required_p": 0.025,
+      "both_co_primary_supported": false,
+      "conclusion": "INCONCLUSIVE for placement+predicateIcMiss conjunction. Positive route interval alone did not satisfy that protocol. All72excluded73;no extra72samples or pooling.",
+      "postprocessing_repair": "Original first72capture reused after source-supported correction:hardwareremainingcounter is not bounded by softwareperiod. Originalschema/raw/failure retained;physicalbitrange and exactsoftwareperiod,allPID/CPU/clock/IP/zero-loss/zero-throttle gates preserved. Linux6.18.55reference archived."
+    },
+    "standard73": {
+      "games": 48,
+      "pairs": 24,
+      "config": "NEWindependent24balancedrandompairs;standard125Hz mainTIDperf/fullTracy/CPUstat WITHOUTIBS;ownedmainCPU6,workersunchanged;actualSDL3.4.18/Undead/OpenGL/fullscreen;32turns/448routes each.",
+      "primary": "Single broader placement-cost hypothesis generated after72failedspecificconjunction;99percentStudentCI declaredbefore73data. All earlier48/72/71/70/67/delivery data excluded.",
+      "base62_route_ms_perturn": 1.5073258346354166,
+      "restored62_route_ms_perturn": 1.44383521875,
+      "route_change_percent": -4.212136117256504,
+      "base_minus_restored_paired99_ms_perturn": [
+        0.02326230761706117,
+        0.10371892415377212
+      ],
+      "conclusion": "SUPPORTED bounded code/link-placement contribution with normalized28hotbodies/literals identical;uncalled160bytepad restores old chain addresses. Full orderedstate/MM and448routecounts identical in all48;zero softwareloss;all raw/function exports retained.",
+      "limits": "Does not identify an exclusive instruction-cache/branch/frequency cause or partition100percent of historical2.71percent. Controlled affinity/profiling,one hardware/scene. Diagnosticpadding is never production;accepted66query/geometrybatch provides measured net improvement."
     }
   },
   "failed_or_rejected_work": [
@@ -338,8 +365,19 @@
       "monster-ai67/mechanism-result.json": "5d21d228f56d3073d95ee03be050b2f69c71dae92dcc9b93c5569ff1d7dfac2c",
       "monster-ai67/mechanism-formal-progress.json": "4f35894b07678e890a5d7af6c226453cbaf92fa2eb9ea0fcdae5dbd57569d1a4",
       "monster-ai67/counter-safety-window-progress.json": "61d5dc25489ba02741fec2b62d120c0bde4a554f9b0f3e16cf5821fc11f5e1b4",
-      "monster-ai67/closure-audit.json": "470073dce6d7502d13dca26ea198969fa14aa34c5defa8002295728c064d7e09"
-    }
+      "monster-ai67/closure-audit.json": "470073dce6d7502d13dca26ea198969fa14aa34c5defa8002295728c064d7e09",
+      "monster-ai68/result.json": "7c21d2b7bac4d993b785eab6a66f22377a0c25742e1cefa59e7b52629ce041ec",
+      "monster-ai70/closed-exploration-audit.json": "46ca980991bfc79803e5d02a966d8e8e36d71b9ee0671417a3a72295b7135f6d",
+      "monster-ai71/closed-incomplete-quality.json": "373a6840c7088450ad93c4d4b3ecb616052951385d6ffa7fd18d0aa78d5b53d3",
+      "monster-ai72/protocol.json": "35a35e6f4a5d83a8d381f3e50f0341d54a4151fa87166f20a677b18a3eba8489",
+      "monster-ai72/confirmatory-results.json": "5f7e57a513121de06ddfc9d1487f815529c119c08938e710517714737aba925c",
+      "monster-ai72/closed-confirmation-audit.json": "595b313b30b402a8a54039db225b0d8883e0087ac817526f193fd70468e15f1e",
+      "monster-ai73/protocol.json": "2ecce4d7b180afec10ad66a2a6e3ace9312523e510bb8c8b6d11dcfa7c53393b",
+      "monster-ai73/formal-progress.json": "d7a1eccda64812526df8f275e1f96888b127bc48b2aab148942673d1624971a8",
+      "monster-ai73/confirmatory-results.json": "8b1bf1a47efa2ada21f548e3dd88fc25d674b5f36580a63275d42d57575c4b26",
+      "monster-ai73/closed-confirmation-audit.json": "78c1514ae10a3e571ad41ba76cab75e1b32d2814de34fe92eb9fbc823909b06e"
+    },
+    "root_confirmation": ".ccb-pr-evidence/native-combined/monster-ai73;earliernegative/qualityfailedstudies retained in68/70/71/72"
   },
   "documentation_impact": "Internal measured performance record only; no user-facing behavior/config/API changes. No CCB-Docs PR, documentation IDs or generated references changed.",
   "runtime_dependencies": [
