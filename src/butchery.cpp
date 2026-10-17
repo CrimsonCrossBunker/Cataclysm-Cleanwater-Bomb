@@ -102,7 +102,9 @@ static bool is_human_autopsy_corpse( const mtype &corpse )
         for( const harvest_entry &entry : corpse.harvest->entries() ) {
             // It also counts if zombie human can be butchered out human flesh.
             if( entry.type == harvest_drop_flesh &&
-                ( entry.drop == itype_human_flesh.str() || entry.drop == itype_mutant_human_flesh.str() || entry.drop == itype_demihuman_flesh.str() ) ) {
+                ( entry.drop == itype_human_flesh.str() ||
+                  entry.drop == itype_mutant_human_flesh.str() ||
+                  entry.drop == itype_demihuman_flesh.str() ) ) {
                 return true;
             }
         }
