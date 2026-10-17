@@ -95,7 +95,6 @@ static const species_id species_ZOMBIE( "ZOMBIE" );
 
 static bool is_human_autopsy_corpse( const mtype &corpse )
 {
-    // Use the normal harvest table: dissection may yield only samples or bionics.
     for( const harvest_entry &entry : corpse.harvest->entries() ) {
         if( entry.type == harvest_drop_flesh &&
             ( entry.drop == itype_human_flesh.str() || entry.drop == itype_mutant_human_flesh.str() ) ) {
@@ -994,7 +993,6 @@ bool butchery_drops_harvest( butchery_data bt, Character &you )
         you.practice( skill_firstaid, std::max( 0, practice ), mt.size + std::min( tool_quality, 3 ) + 2 );
         mt.families.practice_dissect( you );
         if( is_human_autopsy_corpse( mt ) ) {
-            // Match the two practice increments used by weakpoint_families::practice_dissect.
             you.practice_proficiency( proficiency_prof_dissect_humans, 15_minutes );
             you.practice_proficiency( proficiency_prof_dissect_humans, 15_minutes );
         }
