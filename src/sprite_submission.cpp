@@ -21,7 +21,7 @@ bool submit_sprite_command( const sprite_draw_command &command, const sprite_ass
                                   ( geometry.flip_horizontal ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE ) |
                                   ( geometry.flip_vertical ? SDL_FLIP_VERTICAL : SDL_FLIP_NONE ) );
 #if defined(_WIN32) && defined(CROSS_LINUX)
-    if( binding.direct3d ) {
+    if( binding.direct3d && !command.lighting ) {
         if( geometry.rotation_code == 1 ) {
             --destination.y;
         } else if( geometry.rotation_code == 3 ) {
