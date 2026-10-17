@@ -288,6 +288,16 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
         self.assertTrue(
             all(source["entry_count"] > 0 for source in generated["sources"])
         )
+        self.assertTrue(
+            all("\\" not in source["path"] for source in generated["sources"])
+        )
+        self.assertTrue(
+            all(
+                "\\" not in path
+                for entry in generated["entries"]
+                for path in entry["evidence"]
+            )
+        )
 
     def test_entries_have_honest_source_only_evidence(self):
         generated = build_ledger()
