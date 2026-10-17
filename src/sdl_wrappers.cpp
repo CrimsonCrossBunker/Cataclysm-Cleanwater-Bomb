@@ -110,8 +110,8 @@ SDL_Texture_Ptr CreateTexture( const SDL_Renderer_Ptr &renderer, Uint32 format, 
         return SDL_Texture_Ptr();
     }
     SDL_Texture_Ptr result( SDL_CreateTexture( renderer.get(),
-                            static_cast<SDL_PixelFormat>( format ),
-                            static_cast<SDL_TextureAccess>( access ), w, h ) );
+            static_cast<SDL_PixelFormat>( format ),
+            static_cast<SDL_TextureAccess>( access ), w, h ) );
     printErrorIf( !result, "SDL_CreateTexture failed" );
     if( result ) {
         SDL_SetTextureScaleMode( result.get(),
@@ -272,6 +272,17 @@ bool SetTextureColorMod( const SDL_Texture_Ptr &texture, Uint32 r, Uint32 g, Uin
     }
     return printErrorIf( !SDL_SetTextureColorMod( texture.get(), r, g, b ),
                          "SDL_SetTextureColorMod failed" );
+}
+
+bool UpdateTexture( const SDL_Texture_Ptr &texture, const SDL_Rect *rect, const void *pixels,
+                    const int pitch )
+{
+    if( !texture ) {
+        dbg( D_ERROR ) << "Tried to update a null texture";
+        return false;
+    }
+    return !printErrorIf( !SDL_UpdateTexture( texture.get(), rect, pixels, pitch ),
+                          "SDL_UpdateTexture failed" );
 }
 
 bool SetTextureColorMod( const std::shared_ptr<SDL_Texture> &texture, Uint32 r, Uint32 g,
@@ -516,7 +527,7 @@ void RenderCopyEx( const SDL_Renderer_Ptr &renderer, SDL_Texture *const texture,
     const SDL_FRect *fdstp = dstrect ? &( fdst = to_frect( *dstrect ) ) : nullptr;
     const SDL_FPoint *fcenterp = center ? &( fcenter = to_fpoint( *center ) ) : nullptr;
     printErrorIf( !SDL_RenderTextureRotated( renderer.get(), texture, fsrcp, fdstp, angle,
-                  fcenterp, flip ),
+            fcenterp, flip ),
                   "SDL_RenderTextureRotated failed" );
 }
 
@@ -528,6 +539,45 @@ void RenderSetClipRect( const SDL_Renderer_Ptr &renderer, const SDL_Rect *const 
     }
     printErrorIf( !SDL_SetRenderClipRect( renderer.get(), rect ),
                   "SDL_SetRenderClipRect failed" );
+}
+
+void RenderGeometry( const SDL_Renderer_Ptr &renderer, SDL_Texture *const texture,
+                     const SDL_Vertex *const vertices, const int num_vertices,
+                     const int *const indices, const int num_indices )
+{
+    if( !renderer ) {
+        dbg( D_ERROR ) << "Tried to render geometry to a null renderer";
+        return;
+    }
+    if( num_vertices <= 0 || num_indices <= 0 ) {
+        return;
+    }
+    printErrorIf( !SDL_RenderGeometry( renderer.get(), texture, vertices, num_vertices,
+                                       indices, num_indices ),
+                  "SDL_RenderGeometry failed" );
+}
+
+bool UpdateTexture( const SDL_Texture_Ptr &texture, const SDL_Rect &rect,
+                    const SDL_Surface_Ptr &surface )
+{
+    if( !texture || !surface ) {
+        dbg( D_ERROR ) << "Tried to update a texture from a null handle";
+        return false;
+    }
+    const bool must_lock = SDL_MUSTLOCK( surface.get() );
+    if( must_lock && printErrorIf( !SDL_LockSurface( surface.get() ), "SDL_LockSurface failed" ) ) {
+        return false;
+    }
+    const bool ok = SDL_UpdateTexture( texture.get(), &rect, surface->pixels, surface->pitch );
+    if( must_lock ) {
+        SDL_UnlockSurface( surface.get() );
+    }
+    return !printErrorIf( !ok, "SDL_UpdateTexture failed" );
+}
+
+bool GetRectIntersection( const SDL_Rect &a, const SDL_Rect &b, SDL_Rect &result )
+{
+    return SDL_GetRectIntersection( &a, &b, &result );
 }
 
 void RenderGetClipRect( const SDL_Renderer_Ptr &renderer, SDL_Rect *const rect )
@@ -628,7 +678,7 @@ SDL_Surface_Ptr ConvertSurfaceFormat( const SDL_Surface_Ptr &surface, const Uint
         return SDL_Surface_Ptr();
     }
     SDL_Surface_Ptr result( SDL_ConvertSurface( surface.get(),
-                            static_cast<SDL_PixelFormat>( pixel_format ) ) );
+            static_cast<SDL_PixelFormat>( pixel_format ) ) );
     printErrorIf( !result, "SDL_ConvertSurface failed" );
     return result;
 }
@@ -804,6 +854,24 @@ const char *GetRendererName( const SDL_Renderer_Ptr &renderer )
     return name ? name : "";
 }
 
+bool WaitForEvent( const int timeout_ms )
+{
+    return SDL_WaitEventTimeout( nullptr, timeout_ms );
+}
+
+void PushWakeEvent()
+{
+    // the Android insets hook can fire before SDL_main initializes SDL
+    if( SDL_WasInit( SDL_INIT_EVENTS ) == 0 ) {
+        return;
+    }
+    SDL_Event ev;
+    SDL_zero( ev );
+    ev.type = CATA_WAKE_EVENT;
+    // no logging: this runs on foreign threads, and a full queue wakes the waiter anyway
+    static_cast<void>( SDL_PushEvent( &ev ) );
+}
+
 bool IsRendererSoftware( const SDL_Renderer_Ptr &renderer )
 {
     if( !renderer ) {
@@ -824,11 +892,11 @@ bool GetRendererMaxTextureSize( const SDL_Renderer_Ptr &renderer, int *max_w, in
     }
     if( max_w ) {
         *max_w = static_cast<int>( SDL_GetNumberProperty( props,
-                                   SDL_PROP_RENDERER_MAX_TEXTURE_SIZE_NUMBER, 0 ) );
+            SDL_PROP_RENDERER_MAX_TEXTURE_SIZE_NUMBER, 0 ) );
     }
     if( max_h ) {
         *max_h = static_cast<int>( SDL_GetNumberProperty( props,
-                                   SDL_PROP_RENDERER_MAX_TEXTURE_SIZE_NUMBER, 0 ) );
+            SDL_PROP_RENDERER_MAX_TEXTURE_SIZE_NUMBER, 0 ) );
     }
     return true;
 }
@@ -869,7 +937,7 @@ void RenderSetLogicalSize( const SDL_Renderer_Ptr &renderer, const int w, const 
         return;
     }
     printErrorIf( !SDL_SetRenderLogicalPresentation( renderer.get(), w, h,
-                  SDL_LOGICAL_PRESENTATION_LETTERBOX ),
+            SDL_LOGICAL_PRESENTATION_LETTERBOX ),
                   "SDL_SetRenderLogicalPresentation failed" );
 }
 
@@ -895,7 +963,7 @@ bool RenderReadPixels( const SDL_Renderer_Ptr &renderer, const SDL_Rect *rect,
     // SDL3 chooses the surface format. Honor the caller's requested format
     // and pitch instead of copying bytes from a potentially different layout.
     const bool converted = SDL_ConvertPixels( surf->w, surf->h, surf->format,
-                           surf->pixels, surf->pitch, static_cast<SDL_PixelFormat>( format ), pixels, pitch );
+        surf->pixels, surf->pitch, static_cast<SDL_PixelFormat>( format ), pixels, pitch );
     SDL_DestroySurface( surf );
     return converted;
 }
@@ -1030,6 +1098,32 @@ void SetTextureScaleQuality( const SDL_Texture_Ptr &texture, const std::string &
 void SetDefaultTextureScaleQuality( const std::string &quality )
 {
     g_default_texture_scale_quality = quality;
+}
+
+SDL_ScaleMode GetTextureScaleMode( const std::shared_ptr<SDL_Texture> &texture )
+{
+    SDL_ScaleMode mode = SDL_SCALEMODE_INVALID;
+    if( !texture ) {
+        return mode;
+    }
+    if( printErrorIf( !SDL_GetTextureScaleMode( texture.get(), &mode ),
+                      "SDL_GetTextureScaleMode failed" ) ) {
+        return SDL_SCALEMODE_INVALID;
+    }
+    return mode;
+}
+
+const char *GetGPUBackendName( const SDL_Renderer_Ptr &renderer )
+{
+    if( !renderer ) {
+        return "none";
+    }
+    SDL_GPUDevice *const device = SDL_GetGPURendererDevice( renderer.get() );
+    if( !device ) {
+        return "none";
+    }
+    const char *const name = SDL_GetGPUDeviceDriver( device );
+    return name ? name : "none";
 }
 
 

@@ -2009,12 +2009,22 @@ class map
         void saven( const tripoint_bub_sm &grid );
         void loadn( const point_bub_sm &grid, bool update_vehicles );
         /**
-         * Walk all items currently in the bubble (map tiles + vehicle cargo,
-         * recursing into containers) and call rebuild_for_item on each.  Run
-         * after submaps come back into range so item-targeted wakeups re-arm
-         * from authoritative item state.
+         * Whether the reservation index may be cleared before the walk.  A pass that
+         * does not walk every craft holding a record has to be additive, or it erases
+         * claims whose leases are still live.
          */
-        void reconcile_item_wakeups();
+        enum class reconcile_scope : uint8_t {
+            full_rebuild,
+            additive
+        };
+        /**
+         * Walk all items currently in the bubble (map tiles, vehicle parts and character
+         * inventories, recursing into containers) and rebuild the state that is keyed by
+         * item uid: wakeup entries and craft reservation records.  Run after submaps come
+         * back into range, so both re-arm from authoritative item state.  One walk rather
+         * than two, since both duties visit the same locations.
+         */
+        void reconcile_loaded_items( reconcile_scope scope );
         /**
          * Fast forward a submap that has just been loading into this map.
          * This is used to rot and remove rotten items, grow plants, fill funnels etc.
@@ -2410,6 +2420,7 @@ class map
         pathfinding_cache &get_pathfinding_cache( int zlev ) const;
 
         visibility_variables visibility_variables_cache;
+        uint64_t seen_cache_generation = 0;
 
         // caches the highest zlevel above which all zlevels are uniform
         // !value || value->first != map::abs_sub means cache is invalid
@@ -2439,6 +2450,10 @@ class map
         void update_visibility_cache( int zlev );
         void invalidate_visibility_cache();
         const visibility_variables &get_visibility_variables_cache() const;
+        // changes each time build_seen_cache rewrites seen_cache or camera_cache
+        uint64_t seen_generation() const {
+            return seen_cache_generation;
+        }
 
         void update_submaps_with_active_items();
 

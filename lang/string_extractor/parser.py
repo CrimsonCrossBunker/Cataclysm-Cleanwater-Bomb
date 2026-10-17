@@ -46,6 +46,7 @@ from .parsers.nested_category import parse_nested_category
 from .parsers.npc import parse_npc
 from .parsers.npc_class import parse_npc_class
 from .parsers.option_slider import parse_option_slider
+from .parsers.pet_slot import parse_pet_slot
 from .parsers.oter_vision import parse_oter_vision
 from .parsers.overmap_terrain import parse_overmap_terrain
 from .parsers.palette import parse_palette
@@ -224,6 +225,7 @@ parsers = {
     "oter_vision": parse_oter_vision,
     "option_slider": parse_option_slider,
     "overlay_order": dummy_parser,
+    "pet_slot": parse_pet_slot,
     "overmap_connection": dummy_parser,
     "overmap_land_use_code": parse_overmap_land_use_code,
     "overmap_location": dummy_parser,
@@ -263,6 +265,7 @@ parsers = {
     "map_extra_collection": dummy_parser,
     "relic_procgen_data": dummy_parser,
     "requirement": parse_requirement,
+    "riding_config": dummy_parser,
     "rotatable_symbol": dummy_parser,
     "scenario": parse_scenario,
     "scenario_blacklist": dummy_parser,

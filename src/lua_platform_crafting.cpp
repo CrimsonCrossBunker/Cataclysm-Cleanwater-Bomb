@@ -27,7 +27,6 @@ extern "C" {
 #include "character.h"
 #include "crafting_gui.h"
 #include "creature.h"
-#include "inventory.h"
 #include "item.h"
 #include "itype.h"
 #include "lua_platform_bindings_values.h"
@@ -37,10 +36,10 @@ extern "C" {
 #include "requirements.h"
 #include "type_id.h"
 
+class temp_crafting_inventory;
+
 static const activity_id ACT_CRAFT( "ACT_CRAFT" );
 static const activity_id ACT_CRAFT_WAIT( "ACT_CRAFT_WAIT" );
-
-class read_only_visitable;
 
 
 namespace cata::lua_platform
@@ -483,7 +482,7 @@ struct recipe_availability {
 };
 
 recipe_availability availability_for(
-    Character &player, const inventory &crafting_inventory,
+    Character &player, const temp_crafting_inventory &crafting_inventory,
     const recipe &value, const int batch )
 {
     recipe_availability result;
@@ -609,7 +608,7 @@ sol::table recipe_page(
     const recipe_options &options )
 {
     sol::state_view state( lua );
-    const inventory &crafting_inventory =
+    const temp_crafting_inventory &crafting_inventory =
         player.crafting_inventory();
     const crafting_cost_context cost_context =
         crafting_cost_context::for_proficiencies( player );
@@ -675,7 +674,7 @@ sol::table get_recipe(
             "services.recipes.get batch must be within 1..1000" );
     }
     const recipe &value = recipe_id( id.value() ).obj();
-    const inventory &crafting_inventory =
+    const temp_crafting_inventory &crafting_inventory =
         player.crafting_inventory();
     return snapshot_recipe(
                sol::state_view( lua ), player, value, batch,
@@ -800,8 +799,8 @@ sol::table requirement_group_page(
         const auto &group = groups[group_index];
         const std::size_t alternative_count = group.size();
         const std::size_t alternative_returned = std::min(
-                    alternative_count,
-                    maximum_requirement_alternatives );
+                alternative_count,
+                maximum_requirement_alternatives );
         sol::table alternatives = lua.create_table(
                                       static_cast<int>(
                                           alternative_returned ), 0 );
@@ -845,7 +844,7 @@ sol::table snapshot_requirement(
     sol::state_view lua, const Character *actor,
     const requirement_data &value,
     const int batch,
-    const read_only_visitable &crafting_inventory,
+    const temp_crafting_inventory &crafting_inventory,
     const std::function<bool( const item & )> &filter )
 {
     const bool can_make = value.can_make_with_inventory(
@@ -960,7 +959,7 @@ sol::object get_requirement(
     if( !id.is_valid() ) {
         return sol::make_object( state, sol::nil );
     }
-    const inventory &crafting_inventory =
+    const temp_crafting_inventory &crafting_inventory =
         player.crafting_inventory();
     const std::function<bool( const item & )> filter =
     []( const item & ) {
@@ -986,7 +985,7 @@ sol::table requirements_for_recipe(
     }
     sol::state_view state( lua );
     const recipe &value = recipe_id( id.value() ).obj();
-    const inventory &crafting_inventory =
+    const temp_crafting_inventory &crafting_inventory =
         player.crafting_inventory();
     sol::table result = snapshot_requirement(
                             state, &player,
@@ -1012,7 +1011,7 @@ sol::table requirement_page(
 {
     sol::state_view state( lua );
     const auto &all = requirement_data::all();
-    const inventory &crafting_inventory =
+    const temp_crafting_inventory &crafting_inventory =
         player.crafting_inventory();
     const std::function<bool( const item & )> filter =
     []( const item & ) {
@@ -1223,7 +1222,7 @@ void install_crafting_api(
     recipes.set_function(
         "knows",
         [require_read, current_runtime_generation,
-                       world_generation](
+         world_generation](
             sol::this_state lua,
             const game_handle & character,
     const script_game_id & id ) {
@@ -1236,7 +1235,7 @@ void install_crafting_api(
     recipes.set_function(
         "learn",
         [require_write, current_runtime_generation,
-                        world_generation](
+         world_generation](
             sol::this_state lua,
             const game_handle & character,
             const script_game_id & id,
@@ -1251,7 +1250,7 @@ void install_crafting_api(
     recipes.set_function(
         "forget",
         [require_write, current_runtime_generation,
-                        world_generation](
+         world_generation](
             sol::this_state lua,
             const game_handle & character,
     const script_game_id & id ) {
@@ -1264,7 +1263,7 @@ void install_crafting_api(
     recipes.set_function(
         "forget_category",
         [require_write, current_runtime_generation,
-                        world_generation](
+         world_generation](
             sol::this_state lua,
             const game_handle & character,
             const script_game_id & category,
@@ -1338,8 +1337,8 @@ void install_crafting_api(
                                              character->activity.id() ==
                                              ACT_CRAFT_WAIT );
         const std::optional<script_game_id> activity = character->activity ?
-                std::make_optional( script_game_id(
-                                        "activity", character->activity.id().str() ) ) : std::nullopt;
+            std::make_optional( script_game_id(
+                                    "activity", character->activity.id().str() ) ) : std::nullopt;
         sol::table value = lua_state.create_table();
         value["recipe"] = id;
         value["batch"] = batch;

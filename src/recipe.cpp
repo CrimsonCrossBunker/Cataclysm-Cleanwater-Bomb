@@ -31,7 +31,6 @@
 #include "flexbuffer_json.h"
 #include "game_constants.h"
 #include "generic_factory.h"
-#include "inventory.h"
 #include "item.h"
 #include "item_components.h"
 #include "item_contents.h"
@@ -52,6 +51,7 @@
 #include "skill.h"
 #include "string_formatter.h"
 #include "string_id_utils.h"
+#include "temp_crafting_inventory.h"
 #include "translations.h"
 #include "type_id.h"
 #include "uistate.h"
@@ -558,7 +558,7 @@ void recipe::load( const JsonObject &jo, const std::string_view src )
                 jo.throw_error( "Recipe cannot be reversible and have byproducts" );
             }
             byproduct_group = item_group::load_item_group( jo.get_member( "byproduct_group" ),
-                              "collection", "byproducts of recipe " + id.str() );
+                "collection", "byproducts of recipe " + id.str() );
         }
         optional( jo, was_loaded, "construction_blueprint", blueprint );
         if( !blueprint.is_empty() ) {
@@ -635,7 +635,7 @@ void recipe::load( const JsonObject &jo, const std::string_view src )
                 jo.throw_error( "Recipe cannot be reversible and have byproducts" );
             }
             byproduct_group = item_group::load_item_group( jo.get_member( "byproduct_group" ),
-                              "collection", "byproducts of recipe " + id.str() );
+                "collection", "byproducts of recipe " + id.str() );
         }
     } else if( type == "uncraft" ) {
         reversible = true;
@@ -1023,7 +1023,7 @@ void recipe::finalize()
     // ensure result name is always in front of the name for searching in crafting menu
     if( !name_.empty() && !is_practice() && !is_nested() && result_ ) {
         name_ = translation::to_translation( string_format( name_.translated(),
-                                             result_->nname( makes_amount() ) ) );
+            result_->nname( makes_amount() ) ) );
     }
 
     if( is_nested() ) {
@@ -1575,7 +1575,7 @@ double recipe::step_budget_moves( const Character &guy, size_t step_idx, int bat
     return s.batch_info.apply( t, batch );
 }
 
-float best_quality_speed_modifier( const read_only_visitable &inv,
+float best_quality_speed_modifier( const temp_crafting_inventory &inv,
                                    const Character &crafter,
                                    const quality_id &qual, int level )
 {
@@ -1593,7 +1593,7 @@ float best_quality_speed_modifier( const read_only_visitable &inv,
         return VisitResponse::NEXT;
     } );
     // Character-provided qualities (bionics, mutations) have no speed modifier.  Items
-    // reach this through the inventory alone.
+    // reach this through the inventory alone, so a reserved one stays hidden.
     if( !found && crafter.has_intrinsic_quality( qual, level ) ) {
         return 1.0f;
     }
@@ -1605,7 +1605,7 @@ std::vector<float> compute_tool_speeds( const recipe &rec, const Character &craf
     if( !rec.has_steps() ) {
         return {};
     }
-    const read_only_visitable &inv = crafter.crafting_inventory();
+    const temp_crafting_inventory &inv = crafter.crafting_inventory();
     std::vector<float> result;
     result.reserve( rec.steps().size() );
     for( const recipe_step &step : rec.steps() ) {
@@ -1944,7 +1944,7 @@ std::function<bool( const item & )> recipe::get_component_filter(
     }
 
     return [ rotten_filter, favorite_filter, frozen_filter,
-                   magazine_filter ]( const item & component ) {
+    magazine_filter ]( const item & component ) {
         return is_crafting_component( component ) &&
                rotten_filter( component ) &&
                favorite_filter( component ) &&

@@ -1,7 +1,11 @@
 #include "item_stack.h"
 
+#include <colony.h>
+#include <coords_fwd.h>
+#include <type_id.h>
 #include <algorithm>
 
+#include "craft_reservation.h"
 #include "debug.h"
 #include "enums.h"
 #include "item.h"
@@ -147,6 +151,10 @@ std::list<item> item_stack::use_charges( const itype_id &type, int &quantity,
 {
     std::list<item> ret;
     for( auto a = this->begin(); a != this->end() && quantity > 0; ) {
+        if( craft_reservation::contains_reserved( *a ) ) {
+            ++a;
+            continue;
+        }
         // Liquid items on the ground could only be used if they're stored on terrain or furniture with LIQUIDCONT flag
         if( ( !a->made_of( phase_id::LIQUID ) ||
               ( a->made_of( phase_id::LIQUID ) &&

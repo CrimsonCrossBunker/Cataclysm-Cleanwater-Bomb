@@ -16,7 +16,6 @@
 #include "character.h"
 #include "coordinates.h"
 #include "enums.h"
-#include "inventory.h"
 #include "inventory_ui.h"
 #include "item.h"
 #include "item_location.h"
@@ -76,6 +75,8 @@ static const vproto_id vehicle_prototype_test_rv( "test_rv" );
 
 static time_point midnight = calendar::turn_zero;
 static time_point midday = midnight + 12_hours;
+
+class temp_crafting_inventory;
 
 TEST_CASE( "verify_copy_from_gets_damage_reduction", "[vehicle]" )
 {
@@ -191,7 +192,7 @@ static void test_craft_via_rig( const std::vector<item> &items, int give_battery
     veh.charge_battery( here, give_battery );
 
     character.invalidate_crafting_inventory();
-    const inventory &crafting_inv = character.crafting_inventory();
+    const temp_crafting_inventory &crafting_inv = character.crafting_inventory();
     bool can_craft = recipe
                      .deduped_requirements()
                      .can_make_with_inventory( &character, crafting_inv, recipe.get_component_filter() );
@@ -369,7 +370,7 @@ TEST_CASE( "vehicle_prepare_tool_multimag", "[vehicle][multimag]" )
         REQUIRE( veh->battery_left( here ) == 0 );
 
         const bool ok = vehicle::use_vehicle_tool( *veh, &here, test_origin,
-                        itype_test_multimag_vehicle_combo, /*no_invoke=*/true );
+            itype_test_multimag_vehicle_combo, /*no_invoke=*/true );
         CHECK_FALSE( ok );
     }
 
@@ -562,6 +563,25 @@ TEST_CASE( "verify_vehicle_tank_refill", "[vehicle]" )
     check_part_ammo_capacity( vpart_ap_fridge_test, itype_fridge_test, ammo_test_liquid, 444444 );
     check_part_ammo_capacity( vpart_tank_test, itype_metal_tank_test, ammo_water, 240 );
     check_part_ammo_capacity( vpart_tank_test, itype_metal_tank_test, ammo_test_liquid, 60000 );
+}
+
+TEST_CASE( "vehicle_tank_respects_requested_liquid_amount", "[vehicle][liquid]" )
+{
+    vehicle_part tank( vpart_tank_test, item( itype_metal_tank_test ) );
+    item gasoline( itype_gasoline );
+    gasoline.charges = 100;
+
+    REQUIRE( tank.fill_with( gasoline, 10 ) );
+    CHECK( tank.ammo_remaining() == 10 );
+    CHECK( gasoline.charges == 90 );
+
+    REQUIRE( tank.fill_with( gasoline, 5 ) );
+    CHECK( tank.ammo_remaining() == 15 );
+    CHECK( gasoline.charges == 85 );
+
+    CHECK_FALSE( tank.fill_with( gasoline, 0 ) );
+    CHECK( tank.ammo_remaining() == 15 );
+    CHECK( gasoline.charges == 85 );
 }
 
 TEST_CASE( "check_capacity_fueltype_handling", "[vehicle]" )

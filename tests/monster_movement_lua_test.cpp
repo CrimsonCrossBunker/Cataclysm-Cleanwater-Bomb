@@ -68,6 +68,7 @@ ccb.runtime.hook("on_monster_try_move", "movement_probe")
     CHECK( calls == 1 );
     CHECK( source.pos_bub( here ) == tripoint_bub_ms( 50, 50, 0 ) );
     CHECK( source.get_moves() == 100 );
-    CHECK( result == ( allow ? monster_movement_result::cancelled : monster_movement_result::blocked ) );
+    CHECK( result == ( allow ? monster_movement_result::cancelled :
+                       monster_movement_result::blocked ) );
 }
 #endif

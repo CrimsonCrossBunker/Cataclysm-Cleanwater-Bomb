@@ -43,6 +43,8 @@
 
 static const json_character_flag json_flag_ATTUNEMENT( "ATTUNEMENT" );
 static const json_character_flag json_flag_HERITAGE( "HERITAGE" );
+static const json_character_flag json_flag_PERK( "PERK" );
+
 static const mutation_category_id mutation_category_ANY( "ANY" );
 
 static const trait_group::Trait_group_tag Trait_group_EMPTY_GROUP( "EMPTY_GROUP" );
@@ -895,6 +897,8 @@ nc_color mutation_branch::get_display_color() const
         return c_light_green;
     } else if( points < 0 ) {
         return c_light_red;
+    } else if( flags.count( json_flag_PERK ) ) {
+        return c_light_gray;
     } else {
         return c_yellow;
     }
@@ -1268,8 +1272,8 @@ void mutation_branch::add_entry( Trait_group &tg, const JsonObject &obj )
         ptr = std::make_unique<Single_trait_creator>( id, var, probability );
     } else if( obj.has_member( "group" ) ) {
         ptr = std::make_unique<Trait_group_creator>( trait_group::Trait_group_tag(
-                    obj.get_string( "group" ) ),
-                probability );
+                obj.get_string( "group" ) ),
+            probability );
     }
 
     if( !ptr ) {

@@ -1,8 +1,12 @@
 #include "avatar_action.h"
 
+#include <coordinates.h>
+#include <input_enums.h>
+#include <player_activity.h>
 #include <algorithm>
 #include <climits>
 #include <cstdlib>
+#include <functional>
 #include <map>
 #include <memory>
 #include <ostream>
@@ -51,8 +55,8 @@
 #include "options.h"
 #include "output.h"
 #include "pimpl.h"
-#include "popup.h"
 #include "point.h"
+#include "popup.h"
 #include "projectile.h"
 #include "ranged.h"
 #include "ret_val.h"
@@ -68,6 +72,7 @@
 #include "vpart_position.h"
 
 static const efftype_id effect_amigara( "amigara" );
+static const efftype_id effect_berserk( "berserk" );
 static const efftype_id effect_bile_irritant( "bile_irritant" );
 static const efftype_id effect_glowing( "glowing" );
 static const efftype_id effect_harnessed( "harnessed" );
@@ -206,9 +211,9 @@ static bool confirm_non_hostile_melee_attack( avatar &you, const monster &critte
                                    .context( "CANCEL_ACTIVITY_OR_IGNORE_QUERY" )
                                    .message( force_uc && !is_keycode_mode_supported() ?
                                              pgettext( "non_hostile_melee_query",
-                                                     "<color_light_red>Really attack the non-hostile %s? (Case Sensitive)</color>" ) :
+                                                 "<color_light_red>Really attack the non-hostile %s? (Case Sensitive)</color>" ) :
                                              pgettext( "non_hostile_melee_query",
-                                                     "<color_light_red>Really attack the non-hostile %s?</color>" ),
+                                                 "<color_light_red>Really attack the non-hostile %s?</color>" ),
                                              critter.name() )
                                    .option( "YES", allow_key )
                                    .option( "NO", allow_key )
@@ -288,6 +293,37 @@ bool avatar_action::move( avatar &you, map &m, const tripoint_rel_ms &d )
     } else if( m.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, dest_loc ) ) {
         dest_loc.z() -= 1;
         via_ramp = true;
+    }
+
+    // Berserk creatures cannot voluntarily move farther away from visible hostiles.
+    if( you.has_effect( effect_berserk ) ) {
+        bool retreating = false;
+
+        get_creature_tracker().for_each_reachable( you, [&]( Creature * critter ) {
+            if( retreating || critter == &you ) {
+                return;
+            }
+
+            if( !you.sees( here, *critter ) ) {
+                return;
+            }
+
+            if( critter->attitude_to( you ) != Creature::Attitude::HOSTILE ) {
+                return;
+            }
+
+            const int current_dist = rl_dist( you_pos, critter->pos_bub() );
+            const int new_dist = rl_dist( dest_loc, critter->pos_bub() );
+
+            if( new_dist > current_dist ) {
+                retreating = true;
+            }
+        } );
+
+        if( retreating ) {
+            add_msg( m_info, _( "You are too enraged to retreat!" ) );
+            return false;
+        }
     }
 
     item_location weapon = you.get_wielded_item();
@@ -624,12 +660,13 @@ bool avatar_action::move( avatar &you, map &m, const tripoint_rel_ms &d )
         return true;
     }
     if( g->phasing_move_enchant( dest_loc, you.calculate_by_enchantment( 0,
-                                 enchant_vals::mod::PHASE_DISTANCE ) ) ) {
+            enchant_vals::mod::PHASE_DISTANCE ) ) ) {
         return true;
     }
     if( g->phasing_move( dest_loc ) ) {
         return true;
     }
+    //TODO: use open_tile_activity_actor
     if( veh_closed_door ) {
         if( !veh1->handle_potential_theft( you ) ) {
             return true;
@@ -798,7 +835,7 @@ void avatar_action::autoattack( avatar &you, map &m )
     }
     const item_location weapon = you.get_wielded_item();
     int reach = weapon ? weapon->reach_range( you ).first : std::max( 1,
-                static_cast<int>( you.calculate_by_enchantment( 1, enchant_vals::mod::MELEE_RANGE_MODIFIER ) ) );
+        static_cast<int>( you.calculate_by_enchantment( 1, enchant_vals::mod::MELEE_RANGE_MODIFIER ) ) );
     std::vector<Creature *> critters = you.get_targetable_creatures( reach, true );
     critters.erase( std::remove_if( critters.begin(), critters.end(), [&you,
     reach]( const Creature * c ) {
@@ -1182,7 +1219,7 @@ void avatar_action::plthrow( avatar &you, item_location loc,
     item_location weapon = in_mech ? loc : ( keep_wielded ? wielded_item : you.get_wielded_item() );
     item &relevant = keep_wielded ? thrown : *weapon;
     target_handler::trajectory trajectory = target_handler::mode_throw( you, relevant,
-                                            blind_throw_from_pos.has_value() );
+        blind_throw_from_pos.has_value() );
 
     // If we previously shifted our position, put ourselves back now that we've picked our target.
     if( blind_throw_from_pos ) {

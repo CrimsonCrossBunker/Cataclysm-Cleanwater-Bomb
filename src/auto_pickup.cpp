@@ -25,6 +25,7 @@
 #include "cata_path.h"
 #include "cata_utility.h"
 #include "character.h"
+#include "craft_reservation.h"
 #include "color.h"
 #include "coordinates.h"
 #include "cursesdef.h"
@@ -440,6 +441,11 @@ static std::vector<item_location> get_autopickup_items( item_location &from )
     std::list<item *>::iterator it;
     for( it = contents.begin(); it != contents.end(); ++it ) {
         item *item_entry = *it;
+        // Before empty_autopickup_target below, which turns a container out.
+        if( craft_reservation::contains_reserved( *item_entry ) ) {
+            pick_all_items = false;
+            continue;
+        }
         if( !within_autopickup_limits( item_entry ) ) {
             pick_all_items = false;
             continue;
@@ -545,6 +551,11 @@ drop_locations auto_pickup::select_items(
         }
         // do not auto pickup spilt liquids
         if( item_entry->made_of( phase_id::LIQUID ) ) {
+            continue;
+        }
+        // Before empty_autopickup_target below, which turns a container out as part of
+        // selection.  Manual pickup stays unguarded.
+        if( craft_reservation::contains_reserved( *item_entry ) ) {
             continue;
         }
         rule_state pickup_state = get_autopickup_rule( item_entry );
@@ -657,9 +668,9 @@ void user_interface::show()
         nc_color color = c_white;
         // NOLINTNEXTLINE(cata-use-named-point-constants)
         print_colored_text( w_header, point( 1, 0 ), color, c_white, string_format( "%s %s",
-                            ctxt.get_desc( "SWITCH_AUTO_PICKUP_OPTION", _( "Auto pickup enabled:" ) ),
-                            colorize( enabled ? _( "True" ) : _( "False" ),
-                                      enabled ? c_light_green : c_light_red ) ) );
+                ctxt.get_desc( "SWITCH_AUTO_PICKUP_OPTION", _( "Auto pickup enabled:" ) ),
+                colorize( enabled ? _( "True" ) : _( "False" ),
+                          enabled ? c_light_green : c_light_red ) ) );
         // NOLINTNEXTLINE(cata-use-named-point-constants)
         print_colored_text( w_header, point( 1, 1 ), color, c_white,
                             ctxt.get_desc( "HELP_KEYBINDINGS", _( "Display keybindings" ) ) );
@@ -859,14 +870,14 @@ void user_interface::show_imgui()
     const auto edit_rule = [&]( rule & target ) {
 #if defined(__ANDROID__)
         const std::optional<std::string> value = android_native_ui::text_input(
-                    _( "Pickup Rule:" ), target.sRule, 120 );
+                _( "Pickup Rule:" ), target.sRule, 120 );
 #else
         string_input_popup_imgui popup( 60, target.sRule );
         popup.set_label( _( "Pickup Rule:" ) );
         popup.set_max_input_length( 120 );
         const std::string edited = popup.query();
         const std::optional<std::string> value = popup.cancelled() ? std::nullopt :
-                std::optional<std::string>( edited );
+            std::optional<std::string>( edited );
 #endif
         if( value && !value->empty() ) {
             target.sRule = wildcard_trim_rule( *value );
@@ -1062,10 +1073,10 @@ void rule::test_pattern() const
         iContentWidth = FULL_SCREEN_WIDTH - 30;
 
         w_test_rule_border = catacurses::newwin( iContentHeight + 2, iContentWidth,
-                             iOffset );
+            iOffset );
         w_test_rule_content = catacurses::newwin( iContentHeight,
-                              iContentWidth - 2,
-                              iOffset + point::south_east );
+            iContentWidth - 2,
+            iOffset + point::south_east );
 
         ui.position_from_window( w_test_rule_border );
     };
@@ -1074,8 +1085,8 @@ void rule::test_pattern() const
 
     int nmatch = vMatchingItems.size();
     const std::string buf = string_format( n_gettext( "%1$d item matches: %2$s",
-                                           "%1$d items match: %2$s",
-                                           nmatch ), nmatch, sRule );
+        "%1$d items match: %2$s",
+        nmatch ), nmatch, sRule );
 
     int iLine = 0;
 

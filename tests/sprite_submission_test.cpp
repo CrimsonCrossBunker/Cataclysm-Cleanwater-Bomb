@@ -50,11 +50,11 @@ TEST_CASE( "sprite_command_backend_matches_legacy_pixels_and_gray_reset",
     REQUIRE( fixture.available() );
     const auto &renderer = get_sdl_renderer();
     auto raw = std::shared_ptr<SDL_Texture>( SDL_CreateTexture( renderer.get(),
-               SDL_PIXELFORMAT_ABGR8888,
-               SDL_TEXTUREACCESS_STATIC, 2, 2 ), SDL_DestroyTexture );
+        SDL_PIXELFORMAT_ABGR8888,
+        SDL_TEXTUREACCESS_STATIC, 2, 2 ), SDL_DestroyTexture );
     auto mask = std::shared_ptr<SDL_Texture>( SDL_CreateTexture( renderer.get(),
-                SDL_PIXELFORMAT_ABGR8888,
-                SDL_TEXTUREACCESS_STATIC, 2, 2 ), SDL_DestroyTexture );
+        SDL_PIXELFORMAT_ABGR8888,
+        SDL_TEXTUREACCESS_STATIC, 2, 2 ), SDL_DestroyTexture );
     REQUIRE( raw );
     REQUIRE( mask );
     const std::array<std::uint32_t, 4> color{ 0xff0000ff, 0xff00ff00, 0xffff0000, 0xffffffff };
@@ -129,6 +129,83 @@ TEST_CASE( "sprite_command_backend_matches_legacy_pixels_and_gray_reset",
     CHECK( height == 12 );
     CHECK( sprite_pixels( renderer ) == before );
 }
+TEST_CASE( "sprite_command_retains_lighting_geometry_and_resets_atlas_tint",
+           "[tiles][render_commands][smooth_lighting]" )
+{
+    software_render_fixture fixture;
+    REQUIRE( fixture.available() );
+    const auto &renderer = get_sdl_renderer();
+    auto raw = std::shared_ptr<SDL_Texture>( SDL_CreateTexture( renderer.get(),
+        SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, 1, 1 ), SDL_DestroyTexture );
+    REQUIRE( raw );
+    const std::uint32_t white = 0xffffffff;
+    REQUIRE( SDL_UpdateTexture( raw.get(), nullptr, &white, sizeof( white ) ) );
+    texture sprite( raw, SDL_Rect{ 0, 0, 1, 1 } );
+    const sprite_asset_binding binding{ renderer, &sprite, nullptr, false };
+    sprite_draw_command command;
+    command.geometry.destination = { point( 2, 2 ), point( 2, 2 ) };
+    SECTION( "classic shader tint is restored before the next atlas sprite" ) {
+        command.texture_mod = std::array<std::uint8_t, 4> { 128, 64, 32, 255 };
+    }
+    SECTION( "smooth lighting follows the original geometry submission" ) {
+        smooth_lighting::lit_quad_params quad;
+        quad.screen = { 2.0f, 2.0f, 4.0f, 4.0f };
+        quad.uv = { 0.0f, 0.0f, 1.0f, 1.0f };
+        quad.tile_width = 2.0f;
+        quad.tile_height = 2.0f;
+        command.lighting = quad;
+    }
+    SetRenderDrawColor( renderer, 0, 0, 0, 255 );
+    RenderClear( renderer );
+    // The pre-integration renderer submitted the lit quad directly, or applied
+    // the shader tint to the shared atlas for one classic texture copy.
+    if( command.lighting ) {
+        const auto corners = smooth_lighting::lit_quad( *command.lighting );
+        std::array<SDL_Vertex, 4> vertices;
+        for( std::size_t i = 0; i < vertices.size(); ++i ) {
+            const auto &c = corners[i];
+            vertices[i] = { { c.x, c.y }, { c.light.x, c.light.y, c.light.column, c.light.row },
+                { c.u, c.v }
+            };
+        }
+        constexpr std::array<int, 6> indices = { 0, 1, 2, 0, 2, 3 };
+        RenderGeometry( renderer, raw.get(), vertices.data(), vertices.size(),
+                        indices.data(), indices.size() );
+    } else {
+        const auto &mod = *command.texture_mod;
+        SetTextureColorMod( raw, mod[0], mod[1], mod[2] );
+        SetTextureAlphaMod( raw, mod[3] );
+        const SDL_Rect destination{ 2, 2, 2, 2 };
+        sprite.render_copy_ex( renderer, &destination, 0.0, nullptr, SDL_FLIP_NONE );
+        SetTextureColorMod( raw, 255, 255, 255 );
+        SetTextureAlphaMod( raw, 255 );
+    }
+    const auto expected = sprite_pixels( renderer );
+    SetRenderDrawColor( renderer, 0, 0, 0, 255 );
+    RenderClear( renderer );
+    const render_resource_stamp stamp{ 7, 11 };
+    render_command_order order;
+    REQUIRE( order.begin( stamp, 54 ) );
+    command.ticket = *order.issue();
+    command.height_delta = 5;
+    int height = 12;
+    REQUIRE( submit_sprite_command( command, binding, order, stamp, height ) );
+    CHECK( height == 17 );
+    CHECK( sprite_pixels( renderer ) == expected );
+    std::uint8_t r = 0, g = 0, b = 0, alpha = 0;
+    REQUIRE( SDL_GetTextureColorMod( raw.get(), &r, &g, &b ) );
+    REQUIRE( SDL_GetTextureAlphaMod( raw.get(), &alpha ) );
+    CHECK( r == 255 );
+    CHECK( g == 255 );
+    CHECK( b == 255 );
+    CHECK( alpha == 255 );
+    // A stale command must reject both payloads before any renderer mutation.
+    const auto before = sprite_pixels( renderer );
+    CHECK_FALSE( submit_sprite_command( command, binding, order, { 8, 11 }, height ) );
+    CHECK( sprite_pixels( renderer ) == before );
+    CHECK( height == 17 );
+}
+
 TEST_CASE( "sprite_frames_pin_metadata_and_expire_on_reload_or_recovery",
            "[tiles][render_commands]" )
 {
@@ -171,7 +248,7 @@ TEST_CASE( "owner_submission_rechecks_late_changes_without_painting_or_height_ch
     REQUIRE( fixture.available() );
     const auto &renderer = get_sdl_renderer();
     auto raw = std::shared_ptr<SDL_Texture>( SDL_CreateTexture( renderer.get(),
-               SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, 2, 2 ), SDL_DestroyTexture );
+        SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, 2, 2 ), SDL_DestroyTexture );
     REQUIRE( raw );
     const std::array<std::uint32_t, 4> pixels{ 0xff0000ff, 0xff00ff00, 0xffff0000, 0xffffffff };
     REQUIRE( SDL_UpdateTexture( raw.get(), nullptr, pixels.data(), 8 ) );

@@ -43,7 +43,7 @@
     "melee_allowed": true,
     "messages": [ "You bite %s", "<npcname> bites %s" ],
     "unarmed_allowed": true,
-    "weighting": 5,
+    "weighting": -5,
     "reach_ok": false,
     "attack_vectors": [ "vector_bite" ],
     "condition": {
@@ -1409,5 +1409,15 @@
       { "stat": "movecost", "scaling-stat": "melee", "scale": -1.25 },
       { "stat": "movecost", "scaling-stat": "dex", "scale": -0.5 }
     ]
+  },
+  {
+    "type": "technique",
+    "id": "TECH_SLIME_KICK",
+    "name": "Kick",
+    "crit_ok": true,
+    "unarmed_allowed": true,
+    "messages": [ "You smash %s", "<npcname> smashes %s" ],
+    "description": "A basic slime kick",
+    "attack_vectors": [ "vector_slime_kick" ]
   }
 ]

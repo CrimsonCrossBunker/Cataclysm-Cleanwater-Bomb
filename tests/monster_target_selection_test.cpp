@@ -96,7 +96,7 @@ TEST_CASE( "monster_target_continuations_preserve_queries_choices_and_rng",
                          } ) {
                         for( float rating : {
                                  -1.0f, 3.0f, 4.0f, 5.0f, FLT_MAX
-                                 } ) {
+                             } ) {
                             for( bool fleeing_from : {
                                      false, true
                                  } ) {
@@ -108,7 +108,7 @@ TEST_CASE( "monster_target_continuations_preserve_queries_choices_and_rng",
                                         selection_observer original{ scripts[script], 0, {}, {} };
                                         rng_set_engine_seed( seed );
                                         const monster_target_choice expected = original_choice( { best, valid, fleeing }, kind,
-                                                                               rating, fleeing_from, hate, original );
+                                            rating, fleeing_from, hate, original );
                                         const cata_default_random_engine expected_engine = rng_get_engine();
                                         selection_observer observed{ scripts[script], 0, {}, {} };
                                         rng_set_engine_seed( seed );

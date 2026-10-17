@@ -45,6 +45,7 @@
 #include "json.h"
 #include "map.h"
 #include "messages.h"
+#include "mission.h"
 #include "options.h"
 #include "overmap.h"
 #include "overmapbuffer.h"
@@ -266,7 +267,7 @@ struct CataListener : Catch::TestEventListenerBase {
         if( !sectionStats.assertions.allPassed() ||
             m_config->includeSuccessfulResults() ) {
             std::vector<std::pair<std::string, std::string>> messages =
-                        Messages::recent_messages( 0 );
+                Messages::recent_messages( 0 );
             if( !messages.empty() ) {
                 if( !sectionStats.assertions.allPassed() ) {
                     std::cerr << "Log messages during failed test:\n";
@@ -288,6 +289,8 @@ struct CataListener : Catch::TestEventListenerBase {
         }
         // Reset lightweight global state that tests commonly modify without
         // restoring.  Expensive operations like clear_map() stay manual.
+        get_avatar().reset_all_missions();
+        mission::clear_all();
         calendar::turn = calendar::turn_zero;
         weather_manager &weather = get_weather();
         weather.weather_override = WEATHER_NULL; // NOLINT(cata-tests-must-restore-global-state)
@@ -355,6 +358,7 @@ int main( int argc, const char *argv[] )
             Json::globally_report_unvisited_members( false );
             // Destroy the game before function-local Lua registries are torn down.
             g.reset();
+            deinitDebug();
         } };
     Catch::Session session;
 
@@ -496,7 +500,7 @@ int main( int argc, const char *argv[] )
     } catch( const std::exception &err ) {
         DebugLog( D_ERROR, DC_ALL ) << "Terminated:\n" << err.what();
         DebugLog( D_INFO, DC_ALL ) <<
-                                   "Make sure that you're in the correct working directory and your data isn't corrupted.";
+        "Make sure that you're in the correct working directory and your data isn't corrupted.";
         return EXIT_FAILURE;
     }
 
@@ -528,7 +532,7 @@ int main( int argc, const char *argv[] )
 
     if( error_during_initialization ) {
         DebugLog( D_INFO, DC_ALL ) <<
-                                   "Treating result as failure due to error logged during initialization.";
+        "Treating result as failure due to error logged during initialization.";
         return 1;
     }
 
@@ -536,6 +540,18 @@ int main( int argc, const char *argv[] )
         DebugLog( D_INFO, DC_ALL ) << "Treating result as failure due to error logged during tests.";
         return 1;
     }
+
+#if defined(__MINGW32__)
+    // MinGW static teardown is unreliable after game state cleanup.
+    test_shutdown_guard.cancel();
+    Json::globally_report_unvisited_members( false );
+    g.reset();
+    deinitDebug();
+    std::cout.flush();
+    std::cerr.flush();
+    std::fflush( nullptr );
+    std::_Exit( result );
+#endif
 
     return result;
 }

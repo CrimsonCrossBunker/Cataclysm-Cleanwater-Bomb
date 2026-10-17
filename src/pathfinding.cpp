@@ -651,7 +651,7 @@ std::vector<tripoint_bub_ms> map::route( const tripoint_bub_ms &f,
         if( settings.allow_climb_stairs && cur.z() > min.z() &&
             parent_terrain.has_flag( ter_furn_flag::TFLAG_GOES_DOWN ) ) {
             std::optional<tripoint_bub_ms> opt_dest = g->find_or_make_stairs( get_map(),
-                    cur.z() - 1, rope_ladder, false, cur );
+                cur.z() - 1, rope_ladder, false, cur );
             if( !opt_dest ) {
                 continue;
             }
@@ -670,7 +670,7 @@ std::vector<tripoint_bub_ms> map::route( const tripoint_bub_ms &f,
         if( settings.allow_climb_stairs && cur.z() < max.z() &&
             parent_terrain.has_flag( ter_furn_flag::TFLAG_GOES_UP ) ) {
             std::optional<tripoint_bub_ms> opt_dest = g->find_or_make_stairs( get_map(),
-                    cur.z() + 1, rope_ladder, false, cur );
+                cur.z() + 1, rope_ladder, false, cur );
             if( !opt_dest ) {
                 continue;
             }

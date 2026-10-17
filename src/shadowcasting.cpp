@@ -83,7 +83,7 @@ static void split_span( cata::list<span<T>> &spans,
                         const slope &trailing_edge_minor, const slope &leading_edge_minor )
 {
     const T next_cumulative_transparency = accumulate( this_span->cumulative_value,
-                                           current_transparency, distance );
+        current_transparency, distance );
     // We split the span into up to 4 sub-blocks (sub-frustums actually,
     // this is the view from the origin looking out):
     // +-------+ <- end major
@@ -358,7 +358,7 @@ static void cast_horizontal_zlight_segment(
             } else {
                 // Cumulative average of the values encountered.
                 this_span->cumulative_value = accumulate( this_span->cumulative_value,
-                                              current_transparency, distance );
+                    current_transparency, distance );
                 ++this_span;
             }
         }
@@ -532,7 +532,7 @@ static void cast_vertical_zlight_segment(
             } else {
                 // Cumulative average of the values encountered.
                 this_span->cumulative_value = accumulate( this_span->cumulative_value,
-                                              current_transparency, distance );
+                    current_transparency, distance );
                 ++this_span;
             }
         }
@@ -644,7 +644,7 @@ void cast_zlight( const array_of_grids_of<T> &out,
             CATA_PROFILE_SCOPE_NAMED( "vision.horizontal_segments" );
             for( unsigned i = 0; i < 8; ++i ) {
                 horizontal_segment < -1, T, calc, check, accumulate > ( out, in, floors, origin,
-                        penalty, numerator, use_trig_distance, i );
+                    penalty, numerator, use_trig_distance, i );
             }
         }
         if( horizontal_cost_ms ) {
@@ -662,7 +662,7 @@ void cast_zlight( const array_of_grids_of<T> &out,
             CATA_PROFILE_SCOPE_NAMED( "vision.horizontal_segments" );
             for( unsigned i = 0; i < 8; ++i ) {
                 horizontal_segment<1, T, calc, check, accumulate>( out, in, floors, origin,
-                        penalty, numerator, use_trig_distance, i );
+                    penalty, numerator, use_trig_distance, i );
             }
         }
         if( horizontal_cost_ms ) {

@@ -1097,6 +1097,7 @@
     "name": "Hydrocarbons",
     "//": "Oxyacetylene is the only user, stats based on Acetylene",
     "density": 0.7,
+    "freezing_point": -40,
     "specific_heat_liquid": 0.5,
     "specific_heat_solid": 0.5,
     "latent_heat": 518,
@@ -1119,6 +1120,7 @@
     "name": "Diesel",
     "density": 0.85,
     "copy-from": "hydrocarbons",
+    "freezing_point": -20,
     "fuel_data": {
       "energy": "35800 kJ",
       "pump_terrain": "t_diesel_pump",
@@ -1131,6 +1133,7 @@
     "name": "JP8",
     "density": 0.84,
     "copy-from": "hydrocarbons",
+    "freezing_point": -47,
     "fuel_data": {
       "energy": "34700 kJ",
       "pump_terrain": "t_jp8_pump",
@@ -1143,6 +1146,7 @@
     "density": 0.69,
     "name": "Avgas Fuel",
     "copy-from": "hydrocarbons",
+    "freezing_point": -58,
     "fuel_data": {
       "energy": "45800 kJ",
       "pump_terrain": "t_avgas_pump",
@@ -1155,6 +1159,7 @@
     "name": "Biodiesel",
     "density": 0.875,
     "copy-from": "hydrocarbons",
+    "freezing_point": -10,
     "fuel_data": {
       "energy": "29600 kJ",
       "explosion_data": { "chance_hot": 20, "chance_cold": 1000, "factor": 0.2, "fiery": false, "size_factor": 0.1 }
@@ -1166,6 +1171,7 @@
     "name": "Gasoline",
     "density": 0.75,
     "copy-from": "hydrocarbons",
+    "freezing_point": -60,
     "fuel_data": {
       "energy": "34200 kJ",
       "pump_terrain": "t_gas_pump",
@@ -1178,6 +1184,7 @@
     "density": 0.81,
     "name": "Kerosene",
     "copy-from": "hydrocarbons",
+    "freezing_point": -47,
     "fuel_data": {
       "//": "Roughly equivalent to LPG",
       "energy": "26000 kJ",
@@ -1201,6 +1208,7 @@
     "density": 0.95,
     "name": "Motor Oil",
     "copy-from": "hydrocarbons",
+    "freezing_point": -30,
     "fuel_data": {
       "//": "Roughly equivalent to LPG",
       "energy": "26000 kJ",

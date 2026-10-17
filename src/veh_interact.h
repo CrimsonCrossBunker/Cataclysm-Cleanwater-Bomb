@@ -26,8 +26,8 @@
 #include "vpart_position.h"
 
 class Character;
-class inventory;
 class map;
+class temp_crafting_inventory;
 class time_duration;
 class vpart_info;
 struct requirement_data;
@@ -111,7 +111,7 @@ class veh_interact
 
         // Inventory requirements are independent of the selected vehicle tile.
         static std::map<const vpart_info *, bool> installation_requirement_availability(
-            const Character &actor, const inventory &inv );
+            const Character &actor, const temp_crafting_inventory &inv );
 
         /** Prompt for a part matching the selector function */
         static std::optional<vpart_reference> select_part( map &here, const vehicle &veh,
@@ -222,7 +222,7 @@ class veh_interact
         std::unique_ptr<remove_info_t> remove_info;
 
         vehicle *veh;
-        const inventory *crafting_inv;
+        const temp_crafting_inventory *crafting_inv;
         input_context main_context;
 
         // maximum weight capacity of available lifting equipment (if any)
@@ -367,6 +367,10 @@ class veh_interact
          * Updated whenever the cursor moves. */
         std::vector<const vpart_info *> can_mount;
         std::map<const vpart_info *, bool> install_requirements_available;
+        // Names and definitions do not change while this menu is open.
+        std::vector<const vpart_info *> install_candidates_by_name;
+        // Invalidated together with the crafting inventory after menu actions.
+        mutable std::optional<vehicle_part *> cached_most_repairable;
 
         /* Vector of vparts in the current square that can be repaired. Strictly a
          * subset of parts_here.

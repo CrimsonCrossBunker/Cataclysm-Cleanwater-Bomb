@@ -57,7 +57,7 @@ selection_run proposed_selection( const std::vector<monster_step_candidate> &can
     for( const monster_step_candidate &candidate : candidates ) {
         ++run.examined;
         const monster_step_proposal proposal = propose_monster_step( run.selection, candidate,
-                                               staggers, pathed );
+            staggers, pathed );
         bool selected = proposal.select_without_draw;
         if( proposal.needs_draw ) {
             ++run.draws;

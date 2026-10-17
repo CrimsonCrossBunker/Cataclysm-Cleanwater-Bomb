@@ -315,6 +315,8 @@ NPCs do not see the planning modal and behave as if implicitly waiting; the unat
 
 A quality requirement's `"amount"` counts **distinct providers**.  This can change whether a recipe is offered.  A qualifying tool inside a container counts once, not twice.  A stack of a charge-counted qualifying item counts once, not once per charge.
 
+A component can also supply a quality the recipe needs.  When the `"amount"` is one, that check counts items rather than providers.  A stack survives losing a charge, so one spare item is one surviving provider.  One rock cannot be both the hammer and the material.  Two can, even in the same stack.  Above an `"amount"` of one the check counts providers again, because a stack is one tool whatever its charge count.
+
 A quality is measured against the character the check is about.  A charged quality reads that character's power, not the avatar's.  A mutation or body part that grants a quality without an item counts for that character too.
 
 Schema:

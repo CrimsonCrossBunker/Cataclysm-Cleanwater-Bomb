@@ -27,9 +27,9 @@ float monster_stagger_adjustment( const tripoint_bub_ms &source, const tripoint_
                                   const tripoint_bub_ms &step, bool use_trig_distance )
 {
     const float initial = use_trig_distance ? trig_dist( source, goal ) : square_dist( source.raw(),
-                          goal.raw() );
+        goal.raw() );
     const float next = use_trig_distance ? trig_dist( step, goal ) : square_dist( step.raw(),
-                       goal.raw() );
+        goal.raw() );
     return std::max( 0.01f, initial - next );
 }
 
@@ -137,7 +137,7 @@ monster_movement_result monster_movement_plan::commit( const monster_movement_pr
         }
     }
     const float adjustment = monster_stagger_adjustment( source->pos_bub(), proposal.goal, step,
-                             trigdist );
+        trigdist );
     if( source->move_to( step, false, false, adjustment ) ) {
         return monster_movement_result::acted;
     }

@@ -478,7 +478,7 @@ void submap::merge_submaps( submap *copy_from, bool copy_from_is_overlay )
     for( int x = 0; x < SEEX; x++ ) {
         for( int y = 0; y < SEEY; y++ ) {
             if( copy_from->m->ter[x][y] != t_null && ( copy_from_is_overlay ||
-                    this->m->ter[x][y] == t_null ) ) {
+                this->m->ter[x][y] == t_null ) ) {
                 this->m->ter[x][y] = copy_from->m->ter[x][y];
                 this->set_map_damage( { x, y }, copy_from->get_map_damage( { x, y } ) );
             }

@@ -89,7 +89,6 @@ static const flag_id json_flag_NO_UNLOAD( "NO_UNLOAD" );
 static const furn_str_id furn_f_ash( "f_ash" );
 
 static const itype_id itype_ash( "ash" );
-static const itype_id itype_rm13_armor_on( "rm13_armor_on" );
 static const itype_id itype_rock( "rock" );
 
 static const json_character_flag json_flag_HEATSINK( "HEATSINK" );
@@ -154,12 +153,12 @@ int map::burn_body_part( Character &you, field_entry &cur, const bodypart_id &bp
     // A bit ugly, but better than being annoyed by acid when in hazmat
     if( you.get_armor_type( damage_acid, bp ) < damage ) {
         const dealt_damage_instance ddi = you.deal_damage( nullptr, bp, damage_instance( damage_acid,
-                                          damage ) );
+            damage ) );
         total_damage += ddi.total_damage();
     }
     // Represents acid seeping in rather than being splashed on
     you.add_env_effect( effect_corroding, bp, 2 + intensity, time_duration::from_turns( rng( 2,
-                        1 + intensity ) ), bp, false, 0 );
+            1 + intensity ) ), bp, false, 0 );
     return total_damage;
 }
 
@@ -282,7 +281,7 @@ void map::spread_gas( field_entry &cur, const tripoint_bub_ms &p, int percent_sp
     const field_type_id ft_id = cur.get_field_type();
 
     const int scent_neutralize = ft_id->get_intensity_level( current_intensity -
-                                 1 ).scent_neutralization;
+        1 ).scent_neutralization;
 
     if( scent_neutralize > 0 ) {
         // modify scents by neutralization value (minus)
@@ -307,8 +306,8 @@ void map::spread_gas( field_entry &cur, const tripoint_bub_ms &p, int percent_sp
     weather_manager &weather = get_weather();
     const int winddirection = weather.winddirection;
     const int windpower = get_local_windpower( weather.windspeed, om_ter, get_abs( p ),
-                          winddirection,
-                          sheltered );
+        winddirection,
+        sheltered );
 
     if( rng( 1, 100 - windpower ) > percent_spread ) {
         return;
@@ -448,7 +447,7 @@ void map::process_fields_in_submap( submap *const current_submap,
                                     const tripoint_bub_sm &submap )
 {
     const oter_id &om_ter = overmap_buffer.ter( coords::project_to<coords::omt>(
-                                abs_sub + rebase_rel( submap ) ) );
+            abs_sub + rebase_rel( submap ) ) );
     Character &player_character = get_player_character();
     scent_block sblk( submap, get_scent() );
 
@@ -1573,9 +1572,8 @@ void map::player_in_field( Character &you )
             }
         }
         if( ft == fd_fire ) {
-            // Heatsink or suit prevents ALL fire damage.
-            if( !you.has_flag( json_flag_HEATSINK ) && !you.has_flag( json_flag_HEAT_IMMUNE ) &&
-                !you.is_wearing( itype_rm13_armor_on ) ) {
+            // Heatsink prevents ALL fire damage.
+            if( !you.has_flag( json_flag_HEATSINK ) && !you.has_flag( json_flag_HEAT_IMMUNE ) ) {
 
                 // To modify power of a field based on... whatever is relevant for the effect.
                 int adjusted_intensity = cur.get_field_intensity();
@@ -1656,7 +1654,7 @@ void map::player_in_field( Character &you )
                     int total_damage = 0;
                     for( const bodypart_id &part_burned : parts_burned ) {
                         const dealt_damage_instance dealt = you.deal_damage( cur.get_causer(), part_burned,
-                                                            damage_instance( damage_heat, rng( burn_min, burn_max ) ) );
+                            damage_instance( damage_heat, rng( burn_min, burn_max ) ) );
                         total_damage += dealt.type_damage( damage_heat );
                     }
                     if( total_damage > 0 ) {
@@ -1703,9 +1701,8 @@ void map::player_in_field( Character &you )
             // A burst of flame? Only hits the legs and torso.
             if( !inside ) {
                 // Fireballs can't touch you inside a car.
-                // Heatsink or suit stops fire.
-                if( !you.has_flag( json_flag_HEATSINK ) &&
-                    !you.is_wearing( itype_rm13_armor_on ) ) {
+                // Heatsink stops fire.
+                if( !you.has_flag( json_flag_HEATSINK ) ) {
                     you.add_msg_player_or_npc( m_bad, _( "You're torched by flames!" ),
                                                _( "<npcname> is torched by flames!" ) );
                     you.deal_damage( nullptr, bodypart_id( "leg_l" ), damage_instance( damage_heat, rng( 2, 6 ) ) );
@@ -1724,7 +1721,7 @@ void map::player_in_field( Character &you )
                 const bodypart_id &main_part = bodypart_id( "torso" );
                 const int dmg = std::max( 1, rng( cur.get_field_intensity() / 2, cur.get_field_intensity() ) );
                 const int main_part_damage = you.deal_damage( nullptr, main_part,
-                                             damage_instance( damage_electric, dmg ) ).total_damage();
+                    damage_instance( damage_electric, dmg ) ).total_damage();
 
                 if( main_part_damage > 0 ) {
                     for( const bodypart_id &bp :
@@ -2043,7 +2040,7 @@ void map::monster_in_field( monster &z )
                 }
                 if( z.made_of( material_veggy ) ) {
                     z.mod_moves( -to_moves<int>( 1_seconds ) * rng_float( cur.get_field_intensity() * 0.05,
-                                 cur.get_field_intensity() * 0.12 ) );
+                            cur.get_field_intensity() * 0.12 ) );
                     dam *= cur.get_field_intensity();
                 }
             }
@@ -2277,7 +2274,7 @@ std::vector<FieldProcessorPtr> map_field_processing::processors_for_type( const 
     std::vector<FieldProcessorPtr> processors;
 
     const bool intensity_upgrade_chance = std::any_of( ft.intensity_levels.begin(),
-                                          ft.intensity_levels.end(),
+        ft.intensity_levels.end(),
     []( const field_intensity_level & elem ) {
         return elem.intensity_upgrade_chance > 0;
     } );
@@ -2287,7 +2284,7 @@ std::vector<FieldProcessorPtr> map_field_processing::processors_for_type( const 
     } );
 
     const bool has_monster_spawn_chance = std::any_of( ft.intensity_levels.begin(),
-                                          ft.intensity_levels.end(),
+        ft.intensity_levels.end(),
     []( const field_intensity_level & elem ) {
         return elem.monster_spawn_chance > 0 && elem.monster_spawn_count > 0;
     } );

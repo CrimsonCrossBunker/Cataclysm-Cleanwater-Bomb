@@ -3,6 +3,8 @@
 #define CATA_SRC_GATES_H
 
 #include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
 
 #include "coords_fwd.h"
@@ -20,6 +22,7 @@ class content_transaction;
 } // namespace cata::lua_platform
 
 struct gate_data;
+
 using gate_id = string_id<gate_data>;
 
 struct gate_data {
@@ -76,11 +79,6 @@ namespace doors
 */
 bool check_mon_blocking_door( const Creature &who, const tripoint_abs_ms &p );
 
-/**
- * Handles deducting moves, printing messages (only non-NPCs cause messages), actually closing it,
- * checking if it can be closed, etc.
-*/
-void close_door( map &m, Creature &who, const tripoint_bub_ms &closep );
 /**
  * Forcefully closes a door
  * Checks for creatures/items/vehicles at the door tile and attempts to displace them, dealing bash damage.

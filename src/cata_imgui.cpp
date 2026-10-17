@@ -598,7 +598,7 @@ void cataimgui::client::new_frame( int display_buffer_w, int display_buffer_h )
             GetRendererOutputSize( sdl_renderer, &output_w, &output_h );
         }
         const point sz = imgui_frame_display_size( display_buffer_w, display_buffer_h,
-                         output_w, output_h );
+            output_w, output_h );
         if( sz.x > 0 && sz.y > 0 ) {
             io.DisplaySize = ImVec2( static_cast<float>( sz.x ), static_cast<float>( sz.y ) );
             io.DisplayFramebufferScale = ImVec2( 1.0f, 1.0f );
@@ -616,7 +616,7 @@ void cataimgui::client::end_frame()
     ImGui::Render();
     // A watcher write can land after the outer-boundary drain passed but before
     // this paint. The draw list is finalized; skip only the backend paint.
-    if( !renderer_should_abort_frame() ) {
+    if( !renderer_should_abort_frame() && unbind_sprite_shader() ) {
         ImGui_ImplSDLRenderer3_RenderDrawData( ImGui::GetDrawData(), sdl_renderer.get() );
     }
     ImGuiIO &io = ImGui::GetIO();

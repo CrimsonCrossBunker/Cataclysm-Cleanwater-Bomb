@@ -1,9 +1,12 @@
 import copy
 import json
 import unittest
+from unittest import mock
 from pathlib import Path
 
 from jsonschema import Draft202012Validator
+
+from tools.agent import check_lua_first_replacement_ledger as validator
 
 from tools.agent.generate_lua_first_replacement_ledger import (
     IMPLEMENTED_VERIFIED,
@@ -19,6 +22,47 @@ from tools.agent.generate_lua_first_replacement_ledger import (
 
 
 class LuaFirstReplacementLedgerTest(unittest.TestCase):
+    def test_primitive_evidence_does_not_claim_a_selector_migration(self):
+        ledger = build_ledger()
+        entry = next(
+            value for value in ledger["entries"]
+            if value["inventory"] == "eoc-conditions" and
+            value["selector"] == "map_is_passable"
+        )
+        self.assertEqual(entry["status"], "primitive_available_unverified")
+        entry["evidence"] = [
+            path for path in entry["evidence"]
+            if path != "tools/migrate_lua_first.py"
+        ]
+        with mock.patch.object(
+            validator.yaml, "safe_load", return_value=ledger
+        ):
+            validator.check()
+            # Advertising the complete selector still requires its migration.
+            entry["status"] = "implemented_unverified"
+            ledger["summary"]["primitive_available_unverified"] -= 1
+            ledger["summary"]["implemented_unverified"] += 1
+            with self.assertRaisesRegex(
+                RuntimeError, "lacks migration evidence"
+            ):
+                validator.check()
+
+    def test_primitive_evidence_still_requires_a_native_test(self):
+        ledger = build_ledger()
+        entry = next(
+            value for value in ledger["entries"]
+            if value["inventory"] == "eoc-conditions" and
+            value["selector"] == "map_is_passable"
+        )
+        entry["evidence"] = [
+            path for path in entry["evidence"] if not path.startswith("tests/")
+        ]
+        with mock.patch.object(
+            validator.yaml, "safe_load", return_value=ledger
+        ):
+            with self.assertRaisesRegex(RuntimeError, "lacks Platform source"):
+                validator.check()
+
     def test_coordinate_reflection_without_native_acceptance_claim(
         self,
     ):
@@ -243,6 +287,16 @@ class LuaFirstReplacementLedgerTest(unittest.TestCase):
         )
         self.assertTrue(
             all(source["entry_count"] > 0 for source in generated["sources"])
+        )
+        self.assertTrue(
+            all("\\" not in source["path"] for source in generated["sources"])
+        )
+        self.assertTrue(
+            all(
+                "\\" not in path
+                for entry in generated["entries"]
+                for path in entry["evidence"]
+            )
         )
 
     def test_entries_have_honest_source_only_evidence(self):

@@ -245,7 +245,6 @@
     "weight": "177 g",
     "color": "pink",
     "addiction_type": "marloss_r",
-    "use_action": [ "MARLOSS" ],
     "comestible_type": "FOOD",
     "symbol": "%",
     "quench": 20,
@@ -256,11 +255,12 @@
     "price": "1 cent",
     "price_postapoc": "1 cent",
     "material": [ "fruit" ],
-    "volume": "62 ml",
-    "flags": [ "MYCUS_OK" ],
+    "volume": "175 ml",
+    "flags": [ "MARLOSS", "MYCUS_OK" ],
     "fun": 30,
     "vitamins": [ [ "fruit_allergen", 1 ] ],
-    "stackable": true
+    "stackable": true,
+    "consumption_effect_on_conditions": [ "EOC_MARLOSS_BERRY_CONSUME" ]
   },
   {
     "type": "ITEM",
@@ -270,7 +270,6 @@
     "weight": "177 g",
     "color": "yellow",
     "addiction_type": "marloss_y",
-    "use_action": [ "MARLOSS_GEL" ],
     "comestible_type": "FOOD",
     "symbol": "~",
     "quench": 5,
@@ -282,10 +281,12 @@
     "price": "1 cent",
     "price_postapoc": "1 cent",
     "material": [ "fruit" ],
-    "volume": "10 ml",
+    "volume": "175 ml",
     "fun": 30,
     "vitamins": [ [ "fruit_allergen", 1 ] ],
-    "stackable": true
+    "stackable": true,
+    "consumption_effect_on_conditions": [ "EOC_MARLOSS_GEL_CONSUME" ],
+    "flags": [ "MARLOSS" ]
   },
   {
     "type": "ITEM",
@@ -294,7 +295,6 @@
     "name": { "str": "Mycus fruit" },
     "weight": "354 g",
     "color": "light_gray",
-    "use_action": [ "MYCUS" ],
     "comestible_type": "FOOD",
     "symbol": "%",
     "quench": 80,
@@ -307,7 +307,8 @@
     "flags": [ "MYCUS_OK" ],
     "vitamins": [ [ "vitC", 25 ], [ "calcium", 25 ], [ "iron", 25 ], [ "fruit_allergen", 1 ] ],
     "fun": 30,
-    "stackable": true
+    "stackable": true,
+    "consumption_effect_on_conditions": [ "EOC_MYCUS_CONSUME" ]
   },
   {
     "type": "ITEM",
@@ -508,7 +509,7 @@
     "subtypes": [ "SEED", "COMESTIBLE" ],
     "id": "dry_beans",
     "name": { "str_sp": "dried beans" },
-    "weight": "56 g",
+    "weight": "55 g",
     "color": "light_gray",
     "container": "bag_plastic_small",
     "comestible_type": "FOOD",
@@ -520,7 +521,7 @@
     "price": "50 cent",
     "price_postapoc": "25 cent",
     "material": [ "bean" ],
-    "volume": "41 ml",
+    "volume": "50 ml",
     "cooks_like": "beans_cooked",
     "vitamins": [ [ "calcium", 56 ], [ "iron", 22 ], [ "veggy_allergen", 1 ] ],
     "petfood": [ "CATTLEFOOD" ],

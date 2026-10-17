@@ -21,7 +21,6 @@
 #include "coordinates.h"
 #include "craft_command.h"
 #include "game_constants.h"
-#include "inventory.h"
 #include "item_components.h"
 #include "item_location.h"
 #include "map.h"
@@ -32,6 +31,7 @@
 #include "requirements.h"
 #include "safe_reference.h"
 #include "stomach.h"
+#include "temp_crafting_inventory.h"
 #include "translation.h"
 #include "type_id.h"
 #include "units_fwd.h"
@@ -353,8 +353,8 @@ struct basecamp_platform_task_execution_context {
 };
 
 using basecamp_platform_task_executor_dispatch = bool ( * )(
-            basecamp_platform_task_operation operation,
-            basecamp_platform_task_execution_context &context, std::string &error );
+        basecamp_platform_task_operation operation,
+        basecamp_platform_task_execution_context &context, std::string &error );
 
 /**
  * The single native registry entry for a Platform camp-task kind.
@@ -965,7 +965,7 @@ class basecamp
         std::vector<basecamp_resource> resources; // NOLINT(cata-serialize)
         std::vector<basecamp_platform_task> platform_tasks; // NOLINT(cata-serialize)
         std::vector<std::vector<ui_mission_id>> temp_ui_mission_keys;   // NOLINT(cata-serialize)
-        inventory _inv; // NOLINT(cata-serialize)
+        temp_crafting_inventory _inv; // NOLINT(cata-serialize)
         bool by_radio = false; // NOLINT(cata-serialize)
 };
 

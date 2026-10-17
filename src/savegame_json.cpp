@@ -1,4 +1,4 @@
-// Associated headers here are the ones for which their only non-inline
+﻿// Associated headers here are the ones for which their only non-inline
 // functions are serialization functions.  This allows IWYU to check the
 // includes in such headers.
 
@@ -57,6 +57,7 @@
 #include "construction.h"
 #include "coordinates.h"
 #include "craft_command.h"
+#include "craft_reservation.h"
 #include "crafting_enums.h"
 #include "creature.h"
 #include "creature_tracker.h"
@@ -109,6 +110,7 @@
 #include "recipe_dictionary.h"
 #include "relic.h"
 #include "requirements.h"
+#include "riding_config.h"
 #include "ret_val.h"
 #include "rng.h"
 #include "scenario.h"
@@ -188,6 +190,8 @@ static const mfaction_str_id monfaction_factionless( "factionless" );
 static const mtype_id mon_breather( "mon_breather" );
 
 static const skill_id skill_chemistry( "chemistry" );
+static const skill_id skill_riding( "riding" );
+static const skill_id skill_survival( "survival" );
 
 static const ter_str_id ter_t_ash( "t_ash" );
 static const ter_str_id ter_t_dirt( "t_dirt" );
@@ -286,7 +290,7 @@ static void split_loaded_stackable_container_contents( std::list<item> &items )
 static void split_loaded_stackable_container_contents( std::vector<item> &items )
 {
     const size_t split_count = static_cast<size_t>( std::count_if(
-                                   items.begin(), items.end(), stackable_container_contents_need_split ) );
+            items.begin(), items.end(), stackable_container_contents_need_split ) );
     if( split_count == 0 ) {
         return;
     }
@@ -794,7 +798,7 @@ void Character::load( const JsonObject &data )
             temp_selected_style = style_none;
         }
         *martial_arts_data = character_martial_arts( temp_styles, temp_selected_style,
-                             temp_keep_hands_free );
+            temp_keep_hands_free );
     } else {
         data.read( "martial_arts_data", martial_arts_data );
     }
@@ -1159,6 +1163,15 @@ void Character::load( const JsonObject &data )
         }
     }
 
+    if( !skill_data.has_member( "riding" ) ) {
+        const riding_config &config = get_riding_config();
+        const int converted_level = std::min(
+                                        config.legacy_survival_conversion_cap,
+                                        static_cast<int>( std::ceil( get_skill_level( skill_survival ) *
+                                            config.legacy_survival_conversion_ratio ) ) );
+        set_skill_level( skill_riding, converted_level );
+    }
+
     on_stat_change( "thirst", thirst );
     on_stat_change( "hunger", hunger );
     on_stat_change( "sleepiness", sleepiness );
@@ -1423,6 +1436,10 @@ void Character::load( const JsonObject &data )
         queued_effect_on_conditions.push( temp );
     }
     data.read( "inactive_eocs", inactive_effect_on_condition_vector );
+
+    // Merge stackable items that older saves stored as separate entries, so a
+    // stackable field change takes effect after loading the character.
+    inv->restack( *this );
 }
 
 /**
@@ -2759,6 +2776,19 @@ void monster::load( const JsonObject &data )
     horde_attraction = static_cast<monster_horde_attraction>( data.get_int( "horde_attraction", 0 ) );
 
     data.read( "inv", inv );
+    if( data.has_array( "pet_equipment" ) ) {
+        JsonArray equipment_entries = data.get_array( "pet_equipment" );
+        while( equipment_entries.has_more() ) {
+            JsonObject entry = equipment_entries.next_object();
+            const pet_slot_id slot( entry.get_string( "slot" ) );
+            item equipment;
+            equipment.deserialize( entry.get_member( "item" ) );
+            if( !slot.is_valid() || !equip_pet_equipment( slot, equipment ) ) {
+                // Preserve equipment from removed or incompatible mods instead of deleting it.
+                inv.push_back( std::move( equipment ) );
+            }
+        }
+    }
     data.read( "dissectable_inv", dissectable_inv );
     data.read( "dragged_foe_id", dragged_foe_id );
 
@@ -2831,6 +2861,19 @@ void monster::store( JsonOut &json ) const
     }
     if( storage_item ) {
         json.member( "storage_item", *storage_item );
+    }
+    if( !custom_pet_equipment.empty() ) {
+        json.member( "pet_equipment" );
+        json.start_array();
+        for( const auto &[slot, equipment] : custom_pet_equipment ) {
+            if( equipment ) {
+                json.start_object();
+                json.member( "slot", slot.str() );
+                json.member( "item", *equipment );
+                json.end_object();
+            }
+        }
+        json.end_array();
     }
     if( battery_item ) {
         json.member( "battery_item", *battery_item );
@@ -2987,6 +3030,27 @@ void item::craft_data::serialize( JsonOut &jsout ) const
     if( awaiting_collection ) {
         jsout.member( "awaiting_collection", awaiting_collection );
     }
+    if( !reservations.empty() ) {
+        jsout.member( "reservations", reservations );
+    }
+    if( reserved_tile ) {
+        jsout.member( "reserved_tile", reserved_tile );
+    }
+    if( reservation_owner != 0 ) {
+        jsout.member( "reservation_owner", reservation_owner );
+    }
+    if( reservation_expires_at != calendar::before_time_starts ) {
+        jsout.member( "reservation_expires_at", reservation_expires_at );
+    }
+    if( reservation_search_attempts != 0 ) {
+        jsout.member( "reservation_search_attempts", reservation_search_attempts );
+    }
+    if( reservation_pool_fingerprint != 0 ) {
+        jsout.member( "reservation_pool_fingerprint", reservation_pool_fingerprint );
+    }
+    if( reservation_pause_reason != 0 ) {
+        jsout.member( "reservation_pause_reason", reservation_pause_reason );
+    }
     jsout.end_object();
 }
 
@@ -3018,6 +3082,88 @@ static bool alloc_source_valid( const step_tool_alloc &a )
 // group on each timed step, each matching a tool type and count its group still
 // offers.  Also rejects corrupt counters and units that disagree with the
 // selected count, so a recipe edit or stale save forces a rebuild instead of
+// A recipe edit can change a quality id, level, tool type or count without changing any
+// index, so the recorded demand is compared rather than just the indices.  Batch size is
+// absent because requirement_data::operator* leaves qualities alone.
+static bool bindings_fit_recipe( const recipe &making, int step_index,
+                                 const std::vector<craft_reservation::binding> &bindings )
+{
+    if( bindings.empty() ) {
+        return true;
+    }
+    if( !making.has_steps() || step_index < 0 ||
+        step_index >= static_cast<int>( making.steps().size() ) ) {
+        return false;
+    }
+    const requirement_data &step_reqs = making.steps()[step_index].requirements;
+    const std::vector<std::vector<quality_requirement>> &quals = step_reqs.get_qualities();
+    const std::vector<std::vector<tool_comp>> &tools = step_reqs.get_tools();
+
+    std::map<std::pair<int, int>, std::set<int>> slots_by_group;
+
+    for( const craft_reservation::binding &b : bindings ) {
+        if( b.group_index < 0 || b.alternative_index < 0 ) {
+            return false;
+        }
+        const bool abstract_kind = b.kind == craft_reservation::provider_kind::intrinsic ||
+                                   b.kind == craft_reservation::provider_kind::environment;
+        if( abstract_kind != ( b.occurrence_slot >= 0 ) ) {
+            return false;
+        }
+        // Keyed by capability, so a quality binding names no item type.
+        if( b.kind == craft_reservation::provider_kind::intrinsic ) {
+            const bool quality_req = b.req == craft_reservation::requirement_kind::quality;
+            if( quality_req != b.pseudo_type.is_null() ) {
+                return false;
+            }
+        }
+
+        if( b.req == craft_reservation::requirement_kind::quality ) {
+            if( b.group_index >= static_cast<int>( quals.size() ) ||
+                b.alternative_index >= static_cast<int>( quals[b.group_index].size() ) ) {
+                return false;
+            }
+            const quality_requirement &q = quals[b.group_index][b.alternative_index];
+            if( q.type != b.qual || q.level != b.level || q.count != b.group_count ) {
+                return false;
+            }
+        } else if( b.req == craft_reservation::requirement_kind::presence_tool ) {
+            // Presence groups are numbered after the quality groups and follow the
+            // step's allocation order, so the step's own tool groups come first and the
+            // recipe-root ones after them.
+            const std::vector<std::vector<tool_comp>> &root_tools =
+                making.root_requirements().get_tools();
+            int tool_group = b.group_index - static_cast<int>( quals.size() );
+            if( tool_group < 0 ) {
+                return false;
+            }
+            const std::vector<std::vector<tool_comp>> *groups = &tools;
+            if( tool_group >= static_cast<int>( tools.size() ) ) {
+                tool_group -= static_cast<int>( tools.size() );
+                groups = &root_tools;
+            }
+            if( tool_group >= static_cast<int>( groups->size() ) ||
+                b.alternative_index >= static_cast<int>( ( *groups )[tool_group].size() ) ) {
+                return false;
+            }
+            const tool_comp &t = ( *groups )[tool_group][b.alternative_index];
+            if( t.type != b.tool_type ||
+                std::max( 1, std::abs( t.count ) ) != b.group_count ) {
+                return false;
+            }
+        } else {
+            return false;
+        }
+
+        if( b.occurrence_slot >= 0 &&
+            !slots_by_group[ { static_cast<int>( b.req ), b.group_index } ].insert(
+                b.occurrence_slot ).second ) {
+            return false;
+        }
+    }
+    return true;
+}
+
 // metering off an inconsistent allocation.
 static bool step_tool_allocs_fit_recipe(
     const recipe &making, int batch, const std::vector<std::vector<step_tool_alloc>> &allocs )
@@ -3027,7 +3173,7 @@ static bool step_tool_allocs_fit_recipe(
     }
     const int batch_mult = std::max( batch, 1 );
     const std::vector<std::vector<tool_comp>> &root_groups =
-            making.root_requirements().get_tools();
+        making.root_requirements().get_tools();
     int64_t total_time = 0;
     for( const recipe_step &step : making.steps() ) {
         total_time += std::max<int64_t>( step.time, 0 );
@@ -3039,7 +3185,7 @@ static bool step_tool_allocs_fit_recipe(
     for( size_t s = 0; s < allocs.size(); ++s ) {
         const recipe_step &step = making.steps()[s];
         const std::vector<std::vector<tool_comp>> &step_groups =
-                step.requirements.get_tools();
+            step.requirements.get_tools();
         const bool step_timed = total_time > 0 && step.time > 0;
         std::vector<const step_tool_alloc *> owned;
         std::vector<const step_tool_alloc *> root;
@@ -3120,6 +3266,7 @@ void item::craft_data::deserialize( const JsonObject &obj )
     current_step = obj.get_int( "current_step", 0 );
     step_progress = obj.get_float( "step_progress", 0.0 );
     bool allocs_cleared = false;
+    bool bindings_stale = false;
     // Validate step index against the recipe's actual step count.
     if( making && making->has_steps() ) {
         int max_step = static_cast<int>( making->steps().size() ) - 1;
@@ -3142,7 +3289,7 @@ void item::craft_data::deserialize( const JsonObject &obj )
         if( stepless_ok ) {
             const int batch_mult = std::max( batch_size, 1 );
             const std::vector<std::vector<tool_comp>> &tool_groups =
-                    making->simple_requirements().get_tools();
+                making->simple_requirements().get_tools();
             // An empty list means no implicit-step row; treat it as a zero-length
             // row so the bijection below rejects it when the recipe has tools.
             const std::vector<step_tool_alloc> empty_row;
@@ -3235,6 +3382,25 @@ void item::craft_data::deserialize( const JsonObject &obj )
     passive_start_counter = obj.get_int( "passive_start_counter", 0 );
     passive_end_counter = obj.get_int( "passive_end_counter", 0 );
     awaiting_collection = obj.get_bool( "awaiting_collection", false );
+    if( obj.has_member( "reservations" ) ) {
+        obj.read( "reservations", reservations );
+    }
+    if( obj.has_member( "reserved_tile" ) ) {
+        obj.read( "reserved_tile", reserved_tile );
+    }
+    reservation_owner = 0;
+    obj.read( "reservation_owner", reservation_owner );
+    if( obj.has_member( "reservation_expires_at" ) ) {
+        obj.read( "reservation_expires_at", reservation_expires_at );
+    }
+    reservation_search_attempts = obj.get_int( "reservation_search_attempts", 0 );
+    reservation_pool_fingerprint = 0;
+    obj.read( "reservation_pool_fingerprint", reservation_pool_fingerprint );
+    reservation_pause_reason = obj.get_int( "reservation_pause_reason", 0 );
+    if( making && making->has_steps() &&
+        !bindings_fit_recipe( *making, current_step, reservations ) ) {
+        bindings_stale = true;
+    }
     // Recipe-edit migration: drop stale passive runtime on shape mismatch.
     bool stale = false;
     if( making && !disassembly ) {
@@ -3272,6 +3438,16 @@ void item::craft_data::deserialize( const JsonObject &obj )
         env_check_at = calendar::before_time_starts;
         passive_start_counter = 0;
         passive_end_counter = 0;
+    }
+    if( stale || bindings_stale ) {
+        // reservation_owner is kept so reconciliation can still find and clean this
+        // craft's index record; clearing the expiry makes that record inert.
+        reservations.clear();
+        reserved_tile.reset();
+        reservation_expires_at = calendar::before_time_starts;
+        reservation_search_attempts = 0;
+        reservation_pool_fingerprint = 0;
+        reservation_pause_reason = 0;
     }
 }
 
@@ -3636,6 +3812,12 @@ void item::io( Archive &archive )
     has_item_vars_ = !item_vars.empty();
 
     current_phase = static_cast<phase_id>( cur_phase );
+    // Liquids that no longer track temperature cannot thaw themselves after loading.
+    // Restore their declared phase even if an older save recorded them as frozen.
+    if( !has_temperature() && type->phase == phase_id::LIQUID ) {
+        unset_flag( flag_FROZEN );
+        current_phase = type->phase;
+    }
     // override phase if frozen, needed for legacy save
     if( has_own_flag( flag_FROZEN ) && current_phase == phase_id::LIQUID ) {
         current_phase = phase_id::SOLID;
@@ -3807,8 +3989,8 @@ void vehicle_part::deserialize( const JsonObject &data )
                                          ? migration->variant.value()
                                          : migration->part_id_new->variant_default;
         DebugLog( D_WARNING, D_MAIN ) << "vehicle_part::deserialize migrating " <<
-                                      "vpid '" << pid.str() << "' to '" << migration->part_id_new.str() << "' "
-                                      "variant '" << variant << "' to '" << new_variant << "'";
+                                         "vpid '" << pid.str() << "' to '" << migration->part_id_new.str() << "' "
+                                         "variant '" << variant << "' to '" << new_variant << "'";
         pid = migration->part_id_new;
         variant = new_variant;
     }
@@ -5238,7 +5420,7 @@ void basecamp::deserialize( const JsonObject &data )
     platform_expansions_.clear();
     platform_retired_expansion_generations_.clear();
     const auto read_platform_resource_changes = [](
-                JsonObject & source, const char *member,
+            JsonObject & source, const char *member,
     std::vector<basecamp_platform_resource_change> &changes ) {
         if( !source.has_array( member ) ) {
             return false;
@@ -5957,8 +6139,8 @@ void basecamp::deserialize( const JsonObject &data )
                                 }
                                 () &&
                                 restored.uid().get_value() == entry.stable_uid &&
-                                ( restored.count_by_charges() ? restored.charges : 1 ) ==
-                                entry.charges;
+                                        ( restored.count_by_charges() ? restored.charges : 1 ) ==
+                                        entry.charges;
                                 if( !valid ) {
                                     break;
                                 }
@@ -6210,14 +6392,14 @@ void stats_tracker::deserialize( const JsonObject &jo )
                 // we don't know when they took over, so just use current time point
                 if( u.getID() != gs_data["avatar_id"].get<cata_variant_type::character_id>() ) {
                     get_event_bus().send( cata::event::make<event_type::game_avatar_new>( false, false,
-                                          u.getID(), u.name, u.custom_profession ) );
+                            u.getID(), u.name, u.custom_profession ) );
                 }
             } else {
                 // last ditch effort for really old saves that don't even have event_type::game_start
                 // treat current avatar as the starting avatar; abuse is_new_game=false to flag such cases
                 std::swap( calendar::turn, calendar::start_of_game );
                 get_event_bus().send( cata::event::make<event_type::game_avatar_new>( false, false,
-                                      u.getID(), u.name, u.custom_profession ) );
+                        u.getID(), u.name, u.custom_profession ) );
                 std::swap( calendar::turn, calendar::start_of_game );
             }
         }
@@ -6350,7 +6532,7 @@ void cata::lua_platform::detail::erase_platform_savegame_migration(
 }
 
 std::vector<std::pair<std::string, std::string>>
-        cata::lua_platform::detail::terrain_migration_snapshot()
+cata::lua_platform::detail::terrain_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( ter_migrations.size() );
@@ -6362,7 +6544,7 @@ std::vector<std::pair<std::string, std::string>>
 }
 
 std::vector<std::pair<std::string, std::string>>
-        cata::lua_platform::detail::furniture_migration_snapshot()
+cata::lua_platform::detail::furniture_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( furn_migrations.size() );
@@ -6374,7 +6556,7 @@ std::vector<std::pair<std::string, std::string>>
 }
 
 std::vector<std::pair<std::string, std::string>>
-        cata::lua_platform::detail::trap_migration_snapshot()
+cata::lua_platform::detail::trap_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( tr_migrations.size() );
@@ -6872,6 +7054,23 @@ void submap::load( const JsonValue &jv, const std::string &member_name, int vers
                     set_finite_liquid( p, std::min( stored, terrain.liquid_source_count.second ) );
                 }
             }
+            // Merge stackable items that older saves stored as separate
+            // entries, so a stackable field change is reflected after load.
+            auto &items_here = m->itm[p.x()][p.y()];
+            for( auto outer = items_here.begin(); outer != items_here.end(); ++outer ) {
+                if( !outer->is_stackable() ) {
+                    continue;
+                }
+                auto inner = outer;
+                ++inner;
+                while( inner != items_here.end() ) {
+                    if( outer->merge_charges( *inner ) ) {
+                        inner = items_here.erase( inner );
+                    } else {
+                        ++inner;
+                    }
+                }
+            }
             // some portion could've been read even if error occurred
             for( item &it : m->itm[p.x()][p.y()] ) {
                 if( it.is_emissive() ) {
@@ -7044,7 +7243,7 @@ void submap::load( const JsonValue &jv, const std::string &member_name, int vers
                 point_sm_ms loc;
                 computers_json.next_value().read( loc );
                 auto new_comp_it = computers.emplace( loc, computer( "BUGGED_COMPUTER", -100,
-                                                      tripoint_abs_ms::invalid ) ).first;
+                    tripoint_abs_ms::invalid ) ).first;
                 computers_json.next_value().read( new_comp_it->second );
             }
         }

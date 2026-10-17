@@ -9,6 +9,7 @@
 // IWYU pragma: end_exports
 
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -99,6 +100,10 @@ void SetTextureBlendMode( const std::shared_ptr<SDL_Texture> &texture, SDL_Blend
 bool SetTextureColorMod( const SDL_Texture_Ptr &texture, Uint32 r, Uint32 g, Uint32 b );
 bool SetTextureColorMod( const std::shared_ptr<SDL_Texture> &texture, Uint32 r, Uint32 g,
                          Uint32 b );
+// Upload `pixels` (in texture's own format) to `rect` (or whole texture if
+// null). False on failure.
+bool UpdateTexture( const SDL_Texture_Ptr &texture, const SDL_Rect *rect, const void *pixels,
+                    int pitch );
 void SetRenderDrawBlendMode( const SDL_Renderer_Ptr &renderer, SDL_BlendMode blendMode );
 void GetRenderDrawBlendMode( const SDL_Renderer_Ptr &renderer, SDL_BlendMode &blend_mode );
 SDL_Surface_Ptr load_image( const char *path );
@@ -240,7 +245,20 @@ void RenderCopyEx( const SDL_Renderer_Ptr &renderer, SDL_Texture *texture,
                    const SDL_Rect *srcrect, const SDL_Rect *dstrect,
                    double angle, const SDL_Point *center, CataFlipMode flip );
 void RenderSetClipRect( const SDL_Renderer_Ptr &renderer, const SDL_Rect *rect );
+// triangles through SDL_RenderGeometry. SDL_Vertex keeps position, color and uv
+// at one stride, which the software renderer's quad detection needs: it reads
+// uv at the color stride. null texture draws untextured triangles blended with
+// the renderer draw blend mode; a texture's color and alpha mod do not apply
+void RenderGeometry( const SDL_Renderer_Ptr &renderer, SDL_Texture *texture,
+                     const SDL_Vertex *vertices, int num_vertices,
+                     const int *indices, int num_indices );
+// upload `surface` into `rect` of `texture`. surface must already be in the
+// texture's pixel format.
+bool UpdateTexture( const SDL_Texture_Ptr &texture, const SDL_Rect &rect,
+                    const SDL_Surface_Ptr &surface );
 void RenderGetClipRect( const SDL_Renderer_Ptr &renderer, SDL_Rect *rect );
+// Returns whether the intersection is non-empty. result is written either way.
+bool GetRectIntersection( const SDL_Rect &a, const SDL_Rect &b, SDL_Rect &result );
 bool RenderIsClipEnabled( const SDL_Renderer_Ptr &renderer );
 int BlitSurface( const SDL_Surface_Ptr &src, const SDL_Rect *srcrect,
                  const SDL_Surface_Ptr &dst, SDL_Rect *dstrect );
@@ -280,7 +298,17 @@ const char *GetRenderDriverName( int index );
 // SDL3: SDL_RendererInfo struct removed. Name via SDL_GetRendererName,
 // capabilities via SDL_GetRendererProperties.
 const char *GetRendererName( const SDL_Renderer_Ptr &renderer );
+// Name of the SDL GPU backend under a gpu renderer, such as "vulkan", or "none"
+// off the gpu driver
+const char *GetGPUBackendName( const SDL_Renderer_Ptr &renderer );
 bool IsRendererSoftware( const SDL_Renderer_Ptr &renderer );
+// block until event is queued or `timeout_ms` passes (0 polls, -1 has no
+// timeout); the event stays queued for SDL_PollEvent. false on timeout
+bool WaitForEvent( int timeout_ms );
+// queue an empty event from any thread so a blocked WaitForEvent returns
+void PushWakeEvent();
+// posted by PushWakeEvent; SDL_EVENT_USER + 1 is the gamepad scheduler
+inline constexpr Uint32 CATA_WAKE_EVENT = SDL_EVENT_USER + 2;
 bool GetRendererMaxTextureSize( const SDL_Renderer_Ptr &renderer, int *max_w, int *max_h );
 
 // SDL3: various renames, signature changes, behavioral changes.
@@ -336,6 +364,8 @@ void GetWindowSizeInPixels( SDL_Window *window, int *w, int *h );
 void SetTextureScaleQuality( const SDL_Texture_Ptr &texture, const std::string &quality );
 // Store a default scale quality applied by CreateTexture/CreateTextureFromSurface.
 void SetDefaultTextureScaleQuality( const std::string &quality );
+// SDL_GetTextureScaleMode. SDL_SCALEMODE_INVALID for a null texture or on failure.
+SDL_ScaleMode GetTextureScaleMode( const std::shared_ptr<SDL_Texture> &texture );
 
 // Text input state belongs to the specified window.
 void StartTextInput( SDL_Window *window );

@@ -572,11 +572,20 @@ static bool mountable_gun_filter( const itype &guntype )
 // @returns true if a gun accepts liquid directly, without a detachable fuel magazine.
 static bool gun_uses_liquid_ammo( const itype &guntype )
 {
-    // Preserve detachable pressure tanks when mounting the weapon.  Treating
-    // these as vehicle plumbing disables both magazine insertion and removal.
+    // Preserve detachable liquid tanks, while allowing an auxiliary battery
+    // well on a gun whose fuel is held in its integral magazine pocket.
     for( const pocket_data &pkt : guntype.pockets ) {
-        if( pkt.type == pocket_type::MAGAZINE_WELL ) {
-            return false;
+        if( pkt.type != pocket_type::MAGAZINE_WELL ) {
+            continue;
+        }
+        for( const itype_id &magazine : pkt.item_id_restriction ) {
+            for( const pocket_data &magazine_pocket : magazine.obj().pockets ) {
+                for( const std::pair<const ammotype, int> &ammo : magazine_pocket.ammo_restriction ) {
+                    if( ammo.first->default_ammotype()->phase == phase_id::LIQUID ) {
+                        return false;
+                    }
+                }
+            }
         }
     }
     for( const ammotype &at : guntype.gun->ammo ) {
@@ -1892,7 +1901,7 @@ void cata::lua_platform::detail::erase_platform_vpart_migration(
 }
 
 std::vector<std::pair<std::string, std::string>>
-        cata::lua_platform::detail::vehicle_part_migration_snapshot()
+cata::lua_platform::detail::vehicle_part_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( vpart_migrations.size() );

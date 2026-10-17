@@ -39,7 +39,7 @@ tile_lookup_frame::~tile_lookup_frame()
     if( cache_results_ ) {
         CATA_PROFILE_SCOPE_NAMED( "tiles.lookup_frame_summary" );
         const std::string counts = string_format( "requests=%zu;hits=%zu;ids=%zu",
-                                   requests_, cache_hits_, results_.size() );
+            requests_, cache_hits_, results_.size() );
         CATA_PROFILE_TEXT( counts.c_str(), counts.size() );
         CATA_PROFILE_PLOT( "tiles.subtile_requests", static_cast<int64_t>( subtile_requests_ ) );
         CATA_PROFILE_PLOT( "tiles.subtile_cache_hits", static_cast<int64_t>( subtile_cache_hits_ ) );

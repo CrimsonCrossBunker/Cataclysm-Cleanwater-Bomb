@@ -562,7 +562,7 @@ int item::get_encumber( const Character &p, const bodypart_id &bodypart,
         int additional_encumbrance = get_contents().get_additional_pocket_encumbrance(
                                          portion_data->volume_encumber_modifier );
         encumber += std::ceil( relative_encumbrance * ( portion_data->max_encumber +
-                               additional_encumbrance - portion_data->encumber ) );
+            additional_encumbrance - portion_data->encumber ) );
 
         // add the encumbrance values of any ablative plates and additional encumbrance pockets
         if( has_additional_encumbrance() ) {
@@ -1035,7 +1035,7 @@ void item::get_warmth_by_bodypart( std::vector<std::pair<bodypart_id, int>> &res
     }
 
     const side side = get_side();
-    const double warmth = get_warmth();
+    const int warmth = get_warmth();
 
     body_part_set covered_bodyparts;
     iterate_covered_body_parts_internal( side, [&]( const bodypart_str_id & bp ) {

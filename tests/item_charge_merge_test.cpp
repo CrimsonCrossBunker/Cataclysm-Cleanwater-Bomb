@@ -1,16 +1,58 @@
+#include <list>
 #include <string>
 #include <vector>
 
 #include "calendar.h"
 #include "cata_catch.h"
+#include "character.h"
+#include "inventory.h"
 #include "item.h"
 #include "item_components.h"
+#include "pimpl.h"
+#include "player_helpers.h"
 #include "requirements.h"
 #include "type_id.h"
 
 static const itype_id itype_copper( "copper" );
 static const itype_id itype_lead( "lead" );
 static const itype_id itype_string_6( "string_6" );
+
+TEST_CASE( "inventory_restack_preserves_unmergeable_charge_stacks", "[item][stacking][charges]" )
+{
+    clear_avatar();
+    Character &character = get_player_character();
+    inventory &inv = *character.inv;
+    item lhs( itype_string_6, calendar::turn, 10 );
+    item rhs = lhs;
+    SECTION( "different_damage_in_same_display_bucket" ) {
+        lhs.force_set_damage( 1001 );
+        rhs.force_set_damage( 1002 );
+    }
+    SECTION( "different_crafting_components" ) {
+        item lead( itype_lead, calendar::turn, 1 );
+        item copper( itype_copper, calendar::turn, 1 );
+        lhs.components.add( lead );
+        rhs.components.add( copper );
+    }
+    REQUIRE( lhs.stacks_with( rhs ) );
+    REQUIRE_FALSE( lhs.merge_charges( rhs ) );
+    inv.add_item( lhs, false, true, false );
+    inv.add_item( rhs, false, true, false );
+    REQUIRE( inv.size() == 2 );
+
+    inv.restack( character );
+
+    REQUIRE( inv.size() == 2 );
+    int total_charges = 0;
+    for( const std::list<item> *stack : inv.const_slice() ) {
+        REQUIRE( stack->size() == 1 );
+        const item &remaining = stack->front();
+        CHECK( remaining.charges == 10 );
+        CHECK( ( remaining.damage() == lhs.damage() || remaining.damage() == rhs.damage() ) );
+        total_charges += remaining.charges;
+    }
+    CHECK( total_charges == 20 );
+}
 
 TEST_CASE( "physical_stack_merging_preserves_item_state", "[item][stacking][charges]" )
 {

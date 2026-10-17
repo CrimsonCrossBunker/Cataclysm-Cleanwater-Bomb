@@ -1,12 +1,13 @@
 #include <algorithm>
-#include <cstddef>
 #include <climits>
+#include <cstddef>
 #include <functional>
 #include <initializer_list>
 #include <map>
 #include <memory>
 #include <set>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "avatar.h"
@@ -17,20 +18,21 @@
 #include "color.h"
 #include "crafting_gui_helpers.h"
 #include "flat_set.h"
-#include "npc.h"
-#include "recipe_dictionary.h"
+#include "flexbuffer_json.h"
 #include "game.h"
+#include "inventory.h"
 #include "item.h"
-#include "json.h"
 #include "json_loader.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "npc.h"
 #include "options_helpers.h"
 #include "player_helpers.h"
 #include "proficiency.h"
 #include "recipe.h"
+#include "recipe_dictionary.h"
 #include "requirements.h"
-#include "inventory.h"
+#include "temp_crafting_inventory.h"
 #include "type_id.h"
 #include "uistate.h"
 #include "weather_type.h"
@@ -44,17 +46,28 @@ static const itype_id itype_fat( "fat" );
 static const itype_id itype_hammer( "hammer" );
 static const itype_id itype_knife_hunting( "knife_hunting" );
 static const itype_id itype_rock( "rock" );
+static const itype_id itype_soldering_iron_portable( "soldering_iron_portable" );
 
 static const proficiency_id proficiency_prof_carving( "prof_carving" );
 static const proficiency_id proficiency_prof_food_prep( "prof_food_prep" );
 static const proficiency_id proficiency_prof_knapping( "prof_knapping" );
+static const proficiency_id proficiency_prof_test_step_required( "prof_test_step_required" );
 
+static const recipe_id recipe_cudgel_character_requirements_restricted(
+    "cudgel_character_requirements_restricted" );
 static const recipe_id recipe_cudgel_simple( "cudgel_simple" );
 static const recipe_id recipe_cudgel_slow( "cudgel_slow" );
+static const recipe_id recipe_cudgel_test_charged_fast_stepless(
+    "cudgel_test_charged_fast_stepless" );
 static const recipe_id recipe_cudgel_test_no_tools( "cudgel_test_no_tools" );
+static const recipe_id recipe_cudgel_test_steps_required_prof( "cudgel_test_steps_required_prof" );
 static const recipe_id recipe_meat_cooked_test_no_tools( "meat_cooked_test_no_tools" );
 static const recipe_id recipe_prac_knapping( "prac_knapping" );
 static const recipe_id recipe_test_longshirt_test_poor_fit( "test_longshirt_test_poor_fit" );
+static const recipe_id recipe_test_nested_gate_charged( "test_nested_gate_charged" );
+static const recipe_id recipe_test_nested_gate_charreq( "test_nested_gate_charreq" );
+static const recipe_id recipe_test_nested_gate_prof( "test_nested_gate_prof" );
+static const recipe_id recipe_test_nested_outer( "test_nested_outer" );
 static const recipe_id recipe_test_nested_weapons( "test_nested_weapons" );
 static const recipe_id recipe_test_tallow( "test_tallow" );
 static const recipe_id recipe_water_clean_test_in_jar( "water_clean_test_in_jar" );
@@ -341,6 +354,18 @@ TEST_CASE( "can_start_craft_ok_at_midday", "[crafting][gui]" )
 }
 
 
+// recipe_sort_compare() takes a result_name() memo shared across a whole sort.
+// These tests compare a single pair at a time, so each call gets a fresh cache.
+static bool sort_compare( const recipe *a, const recipe *b,
+                          const availability &avail_a, const availability &avail_b,
+                          const Character &crafter, const crafting_cost_context &ctx,
+                          bool a_read, bool b_read, bool unread_first )
+{
+    std::unordered_map<const recipe *, std::string> name_cache;
+    return recipe_sort_compare( a, b, avail_a, avail_b, crafter, ctx,
+                                a_read, b_read, unread_first, name_cache );
+}
+
 TEST_CASE( "recipe_sort_craftable_before_uncraftable", "[crafting][gui]" )
 {
     Character &guy = setup_character();
@@ -361,10 +386,10 @@ TEST_CASE( "recipe_sort_craftable_before_uncraftable", "[crafting][gui]" )
     availability avail_no( guy, &rec );
     CHECK_FALSE( avail_no.can_craft );
 
-    CHECK( recipe_sort_compare( &rec, &rec, avail_yes, avail_no, guy, {},
-                                true, true, false ) );
-    CHECK_FALSE( recipe_sort_compare( &rec, &rec, avail_no, avail_yes, guy, {},
-                                      true, true, false ) );
+    CHECK( sort_compare( &rec, &rec, avail_yes, avail_no, guy, {},
+                         true, true, false ) );
+    CHECK_FALSE( sort_compare( &rec, &rec, avail_no, avail_yes, guy, {},
+                               true, true, false ) );
 }
 
 TEST_CASE( "recipe_sort_by_difficulty", "[crafting][gui]" )
@@ -382,8 +407,8 @@ TEST_CASE( "recipe_sort_by_difficulty", "[crafting][gui]" )
     availability avail_easy( guy, &rec_easy );
 
     // Higher difficulty sorts first (existing behavior: b->difficulty < a->difficulty)
-    CHECK( recipe_sort_compare( &rec_hard, &rec_easy, avail_hard, avail_easy, guy, {},
-                                true, true, false ) );
+    CHECK( sort_compare( &rec_hard, &rec_easy, avail_hard, avail_easy, guy, {},
+                         true, true, false ) );
 }
 
 TEST_CASE( "recipe_sort_by_name", "[crafting][gui]" )
@@ -402,10 +427,10 @@ TEST_CASE( "recipe_sort_by_name", "[crafting][gui]" )
     availability avail_meat( guy, &rec_meat );
 
     // "cooked meat" < "cudgel" alphabetically
-    CHECK( recipe_sort_compare( &rec_meat, &rec_cudgel, avail_meat, avail_cudgel, guy, {},
-                                true, true, false ) );
-    CHECK_FALSE( recipe_sort_compare( &rec_cudgel, &rec_meat, avail_cudgel, avail_meat, guy, {},
-                                      true, true, false ) );
+    CHECK( sort_compare( &rec_meat, &rec_cudgel, avail_meat, avail_cudgel, guy, {},
+                         true, true, false ) );
+    CHECK_FALSE( sort_compare( &rec_cudgel, &rec_meat, avail_cudgel, avail_meat, guy, {},
+                               true, true, false ) );
 }
 
 TEST_CASE( "recipe_sort_by_craft_time_tiebreaker", "[crafting][gui]" )
@@ -422,8 +447,8 @@ TEST_CASE( "recipe_sort_by_craft_time_tiebreaker", "[crafting][gui]" )
     availability avail_slow( guy, &rec_slow );
 
     // Same name, same difficulty -> longer craft time sorts first
-    CHECK( recipe_sort_compare( &rec_slow, &rec_fast, avail_slow, avail_fast, guy, {},
-                                true, true, false ) );
+    CHECK( sort_compare( &rec_slow, &rec_fast, avail_slow, avail_fast, guy, {},
+                         true, true, false ) );
 }
 
 TEST_CASE( "recipe_sort_unread_first", "[crafting][gui]" )
@@ -438,11 +463,11 @@ TEST_CASE( "recipe_sort_unread_first", "[crafting][gui]" )
     availability avail( guy, &rec );
 
     // a_read=false (unread), b_read=true (read), unread_first=true -> a sorts before b
-    CHECK( recipe_sort_compare( &rec, &rec, avail, avail, guy, {},
-                                false, true, true ) );
+    CHECK( sort_compare( &rec, &rec, avail, avail, guy, {},
+                         false, true, true ) );
     // a_read=true (read), b_read=false (unread) -> b should sort first, so a < b is false
-    CHECK_FALSE( recipe_sort_compare( &rec, &rec, avail, avail, guy, {},
-                                      true, false, true ) );
+    CHECK_FALSE( sort_compare( &rec, &rec, avail, avail, guy, {},
+                               true, false, true ) );
 }
 
 TEST_CASE( "recipe_sort_unread_disabled", "[crafting][gui]" )
@@ -463,8 +488,8 @@ TEST_CASE( "recipe_sort_unread_disabled", "[crafting][gui]" )
     availability avail_no( guy, &rec );
 
     // unread_first=false: read state ignored, craftability dominates
-    CHECK( recipe_sort_compare( &rec, &rec, avail_yes, avail_no, guy, {},
-                                true, false, false ) );
+    CHECK( sort_compare( &rec, &rec, avail_yes, avail_no, guy, {},
+                         true, false, false ) );
 }
 
 // Helper: join vector of strings for substring searching
@@ -1089,7 +1114,7 @@ TEST_CASE( "build_recipe_list_hides_hidden", "[crafting][gui][recipe_list]" )
 
     std::map<const recipe *, availability> cache;
     recipe_list_data result = build_recipe_list( picking, false, false,
-                              guy, false, nullptr, false, false, cache, available );
+        guy, false, nullptr, false, false, cache, available );
 
     for( const recipe *entry : result.entries ) {
         CHECK_FALSE( entry->ident() == recipe_cudgel_test_no_tools );
@@ -1110,7 +1135,7 @@ TEST_CASE( "build_recipe_list_skip_hidden_filter", "[crafting][gui][recipe_list]
 
     std::map<const recipe *, availability> cache;
     recipe_list_data result = build_recipe_list( picking, true, false,
-                              guy, false, nullptr, false, false, cache, available );
+        guy, false, nullptr, false, false, cache, available );
 
     CHECK_FALSE( result.entries.empty() );
     CHECK( result.entries[0]->ident() == recipe_cudgel_test_no_tools );
@@ -1135,7 +1160,7 @@ TEST_CASE( "build_recipe_list_sort_craftable_first", "[crafting][gui][recipe_lis
 
     std::map<const recipe *, availability> cache;
     recipe_list_data result = build_recipe_list( picking, false, false,
-                              guy, false, nullptr, false, false, cache, available );
+        guy, false, nullptr, false, false, cache, available );
 
     REQUIRE( result.available.size() == 2 );
     // Craftable recipes come first in sorted order
@@ -1166,7 +1191,7 @@ TEST_CASE( "build_recipe_list_expands_nested", "[crafting][gui][recipe_list]" )
 
     std::map<const recipe *, availability> cache;
     recipe_list_data result = build_recipe_list( picking, false, false,
-                              guy, false, nullptr, false, false, cache, available );
+        guy, false, nullptr, false, false, cache, available );
 
     // Expansion should have inserted the child after the nested category
     REQUIRE( result.entries.size() == 2 );
@@ -1203,7 +1228,7 @@ TEST_CASE( "nested_recipe_expansion_excludes_null_children", "[crafting][gui][re
     uistate.expanded_recipes.insert( nested.ident() );
     std::map<const recipe *, availability> cache;
     const recipe_list_data result = build_recipe_list( { &nested }, false, false,
-                                    guy, false, nullptr, false, false, cache, available );
+        guy, false, nullptr, false, false, cache, available );
     REQUIRE( result.entries.size() == 2 );
     CHECK( result.entries[0] == &nested );
     CHECK( result.entries[1] == cudgel );
@@ -1238,12 +1263,12 @@ TEST_CASE( "crafting_component_snapshot_preserves_counts_and_colors", "[crafting
     guy.i_add( wood );
     guy.invalidate_crafting_inventory();
     const recipe &rec = recipe_cudgel_test_no_tools.obj();
-    const inventory &inv = guy.crafting_inventory();
+    const temp_crafting_inventory &inv = guy.crafting_inventory();
     const auto filter = rec.get_component_filter();
     for( const int batch_size : {
              1, 2
          } ) {
-        const auto display = build_component_display( rec, guy, inv, batch_size );
+        const crafting_component_groups display = build_component_display( rec, guy, inv, batch_size );
         REQUIRE( display.size() == rec.simple_requirements().get_components().size() );
         for( const auto &group : display ) {
             const bool any_available = std::any_of( group.begin(), group.end(),
@@ -1264,4 +1289,127 @@ TEST_CASE( "crafting_component_snapshot_preserves_counts_and_colors", "[crafting
             }
         }
     }
+}
+
+TEST_CASE( "nested_availability_follows_the_camp_inventory", "[crafting][gui]" )
+{
+    Character &guy = setup_character();
+    guy.set_skill_level( skill_fabrication, 2 );
+    guy.set_skill_level( skill_melee, 1 );
+
+    GIVEN( "camp inventory has child's component, crafter doesn't" ) {
+        inventory camp_inv;
+        camp_inv.add_item( item( itype_2x4 ) );
+        WHEN( "camp crafter looks at the nested category" ) {
+            const availability avail( guy, &recipe_test_nested_weapons.obj(), 1, true, &camp_inv );
+            THEN( "craftable" ) {
+                CHECK( avail.can_craft );
+            }
+        }
+    }
+    GIVEN( "crafter carries component, camp inventory empty" ) {
+        guy.i_add( item( itype_2x4 ) );
+        guy.invalidate_crafting_inventory();
+        inventory camp_inv;
+        WHEN( "camp crafter looks at the nested category" ) {
+            const availability avail( guy, &recipe_test_nested_weapons.obj(), 1, true, &camp_inv );
+            THEN( "not craftable" ) {
+                CHECK_FALSE( avail.can_craft );
+            }
+        }
+    }
+    GIVEN( "only child needs 30 charges; both inventories hold an iron with 25" ) {
+        const recipe &nested = recipe_test_nested_gate_charged.obj();
+        REQUIRE( nested.nested_category_data.count( recipe_cudgel_test_charged_fast_stepless ) == 1 );
+        guy.i_add( item( itype_2x4 ) );
+        guy.i_add( tool_with_ammo( itype_soldering_iron_portable, 25 ) );
+        guy.invalidate_crafting_inventory();
+        REQUIRE( guy.crafting_inventory().charges_of( itype_soldering_iron_portable ) == 25 );
+        inventory camp_inv;
+        camp_inv.add_item( item( itype_2x4 ) );
+        camp_inv.add_item( tool_with_ammo( itype_soldering_iron_portable, 25 ) );
+        REQUIRE( camp_inv.charges_of( itype_soldering_iron_portable ) == 25 );
+        WHEN( "crafter looks at the nested category outside a camp" ) {
+            const availability avail( guy, &nested );
+            THEN( "craftable: starting the craft needs only part of the charges" ) {
+                CHECK( avail.can_craft );
+            }
+        }
+        WHEN( "camp crafter looks at the nested category" ) {
+            const availability avail( guy, &nested, 1, true, &camp_inv );
+            THEN( "not craftable: camp crafting needs every charge up front" ) {
+                CHECK_FALSE( avail.can_craft );
+            }
+        }
+    }
+}
+
+// recipe::npc_can_craft accepts every recipe, so no case covers an NPC crafter
+TEST_CASE( "nested_availability_expectations", "[crafting][gui]" )
+{
+    Character &guy = setup_character();
+    guy.set_skill_level( skill_fabrication, 2 );
+    guy.set_skill_level( skill_melee, 1 );
+    guy.set_skill_level( skill_cooking, 3 );
+
+    SECTION( "nested child that is itself nested" ) {
+        const recipe &outer = recipe_test_nested_outer.obj();
+        REQUIRE( outer.nested_category_data.count( recipe_test_tallow ) == 1 );
+        REQUIRE( outer.nested_category_data.count( recipe_test_nested_weapons ) == 1 );
+        REQUIRE( recipe_test_nested_weapons->is_nested() );
+        SECTION( "only grandchild's component" ) {
+            guy.i_add( item( itype_2x4 ) );
+            guy.invalidate_crafting_inventory();
+            CHECK( availability( guy, &outer ).can_craft );
+        }
+        SECTION( "only first child's components" ) {
+            guy.i_add( item( itype_fat ) );
+            guy.i_add( item( itype_fat ) );
+            guy.i_add( item( itype_knife_hunting ) );
+            guy.invalidate_crafting_inventory();
+            CHECK( availability( guy, &outer ).can_craft );
+        }
+        SECTION( "nothing" ) {
+            CHECK_FALSE( availability( guy, &outer ).can_craft );
+        }
+    }
+    SECTION( "child requiring a proficiency" ) {
+        const recipe &nested = recipe_test_nested_gate_prof.obj();
+        const std::vector<proficiency_id> required =
+            recipe_cudgel_test_steps_required_prof->required_proficiencies();
+        REQUIRE( std::count( required.begin(), required.end(),
+                             proficiency_prof_test_step_required ) == 1 );
+        guy.i_add( item( itype_2x4 ) );
+        guy.invalidate_crafting_inventory();
+        CHECK_FALSE( availability( guy, &nested ).can_craft );
+        guy.add_proficiency( proficiency_prof_test_step_required );
+        CHECK( availability( guy, &nested ).can_craft );
+    }
+    SECTION( "child with a strength requirement" ) {
+        const recipe &nested = recipe_test_nested_gate_charreq.obj();
+        REQUIRE( nested.nested_category_data.count(
+                     recipe_cudgel_character_requirements_restricted ) == 1 );
+        guy.set_str_bonus( 0 );
+        guy.set_str_base( 8 );
+        CHECK_FALSE( availability( guy, &nested ).can_craft );
+        guy.set_str_base( 9 );
+        CHECK( availability( guy, &nested ).can_craft );
+    }
+}
+
+
+TEST_CASE( "nested_child_display_reuses_camp_availability", "[crafting][gui]" )
+{
+    Character &guy = setup_character();
+    guy.set_skill_level( skill_fabrication, 2 );
+    guy.set_skill_level( skill_melee, 1 );
+    inventory camp_inv;
+    camp_inv.add_item( item( itype_2x4 ) );
+    std::map<const recipe *, availability> cache;
+    const recipe &child = recipe_cudgel_test_no_tools.obj();
+    const availability &first = cached_availability( cache, guy, child, true, &camp_inv );
+    REQUIRE( first.can_craft );
+    const availability &again = cached_availability( cache, guy, child, true, &camp_inv );
+    CHECK( &first == &again );
+    CHECK( cache.size() == 1 );
 }

@@ -23,6 +23,7 @@
 #include "character_id.h"
 #include "coordinates.h"
 #include "craft_command.h"
+#include "craft_reservation.h"
 #include "crafting_enums.h"
 #include "enums.h"
 #include "flat_set.h"
@@ -1005,9 +1006,9 @@ class item : public visitable
          * @param err Message to print if no more material will fit
          */
         int get_remaining_capacity_for_liquid( const item &liquid, bool allow_bucket = false,
-                                               std::string *err = nullptr ) const;
+                                               rem_cap_return *err = nullptr ) const;
         int get_remaining_capacity_for_liquid( const item &liquid, const Character &p,
-                                               std::string *err = nullptr ) const;
+                                               rem_cap_return *err = nullptr ) const;
 
         /**
          * Returns total capacity of pockets belonging to this item
@@ -3344,6 +3345,22 @@ class item : public visitable
         bool is_awaiting_collection() const;
         void set_awaiting_collection( bool v );
 
+        const std::vector<craft_reservation::binding> &get_reservations() const;
+        void set_reservations( std::vector<craft_reservation::binding> b );
+        std::optional<tripoint_abs_ms> get_reserved_tile() const;
+        void set_reserved_tile( std::optional<tripoint_abs_ms> tile );
+        // Allocates on first call.
+        int64_t reservation_owner_token();
+        int64_t peek_reservation_owner_token() const;
+        time_point get_reservation_expiry() const;
+        void set_reservation_expiry( time_point t );
+        uint8_t get_reservation_search_attempts() const;
+        void set_reservation_search_attempts( uint8_t n );
+        uint64_t get_reservation_pool_fingerprint() const;
+        void set_reservation_pool_fingerprint( uint64_t f );
+        uint8_t get_reservation_pause_reason() const;
+        void set_reservation_pause_reason( uint8_t r );
+
         std::vector<enchant_cache> get_proc_enchantments() const;
         std::vector<enchantment> get_defined_enchantments() const;
         // calculates the enchantment value as if this item were wielded.
@@ -3661,6 +3678,25 @@ class item : public visitable
                 // until the player explicitly collects (pours) it.
                 bool awaiting_collection = false;
 
+                std::vector<craft_reservation::binding> reservations;
+                // Empty while the craft is ultimately character-held.  Derived, not
+                // owned: a craft can change tile without changing uid.
+                std::optional<tripoint_abs_ms> reserved_tile;
+                // Not an item_uid, so it survives the copy that picking a craft up
+                // performs.
+                int64_t reservation_owner = 0;
+                // Set at commit, slid by a tick that ends without pausing, untouched by
+                // a pause.  Persisted so a reload cannot re-mint a lapsed lease.
+                time_point reservation_expires_at = calendar::before_time_starts;
+                // Raises the budget on the next attempt.  Persisted, or a reload would
+                // restart from the value that already failed.
+                uint8_t reservation_search_attempts = 0;
+                // A capped craft re-runs its search only when this changes.
+                uint64_t reservation_pool_fingerprint = 0;
+                // Persisted so a pause explains itself after a reload and announces on
+                // transition rather than every minute.
+                uint8_t reservation_pause_reason = 0;
+
                 // Original crafter (for env-check fallback when craft is on
                 // map/vehicle and the crafter is no longer on top of it).
                 character_id crafter_id;
@@ -3690,7 +3726,7 @@ class item : public visitable
         time_point countdown_point = calendar::turn_max;
 
         units::specific_energy specific_energy = units::from_joule_per_gram(
-                    -10 ); // Specific energy J/g. Negative value for unprocessed.
+                -10 ); // Specific energy J/g. Negative value for unprocessed.
         units::temperature temperature = units::from_kelvin( 0 );       // Temperature of the item .
         int mission_id = -1;       // Refers to a mission in game's master list
         int player_id = -1;        // Only give a mission to the right player!
@@ -3846,6 +3882,6 @@ struct disp_mod_by_barrel {
  * For display purposes only.
  */
 std::vector<std::pair<const item *, int>> get_item_duplicate_counts(
-        const std::list<const item *> &items );
+    const std::list<const item *> &items );
 
 #endif // CATA_SRC_ITEM_H

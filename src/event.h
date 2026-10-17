@@ -137,6 +137,7 @@ enum class event_type : int {
     u_var_changed,
     vehicle_moves,
     character_butchered_corpse,
+    character_effect_intensity_changed,
     num_event_types // last
 };
 
@@ -202,7 +203,7 @@ struct event_spec_character_item {
 // NOTE: Events are saved to the character file for later memorializing them. It's currently unsafe to ever remove any of these.
 // Removal will cause any save file with one of the saved events to be unable to load.
 // FIXME.
-static_assert( static_cast<int>( event_type::num_event_types ) == 113,
+static_assert( static_cast<int>( event_type::num_event_types ) == 114,
                "This static_assert is to remind you to add a specialization for your new "
                "event_type below" );
 
@@ -354,6 +355,17 @@ struct event_spec<event_type::character_gains_effect> {
     static constexpr std::array<event_field, 4> fields = {{
             { "character", cata_variant_type::character_id },
             { "bodypart", cata_variant_type::body_part},
+            { "effect", cata_variant_type::efftype_id },
+            { "intensity", cata_variant_type::int_ }
+        }
+    };
+};
+
+template<>
+struct event_spec<event_type::character_effect_intensity_changed> {
+    static constexpr std::array<event_field, 4> fields = {{
+            { "character", cata_variant_type::character_id },
+            { "bodypart", cata_variant_type::body_part },
             { "effect", cata_variant_type::efftype_id },
             { "intensity", cata_variant_type::int_ }
         }

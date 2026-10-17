@@ -42,6 +42,7 @@
 #include "character_attire.h"
 #include "character_id.h"
 #include "character_martial_arts.h"
+#include "craft_reservation.h"
 #include "creature.h"
 #include "creature_tracker.h"
 #include "cursesdef.h"
@@ -749,13 +750,13 @@ void npc::randomize( const npc_class_id &type, const npc_template_id &tem_id )
     personality.altruism += myclass->roll_altruism();
 
     personality.aggression = std::clamp<int8_t>( personality.aggression,
-                             NPC_PERSONALITY_MIN, NPC_PERSONALITY_MAX );
+        NPC_PERSONALITY_MIN, NPC_PERSONALITY_MAX );
     personality.bravery = std::clamp<int8_t>( personality.bravery,
-                          NPC_PERSONALITY_MIN, NPC_PERSONALITY_MAX );
+        NPC_PERSONALITY_MIN, NPC_PERSONALITY_MAX );
     personality.collector = std::clamp<int8_t>( personality.collector,
-                            NPC_PERSONALITY_MIN, NPC_PERSONALITY_MAX );
+        NPC_PERSONALITY_MIN, NPC_PERSONALITY_MAX );
     personality.altruism = std::clamp<int8_t>( personality.altruism,
-                           NPC_PERSONALITY_MIN, NPC_PERSONALITY_MAX );
+        NPC_PERSONALITY_MIN, NPC_PERSONALITY_MAX );
 
     for( Skill &skill : Skill::skills ) {
         int level = myclass->roll_skill( skill.ident() );
@@ -769,7 +770,7 @@ void npc::randomize( const npc_class_id &type, const npc_template_id &tem_id )
     int days_since_cata = to_days<int>( calendar::turn - calendar::start_of_cataclysm );
     double time_influence = days_since_cata >= 180 ? 3.0 : 6.0 - 3.0 * days_since_cata / 180.0;
     double weight_percent = std::clamp<double>( chi_squared_roll( time_influence ) / 5.0,
-                            0.2, 5.0 );
+        0.2, 5.0 );
     set_stored_kcal( weight_percent * get_healthy_kcal() );
     if( !needs_food() ) {
         set_stored_kcal( get_healthy_kcal() );
@@ -887,7 +888,7 @@ void npc::randomize_personality()
     personality.collector = rng( -1, NPC_PERSONALITY_MAX );
     // Normal distribution. Mean = 0, stddev = 3, clamp at NPC_PERSONALITY_MIN and NPC_PERSONALITY_MAX. Rounded to return integer value.
     personality.altruism = std::round( std::clamp( normal_roll( 0, 3 ),
-                                       static_cast<double>( NPC_PERSONALITY_MIN ), static_cast<double>( NPC_PERSONALITY_MAX ) ) );
+        static_cast<double>( NPC_PERSONALITY_MIN ), static_cast<double>( NPC_PERSONALITY_MAX ) ) );
 }
 
 void npc::learn_ma_styles_from_traits()
@@ -1179,7 +1180,7 @@ void npc::starting_inv_passtime()
     //extra items if storage allows
     int items_added = 0;
     int items_limit = 2 + rng_normal( 4 * ( static_cast<double>( std::min( days_since_cata,
-                                            max_time ) ) / static_cast<double>( max_time ) ) );
+        max_time ) ) / static_cast<double>( max_time ) ) );
     if( one_in( 16 ) ) {
         items_limit += rng( 8, 12 );
     } else if( one_in( 16 ) ) {
@@ -1780,7 +1781,7 @@ void npc::invalidate_range_cache()
         confident_range_cache = 1;
     } else if( weapon->is_gun() ) {
         confident_range_cache = confident_shoot_range( *weapon,
-                                most_accurate_aiming_method_limit( *weapon ) );
+            most_accurate_aiming_method_limit( *weapon ) );
     } else {
         confident_range_cache = weapon->reach_range( *this ).first;
     }
@@ -3402,7 +3403,7 @@ void npc::die( map *here, Creature *nkiller )
 
     if( Character *ch = dynamic_cast<Character *>( killer ) ) {
         get_event_bus().send<event_type::character_kills_character>( ch->getID(), getID(), get_name(),
-                myclass.c_str() );
+            myclass.c_str() );
     }
     Character &player_character = get_player_character();
     if( killer == &player_character ) {
@@ -3947,6 +3948,11 @@ std::function<bool( const tripoint_bub_ms & )> npc::get_path_avoid() const
         if( sees_dangerous_field( p ) ) {
             return true;
         }
+        // pathfinder prices bashing itself. guarding only movement functions would
+        // repath into the same wall every turn.
+        if( craft_reservation::bashing_would_break_reservation( here, *this, p ) ) {
+            return true;
+        }
         return false;
     };
 }
@@ -3986,7 +3992,7 @@ std::vector<std::string> npc::extended_description() const
                                      colorize( npc_attitude_name( get_attitude() ), symbol_color() ) ) );
 
     tmp.emplace_back( sees( here, player_character ) ? colorize( _( "Aware of your presence" ),
-                      c_yellow ) :
+            c_yellow ) :
                       colorize( _( "Unaware of you" ), c_green ) );
 
     if( hit_by_player ) {
@@ -4302,13 +4308,13 @@ bool npc_follower_rules::has_override_enable( ally_rule test ) const
 void npc_follower_rules::enable_override( ally_rule setit )
 {
     override_enable = static_cast<ally_rule>( static_cast<int>( override_enable ) |
-                      static_cast<int>( setit ) );
+        static_cast<int>( setit ) );
 }
 
 void npc_follower_rules::disable_override( ally_rule clearit )
 {
     override_enable = static_cast<ally_rule>( static_cast<int>( override_enable ) &
-                      ~static_cast<int>( clearit ) );
+        ~static_cast<int>( clearit ) );
 }
 
 bool npc_follower_rules::has_override( ally_rule test ) const

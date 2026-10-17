@@ -21,6 +21,7 @@
 #include "item.h"
 #include "item_stack.h"
 #include "json.h"
+#include "magic_ter_furn_transform.h"
 #include "map.h"
 #include "map_scale_constants.h"
 #include "mapdata.h"
@@ -103,6 +104,7 @@ std::string enum_to_string<sub_generator_type>( sub_generator_type data )
         case sub_generator_type::pre_burn: return "pre_burn";
         case sub_generator_type::place_blood: return "place_blood";
         case sub_generator_type::aftershock_ruin: return "aftershock_ruin";
+        case sub_generator_type::ter_furn_transform: return "ter_furn_transform";
         // *INDENT-ON*
         case sub_generator_type::last:
             break;
@@ -143,6 +145,7 @@ void pp_sub_generator::load( const JsonObject &jo )
 {
     mandatory( jo, false, "type", type );
     optional( jo, false, "attempts", attempts, 0 );
+    optional( jo, false, "ter_furn_transform_used", ter_furn_transform_used );
     optional( jo, false, "chance", chance, 0 );
     optional( jo, false, "min_intensity", min_intensity, 0 );
     optional( jo, false, "max_intensity", max_intensity, 0 );
@@ -258,9 +261,21 @@ void pp_sub_generator::check( const std::string &ctx ) const
                           ctx, tname );
             }
             break;
+        case sub_generator_type::ter_furn_transform:
+            if( attempts != 0 || min_intensity != 0 ||
+                max_intensity != 0 || scaling_days_start != 0 || scaling_days_end != 0 ) {
+                debugmsg( "pp_generator '%s' %s: attempts, min_intensity, max_intensity, scaling_days_start and scaling_days_end are not used for this type",
+                          ctx, tname );
+            }
+            break;
         case sub_generator_type::last:
             debugmsg( "pp_generator '%s': invalid sub_generator_type 'last'", ctx );
             break;
+    }
+
+    if( ter_furn_transform_used.has_value() && type != sub_generator_type::ter_furn_transform ) {
+        debugmsg( "pp_generator '%s': 'ter_furn_transform_used' cannot be used outside of 'ter_furn_transform' type",
+                  ctx );
     }
 
     if( min_intensity > max_intensity && max_intensity != 0 ) {
@@ -646,7 +661,7 @@ static void execute_place_blood( map &md,
 
             if( behavior_roll <= 20 ) {
                 if( tile_can_have_blood( md, current_tile, md.has_flag_ter( ter_furn_flag::TFLAG_WALL,
-                                         current_tile ), days_since_cataclysm ) ) {
+                        current_tile ), days_since_cataclysm ) ) {
                     md.add_field( current_tile, field_fd_blood );
                 }
             } else if( behavior_roll <= 60 ) {
@@ -670,9 +685,9 @@ static void execute_aftershock_ruin( map &md, const tripoint_abs_omt &p,
         }
     }
     bool above_open_air = overmap_buffer.ter( tripoint_abs_omt( p.x(), p.y(),
-                          p.z() + 1 ) ) == oter_open_air;
+        p.z() + 1 ) ) == oter_open_air;
     bool above_ruined = overmap_buffer.ter( tripoint_abs_omt( p.x(), p.y(),
-                                            p.z() + 1 ) ) == oter_afs_ruins_dynamic;
+        p.z() + 1 ) ) == oter_afs_ruins_dynamic;
 
     // applied -> fully ruined, skipped -> smashed-up, otherwise 50% roll.
     bool full_ruin_roll;
@@ -761,6 +776,21 @@ static void execute_aftershock_ruin( map &md, const tripoint_abs_omt &p,
                 md.furn_set( p, furn_str_id::NULL_ID() );
                 md.furn_set( p, furn_f_wreckage );
             }, current_tile.xy(), 3 );
+        }
+    }
+}
+
+static void execute_ter_furn_transform( map &md,
+                                        const std::list<tripoint_bub_ms> &all_points_in_map,
+                                        const pp_sub_generator &sg )
+{
+    if( !sg.ter_furn_transform_used.has_value() ) {
+        return;
+    }
+
+    for( const tripoint_bub_ms &current_tile : all_points_in_map ) {
+        if( x_in_y( sg.chance, 100 ) ) {
+            sg.ter_furn_transform_used.value()->transform( md, current_tile );
         }
     }
 }
@@ -900,6 +930,9 @@ void pp_generator::execute( map &md, const tripoint_abs_omt &p,
                 break;
             case sub_generator_type::aftershock_ruin:
                 execute_aftershock_ruin( md, p, dec );
+                break;
+            case sub_generator_type::ter_furn_transform:
+                execute_ter_furn_transform( md, all_points_in_map, sg );
                 break;
             case sub_generator_type::last:
                 debugmsg( "Invalid sub_generator_type in pp_generator '%s'", id.str() );

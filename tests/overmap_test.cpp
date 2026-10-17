@@ -66,6 +66,8 @@ static const overmap_connection_id overmap_connection_local_road( "local_road" )
 static const overmap_special_id overmap_special_Cabin( "Cabin" );
 static const overmap_special_id overmap_special_Lab( "Lab" );
 
+static const region_settings_id region_settings_default( "default" );
+
 class overmap_test_helper
 {
     public:
@@ -185,8 +187,7 @@ TEST_CASE( "set_and_get_overmap_scents", "[overmap]" )
 TEST_CASE( "default_overmap_generation_always_succeeds", "[overmap][slow]" )
 {
     overmap_buffer.clear();
-    const int city_size = overmap_buffer.get_default_settings(
-                              point_abs_om() ).get_settings_city().city_size;
+    const int city_size = region_settings_default->get_settings_city().city_size;
     int overmaps_to_construct = 10;
     for( const point_abs_om &candidate_addr : closest_points_first( point_abs_om(), 10 ) ) {
         // Skip populated overmaps.
@@ -194,7 +195,7 @@ TEST_CASE( "default_overmap_generation_always_succeeds", "[overmap][slow]" )
             continue;
         }
         overmap_special_batch test_specials = overmap_specials::get_default_batch( candidate_addr,
-                                              city_size );
+            city_size );
         overmap_buffer.create_custom_overmap( candidate_addr, test_specials );
         for( const overmap_special_placement &special_placement : test_specials ) {
             const overmap_special *special = special_placement.special_details;
@@ -571,8 +572,7 @@ TEST_CASE( "overmap_terrain_coverage", "[overmap][slow]" )
         int occ_max;
     };
     std::unordered_map<oter_type_id, std::vector<special_spawn_info>> terrain_to_specials;
-    const int city_size = overmap_buffer.get_default_settings(
-                              point_abs_om() ).get_settings_city().city_size;
+    const int city_size = region_settings_default->get_settings_city().city_size;
     for( const overmap_special &sp : overmap_specials::get_all() ) {
         if( !sp.can_spawn( city_size ) ) {
             continue;
@@ -712,12 +712,12 @@ TEST_CASE( "overmap_terrain_coverage", "[overmap][slow]" )
             overmap_buffer.reset();
             overmap_special_batch custom_batch( overmap_origin, filtered );
             for( const point_abs_om &om_cur :
-                 closest_points_first( overmap_origin, 0, 3 ) ) {
+                 closest_points_first( overmap_origin, 0, 9 ) ) {
                 overmap_buffer.create_custom_overmap( om_cur, custom_batch );
             }
             // Scan the custom overmaps for newly-placed terrains.
             for( const point_abs_om &om_cur :
-                 closest_points_first( overmap_origin, 0, 5 ) ) {
+                 closest_points_first( overmap_origin, 0, 9 ) ) {
                 point_abs_omt omt_start = project_to<coords::omt>( om_cur );
                 if( overmap_buffer.ter_existing( { omt_start, 0 } ) == oter_id() ) {
                     continue;
@@ -1160,8 +1160,8 @@ TEST_CASE( "railroad_stations_join_the_network", "[.][overmap][railroads]" )
 {
     const overmap_special_id id( GENERATE( "Railway Station", "railroad_station_city" ) );
     const om_direction::type direction = GENERATE( om_direction::type::north,
-                                         om_direction::type::east, om_direction::type::south,
-                                         om_direction::type::west );
+        om_direction::type::east, om_direction::type::south,
+        om_direction::type::west );
     CAPTURE( id.str(), direction );
     REQUIRE( id.is_valid() );
     REQUIRE( overmap_connection_local_railroad.is_valid() );

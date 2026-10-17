@@ -183,7 +183,7 @@ BENCHMARK_TEST_CASE( "map_memory_first_exploration_compressed_archive",
             ( PATH_INFO::world_base_save_path() / "mmr.dict" ).get_unrelative_path();
         {
             const std::shared_ptr<zzip_stack> packed = zzip_stack::create_from_folder(
-                        archive, source, dictionary );
+                    archive, source, dictionary );
             REQUIRE( packed != nullptr );
             REQUIRE( packed->get_entries().size() == archive_regions );
         }
