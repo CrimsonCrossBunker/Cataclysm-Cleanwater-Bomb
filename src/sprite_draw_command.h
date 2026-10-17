@@ -21,8 +21,8 @@ struct sprite_draw_command {
     std::optional<std::array<std::uint8_t, 4>> gray_overlay;
     // Owner-captured values for the smooth-light shader and classic shader tint.
     // No live map, tileset, or GPU resource is retained in either payload.
-    std::optional<smooth_lighting::lit_quad_params> lighting;
-    std::optional<std::array<std::uint8_t, 4>> texture_mod;
+    std::optional<smooth_lighting::lit_quad_params> lighting = std::nullopt;
+    std::optional<std::array<std::uint8_t, 4>> texture_mod = std::nullopt;
 };
 
 #endif // CATA_SRC_SPRITE_DRAW_COMMAND_H
