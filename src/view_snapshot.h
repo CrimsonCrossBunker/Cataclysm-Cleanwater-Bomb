@@ -7,6 +7,7 @@
 #include <optional>
 #include <string>
 #include <variant>
+#include <utility>
 #include <vector>
 
 #include "character_id.h"
@@ -235,7 +236,57 @@ struct tile_render_info {
 class draw_points_cache_t
 {
     public:
-        using row_vec = std::vector<tile_render_info>;
+        // The variant kind is fixed when an entry is appended. Keep owned
+        // indices for sprites, so repeated owner passes need not rescan fog
+        // entries. Indices survive vector relocation and retain painter order.
+        class row_vec
+        {
+            public:
+                template<typename... Args>
+                void emplace_back( Args &&...args ) {
+                    entries_.emplace_back( std::forward<Args>( args )... );
+                    if( std::holds_alternative<tile_render_info::sprite>( entries_.back().var ) ) {
+                        try {
+                            sprite_indices_.push_back( entries_.size() - 1 );
+                        } catch( ... ) {
+                            entries_.pop_back();
+                            throw;
+                        }
+                    }
+                }
+                void reserve( std::size_t count ) {
+                    entries_.reserve( count );
+                    sprite_indices_.reserve( count );
+                }
+                void clear() {
+                    entries_.clear();
+                    sprite_indices_.clear();
+                }
+                std::size_t size() const {
+                    return entries_.size();
+                }
+                tile_render_info &operator[]( std::size_t index ) {
+                    return entries_[index];
+                }
+                const std::vector<std::size_t> &sprite_indices() const {
+                    return sprite_indices_;
+                }
+                auto begin() {
+                    return entries_.begin();
+                }
+                auto end() {
+                    return entries_.end();
+                }
+                auto begin() const {
+                    return entries_.begin();
+                }
+                auto end() const {
+                    return entries_.end();
+                }
+            private:
+                std::vector<tile_render_info> entries_;
+                std::vector<std::size_t> sprite_indices_;
+        };
 
         // Row storage for a single z-level, addressed by absolute screen row.
         // row_base is the absolute row of rows[0].

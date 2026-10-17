@@ -45,6 +45,7 @@
 #include "options.h"
 #include "point.h"
 #include "rng.h"
+#include "safe_reference.h"
 #include "type_id.h"
 #include "units.h"
 #include "value_ptr.h"
@@ -57,6 +58,11 @@
 
 struct scent_block;
 struct terrain_growth_state;
+
+namespace vision_preparation
+{
+class frame;
+}
 
 namespace catacurses
 {
@@ -104,6 +110,14 @@ struct wrapped_vehicle {
 
 using VehicleList = std::vector<wrapped_vehicle>;
 class map;
+namespace ai_reachability
+{
+class geometry_view;
+struct snapshot;
+bool capture_geometry( const map &world, snapshot &values );
+bool geometry_matches( const map &world, const snapshot &values );
+} // namespace ai_reachability
+
 
 class weather_generator;
 
@@ -374,9 +388,14 @@ class map
         // (JSON mapgen and monster reproduction). Mapgen code should use place_spawns() instead.
         friend class jmapgen_monster;
         friend class monster;
+        friend class map_movement_query;
 
         // for testing
         friend class map_meddler;
+        // Owner-only snapshot boundary. Workers receive values, never map/grid pointers.
+        friend class ai_reachability::geometry_view;
+        friend bool ai_reachability::capture_geometry( const map &, ai_reachability::snapshot & );
+        friend bool ai_reachability::geometry_matches( const map &, const ai_reachability::snapshot & );
         friend void clear_fields( int zlevel );
 
     protected:
@@ -1888,6 +1907,9 @@ class map
 
         /** return @ref abs_sub */
         tripoint_abs_sm get_abs_sub() const;
+        // Owner-side receipt only; expires on destruction or context replacement.
+        // This is not permission to read or mutate a live map from a worker.
+        safe_reference<map> get_context_reference();
         /**
          * Translates local (to this map) coordinates of a square to global absolute coordinates.
          * Coordinates is in the system that is used by the ter/furn/i_at functions.
@@ -2322,6 +2344,33 @@ class map
         mutable std::array< std::unique_ptr<level_cache, level_cache_free>, OVERMAP_LAYERS > caches;
 
         mutable std::array< std::unique_ptr<pathfinding_cache>, OVERMAP_LAYERS > pathfinding_caches;
+        // Not serialized: loading, shifting or changing the coordinate context
+        // retires pending owner receipts, including reloads at the same origin.
+        struct context_lifetime {
+            std::optional<safe_reference_anchor> anchor;
+            context_lifetime() = default;
+            context_lifetime( context_lifetime &&other ) noexcept {
+                other.reset();
+            }
+            context_lifetime &operator=( context_lifetime &&other ) noexcept {
+                reset();
+                other.reset();
+                return *this;
+            }
+            void reset() noexcept {
+                anchor.reset();
+            }
+            safe_reference<map> reference_to( map *owner ) {
+                if( !anchor ) {
+                    anchor.emplace();
+                }
+                return anchor->reference_to( owner );
+            }
+        };
+        context_lifetime context_lifetime_;
+        // Owner-thread capture/merge; workers never retain map/cache references.
+        std::unique_ptr<vision_preparation::frame> vision_preparation_;
+        double vision_horizontal_cost_ms_ = 0.0;
         /**
          * Set of submaps that contain active items in absolute coordinates.
          */

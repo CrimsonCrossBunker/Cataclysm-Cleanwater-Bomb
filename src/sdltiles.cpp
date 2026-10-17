@@ -1,3 +1,4 @@
+#include "tile_preparation.h"
 #include "cursesdef.h" // IWYU pragma: associated
 #include "sdltiles.h" // IWYU pragma: associated
 
@@ -2818,6 +2819,11 @@ bool renderer_recovery_test_support::install_character_preview_targets()
 bool renderer_recovery_test_support::has_character_preview_targets()
 {
     return tilecontext && ( tilecontext->char_preview_work_tex || tilecontext->char_preview_tex );
+}
+
+bool renderer_recovery_test_support::tile_preparation_used_workers()
+{
+    return tilecontext && tilecontext->preparation_ && tilecontext->preparation_->used_workers();
 }
 
 void renderer_recovery_test_support::remove_character_preview_context()

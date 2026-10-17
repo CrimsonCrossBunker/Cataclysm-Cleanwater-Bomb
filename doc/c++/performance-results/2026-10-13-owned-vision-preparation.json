@@ -1,0 +1,603 @@
+{
+  "schema": 1,
+  "batch": 32,
+  "date": "2026-10-13",
+  "name": "owned-vision-preparation",
+  "baseline": "d2b6e3c05335ff63c2e133188b26e7a0031d5178",
+  "source_commit": "802f15ba2c26cb327d4b98ab6edb92c06dcc3c80",
+  "branch": "codex/multithreading-stage1-20261012",
+  "acceptance": "First costly task has safe parallel ownership and repeatable whole-boundary benefit. Local Linux SDL3 acceptance only; no publication or release claim.",
+  "design": {
+    "owner": "map owns executor, snapshot, private outputs, leases and measured-cost admission. Owner captures all21 transparency/floor layers and current origin/direction/distance policy.",
+    "workers": "Existing persistent cata_thread_pool, at most4 workers and4 jobs per synchronous request. Pure horizontal kernels use owned immutable values and private output blocks; no world, gameplay RNG, Lua or SDL access.",
+    "merge": "Drain all submitted futures, validate owner/generation/cancellation, then fixed chunk/z/x/y std::max merge. Negative infinity preserves untouched/negative/NaN/tie/signed-zero behavior. Vertical casting stays on owner.",
+    "failure": "Partial thread startup joined by existing pool; allocation/enqueue/worker exceptions drain before serial fallback. Nested/cheap/first/stale/cancelled requests do not apply private output. Pool is destroyed before buffers.",
+    "legacy_safety": "Legacy shared-output float and fragment casting remains serial in canonical order; overlapping horizontal axes/diagonals cannot safely share writes.",
+    "admission": "radius>=32, preceding horizontal-only cost>=2ms, requested workers>=2, owner permits workers. First/cheap update serial; no snapshot/pool allocation below admission.",
+    "default": "VISION_PREPARATION_WORKERS=4 only on Linux SDL3 desktop reporting>=4 logical CPUs. Other platforms/curses/Android/fewer CPUs default0. Active multiplayer always refuses admission. Explicit0 is the rollback; restart required.",
+    "lua": "Only require(\"ccb\") / Lua Platform v1; no second runtime or scheduler.",
+    "buffer_bytes_per_admitted_map": 7683984
+  },
+  "configuration": {
+    "machine": "Linux x86_64 AMD Ryzen7 5800H,8cores/16logical; affinity0..15",
+    "compiler": "Clang23.1.1 C++17 Release SDL3 tiles/sound LuaPlatformv1 TRACY=ON LTO=OFF LOCALIZE=OFF; build jobs2",
+    "sdl_runtime": "3.4.18",
+    "backend": "X11/OpenGL over Wayland",
+    "pixels": [
+      2880,
+      1800
+    ],
+    "tileset": "UNDEAD_PEOPLE",
+    "zoom": 4,
+    "tile_width": 8,
+    "RENDER_PREPARATION_WORKERS": 0,
+    "MULTITHREADING_ENABLED": false,
+    "TRACY_NO_SYS_TRACE": 1,
+    "TRACY_PORT": 8093,
+    "measured_binary_sha256": {
+      "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile/src/Release/cataclysm-tiles": "ed955a58e7a8d794f2be56333c18af909cb0f78d9b2a5de57514a7c7d40be213",
+      "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile/Release/ccb-sdl3-acceptance": "149f2898ca077e2569d2453147d6dcb64d21a639be8a37492e9415687eb58d4a"
+    },
+    "final_default_binary_sha256": {
+      "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile/src/Release/cataclysm-tiles": "50ec9655b932b5e41a5efdc2b61765d08864b373fa0f99be6e60cdcfc804cef6",
+      "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile/Release/ccb-sdl3-acceptance": "929dec7609977296e1892c9c7e8c3c1a839bf5eb3e127c71705a023723abb977"
+    },
+    "reuse": "All8 computational source inputs are byte-identical between measured and final binaries. Only options.cpp default/description/include changed. Rebuilt/relinked and reran native20/5329 plus real default-mode smoke; retained unchanged concurrency and explicit0/4 timing evidence."
+  },
+  "measurement": {
+    "selection": "Batch31 cast mean4.224608ms; two horizontal batches mean2.096161ms each. Linux perf shows tile drawing still dominates; this batch isolates the costly CPU visibility task, not all-frame rendering or monster AI.",
+    "sampling": "Main TID cycles:u999Hz, mono clock, DWARF32768; all-process30s perf stat task-clock plus native enabled CATA zones captured through Tracy0.14.1.",
+    "boundary": "vision.total includes owned snapshot, queue, private clear/horizontal compute, wait, deterministic merge and owner vertical work. Common seen-cache clear before this scope and subsequent ledge processing are excluded equally.",
+    "cpu_scope": "30s task-clock includes all game threads, user+kernel, client Tracy and idle redraw; excludes external collectors. Not kernel-only or turn-only CPU.",
+    "statistics": "Five alternating paired0/4 per scene; distribution of per-run zone means; paired95% t4 intervals. Samples are not milliseconds; inclusive nested hotspots are not summed.",
+    "recorded_perf_lost_events": 0,
+    "unresolved_leaf_percent_range": [
+      26.983051,
+      32.717001
+    ],
+    "environment": "Per-trial affinity/loadavg/CPU-IO-memory PSI recorded; no overlapping compiler/capture/export/game trials.",
+    "trace_reader": "Two system-trace-on worker captures failed offline reader export at tidToPid metadata; excluded timing, native exits/footers valid and raw files preserved. Official TRACY_NO_SYS_TRACE=1 used for BOTH sides of all40 fresh runs; application CATA zones and Linux perf still enabled. No claim of transport truncation or vendor-source repair."
+  },
+  "scenes": [
+    {
+      "name": "carrier",
+      "fixture_manifest_sha256": "7bda417f85d9decfe74c3837c293544a800098170b102bdac38af9bdb6280f13",
+      "inputs": {
+        "keys": "k",
+        "count": 32,
+        "cadence_s": 0.5
+      },
+      "valid_runs": {
+        "serial": 5,
+        "four_workers": 5
+      },
+      "native_final": {
+        "turn": 5212849,
+        "location": [
+          5495,
+          7417,
+          2
+        ],
+        "monsters": 0
+      },
+      "normalized_player_sha256": "8f0d4e3095e8a415287b224de4367ff270f289139d90cbb8f94f48a47377fb35",
+      "timing": {
+        "valid_per_config": {
+          "0": 5,
+          "4": 5
+        },
+        "vision_total": {
+          "per_config": {
+            "0": {
+              "mean": 3.477738,
+              "median": 3.500546,
+              "stddev": 0.055847,
+              "min": 3.402793,
+              "max": 3.539565
+            },
+            "4": {
+              "mean": 2.534977,
+              "median": 2.527516,
+              "stddev": 0.156744,
+              "min": 2.331645,
+              "max": 2.749942
+            }
+          },
+          "paired_delta": [
+            -1.20792,
+            -1.04065,
+            -0.875277,
+            -0.902143,
+            -0.687814
+          ],
+          "paired95_t4_interval": [
+            -1.184083,
+            -0.701439
+          ],
+          "reduction_percent": 27.108447
+        },
+        "all_process30s_task_clock_ms": {
+          "per_config": {
+            "0": {
+              "mean": 9974.834,
+              "median": 9945.29,
+              "stddev": 94.426258,
+              "min": 9888.81,
+              "max": 10132.21
+            },
+            "4": {
+              "mean": 10261.488,
+              "median": 10234.74,
+              "stddev": 53.481794,
+              "min": 10230.02,
+              "max": 10355.2
+            }
+          },
+          "paired_delta": [
+            341.21,
+            289.45,
+            272.94,
+            222.99,
+            306.68
+          ],
+          "paired95_t4_interval": [
+            232.437223,
+            340.870777
+          ],
+          "reduction_percent": -2.873772
+        }
+      },
+      "parallel_phase_mean_ms": {
+        "vision.capture": 0.247899,
+        "vision.queue": 0.011801,
+        "vision.worker_compute": 1.351721,
+        "vision.wait": 1.65352,
+        "vision.merge": 0.538911
+      },
+      "phase_scope": "Mean of per-run zone means. Worker compute overlaps owner wait and other workers; never add inclusive timings. vision.total is the actual combined critical-path boundary."
+    },
+    {
+      "name": "field",
+      "fixture_manifest_sha256": "1c2d0fcdff02b908921f8c19534109fe46f843e3f69eecd42ffe62dce090f11d",
+      "inputs": {
+        "keys": "k",
+        "count": 32,
+        "cadence_s": 0.5
+      },
+      "valid_runs": {
+        "serial": 5,
+        "four_workers": 5
+      },
+      "native_final": {
+        "turn": 5212849,
+        "location": [
+          5459,
+          7033,
+          0
+        ],
+        "monsters": 0
+      },
+      "normalized_player_sha256": "028357694fb0e824a8e023787b3f38cc313dac5916d6abfcd1b69262eea72cf9",
+      "timing": {
+        "valid_per_config": {
+          "0": 5,
+          "4": 5
+        },
+        "vision_total": {
+          "per_config": {
+            "0": {
+              "mean": 2.530158,
+              "median": 2.602709,
+              "stddev": 0.160993,
+              "min": 2.317738,
+              "max": 2.703443
+            },
+            "4": {
+              "mean": 2.07806,
+              "median": 2.045881,
+              "stddev": 0.226296,
+              "min": 1.840768,
+              "max": 2.335503
+            }
+          },
+          "paired_delta": [
+            -0.271857,
+            -0.862674,
+            -0.267206,
+            -0.334492,
+            -0.524265
+          ],
+          "paired95_t4_interval": [
+            -0.765163,
+            -0.139034
+          ],
+          "reduction_percent": 17.868399
+        },
+        "all_process30s_task_clock_ms": {
+          "per_config": {
+            "0": {
+              "mean": 3615.446,
+              "median": 3624.98,
+              "stddev": 41.770964,
+              "min": 3545.66,
+              "max": 3658.69
+            },
+            "4": {
+              "mean": 3735.636,
+              "median": 3738.15,
+              "stddev": 21.04318,
+              "min": 3708.4,
+              "max": 3762.35
+            }
+          },
+          "paired_delta": [
+            121.75,
+            113.17,
+            139.74,
+            162.74,
+            63.55
+          ],
+          "paired95_t4_interval": [
+            74.347082,
+            166.032918
+          ],
+          "reduction_percent": -3.324348
+        }
+      },
+      "parallel_phase_mean_ms": {
+        "vision.capture": 0.273343,
+        "vision.queue": 0.012062,
+        "vision.worker_compute": 1.019539,
+        "vision.wait": 1.141803,
+        "vision.merge": 0.551453
+      },
+      "phase_scope": "Mean of per-run zone means. Worker compute overlaps owner wait and other workers; never add inclusive timings. vision.total is the actual combined critical-path boundary."
+    },
+    {
+      "name": "room",
+      "fixture_manifest_sha256": "f5a27a86ddaefa359d6c45836ea5b3c62fab0b03746170d3c594ce6b5d56f780",
+      "inputs": {
+        "keys": "hl",
+        "count": 32,
+        "cadence_s": 0.5
+      },
+      "valid_runs": {
+        "serial": 5,
+        "four_workers": 5
+      },
+      "native_final": {
+        "turn": 5212849,
+        "location": [
+          5489,
+          7448,
+          0
+        ],
+        "monsters": 0
+      },
+      "normalized_player_sha256": "530534cb59b8c2e809f7588a8431db8db6055b1571bc8ab0823e66e950bf4ff1",
+      "timing": {
+        "valid_per_config": {
+          "0": 5,
+          "4": 5
+        },
+        "vision_total": {
+          "per_config": {
+            "0": {
+              "mean": 0.028895,
+              "median": 0.029656,
+              "stddev": 0.00149,
+              "min": 0.02692,
+              "max": 0.030184
+            },
+            "4": {
+              "mean": 0.030385,
+              "median": 0.030662,
+              "stddev": 0.003042,
+              "min": 0.026615,
+              "max": 0.034331
+            }
+          },
+          "paired_delta": [
+            -0.001902,
+            0.002975,
+            0.004674,
+            0.005114,
+            -0.003411
+          ],
+          "paired95_t4_interval": [
+            -0.003359,
+            0.006339
+          ],
+          "reduction_percent": -5.15645
+        },
+        "all_process30s_task_clock_ms": {
+          "per_config": {
+            "0": {
+              "mean": 2207.354,
+              "median": 2202.84,
+              "stddev": 23.369119,
+              "min": 2186.77,
+              "max": 2245.9
+            },
+            "4": {
+              "mean": 2196.616,
+              "median": 2195.87,
+              "stddev": 29.896811,
+              "min": 2156.02,
+              "max": 2239.42
+            }
+          },
+          "paired_delta": [
+            -50.03,
+            -0.12,
+            29.73,
+            -30.75,
+            -2.52
+          ],
+          "paired95_t4_interval": [
+            -48.818226,
+            27.342226
+          ],
+          "reduction_percent": 0.486465
+        }
+      },
+      "admission": "No capture/queue/worker zones; remains serial. Mean delta0.001490ms, paired95CI crosses0."
+    },
+    {
+      "name": "combat",
+      "fixture_manifest_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef",
+      "inputs": {
+        "keys": ".",
+        "count": 8,
+        "cadence_s": 0.5
+      },
+      "valid_runs": {
+        "serial": 5,
+        "four_workers": 5
+      },
+      "native_final": {
+        "turn": 5212820,
+        "location": [
+          5495,
+          7449,
+          2
+        ],
+        "monsters": 759
+      },
+      "normalized_player_sha256": "e098c30b077f3e1603a20405092ca7e9e0470626865c2eccada29209ee5c1204",
+      "timing": {
+        "valid_per_config": {
+          "0": 5,
+          "4": 5
+        },
+        "all_process30s_task_clock_ms": {
+          "per_config": {
+            "0": {
+              "mean": 9803.288,
+              "median": 9804.74,
+              "stddev": 30.663987,
+              "min": 9770.81,
+              "max": 9847.65
+            },
+            "4": {
+              "mean": 9867.226,
+              "median": 9870.85,
+              "stddev": 16.870278,
+              "min": 9839.53,
+              "max": 9881.51
+            }
+          },
+          "paired_delta": [
+            110.7,
+            66.11,
+            100.78,
+            -8.12,
+            50.22
+          ],
+          "paired95_t4_interval": [
+            5.272584,
+            122.603416
+          ],
+          "reduction_percent": -0.65221
+        },
+        "combat_cpu_zones": {
+          "monmove": {
+            "serial_run_means_ms": [
+              8.622349,
+              8.536873,
+              8.800794,
+              8.648181,
+              8.831214
+            ],
+            "four_worker_run_means_ms": [
+              9.243624,
+              9.251307,
+              8.909947,
+              9.082977,
+              8.942208
+            ],
+            "serial_mean_ms": 8.687882,
+            "four_worker_mean_ms": 9.086013,
+            "paired_delta_mean_ms": 0.39813,
+            "paired95_t4_interval_ms": [
+              0.048507,
+              0.747754
+            ],
+            "zones_per_run": [
+              8,
+              8,
+              8,
+              8,
+              8
+            ]
+          },
+          "simulate_turn_suffix": {
+            "serial_run_means_ms": [
+              18.880351,
+              18.944584,
+              19.477301,
+              19.066435,
+              19.411698
+            ],
+            "four_worker_run_means_ms": [
+              19.81765,
+              20.001632,
+              19.676186,
+              19.785767,
+              19.593626
+            ],
+            "serial_mean_ms": 19.156074,
+            "four_worker_mean_ms": 19.774972,
+            "paired_delta_mean_ms": 0.618898,
+            "paired95_t4_interval_ms": [
+              0.110424,
+              1.127373
+            ],
+            "zones_per_run": [
+              8,
+              8,
+              8,
+              8,
+              8
+            ]
+          },
+          "tiles.draw": {
+            "serial_run_means_ms": [
+              28.780218,
+              29.121866,
+              28.906831,
+              29.546451,
+              29.207259
+            ],
+            "four_worker_run_means_ms": [
+              28.971358,
+              29.315307,
+              29.212486,
+              29.190601,
+              29.211946
+            ],
+            "serial_mean_ms": 29.112525,
+            "four_worker_mean_ms": 29.18034,
+            "paired_delta_mean_ms": 0.067815,
+            "paired95_t4_interval_ms": [
+              -0.255398,
+              0.391027
+            ],
+            "zones_per_run": [
+              39,
+              39,
+              39,
+              39,
+              39
+            ]
+          }
+        }
+      },
+      "admission": "759 uncloaked monsters, only DEBUG_NODMG. Attacks/grabs/crush and normal AI execute. Fixed8pause sequence does not recast vision during the sampling window; no combat-AI speedup claimed.",
+      "phase_scope": "Action-aligned named CATA CPU scopes from the same10 accepted combat traces. Nested scopes overlap; draw includes idle redraw. This is latency context, not additional A/B runs."
+    }
+  ],
+  "regression": {
+    "native": {
+      "cases": 20,
+      "assertions": 5329,
+      "failures": 0,
+      "skips": 0,
+      "filter": "[shadowcasting],[vision][preparation]",
+      "seed": 20261012,
+      "order": "lex"
+    },
+    "coverage": "Bitwise full volume against canonical serial for metrics/directions/workers1/2/4/extreme origins/cumulative negatives/NaN/signed zero; owned-input deletion/captured distance/RNG sequence; stale/cancel/nested/reuse/bounded workers/MP-permission/serial cost-observation invariants.",
+    "sanitizers": "ASan/UBSan/LSan and TSan on actual preparation/shadowcasting/thread_pool/point boundary; two independent frames,9 reuse batches, concurrent first kernel initialization and cancellation/teardown. Crash-handler setup and initial worker RNG seed hooks stubbed only; not whole-game race/sanitizer proof.",
+    "faults": "54 owner allocation attempts(18positions x3),24 failed preparations with immediate bitwise reuse; actual worker span-list allocation exception; actual second pthread_create failure with partial-startup joining. All10 compile/run gates exited0.",
+    "gameplay": "All10 runs within each of4 scenes have one identical normalized active player+monster payload; latest zzip footer and XXH64 verified. Only learned recipe-ID ordering and game_save wall telemetry time_since_load/total_time_played plus corresponding event-row order normalized; other gameplay/actors/stats retained.",
+    "replay": "Eight native games: carrier32north and genuine combat8pause under0/4, then native save reload for each. Full normalized payload equal at replay and reload boundaries. Replay EOF saves before the physical manual-save next-prefix, so turns are5212848/5212819 respectively; fixed input counts/positions preserved.",
+    "replay_pairs": {
+      "carrier": {
+        "replay": "e41ca5d98df6c6a7fb596d84f7f67ffd70569e9504813865ce3375658359ba68",
+        "reload": "fa0064bc38969ef7d0b34b5fe204f489ae262b0d47af7378635b397474a6039c"
+      },
+      "combat": {
+        "replay": "ecaa77a23f1105220e05e71603a61a0ec65222adf30b5b6cb014ca1b453504de",
+        "reload": "d26dda49779f8ed550b9ab1beb95c822026dd21ac0e660ece04f48b7245a031c"
+      }
+    },
+    "default_smoke": {
+      "state": "passed",
+      "trial": "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/trials/vision-default-carrier-01",
+      "option_override_absent": true,
+      "actual_worker_chunks_per_cast": 4,
+      "casts": 32,
+      "worker_zones": 128,
+      "native_exit": 0,
+      "normalized_player_sha256": "8f0d4e3095e8a415287b224de4367ff270f289139d90cbb8f94f48a47377fb35",
+      "same_as_explicit_zero_and_four": true,
+      "binary_sha256": "50ec9655b932b5e41a5efdc2b61765d08864b373fa0f99be6e60cdcfc804cef6",
+      "collectors_exit": [
+        0,
+        0,
+        0
+      ],
+      "recorded_perf_loss": 0,
+      "scope": "Actual Linux SDL3 default configuration smoke, not another5-pair benchmark. All8 computational inputs byte-identical to accepted40-run matrix; only options.cpp default/description/include changed."
+    },
+    "prior_renderer_sound": "Unchanged combined58-case baseline gate retained within its scope; not rerun as current full test corpus."
+  },
+  "source_inputs_sha256": {
+    "src/shadowcasting.cpp": "726a3d884f731323faf6a30f7efb352fba4ef18444678bbea647313abec5d244",
+    "src/shadowcasting.h": "d4faa616a3db096829ff5aa7f15a8377535e3ba7be1de23c1b7289be166cca02",
+    "src/vision_preparation.h": "ba929223712e131b59088e1aeca425f59a5f212a678a5ce5faff565764651f4a",
+    "src/vision_preparation.cpp": "84371afe5273b99975d88351c487a089816cccf3f6ae609af031199ae2f2eb8e",
+    "src/map.h": "5643b3fe737f6eb41aae88973197bb9d93d9f75980901e8462a0c7e3499003a3",
+    "src/map.cpp": "ae260cbb8be6739d176432897e0a2615a6df32c1b3dd62947dfcf40d09f70593",
+    "src/lightmap.cpp": "ec9a173a3a793bb1105fe667a3eb51f93226216b064ac64050b838e6c09f8640",
+    "src/options.cpp": "227a9a70f821d1e32b46b2a15b0467b3402583531c04d07150c557dab42915fd",
+    "tests/vision_preparation_test.cpp": "64ec15244360fca070962fde616d601693fc0b2b675359cfd907a29381bb101a"
+  },
+  "private_artifacts": {
+    "native_xml": {
+      "path": ".ccb-pr-evidence/native-combined/vision-default-job/native-tests.xml",
+      "sha256": "03ebd4e38306ae35432e537ddbcb466e180075c7b6348a9a4d608fe49bee94f9"
+    },
+    "native_build": {
+      "path": ".ccb-pr-evidence/native-combined/vision-default-job/build-progress.json",
+      "sha256": "adf9a2fcbe782ee34ff2bccbff6b422cfc37b6bc3b3626831489e9499b13a344"
+    },
+    "sanitizers": {
+      "path": ".ccb-pr-evidence/native-combined/vision-admission-job/sanitizers-progress.json",
+      "sha256": "01cdec31051c3e7b9a01f216494fe36a8c7043bf12c101d5fbb9755d2d7fa957"
+    },
+    "matrix": {
+      "path": ".ccb-pr-evidence/native-combined/vision-no-sys-trace-job/scene-ab-progress.json",
+      "sha256": "5a5105e5d174ef7f1803bb2e73fd673bc81cd08482a3bf67fd86e5f14d6f9ce2"
+    },
+    "raw_index": {
+      "path": ".ccb-pr-evidence/native-combined/vision-no-sys-trace-job/accepted-raw-index.json",
+      "sha256": "7a9a29fa9a7b3f5c19968e91dd3a12dd32853553b47aa5e6d62f89c2ed17b29f"
+    },
+    "replay": {
+      "path": ".ccb-pr-evidence/native-combined/vision-no-sys-trace-job/replay-progress.json",
+      "sha256": "fa197eb53fc5bc8a1bb1c8b76acce27d55d9499a8c54a99ae278b18427b83f2f"
+    },
+    "default_smoke": {
+      "path": ".ccb-pr-evidence/native-combined/vision-default-job/default-smoke.json",
+      "sha256": "57bab22a3720cbd87b7106c62dbb970fef04a89418c01a8b9afeb437f92e8a8a"
+    },
+    "reader_diagnosis": {
+      "path": ".ccb-pr-evidence/native-combined/vision-admission-job/reader-diagnosis.json",
+      "sha256": "0b7c27d8b6bb5c39e40feb9c00fd9e2d89f5c12f2d01ec41bb9d8454229f56ff"
+    },
+    "combat_latency": {
+      "path": ".ccb-pr-evidence/native-combined/vision-no-sys-trace-job/combat-latency-summary.json",
+      "sha256": "53c1246f95c9654447d93a0ba099bad925e3aafe23a1331e739d93ccb3e3a49d"
+    }
+  },
+  "limits": [
+    "Observed27.108% carrier and17.868% ordinary-field reductions apply to vision.total only. Exploration all-game30s CPU rises2.874%/3.324%; memory grows~7.33MiB per admitted map plus pool overhead.",
+    "Small-room absolute delta1.49microseconds; paired confidence interval crosses0. Dense combat total CPU+0.652%; no combat AI improvement, FPS/p95-frame/GPU claim. Combat monmove mean8.688->9.086ms(+0.398ms), suffix19.156->19.775ms(+0.619ms); paired intervals above0. Small absolute tradeoff is retained explicitly, not described as unchanged combat latency.",
+    "Fresh display-memory fixtures and actual ordinary field map shifts are tested; OS/disk caches are warm and generation/storage costs are distinguished. Reported multi-second cold-disk/brand-new-terrain stall is not reproduced or claimed fixed.",
+    "No full gameplay corpus, old-save fleet, live multiplayer device, cross-platform/default GPU/Vulkan or long-session acceptance. Multiplayer keeps owner serial and unvalidated platform defaults remain0.",
+    "Original Damon saves and other task/primary work untouched; raw saves/assets/binaries/perf captures remain private. No new push/PR/merge/release."
+  ],
+  "next_exact_action": "Stage1 ends after this local record and checkpoint. For a separately authorized next batch, inspect existing accepted perf exports for cata_tiles::draw/draw_from_id_string_internal and true-combat monmove; choose a measured owner-capture boundary before additional parallelism."
+}

@@ -28,6 +28,7 @@
 #include "coordinates.h"
 #include "map_scale_constants.h"
 #include "creature.h"
+#include "tile_category.h"
 #include "cuboid_rectangle.h"
 #include "hsv_color.h"
 #include "mapdata.h"
@@ -62,6 +63,7 @@ cata_shader::variant_kind compute_variant_kind( lit_level ll, bool use_nv_tiles 
 class Character;
 class map;
 class memorized_tile;
+class map;
 class monster;
 class nc_color;
 class pixel_minimap;
@@ -71,6 +73,14 @@ struct sprite_screen_bounds;
 struct tile_tint;
 struct tint_sprite_record;
 struct tile_render_info;
+class sprite_command_frame;
+struct tile_layer_view;
+struct creature_render_view;
+struct entity_render_view;
+namespace tile_preparation
+{
+class frame;
+}
 
 namespace catacurses
 {
@@ -96,28 +106,6 @@ struct tile_type {
     std::optional<smooth_lighting::light_anchor> light_anchor;
 
     std::vector<std::string> available_subtiles;
-};
-
-// Make sure to change TILE_CATEGORY_IDS if this changes!
-enum class TILE_CATEGORY {
-    NONE,
-    VEHICLE_PART,
-    TERRAIN,
-    ITEM,
-    FURNITURE,
-    TRAP,
-    FIELD,
-    LIGHTING,
-    MONSTER,
-    BULLET,
-    HIT_ENTITY,
-    WEATHER,
-    OVERMAP_TERRAIN,
-    OVERMAP_VISION_LEVEL,
-    OVERMAP_WEATHER,
-    MAP_EXTRA,
-    OVERMAP_NOTE,
-    last
 };
 
 const std::unordered_map<std::string, TILE_CATEGORY> to_TILE_CATEGORY = {
@@ -793,6 +781,8 @@ class cata_tiles
                                       std::string &draw_id );
 
     private:
+        unsigned int resolve_sprite_seed( const map &here, const std::string &found_id,
+                                          TILE_CATEGORY category, const tripoint_bub_ms &pos ) const;
         bool draw_from_id_string_internal( const std::string &id, const tripoint_bub_ms &pos, int subtile,
                                            int rota,
                                            lit_level ll, int retract, bool apply_night_vision_goggles, int &height_3d );
@@ -863,6 +853,7 @@ class cata_tiles
         bool would_apply_vision_effects( visibility_type visibility ) const;
         bool apply_vision_effects( const tripoint_bub_ms &pos, visibility_type visibility, int &height_3d );
         void draw_square_below( const point_bub_ms &p, const nc_color &col, int sizefactor );
+        bool draw_layer_view( const tile_layer_view &view, int &height_3d );
         bool draw_terrain( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
                            const std::array<bool, 5> &invisible );
         bool draw_furniture( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
@@ -885,6 +876,10 @@ class cata_tiles
         // or nullopt when it is unpainted or the VEHICLE_PART_COLOR option is off.
         std::optional<RGBColor> get_vpart_tint( const vehicle &veh,
                                                 const point_rel_ms &mount ) const;
+        std::optional<creature_render_view> capture_critter_view( const tripoint_bub_ms &p,
+                bool invisible ) const;
+        void draw_entity_view( const entity_render_view &view, const tripoint_bub_ms &p,
+                               lit_level ll, int &height_3d );
         bool draw_critter_at( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
                               const std::array<bool, 5> &invisible );
         bool draw_critter_above( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
@@ -1301,6 +1296,8 @@ class cata_tiles
         // Borrowed only while draw() owns its stack-local query frame. The
         // restoration guard also handles nested draws and exceptional exits.
         tile_lookup_frame *lookup_frame_ = nullptr;
+        // Synchronous preparation boundary; owns buffers/workers, never world data.
+        std::unique_ptr<tile_preparation::frame> preparation_;
         // Platform-owned sprite descriptors are populated during mod loading.
         // Keep the bound descriptor revision alongside the renderer revisions so
         // a cached atlas cannot outlive a descriptor change.
@@ -1346,6 +1343,11 @@ class cata_tiles
         // must not include map.h (map.h includes this header). Null outside the
         // sprite branch of the layer loop.
         const tile_render_info *m_cur_tile = nullptr;
+        // Immediate owner scratch; values still own their strings. Each root
+        // draw binds its own buffer and restores any enclosing draw on unwind.
+        tile_layer_view *layer_capture_ = nullptr;
+        // Owner-only frame binding. Commands carry values; resource handles stay here.
+        sprite_command_frame *command_frame_ = nullptr;
 
         // Set by draw_vpart around its draw_from_id_string call so the vehicle
         // part sprite gets recolored with the part's paint color; nullopt
@@ -1473,9 +1475,10 @@ class cata_tiles
         // would, as a quad with ground-relative vertices under the tile
         // anchored at `anchor`; a `standing` sprite takes its light along its
         // base line instead
-        void render_lit_sprite( const texture &tex, const SDL_Rect &dst, smooth_lighting::quarter_turn turn,
-                                CataFlipMode flip, const tripoint_bub_ms &pos, const point &anchor,
-                                bool standing );
+        smooth_lighting::lit_quad_params prepare_lit_sprite( const texture &tex, const SDL_Rect &dst,
+                smooth_lighting::quarter_turn turn,
+                CataFlipMode flip, const tripoint_bub_ms &pos, const point &anchor,
+                bool standing );
 
         bool in_animation = false;
 

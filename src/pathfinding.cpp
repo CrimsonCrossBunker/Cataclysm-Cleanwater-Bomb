@@ -62,9 +62,15 @@ struct path_data_layer {
     }
 };
 
+template<typename T, typename Compare>
+struct reusable_queue : std::priority_queue<T, std::vector<T>, Compare> {
+    void clear() {
+        this->c.clear();
+    }
+};
+
 struct pathfinder {
-    using queue_type =
-        std::priority_queue< std::pair<int, tripoint_bub_ms>, std::vector< std::pair<int, tripoint_bub_ms> >, pair_greater_cmp_first >;
+    using queue_type = reusable_queue<std::pair<int, tripoint_bub_ms>, pair_greater_cmp_first>;
     queue_type open;
     std::array< std::unique_ptr< path_data_layer >, OVERMAP_LAYERS > path_data;
 
@@ -85,7 +91,7 @@ struct pathfinder {
                 path_data[i + OVERMAP_DEPTH]->reset();
             }
         }
-        open = queue_type();
+        open.clear();
     }
 
     bool empty() const {
@@ -130,7 +136,46 @@ struct pathfinder {
 };
 } // namespace
 
-static pathfinder pf;
+struct pathfinding_workspace::state {
+    pathfinder ordinary;
+    std::vector<bool> grab_closed;
+    std::vector<bool> grab_open;
+    std::vector<int> grab_gscore;
+    std::vector<int> grab_parent;
+    reusable_queue<std::pair<int, int>, std::greater<>> grab_queue;
+    bool active = false;
+};
+
+pathfinding_workspace::lease::lease( std::shared_ptr<state> data ) : data_( std::move( data ) )
+{
+}
+
+pathfinding_workspace::lease::~lease()
+{
+    if( data_ ) {
+        data_->active = false;
+    }
+}
+
+pathfinding_workspace::state &pathfinding_workspace::lease::get() const
+{
+    return *data_;
+}
+
+pathfinding_workspace::lease pathfinding_workspace::acquire() const
+{
+    auto data = retained_;
+    if( !data || data->active ) {
+        data = std::make_shared<state>();
+        if( !retained_ ) {
+            retained_ = data;
+        }
+    }
+    // Allocation above can fail without latching the owner as busy. The lease
+    // releases on every exit, and keeps state alive even if its owner retires.
+    data->active = true;
+    return lease( std::move( data ) );
+}
 
 // Modifies `t` to point to a tile with `flag` in a 1-submap radius of `t`'s original value,
 // searching nearest points first (starting with `t` itself).
@@ -478,6 +523,8 @@ std::vector<tripoint_bub_ms> map::route( const tripoint_bub_ms &f,
     clip_to_bounds( min.x(), min.y(), min.z() );
     clip_to_bounds( max.x(), max.y(), max.z() );
 
+    auto search = get_pathfinding_cache_ref( f.z() ).workspace.acquire();
+    pathfinder &pf = search.get().ordinary;
     pf.reset( min.z(), max.z() );
 
     pf.add_point( 0, 0, f, f );
@@ -988,18 +1035,17 @@ std::vector<tripoint_bub_ms> route_with_grab(
 
     const int total_states = MAPSIZE_X * MAPSIZE_Y * GRAB_DIRS;
 
-    // Reuse heap-allocated arrays across calls
-    static std::vector<bool> closed;
-    static std::vector<bool> open;
-    static std::vector<int> gscore;
-    static std::vector<int> parent;
+    auto search = pf_cache.workspace.acquire();
+    auto &state = search.get();
+    auto &closed = state.grab_closed;
+    auto &open = state.grab_open;
+    auto &gscore = state.grab_gscore;
+    auto &parent = state.grab_parent;
 
-    if( static_cast<int>( closed.size() ) != total_states ) {
-        closed.resize( total_states );
-        open.resize( total_states );
-        gscore.resize( total_states );
-        parent.resize( total_states );
-    }
+    closed.resize( total_states );
+    open.resize( total_states );
+    gscore.resize( total_states );
+    parent.resize( total_states );
 
     // Only closed and open need clearing; gscore and parent are only read
     // for states where open[state] is true.
@@ -1007,8 +1053,8 @@ std::vector<tripoint_bub_ms> route_with_grab(
     std::fill( open.begin(), open.end(), false );
 
     // Priority queue: (f-score, state_index), smallest f-score first
-    using pq_entry = std::pair<int, int>;
-    std::priority_queue<pq_entry, std::vector<pq_entry>, std::greater<>> pq;
+    auto &pq = state.grab_queue;
+    pq.clear();
 
     const int start_grab_idx = grab_to_idx( start_grab );
     const int start_state = grab_state_index( start.xy(), start_grab_idx );

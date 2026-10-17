@@ -19,10 +19,24 @@ bool is_pool_worker_thread()
 cata_thread_pool::cata_thread_pool( unsigned int num_workers )
 {
     workers_.reserve( num_workers );
-    for( unsigned int i = 0; i < num_workers; ++i ) {
-        workers_.emplace_back( [this]() {
-            worker_loop();
-        } );
+    try {
+        for( unsigned int i = 0; i < num_workers; ++i ) {
+            workers_.emplace_back( [this]() {
+                worker_loop();
+            } );
+        }
+    } catch( ... ) {
+        // A later thread creation may fail after earlier workers started. Stop
+        // and join them before unwinding their joinable std::thread objects.
+        {
+            std::scoped_lock lock( mutex_ );
+            stop_ = true;
+        }
+        cv_.notify_all();
+        for( std::thread &worker : workers_ ) {
+            worker.join();
+        }
+        throw;
     }
 }
 

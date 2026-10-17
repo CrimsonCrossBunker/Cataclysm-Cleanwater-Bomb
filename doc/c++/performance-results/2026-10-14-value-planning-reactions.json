@@ -1,0 +1,236 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-14",
+  "batch": 39,
+  "baseline": "ea75721da561c34b55c92189df67260f2ed8e2b2",
+  "scope": "Numeric seen/near/mating/cub/weak reactions and group-morale/swarm policies separated from sequenced owner queries and effects. No new worker dispatch.",
+  "changes": [
+    "src/monmove.cpp",
+    "src/monster_planning_reaction.h",
+    "tests/monster_planning_reaction_test.cpp"
+  ],
+  "contracts": [
+    "Policy inputs/results contain primitive numeric/boolean values; they query no live world and consume no RNG.",
+    "Owner retains visibility, season, baby/group membership and target-health queries in existing order. Reaction results apply at the original effect points; conditional x_in_y and debug/aggro writes keep their order.",
+    "Player/NPC/reachable-monster reaction differences preserved: monsters have no near-hostile aggro draw and no mating reaction in that loop.",
+    "Weak-target anger/fear/placate priority and threshold<=70HP/<=40anger preserved.",
+    "Group morale preserves float addition before conversion of the whole sum to int, including negative morale.",
+    "Swarm policy returns only none/disperse/follow-ally; repeated zero-vector random draws and owner wandering/target writes remain unchanged."
+  ],
+  "validation": {
+    "configuration": "Linux Clang 23 Release SDL3 tiles/sound, Lua v1, TRACY=ON, jobs=2",
+    "native": {
+      "assertions": {
+        "successes": "109431",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "cases": {
+        "successes": "16",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "xml_sha256": "44aae72a70fe10446ecd50858f8e7a8354dd9c741530265232fb2dc22d406b3f"
+    },
+    "scoped_asan_ubsan_lsan": {
+      "assertions": {
+        "successes": "108261",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "cases": {
+        "successes": "15",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "xml_sha256": "bd6336af78d50f3909c5332f2162d685f7f096f7468d134675e0035e63f201ef"
+    },
+    "sanitizer_scope": "Numeric reaction/group/swarm policies, original owner query/effect/RNG ordering. Actual monmove.cpp, monster_destination_plan.cpp, policy header and affected tests/support instrumented ASan/UBSan/LSan; other common world objects Release. Unchanged target-selection oracle and map context/fault evidence reused; not whole-game safety proof. No new worker dispatch.",
+    "commands": [
+      [
+        "cmake",
+        "--build",
+        "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile",
+        "--config",
+        "Release",
+        "--target",
+        "cataclysm-tiles",
+        "ccb-sdl3-acceptance",
+        "ccb-reaction-asan",
+        "--parallel",
+        "2"
+      ],
+      [
+        "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile/Release/ccb-sdl3-acceptance",
+        "[planning_reaction],[destination_plan],[step_selection],[determinism],monster_attack",
+        "--rng-seed",
+        "20261014",
+        "--order",
+        "lex",
+        "--warn",
+        "NoTests",
+        "--user-dir",
+        "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/planning-reaction-stage4/native-user",
+        "--reporter",
+        "xml",
+        "--out",
+        "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/planning-reaction-stage4/native.xml"
+      ],
+      [
+        "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile/Release/ccb-reaction-asan",
+        "[planning_reaction],[destination_plan],[step_selection],[determinism]",
+        "--rng-seed",
+        "20261014",
+        "--order",
+        "lex",
+        "--warn",
+        "NoTests",
+        "--user-dir",
+        "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/planning-reaction-stage4/asan-user",
+        "--reporter",
+        "xml",
+        "--out",
+        "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/planning-reaction-stage4/asan.xml"
+      ]
+    ],
+    "oracle": "20736 seeded reaction-sequence combinations compare anger/morale, aggro outcome, RNG numerator/denominator/result order and exact engine. Weak-reaction branch/threshold table and negative/fractional group-morale regression cover policy semantics.",
+    "source_sha256": {
+      "src/monmove.cpp": "0cec85ded1b65967d687f3f81d15da670cca667bb5c40a59e2f6248883e5bd13",
+      "src/monster_planning_reaction.h": "b50def50a1aba392aaa24e0889a7a28dfea15be50b4a743def50e1ff8052b56d",
+      "tests/monster_planning_reaction_test.cpp": "003fe1cff76c4954d9022850b9c1903814d3df7846ea403f10f3a3d97480cd13"
+    },
+    "candidate_binary_sha256": {
+      "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile/src/Release/cataclysm-tiles": "cf0ff34178f5f98bba79c3f3584466e3b8fe80c6ff6e73cfe633487f3d5d0df7",
+      "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile/Release/ccb-sdl3-acceptance": "6ddd474ac6c241129691754dbcc1d21e90c287426b92169b84b806c244589ca6"
+    },
+    "actual_sdl3_replay_reload": [
+      {
+        "name": "reaction-replay-combat-baseline",
+        "variant": "baseline",
+        "exit": 0,
+        "turn": 5212819,
+        "position": [
+          5495,
+          7449,
+          2
+        ],
+        "monsters": 759,
+        "normalized_sha256": "58af4b5158d3802f0b3cd27784f71b32ee5f2e9260002d33d8c26b8150a6547f",
+        "footer_verified": true
+      },
+      {
+        "name": "reaction-reload-combat-baseline",
+        "variant": "baseline",
+        "exit": 0,
+        "turn": 5212819,
+        "position": [
+          5495,
+          7449,
+          2
+        ],
+        "monsters": 759,
+        "normalized_sha256": "c065d369013f70f86eeb92198e39908433258a9a45f416d620e3e0653a6b35ff",
+        "footer_verified": true
+      },
+      {
+        "name": "reaction-replay-combat-candidate",
+        "variant": "candidate",
+        "exit": 0,
+        "turn": 5212819,
+        "position": [
+          5495,
+          7449,
+          2
+        ],
+        "monsters": 759,
+        "normalized_sha256": "58af4b5158d3802f0b3cd27784f71b32ee5f2e9260002d33d8c26b8150a6547f",
+        "footer_verified": true
+      },
+      {
+        "name": "reaction-reload-combat-candidate",
+        "variant": "candidate",
+        "exit": 0,
+        "turn": 5212819,
+        "position": [
+          5495,
+          7449,
+          2
+        ],
+        "monsters": 759,
+        "normalized_sha256": "c065d369013f70f86eeb92198e39908433258a9a45f416d620e3e0653a6b35ff",
+        "footer_verified": true
+      },
+      {
+        "name": "reaction-replay-room-baseline",
+        "variant": "baseline",
+        "exit": 0,
+        "turn": 5212848,
+        "position": [
+          5489,
+          7448,
+          0
+        ],
+        "monsters": 0,
+        "normalized_sha256": "8151bb75dee10193f9f6a1bafa067a4936abe0d372263068b5753d97ac96592b",
+        "footer_verified": true
+      },
+      {
+        "name": "reaction-reload-room-baseline",
+        "variant": "baseline",
+        "exit": 0,
+        "turn": 5212848,
+        "position": [
+          5489,
+          7448,
+          0
+        ],
+        "monsters": 0,
+        "normalized_sha256": "34b92cad78cd95eacda0597f7b63ab7d80227ac8793cf4858e10c58157a1f2e2",
+        "footer_verified": true
+      },
+      {
+        "name": "reaction-replay-room-candidate",
+        "variant": "candidate",
+        "exit": 0,
+        "turn": 5212848,
+        "position": [
+          5489,
+          7448,
+          0
+        ],
+        "monsters": 0,
+        "normalized_sha256": "8151bb75dee10193f9f6a1bafa067a4936abe0d372263068b5753d97ac96592b",
+        "footer_verified": true
+      },
+      {
+        "name": "reaction-reload-room-candidate",
+        "variant": "candidate",
+        "exit": 0,
+        "turn": 5212848,
+        "position": [
+          5489,
+          7448,
+          0
+        ],
+        "monsters": 0,
+        "normalized_sha256": "34b92cad78cd95eacda0597f7b63ab7d80227ac8793cf4858e10c58157a1f2e2",
+        "footer_verified": true
+      }
+    ],
+    "memory_region_semantic_hashes": {
+      "reaction-replay-combat": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488",
+      "reaction-reload-combat": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488",
+      "reaction-replay-room": "8d7811c8c299161465803708af20bb8d1ab3fab140729a21911e37c3a1002b74",
+      "reaction-reload-room": "8d7811c8c299161465803708af20bb8d1ab3fab140729a21911e37c3a1002b74"
+    },
+    "reused_evidence": "Unchanged target-selection oracle, map context/fault coverage and SDL3 build configuration reused. Common world objects linked Release; no whole-game sanitizer claim.",
+    "normalization": "Unordered recipe/event row order, game_save two wall-time fields and exact verified12/13/14 build identities only; all gameplay/event counts preserved, latest footer and xxh64 verified."
+  },
+  "performance_claim": "None: structural state/query/effect separation. Fixed repeated timing remains unproved after external interference stopped the routing matrix.",
+  "remaining_and_limits": [
+    "General sensing/goal paths and actual ordered movement proposal/conflict commit boundary remain; this numeric reaction batch alone does not complete full planning.",
+    "No live-world concurrent read/write, whole-game sanitizer, cross-platform/GPU-device or multiplayer gameplay acceptance claim.",
+    "Full semantic renderer/ordered asset-backend boundary and final combined scope acceptance remain."
+  ],
+  "local_raw_evidence": "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/planning-reaction-stage4"
+}

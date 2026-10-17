@@ -6823,6 +6823,9 @@ void submap::store( JsonOut &jsout ) const
 
 void submap::load( const JsonValue &jv, const std::string &member_name, int version )
 {
+    if( member_name == "terrain" || member_name == "furniture" ) {
+        geometry_version_.changed();
+    }
     ensure_nonuniform();
     bool rubpow_update = version < 22;
     if( member_name == "turn_last_touched" ) {

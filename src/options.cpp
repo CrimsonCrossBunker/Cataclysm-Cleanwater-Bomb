@@ -9,6 +9,7 @@
 #include <iterator>
 #include <limits>
 #include <stdexcept>
+#include <thread>
 
 #include "android_ui_mode.h"
 #include "cached_options.h"
@@ -3443,6 +3444,37 @@ void options_manager::add_options_performance()
                          "higher values mainly cost background I/O, not main-thread time." ),
          0, 6, 2
        );
+
+#if defined(TILES)
+    add( "RENDER_PREPARATION_WORKERS", "performance",
+         to_translation( "Render preparation workers" ),
+         to_translation( "Prepare tile layers and lighting on dedicated workers. "
+                         "0 keeps serial preparation. Requires a restart." ),
+         0, 4, 0
+       );
+#endif
+
+    // Only the measured Linux SDL3 path has completed parallel acceptance.
+    int vision_workers_default = 0;
+#if defined(TILES) && defined(USE_SDL3) && defined(__linux__) && !defined(__ANDROID__)
+    if( std::thread::hardware_concurrency() >= 4 ) {
+        vision_workers_default = 4;
+    }
+#endif
+    add( "VISION_PREPARATION_WORKERS", "performance",
+         to_translation( "Visibility calculation workers" ),
+         to_translation( "Use workers for expensive visibility updates. "
+                         "Small updates and multiplayer stay serial. "
+                         "0 disables workers. Requires a restart." ),
+         0, 4, vision_workers_default );
+
+    add( "AI_REACHABILITY_WORKERS", "performance",
+         to_translation( "Monster reachability preparation workers" ),
+         to_translation( "Prepare expensive monster reachability geometry from captured values. "
+                         "0 keeps the original path; 1 prepares on the main thread; "
+                         "2 to 4 use dedicated workers. Multiplayer stays on the original path. "
+                         "Requires a restart." ),
+         0, 4, 0 );
 
     add( "MULTITHREADING_ENABLED", "performance",
          to_translation( "Enable multithreading (highly unstable)" ),

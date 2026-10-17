@@ -1651,6 +1651,16 @@ void monster::set_patrol_route( const std::vector<point_rel_ms> &patrol_pts_rel_
     next_patrol_point = 0;
 }
 
+monster_patrol_view monster::patrol_view() const
+{
+    monster_patrol_view view{ patrol_route.size(), next_patrol_point, std::nullopt };
+    if( next_patrol_point >= 0 &&
+        static_cast<std::size_t>( next_patrol_point ) < patrol_route.size() ) {
+        view.goal = patrol_route[next_patrol_point];
+    }
+    return view;
+}
+
 void monster::shift( const point_rel_sm & )
 {
     // TODO: migrate this to absolute coords and get rid of shift()
