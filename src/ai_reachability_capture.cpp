@@ -153,7 +153,15 @@ bool geometry_view::matches_at( const tripoint_bub_ms &position, int direction )
     if( !matches_block( z, x, y ) || ( direction == -1 && !matches_block( z + 1, x, y ) ) ) {
         return false;
     }
-    if( values_.transparent[z][x][y] !=
+    auto &transparency = transparency_checked_[z];
+    if( transparency == 0 ) {
+        // This view belongs to one mutation-free owner flood. A matching layer
+        // needs no more world-cache queries during that flood. If any bit differs,
+        // retain the original cell checks so unrelated cells can still be reused.
+        transparency = values_.transparent[z] ==
+                       world_.get_cache_ref( position.z() ).transparent_cache_wo_fields ? 1 : 2;
+    }
+    if( transparency == 2 && values_.transparent[z][x][y] !=
         world_.get_cache_ref( position.z() ).transparent_cache_wo_fields[x][y] ) {
         stale_ = true;
         return false;

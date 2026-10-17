@@ -7,6 +7,7 @@
 #include "avatar.h"
 #include "cata_catch.h"
 #include "creature_tracker.h"
+#include "flood_fill.h"
 #include "flexbuffer_json.h"
 #include "json.h"
 #include "json_loader.h"
@@ -298,4 +299,33 @@ TEST_CASE( "creature_registration_filter_collisions_preserve_authoritative_looku
     other->spawn( moved );
     CHECK_FALSE( tracker.find( old ) );
     CHECK( tracker.find( moved ) == other );
+}
+
+TEST_CASE( "creature_reachability_scanline_retains_order_across_vertical_spans",
+           "[monster][reachability][flood_fill]" )
+{
+    const auto passable = []( const tripoint_bub_ms & p, int direction ) {
+        const bool ground = p.z() == 0 && p.x() >= 2 && p.x() <= 4 &&
+                            p.y() >= 2 && p.y() <= 3;
+        const bool upper = p.z() == 1 && p.y() == 3 && p.x() >= 3 && p.x() <= 4;
+        if( direction == 0 ) {
+            return ground || upper;
+        }
+        return p.x() == 4 && p.y() == 3 &&
+               ( ( direction == 1 && p.z() == 1 ) || ( direction == -1 && p.z() == 0 ) );
+    };
+    const std::vector<tripoint_bub_ms> expected{
+        { 2, 2, 0 }, { 3, 2, 0 }, { 4, 2, 0 }, { 3, 3, 0 },
+        { 2, 3, 0 }, { 4, 3, 0 }, { 3, 3, 1 }, { 4, 3, 1 }
+    };
+    const auto rng_before = rng_get_engine();
+    for( int repeat = 0; repeat < 2; ++repeat ) {
+        std::vector<tripoint_bub_ms> visited;
+        ff::flood_fill_visit_10_connected( tripoint_bub_ms{ 3, 3, 0 }, passable,
+        [&visited]( const tripoint_bub_ms & p ) {
+            visited.push_back( p );
+        } );
+        CHECK( visited == expected );
+    }
+    CHECK( rng_get_engine() == rng_before );
 }
