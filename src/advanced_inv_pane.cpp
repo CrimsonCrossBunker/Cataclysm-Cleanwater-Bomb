@@ -1,4 +1,4 @@
-#include "advanced_inv_pane.h"
+﻿#include "advanced_inv_pane.h"
 
 #include <cstddef>
 #include <iterator>
@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "advanced_inv_area.h"
+#include "advanced_inv_listitem.h"
 #include "advanced_inv_pagination.h"
 #include "avatar.h"
 #include "cata_assert.h"
@@ -15,6 +16,7 @@
 #include "enums.h"
 #include "flag.h"
 #include "item.h"
+#include "item_location.h"
 #include "item_search.h"
 #include "map.h"
 #include "map_selector.h"
@@ -110,7 +112,7 @@ static std::vector<std::vector<item_location>> item_list_to_stack(
     for( auto iter_outer = item_list.begin(); iter_outer != item_list.end(); ++iter_outer ) {
         std::vector<item_location> item_stack( { item_location( parent, *iter_outer ) } );
         for( auto iter_inner = std::next( iter_outer ); iter_inner != item_list.end(); ) {
-            if( ( *iter_outer )->display_stacked_with( **iter_inner ) ) {
+            if( ( *iter_outer )->stacks_with( **iter_inner ) ) {
                 item_stack.emplace_back( parent, *iter_inner );
                 iter_inner = item_list.erase( iter_inner );
             } else {

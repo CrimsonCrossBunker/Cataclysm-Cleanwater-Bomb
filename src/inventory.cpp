@@ -1,4 +1,4 @@
-#include "inventory.h"
+﻿#include "inventory.h"
 
 #include <item.h>
 #include <visitable.h>
@@ -489,7 +489,9 @@ void inventory::restack( Character &p )
         for( invstack::iterator other = iter; other != items.end(); ++other ) {
             if( iter != other && iter->front().stacks_with( other->front() ) ) {
                 if( other->front().count_by_charges() ) {
-                    iter->front().charges += other->front().charges;
+                    if( !iter->front().merge_charges( other->front() ) ) {
+                        continue;
+                    }
                 } else {
                     iter->splice( iter->begin(), *other );
                 }

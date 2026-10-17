@@ -1066,6 +1066,9 @@ void Creature::deal_melee_hit( Creature *source, int hit_spread, bool critical_h
     dam.onhit_effects( source, this ); // on-hit effects for inflicted damage types
     dealt_dam = deal_damage( source, bp_hit, d, attack_copy );
     dealt_dam.bp_hit = bp_hit;
+    if( Character *character = as_character() ) {
+        character->check_mounted_balance( dealt_dam.total_damage() );
+    }
 }
 
 double Creature::accuracy_projectile_attack( const int &speed, const double &missed_by ) const
