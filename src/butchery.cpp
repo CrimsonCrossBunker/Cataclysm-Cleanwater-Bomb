@@ -70,6 +70,7 @@ static const harvest_drop_type_id harvest_drop_offal( "offal" );
 static const harvest_drop_type_id harvest_drop_skin( "skin" );
 
 static const itype_id itype_burnt_out_bionic( "burnt_out_bionic" );
+static const itype_id itype_demihuman_flesh( "demihuman_flesh" );
 static const itype_id itype_human_flesh( "human_flesh" );
 static const itype_id itype_mutant_human_flesh( "mutant_human_flesh" );
 
@@ -99,7 +100,7 @@ static bool is_human_autopsy_corpse( const mtype &corpse )
     if( corpse.id == mtype_id::NULL_ID() || corpse.in_species( species_HUMAN ) ) {
         for( const harvest_entry &entry : corpse.harvest->entries() ) {
             if( entry.type == harvest_drop_flesh &&
-                ( entry.drop == itype_human_flesh.str() || entry.drop == itype_mutant_human_flesh.str() ) ) {
+                ( entry.drop == itype_human_flesh.str() || entry.drop == itype_mutant_human_flesh.str() || entry.drop == itype_demihuman_flesh.str() ) ) {
                 return true;
             }
         }
