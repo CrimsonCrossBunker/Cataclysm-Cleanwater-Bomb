@@ -3453,6 +3453,14 @@ void options_manager::add_options_performance()
                          "0 disables workers. Requires a restart." ),
          0, 4, vision_workers_default );
 
+    add( "AI_REACHABILITY_WORKERS", "performance",
+         to_translation( "Monster reachability preparation workers" ),
+         to_translation( "Prepare expensive monster reachability geometry from captured values. "
+                         "0 keeps the original path; 1 prepares on the main thread; "
+                         "2 to 4 use dedicated workers. Multiplayer stays on the original path. "
+                         "Requires a restart." ),
+         0, 4, 0 );
+
     add( "MULTITHREADING_ENABLED", "performance",
          to_translation( "Enable multithreading (highly unstable)" ),
          to_translation( "Enable the persistent worker thread pool for parallelizing "
