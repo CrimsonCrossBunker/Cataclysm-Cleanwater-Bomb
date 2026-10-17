@@ -81,6 +81,7 @@ static const morale_type morale_butcher( "morale_butcher" );
 static const proficiency_id proficiency_prof_butchering_adv( "prof_butchering_adv" );
 static const proficiency_id proficiency_prof_butchering_basic( "prof_butchering_basic" );
 static const proficiency_id proficiency_prof_dissect_humans( "prof_dissect_humans" );
+static const proficiency_id proficiency_prof_physiology( "prof_physiology" );
 static const proficiency_id proficiency_prof_skinning_adv( "prof_skinning_adv" );
 static const proficiency_id proficiency_prof_skinning_basic( "prof_skinning_basic" );
 
@@ -995,8 +996,15 @@ bool butchery_drops_harvest( butchery_data bt, Character &you )
         you.practice( skill_firstaid, std::max( 0, practice ), mt.size + std::min( tool_quality, 3 ) + 2 );
         mt.families.practice_dissect( you );
         if( is_human_autopsy_corpse( mt ) ) {
-            you.practice_proficiency( proficiency_prof_dissect_humans, 15_minutes );
-            you.practice_proficiency( proficiency_prof_dissect_humans, 15_minutes );
+            if( you.has_proficiency( proficiency_prof_physiology ) ) {
+                if( mt.in_species( species_ZOMBIE ) ) {
+                    you.practice_proficiency( proficiency_prof_dissect_humans, moves_total );
+                } else {
+                    you.practice_proficiency( proficiency_prof_dissect_humans, moves_total * 0.15 );
+                }
+            } else {
+                you.practice_proficiency( proficiency_prof_physiology, moves_total * 0.15 );
+            }
         }
     } else {
         you.practice( skill_survival, std::max( 0, practice ), std::max( mt.size - creature_size::medium,
