@@ -162,6 +162,9 @@ class creature_tracker
         void flood_fill_zone( const Creature &origin );
 
         void rebuild_cache();
+        size_t location_bucket( const tripoint_abs_ms &pos ) const;
+        void rebuild_location_filter();
+        void cache_location( const tripoint_abs_ms &pos, const shared_ptr_fast<monster> &critter );
 
         /** Rebuild the passability bitmap from level caches. Called when dirty_ is set. */
         void rebuild_passability_bitmap();
@@ -172,6 +175,12 @@ class creature_tracker
         std::vector<shared_ptr_fast<monster>> monsters_list;
         // NOLINTNEXTLINE(cata-serialize)
         std::unordered_map<tripoint_abs_ms, shared_ptr_fast<monster>> monsters_by_location;
+
+        // Owner-only conservative index of location-map keys. Collisions and
+        // removed positions may keep bits set; every insertion marks its key.
+        // Periodic rebuilding bounds false positives during sustained movement.
+        std::bitset<8192> location_filter_; // NOLINT(cata-serialize)
+        size_t location_filter_updates_ = 0; // NOLINT(cata-serialize)
 
         /**
          * Creatures that get removed via @ref remove are stored here until the end of the turn.
