@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-14",
+  "batch": "50-allocation-acceptance",
+  "production_source_commit": "360656a4d52",
+  "scope": "Supplemental actual production draw-row append fault test. Cache row storage and string-ID implementation are compiled directly; no mocked implementation.",
+  "implementation": [
+    "Allocator armed only after real fixture/string-intern initialization.",
+    "Two exact allocation positions: entry storage growth and sprite-index publication. Failed append must retain prior vision-effect entry and empty sprite index.",
+    "Successful reuse, later entry relocation and clear/refill must retain correct ordered indices."
+  ],
+  "validation": {
+    "state": "passed",
+    "failed_allocations_native": 2,
+    "failed_allocations_scoped_asan_ubsan_lsan": 2,
+    "assertions_enabled": true,
+    "production_release_string_id_layout": true,
+    "commands": [
+      {
+        "name": "native-compile",
+        "command": [
+          "/usr/bin/clang++",
+          "-std=c++17",
+          "-DTILES",
+          "-DRELEASE",
+          "-O2",
+          "-g1",
+          "-I/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/src",
+          "-isystem",
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/src/third-party",
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/tests/standalone/draw_cache_row_fault_test.cpp",
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/src/string_id.cpp",
+          "-o",
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/draw-row-index-stage5/row-index-fault-native"
+        ],
+        "log": "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/draw-row-index-stage5/native-compile.log",
+        "exit_code": 0
+      },
+      {
+        "name": "native-faults",
+        "command": [
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/draw-row-index-stage5/row-index-fault-native"
+        ],
+        "log": "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/draw-row-index-stage5/native-faults.log",
+        "exit_code": 0
+      },
+      {
+        "name": "asan-compile",
+        "command": [
+          "/usr/bin/clang++",
+          "-std=c++17",
+          "-DTILES",
+          "-DRELEASE",
+          "-O2",
+          "-g1",
+          "-I/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/src",
+          "-isystem",
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/src/third-party",
+          "-fsanitize=address,undefined",
+          "-fno-omit-frame-pointer",
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/tests/standalone/draw_cache_row_fault_test.cpp",
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/src/string_id.cpp",
+          "-o",
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/draw-row-index-stage5/row-index-fault-asan"
+        ],
+        "log": "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/draw-row-index-stage5/asan-compile.log",
+        "exit_code": 0
+      },
+      {
+        "name": "asan-faults",
+        "command": [
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/draw-row-index-stage5/row-index-fault-asan"
+        ],
+        "log": "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/draw-row-index-stage5/asan-faults.log",
+        "exit_code": 0
+      }
+    ],
+    "test_source_sha256": "a7120ef90a4594ce05a63b84bfdecd74dab27387ec9d921e3ef09f0ac389ba4b",
+    "source_sha256": {
+      "src/view_snapshot.h": "28f9d91886fc652a361ec3e1aa5486ca9db8af8f2fc8dab033dff321568a4105",
+      "src/coordinates.h": "946b441b7282e814b99445828a968110390bd66d53540fd120adcb1d31ea40b9",
+      "src/point.h": "8ee7788afbefe0118d20c2dfa3bb66ddbc32d1ee9cfc6cc1b3412ba848a328ad",
+      "src/enums.h": "e8bdca7ebea0d4f33bc83faa90817aba3ca292c4398ca4ca138b5750caea1408",
+      "src/string_id.h": "fca9ac5efe02f3906f83d2d8a6cbc1fe7329381a86e0a627b5c93f59cb64ccab",
+      "src/string_id.cpp": "adbc316ca161b74719976784a3db8d8ed36369c4a12aa4735787c893fe8700a9"
+    },
+    "native_output": [
+      "allocation failure 0: rollback, reuse, relocation and clear passed",
+      "allocation failure 1: rollback, reuse, relocation and clear passed"
+    ],
+    "sanitizer_output": [
+      "allocation failure 0: rollback, reuse, relocation and clear passed",
+      "allocation failure 1: rollback, reuse, relocation and clear passed"
+    ]
+  },
+  "build_routing": "Independent executable outside normal Make/CMake tests/*.cpp globs. No production or existing native acceptance input changed; previous73renderer/native,29scoped sanitizer,36owner-domain cases and8actual game replays retained.",
+  "diagnostics": [
+    "Initial protection refused compilation while a native replay was already running; no compiler started.",
+    "Private harness first lacked game include paths, then coordinate/light type definitions, then the actual string-ID link dependency. Each focused diagnostic was retained and repaired.",
+    "Automatic approval rejected a retry while matrix status remained running. Read-only audit subsequently verified terminal failed dispatcher/matrix and absent PIDs plus stopped owned game before compilation.",
+    "First baseline50run started before the new allocation admission gate was added. Preserve it as a pilot; fresh paired runs will all use the accepted gate before identical quiet preflight. No timing-based exclusion."
+  ],
+  "limits": [
+    "No complete renderer/map-cache rebuild allocation-failure, whole-game sanitizer, worker race, physical GPU or other-platform claim.",
+    "Global allocation override is isolated to this test executable; the production allocator is unchanged.",
+    "This verifies correctness and exception safety of the row append mechanism; no performance claim."
+  ],
+  "private_evidence": "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/draw-row-index-stage5/row-index-fault-progress.json",
+  "publication": "Local test/evidence commit only; no push/PR/merge/release."
+}

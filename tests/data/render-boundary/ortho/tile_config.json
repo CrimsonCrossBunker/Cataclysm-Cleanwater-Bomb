@@ -1,0 +1,59 @@
+{
+  "tile_info": [
+    {
+      "width": 4,
+      "height": 4,
+      "iso": false,
+      "zlevel_height": 4
+    }
+  ],
+  "tiles-new": [
+    {
+      "file": "../atlas.png",
+      "sprite_width": 2,
+      "sprite_height": 2,
+      "tiles": [
+        {
+          "id": [
+            "unknown",
+            "t_floor",
+            "lighting_lowlight_light",
+            "lighting_lowlight_dark",
+            "lighting_hidden",
+            "highlight_item"
+          ],
+          "fg": 0
+        },
+        {
+          "id": [
+            "t_wall",
+            "f_chair",
+            "fd_acid",
+            "graffiti"
+          ],
+          "fg": 1
+        },
+        {
+          "id": [
+            "rock",
+            "stick",
+            "mon_zombie",
+            "player_male",
+            "player_female",
+            "shadow",
+            "item_context"
+          ],
+          "fg": 2
+        },
+        {
+          "id": [
+            "fd_smoke",
+            "field_context",
+            "cursor"
+          ],
+          "fg": 3
+        }
+      ]
+    }
+  ]
+}

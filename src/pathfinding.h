@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <functional>
 #include <map>
+#include <memory>
 #include <optional>
 #include <unordered_set>
 #include <vector>
@@ -131,6 +132,37 @@ constexpr PathfindingFlags operator |( const PathfindingFlag &a, const Pathfindi
     return PathfindingFlags( a ) | PathfindingFlags( b );
 }
 
+// Synchronous owner-side search scratch, separate from cached world costs.
+// A lease pins one complete search; reentrant calls receive independent state.
+// This does not authorize concurrent reads/mutation of a live map.
+class pathfinding_workspace
+{
+    public:
+        struct state;
+        class lease
+        {
+            private:
+                friend class pathfinding_workspace;
+                explicit lease( std::shared_ptr<state> data );
+                std::shared_ptr<state> data_;
+            public:
+                lease( const lease & ) = delete;
+                lease &operator=( const lease & ) = delete;
+                lease( lease && ) noexcept = default;
+                lease &operator=( lease && ) = delete;
+                ~lease();
+                state &get() const;
+        };
+
+        pathfinding_workspace() = default;
+        pathfinding_workspace( const pathfinding_workspace & ) = delete;
+        pathfinding_workspace &operator=( const pathfinding_workspace & ) = delete;
+        lease acquire() const;
+
+    private:
+        mutable std::shared_ptr<state> retained_;
+};
+
 struct pathfinding_cache {
     pathfinding_cache();
 
@@ -138,6 +170,8 @@ struct pathfinding_cache {
     std::unordered_set<point_bub_ms> dirty_points;
 
     cata::mdarray<PathfindingFlags, point_bub_ms> special;
+    // Owned by this map level. Cheap/straight routes never acquire a lease.
+    pathfinding_workspace workspace;
 };
 
 struct pathfinding_settings {

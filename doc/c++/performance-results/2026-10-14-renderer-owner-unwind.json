@@ -1,0 +1,339 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-14",
+  "batch": 51,
+  "baseline": "a08eff7ae13b0f5953717d0d4f16f55bdbff5c32",
+  "scope": "Renderer-owner exceptional exit readiness and borrowed frame binding lifetime. No new worker or gameplay/Lua contract.",
+  "implementation": [
+    "A no-allocation owner readiness guard keeps previous clean-during-build behavior; unsuccessful exit marks cache dirty for retry. Successful completion preserves new owner invalidations.",
+    "Root draw scopes restore enclosing tile/bounds/tint bindings on ordinary and exceptional exit; bindings start empty for this draw.",
+    "Standalone fault test couples actual entry/index allocation failures to the real readiness guard and checks retry, preservation of invalidation, nested/outer pointer restoration."
+  ],
+  "validation": {
+    "native": {
+      "assertions": {
+        "successes": "5787",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "cases": {
+        "successes": "73",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "xml_sha256": "9cccdf96767d20a877ea3d38441e6868323cb02cee29aa960b7d76e62b86b645"
+    },
+    "scoped_asan_ubsan_lsan": {
+      "assertions": {
+        "successes": "2923",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "cases": {
+        "successes": "29",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "xml_sha256": "3a062ea9b213e30563d394a0fb4a764ff7088dea31096973748abfdcef72eaf0"
+    },
+    "coupled_faults": {
+      "state": "passed",
+      "pid": 1819602,
+      "source_sha256": {
+        "src/draw_cache_rebuild_guard.h": "0caf28d8ec7a363475114ef935159082eb05cf2023e0526aff7e0635e6f7c1d2",
+        "src/view_snapshot.h": "28f9d91886fc652a361ec3e1aa5486ca9db8af8f2fc8dab033dff321568a4105",
+        "src/cata_scope_helpers.h": "a642be6892aff2e1e7e331680e973b939c202972f7f880c8a4cef465254f437e",
+        "src/string_id.cpp": "adbc316ca161b74719976784a3db8d8ed36369c4a12aa4735787c893fe8700a9",
+        "src/string_id.h": "fca9ac5efe02f3906f83d2d8a6cbc1fe7329381a86e0a627b5c93f59cb64ccab",
+        "tests/standalone/draw_cache_row_fault_test.cpp": "d3d74e5609dfc4f1025b17068fa293fbac93b4c54c4f48216e4df2363fc03ec5"
+      },
+      "steps": [
+        {
+          "name": "native-compile",
+          "command": [
+            "/usr/bin/clang++",
+            "-std=c++17",
+            "-DTILES",
+            "-DRELEASE",
+            "-O2",
+            "-g1",
+            "-I/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/src",
+            "-isystem",
+            "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/src/third-party",
+            "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/tests/standalone/draw_cache_row_fault_test.cpp",
+            "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/src/string_id.cpp",
+            "-o",
+            "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/renderer-unwind-stage5/row-unwind-fault-native"
+          ],
+          "log": "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/renderer-unwind-stage5/native-compile.log",
+          "exit_code": 0
+        },
+        {
+          "name": "native-faults",
+          "command": [
+            "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/renderer-unwind-stage5/row-unwind-fault-native"
+          ],
+          "log": "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/renderer-unwind-stage5/native-faults.log",
+          "exit_code": 0
+        },
+        {
+          "name": "asan-compile",
+          "command": [
+            "/usr/bin/clang++",
+            "-std=c++17",
+            "-DTILES",
+            "-DRELEASE",
+            "-O2",
+            "-g1",
+            "-I/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/src",
+            "-isystem",
+            "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/src/third-party",
+            "-fsanitize=address,undefined",
+            "-fno-omit-frame-pointer",
+            "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/tests/standalone/draw_cache_row_fault_test.cpp",
+            "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/src/string_id.cpp",
+            "-o",
+            "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/renderer-unwind-stage5/row-unwind-fault-asan"
+          ],
+          "log": "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/renderer-unwind-stage5/asan-compile.log",
+          "exit_code": 0
+        },
+        {
+          "name": "asan-faults",
+          "command": [
+            "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/renderer-unwind-stage5/row-unwind-fault-asan"
+          ],
+          "log": "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/renderer-unwind-stage5/asan-faults.log",
+          "exit_code": 0
+        }
+      ],
+      "current_step": null,
+      "failed_row_allocations_each": 2,
+      "coverage": "Actual row entry/index failure under readiness guard, dirty retry, new invalidation preserved, scoped nested/outer borrowed pointer restoration. Assertions enabled. No complete renderer/world sanitizer claim."
+    },
+    "reused_owner_domains": {
+      "state": "reused unchanged simulation/map-memory inputs; batch50native36cases/171297assertions"
+    },
+    "actual_sdl3_replay_reload": {
+      "state": "passed",
+      "runs": 8,
+      "memory_region_semantic_hashes": {
+        "unwind51-replay-combat": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488",
+        "unwind51-reload-combat": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488",
+        "unwind51-replay-room": "8d7811c8c299161465803708af20bb8d1ab3fab140729a21911e37c3a1002b74",
+        "unwind51-reload-room": "8d7811c8c299161465803708af20bb8d1ab3fab140729a21911e37c3a1002b74"
+      },
+      "raw": "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/renderer-unwind-stage5/replay-progress.json"
+    },
+    "commands": [
+      {
+        "name": "format",
+        "command": [
+          "/tmp/ccb-render-astyle31/astyle/build/gcc/bin/astyle",
+          "--options=.astylerc",
+          "--dry-run",
+          "-n",
+          "src/cata_tiles.cpp",
+          "src/draw_cache_rebuild_guard.h",
+          "tests/standalone/draw_cache_row_fault_test.cpp"
+        ],
+        "log": "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/renderer-unwind-stage5/format.log",
+        "pid": 1819752,
+        "exit_code": 0,
+        "seconds": 0.03179879899835214
+      },
+      {
+        "name": "build",
+        "command": [
+          "cmake",
+          "--build",
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile",
+          "--config",
+          "Release",
+          "--target",
+          "cataclysm-tiles",
+          "ccb-sdl3-acceptance",
+          "ccb-subtile-asan",
+          "--parallel",
+          "2"
+        ],
+        "log": "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/renderer-unwind-stage5/build.log",
+        "pid": 1819753,
+        "exit_code": 0,
+        "seconds": 30.64466527296463
+      },
+      {
+        "name": "native-tests",
+        "command": [
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile/Release/ccb-sdl3-acceptance",
+          "[dynamic_view],[renderer_boundary],[render_commands],[layer_view],[semantic_view],[tile_lookup],[sprite_geometry],[sprite_variation],[renderer_recovery],[gpu]",
+          "--rng-seed",
+          "20261014",
+          "--order",
+          "lex",
+          "--warn",
+          "NoTests",
+          "--user-dir",
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/renderer-unwind-stage5/native-user",
+          "--reporter",
+          "xml",
+          "--out",
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/renderer-unwind-stage5/native.xml"
+        ],
+        "log": "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/renderer-unwind-stage5/native-tests.log",
+        "pid": 1819823,
+        "exit_code": 0,
+        "seconds": 16.906361911038402
+      },
+      {
+        "name": "asan-tests",
+        "command": [
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile/Release/ccb-subtile-asan",
+          "[dynamic_view],[renderer_boundary],[render_commands],[layer_view],[semantic_view],[tile_lookup]",
+          "--rng-seed",
+          "20261014",
+          "--order",
+          "lex",
+          "--warn",
+          "NoTests",
+          "--user-dir",
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/renderer-unwind-stage5/asan-user",
+          "--reporter",
+          "xml",
+          "--out",
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/renderer-unwind-stage5/asan.xml"
+        ],
+        "log": "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/renderer-unwind-stage5/asan-tests.log",
+        "pid": 1819868,
+        "exit_code": 0,
+        "seconds": 43.93313414504519
+      },
+      {
+        "name": "replay-reload",
+        "command": [
+          "python3",
+          "/tmp/ccb-render-unwind51-replay.py"
+        ],
+        "log": "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/renderer-unwind-stage5/replay-reload.log",
+        "pid": 1820060,
+        "exit_code": 0,
+        "seconds": 156.80535517202225
+      },
+      {
+        "name": "format-final",
+        "command": [
+          "/tmp/ccb-render-astyle31/astyle/build/gcc/bin/astyle",
+          "--options=.astylerc",
+          "--dry-run",
+          "-n",
+          "src/cata_tiles.cpp",
+          "src/draw_cache_rebuild_guard.h",
+          "tests/standalone/draw_cache_row_fault_test.cpp"
+        ],
+        "log": "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/renderer-unwind-stage5/format-final.log",
+        "pid": 1821315,
+        "exit_code": 0,
+        "seconds": 0.06395854003494605
+      }
+    ],
+    "source_sha256": {
+      "src/cata_tiles.cpp": "5f55cf8c811e32d4be9591b84cabeebaf557a3753c59a54106c6057867077837",
+      "src/cata_tiles.h": "0b1d81494570468a854500a6e0ece98cfdfc9c5cb533b1c827665f07f4db2fc2",
+      "src/creature_render_view.cpp": "cc9a8f8b156172b282e6c59d7d5507e18d0dc043971f39253a2eeab15d57af2a",
+      "src/creature_render_view.h": "efb93c8b52ef058809a33095a4e0da9af248f7754f06b316a6a89dab5d3e5379",
+      "src/creature_tracker.cpp": "95dca1447ff548a7e8d725beecfc6dbfe9922ef42c4361487de047a234b5a4da",
+      "src/creature_tracker.h": "da3e5e7758ba6e26fcf8f03f718ebf965f71af4b4a746def343877f1b0b458a9",
+      "src/do_turn.cpp": "d2d585bee3a0ff0ae18359eab8cd8e547d1142565535d2916d930add50edcae4",
+      "src/draw_cache_rebuild_guard.h": "0caf28d8ec7a363475114ef935159082eb05cf2023e0526aff7e0635e6f7c1d2",
+      "src/dynamic_tile_capture.cpp": "5fadae751afc14c2ace80643119520881032a4bcd375daeb0ed05796e3aeee99",
+      "src/dynamic_tile_capture.h": "1ec4fbdab3d1df800d4ddc7ab0d16f30f568a0645b1f88b16cea9d2af3412a03",
+      "src/dynamic_tile_view.h": "ed1b62a19ca5af40ba19df3f91ccf952ee19da75557d9d9e3a86be6d1a04570c",
+      "src/lightmap.cpp": "ec9a173a3a793bb1105fe667a3eb51f93226216b064ac64050b838e6c09f8640",
+      "src/map.cpp": "a754985b943a020311ded1f7e18659290fa95951e851f02a88df28d455416c98",
+      "src/map.h": "76c38d354d8a598289ec222748f40aab23b706f6452e02e3c436bf398d2438f0",
+      "src/map_memory.cpp": "e2f11d3ea634494937627d4108ef885a5134dbeea67545c4032324c527e312f2",
+      "src/map_memory.h": "bc7a0f4971683d21931a85c4b9798aa5f572bdd1147261011c33da230873048d",
+      "src/monmove.cpp": "e757b617447e0d9b5c23a2c15717aaee20d8f24ebc67586cd385537207d58632",
+      "src/monster.cpp": "ff8469a460065086bf521a3c35e1cabb72ceb7a90263955fa2ed139a5189ea4c",
+      "src/monster.h": "2d4b888299cd90a69652e2ab98f9068cfa95a0d42dca00a9495ce3444906d511",
+      "src/monster_destination_plan.cpp": "bf02d9ef858c88fdf24b5b156f3d8807a963d76669d4f787ddffa72523f88edf",
+      "src/monster_destination_plan.h": "2b1078b8d5c7e9b4dfb938f7af683556111318cc1ec8bda21de755646c489ec0",
+      "src/monster_goal_policy.h": "243739e7e867d25e448aa6944ea80aae22bde64558f680164b339e465b79b635",
+      "src/monster_movement_plan.cpp": "e2db5b8ce648af318627e2ba0c5166dd3bfa4fdfa87cc5da24a825fb5b38d446",
+      "src/monster_movement_plan.h": "d4b8492a413b996faa4e2c3a43f44557b803f1f869f98760440494a19617e505",
+      "src/monster_planning_reaction.h": "b50def50a1aba392aaa24e0889a7a28dfea15be50b4a743def50e1ff8052b56d",
+      "src/monster_step_selection.h": "f2a3723f4a89f7b36e8a6a6c082c17bea7f701627e38a504fec42448e43516f7",
+      "src/monster_target_selection.h": "ad09a4b3ea561113058227d4fab4029c628ff59ae85e9dffefb3159c4a00db4f",
+      "src/options.cpp": "227a9a70f821d1e32b46b2a15b0467b3402583531c04d07150c557dab42915fd",
+      "src/pathfinding.cpp": "03ef5aefa46f0a5148f63a50fb6272ecbc8a056deb1af5b073dc7f70bf3c4f15",
+      "src/pathfinding.h": "c16fd0fb3ffb2de601a7e8e191e8738f26bf602bbf80cb91d94e5ab2a03dc0ce",
+      "src/render_command_order.h": "c5b7e63fc22ded3308992893043694ec357f94ea7c032b8ac941776355534977",
+      "src/sdl_renderer_recovery.h": "6eb1f3b19cc55177c3b5b73ebc24854b3a3ce0cc1689a6376530f42f07923986",
+      "src/sdltiles.cpp": "8d872719d2f487e165985b60659c5e8b734253e5a2d79f8300270d5435d15656",
+      "src/shadowcasting.cpp": "726a3d884f731323faf6a30f7efb352fba4ef18444678bbea647313abec5d244",
+      "src/shadowcasting.h": "d4faa616a3db096829ff5aa7f15a8377535e3ba7be1de23c1b7289be166cca02",
+      "src/sprite_command_frame.cpp": "d49c4e1888aee313a9917ec2ba95518a17c6f88da6618603a8145e645f06b126",
+      "src/sprite_command_frame.h": "68449175a21153840aa0d4db46bec3e1a18b0b9199c38c956b9c5d7702585c07",
+      "src/sprite_draw_command.h": "64ed44159c444973779664db045fc2e47d1f60b9455624ef5233ca966a95a577",
+      "src/sprite_submission.cpp": "26ed889ce5944af54fbfa7a8deb7cd0f8fbafc4d8047afc33e727f5d783e4dfd",
+      "src/sprite_submission.h": "9a63cac02d45201729e4e094d6d22ec6a18f5414cef17cf8f394cec43fa54452",
+      "src/tile_category.h": "6774315bd961c2774dbd4ddfaa0f7a27f822cb2a01e52a95e465dfe84844818a",
+      "src/tile_layer_capture.cpp": "4e546030d7c7f3e4c906279a59f9901da97a3eb2718f8f72ead474cb1f5566f0",
+      "src/tile_layer_capture.h": "d423d6d6278278f12354a063085742323233c2066d14e0750df6e8c112ef473e",
+      "src/tile_layer_view.h": "d195a1d40aafc5533a2f0960141b9d0e9bf3f59d2cc461f293d476fa7b09fb23",
+      "src/tile_lookup.cpp": "ca847b0120193109f2c1a76ae8a4aeccbe494653302f44d29324c26ff6813dcb",
+      "src/tile_lookup.h": "14f141ffe0ae3dd4df095ab67e26f2463ba6b6917cd496e1a2f213a821dcad5d",
+      "src/view_snapshot.h": "28f9d91886fc652a361ec3e1aa5486ca9db8af8f2fc8dab033dff321568a4105",
+      "src/vision_preparation.cpp": "84371afe5273b99975d88351c487a089816cccf3f6ae609af031199ae2f2eb8e",
+      "src/vision_preparation.h": "ba929223712e131b59088e1aeca425f59a5f212a678a5ce5faff565764651f4a",
+      "tests/creature_render_view_test.cpp": "550083e41c7ba0fa47ecc28f6cd73fd3d7b79303581fbd7a1dd76607d64fd8fe",
+      "tests/data/render-boundary/atlas.png": "081c045fd93d4c05fd3b282d075a2b95fc4b4bb40f1409745429ea75d52b3996",
+      "tests/data/render-boundary/iso/layering.json": "a045317ec34ae4094922587ac8cc9f008e223ef34c6e5d037e920f761885f440",
+      "tests/data/render-boundary/iso/tile_config.json": "fac52a960dbd1b9452ce770627c98ab03611f51ec3a0c5ec772dbe6c43e342ca",
+      "tests/data/render-boundary/iso/tileset.txt": "e37556077f8d12e93f4c3d5290c84d1fd1259404df3ad3828b865cf8c5090878",
+      "tests/data/render-boundary/ortho/layering.json": "a045317ec34ae4094922587ac8cc9f008e223ef34c6e5d037e920f761885f440",
+      "tests/data/render-boundary/ortho/tile_config.json": "a02cbe234466ba2487714d72fb7392e57bf72751ab1e498a3bae41ac51f88754",
+      "tests/data/render-boundary/ortho/tileset.txt": "e37556077f8d12e93f4c3d5290c84d1fd1259404df3ad3828b865cf8c5090878",
+      "tests/dynamic_tile_capture_test.cpp": "4ec9d1fbdffa4ce1dfd72660dad1d9dd2c5d5228f15ce7ad5fccee959148eb63",
+      "tests/map_memory_test.cpp": "4762384269e81aefb20df903c6edf6d32b6b71811c87452b2d2a39ee55b2fade",
+      "tests/map_path_test.cpp": "8534f5145c6f0a51ce8885f36997451ec9c243977be1e69c2b71862e4f4167d8",
+      "tests/monster_ai_determinism_test.cpp": "d2b3f98c69200017f313757a6aca7c3f7a9dac5359bcca59c0f430cf76a303ba",
+      "tests/monster_attack_test.cpp": "0e6070b8788c79879a47282be97761fae64e0d4afe16ee7315b299a5ee1387a4",
+      "tests/monster_destination_plan_test.cpp": "46ed44272d07443c6ff7818a09d749302af763352e8e943fcddb38899e62caaf",
+      "tests/monster_goal_policy_test.cpp": "3b787ed31d7d652416d9dc92006a2d8a12397277404fed69efb1ec1c457abdde",
+      "tests/monster_movement_lua_test.cpp": "71966eb670725cbe1aca860624cb6240a8d79625ba0c17efe157fa4c2051a526",
+      "tests/monster_movement_plan_test.cpp": "37a26069139110ab3c3c1c58650bf5a92bfc7d701bfd1ae9cd27cd9732ac2dee",
+      "tests/monster_planning_reaction_test.cpp": "003fe1cff76c4954d9022850b9c1903814d3df7846ea403f10f3a3d97480cd13",
+      "tests/monster_sensing_plan_test.cpp": "e3fef62620718095cdb4a9ef19de5913c3dead6cec993d5a2b17078bcb7da2ee",
+      "tests/monster_stair_test.cpp": "86bff54ec8103451863015ca71ed3b10cebdc442dc020220e6d36d685074453c",
+      "tests/monster_step_selection_test.cpp": "bd71c1553cf90f98825f7673f55bcdf1496656631ee8a9ae00c48825462f7b3c",
+      "tests/monster_target_selection_test.cpp": "a3624b1e7ce60102694322a85c7ca1bc55ab2efa90dc5040aa732399a46a2701",
+      "tests/pathfinding_test.cpp": "3b675819017aee78c45908ed91259c3892bd00c4600bcf2b0f17402f555f8aa0",
+      "tests/pathfinding_workspace_test.cpp": "e059698dad4ebd66f29ed731596afcac27c00e160516893644c686752100e7e8",
+      "tests/render_command_order_test.cpp": "407149e10b288b41fa42722d2fd34b8c408a205664176c52f45ad74d36168245",
+      "tests/renderer_boundary_test.cpp": "54569f8bce25bc5e71527f7a49c76965ff5d579a3b9be41cf72371810b00818d",
+      "tests/sprite_submission_test.cpp": "ab5b505f56d63e39e1a6341d8d6b7eb4497941370ee364e4de0820d5924c2ea7",
+      "tests/standalone/draw_cache_row_fault_test.cpp": "d3d74e5609dfc4f1025b17068fa293fbac93b4c54c4f48216e4df2363fc03ec5",
+      "tests/tile_layer_capture_test.cpp": "b37247ab8261b90c31b57c621f242c68885c16c71152f65d590a4b8152225268",
+      "tests/tile_lookup_test.cpp": "8190f9872fd472633f2fc9f8f3b21e63db3cdd4f8387c04a7d8e3f06eb7bd75e",
+      "tests/vision_preparation_test.cpp": "64ec15244360fca070962fde616d601693fc0b2b675359cfd907a29381bb101a"
+    },
+    "binary_sha256": {
+      "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/renderer-unwind-stage5/candidate/bin/cataclysm-tiles": "9224dd0b63fa0d94bde6c70ac947b21d17e11c3c6626dbcac302677269de13f7",
+      "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/renderer-unwind-stage5/candidate/bin/ccb-sdl3-acceptance": "2e23723ba68de4b9bbf64cd8fdbf4592136d19301b9d8e641a9d160a86140624"
+    }
+  },
+  "measurement_before51": {
+    "matrix": "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/final-corrected50/matrix-progress.json",
+    "audit": "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/final-corrected50/combined-audit.json",
+    "accepted_trials": 40,
+    "scope": "Aggregate34-50vs pre34, bothVISION4/RENDER0. Carrier rebuilt-3.47percent/reused-3.08percent and room rebuilt-7.73percent supported; field/combat intervals cross0.51final performance still requires applicable validation."
+  },
+  "performance_claim": "Exception safety fix, no independent speedup claim. Final code performance validation pending.",
+  "limits": [
+    "Fault harness compiles actual production row/readiness/string-ID code; scoped sanitizer does not cover entire world, renderer or production allocator.",
+    "Root scope restoration is combined with complete existing renderer pixel/lifecycle tests and actual game replay. No full nested world replacement, physical GPU loss, async-frame, real3D, device/network or cross-platform claim.",
+    "Simulation, ordered RNG/Lua owner boundaries and serialized fields unchanged; original saves untouched."
+  ],
+  "publication": "Two logical local implementation/test and evidence commits, no push/PR/merge/release."
+}

@@ -1,0 +1,757 @@
+{
+  "schema": 1,
+  "stage": 3,
+  "batch": 34,
+  "date": "2026-10-13",
+  "name": "owned-transactional-map-memory-region",
+  "baseline": "2f4a0c2dd71a0ea4b0bbe08418d7ccffd3e5a171",
+  "branch": "codex/performance-remaining-stages-20261013",
+  "classification": "State ownership and correctness repair. No general speedup claim; no IO or simulation worker enabled.",
+  "implementation": [
+    "Replace mutating tree lookup with bounded indexed level queries; const queries never allocate/insert/fetch.",
+    "Reject outside/padding/unloaded writes using an instance-owned invalid submap; remove process-wide writable fallback.",
+    "Publish region cache/position/size after complete preparation; preserve prior view on allocation failure.",
+    "Keep storage, JSON loading and all memorization mutation on their existing owner. Synchronous preparation has no pending work to cancel/unload."
+  ],
+  "behavior_change": "Former out-of-cache writes contaminated a shared fallback across maps. They are now ignored; prepared interior data and serialization remain unchanged.",
+  "native": {
+    "assertions": {
+      "successes": "8769",
+      "failures": "0",
+      "expectedFailures": "0"
+    },
+    "cases": {
+      "successes": "34",
+      "failures": "0",
+      "expectedFailures": "0"
+    },
+    "xml_sha256": "837144c6f0172540f4469f91e6d2917ac9c685e6ca6b8b139a441c975a35e70f"
+  },
+  "asan_ubsan_lsan": {
+    "assertions": {
+      "successes": "4470",
+      "failures": "0",
+      "expectedFailures": "0"
+    },
+    "cases": {
+      "successes": "18",
+      "failures": "0",
+      "expectedFailures": "0"
+    },
+    "xml_sha256": "08ff031639fbeb76dfbe9905be50032457bef492987dfe40a4abfffe6879217f"
+  },
+  "tsan": {
+    "assertions": {
+      "successes": "4470",
+      "failures": "0",
+      "expectedFailures": "0"
+    },
+    "cases": {
+      "successes": "18",
+      "failures": "0",
+      "expectedFailures": "0"
+    },
+    "xml_sha256": "b35f5ca886b87102eaff7f626a63cd39456b3505a650d2eeec96a3a6245d3a70"
+  },
+  "sanitizer_scope": "Transactional map-memory region publication, indexed const queries and isolated unavailable state; actual map_memory.cpp/test units instrumented. Other common modules are linked Release, not whole-game sanitizer proof. Test allocator override omitted for sanitizer interception; production game retains its real allocator. Not whole-game or production-allocator sanitizer proof.",
+  "faults": {
+    "state": "passed",
+    "results": [
+      {
+        "mode": "legacy",
+        "command": [
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile/Release/ccb-memory-fault-legacy"
+        ],
+        "exit": 0,
+        "stdout": "legacy_outside_writes_isolated=0 (expected0)\n",
+        "stderr": ""
+      },
+      {
+        "mode": "current",
+        "command": [
+          "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile/Release/ccb-memory-fault-current"
+        ],
+        "exit": 0,
+        "stdout": "outside_writes_isolated=1 allocation_attempts=13 caught_failures=13 recovery=passed\n",
+        "stderr": ""
+      }
+    ],
+    "seconds": 7.689619462995324,
+    "scope": "Actual old/current map_memory.cpp, test-only allocator injecting exceptions; original cross-map defect and13 allocation points recovery. No fault branches in production."
+  },
+  "protocol": {
+    "configuration": "Linux Clang 23 Release SDL3 tiles/sound, Lua v1, TRACY=ON, jobs=2",
+    "regular_runs": 40,
+    "pairing": "5balanced baseline/candidate pairs per scene; reversed order on even pairs; fresh immutable copies; native EOF and actual saved state verified.",
+    "regular_perf_hz_by_scene": {
+      "carrier": 249,
+      "field": 249,
+      "room": 249,
+      "combat": 125
+    },
+    "cold_perf_hz": 125,
+    "perf_stack": "Main-TID cycles:u,DWARF32768; recorded loss must be zero.",
+    "cpu": "All-game-thread user-only task-clock:u,30s regular/60s cold. Does not include kernel or external collectors.",
+    "graphics": "Independent Linux SDL3 tiles,UNDEAD_PEOPLE,OpenGL,2880x1800 fullscreen,zoom4; VISION4,RENDER0,legacyMULTI=false;TRACY_NO_SYS_TRACE=1.",
+    "draw": "Tracy owner CPU tiles.draw in fixed action window; classified by containment of draw_cache_rebuild. No GPU/present/FPS/frame-p95 claim.",
+    "environment": "Load and CPU/IO/memory pressure per trial. Recorded IO pressure and transport loss preserved; excluded whole pairs/configurations before interpreting speed.",
+    "cold": "Private copied save files only:fsync,POSIX_FADV_DONTNEED,then mincore verifies0resident pages before launch. Hardware caches and later preload uncontrolled.64north inputs/60s captures; actual native new-region endpoint/monsters recorded."
+  },
+  "regular_metrics": {
+    "carrier": {
+      "draw.rebuilt": {
+        "means": {
+          "baseline": 34.68980565945946,
+          "candidate": 34.10648824864865
+        },
+        "paired95_t4_interval": [
+          -1.973801633828347,
+          0.8071668122067277
+        ],
+        "reduction_percent": 1.6815240089180006
+      },
+      "draw.reused": {
+        "means": {
+          "baseline": 24.507896678742956,
+          "candidate": 24.627507391440602
+        },
+        "paired95_t4_interval": [
+          -0.34131021495077274,
+          0.5805316403460629
+        ],
+        "reduction_percent": -0.4880496856402683
+      },
+      "monmove": {
+        "means": {
+          "baseline": 0.002375172972972973,
+          "candidate": 0.0024221567567567566
+        },
+        "paired95_t4_interval": [
+          -0.0003635926204448133,
+          0.0004575601880123809
+        ],
+        "reduction_percent": -1.978120512417858
+      },
+      "map_memory.prepare_region": {
+        "means": {
+          "baseline": 0.8715975666666667,
+          "candidate": 0.8415942333333333
+        },
+        "paired95_t4_interval": [
+          -0.30212002923849146,
+          0.2421133625718248
+        ],
+        "reduction_percent": 3.4423378954668293
+      },
+      "all_process30s_user_task_clock_ms": {
+        "means": {
+          "baseline": 9876.122,
+          "candidate": 9826.592
+        },
+        "paired95_t4_interval": [
+          -310.6597975575755,
+          211.59979755757564
+        ],
+        "reduction_percent": 0.5015126382602264
+      }
+    },
+    "field": {
+      "draw.rebuilt": {
+        "means": {
+          "baseline": 26.764593556756758,
+          "candidate": 25.239330102702702
+        },
+        "paired95_t4_interval": [
+          -3.2185929381348997,
+          0.1680660300267911
+        ],
+        "reduction_percent": 5.698810448287195
+      },
+      "monmove": {
+        "means": {
+          "baseline": 0.002835264864864865,
+          "candidate": 0.0025942162162162163
+        },
+        "paired95_t4_interval": [
+          -0.0007677344746751362,
+          0.00028563717737783875
+        ],
+        "reduction_percent": 8.501803539971487
+      },
+      "map_memory.prepare_region": {
+        "means": {
+          "baseline": 1.1533100666666667,
+          "candidate": 1.0165837666666666
+        },
+        "paired95_t4_interval": [
+          -0.40131667071090005,
+          0.1278640707109001
+        ],
+        "reduction_percent": 11.855120661104667
+      },
+      "all_process30s_user_task_clock_ms": {
+        "means": {
+          "baseline": 3784.29,
+          "candidate": 3648.148
+        },
+        "paired95_t4_interval": [
+          -386.95535760491464,
+          114.67135760491439
+        ],
+        "reduction_percent": 3.597557269659557
+      }
+    },
+    "room": {
+      "draw.rebuilt": {
+        "means": {
+          "baseline": 17.19623035135135,
+          "candidate": 17.342178556756757
+        },
+        "paired95_t4_interval": [
+          -0.5899024124132421,
+          0.881798823224055
+        ],
+        "reduction_percent": -0.848722088640419
+      },
+      "monmove": {
+        "means": {
+          "baseline": 0.002348789189189189,
+          "candidate": 0.0023585891891891894
+        },
+        "paired95_t4_interval": [
+          -0.0003256346184303834,
+          0.00034523461843038354
+        ],
+        "reduction_percent": -0.4172362528364282
+      },
+      "map_memory.prepare_region": {
+        "means": {
+          "baseline": 0.7482386,
+          "candidate": 0.8018238
+        },
+        "paired95_t4_interval": [
+          -0.0970844129261879,
+          0.20425481292618797
+        ],
+        "reduction_percent": -7.161512383883961
+      },
+      "all_process30s_user_task_clock_ms": {
+        "means": {
+          "baseline": 2204.44,
+          "candidate": 2215.442
+        },
+        "paired95_t4_interval": [
+          -44.675140904585106,
+          66.67914090458538
+        ],
+        "reduction_percent": -0.49908366750739397
+      }
+    },
+    "combat": {
+      "draw.rebuilt": {
+        "means": {
+          "baseline": 38.213620175,
+          "candidate": 37.123682125
+        },
+        "paired95_t4_interval": [
+          -2.014188589979561,
+          -0.16568751002044013
+        ],
+        "reduction_percent": 2.8522240107286545
+      },
+      "draw.reused": {
+        "means": {
+          "baseline": 27.619211212903224,
+          "candidate": 27.345285574408603
+        },
+        "paired95_t4_interval": [
+          -1.3917988400100096,
+          0.8439475630207635
+        ],
+        "reduction_percent": 0.9917938509650392
+      },
+      "monmove": {
+        "means": {
+          "baseline": 9.5241566,
+          "candidate": 10.3953071
+        },
+        "paired95_t4_interval": [
+          -0.6613160244061463,
+          2.403617024406147
+        ],
+        "reduction_percent": -9.146746915102177
+      },
+      "all_process30s_user_task_clock_ms": {
+        "means": {
+          "baseline": 10014.53,
+          "candidate": 9911.556
+        },
+        "paired95_t4_interval": [
+          -229.07808415823644,
+          23.130084158237565
+        ],
+        "reduction_percent": 1.0282459586221204
+      }
+    }
+  },
+  "cold_metrics": {
+    "field-file-cold": {
+      "draw.rebuilt": {
+        "means": {
+          "baseline": 28.9399936,
+          "candidate": 27.98059472328767
+        },
+        "paired95_t4_interval": [
+          -1.6240808597893708,
+          -0.2947168936352862
+        ],
+        "reduction_percent": 3.315131613271438
+      },
+      "monmove": {
+        "means": {
+          "baseline": 0.0318176972972973,
+          "candidate": 0.04177782702702703
+        },
+        "paired95_t4_interval": [
+          -0.018541314721365436,
+          0.0384615741808249
+        ],
+        "reduction_percent": -31.3037415519563
+      },
+      "map_memory.prepare_region": {
+        "means": {
+          "baseline": 1.0016481333333334,
+          "candidate": 1.0236095333333333
+        },
+        "paired95_t4_interval": [
+          -0.05592424117819111,
+          0.09984704117819096
+        ],
+        "reduction_percent": -2.1925264241161813
+      },
+      "all_process60s_user_task_clock_ms": {
+        "means": {
+          "baseline": 7929.392,
+          "candidate": 7840.292
+        },
+        "paired95_t4_interval": [
+          -201.32677239282063,
+          23.126772392820982
+        ],
+        "reduction_percent": 1.123667489260205
+      }
+    }
+  },
+  "cold_runs": [
+    {
+      "name": "memory249v2-field-file-cold-baseline-01",
+      "variant": "baseline",
+      "pair": 1,
+      "native": {
+        "exit": 0,
+        "turn": 5212886,
+        "location": [
+          5459,
+          7001,
+          0
+        ],
+        "monsters": 6,
+        "player_xxh64_verified": true
+      },
+      "pages_before_launch": 538,
+      "resident_pages_before_launch": 0
+    },
+    {
+      "name": "memory249v2-field-file-cold-candidate-01",
+      "variant": "candidate",
+      "pair": 1,
+      "native": {
+        "exit": 0,
+        "turn": 5212886,
+        "location": [
+          5459,
+          7001,
+          0
+        ],
+        "monsters": 6,
+        "player_xxh64_verified": true
+      },
+      "pages_before_launch": 538,
+      "resident_pages_before_launch": 0
+    },
+    {
+      "name": "memory249v2-field-file-cold-candidate-02",
+      "variant": "candidate",
+      "pair": 2,
+      "native": {
+        "exit": 0,
+        "turn": 5212886,
+        "location": [
+          5459,
+          7001,
+          0
+        ],
+        "monsters": 6,
+        "player_xxh64_verified": true
+      },
+      "pages_before_launch": 538,
+      "resident_pages_before_launch": 0
+    },
+    {
+      "name": "memory249v2-field-file-cold-baseline-02",
+      "variant": "baseline",
+      "pair": 2,
+      "native": {
+        "exit": 0,
+        "turn": 5212886,
+        "location": [
+          5459,
+          7001,
+          0
+        ],
+        "monsters": 6,
+        "player_xxh64_verified": true
+      },
+      "pages_before_launch": 538,
+      "resident_pages_before_launch": 0
+    },
+    {
+      "name": "memory249v2-field-file-cold-baseline-03",
+      "variant": "baseline",
+      "pair": 3,
+      "native": {
+        "exit": 0,
+        "turn": 5212886,
+        "location": [
+          5459,
+          7001,
+          0
+        ],
+        "monsters": 6,
+        "player_xxh64_verified": true
+      },
+      "pages_before_launch": 538,
+      "resident_pages_before_launch": 0
+    },
+    {
+      "name": "memory249v2-field-file-cold-candidate-03",
+      "variant": "candidate",
+      "pair": 3,
+      "native": {
+        "exit": 0,
+        "turn": 5212886,
+        "location": [
+          5459,
+          7001,
+          0
+        ],
+        "monsters": 6,
+        "player_xxh64_verified": true
+      },
+      "pages_before_launch": 538,
+      "resident_pages_before_launch": 0
+    },
+    {
+      "name": "memory249v2-field-file-cold-candidate-04",
+      "variant": "candidate",
+      "pair": 4,
+      "native": {
+        "exit": 0,
+        "turn": 5212886,
+        "location": [
+          5459,
+          7001,
+          0
+        ],
+        "monsters": 6,
+        "player_xxh64_verified": true
+      },
+      "pages_before_launch": 538,
+      "resident_pages_before_launch": 0
+    },
+    {
+      "name": "memory249v2-field-file-cold-baseline-04",
+      "variant": "baseline",
+      "pair": 4,
+      "native": {
+        "exit": 0,
+        "turn": 5212886,
+        "location": [
+          5459,
+          7001,
+          0
+        ],
+        "monsters": 6,
+        "player_xxh64_verified": true
+      },
+      "pages_before_launch": 538,
+      "resident_pages_before_launch": 0
+    },
+    {
+      "name": "memory249v2-field-file-cold-baseline-05",
+      "variant": "baseline",
+      "pair": 5,
+      "native": {
+        "exit": 0,
+        "turn": 5212886,
+        "location": [
+          5459,
+          7001,
+          0
+        ],
+        "monsters": 6,
+        "player_xxh64_verified": true
+      },
+      "pages_before_launch": 538,
+      "resident_pages_before_launch": 0
+    },
+    {
+      "name": "memory249v2-field-file-cold-candidate-05",
+      "variant": "candidate",
+      "pair": 5,
+      "native": {
+        "exit": 0,
+        "turn": 5212886,
+        "location": [
+          5459,
+          7001,
+          0
+        ],
+        "monsters": 6,
+        "player_xxh64_verified": true
+      },
+      "pages_before_launch": 538,
+      "resident_pages_before_launch": 0
+    }
+  ],
+  "cold_stage_extrema": {
+    "baseline": {
+      "map_memory.prepare_region": {
+        "mean_of_run_means_ms": 1.0016481333333334,
+        "maximum_observed_ms": 1.884306
+      },
+      "map_memory.load_region": {
+        "mean_of_run_means_ms": 0.0033249571428571427,
+        "maximum_observed_ms": 0.506337
+      },
+      "game.action_execute": {
+        "mean_of_run_means_ms": 2.281706759375,
+        "maximum_observed_ms": 51.313976
+      },
+      "simulate_turn_suffix": {
+        "mean_of_run_means_ms": 7.730488256756757,
+        "maximum_observed_ms": 24.393524
+      }
+    },
+    "candidate": {
+      "map_memory.prepare_region": {
+        "mean_of_run_means_ms": 1.0236095333333333,
+        "maximum_observed_ms": 1.805732
+      },
+      "map_memory.load_region": {
+        "mean_of_run_means_ms": 0.0023337071428571428,
+        "maximum_observed_ms": 0.142737
+      },
+      "game.action_execute": {
+        "mean_of_run_means_ms": 2.952658921875,
+        "maximum_observed_ms": 155.74487
+      },
+      "simulate_turn_suffix": {
+        "mean_of_run_means_ms": 7.938825543243243,
+        "maximum_observed_ms": 73.259819
+      }
+    }
+  },
+  "regular_exclusions": [
+    {
+      "scene": "carrier",
+      "pair": 3,
+      "reason": "Recorded perf loss12 during high IO/memory pressure; rerun both sides of pair, retain native/state diagnostics. No speed-based exclusion.",
+      "invalid_trial": "memory249v2-carrier-candidate-03",
+      "retired_matching_valid_runs": [
+        "memory249v2-carrier-baseline-03"
+      ]
+    },
+    {
+      "scene": "combat",
+      "reason": "Second recorded perf transport loss during sustained IO pressure; reduce producer frequency for the complete combat scene, rerun both variants for5balanced pairs. Do not mix collector configurations within that scene.",
+      "invalid_trial": "memory249v2-combat-candidate-02",
+      "retired_matching_valid_runs": [
+        "memory249v2-combat-baseline-01",
+        "memory249v2-combat-candidate-01"
+      ]
+    }
+  ],
+  "save_and_replay": {
+    "native_replay_reload_runs": 8,
+    "runs": [
+      {
+        "name": "memory-replay-carrier-baseline",
+        "variant": "baseline",
+        "exit": 0,
+        "turn": 5212848,
+        "position": [
+          5495,
+          7417,
+          2
+        ],
+        "monsters": 0,
+        "normalized_sha256": "068860a26dc9fcc72eba8da07949507b8597463f71e53796b097de2e403ff0c9",
+        "footer_verified": true
+      },
+      {
+        "name": "memory-reload-carrier-baseline",
+        "variant": "baseline",
+        "exit": 0,
+        "turn": 5212848,
+        "position": [
+          5495,
+          7417,
+          2
+        ],
+        "monsters": 0,
+        "normalized_sha256": "f9a63531fac2cd9eed27470ff7988ffb750b35b941c306d19b31016162d507d1",
+        "footer_verified": true
+      },
+      {
+        "name": "memory-replay-carrier-candidate",
+        "variant": "candidate",
+        "exit": 0,
+        "turn": 5212848,
+        "position": [
+          5495,
+          7417,
+          2
+        ],
+        "monsters": 0,
+        "normalized_sha256": "068860a26dc9fcc72eba8da07949507b8597463f71e53796b097de2e403ff0c9",
+        "footer_verified": true
+      },
+      {
+        "name": "memory-reload-carrier-candidate",
+        "variant": "candidate",
+        "exit": 0,
+        "turn": 5212848,
+        "position": [
+          5495,
+          7417,
+          2
+        ],
+        "monsters": 0,
+        "normalized_sha256": "f9a63531fac2cd9eed27470ff7988ffb750b35b941c306d19b31016162d507d1",
+        "footer_verified": true
+      },
+      {
+        "name": "memory-replay-combat-baseline",
+        "variant": "baseline",
+        "exit": 0,
+        "turn": 5212819,
+        "position": [
+          5495,
+          7449,
+          2
+        ],
+        "monsters": 759,
+        "normalized_sha256": "58af4b5158d3802f0b3cd27784f71b32ee5f2e9260002d33d8c26b8150a6547f",
+        "footer_verified": true
+      },
+      {
+        "name": "memory-reload-combat-baseline",
+        "variant": "baseline",
+        "exit": 0,
+        "turn": 5212819,
+        "position": [
+          5495,
+          7449,
+          2
+        ],
+        "monsters": 759,
+        "normalized_sha256": "c065d369013f70f86eeb92198e39908433258a9a45f416d620e3e0653a6b35ff",
+        "footer_verified": true
+      },
+      {
+        "name": "memory-replay-combat-candidate",
+        "variant": "candidate",
+        "exit": 0,
+        "turn": 5212819,
+        "position": [
+          5495,
+          7449,
+          2
+        ],
+        "monsters": 759,
+        "normalized_sha256": "58af4b5158d3802f0b3cd27784f71b32ee5f2e9260002d33d8c26b8150a6547f",
+        "footer_verified": true
+      },
+      {
+        "name": "memory-reload-combat-candidate",
+        "variant": "candidate",
+        "exit": 0,
+        "turn": 5212819,
+        "position": [
+          5495,
+          7449,
+          2
+        ],
+        "monsters": 759,
+        "normalized_sha256": "c065d369013f70f86eeb92198e39908433258a9a45f416d620e3e0653a6b35ff",
+        "footer_verified": true
+      }
+    ],
+    "normalization": "Explicit recipe ordering and save wall telemetry; only exact known build-version event keys/count-bucket merge. Preserve all other gameplay arrays and stats. Original raw differences retained.",
+    "map_memory_archives": {
+      "state": "passed",
+      "matrices": [
+        {
+          "scope": "regular",
+          "runs": 40,
+          "scenes": {
+            "carrier": "9a04a5bbf58cefe47ecdbc3e648e9dde9b3462d11481fd79a02a2d03769cdae4",
+            "field": "f2a2da11960b15c2a849b12d268e29b7a52db4b898c7926c61fffa302aa81cba",
+            "room": "8d7811c8c299161465803708af20bb8d1ab3fab140729a21911e37c3a1002b74",
+            "combat": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488"
+          }
+        },
+        {
+          "scope": "file-cold",
+          "runs": 10,
+          "scenes": {
+            "field-file-cold": "8db1531b154291c36fb455991e12ad2fef262eb2f0a086f96f348765af24d4b7"
+          }
+        }
+      ]
+    }
+  },
+  "source_sha256": {
+    "src/map_memory.cpp": "e2f11d3ea634494937627d4108ef885a5134dbeea67545c4032324c527e312f2",
+    "src/map_memory.h": "bc7a0f4971683d21931a85c4b9798aa5f572bdd1147261011c33da230873048d",
+    "tests/map_memory_test.cpp": "4762384269e81aefb20df903c6edf6d32b6b71811c87452b2d2a39ee55b2fade"
+  },
+  "binaries": {
+    "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile/src/Release/cataclysm-tiles": "0386e69f7716d881a0dbc425546549c7b266634f0e9164405aa76e60f6c6a022",
+    "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile/Release/ccb-sdl3-acceptance": "c5aa3f43b2790b7325f1c3eb3df0c6b0168ab2d91c15225d1612962bd110ed54"
+  },
+  "proof_sha256": {
+    ".ccb-pr-evidence/native-combined/memory-cache-stage3/build-progress.json": "49419415af7a3ed8fa489db8be1db1f19fd7acecf8e23e39893b3fb299441f9a",
+    ".ccb-pr-evidence/native-combined/memory-cache-stage3/baseline/build-progress.json": "1fb02cd540277a21e1015b7f52cf261681f57f3b259b3bccd69aab9954331f34",
+    ".ccb-pr-evidence/native-combined/memory-cache-stage3/matrix-progress.json": "d8b480cf783ae18e29c45bd637f52edfd7dc7cd0e3950a994fe19a974644d0c3",
+    ".ccb-pr-evidence/native-combined/memory-cache-stage3/cold-traversal/matrix-progress.json": "f305b6620d0f465357b50dab3120286ab0511680f83a8f404210ba3b06825d38",
+    ".ccb-pr-evidence/native-combined/memory-cache-stage3/replay-progress.json": "82000e150aaaed61d0074e816e8e033005ac87417c9ad44b8fe8bf818098cda5",
+    ".ccb-pr-evidence/native-combined/memory-cache-stage3/fault-results.json": "753fcb5a7965d7e1e44574ecb6bc620f91ed8339427932f257874633c5b35611",
+    ".ccb-pr-evidence/native-combined/memory-cache-stage3/memory-archive-summary.json": "2496fc48c688703c27556566b53e66c8d03e9c5345ed20f3185319db2e3d01be",
+    ".ccb-pr-evidence/native-combined/memory-cache-stage3/remaining-gates-progress.json": "eb59b8d42c0435eca62aec613ba34f65b8c85eeec789adb7eb71d8a6e42ac274"
+  },
+  "risks": [
+    "The reported several-second exploration stall is not established as reproduced/fixed by these scenes.",
+    "Short-lived IO pressure widens some paired intervals. No general gain or equivalence claim from intervals crossing zero; retain complete metrics.",
+    "No whole old-save corpus,live multiplayer device,cross-platform,Vulkan/GPU or long-session acceptance.",
+    "Pointer-derived monster variants and wall-clock animation remain existing rendering semantics; saved state and complete region JSON match, not a whole-image pixel oracle."
+  ],
+  "publication": "Local source/test and evidence commits only; no push/new PR/merge/release; original saves/frozen graphics/unrelated primary changes preserved; no obj-lua access.",
+  "next_exact_action": "Close stage3 checkpoint and local commits; then apply owned pathfinding workspace/nested-search regressions for stage4. Keep remaining renderer boundary/combined acceptance active.",
+  "source_commit": "911ce8a8bd0d6421a71c71d4b337fecd91ce0698",
+  "changed_lines": 912,
+  "reference_commits": "<=15 for this <1000line batch",
+  "actual_commits": 2,
+  "split_reason": "155implementation/regression lines remain coherent;757measured evidence lines(83%) are an independent reviewable record, not mechanically split."
+}

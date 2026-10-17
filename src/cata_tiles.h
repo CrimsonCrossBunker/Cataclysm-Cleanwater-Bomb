@@ -27,6 +27,7 @@
 #include "cata_small_literal_vector.h"
 #include "coordinates.h"
 #include "creature.h"
+#include "tile_category.h"
 #include "cuboid_rectangle.h"
 #include "hsv_color.h"
 #include "mapdata.h"
@@ -67,6 +68,10 @@ class vehicle;
 struct sprite_screen_bounds;
 struct tint_sprite_record;
 struct tile_render_info;
+class sprite_command_frame;
+struct tile_layer_view;
+struct creature_render_view;
+struct entity_render_view;
 namespace tile_preparation
 {
 class frame;
@@ -94,28 +99,6 @@ struct tile_type {
     float pixelscale = 1.0;
 
     std::vector<std::string> available_subtiles;
-};
-
-// Make sure to change TILE_CATEGORY_IDS if this changes!
-enum class TILE_CATEGORY {
-    NONE,
-    VEHICLE_PART,
-    TERRAIN,
-    ITEM,
-    FURNITURE,
-    TRAP,
-    FIELD,
-    LIGHTING,
-    MONSTER,
-    BULLET,
-    HIT_ENTITY,
-    WEATHER,
-    OVERMAP_TERRAIN,
-    OVERMAP_VISION_LEVEL,
-    OVERMAP_WEATHER,
-    MAP_EXTRA,
-    OVERMAP_NOTE,
-    last
 };
 
 const std::unordered_map<std::string, TILE_CATEGORY> to_TILE_CATEGORY = {
@@ -749,6 +732,7 @@ class cata_tiles
         bool would_apply_vision_effects( visibility_type visibility ) const;
         bool apply_vision_effects( const tripoint_bub_ms &pos, visibility_type visibility, int &height_3d );
         void draw_square_below( const point_bub_ms &p, const nc_color &col, int sizefactor );
+        bool draw_layer_view( const tile_layer_view &view, int &height_3d );
         bool draw_terrain( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
                            const std::array<bool, 5> &invisible );
         bool draw_furniture( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
@@ -771,6 +755,10 @@ class cata_tiles
         // or nullopt when it is unpainted or the VEHICLE_PART_COLOR option is off.
         std::optional<RGBColor> get_vpart_tint( const vehicle &veh,
                                                 const point_rel_ms &mount ) const;
+        std::optional<creature_render_view> capture_critter_view( const tripoint_bub_ms &p,
+                bool invisible ) const;
+        void draw_entity_view( const entity_render_view &view, const tripoint_bub_ms &p,
+                               lit_level ll, int &height_3d );
         bool draw_critter_at( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
                               const std::array<bool, 5> &invisible );
         bool draw_critter_above( const tripoint_bub_ms &p, lit_level ll, int &height_3d,
@@ -1225,6 +1213,11 @@ class cata_tiles
         // must not include map.h (map.h includes this header). Null outside the
         // sprite branch of the layer loop.
         const tile_render_info *m_cur_tile = nullptr;
+        // Immediate owner scratch; values still own their strings. Each root
+        // draw binds its own buffer and restores any enclosing draw on unwind.
+        tile_layer_view *layer_capture_ = nullptr;
+        // Owner-only frame binding. Commands carry values; resource handles stay here.
+        sprite_command_frame *command_frame_ = nullptr;
 
         // Set by draw_vpart around its draw_from_id_string call so the vehicle
         // part sprite gets recolored with the part's paint color; nullopt

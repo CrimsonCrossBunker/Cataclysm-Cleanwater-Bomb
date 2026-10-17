@@ -1,4 +1,6 @@
-#include "lightmap.h" // IWYU pragma: associated
+#include "lightmap.h"
+#include "vision_preparation.h"
+#include <system_error> // IWYU pragma: associated
 #include "shadowcasting.h" // IWYU pragma: associated
 
 #include <algorithm>
@@ -1394,9 +1396,52 @@ void map::build_seen_cache( const tripoint_bub_ms &origin, const int target_z, i
         ( *seen_caches[ target_z + OVERMAP_DEPTH ] )[origin.x()][origin.y()] = VISIBILITY_FULL;
     }
 
-    cast_zlight<float, sight_calc, sight_check, accumulate_transparency>(
-        seen_caches, transparency_caches, floor_caches, origin, penalty, 1.0,
-        directions_to_cast );
+    {
+        CATA_PROFILE_SCOPE_NAMED( "vision.total" );
+        bool prepared = false;
+        const int workers = get_option<int>( "VISION_PREPARATION_WORKERS" );
+        if( workers > 0 && vision_preparation::should_prepare(
+                MAX_VIEW_DISTANCE - penalty, vision_horizontal_cost_ms_, static_cast<unsigned>( workers ),
+                !cata_mp::is_session_active() ) ) {
+            try {
+                if( !vision_preparation_ ) {
+                    vision_preparation_ = std::make_unique<vision_preparation::frame>( workers );
+                }
+                auto request = vision_preparation_->try_acquire( MAX_VIEW_DISTANCE - penalty );
+                if( request ) {
+                    {
+                        CATA_PROFILE_SCOPE_NAMED( "vision.capture" );
+                        auto &values = vision_preparation_->capture();
+                        values.origin = origin;
+                        values.offset_distance = penalty;
+                        values.numerator = 1.0f;
+                        values.direction = directions_to_cast;
+                        values.trig_distance = trigdist;
+                        for( int z = 0; z < OVERMAP_LAYERS; ++z ) {
+                            values.transparency[z] = *transparency_caches[z];
+                            values.floors[z] = *floor_caches[z];
+                        }
+                    }
+                    if( vision_preparation_->prepare() && vision_preparation_->apply( seen_caches, request ) ) {
+                        prepared = true;
+                        vision_horizontal_cost_ms_ = vision_preparation_->horizontal_cost_ms();
+                    }
+                }
+            } catch( const std::bad_alloc & ) {
+                // No result has been applied; retain the normal serial path.
+            }
+        }
+        if( prepared ) {
+            // Vertical casting remains on the owner; its original exception
+            // semantics are not hidden by the parallel allocation fallback.
+            vision_preparation::cast_vertical( seen_caches, transparency_caches, floor_caches,
+                                               origin, penalty, 1.0f, directions_to_cast, trigdist );
+        } else {
+            cast_zlight<float, sight_calc, sight_check, accumulate_transparency>(
+                seen_caches, transparency_caches, floor_caches, origin, penalty, 1.0,
+                directions_to_cast, workers > 0 ? &vision_horizontal_cost_ms_ : nullptr );
+        }
+    }
     seen_cache_process_ledges( seen_caches, floor_caches, std::nullopt );
 
     const optional_vpart_position vp = veh_at( origin );

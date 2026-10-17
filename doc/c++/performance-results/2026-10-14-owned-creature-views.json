@@ -1,0 +1,233 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-14",
+  "batch": 43,
+  "baseline": "50238e46ec3fd45f49f8908ecb8b042c169eb809",
+  "scope": "SDL-free owner capture of creature appearance/visibility/disposition; renderer consumes owned character/monster/rider/copied-look values. Not completion of the full renderer frame boundary.",
+  "implementation": [
+    "Entity appearance values own body/category/facing/gender and ordered effect/equipment overlay ids; no Creature/item/mutation/SDL pointer survives capture.",
+    "Owner resolves underwater fallback, visibility and special-vision descriptions, rider and summoner/avatar appearance; resource lookup chooses existing ridden/body/overlay assets separately.",
+    "Character overlay heights all start at the pre-body base; monster overlays stack from the preceding current height. Rider starts at6. Preserve unsupported facing and legacy copy-avatar false draw result.",
+    "Shadow disposition uses the same owned icon result and retains its original post-shadow lazy query point. Body/overlay/icon emission order remains unchanged.",
+    "Animation/glide ordering and GPU resource handling remain on the owner. No new asynchronous frame or worker dispatch."
+  ],
+  "validation": {
+    "configuration": "Linux Clang 23 Release SDL3 tiles/sound, Lua v1, TRACY=ON, jobs=2",
+    "private_configuration_stability": "Private early attach retains identical accepted -DGIT_VERSION across clean/dirty absolute worktrees; actual head and binary hashes recorded.",
+    "native": {
+      "assertions": {
+        "successes": "4699",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "cases": {
+        "successes": "57",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "xml_sha256": "4ba41cf6c4b6d94beaaabfb9204ae872ca2d34fa44c3e8f32f03d7d71e1084bf"
+    },
+    "scoped_asan_ubsan_lsan": {
+      "assertions": {
+        "successes": "1835",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "cases": {
+        "successes": "13",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "xml_sha256": "4485325ced5389d9a0df55f83d0a7b1454e4342a5532485e6f8fb1f09b87a59f"
+    },
+    "sanitizer_scope": "Owned appearance/disposition module and cata_tiles consumption. ASan/UBSan/LSan instrument actual cata_tiles.cpp, creature_render_view.cpp, tile_lookup.cpp and tests/support; common world objects Release. No new worker dispatch; not whole-game/GPU safety proof. ASan filter is limited to the13 registered affected-view/lookup cases; wider geometry/variation/recovery/GPU cases passed in native acceptance.",
+    "commands": [
+      [
+        "cmake",
+        "--build",
+        "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile",
+        "--config",
+        "Release",
+        "--target",
+        "cataclysm-tiles",
+        "ccb-sdl3-acceptance",
+        "ccb-subtile-asan",
+        "--parallel",
+        "2"
+      ],
+      [
+        "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile/Release/ccb-sdl3-acceptance",
+        "[semantic_view],[tile_lookup],[sprite_geometry],[sprite_variation],[renderer_recovery],[gpu]",
+        "--rng-seed",
+        "20261014",
+        "--order",
+        "lex",
+        "--warn",
+        "NoTests",
+        "--user-dir",
+        "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/creature-semantic-stage5/native-user",
+        "--reporter",
+        "xml",
+        "--out",
+        "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/creature-semantic-stage5/native.xml"
+      ],
+      [
+        "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile/Release/ccb-subtile-asan",
+        "[semantic_view],[tile_lookup]",
+        "--rng-seed",
+        "20261014",
+        "--order",
+        "lex",
+        "--warn",
+        "NoTests",
+        "--user-dir",
+        "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/creature-semantic-stage5/asan-user",
+        "--reporter",
+        "xml",
+        "--out",
+        "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/creature-semantic-stage5/asan.xml"
+      ]
+    ],
+    "source_sha256": {
+      "src/cata_tiles.cpp": "fb5c9a6cd2a9a71adc73cbb3eac4ecc6e6b4026db38dae2d8523821d506d8135",
+      "src/cata_tiles.h": "09634f0d11caedbb567e9226d4d6554cb82f626486005470c81644f99d125282",
+      "src/creature_render_view.cpp": "cc9a8f8b156172b282e6c59d7d5507e18d0dc043971f39253a2eeab15d57af2a",
+      "src/creature_render_view.h": "efb93c8b52ef058809a33095a4e0da9af248f7754f06b316a6a89dab5d3e5379",
+      "tests/creature_render_view_test.cpp": "550083e41c7ba0fa47ecc28f6cd73fd3d7b79303581fbd7a1dd76607d64fd8fe"
+    },
+    "candidate_binaries_sha256": {
+      "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile/src/Release/cataclysm-tiles": "4c1de44b1f5cbb7f00adb4eb3096d07f987ee798d13feb6d99a3edfe3b0b5b55",
+      "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile/Release/ccb-sdl3-acceptance": "7caf636d9d26f8fc60b14d9f163709df560d7f403939a93dc3343d5a33d87886"
+    },
+    "regression": "Owned appearance after actor mutation/destruction without RNG; normal/invisible/ridden/copied-summoner/avatar and underwater-avatar fallback; count lazy special-vision condition/description callbacks. Existing lookup/geometry/variation/recovery/variant native scope as routed by filter.",
+    "actual_sdl3_replay_reload": [
+      {
+        "name": "creature43-replay-combat-baseline",
+        "variant": "baseline",
+        "exit": 0,
+        "turn": 5212819,
+        "position": [
+          5495,
+          7449,
+          2
+        ],
+        "monsters": 759,
+        "normalized_sha256": "58af4b5158d3802f0b3cd27784f71b32ee5f2e9260002d33d8c26b8150a6547f",
+        "footer_verified": true
+      },
+      {
+        "name": "creature43-reload-combat-baseline",
+        "variant": "baseline",
+        "exit": 0,
+        "turn": 5212819,
+        "position": [
+          5495,
+          7449,
+          2
+        ],
+        "monsters": 759,
+        "normalized_sha256": "c065d369013f70f86eeb92198e39908433258a9a45f416d620e3e0653a6b35ff",
+        "footer_verified": true
+      },
+      {
+        "name": "creature43-replay-combat-candidate",
+        "variant": "candidate",
+        "exit": 0,
+        "turn": 5212819,
+        "position": [
+          5495,
+          7449,
+          2
+        ],
+        "monsters": 759,
+        "normalized_sha256": "58af4b5158d3802f0b3cd27784f71b32ee5f2e9260002d33d8c26b8150a6547f",
+        "footer_verified": true
+      },
+      {
+        "name": "creature43-reload-combat-candidate",
+        "variant": "candidate",
+        "exit": 0,
+        "turn": 5212819,
+        "position": [
+          5495,
+          7449,
+          2
+        ],
+        "monsters": 759,
+        "normalized_sha256": "c065d369013f70f86eeb92198e39908433258a9a45f416d620e3e0653a6b35ff",
+        "footer_verified": true
+      },
+      {
+        "name": "creature43-replay-room-baseline",
+        "variant": "baseline",
+        "exit": 0,
+        "turn": 5212848,
+        "position": [
+          5489,
+          7448,
+          0
+        ],
+        "monsters": 0,
+        "normalized_sha256": "8151bb75dee10193f9f6a1bafa067a4936abe0d372263068b5753d97ac96592b",
+        "footer_verified": true
+      },
+      {
+        "name": "creature43-reload-room-baseline",
+        "variant": "baseline",
+        "exit": 0,
+        "turn": 5212848,
+        "position": [
+          5489,
+          7448,
+          0
+        ],
+        "monsters": 0,
+        "normalized_sha256": "34b92cad78cd95eacda0597f7b63ab7d80227ac8793cf4858e10c58157a1f2e2",
+        "footer_verified": true
+      },
+      {
+        "name": "creature43-replay-room-candidate",
+        "variant": "candidate",
+        "exit": 0,
+        "turn": 5212848,
+        "position": [
+          5489,
+          7448,
+          0
+        ],
+        "monsters": 0,
+        "normalized_sha256": "8151bb75dee10193f9f6a1bafa067a4936abe0d372263068b5753d97ac96592b",
+        "footer_verified": true
+      },
+      {
+        "name": "creature43-reload-room-candidate",
+        "variant": "candidate",
+        "exit": 0,
+        "turn": 5212848,
+        "position": [
+          5489,
+          7448,
+          0
+        ],
+        "monsters": 0,
+        "normalized_sha256": "34b92cad78cd95eacda0597f7b63ab7d80227ac8793cf4858e10c58157a1f2e2",
+        "footer_verified": true
+      }
+    ],
+    "memory_region_semantic_hashes": {
+      "creature43-replay-combat": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488",
+      "creature43-reload-combat": "cb81b8e02e4b13892fe0d76b078e318176faf5f021efef4e1091e117522c6488",
+      "creature43-replay-room": "8d7811c8c299161465803708af20bb8d1ab3fab140729a21911e37c3a1002b74",
+      "creature43-reload-room": "8d7811c8c299161465803708af20bb8d1ab3fab140729a21911e37c3a1002b74"
+    },
+    "game_scope": "Actual fullscreen SDL3 UndeadPeople carrier combat and room scenes, baseline41 versus candidate43; original saves/manifests unchanged. Semantic gameplay/save/memory comparison, not a pixel-exact visual or speedup claim.",
+    "normalization": "Only unordered learned-recipe/event ordering, game_save wall-time fields and exact verified12/13/14 build identities; retain gameplay values and event counts, verify archive active footer/xxh64."
+  },
+  "performance_claim": "None. Structural boundary; final fixed-scene function perf/CATA comparison remains required.",
+  "remaining": [
+    "Full memory/light/override semantic views and ordered asset/backend commands with generation/lifecycle validation.",
+    "Full ortho/iso/color/override/memory/recovery/reload combined acceptance and repeated controlled timing.",
+    "No whole-game sanitizer/race, multiplayer gameplay, network-serialized frames, future3D renderer or cross-platform/GPU-device acceptance claim."
+  ],
+  "local_raw_evidence": "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/creature-semantic-stage5"
+}

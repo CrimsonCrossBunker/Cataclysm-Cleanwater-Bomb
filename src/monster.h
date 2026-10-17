@@ -25,6 +25,7 @@
 #include "coordinates.h"
 #include "creature.h"
 #include "monster_uid.h"
+#include "monster_goal_policy.h"
 #include "type_id.h"
 #include "units_fwd.h"
 #include "value_ptr.h"
@@ -222,6 +223,8 @@ class monster : public Creature
         // Performs any necessary coordinate updates due to map shift.
         void shift( const point_rel_sm &sm_shift );
         void set_patrol_route( const std::vector<point_rel_ms> &patrol_pts_rel_ms );
+        // Owner query returns values; route storage remains private.
+        monster_patrol_view patrol_view() const;
 
         /**
          * Checks whether we can move to/through p. This does not account for bashing.

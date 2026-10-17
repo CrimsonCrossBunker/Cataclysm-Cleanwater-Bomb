@@ -311,21 +311,25 @@ bool map_memory::prepare_region( const tripoint_abs_ms &p1, const tripoint_abs_m
 
     dbg( D_INFO ) << "Preparing memory map for area: pos: " << sm_pos << " size: " << sm_size;
 
-    cache_pos = sm_pos;
-    cache_size = sm_size.raw();
-    cached.clear();
+    // Build off to the side: an allocation/read failure must not publish a
+    // partly populated region or retire the previous usable view.
+    region_cache prepared;
     // Loop through each z-level in vision range
     for( int z = std::max( sm_pos.z() - fov_3d_z_range, -OVERMAP_DEPTH );
          z <= std::min( sm_pos.z() + fov_3d_z_range, OVERMAP_HEIGHT ); z++ ) {
-        cached[z].reserve( static_cast<std::size_t>( cache_size.x ) * cache_size.y );
-        for( int dy = 0; dy < cache_size.y; dy++ ) {
-            for( int dx = 0; dx < cache_size.x; dx++ ) {
+        auto &level = prepared[z + OVERMAP_DEPTH];
+        level.reserve( static_cast<std::size_t>( sm_size.x() ) * sm_size.y() );
+        for( int dy = 0; dy < sm_size.y(); dy++ ) {
+            for( int dx = 0; dx < sm_size.x(); dx++ ) {
                 // Store submap pointer in cache, categorized by z-level
-                const tripoint_abs_sm smpos( cache_pos.x() + dx, cache_pos.y() + dy, z );
-                cached[z].push_back( fetch_submap( smpos, reader ) );
+                const tripoint_abs_sm smpos( sm_pos.x() + dx, sm_pos.y() + dy, z );
+                level.push_back( fetch_submap( smpos, reader ) );
             }
         }
     }
+    cached = std::move( prepared );
+    cache_pos = sm_pos;
+    cache_size = sm_size.raw();
     return true;
 }
 
@@ -441,27 +445,34 @@ shared_ptr_fast<mm_submap> map_memory::load_submap( const tripoint_abs_sm &sm_po
     return ret;
 }
 
-static mm_submap null_mz_submap;
-static mm_submap invalid_mz_submap{ false };
 static const tripoint_abs_sm invalid_cache_pos = tripoint_abs_sm::invalid;
+
+mm_submap *map_memory::cached_submap( const tripoint_abs_sm &sm_pos ) const
+{
+    if( !is_valid() || sm_pos.z() < -OVERMAP_DEPTH || sm_pos.z() > OVERMAP_HEIGHT ) {
+        return nullptr;
+    }
+    const point_rel_sm idx = ( sm_pos - cache_pos ).xy();
+    const auto &level = cached[sm_pos.z() + OVERMAP_DEPTH];
+    // The north/west padding is not a writable memorization region. Keep the
+    // existing interior policy; every missing/outside query is a read-only miss.
+    if( idx.x() > 0 && idx.y() > 0 && idx.x() < cache_size.x && idx.y() < cache_size.y &&
+        !level.empty() ) {
+        return level[idx.y() * cache_size.x + idx.x()].get();
+    }
+    return nullptr;
+}
 
 const mm_submap &map_memory::get_submap( const tripoint_abs_sm &sm_pos ) const
 {
-    return const_cast<map_memory *>( this )->get_submap( sm_pos );
+    const mm_submap *const sm = cached_submap( sm_pos );
+    return sm ? *sm : unavailable_submap;
 }
 
 mm_submap &map_memory::get_submap( const tripoint_abs_sm &sm_pos )
 {
-    if( !is_valid() ) {
-        return invalid_mz_submap;
-    }
-    const point_rel_sm idx = ( sm_pos - cache_pos ).xy();
-    if( idx.x() > 0 && idx.y() > 0 && idx.x() < cache_size.x && idx.y() < cache_size.y &&
-        !cached[sm_pos.z()].empty() ) {
-        return *cached[sm_pos.z()][idx.y() * cache_size.x + idx.x()];
-    } else {
-        return null_mz_submap;
-    }
+    mm_submap *const sm = cached_submap( sm_pos );
+    return sm ? *sm : unavailable_submap;
 }
 
 bool map_memory::is_valid() const
@@ -584,7 +595,9 @@ void map_memory::clear()
 }
 void map_memory::clear_cache()
 {
-    cached.clear();
+    for( auto &level : cached ) {
+        level.clear();
+    }
     cache_pos = invalid_cache_pos;
     cache_size = point::zero;
 }

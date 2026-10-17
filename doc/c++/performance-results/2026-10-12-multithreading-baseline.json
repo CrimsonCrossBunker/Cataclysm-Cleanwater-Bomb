@@ -1,0 +1,244 @@
+{
+  "schema": 1,
+  "batch": 30,
+  "date": "2026-10-12",
+  "name": "multithreading-native-observability-baseline",
+  "baseline": "d20ad8c1128b70ffc20a9819f2024f58297435db",
+  "branch": "codex/multithreading-stage1-20261012",
+  "goal_state": "active; costly parallel task and measured benefit remain outstanding",
+  "scope": "Enabled profiling integration and combined native acceptance. Not a speedup or completed multithreading delivery.",
+  "fix": {
+    "file": "src/cata_tiles.cpp",
+    "problem": "TRACY=ON PlotData call with int 0/1 is ambiguous between int64_t, float and double overloads",
+    "solution": "Cast existing used_workers boolean to int64_t; preserve 0/1 meanings and disabled-build no-op",
+    "source_sha256": "7dc7d74f6ce89ae0584be3950ebfbd7ed86dcfaaae73b2720db218e92d196979"
+  },
+  "configuration": {
+    "compiler": "Clang23.1.1",
+    "standard": "C++17",
+    "build": "Release tiles/sound LuaPlatformv1 TRACY=ON,2compiler jobs",
+    "sdl_compile_runtime": "3.4.18",
+    "game_ldd": "SDL3/core,image,ttf,sound; no SDL2",
+    "backend": "X11/OpenGL",
+    "default_render_preparation_workers": 0,
+    "legacy_multithreading_enabled": false
+  },
+  "tracy_client": {
+    "version": "0.14.1",
+    "archive_sha256": "bf4af567e9c7524d07f3caa745fad02fb33bd5694f11910750382d1efbb251c1",
+    "client_sha256": "585226305c868f81e9f96be6701077259a7d055e3449e91fa2e77c4bdf5be632",
+    "configuration": "TRACY_ENABLE=ON,ON_DEMAND=OFF,static; matching source headers",
+    "system_library_failure": "Missing enabled GetToken/GetProfiler/allocator symbols, rejected by CMake. No system library replaced.",
+    "functional_capture": {
+      "zones": 224,
+      "native_exit": 0,
+      "scope": "wrapper/client/collector transport only"
+    }
+  },
+  "build": {
+    "game_sha256": "1681bd90a29e0ea5e13864410dfa6c430cf5251593f0a86cb0cd9c24eb8bf070",
+    "tests_sha256": "62e7d833c55cccb241af7258e2a917ca4cfb2acacbcd65f98a447ce5648717fa",
+    "incremental_resume_seconds": 2137.759,
+    "link_exit": 0,
+    "vendored_warning": "Existing Lua os_tmpname/tmpnam linker warning; vendored source unchanged."
+  },
+  "native_regression": {
+    "cases": 58,
+    "assertions": 519766,
+    "failures": 0,
+    "skips": 0,
+    "seed": 20261012,
+    "elapsed_seconds": 22.292,
+    "xml_sha256": "30a9e86ccfacc11dbfb2cffcf18ac3ef04ecbe580fd5cfbec291d5ae4535ea37",
+    "scope": "Affected sprite variation,geometry,preparation,SDL3,recovery,GPUdispatch,sound tags under dummy video/audio; not hardware or whole corpus"
+  },
+  "native_game": {
+    "trial": "baseline-pilot-quiet",
+    "scene": "Damon aircraft carrier,0active monsters,DEBUG_CLOAK/DEBUG_NODMG,100speed",
+    "tileset": "UNDEAD_PEOPLE",
+    "fullscreen_pixels": [
+      2880,
+      1800
+    ],
+    "zoom": 4,
+    "inputs": "32north,0.5s cadence,3s drain",
+    "state": {
+      "turn": 5212849,
+      "calendar_advance": 37,
+      "location": [
+        5495,
+        7417,
+        2
+      ],
+      "moves": 28,
+      "all32_moves_completed": true
+    },
+    "saved_footer": "latest active zzip footer and payload XXH64 verified",
+    "save_exit": 0,
+    "source_fixture_files_preserved": 65,
+    "original_manifest_sha256": "e440a270103c0f7fa28d751aaae9fc9235d3b4a0c3ede9d24bfcbabfc51ba085",
+    "runtime_data": "current combined source branch; private cache; frozen user gfx link"
+  },
+  "actual_game_trace": {
+    "zones": 464768,
+    "frames": 2,
+    "file": "startup.tracy",
+    "scope": "Startup and idle redraw diagnostic; includes preconnection history and human-independent setup waits, not the32input workload",
+    "selected_zones": {
+      "game.input_redraw": {
+        "counts": 213,
+        "total_ns": 9733697989,
+        "mean_ns": 45698112,
+        "max_ns": 155363970
+      },
+      "tiles.draw": {
+        "counts": 213,
+        "total_ns": 6935786408,
+        "mean_ns": 32562377,
+        "max_ns": 114842734
+      },
+      "tiles.layer_loop": {
+        "counts": 213,
+        "total_ns": 6043955234,
+        "mean_ns": 28375376,
+        "max_ns": 81399725
+      },
+      "tiles.dynamic_cache_refresh": {
+        "counts": 213,
+        "total_ns": 699582899,
+        "mean_ns": 3284426,
+        "max_ns": 7471717
+      },
+      "map_memory.prepare_region": {
+        "counts": 1,
+        "total_ns": 4671637,
+        "mean_ns": 4671637,
+        "max_ns": 4671637
+      },
+      "map_memory.load_region": {
+        "counts": 228,
+        "total_ns": 6120665,
+        "mean_ns": 26845,
+        "max_ns": 1968719
+      },
+      "unserialize_submaps": {
+        "counts": 2700,
+        "total_ns": 1144327181,
+        "mean_ns": 423824,
+        "max_ns": 139272199
+      }
+    },
+    "interpretation": "Nested inclusive zones overlap. Mean layer_loop28.375376ms is a profiled startup/idle observation, not a production FPS result."
+  },
+  "pilot_perf": {
+    "configuration": "TRACY compiled in; prior collector disconnected. Not release-default or A/B measurement.",
+    "all_process_interval_seconds": 30,
+    "all_process_metrics": {
+      "task-clock:u": {
+        "value": 12583.09,
+        "unit": "msec",
+        "running_percent": "100.00"
+      },
+      "cycles:u": {
+        "value": 41241053599.0,
+        "unit": "",
+        "running_percent": "58.00"
+      },
+      "instructions:u": {
+        "value": 111722678873.0,
+        "unit": "",
+        "running_percent": "56.00"
+      },
+      "cache-misses:u": {
+        "value": 240865002.0,
+        "unit": "",
+        "running_percent": "56.00"
+      },
+      "context-switches:u": {
+        "value": 0.0,
+        "unit": "",
+        "running_percent": "100.00"
+      },
+      "cpu-migrations:u": {
+        "value": 0.0,
+        "unit": "",
+        "running_percent": "100.00"
+      }
+    },
+    "main_window_monotonic": [
+      104527.59175218,
+      104546.599307408
+    ],
+    "main_samples": 371,
+    "folded_samples": 371,
+    "unresolved_leaf_samples": 105,
+    "unresolved_leaf_fraction": 0.2830188679245283,
+    "main_total_lost_samples": 0,
+    "self_top": [
+      {
+        "symbol": "cata_tiles::draw",
+        "period_percent": 8.42,
+        "samples": 31
+      },
+      {
+        "symbol": "cata_tiles::draw_from_id_string_internal",
+        "period_percent": 5.69,
+        "samples": 21
+      },
+      {
+        "symbol": "cata_tiles::draw_sprite_at",
+        "period_percent": 3.5,
+        "samples": 12
+      },
+      {
+        "symbol": "cata_tiles::draw",
+        "period_percent": 3.03,
+        "samples": 11
+      },
+      {
+        "symbol": "map::ter",
+        "period_percent": 2.39,
+        "samples": 9
+      },
+      {
+        "symbol": "",
+        "period_percent": 2.18,
+        "samples": 8
+      },
+      {
+        "symbol": "0x0000000000176524",
+        "period_percent": 2.16,
+        "samples": 8
+      },
+      {
+        "symbol": "std::_Hashtable<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, tile_lookup_frame::id_results>, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, tile_lookup_frame::id_results> >, std::__detail::_Select1st, std::equal_to<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::hash<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<true, false, true> >::__location_type std::_Hashtable<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, tile_lookup_frame::id_results>, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, tile_lookup_frame::id_results> >, std::__detail::_Select1st, std::equal_to<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::hash<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<true, false, true> >::_M_locate_tr<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >",
+        "period_percent": 2.1,
+        "samples": 8
+      },
+      {
+        "symbol": "rebuild_visibility_cache_grid",
+        "period_percent": 1.96,
+        "samples": 7
+      },
+      {
+        "symbol": "std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_assign",
+        "period_percent": 1.86,
+        "samples": 7
+      }
+    ],
+    "sampling": "99Hz cycles:u,main TID,DWARF32768,128pages; period-weighted tables; folded counts are not milliseconds"
+  },
+  "closed_failure_loop": {
+    "trace_reconnect": "Second connection rejected by non-on-demand client. Failed before any movement. Partial perf/failed logs retained and excluded.",
+    "recovery": "Same untouched game received32inputs under perf-only collector; future game trials use one capture connection per process.",
+    "save_control": "Q unbound in game; saved via configured S and uppercaseY; main-menu q and uppercaseY exited normally."
+  },
+  "limits": [
+    "No new parallel kernel,stable gain,default-enabled threading or whole-frame/GPU timing proof",
+    "Quiet historical pilot does not prove genuinely cold exploration or combat AI workload",
+    "Tracy-instrumented pilot must not substitute for matched final production-configuration A/B trials",
+    "No full native corpus,replay,multiplayer,whole-world save equality,cross-platform or target-device acceptance"
+  ],
+  "next_exact_action": "Freeze current gate as source baseline; derive cold exploration and uncloaked dense native fixtures, start fresh game once and one Tracy connection over loading/input/save, align trace action plots and perf input window; then select costly pure job from measured caller boundaries.",
+  "private_evidence_root": "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined"
+}

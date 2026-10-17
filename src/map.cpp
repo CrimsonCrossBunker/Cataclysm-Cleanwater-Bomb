@@ -1,4 +1,5 @@
 #include "map.h"
+#include "vision_preparation.h"
 
 #define MP_ENABLED
 #include <algorithm>
@@ -380,6 +381,7 @@ map::map( int mapsize, bool zlev ) : my_MAPSIZE( mapsize ), my_HALF_MAPSIZE( map
 
 map::~map()
 {
+    context_lifetime_.reset();
     if( ( _main_requires_cleanup && !_main_cleanup_override ) ||
         ( _main_cleanup_override && *_main_cleanup_override ) ) {
         map &bubble_map = reality_bubble();
@@ -3881,6 +3883,17 @@ std::optional<tripoint_bub_ms> map::vehicle_ladder_destination( const tripoint_b
 
 std::optional<furn_id> map::vehicle_ladder_furniture_at( const tripoint_bub_ms &pt ) const
 {
+    // The same occupancy bits used by veh_at are authoritative negatives.
+    // With no projected ladders anywhere, an empty in-bounds vehicle square
+    // cannot produce ladder furniture. Avoid the submap/furniture lookup here;
+    // occupied squares, projected ladders and unknown bounds keep the full path.
+    if( cached_veh_ladders.empty() && inbounds( pt ) ) {
+        const level_cache &cache = get_cache( pt.z() );
+        if( !cache.get_veh_in_active_range() || !cache.get_veh_exists_at( pt ) ) {
+            return std::nullopt;
+        }
+    }
+
     if( has_furn( pt ) ) {
         return std::nullopt;
     }
@@ -9915,6 +9928,7 @@ void map::save()
 void map::load( const tripoint_abs_sm &w, const bool update_vehicle,
                 const bool pump_events )
 {
+    context_lifetime_.reset();
     map &main_map = get_map();
     // It used to be unsafe to load a map that overlaps with the primary map;
     // Show an info line in tests to help track new errors
@@ -12206,6 +12220,7 @@ tripoint_bub_ms map::get_bub( const tripoint_abs_ms &p ) const
 
 void map::set_abs_sub( const tripoint_abs_sm &p )
 {
+    context_lifetime_.reset();
     abs_sub = p;
     abs_ms = point_abs_ms{ project_to<coords::ms>( abs_sub.xy() ) };
 }
@@ -12213,6 +12228,11 @@ void map::set_abs_sub( const tripoint_abs_sm &p )
 tripoint_abs_sm map::get_abs_sub() const
 {
     return abs_sub;
+}
+
+safe_reference<map> map::get_context_reference()
+{
+    return context_lifetime_.reference_to( this );
 }
 
 template<typename Array>

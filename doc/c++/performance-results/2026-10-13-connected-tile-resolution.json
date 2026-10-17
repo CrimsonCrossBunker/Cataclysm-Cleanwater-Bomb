@@ -1,0 +1,863 @@
+{
+  "schema": 1,
+  "stage": 2,
+  "batch": 33,
+  "date": "2026-10-13",
+  "name": "frame-owned-connected-tile-resolution",
+  "baseline": "976788110e47295d6b88c3d83b77ea4749115305",
+  "source_commit": "0472056eef20c58017464a337563a88b5fb35d36",
+  "branch": "codex/performance-tile-resolution-20261013",
+  "design": {
+    "frame": "Existing tile_lookup_frame pins immutable bundle/season and owns the connected-subtile result/miss cache. Keys use stable bundle id identity, category and the canonical8 connection indices. Caches retire with each frame, including nested/exception exits.",
+    "selection": "Resolve the same canonical seasonal/variant child id once per frame. Successfully found children continue to the shared final sprite selection/submission without the duplicate recursive draw preamble. Missing children preserve original recursive ASCII/unknown fallback.",
+    "compatibility": "Preserve child-category lookup, default recursion depth, cleared child variant/intensity, zero child offset, rotations, stacking height, weather RNG consumption and SDL owner order. World queries/RNG/Lua/SDL remain on their owners; no new scheduler/thread pool/Lua runtime.",
+    "boundary": "Only terrain draw frames use the fast path; out-of-frame bullet/overlay/overmap lookup retains the existing uncached/current-bundle behavior."
+  },
+  "configuration": {
+    "details": "Identical Linux SDL3 Clang23 Release/TRACY, UNDEAD fullscreen2880x1800 zoom4; VISION4/RENDER0/legacyMULTI=false; TRACY_NO_SYS_TRACE=1; perf249HzDWARF32768 with explicit user task-clock:u; no overlapping builds/game/export. Frozen baseline/candidate binaries,5pairs/scene with reversed order on even pairs.",
+    "compiler": "Clang23.1.1 C++17 Release SDL3 tiles/sound LuaPlatformv1 TRACY=ON LTO=OFF LOCALIZE=OFF; jobs2",
+    "machine": "Linux x86_64 Ryzen7 5800H,8cores/16logical; affinity0..15",
+    "backend": "X11/OpenGL over Wayland",
+    "pixels": [
+      2880,
+      1800
+    ],
+    "tile_pack": "UNDEAD_PEOPLE",
+    "zoom": 4,
+    "VISION_PREPARATION_WORKERS": 4,
+    "RENDER_PREPARATION_WORKERS": 0,
+    "MULTITHREADING_ENABLED": false,
+    "TRACY_NO_SYS_TRACE": 1,
+    "baseline_binaries": {
+      "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/tile-resolution-stage2/baseline/cataclysm-tiles": "50ec9655b932b5e41a5efdc2b61765d08864b373fa0f99be6e60cdcfc804cef6",
+      "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/.ccb-pr-evidence/native-combined/tile-resolution-stage2/baseline/ccb-sdl3-acceptance": "929dec7609977296e1892c9c7e8c3c1a839bf5eb3e127c71705a023723abb977"
+    },
+    "candidate_binaries": {
+      "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile/src/Release/cataclysm-tiles": "4ed57b48528fe65a237810ac69dd6a08c669ae13cf820d84e9cf5660242e1488",
+      "/home/zhgpicg/.codex/worktrees/render-preparation-pr/Cataclysm-Cleanwater-Bomb/out/build/ccb-sdl3-profile/Release/ccb-sdl3-acceptance": "202b1fae24b973786f0d1d3282d085728dfd4f586bc7cdea81c502739d7005a4"
+    }
+  },
+  "measurement": {
+    "method": "Same machine/config/immutable fixture/fixed inputs,5 balanced pairs per4scenes; reverse order on even pairs. Linux perf cycles:u249HzDWARF32768 and enabled native CATA/Tracy0.14.1.",
+    "draw_classes": "CPU tiles.draw scopes in action window classified by a contained same-thread draw_cache_rebuild scope. Report dirty and reused draws separately; inclusive nested zones are not added.",
+    "cpu": "Explicit30s all-game-thread task-clock:u, includes client Tracy/idle redraw but excludes kernel/external collectors. Old unqualified stage1 CPU values are not mixed with this matrix.",
+    "scope": "Draw/preparation CPU timing, not SDL present, GPU completion, FPS or p95-frame evidence. Distributions are per-run means; paired95% t4 intervals.",
+    "excluded": "Initial999Hz capture had recorded perf loss and system user-only event fallback under high I/O pressure; retained diagnostic only. Both sides of the accepted matrix use the revised identical249Hz/user-event configuration.",
+    "recorded_lost_events": 0,
+    "unresolved_leaf_percent_range": [
+      25.348189,
+      32.432432
+    ],
+    "summary": {
+      "carrier": {
+        "draw.rebuilt": {
+          "per_run": {
+            "baseline": [
+              39.64116,
+              40.072781,
+              40.246165,
+              39.942742,
+              39.773253
+            ],
+            "candidate": [
+              38.70024,
+              38.307206,
+              38.06922,
+              38.471144,
+              38.064902
+            ]
+          },
+          "means": {
+            "baseline": 39.93522,
+            "candidate": 38.322542
+          },
+          "stddevs": {
+            "baseline": 0.238941,
+            "candidate": 0.271811
+          },
+          "paired_delta": [
+            -0.94092,
+            -1.765576,
+            -2.176945,
+            -1.471599,
+            -1.708351
+          ],
+          "paired95_t4_interval": [
+            -2.175581,
+            -1.049775
+          ],
+          "reduction_percent": 4.038235
+        },
+        "draw.reused": {
+          "per_run": {
+            "baseline": [
+              28.177048,
+              28.602843,
+              29.021675,
+              29.000711,
+              29.049639
+            ],
+            "candidate": [
+              27.269572,
+              26.546805,
+              25.971647,
+              26.565733,
+              26.40379
+            ]
+          },
+          "means": {
+            "baseline": 28.770383,
+            "candidate": 26.551509
+          },
+          "stddevs": {
+            "baseline": 0.378912,
+            "candidate": 0.467413
+          },
+          "paired_delta": [
+            -0.907476,
+            -2.056038,
+            -3.050028,
+            -2.434978,
+            -2.645848
+          ],
+          "paired95_t4_interval": [
+            -3.232581,
+            -1.205166
+          ],
+          "reduction_percent": 7.712353
+        },
+        "monmove": {
+          "per_run": {
+            "baseline": [
+              0.002788,
+              0.002952,
+              0.004955,
+              0.002941,
+              0.002869
+            ],
+            "candidate": [
+              0.00332,
+              0.002847,
+              0.002734,
+              0.003085,
+              0.003354
+            ]
+          },
+          "means": {
+            "baseline": 0.003301,
+            "candidate": 0.003068
+          },
+          "stddevs": {
+            "baseline": 0.000927,
+            "candidate": 0.000277
+          },
+          "paired_delta": [
+            0.000533,
+            -0.000104,
+            -0.002221,
+            0.000144,
+            0.000485
+          ],
+          "paired95_t4_interval": [
+            -0.00165,
+            0.001185
+          ],
+          "reduction_percent": 7.054296
+        },
+        "all_process30s_user_task_clock_ms": {
+          "per_run": {
+            "baseline": [
+              10649.08,
+              10634.76,
+              10771.56,
+              10734.54,
+              10741.7
+            ],
+            "candidate": [
+              10551.53,
+              10400.4,
+              10384.33,
+              10445.77,
+              10371.5
+            ]
+          },
+          "means": {
+            "baseline": 10706.328,
+            "candidate": 10430.706
+          },
+          "stddevs": {
+            "baseline": 60.625121,
+            "candidate": 73.143524
+          },
+          "paired_delta": [
+            -97.55,
+            -234.36,
+            -387.23,
+            -288.77,
+            -370.2
+          ],
+          "paired95_t4_interval": [
+            -421.202012,
+            -130.041988
+          ],
+          "reduction_percent": 2.574384
+        }
+      },
+      "field": {
+        "draw.rebuilt": {
+          "per_run": {
+            "baseline": [
+              30.034493,
+              30.214879,
+              30.078633,
+              29.678052,
+              28.679104
+            ],
+            "candidate": [
+              28.727522,
+              29.56575,
+              27.642034,
+              27.22918,
+              27.950325
+            ]
+          },
+          "means": {
+            "baseline": 29.737032,
+            "candidate": 28.222962
+          },
+          "stddevs": {
+            "baseline": 0.623739,
+            "candidate": 0.92966
+          },
+          "paired_delta": [
+            -1.306971,
+            -0.649129,
+            -2.436598,
+            -2.448871,
+            -0.728779
+          ],
+          "paired95_t4_interval": [
+            -2.612891,
+            -0.415249
+          ],
+          "reduction_percent": 5.091529
+        },
+        "monmove": {
+          "per_run": {
+            "baseline": [
+              0.002767,
+              0.002661,
+              0.00354,
+              0.002673,
+              0.002986
+            ],
+            "candidate": [
+              0.002751,
+              0.00292,
+              0.012383,
+              0.003157,
+              0.002695
+            ]
+          },
+          "means": {
+            "baseline": 0.002925,
+            "candidate": 0.004781
+          },
+          "stddevs": {
+            "baseline": 0.000368,
+            "candidate": 0.004253
+          },
+          "paired_delta": [
+            -1.6e-05,
+            0.000259,
+            0.008842,
+            0.000483,
+            -0.000291
+          ],
+          "paired95_t4_interval": [
+            -0.003007,
+            0.006719
+          ],
+          "reduction_percent": -63.43116
+        },
+        "all_process30s_user_task_clock_ms": {
+          "per_run": {
+            "baseline": [
+              3910.09,
+              3931.01,
+              4002.35,
+              3900.96,
+              3773.51
+            ],
+            "candidate": [
+              3881.13,
+              3938.99,
+              3797.6,
+              3794.62,
+              3783.03
+            ]
+          },
+          "means": {
+            "baseline": 3903.584,
+            "candidate": 3839.074
+          },
+          "stddevs": {
+            "baseline": 82.878476,
+            "candidate": 68.170916
+          },
+          "paired_delta": [
+            -28.96,
+            7.98,
+            -204.75,
+            -106.34,
+            9.52
+          ],
+          "paired95_t4_interval": [
+            -177.998446,
+            48.978446
+          ],
+          "reduction_percent": 1.652584
+        }
+      },
+      "room": {
+        "draw.rebuilt": {
+          "per_run": {
+            "baseline": [
+              17.619259,
+              16.652493,
+              16.722107,
+              17.066746,
+              17.819764
+            ],
+            "candidate": [
+              17.109233,
+              17.258936,
+              16.630831,
+              17.19872,
+              16.768692
+            ]
+          },
+          "means": {
+            "baseline": 17.176074,
+            "candidate": 16.993282
+          },
+          "stddevs": {
+            "baseline": 0.525102,
+            "candidate": 0.277504
+          },
+          "paired_delta": [
+            -0.510026,
+            0.606444,
+            -0.091276,
+            0.131974,
+            -1.051073
+          ],
+          "paired95_t4_interval": [
+            -0.965961,
+            0.600378
+          ],
+          "reduction_percent": 1.064222
+        },
+        "monmove": {
+          "per_run": {
+            "baseline": [
+              0.001787,
+              0.001775,
+              0.001998,
+              0.00235,
+              0.001973
+            ],
+            "candidate": [
+              0.001947,
+              0.001999,
+              0.002217,
+              0.001965,
+              0.001959
+            ]
+          },
+          "means": {
+            "baseline": 0.001976,
+            "candidate": 0.002017
+          },
+          "stddevs": {
+            "baseline": 0.000232,
+            "candidate": 0.000113
+          },
+          "paired_delta": [
+            0.00016,
+            0.000224,
+            0.000219,
+            -0.000385,
+            -1.4e-05
+          ],
+          "paired95_t4_interval": [
+            -0.000278,
+            0.00036
+          ],
+          "reduction_percent": -2.068518
+        },
+        "all_process30s_user_task_clock_ms": {
+          "per_run": {
+            "baseline": [
+              2212.9,
+              2141.6,
+              2164.48,
+              2217.01,
+              2194.45
+            ],
+            "candidate": [
+              2159.84,
+              2136.5,
+              2180.66,
+              2158.06,
+              2197.99
+            ]
+          },
+          "means": {
+            "baseline": 2186.088,
+            "candidate": 2166.61
+          },
+          "stddevs": {
+            "baseline": 32.369215,
+            "candidate": 23.492841
+          },
+          "paired_delta": [
+            -53.06,
+            -5.1,
+            16.18,
+            -58.95,
+            3.54
+          ],
+          "paired95_t4_interval": [
+            -62.012186,
+            23.056186
+          ],
+          "reduction_percent": 0.890998
+        }
+      },
+      "combat": {
+        "draw.rebuilt": {
+          "per_run": {
+            "baseline": [
+              35.752626,
+              37.118911,
+              36.530936,
+              37.093758,
+              37.213487
+            ],
+            "candidate": [
+              34.231517,
+              34.112734,
+              34.793752,
+              34.131702,
+              34.094727
+            ]
+          },
+          "means": {
+            "baseline": 36.741944,
+            "candidate": 34.272887
+          },
+          "stddevs": {
+            "baseline": 0.614716,
+            "candidate": 0.295945
+          },
+          "paired_delta": [
+            -1.52111,
+            -3.006177,
+            -1.737184,
+            -2.962056,
+            -3.118759
+          ],
+          "paired95_t4_interval": [
+            -3.428419,
+            -1.509696
+          ],
+          "reduction_percent": 6.719996
+        },
+        "draw.reused": {
+          "per_run": {
+            "baseline": [
+              26.278783,
+              27.545445,
+              27.287537,
+              28.639714,
+              27.633535
+            ],
+            "candidate": [
+              24.799413,
+              24.937272,
+              25.3124,
+              25.083102,
+              25.664282
+            ]
+          },
+          "means": {
+            "baseline": 27.477003,
+            "candidate": 25.159294
+          },
+          "stddevs": {
+            "baseline": 0.844499,
+            "candidate": 0.340245
+          },
+          "paired_delta": [
+            -1.47937,
+            -2.608173,
+            -1.975137,
+            -3.556612,
+            -1.969253
+          ],
+          "paired95_t4_interval": [
+            -3.311203,
+            -1.324215
+          ],
+          "reduction_percent": 8.435086
+        },
+        "monmove": {
+          "per_run": {
+            "baseline": [
+              8.581535,
+              8.742355,
+              9.04784,
+              9.015364,
+              8.772454
+            ],
+            "candidate": [
+              8.896644,
+              9.170997,
+              9.044657,
+              9.057713,
+              8.854064
+            ]
+          },
+          "means": {
+            "baseline": 8.83191,
+            "candidate": 9.004815
+          },
+          "stddevs": {
+            "baseline": 0.196548,
+            "candidate": 0.128869
+          },
+          "paired_delta": [
+            0.315109,
+            0.428641,
+            -0.003183,
+            0.042349,
+            0.08161
+          ],
+          "paired95_t4_interval": [
+            -0.06105,
+            0.406861
+          ],
+          "reduction_percent": -1.957736
+        },
+        "all_process30s_user_task_clock_ms": {
+          "per_run": {
+            "baseline": [
+              9649.54,
+              9752.89,
+              9638.94,
+              9889.3,
+              9833.36
+            ],
+            "candidate": [
+              9443.31,
+              9361.35,
+              9648.77,
+              9440.47,
+              9586.7
+            ]
+          },
+          "means": {
+            "baseline": 9752.806,
+            "candidate": 9496.12
+          },
+          "stddevs": {
+            "baseline": 110.395764,
+            "candidate": 117.851104
+          },
+          "paired_delta": [
+            -206.23,
+            -391.54,
+            9.83,
+            -448.83,
+            -246.66
+          ],
+          "paired95_t4_interval": [
+            -479.479091,
+            -33.892909
+          ],
+          "reduction_percent": 2.631919
+        }
+      }
+    }
+  },
+  "regression": {
+    "native": {
+      "assertions": {
+        "successes": "4299",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "cases": {
+        "successes": "16",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "xml_sha256": "4b7e44f486f65955189b6ed58e46901190409d389b3e9c85c6b12efb92817167"
+    },
+    "asan_ubsan_lsan": {
+      "assertions": {
+        "successes": "1738",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "cases": {
+        "successes": "9",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "xml_sha256": "e12fe085b15e322c709392403383b3e93a2237b34308242036f4b915fc1dd04c"
+    },
+    "tsan": {
+      "assertions": {
+        "successes": "1738",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "cases": {
+        "successes": "9",
+        "failures": "0",
+        "expectedFailures": "0"
+      },
+      "xml_sha256": "440190a03349e98f5e4de1cf7c3d1c174ee5810ef71ca73c5cc59a5ff19b3d02"
+    },
+    "sanitizer_scope": "Actual tile_lookup.cpp/cata_tiles.cpp and test/support units instrumented; unchanged common objects Release. Test-only production allocator override omitted, init_allocator no-op, sanitizer owns allocation interception. Production game still uses its real allocator. Not whole-game/production-allocator sanitizer proof.",
+    "cases": "Canonical recursive selection across seasons/variants/all8indices, declared missing and unsupported children, real corpse category fallback, frame miss retirement,512-id rehash/pinned metadata, two independent concurrent metadata frames; unchanged sprite geometry/variation/RNG regressions.",
+    "save_behavior": "All10 active player+monster payloads per scene identical after explicit recipe ordering, save wall telemetry and exact known build-version event normalization. Version fields in game_begin/game_load are map keys: merge identical normalized keys with summed count,min first,max last; preserve every other game value/stat. Raw version differences retained.",
+    "replay": "Eight native runs: carrier32north and uncloaked759-monster8pause, both frozen baseline/candidate then native save reload. Full normalized payloads identical at each replay/reload boundary; EOF saves before manual-save extra prefix.",
+    "replay_runs": [
+      {
+        "name": "subtile-replay-carrier-baseline",
+        "variant": "baseline",
+        "exit": 0,
+        "turn": 5212848,
+        "position": [
+          5495,
+          7417,
+          2
+        ],
+        "monsters": 0,
+        "normalized_sha256": "068860a26dc9fcc72eba8da07949507b8597463f71e53796b097de2e403ff0c9",
+        "footer_verified": true
+      },
+      {
+        "name": "subtile-reload-carrier-baseline",
+        "variant": "baseline",
+        "exit": 0,
+        "turn": 5212848,
+        "position": [
+          5495,
+          7417,
+          2
+        ],
+        "monsters": 0,
+        "normalized_sha256": "f9a63531fac2cd9eed27470ff7988ffb750b35b941c306d19b31016162d507d1",
+        "footer_verified": true
+      },
+      {
+        "name": "subtile-replay-carrier-candidate",
+        "variant": "candidate",
+        "exit": 0,
+        "turn": 5212848,
+        "position": [
+          5495,
+          7417,
+          2
+        ],
+        "monsters": 0,
+        "normalized_sha256": "068860a26dc9fcc72eba8da07949507b8597463f71e53796b097de2e403ff0c9",
+        "footer_verified": true
+      },
+      {
+        "name": "subtile-reload-carrier-candidate",
+        "variant": "candidate",
+        "exit": 0,
+        "turn": 5212848,
+        "position": [
+          5495,
+          7417,
+          2
+        ],
+        "monsters": 0,
+        "normalized_sha256": "f9a63531fac2cd9eed27470ff7988ffb750b35b941c306d19b31016162d507d1",
+        "footer_verified": true
+      },
+      {
+        "name": "subtile-replay-combat-baseline",
+        "variant": "baseline",
+        "exit": 0,
+        "turn": 5212819,
+        "position": [
+          5495,
+          7449,
+          2
+        ],
+        "monsters": 759,
+        "normalized_sha256": "58af4b5158d3802f0b3cd27784f71b32ee5f2e9260002d33d8c26b8150a6547f",
+        "footer_verified": true
+      },
+      {
+        "name": "subtile-reload-combat-baseline",
+        "variant": "baseline",
+        "exit": 0,
+        "turn": 5212819,
+        "position": [
+          5495,
+          7449,
+          2
+        ],
+        "monsters": 759,
+        "normalized_sha256": "c065d369013f70f86eeb92198e39908433258a9a45f416d620e3e0653a6b35ff",
+        "footer_verified": true
+      },
+      {
+        "name": "subtile-replay-combat-candidate",
+        "variant": "candidate",
+        "exit": 0,
+        "turn": 5212819,
+        "position": [
+          5495,
+          7449,
+          2
+        ],
+        "monsters": 759,
+        "normalized_sha256": "58af4b5158d3802f0b3cd27784f71b32ee5f2e9260002d33d8c26b8150a6547f",
+        "footer_verified": true
+      },
+      {
+        "name": "subtile-reload-combat-candidate",
+        "variant": "candidate",
+        "exit": 0,
+        "turn": 5212819,
+        "position": [
+          5495,
+          7449,
+          2
+        ],
+        "monsters": 759,
+        "normalized_sha256": "c065d369013f70f86eeb92198e39908433258a9a45f416d620e3e0653a6b35ff",
+        "footer_verified": true
+      }
+    ]
+  },
+  "accepted_scenes": {
+    "carrier": {
+      "valid_runs": 10,
+      "fixture_manifest_sha256": "7bda417f85d9decfe74c3837c293544a800098170b102bdac38af9bdb6280f13",
+      "normalized_player_sha256": "9c2546efb072060cb31d826f957fac53c3d4a46c54bb60a9af3e69ef1b92cefc",
+      "native_final": {
+        "exit": 0,
+        "turn": 5212849,
+        "location": [
+          5495,
+          7417,
+          2
+        ],
+        "monsters": 0,
+        "player_xxh64_verified": true
+      }
+    },
+    "field": {
+      "valid_runs": 10,
+      "fixture_manifest_sha256": "1c2d0fcdff02b908921f8c19534109fe46f843e3f69eecd42ffe62dce090f11d",
+      "normalized_player_sha256": "991955a143044e94b3e0536106c8e3bffb696ad56bfedb94037ab2b0eb165964",
+      "native_final": {
+        "exit": 0,
+        "turn": 5212849,
+        "location": [
+          5459,
+          7033,
+          0
+        ],
+        "monsters": 0,
+        "player_xxh64_verified": true
+      }
+    },
+    "room": {
+      "valid_runs": 10,
+      "fixture_manifest_sha256": "f5a27a86ddaefa359d6c45836ea5b3c62fab0b03746170d3c594ce6b5d56f780",
+      "normalized_player_sha256": "38172fc456777f39b42e62e3cdf36db9e53dda0961b9981ce375ade5d6a550de",
+      "native_final": {
+        "exit": 0,
+        "turn": 5212849,
+        "location": [
+          5489,
+          7448,
+          0
+        ],
+        "monsters": 0,
+        "player_xxh64_verified": true
+      }
+    },
+    "combat": {
+      "valid_runs": 10,
+      "fixture_manifest_sha256": "a5b98464f6f080ef0ed03b497c1a7a2a80349290025667e46ccedd5a155320ef",
+      "normalized_player_sha256": "6b542afafeae4c24de9f3fe4b1fcaeeb5ff5cbde4cdec2eab75c1e732c8b7c72",
+      "native_final": {
+        "exit": 0,
+        "turn": 5212820,
+        "location": [
+          5495,
+          7449,
+          2
+        ],
+        "monsters": 759,
+        "player_xxh64_verified": true
+      }
+    }
+  },
+  "source_inputs_sha256": {
+    "src/cata_tiles.cpp": "500c35640527c94c159646c1304d71bb86c1005a7f743a3a14a2665cb15373eb",
+    "src/lightmap.cpp": "ec9a173a3a793bb1105fe667a3eb51f93226216b064ac64050b838e6c09f8640",
+    "src/map.cpp": "ae260cbb8be6739d176432897e0a2615a6df32c1b3dd62947dfcf40d09f70593",
+    "src/map.h": "5643b3fe737f6eb41aae88973197bb9d93d9f75980901e8462a0c7e3499003a3",
+    "src/options.cpp": "227a9a70f821d1e32b46b2a15b0467b3402583531c04d07150c557dab42915fd",
+    "src/shadowcasting.cpp": "726a3d884f731323faf6a30f7efb352fba4ef18444678bbea647313abec5d244",
+    "src/shadowcasting.h": "d4faa616a3db096829ff5aa7f15a8377535e3ba7be1de23c1b7289be166cca02",
+    "src/tile_lookup.cpp": "ca847b0120193109f2c1a76ae8a4aeccbe494653302f44d29324c26ff6813dcb",
+    "src/tile_lookup.h": "14f141ffe0ae3dd4df095ab67e26f2463ba6b6917cd496e1a2f213a821dcad5d",
+    "src/vision_preparation.cpp": "84371afe5273b99975d88351c487a089816cccf3f6ae609af031199ae2f2eb8e",
+    "src/vision_preparation.h": "ba929223712e131b59088e1aeca425f59a5f212a678a5ce5faff565764651f4a",
+    "tests/tile_lookup_test.cpp": "8190f9872fd472633f2fc9f8f3b21e63db3cdd4f8387c04a7d8e3f06eb7bd75e",
+    "tests/vision_preparation_test.cpp": "64ec15244360fca070962fde616d601693fc0b2b675359cfd907a29381bb101a"
+  },
+  "private_proof": {
+    "build-progress.json": {
+      "path": ".ccb-pr-evidence/native-combined/tile-resolution-stage2/build-progress.json",
+      "sha256": "7b28a9a000e6a786cbccf94fd709c2f798db8f3fc7bf19aa5a53fe27584fb1b6"
+    },
+    "matrix-progress.json": {
+      "path": ".ccb-pr-evidence/native-combined/tile-resolution-stage2/matrix-progress.json",
+      "sha256": "26006920077a59488bb6e67e3d7ebc014d797a5690b26b0f66db957aee388f33"
+    },
+    "replay-progress.json": {
+      "path": ".ccb-pr-evidence/native-combined/tile-resolution-stage2/replay-progress.json",
+      "sha256": "ef99ff1c9c34d36a0b4294c1c5bd1c6d8a7f417d32576466e35ba496ee72781a"
+    },
+    "baseline/build-progress.json": {
+      "path": ".ccb-pr-evidence/native-combined/tile-resolution-stage2/baseline/build-progress.json",
+      "sha256": "4adb93f9cc0807fb60cf8a37c8101f553906b169ce2a47720ce021cea3dd8468"
+    },
+    "raw-index.json": {
+      "path": ".ccb-pr-evidence/native-combined/tile-resolution-stage2/raw-index.json",
+      "sha256": "eaaecc87ba34a8da5aacd5e301137393fb15f003db407e626fc35e4f50674bda"
+    }
+  },
+  "limits": [
+    "Warm OS/storage caches with fresh display-memory fixtures and actual ordinary-field map shifts; reported several-second cold-storage/new-terrain stall remains unproven.",
+    "No full old-save corpus, live network-device, cross-platform, Vulkan/GPU or long-session acceptance. No new parallel path was enabled in this batch.",
+    "Original Damon saves, frozen graphics and unrelated primary/user changes preserved; no obj-lua access, push/new PR/merge/release.",
+    "Rendering retains existing wall-clock animations and pointer-based monster variants. Initial visual pilot is not pixel-perfect/all-tileset validation; selection semantics and real save/replay state are separately checked."
+  ],
+  "next_exact_action": "Stop this bounded stage after local source/test/evidence commits and checkpoint. A separately authorized batch should inspect the remaining owner world-query and SDL draw hot paths before selecting another costly pure task."
+}
