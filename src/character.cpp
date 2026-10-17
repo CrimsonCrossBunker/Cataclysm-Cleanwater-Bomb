@@ -354,6 +354,7 @@ static const mod_id MOD_INFORMATION_catalegacy_future( "catalegacy_future" );
 static const move_mode_id move_mode_run( "run" );
 static const move_mode_id move_mode_walk( "walk" );
 
+static const proficiency_id proficiency_prof_dissect_humans( "prof_dissect_humans" );
 static const proficiency_id proficiency_prof_parkour( "prof_parkour" );
 static const proficiency_id proficiency_prof_spotting( "prof_spotting" );
 static const proficiency_id proficiency_prof_wound_care( "prof_wound_care" );
@@ -8133,7 +8134,8 @@ int Character::insensitivity_score() const
     const int days_survived = std::max( to_days<int>( calendar::turn - calendar::start_of_cataclysm ),
                                         0 );
     return mental_metric_guilt_kills * 5 +
-           std::min( mental_metric_human_dissections, 100 ) * 10 +
+           std::max( std::min( mental_metric_human_dissections, 100 ) * 10,
+                     has_proficiency( proficiency_prof_dissect_humans ) ? 125 : 0 ) +
            std::min( g->get_kill_tracker().monster_kill_count(), 5000 ) / 10 +
            days_survived * 2 +
            std::min( mental_metric_cannibalism, 100 );
@@ -8148,7 +8150,9 @@ void Character::maybe_gain_insensitivity()
     const int days_survived = std::max( to_days<int>( calendar::turn - calendar::start_of_cataclysm ),
                                         0 );
     if( days_survived < 30 || g->get_kill_tracker().monster_kill_count() < 100 ||
-        mental_metric_guilt_kills < 50 || mental_metric_human_dissections < 1 ) {
+        mental_metric_guilt_kills < 50 ||
+        ( mental_metric_human_dissections < 1 &&
+          !has_proficiency( proficiency_prof_dissect_humans ) ) ) {
         return;
     }
 
