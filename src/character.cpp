@@ -4216,6 +4216,9 @@ bool Character::pour_into( item_location &container, item &liquid, bool ignore_s
     }
 
     switch( err ) {
+        case rem_cap_return::CANNOT_REFILL:
+            add_msg_if_player( m_bad, _( "That %s cannot be refilled." ), container->tname() );
+            return false;
         case rem_cap_return::BUCKET_FAIL:
             add_msg_if_player( m_bad, _( "That %s must be on the ground or held to hold contents!" ),
                                container->tname() );

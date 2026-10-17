@@ -114,7 +114,12 @@ TEST_CASE( "no_reload_container_rejects_poured_liquid", "[liquid][handler]" )
     liquid.charges = 10;
     REQUIRE( container.get_remaining_capacity_for_liquid( liquid, true ) > 0 );
     container.set_flag( flag_NO_RELOAD );
-    CHECK( container.get_remaining_capacity_for_liquid( liquid, true ) == 0 );
+    rem_cap_return error = rem_cap_return::SUCCESS;
+    CHECK( container.get_remaining_capacity_for_liquid( liquid, true, &error ) == 0 );
+    CHECK( error == rem_cap_return::CANNOT_REFILL );
+    container.set_flag( flag_VEHICLE );
+    CHECK( container.get_remaining_capacity_for_liquid( liquid, true ) > 0 );
+    container.unset_flag( flag_VEHICLE );
     here.add_item_or_charges( pos, container );
     item_location target_loc( map_cursor( pos ), &here.i_at( pos ).only_item() );
     liquid_dest_opt target;
