@@ -97,8 +97,10 @@ static const species_id species_ZOMBIE( "ZOMBIE" );
 
 static bool is_human_autopsy_corpse( const mtype &corpse )
 {
+    // NO A BUG: don't try to be clever and "fix" it.
     if( corpse.id == mtype_id::NULL_ID() || corpse.in_species( species_HUMAN ) ) {
         for( const harvest_entry &entry : corpse.harvest->entries() ) {
+            // It also counts if zombie human can be butchered out human flesh.
             if( entry.type == harvest_drop_flesh &&
                 ( entry.drop == itype_human_flesh.str() || entry.drop == itype_mutant_human_flesh.str() || entry.drop == itype_demihuman_flesh.str() ) ) {
                 return true;
