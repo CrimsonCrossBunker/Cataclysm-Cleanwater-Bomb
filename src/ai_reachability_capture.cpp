@@ -36,9 +36,9 @@ bool matches_block( const submap *sm, const block &captured )
 }
 } // namespace
 
-bool capture_geometry( const map &here, snapshot &values )
+bool capture_geometry( const map &world, snapshot &values )
 {
-    if( here.getmapsize() != MAPSIZE ) {
+    if( world.getmapsize() != MAPSIZE ) {
         return false;
     }
     values.opaque_passable = {};
@@ -57,11 +57,11 @@ bool capture_geometry( const map &here, snapshot &values )
     }
     for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; ++z ) {
         const int layer = z + OVERMAP_DEPTH;
-        values.transparent[layer] = here.get_cache_ref( z ).transparent_cache_wo_fields;
+        values.transparent[layer] = world.get_cache_ref( z ).transparent_cache_wo_fields;
         for( int sx = 0; sx < MAPSIZE; ++sx ) {
             for( int sy = 0; sy < MAPSIZE; ++sy ) {
                 ai_reachability::block &block = values.blocks[( layer * MAPSIZE + sx ) * MAPSIZE + sy];
-                const submap *sm = here.get_submap_at_grid( tripoint_rel_sm{ sx, sy, z } );
+                const submap *sm = world.get_submap_at_grid( tripoint_rel_sm{ sx, sy, z } );
                 block.version = sm ? sm->geometry_stamp() : std::pair<std::uint64_t, std::uint64_t> {};
                 if( sm && block.version.first == 0 ) {
                     return false;
@@ -91,7 +91,7 @@ bool capture_geometry( const map &here, snapshot &values )
                     for( int y = sy * SEEY; y < ( sy + 1 ) * SEEY; ++y ) {
                         if( !values.transparent[layer][x][y] &&
                             ( values.terrain.at( block.at( x % SEEX, y % SEEY ).terrain ) & movable ) ) {
-                            values.opaque_passable[layer][x][y] = here.passable( tripoint_bub_ms{ x, y, z } );
+                            values.opaque_passable[layer][x][y] = world.passable( tripoint_bub_ms{ x, y, z } );
                         }
                     }
                 }
@@ -100,21 +100,21 @@ bool capture_geometry( const map &here, snapshot &values )
     }
     return true;
 }
-bool geometry_matches( const map &here, const snapshot &values )
+bool geometry_matches( const map &world, const snapshot &values )
 {
-    if( here.getmapsize() != MAPSIZE || values.terrain.size() != ter_t::count() ||
+    if( world.getmapsize() != MAPSIZE || values.terrain.size() != ter_t::count() ||
         values.furniture_nonblocking.size() != furn_t::count() ) {
         return false;
     }
     for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; ++z ) {
         const int layer = z + OVERMAP_DEPTH;
-        if( values.transparent[layer] != here.get_cache_ref( z ).transparent_cache_wo_fields ) {
+        if( values.transparent[layer] != world.get_cache_ref( z ).transparent_cache_wo_fields ) {
             return false;
         }
         for( int sx = 0; sx < MAPSIZE; ++sx ) {
             for( int sy = 0; sy < MAPSIZE; ++sy ) {
                 const ai_reachability::block &block = values.blocks[( layer * MAPSIZE + sx ) * MAPSIZE + sy];
-                const submap *sm = here.get_submap_at_grid( tripoint_rel_sm{ sx, sy, z } );
+                const submap *sm = world.get_submap_at_grid( tripoint_rel_sm{ sx, sy, z } );
                 if( !matches_block( sm, block ) ) {
                     return false;
                 }
@@ -134,12 +134,12 @@ geometry_view::geometry_view( const map &world, const snapshot &values ) :
 }
 bool geometry_view::matches_block( int layer, const point_bub_ms &position )
 {
-    const int sx = position.x() / SEEX;
-    const int sy = position.y() / SEEY;
-    const int index = ( layer * MAPSIZE + sx ) * MAPSIZE + sy;
+    const tripoint_rel_sm submap_position{ position.x() / SEEX, position.y() / SEEY,
+                                           layer - OVERMAP_DEPTH };
+    const int index = ( layer * MAPSIZE + submap_position.x() ) * MAPSIZE + submap_position.y();
     unsigned char &checked = checked_[index];
     if( checked == 0 ) {
-        const submap *sm = world_.get_submap_at_grid( tripoint_rel_sm{ sx, sy, layer - OVERMAP_DEPTH } );
+        const submap *sm = world_.get_submap_at_grid( submap_position );
         checked = ai_reachability::matches_block( sm, values_.blocks[index] ) ? 1 : 2;
     }
     if( checked == 2 ) {
@@ -157,14 +157,14 @@ bool geometry_view::matches_at( const tripoint_bub_ms &position, int direction )
         return false;
     }
     const int z = position.z() + OVERMAP_DEPTH;
-    const int x = position.x();
-    const int y = position.y();
-    if( z < 0 || z >= OVERMAP_LAYERS || x < 0 || x >= MAPSIZE_X || y < 0 || y >= MAPSIZE_Y ||
+    const point_bub_ms tile_position = position.xy();
+    if( z < 0 || z >= OVERMAP_LAYERS || tile_position.x() < 0 || tile_position.x() >= MAPSIZE_X ||
+        tile_position.y() < 0 || tile_position.y() >= MAPSIZE_Y ||
         ( direction != 1 && direction != -1 ) || ( direction == -1 && z + 1 >= OVERMAP_LAYERS ) ) {
         return false;
     }
-    if( !matches_block( z, position.xy() ) ||
-        ( direction == -1 && !matches_block( z + 1, position.xy() ) ) ) {
+    if( !matches_block( z, tile_position ) ||
+        ( direction == -1 && !matches_block( z + 1, tile_position ) ) ) {
         return false;
     }
     unsigned char &transparency = transparency_checked_[z];
@@ -175,8 +175,9 @@ bool geometry_view::matches_at( const tripoint_bub_ms &position, int direction )
         transparency = values_.transparent[z] ==
                        world_.get_cache_ref( position.z() ).transparent_cache_wo_fields ? 1 : 2;
     }
-    if( transparency == 2 && values_.transparent[z][x][y] !=
-        world_.get_cache_ref( position.z() ).transparent_cache_wo_fields[x][y] ) {
+    if( transparency == 2 && values_.transparent[z][tile_position.x()][tile_position.y()] !=
+        world_.get_cache_ref(
+            position.z() ).transparent_cache_wo_fields[tile_position.x()][tile_position.y()] ) {
         stale_ = true;
         return false;
     }

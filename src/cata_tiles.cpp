@@ -1412,6 +1412,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
             tinted_tile_scratch *tint = nullptr;
             unsigned sparse_layers = 0;
         };
+        using tile_preparation::layer_none;
         using tile_preparation::layer_graffiti;
         using tile_preparation::layer_trap;
         using tile_preparation::layer_part_con;
@@ -1419,7 +1420,6 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         using tile_preparation::layer_vpart;
         using tile_preparation::layer_critter;
         using tile_preparation::layer_revival;
-        constexpr tile_preparation::sparse_layer no_sparse_layer{};
         // Capture live queries only on the renderer owner. Pure preparation may
         // run on workers; neither tile pointers nor cache references escape.
         const auto capture_preparation = [&]( const tile_render_info & p,
@@ -1577,7 +1577,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                         ( f == &cata_tiles::draw_vpart_no_roof || f == &cata_tiles::draw_vpart_roof ) ?
                         layer_vpart :
                         f == &cata_tiles::draw_critter_at ? layer_critter :
-                        f == &cata_tiles::draw_zombie_revival_indicators ? layer_revival : no_sparse_layer;
+                        f == &cata_tiles::draw_zombie_revival_indicators ? layer_revival : layer_none;
                     const bool track_bounds = !iso &&
                                               f != &cata_tiles::draw_zone_mark &&
                                               f != &cata_tiles::draw_zombie_revival_indicators;
