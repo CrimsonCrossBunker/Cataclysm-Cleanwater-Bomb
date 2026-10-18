@@ -43,6 +43,9 @@ TEST_CASE( "static_layer_values_keep_cached_content_after_world_changes", "[tile
     CHECK( terrain->absolute_position == here.get_abs( pos ) );
     CHECK( terrain->light == lit_level::LOW );
     CHECK( terrain->night_vision );
+    CHECK_FALSE( terrain->fixed_light );
+    CHECK_FALSE( furniture->fixed_light );
+    CHECK_FALSE( trap->fixed_light );
     CHECK( rng_get_engine() == engine );
     here.ter_set( pos, ter_id( "t_grass" ) );
     here.furn_set( pos, furn_id( "f_null" ) );
@@ -119,6 +122,7 @@ TEST_CASE( "explicit_layer_overrides_keep_full_light_and_do_not_memorize", "[til
              } ) {
             CHECK( view->light == lit_level::LIT );
             CHECK_FALSE( view->night_vision );
+            CHECK( view->fixed_light );
             CHECK( view->absolute_position == absolute );
         }
         CHECK( you.get_memorized_tile( absolute ) == before );
@@ -141,7 +145,7 @@ TEST_CASE( "reused_layer_capture_keeps_owned_values_and_refreshes_every_field",
     tile_layer_capture_input input{ pos, lit_level::LOW, {}, cached, true, false };
     tile_layer_view output{ std::string( 128, 'x' ), TILE_CATEGORY::NONE,
                             "obsolete subcategory", pos, 99, 99, lit_level::DARK, false,
-                            tripoint_abs_ms( 1, 2, 3 ) };
+                            tripoint_abs_ms( 1, 2, 3 ), true };
     const std::size_t capacity = output.id.capacity();
     const auto engine = rng_get_engine();
     REQUIRE( capture_terrain_layer( here, you, input, {}, output ) );
@@ -154,6 +158,7 @@ TEST_CASE( "reused_layer_capture_keeps_owned_values_and_refreshes_every_field",
     CHECK( output.absolute_position == here.get_abs( pos ) );
     CHECK( output.light == lit_level::LOW );
     CHECK( output.night_vision );
+    CHECK_FALSE( output.fixed_light );
     const tile_layer_view retained = output;
     REQUIRE( capture_furniture_layer( here, you, input, {}, output ) );
     CHECK( output.id == "f_chair" );
@@ -169,6 +174,7 @@ TEST_CASE( "reused_layer_capture_keeps_owned_values_and_refreshes_every_field",
     CHECK( output.rotation == 0 );
     CHECK( output.light == lit_level::LIT );
     CHECK_FALSE( output.night_vision );
+    CHECK_FALSE( output.fixed_light );
     CHECK( output.id.capacity() >= capacity );
     CHECK( retained.id == "t_floor" );
     CHECK( retained.category == TILE_CATEGORY::TERRAIN );
@@ -184,6 +190,7 @@ TEST_CASE( "reused_layer_capture_keeps_owned_values_and_refreshes_every_field",
     CHECK( output.id == "t_wall" );
     CHECK( output.light == lit_level::LIT );
     CHECK_FALSE( output.night_vision );
+    CHECK( output.fixed_light );
     CHECK( you.get_memorized_tile( here.get_abs( pos ) ).get_ter_id() == before_preview.get_ter_id() );
     CHECK( you.get_memorized_tile( here.get_abs( pos ) ).get_ter_subtile() ==
            before_preview.get_ter_subtile() );
@@ -195,6 +202,7 @@ TEST_CASE( "reused_layer_capture_keeps_owned_values_and_refreshes_every_field",
     CHECK( output.subtile == 4 );
     CHECK( output.rotation == 3 );
     CHECK( output.light == lit_level::MEMORIZED );
+    CHECK_FALSE( output.fixed_light );
     you.memorize_terrain( here.get_abs( pos ), "", 0, 0 );
     CHECK_FALSE( capture_terrain_layer( here, you, input, {}, output ) );
     CHECK( rng_get_engine() == engine );

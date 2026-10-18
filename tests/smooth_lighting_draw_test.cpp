@@ -77,7 +77,7 @@ std::vector<tripoint_bub_ms> around( const tripoint_bub_ms &center )
 struct policy_fixture {
     explicit policy_fixture( const std::vector<std::pair<std::string, tile_type>> &tiles =
     plain_tiles( {
-        ter_t_grass.str(), ter_t_wall.str(), mon_zombie.str(), "lighting_hidden"
+        ter_t_grass.str(), ter_t_wall.str(), "f_chair", "tr_beartrap", mon_zombie.str(), "lighting_hidden"
     } ) ) : available_( fx_.available() ) {
         if( !available_ ) {
             return;
@@ -151,6 +151,29 @@ TEST_CASE( "map_sprites_take_scene_light_and_overlays_fixed_light", "[smooth_lig
         fx.tiles_->void_terrain_override();
         THEN( "override keeps its look whatever the light" ) {
             CHECK( fx.drew( ter_t_wall.str(), draw_light::fixed ) );
+            CHECK( fx.drew( ter_t_grass.str(), draw_light::scene ) );
+        }
+    }
+    WHEN( "tiles around avatar show furniture override" ) {
+        for( const tripoint_bub_ms &p : around( player_pos ) ) {
+            fx.tiles_->init_draw_furniture_override( p, furn_id( "f_chair" ) );
+        }
+        fx.draw();
+        fx.tiles_->void_furniture_override();
+        THEN( "only the preview ignores scene light" ) {
+            CHECK( fx.drew( "f_chair", draw_light::fixed ) );
+            CHECK( fx.drew( ter_t_grass.str(), draw_light::scene ) );
+        }
+    }
+    WHEN( "tiles around avatar show trap override" ) {
+        for( const tripoint_bub_ms &p : around( player_pos ) ) {
+            fx.tiles_->init_draw_trap_override( p, trap_id( "tr_beartrap" ) );
+        }
+        fx.draw();
+        fx.tiles_->void_trap_override();
+        THEN( "only the preview ignores scene light" ) {
+            CHECK( fx.drew( "tr_beartrap", draw_light::fixed ) );
+            CHECK( fx.drew( ter_t_grass.str(), draw_light::scene ) );
         }
     }
     WHEN( "tiles around avatar show monster override" ) {
@@ -161,6 +184,7 @@ TEST_CASE( "map_sprites_take_scene_light_and_overlays_fixed_light", "[smooth_lig
         fx.tiles_->void_monster_override();
         THEN( "override keeps its look whatever the light" ) {
             CHECK( fx.drew( mon_zombie.str(), draw_light::fixed ) );
+            CHECK( fx.drew( ter_t_grass.str(), draw_light::scene ) );
         }
     }
     WHEN( "night on unexplored ground hides the tiles round the avatar" ) {

@@ -85,7 +85,7 @@ bool capture_terrain_layer( map &here, const avatar &you,
             const bool nv = overridden ? false : input.night_vision;
             output.assign( tname, TILE_CATEGORY::TERRAIN, std::string{},
                            p, subtile, rotation, lit, nv,
-                           here.get_abs( p ) );
+                           here.get_abs( p ), overridden );
             return true;
         }
     } else if( invisible[0] ) {
@@ -195,7 +195,7 @@ bool capture_furniture_layer( map &here, const avatar &you,
             const bool nv = explicitly_overridden ? false : input.night_vision;
             output.assign( fname, TILE_CATEGORY::FURNITURE, std::string{},
                            p, subtile, rotation, lit,
-                           nv, here.get_abs( p ) );
+                           nv, here.get_abs( p ), explicitly_overridden );
             return true;
         }
     } else if( invisible[0] ) {
@@ -280,7 +280,7 @@ bool capture_trap_layer( map &here, const avatar &you,
             const bool nv = overridden ? false : input.night_vision;
             output.assign( trname, TILE_CATEGORY::TRAP, std::string{}, p,
                            subtile, rotation, lit, nv,
-                           here.get_abs( p ) );
+                           here.get_abs( p ), overridden );
             return true;
         }
     } else if( invisible[0] ) {
