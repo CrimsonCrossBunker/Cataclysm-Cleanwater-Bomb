@@ -230,7 +230,7 @@ static void migrate_mag_from_pockets( itype &def )
 }
 
 static std::optional<std::reference_wrapper<const itype>> find_template_list_const(
-    const itype_id &it_id )
+            const itype_id &it_id )
 
 {
     generic_factory<itype> &factory = item_controller->get_generic_factory();
@@ -530,7 +530,7 @@ void Item_factory::finalize_pre( itype &obj )
         int mat_total = 0;
 
         auto add_spi = [&is_not_boring, &specific_heat_solid, &specific_heat_liquid, &latent_heat,
-        &mat_total]( const material_id & m, int portion ) {
+                        &mat_total]( const material_id & m, int portion ) {
             specific_heat_solid += m->specific_heat_solid() * portion;
             specific_heat_liquid += m->specific_heat_liquid() * portion;
             latent_heat += m->latent_heat() * portion;
@@ -1349,7 +1349,7 @@ void Item_factory::finalize_post_armor( itype &obj )
                 mat.cover = 100;
             } else {
                 mat.cover = std::round( static_cast<float>( mat.cover ) / ( static_cast<float>
-                    ( it.coverage ) / 100.0f ) );
+                                        ( it.coverage ) / 100.0f ) );
             }
         }
     }
@@ -1836,7 +1836,7 @@ void Item_factory::finalize_item_blacklist()
             for( std::pair<itype_id, std::string> &spawn_pair : vis.item_ids ) {
                 itype_id &type_to_spawn = spawn_pair.first;
                 std::map<itype_id, std::vector<migration>>::iterator replacement =
-                    migrations.find( type_to_spawn );
+                        migrations.find( type_to_spawn );
                 if( replacement == migrations.end() ) {
                     continue;
                 }
@@ -3867,7 +3867,7 @@ class vitamins_reader : public generic_typed_reader<vitamins_reader>
 {
     public:
         std::pair<vitamin_id, std::variant<int, vitamin_units::mass>> get_next(
-            const JsonValue &val ) const {
+        const JsonValue &val ) const {
             if( val.test_array() ) {
                 JsonArray arr = val.get_array();
                 if( arr.size() == 2 ) {
@@ -5596,7 +5596,7 @@ Item_factory::get_armor_containers( units::volume min_volume ) const
     // Iterator in volumes coresponds to iterator in armor_containers.
     // Binary find the first holster that has enough volume.
     return { armor_containers.begin() + static_cast<size_t>( lower_bound(
-                volumes.begin(), volumes.end(), min_volume ) - volumes.begin() ),
+                 volumes.begin(), volumes.end(), min_volume ) - volumes.begin() ),
              armor_containers.end()};
 }
 

@@ -74,11 +74,15 @@ static const furn_str_id furn_f_null( "f_null" );
 static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_horse_stirrups( "horse_stirrups" );
 static const itype_id itype_horse_tack( "horse_tack" );
+static const itype_id itype_horse_bridle( "horse_bridle" );
+static const itype_id itype_fitted_horseshoes( "fitted_horseshoes" );
+static const itype_id itype_nail_puller( "nail_puller" );
 static const itype_id itype_rock( "rock" );
 static const itype_id itype_rope_30( "rope_30" );
 static const itype_id itype_saddlebag( "saddlebag" );
 
 static const mtype_id mon_dog_zombie_brute( "mon_dog_zombie_brute" );
+static const mtype_id mon_horse( "mon_horse" );
 static const mtype_id mon_mech_recon( "mon_mech_recon" );
 static const mtype_id mon_test_zombie( "mon_test_zombie" );
 static const mtype_id pseudo_dormant_mon_zombie_fat( "pseudo_dormant_mon_zombie_fat" );
@@ -86,6 +90,16 @@ static const mtype_id pseudo_dormant_mon_zombie_fat( "pseudo_dormant_mon_zombie_
 static const oter_str_id oter_field( "field" );
 
 static const skill_id skill_riding( "riding" );
+static const quality_id qual_HAMMER( "HAMMER" );
+static const quality_id qual_PRYING_NAIL( "PRYING_NAIL" );
+
+static const pet_slot_id pet_slot_saddle( "saddle" );
+static const pet_slot_id pet_slot_saddlebag( "saddlebag" );
+static const pet_slot_id pet_slot_stirrup( "stirrup" );
+static const pet_slot_id pet_slot_bridle( "bridle" );
+static const pet_slot_id pet_slot_storage( "storage" );
+static const pet_slot_id pet_slot_removed( "removed_pet_slot" );
+static const pet_slot_id pet_slot_horseshoes( "horseshoes" );
 
 static const ter_str_id ter_t_fence( "t_fence" );
 static const ter_str_id ter_t_grass( "t_grass" );
@@ -115,7 +129,7 @@ TEST_CASE( "creature_tracker_find_monster_by_uid", "[monster][creature_tracker]"
 {
     creature_tracker tracker;
     const auto live_monster = make_shared_fast<monster>( mon_test_zombie,
-        tripoint_bub_ms( 0, 0, 0 ) );
+                              tripoint_bub_ms( 0, 0, 0 ) );
     REQUIRE( tracker.add( live_monster ) );
     REQUIRE( live_monster->uid().is_valid() );
     const int64_t live_uid = live_monster->uid().get_value();
@@ -128,7 +142,7 @@ TEST_CASE( "creature_tracker_find_monster_by_uid", "[monster][creature_tracker]"
     CHECK( tracker.find_by_uid( live_uid ) == nullptr );
 
     const auto dead_monster = make_shared_fast<monster>( mon_test_zombie,
-        tripoint_bub_ms( 1, 0, 0 ) );
+                              tripoint_bub_ms( 1, 0, 0 ) );
     REQUIRE( tracker.add( dead_monster ) );
     REQUIRE( dead_monster->uid().is_valid() );
     const int64_t dead_uid = dead_monster->uid().get_value();
@@ -186,9 +200,9 @@ struct track {
 std::ostream &operator<<( std::ostream &os, track const &value )
 {
     os << value.participant <<
-    " l:" << value.location <<
-    " d:" << value.distance <<
-    " m:" << value.moves;
+       " l:" << value.location <<
+       " d:" << value.distance <<
+       " m:" << value.moves;
     return os;
 }
 
@@ -287,7 +301,7 @@ static void check_shamble_speed( const std::string &monster_type,
     // Scale the scaling factor based on the ratio of diagonal to cardinal steps.
     const float slope = get_normalized_angle( point::zero, destination.xy().raw() );
     const float diagonal_multiplier = 1.0 + ( get_option<bool>( "CIRCLEDIST" ) ?
-        ( slope * 0.41 ) : 0.0 );
+                                      ( slope * 0.41 ) : 0.0 );
     INFO( monster_type << " " << destination );
     // Wandering makes things nondeterministic, so look at the distribution rather than a target number.
     move_statistics move_stats;
@@ -333,7 +347,7 @@ static void test_moves_to_squares( const std::string &monster_type, const bool w
                 // Scale the scaling factor based on the ratio of diagonal to cardinal steps.
                 const float slope = get_normalized_angle( {50, 50}, {x, y} );
                 const float diagonal_multiplier = 1.0 + ( get_option<bool>( "CIRCLEDIST" ) ?
-                    ( slope * 0.41 ) : 0.0 );
+                                                  ( slope * 0.41 ) : 0.0 );
                 turns_at_angle[angle * 100].new_type();
                 turns_at_slope[slope].new_type();
                 for( int i = 0; i < 5; ++i ) {
@@ -373,7 +387,7 @@ static void test_moves_to_squares( const std::string &monster_type, const bool w
     if( write_data ) {
         std::ofstream data;
         data.open( std::filesystem::u8path( "slope_test_data_" + std::string( (
-                    trigdist ? "trig_" : "square_" ) ) +
+                                                trigdist ? "trig_" : "square_" ) ) +
                                             monster_type ) );
         for( const auto &stat_pair : turns_at_angle ) {
             data << stat_pair.first << " " << stat_pair.second.avg() << "\n";
@@ -720,10 +734,10 @@ TEST_CASE( "mounting_a_tied_mount_clears_its_leash_state", "[monster][mount]" )
 TEST_CASE( "pet_equipment_slots_bridge_legacy_and_nested_equipment",
            "[monster][pet_equipment]" )
 {
-    monster horse( mtype_id( "mon_horse" ) );
-    const pet_slot_id saddle_slot( "saddle" );
-    const pet_slot_id saddlebag_slot( "saddlebag" );
-    const pet_slot_id stirrup_slot( "stirrup" );
+    monster horse( mon_horse );
+    const pet_slot_id saddle_slot = pet_slot_saddle;
+    const pet_slot_id saddlebag_slot = pet_slot_saddlebag;
+    const pet_slot_id stirrup_slot = pet_slot_stirrup;
 
     const item tack( itype_horse_tack );
     const item stirrups( itype_horse_stirrups );
@@ -766,11 +780,11 @@ TEST_CASE( "pet_equipment_slots_bridge_legacy_and_nested_equipment",
 TEST_CASE( "horse_bridle_and_horseshoes_use_independent_equipment_slots",
            "[monster][pet_equipment]" )
 {
-    monster horse( mtype_id( "mon_horse" ) );
-    const pet_slot_id bridle_slot( "bridle" );
-    const pet_slot_id horseshoes_slot( "horseshoes" );
-    const item bridle( itype_id( "horse_bridle" ) );
-    const item horseshoes( itype_id( "fitted_horseshoes" ) );
+    monster horse( mon_horse );
+    const pet_slot_id bridle_slot = pet_slot_bridle;
+    const pet_slot_id horseshoes_slot = pet_slot_horseshoes;
+    const item bridle( itype_horse_bridle );
+    const item horseshoes( itype_fitted_horseshoes );
 
     REQUIRE( bridle.type->pet_equipment );
     REQUIRE( horseshoes.type->pet_equipment );
@@ -779,7 +793,7 @@ TEST_CASE( "horse_bridle_and_horseshoes_use_independent_equipment_slots",
     CHECK( bridle.type->pet_equipment->spook_multiplier == Approx( 0.75 ) );
     CHECK( horseshoes.type->pet_equipment->mounted_move_cost_multiplier == Approx( 0.9 ) );
     const std::vector<std::pair<quality_id, int>> expected_qualities = {
-        { quality_id( "HAMMER" ), 1 }, { quality_id( "PRYING_NAIL" ), 1 }
+        { qual_HAMMER, 1 }, { qual_PRYING_NAIL, 1 }
     };
     CHECK( horseshoes.type->pet_equipment->install_qualities == expected_qualities );
     CHECK( horse.pet_equipment_mount_threshold_delta() == 0 );
@@ -814,17 +828,17 @@ TEST_CASE( "horseshoe_installation_requires_farrier_tools", "[monster][pet_equip
 {
     clear_avatar();
     avatar &player = get_avatar();
-    const item horseshoes( itype_id( "fitted_horseshoes" ) );
+    const item horseshoes( itype_fitted_horseshoes );
     const auto missing_hammer = pet_inventory_ui::missing_install_quality( player, horseshoes );
     REQUIRE( missing_hammer );
-    CHECK( missing_hammer->first == quality_id( "HAMMER" ) );
+    CHECK( missing_hammer->first == qual_HAMMER );
 
     player.i_add( item( itype_rock ) );
     const auto missing_puller = pet_inventory_ui::missing_install_quality( player, horseshoes );
     REQUIRE( missing_puller );
-    CHECK( missing_puller->first == quality_id( "PRYING_NAIL" ) );
+    CHECK( missing_puller->first == qual_PRYING_NAIL );
 
-    player.i_add( item( itype_id( "nail_puller" ) ) );
+    player.i_add( item( itype_nail_puller ) );
     CHECK_FALSE( pet_inventory_ui::missing_install_quality( player, horseshoes ) );
 }
 
@@ -849,13 +863,13 @@ TEST_CASE( "mech_mounting_does_not_require_animal_riding", "[monster][mount][rid
 
 TEST_CASE( "unrestorable_pet_equipment_survives_loading", "[monster][pet_equipment][save]" )
 {
-    monster original( mtype_id( "mon_horse" ) );
+    monster original( mon_horse );
     item bag( itype_saddlebag );
     REQUIRE( bag.put_in( item( itype_rock ), pocket_type::CONTAINER ).success() );
-    original.inv.push_back( item( itype_rope_30 ) );
-    pet_slot_id slot( "saddlebag" );
+    original.inv.emplace_back( itype_rope_30 );
+    pet_slot_id slot = pet_slot_saddlebag;
     SECTION( "removed_slot" ) {
-        slot = pet_slot_id( "removed_pet_slot" );
+        slot = pet_slot_removed;
     }
     SECTION( "missing_parent_equipment" ) {
         REQUIRE_FALSE( original.pet_slot_available( slot ) );
@@ -886,14 +900,14 @@ TEST_CASE( "unrestorable_pet_equipment_survives_loading", "[monster][pet_equipme
 
 TEST_CASE( "pet_cargo_uses_all_equipped_storage", "[monster][pet_equipment]" )
 {
-    monster horse( mtype_id( "mon_horse" ) );
-    REQUIRE( horse.equip_pet_equipment( pet_slot_id( "saddle" ), item( itype_horse_tack ) ) );
-    REQUIRE( horse.equip_pet_equipment( pet_slot_id( "saddlebag" ), item( itype_saddlebag ) ) );
-    REQUIRE( horse.equip_pet_equipment( pet_slot_id( "storage" ), item( itype_backpack ) ) );
+    monster horse( mon_horse );
+    REQUIRE( horse.equip_pet_equipment( pet_slot_saddle, item( itype_horse_tack ) ) );
+    REQUIRE( horse.equip_pet_equipment( pet_slot_saddlebag, item( itype_saddlebag ) ) );
+    REQUIRE( horse.equip_pet_equipment( pet_slot_storage, item( itype_backpack ) ) );
     REQUIRE( horse.get_pet_storages().size() == 2 );
 
-    item *backpack = horse.get_pet_equipment( pet_slot_id( "storage" ) );
-    item *saddlebags = horse.get_pet_equipment( pet_slot_id( "saddlebag" ) );
+    item *backpack = horse.get_pet_equipment( pet_slot_storage );
+    item *saddlebags = horse.get_pet_equipment( pet_slot_saddlebag );
     const item cargo( itype_rock );
     REQUIRE( horse.find_pet_storage( cargo ) == backpack );
     int stored = 0;
@@ -917,7 +931,7 @@ TEST_CASE( "pet_cargo_uses_all_equipped_storage", "[monster][pet_equipment]" )
         }
     }
     CHECK( loaded_items == stored + 1 );
-    CHECK( loaded.find_pet_storage( cargo ) == loaded.get_pet_equipment( pet_slot_id( "saddlebag" ) ) );
+    CHECK( loaded.find_pet_storage( cargo ) == loaded.get_pet_equipment( pet_slot_saddlebag ) );
 }
 
 TEST_CASE( "riding_skill_reduces_mounted_movement_cost", "[monster][mount][riding]" )
@@ -953,12 +967,11 @@ TEST_CASE( "horseshoes_reduce_mounted_movement_cost", "[monster][mount][pet_equi
     player.mount_creature( horse );
     const int bare_cost = player.run_cost( 100, false );
 
-    REQUIRE( horse.equip_pet_equipment( pet_slot_id( "horseshoes" ),
-                                       item( itype_id( "fitted_horseshoes" ) ) ) );
+    REQUIRE( horse.equip_pet_equipment( pet_slot_horseshoes, item( itype_fitted_horseshoes ) ) );
     const int shod_cost = player.run_cost( 100, false );
     CHECK( shod_cost < bare_cost );
 
-    REQUIRE( horse.remove_pet_equipment( pet_slot_id( "horseshoes" ) ) );
+    REQUIRE( horse.remove_pet_equipment( pet_slot_horseshoes ) );
     CHECK( player.run_cost( 100, false ) == bare_cost );
     player.forced_dismount();
 }
@@ -1276,7 +1289,7 @@ TEST_CASE( "monster_can_navigate_from_overmap_to_reality_bubble_following_sound"
     horde_entity *test_mon_initial = nullptr;
     capture_debugmsg_during( [&]() {
         test_mon_initial = &overmap_buffer.spawn_monster( entity_spawn_location,
-            mon_test_zombie );
+                           mon_test_zombie );
     } );
     // Assert monster is not wandering
     REQUIRE( test_mon_initial->tracking_intensity == 0 );
@@ -1623,7 +1636,7 @@ TEST_CASE( "obstacles_placed_on_map_are_present_in_overmap", "[map][hordes]" )
     tripoint_bub_ms obstacle_origin{ 30, 30, 0 };
     int obstacle_radius = 10;
     tripoint_abs_ms obstacle_eastern_border = here.get_abs( obstacle_origin + point::east *
-        obstacle_radius );
+            obstacle_radius );
     std::set<tripoint_abs_omt> edited_omts;
     std::set<tripoint_abs_ms> obstacle_locations;
     std::set<tripoint_abs_ms> passable_locations;
@@ -1687,7 +1700,7 @@ TEST_CASE( "dormant_zombie_places_corpse_and_trap", "[monster][map]" )
     monster dormant_monster( pseudo_dormant_mon_zombie_fat );
     REQUIRE( dormant_monster.can_move_to( spawn_point ) );
     monster *const placed_monster = g->place_critter_at( make_shared_fast<monster>( dormant_monster ),
-        spawn_point );
+                                    spawn_point );
     REQUIRE( placed_monster != nullptr );
     REQUIRE( placed_monster->pos_bub() == spawn_point );
     REQUIRE( placed_monster->type->id == dormant_monster.type->id );

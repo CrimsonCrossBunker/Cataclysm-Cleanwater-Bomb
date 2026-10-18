@@ -15,7 +15,7 @@ namespace pet_inventory_ui
 {
 /** The first missing tool quality needed to install an item, if any. */
 std::optional<std::pair<quality_id, int>> missing_install_quality( const Character &who,
-        const item &equipment );
+                                       const item &equipment );
 void show_equipment( monster &pet );
 void show_transfer( monster &pet );
 } // namespace pet_inventory_ui
