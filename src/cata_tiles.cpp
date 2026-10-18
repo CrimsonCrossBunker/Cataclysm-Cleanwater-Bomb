@@ -394,7 +394,7 @@ tile_type &tileset::create_tile_type( const std::string &id, tile_type &&new_til
             has_season_suffix = true;
             // key is id without _season suffix
             season_tile_value &value = tile_ids_by_season[i][id.substr( 0,
-                id.size() - strlen( season_suffix[i] ) )];
+                                       id.size() - strlen( season_suffix[i] ) )];
             // value stores reference to string id with _season suffix
             value.season_tile = tile_lookup_res( inserted_id, inserted_tile );
             break;
@@ -517,7 +517,7 @@ void cata_tiles::load_tileset( const std::string &tileset_id, const bool prechec
     // Precalculate fog transparency
     // On isometric tilesets, fog intensity scales with zlevel_height in tile_config.json
     fog_alpha = is_isometric() ? std::min( std::max( int( 255.0f - 255.0f * pow( 155.0f / 255.0f,
-        zlevel_height / 100.0f ) ), 40 ), 150 ) : 100;
+                                           zlevel_height / 100.0f ) ), 40 ), 150 ) : 100;
 
     if( !precheck && published ) {
         // Service any recovery queued during the now-published upload. An
@@ -804,7 +804,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         return np.y() < min_visible.y || np.y() > max_visible.y ||
                np.x() < min_visible.x || np.x() > max_visible.x ||
                would_apply_vision_effects( here.get_visibility( ch.visibility_cache[np.x()][np.y()],
-                   cache ) );
+                                           cache ) );
     };
     std::map<tripoint_bub_ms, int> npc_attack_rating_map;
     int max_npc_effectiveness = 0;
@@ -1208,9 +1208,9 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
     }
 
     const half_open_rectangle<point> light_fill_area = smooth_lighting::lightmap_fill_area(
-            min_visible, max_visible, screen_min, screen_max );
+                min_visible, max_visible, screen_min, screen_max );
     const bool lit_this_frame = begin_smooth_lighting( cache, light_fill_area, draw_min_z,
-        center.z() );
+                                center.z() );
     // lit states must not reach the overmap or UI sprites drawn after the map
     on_out_of_scope end_smooth_lighting( [this, lit_this_frame]() {
         smooth_lighting_active = false;
@@ -1420,6 +1420,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         using tile_preparation::layer_vpart;
         using tile_preparation::layer_critter;
         using tile_preparation::layer_revival;
+        constexpr auto no_sparse_layer = static_cast<tile_preparation::sparse_layer>( 0 );
         // Capture live queries only on the renderer owner. Pure preparation may
         // run on workers; neither tile pointers nor cache references escape.
         const auto capture_preparation = [&]( const tile_render_info & p,
@@ -1505,7 +1506,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         std::vector<tinted_tile_scratch> row_tinted;
         while( cur_zlevel <= center.z() && !draw_aborted ) {
             const half_open_rectangle<point> &cur_any_tile_range = is_isometric()
-                ? z_any_tile_range[center.z() - cur_zlevel] : top_any_tile_range;
+                    ? z_any_tile_range[center.z() - cur_zlevel] : top_any_tile_range;
             // For each row
             const bool iso = is_isometric();
             const level_cache &zlev_cache = here.access_cache( cur_zlevel );
@@ -1546,8 +1547,8 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                     tile_render_info &p = row_points[index];
                     p.scratch.height_3d = ( cur_zlevel - center.z() ) * zlevel_height;
                     const tile_preparation::result prepared = captured_frame ?
-                        preparation_->results()[preparation_index + index] :
-                        tile_preparation::prepare( capture_preparation( p, zlev_cache, zlev_has_color ) );
+                            preparation_->results()[preparation_index + index] :
+                            tile_preparation::prepare( capture_preparation( p, zlev_cache, zlev_has_color ) );
                     row_sprites.push_back( { &p, nullptr, prepared.layers } );
                     if( prepared.tint[3] == 0 ) {
                         continue;
@@ -1577,7 +1578,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                         ( f == &cata_tiles::draw_vpart_no_roof || f == &cata_tiles::draw_vpart_roof ) ?
                         layer_vpart :
                         f == &cata_tiles::draw_critter_at ? layer_critter :
-                        f == &cata_tiles::draw_zombie_revival_indicators ? layer_revival : 0;
+                        f == &cata_tiles::draw_zombie_revival_indicators ? layer_revival : no_sparse_layer;
                     const bool track_bounds = !iso &&
                                               f != &cata_tiles::draw_zone_mark &&
                                               f != &cata_tiles::draw_zombie_revival_indicators;
@@ -2327,7 +2328,7 @@ bool cata_tiles::begin_smooth_lighting( const visibility_variables &cache,
     settings.tint = !tint_overlay_disabled();
     settings.masks = mode == "smooth_filtered";
     if( const std::optional<smooth_lighting::lit_failure> f = lightmap->fill( get_map(), settings,
-        std::max( min_z, -OVERMAP_DEPTH ), std::min( max_z, OVERMAP_HEIGHT ) ) ) {
+            std::max( min_z, -OVERMAP_DEPTH ), std::min( max_z, OVERMAP_HEIGHT ) ) ) {
         // stale texels would shade wrong, so this frame draws classic
         vp->end_lit();
         return fail_frame( *f );
@@ -2439,7 +2440,7 @@ half_open_rectangle<point> cata_tiles::get_window_any_tile_range(
         const int col_end = divide_round_up( ( size.x - max_tile_extent.p_min.x ) * 2,
                                              tile_width ) + 1;
         const int row_beg = divide_round_down( ( z_height + tile_height
-            - max_tile_extent.p_max.y ) * 4,
+                                               - max_tile_extent.p_max.y ) * 4,
                                                tile_width );
         // The difference between the default sprite height `tile_height` and
         // base tile height `tile_width / 2` should be added to the tile extent
@@ -2503,9 +2504,9 @@ std::optional<point_bub_ms> cata_tiles::tile_to_player(
         }
         return o + point_rel_ms {
             divide_round_down( colrow.x - colrow.y - base_tile_cnt.x / 2
-            + base_tile_cnt.y / 2, 2 ),
+                               + base_tile_cnt.y / 2, 2 ),
             divide_round_down( colrow.y + colrow.x - base_tile_cnt.y / 2
-            - base_tile_cnt.x / 2, 2 ),
+                               - base_tile_cnt.x / 2, 2 ),
         };
     } else {
         return point_rel_ms( colrow ) + o;
@@ -2879,10 +2880,10 @@ point_bub_ms cata_tiles::screen_to_player(
         const point colrow( divide_round_down( scr_pos.x * 2, tile_size.x ) + 1,
                             divide_round_down( scr_pos.y * 4, tile_size.x ) + 1 );
         const std::optional<point_bub_ms> player_1 = tile_to_player(
-                colrow, center, base_tile, iso );
+                    colrow, center, base_tile, iso );
         const std::optional<point_bub_ms> player_2 = tile_to_player(
-                //NOLINTNEXTLINE(cata-use-named-point-constants): the name would be confusing here (screen 'NSWE' are not map NSWE)
-                colrow + point( 1, 0 ), center, base_tile, iso );
+                    //NOLINTNEXTLINE(cata-use-named-point-constants): the name would be confusing here (screen 'NSWE' are not map NSWE)
+                    colrow + point( 1, 0 ), center, base_tile, iso );
         // We do not know the precise shape of the base tile, assuming rhombuses.
         // TODO: maybe let tilesets provide the exact shape of the base tile.
         if( player_1.has_value() ) {
@@ -3103,7 +3104,7 @@ bool cata_tiles::draw_from_id_string_internal( const std::string &id, TILE_CATEG
 {
     restore_on_out_of_scope<bool> restore_decided( m_anchor_decided );
     restore_on_out_of_scope<std::optional<smooth_lighting::light_anchor>> restore_anchor(
-        m_shown_anchor );
+                m_shown_anchor );
     if( !m_anchor_decided ) {
         m_anchor_decided = true;
         // filtered lighting needs it, and the test seam records it
@@ -3167,14 +3168,14 @@ bool cata_tiles::draw_from_id_string_internal( const std::string &id, TILE_CATEG
                 } else {
                     const float distance = std::sqrt( dist_sq );
                     retract = static_cast<int>( 100.0 * ( 1.0 - std::clamp( ( distance - d_min ) /
-                        ( d_max - d_min ), 0.0f, 1.0f ) ) );
+                                                          ( d_max - d_min ), 0.0f, 1.0f ) ) );
                 }
             } else {
                 const float distance = std::sqrt( dist_sq );
                 const float d_range = d_max - d_min;
                 const float d_slope = d_range <= 0.0f ? 100.0 : 1.0 / d_range;
                 retract = static_cast<int>( 100.0 * ( 1.0 - std::clamp( ( distance - d_min ) * d_slope, 0.0f,
-                    1.0f ) ) );
+                                                      1.0f ) ) );
             }
         }
 
@@ -3595,7 +3596,7 @@ unsigned int cata_tiles::resolve_sprite_seed( const map &here, const std::string
             // FIXME: add persistent id to Creature type, instead of using monster pointer address
             if( monster_override.find( tripoint_bub_ms( pos ) ) == monster_override.end() ) {
                 seed = reinterpret_cast<uintptr_t>( get_creature_tracker().creature_at<monster>( here.get_abs(
-                        pos ) ) );
+                                                        pos ) ) );
             }
             break;
         default:
@@ -3666,7 +3667,7 @@ bool cata_tiles::draw_sprite_at(
 
     // Painted parts use a CPU-recolored texture instead of the base atlas.
     const cata_shader::variant_kind variant = rp.tint ? cata_shader::variant_kind::NORMAL
-        : compute_variant_kind( rp.ll, rp.use_night_vision_tiles );
+            : compute_variant_kind( rp.ll, rp.use_night_vision_tiles );
     bool shader_bound = false;
     // Try the GPU shader variant first. On success the main atlas drives
     // the render and the variant transform happens per-pixel in the
@@ -3674,7 +3675,7 @@ bool cata_tiles::draw_sprite_at(
     // preset, clean session-disable) try_begin reports use_atlas; abort_frame
     // means undefined shader state -- latch recovery and throw.
     const bool scene_lit = smooth_lighting::lit_path_for( smooth_lighting_active,
-        rp.light == draw_light::scene, lit_extent.covers( rp.pos ) ) &&
+                           rp.light == draw_light::scene, lit_extent.covers( rp.pos ) ) &&
                            !rp.tint && !allow_diagonal_rota;
     // sprites that keep their lit_level's look draw classic while lighting is on
     const bool shown_unlit = smooth_lighting_active && !scene_lit;
@@ -3742,7 +3743,7 @@ bool cata_tiles::draw_sprite_at(
     geometry_input.sprite_size = point( width, height );
     geometry_input.screen_tile_size = point( tile_width, tile_height );
     geometry_input.tileset_tile_size = point( tileset_ptr->get_tile_width(),
-        tileset_ptr->get_tile_height() );
+                                       tileset_ptr->get_tile_height() );
     geometry_input.offset = tile.offset;
     geometry_input.offset_retracted = tile.offset_retracted;
     geometry_input.extra_offset = offset;
@@ -3771,9 +3772,9 @@ bool cata_tiles::draw_sprite_at(
                                          ( geometry.flip_horizontal ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE ) |
                                          ( geometry.flip_vertical ? SDL_FLIP_VERTICAL : SDL_FLIP_NONE ) );
     const smooth_lighting::quarter_turn render_turn = render_angle == 90.0
-        ? smooth_lighting::quarter_turn::clockwise
-        : render_angle == -90.0 ? smooth_lighting::quarter_turn::counterclockwise
-        : smooth_lighting::quarter_turn::none;
+            ? smooth_lighting::quarter_turn::clockwise
+            : render_angle == -90.0 ? smooth_lighting::quarter_turn::counterclockwise
+            : smooth_lighting::quarter_turn::none;
     if( geometry.opaque_bounds ) {
         const sprite_rectangle &bounds = *geometry.opaque_bounds;
         m_cur_bounds->expand( bounds.origin.x, bounds.origin.y, bounds.size.x, bounds.size.y );
@@ -3814,7 +3815,7 @@ bool cata_tiles::draw_sprite_at(
             smooth_lighting::sprite_footprint footprint;
             footprint.size = point( width, height );
             footprint.opaque = half_open_rectangle<point>( point( opq.x, opq.y ),
-                point( opq.x + opq.w, opq.y + opq.h ) );
+                               point( opq.x + opq.w, opq.y + opq.h ) );
             footprint.flip_horizontal = ( render_flip & SDL_FLIP_HORIZONTAL ) != 0;
             footprint.flip_vertical = ( render_flip & SDL_FLIP_VERTICAL ) != 0;
             footprint.turn = render_turn;
@@ -4075,7 +4076,7 @@ bool cata_tiles::draw_graffiti( const tripoint_bub_ms &p, const lit_level ll, in
     }
     const std::string tile = "graffiti_" +
                              to_upper_case( string_replace( remove_punctuations( graffiti_text ), " ",
-                                 "_" ) ).substr( 0, 32 );
+                                            "_" ) ).substr( 0, 32 );
     return draw_from_id_string( tileset_ptr->find_tile_type( tile ) ? tile : "graffiti",
                                 TILE_CATEGORY::NONE, empty_string, p, 0, rotation, lit, false, height_3d );
 }
@@ -4104,7 +4105,7 @@ bool cata_tiles::draw_field_or_item( const tripoint_bub_ms &p, const lit_level l
     }
 
     const auto fields = capture_field_render_views( get_map(), p, cached_fld, invisible,
-        field_override );
+                        field_override );
     std::optional<dynamic_tile_context> context;
     const auto &get_context = [&]() -> const dynamic_tile_context & {
         if( !context )
@@ -4475,7 +4476,7 @@ bool cata_tiles::draw_vehicle_preview( const catacurses::window &w_disp, const v
 
     if( selection ) {
         const SDL_Rect area = vehicle_preview_selection_rect( selection->first, selection->second,
-            cursor_vp_mount, center_px, point( tile_width, tile_height ) );
+                              cursor_vp_mount, center_px, point( tile_width, tile_height ) );
         SDL_BlendMode saved_blend = SDL_BLENDMODE_NONE;
         GetRenderDrawBlendMode( renderer, saved_blend );
         SDL_Color saved_color{ 0, 0, 0, 255 };
@@ -5065,7 +5066,7 @@ std::shared_ptr<const tileset> tileset_cache::load_tileset( const std::string &t
     // real load arrives.
     if( !force ) {
         if( std::shared_ptr<tileset> fresh = find_fresh_cached( key, current_renderer_instance_gen,
-            current_gpu_textures_gen ) ) {
+                                             current_gpu_textures_gen ) ) {
             if( precheck || !fresh->get_tileset_id().empty() ) {
                 return fresh;
             }
@@ -6415,7 +6416,7 @@ void cata_tiles::lr_generic( Iter begin, Iter end, Func id_func, TILE_CATEGORY c
     const std::string &category_name = TILE_CATEGORY_IDS[static_cast<size_t>( category )];
     DebugLog( D_INFO, DC_ALL ) << "Missing " << category_name << ": " << missing_list;
     DebugLog( D_INFO, DC_ALL ) << "Missing " << category_name <<
-                                  " (but looks_like tile exists): " << missing_with_looks_like_list;
+                               " (but looks_like tile exists): " << missing_with_looks_like_list;
 }
 
 template <typename maptype>
