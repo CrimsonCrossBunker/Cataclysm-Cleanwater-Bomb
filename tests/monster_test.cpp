@@ -72,10 +72,10 @@ static const efftype_id effect_tied( "tied" );
 static const furn_str_id furn_f_null( "f_null" );
 
 static const itype_id itype_backpack( "backpack" );
+static const itype_id itype_fitted_horseshoes( "fitted_horseshoes" );
+static const itype_id itype_horse_bridle( "horse_bridle" );
 static const itype_id itype_horse_stirrups( "horse_stirrups" );
 static const itype_id itype_horse_tack( "horse_tack" );
-static const itype_id itype_horse_bridle( "horse_bridle" );
-static const itype_id itype_fitted_horseshoes( "fitted_horseshoes" );
 static const itype_id itype_nail_puller( "nail_puller" );
 static const itype_id itype_rock( "rock" );
 static const itype_id itype_rope_30( "rope_30" );
@@ -89,17 +89,18 @@ static const mtype_id pseudo_dormant_mon_zombie_fat( "pseudo_dormant_mon_zombie_
 
 static const oter_str_id oter_field( "field" );
 
-static const skill_id skill_riding( "riding" );
-static const quality_id qual_HAMMER( "HAMMER" );
-static const quality_id qual_PRYING_NAIL( "PRYING_NAIL" );
-
+static const pet_slot_id pet_slot_bridle( "bridle" );
+static const pet_slot_id pet_slot_horseshoes( "horseshoes" );
+static const pet_slot_id pet_slot_removed_pet_slot( "removed_pet_slot" );
 static const pet_slot_id pet_slot_saddle( "saddle" );
 static const pet_slot_id pet_slot_saddlebag( "saddlebag" );
 static const pet_slot_id pet_slot_stirrup( "stirrup" );
-static const pet_slot_id pet_slot_bridle( "bridle" );
 static const pet_slot_id pet_slot_storage( "storage" );
-static const pet_slot_id pet_slot_removed_pet_slot( "removed_pet_slot" );
-static const pet_slot_id pet_slot_horseshoes( "horseshoes" );
+
+static const quality_id qual_HAMMER( "HAMMER" );
+static const quality_id qual_PRYING_NAIL( "PRYING_NAIL" );
+
+static const skill_id skill_riding( "riding" );
 
 static const ter_str_id ter_t_fence( "t_fence" );
 static const ter_str_id ter_t_grass( "t_grass" );
