@@ -74,8 +74,9 @@ class SDL3BuildContractTest(unittest.TestCase):
                           if line.strip().startswith("make "))
         command = shlex.split(build_line.replace("${{ matrix.tiles }}", "0"))
         self.assertEqual(command.pop(), "dmgdist")
-        with tempfile.TemporaryDirectory(prefix="ccb-macos-terminal-") as directory:
-            # Fail any SDL discovery even on a host with SDK frameworks installed.
+        with tempfile.TemporaryDirectory(
+                prefix="ccb-macos-terminal-") as directory:
+            # Reject SDL discovery even when SDK frameworks are installed.
             marker = Path(directory) / "sdl-query"
             find = Path(directory) / "find"
             find.write_text(
