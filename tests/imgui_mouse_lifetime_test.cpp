@@ -1,3 +1,6 @@
+#include <functional>
+#include <string>
+
 #include "cata_catch.h"
 #include "cata_imgui.h"
 #include "cata_scope_helpers.h"
