@@ -2460,9 +2460,6 @@ static float book_proficiency_cap( const proficiency_id &prof )
     return 1.0f;
 }
 
-// Cooldown timestamps for the "books teach no further" message, keyed by reader.
-static std::map<character_id, time_point> next_prof_cap_message;
-
 bool read_activity_actor::player_read( avatar &you )
 {
     if( !you.has_identified( book->typeId() ) ) {
@@ -2591,12 +2588,8 @@ bool read_activity_actor::player_read( avatar &you )
             const time_duration practiced = learner->get_proficiency_practiced_time( bonus.id );
             if( practiced >= cap_time ) {
                 if( learner->is_avatar() && !learner->has_proficiency( bonus.id ) ) {
-                    auto it = next_prof_cap_message.find( learner->getID() );
-                    if( it == next_prof_cap_message.end() || calendar::turn >= it->second ) {
-                        add_msg( m_info,
-                                 _( "You have learned all you can from books; further improvement requires hands-on practice." ) );
-                        next_prof_cap_message.insert_or_assign( learner->getID(), calendar::turn + 1_hours );
-                    }
+                    add_msg( m_info,
+                             _( "You have learned all you can from books; further improvement requires hands-on practice." ) );
                 }
                 continue;
             }
