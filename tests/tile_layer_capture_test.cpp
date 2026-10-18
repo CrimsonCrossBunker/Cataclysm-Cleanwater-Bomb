@@ -15,6 +15,11 @@
 #include "vehicle.h"
 #include "vpart_position.h"
 
+static const vpart_id vpart_aisle( "aisle" );
+static const vpart_id vpart_ladder_3( "ladder_3" );
+
+static const vproto_id vproto_test_turret_rig( "test_turret_rig" );
+
 TEST_CASE( "static_layer_values_keep_cached_content_after_world_changes", "[tiles][layer_view]" )
 {
     clear_map_without_vision();
@@ -27,7 +32,8 @@ TEST_CASE( "static_layer_values_keep_cached_content_after_world_changes", "[tile
     cached.set_furn_content( furn_id( "f_chair" ), 2, 2 );
     cached.set_trap_content( trap_id( "tr_beartrap" ), 1, 0 );
     const tile_layer_capture_input input{ pos, lit_level::LOW, {}, cached, true, false };
-    const auto engine = rng_get_engine();
+    // Snapshot the shared engine for the state comparison below.
+    const cata_default_random_engine engine = rng_get_engine(); // NOLINT(cata-determinism)
     const auto terrain = capture_terrain_layer( here, you, input, {} );
     const auto furniture = capture_furniture_layer( here, you, input, {} );
     const auto trap = capture_trap_layer( here, you, input, {} );
@@ -65,7 +71,7 @@ TEST_CASE( "memory_layer_values_own_content_and_classify_decoration_prefixes",
     you.prepare_map_memory_region( absolute - tripoint( 2, 2, 0 ), absolute + tripoint( 2, 2, 0 ) );
     you.memorize_terrain( absolute, "t_floor", 2, 3 );
     you.memorize_decoration( absolute, "f_chair", 1, 2 );
-    const auto before = you.get_memorized_tile( absolute );
+    const memorized_tile before = you.get_memorized_tile( absolute );
     tile_render_info::sprite cached{ lit_level::MEMORIZED, { true, true, true, true, true } };
     const tile_layer_capture_input input{ pos, lit_level::DARK, cached.invisible, cached, true, false };
     const auto terrain = capture_terrain_layer( here, you, input, {} );
@@ -99,7 +105,7 @@ TEST_CASE( "explicit_layer_overrides_keep_full_light_and_do_not_memorize", "[til
     const tripoint_bub_ms pos( 50, 50, 0 );
     const tripoint_abs_ms absolute = here.get_abs( pos );
     you.prepare_map_memory_region( absolute - tripoint( 2, 2, 0 ), absolute + tripoint( 2, 2, 0 ) );
-    const auto before = you.get_memorized_tile( absolute );
+    const memorized_tile before = you.get_memorized_tile( absolute );
     tile_render_info::sprite cached{ lit_level::DARK, {} };
     for( bool hidden : {
              false, true
@@ -147,7 +153,8 @@ TEST_CASE( "reused_layer_capture_keeps_owned_values_and_refreshes_every_field",
                             "obsolete subcategory", pos, 99, 99, lit_level::DARK, false,
                             tripoint_abs_ms( 1, 2, 3 ), true };
     const std::size_t capacity = output.id.capacity();
-    const auto engine = rng_get_engine();
+    // Snapshot the shared engine for the state comparison below.
+    const cata_default_random_engine engine = rng_get_engine(); // NOLINT(cata-determinism)
     REQUIRE( capture_terrain_layer( here, you, input, {}, output ) );
     CHECK( output.id == "t_floor" );
     CHECK( output.category == TILE_CATEGORY::TERRAIN );
@@ -223,11 +230,11 @@ TEST_CASE( "vehicle_ladder_visuals_follow_real_cache_lifecycle",
     here.furn_set( below, furn_id( "f_null" ) );
     CHECK_FALSE( here.vehicle_ladder_furniture_at( below ) );
     CHECK_FALSE( here.vehicle_ladder_furniture_at( tripoint_bub_ms( 0, 0, 2 ) ) );
-    vehicle *veh = here.add_vehicle( vproto_id( "test_turret_rig" ), top, 0_degrees,
+    vehicle *veh = here.add_vehicle( vproto_test_turret_rig, top, 0_degrees,
                                      0, veh_spawn_status::PRISTINE, false, true );
     REQUIRE( veh );
-    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_id( "aisle" ) ) >= 0 );
-    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_id( "ladder_3" ) ) >= 0 );
+    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_aisle ) >= 0 );
+    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_ladder_3 ) >= 0 );
     veh->refresh();
     here.add_vehicle_to_cache( veh );
     const auto visual = here.vehicle_ladder_furniture_at( below );

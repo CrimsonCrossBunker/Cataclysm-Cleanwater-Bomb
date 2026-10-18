@@ -14,7 +14,7 @@
 #include "cata_utility.h"
 #include "trap.h"
 
-bool capture_terrain_layer( map &here, const avatar &you,
+bool capture_terrain_layer( map &here, const avatar &observer,
                             const tile_layer_capture_input &input, const std::map<tripoint_bub_ms, ter_id> &overrides,
                             tile_layer_view &output )
 {
@@ -90,7 +90,7 @@ bool capture_terrain_layer( map &here, const avatar &you,
         }
     } else if( invisible[0] ) {
         // try drawing memory if invisible and not overridden
-        const memorized_tile &mt = you.get_memorized_tile( here.get_abs( p ) );
+        const memorized_tile &mt = observer.get_memorized_tile( here.get_abs( p ) );
         if( !mt.get_ter_id().empty() ) {
             output.assign( mt.get_ter_id(), TILE_CATEGORY::TERRAIN,
                            std::string{}, p,
@@ -103,7 +103,7 @@ bool capture_terrain_layer( map &here, const avatar &you,
 
 }
 
-bool capture_furniture_layer( map &here, const avatar &you,
+bool capture_furniture_layer( map &here, const avatar &observer,
                               const tile_layer_capture_input &input, const std::map<tripoint_bub_ms, furn_id> &overrides,
                               tile_layer_view &output )
 {
@@ -200,7 +200,7 @@ bool capture_furniture_layer( map &here, const avatar &you,
         }
     } else if( invisible[0] ) {
         // try drawing memory if invisible and not overridden
-        const memorized_tile &mt = you.get_memorized_tile( here.get_abs( p ) );
+        const memorized_tile &mt = observer.get_memorized_tile( here.get_abs( p ) );
         if( string_starts_with( mt.get_dec_id(), "f_" ) ) {
             output.assign( mt.get_dec_id(), TILE_CATEGORY::FURNITURE,
                            std::string{}, p,
@@ -213,7 +213,7 @@ bool capture_furniture_layer( map &here, const avatar &you,
 
 }
 
-bool capture_trap_layer( map &here, const avatar &you,
+bool capture_trap_layer( map &here, const avatar &observer,
                          const tile_layer_capture_input &input, const std::map<tripoint_bub_ms, trap_id> &overrides,
                          tile_layer_view &output )
 {
@@ -253,7 +253,7 @@ bool capture_trap_layer( map &here, const avatar &you,
     // override previews and memory tiles are not captured into the cache.
     const trap &tr = here.tr_at( p );
     if( overridden || ( !invisible[0] && neighborhood_overridden &&
-                        tr.can_see( p, you ) ) ) {
+                        tr.can_see( p, observer ) ) ) {
         // and then draw the override trap
         const trap_id &tr2 = overridden ? override->second : tr.loadid;
         if( tr2 ) {
@@ -285,7 +285,7 @@ bool capture_trap_layer( map &here, const avatar &you,
         }
     } else if( invisible[0] ) {
         // try drawing memory if invisible and not overridden
-        const memorized_tile &mt = you.get_memorized_tile( here.get_abs( p ) );
+        const memorized_tile &mt = observer.get_memorized_tile( here.get_abs( p ) );
         if( string_starts_with( mt.get_dec_id(), "tr_" ) ) {
             output.assign( mt.get_dec_id(), TILE_CATEGORY::TRAP,
                            std::string{}, p,
@@ -299,34 +299,34 @@ bool capture_trap_layer( map &here, const avatar &you,
 }
 
 
-std::optional<tile_layer_view> capture_terrain_layer( map &here, const avatar &you,
+std::optional<tile_layer_view> capture_terrain_layer( map &here, const avatar &observer,
         const tile_layer_capture_input &input, const std::map<tripoint_bub_ms, ter_id> &overrides )
 {
     tile_layer_view output{ std::string{}, TILE_CATEGORY::NONE, std::string{}, input.position,
                             0, 0, input.light, false, tripoint_abs_ms::zero };
-    if( !capture_terrain_layer( here, you, input, overrides, output ) ) {
+    if( !capture_terrain_layer( here, observer, input, overrides, output ) ) {
         return std::nullopt;
     }
     return output;
 }
 
-std::optional<tile_layer_view> capture_furniture_layer( map &here, const avatar &you,
+std::optional<tile_layer_view> capture_furniture_layer( map &here, const avatar &observer,
         const tile_layer_capture_input &input, const std::map<tripoint_bub_ms, furn_id> &overrides )
 {
     tile_layer_view output{ std::string{}, TILE_CATEGORY::NONE, std::string{}, input.position,
                             0, 0, input.light, false, tripoint_abs_ms::zero };
-    if( !capture_furniture_layer( here, you, input, overrides, output ) ) {
+    if( !capture_furniture_layer( here, observer, input, overrides, output ) ) {
         return std::nullopt;
     }
     return output;
 }
 
-std::optional<tile_layer_view> capture_trap_layer( map &here, const avatar &you,
+std::optional<tile_layer_view> capture_trap_layer( map &here, const avatar &observer,
         const tile_layer_capture_input &input, const std::map<tripoint_bub_ms, trap_id> &overrides )
 {
     tile_layer_view output{ std::string{}, TILE_CATEGORY::NONE, std::string{}, input.position,
                             0, 0, input.light, false, tripoint_abs_ms::zero };
-    if( !capture_trap_layer( here, you, input, overrides, output ) ) {
+    if( !capture_trap_layer( here, observer, input, overrides, output ) ) {
         return std::nullopt;
     }
     return output;
