@@ -598,7 +598,7 @@ void cataimgui::client::new_frame( int display_buffer_w, int display_buffer_h )
             GetRendererOutputSize( sdl_renderer, &output_w, &output_h );
         }
         const point sz = imgui_frame_display_size( display_buffer_w, display_buffer_h,
-            output_w, output_h );
+                         output_w, output_h );
         if( sz.x > 0 && sz.y > 0 ) {
             io.DisplaySize = ImVec2( static_cast<float>( sz.x ), static_cast<float>( sz.y ) );
             io.DisplayFramebufferScale = ImVec2( 1.0f, 1.0f );

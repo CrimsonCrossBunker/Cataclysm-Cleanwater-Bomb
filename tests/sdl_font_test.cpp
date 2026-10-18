@@ -171,7 +171,7 @@ class oracle_canvas
         Uint32 rgb_at( const point &p ) {
             REQUIRE( LockSurface( canvas_ ) == 0 );
             const Uint32 v = static_cast<const Uint32 *>( canvas_->pixels )[
-                                 p.y * ( canvas_->pitch / 4 ) + p.x];
+                      p.y * ( canvas_->pitch / 4 ) + p.x];
             UnlockSurface( canvas_ );
             return v & 0x00FFFFFF;
         }
@@ -301,7 +301,7 @@ TEST_CASE( "draw_window_matches_ttf_glyph_oracle", "[tiles][sdl_font]" )
 
     GIVEN( "8x4 window of colored cells, spaces, wide glyphs, box lines and a wrapped wide glyph" ) {
         REQUIRE( renderer_recovery_test_support::install_test_font( typeface, cell_w, cell_h,
-                font_size, blending ) );
+                 font_size, blending ) );
         const catacurses::window w = catacurses::newwin( win_rows, win_cols, point::zero );
         for( const cell_spec &c : test_cells() ) {
             put_cell( w, c );
