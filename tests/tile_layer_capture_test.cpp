@@ -18,7 +18,7 @@
 static const vpart_id vpart_aisle( "aisle" );
 static const vpart_id vpart_ladder_3( "ladder_3" );
 
-static const vproto_id vproto_test_turret_rig( "test_turret_rig" );
+static const vproto_id vehicle_prototype_test_turret_rig( "test_turret_rig" );
 
 TEST_CASE( "static_layer_values_keep_cached_content_after_world_changes", "[tiles][layer_view]" )
 {
@@ -230,7 +230,7 @@ TEST_CASE( "vehicle_ladder_visuals_follow_real_cache_lifecycle",
     here.furn_set( below, furn_id( "f_null" ) );
     CHECK_FALSE( here.vehicle_ladder_furniture_at( below ) );
     CHECK_FALSE( here.vehicle_ladder_furniture_at( tripoint_bub_ms( 0, 0, 2 ) ) );
-    vehicle *veh = here.add_vehicle( vproto_test_turret_rig, top, 0_degrees,
+    vehicle *veh = here.add_vehicle( vehicle_prototype_test_turret_rig, top, 0_degrees,
                                      0, veh_spawn_status::PRISTINE, false, true );
     REQUIRE( veh );
     REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_aisle ) >= 0 );
