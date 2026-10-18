@@ -487,6 +487,10 @@ struct renderer_recovery_test_support {
     // Whether the most recently armed phase fault has fired since arming.
     static bool phase_fault_fired();
 
+    // Reconcile a cold-start window with the real initial-target path, without
+    // relying on a resize notification being observed during renderer creation.
+    static bool setup_initial_display_buffer( const std::optional<point> &requested_pixel_size );
+
     // Set the scaling factor and resize the hidden fixture window, then notify
     // the coordinator. The deferred resize applies on the next drain.
     static void set_scaling_and_resize_window( int scaling, int window_w, int window_h );

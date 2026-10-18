@@ -282,19 +282,26 @@ static point compute_display_buffer_dims()
     return point{ TERMINAL_WIDTH * fontwidth, TERMINAL_HEIGHT * fontheight };
 }
 
-// Backing-store pixel dimensions of the window, tracked independently of the
-// logical size so a DPI-only change leaves the display buffer alone.
+// Test-only injected drawable pixels. The dummy backend has no HiDPI window.
+// Keep all drawable queries consistent with the injected physical dimensions.
+static int test_drawable_override_w = -1;
+static int test_drawable_override_h = -1;
+
+// Font dimensions and SCALING_FACTOR are measured in drawable pixels. SDL's
+// logical window coordinates are used only for window operations and input.
 static point compute_drawable_dims()
 {
-    int pw = 0;
-    int ph = 0;
-    GetWindowSizeInPixels( ::window.get(), &pw, &ph );
-    return point{ pw, ph };
+    if( test_drawable_override_w >= 0 && test_drawable_override_h >= 0 ) {
+        return point{ test_drawable_override_w, test_drawable_override_h };
+    }
+    point pixels;
+    GetWindowSizeInPixels( ::window.get(), &pixels.x, &pixels.y );
+    return pixels;
 }
 
 #if !defined(__ANDROID__)
 // Present rect in drawable px: largest integer buffer multiple that fits
-// (absorbs SCALING_FACTOR + HiDPI), top-left, remainder border. A fractional
+// (the configured SCALING_FACTOR), top-left, remainder border. A fractional
 // fit would grid the minimap. Inverted by window_to_display_buffer_coords.
 static SDL_Rect get_display_buffer_render_rect()
 {
@@ -308,23 +315,36 @@ static SDL_Rect get_display_buffer_render_rect()
 }
 #endif
 
-// Test-only injected drawable pixels. The headless dummy backend reports backing
-// pixels equal to the logical window, so a DPI-only change cannot be produced
-// through SDL; a non-negative override stands in. Inert at the -1 default.
-static int test_drawable_override_w = -1;
-static int test_drawable_override_h = -1;
-
 // Refresh the cached drawable-pixel track from the current window.
 static void refresh_drawable_dims()
 {
-    if( test_drawable_override_w >= 0 && test_drawable_override_h >= 0 ) {
-        DrawableWidth = test_drawable_override_w;
-        DrawableHeight = test_drawable_override_h;
-        return;
-    }
     const point drawable = compute_drawable_dims();
     DrawableWidth = drawable.x;
     DrawableHeight = drawable.y;
+}
+
+#if !defined(__ANDROID__)
+static point desktop_terminal_size()
+{
+    return point{ std::max( DrawableWidth / fontwidth / scaling_factor, EVEN_MINIMUM_TERM_WIDTH ),
+                  std::max( DrawableHeight / fontheight / scaling_factor, EVEN_MINIMUM_TERM_HEIGHT ) };
+}
+#endif
+
+// SDL window sizes use logical units on Wayland and Cocoa. Round up so a
+// requested pixel extent never loses a terminal cell at fractional density.
+static point window_size_for_pixels( const point &pixels )
+{
+    point logical;
+    GetWindowSize( ::window.get(), &logical.x, &logical.y );
+    const point drawable = compute_drawable_dims();
+    if( logical.x <= 0 || logical.y <= 0 || drawable.x <= 0 || drawable.y <= 0 ) {
+        return pixels;
+    }
+    return point{
+        static_cast<int>( ( static_cast<int64_t>( pixels.x ) * logical.x + drawable.x - 1 ) / drawable.x ),
+        static_cast<int>( ( static_cast<int64_t>( pixels.y ) * logical.y + drawable.y - 1 ) / drawable.y )
+    };
 }
 
 static bool apply_resize_layout( int w, int h );
@@ -627,6 +647,28 @@ std::optional<atlas_bake_plan> resolve_atlas_bake_plan( const std::string &memor
                                     tint_shader );
 }
 
+// Renderer creation can pump a pending fullscreen configure before the event
+// watch is installed. Reconcile live metrics before allocating the first target.
+static bool SetupInitialRenderTarget( const std::optional<point> &requested_pixel_size )
+{
+#if !defined(__ANDROID__)
+    printErrorIf( !SDL_SyncWindow( ::window.get() ), "Window initialization did not settle" );
+    if( requested_pixel_size ) {
+        const point logical = window_size_for_pixels( *requested_pixel_size );
+        SetWindowSize( ::window.get(), logical.x, logical.y );
+        printErrorIf( !SDL_SyncWindow( ::window.get() ), "Initial window resize did not settle" );
+    }
+    GetWindowSize( ::window.get(), &WindowWidth, &WindowHeight );
+    refresh_drawable_dims();
+    const point terminal = desktop_terminal_size();
+    TERMINAL_WIDTH = terminal.x;
+    TERMINAL_HEIGHT = terminal.y;
+#else
+    ( void )requested_pixel_size;
+#endif
+    return SetupRenderTarget();
+}
+
 //Registers, creates, and shows the Window!!
 static void WinCreate()
 {
@@ -716,18 +758,10 @@ static void WinCreate()
         SetWindowFullscreen( ::window.get(), desired_fullscreen );
     }
 
-#if !defined(__ANDROID__) && !defined(EMSCRIPTEN)
-    // On Android SDL seems janky in windowed mode so we're fullscreen all the time.
-    // Fullscreen mode is now modified so it obeys terminal width/height, rather than
-    // overwriting it with this calculation.
-    if( desired_fullscreen != FullscreenMode::windowed
-        || ( window_flags & CATA_WINDOW_MAXIMIZED ) ) {
-        GetWindowSize( ::window.get(), &WindowWidth, &WindowHeight );
-        // Ignore previous values, use the whole window, but nothing more.
-        TERMINAL_WIDTH = WindowWidth / fontwidth / scaling_factor;
-        TERMINAL_HEIGHT = WindowHeight / fontheight / scaling_factor;
+    std::optional<point> requested_pixel_size;
+    if( desired_fullscreen == FullscreenMode::windowed && !( window_flags & CATA_WINDOW_MAXIMIZED ) ) {
+        requested_pixel_size = point{ WindowWidth, WindowHeight };
     }
-#endif
     pixel_format = SDL_GetWindowPixelFormat( ::window.get() );
     throwErrorIf( pixel_format == SDL_PIXELFORMAT_UNKNOWN, "SDL_GetWindowPixelFormat failed" );
 
@@ -769,7 +803,7 @@ static void WinCreate()
         if( printErrorIf( !renderer,
                           "Failed to initialize accelerated renderer, falling back to software rendering" ) ) {
             software_renderer = true;
-        } else if( !SetupRenderTarget() ) {
+        } else if( !SetupInitialRenderTarget( requested_pixel_size ) ) {
             dbg( D_ERROR ) <<
                            "Failed to initialize display buffer under accelerated rendering, falling back to software rendering.";
             software_renderer = true;
@@ -784,7 +818,7 @@ static void WinCreate()
     if( software_renderer ) {
         renderer = create_game_renderer( {}, true );
         throwErrorIf( !renderer, "Failed to initialize software renderer" );
-        throwErrorIf( !SetupRenderTarget(),
+        throwErrorIf( !SetupInitialRenderTarget( requested_pixel_size ),
                       "Failed to initialize display buffer under software rendering, unable to continue." );
     }
 
@@ -793,8 +827,15 @@ static void WinCreate()
     // Seed the drawable track from the created window (see DrawableWidth).
     refresh_drawable_dims();
 
+#if !defined(__ANDROID__)
+    const point minimum = window_size_for_pixels( point { fontwidth *EVEN_MINIMUM_TERM_WIDTH * scaling_factor,
+                          fontheight *EVEN_MINIMUM_TERM_HEIGHT *scaling_factor
+                                                        } );
+    SetWindowMinimumSize( ::window.get(), minimum.x, minimum.y );
+#else
     SetWindowMinimumSize( ::window.get(), fontwidth * EVEN_MINIMUM_TERM_WIDTH * scaling_factor,
                           fontheight * EVEN_MINIMUM_TERM_HEIGHT * scaling_factor );
+#endif
 
 #if defined(__ANDROID__)
     // TODO: Not too sure why this works to make fullscreen on Android behave. :/
@@ -3141,6 +3182,12 @@ bool renderer_recovery_test_support::phase_fault_fired()
     return renderer_coordinator.test_phase_fault_fired_;
 }
 
+bool renderer_recovery_test_support::setup_initial_display_buffer(
+    const std::optional<point> &requested_pixel_size )
+{
+    return SetupInitialRenderTarget( requested_pixel_size );
+}
+
 void renderer_recovery_test_support::set_scaling_and_resize_window( const int scaling,
         const int window_w, const int window_h )
 {
@@ -5049,12 +5096,10 @@ static input_event sdl_keysym_to_keycode_evt( const CataKeysym &keysym )
 // the terminal layout when the platform or Android automatic sizing requires it.
 static bool apply_resize_layout( int w, int h )
 {
-    const bool logical_changed = w != WindowWidth || h != WindowHeight;
     WindowWidth = w;
     WindowHeight = h;
     refresh_drawable_dims();
 #if defined(__ANDROID__)
-    ( void )logical_changed;
     const point terminal = get_android_terminal_size();
     const bool terminal_changed = terminal.x != TERMINAL_WIDTH || terminal.y != TERMINAL_HEIGHT;
     if( terminal_changed ) {
@@ -5064,14 +5109,14 @@ static bool apply_resize_layout( int w, int h )
     }
     return terminal_changed;
 #else
-    if( logical_changed ) {
-        // A minimal window size is set during initialization, but some platforms
-        // ignore the minimum size so we clamp the terminal size here for safety.
-        TERMINAL_WIDTH = std::max( WindowWidth / fontwidth / scaling_factor, EVEN_MINIMUM_TERM_WIDTH );
-        TERMINAL_HEIGHT = std::max( WindowHeight / fontheight / scaling_factor, EVEN_MINIMUM_TERM_HEIGHT );
+    const point terminal = desktop_terminal_size();
+    const bool terminal_changed = terminal.x != TERMINAL_WIDTH || terminal.y != TERMINAL_HEIGHT;
+    if( terminal_changed ) {
+        TERMINAL_WIDTH = terminal.x;
+        TERMINAL_HEIGHT = terminal.y;
         catacurses::stdscr = catacurses::newwin( TERMINAL_HEIGHT, TERMINAL_WIDTH, point::zero );
     }
-    return logical_changed;
+    return terminal_changed;
 #endif
 }
 
@@ -5084,9 +5129,10 @@ void resize_term( const int cell_w, const int cell_h )
     ( void )cell_h;
     renderer_coordinator.notify_resize();
 #else
-    const int w = cell_w * fontwidth * scaling_factor;
-    const int h = cell_h * fontheight * scaling_factor;
-    SetWindowSize( window.get(), w, h );
+    const point logical = window_size_for_pixels( point { cell_w *fontwidth * scaling_factor,
+                          cell_h *fontheight *scaling_factor
+                                                        } );
+    SetWindowSize( window.get(), logical.x, logical.y );
     // The resize is async: the coordinator applies it on the next drain, driven
     // by this hint and the resulting watched resize event.
     renderer_coordinator.notify_resize();
@@ -5100,8 +5146,9 @@ void toggle_fullscreen_window()
     return;
 #endif
 
-    static int restore_win_w = get_option<int>( "TERMINAL_X" ) * fontwidth * scaling_factor;
-    static int restore_win_h = get_option<int>( "TERMINAL_Y" ) * fontheight * scaling_factor;
+    static point restore_size = window_size_for_pixels( point{
+        get_option<int>( "TERMINAL_X" ) * fontwidth * scaling_factor,
+        get_option<int>( "TERMINAL_Y" ) * fontheight * scaling_factor } );
 
     if( fullscreen ) {
         if( !SetWindowFullscreen( window.get(), FullscreenMode::windowed ) ) {
@@ -5109,12 +5156,12 @@ void toggle_fullscreen_window()
             return;
         }
         RestoreWindow( window.get() );
-        SetWindowSize( window.get(), restore_win_w, restore_win_h );
-        SetWindowMinimumSize( window.get(), fontwidth * EVEN_MINIMUM_TERM_WIDTH * scaling_factor,
-                              fontheight * EVEN_MINIMUM_TERM_HEIGHT * scaling_factor );
+        SetWindowSize( window.get(), restore_size.x, restore_size.y );
+        const point minimum = window_size_for_pixels( point{ fontwidth *EVEN_MINIMUM_TERM_WIDTH * scaling_factor,
+                              fontheight *EVEN_MINIMUM_TERM_HEIGHT * scaling_factor } );
+        SetWindowMinimumSize( window.get(), minimum.x, minimum.y );
     } else {
-        restore_win_w = WindowWidth;
-        restore_win_h = WindowHeight;
+        restore_size = point{ WindowWidth, WindowHeight };
         if( !SetWindowFullscreen( window.get(), FullscreenMode::fullscreen_desktop ) ) {
             printErrorIf( true, "SetWindowFullscreen(fullscreen_desktop) failed" );
             return;
@@ -7675,33 +7722,6 @@ int projected_window_height()
     return get_option<int>( "TERMINAL_Y" ) * fontheight;
 }
 
-// Measures scaling factor for high-dpi displays
-static std::pair<float, float> get_display_scale( int display_index )
-{
-#if SDL_VERSION_ATLEAST(2,26,0)
-    SDL_Window_Ptr probe = CreateGameWindow( "probe", display_index, 16, 16,
-                           CATA_WINDOW_HIDDEN | CATA_WINDOW_HIGH_DPI );
-    if( !probe ) {
-        return std::make_pair( 1.0f, 1.0f );
-    }
-
-    int lw = 0;
-    int lh = 0;
-    GetWindowSize( probe.get(), &lw, &lh );
-    int pw = 0;
-    int ph = 0;
-    GetWindowSizeInPixels( probe.get(), &pw, &ph );
-    probe.reset();
-
-    float scale_w = lw ? static_cast<float>( pw ) / static_cast<float>( lw ) : 1.0f;
-    float scale_h = lh ? static_cast<float>( ph ) / static_cast<float>( lh ) : 1.0f;
-    return std::make_pair( scale_w, scale_h );
-#else
-    ( void )display_index; // avoid unused parameter lint
-    return std::make_pair( 1.0f, 1.0f );
-#endif
-}
-
 static void init_term_size_and_scaling_factor()
 {
     scaling_factor = 1;
@@ -7742,9 +7762,8 @@ static void init_term_size_and_scaling_factor()
 
             } else {
                 // For fullscreen or window borderless maximum size is the display size
-                auto [ dpi_scale_w, dpi_scale_h ] = get_display_scale( current_display_id );
-                max_width = dpi_scale_w * current_display.w;
-                max_height = dpi_scale_h * current_display.h;
+                max_width = current_display.w;
+                max_height = current_display.h;
             }
         } else {
             dbg( D_WARNING ) << "Failed to get current Display Mode, assuming infinite display size.";
