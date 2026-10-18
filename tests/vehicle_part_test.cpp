@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <functional>
+#include <list>
 #include <map>
 #include <memory>
 #include <optional>

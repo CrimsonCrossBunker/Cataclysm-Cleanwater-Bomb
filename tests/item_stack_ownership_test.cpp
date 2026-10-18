@@ -1,5 +1,7 @@
-#include "cata_catch.h"
+#include <string>
+
 #include "calendar.h"
+#include "cata_catch.h"
 #include "item.h"
 #include "type_id.h"
 

@@ -3,6 +3,7 @@
 #include <string>
 
 #if defined(TILES)
+    #include "cata_imgui.h"
     #include "cursesdef.h"
     #include "cursesport.h"
 #endif

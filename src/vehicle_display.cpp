@@ -12,18 +12,25 @@
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "color.h"
+#include "coordinates.h"
 #include "cursesdef.h"
 #include "debug.h"
+#include "item.h"
 #include "itype.h"
 #include "options.h"
 #include "output.h"
+#include "point.h"
 #include "string_formatter.h"
+#include "tileray.h"
 #include "translations.h"
+#include "type_id.h"
 #include "units.h"
 #include "units_utility.h"
 #include "veh_type.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
+
+class map;
 
 static const ammotype ammo_battery( "battery" );
 
