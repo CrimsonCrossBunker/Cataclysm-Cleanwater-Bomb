@@ -98,7 +98,7 @@ static const pet_slot_id pet_slot_saddlebag( "saddlebag" );
 static const pet_slot_id pet_slot_stirrup( "stirrup" );
 static const pet_slot_id pet_slot_bridle( "bridle" );
 static const pet_slot_id pet_slot_storage( "storage" );
-static const pet_slot_id pet_slot_removed( "removed_pet_slot" );
+static const pet_slot_id pet_slot_removed_pet_slot( "removed_pet_slot" );
 static const pet_slot_id pet_slot_horseshoes( "horseshoes" );
 
 static const ter_str_id ter_t_fence( "t_fence" );
@@ -869,7 +869,7 @@ TEST_CASE( "unrestorable_pet_equipment_survives_loading", "[monster][pet_equipme
     original.inv.emplace_back( itype_rope_30 );
     pet_slot_id slot = pet_slot_saddlebag;
     SECTION( "removed_slot" ) {
-        slot = pet_slot_removed;
+        slot = pet_slot_removed_pet_slot;
     }
     SECTION( "missing_parent_equipment" ) {
         REQUIRE_FALSE( original.pet_slot_available( slot ) );
