@@ -3,15 +3,10 @@
 #define CATA_SRC_AI_REACHABILITY_OWNER_H
 
 #include "ai_reachability.h"
+#include "ai_reachability_fwd.h"
 
-class map;
 namespace ai_reachability
 {
-// Owner-thread boundary; unsupported maps or invalid storage identities refuse
-// admission. No borrowed map/submap pointers enter snapshot or worker outputs.
-bool capture_geometry( const map &world, snapshot &values );
-bool geometry_matches( const map &world, const snapshot &values );
-
 // One internal, mutation-free flood owns this view. It must not escape that
 // call or invoke gameplay callbacks. Check touched blocks and validate each
 // unchanged transparency layer once. A mismatching layer keeps per-cell checks;

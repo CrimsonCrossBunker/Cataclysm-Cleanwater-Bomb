@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "active_item_cache.h"
+#include "ai_reachability_fwd.h"
 #include "cached_options.h"
 #include "calendar.h"
 #include "cata_assert.h"
@@ -109,15 +110,6 @@ struct wrapped_vehicle {
 };
 
 using VehicleList = std::vector<wrapped_vehicle>;
-class map;
-namespace ai_reachability
-{
-class geometry_view;
-struct snapshot;
-bool capture_geometry( const map &world, snapshot &values );
-bool geometry_matches( const map &world, const snapshot &values );
-} // namespace ai_reachability
-
 
 class weather_generator;
 

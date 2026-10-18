@@ -552,27 +552,31 @@ void creature_tracker::flood_fill_zone( const Creature &origin )
         geometry.emplace( here, *reachability_preparation_->captured() );
     }
     ff::flood_fill_visit_10_connected( origin.pos_bub(),
-    [this, &here, prepared, &geometry]( const tripoint_bub_ms & loc, int direction ) {
-        if( direction == 0 ) {
+    [this, &here, prepared, &geometry]( const tripoint_bub_ms & loc, int direction ) -> bool {
+        if( direction == 0 )
+        {
             return loc.z() >= -OVERMAP_DEPTH && loc.z() <= OVERMAP_HEIGHT &&
-                   loc.y() >= 0 && loc.y() < MAPSIZE_Y &&
-                   loc.x() >= 0 && loc.x() < MAPSIZE_X &&
-                   passability_bitmap_[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()];
+                      loc.y() >= 0 && loc.y() < MAPSIZE_Y &&
+                      loc.x() >= 0 && loc.x() < MAPSIZE_X &&
+                      passability_bitmap_[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()];
         }
 
-        if( prepared && geometry->matches_at( loc, direction ) ) {
+        if( prepared && geometry->matches_at( loc, direction ) )
+        {
             return direction == 1 ? prepared->up[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()] :
-                   prepared->down[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()];
+            prepared->down[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()];
         }
 
-        auto check_location_passable_down = [loc, &here]( const maptile & mt, const ter_t & ter ) {
+        auto check_location_passable_down = [loc, &here]( const maptile & mt, const ter_t & ter )
+        {
             return ( ( ter.movecost != 0 && mt.get_furn_t().movecost >= 0 ) ||
                      here.is_transparent_wo_fields( loc ) ) &&
-                   ( ter.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) ||
-                     ter.has_flag( ter_furn_flag::TFLAG_GOES_DOWN ) );
+            ( ter.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) ||
+              ter.has_flag( ter_furn_flag::TFLAG_GOES_DOWN ) );
         };
 
-        if( direction == 1 ) {
+        if( direction == 1 )
+        {
             const maptile &up = here.maptile_at( loc );
             const ter_t &up_ter = up.get_ter_t();
             if( up_ter.id.is_null() ) {
@@ -582,7 +586,8 @@ void creature_tracker::flood_fill_zone( const Creature &origin )
                 return true;
             }
         }
-        if( direction == -1 ) {
+        if( direction == -1 )
+        {
             const maptile &up = here.maptile_at( loc + tripoint::above );
             const ter_t &up_ter = up.get_ter_t();
             if( up_ter.id.is_null() ) {
