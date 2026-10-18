@@ -23,6 +23,7 @@
 const float book_proficiency_bonus::default_time_factor = 0.5f;
 const float book_proficiency_bonus::default_fail_factor = 0.5f;
 const bool book_proficiency_bonus::default_include_prereqs = true;
+const float book_proficiency_bonus::default_cap = 1.0f;
 
 static std::map<proficiency_id, proficiency_migration> prof_migrations;
 
@@ -617,11 +618,15 @@ void book_proficiency_bonus::deserialize( const JsonObject &jo )
     optional( jo, was_loaded, "fail_factor", fail_factor, default_fail_factor );
     optional( jo, was_loaded, "time_factor", time_factor, default_time_factor );
     optional( jo, was_loaded, "include_prereqs", include_prereqs, default_include_prereqs );
+    optional( jo, was_loaded, "cap", cap, default_cap );
     if( fail_factor < 0 || fail_factor >= 1 ) {
         jo.throw_error( "fail_factor must be in range [0,1)" );
     }
     if( time_factor < 0 || time_factor >= 1 ) {
         jo.throw_error( "time_factor must be in range [0,1)" );
+    }
+    if( cap <= 0 || cap > 1 ) {
+        jo.throw_error( "cap must be in range (0,1]" );
     }
 }
 

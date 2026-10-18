@@ -208,6 +208,8 @@ struct book_proficiency_bonus {
         float time_factor = default_time_factor;
         float fail_factor = default_fail_factor;
         bool include_prereqs = default_include_prereqs;
+        // fraction of time_to_learn this book can train the proficiency up to
+        float cap = default_cap;
 
         bool was_loaded = false;
         void deserialize( const JsonObject &jo );
@@ -216,6 +218,7 @@ struct book_proficiency_bonus {
         static const float default_time_factor;
         static const float default_fail_factor;
         static const bool default_include_prereqs;
+        static const float default_cap;
 };
 
 // a container class for book_proficiency_bonus to make it easy to calculate and compartmentalize
