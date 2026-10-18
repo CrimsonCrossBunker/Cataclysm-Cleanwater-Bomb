@@ -1,6 +1,7 @@
 """Exercise legacy flag failures and dependency-free utility targets."""
 
 import os
+import shlex
 from pathlib import Path
 import shutil
 import subprocess
@@ -60,6 +61,39 @@ class SDL3BuildContractTest(unittest.TestCase):
                 "ASTYLE=0", "LINTJSON=0", "LOCALIZE=0", "LANGUAGES=",
                 "ODIR=" + directory + "/obj",
                 "CATA_ENABLE_LUA_PLATFORM=0",
+            ], env=environment)
+            self.assertEqual(result.returncode, 0, result.stdout[-4000:])
+            self.assertFalse(marker.exists(), result.stdout[-4000:])
+
+    @unittest.skipUnless(shutil.which("make"), "GNU Make is unavailable")
+    def test_macos_terminal_release_does_not_require_sdl(self):
+        workflow = (ROOT / ".github/workflows/release.yml").read_text()
+        step = workflow.split("- name: Build CDDA (osx, curses)\n", 1)[1]
+        step = step.split("\n      - name:", 1)[0]
+        build_line = next(line.strip() for line in step.splitlines()
+                          if line.strip().startswith("make "))
+        command = shlex.split(build_line.replace("${{ matrix.tiles }}", "0"))
+        self.assertEqual(command.pop(), "dmgdist")
+        with tempfile.TemporaryDirectory(
+                prefix="ccb-macos-terminal-") as directory:
+            # Reject SDL discovery even when SDK frameworks are installed.
+            marker = Path(directory) / "sdl-query"
+            find = Path(directory) / "find"
+            find.write_text(
+                '#!/bin/sh\ncase "$*" in *SDL3*) '
+                ': > "$CCB_SDL_QUERY_MARKER"; exit 0;; esac\n'
+                'exec ' + shlex.quote(shutil.which("find")) + ' "$@"\n'
+            )
+            find.chmod(0o755)
+            environment = dict(
+                os.environ, CCB_SDL_QUERY_MARKER=str(marker),
+                PATH=directory + os.pathsep + os.environ["PATH"],
+            )
+            result = self.run_command([
+                command[0], "-n", *command[1:], "NATIVE=osx", "FRAMEWORKSDIR=",
+                "ASTYLE=0", "LINTJSON=0", "LOCALIZE=0", "LANGUAGES=",
+                "CATA_ENABLE_LUA_PLATFORM=0", "ODIR=" + directory + "/obj",
+                "appclean",
             ], env=environment)
             self.assertEqual(result.returncode, 0, result.stdout[-4000:])
             self.assertFalse(marker.exists(), result.stdout[-4000:])

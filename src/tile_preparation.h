@@ -13,6 +13,7 @@ class cata_thread_pool;
 namespace tile_preparation
 {
 enum sparse_layer : unsigned {
+    layer_none = 0,
     layer_graffiti = 1U << 0,
     layer_trap = 1U << 1,
     layer_part_con = 1U << 2,

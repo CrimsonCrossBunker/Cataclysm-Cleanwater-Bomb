@@ -1,5 +1,7 @@
 #include "creature_tracker.h"
 
+#include <ai_reachability.h>
+#include <ai_reachability_fwd.h>
 #include <coordinates.h>
 #include <creature.h>
 #include <map_scale_constants.h>
@@ -7,10 +9,11 @@
 #include <monster_uid.h>
 #include <algorithm>
 #include <chrono>
-#include <functional>
 #include <limits>
-#include <ostream>
+#include <new>
 #include <optional>
+#include <ostream>
+#include <ratio>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -27,10 +30,10 @@
 #include "maptile_fwd.h"
 #include "mongroup.h"
 #include "monster.h"
+#include "mp_gamestate.h"
 #include "mtype.h"
 #include "npc.h"
 #include "options.h"
-#include "mp_gamestate.h"
 #include "point.h"
 #include "profiling.h"
 #include "string_formatter.h"
@@ -458,7 +461,7 @@ const ai_reachability::output *creature_tracker::prepare_reachability_geometry()
         if( !reachability_preparation_ ) {
             reachability_preparation_ = std::make_unique<ai_reachability::frame>( workers == 1 ? 0 : workers );
         }
-        auto request = reachability_preparation_->try_acquire();
+        ai_reachability::frame::lease request = reachability_preparation_->try_acquire();
         if( !request ) {
             return nullptr;
         }
@@ -498,7 +501,7 @@ void creature_tracker::rebuild_passability_bitmap()
         }
         invalidate_reachability_preparation();
     }
-    const auto start = std::chrono::steady_clock::now();
+    const std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
     for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; z++ ) {
         const level_cache &cache = here.get_cache_ref( z );
         const auto &transparent_wo_fields = cache.transparent_cache_wo_fields;
@@ -544,7 +547,7 @@ void creature_tracker::flood_fill_zone( const Creature &origin )
     }
 
     CATA_PROFILE_SCOPE_NAMED( "ai.reachability.flood" );
-    const auto start = std::chrono::steady_clock::now();
+    const std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
     const ai_reachability::output *prepared = prepare_reachability_geometry();
     map &here = get_map();
     std::optional<ai_reachability::geometry_view> geometry;
@@ -552,27 +555,31 @@ void creature_tracker::flood_fill_zone( const Creature &origin )
         geometry.emplace( here, *reachability_preparation_->captured() );
     }
     ff::flood_fill_visit_10_connected( origin.pos_bub(),
-    [this, &here, prepared, &geometry]( const tripoint_bub_ms & loc, int direction ) {
-        if( direction == 0 ) {
+    [this, &here, prepared, &geometry]( const tripoint_bub_ms & loc, int direction ) -> bool {
+        if( direction == 0 )
+        {
             return loc.z() >= -OVERMAP_DEPTH && loc.z() <= OVERMAP_HEIGHT &&
-                   loc.y() >= 0 && loc.y() < MAPSIZE_Y &&
-                   loc.x() >= 0 && loc.x() < MAPSIZE_X &&
-                   passability_bitmap_[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()];
+            loc.y() >= 0 && loc.y() < MAPSIZE_Y &&
+            loc.x() >= 0 && loc.x() < MAPSIZE_X &&
+            passability_bitmap_[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()];
         }
 
-        if( prepared && geometry->matches_at( loc, direction ) ) {
+        if( prepared && geometry->matches_at( loc, direction ) )
+        {
             return direction == 1 ? prepared->up[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()] :
-                   prepared->down[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()];
+            prepared->down[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()];
         }
 
-        auto check_location_passable_down = [loc, &here]( const maptile & mt, const ter_t & ter ) {
+        auto check_location_passable_down = [loc, &here]( const maptile & mt, const ter_t & ter )
+        {
             return ( ( ter.movecost != 0 && mt.get_furn_t().movecost >= 0 ) ||
                      here.is_transparent_wo_fields( loc ) ) &&
-                   ( ter.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) ||
-                     ter.has_flag( ter_furn_flag::TFLAG_GOES_DOWN ) );
+            ( ter.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) ||
+              ter.has_flag( ter_furn_flag::TFLAG_GOES_DOWN ) );
         };
 
-        if( direction == 1 ) {
+        if( direction == 1 )
+        {
             const maptile &up = here.maptile_at( loc );
             const ter_t &up_ter = up.get_ter_t();
             if( up_ter.id.is_null() ) {
@@ -582,7 +589,8 @@ void creature_tracker::flood_fill_zone( const Creature &origin )
                 return true;
             }
         }
-        if( direction == -1 ) {
+        if( direction == -1 )
+        {
             const maptile &up = here.maptile_at( loc + tripoint::above );
             const ter_t &up_ter = up.get_ter_t();
             if( up_ter.id.is_null() ) {
