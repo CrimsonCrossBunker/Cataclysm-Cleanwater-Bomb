@@ -4,6 +4,7 @@
 
 #include "ai_reachability.h"
 #include "ai_reachability_fwd.h"
+#include "coords_fwd.h"
 
 namespace ai_reachability
 {
@@ -20,7 +21,7 @@ class geometry_view
         bool matches_at( const tripoint_bub_ms &position, int direction );
         bool stale() const;
     private:
-        bool matches_block( int layer, int x, int y );
+        bool matches_block( int layer, const point_bub_ms &position );
         const std::thread::id owner_thread_;
         const map &world_;
         const snapshot &values_;

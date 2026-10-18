@@ -63,7 +63,7 @@ struct terrain_growth_state;
 namespace vision_preparation
 {
 class frame;
-}
+} // namespace vision_preparation
 
 namespace catacurses
 {

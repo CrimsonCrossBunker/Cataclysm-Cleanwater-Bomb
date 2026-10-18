@@ -1,5 +1,18 @@
 #include "ai_reachability_owner.h"
 
+#include <ai_reachability.h>
+#include <ai_reachability_fwd.h>
+#include <coordinates.h>
+#include <map_scale_constants.h>
+#include <point.h>
+#include <array>
+#include <bitset>
+#include <cstddef>
+#include <cstdint>
+#include <thread>
+#include <utility>
+#include <vector>
+
 #include "cata_assert.h"
 #include "thread_pool.h"
 
@@ -18,7 +31,7 @@ bool matches_block( const submap *sm, const block &captured )
     if( !sm ) {
         return captured.version.first == 0;
     }
-    const auto stamp = sm->geometry_stamp();
+    const std::pair<std::uint64_t, std::uint64_t> stamp = sm->geometry_stamp();
     return stamp.first != 0 && stamp == captured.version && sm->is_uniform() == captured.uniform;
 }
 } // namespace
@@ -47,7 +60,7 @@ bool capture_geometry( const map &here, snapshot &values )
         values.transparent[layer] = here.get_cache_ref( z ).transparent_cache_wo_fields;
         for( int sx = 0; sx < MAPSIZE; ++sx ) {
             for( int sy = 0; sy < MAPSIZE; ++sy ) {
-                auto &block = values.blocks[( layer * MAPSIZE + sx ) * MAPSIZE + sy];
+                ai_reachability::block &block = values.blocks[( layer * MAPSIZE + sx ) * MAPSIZE + sy];
                 const submap *sm = here.get_submap_at_grid( tripoint_rel_sm{ sx, sy, z } );
                 block.version = sm ? sm->geometry_stamp() : std::pair<std::uint64_t, std::uint64_t> {};
                 if( sm && block.version.first == 0 ) {
@@ -100,7 +113,7 @@ bool geometry_matches( const map &here, const snapshot &values )
         }
         for( int sx = 0; sx < MAPSIZE; ++sx ) {
             for( int sy = 0; sy < MAPSIZE; ++sy ) {
-                const auto &block = values.blocks[( layer * MAPSIZE + sx ) * MAPSIZE + sy];
+                const ai_reachability::block &block = values.blocks[( layer * MAPSIZE + sx ) * MAPSIZE + sy];
                 const submap *sm = here.get_submap_at_grid( tripoint_rel_sm{ sx, sy, z } );
                 if( !matches_block( sm, block ) ) {
                     return false;
@@ -119,12 +132,12 @@ geometry_view::geometry_view( const map &world, const snapshot &values ) :
     catalogs_match_ = world.getmapsize() == MAPSIZE && values.terrain.size() == ter_t::count() &&
                       values.furniture_nonblocking.size() == furn_t::count();
 }
-bool geometry_view::matches_block( int layer, int x, int y )
+bool geometry_view::matches_block( int layer, const point_bub_ms &position )
 {
-    const int sx = x / SEEX;
-    const int sy = y / SEEY;
+    const int sx = position.x() / SEEX;
+    const int sy = position.y() / SEEY;
     const int index = ( layer * MAPSIZE + sx ) * MAPSIZE + sy;
-    auto &checked = checked_[index];
+    unsigned char &checked = checked_[index];
     if( checked == 0 ) {
         const submap *sm = world_.get_submap_at_grid( tripoint_rel_sm{ sx, sy, layer - OVERMAP_DEPTH } );
         checked = ai_reachability::matches_block( sm, values_.blocks[index] ) ? 1 : 2;
@@ -150,10 +163,11 @@ bool geometry_view::matches_at( const tripoint_bub_ms &position, int direction )
         ( direction != 1 && direction != -1 ) || ( direction == -1 && z + 1 >= OVERMAP_LAYERS ) ) {
         return false;
     }
-    if( !matches_block( z, x, y ) || ( direction == -1 && !matches_block( z + 1, x, y ) ) ) {
+    if( !matches_block( z, position.xy() ) ||
+        ( direction == -1 && !matches_block( z + 1, position.xy() ) ) ) {
         return false;
     }
-    auto &transparency = transparency_checked_[z];
+    unsigned char &transparency = transparency_checked_[z];
     if( transparency == 0 ) {
         // This view belongs to one mutation-free owner flood. A matching layer
         // needs no more world-cache queries during that flood. If any bit differs,

@@ -8,6 +8,7 @@
 #include "creature_render_view.h"
 #include "tile_lookup.h"
 #include "tile_preparation.h"
+#include "view_snapshot.h"
 #include "tileset_loader.h"
 #include "uistate.h"
 
@@ -126,8 +127,6 @@ static const vpart_location_id vpart_location_structure( "structure" );
 
 static const std::string ITEM_HIGHLIGHT( "highlight_item" );
 static const std::string ZOMBIE_REVIVAL_INDICATOR( "zombie_revival_indicator" );
-
-static const auto &multitile_keys = tile_lookup_frame::subtile_keys;
 
 static const std::string empty_string;
 static const std::array<std::string, 17> TILE_CATEGORY_IDS = {{
@@ -1234,7 +1233,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         auto &vp_ov = vpart_override;
         for( int zlevel = center.z(); zlevel >= draw_min_z; zlevel-- ) {
             for( int row = min_row; row < max_row; row++ ) {
-                auto &points = here.draw_points_cache.tiles[zlevel][row];
+                draw_points_cache_t::row_vec &points = here.draw_points_cache.tiles[zlevel][row];
                 for( const std::size_t index : points.sprite_indices() ) {
                     tile_render_info &tri = points[index];
                     tile_render_info::sprite *const var =
@@ -1420,7 +1419,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         using tile_preparation::layer_vpart;
         using tile_preparation::layer_critter;
         using tile_preparation::layer_revival;
-        constexpr auto no_sparse_layer = static_cast<tile_preparation::sparse_layer>( 0 );
+        constexpr tile_preparation::sparse_layer no_sparse_layer{};
         // Capture live queries only on the renderer owner. Pure preparation may
         // run on workers; neither tile pointers nor cache references escape.
         const auto capture_preparation = [&]( const tile_render_info & p,
@@ -1479,7 +1478,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         }
         // Small views keep direct serial preparation, including when workers
         // were requested: avoid capturing/copying a frame that will not queue.
-        auto preparation_lease = preparation_->try_acquire( preparation_tiles );
+        tile_preparation::frame::lease preparation_lease = preparation_->try_acquire( preparation_tiles );
         const bool captured_frame = static_cast<bool>( preparation_lease );
         if( captured_frame ) {
             auto &inputs = preparation_->capture();
@@ -1965,7 +1964,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
     if( !monster_override.empty() ) {
         // display number of monsters to spawn in mapgen preview
         for( int row = top_any_tile_range.p_min.y; row < top_any_tile_range.p_max.y; row ++ ) {
-            auto &points = here.draw_points_cache.tiles[center.z()][row];
+            draw_points_cache_t::row_vec &points = here.draw_points_cache.tiles[center.z()][row];
             for( const std::size_t index : points.sprite_indices() ) {
                 const tile_render_info &p = points[index];
                 const auto mon_override = monster_override.find( p.view.pos );
@@ -3437,7 +3436,8 @@ bool cata_tiles::draw_from_id_string_internal( const std::string &id, TILE_CATEG
     if( subtile != -1 && tt->multitile ) {
         bool available = false;
         if( lookup_frame_ && res ) {
-            const auto child = lookup_frame_->find_subtile( *res, category, subtile );
+            const tile_lookup_frame::subtile_result child = lookup_frame_->find_subtile( *res, category,
+                    subtile );
             available = child.available;
             if( child.resolved ) {
                 // A successfully resolved child skips the duplicate draw preamble.
@@ -3450,12 +3450,12 @@ bool cata_tiles::draw_from_id_string_internal( const std::string &id, TILE_CATEG
         } else {
             const auto &display_subtiles = tt->available_subtiles;
             available = std::find( display_subtiles.begin(), display_subtiles.end(),
-                                   multitile_keys[subtile] ) != display_subtiles.end();
+                                   tile_lookup_frame::subtile_keys[subtile] ) != display_subtiles.end();
         }
         if( available ) {
             // Missing children retain all original ASCII/unknown fallback behavior.
             return draw_from_id_string_internal(
-                       found_id + "_" + multitile_keys[subtile], category, subcategory, pos, -1, rota, ll,
+                       found_id + "_" + tile_lookup_frame::subtile_keys[subtile], category, subcategory, pos, -1, rota, ll,
                        retract, nv_color_active, height_3d, 0, "", point() );
         }
     }
