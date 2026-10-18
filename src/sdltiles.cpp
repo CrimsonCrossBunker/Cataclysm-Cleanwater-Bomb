@@ -273,12 +273,11 @@ gpu_handle_graveyard &setup_target_quarantine()
 }
 } // namespace
 
-// Terminal-sized intermediate buffer dimensions: logical window size over
-// scaling_factor, independent of backing-store pixels.
+// Terminal-sized intermediate buffer dimensions in configured font pixels,
+// before SCALING_FACTOR is applied during presentation.
 static point compute_display_buffer_dims()
 {
-    // On desktop this matches the window over scaling up to a sub-cell remainder;
-    // on android TERMINAL is window-independent, the only correct buffer size.
+    // Desktop layout follows drawable pixels; Android owns its terminal size.
     return point{ TERMINAL_WIDTH * fontwidth, TERMINAL_HEIGHT * fontheight };
 }
 
@@ -3182,6 +3181,11 @@ bool renderer_recovery_test_support::phase_fault_fired()
     return renderer_coordinator.test_phase_fault_fired_;
 }
 
+std::unique_ptr<cataimgui::client> renderer_recovery_test_support::make_imgui_client()
+{
+    return std::make_unique<cataimgui::client>( renderer, window, geometry );
+}
+
 bool renderer_recovery_test_support::setup_initial_display_buffer(
     const std::optional<point> &requested_pixel_size )
 {
@@ -4347,8 +4351,8 @@ static bool draw_window( Font_Ptr &font, const catacurses::window &w, const poin
     if( !unbind_sprite_shader() ) {
         return false;
     }
+    const point buffer_dims = compute_display_buffer_dims();
     if( scaling_factor > 1 ) {
-        const point buffer_dims = compute_display_buffer_dims();
         RenderSetLogicalSize( renderer, buffer_dims.x, buffer_dims.y );
     }
 
@@ -4388,7 +4392,7 @@ static bool draw_window( Font_Ptr &font, const catacurses::window &w, const poin
             const cursecell &cell = win->line[j].chars[i];
 
             const point draw( offset + point( i * font->width, j * font->height ) );
-            if( draw.x + font->width > WindowWidth || draw.y + font->height > WindowHeight ) {
+            if( draw.x + font->width > buffer_dims.x || draw.y + font->height > buffer_dims.y ) {
                 // Outside of the display area, would not render anyway
                 continue;
             }
@@ -5339,10 +5343,7 @@ static void android_process_imgui_pointer( const Uint32 event_type, const float 
         mouse_event.button.x = x;
         mouse_event.button.y = y;
     }
-    int buffer_width = 0;
-    int buffer_height = 0;
-    get_display_buffer_dims( &buffer_width, &buffer_height );
-    imclient->process_input( &mouse_event, buffer_width, buffer_height );
+    imclient->process_input( &mouse_event );
 }
 
 static float android_imgui_touch_slop()
@@ -6806,9 +6807,6 @@ static void CheckMessages()
 
     using cata::options::mouse;
 
-    int imgui_buf_w = 0;
-    int imgui_buf_h = 0;
-    get_display_buffer_dims( &imgui_buf_w, &imgui_buf_h );
     while( SDL_PollEvent( &ev ) ) {
 #if defined(__ANDROID__)
         // Touchscreens do not provide a persistent hover position.  SDL's
@@ -6849,7 +6847,7 @@ static void CheckMessages()
         // shortcut and joystick hit-tests see the same domain SDL emitted.
         SDL_Event ev_display = ev;
         convert_event_to_display_buffer_coords( &ev_display );
-        imclient->process_input( &ev_display, imgui_buf_w, imgui_buf_h, scaling_factor );
+        imclient->process_input( &ev_display );
 
         if( IsWindowEvent( ev ) && GetWindowEventID( ev ) == CATA_WINDOWEVENT_FOCUS_LOST ) {
             imgui_mouse_buttons.clear();
@@ -7753,6 +7751,8 @@ static void init_term_size_and_scaling_factor()
                                                  EVEN_MINIMUM_TERM_HEIGHT * fontheight,
                                                  CATA_WINDOW_RESIZABLE | CATA_WINDOW_HIGH_DPI | CATA_WINDOW_MAXIMIZED );
 
+                // SDL3 can return before the compositor maximizes this probe.
+                printErrorIf( !SDL_SyncWindow( test_window.get() ), "Maximized size probe did not settle" );
                 GetWindowSizeInPixels( test_window.get(), &max_width, &max_height );
 
                 // If the video subsystem isn't reset the test window messes things up later
