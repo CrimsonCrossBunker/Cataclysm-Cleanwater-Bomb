@@ -88,7 +88,7 @@ struct policy_fixture {
         set_time_to_day();
         refresh_caches();
         const std::shared_ptr<const tileset> ts = renderer_recovery_test_support::install_tiles_bundle(
-                "policy_ts", "color_pixel_darken", 1, 1, atlas_bake_plan{}, true, tiles );
+                    "policy_ts", "color_pixel_darken", 1, 1, atlas_bake_plan{}, true, tiles );
         REQUIRE( ts );
         tiles_ = renderer_recovery_test_support::make_test_tiles( ts );
         renderer_recovery_test_support::log_draw_light( *tiles_, &log_ );
@@ -209,7 +209,7 @@ TEST_CASE( "failed_shader_unbind_stops_the_minimap_before_it_paints",
         return;
     }
     REQUIRE( renderer_recovery_test_support::install_test_font( PATH_INFO::fontdir() + "unifont.ttf",
-            8, 16, 16, false ) );
+             8, 16, 16, false ) );
     const catacurses::window w = catacurses::newwin( 4, 8, point::zero );
     int paints = 0;
     WHEN( "minimap window is drawn" ) {
@@ -232,7 +232,7 @@ TEST_CASE( "failed_shader_unbind_stops_the_minimap_before_it_paints",
 
 // grass, and a wall drawn through subtiles that take `subtile_anchor`
 static std::vector<std::pair<std::string, tile_type>> wall_tiles(
-    const std::optional<smooth_lighting::light_anchor> &subtile_anchor )
+            const std::optional<smooth_lighting::light_anchor> &subtile_anchor )
 {
     std::vector<std::pair<std::string, tile_type>> tiles = plain_tiles( { ter_t_grass.str() } );
     tile_type wall = atlas_sprite_tile();
@@ -252,7 +252,7 @@ static std::vector<std::pair<std::string, tile_type>> wall_tiles(
 }
 
 static std::vector<std::optional<smooth_lighting::light_anchor>> wall_subtile_anchors(
-    const light_log &log )
+            const light_log &log )
 {
     std::vector<std::optional<smooth_lighting::light_anchor>> anchors;
     for( const drawn_sprite_record &e : log ) {
@@ -285,7 +285,7 @@ TEST_CASE( "connected_walls_keep_their_anchor_through_subtiles", "[smooth_lighti
         draw_walls( fx );
         THEN( "its subtiles take the base anchor of walls" ) {
             const std::vector<std::optional<smooth_lighting::light_anchor>> anchors =
-                wall_subtile_anchors( fx.log_ );
+                        wall_subtile_anchors( fx.log_ );
             REQUIRE_FALSE( anchors.empty() );
             for( const std::optional<smooth_lighting::light_anchor> &a : anchors ) {
                 CHECK( a == smooth_lighting::light_anchor::base );
@@ -301,7 +301,7 @@ TEST_CASE( "connected_walls_keep_their_anchor_through_subtiles", "[smooth_lighti
         draw_walls( fx );
         THEN( "tileset's anchor wins" ) {
             const std::vector<std::optional<smooth_lighting::light_anchor>> anchors =
-                wall_subtile_anchors( fx.log_ );
+                        wall_subtile_anchors( fx.log_ );
             REQUIRE_FALSE( anchors.empty() );
             for( const std::optional<smooth_lighting::light_anchor> &a : anchors ) {
                 CHECK( a == smooth_lighting::light_anchor::ground );
@@ -450,7 +450,7 @@ TEST_CASE( "lit_probe_cases_reach_each_visual_input", "[smooth_lighting]" )
         const probe_case &c = probe_case_named( all, "translucent sprite" );
         THEN( "it differs from the same sprite opaque" ) {
             CHECK_FALSE( matches( expected( c ), expected( probe_case_named( all,
-                    "colored sprite, half light" ) ) ) );
+                                  "colored sprite, half light" ) ) ) );
         }
     }
     GIVEN( "corner of a full size level between red levels" ) {

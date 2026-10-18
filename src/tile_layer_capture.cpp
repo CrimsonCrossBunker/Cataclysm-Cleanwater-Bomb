@@ -262,7 +262,7 @@ bool capture_trap_layer( map &here, const avatar &you,
             const auto tr_at = [&]( const tripoint_bub_ms & q, const bool invis ) -> trap_id {
                 const auto it = overrides.find( q );
                 return it != overrides.end() ? it->second :
-                                      ( !overridden || !invis ) ? here.tr_at( q ).loadid : tr_null;
+                ( !overridden || !invis ) ? here.tr_at( q ).loadid : tr_null;
             };
             const std::array<int, 4> neighborhood = {
                 static_cast<int>( tr_at( p + point::south, invisible[1] ) ),
