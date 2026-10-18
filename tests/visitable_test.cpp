@@ -14,6 +14,7 @@
 #include "player_helpers.h"
 #include "pocket_type.h"
 #include "ret_val.h"
+#include "temp_crafting_inventory.h"
 #include "type_id.h"
 
 static const itype_id itype_bottle_plastic( "bottle_plastic" );
@@ -52,7 +53,7 @@ TEST_CASE( "charges_of_in_tools_counts_ammo_loaded_in_a_tool", "[visitable]" )
 
 TEST_CASE( "inventory_poison_queries_include_nested_components", "[visitable][crafting]" )
 {
-    inventory inv;
+    temp_crafting_inventory inv;
     item clean( itype_water, calendar::turn, 2 );
     item poisoned( itype_water, calendar::turn, 2 );
     SECTION( "poison" ) {
@@ -63,8 +64,8 @@ TEST_CASE( "inventory_poison_queries_include_nested_components", "[visitable][cr
     }
     item bottle( itype_bottle_plastic, calendar::turn );
     REQUIRE( bottle.put_in( poisoned, pocket_type::CONTAINER ).success() );
-    inv.add_item( clean );
-    inv.add_item( bottle );
+    inv.add_item_copy( clean );
+    inv.add_item_copy( bottle );
     CHECK( inv.count_item( itype_water ) == 4 );
     CHECK_FALSE( inv.must_use_hallu_poison( itype_water, 2 ) );
     CHECK( inv.must_use_hallu_poison( itype_water, 3 ) );
@@ -72,8 +73,8 @@ TEST_CASE( "inventory_poison_queries_include_nested_components", "[visitable][cr
     CHECK_FALSE( inv.must_use_hallu_poison( itype_lighter, 0 ) );
     CHECK( inv.must_use_hallu_poison( itype_lighter, 1 ) );
 
-    // Rebuild the index after a mutation; cached misses must not outlive it.
-    inv.add_item( item( itype_water, calendar::turn, 2 ) );
+    // Additional clean charges change whether poisoned contents are required.
+    inv.add_item_copy( item( itype_water, calendar::turn, 2 ) );
     CHECK( inv.count_item( itype_water ) == 6 );
     CHECK_FALSE( inv.must_use_hallu_poison( itype_water, 4 ) );
     CHECK( inv.must_use_hallu_poison( itype_water, 5 ) );
