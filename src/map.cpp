@@ -11635,7 +11635,17 @@ void map::spawn_monsters_submap( const tripoint_rel_sm &gp, bool ignore_sight, b
 
             // This can fail, but there isn't much we can do about it if it does. We could output some
             // kind of info message, but, again, it's unlikely to result in anything that can be acted on.
-            g->place_critter_at_or_within( make_shared_fast<monster>( tmp ), this, center, points );
+            monster *const placed =
+                g->place_critter_at_or_within( make_shared_fast<monster>( tmp ), this, center, points );
+            // CCB: mapgen spawns must catch up with world time, as 0.G/0.H did by calling on_load()
+            // right here. The 0.I spawn-placement rework dropped that call, so in a world started
+            // long after the Cataclysm freshly generated monsters stayed unevolved until the
+            // reality bubble reloaded them. Only run the evolution catch-up (not the whole
+            // on_load()) and leave mission targets alone so MGOAL_KILL_MONSTERS still sees its
+            // original target type.
+            if( placed != nullptr && i.mission_id <= 0 ) {
+                placed->try_upgrade( false );
+            }
         }
     }
     current_submap->spawns.clear();
