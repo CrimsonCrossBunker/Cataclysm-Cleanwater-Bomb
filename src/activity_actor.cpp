@@ -409,7 +409,6 @@ static const move_mode_id move_mode_walk( "walk" );
 
 static const mtype_id mon_yrax_trifacet( "mon_yrax_trifacet" );
 
-static const proficiency_id proficiency_prof_dissect_humans( "prof_dissect_humans" );
 static const proficiency_id proficiency_prof_lockpicking( "prof_lockpicking" );
 static const proficiency_id proficiency_prof_lockpicking_expert( "prof_lockpicking_expert" );
 static const proficiency_id proficiency_prof_safecracking( "prof_safecracking" );
@@ -2450,19 +2449,6 @@ void read_activity_actor::read_book( Character &learner,
     skill_level.readBook( min_ex, max_ex, islotbook->level );
 }
 
-// Books can only teach some proficiencies up to a fixed point; the rest requires hands-on practice.
-// TODO: move these caps into book JSON (book_proficiency_bonus) instead of hardcoding them here.
-static float book_proficiency_cap( const proficiency_id &prof )
-{
-    if( prof == proficiency_prof_dissect_humans ) {
-        return 0.5f;
-    }
-    return 1.0f;
-}
-
-// Cooldown timestamps for the "books teach no further" message, keyed by reader.
-static std::map<character_id, time_point> next_prof_cap_message;
-
 bool read_activity_actor::player_read( avatar &you )
 {
     if( !you.has_identified( book->typeId() ) ) {
@@ -2586,17 +2572,12 @@ bool read_activity_actor::player_read( avatar &you )
         }
 
         for( const book_proficiency_bonus &bonus : islotbook->proficiencies ) {
-            const time_duration cap_time = bonus.id->time_to_learn() *
-                                           book_proficiency_cap( bonus.id );
+            const time_duration cap_time = bonus.id->time_to_learn() * bonus.cap;
             const time_duration practiced = learner->get_proficiency_practiced_time( bonus.id );
             if( practiced >= cap_time ) {
                 if( learner->is_avatar() && !learner->has_proficiency( bonus.id ) ) {
-                    auto it = next_prof_cap_message.find( learner->getID() );
-                    if( it == next_prof_cap_message.end() || calendar::turn >= it->second ) {
-                        add_msg( m_info,
-                                 _( "You have learned all you can from books; further improvement requires hands-on practice." ) );
-                        next_prof_cap_message.insert_or_assign( learner->getID(), calendar::turn + 1_hours );
-                    }
+                    add_msg( m_info,
+                             _( "You have learned all you can from books; further improvement requires hands-on practice." ) );
                 }
                 continue;
             }

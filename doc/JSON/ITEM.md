@@ -581,7 +581,8 @@ Books can be defined like this:
   { 
     "proficiency": "prof_fermenting", // id of proficiency
     "time_factor": 0.1,               // slowdown for using this book proficiency - slowdown from lack of proficiency is multiplied on this value, so for `0.75`, if recipe adds 10 hours for lack of proficiency,  with book it would be [ 10 * ( 1 - 0.75 ) = ] 2.5 hours; multiple books stacks, but in logarithmic way, meaning having more books of the same proficiency is better than having one book, but never would be better than learning the proficiency
-    "fail_factor": 0.25               // works same as `time_factor`
+    "fail_factor": 0.25,              // works same as `time_factor`
+    "cap": 1                          // optional (default 1): fraction of the proficiency's total learning time this book can train you up to; reading grants no further practice for it once reached (0.5 = the book can only teach half, the rest requires hands-on practice)
   },
   { "proficiency": "prof_brewing", "time_factor": 0.25, "fail_factor": 0.5 },
   { "proficiency": "prof_winemaking", "time_factor": 0.1, "fail_factor": 0.25 }
