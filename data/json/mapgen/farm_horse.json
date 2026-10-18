@@ -221,6 +221,7 @@
         { "item": "stepladder", "x": 8, "y": 8, "chance": 100 },
         { "item": "horseshoe", "x": 17, "y": 6, "chance": 60, "repeat": [ 4, 8 ] },
         { "group": "farrier_tools", "x": 17, "y": 8, "chance": 100 },
+        { "group": "horse_stable_riding_gear", "x": [ 17, 18 ], "y": 7, "chance": 80, "repeat": [ 2, 4 ] },
         { "item": "forge", "x": 19, "y": 7, "chance": 100 },
         { "group": "farming_tools", "x": [ 74, 77 ], "y": 15, "chance": 40, "repeat": [ 2, 4 ] },
         { "group": "farming_tools", "x": [ 79, 81 ], "y": 15, "chance": 40, "repeat": [ 2, 4 ] },

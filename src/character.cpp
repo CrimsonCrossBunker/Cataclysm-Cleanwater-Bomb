@@ -1764,7 +1764,7 @@ bool Character::check_mount_is_spooked()
                 if( combat_mount ) {
                     chance /= 2;
                 }
-                chance *= mounted_creature->pet_equipment_fear_multiplier();
+                chance *= mounted_creature->pet_equipment_spook_multiplier();
                 chance = std::max( 1.0, chance );
                 if( x_in_y( chance, 100.0 ) ) {
                     forced_dismount();
@@ -6568,8 +6568,9 @@ std::vector<run_cost_effect> Character::run_cost_effects( float &movecost ) cons
             const riding_config &config = get_riding_config();
             const double riding_multiplier = std::max(
                                                  config.minimum_move_cost_multiplier,
-                                                 1.0 + config.mounted_move_cost_penalty -
-                                                 get_skill_level( skill_riding ) * config.move_cost_skill_reduction );
+                                                 ( 1.0 + config.mounted_move_cost_penalty -
+                                                   get_skill_level( skill_riding ) * config.move_cost_skill_reduction ) *
+                                                 mounted_creature->pet_equipment_mounted_move_cost_multiplier() );
             run_cost_effect_mul( riding_multiplier, _( "Riding skill" ) );
         }
         return effects;

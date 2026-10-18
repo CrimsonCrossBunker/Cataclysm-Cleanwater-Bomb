@@ -47,6 +47,7 @@
 #include "options_helpers.h"
 #include "overmap_map_data_cache.h"
 #include "overmapbuffer.h"
+#include "pet_inventory_ui.h"
 #include "pet_slot.h"
 #include "player_helpers.h"
 #include "pocket_type.h"
@@ -735,14 +736,16 @@ TEST_CASE( "pet_equipment_slots_bridge_legacy_and_nested_equipment",
     CHECK( saddlebags.type->pet_equipment->slots == std::vector<std::string> { "saddlebag" } );
     CHECK( stirrup_slot.obj().mount_threshold_delta == 0 );
     CHECK( stirrup_slot.obj().melee_hit_multiplier == Approx( 1.0 ) );
-    CHECK( stirrups.type->pet_equipment->mount_threshold_delta == -2 );
+    CHECK( tack.type->pet_equipment->mount_threshold_delta == -1 );
+    CHECK( stirrups.type->pet_equipment->mount_threshold_delta == 0 );
     CHECK( stirrups.type->pet_equipment->melee_hit_multiplier == Approx( 1.1 ) );
-    CHECK( stirrups.type->pet_equipment->fear_multiplier == Approx( 0.75 ) );
+    CHECK( stirrups.type->pet_equipment->fear_multiplier == Approx( 1.0 ) );
 
     REQUIRE_FALSE( horse.pet_slot_available( stirrup_slot ) );
     REQUIRE( horse.equip_pet_equipment( saddle_slot, item( itype_horse_tack ) ) );
     CHECK( horse.tack_item );
     CHECK( horse.has_effect( effect_monster_saddled ) );
+    CHECK( horse.pet_equipment_mount_threshold_delta() == -1 );
     CHECK( horse.pet_slot_available( stirrup_slot ) );
 
     REQUIRE( horse.equip_pet_equipment( stirrup_slot, item( itype_horse_stirrups ) ) );
@@ -758,6 +761,71 @@ TEST_CASE( "pet_equipment_slots_bridge_legacy_and_nested_equipment",
     REQUIRE( horse.remove_pet_equipment( saddle_slot ) );
     CHECK_FALSE( horse.tack_item );
     CHECK_FALSE( horse.has_effect( effect_monster_saddled ) );
+}
+
+TEST_CASE( "horse_bridle_and_horseshoes_use_independent_equipment_slots",
+           "[monster][pet_equipment]" )
+{
+    monster horse( mtype_id( "mon_horse" ) );
+    const pet_slot_id bridle_slot( "bridle" );
+    const pet_slot_id horseshoes_slot( "horseshoes" );
+    const item bridle( itype_id( "horse_bridle" ) );
+    const item horseshoes( itype_id( "fitted_horseshoes" ) );
+
+    REQUIRE( bridle.type->pet_equipment );
+    REQUIRE( horseshoes.type->pet_equipment );
+    CHECK( bridle_slot.obj().accepts( bridle, horse ) );
+    CHECK( horseshoes_slot.obj().accepts( horseshoes, horse ) );
+    CHECK( bridle.type->pet_equipment->spook_multiplier == Approx( 0.75 ) );
+    CHECK( horseshoes.type->pet_equipment->mounted_move_cost_multiplier == Approx( 0.9 ) );
+    const std::vector<std::pair<quality_id, int>> expected_qualities = {
+        { quality_id( "HAMMER" ), 1 }, { quality_id( "PRYING_NAIL" ), 1 }
+    };
+    CHECK( horseshoes.type->pet_equipment->install_qualities == expected_qualities );
+    CHECK( horse.pet_equipment_mount_threshold_delta() == 0 );
+    CHECK( horse.pet_equipment_spook_multiplier() == Approx( 1.0 ) );
+    CHECK( horse.pet_equipment_mounted_move_cost_multiplier() == Approx( 1.0 ) );
+    REQUIRE( horse.equip_pet_equipment( bridle_slot, bridle ) );
+    CHECK( horse.pet_equipment_mount_threshold_delta() == 0 );
+    CHECK( horse.pet_equipment_spook_multiplier() == Approx( 0.75 ) );
+    CHECK( horse.pet_equipment_fear_multiplier() == Approx( 1.0 ) );
+    REQUIRE( horse.equip_pet_equipment( horseshoes_slot, horseshoes ) );
+    CHECK( horse.pet_equipment_mounted_move_cost_multiplier() == Approx( 0.9 ) );
+    CHECK( horse.get_pet_equipment( bridle_slot ) != nullptr );
+    CHECK( horse.get_pet_equipment( horseshoes_slot ) != nullptr );
+
+    monster loaded;
+    deserialize_wrapper( [&loaded]( const JsonValue & value ) {
+        loaded.deserialize( value.get_object() );
+    }, serialize( horse ) );
+    REQUIRE( loaded.get_pet_equipment( bridle_slot ) != nullptr );
+    REQUIRE( loaded.get_pet_equipment( horseshoes_slot ) != nullptr );
+    CHECK( loaded.pet_equipment_spook_multiplier() == Approx( 0.75 ) );
+    CHECK( loaded.pet_equipment_mounted_move_cost_multiplier() == Approx( 0.9 ) );
+
+    REQUIRE( horse.remove_pet_equipment( bridle_slot ) );
+    CHECK( horse.pet_equipment_mount_threshold_delta() == 0 );
+    CHECK( horse.pet_equipment_spook_multiplier() == Approx( 1.0 ) );
+    REQUIRE( horse.remove_pet_equipment( horseshoes_slot ) );
+    CHECK( horse.pet_equipment_mounted_move_cost_multiplier() == Approx( 1.0 ) );
+}
+
+TEST_CASE( "horseshoe_installation_requires_farrier_tools", "[monster][pet_equipment]" )
+{
+    clear_avatar();
+    avatar &player = get_avatar();
+    const item horseshoes( itype_id( "fitted_horseshoes" ) );
+    const auto missing_hammer = pet_inventory_ui::missing_install_quality( player, horseshoes );
+    REQUIRE( missing_hammer );
+    CHECK( missing_hammer->first == quality_id( "HAMMER" ) );
+
+    player.i_add( item( itype_rock ) );
+    const auto missing_puller = pet_inventory_ui::missing_install_quality( player, horseshoes );
+    REQUIRE( missing_puller );
+    CHECK( missing_puller->first == quality_id( "PRYING_NAIL" ) );
+
+    player.i_add( item( itype_id( "nail_puller" ) ) );
+    CHECK_FALSE( pet_inventory_ui::missing_install_quality( player, horseshoes ) );
 }
 
 TEST_CASE( "mech_mounting_does_not_require_animal_riding", "[monster][mount][riding]" )
@@ -869,6 +937,29 @@ TEST_CASE( "riding_skill_reduces_mounted_movement_cost", "[monster][mount][ridin
     const int expert_cost = player.run_cost( 100, false );
 
     CHECK( expert_cost < untrained_cost );
+    player.forced_dismount();
+}
+
+TEST_CASE( "horseshoes_reduce_mounted_movement_cost", "[monster][mount][pet_equipment]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    clear_creatures();
+
+    avatar &player = get_avatar();
+    monster &horse = spawn_test_monster( "mon_horse", player.pos_bub() + tripoint::east );
+    horse.friendly = -1;
+    player.set_skill_level( skill_riding, 0 );
+    player.mount_creature( horse );
+    const int bare_cost = player.run_cost( 100, false );
+
+    REQUIRE( horse.equip_pet_equipment( pet_slot_id( "horseshoes" ),
+                                       item( itype_id( "fitted_horseshoes" ) ) ) );
+    const int shod_cost = player.run_cost( 100, false );
+    CHECK( shod_cost < bare_cost );
+
+    REQUIRE( horse.remove_pet_equipment( pet_slot_id( "horseshoes" ) ) );
+    CHECK( player.run_cost( 100, false ) == bare_cost );
     player.forced_dismount();
 }
 

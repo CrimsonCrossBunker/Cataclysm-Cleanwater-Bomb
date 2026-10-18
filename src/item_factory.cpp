@@ -2723,6 +2723,15 @@ void Item_factory::check_definitions() const
                                       q.first.c_str() );
             }
         }
+        if( type->pet_equipment ) {
+            for( const auto &requirement : type->pet_equipment->install_qualities ) {
+                const quality_id &quality = requirement.first;
+                if( !quality.is_valid() ) {
+                    msg += string_format( "item %s requires unknown pet installation quality %s\n",
+                                          type->id.c_str(), quality.c_str() );
+                }
+            }
+        }
         if( type->default_container && !type->default_container->is_null() ) {
             if( has_template( *type->default_container ) ) {
                 // Spawn the item in its default container to generate an error
@@ -3754,10 +3763,30 @@ void islot_pet_equipment::deserialize( const JsonObject &jo )
 {
     mandatory( jo, was_loaded, "pet_slots", slots );
     optional( jo, was_loaded, "pet_passive_effects", passive_effects );
+    if( jo.has_member( "pet_install_qualities" ) ) {
+        install_qualities.clear();
+        JsonArray requirements = jo.get_array( "pet_install_qualities" );
+        while( requirements.has_more() ) {
+            JsonArray requirement = requirements.next_array();
+            if( requirement.size() != 2 ) {
+                requirement.throw_error( "expected [quality ID, level]" );
+            }
+            const quality_id quality( requirement.get_string( 0 ) );
+            const int level = requirement.get_int( 1 );
+            if( level < 1 || quality.str().empty() ) {
+                requirement.throw_error( "expected a quality ID and positive level" );
+            }
+            install_qualities.emplace_back( quality, level );
+        }
+    }
     optional( jo, was_loaded, "pet_mount_threshold_delta", mount_threshold_delta, 0 );
     optional( jo, was_loaded, "pet_melee_hit_multiplier", melee_hit_multiplier, 1.0 );
     optional( jo, was_loaded, "pet_melee_damage_multiplier", melee_damage_multiplier, 1.0 );
     optional( jo, was_loaded, "pet_fear_multiplier", fear_multiplier, 1.0 );
+    optional( jo, was_loaded, "pet_spook_multiplier", spook_multiplier,
+              numeric_bound_reader<double> { 0.1, 2.0 }, 1.0 );
+    optional( jo, was_loaded, "pet_mounted_move_cost_multiplier", mounted_move_cost_multiplier,
+              numeric_bound_reader<double> { 0.5, 2.0 }, 1.0 );
 }
 
 void islot_tool::deserialize( const JsonObject &jo )

@@ -648,10 +648,14 @@ struct islot_pet_armor {
 struct islot_pet_equipment {
     std::vector<std::string> slots;
     std::vector<efftype_id> passive_effects;
+    /** Tool qualities required to fit this equipment through the pet equipment menu. */
+    std::vector<std::pair<quality_id, int>> install_qualities;
     int mount_threshold_delta = 0;
     double melee_hit_multiplier = 1.0;
     double melee_damage_multiplier = 1.0;
     double fear_multiplier = 1.0;
+    double spook_multiplier = 1.0;
+    double mounted_move_cost_multiplier = 1.0;
 
     bool was_loaded = false;
     void deserialize( const JsonObject &jo );

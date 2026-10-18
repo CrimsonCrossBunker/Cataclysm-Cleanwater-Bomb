@@ -3118,6 +3118,35 @@ double monster::pet_equipment_fear_multiplier() const
     return result;
 }
 
+double monster::pet_equipment_spook_multiplier() const
+{
+    double result = 1.0;
+    for( const pet_slot &slot : get_all_pet_slots() ) {
+        if( const item *equipment = get_pet_equipment( slot.id ) ) {
+            result *= slot.fear_multiplier * slot.spook_multiplier;
+            if( equipment->type->pet_equipment ) {
+                result *= equipment->type->pet_equipment->fear_multiplier;
+                result *= equipment->type->pet_equipment->spook_multiplier;
+            }
+        }
+    }
+    return std::clamp( result, 0.1, 2.0 );
+}
+
+double monster::pet_equipment_mounted_move_cost_multiplier() const
+{
+    double result = 1.0;
+    for( const pet_slot &slot : get_all_pet_slots() ) {
+        if( const item *equipment = get_pet_equipment( slot.id ) ) {
+            result *= slot.mounted_move_cost_multiplier;
+            if( equipment->type->pet_equipment ) {
+                result *= equipment->type->pet_equipment->mounted_move_cost_multiplier;
+            }
+        }
+    }
+    return std::clamp( result, 0.5, 2.0 );
+}
+
 int monster::get_armor_type( const damage_type_id &dt, bodypart_id /*bp*/ ) const
 {
     return get_worn_armor_val( dt ) + type->armor.type_resist( dt ) + get_armor_res_bonus( dt );

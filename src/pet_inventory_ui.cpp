@@ -23,6 +23,7 @@
 #include "item.h"
 #include "item_location.h"
 #include "item_pocket.h"
+#include "itype.h"
 #include "monster.h"
 #include "mtype.h"
 #include "output.h"
@@ -43,6 +44,19 @@
 
 namespace pet_inventory_ui
 {
+std::optional<std::pair<quality_id, int>> missing_install_quality( const Character &who,
+        const item &equipment )
+{
+    if( equipment.type->pet_equipment ) {
+        for( const auto &[quality, level] : equipment.type->pet_equipment->install_qualities ) {
+            if( !who.has_quality( quality, level ) ) {
+                return std::make_pair( quality, level );
+            }
+        }
+    }
+    return std::nullopt;
+}
+
 namespace
 {
 
@@ -587,6 +601,11 @@ void show_equipment( monster &pet )
         }
         if( selected->weight() > pet.weight_capacity() - pet.get_carried_weight() ) {
             popup( _( "That equipment is too heavy for the animal." ) );
+            return false;
+        }
+        if( const auto missing = missing_install_quality( player, *selected ) ) {
+            popup( _( "Installing this equipment requires %s quality level %d." ),
+                   missing->first.obj().name, missing->second );
             return false;
         }
         if( !pet.equip_pet_equipment( slot_id, *selected ) ) {
