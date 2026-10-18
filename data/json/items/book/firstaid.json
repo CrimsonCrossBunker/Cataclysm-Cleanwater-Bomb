@@ -210,7 +210,7 @@
     "required_level": 6,
     "max_level": 8,
     "intelligence": 10,
-    "proficiencies": [ { "proficiency": "prof_dissect_humans", "time_factor": 0.75, "fail_factor": 0.5 } ],
+    "proficiencies": [ { "proficiency": "prof_dissect_humans", "time_factor": 0.75, "fail_factor": 0.5, "cap": 0.5 } ],
     "time": "45 m",
     "melee_damage": { "bash": 6 },
     "read_skill": "firstaid",
