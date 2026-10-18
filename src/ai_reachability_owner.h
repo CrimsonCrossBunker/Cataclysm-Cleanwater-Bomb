@@ -24,7 +24,7 @@ class geometry_view
         const std::thread::id owner_thread_;
         const map &world_;
         const snapshot &values_;
-        std::array<unsigned char, OVERMAP_LAYERS * MAPSIZE * MAPSIZE> checked_{};
+        std::array<unsigned char, OVERMAP_LAYERS *MAPSIZE *MAPSIZE> checked_{};
         std::array<unsigned char, OVERMAP_LAYERS> transparency_checked_{};
         bool catalogs_match_ = false;
         bool stale_ = false;

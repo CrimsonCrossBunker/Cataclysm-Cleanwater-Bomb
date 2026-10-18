@@ -556,9 +556,9 @@ void creature_tracker::flood_fill_zone( const Creature &origin )
         if( direction == 0 )
         {
             return loc.z() >= -OVERMAP_DEPTH && loc.z() <= OVERMAP_HEIGHT &&
-                      loc.y() >= 0 && loc.y() < MAPSIZE_Y &&
-                      loc.x() >= 0 && loc.x() < MAPSIZE_X &&
-                      passability_bitmap_[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()];
+            loc.y() >= 0 && loc.y() < MAPSIZE_Y &&
+            loc.x() >= 0 && loc.x() < MAPSIZE_X &&
+            passability_bitmap_[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()];
         }
 
         if( prepared && geometry->matches_at( loc, direction ) )
