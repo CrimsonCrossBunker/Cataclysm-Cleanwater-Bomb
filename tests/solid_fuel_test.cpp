@@ -2,8 +2,9 @@
 #include <sstream>
 #include <string>
 
+#include "cata_imgui.h" // Select TUI before the UI-test guards.
+
 #if defined(TILES)
-    #include "cata_imgui.h"
     #include "cursesdef.h"
     #include "cursesport.h"
 #endif
