@@ -2911,6 +2911,7 @@ TEST_CASE( "show_available_recipes_with_item_as_an_ingredient", "[iteminfo][reci
                     CHECK( item_info_str( *iodine, crafting ) ==
                            "--\n"
                            "You could use it to craft: "
+                           "<color_c_dark_gray>iodine crystals</color> and "
                            "<color_c_dark_gray>water purification tablet</color>\n" );
                 }
             }
