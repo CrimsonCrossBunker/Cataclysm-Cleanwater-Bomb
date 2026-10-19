@@ -2,9 +2,9 @@
 #include <creature.h>
 #include <map_scale_constants.h>
 #include <point.h>
-#include <stddef.h>
 #include <algorithm>
 #include <array>
+#include <cstddef>
 #include <functional>
 #include <initializer_list>
 #include <limits>
@@ -358,7 +358,7 @@ BENCHMARK_TEST_CASE( "creature_reachability_zone_collection_benchmark", "[reacha
     BENCHMARK( fragmented ? "759 creatures in small isolated zones" :
                "759 creatures in one open zone" ) {
         tracker.invalidate_reachability_cache();
-        size_t found = 0;
+        std::size_t found = 0;
         for( const monster *origin : creatures ) {
             tracker.find_reachable( *origin, [&found]( Creature * ) {
                 ++found;
@@ -454,7 +454,7 @@ TEST_CASE( "creature_registration_filter_collisions_preserve_authoritative_looku
     // distinct in the authoritative map, including when either is removed.
     const auto original = members[0];
     const auto hash = std::hash<tripoint_abs_ms> {};
-    const size_t bucket = hash( original->pos_abs() ) % 8192;
+    const std::size_t bucket = hash( original->pos_abs() ) % 8192;
     tripoint_abs_ms collision{ 30000, 40000, 0 };
     for( int attempts = 0; attempts < 100000 && hash( collision ) % 8192 != bucket; ++attempts ) {
         collision.x()++;
