@@ -21,12 +21,12 @@
 
 namespace ai_reachability
 {
-class frame;
 struct output;
 }
 
 class JsonArray;
 class JsonOut;
+class creature_reachability_filter;
 class game;
 class monster;
 class npc;
@@ -158,7 +158,9 @@ class creature_tracker
         /** Remove the monsters entry in @ref monsters_by_location */
         void remove_from_location_map( const monster &critter );
 
-        void flood_fill_zone( const Creature &origin );
+        void flood_fill_zone( const Creature &origin,
+                              const creature_reachability_filter *occupancy = nullptr );
+        creature_reachability_filter creature_locations_for_flood() const;
 
         void rebuild_cache();
         size_t location_bucket( const tripoint_abs_ms &pos ) const;
@@ -206,8 +208,10 @@ class creature_tracker
         std::array<std::array<std::bitset<MAPSIZE_Y>, MAPSIZE_X>, OVERMAP_LAYERS>
         passability_bitmap_{};  // NOLINT(cata-serialize)
 
-        // Preserve the offsets of the authoritative location and zone caches.
-        std::unique_ptr<ai_reachability::frame> reachability_preparation_; // NOLINT(cata-serialize)
+        // Keep preparation and traversal scratch behind the same owner boundary.
+        // This preserves the location/zone cache offsets and tracker footprint.
+        struct reachability_state;
+        std::unique_ptr<reachability_state> reachability_state_; // NOLINT(cata-serialize)
         double reachability_flood_cost_ms_ = 0.0; // NOLINT(cata-serialize)
         double reachability_bitmap_cost_ms_ = 0.0; // NOLINT(cata-serialize)
 

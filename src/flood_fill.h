@@ -6,6 +6,7 @@
 #include <array>
 #include <bitset>
 #include <cstdint>
+#include <optional>
 #include <queue>
 #include <vector>
 #include <unordered_set>
@@ -86,31 +87,82 @@ inline void add_span( std::vector<span> &spans, int startX, int endX,
 }
 
 
-template<typename UnaryPredicate, typename UnaryVisitor>
-void flood_fill_visit_10_connected( const tripoint_bub_ms &starting_point, UnaryPredicate predicate,
-                                    UnaryVisitor visitor )
+class flood_fill_10_workspace;
+namespace detail
 {
-    std::array<std::array<std::bitset<MAPSIZE_Y>, MAPSIZE_X>, OVERMAP_LAYERS> visited;
-    std::array<std::array<std::bitset<MAPSIZE_Y>, MAPSIZE_X>, OVERMAP_LAYERS> visited_vertically;
-    std::array<std::vector<span>, OVERMAP_LAYERS> spans_to_process;
+template<typename UnaryPredicate, typename UnaryVisitor>
+void flood_fill_visit_10_connected( const tripoint_bub_ms &starting_point,
+                                    UnaryPredicate &predicate,
+                                    UnaryVisitor &visitor, flood_fill_10_workspace &workspace );
+}
+
+// Scratch belongs to one owner and contains no world references. It retains
+// buffer capacity and resets visit markers before reuse. Nested calls use
+// independent scratch.
+class flood_fill_10_workspace
+{
+    public:
+        flood_fill_10_workspace() = default;
+        flood_fill_10_workspace( const flood_fill_10_workspace & ) = delete;
+        flood_fill_10_workspace &operator=( const flood_fill_10_workspace & ) = delete;
+    private:
+        using layer = std::array<std::bitset<MAPSIZE_Y>, MAPSIZE_X>;
+        std::array<layer, OVERMAP_LAYERS> visited_{};
+        std::array<layer, OVERMAP_LAYERS> visited_vertically_{};
+        std::array<std::vector<span>, OVERMAP_LAYERS> spans_;
+        std::array<bool, OVERMAP_LAYERS> touched_layers_{};
+        bool active_ = false;
+
+        void reset() {
+            for( int z = 0; z < OVERMAP_LAYERS; ++z ) {
+                // Queued spans can survive a throwing predicate or visitor,
+                // including in layers that have not been visited yet.
+                spans_[z].clear();
+                if( touched_layers_[z] ) {
+                    for( auto &row : visited_[z] ) {
+                        row.reset();
+                    }
+                    for( auto &row : visited_vertically_[z] ) {
+                        row.reset();
+                    }
+                }
+            }
+            touched_layers_.fill( false );
+        }
+
+        template<typename UnaryPredicate, typename UnaryVisitor>
+        friend void detail::flood_fill_visit_10_connected( const tripoint_bub_ms &,
+                UnaryPredicate &, UnaryVisitor &, flood_fill_10_workspace & );
+};
+
+namespace detail
+{
+template<typename UnaryPredicate, typename UnaryVisitor>
+void flood_fill_visit_10_connected( const tripoint_bub_ms &starting_point,
+                                    UnaryPredicate &predicate,
+                                    UnaryVisitor &visitor, flood_fill_10_workspace &requested_workspace )
+{
+    // Create nested storage only for reentrant calls. Keeping this selection
+    // nonrecursive also lets callers inline their world-access predicates.
+    std::optional<flood_fill_10_workspace> nested;
+    flood_fill_10_workspace &workspace = requested_workspace.active_ ?
+                                         nested.emplace() : requested_workspace;
+    workspace.reset();
+    workspace.active_ = true;
+    struct release_workspace {
+        bool &active;
+        ~release_workspace() {
+            active = false;
+        }
+    } release{ workspace.active_ };
+    auto &visited = workspace.visited_;
+    auto &visited_vertically = workspace.visited_vertically_;
+    auto &spans_to_process = workspace.spans_;
     int current_z = starting_point.z();
     add_span( spans_to_process[current_z + OVERMAP_DEPTH], starting_point.x(), starting_point.x(),
               starting_point.y(), 1, starting_point.z(), 0 );
     add_span( spans_to_process[current_z + OVERMAP_DEPTH], starting_point.x(), starting_point.x(),
               starting_point.y() - 1, -1, starting_point.z(), 0 );
-    auto check = [&predicate, &visited]( const tripoint_bub_ms & loc, int dir ) {
-        return loc.z() >= -OVERMAP_DEPTH && loc.z() <= OVERMAP_HEIGHT &&
-               loc.y() >= 0 && loc.y() < MAPSIZE_Y &&
-               loc.x() >= 0 && loc.x() < MAPSIZE_X &&
-               !visited[loc.z() + OVERMAP_DEPTH][loc.y()][loc.x()] && predicate( loc, dir );
-    };
-    auto check_vertical = [&predicate, &visited_vertically]( const tripoint_bub_ms & loc,
-    int dir ) {
-        return loc.z() >= -OVERMAP_DEPTH && loc.z() <= OVERMAP_HEIGHT &&
-               loc.y() >= 0 && loc.y() < MAPSIZE_Y &&
-               loc.x() >= 0 && loc.x() < MAPSIZE_X &&
-               !visited_vertically[loc.z() + OVERMAP_DEPTH][loc.y()][loc.x()] && predicate( loc, dir );
-    };
     while( true ) {
         struct span current_span;
         if( !spans_to_process[current_z + OVERMAP_DEPTH].empty() ) {
@@ -128,7 +180,23 @@ void flood_fill_visit_10_connected( const tripoint_bub_ms &starting_point, Unary
                 break;
             }
         }
+        workspace.touched_layers_[current_z + OVERMAP_DEPTH] = true;
         tripoint_bub_ms current_point{ static_cast<int>( current_span.startX ), static_cast <int>( current_span.y ), static_cast<int>( current_span.z ) };
+        // add_span keeps a span in one bounded z layer. Cache that layer
+        // while scanning x; callbacks only observe the current point.
+        auto &visited_layer = visited[current_z + OVERMAP_DEPTH];
+        auto &vertical_layer = visited_vertically[current_z + OVERMAP_DEPTH];
+        const auto check = [&predicate, &visited_layer]( const tripoint_bub_ms & loc, int dir ) {
+            return loc.y() >= 0 && loc.y() < MAPSIZE_Y &&
+                   loc.x() >= 0 && loc.x() < MAPSIZE_X &&
+                   !visited_layer[loc.y()][loc.x()] && predicate( loc, dir );
+        };
+        const auto check_vertical = [&predicate, &vertical_layer]( const tripoint_bub_ms & loc,
+        int dir ) {
+            return loc.y() >= 0 && loc.y() < MAPSIZE_Y &&
+                   loc.x() >= 0 && loc.x() < MAPSIZE_X &&
+                   !vertical_layer[loc.y()][loc.x()] && predicate( loc, dir );
+        };
         // Special handling for spans with a vertical offset.
         if( current_span.dz != 0 ) {
             bool span_found = false;
@@ -140,7 +208,7 @@ void flood_fill_visit_10_connected( const tripoint_bub_ms &starting_point, Unary
                 if( check_vertical( current_point, current_span.dz ) ) {
                     span_found = true;
                     new_span.endX = current_point.x();
-                    visited_vertically[current_point.z() + OVERMAP_DEPTH][current_point.y()].set( current_point.x() );
+                    vertical_layer[current_point.y()].set( current_point.x() );
                 } else {
                     if( span_found ) {
                         add_span( spans_to_process[current_z + OVERMAP_DEPTH], new_span.startX, new_span.endX,
@@ -168,7 +236,7 @@ void flood_fill_visit_10_connected( const tripoint_bub_ms &starting_point, Unary
             current_point.x()--;
             while( check( current_point, 0 ) ) {
                 visitor( current_point );
-                visited[current_point.z() + OVERMAP_DEPTH][current_point.y()].set( current_point.x() );
+                visited_layer[current_point.y()].set( current_point.x() );
                 current_point.x()--;
             }
             current_point.x()++;
@@ -185,7 +253,7 @@ void flood_fill_visit_10_connected( const tripoint_bub_ms &starting_point, Unary
         while( current_point.x() <= current_span.endX ) {
             while( check( current_point, 0 ) ) {
                 visitor( current_point );
-                visited[current_point.z() + OVERMAP_DEPTH][current_point.y()].set( current_point.x() );
+                visited_layer[current_point.y()].set( current_point.x() );
                 current_point.x()++;
             }
             // If we have made any progress in the above loops, emit a span going in our initial y direction as well as in both vertical directions.
@@ -217,6 +285,22 @@ void flood_fill_visit_10_connected( const tripoint_bub_ms &starting_point, Unary
             furthestX = current_point.x();
         }
     }
+}
+} // namespace detail
+
+template<typename UnaryPredicate, typename UnaryVisitor>
+void flood_fill_visit_10_connected( const tripoint_bub_ms &starting_point, UnaryPredicate predicate,
+                                    UnaryVisitor visitor, flood_fill_10_workspace &workspace )
+{
+    detail::flood_fill_visit_10_connected( starting_point, predicate, visitor, workspace );
+}
+
+template<typename UnaryPredicate, typename UnaryVisitor>
+void flood_fill_visit_10_connected( const tripoint_bub_ms &starting_point, UnaryPredicate predicate,
+                                    UnaryVisitor visitor )
+{
+    flood_fill_10_workspace workspace;
+    detail::flood_fill_visit_10_connected( starting_point, predicate, visitor, workspace );
 }
 } // namespace ff
 
