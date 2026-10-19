@@ -87,6 +87,7 @@
 #include "overmap.h"
 #include "pixel_minimap.h"
 #include "profiling.h"
+#include "render3d.h"
 #include "scent_map.h"
 #include "screen_shake.h"
 #include "sdl_renderer_recovery.h"
@@ -3095,6 +3096,106 @@ void cata_tiles::set_disable_occlusion( const bool val )
     disable_occlusion = val;
 }
 
+static std::optional<texture_draw_data> make_texture_draw_data_3d( const texture *tile )
+{
+    if( !tile ) {
+        return std::nullopt;
+    }
+    std::shared_ptr<SDL_Texture> texture_ptr = tile->get_texture_ptr();
+    SDL_Rect rect = tile->get_srcrect();
+
+    int buf_w = 0;
+    int buf_h = 0;
+    SDL_PropertiesID props = SDL_GetTextureProperties( texture_ptr.get() );
+    if( props ) {
+        buf_w = static_cast<int>( SDL_GetNumberProperty( props, SDL_PROP_TEXTURE_WIDTH_NUMBER, 0 ) );
+        buf_h = static_cast<int>( SDL_GetNumberProperty( props, SDL_PROP_TEXTURE_HEIGHT_NUMBER, 0 ) );
+    }
+
+    std::pair<float, float> uv0{ rect.x / static_cast<float>( buf_w ), rect.y / static_cast<float>( buf_h ) };
+    std::pair<float, float> uv1{ ( rect.x + rect.w ) / static_cast<float>( buf_w ), ( rect.y + rect.h ) / static_cast<float>( buf_h ) };
+
+    return texture_draw_data{ texture_ptr.get(), rect, uv0, uv1, tile->get_opaque_rect() };
+}
+
+bool cata_tiles::resolve_sprite_layers_3d( const std::string &id, TILE_CATEGORY category,
+        const tripoint_bub_ms &p, int subtile, int rota, bool force_rota,
+        sprite_layers_3d &out )
+{
+    out = sprite_layers_3d{};
+    std::optional<tile_lookup_res> res = find_tile_looks_like( id, category, "" );
+    if( !res ) {
+        return false;
+    }
+    const bool was_multitile = res->tile().multitile;
+    // draw_from_id_string_internal: a multitile with a matching subtile
+    // re-resolves on the RESOLVED (looks_like/season) id — critical for tiles
+    // that borrow another terrain's sprites
+    if( subtile >= 0 && subtile < static_cast<int>( tile_lookup_frame::subtile_keys.size() ) &&
+        was_multitile ) {
+        const std::string &key = tile_lookup_frame::subtile_keys[subtile];
+        const std::vector<std::string> &subs = res->tile().available_subtiles;
+        if( std::find( subs.begin(), subs.end(), key ) != subs.end() ) {
+            if( std::optional<tile_lookup_res> sub_res =
+                    find_tile_looks_like( res->id() + "_" + key, category, "" ) ) {
+                res = sub_res;
+            }
+        }
+    }
+    const tile_type &ttype = res->tile();
+    out.multitile = was_multitile;
+    out.resolved_id = &res->id();
+    // draw_from_id_string_internal zeroes rota on non-rotating tiles so plain
+    // floors never rotate; vertical-face 3D callers opt out to keep their
+    // straight "edge" convention
+    int use_rota = rota < 0 ? 0 : rota;
+    if( !force_rota && !ttype.rotates && category != TILE_CATEGORY::NONE &&
+        category != TILE_CATEGORY::MONSTER ) {
+        use_rota = 0;
+    }
+    unsigned int loc_rand = 0;
+    if( ttype.fg.size() > 1 || ttype.bg.size() > 1 ) {
+        loc_rand = sprite_variation::mix_seed( resolve_sprite_seed( get_map(), res->id(), category, p ) );
+        if( ttype.animated ) {
+            has_animated_tiles_ = true;
+            const auto now = std::chrono::steady_clock::now();
+            const auto now_ms = std::chrono::time_point_cast<std::chrono::milliseconds>( now );
+            int animation_frame = static_cast<int>( now_ms.time_since_epoch().count() / 17 );
+            animation_frame += loc_rand;
+            int frames_in_loop = ttype.fg.get_weight();
+            if( frames_in_loop == 1 ) {
+                frames_in_loop = ttype.bg.get_weight();
+            }
+            loc_rand = animation_frame % frames_in_loop;
+        }
+    }
+    if( const std::vector<int> *fg = ttype.fg.pick( loc_rand ) ) {
+        out.fg_count = static_cast<int>( fg->size() );
+        if( !fg->empty() ) {
+            if( fg->size() == 1 ) {
+                // draw_sprite_at: one sprite is rotated, not swapped for a variant
+                out.fg_index = 0;
+                out.rot4 = use_rota % 4;
+            } else {
+                // multiple orientation variants: pick by rota % size, no rotation
+                out.fg_index = use_rota % static_cast<int>( fg->size() );
+            }
+            out.fg = make_texture_draw_data_3d( tileset_ptr->get_tile( ( *fg )[out.fg_index] ) );
+            out.fg_found = out.fg.has_value();
+        }
+    }
+    if( const std::vector<int> *bg = ttype.bg.pick( loc_rand ) ) {
+        out.bg_count = static_cast<int>( bg->size() );
+        if( !bg->empty() ) {
+            // a bg without manual rotations is never rotated (draw_sprite_at)
+            out.bg_index = bg->size() == 1 ? 0 : use_rota % static_cast<int>( bg->size() );
+            out.bg = make_texture_draw_data_3d( tileset_ptr->get_tile( ( *bg )[out.bg_index] ) );
+            out.bg_found = out.bg.has_value();
+        }
+    }
+    return out.fg_found || out.bg_found;
+}
+
 bool cata_tiles::draw_from_id_string_internal( const std::string &id, TILE_CATEGORY category,
         const std::string &subcategory, const tripoint_bub_ms &pos,
         int subtile, int rota, lit_level ll, int retract,
@@ -5406,11 +5507,14 @@ void cata_tiles::init_draw_cursor( const tripoint_bub_ms &p )
 {
     do_draw_cursor = true;
     cursors.emplace_back( p );
+    // the 3D terrain view replaces cata_tiles::draw, so forward cursors to it
+    render3d::push_cursor( p, false );
 }
 void cata_tiles::init_draw_highlight( const tripoint_bub_ms &p )
 {
     do_draw_highlight = true;
     highlights.emplace_back( p );
+    render3d::push_cursor( p, true );
 }
 void cata_tiles::init_draw_weather( weather_printable weather, std::string name )
 {
@@ -6326,6 +6430,48 @@ void cata_tiles::tile_loading_report_dups()
 void cata_tiles::init_light()
 {
     g->reset_light_level();
+}
+
+void cata_tiles::get_terrain_rota_subtile( const tripoint_bub_ms &p, int &rota, int &subtile )
+{
+    rota = 0;
+    subtile = 0;
+    map &here = get_map();
+    const ter_id &t = here.ter( p );
+    if( !t ) {
+        return;
+    }
+    const std::bitset<NUM_TERCONN> &connect_group = t.obj().connect_to_groups;
+    const std::bitset<NUM_TERCONN> &rotate_group = t.obj().rotate_to_groups;
+    if( connect_group.any() ) {
+        map::get_connect_values( p, subtile, rota, connect_group, rotate_group, {} );
+    } else {
+        map::get_terrain_orientation( p, rota, subtile, {}, {}, rotate_group );
+    }
+}
+
+void cata_tiles::get_furniture_rota_subtile( const tripoint_bub_ms &p, int &rota, int &subtile )
+{
+    rota = 0;
+    subtile = 0;
+    map &here = get_map();
+    const furn_id &f = here.furn( p );
+    if( !f ) {
+        return;
+    }
+    const std::bitset<NUM_TERCONN> &connect_group = f.obj().connect_to_groups;
+    const std::bitset<NUM_TERCONN> &rotate_group = f.obj().rotate_to_groups;
+    if( connect_group.any() ) {
+        map::get_furn_connect_values( p, subtile, rota, connect_group, rotate_group, {} );
+    } else {
+        const std::array<int, 4> neighborhood = {
+            static_cast<int>( here.furn( p + point::south ) ),
+            static_cast<int>( here.furn( p + point::east ) ),
+            static_cast<int>( here.furn( p + point::west ) ),
+            static_cast<int>( here.furn( p + point::north ) )
+        };
+        map::get_tile_values_with_ter( p, f.to_i(), neighborhood, subtile, rota, rotate_group );
+    }
 }
 
 void cata_tiles::do_tile_loading_report()

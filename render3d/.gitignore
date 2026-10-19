@@ -1,0 +1,7 @@
+# Local 3D test harness artifacts; the living doc is tracked.
+*.log
+test-profile/
+screen*.png
+*.ps1
+*.bat
+*.patch

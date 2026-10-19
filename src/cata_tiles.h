@@ -682,6 +682,32 @@ struct formatted_text {
     formatted_text( const std::string &text, int color, direction text_direction );
 };
 
+struct texture_draw_data {
+    SDL_Texture *texture;
+    SDL_Rect dimensions;
+    // avoiding ImVec2 here
+    std::pair<float, float> uv0;
+    std::pair<float, float> uv1;
+    // tightest non-transparent pixel bounds, relative to the dimensions origin
+    SDL_Rect opaque_rect = { 0, 0, 0, 0 };
+};
+
+// One tile's fg/bg sprite resolution for the 3D renderer, as produced by
+// cata_tiles::resolve_sprite_layers_3d (a faithful port of the selection
+// draw_from_id_string_internal + draw_sprite_at perform for 2D).
+struct sprite_layers_3d {
+    std::optional<texture_draw_data> fg;
+    std::optional<texture_draw_data> bg;
+    bool fg_found = false;
+    bool bg_found = false;
+    bool multitile = false;   // the (pre-subtile) tile is multitile
+    int fg_count = 0;         // picked fg list size: 1 = rotated, >1 = variants
+    int fg_index = -1;
+    int bg_count = 0;
+    int bg_index = -1;
+    int rot4 = 0;             // clockwise quarter turns applied to a single fg sprite
+    const std::string *resolved_id = nullptr; // tileset key actually used
+};
 /** type used for color blocks overlays.
  * first: The SDL blend mode used for the color.
  * second:
@@ -750,6 +776,22 @@ class cata_tiles
          * renderer (e.g. per-ammo bullet sprite lookup in ballistics).
          */
         std::string find_bullet_sprite_id( const std::string &id, TILE_CATEGORY category );
+
+        // 3D-only: resolves the fg/bg sprites with exactly the selection logic
+        // 2D's draw_from_id_string_internal + draw_sprite_at use for a tile:
+        // looks_like/season resolution, multitile subtile re-resolution on the
+        // RESOLVED id, the `rotates` gate, the shared variant seed, and the
+        // single-sprite rotation vs multi-sprite variant-index rule. The 2D
+        // draw path never calls this, so 2D rendering is unaffected.
+        bool resolve_sprite_layers_3d( const std::string &id, TILE_CATEGORY category,
+                                       const tripoint_bub_ms &p, int subtile, int rota,
+                                       bool force_rota, sprite_layers_3d &out );
+
+        // Multitile subtile + rotation for the terrain/furniture at p, using the
+        // same dispatch as draw_terrain/draw_furniture. Read-only; subtile is a
+        // MULTITILE_TYPE (enums.h), rota is quarter-turns (use rota % 4).
+        void get_terrain_rota_subtile( const tripoint_bub_ms &p, int &rota, int &subtile );
+        void get_furniture_rota_subtile( const tripoint_bub_ms &p, int &rota, int &subtile );
 
     protected:
         /** How many rows and columns of tiles fit into given dimensions, fully
