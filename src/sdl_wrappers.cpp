@@ -61,23 +61,23 @@ static SDL_ScaleMode scale_quality_to_mode( const std::string &quality )
     return SDL_SCALEMODE_LINEAR;
 }
 
-void RenderCopy( const SDL_Renderer_Ptr &renderer, const SDL_Texture_Ptr &texture,
+bool RenderCopy( const SDL_Renderer_Ptr &renderer, const SDL_Texture_Ptr &texture,
                  const SDL_Rect *srcrect, const SDL_Rect *dstrect )
 {
     if( !renderer ) {
         dbg( D_ERROR ) << "Tried to render to a null renderer";
-        return;
+        return false;
     }
     if( !texture ) {
         dbg( D_ERROR ) << "Tried to render a null texture";
-        return;
+        return false;
     }
     SDL_FRect fsrc;
     SDL_FRect fdst;
     const SDL_FRect *fsrcp = srcrect ? &( fsrc = to_frect( *srcrect ) ) : nullptr;
     const SDL_FRect *fdstp = dstrect ? &( fdst = to_frect( *dstrect ) ) : nullptr;
-    printErrorIf( !SDL_RenderTexture( renderer.get(), texture.get(), fsrcp, fdstp ),
-                  "SDL_RenderTexture failed" );
+    return !printErrorIf( !SDL_RenderTexture( renderer.get(), texture.get(), fsrcp, fdstp ),
+                          "SDL_RenderTexture failed" );
 }
 
 bool RenderTexturedMesh( const SDL_Renderer_Ptr &renderer, const SDL_Texture_Ptr &texture,

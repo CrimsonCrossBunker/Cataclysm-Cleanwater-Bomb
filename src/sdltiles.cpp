@@ -140,6 +140,8 @@ std::unique_ptr<cata_tiles> overmap_tilecontext;
 static uint32_t lastupdate = 0;
 static uint32_t interval = 25;
 static bool needupdate = false;
+// Recovery clears the display buffer; never present it before the UI repaints.
+static bool recovery_redraw_pending = false;
 // Synthetic Android touch clicks carry their own coordinates.  Preserve them
 // instead of replacing them with the (usually stale) hardware mouse position.
 static bool last_input_has_explicit_mouse_pos = false;
@@ -1401,7 +1403,7 @@ static bool request_tile_repair_if_needed()
 // rebuilt and no frame drawn from a stale bundle is shown.
 static bool present_gate()
 {
-    if( renderer_coordinator.should_abort_frame() ) {
+    if( renderer_coordinator.should_abort_frame() || recovery_redraw_pending ) {
         needupdate = true;
         return false;
     }
@@ -1457,7 +1459,11 @@ void refresh_display()
         TERMINAL_HEIGHT * fontheight );
     dstrect.x += shake.x;
     dstrect.y += shake.y;
-    RenderCopy( renderer, display_buffer, NULL, &dstrect );
+    if( !RenderCopy( renderer, display_buffer, NULL, &dstrect ) ) {
+        renderer_coordinator.request_recovery( renderer_recovery_severity::device_lost );
+        needupdate = true;
+        return;
+    }
     if( android_ui_mode::is_new_ui_build() ) {
         const android_hud::minimap_rect hud_minimap = android_hud::get_minimap_rect();
         if( hud_minimap.visible && hud_minimap.width > 0 && hud_minimap.height > 0 &&
@@ -1502,9 +1508,17 @@ void refresh_display()
         if( dstrect.w > 0 && dstrect.h > 0 ) {
             dstrect.x += shake.x;
             dstrect.y += shake.y;
-            RenderCopy( renderer, display_buffer, nullptr, &dstrect );
+            if( !RenderCopy( renderer, display_buffer, nullptr, &dstrect ) ) {
+                renderer_coordinator.request_recovery( renderer_recovery_severity::device_lost );
+                needupdate = true;
+                return;
+            }
         } else {
-            RenderCopy( renderer, display_buffer, nullptr, nullptr );
+            if( !RenderCopy( renderer, display_buffer, nullptr, nullptr ) ) {
+                renderer_coordinator.request_recovery( renderer_recovery_severity::device_lost );
+                needupdate = true;
+                return;
+            }
         }
     }
 #endif
@@ -1732,6 +1746,18 @@ bool display_buffer_scope_is_invalid()
 bool display_buffer_scope_recovery_pending()
 {
     return display_buffer_scope_recovery_required;
+}
+
+bool renderer_recovery_redraw_pending()
+{
+    return recovery_redraw_pending;
+}
+
+void renderer_recovery_redraw_complete()
+{
+    if( !renderer_should_abort_frame() && !display_buffer_scope_is_invalid() ) {
+        recovery_redraw_pending = false;
+    }
 }
 
 void display_buffer_scope_signal_recovery_required()
@@ -2119,9 +2145,10 @@ void renderer_resource_coordinator::run_post_success_full_invalidation()
         }
     }
     ui_manager::invalidate_all_ui_adaptors();
-    // Force every curses window to re-emit in full on its next refresh, then
-    // request a present so the rebuilt buffer reaches the screen.
+    // Force every curses window to re-emit in full on its next refresh. A
+    // present is requested but held until the UI has repainted this buffer.
     cata_cursesport::bump_curses_render_epoch();
+    recovery_redraw_pending = true;
     needupdate = true;
 }
 
@@ -2635,6 +2662,7 @@ static struct {
     Uint32 pixel_format;
     bool direct3d_mode;
     bool needupdate;
+    bool recovery_redraw_pending;
     unsigned curses_render_epoch;
 } test_fixture_saved;
 
@@ -2764,8 +2792,9 @@ bool renderer_recovery_test_support::setup_software_renderer()
     test_fixture_saved = {
         TERMINAL_WIDTH, TERMINAL_HEIGHT, fontwidth, fontheight, scaling_factor,
         WindowWidth, WindowHeight, DrawableWidth, DrawableHeight, pixel_format, direct3d_mode,
-        needupdate, cata_cursesport::curses_render_epoch
+        needupdate, recovery_redraw_pending, cata_cursesport::curses_render_epoch
     };
+    recovery_redraw_pending = false;
 
     TERMINAL_WIDTH = 8;
     TERMINAL_HEIGHT = 8;
@@ -2849,6 +2878,7 @@ void renderer_recovery_test_support::teardown_software_renderer()
     display_buffer_scope_aborted = false;
     display_buffer_scope_invalid = false;
     display_buffer_scope_recovery_required = false;
+    recovery_redraw_pending = false;
     reset_coordinator();
     geometry.reset();
     reset_shared_lightmap();
@@ -2874,6 +2904,7 @@ void renderer_recovery_test_support::teardown_software_renderer()
     pixel_format = test_fixture_saved.pixel_format;
     direct3d_mode = test_fixture_saved.direct3d_mode;
     needupdate = test_fixture_saved.needupdate;
+    recovery_redraw_pending = test_fixture_saved.recovery_redraw_pending;
     test_drawable_override_w = -1;
     test_drawable_override_h = -1;
     cata_cursesport::curses_render_epoch = test_fixture_saved.curses_render_epoch;
@@ -8044,6 +8075,11 @@ input_event input_manager::get_input_event( const keyboard_mode preferred_keyboa
     // CheckMessages poll below still reads it.
     SDL_PumpEvents();
     drain_renderer_recovery();
+#if !defined(__ANDROID__)
+    if( renderer_recovery_redraw_pending() ) {
+        ui_manager::redraw_invalidated();
+    }
+#endif
 #if defined(__ANDROID__)
     // Foreground recovery can replace and blank the display buffer.  Rebuild
     // the active UI before the pre-poll present, so no empty recovery frame is

@@ -14,6 +14,7 @@
 #include "output.h"
 #include "point.h"
 #include "sdl_renderer_recovery.h"
+#include "sdltiles.h"
 
 namespace
 {
@@ -431,6 +432,34 @@ TEST_CASE( "renderer_coordinator_device_reset_bumps_texture_generation",
     // is unchanged.
     CHECK( renderer_coordinator.instance_generation() == inst0 );
     CHECK( renderer_coordinator.is_render_allowed() );
+}
+
+TEST_CASE( "recovered_display_buffer_waits_for_ui_redraw_before_present",
+           "[tiles][renderer_recovery]" )
+{
+    software_render_fixture fx;
+    if( !fx.available() ) {
+        WARN( "dummy SDL video backend unavailable; skipping" );
+        return;
+    }
+
+    REQUIRE( renderer_recovery_test_support::run_present_gate() );
+    renderer_coordinator.request_recovery( renderer_recovery_severity::device_reset );
+    renderer_coordinator.drain_pending();
+    REQUIRE( renderer_coordinator.is_render_allowed() );
+    REQUIRE( renderer_recovery_redraw_pending() );
+    CHECK_FALSE( renderer_recovery_test_support::run_present_gate() );
+    CHECK( renderer_recovery_test_support::needupdate_armed() );
+
+    renderer_coordinator.request_recovery( renderer_recovery_severity::targets_reset );
+    renderer_recovery_redraw_complete();
+    CHECK( renderer_recovery_redraw_pending() );
+    CHECK_FALSE( renderer_recovery_test_support::run_present_gate() );
+    renderer_coordinator.drain_pending();
+    REQUIRE( renderer_coordinator.is_render_allowed() );
+    renderer_recovery_redraw_complete();
+    CHECK_FALSE( renderer_recovery_redraw_pending() );
+    CHECK( renderer_recovery_test_support::run_present_gate() );
 }
 
 TEST_CASE( "renderer_coordinator_device_lost_bumps_all_generations",
