@@ -369,6 +369,8 @@ struct requirement_data {
          * Returns true if the requirements are fulfilled by the filtered inventory
          * @param filter should be recipe::get_component_filter() if used with a recipe
          * or is_crafting_component otherwise.
+         * craft_flags::stop_on_failure is for boolean queries only; it may
+         * leave individual availability colors unrefreshed after a failure.
          */
         // `actor` is the character whose capabilities the answer is about, or null when
         // there is none, as when a camp builds from its own stock.  A null actor
