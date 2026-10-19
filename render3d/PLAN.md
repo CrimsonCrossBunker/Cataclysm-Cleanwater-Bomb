@@ -70,11 +70,81 @@
 
 - z 范围 = `[-OVERMAP_DEPTH, +OVERMAP_HEIGHT]`（±10 层）；近区 ±24 全逻辑，
   远环（24<d≤60）只画当前层。
-- 下层（dz<0）：仅 `seen_cache > 0` 的格绘制，未见不画黑块。
-- 上层（dz>0）：屋顶模式——露天（`NO_FLOOR`/无地板）跳过；非露天格画地板与
-  墙/门窗/栅栏轮廓；家具/物品/生物仅 seen 才画。
-- dollhouse：玩家 12 格内的室内已见可走列，其上方各层只保留 50% ghost 地板
-  （bit5），其余内容整列跳过；相机→玩家软遮罩仍会挖除视线内的部分。
+- **可见性 = 2D 逐格判定**：`level_cache::visibility_cache[z][x][y]` 为
+  `LOW/LIT/BRIGHT`（即 `map::get_visibility == CLEAR`）才算可见；该缓存同时包含
+  视线遮挡、光照阈值与 `unimpaired_range`，与 2D 绘制使用同一份数据。
+  `seen_cache` 只是纯视线投射，仅用于上层的“完整细节 vs 轮廓”区分。
+- 当前层（dz=0）：不可见 → 近黑地板 slab（保留雾区效果），不读真实地形/家具/物品；
+  可见性每帧由 `game::draw` 的 `update_visibility_cache` 保证新鲜。
+- 下层（dz<0）：只有 `[lowest_vision_level, center.z]` 范围内有新鲜
+  `visibility_cache`；范围外整层跳过，层内不可见格跳过。
+- 上层（dz>0）：与视平层同一逐格可见度判定，**没有"整块建筑"例外**。
+  `update_visibility_cache` 只刷新到 `center.z`，所以上层逐格用
+  `map::apparent_light_at` 现算；`seen_cache`/`camera_cache` 均未命中且无
+  clairvoyance 时直接判 BLANK。引擎对从下方看上层地板/屋顶本就按 `floor_block`
+  视为不可见（`shadowcasting.cpp`），因此站在本层看不到上一层的房顶和墙；只有
+  相机/透视照到的上层格才显示。可见但非直接视线的上层格只画地板+墙轮廓
+  （`roof_unseen`），不画家具/物品。
+- dollhouse：玩家 12 格内的室内**当前可见**可走列，其上方各层只保留 50% ghost
+  地板（bit5），其余内容整列跳过；相机→玩家软遮罩仍会挖除视线内的部分。
+
+### 光照等级（逐格 tone）
+
+- 每格算一次 `tile_tone { shade, sat }`，该格上**所有实例**共享：地面、fg 覆盖层、
+  树/灌木、门/窗/栅栏/墙、家具、物品、物品高亮、生物。
+- 等级来源与 2D 平滑光照完全一致：`smooth_lighting::classify_light_cell`
+  （BRIGHT=1；LOW/LIT 用 `apparent_light_helper` + `light_above_threshold`）；
+  上层没有新鲜 `visibility_cache`，用该层 `lm.max()` 按同一阈值归一。
+- `shade = mix(shadow_shade=0.625, 1.0, light)`；`sat = smoothstep(0, 0.75, light)`。
+  实例颜色 alpha 槽携带 `sat`，`terrain3d.frag` 按 2D `lit.frag` 的方式向灰度混合，
+  低光下物体整体变暗并去色。
+- 不做的：彩色光染色（illumination hue / tint overlay）、夜视仪专用色调。
+
+### 夜视仪（TP-6）
+
+- 触发与 2D 的 `nv_color_active` 相同：`get_avatar().get_vision_modes()[NV_GOGGLES]`
+  （`Character::has_nv_goggles()`：`GNV_EFFECT` / `NIGHT_VISION` / `NVG_GREEN` 物品或模块）
+  且选项 `NV_GREEN_TOGGLE` 开。视距加成（`get_vision_threshold` 的 +10）本来就会进入
+  3D 使用的可见性/光照缓存，本轮只补颜色。
+- 世界 pass：`terrain3d.frag` 复用 `nightvision_presets.glsl`，按 2D
+  `smooth_lighting::reference_night_rgb` 的同一公式把精灵色映射成绿色夜视：
+  暗处用 `nightvision_rgb`（乘 `night_floor` 起的光照），越过 `overexpose_start`
+  后过渡到 `overexposed_rgb`；最后仍乘 3D 的太阳面明暗 `v_shade`。
+  两个常量由 C++ 传入 `nv_params`，不写死在着色器里。
+- 逐格光照的传递：夜视帧里实例颜色 alpha 槽临时改存该格 light（正常帧仍是饱和度），
+  所有地形/家具/物品/生物无需改调用点。雾块与非 `cll_clear` 兜底的 alpha 固定 0，
+  夜视下保持近黑；记忆实例（bit6）在着色器里提前返回，继续按 `MEMORY_MAP_MODE` 着色。
+- 天空 pass：`sky.frag` 用同样的绿色变换（`params.w` 为夜视标志，按 daylight 过渡到过曝），
+  使整个 3D 视口与 2D 一样是绿色。这是 3D 专有延伸（2D 无天空）。
+- 关闭 `NV_GREEN_TOGGLE` 时 3D 画面完全不变（视距加成仍在，与 2D 一致）。
+
+### 记忆中的地形（map memory）
+
+- **记忆写入**：Render3D 不经过 `cata_tiles::draw`，所以由
+  `cata_tiles::memorize_map_memory(center)`（3D 专用新增方法）复刻 2D draw 末尾的
+  sweep：逐格 `visibility_cache` 为 CLEAR 时 `draw_terrain/draw_furniture/...`
+  以 `memorize_only=true` 把地形与装饰写进 avatar 的 `map_memory`。
+  扫描层 = `map::vision_levels()`（avatar 层 + 本回合视线真正到达的下层，
+  含透过洞口/楼梯看到的下层），每层用各自的 visibility cache；上层不主动写入
+  （与 2D 的绘制范围一致，上层记忆来自玩家曾在该层）。触发：
+  `map_memory_sweep_pending`、玩家位置、`calendar::turn` 或
+  `level_cache::sight_revision` 变化（等价于 2D 每回合重扫一次）。
+- **区域准备**：每帧对整个 reality bubble 调
+  `avatar::prepare_map_memory_region`，角点 z 固定为 0，使 `prepare_region` 的
+  `±fov_3d_z_range` 缓存窗口恰好覆盖渲染的全部 z 层
+  `[-OVERMAP_DEPTH, +OVERMAP_HEIGHT]`（`static_assert` 固化前提）。
+- **渲染**：**所有层**。任何 `dz` 下当前不可见的格子都用记忆里的 id +
+  **存储的 subtile/rotation** 解析精灵，几何复用实时路径的形状（地板/树/灌木/
+  门窗薄板/栅栏半段 quad/墙盒，家具 billboard）。视平层无记忆时仍画近黑雾块；
+  其他层无记忆时什么都不画。**视平层以上的记忆只画结构（地板/墙/门窗/栅栏），
+  不画记住的家具**；视平层及以下的记忆家具照常显示。dollhouse 挖空列不填记忆，
+  保持室内可见。
+  只读记忆数据，不读实时地图，避免泄露未见变化。`dz != 0` 仍只在近区
+  ±`REGION_RADIUS` 内绘制。载具部件（`vp_`）与陷阱（`tr_`）记忆不渲染。
+- **着色**：实例 flags bit6 标记 memory；`terrain3d.frag` 对其实例套用 2D 的
+  `MEMORY_MAP_MODE` 预设（`memory_presets.glsl`，四个命名预设 + 自定义
+  `MEMORY_RGB_*` / `MEMORY_GAMMA`），**不受光照/去色影响**，与 2D 记忆叠加一致。
+- 有意不做：`LIGHTING_MEMORY_BLEND` 的视线边缘渐变。
 
 ### 相机与软遮罩
 
@@ -97,6 +167,63 @@
 地形 gather 的 `shaped`（plain floor）走 `get_terrain_rota_subtile` 计算
 subtile/rota；墙/栅栏/门窗强制 `SUBTILE_EDGE`；bg 查找先试子瓦片 id、再回退基础 id；
 有 bg 的地板 = 不透明 bg 盒 + fg 镂空面片；无 bg 的透明地板用 FLATQUAD 全 UV 镂空。
+
+门窗上下夹块（窗台/窗楣/门楣）继承同一墙线上墙的中段贴图：连续的门窗（含打开的门、
+空门框/空窗框）视为一段整体，沿墙线跨过整段到两端的第一堵真墙取贴图
+（东/北端优先，与旧侧格顺序一致）；两端都没有真墙（空地、栅栏、地图边缘、记忆缺失）
+时夹块直接留空，不再绘制灰色占位盒。实时与记忆两条路径规则一致。
+
+门洞（打开的门/大门、空门框、空窗框）与普通门同样处理：bg（无 bg 用 `t_floor`
+兜底）做地板，fg 贴图作为 0..1.4 的立板，`PANEL_HEIGHT..WALL_HEIGHT` 的门楣
+切片同样继承自 run 端点的墙；地面上不再保留平铺的 fg 贴纸。**上锁（LOCKED）
+且带 bg 的关门面板**是分层贴图（UC 的 `t_door_metal_pickable`：bg=金属门板、
+fg=钥匙图标）：两层都立到门板上——bg 打底、fg 以居中对称方式两侧各外凸 5 mm
+（总厚 +0.01，alpha cutout，防 z-fight，两面都可见）叠加，地板改用 `t_floor` 兜底。判据：可通行、
+非 WINDOW/DOOR/WALL/THIN_OBSTACLE、`connects_to` 含 WALL，且有 `close`
+（打开的门）或 `FLAT + SUPPORTS_ROOF`（空框/拱门）。薄板家族除
+DOOR/WINDOW/open 外还覆盖四类 `BARRICADABLE_DOOR*` 与 `LOCKED`（排除
+THIN_OBSTACLE）——上锁/破损门因此按门板渲染，而不是 movecost==0 的整块体素；
+但**不含裸 `close`**（带 WALL 的百叶窗墙不能变薄板）。该判据已对 core+mods
+全部地形做过类别 diff 审计，除上述门类外零地形变化。
+
+### 上锁/报警物体的分层贴图（TP-4.3.4）
+
+- 2D 的 `draw_tile_at` 对每格**总是先 bg 再 fg**（同一 `tile.offset`）。UC 把少数"上锁/报警"物体拆成
+  **bg = 本体、fg = 小图标**：`f_displaycase`/`f_safe_l`/`f_gunsafe_ml`（fg=钥匙 1778）、
+  `f_gun_safe_el`（fg=电子锁图标 13023）、`t_window_bars_alarm`（fg=红色报警 8855，bg=栅栏窗 8657）。
+  3D 原来家具只用 fg、窗户把 fg 当窗面并把 bg 铺在地上，所以只剩图标。
+- 判定 `wants_layered_face`：`LOCKED | ALARMED | PICKABLE` 或 examine action `safe` / `gunsafe_el`
+  （保险箱没有 flag），**且**该 tileset 定义了 bg。**不能**对所有带 bg 的家具分层：`f_earthbag_half`
+  的 bg=6734 是地面草地，立起来会变成绿墙；`f_LIXA_machinery_electronic` 的 bg 也是地面。
+- 家具（实时 + 记忆）：本体用 bg 走原 billboard 几何，fg 图标用**同一四元**再画一层，
+  沿相机方向偏移 0.02 m（家具 0 / 物品高亮 0.03 / 物品 0.06 之间），避免严格 LESS 深度淘汰。
+- 门窗面板（实时 + 记忆）：`layered_face` 不再排除窗口；窗面本身用 bg，fg 图标以同一窗面盒
+  对称外扩 5 mm 叠在玻璃上，地面回退 `t_floor`。已有上锁门面板行为不变。
+- 栅栏路径不动：`t_chaingate_l`/`t_retractable_gate_l` 的 bg 是整块地面，不能立；
+  `t_door_bar_locked`（栅栏路径）同类症状留待后续单独处理。
+- UC 中命中对象仅 5 个：上面 4 个家具 + `t_window_bars_alarm`。
+
+### 角色布娃娃（TP-5）
+
+- 每个可见生物 = 基础精灵 billboard + 2D 的全部 overlay 图层，id 与顺序完全沿用
+  `Character::get_overlay_ids()` / `monster::get_overlay_ids()`，逐层经
+  `find_overlay_looks_like`（3D 包装器 `find_overlay_looks_like_3d` 转调同一实现）解析：
+  效果图标 → 变异/生化（按 `get_overlay_order_of_mutation` 排序）→ worn 衣物（内层到外层，
+  含 `sprite_override` 与烧蚀护甲）→ wielded 武器。带 `override_look` 的生效变异照 2D
+  换成该外观，overlay 只剩效果/移动模式。
+- **画布对齐**：2D 把每层画在 tile 原点 + `tile_type::offset`（tilesheet 的 sprite_offset，
+  单位=贴图像素）。3D 用基础精灵的像素高度定出统一的 米/像素 比例，overlay 的高度、底边、
+  水平中心都按画布像素差换算，因此帽子/眼镜/长杆武器各归其位；**不能用** overlay 自己的
+  `base_drop`（帽子的不透明底边在头顶，不在脚下）。UC 中基础身体在 `human_body_plus.png`
+  （32×48，offset_y=-16），装备多在 `human_body.png`（32×36，offset_y=-8），底边差由
+  offset 精确抵消。
+- **深度**：管线 compare_op 是严格 LESS，且 base 与 overlay 常在不同 tilesheet（不同 draw
+  call），不能靠提交顺序。每层沿朝向相机方向递增 4 mm（最多 24 层 = 9.6 cm，与物品
+  0.03/0.06 同一手法），不依赖绘制顺序、不改着色器。
+- 有意不继承：左右朝向翻转（billboard 恒面向相机、相机可旋转）、`height_3d` 堆叠、
+  overlay 自带的 bg 层、骑乘（`rid_` / `mounted_player`）与
+  `COPY_AVATAR_LOOK` / `COPY_SUMMONER_LOOK`。
+- 临时诊断：`doll: <base> overlays=N resolved=M ids=...`（每 base id 一次，上限 120 行）。
 
 ## 构建与实测
 
@@ -121,12 +248,10 @@ shape: t_water_pool_shallow_outdoors sub=corner rota=2 -> t_water_pool_corner li
 
 ## 已知限制与后续路线
 
-- **TP-4 记忆中的地形**：读取 avatar map memory（2D MEMORIZED 层的灰度/低亮数据），
-  以低饱和实例渲染；只读接口，不改 2D 绘制。
 - **TP-5 载具渲染**：`draw_vpart` 的部件贴图 + 朝向旋转接入 3D。
 - **稳定性**：GPU 探针失败自动回退 2D（已实现）；关注实例缓冲上限与 gather 成本
   （±60 约 2.9 万格/帧）。
-- 已知未覆盖：粒子/动画帧、多 tileset 叠加、载具、记忆地形。
+- 已知未覆盖：粒子/动画帧、多 tileset 叠加、载具、非当前 z 的记忆。
 
 ## 历史
 
@@ -139,6 +264,38 @@ shape: t_water_pool_shallow_outdoors sub=corner rota=2 -> t_water_pool_corner li
   无贴图物品 ASCII 字形、ghost 屋顶取代娃娃屋挖除。
 - TP-3.x：渲染距离 ±60、天空/太阳/云、dollhouse 半径、云增强与夜空压暗、
   全地形多瓦片连接、栅栏拐角、透明地板双层合成、FLATQUAD 消除黑缝、全 z 层。
+- TP-3.7：3D 可见性对齐 2D——逐格 `visibility_cache`（遮挡 + 光照 + 距离）、
+  上层同样逐格按 `apparent_light_at` 判定（取消整块建筑例外）、生物改用 `avatar::sees`。
+- TP-3.8：光照等级系统——复用 `smooth_lighting` 的等级分类与 2D lit 色调
+  （`shade`/`sat` 每格一次，应用到该格全部实例；alpha 槽传递饱和度）。
+- TP-4：记忆中的地形——3D 侧复用 2D 的 map-memory sweep 写入 avatar 记忆；
+  视平层不可见格用记忆里的 id/subtile/rotation 绘制，并按 `MEMORY_MAP_MODE`
+  预设着色（实例 bit6 + `memory_presets.glsl`），只读记忆、不泄露实时变化。
+- TP-4.1：跨层记忆——记忆渲染扩展到渲染范围内的**所有 z 层**（dollhouse 挖空列
+  除外），sweep 扩展到 `vision_levels()`（当前层 + 看穿洞口/楼梯的下层），
+  记忆区域准备固定以 z=0 为锚点覆盖全部渲染层。
+- TP-4.2：门窗夹块继承——连续门窗视为一段整体，沿墙线跨过整段到两端第一堵真墙
+  继承窗台/窗楣/门楣贴图（打开的门计入 run）；两端都无墙时留空，不再绘制灰色
+  占位盒。实时与记忆路径同步。
+- TP-4.3：门洞与锁门——打开的门/空门框/空窗框保留地板并继承墙上部（门楣切片）；
+  上锁/破损门（LOCKED / BARRICADABLE_DOOR*）进入门板薄片分支，不再画成整块体素。
+  判据对 core+mods 全量地形做过类别 diff，仅门类地形受影响。
+- TP-4.3.1：门洞立板——打开的门/空门框/空窗框并入普通门的面板渲染：bg（或
+  `t_floor` 兜底）地板 + 0..1.4 的 fg 立板 + 继承门楣；地板上的平铺 fg 贴纸取消。
+- TP-4.3.3：分层门板——上锁（LOCKED）且带 bg 的门面板（如 UC 的
+  `t_door_metal_pickable`：bg=金属门板、fg=钥匙图标）把两层都立到门板上，
+  bg 打底 + fg 两侧对称外凸 5 mm 叠加（两面都可见）；地板改用 `t_floor` 兜底。
+  其余门/窗不变。
+- TP-4.3.4：上锁/报警物分层——家具（展柜/保险箱/枪柜）按 LOCKED|ALARMED|PICKABLE 或
+  examine `safe`/`gunsafe_el` 判定，bg 本体 billboard + fg 图标同四元叠层（相机方向 0.02 m）；
+  报警窗 `t_window_bars_alarm` 的 `layered_face` 扩展到窗口，fg 图标外凸 5 mm 叠在 bg 窗面上，
+  地面回退 `t_floor`。带地面 bg 的家具/栅栏保持不变。
+- TP-5：角色布娃娃——可见角色/怪物按 2D `draw_entity_with_overlays` 的 id 与顺序绘制
+  全部装备/变异/武器 overlay 层；按 tilesheet 画布偏移对齐；每层沿相机方向 4 mm
+  深度偏移保证叠放顺序。
+- TP-6：夜视仪——按 2D `reference_night_rgb` 的同一公式给 3D 世界与天空加绿色夜视变换；
+  逐格 light 经实例 alpha 槽传入着色器，记忆/雾块/未看见区域不受影响；
+  `NV_GREEN_TOGGLE` 关闭时完全不变。
 - 2D 隔离 + 忠实移植：恢复 `get_texture_draw_data` 为基点实现；新增 3D 专用解析器
   完整复刻 2D 选取语义。
 

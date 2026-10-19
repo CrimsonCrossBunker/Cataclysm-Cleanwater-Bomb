@@ -706,6 +706,10 @@ struct sprite_layers_3d {
     int bg_count = 0;
     int bg_index = -1;
     int rot4 = 0;             // clockwise quarter turns applied to a single fg sprite
+    // the resolved tile's sheet sprite offset in sprite pixels (tile_type::offset);
+    // 2D places a sprite at tile origin + this, the 3D paper doll uses it to
+    // align overlay layers with the base body canvas
+    point offset = point::zero;
     const std::string *resolved_id = nullptr; // tileset key actually used
 };
 /** type used for color blocks overlays.
@@ -787,11 +791,24 @@ class cata_tiles
                                        const tripoint_bub_ms &p, int subtile, int rota,
                                        bool force_rota, sprite_layers_3d &out );
 
+        // 3D-only: the paper-doll overlay lookup 2D's draw_entity_with_overlays
+        // performs through find_overlay_looks_like (gender prefix, `_var_`
+        // variant, then the looks_like fallback chain). The 2D path never calls
+        // this wrapper, so 2D rendering is unaffected.
+        bool find_overlay_looks_like_3d( bool male, const std::string &overlay,
+                                         const std::string &variant, std::string &draw_id );
+
         // Multitile subtile + rotation for the terrain/furniture at p, using the
         // same dispatch as draw_terrain/draw_furniture. Read-only; subtile is a
         // MULTITILE_TYPE (enums.h), rota is quarter-turns (use rota % 4).
         void get_terrain_rota_subtile( const tripoint_bub_ms &p, int &rota, int &subtile );
         void get_furniture_rota_subtile( const tripoint_bub_ms &p, int &rota, int &subtile );
+
+        // 3D-only: the map-memory sweep draw() performs at its end (memorize
+        // everything the avatar currently sees), for the reality-bubble level
+        // center.z(). Render3D bypasses draw(), so it runs this itself; the 2D
+        // path never calls it. center's x/y are not used, only its z.
+        void memorize_map_memory( const tripoint_bub_ms &center );
 
     protected:
         /** How many rows and columns of tiles fit into given dimensions, fully

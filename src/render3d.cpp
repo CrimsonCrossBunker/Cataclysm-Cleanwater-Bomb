@@ -12,6 +12,8 @@
 #include <fstream>
 #include <map>
 #include <string>
+#include <string_view>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -36,13 +38,16 @@
 #include "lightmap.h"
 #include "line.h"
 #include "map.h"
+#include "map_memory.h"
 #include "mapdata.h"
 #include "monster.h"
 #include "mtype.h"
+#include "mutation.h"
 #include "npc.h"
 #include "path_info.h"
 #include "point.h"
 #include "shadowcasting.h"
+#include "smooth_lighting.h"
 #include "submap.h"
 #include "weather.h"
 #include "weather_type.h"
@@ -82,6 +87,11 @@ constexpr float FENCE_HEIGHT = 1.5f;
 constexpr float FENCE_THICK = 0.15f;
 constexpr float CREATURE_BASE_HEIGHT = 1.8f;
 constexpr float ITEM_HEIGHT = 0.5f;
+
+// the whole rendered z range must be inside map memory's prepared region; the
+// prepare call below anchors that region's z window at 0 (see draw_terrain_window)
+static_assert( fov_3d_z_range >= OVERMAP_DEPTH && fov_3d_z_range >= OVERMAP_HEIGHT,
+               "map memory region must cover every rendered z-level" );
 
 // geometry kind of an instance batch (matches `params.x` in terrain3d.vert)
 enum draw_mode : int {
@@ -921,6 +931,14 @@ struct sprite_info {
     // as black margins, so the floor samples just the opaque bounds
     float gu0 = 0.0f, gv0 = 0.0f, gu1 = 0.0f, gv1 = 0.0f;
     float aspect = 1.0f; // sprite pixel width / height
+    // sprite canvas size in tileset pixels; the paper doll uses it (with
+    // `offset`) to place overlay layers on the same canvas scale as the body
+    int px_w = 0;
+    int px_h = 0;
+    // tilesheet sprite offset (tile_type::offset), in tileset pixels: 2D draws
+    // every sprite at tile origin + offset, which is what aligns a hat with the
+    // head instead of dropping its opaque bottom to the ground
+    point offset = point::zero;
     // fraction of the sprite's height below which everything is transparent;
     // vertical sprites (trees, furniture, creatures) are dropped by this amount
     // so their opaque base touches the ground instead of floating
@@ -944,6 +962,8 @@ bool fill_sprite_info( const texture_draw_data &d, sprite_info &out )
     out.aspect = d.dimensions.h > 0
                  ? static_cast<float>( d.dimensions.w ) / static_cast<float>( d.dimensions.h )
                  : 1.0f;
+    out.px_w = d.dimensions.w;
+    out.px_h = d.dimensions.h;
     if( d.opaque_rect.w > 0 && d.dimensions.w > 0 && d.dimensions.h > 0 ) {
         const float dw = static_cast<float>( d.dimensions.w );
         const float dh = static_cast<float>( d.dimensions.h );
@@ -979,6 +999,175 @@ const std::array<const char *, 8> multitile_keys = {{
     }
 };
 
+constexpr int SUBTILE_EDGE = 2; // enums.h MULTITILE_TYPE::edge
+
+// doors and windows, matching the classification both gather paths use: plain
+// doors carry DOOR; closed doors/windows expose an "open" transform; the
+// barricadable families cover locked and broken doors; locked doors that can
+// only be opened with a keycard or tool (t_door_metal_locked and friends)
+// carry neither DOOR nor a transform, just LOCKED. a bare "close" transform is
+// NOT enough: WALL-flagged shutter terrains have one too and must stay walls.
+// enum flags: this runs per tile per frame (bitflags are much cheaper than the
+// string overload); the one flag without an enum keeps a static string.
+bool door_or_window( const ter_t &t )
+{
+    if( t.has_flag( ter_furn_flag::TFLAG_DOOR ) ||
+        t.has_flag( ter_furn_flag::TFLAG_WINDOW ) || !t.open.is_null() ||
+        t.has_flag( ter_furn_flag::TFLAG_BARRICADABLE_DOOR ) ||
+        t.has_flag( ter_furn_flag::TFLAG_BARRICADABLE_DOOR_DAMAGED ) ||
+        t.has_flag( ter_furn_flag::TFLAG_BARRICADABLE_DOOR_REINFORCED ) ||
+        ( t.has_flag( ter_furn_flag::TFLAG_LOCKED ) &&
+          !t.has_flag( ter_furn_flag::TFLAG_THIN_OBSTACLE ) ) ) {
+        return true;
+    }
+    static const std::string broken_reinforced( "BARRICADABLE_DOOR_REINFORCED_DAMAGED" );
+    return t.has_flag( broken_reinforced );
+}
+
+// does this terrain join the WALL connect line (the terrain's "connects_to")?
+bool joins_wall_line( const ter_t &t )
+{
+    static const int wall_group = get_connect_group( "WALL" ).index;
+    return t.connect_to_groups.test( wall_group );
+}
+
+// a passable doorway sitting in a wall line: an open door or gate (only a
+// "close" transform; open/close never inherit through copy-from), or an empty
+// door/window frame — a flat, roof-bearing, wall-connected tile. open windows
+// keep WINDOW and stay panels.
+bool wall_opening( const ter_t &t )
+{
+    if( t.has_flag( ter_furn_flag::TFLAG_WINDOW ) ||
+        t.has_flag( ter_furn_flag::TFLAG_DOOR ) || t.movecost <= 0 ||
+        t.has_flag( ter_furn_flag::TFLAG_WALL ) ||
+        t.has_flag( ter_furn_flag::TFLAG_THIN_OBSTACLE ) ||
+        !joins_wall_line( t ) ) {
+        return false;
+    }
+    return !t.close.is_null() ||
+           ( t.has_flag( ter_furn_flag::TFLAG_FLAT ) &&
+             t.has_flag( ter_furn_flag::TFLAG_SUPPORTS_ROOF ) );
+}
+
+// a solid wall whose sprite can clamp a door/window panel (sill + lintel) or
+// back a doorway's lintel: WALL-flagged, impassable, never a panel or a fence
+bool wall_terrain( const ter_t &t )
+{
+    return t.movecost == 0 && t.has_flag( ter_furn_flag::TFLAG_WALL ) &&
+           !door_or_window( t ) &&
+           !t.has_flag( ter_furn_flag::TFLAG_THIN_OBSTACLE );
+}
+
+// 2D composites a tile's bg under its fg. for a few locked/alarmed objects the
+// tileset splits the sprite into bg = the body and fg = a small indicator icon
+// (UC: key 1778, alarm 8855), so 3D must draw both layers or only the icon
+// shows. safes and electronic safes carry no LOCKED flag, only an examine
+// action. deliberately NOT "any sprite with a bg": some furniture uses the
+// ground texture as bg, which must not be stood up as a billboard
+bool wants_layered_face( const map_data_common_t &d )
+{
+    return d.has_flag( ter_furn_flag::TFLAG_LOCKED ) ||
+           d.has_flag( ter_furn_flag::TFLAG_ALARMED ) ||
+           d.has_flag( ter_furn_flag::TFLAG_PICKABLE ) ||
+           d.has_examine( iexamine::safe ) ||
+           d.has_examine( iexamine::gunsafe_el );
+}
+
+// one end of the door/window run a panel or doorway sits in. consecutive doors
+// and windows — open ones and empty frames included — are one unit, so the
+// scan walks over the whole run and returns the first true wall at that end. a
+// run that ends in open ground, a fence, the map edge or unknown memory
+// (get_ter returns nullptr) has no wall to inherit: nullptr.
+template<typename TerAt>
+const ter_t *panel_run_end( const tripoint_bub_ms &p, const point &step,
+                            const TerAt &get_ter, tripoint_bub_ms &wall_pos )
+{
+    tripoint_bub_ms q = p;
+    for( ;; ) {
+        q += step;
+        if( !get_map().inbounds( q ) ) {
+            return nullptr;
+        }
+        const ter_t *nt = get_ter( q );
+        if( nt == nullptr ) {
+            return nullptr;
+        }
+        if( door_or_window( *nt ) || wall_opening( *nt ) ) {
+            continue;
+        }
+        if( !wall_terrain( *nt ) ) {
+            return nullptr;
+        }
+        wall_pos = q;
+        return nt;
+    }
+}
+
+// the wall sprite's vertical slice between heights z0..z1, as if a full wall
+// were cut at those heights — not the whole sprite squashed into a small box
+sprite_info wall_slice( const sprite_info &s, const float z0, const float z1 )
+{
+    sprite_info r = s;
+    r.v0 = s.v1 - ( z1 / WALL_HEIGHT ) * ( s.v1 - s.v0 );
+    r.v1 = s.v1 - ( z0 / WALL_HEIGHT ) * ( s.v1 - s.v0 );
+    return r;
+}
+
+// connection mask (S=1, E=2, W=4, N=8) encoded by a memorized multitile
+// subtile/rotation pair. The table mirrors cata_tiles::get_rotation_and_subtile:
+// a map-memory tile only carries these two numbers, not its neighbors, so a
+// remembered fence's bend has to be reconstructed from them.
+uint8_t memory_conn_mask( const int subtile, const int rotation )
+{
+    const int rot = ( ( rotation % 4 ) + 4 ) % 4;
+    switch( subtile ) {
+        case 0: // center
+            return 15;
+        case 1: { // corner: 0 = S+E, 1 = S+W, 2 = W+N, 3 = E+N
+            static const uint8_t corners[4] = { 1 | 2, 1 | 4, 4 | 8, 2 | 8 };
+            return corners[rot];
+        }
+        case 2: // edge: even = N+S, odd = E+W
+            return ( rot % 2 ) ? ( 2 | 4 ) : ( 1 | 8 );
+        case 3: { // t_connection: the rotation names the missing arm
+            static const uint8_t tees[4] = { 15 & ~8, 15 & ~2, 15 & ~1, 15 & ~4 };
+            return tees[rot];
+        }
+        case 4: { // end_piece: 0 = toward S, 1 = W, 2 = N, 3 = E
+            static const uint8_t ends[4] = { 1, 4, 8, 2 };
+            return ends[rot];
+        }
+        default: // unconnected / open / broken
+            return 0;
+    }
+}
+
+// map-memory sprite lookups repeat heavily (floors, walls, roads); cache the
+// single-variant ones for the frame. multi-variant tiles keep their per-tile
+// variant seed, so they resolve every time and stay varied.
+struct memory_lookup_key {
+    std::string_view id;
+    int category = 0;
+    int subtile = 0;
+    int rota = 0;
+    int force = 0;
+    bool operator==( const memory_lookup_key &o ) const {
+        return category == o.category && subtile == o.subtile && rota == o.rota &&
+               force == o.force && id == o.id;
+    }
+};
+
+struct memory_lookup_hash {
+    size_t operator()( const memory_lookup_key &k ) const {
+        size_t h = std::hash<std::string_view>{}( k.id );
+        h = h * 1000003u + static_cast<size_t>( k.category );
+        h = h * 1000003u + static_cast<size_t>( k.subtile );
+        h = h * 1000003u + static_cast<size_t>( k.rota );
+        h = h * 1000003u + static_cast<size_t>( k.force );
+        return h;
+    }
+};
+
 // 3D-side view of cata_tiles::resolve_sprite_layers_3d: the fg/bg layers plus
 // the selected variant info, converted to renderable sprite_info
 struct sprite_lookup_3d {
@@ -989,7 +1178,10 @@ struct sprite_lookup_3d {
     bool multitile = false;
     int fg_count = 0;
     int fg_index = -1;
+    int bg_count = 0;
+    int bg_index = -1;
     int fg_rot4 = 0;
+    point offset; // sheet sprite offset of the resolved tile (sprite pixels)
     std::string resolved_id;
 };
 
@@ -1007,7 +1199,10 @@ bool lookup_sprite_layers_3d( cata_tiles *tiles, const std::string &id,
     out.multitile = layers.multitile;
     out.fg_count = layers.fg_count;
     out.fg_index = layers.fg_index;
+    out.bg_count = layers.bg_count;
+    out.bg_index = layers.bg_index;
     out.fg_rot4 = layers.rot4;
+    out.offset = layers.offset;
     if( layers.resolved_id ) {
         out.resolved_id = *layers.resolved_id;
     }
@@ -1028,6 +1223,7 @@ bool lookup_sprite( cata_tiles *tiles, const std::string &id, const TILE_CATEGOR
     sprite_lookup_3d l;
     lookup_sprite_layers_3d( tiles, id, cat, p, -1, rot, true, l );
     out = l.fg;
+    out.offset = l.offset;
     if( rot4_out ) {
         *rot4_out = l.fg_rot4;
     }
@@ -1046,7 +1242,8 @@ void push_instance( std::vector<float> &out, const float dx, const float dy,
                     const sprite_info &spr, const float r, const float g, const float b,
                     const bool no_discard = false, const int rota4 = 0,
                     const bool side_strip = false, const float pad_value = -1.0f,
-                    const bool ghost = false )
+                    const bool ghost = false, const float saturation = 1.0f,
+                    const bool memory = false )
 {
     out.push_back( dx );
     out.push_back( dy );
@@ -1061,15 +1258,19 @@ void push_instance( std::vector<float> &out, const float dx, const float dy,
     out.push_back( r );
     out.push_back( g );
     out.push_back( b );
-    out.push_back( 1.0f );
+    // color alpha carries the tile light's saturation (1 = full color,
+    // 0 = grayscale), matching 2D's lit shader low-light drain
+    out.push_back( saturation );
     // bit0: textured, bit1: no alpha cutout (ground layer),
     // bit2-3: top-face uv quarter turns, bit4: side faces sample the
     // horizontal strip at pad (the sprite's opaque bottom edge),
-    // bit5: ghost — dithered 50% transparency (levels above an indoor column)
+    // bit5: ghost — dithered 50% transparency (levels above an indoor column),
+    // bit6: memory — map-memory look, unlit (2D leaves remembered tiles
+    // unlit and recolors them through the MEMORY_MAP_MODE preset)
     // pad: side-strip v, or the run direction for MODE_LINEQUAD (0 = E-W)
     out.push_back( ( spr.atlas ? 1.0f : 0.0f ) + ( no_discard ? 2.0f : 0.0f ) +
                    static_cast<float>( ( rota4 & 3 ) << 2 ) + ( side_strip ? 16.0f : 0.0f ) +
-                   ( ghost ? 32.0f : 0.0f ) );
+                   ( ghost ? 32.0f : 0.0f ) + ( memory ? 64.0f : 0.0f ) );
     out.push_back( pad_value >= 0.0f ? pad_value
                    : ( side_strip ? spr.v1 - 0.02f * ( spr.v1 - spr.v0 ) : 0.0f ) );
 }
@@ -1117,6 +1318,15 @@ std::optional<tripoint_bub_ms> tile_at_pixel( const point &logical_pixel )
                                 static_cast<int>( std::floor( wy ) ), 0 );
 }
 
+// 2D's nv_color_active: night vision devices worn and the green overlay not
+// switched off. the vision-range bonus (get_vision_threshold) already feeds
+// the 3D visibility cache, so only the color transform is missing here.
+bool nv_tint_active()
+{
+    return get_avatar().get_vision_modes()[NV_GOGGLES] &&
+           get_option<bool>( "NV_GREEN_TOGGLE" );
+}
+
 int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                       std::vector<instance_bucket> &buckets )
 {
@@ -1140,6 +1350,63 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     const float fwd_y = std::sin( g_yaw );
 
     const int cz = center.z();
+    const tripoint_bub_ms upos = get_avatar().pos_bub();
+    const level_cache &center_cache = here.get_cache_ref( cz );
+    // update_visibility_cache refreshes exactly [lowest_vision_level, center.z];
+    // visibility caches outside that range are stale (same formula as
+    // map::lowest_vision_level)
+    const int lowest_vis_z = std::max( std::min( cz, upos.z() - fov_3d_z_range ),
+                                       -OVERMAP_DEPTH );
+    // per-tile visibility, exactly when 2D draws the real tile: LOW/LIT/BRIGHT
+    // are the lit levels map::get_visibility maps to CLEAR. everything else
+    // draws memory or a vision-effect tile in 2D, so 3D must not show it
+    const auto tile_visible = []( const level_cache &c, const tripoint_bub_ms &q ) {
+        const lit_level ll = c.visibility_cache[q.x()][q.y()];
+        return ll == lit_level::LOW || ll == lit_level::LIT || ll == lit_level::BRIGHT;
+    };
+    // per-tile light tone, the same model 2D's smooth lighting uses
+    // (smooth_lighting::classify_light_cell + data/shaders/lit.frag): light is
+    // 0 at the vision threshold and 1 at LIGHT_AMBIENT_LIT; brightness bottoms
+    // out at shadow_shade and color drains to gray below full_color_light.
+    // every instance on a tile shares this tone.
+    struct tile_tone {
+        float shade = 1.0f;   // brightness multiplier
+        // 1 = full color, 0 = grayscale; in a night vision frame this slot
+        // instead carries the tile light (0..1) the NV look dims by
+        float sat = 1.0f;
+    };
+    const bool nv_tint = nv_tint_active();
+    const auto tone_from_light = [nv_tint]( const float light ) {
+        const float t = std::clamp( light / smooth_lighting::full_color_light, 0.0f, 1.0f );
+        return tile_tone{
+            smooth_lighting::shadow_shade +
+            ( 1.0f - smooth_lighting::shadow_shade ) * light,
+            nv_tint ? std::clamp( light, 0.0f, 1.0f ) : t * t * ( 3.0f - 2.0f * t ) };
+    };
+    const visibility_variables &vis_vars = here.get_visibility_variables_cache();
+    // upper levels are not refreshed by update_visibility_cache (it stops at
+    // center.z), so their lit level is computed on the spot with
+    // map::apparent_light_at, the same function the 2D visibility cache is
+    // built from. a tile no avatar/camera cast reached and no clairvoyance can
+    // light is certainly invisible; this also keeps upper levels, which the
+    // cast hides behind their own floor/roof (shadowcasting floor_block),
+    // nearly free.
+    const auto upper_lit_at = [&]( const level_cache &c, const tripoint_bub_ms &q ) {
+        if( c.seen_cache[q.x()][q.y()] <= 0.0f && c.camera_cache[q.x()][q.y()] <= 0.0f &&
+            vis_vars.u_clairvoyance <= 0 && !vis_vars.clairvoyance_field ) {
+            return lit_level::BLANK;
+        }
+        return here.apparent_light_at( q, vis_vars );
+    };
+    // tile light tone from its lit level, the same model 2D's smooth lighting
+    // uses (smooth_lighting::classify_light_cell + data/shaders/lit.frag)
+    const auto tone_for = [&]( const level_cache &c, const tripoint_bub_ms &q,
+                               const lit_level ll ) {
+        const float apparent = smooth_lighting::needs_apparent_light( ll )
+                               ? map::apparent_light_helper( c, q ).apparent_light : 0.0f;
+        return tone_from_light( smooth_lighting::classify_light_cell(
+                                    ll, apparent, vis_vars.vision_threshold ).light );
+    };
     // render every z-level: per-level rules (seen-only below, roof mode above,
     // open air skipped) keep the cost proportional to what actually exists
     const int zmin = -OVERMAP_DEPTH;
@@ -1151,10 +1418,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     constexpr int DOLLHOUSE_RADIUS = 12;
     std::array<bool, REGION_SIZE *REGION_SIZE> dollhouse{};
     {
-        const tripoint_bub_ms upos = get_avatar().pos_bub();
         const int pdx = upos.x() - center.x();
         const int pdy = upos.y() - center.y();
-        const level_cache &ccache = here.get_cache_ref( cz );
         for( int dy = -REGION_RADIUS; dy <= REGION_RADIUS; ++dy ) {
             for( int dx = -REGION_RADIUS; dx <= REGION_RADIUS; ++dx ) {
                 const tripoint_bub_ms p = center + tripoint( dx, dy, 0 );
@@ -1164,14 +1429,428 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 const int rx = dx - pdx;
                 const int ry = dy - pdy;
                 if( rx * rx + ry * ry <= DOLLHOUSE_RADIUS * DOLLHOUSE_RADIUS &&
-                    ccache.seen_cache[p.x()][p.y()] > 0.0f &&
-                    !ccache.outside_cache[p.x()][p.y()] &&
+                    tile_visible( center_cache, p ) &&
+                    !center_cache.outside_cache[p.x()][p.y()] &&
                     here.move_cost( p ) > 0 ) {
                     dollhouse[( dy + REGION_RADIUS ) * REGION_SIZE + ( dx + REGION_RADIUS )] = true;
                 }
             }
         }
     }
+
+    // ---- memory layer (2D's memory map) ------------------------------------
+    // View-level tiles the avatar cannot see right now draw what it remembers
+    // of them instead of the fog slab, exactly where 2D draws its memory
+    // overlay. Only memorized data is read here: the live map may have changed
+    // since the tile was last seen, and drawing that would leak it.
+    std::unordered_map<memory_lookup_key, sprite_lookup_3d, memory_lookup_hash> mem_cache;
+    const auto memory_lookup = [&]( const std::string & id, const TILE_CATEGORY cat,
+    const tripoint_bub_ms &p, const int subtile,
+    const int rota, const bool force ) -> sprite_lookup_3d {
+        const memory_lookup_key key{ id, static_cast<int>( cat ), subtile, rota, force ? 1 : 0 };
+        const auto it = mem_cache.find( key );
+        if( it != mem_cache.end() )
+        {
+            return it->second;
+        }
+        sprite_lookup_3d l;
+        lookup_sprite_layers_3d( tiles, id, cat, p, subtile, rota, force, l );
+        // multi-variant sprites pick by a position seed, so caching them would
+        // make whole remembered regions identical; resolve those per tile
+        if( l.fg_count <= 1 && l.bg_count <= 1 ) {
+            mem_cache.emplace( key, l );
+        }
+        return l;
+    };
+    const auto push_fog_slab = [&]( const int dx, const int dy, const float wz ) {
+        std::vector<float> &v = bucket_for( MODE_BOX, nullptr );
+        push_instance( v, static_cast<float>( dx ), static_cast<float>( dy ),
+                       wz - FLOOR_THICK - 0.001f, 1.0f, 1.0f, FLOOR_THICK, sprite_info{},
+                       0.02f, 0.02f, 0.028f, true, 0, false, -1.0f, false,
+                       nv_tint ? 0.0f : 1.0f );
+        ++count;
+    };
+    // draws one tile from the avatar's map memory; returns true when it drew
+    // (or deliberately left open) the tile, false to fall back to the fog slab.
+    // with_furniture is false above the view level: remembered floors and walls
+    // read as structure there, while remembered furniture would only clutter
+    // the cross-level view.
+    const auto gather_memory_tile = [&]( const tripoint_bub_ms & p, const int dx,
+    const int dy, const float wz, const bool with_furniture ) -> bool {
+        const memorized_tile &mt = get_avatar().get_memorized_tile( here.get_abs( p ) );
+        const std::string &mem_ter = mt.get_ter_id();
+        const std::string &dec_id = mt.get_dec_id();
+        if( mem_ter.empty() && dec_id.empty() )
+        {
+            return false;
+        }
+        // the one decoration slot holds furniture ("f_"), a trap ("tr_") or a
+        // vehicle part ("vp_"); 3D renders furniture only, as it does live
+        const bool has_furn = !dec_id.empty() && dec_id.rfind( "f_", 0 ) == 0;
+        furn_str_id fid;
+        if( has_furn ) {
+            fid = furn_str_id( dec_id );
+        }
+        const bool furn_ok = has_furn && fid.is_valid();
+        const auto push_memory_furniture = [&]() {
+            if( !furn_ok || !with_furniture || count >= MAX_DRAW_INSTANCES ) {
+                return;
+            }
+            // 2D's memory draw feeds the stored subtile/rotation back in
+            const sprite_lookup_3d fl = memory_lookup( dec_id, TILE_CATEGORY::FURNITURE, p,
+                                        mt.get_dec_subtile(), mt.get_dec_rotation(), false );
+            // locked/alarmed furniture whose tileset splits bg=body /
+            // fg=indicator (key or alarm icon) draws both layers, as 2D does
+            const bool layered = fl.bg_tex && wants_layered_face( furn_id( fid ).obj() );
+            const sprite_info &fspr = layered ? fl.bg : fl.fg;
+            const bool ftex = layered ? fl.bg_tex : fl.fg_tex;
+            float fr = 1.0f, fg = 1.0f, fb = 1.0f;
+            if( !ftex ) {
+                terrain_color( furn_id( fid ).to_i() * 31 + 7, fr, fg, fb );
+            }
+            const float fw = FURN_QUAD_HEIGHT * std::clamp( fspr.aspect, 0.5f, 2.0f );
+            std::vector<float> &v = bucket_for( MODE_BILLBOARD_SNAP,
+                                                ftex ? fspr.atlas : nullptr );
+            push_instance( v, dx + 0.5f, dy + 0.5f,
+                           wz - FURN_QUAD_HEIGHT * fspr.base_drop,
+                           fw, FURN_QUAD_HEIGHT, 1.0f, fspr, fr, fg, fb,
+                           false, 0, false, -1.0f, false, 1.0f, true );
+            ++count;
+            if( layered && fl.fg_tex && count < MAX_DRAW_INSTANCES ) {
+                // the indicator rides the body's exact quad, a hair toward the
+                // camera so the strict depth test never drops it
+                std::vector<float> &vo = bucket_for( MODE_BILLBOARD_SNAP, fl.fg.atlas );
+                push_instance( vo, dx + 0.5f - fwd_x * 0.02f, dy + 0.5f - fwd_y * 0.02f,
+                               wz - FURN_QUAD_HEIGHT * fspr.base_drop,
+                               fw, FURN_QUAD_HEIGHT, 1.0f, fl.fg,
+                               1.0f, 1.0f, 1.0f,
+                               false, 0, false, -1.0f, false, 1.0f, true );
+                ++count;
+            }
+        };
+
+        const ter_str_id tid( mem_ter );
+        if( mem_ter.empty() || !tid.is_valid() ) {
+            // stale memory id (content removed): nothing faithful to draw
+            if( furn_ok && with_furniture ) {
+                push_fog_slab( dx, dy, wz );
+                push_memory_furniture();
+                return true;
+            }
+            return !furn_ok;
+        }
+        const ter_t &t = *tid;
+        const int ter_int = ter_id( tid ).to_i();
+        if( t.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) ) {
+            // remembered open air stays open, as the live path draws it; a
+            // remembered decoration still gets its dark backdrop
+            if( !dec_id.empty() && with_furniture ) {
+                push_fog_slab( dx, dy, wz );
+                push_memory_furniture();
+            }
+            return true;
+        }
+
+        const bool is_tree = t.has_flag( "TREE" );
+        const bool is_shrub = t.has_flag( "SHRUB" );
+        // doorways (open doors, empty frames) render exactly like closed
+        // panels: the fg sprite stands on a thin slab over the bg (or t_floor
+        // fallback) ground, and the inherited lintel caps the wall line
+        const bool is_opening = wall_opening( t );
+        const bool is_panel = door_or_window( t ) || is_opening;
+        const bool is_fence = !is_panel && t.has_flag( "THIN_OBSTACLE" );
+        const bool is_wall = !is_tree && !is_shrub && !is_panel && !is_fence &&
+                             t.movecost == 0;
+        const bool plain_floor = !is_tree && !is_shrub && !is_panel && !is_fence &&
+                                 !is_wall;
+        // an edge segment's stored rotation is 0 for a N-S wall line and 1 for
+        // an E-W one (cata_tiles::get_rotation_and_subtile)
+        const bool ew_line = ( ( mt.get_ter_rotation() % 2 ) + 2 ) % 2 == 1;
+
+        int lookup_subtile = -1;
+        int lookup_rota = 0;
+        bool force_rota = false;
+        if( plain_floor || is_tree || is_shrub ) {
+            // 2D's memory draw uses the stored subtile and rotation as-is
+            lookup_subtile = mt.get_ter_subtile();
+            lookup_rota = mt.get_ter_rotation();
+        } else {
+            lookup_subtile = SUBTILE_EDGE;
+            lookup_rota = ( is_wall || is_fence ) ? 1 : ( ew_line ? 1 : 0 );
+            force_rota = true;
+        }
+        const sprite_lookup_3d tl = memory_lookup( mem_ter, TILE_CATEGORY::TERRAIN, p,
+                                    lookup_subtile, lookup_rota, force_rota );
+        // a subtile without its own bg falls back to the base tile's bg
+        sprite_info bspr = tl.bg;
+        bool btex = tl.bg_tex;
+        if( !btex && lookup_subtile != -1 ) {
+            const sprite_lookup_3d base_l = memory_lookup( mem_ter, TILE_CATEGORY::TERRAIN, p,
+                                            -1, lookup_rota, false );
+            if( base_l.bg_tex ) {
+                bspr = base_l.bg;
+                btex = true;
+            }
+        }
+        // locked/alarmed doors and windows whose tileset splits the face into
+        // layers: bg is the board/glass and fg only an indicator (key / alarm
+        // icon); both layers stand on the panel and the floor falls back to
+        // t_floor
+        const bool is_window_panel = t.has_flag( "WINDOW" ) && !t.has_flag( "DOOR" );
+        const bool layered_face = is_panel && btex && !is_opening && wants_layered_face( t );
+        // diagnostic: remembered door-family classification trace, once per id
+        if( is_panel || t.has_flag( "LOCKED" ) ) {
+            static std::unordered_set<std::string> logged_mem_doors;
+            if( logged_mem_doors.size() < 300 && logged_mem_doors.insert( mem_ter ).second ) {
+                write_status( std::string( "memdoor: " ) + mem_ter +
+                              " panel=" + std::to_string( is_panel ? 1 : 0 ) +
+                              " opening=" + std::to_string( wall_opening( t ) ? 1 : 0 ) +
+                              " layered=" + std::to_string( layered_face ? 1 : 0 ) +
+                              " wall=" + std::to_string( is_wall ? 1 : 0 ) +
+                              " strlock=" + std::to_string( t.has_flag( "LOCKED" ) ? 1 : 0 ) +
+                              " ftex=" + std::to_string( tl.fg_tex ? 1 : 0 ) +
+                              " bg=" + std::to_string( btex ? 1 : 0 ) +
+                              " ew=" + std::to_string( ew_line ? 1 : 0 ) );
+            }
+        }
+        // doors and windows stand on a floor the tileset doesn't supply
+        static const std::string t_floor_id = "t_floor";
+        sprite_info dfspr;
+        bool dtex = false;
+        if( is_panel && ( !btex || layered_face ) ) {
+            const sprite_lookup_3d dl = memory_lookup( t_floor_id, TILE_CATEGORY::TERRAIN, p,
+                                        -1, 0, false );
+            if( dl.fg_tex ) {
+                dfspr = dl.fg;
+                dtex = true;
+            }
+        }
+        const sprite_info &ground_spr = ( btex && !layered_face ) ? bspr
+                                        : ( dtex ? dfspr : tl.fg );
+        const bool ground_tex = ( btex && !layered_face ) || dtex ||
+                                ( tl.fg_tex && plain_floor );
+        const int ground_rot4 = ( !btex && !dtex ) ? tl.fg_rot4 : 0;
+        float gr = 1.0f, gg = 1.0f, gb = 1.0f;
+        if( !ground_tex ) {
+            terrain_color( ter_int, gr, gg, gb );
+        }
+        if( plain_floor && !btex && !dtex && ground_spr.has_transparency ) {
+            std::vector<float> &v = bucket_for( MODE_FLATQUAD,
+                                                ground_tex ? ground_spr.atlas : nullptr );
+            push_instance( v, static_cast<float>( dx ), static_cast<float>( dy ),
+                           wz - 0.001f, 1.0f, 1.0f, 1.0f, ground_spr, gr, gg, gb,
+                           false, ground_rot4, false, -1.0f, false, 1.0f, true );
+            ++count;
+        } else {
+            sprite_info gspr = ground_spr;
+            gspr.u0 = ground_spr.gu0;
+            gspr.v0 = ground_spr.gv0;
+            gspr.u1 = ground_spr.gu1;
+            gspr.v1 = ground_spr.gv1;
+            std::vector<float> &v = bucket_for( MODE_BOX, ground_tex ? gspr.atlas : nullptr );
+            push_instance( v, static_cast<float>( dx ), static_cast<float>( dy ),
+                           wz - FLOOR_THICK - 0.001f, 1.0f, 1.0f, FLOOR_THICK, gspr,
+                           gr, gg, gb, true, ground_rot4, false, -1.0f, false, 1.0f, true );
+            ++count;
+        }
+
+        const sprite_info &fspr = tl.fg;
+        const bool ftex = tl.fg_tex;
+        float or_ = 1.0f, og = 1.0f, ob = 1.0f;
+        if( !ftex ) {
+            terrain_color( ter_int, or_, og, ob );
+        }
+        // the wall sprite clamping a panel or backing a doorway's lintel:
+        // consecutive doors/windows/openings are one run, scanned along the
+        // wall line to the first wall at either end
+        const auto mem_clamp_wall = [&]( sprite_info & out ) {
+            const auto mem_ter_at = [&]( const tripoint_bub_ms & q ) -> const ter_t * {
+                const std::string &nid =
+                    get_avatar().get_memorized_tile( here.get_abs( q ) ).get_ter_id();
+                if( nid.empty() ) {
+                    return nullptr;
+                }
+                const ter_str_id ntid( nid );
+                return ntid.is_valid() ? &*ntid : nullptr;
+            };
+            const point line_step = ew_line ? point::east : point::north;
+            for( const int dir : { 1, -1 } ) {
+                tripoint_bub_ms wall_pos;
+                const ter_t *wt = panel_run_end( p, line_step * dir, mem_ter_at, wall_pos );
+                if( wt == nullptr ) {
+                    continue;
+                }
+                const sprite_lookup_3d nl = memory_lookup( wt->id.str(),
+                                            TILE_CATEGORY::TERRAIN, wall_pos, SUBTILE_EDGE, 1, true );
+                if( nl.fg_tex ) {
+                    out = nl.fg;
+                    return true;
+                }
+            }
+            return false;
+        };
+        if( is_tree ) {
+            std::vector<float> &v = bucket_for( MODE_XQUAD, ftex ? fspr.atlas : nullptr );
+            push_instance( v, static_cast<float>( dx ), static_cast<float>( dy ),
+                           wz - TREE_HEIGHT * fspr.base_drop,
+                           1.0f, 1.0f, TREE_HEIGHT, fspr, or_, og, ob,
+                           false, 0, false, -1.0f, false, 1.0f, true );
+            ++count;
+        } else if( is_shrub ) {
+            std::vector<float> &v = bucket_for( MODE_XQUAD, ftex ? fspr.atlas : nullptr );
+            push_instance( v, static_cast<float>( dx ), static_cast<float>( dy ),
+                           wz - SHRUB_HEIGHT * fspr.base_drop,
+                           0.9f, 0.9f, SHRUB_HEIGHT, fspr, or_, og, ob,
+                           false, 0, false, -1.0f, false, 1.0f, true );
+            ++count;
+        } else if( is_panel ) {
+            const float px = ew_line ? static_cast<float>( dx )
+                             : dx + 0.5f - PANEL_THICK * 0.5f;
+            const float py = ew_line ? dy + 0.5f - PANEL_THICK * 0.5f
+                             : static_cast<float>( dy );
+            const float psx = ew_line ? 1.0f : PANEL_THICK;
+            const float psy = ew_line ? PANEL_THICK : 1.0f;
+            // a layered locked door stands both layers up: bg is the board,
+            // fg (the key/lock indicator) rides on top of it
+            const sprite_info &facespr = layered_face ? bspr : fspr;
+            const bool factex = layered_face || ftex;
+            const float pr = layered_face ? 1.0f : or_;
+            const float pg = layered_face ? 1.0f : og;
+            const float pb = layered_face ? 1.0f : ob;
+            std::vector<float> &v = bucket_for( MODE_BOX, factex ? facespr.atlas : nullptr );
+            // the clamping voxels take a remembered wall's sprite; without one
+            // the sill/lintel are left out entirely (no gray placeholder)
+            sprite_info wspr;
+            const bool wok = mem_clamp_wall( wspr );
+            if( is_window_panel ) {
+                constexpr float SILL_H = 0.85f;
+                push_instance( v, px, py, wz + SILL_H, psx, psy, SILL_H, facespr,
+                               pr, pg, pb, false, 0, false, -1.0f, false, 1.0f, true );
+                ++count;
+                if( layered_face && ftex && count < MAX_DRAW_INSTANCES ) {
+                    // the indicator layer rides a hair proud of the glass so
+                    // it never z-fights the face it composites over; grow
+                    // symmetrically about the centre and shift back half the
+                    // growth so it reads from either side
+                    std::vector<float> &vo = bucket_for( MODE_BOX, fspr.atlas );
+                    const float grow = 0.01f; // 5 mm on each face
+                    const float osx = ew_line ? psx : psx + grow;
+                    const float osy = ew_line ? psy + grow : psy;
+                    const float opx = ew_line ? px : px - grow * 0.5f;
+                    const float opy = ew_line ? py - grow * 0.5f : py;
+                    push_instance( vo, opx, opy, wz + SILL_H, osx, osy, SILL_H, fspr,
+                                   1.0f, 1.0f, 1.0f,
+                                   false, 0, false, -1.0f, false, 1.0f, true );
+                    ++count;
+                }
+                if( wok && count + 2 <= MAX_DRAW_INSTANCES ) {
+                    // memory instances bypass the light tone, so the inherited
+                    // wall sprite is sampled at full color
+                    std::vector<float> &vb = bucket_for( MODE_BOX, wspr.atlas );
+                    const sprite_info sill = wall_slice( wspr, 0.0f, SILL_H );
+                    const sprite_info lintel = wall_slice( wspr, SILL_H * 2.0f, WALL_HEIGHT );
+                    push_instance( vb, static_cast<float>( dx ), static_cast<float>( dy ),
+                                   wz, 1.0f, 1.0f, SILL_H, sill,
+                                   1.0f, 1.0f, 1.0f,
+                                   false, 0, false, -1.0f, false, 1.0f, true );
+                    push_instance( vb, static_cast<float>( dx ), static_cast<float>( dy ),
+                                   wz + SILL_H * 2.0f, 1.0f, 1.0f, WALL_HEIGHT - SILL_H * 2.0f,
+                                   lintel, 1.0f, 1.0f, 1.0f,
+                                   false, 0, false, -1.0f, false, 1.0f, true );
+                    count += 2;
+                }
+            } else {
+                push_instance( v, px, py, wz, psx, psy, PANEL_HEIGHT, facespr,
+                               pr, pg, pb, false, 0, false, -1.0f, false, 1.0f, true );
+                ++count;
+                if( layered_face && ftex && count < MAX_DRAW_INSTANCES ) {
+                    // the indicator layer rides a hair proud of the board so it
+                    // never z-fights the face it composites over. the box grows
+                    // symmetrically about its centre: push_instance anchors at
+                    // the min corner, so shift back by half the growth to stay
+                    // proud on BOTH faces (the key must read from either side)
+                    std::vector<float> &vo = bucket_for( MODE_BOX, fspr.atlas );
+                    const float grow = 0.01f; // 5 mm on each face
+                    const float osx = ew_line ? psx : psx + grow;
+                    const float osy = ew_line ? psy + grow : psy;
+                    const float opx = ew_line ? px : px - grow * 0.5f;
+                    const float opy = ew_line ? py - grow * 0.5f : py;
+                    push_instance( vo, opx, opy, wz, osx, osy, PANEL_HEIGHT, fspr,
+                                   1.0f, 1.0f, 1.0f, false, 0, false, -1.0f, false, 1.0f, true );
+                    ++count;
+                }
+                if( wok && count + 1 <= MAX_DRAW_INSTANCES ) {
+                    std::vector<float> &vb = bucket_for( MODE_BOX, wspr.atlas );
+                    const sprite_info lintel = wall_slice( wspr, PANEL_HEIGHT, WALL_HEIGHT );
+                    push_instance( vb, static_cast<float>( dx ), static_cast<float>( dy ),
+                                   wz + PANEL_HEIGHT, 1.0f, 1.0f, WALL_HEIGHT - PANEL_HEIGHT,
+                                   lintel, 1.0f, 1.0f, 1.0f,
+                                   false, 0, false, -1.0f, false, 1.0f, true );
+                    ++count;
+                }
+            }
+        } else if( is_fence ) {
+            const float fh = t.has_flag( "TINY" ) ? 0.35f : FENCE_HEIGHT;
+            std::vector<float> &v = bucket_for( MODE_LINEQUAD, ftex ? fspr.atlas : nullptr );
+            // the stored subtile/rotation encode the fence run; a memory tile
+            // has no neighbors to consult
+            const uint8_t conn = memory_conn_mask( mt.get_ter_subtile(),
+                                                   mt.get_ter_rotation() );
+            const bool cn = ( conn & 8 ) != 0, cs = ( conn & 1 ) != 0;
+            const bool ce = ( conn & 2 ) != 0, cw = ( conn & 4 ) != 0;
+            const bool straight = ( cn && cs && !ce && !cw ) ||
+                                  ( ce && cw && !cn && !cs );
+            if( straight || ( !cn && !cs && !ce && !cw ) ) {
+                const bool run_ns = ( cn && cs ) ? true : ( ce && cw ) ? false : !ew_line;
+                push_instance( v, dx + 0.5f, dy + 0.5f, wz, 1.0f, fh, 1.0f,
+                               fspr, or_, og, ob, false, 0, false, run_ns ? 1.0f : 0.0f,
+                               false, 1.0f, true );
+                ++count;
+            } else {
+                sprite_info hspr = fspr;
+                hspr.u1 = fspr.u0 + ( fspr.u1 - fspr.u0 ) * 0.5f;
+                const float fcx = dx + 0.5f, fcy = dy + 0.5f;
+                if( cn ) {
+                    push_instance( v, fcx, fcy - 0.25f, wz, 0.5f, fh, 1.0f, hspr,
+                                   or_, og, ob, false, 0, false, 1.0f, false, 1.0f, true );
+                    ++count;
+                }
+                if( cs ) {
+                    push_instance( v, fcx, fcy + 0.25f, wz, 0.5f, fh, 1.0f, hspr,
+                                   or_, og, ob, false, 0, false, 1.0f, false, 1.0f, true );
+                    ++count;
+                }
+                if( ce ) {
+                    push_instance( v, fcx + 0.25f, fcy, wz, 0.5f, fh, 1.0f, hspr,
+                                   or_, og, ob, false, 0, false, 0.0f, false, 1.0f, true );
+                    ++count;
+                }
+                if( cw ) {
+                    push_instance( v, fcx - 0.25f, fcy, wz, 0.5f, fh, 1.0f, hspr,
+                                   or_, og, ob, false, 0, false, 0.0f, false, 1.0f, true );
+                    ++count;
+                }
+            }
+        } else if( is_wall ) {
+            std::vector<float> &v = bucket_for( MODE_BOX, ftex ? fspr.atlas : nullptr );
+            push_instance( v, static_cast<float>( dx ), static_cast<float>( dy ), wz,
+                           1.0f, 1.0f, WALL_HEIGHT, fspr, or_, og, ob,
+                           false, 0, false, -1.0f, false, 1.0f, true );
+            ++count;
+        }
+
+        // plain floor with a bg and an fg composites them like live/2D
+        if( plain_floor && ftex && btex && count < MAX_DRAW_INSTANCES ) {
+            std::vector<float> &v = bucket_for( MODE_FLATQUAD, fspr.atlas );
+            push_instance( v, static_cast<float>( dx ), static_cast<float>( dy ),
+                           wz + 0.004f, 1.0f, 1.0f, 1.0f, fspr, or_, og, ob,
+                           false, 0, false, -1.0f, false, 1.0f, true );
+            ++count;
+        }
+
+        push_memory_furniture();
+        return true;
+    };
 
     for( int zlev = zmin; zlev <= zmax; ++zlev ) {
         const int dz = zlev - cz;
@@ -1193,21 +1872,44 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 if( !here.inbounds( p ) ) {
                     continue;
                 }
+                // per-tile lit level, the same one 2D draws from: fresh
+                // visibility_cache for the view level and below within the
+                // refreshed range; upper levels have no fresh cache
+                // (update_visibility_cache stops at center.z), so it is
+                // computed with map::apparent_light_at. levels below the
+                // refreshed range have stale caches: they count as invisible
+                // but still draw their map memory.
+                const bool stale_lower = dz < 0 && zlev < lowest_vis_z;
+                lit_level ll = lit_level::BLANK;
+                if( !stale_lower ) {
+                    ll = dz > 0 ? upper_lit_at( cache, p )
+                         : cache.visibility_cache[p.x()][p.y()];
+                }
+                const bool visible = ll == lit_level::LOW || ll == lit_level::LIT ||
+                                     ll == lit_level::BRIGHT;
+                // direct line of sight to an upper tile only decides whether
+                // its detail is drawn (roof mode) when a camera or clairvoyance
+                // made it visible
                 const bool seen = cache.seen_cache[p.x()][p.y()] > 0.0f;
                 // do not reveal what the player cannot see (visual = mechanics):
-                // unseen tiles on the view level become a featureless near-black
-                // ground slab (fog of war); unseen tiles below are simply not
-                // drawn (a black slab would float inside a pit); unseen tiles
-                // above still draw the building silhouette (roof mode below)
-                if( dz == 0 && !seen ) {
-                    std::vector<float> &v = bucket_for( MODE_BOX, nullptr );
-                    push_instance( v, static_cast<float>( dx ), static_cast<float>( dy ),
-                                   wz - FLOOR_THICK - 0.001f, 1.0f, 1.0f, FLOOR_THICK, sprite_info{},
-                                   0.02f, 0.02f, 0.028f, true );
-                    ++count;
-                    continue;
-                }
-                if( dz < 0 && !seen ) {
+                // an invisible tile draws the avatar's memory of it, on every
+                // level, so previously explored floors stay readable across
+                // z-levels. the view level keeps a featureless near-black
+                // ground slab (fog of war) where nothing was ever seen; other
+                // levels draw memory only, nothing where there is none.
+                if( !visible ) {
+                    if( dz == 0 ) {
+                        if( !gather_memory_tile( p, dx, dy, wz, true ) ) {
+                            push_fog_slab( dx, dy, wz );
+                        }
+                    } else if( !( dz > 0 &&
+                                  dollhouse[( dy + REGION_RADIUS ) * REGION_SIZE + ( dx + REGION_RADIUS )] ) ) {
+                        // the dollhouse cutout stays clear: remembered walls on
+                        // the floors above an interior must not block it.
+                        // upper floors keep their remembered structure only:
+                        // remembered furniture there is deliberately not drawn
+                        gather_memory_tile( p, dx, dy, wz, dz < 0 );
+                    }
                     continue;
                 }
                 // levels above an indoor column the player can see into are drawn
@@ -1215,8 +1917,9 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 // roof stays perceptible from inside
                 const bool ghost = dz > 0 &&
                                    dollhouse[( dy + REGION_RADIUS ) * REGION_SIZE + ( dx + REGION_RADIUS )];
-                // roof mode: an unseen tile above still draws its floor + walls
-                // (the building outline), but no furniture/items/creatures
+                // roof mode: an upper tile made visible by a camera or
+                // clairvoyance but not by direct line of sight draws only its
+                // floor + walls (the building outline), no furniture/items
                 const bool roof_unseen = dz > 0 && !seen;
                 const ter_id t = here.ter( p );
                 if( t == t_null ) {
@@ -1228,19 +1931,19 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 if( t->has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) && !here.has_furn( p ) ) {
                     continue;
                 }
-                const float light = roof_unseen ? cache.natural_light_level_cache
-                                    : cache.lm[p.x()][p.y()].max();
-                const float brightness = std::clamp( light / LIGHT_AMBIENT_LIT, 0.045f, 1.0f );
+                // the whole tile shares one light tone, from the same light
+                // level classification 2D uses: bright tiles stay full color,
+                // dim ones darken and drain toward grayscale
+                const tile_tone tone = tone_for( cache, p, ll );
 
                 const bool is_tree = t->has_flag( "TREE" );
                 const bool is_shrub = t->has_flag( "SHRUB" );
-                // doors: the DOOR flag covers plain closed doors; locked/metal
-                // doors lack it, but every closeable door has an "open" transform
-                // target (ter_t::open). WINDOW wins over the open-field check:
-                // curtained window variants open too but must stay windows
-                const bool is_door = t->has_flag( "DOOR" ) ||
-                                     ( !t->has_flag( "WINDOW" ) && !t->open.is_null() );
-                const bool is_panel = is_door || t->has_flag( "WINDOW" );
+                // door/window classification: closed doors/windows (DOOR/WINDOW
+                // flags or an "open" transform, plus the locked/broken families)
+                // and passable doorways (open doors, empty frames) all draw as
+                // standing slabs on the bg/t_floor ground
+                const bool is_opening = wall_opening( *t );
+                const bool is_panel = door_or_window( *t ) || is_opening;
                 const bool is_fence = !is_panel && t->has_flag( "THIN_OBSTACLE" );
                 const bool is_wall = !is_tree && !is_shrub && !is_panel && !is_fence &&
                                      t->movecost == 0;
@@ -1258,7 +1961,6 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 // same-id neighborhood, exactly as 2D's draw_terrain per tile);
                 // walls, fences and panels keep the straight "edge" middle
                 // segment since they are drawn as vertical faces
-                constexpr int SUBTILE_EDGE = 2; // enums.h MULTITILE_TYPE::edge
                 const bool plain_floor = !is_tree && !is_shrub && !is_panel && !is_fence &&
                                          !is_wall;
                 const bool shaped = plain_floor;
@@ -1294,6 +1996,36 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                         btex = true;
                     }
                 }
+                // locked/alarmed doors and windows whose tileset splits the
+                // face into layers: bg is the board/glass and fg only an
+                // indicator (key / alarm icon); both layers stand on the
+                // panel, floor falls back to t_floor
+                const bool is_window_panel = t->has_flag( "WINDOW" ) &&
+                                             !t->has_flag( "DOOR" );
+                const bool layered_face = is_panel && btex && !is_opening &&
+                                          wants_layered_face( *t );
+                // diagnostic: door-family classification trace, once per
+                // terrain id (strlock = raw flag string, doorenum = bitflag),
+                // so a missing slab can be traced from render3d_status.txt
+                if( door_or_window( *t ) || wall_opening( *t ) || t->has_flag( "LOCKED" ) ) {
+                    static std::unordered_set<std::string> logged_doors;
+                    if( logged_doors.size() < 300 && logged_doors.insert( t->id.str() ).second ) {
+                        write_status( std::string( "door: " ) + t->id.str() +
+                                      " panel=" + std::to_string( is_panel ? 1 : 0 ) +
+                                      " opening=" + std::to_string( wall_opening( *t ) ? 1 : 0 ) +
+                                      " layered=" + std::to_string( layered_face ? 1 : 0 ) +
+                                      " wall=" + std::to_string( is_wall ? 1 : 0 ) +
+                                      " strlock=" + std::to_string( t->has_flag( "LOCKED" ) ? 1 : 0 ) +
+                                      " doorenum=" + std::to_string(
+                                          t->has_flag( ter_furn_flag::TFLAG_DOOR ) ? 1 : 0 ) +
+                                      " ftex=" + std::to_string( ftex ? 1 : 0 ) +
+                                      " fg=" + std::to_string( tspr.fg_count ) +
+                                      " bg=" + std::to_string( btex ? 1 : 0 ) +
+                                      " ew=" + std::to_string( ew_line ? 1 : 0 ) +
+                                      " sub=" + std::to_string( lookup_subtile ) +
+                                      " rota=" + std::to_string( lookup_rota ) );
+                    }
+                }
                 // diagnostic: record the resolver's pick for each distinct
                 // (terrain, subtile, rota) so a wrong corner can be traced from
                 // render3d_status.txt instead of guessed at
@@ -1320,25 +2052,27 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 // doors and windows stand on a floor the tileset doesn't supply:
                 // fall back to the generic wood floor so the doorway isn't a hole
                 sprite_info dfspr;
-                const bool dtex = is_panel && !btex &&
+                const bool dtex = is_panel && ( !btex || layered_face ) &&
                                   lookup_sprite( tiles, "t_floor", TILE_CATEGORY::TERRAIN, p, dfspr );
-                const sprite_info &ground_spr = btex ? bspr : ( dtex ? dfspr : fspr );
-                const bool ground_tex = btex || dtex || ( ftex && plain_floor );
+                const sprite_info &ground_spr = ( btex && !layered_face ) ? bspr
+                                                : ( dtex ? dfspr : fspr );
+                const bool ground_tex = ( btex && !layered_face ) || dtex ||
+                                        ( ftex && plain_floor );
 
                 // untextured fallback: hash color; textured: white, the atlas supplies the color
-                float gr = brightness, gg = brightness, gb = brightness;
+                float gr = tone.shade, gg = tone.shade, gb = tone.shade;
                 if( !ground_tex ) {
                     terrain_color( t.to_i(), gr, gg, gb );
-                    gr *= brightness;
-                    gg *= brightness;
-                    gb *= brightness;
+                    gr *= tone.shade;
+                    gg *= tone.shade;
+                    gb *= tone.shade;
                 }
-                float or_ = brightness, og = brightness, ob = brightness;
+                float or_ = tone.shade, og = tone.shade, ob = tone.shade;
                 if( !ftex ) {
                     terrain_color( t.to_i(), or_, og, ob );
-                    or_ *= brightness;
-                    og *= brightness;
-                    ob *= brightness;
+                    or_ *= tone.shade;
+                    og *= tone.shade;
+                    ob *= tone.shade;
                 }
 
                 // every tile gets a floor slab (slightly below the level base so
@@ -1364,7 +2098,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                                             ground_tex ? ground_spr.atlas : nullptr );
                         push_instance( v, static_cast<float>( dx ), static_cast<float>( dy ),
                                        wz - 0.001f, 1.0f, 1.0f, 1.0f, ground_spr,
-                                       gr, gg, gb, false, ground_rot4, false, -1.0f, ghost );
+                                       gr, gg, gb, false, ground_rot4, false, -1.0f, ghost,
+                                       tone.sat );
                         ++count;
                     } else {
                         sprite_info gspr = ground_spr;
@@ -1375,7 +2110,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                         std::vector<float> &v = bucket_for( MODE_BOX, ground_tex ? gspr.atlas : nullptr );
                         push_instance( v, static_cast<float>( dx ), static_cast<float>( dy ),
                                        wz - FLOOR_THICK - 0.001f, 1.0f, 1.0f, FLOOR_THICK, gspr,
-                                       gr, gg, gb, true, ground_rot4, false, -1.0f, ghost );
+                                       gr, gg, gb, true, ground_rot4, false, -1.0f, ghost,
+                                       tone.sat );
                         ++count;
                     }
                 }
@@ -1398,9 +2134,35 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                     std::vector<float> &v = bucket_for( MODE_FLATQUAD, fspr.atlas );
                     push_instance( v, static_cast<float>( dx ), static_cast<float>( dy ),
                                    wz + 0.004f, 1.0f, 1.0f, 1.0f, fspr, or_, og, ob,
-                                   false, 0, false, -1.0f, ghost );
+                                   false, 0, false, -1.0f, ghost, tone.sat );
                     ++count;
                 }
+
+                // the wall sprite clamping a door/window panel or backing a
+                // doorway's lintel: consecutive doors/windows/openings are one
+                // run, scanned along the wall line to the first wall at either end
+                const auto live_clamp_wall = [&]( sprite_info & out ) {
+                    const auto live_ter_at = [&]( const tripoint_bub_ms & q ) -> const ter_t * {
+                        const ter_id nt = here.ter( q );
+                        return nt ? &*nt : nullptr;
+                    };
+                    const point line_step = ew_line ? point::east : point::north;
+                    for( const int dir : { 1, -1 } ) {
+                        tripoint_bub_ms wall_pos;
+                        const ter_t *wt = panel_run_end( p, line_step * dir, live_ter_at, wall_pos );
+                        if( wt == nullptr ) {
+                            continue;
+                        }
+                        sprite_lookup_3d nl;
+                        lookup_sprite_layers_3d( tiles, wt->id.str(), TILE_CATEGORY::TERRAIN,
+                                                 wall_pos, SUBTILE_EDGE, 1, true, nl );
+                        if( nl.fg_tex ) {
+                            out = nl.fg;
+                            return true;
+                        }
+                    }
+                    return false;
+                };
 
                 // object layer on top of the ground; roof mode draws only the
                 // building outline (walls/panels/fences), no trees or shrubs
@@ -1411,7 +2173,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                     push_instance( v, static_cast<float>( dx ), static_cast<float>( dy ),
                                    wz - TREE_HEIGHT * fspr.base_drop,
                                    1.0f, 1.0f, TREE_HEIGHT, fspr, or_, og, ob,
-                                   false, 0, false, -1.0f, ghost );
+                                   false, 0, false, -1.0f, ghost, tone.sat );
                     ++count;
                 } else if( is_shrub && !roof_unseen ) {
                     // same crossed quads, but shrub-sized
@@ -1419,7 +2181,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                     push_instance( v, static_cast<float>( dx ), static_cast<float>( dy ),
                                    wz - SHRUB_HEIGHT * fspr.base_drop,
                                    0.9f, 0.9f, SHRUB_HEIGHT, fspr, or_, og, ob,
-                                   false, 0, false, -1.0f, ghost );
+                                   false, 0, false, -1.0f, ghost, tone.sat );
                     ++count;
                 } else if( is_panel ) {
                     // doors and windows are planar: a thin cutout panel standing in
@@ -1431,78 +2193,86 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                      : static_cast<float>( dy );
                     const float psx = ew_line ? 1.0f : PANEL_THICK;
                     const float psy = ew_line ? PANEL_THICK : 1.0f;
-                    std::vector<float> &v = bucket_for( MODE_BOX, ftex ? fspr.atlas : nullptr );
-                    // the solid voxels clamping the panel (window sill + lintel, door
-                    // lintel) take the first wall-class flank's middle-segment sprite
+                    // a layered locked door stands both layers up: bg is the
+                    // board, fg (the key/lock indicator) rides on top of it
+                    const sprite_info &facespr = layered_face ? bspr : fspr;
+                    const float pr = layered_face ? tone.shade : or_;
+                    const float pg = layered_face ? tone.shade : og;
+                    const float pb = layered_face ? tone.shade : ob;
+                    std::vector<float> &v = bucket_for( MODE_BOX,
+                                                        layered_face || ftex ? facespr.atlas : nullptr );
+                    // the solid voxels clamping the panel (window sill + lintel,
+                    // door lintel) take a wall's middle-segment sprite; without
+                    // one they are left out entirely (no gray placeholder)
                     sprite_info wspr;
-                    bool wok = false;
-                    const std::array<point, 2> flanks = ew_line
-                                                        ? std::array<point, 2>{ point::east, point::west }
-                                                        : std::array<point, 2>{ point::north, point::south };
-                    for( const point &off : flanks ) {
-                        const tripoint_bub_ms q = p + off;
-                        const ter_id nt = here.ter( q );
-                        // only a true wall contributes its sprite: must carry the
-                        // WALL flag (locked/boarded doors lack it), and never a
-                        // door, window or fence
-                        if( !nt || nt->movecost != 0 || !nt->has_flag( "WALL" ) ||
-                            nt->has_flag( "DOOR" ) || nt->has_flag( "WINDOW" ) ||
-                            nt->has_flag( "THIN_OBSTACLE" ) ) {
-                            continue;
-                        }
-                        sprite_lookup_3d nl;
-                        lookup_sprite_layers_3d( tiles, nt->id.str(), TILE_CATEGORY::TERRAIN, q,
-                                                 SUBTILE_EDGE, 1, true, nl );
-                        if( nl.fg_tex ) {
-                            wspr = nl.fg;
-                            wok = true;
-                            break;
-                        }
-                    }
-                    const float wc = 0.35f * brightness;
-                    std::vector<float> &vb = bucket_for( MODE_BOX,
-                                                         wok ? wspr.atlas : nullptr );
-                    // the clamping voxels sample the SLICE of the wall sprite their
-                    // height covers, as if a full wall were cut at those heights —
-                    // not the whole sprite squashed into a small box
-                    const auto slice_v = []( const sprite_info & s, const float z0,
-                    const float z1 ) {
-                        sprite_info r = s;
-                        r.v0 = s.v1 - ( z1 / WALL_HEIGHT ) * ( s.v1 - s.v0 );
-                        r.v1 = s.v1 - ( z0 / WALL_HEIGHT ) * ( s.v1 - s.v0 );
-                        return r;
-                    };
-                    if( t->has_flag( "WINDOW" ) && !t->has_flag( "DOOR" ) ) {
+                    const bool wok = live_clamp_wall( wspr );
+                    if( is_window_panel ) {
                         // window = glass band at middle height, clamped by a sill
                         // voxel below and a lintel voxel above
                         constexpr float SILL_H = 0.85f;
-                        push_instance( v, px, py, wz + SILL_H, psx, psy, SILL_H, fspr,
-                                       or_, og, ob, false, 0, false, -1.0f, ghost );
+                        push_instance( v, px, py, wz + SILL_H, psx, psy, SILL_H, facespr,
+                                       pr, pg, pb, false, 0, false, -1.0f, ghost, tone.sat );
                         ++count;
-                        if( count + 2 <= MAX_DRAW_INSTANCES ) {
-                            const sprite_info sill = slice_v( wspr, 0.0f, SILL_H );
-                            const sprite_info lintel = slice_v( wspr, SILL_H * 2.0f, WALL_HEIGHT );
+                        if( layered_face && ftex && count < MAX_DRAW_INSTANCES ) {
+                            // the indicator layer rides a hair proud of the
+                            // glass so it never z-fights the face it
+                            // composites over; grow symmetrically about the
+                            // centre and shift back half the growth so it
+                            // reads from either side
+                            std::vector<float> &vo = bucket_for( MODE_BOX, fspr.atlas );
+                            const float grow = 0.01f; // 5 mm on each face
+                            const float osx = ew_line ? psx : psx + grow;
+                            const float osy = ew_line ? psy + grow : psy;
+                            const float opx = ew_line ? px : px - grow * 0.5f;
+                            const float opy = ew_line ? py - grow * 0.5f : py;
+                            push_instance( vo, opx, opy, wz + SILL_H, osx, osy, SILL_H, fspr,
+                                           tone.shade, tone.shade, tone.shade,
+                                           false, 0, false, -1.0f, ghost, tone.sat );
+                            ++count;
+                        }
+                        if( wok && count + 2 <= MAX_DRAW_INSTANCES ) {
+                            std::vector<float> &vb = bucket_for( MODE_BOX, wspr.atlas );
+                            const sprite_info sill = wall_slice( wspr, 0.0f, SILL_H );
+                            const sprite_info lintel = wall_slice( wspr, SILL_H * 2.0f, WALL_HEIGHT );
                             push_instance( vb, static_cast<float>( dx ), static_cast<float>( dy ),
                                            wz, 1.0f, 1.0f, SILL_H, sill,
-                                           wok ? or_ : wc, wok ? og : wc, wok ? ob : wc,
-                                           false, 0, false, -1.0f, ghost );
+                                           tone.shade, tone.shade, tone.shade,
+                                           false, 0, false, -1.0f, ghost, tone.sat );
                             push_instance( vb, static_cast<float>( dx ), static_cast<float>( dy ),
                                            wz + SILL_H * 2.0f, 1.0f, 1.0f, WALL_HEIGHT - SILL_H * 2.0f,
-                                           lintel, wok ? or_ : wc, wok ? og : wc, wok ? ob : wc,
-                                           false, 0, false, -1.0f, ghost );
+                                           lintel, tone.shade, tone.shade, tone.shade,
+                                           false, 0, false, -1.0f, ghost, tone.sat );
                             count += 2;
                         }
                     } else {
                         // door = grounded panel + a lintel voxel up to the wall top
-                        push_instance( v, px, py, wz, psx, psy, PANEL_HEIGHT, fspr,
-                                       or_, og, ob, false, 0, false, -1.0f, ghost );
-                        if( count + 2 <= MAX_DRAW_INSTANCES ) {
+                        push_instance( v, px, py, wz, psx, psy, PANEL_HEIGHT, facespr,
+                                       pr, pg, pb, false, 0, false, -1.0f, ghost, tone.sat );
+                        ++count;
+                        if( layered_face && ftex && count < MAX_DRAW_INSTANCES ) {
+                            // the indicator layer rides a hair proud of the board
+                            // so it never z-fights the face it composites over.
+                            // push_instance anchors at the min corner, so grow
+                            // symmetrically about the centre and shift back half
+                            // the growth: the key must read from either face
+                            std::vector<float> &vo = bucket_for( MODE_BOX, fspr.atlas );
+                            const float grow = 0.01f; // 5 mm on each face
+                            const float osx = ew_line ? psx : psx + grow;
+                            const float osy = ew_line ? psy + grow : psy;
+                            const float opx = ew_line ? px : px - grow * 0.5f;
+                            const float opy = ew_line ? py - grow * 0.5f : py;
+                            push_instance( vo, opx, opy, wz, osx, osy, PANEL_HEIGHT, fspr,
+                                           tone.shade, tone.shade, tone.shade,
+                                           false, 0, false, -1.0f, ghost, tone.sat );
                             ++count;
-                            const sprite_info lintel = slice_v( wspr, PANEL_HEIGHT, WALL_HEIGHT );
+                        }
+                        if( wok && count + 1 <= MAX_DRAW_INSTANCES ) {
+                            std::vector<float> &vb = bucket_for( MODE_BOX, wspr.atlas );
+                            const sprite_info lintel = wall_slice( wspr, PANEL_HEIGHT, WALL_HEIGHT );
                             push_instance( vb, static_cast<float>( dx ), static_cast<float>( dy ),
                                            wz + PANEL_HEIGHT, 1.0f, 1.0f, WALL_HEIGHT - PANEL_HEIGHT,
-                                           lintel, wok ? or_ : wc, wok ? og : wc, wok ? ob : wc,
-                                           false, 0, false, -1.0f, ghost );
+                                           lintel, tone.shade, tone.shade, tone.shade,
+                                           false, 0, false, -1.0f, ghost, tone.sat );
                             ++count;
                         }
                     }
@@ -1525,7 +2295,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                     if( straight || ( !cn && !cs && !ce && !cw ) ) {
                         push_instance( v, dx + 0.5f, dy + 0.5f, wz, 1.0f, fh, 1.0f,
                                        fspr, or_, og, ob, false, 0, false, ew_line ? 0.0f : 1.0f,
-                                       ghost );
+                                       ghost, tone.sat );
                         ++count;
                     } else {
                         // half quads sample half the sprite width so the texel
@@ -1535,22 +2305,22 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                         const float fcx = dx + 0.5f, fcy = dy + 0.5f;
                         if( cn ) {
                             push_instance( v, fcx, fcy - 0.25f, wz, 0.5f, fh, 1.0f, hspr,
-                                           or_, og, ob, false, 0, false, 1.0f, ghost );
+                                           or_, og, ob, false, 0, false, 1.0f, ghost, tone.sat );
                             ++count;
                         }
                         if( cs ) {
                             push_instance( v, fcx, fcy + 0.25f, wz, 0.5f, fh, 1.0f, hspr,
-                                           or_, og, ob, false, 0, false, 1.0f, ghost );
+                                           or_, og, ob, false, 0, false, 1.0f, ghost, tone.sat );
                             ++count;
                         }
                         if( ce ) {
                             push_instance( v, fcx + 0.25f, fcy, wz, 0.5f, fh, 1.0f, hspr,
-                                           or_, og, ob, false, 0, false, 0.0f, ghost );
+                                           or_, og, ob, false, 0, false, 0.0f, ghost, tone.sat );
                             ++count;
                         }
                         if( cw ) {
                             push_instance( v, fcx - 0.25f, fcy, wz, 0.5f, fh, 1.0f, hspr,
-                                           or_, og, ob, false, 0, false, 0.0f, ghost );
+                                           or_, og, ob, false, 0, false, 0.0f, ghost, tone.sat );
                             ++count;
                         }
                     }
@@ -1559,21 +2329,27 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                     std::vector<float> &v = bucket_for( MODE_BOX, ftex ? fspr.atlas : nullptr );
                     push_instance( v, static_cast<float>( dx ), static_cast<float>( dy ), wz,
                                    1.0f, 1.0f, WALL_HEIGHT, fspr, or_, og, ob,
-                                   false, 0, false, -1.0f, ghost );
+                                   false, 0, false, -1.0f, ghost, tone.sat );
                     ++count;
                 }
 
                 if( !roof_unseen && here.has_furn( p ) && count < MAX_DRAW_INSTANCES ) {
                     const furn_id f = here.furn( p );
-                    sprite_info fspr;
-                    const bool ftex = lookup_sprite( tiles, f->id.str(), TILE_CATEGORY::FURNITURE, p,
-                                                     fspr );
-                    float fr = brightness, fg = brightness, fb = brightness;
+                    sprite_lookup_3d fl;
+                    lookup_sprite_layers_3d( tiles, f->id.str(), TILE_CATEGORY::FURNITURE, p,
+                                             -1, 0, true, fl );
+                    // locked/alarmed furniture whose tileset splits bg=body /
+                    // fg=indicator (key or alarm icon) draws both layers, as
+                    // 2D does; ordinary furniture keeps its fg-only billboard
+                    const bool layered = fl.bg_tex && wants_layered_face( f.obj() );
+                    const sprite_info &fspr = layered ? fl.bg : fl.fg;
+                    const bool ftex = layered ? fl.bg_tex : fl.fg_tex;
+                    float fr = tone.shade, fg = tone.shade, fb = tone.shade;
                     if( !ftex ) {
                         terrain_color( f.to_i() * 31 + 7, fr, fg, fb );
-                        fr *= brightness;
-                        fg *= brightness;
-                        fb *= brightness;
+                        fr *= tone.shade;
+                        fg *= tone.shade;
+                        fb *= tone.shade;
                     }
                     // furniture is a billboard snapped to 90-degree steps: always
                     // roughly facing the camera without continuously rotating
@@ -1583,8 +2359,21 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                     push_instance( v, dx + 0.5f, dy + 0.5f,
                                    wz - FURN_QUAD_HEIGHT * fspr.base_drop,
                                    fw, FURN_QUAD_HEIGHT, 1.0f, fspr, fr, fg, fb,
-                                   false, 0, false, -1.0f, ghost );
+                                   false, 0, false, -1.0f, ghost, tone.sat );
                     ++count;
+                    if( layered && fl.fg_tex && count < MAX_DRAW_INSTANCES ) {
+                        // the indicator rides the body's exact quad, a hair
+                        // toward the camera so the strict depth test never
+                        // drops it
+                        std::vector<float> &vo = bucket_for( MODE_BILLBOARD_SNAP, fl.fg.atlas );
+                        push_instance( vo, dx + 0.5f - fwd_x * 0.02f,
+                                       dy + 0.5f - fwd_y * 0.02f,
+                                       wz - FURN_QUAD_HEIGHT * fspr.base_drop,
+                                       fw, FURN_QUAD_HEIGHT, 1.0f, fl.fg,
+                                       tone.shade, tone.shade, tone.shade,
+                                       false, 0, false, -1.0f, ghost, tone.sat );
+                        ++count;
+                    }
                 }
 
                 if( !roof_unseen && count < MAX_DRAW_INSTANCES ) {
@@ -1594,7 +2383,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                         sprite_info ispr;
                         bool itex = lookup_sprite( tiles, itm.typeId().str(), TILE_CATEGORY::ITEM,
                                                    p, ispr );
-                        float ir = brightness, ig = brightness, ib = brightness;
+                        float ir = tone.shade, ig = tone.shade, ib = tone.shade;
                         if( !itex && g_ctx.glyph_tex ) {
                             // sprite-less item: its ASCII symbol tinted with the
                             // item's own color (curses-style fallback) instead of
@@ -1619,9 +2408,9 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             ispr.base_drop = 0.0f;
                             itex = true;
                             const ImVec4 ic = itm.color();
-                            ir = ic.x * brightness;
-                            ig = ic.y * brightness;
-                            ib = ic.z * brightness;
+                            ir = ic.x * tone.shade;
+                            ig = ic.y * tone.shade;
+                            ib = ic.z * tone.shade;
                         }
                         const float iw = ITEM_HEIGHT * std::clamp( ispr.aspect, 0.5f, 2.0f );
                         // separate co-tile quads along the camera axis so items,
@@ -1637,19 +2426,135 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             std::vector<float> &v = bucket_for( MODE_BILLBOARD, hspr.atlas );
                             push_instance( v, cx + fwd_x * 0.03f, cy + fwd_y * 0.03f, iz,
                                            iw * 1.35f, ITEM_HEIGHT * 1.35f, 1.0f, hspr,
-                                           brightness, brightness, brightness,
-                                           false, 0, false, -1.0f, ghost );
+                                           tone.shade, tone.shade, tone.shade,
+                                           false, 0, false, -1.0f, ghost, tone.sat );
                             ++count;
                         }
                         std::vector<float> &v = bucket_for( MODE_BILLBOARD, itex ? ispr.atlas : nullptr );
                         push_instance( v, cx, cy, iz, iw, ITEM_HEIGHT, 1.0f, ispr,
-                                       ir, ig, ib, false, 0, false, -1.0f, ghost );
+                                       ir, ig, ib, false, 0, false, -1.0f, ghost, tone.sat );
                         ++count;
                     }
                 }
             }
         }
     }
+
+    // paper doll: the base body billboard plus every overlay layer 2D's
+    // draw_entity_with_overlays draws, with exactly its ids and order
+    // (Character::get_overlay_ids / monster::get_overlay_ids resolved through
+    // find_overlay_looks_like). Overlay canvases are placed with the same
+    // tile-origin + sheet-offset rule 2D uses, scaled to the body's pixel size,
+    // and nudged toward the camera per layer so the strict-LESS depth test
+    // stacks them correctly even across tilesheet draw calls.
+    auto push_entity = [&]( const Creature & critter, const tripoint_bub_ms & p,
+                            const float dx, const float dy, const float wz,
+                            const tile_tone & tone ) {
+        std::string sprite_id;
+        TILE_CATEGORY cat = TILE_CATEGORY::NONE;
+        float size_scale = 1.0f;
+        bool male = true;
+        std::vector<std::pair<std::string, std::string>> overlays;
+        if( const monster *m = critter.as_monster() ) {
+            sprite_id = m->type->id.str();
+            cat = TILE_CATEGORY::MONSTER;
+            size_scale = creature_size_scale( m->get_size() );
+            overlays = m->get_overlay_ids();
+        } else if( const Character *ch = critter.as_character() ) {
+            male = ch->male;
+            const std::vector<trait_id> look_muts = ch->get_functioning_mutations( true, false,
+            []( const mutation_branch & mut ) {
+                return mut.override_look.has_value();
+            } );
+            if( look_muts.empty() ) {
+                sprite_id = ch->is_npc() ? ( male ? "npc_male" : "npc_female" )
+                            : ( male ? "player_male" : "player_female" );
+                overlays = ch->get_overlay_ids();
+            } else {
+                // 2D draws the mutation's override tile instead of a body and
+                // keeps only effect/move-mode overlays
+                const mutation_branch::OverrideLook &look =
+                    look_muts.front().obj().override_look.value();
+                sprite_id = look.id;
+                const auto cat_it = to_TILE_CATEGORY.find( look.tile_category );
+                cat = cat_it != to_TILE_CATEGORY.end() ? cat_it->second : TILE_CATEGORY::NONE;
+                overlays = ch->get_overlay_ids_when_override_look();
+            }
+        } else {
+            return;
+        }
+        sprite_info cspr;
+        const bool ctex = lookup_sprite( tiles, sprite_id, cat, p, cspr );
+        const float ch = CREATURE_BASE_HEIGHT * size_scale;
+        const float cw = ch * std::clamp( cspr.aspect, 0.4f, 2.5f );
+        // canvas bottom of the body sprite, as the single-billboard path placed it
+        const float zbase = wz - ch * cspr.base_drop;
+        {
+            std::vector<float> &v = bucket_for( MODE_BILLBOARD, ctex ? cspr.atlas : nullptr );
+            push_instance( v, dx + 0.5f, dy + 0.5f, zbase, cw, ch, 1.0f, cspr,
+                           tone.shade, tone.shade, tone.shade,
+                           false, 0, false, -1.0f, false, tone.sat );
+            ++count;
+        }
+        if( !ctex || cspr.px_h <= 0 || cspr.px_w <= 0 ) {
+            return;
+        }
+        // meters per sprite pixel: the body canvas sets the scale every layer
+        // shares, so an overlay canvas lands exactly where 2D draws it
+        const float px_scale = ch / static_cast<float>( cspr.px_h );
+        const float base_center_px = cspr.offset.x + cspr.px_w * 0.5f;
+        const float rgt_x = std::sin( g_yaw );
+        const float rgt_y = -std::cos( g_yaw );
+        int layer = 0;
+        int resolved = 0;
+        std::string resolved_ids;
+        for( const std::pair<std::string, std::string> &overlay : overlays ) {
+            if( count >= MAX_DRAW_INSTANCES ) {
+                return;
+            }
+            std::string draw_id;
+            if( !tiles->find_overlay_looks_like_3d( male, overlay.first, overlay.second, draw_id ) ) {
+                continue;
+            }
+            sprite_info ospr;
+            if( !lookup_sprite( tiles, draw_id, TILE_CATEGORY::NONE, p, ospr ) ||
+                ospr.px_h <= 0 || ospr.px_w <= 0 ) {
+                continue;
+            }
+            ++layer;
+            ++resolved;
+            if( resolved <= 8 ) {
+                resolved_ids += resolved_ids.empty() ? "" : ",";
+                resolved_ids += draw_id;
+            }
+            const float oh = ospr.px_h * px_scale;
+            const float ow = oh * std::clamp( ospr.aspect, 0.4f, 2.5f );
+            // 2D places each layer at tile origin + its sheet sprite offset, so
+            // the canvas-bottom/center difference to the body canvas is the
+            // layer's displacement (a hat must not drop its opaque bottom to
+            // the ground, so per-sprite base_drop is NOT usable here)
+            const float zbot = zbase - static_cast<float>(
+                                   ( ospr.offset.y + ospr.px_h ) - ( cspr.offset.y + cspr.px_h ) ) *
+                               px_scale;
+            const float dpx = ( ospr.offset.x + ospr.px_w * 0.5f ) - base_center_px;
+            // strict-LESS depth: each later layer sits a bit closer to the camera
+            const float off = 0.004f * std::min( layer, 24 );
+            const float ax = dx + 0.5f + rgt_x * dpx * px_scale - fwd_x * off;
+            const float ay = dy + 0.5f + rgt_y * dpx * px_scale - fwd_y * off;
+            std::vector<float> &v = bucket_for( MODE_BILLBOARD, ospr.atlas );
+            push_instance( v, ax, ay, zbot, ow, oh, 1.0f, ospr,
+                           tone.shade, tone.shade, tone.shade,
+                           false, 0, false, -1.0f, false, tone.sat );
+            ++count;
+        }
+        // TEMP paper-doll bring-up diagnostic: one line per base sprite
+        static std::unordered_set<std::string> doll_logged;
+        if( doll_logged.size() < 120 && doll_logged.insert( sprite_id ).second ) {
+            write_status( "doll: " + sprite_id + " overlays=" +
+                          std::to_string( overlays.size() ) + " resolved=" +
+                          std::to_string( resolved ) + " ids=" + resolved_ids );
+        }
+    };
 
     // creatures live in the tracker, not the map; add them per tile position
     creature_tracker &tracker = get_creature_tracker();
@@ -1667,7 +2572,10 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                     continue;
                 }
                 const tripoint_bub_ms p = center + tripoint( dx, dy, dz );
-                if( !here.inbounds( p ) || cache.seen_cache[p.x()][p.y()] <= 0.0f ) {
+                if( !here.inbounds( p ) ) {
+                    continue;
+                }
+                if( dz < 0 && zlev < lowest_vis_z ) {
                     continue;
                 }
                 // levels above an indoor column near the player show nothing
@@ -1680,31 +2588,24 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 if( !critter ) {
                     continue;
                 }
-                const float light = cache.lm[p.x()][p.y()].max();
-                const float brightness = std::clamp( light / LIGHT_AMBIENT_LIT, 0.045f, 1.0f );
-                std::string sprite_id;
-                TILE_CATEGORY cat = TILE_CATEGORY::NONE;
-                float size_scale = 1.0f;
-                if( const monster *m = critter->as_monster() ) {
-                    sprite_id = m->type->id.str();
-                    cat = TILE_CATEGORY::MONSTER;
-                    size_scale = creature_size_scale( m->get_size() );
-                } else if( const npc *n = critter->as_npc() ) {
-                    sprite_id = n->male ? "npc_male" : "npc_female";
-                } else if( const avatar *a = critter->as_avatar() ) {
-                    // top-down camera: the player is on screen now
-                    sprite_id = a->male ? "player_male" : "player_female";
-                } else {
+                // the same test 2D's draw_critter_at uses: light, line of
+                // sight, distance, invisibility and ALWAYS_VISIBLE are all
+                // handled there; the avatar itself is always visible
+                if( !get_avatar().sees( here, *critter ) ) {
                     continue;
                 }
-                sprite_info cspr;
-                const bool ctex = lookup_sprite( tiles, sprite_id, cat, p, cspr );
-                const float ch = CREATURE_BASE_HEIGHT * size_scale;
-                const float cw = ch * std::clamp( cspr.aspect, 0.4f, 2.5f );
-                std::vector<float> &v = bucket_for( MODE_BILLBOARD, ctex ? cspr.atlas : nullptr );
-                push_instance( v, dx + 0.5f, dy + 0.5f, wz - ch * cspr.base_drop, cw, ch, 1.0f,
-                               cspr, brightness, brightness, brightness );
-                ++count;
+                // the creature takes its tile's light tone, exactly like 2D's
+                // critter sprites do through the lit shader. a creature 2D draws
+                // on an otherwise invisible tile (ALWAYS_VISIBLE, special
+                // vision) uses fixed lighting there, so keep it full color.
+                const lit_level cll = dz > 0 ? upper_lit_at( cache, p )
+                                      : cache.visibility_cache[p.x()][p.y()];
+                const bool cll_clear = cll == lit_level::LOW || cll == lit_level::LIT ||
+                                       cll == lit_level::BRIGHT;
+                const tile_tone tone = cll_clear ? tone_for( cache, p, cll )
+                                       : tile_tone{ 1.0f, nv_tint ? 0.0f : 1.0f };
+                push_entity( *critter, p, static_cast<float>( dx ), static_cast<float>( dy ), wz,
+                             tone );
             }
         }
     }
@@ -1843,6 +2744,37 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
         return;
     }
 
+    // map memory: remembered terrain is drawn for tiles the player cannot see
+    // right now. Render3D bypasses cata_tiles::draw, which normally prepares
+    // the memory region and sweeps what is visible into it, so do both here:
+    // the whole reality bubble (the same region 2D prepares; prepare_region
+    // early-outs until the bubble shifts) and a sweep once per turn, player
+    // position or visibility-cache change.
+    map &here = get_map();
+    if( tiles ) {
+        avatar &you = get_avatar();
+        const tripoint_bub_ms upos = you.pos_bub();
+        // prepare_region caches p1.z +/- fov_3d_z_range; anchoring the window
+        // at z=0 makes it cover the whole rendered range
+        // [-OVERMAP_DEPTH, +OVERMAP_HEIGHT] no matter which level the player is
+        // on (the static_assert above keeps that invariant)
+        you.prepare_map_memory_region(
+            here.get_abs( tripoint_bub_ms( 0, 0, 0 ) ),
+            here.get_abs( tripoint_bub_ms( MAPSIZE_X - 1, MAPSIZE_Y - 1, 0 ) ) );
+        const level_cache &mem_level = here.get_cache_ref( upos.z() );
+        static tripoint_bub_ms last_sweep_pos = tripoint_bub_ms( -1, -1, -1 );
+        static time_point last_sweep_turn = calendar::turn_zero;
+        static uint64_t last_sight_revision = 0;
+        if( mem_level.map_memory_sweep_pending || upos != last_sweep_pos ||
+            calendar::turn != last_sweep_turn ||
+            mem_level.sight_revision != last_sight_revision ) {
+            tiles->memorize_map_memory( center );
+            last_sweep_pos = upos;
+            last_sweep_turn = calendar::turn;
+            last_sight_revision = mem_level.sight_revision;
+        }
+    }
+
     // top-down: anchor the scene to the view center (ter_view_p follows the
     // player; look-around mode pans it for free)
     std::vector<instance_bucket> buckets;
@@ -1912,7 +2844,6 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
     // daylight + sun position from the game calendar. azimuth is measured FROM
     // the south, positive toward the west (calendar.cpp); scene coords are
     // x = east, y = south, z = up
-    map &here = get_map();
     const level_cache &cache = here.get_cache_ref( center.z() );
     const float daylight = std::clamp( cache.natural_light_level_cache / LIGHT_AMBIENT_LIT,
                                        0.0f, 1.0f );
@@ -1960,15 +2891,18 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
         std::array<float, 4> cam_up;
         std::array<float, 4> cam_forward;
         std::array<float, 4> sun_dir; // xyz = toward sun, w = daylight
-        std::array<float, 4> params;  // x = tan(fov/2), y = aspect, z = cloudiness
+        std::array<float, 4> params;  // x = tan(fov/2), y = aspect, z = cloudiness,
+        // w = 1 in a night vision frame
         std::array<float, 4> wind;    // xy = cloud drift offset
     };
+    const bool nv_tint = nv_tint_active();
     sky_uniforms sky_ub{};
     sky_ub.cam_right = { g_basis_r.x, g_basis_r.y, g_basis_r.z, 0.0f };
     sky_ub.cam_up = { g_basis_u.x, g_basis_u.y, g_basis_u.z, 0.0f };
     sky_ub.cam_forward = { g_basis_f.x, g_basis_f.y, g_basis_f.z, 0.0f };
     sky_ub.sun_dir = { sun_dir.x, sun_dir.y, sun_dir.z, daylight };
-    sky_ub.params = { std::tan( g_fov_y * 0.5f ), g_aspect, cloudiness, 0.0f };
+    sky_ub.params = { std::tan( g_fov_y * 0.5f ), g_aspect, cloudiness,
+                      nv_tint ? 1.0f : 0.0f };
     sky_ub.wind = { wind_dir.x * drift_scale, wind_dir.y * drift_scale, 0.0f, 0.0f };
 
     // fragment-shader uniforms: the camera->player occlusion mask. walls and
@@ -1980,6 +2914,14 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
         std::array<float, 4> cam_right;
         std::array<float, 4> cam_up;
         std::array<float, 4> mask_params; // r_x, r_y, ground_z, enabled
+        // memory-map look (2D's MEMORY_MAP_MODE): x = named preset 0..3,
+        // y = 1 for the custom mixer; dark rgb + gamma, light rgb
+        std::array<float, 4> memory_params;
+        std::array<float, 4> memory_dark;
+        std::array<float, 4> memory_light;
+        // night vision look: x = 1 in an NV frame (v_color.a then carries the
+        // tile light), y = night floor brightness, z = overexpose start
+        std::array<float, 4> nv_params;
     };
     frag_uniforms frag_ub{};
     const tripoint_bub_ms upos = get_avatar().pos_bub();
@@ -1991,6 +2933,21 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
     frag_ub.cam_right = { g_basis_r.x, g_basis_r.y, g_basis_r.z, 0.0f };
     frag_ub.cam_up = { g_basis_u.x, g_basis_u.y, g_basis_u.z, 0.0f };
     frag_ub.mask_params = { 3.2f, 2.2f, player_gz, 1.0f };
+    // same memory look 2D's lit shader uses: a named preset, else the custom
+    // MEMORY_RGB_* / MEMORY_GAMMA mixer
+    const cata_shader::memory_look mem_look = cata_tiles::memory_look_from_options(
+                cata_shader::memory_preset_from_option_value(
+                    get_option<std::string>( "MEMORY_MAP_MODE" ) ) );
+    frag_ub.memory_params = { mem_look.preset ? static_cast<float>( *mem_look.preset ) : 0.0f,
+                              mem_look.preset ? 0.0f : 1.0f, 0.0f, 0.0f };
+    frag_ub.memory_dark = { mem_look.custom_dark[0], mem_look.custom_dark[1],
+                            mem_look.custom_dark[2], mem_look.custom_gamma };
+    frag_ub.memory_light = { mem_look.custom_light[0], mem_look.custom_light[1],
+                             mem_look.custom_light[2], 0.0f };
+    // 2D's reference_night_rgb constants travel to the shader so the two
+    // implementations cannot drift apart (nv_tint was resolved with the sky)
+    frag_ub.nv_params = { nv_tint ? 1.0f : 0.0f, smooth_lighting::night_floor,
+                          smooth_lighting::overexpose_start, 0.0f };
 
     // fallback clear color when the sky pass is unavailable
     const SDL_FColor sky{ 0.02f + 0.35f * daylight, 0.02f + 0.45f * daylight,

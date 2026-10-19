@@ -6,13 +6,16 @@
 // SDL GPU fragment uniform buffers live in set 3.
 
 #version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "nightvision_presets.glsl"
 
 layout(set = 3, binding = 0) uniform SkyUBO {
     vec4 cam_right;    // xyz = camera right basis
     vec4 cam_up;       // xyz = camera up basis
     vec4 cam_forward;  // xyz = camera forward basis
     vec4 sun_dir;      // xyz = direction toward the sun (world), w = daylight 0..1
-    vec4 params;       // x = tan(fov/2), y = aspect, z = cloudiness 0..1
+    vec4 params;       // x = tan(fov/2), y = aspect, z = cloudiness, w = night vision
     vec4 wind;         // xy = cloud drift offset in noise space
 };
 
@@ -84,5 +87,12 @@ void main()
         col = mix( col, cloud_col, min( cov * 1.15, 0.95 ) );
     }
 
+    // night vision goggles: the whole viewport turns green like 2D's map.
+    // daylight takes the overexposed look, the same hand-over the map uses
+    // (smooth_lighting::overexpose_start)
+    if( params.w > 0.5 ) {
+        col = mix( nightvision_rgb( col ), overexposed_rgb( col ),
+                   smoothstep( 0.85, 1.0, daylight ) );
+    }
     out_color = vec4( col, 1.0 );
 }
