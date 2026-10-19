@@ -392,8 +392,8 @@ TEST_CASE( "creature_registration_filter_survives_moves_swaps_and_repeated_rebui
     verify();
     const auto first = members[0];
     const auto second = members[1];
-    const auto first_pos = first->pos_abs();
-    const auto second_pos = second->pos_abs();
+    const tripoint_abs_ms first_pos = first->pos_abs();
+    const tripoint_abs_ms second_pos = second->pos_abs();
     tracker.swap_positions( *first, *second );
     CHECK( tracker.find( first_pos ) == second );
     CHECK( tracker.find( second_pos ) == first );
@@ -403,7 +403,7 @@ TEST_CASE( "creature_registration_filter_survives_moves_swaps_and_repeated_rebui
     // filter repeatedly. Every live registration must survive each refresh.
     for( int i = 0; i < 4096; ++i ) {
         const auto &who = members[i % members.size()];
-        const auto old = who->pos_abs();
+        const tripoint_abs_ms old = who->pos_abs();
         const tripoint_abs_ms next{ 200000 + i, -300000 + i % 7, i % 3 - 1 };
         REQUIRE( tracker.update_pos( *who, old, next ) );
         who->spawn( next );
@@ -454,7 +454,7 @@ TEST_CASE( "creature_registration_filter_collisions_preserve_authoritative_looku
     // distinct in the authoritative map, including when either is removed.
     const auto original = members[0];
     const auto hash = std::hash<tripoint_abs_ms> {};
-    const auto bucket = hash( original->pos_abs() ) % 8192;
+    const size_t bucket = hash( original->pos_abs() ) % 8192;
     tripoint_abs_ms collision{ 30000, 40000, 0 };
     for( int attempts = 0; attempts < 100000 && hash( collision ) % 8192 != bucket; ++attempts ) {
         collision.x()++;
@@ -469,7 +469,7 @@ TEST_CASE( "creature_registration_filter_collisions_preserve_authoritative_looku
     tracker.remove( *original );
     CHECK_FALSE( tracker.find( original->pos_abs() ) );
     CHECK( tracker.find( collision ) == other );
-    const auto old = other->pos_abs();
+    const tripoint_abs_ms old = other->pos_abs();
     const tripoint_abs_ms moved{ -50000, 60000, 1 };
     REQUIRE( tracker.update_pos( *other, old, moved ) );
     other->spawn( moved );
@@ -517,15 +517,15 @@ struct flood_observation {
 bool scanline_pattern( const tripoint_bub_ms &p, int direction, int base_z,
                        const point &offset, bool upper )
 {
-    const int x = p.x() - offset.x;
-    const int y = p.y() - offset.y;
-    const int z = p.z() - base_z;
-    const bool ground = z == 0 && x >= 2 && x <= 4 && y >= 2 && y <= 3;
+    const tripoint local = p.raw() - tripoint( offset, base_z );
+    const bool ground = local.z == 0 && local.x >= 2 && local.x <= 4 &&
+                        local.y >= 2 && local.y <= 3;
     if( direction == 0 ) {
-        return ground || ( upper && z == 1 && y == 3 && x >= 3 && x <= 4 );
+        return ground || ( upper && local.z == 1 && local.y == 3 &&
+                           local.x >= 3 && local.x <= 4 );
     }
-    return upper && x == 4 && y == 3 &&
-           ( ( direction == 1 && z == 1 ) || ( direction == -1 && z == 0 ) );
+    return upper && local.x == 4 && local.y == 3 &&
+           ( ( direction == 1 && local.z == 1 ) || ( direction == -1 && local.z == 0 ) );
 }
 
 flood_observation observe_scanline( ff::flood_fill_10_workspace *workspace,
@@ -553,8 +553,10 @@ flood_observation observe_scanline( ff::flood_fill_10_workspace *workspace,
 TEST_CASE( "creature_flood_workspace_preserves_order_between_layers_and_owners",
            "[monster][reachability][flood_fill]" )
 {
-    ff::flood_fill_10_workspace workspace;
-    ff::flood_fill_10_workspace other;
+    const std::unique_ptr<ff::flood_fill_10_workspace> workspace =
+        std::make_unique<ff::flood_fill_10_workspace>();
+    const std::unique_ptr<ff::flood_fill_10_workspace> other =
+        std::make_unique<ff::flood_fill_10_workspace>();
     const cata_default_random_engine rng_before =
         rng_get_engine(); // NOLINT(cata-determinism) Snapshot only; no independent draws.
     for( const int base_z : {
@@ -562,7 +564,7 @@ TEST_CASE( "creature_flood_workspace_preserves_order_between_layers_and_owners",
              } ) {
         for( const point offset : {
                  point{ -2, -2 }, point{ MAPSIZE_X - 5, MAPSIZE_Y - 4 },
-                 point{ 0, 0 }
+                 point::zero
              } ) {
             for( const bool upper : {
                      true, false, true
@@ -581,9 +583,9 @@ TEST_CASE( "creature_flood_workspace_preserves_order_between_layers_and_owners",
                     position.y() += offset.y;
                     position.z() += base_z;
                 }
-                const auto fresh = observe_scanline( nullptr, base_z, offset, upper );
-                const auto reused = observe_scanline( &workspace, base_z, offset, upper );
-                const auto independent = observe_scanline( &other, base_z, offset, upper );
+                const flood_observation fresh = observe_scanline( nullptr, base_z, offset, upper );
+                const flood_observation reused = observe_scanline( workspace.get(), base_z, offset, upper );
+                const flood_observation independent = observe_scanline( other.get(), base_z, offset, upper );
                 CHECK( fresh.visited == expected );
                 CHECK( reused.visited == expected );
                 CHECK( independent.visited == expected );
@@ -598,8 +600,9 @@ TEST_CASE( "creature_flood_workspace_preserves_order_between_layers_and_owners",
 TEST_CASE( "creature_flood_workspace_recovers_after_callbacks_throw",
            "[monster][reachability][flood_fill]" )
 {
-    ff::flood_fill_10_workspace workspace;
-    const auto expected = observe_scanline( nullptr, 0, point::zero, true );
+    const std::unique_ptr<ff::flood_fill_10_workspace> workspace =
+        std::make_unique<ff::flood_fill_10_workspace>();
+    const flood_observation expected = observe_scanline( nullptr, 0, point::zero, true );
     const bool throw_in_predicate = GENERATE( false, true );
     int checks = 0;
     int visits = 0;
@@ -615,8 +618,8 @@ TEST_CASE( "creature_flood_workspace_recovers_after_callbacks_throw",
         }
     };
     REQUIRE_THROWS_AS( ff::flood_fill_visit_10_connected( tripoint_bub_ms{ 3, 3, 0 },
-                       predicate, visitor, workspace ), std::runtime_error );
-    const auto after_throw = observe_scanline( &workspace, 0, point::zero, true );
+                       predicate, visitor, *workspace ), std::runtime_error );
+    const flood_observation after_throw = observe_scanline( workspace.get(), 0, point::zero, true );
     CHECK( after_throw.visited == expected.visited );
     CHECK( after_throw.checks == expected.checks );
 }
@@ -624,8 +627,9 @@ TEST_CASE( "creature_flood_workspace_recovers_after_callbacks_throw",
 TEST_CASE( "creature_flood_workspace_isolates_reentrant_calls",
            "[monster][reachability][flood_fill]" )
 {
-    ff::flood_fill_10_workspace workspace;
-    const auto expected = observe_scanline( nullptr, 0, point::zero, true );
+    const std::unique_ptr<ff::flood_fill_10_workspace> workspace =
+        std::make_unique<ff::flood_fill_10_workspace>();
+    const flood_observation expected = observe_scanline( nullptr, 0, point::zero, true );
     flood_observation outer;
     flood_observation inner;
     const auto predicate = [&]( const tripoint_bub_ms & p, int direction ) {
@@ -636,14 +640,14 @@ TEST_CASE( "creature_flood_workspace_isolates_reentrant_calls",
     const auto visitor = [&]( const tripoint_bub_ms & p ) {
         outer.visited.push_back( p );
         if( outer.visited.size() == 1 ) {
-            inner = observe_scanline( &workspace, -2, point{ 10, 10 }, true );
+            inner = observe_scanline( workspace.get(), -2, point{ 10, 10 }, true );
         }
     };
-    ff::flood_fill_visit_10_connected( tripoint_bub_ms{ 3, 3, 0 }, predicate, visitor, workspace );
+    ff::flood_fill_visit_10_connected( tripoint_bub_ms{ 3, 3, 0 }, predicate, visitor, *workspace );
     CHECK( outer.visited == expected.visited );
     CHECK( outer.checks == expected.checks );
-    const auto fresh_inner = observe_scanline( nullptr, -2, point{ 10, 10 }, true );
+    const flood_observation fresh_inner = observe_scanline( nullptr, -2, point{ 10, 10 }, true );
     CHECK( inner.visited == fresh_inner.visited );
     CHECK( inner.checks == fresh_inner.checks );
-    CHECK( observe_scanline( &workspace, 0, point::zero, true ).visited == expected.visited );
+    CHECK( observe_scanline( workspace.get(), 0, point::zero, true ).visited == expected.visited );
 }

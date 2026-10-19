@@ -6,7 +6,7 @@
 #include <array>
 #include <bitset>
 #include <cstdint>
-#include <optional>
+#include <memory>
 #include <queue>
 #include <vector>
 #include <unordered_set>
@@ -94,7 +94,7 @@ template<typename UnaryPredicate, typename UnaryVisitor>
 void flood_fill_visit_10_connected( const tripoint_bub_ms &starting_point,
                                     UnaryPredicate &predicate,
                                     UnaryVisitor &visitor, flood_fill_10_workspace &workspace );
-}
+} // namespace detail
 
 // Scratch belongs to one owner and contains no world references. It retains
 // buffer capacity and resets visit markers before reuse. Nested calls use
@@ -113,18 +113,18 @@ class flood_fill_10_workspace
         std::array<bool, OVERMAP_LAYERS> touched_layers_{};
         bool active_ = false;
 
+        static void reset_layer( layer &visited, layer &visited_vertically ) {
+            visited = {};
+            visited_vertically = {};
+        }
+
         void reset() {
             for( int z = 0; z < OVERMAP_LAYERS; ++z ) {
                 // Queued spans can survive a throwing predicate or visitor,
                 // including in layers that have not been visited yet.
                 spans_[z].clear();
                 if( touched_layers_[z] ) {
-                    for( auto &row : visited_[z] ) {
-                        row.reset();
-                    }
-                    for( auto &row : visited_vertically_[z] ) {
-                        row.reset();
-                    }
+                    reset_layer( visited_[z], visited_vertically_[z] );
                 }
             }
             touched_layers_.fill( false );
@@ -144,9 +144,11 @@ void flood_fill_visit_10_connected( const tripoint_bub_ms &starting_point,
 {
     // Create nested storage only for reentrant calls. Keeping this selection
     // nonrecursive also lets callers inline their world-access predicates.
-    std::optional<flood_fill_10_workspace> nested;
-    flood_fill_10_workspace &workspace = requested_workspace.active_ ?
-                                         nested.emplace() : requested_workspace;
+    std::unique_ptr<flood_fill_10_workspace> nested;
+    if( requested_workspace.active_ ) {
+        nested = std::make_unique<flood_fill_10_workspace>();
+    }
+    flood_fill_10_workspace &workspace = nested ? *nested : requested_workspace;
     workspace.reset();
     workspace.active_ = true;
     struct release_workspace {
@@ -299,8 +301,9 @@ template<typename UnaryPredicate, typename UnaryVisitor>
 void flood_fill_visit_10_connected( const tripoint_bub_ms &starting_point, UnaryPredicate predicate,
                                     UnaryVisitor visitor )
 {
-    flood_fill_10_workspace workspace;
-    detail::flood_fill_visit_10_connected( starting_point, predicate, visitor, workspace );
+    const std::unique_ptr<flood_fill_10_workspace> workspace =
+        std::make_unique<flood_fill_10_workspace>();
+    detail::flood_fill_visit_10_connected( starting_point, predicate, visitor, *workspace );
 }
 } // namespace ff
 

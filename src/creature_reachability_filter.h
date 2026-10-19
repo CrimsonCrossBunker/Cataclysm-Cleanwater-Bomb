@@ -28,7 +28,7 @@ class creature_reachability_filter
 
     private:
         // 16 x 16 XY blocks, 32 Z buckets: a 1 KiB traversal-local value.
-        std::bitset<8192> occupied_{};
+        std::bitset<8192> occupied_;
 
         static size_t block( const tripoint_abs_ms &position ) {
             // Unsigned conversion keeps negative and extreme coordinates defined.

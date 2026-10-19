@@ -22,7 +22,7 @@
 namespace ai_reachability
 {
 struct output;
-}
+} // namespace ai_reachability
 
 class JsonArray;
 class JsonOut;
