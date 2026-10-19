@@ -153,6 +153,44 @@
   `smoothstep` + hash 抖动实现软边；`t` 向淡出让玩家面前的墙恢复；作用于
   BOX / LINEQUAD / FLATQUAD。
 
+### 3D 相机相对移动（TP-7）
+
+- **屏幕系**：相机地面朝向 `f = (cos g_yaw, sin g_yaw)` 就是屏幕"前方"；屏幕"右方"是
+  相机基 `r = cross(up, f) = (−sin g_yaw, cos g_yaw)`（与投影和 `screen_to_tile` 用的
+  `g_basis_r` 同一个向量；地图是左手系，详见 TP-8）。地图 +x=东、+y=南；
+  罗盘序 N,NE,E,SE,S,SW,W,NW 为 0..7。
+- **换帧公式**：动作键方向 `a`（FORTH=0=N，顺时针 FORTH_RIGHT=1 … FORTH_LEFT=7）→ 地图方向
+  `w = (k + a) mod 8`，`k = round(bearing(f)/(π/4))`。加号来自相机右基在罗盘上位于前方
+  +2 格（相机朝东时屏幕右方是南）。这是旋转、不是镜像，所以两个方向各用一个函数：
+  `render3d::camera_screen_to_map_delta`（动作键→地图）与
+  `camera_map_to_screen_delta`（地图→动作，供自动旅行闭环）。
+- **挂点**：沿用 2D 等距模式的 `iso_rotate` 接口（`get_delta_from_movement_action` /
+  `get_movement_action_from_delta`）与 `input_context::get_direction` 的 `iso_mode` 分支；
+  3D 激活时相机变换**取代**等距的 45° 旋转。走路、自动旅行（世界路线经同一对函数闭环）、
+  examine/open/投掷/look-around 的方向键因此全部与屏幕一致。载具驾驶（`iso_rotate::no`）
+  与 overmap 不受影响。
+- **前方落点标记**：gather 每帧按 `k` 在 Up 键落点画一格 `line_target` 角标（UC 为黄色，
+  与鼠标 hover 的白色 `highlight` 明确区分），它相对玩家的位置直接表明这一步是正交（正向）
+  还是斜向；载具操控时（方向键是转向）不画，与游戏光标或鼠标 hover 同格时去重
+  （同坐标两块薄板会 z-fight，前进语义优先）。
+- **V 菜单聚焦**：`surroundings_menu::update_path_end` 每帧把选中格作为游戏光标推给
+  render3d；gather 在任何游戏光标存在时不再画原始鼠标 hover（游戏光标是权威标记）。
+  这样按 V 选中远处物品、镜头随 `SHIFT_LIST_ITEM_VIEW=centered` 平移时，高亮停在选中格，
+  不再有过期鼠标像素随视图扫动。look-around/瞄准/建造同理只保留游戏光标；
+  平时游玩、边缘滚动、驾驶的 hover 行为不变。
+
+### 相机手性（TP-8）
+
+- 地图坐标 x=东、y=南、z=上 相对物理空间是**左手系**（东×南 = 上，物理上应为下）。
+  按右手惯例取 `r = cross(f, up)` 会得到物理右方的反向，整幅画面水平镜像
+  （面向北时屏幕右方是西）。TP-7 相机相对移动因此表现为"屏幕上向左、地图上向东"。
+- 相机基改为 `r = cross(up, f)`、`u = cross(f, r)`（`mat4_lookat`、缓存的
+  `g_basis_r/u`、顶点 UBO 的 `cam_right` 三处同步）。画面从此与 2D 地图/overmap 同向；
+  鼠标拾取、天空太阳方位、软遮罩都由同一组基驱动，保持一致；billboard 是居中对称四边形，
+  观感不变。
+- 中键水平拖拽的 `g_yaw` 输入取反（`-= dx`），保持镜像修复前"画面跟手"的旋转手感；
+  俯仰不变。
+
 ### 贴图解析（3D 专用）
 
 `resolve_sprite_layers_3d(id, category, p, subtile, rota, force_rota)`：
@@ -296,6 +334,13 @@ shape: t_water_pool_shallow_outdoors sub=corner rota=2 -> t_water_pool_corner li
 - TP-6：夜视仪——按 2D `reference_night_rgb` 的同一公式给 3D 世界与天空加绿色夜视变换；
   逐格 light 经实例 alpha 槽传入着色器，记忆/雾块/未看见区域不受影响；
   `NV_GREEN_TOGGLE` 关闭时完全不变。
+- TP-7：相机相对移动——移动键与方向提示按相机屏幕系解释（复用 `iso_rotate`/`iso_mode`
+  挂点，`w = (k + a) mod 8` 旋转映射）；Up 落点用 `line_target` 角标标出（正交/斜向一眼可辨，
+  与鼠标 hover 的 `highlight` 区分）；V 菜单选中格作为游戏光标推入，存在游戏光标时不再画
+  原始鼠标 hover，修复镜头聚焦远处物品时标记随视图扫动的问题。
+- TP-8：相机手性修复——地图坐标是左手系，旧的 `r = cross(f, up)` 使 3D 画面水平镜像
+  （面向北时按左会向东走）。相机基改为 `r = cross(up, f)` / `u = cross(f, r)`（lookat、
+  缓存基、顶点 UBO 同步），画面与 2D 地图同向；中键水平拖拽 yaw 输入取反保持原手感。
 - 2D 隔离 + 忠实移植：恢复 `get_texture_draw_data` 为基点实现；新增 3D 专用解析器
   完整复刻 2D 选取语义。
 

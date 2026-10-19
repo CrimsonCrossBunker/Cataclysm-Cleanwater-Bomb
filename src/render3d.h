@@ -57,6 +57,14 @@ std::optional<tripoint_bub_ms> screen_to_tile( const point &logical_pixel );
 // draw_terrain_window call.
 void push_cursor( const tripoint_bub_ms &p, bool highlight );
 
+// Remaps one compass step between the screen frame (north = up on screen,
+// east = screen right, what the movement keys name) and the map frame for
+// the current camera yaw. Returns false (leaving dx/dy alone) when the 3D
+// renderer is not the active view or the delta is not a unit compass step.
+bool camera_screen_to_map_delta( int &dx, int &dy );
+// The inverse: a map-frame step to the movement keys' screen frame.
+bool camera_map_to_screen_delta( int &dx, int &dy );
+
 // Enable/disable relative mouse mode for FP look. Idempotent.
 void sync_mouse_capture( SDL_Renderer *renderer, bool want );
 

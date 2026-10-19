@@ -44,6 +44,7 @@
 #include "output.h"
 #include "panels.h"
 #include "point.h"
+#include "render3d.h"
 #include "safemode_ui.h"
 #include "string_formatter.h"
 #include "text.h"
@@ -1326,6 +1327,14 @@ void surroundings_menu::update_path_end()
 
     if( p ) {
         path_end = you.pos_bub() + *p;
+        // The 3D view centers on the selected entry (SHIFT_LIST_ITEM_VIEW) and
+        // the camera follows the view center, so the raw mouse hover would
+        // sweep across the map while the list pans. Push the selection as a
+        // game cursor: the renderer draws it on the selected tile and skips
+        // the stale hover marker.
+#if defined(TILES)
+        render3d::push_cursor( *path_end, true );
+#endif
     } else {
         path_end = std::nullopt;
     }

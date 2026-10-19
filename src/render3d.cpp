@@ -165,8 +165,12 @@ float vec3_dot( const vec3 &a, const vec3 &b )
 mat4 mat4_lookat( const vec3 &eye, const vec3 &target, const vec3 &up )
 {
     const vec3 f = vec3_normalize( vec3_sub( target, eye ) );
-    const vec3 r = vec3_normalize( vec3_cross( f, up ) );
-    const vec3 u = vec3_cross( r, f );
+    // The map frame (x east, y south, z up) is left-handed relative to
+    // physical space, so the physical screen-right is up x forward, not the
+    // right-handed f x up, which would render the world mirrored. The camera
+    // up vector is f x r in either convention.
+    const vec3 r = vec3_normalize( vec3_cross( up, f ) );
+    const vec3 u = vec3_normalize( vec3_cross( f, r ) );
     mat4 m{};
     m.c[0] = r.x;
     m.c[1] = u.x;
@@ -394,6 +398,34 @@ point g_last_mouse{ -1, -1 };
 // game-driven cursors forwarded from cata_tiles (targeting, construction...);
 // cleared after each frame's gather
 std::vector<std::pair<tripoint_bub_ms, bool>> g_game_cursors;
+
+// The eight single-step compass directions, clockwise from north (map space:
+// +x east, +y south). Movement keys name directions in the screen frame, with
+// FORTH = up = index 0, FORTH_RIGHT = 1, ..., FORTH_LEFT = 7.
+constexpr point_rel_ms compass8[8] = {
+    { 0, -1 }, { 1, -1 }, { 1, 0 }, { 1, 1 }, { 0, 1 }, { -1, 1 }, { -1, 0 }, { -1, -1 }
+};
+
+int compass_index( const point_rel_ms &d )
+{
+    for( int i = 0; i < 8; ++i ) {
+        if( d == compass8[i] ) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+// Compass octant of the camera's ground-plane forward direction, i.e. the map
+// direction the top of the screen points at. f = (cos yaw, sin yaw) is the
+// horizontal part of the view direction (eye -> target); bearing is measured
+// clockwise from north, as the compass table is.
+int camera_forward_octant()
+{
+    const float bearing = std::atan2( std::cos( g_yaw ), -std::sin( g_yaw ) );
+    int k = static_cast<int>( std::lround( bearing / ( 3.14159265f / 4.0f ) ) ) % 8;
+    return k < 0 ? k + 8 : k;
+}
 
 // P0 scaffolding: Release builds filter out D_INFO, so probe results go to a
 // status file in the config dir for headless diagnosis.
@@ -2624,9 +2656,40 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                        0.002f, 1.0f, 1.0f, 0.05f, cspr, 1.0f, 1.0f, 1.0f );
         ++count;
     };
-    if( !g_mouse_captured ) {
+    // forward movement marker: the tile the "up" key steps to, i.e. screen
+    // forward. the tileset's line_target brackets (yellow in UC) mark it as a
+    // destination, visibly distinct from the white mouse hover below; its
+    // position next to the player shows whether the step is orthogonal or
+    // diagonal. while controlling a vehicle the direction keys steer, so the
+    // marker would lie.
+    const auto has_game_cursor = [&]( const tripoint_bub_ms & tp ) {
+        for( const auto &c : g_game_cursors ) {
+            if( c.first == tp ) {
+                return true;
+            }
+        }
+        return false;
+    };
+    std::optional<tripoint_bub_ms> move_marker;
+    if( !get_avatar().controlling_vehicle && upos.z() == center.z() ) {
+        const point_rel_ms w = compass8[camera_forward_octant()];
+        const tripoint_bub_ms tp = upos + tripoint( w.x(), w.y(), 0 );
+        if( here.inbounds( tp ) && !has_game_cursor( tp ) ) {
+            push_cursor_slab( tp, "line_target" );
+            move_marker = tp;
+        }
+    }
+    // a game-driven cursor is the authoritative marker (look-around, targeting,
+    // the V menu's selected tile); the raw mouse hover would duplicate it, and
+    // while a menu pans the view to a distant focus the stale mouse pixel would
+    // sweep across the map, so skip hover whenever one is present. the hover is
+    // also skipped where the movement marker already sits: two slabs at the same
+    // spot would z-fight, and the movement meaning wins there.
+    if( !g_mouse_captured && g_game_cursors.empty() ) {
         if( const std::optional<tripoint_bub_ms> hov = tile_at_pixel( g_last_mouse ) ) {
-            push_cursor_slab( *hov, "highlight" );
+            if( !move_marker || *move_marker != *hov ) {
+                push_cursor_slab( *hov, "highlight" );
+            }
         }
     }
     for( const auto &[tp, hl] : g_game_cursors ) {
@@ -2639,7 +2702,9 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
 
 void note_mouse_look( const float dx, const float dy )
 {
-    g_yaw += dx * 0.0032f;
+    // drag right orbits so the scene follows the cursor; the sign matches the
+    // now-unmirrored camera basis (east is screen-right when facing north)
+    g_yaw -= dx * 0.0032f;
     // looking down only, but nearly horizontal at the top end (~-4.6°..-80°)
     // so the sky pass is visible
     g_pitch = std::clamp( g_pitch - dy * 0.0032f, -1.40f, -0.08f );
@@ -2665,10 +2730,45 @@ void push_cursor( const tripoint_bub_ms &p, const bool highlight )
 {
     // consumed per frame by gather; the cap prevents unbounded growth while
     // the 3D view is not being drawn
-    if( !g_available || g_game_cursors.size() >= 64 ) {
+    if( !g_available || !get_option<bool>( "RENDER3D_EXPERIMENTAL" ) ||
+        g_game_cursors.size() >= 64 ) {
         return;
     }
     g_game_cursors.emplace_back( p, highlight );
+}
+
+namespace
+{
+// rotate a single compass step by `steps` octants (clockwise on the compass)
+bool camera_rotate_step( int &dx, int &dy, const int steps )
+{
+    if( !g_available || !get_option<bool>( "RENDER3D_EXPERIMENTAL" ) ) {
+        return false;
+    }
+    const int idx = compass_index( point_rel_ms( dx, dy ) );
+    if( idx < 0 ) {
+        return false;
+    }
+    const point_rel_ms &w = compass8[( idx + steps + 16 ) % 8];
+    dx = w.x();
+    dy = w.y();
+    return true;
+}
+} // namespace
+
+bool camera_screen_to_map_delta( int &dx, int &dy )
+{
+    // screen frame -> map: the screen up direction is the camera forward
+    // (octant k), screen right sits two octants clockwise of it (up x forward;
+    // facing east, screen right is south), so the movement key's octant a maps
+    // to k + a.
+    return camera_rotate_step( dx, dy, camera_forward_octant() );
+}
+
+bool camera_map_to_screen_delta( int &dx, int &dy )
+{
+    // inverse of the above: map octant m -> key octant m - k
+    return camera_rotate_step( dx, dy, -camera_forward_octant() );
 }
 
 void sync_mouse_capture( SDL_Renderer *renderer, const bool want )
@@ -2831,9 +2931,10 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
     {
         g_dest = dest;
         g_eye = eye;
-        const vec3 rgt = vec3_normalize( vec3_cross( dir, { 0.0f, 0.0f, 1.0f } ) );
+        // physical screen-right in the left-handed map frame: up x forward
+        const vec3 rgt = vec3_normalize( vec3_cross( { 0.0f, 0.0f, 1.0f }, dir ) );
         g_basis_r = rgt;
-        g_basis_u = vec3_cross( rgt, dir );
+        g_basis_u = vec3_cross( dir, rgt );
         g_basis_f = dir;
         g_aspect = static_cast<float>( w ) / static_cast<float>( h );
         g_center = center;
@@ -2879,8 +2980,9 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
     };
     vert_uniforms uniforms{};
     uniforms.mvp = mvp;
-    // camera right on the ground plane: cross( forward, up ) with up = +z
-    uniforms.cam_right = { std::sin( g_yaw ), -std::cos( g_yaw ), 0.0f, 0.0f };
+    // physical camera right on the ground plane: cross( up, forward ) with
+    // up = +z (the map frame is left-handed, see mat4_lookat)
+    uniforms.cam_right = { -std::sin( g_yaw ), std::cos( g_yaw ), 0.0f, 0.0f };
     uniforms.cam_up = { 0.0f, 0.0f, 1.0f, 0.0f };
     uniforms.sun_dir = { sun_dir.x, sun_dir.y, sun_dir.z, sun_up ? 1.0f : 0.0f };
 

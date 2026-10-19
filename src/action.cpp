@@ -43,6 +43,7 @@
 #include "path_info.h"
 #include "point.h"
 #include "popup.h"
+#include "render3d.h"
 #include "ret_val.h"
 #include "sling.h"
 #include "translations.h"
@@ -566,22 +567,36 @@ std::optional<std::string> press_x_if_bound( action_id act )
 
 action_id get_movement_action_from_delta( const tripoint_rel_ms &d, const iso_rotate rot )
 {
-    const bool iso_mode = rot == iso_rotate::yes && g->is_tileset_isometric();
-    if( d.xy() == point_rel_ms::north ) {
+    point_rel_ms xy = d.xy();
+    bool iso_mode = rot == iso_rotate::yes && g->is_tileset_isometric();
+#if defined(TILES)
+    // 3D: the movement keys name directions in the screen frame, so translate
+    // the world delta back into it first. the camera transform replaces the
+    // isometric 45-degree approximation.
+    if( rot == iso_rotate::yes ) {
+        int dx = xy.x();
+        int dy = xy.y();
+        if( render3d::camera_map_to_screen_delta( dx, dy ) ) {
+            xy = point_rel_ms( dx, dy );
+            iso_mode = false;
+        }
+    }
+#endif
+    if( xy == point_rel_ms::north ) {
         return iso_mode ? ACTION_MOVE_FORTH_LEFT : ACTION_MOVE_FORTH;
-    } else if( d.xy() == point_rel_ms::north_east ) {
+    } else if( xy == point_rel_ms::north_east ) {
         return iso_mode ? ACTION_MOVE_FORTH : ACTION_MOVE_FORTH_RIGHT;
-    } else if( d.xy() == point_rel_ms::east ) {
+    } else if( xy == point_rel_ms::east ) {
         return iso_mode ? ACTION_MOVE_FORTH_RIGHT : ACTION_MOVE_RIGHT;
-    } else if( d.xy() == point_rel_ms::south_east ) {
+    } else if( xy == point_rel_ms::south_east ) {
         return iso_mode ? ACTION_MOVE_RIGHT : ACTION_MOVE_BACK_RIGHT;
-    } else if( d.xy() == point_rel_ms::south ) {
+    } else if( xy == point_rel_ms::south ) {
         return iso_mode ? ACTION_MOVE_BACK_RIGHT : ACTION_MOVE_BACK;
-    } else if( d.xy() == point_rel_ms::south_west ) {
+    } else if( xy == point_rel_ms::south_west ) {
         return iso_mode ? ACTION_MOVE_BACK : ACTION_MOVE_BACK_LEFT;
-    } else if( d.xy() == point_rel_ms::west ) {
+    } else if( xy == point_rel_ms::west ) {
         return iso_mode ? ACTION_MOVE_BACK_LEFT : ACTION_MOVE_LEFT;
-    } else if( d.xy() == point_rel_ms::north_west ) {
+    } else if( xy == point_rel_ms::north_west ) {
         return iso_mode ? ACTION_MOVE_LEFT : ACTION_MOVE_FORTH_LEFT;
     }
 
@@ -599,27 +614,71 @@ action_id get_movement_action_from_delta( const tripoint_rel_ms &d, const iso_ro
 
 point_rel_ms get_delta_from_movement_action( const action_id act, const iso_rotate rot )
 {
-    const bool iso_mode = rot == iso_rotate::yes && g->is_tileset_isometric();
+    // the movement keys' own frame: FORTH is up on screen (= north here),
+    // clockwise through FORTH_LEFT
+    point_rel_ms delta;
     switch( act ) {
         case ACTION_MOVE_FORTH:
-            return iso_mode ? point_rel_ms::north_east : point_rel_ms::north;
+            delta = point_rel_ms::north;
+            break;
         case ACTION_MOVE_FORTH_RIGHT:
-            return iso_mode ? point_rel_ms::east : point_rel_ms::north_east;
+            delta = point_rel_ms::north_east;
+            break;
         case ACTION_MOVE_RIGHT:
-            return iso_mode ? point_rel_ms::south_east : point_rel_ms::east;
+            delta = point_rel_ms::east;
+            break;
         case ACTION_MOVE_BACK_RIGHT:
-            return iso_mode ? point_rel_ms::south : point_rel_ms::south_east;
+            delta = point_rel_ms::south_east;
+            break;
         case ACTION_MOVE_BACK:
-            return iso_mode ? point_rel_ms::south_west : point_rel_ms::south;
+            delta = point_rel_ms::south;
+            break;
         case ACTION_MOVE_BACK_LEFT:
-            return iso_mode ? point_rel_ms::west : point_rel_ms::south_west;
+            delta = point_rel_ms::south_west;
+            break;
         case ACTION_MOVE_LEFT:
-            return iso_mode ? point_rel_ms::north_west : point_rel_ms::west;
+            delta = point_rel_ms::west;
+            break;
         case ACTION_MOVE_FORTH_LEFT:
-            return iso_mode ? point_rel_ms::north : point_rel_ms::north_west;
+            delta = point_rel_ms::north_west;
+            break;
         default:
             return point_rel_ms::zero;
     }
+    if( rot == iso_rotate::yes ) {
+#if defined(TILES)
+        // 3D: screen direction -> map direction for the orbit camera
+        int dx = delta.x();
+        int dy = delta.y();
+        if( render3d::camera_screen_to_map_delta( dx, dy ) ) {
+            return point_rel_ms( dx, dy );
+        }
+#endif
+        if( g->is_tileset_isometric() ) {
+            // isometric tilesets show the map rotated 45 degrees clockwise
+            switch( act ) {
+                case ACTION_MOVE_FORTH:
+                    return point_rel_ms::north_east;
+                case ACTION_MOVE_FORTH_RIGHT:
+                    return point_rel_ms::east;
+                case ACTION_MOVE_RIGHT:
+                    return point_rel_ms::south_east;
+                case ACTION_MOVE_BACK_RIGHT:
+                    return point_rel_ms::south;
+                case ACTION_MOVE_BACK:
+                    return point_rel_ms::south_west;
+                case ACTION_MOVE_BACK_LEFT:
+                    return point_rel_ms::west;
+                case ACTION_MOVE_LEFT:
+                    return point_rel_ms::north_west;
+                case ACTION_MOVE_FORTH_LEFT:
+                    return point_rel_ms::north;
+                default:
+                    break;
+            }
+        }
+    }
+    return delta;
 }
 
 std::optional<input_event> hotkey_for_action( const action_id action,
