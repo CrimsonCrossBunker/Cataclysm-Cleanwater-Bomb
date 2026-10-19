@@ -41,6 +41,7 @@
 
 static const faction_id faction_your_followers( "your_followers" );
 static const itype_id itype_1l_bronze( "1l_bronze" );
+static const itype_id itype_9mm( "9mm" );
 static const itype_id itype_aspirin( "aspirin" );
 static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_bag_body_bag( "bag_body_bag" );
@@ -58,6 +59,7 @@ static const itype_id itype_cig( "cig" );
 static const itype_id itype_codeine( "codeine" );
 static const itype_id itype_corpse( "corpse" );
 static const itype_id itype_diving_flashlight_small_hipower( "diving_flashlight_small_hipower" );
+static const itype_id itype_glock17_17( "glock17_17" );
 static const itype_id itype_light_battery_cell( "light_battery_cell" );
 static const itype_id itype_marble( "marble" );
 static const itype_id itype_meat_canned( "meat_canned" );
@@ -790,6 +792,53 @@ TEST_CASE( "auto_pickup_item_rule_cache", "[autopickup][item]" )
 
     rules.add_rule( &marble, false );
     CHECK( rules.check_item( marble ) == rule_state::BLACKLISTED );
+}
+
+TEST_CASE( "empty_autopickup_rules_do_not_match_uncached_items",
+           "[autopickup][item][autopickup_container]" )
+{
+    const itype_id type = GENERATE( itype_glock17_17, itype_bottle_plastic, itype_bag_plastic );
+    const bool exclude = GENERATE( false, true );
+    const bool item_overload = GENERATE( false, true );
+    CAPTURE( type.str(), exclude, item_overload );
+    auto_pickup::rule_list rules;
+    rules.emplace_back( "", true, exclude );
+    auto_pickup::cache cache;
+    rules.refresh_map_items( cache );
+    REQUIRE( cache.empty() );
+    const item container( type );
+    const std::string name = container.tname( 1, false );
+    if( item_overload ) {
+        rules.create_rule( cache, container );
+    } else {
+        rules.create_rule( cache, name );
+    }
+    CHECK( cache.find( name ) == cache.end() );
+
+    rules.emplace_back( "*", true, exclude );
+    rules.create_rule( cache, container );
+    CHECK( cache.at( name ) == ( exclude ? rule_state::BLACKLISTED : rule_state::WHITELISTED ) );
+}
+
+TEST_CASE( "ammo_autopickup_leaves_unmatched_empty_containers_on_the_ground",
+           "[autopickup][item][autopickup_container]" )
+{
+    const itype_id type = GENERATE( itype_glock17_17, itype_bottle_plastic, itype_bag_plastic );
+    clear_everything();
+    avatar &you = get_avatar();
+    const auto worn = you.wear_item( item( itype_backpack ) );
+    REQUIRE( worn );
+    item &backpack = **worn;
+    const tripoint_bub_ms pos = you.pos_bub();
+    unique_item ammo( itype_9mm, 17 );
+    unique_item container( type );
+    REQUIRE( container.spawn_item( pos ) );
+    REQUIRE( ammo.spawn_item( pos ) );
+    add_autopickup_rule( ammo.get(), true );
+    CHECK( get_auto_pickup().check_item( *container.get() ) == rule_state::NONE );
+    simulate_auto_pickup( pos, you );
+    expect_to_find( backpack, { &ammo } );
+    CHECK_FALSE( container.find_on_ground( pos )->is_null() );
 }
 
 TEST_CASE( "auto_pickup_should_not_implicitly_pickup_corpses", "[autopickup][item]" )
