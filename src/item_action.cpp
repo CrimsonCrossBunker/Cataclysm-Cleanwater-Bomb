@@ -140,8 +140,20 @@ item_action_map item_action_generator::map_actions_to_items( Character &you,
     // Default behavior
     if( use_player_inventory ) {
         items = you.inv_dump();
+        // inv_dump omits integrated equipment because it cannot be dropped.
+        // Actions must use its persistent worn instance, not the bionic's
+        // temporary pseudo-item: e.g. scanned AR books belong in the save.
+        for( item_location &worn : you.top_items_loc() ) {
+            if( worn->has_flag( flag_INTEGRATED ) ) {
+                items.push_back( worn.get_item() );
+            }
+        }
         items.reserve( items.size() + pseudos.size() );
-        items.insert( items.end(), pseudos.begin(), pseudos.end() );
+        for( item *pseudo : pseudos ) {
+            if( !pseudo->has_flag( flag_INTEGRATED ) ) {
+                items.push_back( pseudo );
+            }
+        }
     } else {
         items = pseudos;
     }
