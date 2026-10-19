@@ -1,5 +1,6 @@
 #include "ui_manager.h"
 
+#include <cuboid_rectangle.h>
 #include <functional>
 #include <iterator>
 #include <optional>

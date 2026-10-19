@@ -36,6 +36,8 @@ jobs:
             .tx
             tools
             lang
+            src/lang_stats.inc
+          sparse-checkout-cone-mode: false
           fetch-depth: 1
           persist-credentials: false
 
@@ -119,6 +121,24 @@ jobs:
             fi
             echo "::warning::Translation artifact from master run $run_id is unavailable or incomplete"
           done
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            echo "::warning::No trusted translation artifact is available; building this pull request with an empty translation catalog"
+            mkdir -p lang/po lang/mo/placeholder/LC_MESSAGES
+            cat > lang/po/placeholder.po <<'EOF'
+          msgid ""
+          msgstr ""
+          "Content-Type: text/plain; charset=UTF-8\n"
+          "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+          EOF
+            python3 - <<'PY'
+          import struct
+          from pathlib import Path
+
+          path = Path("lang/mo/placeholder/LC_MESSAGES/cataclysm-dda.mo")
+          path.write_bytes(struct.pack("<7I", 0x950412de, 0, 0, 28, 28, 0, 0))
+          PY
+            exit 0
+          fi
           echo "::error::No downloadable translation artifact is available from recent trusted master builds"
           exit 1
 

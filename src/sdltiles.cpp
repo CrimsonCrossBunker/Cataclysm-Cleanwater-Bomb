@@ -473,7 +473,7 @@ static void detect_renderer_backend()
     const char *gpu_driver = "n/a";
     SDL_GPUDevice *gpu_dev = props != 0
                              ? static_cast<SDL_GPUDevice *>( SDL_GetPointerProperty(
-                                     props, SDL_PROP_RENDERER_GPU_DEVICE_POINTER, nullptr ) )
+                                         props, SDL_PROP_RENDERER_GPU_DEVICE_POINTER, nullptr ) )
                              : nullptr;
     if( gpu_dev ) {
         const char *drv = SDL_GetGPUDeviceDriver( gpu_dev );
@@ -759,7 +759,7 @@ static void WinCreate()
         && only_spirv_shader_artifacts_present() ) {
         SDL_SetHint( SDL_HINT_GPU_DRIVER, "vulkan" );
         dbg( D_INFO ) << "Only SPIR-V shader artifacts present; biasing SDL3 "
-                         "GPU device toward Vulkan.";
+                      "GPU device toward Vulkan.";
     }
 #  else
     SDL_SetHint( SDL_HINT_RENDER_DRIVER, "gpu,opengl" );
@@ -773,7 +773,7 @@ static void WinCreate()
             software_renderer = true;
         } else if( !SetupRenderTarget() ) {
             dbg( D_ERROR ) <<
-            "Failed to initialize display buffer under accelerated rendering, falling back to software rendering.";
+                           "Failed to initialize display buffer under accelerated rendering, falling back to software rendering.";
             software_renderer = true;
             display_buffer.reset();
             renderer.reset();
@@ -1073,7 +1073,7 @@ extern "C" {
         const std::string action_s( raw_action );
         env->ReleaseStringUTFChars( action, raw_action );
         const bool accepted = cata::input_context_actions::enqueue( action_s,
-            context_revision, dangerous_authorized == JNI_TRUE );
+                              context_revision, dangerous_authorized == JNI_TRUE );
         if( accepted ) {
             PushWakeEvent();
         }
@@ -1200,7 +1200,7 @@ static int get_android_shortcut_height()
     constexpr float shortcut_authored_density = 3.0f; // 480p xxhdpi
     const float density = std::max( 1.0f, android_get_display_density() );
     return std::max( 1, static_cast<int>( std::floor( density / shortcut_authored_density *
-            get_option<int>( "ANDROID_SHORTCUT_HEIGHT" ) ) ) );
+                                          get_option<int>( "ANDROID_SHORTCUT_HEIGHT" ) ) ) );
 }
 
 static SDL_Rect get_android_content_bounds()
@@ -1241,13 +1241,13 @@ static point get_android_terminal_size()
     const SDL_Rect bounds = get_android_content_bounds();
     const float density = std::max( 1.0f, android_get_display_density() );
     int rows = std::clamp( static_cast<int>( std::lround( bounds.h /
-        ( density * target_cell_height_dp ) ) ),
+                           ( density * target_cell_height_dp ) ) ),
                            EVEN_MINIMUM_TERM_HEIGHT, maximum_auto_terminal_height );
     rows -= rows % 2;
 
     const float cell_aspect = static_cast<float>( fontwidth ) / static_cast<float>( fontheight );
     int columns = std::clamp( static_cast<int>( std::lround( static_cast<float>( bounds.w ) /
-        static_cast<float>( bounds.h ) * rows / cell_aspect ) ),
+                              static_cast<float>( bounds.h ) * rows / cell_aspect ) ),
                               EVEN_MINIMUM_TERM_WIDTH, maximum_auto_terminal_width );
     columns -= columns % 2;
     return point( columns, rows );
@@ -1456,7 +1456,7 @@ void refresh_display()
     screen_shake_offset_now( shake.x, shake.y );
 #if defined(__ANDROID__)
     SDL_Rect dstrect = get_android_render_rect( TERMINAL_WIDTH * fontwidth,
-        TERMINAL_HEIGHT * fontheight );
+                       TERMINAL_HEIGHT * fontheight );
     dstrect.x += shake.x;
     dstrect.y += shake.y;
     if( !RenderCopy( renderer, display_buffer, NULL, &dstrect ) ) {
@@ -1590,9 +1590,9 @@ void get_display_buffer_dims( int *w, int *h )
         SDL_PropertiesID props = SDL_GetTextureProperties( display_buffer.get() );
         if( props ) {
             buf_w = static_cast<int>( SDL_GetNumberProperty( props,
-                SDL_PROP_TEXTURE_WIDTH_NUMBER, 0 ) );
+                                      SDL_PROP_TEXTURE_WIDTH_NUMBER, 0 ) );
             buf_h = static_cast<int>( SDL_GetNumberProperty( props,
-                SDL_PROP_TEXTURE_HEIGHT_NUMBER, 0 ) );
+                                      SDL_PROP_TEXTURE_HEIGHT_NUMBER, 0 ) );
         }
     }
     if( w ) {
@@ -1628,7 +1628,7 @@ SDL_Point window_to_display_buffer_coords( SDL_Point window_pt )
     // then scale to buffer dims. Outside-letterbox values are left unclamped so
     // callers can detect touches outside the playfield.
     const SDL_Rect dstrect = get_android_render_rect( TERMINAL_WIDTH * fontwidth,
-        TERMINAL_HEIGHT * fontheight );
+                             TERMINAL_HEIGHT * fontheight );
     if( dstrect.w <= 0 || dstrect.h <= 0 ) {
         return window_pt;
     }
@@ -2123,7 +2123,7 @@ bool renderer_resource_coordinator::check_pause_abort()
 bool renderer_resource_coordinator::safe_pre_teardown_unbind( recipe_result &out )
 {
     const bind_result r = permanent_render_target_bind( renderer, nullptr,
-        shared_variant_pass_or_null() );
+                          shared_variant_pass_or_null() );
     if( r == bind_result::failed_in_switch ) {
         out = { recipe_outcome::restart_required, renderer_recovery_severity::device_lost };
         return false;
@@ -2840,9 +2840,9 @@ bool renderer_recovery_test_support::install_character_preview_targets()
     }
     tilecontext = std::make_unique<cata_tiles>( renderer, geometry, ts_cache );
     tilecontext->char_preview_work_tex = CreateTexture( renderer, SDL_PIXELFORMAT_ARGB8888,
-        SDL_TEXTUREACCESS_TARGET, 8, 8 );
+                                         SDL_TEXTUREACCESS_TARGET, 8, 8 );
     tilecontext->char_preview_tex = CreateTexture( renderer, SDL_PIXELFORMAT_ARGB8888,
-        SDL_TEXTUREACCESS_TARGET, 4, 4 );
+                                    SDL_TEXTUREACCESS_TARGET, 4, 4 );
     return tilecontext->char_preview_work_tex && tilecontext->char_preview_tex;
 }
 
@@ -3011,8 +3011,8 @@ std::shared_ptr<const tileset> renderer_recovery_test_support::upload_test_bundl
 point renderer_recovery_test_support::character_preview_size( const Character &ch, int scale )
 {
     auto ts = std::const_pointer_cast<tileset>( install_synthetic_bundle(
-            "character_preview_test", "color_pixel_sepia_light",
-            renderer_coordinator.instance_generation(), renderer_coordinator.textures_generation() ) );
+                  "character_preview_test", "color_pixel_sepia_light",
+                  renderer_coordinator.instance_generation(), renderer_coordinator.textures_generation() ) );
     ts->tile_width = 1;
     ts->tile_height = 1;
     tile_type player_tile;
@@ -3224,7 +3224,7 @@ std::optional<point> renderer_recovery_test_support::map_cell_at_window_point(
     context.coordinate_input_received = true;
     context.coordinate = point( buffer_point.x, buffer_point.y );
     const std::optional<tripoint_bub_ms> mapped = context.get_coordinates(
-            capture_win, center, true );
+                capture_win, center, true );
     return mapped ? std::optional<point>( mapped->xy().raw() ) : std::nullopt;
 }
 
@@ -3278,7 +3278,7 @@ bool renderer_resource_coordinator::apply_resize_only( const uint32_t serviced_r
                                 || want.y != display_buffer_h_;
     if( buffer_changed ) {
         const bind_result r = permanent_render_target_bind( renderer, nullptr,
-            shared_variant_pass_or_null() );
+                              shared_variant_pass_or_null() );
         if( r == bind_result::failed_in_switch ) {
             // Undefined renderer state -- escalate to a full device-loss rebuild
             // at the next drain rather than recreating against it.
@@ -3573,7 +3573,7 @@ recovery_drain_planner::action recovery_drain_planner::finish_retry_action()
 }
 
 static std::optional<std::pair<tripoint_abs_omt, std::string>> get_mission_arrow(
-    const inclusive_cuboid<tripoint_abs_omt> &overmap_area, const tripoint_abs_omt &center )
+            const inclusive_cuboid<tripoint_abs_omt> &overmap_area, const tripoint_abs_omt &center )
 {
     const tripoint_abs_omt mission_target = get_avatar().get_active_mission_target();
 
@@ -3599,7 +3599,7 @@ static std::optional<std::pair<tripoint_abs_omt, std::string>> get_mission_arrow
     }
 
     const std::vector<tripoint_abs_omt> traj = line_to( center,
-        tripoint_abs_omt( mission_target.xy(), center.z() ) );
+            tripoint_abs_omt( mission_target.xy(), center.z() ) );
 
     if( traj.empty() ) {
         debugmsg( "Failed to gen overmap mission trajectory %s %s",
@@ -3902,7 +3902,7 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
             const lit_level ll = overmap_buffer.is_explored( omp ) ? lit_level::LOW : lit_level::LIT;
             if( drilled ) {
                 const Uint8 blend_alpha = static_cast<Uint8>( std::min(
-                        192, 20 * ( ground_z_offset + 1 ) ) );
+                                              192, 20 * ( ground_z_offset + 1 ) ) );
                 pending_gray_overlay_ = SDL_Color{ 255, 255, 255, blend_alpha };
             }
             // light level is now used for choosing between grayscale filter and normal lit tiles.
@@ -3925,13 +3925,13 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
             if( vision != om_vision_level::unseen ) {
                 const int horde_size = showhordes && los ?
                                        overmap_buffer.get_horde_size( ground_omp,
-                                           horde_map_flavors::active | horde_map_flavors::idle ) : 0;
+                                               horde_map_flavors::active | horde_map_flavors::idle ) : 0;
                 // The normal horde marker already represents this group.  Debug
                 // overlays should not add a second zombie sprite beneath it.
                 if( draw_overlays && uistate.overmap_debug_mongroup &&
                     horde_size < HORDE_VISIBILITY_SIZE ) {
                     std::vector<std::unordered_map<tripoint_abs_ms, horde_entity>*> hordes = overmap_buffer.hordes_at(
-                            ground_omp );
+                                ground_omp );
                     if( !hordes.empty() ) {
                         draw_from_id_string( "mon_zombie", omp, 0, 0, lit_level::LIT, false );
                     }
@@ -4113,7 +4113,7 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
 
         // only draw in full tiles so it doesn't get cut off
         const std::optional<std::pair<tripoint_abs_omt, std::string>> mission_arrow =
-            get_mission_arrow( full_om_tile_area, center_pos );
+                    get_mission_arrow( full_om_tile_area, center_pos );
         if( mission_arrow ) {
             draw_from_id_string( mission_arrow->second, global_omt_to_draw_position( mission_arrow->first ), 0,
                                  0, lit_level::LIT, false );
@@ -4124,7 +4124,7 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
 
         const auto abs_sm_to_draw_label = [&]( const tripoint_abs_sm & city_pos, const int label_length ) {
             const point_abs_omt omt_pos = global_omt_to_draw_position( project_to<coords::omt>
-                ( city_pos ) ).xy();
+                                          ( city_pos ) ).xy();
             const point draw_point = player_to_screen( omt_pos );
             // center text on the tile
             return draw_point + point( ( tile_width - label_length * fontwidth ) / 2,
@@ -4145,7 +4145,7 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
         // the tiles on the overmap are overmap tiles, so we need to use
         // coordinate conversions to make sure we're in the right place.
         const int radius = project_to<coords::sm>( tripoint_abs_omt( std::max( s.x, s.y ),
-            0, 0 ) ).x() / 2;
+                           0, 0 ) ).x() / 2;
 
         for( const city_reference &city : overmap_buffer.get_cities_near(
                  project_to<coords::sm>( center_pos ), radius ) ) {
@@ -4193,7 +4193,7 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
         const std::string &note_text = overmap_buffer.note( center_pos );
         if( !note_text.empty() ) {
             const std::tuple<char, nc_color, size_t> note_info = overmap_ui::get_note_display_info(
-                    note_text );
+                        note_text );
             const size_t pos = std::get<2>( note_info );
             if( pos != std::string::npos ) {
                 notes_window_text.emplace_back( std::get<1>( note_info ), note_text.substr( pos ) );
@@ -4243,9 +4243,9 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
 
         // Find screen coordinates to the right of the center tile
         auto center_sm = project_to<coords::sm>( tripoint_abs_omt( center_pos.x() + 1,
-            center_pos.y(), center_pos.z() ) );
+                         center_pos.y(), center_pos.z() ) );
         const point_abs_omt omt_pos = global_omt_to_draw_position( project_to<coords::omt>
-            ( center_sm ) ).xy();
+                                      ( center_sm ) ).xy();
         point draw_point = player_to_screen( omt_pos );
         draw_point += point( padding, padding );
 
@@ -4281,7 +4281,7 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
 
                 if( seg[0] == '<' ) {
                     const color_tag_parse_result::tag_type type = update_color_stack(
-                            color_stack, seg, report_color_error::no );
+                                color_stack, seg, report_color_error::no );
                     if( type != color_tag_parse_result::non_color_tag ) {
                         seg = rm_prefix( seg );
                     }
@@ -5225,7 +5225,7 @@ static void android_update_pinch_zoom()
     }
 
     const float current_distance = std::hypot( finger_curr_x - second_finger_curr_x,
-        finger_curr_y - second_finger_curr_y );
+                                   finger_curr_y - second_finger_curr_y );
     if( current_distance <= 0.0f ) {
         return;
     }
@@ -5235,7 +5235,7 @@ static void android_update_pinch_zoom()
     const int minimum_zoom = std::min( configured_min, configured_max );
     const int maximum_zoom = std::max( configured_min, configured_max );
     int target_zoom = static_cast<int>( std::lround( pinch_start_zoom * current_distance /
-        pinch_start_distance ) );
+                                        pinch_start_distance ) );
     // Two-unit steps feel continuous while avoiding a resize for every pixel of motion.
     target_zoom = 2 * static_cast<int>( std::lround( target_zoom / 2.0f ) );
     target_zoom = std::clamp( target_zoom, minimum_zoom, maximum_zoom );
@@ -5565,7 +5565,7 @@ input_event *get_quick_shortcut_under_finger( bool down = false )
     }
 
     quick_shortcuts_t &qsl = quick_shortcuts_map[get_quick_shortcut_name(
-            touch_input_context.get_category() )];
+                                 touch_input_context.get_category() )];
 
     float border, width, height;
     get_quick_shortcut_dimensions( qsl, border, width, height );
@@ -5615,7 +5615,7 @@ bool ignore_action_for_quick_shortcuts( const std::string &action )
              || action == "MOVE_ARMOR" // maps to ENTER
              || action == "ANY_INPUT"
              || action ==
-                       "DELETE_TEMPLATE" // strictly we shouldn't have this one, but I don't like seeing the "d" on the main menu by default. :)
+             "DELETE_TEMPLATE" // strictly we shouldn't have this one, but I don't like seeing the "d" on the main menu by default. :)
            );
 }
 
@@ -5952,7 +5952,7 @@ void draw_quick_shortcuts()
         std::string text = event.text;
         int key = event.get_first_input();
         float default_text_scale = std::floor( 0.75f * ( height /
-            font->height ) ); // default for single character strings
+                                               font->height ) ); // default for single character strings
         float text_scale = default_text_scale;
         if( text.empty() || text == " " ) {
             text = inp_mngr.get_keyname( key, event.type );
@@ -5968,7 +5968,7 @@ void draw_quick_shortcuts()
                 Character &player_character = get_player_character();
                 // Special case for inventory items - show the inventory item name as help text
                 hint_text = player_character.inv->find_item( player_character.inv->invlet_to_position(
-                        key ) ).display_name();
+                                key ) ).display_name();
                 if( hint_text == "none" ) {
                     // We couldn't find this item in the inventory, let's check worn items
                     std::optional<const item *> item = player_character.worn.item_worn_with_inv_let( key );
@@ -6028,7 +6028,7 @@ void draw_quick_shortcuts()
         int text_x, text_y;
         if( shortcut_right ) {
             text_x = ( WindowWidth - ( i + 0.5f ) * width - ( font->width * utf8_width(
-                    text ) ) * text_scale * 0.5f ) / text_scale;
+                           text ) ) * text_scale * 0.5f ) / text_scale;
         } else {
             text_x = ( ( i + 0.5f ) * width - ( font->width * utf8_width( text ) ) * text_scale * 0.5f ) /
                      text_scale;
@@ -6054,7 +6054,7 @@ void draw_quick_shortcuts()
                 int hint_length = utf8_width( hint_text );
                 if( WindowWidth * safe_margin < font->width * text_scale * hint_length ) {
                     text_scale *= ( WindowWidth * safe_margin ) / ( font->width * text_scale *
-                        hint_length );    // scale to fit comfortably
+                                  hint_length );    // scale to fit comfortably
                 }
                 RenderSetScale( renderer, text_scale, text_scale );
                 text_x = ( WindowWidth - ( ( font->width  * hint_length ) * text_scale ) ) * 0.5f / text_scale;
@@ -6192,7 +6192,7 @@ static void draw_gamepad_radial_menu()
 
         // Convert target screen coords back to scaled coords for font drawing
         const point draw( static_cast<int>( target_x / text_scale ) - ( font->width * utf8_width(
-                    label ) / 2 ),
+                              label ) / 2 ),
                           static_cast<int>( target_y / text_scale ) - ( font->height / 2 ) );
 
         bool is_selected = dir == selected_dir;
@@ -6268,7 +6268,7 @@ void handle_finger_input( uint32_t ticks )
     bool is_default_mode = touch_input_context.get_category() == "DEFAULTMODE" &&
                            android_has_active_world();
     if( dist > ( get_option<float>( "ANDROID_DEADZONE_RANGE" ) * std::max( WindowWidth,
-            WindowHeight ) ) ) {
+                 WindowHeight ) ) ) {
         if( !handle_diagonals ) {
             if( delta_x >= 0 && delta_y >= 0 ) {
                 last_input = input_event( delta_x > delta_y ? KEY_RIGHT : KEY_DOWN, input_event_t::keyboard_char );
@@ -6526,7 +6526,7 @@ static void CheckMessages()
     bool is_default_mode = touch_input_context.get_category() == "DEFAULTMODE" &&
                            android_has_active_world();
     quick_shortcuts_t &qsl = quick_shortcuts_map[get_quick_shortcut_name(
-            touch_input_context.get_category() )];
+                                 touch_input_context.get_category() )];
 
     const bool allow_touch_repeat = !needupdate;
 
@@ -6728,7 +6728,7 @@ static void CheckMessages()
                     jobject activity = ( jobject )GetAndroidActivity();
                     jclass clazz( env->GetObjectClass( activity ) );
                     jstring toast_message = env->NewStringUTF( quick_shortcuts_enabled ? "Shortcuts visible" :
-                        "Shortcuts hidden" );
+                                            "Shortcuts hidden" );
                     jmethodID method_id = env->GetMethodID( clazz, "toast", "(Ljava/lang/String;)V" );
                     env->CallVoidMethod( activity, method_id, toast_message );
                     env->DeleteLocalRef( activity );
@@ -7083,7 +7083,7 @@ static void CheckMessages()
                                     }
 
                                     quick_shortcuts_t &qsl = quick_shortcuts_map[get_quick_shortcut_name(
-                                            touch_input_context.get_category() )];
+                                                                 touch_input_context.get_category() )];
                                     qsl.remove( last_input );
                                     add_quick_shortcut( qsl, last_input, false, true );
                                     android_request_repaint();
@@ -7394,7 +7394,7 @@ static void CheckMessages()
                                 last_input = *quick_shortcut;
                                 if( get_option<bool>( "ANDROID_SHORTCUT_MOVE_FRONT" ) ) {
                                     quick_shortcuts_t &qsl = quick_shortcuts_map[get_quick_shortcut_name(
-                                            touch_input_context.get_category() )];
+                                                                 touch_input_context.get_category() )];
                                     reorder_quick_shortcut( qsl, quick_shortcut->get_first_input(), false );
                                 }
                                 quick_shortcut->shortcut_last_used_action_counter = g->get_user_action_counter();
@@ -7408,7 +7408,7 @@ static void CheckMessages()
                                     finger_down_y - finger_curr_y > std::abs( finger_down_x - finger_curr_x ) ) {
                                     // a flick up was detected, remove the quick shortcut!
                                     quick_shortcuts_t &qsl = quick_shortcuts_map[get_quick_shortcut_name(
-                                            touch_input_context.get_category() )];
+                                                                 touch_input_context.get_category() )];
                                     qsl.remove( *quick_shortcut );
                                 }
                             }
@@ -7504,7 +7504,7 @@ static void CheckMessages()
                                             jobject activity = ( jobject )GetAndroidActivity();
                                             jclass clazz( env->GetObjectClass( activity ) );
                                             jstring toast_message = env->NewStringUTF( quick_shortcuts_enabled ? "Shortcuts visible" :
-                                                "Shortcuts hidden" );
+                                                                    "Shortcuts hidden" );
                                             jmethodID method_id = env->GetMethodID( clazz, "toast", "(Ljava/lang/String;)V" );
                                             env->CallVoidMethod( activity, method_id, toast_message );
                                             env->DeleteLocalRef( activity );
@@ -7589,9 +7589,9 @@ static void CheckMessages()
                             }
                         }
                         third_finger_down_x = third_finger_curr_x = second_finger_down_x = second_finger_curr_x =
-                        finger_down_x = finger_curr_x = -1.0f;
+                                                  finger_down_x = finger_curr_x = -1.0f;
                         third_finger_down_y = third_finger_curr_y = second_finger_down_y = second_finger_curr_y =
-                        finger_down_y = finger_curr_y = -1.0f;
+                                                  finger_down_y = finger_curr_y = -1.0f;
                         is_two_finger_touch = false;
                         is_three_finger_touch = false;
                         pinch_start_distance = 0.0f;
@@ -7711,7 +7711,7 @@ static std::pair<float, float> get_display_scale( int display_index )
 {
 #if SDL_VERSION_ATLEAST(2,26,0)
     SDL_Window_Ptr probe = CreateGameWindow( "probe", display_index, 16, 16,
-        CATA_WINDOW_HIDDEN | CATA_WINDOW_HIGH_DPI );
+                           CATA_WINDOW_HIDDEN | CATA_WINDOW_HIGH_DPI );
     if( !probe ) {
         return std::make_pair( 1.0f, 1.0f );
     }
@@ -7918,15 +7918,15 @@ void catacurses::init_interface()
 #endif // SOUND
 
     font = std::make_unique<FontFallbackList>( renderer, pixel_format, fl.fontwidth, fl.fontheight,
-        windowsPalette, fl.typeface, fl.fontsize, fl.fontblending );
+            windowsPalette, fl.typeface, fl.fontsize, fl.fontblending );
     gui_font = std::make_unique<FontFallbackList>( renderer, pixel_format, fl.fontwidth, fl.fontheight,
-        windowsPalette, fl.gui_typeface, fl.fontsize, fl.fontblending );
+               windowsPalette, fl.gui_typeface, fl.fontsize, fl.fontblending );
     map_font = std::make_unique<FontFallbackList>( renderer, pixel_format, fl.map_fontwidth,
-        fl.map_fontheight,
-        windowsPalette, fl.map_typeface, fl.map_fontsize, fl.fontblending );
+               fl.map_fontheight,
+               windowsPalette, fl.map_typeface, fl.map_fontsize, fl.fontblending );
     overmap_font = std::make_unique<FontFallbackList>( renderer, pixel_format, fl.overmap_fontwidth,
-        fl.overmap_fontheight,
-        windowsPalette, fl.overmap_typeface, fl.overmap_fontsize, fl.fontblending );
+                   fl.overmap_fontheight,
+                   windowsPalette, fl.overmap_typeface, fl.overmap_fontsize, fl.fontblending );
     stdscr = newwin( get_terminal_height(), get_terminal_width(), point::zero );
     //newwin calls `new WINDOW`, and that will throw, but not return nullptr.
     imclient->load_fonts( gui_font, font, windowsPalette, fl.gui_typeface, fl.typeface );
