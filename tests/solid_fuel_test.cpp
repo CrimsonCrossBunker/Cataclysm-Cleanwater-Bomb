@@ -2,6 +2,13 @@
 #include <sstream>
 #include <string>
 
+#include "cata_imgui.h" // Select TUI before the UI-test guards.
+
+#if defined(TILES)
+    #include "cursesdef.h"
+    #include "cursesport.h"
+#endif
+
 #include "cata_catch.h"
 #include "coordinates.h"
 #include "enums.h"
@@ -40,6 +47,42 @@ TEST_CASE( "solid_fuel_bunker_uses_actual_fuel_volume", "[vehicle][fuel]" )
         CHECK( bunker.get_base().legacy_front().weight() == 10400_gram );
     }
 }
+
+#if defined(TILES) && !defined(TUI)
+TEST_CASE( "solid_fuel_bunker_part_details_show_actual_volume", "[vehicle][fuel][ui]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    clear_vehicles();
+    map &here = get_map();
+    const itype_id fuel = GENERATE( itype_charcoal, itype_coal_lump );
+    const bool half_full = GENERATE( false, true );
+    CAPTURE( fuel, half_full );
+    vehicle *veh = here.add_vehicle( vehicle_prototype_none, tripoint_bub_ms( 60, 60, 0 ),
+                                     0_degrees, 0, veh_spawn_status::UNDAMAGED );
+    REQUIRE( veh != nullptr );
+    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_frame ) >= 0 );
+    const int bunker = veh->install_part( here, point_rel_ms::zero, vpart_fuel_bunker );
+    REQUIRE( bunker >= 0 );
+    const int full = veh->part( bunker ).ammo_set( fuel );
+    REQUIRE( full > 0 );
+    if( half_full ) {
+        REQUIRE( veh->part( bunker ).ammo_set( fuel, full / 2 ) == full / 2 );
+    }
+
+    const catacurses::window win = catacurses::newwin( 4, 80, point::zero );
+    REQUIRE( static_cast<bool>( win ) );
+    veh->print_part_list( win, 0, 4, 80, bunker, -1, true );
+    const cata_cursesport::WINDOW *buffer = win.get<cata_cursesport::WINDOW>();
+    std::string rendered;
+    for( const cata_cursesport::curseline &line : buffer->line ) {
+        for( const cata_cursesport::cursecell &cell : line.chars ) {
+            rendered += cell.ch;
+        }
+    }
+    CHECK( rendered.find( half_full ? "25.0L" : "50.0L" ) != std::string::npos );
+}
+#endif
 
 TEST_CASE( "steam_engines_do_not_collect_unserved_fuel_demand", "[vehicle][fuel]" )
 {

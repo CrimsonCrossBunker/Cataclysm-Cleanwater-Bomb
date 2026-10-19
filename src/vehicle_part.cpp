@@ -502,6 +502,11 @@ bool vehicle_part::can_reload( const item &obj ) const
         if( is_tank() && ( obj.made_of( phase_id::SOLID ) || obj.made_of( phase_id::PNULL ) ) ) {
             return false;
         }
+        // Type/capacity alone does not guarantee that existing liquid can mix
+        // with this batch. Do not offer a tank that cannot accept even one unit.
+        if( is_tank() && base.get_remaining_capacity_for_liquid( obj, true ) <= 0 ) {
+            return false;
+        }
         // forbid putting liquids, gasses, and plasma in things that aren't tanks
         if( !obj.made_of( phase_id::SOLID ) && !is_tank() ) {
             return false;
@@ -819,7 +824,7 @@ bool vehicle::can_enable( map &here, const vehicle_part &pt, bool alert ) const
 
     // FIXME/HACK: Always checks buckwheat seeds!
     ret_val<void>can_plant = warm_enough_to_plant( get_player_character().pos_bub(),
-        itype_seed_buckwheat );
+                             itype_seed_buckwheat );
     if( pt.info().has_flag( "PLANTER" ) && !can_plant.success() ) {
         if( alert ) {
             add_msg( m_bad, can_plant.c_str() );
