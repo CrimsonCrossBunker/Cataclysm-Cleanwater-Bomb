@@ -135,7 +135,9 @@ class BuildTranslationsFallbackTest(unittest.TestCase):
                     placeholder_mo.read_bytes()
                     if placeholder_mo.is_file() else b""
                 ),
-                "stats": stats_file.read_text() if stats_file.is_file() else "",
+                "stats": (
+                    stats_file.read_text() if stats_file.is_file() else ""
+                ),
             }
             return result, downloaded, files
 
@@ -159,7 +161,9 @@ class BuildTranslationsFallbackTest(unittest.TestCase):
         self.assertEqual(downloads, ["35"], result.stdout + result.stderr)
         self.assertTrue(files["zh_cn_mo"])
 
-    def test_creates_empty_catalog_for_pull_request_without_artifact(self) -> None:
+    def test_creates_empty_catalog_for_pull_request_without_artifact(
+        self,
+    ) -> None:
         result, downloads, files = self.run_fallback({
             "matrix.yml": [{"id": 40, "status": "success"}],
             "artifacts": {"40": {"expired": True}},
