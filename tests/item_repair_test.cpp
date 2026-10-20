@@ -1,14 +1,17 @@
-#include <algorithm>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "activity_actor.h"
+#include "activity_actor_definitions.h"
 #include "activity_handlers.h"
 #include "calendar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
 #include "character.h"
+#include "clone_ptr.h"
 #include "coordinates.h"
+#include "fault.h"
 #include "item.h"
 #include "item_location.h"
 #include "item_repair.h"
@@ -28,10 +31,23 @@
 
 static const activity_id ACT_MEND_ITEM( "ACT_MEND_ITEM" );
 static const activity_id ACT_REPAIR_ITEM( "ACT_REPAIR_ITEM" );
+static const fault_id fault_blade_cracked( "fault_blade_cracked" );
+static const fault_id fault_blade_rolled_edge( "fault_blade_rolled_edge" );
+static const fault_id fault_fail_to_feed( "fault_fail_to_feed" );
 static const fault_id fault_spearhead_bent_socket( "fault_spearhead_bent_socket" );
+static const fault_id fault_spearhead_chipping( "fault_spearhead_chipping" );
+static const fault_id fault_spearhead_warped( "fault_spearhead_warped" );
+static const fault_fix_id fault_fix_mend_blade_grind( "mend_blade_grind" );
+static const fault_fix_id
+fault_fix_mend_fault_fail_to_feed_manual_feed( "mend_fault_fail_to_feed_manual_feed" );
+static const fault_fix_id fault_fix_mend_spearhead_grind( "mend_spearhead_grind" );
+static const fault_fix_id fault_fix_mend_spearhead_straighten( "mend_spearhead_straighten" );
+static const itype_id itype_glock_19( "glock_19" );
 static const itype_id itype_integrated_welder( "integrated_welder" );
+static const itype_id itype_knife_combat( "knife_combat" );
 static const itype_id itype_magazine_battery_mod( "magazine_battery_mod" );
 static const itype_id itype_mc_steel_chunk( "mc_steel_chunk" );
+static const itype_id itype_metal_honing_rod( "metal_honing_rod" );
 static const itype_id itype_qt_spear_steel( "qt_spear_steel" );
 static const itype_id itype_small_storage_battery( "small_storage_battery" );
 static const itype_id itype_welding_kit( "welding_kit" );
@@ -225,4 +241,127 @@ TEST_CASE( "item_repair_restores_faultless_combat_wear_to_full", "[item][repair]
         CHECK( target->faults.empty() );
         CHECK( tool->ammo_remaining() < charge_before );
     }
+}
+
+// Complete the real activity so requirements, fault removal and durability changes run.
+static void finish_mending( Character &you, const item_location &target,
+                            const fault_id &fault, const fault_fix_id &fix )
+{
+    REQUIRE( target->has_fault( fault ) );
+    you.assign_activity( mend_item_activity_actor( fix->time, target, fault, fix ) );
+    you.activity.actor->finish( you.activity, you );
+    REQUIRE( you.activity.is_null() );
+}
+
+TEST_CASE( "item_mending_restores_residual_wear_after_the_last_fault",
+           "[item][repair][repair_menu][mending]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    set_time_to_day();
+    Character &you = get_player_character();
+    item_location target = damaged_spear( you );
+
+    for( const int damage : {
+             1000, 1250, 2000, 3250
+         } ) {
+        CAPTURE( damage );
+        // Reduced fault rates and blocked faults leave more wear than faults.
+        // Reuse one weapon through repeated cycles, without a separate repair kit.
+        target->force_set_damage( damage );
+        REQUIRE( target->set_fault( fault_spearhead_bent_socket, false, nullptr, true ) );
+        finish_mending( you, target, fault_spearhead_bent_socket,
+                        fault_fix_mend_spearhead_straighten );
+        CHECK( target->faults.empty() );
+        CHECK( target->degradation() == 0 );
+        CHECK( target->damage() == 0 );
+    }
+}
+
+TEST_CASE( "item_mending_restores_residual_wear_only_after_all_mechanical_faults",
+           "[item][repair][repair_menu][mending]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    set_time_to_day();
+    Character &you = get_player_character();
+    item_location target = damaged_spear( you );
+    target->force_set_damage( 3250 );
+    REQUIRE( target->set_fault( fault_spearhead_bent_socket, false, nullptr, true ) );
+    REQUIRE( target->set_fault( fault_spearhead_chipping, false, nullptr, true ) );
+    REQUIRE( target->set_fault( fault_spearhead_warped, false, nullptr, true ) );
+    get_map().add_item_or_charges( you.pos_bub(), item( itype_metal_honing_rod ) );
+    you.invalidate_crafting_inventory();
+
+    finish_mending( you, target, fault_spearhead_bent_socket,
+                    fault_fix_mend_spearhead_straighten );
+    CHECK( target->damage() == 2250 );
+    CHECK( target->has_fault( fault_spearhead_chipping ) );
+    CHECK( target->has_fault( fault_spearhead_warped ) );
+    finish_mending( you, target, fault_spearhead_chipping, fault_fix_mend_spearhead_grind );
+    CHECK( target->faults.empty() );
+    CHECK( target->damage() == 0 );
+}
+
+TEST_CASE( "item_mending_preserves_requirements_for_full_repair",
+           "[item][repair][repair_menu][mending]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    set_time_to_day();
+    Character &you = get_player_character();
+    item_location target = damaged_spear( you );
+    REQUIRE( target->set_fault( fault_spearhead_chipping, false, nullptr, true ) );
+
+    finish_mending( you, target, fault_spearhead_chipping, fault_fix_mend_spearhead_grind );
+    CHECK( target->damage() == 2000 );
+    CHECK( target->has_fault( fault_spearhead_chipping ) );
+    get_map().add_item_or_charges( you.pos_bub(), item( itype_metal_honing_rod ) );
+    you.invalidate_crafting_inventory();
+    finish_mending( you, target, fault_spearhead_chipping, fault_fix_mend_spearhead_grind );
+    CHECK( target->faults.empty() );
+    CHECK( target->damage() == 0 );
+}
+
+TEST_CASE( "item_mending_does_not_bypass_irreparable_faults",
+           "[item][repair][repair_menu][mending]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    set_time_to_day();
+    Character &you = get_player_character();
+    item knife( itype_knife_combat );
+    REQUIRE( you.wield( knife ) );
+    item_location target = you.get_wielded_item();
+    target->force_set_damage( 3250 );
+    REQUIRE( target->set_fault( fault_blade_cracked, false, nullptr, true ) );
+    REQUIRE( fault_blade_cracked->get_fixes().empty() );
+    REQUIRE( target->set_fault( fault_blade_rolled_edge, false, nullptr, true ) );
+    get_map().add_item_or_charges( you.pos_bub(), item( itype_metal_honing_rod ) );
+    you.invalidate_crafting_inventory();
+
+    finish_mending( you, target, fault_blade_rolled_edge, fault_fix_mend_blade_grind );
+    CHECK_FALSE( target->has_fault( fault_blade_rolled_edge ) );
+    CHECK( target->has_fault( fault_blade_cracked ) );
+    CHECK( target->degradation() == fault_blade_cracked->degradation_mod() );
+    CHECK( target->damage() == 2250 );
+}
+
+TEST_CASE( "item_mending_a_gun_malfunction_does_not_restore_durability",
+           "[item][repair][repair_menu][mending]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    set_time_to_day();
+    Character &you = get_player_character();
+    item gun( itype_glock_19 );
+    REQUIRE( you.wield( gun ) );
+    item_location target = you.get_wielded_item();
+    target->force_set_damage( 2000 );
+    REQUIRE( target->set_fault( fault_fail_to_feed, true, nullptr, true ) );
+
+    finish_mending( you, target, fault_fail_to_feed,
+                    fault_fix_mend_fault_fail_to_feed_manual_feed );
+    CHECK( target->faults.empty() );
+    CHECK( target->damage() == 2000 );
 }

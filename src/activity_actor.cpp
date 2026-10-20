@@ -78,6 +78,7 @@
 #include "input_popup.h"
 #include "inventory_ui.h"
 #include "item.h"
+#include "item_category.h"
 #include "item_components.h"
 #include "item_contents.h"
 #include "item_factory.h"
@@ -344,6 +345,8 @@ static const furn_str_id furn_f_safe_o( "f_safe_o" );
 static const furn_str_id furn_f_smoking_rack( "f_smoking_rack" );
 
 static const gun_mode_id gun_mode_DEFAULT( "DEFAULT" );
+
+static const item_category_id item_category_veh_parts( "veh_parts" );
 
 static const item_group_id
 Item_spawn_data_SUS_trash_forest_no_manmade( "SUS_trash_forest_no_manmade" );
@@ -2583,7 +2586,7 @@ bool read_activity_actor::player_read( avatar &you )
             }
             learner->practice_proficiency( bonus.id,
                                            std::min( islotbook->time * bonus.time_factor * penalty,
-                                                     cap_time - practiced ) );
+                                                   cap_time - practiced ) );
         }
 
         if( learner_left && learner->getID().get_value() == learner_id ) {
@@ -11646,9 +11649,11 @@ void mend_item_activity_actor::finish( player_activity &act, Character &who )
     who.invalidate_crafting_inventory();
 
     int num_faults_removed = 0;
+    bool repaired_mechanical_damage = false;
     for( const ::fault_id &id : fix.faults_removed ) {
         if( target.remove_fault( id ) ) {
             num_faults_removed++;
+            repaired_mechanical_damage |= id->type() == "mechanical_damage";
         }
     }
     for( const ::fault_id &id : fix.faults_added ) {
@@ -11670,6 +11675,18 @@ void mend_item_activity_actor::finish( player_activity &act, Character &who )
     }
     if( fix.mod_degradation ) {
         target.set_degradation( target.degradation() + ( fix.mod_degradation * num_faults_removed ) );
+    }
+
+    // Wear is not one-to-one with faults: fault-rate modifiers can skip faults,
+    // and severe faults can replace several smaller ones.  Once the last
+    // mechanical fault is repaired, do not leave that wear for a second repair
+    // tool.  Vehicle parts retain their separate damage/degradation repairs.
+    if( repaired_mechanical_damage && fix.mod_damage < 0 &&
+        target.get_category_shallow().get_id() != item_category_veh_parts &&
+    std::none_of( target.faults.begin(), target.faults.end(), []( const fault_id & id ) {
+    return id->type() == "mechanical_damage";
+    } ) ) {
+        target.mod_damage( -std::max( 0, target.damage() - target.degradation() ) );
     }
 
     for( const auto& [skill_id, level] : fix.skills ) {
