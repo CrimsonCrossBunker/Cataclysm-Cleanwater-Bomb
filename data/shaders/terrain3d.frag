@@ -79,6 +79,12 @@ void main()
         if( !no_discard && sampled.a < 0.1 ) {
             discard;
         }
+        // field layers: bit7 (128) renders translucent pixels as a screen-door
+        // dither proportional to their alpha (the same trick as ghost), so
+        // smoke, fire and blood edges read as translucent without blending
+        if( ( flags & 128 ) != 0 && sampled.a < 0.9 && hash > sampled.a ) {
+            discard;
+        }
     }
     vec3 rgb = v_color.rgb * sampled.rgb;
     // remembered terrain (bit6): 2D draws the map-memory overlay unlit, colored

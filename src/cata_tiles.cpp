@@ -6483,6 +6483,13 @@ void cata_tiles::get_furniture_rota_subtile( const tripoint_bub_ms &p, int &rota
     }
 }
 
+void cata_tiles::get_field_rota_subtile_3d( int field_id, const std::array<int, 4> &neighborhood,
+        int &subtile, int &rotation )
+{
+    // exactly the call draw_field_or_item makes for its field connection shape
+    get_tile_values( field_id, neighborhood, subtile, rotation, 0 );
+}
+
 void cata_tiles::memorize_map_memory( const tripoint_bub_ms &center )
 {
     map &here = get_map();

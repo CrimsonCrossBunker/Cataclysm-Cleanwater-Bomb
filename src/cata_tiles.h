@@ -804,6 +804,14 @@ class cata_tiles
         void get_terrain_rota_subtile( const tripoint_bub_ms &p, int &rota, int &subtile );
         void get_furniture_rota_subtile( const tripoint_bub_ms &p, int &rota, int &subtile );
 
+        // 3D-only: the connection subtile/rotation draw_field_or_item derives
+        // from neighboring tiles carrying the same field (get_tile_values).
+        // neighborhood is the S,E,W,N field id per direction (absent = -1).
+        // The 2D draw path never calls this wrapper, so 2D rendering is
+        // unaffected.
+        void get_field_rota_subtile_3d( int field_id, const std::array<int, 4> &neighborhood,
+                                        int &subtile, int &rotation );
+
         // 3D-only: the map-memory sweep draw() performs at its end (memorize
         // everything the avatar currently sees), for the reality-bubble level
         // center.z(). Render3D bypasses draw(), so it runs this itself; the 2D

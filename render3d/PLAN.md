@@ -263,6 +263,24 @@ THIN_OBSTACLE）——上锁/破损门因此按门板渲染，而不是 movecost
   `COPY_AVATAR_LOOK` / `COPY_SUMMONER_LOOK`。
 - 临时诊断：`doll: <base> overlays=N resolved=M ids=...`（每 base id 一次，上限 120 行）。
 
+### field 渲染（TP-10）
+
+- **2D 语义**：每个可见格按 field-map 顺序绘制**全部** displayable field 条目
+  （`display_field=false` 跳过）；先试 `fd_xxx_int<N>` 再回退基础 id；四邻（S/E/W/N，
+  邻居需同 field 且可见）经 `get_tile_values` 得到连接 subtile/rotation
+  （`fd_blood` 等 multitile 的 center/corner/edge/… 子图）；FIELD 的 `looks_like`
+  链与等级 0 的 ASCII 兜底；field 不进入地图记忆；2D 中 field 画在物品之前。
+- **3D 呈现**：按 `field_type::phase` 分类（PNULL 沿 `looks_like` 链取相位）——
+  LIQUID/SOLID 画贴地薄片（`wz+0.001`，同格按 field-map 顺序每层 +0.3 mm）；
+  GAS/PLASMA（烟、雾、毒气、火、电、等离子）画面向相机的 billboard
+  （高 1.4 m、宽按贴图纵横比，同格沿相机方向每层错开 8 mm）。
+- 世界 pass 无混合：两种呈现都传 **bit7 软 alpha**，按贴图 alpha 抖动近似 2D 的半透明
+  （烟雾 64–254、蛛网 128–191、火焰 64–254、血迹边缘抗锯齿）。
+- 连接形状经新增的 3D 专用包装 `cata_tiles::get_field_rota_subtile_3d` 调用 2D 的
+  `get_tile_values`；无贴图时用等级 0 符号/颜色的字形回退。
+- 已知限制：tileset layering 的 field_variants（火盆/油桶的 `fd_smoke_overlay` 专用贴图）
+  未实现，与物品 layering 现状一致。
+
 ## 构建与实测
 
 ```bash
@@ -290,6 +308,7 @@ shape: t_water_pool_shallow_outdoors sub=corner rota=2 -> t_water_pool_corner li
 - **稳定性**：GPU 探针失败自动回退 2D（已实现）；关注实例缓冲上限与 gather 成本
   （±60 约 2.9 万格/帧）。
 - 已知未覆盖：粒子/动画帧、多 tileset 叠加、载具、非当前 z 的记忆。
+- field 后续：tileset layering 的 field_variants（火盆/油桶专用覆盖贴图）未实现。
 
 ## 历史
 
@@ -341,6 +360,9 @@ shape: t_water_pool_shallow_outdoors sub=corner rota=2 -> t_water_pool_corner li
 - TP-8：相机手性修复——地图坐标是左手系，旧的 `r = cross(f, up)` 使 3D 画面水平镜像
   （面向北时按左会向东走）。相机基改为 `r = cross(up, f)` / `u = cross(f, r)`（lookat、
   缓存基、顶点 UBO 同步），画面与 2D 地图同向；中键水平拖拽 yaw 输入取反保持原手感。
+- TP-10：field 渲染——血迹/胆汁/酸液/蛛网等液固体画贴地薄片（带邻接连接子图与强度贴图），
+  烟雾/毒气/火焰/电等气体等离子画面向相机的 billboard（高 1.4 m、软 alpha 抖动）；
+  连接形状经 3D 专用包装复用 2D 的 `get_tile_values`。
 - 2D 隔离 + 忠实移植：恢复 `get_texture_draw_data` 为基点实现；新增 3D 专用解析器
   完整复刻 2D 选取语义。
 

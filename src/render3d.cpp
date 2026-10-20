@@ -31,6 +31,8 @@
 #include "creature.h"
 #include "creature_tracker.h"
 #include "debug.h"
+#include "field.h"
+#include "field_type.h"
 #include "font_loader.h"
 #include "game_constants.h"
 #include "item.h"
@@ -87,6 +89,13 @@ constexpr float FENCE_HEIGHT = 1.5f;
 constexpr float FENCE_THICK = 0.15f;
 constexpr float CREATURE_BASE_HEIGHT = 1.8f;
 constexpr float ITEM_HEIGHT = 0.5f;
+// fields: liquid/solid traces (blood, bile, acid, web...) draw as thin decals
+// just above the floor; gas/plasma effects (smoke, fire, gas...) draw as
+// camera-facing billboards. Co-tile entries stagger so they never share a plane.
+constexpr float FIELD_DECAL_Z = 0.001f;
+constexpr float FIELD_DECAL_STAGGER = 0.0003f;
+constexpr float FIELD_RISER_HEIGHT = 1.4f;
+constexpr float FIELD_RISER_OFFSET = 0.008f;
 
 // the whole rendered z range must be inside map memory's prepared region; the
 // prepare call below anchors that region's z window at 0 (see draw_terrain_window)
@@ -1275,7 +1284,7 @@ void push_instance( std::vector<float> &out, const float dx, const float dy,
                     const bool no_discard = false, const int rota4 = 0,
                     const bool side_strip = false, const float pad_value = -1.0f,
                     const bool ghost = false, const float saturation = 1.0f,
-                    const bool memory = false )
+                    const bool memory = false, const bool soft_alpha = false )
 {
     out.push_back( dx );
     out.push_back( dy );
@@ -1298,11 +1307,14 @@ void push_instance( std::vector<float> &out, const float dx, const float dy,
     // horizontal strip at pad (the sprite's opaque bottom edge),
     // bit5: ghost — dithered 50% transparency (levels above an indoor column),
     // bit6: memory — map-memory look, unlit (2D leaves remembered tiles
-    // unlit and recolors them through the MEMORY_MAP_MODE preset)
+    // unlit and recolors them through the MEMORY_MAP_MODE preset),
+    // bit7: soft alpha — dithered translucency proportional to the sampled
+    // alpha, for field sprites whose semi-transparent pixels 2D would blend
     // pad: side-strip v, or the run direction for MODE_LINEQUAD (0 = E-W)
     out.push_back( ( spr.atlas ? 1.0f : 0.0f ) + ( no_discard ? 2.0f : 0.0f ) +
                    static_cast<float>( ( rota4 & 3 ) << 2 ) + ( side_strip ? 16.0f : 0.0f ) +
-                   ( ghost ? 32.0f : 0.0f ) + ( memory ? 64.0f : 0.0f ) );
+                   ( ghost ? 32.0f : 0.0f ) + ( memory ? 64.0f : 0.0f ) +
+                   ( soft_alpha ? 128.0f : 0.0f ) );
     out.push_back( pad_value >= 0.0f ? pad_value
                    : ( side_strip ? spr.v1 - 0.02f * ( spr.v1 - spr.v0 ) : 0.0f ) );
 }
@@ -1438,6 +1450,25 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                ? map::apparent_light_helper( c, q ).apparent_light : 0.0f;
         return tone_from_light( smooth_lighting::classify_light_cell(
                                     ll, apparent, vis_vars.vision_threshold ).light );
+    };
+    // sprite-less tiles (fields) fall back to the tileset's ASCII symbol, drawn
+    // from the shared TTF glyph atlas and tinted with the entity color (the
+    // same curses-style fallback 2D uses)
+    const auto glyph_sprite = [&]( const char32_t cp, sprite_info & out ) -> bool {
+        if( !g_ctx.glyph_tex ) {
+            return false;
+        }
+        const uint32_t c = static_cast<uint32_t>( cp );
+        const int gc = ( c > 32 && c <= 126 ) ? static_cast<int>( c ) - 32 : '?' - 32;
+        out = sprite_info{};
+        out.atlas = g_ctx.glyph_tex;
+        out.u0 = ( gc % 16 ) * g_ctx.glyph_cell_w / static_cast<float>( g_ctx.glyph_atlas_w );
+        out.v0 = ( gc / 16 ) * g_ctx.glyph_cell_h / static_cast<float>( g_ctx.glyph_atlas_h );
+        out.u1 = out.u0 + g_ctx.glyph_cell_w / static_cast<float>( g_ctx.glyph_atlas_w );
+        out.v1 = out.v0 + g_ctx.glyph_cell_h / static_cast<float>( g_ctx.glyph_atlas_h );
+        out.aspect = g_ctx.glyph_cell_h > 0
+                     ? static_cast<float>( g_ctx.glyph_cell_w ) / g_ctx.glyph_cell_h : 1.0f;
+        return true;
     };
     // render every z-level: per-level rules (seen-only below, roof mode above,
     // open air skipped) keep the cost proportional to what actually exists
@@ -2363,6 +2394,169 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                    1.0f, 1.0f, WALL_HEIGHT, fspr, or_, og, ob,
                                    false, 0, false, -1.0f, ghost, tone.sat );
                     ++count;
+                }
+
+                // fields (blood, bile, smoke, fire, web...): 2D draws every
+                // displayable field entry of the tile in field-map order, below
+                // items. Liquid/solid traces become thin decals on the floor;
+                // gas/plasma effects (smoke, fire, gas) become camera-facing
+                // billboards, matching what their sprites depict.
+                {
+                    const field &fld_here = here.field_at( p );
+                    if( fld_here.field_count() > 0 ) {
+                        // the neighbour must carry the same field type AND be
+                        // visible by the same rule as the tile itself (2D drops
+                        // connection edges toward unseen neighbours)
+                        const auto neighbor_same_field = [&]( const field_type_id & fid,
+                        const tripoint_bub_ms & q ) -> int {
+                            if( !here.inbounds( q ) ) {
+                                return -1;
+                            }
+                            const int qdx = q.x() - center.x();
+                            const int qdy = q.y() - center.y();
+                            const int qdz = q.z() - cz;
+                            if( std::abs( qdx ) > VIEW_RADIUS || std::abs( qdy ) > VIEW_RADIUS ) {
+                                return -1;
+                            }
+                            if( qdz != 0 && ( std::abs( qdx ) > REGION_RADIUS ||
+                                              std::abs( qdy ) > REGION_RADIUS ) ) {
+                                return -1;
+                            }
+                            const level_cache &qc = here.get_cache_ref( q.z() );
+                            lit_level qll = lit_level::BLANK;
+                            if( !( qdz < 0 && q.z() < lowest_vis_z ) ) {
+                                qll = qdz > 0 ? upper_lit_at( qc, q )
+                                      : qc.visibility_cache[q.x()][q.y()];
+                            }
+                            if( qll != lit_level::LOW && qll != lit_level::LIT &&
+                                qll != lit_level::BRIGHT ) {
+                                return -1;
+                            }
+                            return here.field_at( q ).find_field( fid ) ?
+                                   static_cast<int>( fid ) : -1;
+                        };
+                        // render phase, following looks_like through valid
+                        // field ids (fd_fog -> fd_smoke, ...); PNULL stays a
+                        // ground decal
+                        const auto field_render_phase = []( field_type_id id ) {
+                            for( int hop = 0; hop < 4 && id.is_valid(); ++hop ) {
+                                const field_type &st = id.obj();
+                                if( st.phase != phase_id::PNULL ) {
+                                    return st.phase;
+                                }
+                                const field_type_str_id ll( st.looks_like );
+                                if( !ll.is_valid() ) {
+                                    break;
+                                }
+                                id = ll.id();
+                            }
+                            return phase_id::PNULL;
+                        };
+                        int ordinal = 0;
+                        for( const std::pair<const field_type_id, field_entry> &fd_pr :
+                             fld_here ) {
+                            const field_type_id &fid = fd_pr.first;
+                            const field_type &ft = fid.obj();
+                            if( !ft.display_field ) {
+                                ++ordinal;
+                                continue;
+                            }
+                            if( count >= MAX_DRAW_INSTANCES ) {
+                                break;
+                            }
+                            const int intensity = fd_pr.second.get_field_intensity();
+                            const std::array<int, 4> nb = {{
+                                    neighbor_same_field( fid, p + point::south ),
+                                    neighbor_same_field( fid, p + point::east ),
+                                    neighbor_same_field( fid, p + point::west ),
+                                    neighbor_same_field( fid, p + point::north )
+                                }
+                            };
+                            int fsubtile = 0;
+                            int frota = 0;
+                            if( tiles ) {
+                                tiles->get_field_rota_subtile_3d( static_cast<int>( fid ), nb,
+                                                                  fsubtile, frota );
+                            }
+                            // intensity sprite first, then the base sprite, the
+                            // same order draw_from_id_string_internal uses
+                            const std::string fid_str = ft.id.str();
+                            sprite_lookup_3d l;
+                            bool found = false;
+                            if( tiles && intensity > 0 ) {
+                                found = lookup_sprite_layers_3d(
+                                            tiles, fid_str + "_int" + std::to_string( intensity ),
+                                            TILE_CATEGORY::FIELD, p, fsubtile, frota, false, l );
+                            }
+                            if( tiles && !found ) {
+                                found = lookup_sprite_layers_3d( tiles, fid_str,
+                                                                 TILE_CATEGORY::FIELD, p,
+                                                                 fsubtile, frota, false, l );
+                            }
+                            const sprite_info *spr = nullptr;
+                            if( found && l.fg_tex ) {
+                                spr = &l.fg;
+                            } else if( found && l.bg_tex ) {
+                                spr = &l.bg;
+                            }
+                            sprite_info gspr;
+                            bool gtex = false;
+                            float fr = tone.shade, fgn = tone.shade, fb = tone.shade;
+                            if( spr == nullptr ) {
+                                // ASCII fallback: the level-0 symbol and colour,
+                                // exactly the FIELD fallback draw_from_id_string
+                                // uses when no sprite resolves
+                                const field_intensity_level &il = ft.get_intensity_level();
+                                if( glyph_sprite( static_cast<char32_t>( il.symbol ), gspr ) ) {
+                                    const ImVec4 col = il.color;
+                                    fr = col.x * tone.shade;
+                                    fgn = col.y * tone.shade;
+                                    fb = col.z * tone.shade;
+                                    gtex = true;
+                                }
+                            }
+                            const sprite_info &s = spr != nullptr ? *spr : gspr;
+                            if( spr == nullptr && !gtex ) {
+                                ++ordinal;
+                                continue;
+                            }
+                            const phase_id ph = field_render_phase( fid );
+                            const bool riser = ph == phase_id::GAS ||
+                                               ph == phase_id::PLASMA;
+                            if( riser ) {
+                                // camera-facing billboard; co-tile risers step
+                                // toward the camera so they never share a plane
+                                const float w = FIELD_RISER_HEIGHT *
+                                                std::clamp( s.aspect, 0.5f, 2.0f );
+                                const float off = FIELD_RISER_OFFSET *
+                                                  ( ordinal % 4 );
+                                std::vector<float> &v = bucket_for( MODE_BILLBOARD, s.atlas );
+                                push_instance( v, static_cast<float>( dx ) + 0.5f - fwd_x * off,
+                                               static_cast<float>( dy ) + 0.5f - fwd_y * off,
+                                               wz + 0.01f, w, FIELD_RISER_HEIGHT, 1.0f, s,
+                                               fr, fgn, fb, false, 0, false, -1.0f, ghost,
+                                               tone.sat, false, spr != nullptr );
+                                ++count;
+                            } else {
+                                // thin ground decal; later fields (map order)
+                                // sit a hair higher, reproducing 2D's overdraw
+                                const float ox = spr != nullptr ? s.offset.x / 32.0f : 0.0f;
+                                const float oy = spr != nullptr ? s.offset.y / 32.0f : 0.0f;
+                                const float sx = spr != nullptr ? s.px_w / 32.0f : 1.0f;
+                                const float sy = spr != nullptr ? s.px_h / 32.0f : 1.0f;
+                                std::vector<float> &v = bucket_for( MODE_FLATQUAD, s.atlas );
+                                push_instance( v, static_cast<float>( dx ) + ox,
+                                               static_cast<float>( dy ) + oy,
+                                               wz + FIELD_DECAL_Z +
+                                               FIELD_DECAL_STAGGER * ( ordinal % 8 ),
+                                               sx, sy, 1.0f, s, fr, fgn, fb,
+                                               false, 0, false, -1.0f, ghost, tone.sat,
+                                               false, spr != nullptr );
+                                ++count;
+                            }
+                            ++ordinal;
+                        }
+                    }
                 }
 
                 if( !roof_unseen && here.has_furn( p ) && count < MAX_DRAW_INSTANCES ) {
