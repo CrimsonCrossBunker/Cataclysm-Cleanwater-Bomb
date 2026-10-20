@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:adf6f916562d01e2c46278afed568b0375cc8d83e5c6cee0aadde1ecc3a3ad8d",
+    "source_fingerprint": "sha256:894d83323e5b7b79f74d55b62df0261a69d80a44ed94763f62815b3f46e17862",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -30,7 +30,7 @@
     ],
     "observed_not_registered": [],
     "tracked_json_files": 6818,
-    "top_level_objects": 95269,
+    "top_level_objects": 95273,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -113,7 +113,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 15178,
+        "occurrences": 15185,
         "examples": [
           {
             "path": "data/json/artifact/artifact_item_types.json",
@@ -339,7 +339,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 1111,
+        "occurrences": 1104,
         "examples": [
           {
             "path": "data/json/items/comestibles/irradiated_fruit_migration.json",
@@ -4558,7 +4558,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 7809,
+        "occurrences": 7811,
         "examples": [
           {
             "path": "data/json/deconstruction.json",
@@ -7485,7 +7485,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 8208,
+        "occurrences": 8210,
         "examples": [
           {
             "path": "data/json/items/armor/jewelry.json",
