@@ -326,7 +326,6 @@ jobs:
           - name: Android x64
             os: ubuntu-latest
             tiles: 1
-            sound: 1
             sdl3: 1
             android: arm64
             artifact: android-x64
@@ -335,7 +334,6 @@ jobs:
           - name: Android x64 New UI
             os: ubuntu-latest
             tiles: 1
-            sound: 1
             sdl3: 1
             android: arm64
             new_ui: 1
@@ -345,7 +343,6 @@ jobs:
           - name: Android x32
             os: ubuntu-latest
             tiles: 1
-            sound: 1
             sdl3: 1
             android: arm32
             artifact: android-x32
