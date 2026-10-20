@@ -40,6 +40,9 @@ trajectory mode_fire( avatar &you, aim_activity_actor &activity );
 /** Throwing item */
 trajectory mode_throw( avatar &you, item &relevant, bool blind_throwing );
 
+/** Direct sling launch, with the full retrieval/ignition/launch cost displayed. */
+trajectory mode_sling( avatar &you, item &ammo, int moves );
+
 /** Reach attacking */
 trajectory mode_reach( avatar &you, item_location weapon );
 

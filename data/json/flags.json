@@ -2137,6 +2137,16 @@
     "type": "json_flag"
   },
   {
+    "id": "SLING_LAUNCHER",
+    "type": "json_flag",
+    "info": "Can launch sling-ready explosives directly from your inventory."
+  },
+  {
+    "id": "SLING_AMMO",
+    "type": "json_flag",
+    "info": "Can be automatically activated and launched with a staff sling."
+  },
+  {
     "id": "THROW_KEEP_WIELDED",
     "type": "json_flag",
     "info": "Can be kept wielded while throwing another item, boosting the throw."

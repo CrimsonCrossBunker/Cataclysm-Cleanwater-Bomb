@@ -24,6 +24,11 @@
     "do_emp_blast": false
   },
   {
+    "id": "STOP_ON_CONTACT",
+    "type": "ammo_effect",
+    "//": "Drops a sling projectile at the first creature or impassable obstacle on its path, even if impact damage is dodged. Hardcoded."
+  },
+  {
     "id": "NO_PENETRATE_OBSTACLES",
     "type": "ammo_effect",
     "//": "Prevents a projectile from going through a tile with obstacles, such as chainlink fences or dressers. Hardcoded"

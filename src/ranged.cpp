@@ -307,6 +307,8 @@ class target_ui
         item *relevant = nullptr;
         // Cached selection range from player's position
         int range = 0;
+        // Sling launches share throwing accuracy, but have their own cost and labels.
+        int sling_moves = 0;
         // Cached current ammo to display
         const itype *ammo = nullptr;
         // Turret being manually fired
@@ -586,6 +588,18 @@ target_handler::trajectory target_handler::mode_throw( avatar &you, item &releva
     ui.relevant = &relevant;
     ui.range = you.throw_range( relevant );
 
+    restore_on_out_of_scope view_offset_prev( you.view_offset );
+    return ui.run();
+}
+
+target_handler::trajectory target_handler::mode_sling( avatar &you, item &ammo, int moves )
+{
+    target_ui ui = target_ui();
+    ui.you = &you;
+    ui.mode = target_ui::TargetMode::Throw;
+    ui.relevant = &ammo;
+    ui.range = you.throw_range( ammo );
+    ui.sling_moves = moves;
     restore_on_out_of_scope view_offset_prev( you.view_offset );
     return ui.run();
 }
@@ -2283,7 +2297,7 @@ static std::vector<aim_type_prediction> calculate_ranged_chances(
 
     const double selected_steadiness = calc_steadiness( you, weapon, pos, aim_to_selected.recoil );
 
-    const int throw_moves = throw_cost( you, weapon );
+    const int throw_moves = ui.sling_moves > 0 ? ui.sling_moves : throw_cost( you, weapon );
 
     for( const aim_type &aim_type : aim_types ) {
         const std::vector<input_event> keys = ctxt.keys_bound_to( aim_type.action.empty() ? "FIRE" :
@@ -2381,7 +2395,7 @@ static void print_confidence_rating_bar( const catacurses::window &w,
 
 static int print_ranged_chance( const catacurses::window &w, int line_number,
                                 const std::vector<aim_type_prediction> &aim_chances, const int time,
-                                const target_ui::TargetMode mode )
+                                const target_ui::TargetMode mode, bool sling = false )
 {
     std::vector<aim_type_prediction> sorted = aim_chances;
 
@@ -2436,11 +2450,11 @@ static int print_ranged_chance( const catacurses::window &w, int line_number,
         for( const aim_type_prediction &out : sorted ) {
             if( display_numbers ) {
                 t_aims[aim_iter] = string_format( "<color_dark_gray>%s:</color>",
-                                                  is_throw ? _( "Throw" ) : out.name );
+                                                  is_throw ? ( sling ? _( "Launch" ) : _( "Throw" ) ) : out.name );
                 t_confidence[( aim_iter * 5 ) + 4] = string_format( "<color_light_blue>%d</color>", out.moves );
             } else {
                 if( is_throw ) {
-                    print_colored_text( w, point( 1, line_number ), col, col, _( "Throw:" ) );
+                    print_colored_text( w, point( 1, line_number ), col, col, sling ? _( "Launch:" ) : _( "Throw:" ) );
                 } else {
                     print_colored_text( w, point( 1, line_number ), col, col, string_format( _( "%s %s:" ), out.name,
                             _( "Aim" ) ) );
@@ -2495,7 +2509,8 @@ static int print_ranged_chance( const catacurses::window &w, int line_number,
             std::string desc;
             if( is_throw ) {
                 desc = string_format( "<color_white>[%s]</color> <color_%s>%s</color> | %s: <color_light_blue>%3d</color>",
-                                      out.hotkey, col_hl, _( "Throw" ), _( "Moves to throw" ), out.moves );
+                                      out.hotkey, col_hl, sling ? _( "Launch" ) : _( "Throw" ),
+                                      sling ? _( "Moves to launch" ) : _( "Moves to throw" ), out.moves );
             } else {
                 desc = time == 0 ?
                        string_format( "<color_white>[%s]</color> <color_%s>%s %s</color> | %s: <color_light_blue>%3d</color>",
@@ -2610,7 +2625,7 @@ static void draw_throw_aim( const target_ui &ui, const Character &you, const cat
         throwing_target_mode, ctxt, weapon, dispersion, confidence_config, attributes, target_pos,
         item_location() );
 
-    text_y = print_ranged_chance( w, text_y, aim_chances, 0, throwing_target_mode );
+    text_y = print_ranged_chance( w, text_y, aim_chances, 0, throwing_target_mode, ui.sling_moves > 0 );
 }
 
 std::vector<aim_type> Character::get_aim_types( const item &gun ) const
@@ -4522,7 +4537,8 @@ std::string target_ui::uitext_title() const
         case TargetMode::TurretManual:
             return string_format( _( "Firing %s" ), relevant->tname() );
         case TargetMode::Throw:
-            return string_format( _( "Throwing %s" ), relevant->tname() );
+            return string_format( sling_moves > 0 ? _( "Launching %s" ) : _( "Throwing %s" ),
+                                  relevant->tname() );
         case TargetMode::ThrowBlind:
             return string_format( _( "Blind throwing %s" ), relevant->tname() );
         default:
@@ -4532,6 +4548,9 @@ std::string target_ui::uitext_title() const
 
 std::string target_ui::uitext_fire() const
 {
+    if( sling_moves > 0 ) {
+        return to_translation( "[Hotkey] to launch", "to launch" ).translated();
+    }
     if( mode == TargetMode::Throw || mode == TargetMode::ThrowBlind ) {
         return to_translation( "[Hotkey] to throw", "to throw" ).translated();
     } else if( mode == TargetMode::Reach ) {

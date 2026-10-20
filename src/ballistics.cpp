@@ -70,6 +70,7 @@ static const ammo_effect_str_id ammo_effect_NO_OVERSHOOT( "NO_OVERSHOOT" );
 static const ammo_effect_str_id ammo_effect_NO_PENETRATE_OBSTACLES( "NO_PENETRATE_OBSTACLES" );
 static const ammo_effect_str_id ammo_effect_NULL_SOURCE( "NULL_SOURCE" );
 static const ammo_effect_str_id ammo_effect_SHATTER_SELF( "SHATTER_SELF" );
+static const ammo_effect_str_id ammo_effect_STOP_ON_CONTACT( "STOP_ON_CONTACT" );
 static const ammo_effect_str_id ammo_effect_STREAM( "STREAM" );
 static const ammo_effect_str_id ammo_effect_STREAM_BIG( "STREAM_BIG" );
 static const ammo_effect_str_id ammo_effect_STREAM_TINY( "STREAM_TINY" );
@@ -658,6 +659,8 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
                 }
             }
 
+            const bool contact_obstacle = proj_effects.count( ammo_effect_STOP_ON_CONTACT ) &&
+                                          here->impassable( tp );
             Creature *critter = creatures.creature_at( tp );
             if( origin == critter ) {
                 // No hitting self with "weird" attacks.
@@ -797,6 +800,14 @@ void projectile_attack( dealt_projectile_attack &attack, const projectile &proj_
                     stop_idx = i;
                 }
             }
+            // A heavy sling round falls at the first occupied tile even when the
+            // creature avoids impact damage. It must never fly through the front rank.
+            if( proj_effects.count( ammo_effect_STOP_ON_CONTACT ) &&
+                ( contact_obstacle || ( critter && !critter->is_underwater() ) ) ) {
+                has_momentum = false;
+                stop_idx = i;
+            }
+
             if( ( !has_momentum || traj_len == size_t( 2 ) ) && proj.count > 1 && distance <= 1 ) {
                 // Track that we hit an obstacle while wadded up,
                 // to cancel out of applying the other projectiles.
