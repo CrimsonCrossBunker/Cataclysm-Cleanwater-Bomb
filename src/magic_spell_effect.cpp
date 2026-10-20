@@ -1995,8 +1995,8 @@ void spell_effect::dash( const spell &sp, Creature &caster, const tripoint_bub_m
     spell_effect::override_parameters params( sp, caster );
     params.range = sp.aoe( caster );
     const std::set<tripoint_bub_ms> hit_area = spell_effect_cone_range_override( params,
-        here.get_bub( source_abs ),
-        far_target );
+            here.get_bub( source_abs ),
+            far_target );
     damage_targets( sp, caster, hit_area );
 }
 
