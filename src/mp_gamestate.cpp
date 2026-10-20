@@ -1,4 +1,5 @@
 #include "mp_gamestate.h"
+#include "mp_magic.h"
 
 #include "activity_actor.h"
 #include "activity_actor_definitions.h"
@@ -429,6 +430,8 @@ void host_queue_sfx( const std::string &id, const std::string &variant, int vol 
 // The character_id of the remote player's NPC. Invalid when no remote player is connected.
 static character_id remote_player_npc_id;
 static bool remote_player_connected = false;
+// The connection identity stays stable when char_stats renames the proxy.
+static std::string remote_player_connection_name;
 // Client-side: NPC representing the host player in the client's local world.
 static character_id client_host_npc_id;
 static bool client_host_npc_spawned = false;
@@ -1831,6 +1834,7 @@ static void mp_cull_local_npcs()
 // that enters a world twice per launch hits it.
 void mp_on_world_exit()
 {
+    mp_magic_reset();
     mp_cleanup_done = false;
     // A world exit ends any co-op session.  Clear the host/client session mode so
     // the NEXT game started from the menu is treated as plain single-player.
@@ -1912,6 +1916,8 @@ static void spawn_remote_player( const std::string &name )
         std::cout << "[cdda-mp] Remote player already exists, ignoring spawn." << std::endl;
         return;
     }
+    mp_magic_reset();
+    remote_player_connection_name = name;
     // Purge any stale NPCs from previous sessions that share this name —
     // covers artifacts that predate the ID-tracking cleanup file.
     purge_npcs_by_name( name );
@@ -2035,6 +2041,8 @@ static void spawn_remote_player( const std::string &name )
 
 static void remove_remote_player()
 {
+    mp_magic_reset();
+    remote_player_connection_name.clear();
     if( !remote_player_connected ) {
         return;
     }
@@ -2485,7 +2493,7 @@ static void mp_handle_high_five_recv( const std::string &msg );
 static void mp_handle_shout_recv( const std::string &msg );
 
 // NOLINTNEXTLINE(readability-function-size)
-static void handle_remote_action( const std::string_view/*name*/, const std::string &msg )
+static void handle_remote_action( const std::string_view name, const std::string &msg )
 {
     if( !remote_player_connected ) {
         return;
@@ -2493,6 +2501,15 @@ static void handle_remote_action( const std::string_view/*name*/, const std::str
 
     npc *remote = g->critter_by_id<npc>( remote_player_npc_id );
     if( !remote ) {
+        return;
+    }
+
+    if( msg.find( "\"type\":\"client_monster_op\"" ) != std::string::npos ||
+        msg.find( "\"type\":\"magic_resync_request\"" ) != std::string::npos ||
+        msg.find( "\"type\":\"partner_spell\"" ) != std::string::npos ) {
+        if( name == remote_player_connection_name ) {
+            mp_handle_spell_message( msg );
+        }
         return;
     }
 
@@ -6357,6 +6374,9 @@ void process_mp_events()
     // buffering — see ROADMAP.md "Action queue depth"
     auto is_state_sync = []( const std::string_view data ) {
         return data.find( R"("action":"worn_sync")" ) != std::string::npos
+               || data.find( R"("type":"client_monster_op")" ) != std::string::npos
+               || data.find( R"("type":"magic_resync_request")" ) != std::string::npos
+               || data.find( R"("type":"partner_spell")" ) != std::string::npos
                || data.find( R"("type":"trade_delta")" ) != std::string::npos
                || data.find( R"("type":"note_sync")" ) != std::string::npos
                || data.find( R"("type":"chat")" ) != std::string::npos
@@ -7057,6 +7077,7 @@ static bool apply_one_state_message( const std::string &msg )
         JsonObject jo = jv.get_object();
         jo.allow_omitted_members();
         mp_log( "[cdda-mp] STATE-APPLY: parse done" );
+        mp_magic_client_state( jo );
 
         // Sync host's calendar turn so the client sees the correct time, lighting, and weather.
         if( jo.has_int( "calendar_turn" ) ) {
@@ -8157,6 +8178,29 @@ static std::string build_client_veh_cargo_changes( int radius = 12 )
 
 // Build JSON array of monsters the client damaged since the last server sync.
 // Uses g_last_monster_hp (last server-reported HP) as the baseline.
+void mp_client_monster_op_sent( const monster &mon, bool killed )
+{
+    if( killed ) {
+        g_last_monster_hp.erase( mon.mp_net_id );
+        g_client_pending_kill[mon.mp_net_id] = CLIENT_PENDING_KILL_SYNCS;
+    } else {
+        // A polymorph's HP rescale is not a combat hit.
+        g_last_monster_hp[mon.mp_net_id] = mon.get_hp();
+    }
+}
+
+int mp_client_monster_prior_hp( const monster &mon )
+{
+    const auto baseline = g_last_monster_hp.find( mon.mp_net_id );
+    return is_client_mode() && baseline != g_last_monster_hp.end() &&
+           mon.get_hp() < baseline->second ? std::max( 0, mon.get_hp() ) : -1;
+}
+
+void mp_server_mon_force_resend( uint32_t nid )
+{
+    g_server_mon_last_sent.erase( nid );
+}
+
 static std::string build_client_monster_hits()
 {
     std::string hits;
@@ -9072,6 +9116,8 @@ static std::string build_monster_list( const tripoint_abs_ms &center, int radius
                           + ",\"y\":" + std::to_string( mp.y() )
                           + ",\"z\":" + std::to_string( mp.z() )
                           + ",\"hp\":" + std::to_string( mon_ptr->get_hp() )
+                          + ",\"fr\":" + std::to_string( mon_ptr->friendly )
+                          + ",\"eff\":" + mp_monster_effects_wire( *mon_ptr )
                           + ",\"facing\":" + std::to_string( mon_facing ) + "}";
         // Delta gate: emit only if new or changed since last broadcast. nid + id
         // are stable, so an identical record string means x/y/z/hp/facing are all
@@ -9948,6 +9994,17 @@ static void apply_monster_sync( JsonObject &jo )
         }
 
         matched.insert( best );
+
+        const mtype_id authoritative_type( mo.get_string( "id", "" ) );
+        if( authoritative_type.is_valid() && best->type->id != authoritative_type ) {
+            best->poly( authoritative_type );
+        }
+        if( mo.has_int( "fr" ) ) {
+            best->friendly = mo.get_int( "fr" );
+        }
+        if( !best->is_dead() ) {
+            mp_apply_monster_effects( *best, mo );
+        }
 
         // Silent-drop diagnostic: remember live nids; forget ones the host reports
         // dead (server_hp<=0) so a later revival re-spawn isn't mis-flagged.
@@ -11084,7 +11141,7 @@ std::string serialize_remote_player_state()
     }
     host_hp_json += "]";
 
-    return "{\"type\":\"state\","
+    return "{\"type\":\"state\",\"spell_generation\":\"" + mp_magic_host_generation() + "\","
            "\"calendar_turn\":" + std::to_string( to_turn<int>( calendar::turn ) ) + ","
            "\"host_name\":\"" + host.name + "\","
            "\"pos\":{\"x\":" + std::to_string( pos.x() ) +

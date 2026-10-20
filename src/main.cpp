@@ -582,7 +582,7 @@ cli_opts parse_commandline( int argc, const char **argv )
             },
             {
                 "--server", {},
-                "Run as dedicated headless multiplayer server",
+                "Reserved server mode; use --host for playable hosting",
                 section_default,
                 0,
                 [&result]( int, const char ** ) -> int {

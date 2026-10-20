@@ -70,6 +70,7 @@
 #include "mod_manager.h"
 #include "mp_client_conn.h"
 #include "mp_gamestate.h"
+#include "mp_magic.h"
 #include "options.h"
 #include "output.h"
 #include "overmapbuffer.h"
@@ -375,6 +376,7 @@ bool game::load( const std::string &world )
 
 bool game::load( const save_t &name )
 {
+    cata_mp::mp_magic_reset( true );
     map &here = get_map();
 
     const cata_path worldpath = PATH_INFO::world_base_save_path();
