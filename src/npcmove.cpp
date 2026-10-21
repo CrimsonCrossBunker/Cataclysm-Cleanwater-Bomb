@@ -3065,7 +3065,7 @@ npc_action npc::address_needs( float danger )
     const npc_mission saved_mission = mission;
     const auto self_activity = [&]() -> npc_action {
         attitude = saved_attitude;
-        mission = saved_mission;
+        this->mission = saved_mission;
         return npc_player_activity;
     };
 
@@ -3897,7 +3897,7 @@ void npc::move_to( const tripoint_bub_ms &pt, bool no_bashing, std::set<tripoint
         bool diag = trigdist && pos.x() != p.x() && pos.y() != p.y();
         if( is_mounted() ) {
             const double base_moves = run_cost( here.combined_movecost( pos, p ),
-                                                diag ) * 100.0 / mounted_creature->get_speed();
+                                                diag ) * 100.0 / mount_speed();
             const double encumb_moves = get_weight() / 4800.0_gram;
             mod_moves( -static_cast<int>( std::ceil( base_moves + encumb_moves ) ) );
             if( mounted_creature->has_flag( mon_flag_RIDEABLE_MECH ) ) {

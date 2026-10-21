@@ -175,11 +175,17 @@ bool pet_slot::accepts( const item &candidate, const monster &pet,
         if( std::find( item_slots.begin(), item_slots.end(), id.str() ) == item_slots.end() ) {
             return reject( "item does not declare compatibility with this equipment slot" );
         }
-    } else if( !required_flags.empty() && std::none_of( required_flags.begin(), required_flags.end(),
-    [&candidate]( const flag_id & flag ) {
-    return candidate.has_flag( flag );
-    } ) ) {
-        return reject( "item lacks a required equipment flag" );
+    } else {
+        if( required_flags.empty() && !pet_armor && min_storage <= 0_ml ) {
+            return reject( "item does not declare compatibility with this equipment slot" );
+        }
+        if( !required_flags.empty() &&
+            std::none_of( required_flags.begin(), required_flags.end(),
+        [&candidate]( const flag_id & flag ) {
+        return candidate.has_flag( flag );
+        } ) ) {
+            return reject( "item lacks a required equipment flag" );
+        }
     }
     if( std::any_of( forbidden_flags.begin(), forbidden_flags.end(),
     [&candidate]( const flag_id & flag ) {

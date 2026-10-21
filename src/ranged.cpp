@@ -185,7 +185,7 @@ static const skill_id skill_dodge( "dodge" );
 static const skill_id skill_driving( "driving" );
 static const skill_id skill_gun( "gun" );
 static const skill_id skill_launcher( "launcher" );
-static const skill_id skill_riding( "riding" );
+static const skill_id skill_athletics( "swimming" );
 static const skill_id skill_swimming( "swimming" );
 static const skill_id skill_throw( "throw" );
 
@@ -1219,7 +1219,7 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, int shots, it
 
     if( is_mounted() && get_steed_type() == steed_type::ANIMAL ) {
         const riding_config &config = get_riding_config();
-        practice( skill_riding, config.ranged_practice );
+        practice( skill_athletics, config.ranged_practice );
         const time_duration practice_time = time_duration::from_seconds(
                                                 config.proficiency_practice_seconds );
         practice_proficiency( config.mounted_combat_proficiency, practice_time );
@@ -2985,7 +2985,7 @@ dispersion_sources Character::get_weapon_dispersion( const item &obj ) const
         const riding_config &config = get_riding_config();
         int mounted_penalty = std::max( 0,
                                         config.mounted_ranged_dispersion_penalty -
-                                        static_cast<int>( get_skill_level( skill_riding ) ) *
+                                        static_cast<int>( get_skill_level( skill_athletics ) ) *
                                         config.ranged_dispersion_skill_reduction );
         if( has_proficiency( config.mounted_ranged_proficiency ) ) {
             mounted_penalty = std::max( 0,

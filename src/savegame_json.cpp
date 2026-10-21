@@ -110,7 +110,6 @@
 #include "recipe_dictionary.h"
 #include "relic.h"
 #include "requirements.h"
-#include "riding_config.h"
 #include "ret_val.h"
 #include "rng.h"
 #include "scenario.h"
@@ -191,7 +190,7 @@ static const mtype_id mon_breather( "mon_breather" );
 
 static const skill_id skill_chemistry( "chemistry" );
 static const skill_id skill_riding( "riding" );
-static const skill_id skill_survival( "survival" );
+static const skill_id skill_athletics( "swimming" );
 
 static const ter_str_id ter_t_ash( "t_ash" );
 static const ter_str_id ter_t_dirt( "t_dirt" );
@@ -1163,13 +1162,13 @@ void Character::load( const JsonObject &data )
         }
     }
 
-    if( !skill_data.has_member( "riding" ) ) {
-        const riding_config &config = get_riding_config();
-        const int converted_level = std::min(
-                                        config.legacy_survival_conversion_cap,
-                                        static_cast<int>( std::ceil( get_skill_level( skill_survival ) *
-                                            config.legacy_survival_conversion_ratio ) ) );
-        set_skill_level( skill_riding, converted_level );
+    if( skill_data.has_member( "riding" ) ) {
+        if( get_skill_level( skill_riding ) > get_skill_level( skill_athletics ) ) {
+            set_skill_level( skill_athletics, get_skill_level( skill_riding ) );
+        }
+        if( get_knowledge_level( skill_riding ) > get_knowledge_level( skill_athletics ) ) {
+            set_knowledge_level( skill_athletics, get_knowledge_level( skill_riding ) );
+        }
     }
 
     on_stat_change( "thirst", thirst );

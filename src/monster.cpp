@@ -11,7 +11,6 @@
 #include <cstdlib>
 #include <list>
 #include <memory>
-#include <monster_goal_policy.h>
 #include <monster_uid.h>
 #include <optional>
 #include <set>
@@ -668,8 +667,8 @@ void monster::try_reproduce()
             }
             if( !type->baby_type.baby_monster_group.is_null() ) {
                 std::vector<MonsterGroupResult> babies = MonsterGroupManager::GetResultFromGroup(
-                            type->baby_type.baby_monster_group, &spawn_cnt,
-                            nullptr, false, nullptr, true );
+                        type->baby_type.baby_monster_group, &spawn_cnt,
+                        nullptr, false, nullptr, true );
                 for( const MonsterGroupResult &mgr : babies ) {
                     here.add_spawn( mgr.id, std::max( 1, spawn_cnt * mgr.pack_size ), pos_bub(), friendly );
                 }
@@ -986,7 +985,7 @@ int monster::print_info( const catacurses::window &w, int vStart, int vLines, in
     if( !mission_fused.empty() ) {
         // Mission monsters fused into this monster
         const std::string fused_desc = string_format( _( "Parts of %s protrude from its body." ),
-                                       enumerate_as_string( mission_fused ) );
+            enumerate_as_string( mission_fused ) );
         lines = foldstring( fused_desc, max_width );
         numlines = lines.size();
         for( int i = 0; i < numlines && vStart < vEnd; i++ ) {
@@ -1097,7 +1096,7 @@ void monster::print_info_imgui() const
     if( !mission_fused.empty() ) {
         // Mission monsters fused into this monster
         const std::string fused_desc = string_format( _( "Parts of %s protrude from its body." ),
-                                       enumerate_as_string( mission_fused ) );
+            enumerate_as_string( mission_fused ) );
         ImGui::TextWrapped( "%s", fused_desc.c_str() );
     }
 
@@ -1163,7 +1162,7 @@ std::vector<std::string> monster::extended_description() const
     std::string att_colored = colorize( att.first, att.second );
 
     tmp.emplace_back( string_format( _( "This is a %s %s. %s" ), hpbar, colorize( name(),
-                                     basic_symbol_color() ), player_knows ? att_colored : std::string() ) );
+            basic_symbol_color() ), player_knows ? att_colored : std::string() ) );
     tmp.emplace_back( "--" );
 
     std::string difficulty_str;
@@ -1215,7 +1214,7 @@ std::vector<std::string> monster::extended_description() const
     if( !mission_fused.empty() ) {
         // Mission monsters fused into this monster
         const std::string fused_desc = string_format( _( "Parts of %s protrude from its body." ),
-                                       enumerate_as_string( mission_fused ) );
+            enumerate_as_string( mission_fused ) );
         tmp.emplace_back( string_format( "<dark>%s</dark>", fused_desc ) );
         tmp.emplace_back( "--" );
     }
@@ -2440,14 +2439,14 @@ bool monster::melee_attack( Creature &target, float accuracy )
             if( target.is_avatar() ) {
                 //~ 1$s is attacker name, 2$s is bodypart name in accusative, 3$s is armor name
                 add_msg( _( "%1$s hits your %2$s, but your %3$s protects you." ), u_see_me ? disp_name( false,
-                         true ) : _( "Something" ),
+                        true ) : _( "Something" ),
                          body_part_name_accusative( dealt_dam.bp_hit ), target.skin_name() );
             } else if( target.is_npc() ) {
                 //~ $1s is monster name, %2$s is that monster target name,
                 //~ $3s is target bodypart name in accusative, $4s is the monster target name,
                 //~ 5$s is target armor name.
                 add_msg( _( "%1$s hits %2$s %3$s but is stopped by %4$s %5$s." ), u_see_me ? disp_name( false,
-                         true ) : _( "Something" ),
+                        true ) : _( "Something" ),
                          target.disp_name( true ),
                          body_part_name_accusative( dealt_dam.bp_hit ),
                          target.disp_name( true ),
@@ -2489,8 +2488,8 @@ bool monster::melee_attack( Creature &target, float accuracy )
         if( x_in_y( eff.chance, 100 ) ) {
             const bodypart_id affected_bp = eff.affect_hit_bp ? dealt_dam.bp_hit :  eff.bp.id();
             target.add_effect( eff.id, time_duration::from_turns( rng( eff.duration.first,
-                               eff.duration.second ) ), affected_bp, eff.permanent, rng( eff.intensity.first,
-                                       eff.intensity.second ) );
+                    eff.duration.second ) ), affected_bp, eff.permanent, rng( eff.intensity.first,
+                            eff.intensity.second ) );
             target.add_msg_if_player( m_mixed, eff.message, name() );
         }
     }
@@ -2681,7 +2680,7 @@ bool monster::move_effects( bool )
         } else {
             if( tied_item ) {
                 const bool broken = rng( type->melee_dice * type->melee_sides, std::min( 10000,
-                                         type->melee_dice * type->melee_sides * 250 ) ) > 800;
+                    type->melee_dice * type->melee_sides * 250 ) ) > 800;
                 if( !broken ) {
                     here.add_item_or_charges( pos_bub(), *tied_item );
                 }
@@ -3302,13 +3301,13 @@ int monster::impact( const int force, const tripoint_bub_ms &p )
     int total_dealt = 0;
     if( get_map().has_flag( ter_furn_flag::TFLAG_SHARP, p ) ) {
         const int cut_damage = std::max( 0.0f, 10 * mod - get_armor_type( damage_cut,
-                                         bodypart_id( "torso" ) ) );
+            bodypart_id( "torso" ) ) );
         apply_damage( nullptr, bodypart_id( "torso" ), cut_damage );
         total_dealt += 10 * mod;
     }
 
     const int bash_damage = std::max( 0.0f, force * mod - get_armor_type( damage_bash,
-                                      bodypart_id( "torso" ) ) );
+        bodypart_id( "torso" ) ) );
     apply_damage( nullptr, bodypart_id( "torso" ), bash_damage );
     total_dealt += force * mod;
 
@@ -3355,14 +3354,14 @@ void monster::disable_special( const std::string &special_name )
 bool monster::special_available( std::string_view special_name ) const
 {
     std::map<std::string, mon_special_attack>::const_iterator iter = special_attacks.find(
-                special_name );
+            special_name );
     return iter != special_attacks.end() && iter->second.enabled && iter->second.cooldown == 0;
 }
 
 bool monster::has_special( const std::string &special_name ) const
 {
     std::map<std::string, mon_special_attack>::const_iterator iter = special_attacks.find(
-                special_name );
+            special_name );
     return iter != special_attacks.end() && iter->second.enabled;
 }
 
@@ -3515,7 +3514,7 @@ void monster::die( map *here, Creature *nkiller )
             // Cleanwater: 撤销 PR #86067 — 恢复无条件击杀经验
             const int kill_xp = compute_kill_xp( type->id );
             cata::event e = cata::event::make<event_type::character_kills_monster>( ch->getID(), type->id,
-                            kill_xp );
+                kill_xp );
             get_event_bus().send_with_talker( ch, this, e );
         }
     }
@@ -3784,8 +3783,8 @@ void monster::generate_inventory( bool disableDrops )
     }
 
     std::vector<item> new_items = item_group::items_from( type->death_drops,
-                                  calendar::start_of_cataclysm,
-                                  spawn_flags::use_spawn_rate );
+        calendar::start_of_cataclysm,
+        spawn_flags::use_spawn_rate );
 
     for( item &it : new_items ) {
         if( has_flag( mon_flag_FILTHY ) ) {
@@ -3812,8 +3811,8 @@ void monster::drop_items_on_death( map *here, item *corpse ) const
     }
 
     std::vector<item> new_items = item_group::items_from( type->death_drops,
-                                  calendar::start_of_cataclysm,
-                                  spawn_flags::use_spawn_rate );
+        calendar::start_of_cataclysm,
+        spawn_flags::use_spawn_rate );
 
     for( item &e : new_items ) {
         e.randomize_rot();
@@ -3885,8 +3884,8 @@ void monster::spawn_dissectables_on_death( item *corpse ) const
 
     for( const harvest_entry &entry : *type->dissect ) {
         std::vector<item> dissectables = item_group::items_from( item_group_id( entry.drop ),
-                                         calendar::turn,
-                                         spawn_flags::use_spawn_rate );
+            calendar::turn,
+            spawn_flags::use_spawn_rate );
         for( item &dissectable : dissectables ) {
             dissectable.dropped_from = entry.type;
             for( const flag_id &flg : entry.flags ) {
@@ -3995,7 +3994,7 @@ void monster::process_one_effect( effect &it, bool is_new )
     }
     //Reset max speed
     set_speed_bonus( calculate_by_enchantment( get_speed_base(), enchant_vals::mod::SPEED,
-                     true ) - get_speed_base() );
+            true ) - get_speed_base() );
 
     if( !is_new ) {
         return;
@@ -4058,7 +4057,7 @@ void monster::process_effects()
                     _effect_it.second.get_id().str(),
                     body_part == bodypart_str_id::NULL_ID() ?
                     std::string() : body_part.id().str(),
-                    _effect_it.second.get_intensity()
+                                             _effect_it.second.get_intensity()
                 } );
             }
         }
@@ -4101,7 +4100,7 @@ void monster::process_effects()
     }
     //Apply enchantment modifiers
     regeneration_amount = calculate_by_enchantment( regeneration_amount, enchant_vals::mod::REGEN_HP,
-                          true );
+        true );
     //Prevent negative regeneration
     if( regeneration_amount < 0 ) {
         regeneration_amount = 0;
@@ -4621,7 +4620,7 @@ void monster::hear_sound( const tripoint_bub_ms &source, const int vol, const in
     }
 
     tripoint_abs_ms target = get_map().get_abs( source ) + point( rng( -max_error, max_error ),
-                             rng( -max_error, max_error ) );
+        rng( -max_error, max_error ) );
     // target_z will require some special check due to soil muffling sounds
 
     const int wander_turns = volume * ( goodhearing ? 6 : 1 );

@@ -319,6 +319,7 @@
     "difficulty": 4,
     "time": "6 h",
     "autolearn": true,
+    "book_learn": [ [ "book_horse_tack", 4 ] ],
     "using": [ [ "tailoring_leather_patchwork", 4 ], [ "clasps", 2 ] ],
     "proficiencies": [
       { "proficiency": "prof_leatherworking_basic" },

@@ -12122,6 +12122,13 @@ void invoke_technique_application_handler(
 {
 }
 
+std::optional<bool> invoke_technique_condition_handler(
+    std::string_view, std::string_view, std::string_view,
+    const Character &, std::string_view )
+{
+    return std::nullopt;
+}
+
 void invoke_item_consumption_handler(
     std::string_view, std::string_view, std::string_view, Character &, item & )
 {

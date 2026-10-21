@@ -370,6 +370,17 @@
     "components": [ [ [ "spear_shaft", 1 ] ], [ [ "nail", 1 ] ] ]
   },
   {
+    "result": "mounted_lance",
+    "type": "recipe",
+    "copy-from": "spear_steel",
+    "category": "CC_*",
+    "subcategory": "CSC_*_NESTED",
+    "book_learn": [ [ "textbook_weapwest", 4 ] ],
+    "difficulty": 5,
+    "autolearn": false,
+    "components": [ [ [ "spear_shaft", 1 ] ], [ [ "nail", 2 ] ] ]
+  },
+  {
     "result": "ch_spear_steel",
     "type": "recipe",
     "category": "CC_*",

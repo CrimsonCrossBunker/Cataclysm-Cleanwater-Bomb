@@ -4569,4 +4569,47 @@ class zone_sort_activity_actor : public zone_activity_actor
         void return_items_to_source( Character &you, const tripoint_bub_ms &src_bub );
 };
 
+/** One-step-per-activity-call selected-route charge for an animal-mounted rider. */
+class mounted_charge_activity_actor : public activity_actor
+{
+    public:
+        mounted_charge_activity_actor() = default;
+        mounted_charge_activity_actor( const tripoint_abs_ms &destination,
+                                       int64_t mount_uid, int64_t weapon_uid,
+                                       const tripoint_abs_ms &origin,
+                                       const itype_id &charge_item_type ) :
+            destination( destination ), mount_uid( mount_uid ), weapon_uid( weapon_uid ), origin( origin ),
+            charge_item_type( charge_item_type ) {}
+
+        const activity_id &get_type() const override {
+            static const activity_id ACT_MOUNTED_CHARGE( "ACT_MOUNTED_CHARGE" );
+            return ACT_MOUNTED_CHARGE;
+        }
+
+        void start( player_activity &act, Character &who ) override;
+        void do_turn( player_activity &act, Character &who ) override;
+        void finish( player_activity &act, Character &who ) override;
+        void canceled( player_activity &act, Character &who ) override;
+
+        std::unique_ptr<activity_actor> clone() const override {
+            return std::make_unique<mounted_charge_activity_actor>( *this );
+        }
+
+        void serialize( JsonOut &jsout ) const override;
+        static std::unique_ptr<activity_actor> deserialize( JsonValue &jsin );
+
+    private:
+        tripoint_abs_ms destination = tripoint_abs_ms::min;
+        tripoint_rel_ms legacy_direction = tripoint_rel_ms::zero;
+        int64_t mount_uid = 0;
+        int64_t weapon_uid = 0;
+        tripoint_abs_ms origin = tripoint_abs_ms::min;
+        itype_id charge_item_type;
+        int completed_steps = 0;
+
+        bool valid_state( Character &who, const item *&weapon ) const;
+        tripoint_abs_ms route_destination( int max_steps ) const;
+        void stop( player_activity &act ) const;
+};
+
 #endif // CATA_SRC_ACTIVITY_ACTOR_DEFINITIONS_H

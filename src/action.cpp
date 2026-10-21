@@ -243,6 +243,8 @@ std::string action_ident( action_id act )
             return "wield";
         case ACTION_PICK_STYLE:
             return "pick_style";
+        case ACTION_ACTIVE_TECHNIQUE:
+            return "active_technique";
         case ACTION_RELOAD_ITEM:
             return "reload_item";
         case ACTION_RELOAD_WEAPON:
@@ -1136,6 +1138,7 @@ action_id handle_action_menu( map &here )
             REGISTER_ACTION( ACTION_THROW_WIELDED );
             REGISTER_ACTION( ACTION_FIRE_BURST );
             REGISTER_ACTION( ACTION_PICK_STYLE );
+            REGISTER_ACTION( ACTION_ACTIVE_TECHNIQUE );
             REGISTER_ACTION( ACTION_TOGGLE_AUTO_TRAVEL_MODE );
             REGISTER_ACTION( ACTION_TOGGLE_SAFEMODE );
             REGISTER_ACTION( ACTION_TOGGLE_AUTOSAFE );

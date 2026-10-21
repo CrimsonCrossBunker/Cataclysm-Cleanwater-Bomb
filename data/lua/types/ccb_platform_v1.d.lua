@@ -2765,7 +2765,30 @@ function AttackVectorDefinition:forbids_flag(flag_id) end
 ---@field unarmed_allowed? boolean Whether unarmed characters may use it.
 ---@field melee_allowed? boolean Whether armed characters may use it.
 ---@field strictly_unarmed? boolean Ignore force-unarmed styles.
+---@field manual_activation? boolean Restrict activation to the active technique menu. All offensive non-counter techniques are selectable by default.
+---@field active_when? string Named Lua handler that decides whether the technique is available.
 
+---@class CcbTechniqueConditionPayload
+---@field technique_id string Stable native technique id.
+---@field phase 'menu'|'start'|'continue' Native activation phase.
+---@field character GameHandle Exact Character being evaluated.
+---@field weapon_id string Wielded item id, or an empty string when unarmed.
+---@field moves integer Current native move points.
+---@field mounted boolean Whether the Character is mounted.
+---@field mount_kind 'none'|'animal'|'mech' Native mount category.
+---@field activity_active boolean Whether a native activity is active.
+---@field activity_id string Current native activity id, or an empty string when inactive.
+---@field grabbed boolean Whether the avatar is grabbing terrain, furniture, or a vehicle.
+---@field auto_moving boolean Whether automatic movement is active.
+---@field hauling boolean Whether hauling is active.
+---@field in_vehicle boolean Native cached passenger state.
+---@field controlling_vehicle boolean Whether native vehicle control is active.
+---@field crouching boolean Whether the current movement mode is crouching.
+---@field prone boolean Whether the current movement mode is prone.
+---@field in_shell boolean Whether an active shell mutation encloses the Character.
+---@field phase_movement boolean Whether phase movement is active.
+---@field can_attack boolean False when a native CANNOT_ATTACK flag is present.
+---@field can_move boolean False when a native CANNOT_MOVE flag is present.
 ---@class TechniqueDefinition
 ---@field id string
 local TechniqueDefinition = {}
@@ -2782,6 +2805,9 @@ function TechniqueDefinition:attack_vector(attack_vector_id) end
 ---@param level integer Non-negative minimum skill level.
 ---@return TechniqueDefinition self
 function TechniqueDefinition:requires_skill(skill_id, level) end
+---@param handler_id string Named Lua handler that receives a CcbTechniqueConditionPayload and returns one boolean.
+---@return TechniqueDefinition self
+function TechniqueDefinition:active_when(handler_id) end
 ---@param handler_id string
 ---@return TechniqueDefinition self
 function TechniqueDefinition:on_apply(handler_id) end
@@ -11943,7 +11969,8 @@ function CcbPlatformRecipesApi.forget_category(character, category, subcategory)
 ---@field flags CcbTechniqueFlagPage
 ---@field attack_vectors CcbTechniqueIdPage GameId<attack_vector> entries.
 ---@field eocs CcbTechniqueIdPage Native attached condition identifiers; not a Lua authoring interface.
-
+---@field manual_activation boolean Whether the player may select the technique as an active attack.
+---@field conditional_activation boolean Whether a Lua activation policy is attached.
 ---@class CcbMartialArtsApi
 local CcbMartialArtsApi = {}
 

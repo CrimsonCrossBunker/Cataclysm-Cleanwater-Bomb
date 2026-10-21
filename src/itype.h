@@ -34,6 +34,7 @@
 #include "iuse.h" // use_function
 #include "mapdata.h"
 #include "material.h"
+#include "mounted_charge.h"
 #include "proficiency.h"
 #include "relic.h"
 #include "stomach.h"
@@ -1764,6 +1765,9 @@ struct itype {
     public:
         /** Damage output in melee for zero or more damage types */
         item_melee_damage melee;
+
+        /** Optional typed profile for the mounted directional charge action. */
+        std::optional<mounted_charge_profile> mounted_charge;
 
         bool default_container_sealed = true;
 

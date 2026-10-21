@@ -2777,6 +2777,7 @@ input_context get_default_mode_input_context()
         ctxt.register_action( "read" );
         ctxt.register_action( "wield" );
         ctxt.register_action( "pick_style" );
+        ctxt.register_action( "active_technique" );
         ctxt.register_action( "reload_item" );
         ctxt.register_action( "reload_weapon" );
         ctxt.register_action( "reload_wielded" );
@@ -8396,13 +8397,7 @@ bool game::walk_move( const tripoint_bub_ms &dest_loc, const bool via_ramp,
             add_msg( m_warning, _( "You cannot pass obstacles whilst mounted." ) );
             return false;
         }
-        double crit_speed;
-        if( crit->has_flag( mon_flag_RIDEABLE_MECH ) ) {
-            crit_speed = crit->get_speed();
-        } else {
-            // Approximate animal walk speed by halving base speed
-            crit_speed = crit->get_speed() / 2.0;
-        }
+        const double crit_speed = u.mount_speed();
         const double base_moves = u.run_cost( mcost, diag ) * 100.0 / crit_speed;
         const double encumb_moves = u.get_weight() / 4800.0_gram;
         u.mod_moves( -static_cast<int>( std::ceil( base_moves + encumb_moves ) ) );

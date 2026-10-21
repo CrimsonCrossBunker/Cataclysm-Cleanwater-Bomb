@@ -906,6 +906,7 @@
       { "item": "manual_tailor", "prob": 30 },
       { "item": "dieselpunk_tailor", "prob": 20 },
       { "item": "textbook_tailor", "prob": 30 },
+      { "item": "book_horse_tack", "prob": 12 },
       { "item": "scots_tailor", "prob": 10 },
       { "item": "recipe_fauxfur", "prob": 10 },
       { "item": "tailor_portfolio", "prob": 2 },

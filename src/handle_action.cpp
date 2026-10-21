@@ -2612,7 +2612,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 ACTION_USE, ACTION_USE_WIELDED, ACTION_READ,
                 ACTION_PASS_ITEM, ACTION_HIGH_FIVE,
                 ACTION_CHAT,
-                ACTION_FIRE, ACTION_FIRE_BURST, ACTION_AUTOATTACK,
+                ACTION_FIRE, ACTION_FIRE_BURST, ACTION_AUTOATTACK, ACTION_ACTIVE_TECHNIQUE,
                 ACTION_THROW, ACTION_THROW_WIELDED,
                 ACTION_CAST_SPELL, ACTION_RECAST_SPELL,
                 ACTION_SMASH,
@@ -3759,6 +3759,16 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
 #ifdef MP_ENABLED
             cata_mp::client_resync_worn();
 #endif
+            break;
+
+        case ACTION_ACTIVE_TECHNIQUE:
+#ifdef MP_ENABLED
+            if( cata_mp::is_client_mode() ) {
+                add_msg( m_info, _( "Active techniques are not available to remote players yet." ) );
+                break;
+            }
+#endif
+            avatar_action::active_technique( player_character, here );
             break;
 
         case ACTION_RELOAD_ITEM: {

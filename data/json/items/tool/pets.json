@@ -144,7 +144,7 @@
     "symbol": "M",
     "color": "brown",
     "pet_slots": [ "bridle" ],
-    "pet_spook_multiplier": 0.75
+    "pet_fear_multiplier": 0.75
   },
   {
     "id": "horse_stirrups",

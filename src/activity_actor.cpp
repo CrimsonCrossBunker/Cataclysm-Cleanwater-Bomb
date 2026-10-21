@@ -110,6 +110,7 @@
 #endif
 #include "mongroup.h"
 #include "monster.h"
+#include "move_mode.h"
 #include "mtype.h"
 #include "npc.h"
 #include "npc_opinion.h"
@@ -221,6 +222,7 @@ static const activity_id ACT_MEND_ITEM( "ACT_MEND_ITEM" );
 static const activity_id ACT_MIGRATION_CANCEL( "ACT_MIGRATION_CANCEL" );
 static const activity_id ACT_MILK( "ACT_MILK" );
 static const activity_id ACT_MOP( "ACT_MOP" );
+static const activity_id ACT_MOUNTED_CHARGE( "ACT_MOUNTED_CHARGE" );
 static const activity_id ACT_MOVE_ITEMS( "ACT_MOVE_ITEMS" );
 static const activity_id ACT_MOVE_LOOT( "ACT_MOVE_LOOT" );
 static const activity_id ACT_MULTIPLE_BUTCHER( "ACT_MULTIPLE_BUTCHER" );
@@ -290,6 +292,7 @@ static const activity_id ACT_WORKOUT_ACTIVE( "ACT_WORKOUT_ACTIVE" );
 static const activity_id ACT_WORKOUT_HARD( "ACT_WORKOUT_HARD" );
 static const activity_id ACT_WORKOUT_LIGHT( "ACT_WORKOUT_LIGHT" );
 static const activity_id ACT_WORKOUT_MODERATE( "ACT_WORKOUT_MODERATE" );
+
 
 static const ammotype ammo_battery( "battery" );
 static const ammotype ammo_money( "money" );
@@ -16607,6 +16610,264 @@ std::unique_ptr<activity_actor> zone_sort_activity_actor::deserialize( JsonValue
     return actor.clone();
 }
 
+tripoint_abs_ms mounted_charge_activity_actor::route_destination( const int max_steps ) const
+{
+    if( destination != tripoint_abs_ms::min ) {
+        return destination;
+    }
+    constexpr int legacy_max_steps = 4;
+    const int steps = std::min( max_steps, legacy_max_steps );
+    return origin + tripoint( legacy_direction.x() * steps,
+                             legacy_direction.y() * steps, legacy_direction.z() * steps );
+}
+
+bool mounted_charge_activity_actor::valid_state( Character &who, const item *&weapon ) const
+{
+    weapon = nullptr;
+    if( completed_steps < 0 ||
+        ( destination == tripoint_abs_ms::min && legacy_direction == tripoint_rel_ms::zero ) ||
+        origin == tripoint_abs_ms::min ||
+        charge_item_type.is_null() ) {
+        return false;
+    }
+    if( !who.is_avatar() || !who.is_mounted() || !who.mounted_creature ||
+        who.mounted_creature->uid().get_value() != mount_uid ) {
+        return false;
+    }
+
+    const item_location wielded = who.get_wielded_item();
+    if( !wielded || wielded->uid().get_value() != weapon_uid ||
+        wielded->typeId() != charge_item_type ||
+        !wielded->has_technique( tec_mounted_charge ) ||
+        !wielded->type->mounted_charge || !wielded->type->mounted_charge->valid() ) {
+        return false;
+    }
+
+    const mounted_charge_profile &profile = *wielded->type->mounted_charge;
+    const tripoint_abs_ms target = route_destination( profile.max_steps );
+    if( target.z() != origin.z() || target == origin ||
+        rl_dist( origin, target ) > profile.max_steps ) {
+        return false;
+    }
+    const std::vector<tripoint_abs_ms> path = line_to( origin, target );
+    if( completed_steps > static_cast<int>( path.size() ) ) {
+        return false;
+    }
+    const tripoint_abs_ms expected = completed_steps == 0 ? origin : path[completed_steps - 1];
+    if( who.pos_abs() != expected || who.mounted_creature->pos_abs() != who.pos_abs() ) {
+        return false;
+    }
+
+    weapon = wielded.get_item();
+    return weapon != nullptr;
+}
+
+void mounted_charge_activity_actor::stop( player_activity &act ) const
+{
+    act.set_to_null();
+}
+
+void mounted_charge_activity_actor::start( player_activity &act, Character &who )
+{
+    const item *weapon = nullptr;
+    if( !valid_state( who, weapon ) ||
+        !tec_mounted_charge->activation_allowed( who, "start" ) ) {
+        stop( act );
+        return;
+    }
+
+    act.moves_total = 1;
+    act.moves_left = 1;
+}
+
+static std::optional<tripoint_bub_ms> mounted_charge_knockback_tile( map &here,
+        const tripoint_bub_ms &current, const tripoint_bub_ms &next )
+{
+    const tripoint_rel_ms direction = next - current;
+    const std::array<tripoint, 2> offsets = { {
+            tripoint( -direction.y(), direction.x(), 0 ),
+            tripoint( direction.y(), -direction.x(), 0 )
+        } };
+    for( const tripoint &offset : offsets ) {
+        const tripoint_bub_ms landing = next + offset;
+        if( here.inbounds( landing ) && !here.impassable( landing ) &&
+            !here.impassable_field_at( landing ) &&
+            get_creature_tracker().creature_at( landing, true ) == nullptr ) {
+            return landing;
+        }
+    }
+    return std::nullopt;
+}
+
+void mounted_charge_activity_actor::do_turn( player_activity &act, Character &who )
+{
+    const item *weapon = nullptr;
+    if( !valid_state( who, weapon ) ||
+        !tec_mounted_charge->activation_allowed( who, "continue" ) ) {
+        stop( act );
+        return;
+    }
+
+    const mounted_charge_profile &profile = *weapon->type->mounted_charge;
+    const std::vector<tripoint_abs_ms> path = line_to( origin, route_destination( profile.max_steps ) );
+    if( completed_steps >= static_cast<int>( path.size() ) ) {
+        stop( act );
+        return;
+    }
+
+    avatar *const player = who.as_avatar();
+    if( player == nullptr ) {
+        stop( act );
+        return;
+    }
+    map &here = get_map();
+    const tripoint_bub_ms current = who.pos_bub( here );
+    const tripoint_abs_ms next_abs = path[completed_steps];
+    const tripoint_bub_ms next = here.get_bub( next_abs );
+    if( next.z() != current.z() || here.impassable( next ) ||
+        here.impassable_field_at( next ) ||
+        ( here.has_flag( ter_furn_flag::TFLAG_DOOR, next ) &&
+          here.open_door( who, next, !here.is_outside( current ), true ) ) ||
+        here.has_flag( ter_furn_flag::TFLAG_RAMP_UP, next ) ||
+        here.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, next ) ||
+        here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, next ) ||
+        here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, next ) ||
+        here.veh_at( next ).part_with_feature( VPFLAG_BOARDABLE, true ) ) {
+        stop( act );
+        return;
+    }
+
+    Creature *const target = get_creature_tracker().creature_at( next, true );
+    if( target != nullptr ) {
+        if( !player->try_break_relax_gas( _( "Your mount surges forward!" ),
+                                          _( "You are too pacified to charge." ) ) ) {
+            stop( act );
+            return;
+        }
+
+        monster *const struck_monster = target->as_monster();
+        // Only a small fraction of the rider and mount's combined mass can be thrown clear.
+        constexpr int knockback_mass_ratio = 4;
+        const bool light_monster = struck_monster != nullptr &&
+                                   struck_monster->get_weight() * knockback_mass_ratio <=
+                                   who.get_weight() + who.mounted_creature->get_weight();
+        const std::optional<tripoint_bub_ms> landing = light_monster ?
+                mounted_charge_knockback_tile( here, current, next ) : std::nullopt;
+        std::vector<int64_t> existing_corpse_uids;
+        if( landing ) {
+            for( const item &ground_item : here.i_at( next ) ) {
+                if( ground_item.is_corpse() ) {
+                    existing_corpse_uids.push_back( ground_item.uid().get_value() );
+                }
+            }
+        }
+
+        who.set_mounted_charge_damage_multiplier( damage_type_id( profile.damage_type ),
+                mounted_charge_multiplier( profile, completed_steps,
+                                           who.mounted_creature->get_speed() ) );
+        who.melee_attack( *target, false );
+        who.clear_mounted_charge_stab_multiplier();
+        if( npc *const person = target->as_npc() ) {
+            person->make_angry();
+        }
+        if( !landing || struck_monster == nullptr ) {
+            stop( act );
+            return;
+        }
+        if( struck_monster->is_dead() ) {
+            for( item &ground_item : here.i_at( next ) ) {
+                if( ground_item.is_corpse() && ground_item.get_corpse_mon() == struck_monster->type &&
+                    std::find( existing_corpse_uids.begin(), existing_corpse_uids.end(),
+                               ground_item.uid().get_value() ) == existing_corpse_uids.end() ) {
+                    item corpse = ground_item;
+                    here.i_rem( next, &ground_item );
+                    here.add_item_or_charges( *landing, std::move( corpse ), false );
+                    break;
+                }
+            }
+        } else {
+            struck_monster->setpos( here, *landing );
+        }
+        if( get_creature_tracker().creature_at( next ) != nullptr ) {
+            stop( act );
+            return;
+        }
+    }
+
+    const tripoint_abs_ms before = who.pos_abs();
+    const int moves_before = who.get_moves();
+    const tripoint_rel_ms direction = next - current;
+    avatar_action::move( *player, here, direction );
+    const tripoint_abs_ms expected_after = next_abs;
+    if( who.pos_abs() != expected_after || !who.is_mounted() || !who.mounted_creature ||
+        who.mounted_creature->uid().get_value() != mount_uid ||
+        who.mounted_creature->pos_abs() != who.pos_abs() ) {
+        stop( act );
+        return;
+    }
+
+    ++completed_steps;
+    if( who.get_moves() >= moves_before ) {
+        // A native hook must not leave this actor in a zero-cost loop.
+        stop( act );
+        return;
+    }
+    if( completed_steps >= static_cast<int>( path.size() ) ) {
+        stop( act );
+        return;
+    }
+
+    // Keep an actor-driven activity alive across turns without consuming a
+    // second movement step in the same callback.
+    act.moves_total = 1;
+    act.moves_left = 1;
+}
+
+void mounted_charge_activity_actor::finish( player_activity &act, Character &who )
+{
+    who.clear_mounted_charge_stab_multiplier();
+    stop( act );
+}
+
+void mounted_charge_activity_actor::canceled( player_activity &, Character &who )
+{
+    who.clear_mounted_charge_stab_multiplier();
+}
+
+void mounted_charge_activity_actor::serialize( JsonOut &jsout ) const
+{
+    jsout.start_object();
+    if( destination != tripoint_abs_ms::min ) {
+        jsout.member( "destination", destination );
+    } else {
+        jsout.member( "direction", legacy_direction );
+    }
+    jsout.member( "mount_uid", mount_uid );
+    jsout.member( "weapon_uid", weapon_uid );
+    jsout.member( "origin", origin );
+    jsout.member( "charge_item_type", charge_item_type );
+    jsout.member( "completed_steps", completed_steps );
+    jsout.end_object();
+}
+
+std::unique_ptr<activity_actor> mounted_charge_activity_actor::deserialize( JsonValue &jsin )
+{
+    mounted_charge_activity_actor actor;
+    JsonObject data = jsin.get_object();
+    data.read( "mount_uid", actor.mount_uid );
+    data.read( "weapon_uid", actor.weapon_uid );
+    data.read( "origin", actor.origin );
+    data.read( "charge_item_type", actor.charge_item_type );
+    data.read( "completed_steps", actor.completed_steps );
+    if( data.has_member( "destination" ) ) {
+        data.read( "destination", actor.destination );
+    } else {
+        // Resume activities written by the pre-selection directional format.
+        data.read( "direction", actor.legacy_direction );
+    }
+    return actor.clone();
+}
+
 namespace activity_actors
 {
 
@@ -16673,6 +16934,7 @@ deserialize_functions = {
     { ACT_MIGRATION_CANCEL, &migration_cancel_activity_actor::deserialize },
     { ACT_MILK, &milk_activity_actor::deserialize },
     { ACT_MOP, &mop_activity_actor::deserialize },
+    { ACT_MOUNTED_CHARGE, &mounted_charge_activity_actor::deserialize },
     { ACT_MOVE_ITEMS, &move_items_activity_actor::deserialize },
     { ACT_MOVE_LOOT, &zone_sort_activity_actor::deserialize },
     { ACT_MULTIPLE_BUTCHER, &multi_butchery_activity_actor::deserialize },

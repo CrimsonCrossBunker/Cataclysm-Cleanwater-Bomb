@@ -24,6 +24,7 @@
 #include "bodypart.h"
 #include "cached_options.h"
 #include "calendar.h"
+#include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "character.h"
 #include "character_attire.h"
@@ -162,7 +163,7 @@ static const material_id material_steel( "steel" );
 static const move_mode_id move_mode_prone( "prone" );
 
 static const skill_id skill_melee( "melee" );
-static const skill_id skill_riding( "riding" );
+static const skill_id skill_athletics( "swimming" );
 static const skill_id skill_spellcraft( "spellcraft" );
 static const skill_id skill_unarmed( "unarmed" );
 
@@ -234,7 +235,7 @@ bool Character::handle_melee_wear( item_location shield, float wear_multiplier )
 
     // Percentage chance that item takes damage divided by 100.
     double enchant_multiplier = calculate_by_enchantment( 1,
-        enchant_vals::mod::EQUIPMENT_DAMAGE_CHANCE );
+                                enchant_vals::mod::EQUIPMENT_DAMAGE_CHANCE );
     if( enchant_multiplier <= 0.0f ) {
         return false;
     }
@@ -448,7 +449,7 @@ static void practice_mounted_melee( Character &character, const item &weapon )
     }
 
     const riding_config &config = get_riding_config();
-    character.practice( skill_riding, config.melee_practice );
+    character.practice( skill_athletics, config.melee_practice );
     const time_duration base_practice = time_duration::from_seconds(
                                             config.proficiency_practice_seconds );
     character.practice_proficiency( config.mounted_combat_proficiency, base_practice );
@@ -469,7 +470,7 @@ static void practice_mounted_melee( Character &character, const item &weapon )
             continue;
         }
         const int seconds = std::max( 1, static_cast<int>( std::round(
-                config.proficiency_practice_seconds * amount / total ) ) );
+                                          config.proficiency_practice_seconds * amount / total ) ) );
         character.practice_proficiency( proficiency, time_duration::from_seconds( seconds ) );
     }
 }
@@ -506,7 +507,7 @@ float Character::hit_roll() const
         const riding_config &config = get_riding_config();
         const double penalty = std::max( 0.0,
                                          config.mounted_melee_hit_penalty -
-                                         get_skill_level( skill_riding ) * config.melee_hit_skill_reduction );
+                                         get_skill_level( skill_athletics ) * config.melee_hit_skill_reduction );
         const double proficiency_bonus = learned_mounted_damage_fraction( *this, cur_weap ) *
                                          config.mounted_melee_proficiency_hit_bonus;
         hit = static_cast<float>( ( hit - penalty + proficiency_bonus ) *
@@ -592,6 +593,24 @@ void Character::roll_all_damage( bool crit, damage_instance &di, bool average,
     }
 }
 
+void Character::set_mounted_charge_damage_multiplier( const damage_type_id &damage_type,
+        const float multiplier )
+{
+    mounted_charge_damage_type_ = damage_type;
+    mounted_charge_stab_multiplier_ = std::clamp( multiplier, 1.0f, 2.0f );
+}
+
+void Character::set_mounted_charge_stab_multiplier( const float multiplier )
+{
+    set_mounted_charge_damage_multiplier( damage_type_id( "stab" ), multiplier );
+}
+
+void Character::clear_mounted_charge_stab_multiplier()
+{
+    mounted_charge_stab_multiplier_ = 1.0f;
+    mounted_charge_damage_type_ = damage_type_id::NULL_ID();
+}
+
 static void melee_train( Character &you, int lo, int hi, int training_level, const item &weap,
                          const attack_vector_id vector )
 {
@@ -658,7 +677,7 @@ damage_instance Creature::modify_damage_dealt_with_enchantments( const damage_in
         if( dmg_mod != 0 ) {
             modified.add_damage( dt.id, dmg_mod );
             modified.add_damage( dt.id, enchantment_cache->modify_value( enchant_vals::mod::MELEE_DAMAGE,
-                    0.0f ) );
+                                 0.0f ) );
         }
     }
 
@@ -668,7 +687,9 @@ damage_instance Creature::modify_damage_dealt_with_enchantments( const damage_in
 // Melee calculation is in parts. This sets up the attack, then in deal_melee_attack,
 // we calculate if we would hit. In Creature::deal_melee_hit, we calculate if the target dodges.
 bool Character::melee_attack( Creature &t, bool allow_special, const matec_id &force_technique,
-                              bool allow_unarmed, int forced_movecost )
+                              bool allow_unarmed, int forced_movecost,
+                              const std::optional<std::tuple<matec_id, attack_vector_id, sub_bodypart_str_id>>
+                              &validated_technique )
 {
     if( has_flag( json_flag_CANNOT_ATTACK ) ) {
         add_msg_if_player( m_info, _( "You are incapable of attacking!" ) );
@@ -679,7 +700,8 @@ bool Character::melee_attack( Creature &t, bool allow_special, const matec_id &f
         return false;
     }
     if( !is_adjacent( &t, false ) &&
-        !get_map().on_matching_stairs( pos_bub(), t.pos_bub() ) ) {
+        !get_map().on_matching_stairs( pos_bub(), t.pos_bub() ) &&
+        !( reach_attacking && validated_technique ) ) {
         return false;
     }
 
@@ -687,7 +709,8 @@ bool Character::melee_attack( Creature &t, bool allow_special, const matec_id &f
     recoil = MAX_RECOIL;
     last_target_pos = std::nullopt;
 
-    return melee_attack_abstract( t, allow_special, force_technique, allow_unarmed, forced_movecost );
+    return melee_attack_abstract( t, allow_special, force_technique, allow_unarmed, forced_movecost,
+                                  validated_technique );
 }
 
 static const std::set<weapon_category_id> &wielded_weapon_categories( const Character &c )
@@ -713,7 +736,9 @@ void Character::reduce_moves_from_attack( int forced_movecost, int move_cost )
 
 bool Character::melee_attack_abstract( Creature &t, bool allow_special,
                                        const matec_id &force_technique,
-                                       bool allow_unarmed, int forced_movecost )
+                                       bool allow_unarmed, int forced_movecost,
+                                       const std::optional<std::tuple<matec_id, attack_vector_id, sub_bodypart_str_id>>
+                                       &validated_technique )
 {
     map &here = get_map();
 
@@ -783,7 +808,7 @@ bool Character::melee_attack_abstract( Creature &t, bool allow_special,
         const std::string &action = query_popup()
                                     .context( "CANCEL_ACTIVITY_OR_IGNORE_QUERY" )
                                     .message( _( "<color_light_red>Attacking with your %1$s will take a long time.  "
-                     "Are you sure you want to continue?</color>" ),
+                                              "Are you sure you want to continue?</color>" ),
                                               cur_weap.display_name() )
                                     .option( "YES" )
                                     .option( "NO" )
@@ -805,11 +830,11 @@ bool Character::melee_attack_abstract( Creature &t, bool allow_special,
 
     if( monster *m = t.as_monster() ) {
         cata::event e = cata::event::make<event_type::character_melee_attacks_monster>( getID(),
-            cur_weap.typeId(), hits, m->type->id );
+                        cur_weap.typeId(), hits, m->type->id );
         get_event_bus().send_with_talker( this, m, e );
     } else if( Character *c = t.as_character() ) {
         cata::event e = cata::event::make<event_type::character_melee_attacks_character>( getID(),
-            cur_weap.typeId(), hits, c->getID(), c->get_name() );
+                        cur_weap.typeId(), hits, c->getID(), c->get_name() );
         get_event_bus().send_with_talker( this, c, e );
     }
 
@@ -884,7 +909,7 @@ bool Character::melee_attack_abstract( Creature &t, bool allow_special,
         }
         // select target body part
         const bodypart_id &target_bp = t.select_body_part( -1, -1, can_attack_high(),
-            hit_spread );
+                                       hit_spread );
 
         const bool has_force_technique = !force_technique.str().empty();
 
@@ -895,7 +920,9 @@ bool Character::melee_attack_abstract( Creature &t, bool allow_special,
 
         // Pick our attack
         // Unarmed needs a defined technique
-        if( has_force_technique ) {
+        if( validated_technique ) {
+            attack = *validated_technique;
+        } else if( has_force_technique ) {
             attack = std::make_tuple( force_technique, attack_vector_id::NULL_ID(),
                                       sub_bodypart_str_id::NULL_ID() );
         } else if( allow_special ) {
@@ -1095,7 +1122,8 @@ bool Character::melee_attack_abstract( Creature &t, bool allow_special,
     burn_energy_arms( std::min( -50, total_stam + deft_bonus ) );
     add_msg_debug( debugmode::DF_MELEE, "Stamina burn base/total (capped at -50): %d/%d", base_stam,
                    total_stam + deft_bonus );
-    reduce_moves_from_attack( forced_movecost, move_cost );
+    reduce_moves_from_attack( forced_movecost, validated_technique ? std::max( 1,
+                              move_cost ) : move_cost );
     // trigger martial arts on-attack effects
     martial_arts_data->ma_onattack_effects( *this );
     // some things (shattering weapons) can harm the attacking creature.
@@ -1127,7 +1155,7 @@ int Character::get_total_melee_stamina_cost( const item *weap ) const
     // Quadrupeds don't mind crouching, squids and slimes hardly care about even being prone
     const int stance_malus = ( is_on_ground() &&
                                !has_flag( json_flag_PSEUDOPOD_GRASP ) ) ? 50 : ( !has_flag( json_flag_PSEUDOPOD_GRASP ) &&
-                                   ( !has_effect( effect_natural_stance ) && ( !unarmed_attack() ) ) && is_crouching() ? 20 : 0 );
+                                       ( !has_effect( effect_natural_stance ) && ( !unarmed_attack() ) ) && is_crouching() ? 20 : 0 );
 
     float proficiency_multiplier = 1.f;
     for( const weapon_category_id &cat : wielded_weapon_categories( *this ) ) {
@@ -1475,9 +1503,10 @@ float Character::bonus_damage( bool random ) const
 static void roll_melee_damage_internal( const Character &u, const damage_type_id &dt, bool crit,
                                         damage_instance &di, bool average, const item &weap,
                                         const attack_vector_id &attack_vector, const sub_bodypart_str_id &contact, float crit_mod,
-                                        float target_cut_armor )
+                                        float target_cut_armor, float weapon_damage_multiplier )
 {
-    float dmg = u.mabuff_damage_bonus( dt ) + weap.damage_melee( dt );
+    float dmg = u.mabuff_damage_bonus( dt ) +
+                weap.damage_melee( dt ) * weapon_damage_multiplier;
     float dmg_mul = 1.0f;
     bool unarmed = !attack_vector->weapon;
     int arpen = 0;
@@ -1581,8 +1610,12 @@ void Character::roll_damage( const damage_type_id &dt, bool crit, damage_instanc
 {
     // For handling melee damage types, and physical damage types during melee attacks
     if( dt->melee_only || dt->physical ) {
+        const float weapon_damage_multiplier = is_mounted() &&
+                                               get_steed_type() == steed_type::ANIMAL &&
+                                               dt == mounted_charge_damage_type_ ?
+                                               mounted_charge_stab_multiplier_ : 1.0f;
         roll_melee_damage_internal( *this, dt, crit, di, average, weap, attack_vector, contact, crit_mod,
-                                    target_cut_armor );
+                                    target_cut_armor, weapon_damage_multiplier );
         return;
     }
 
@@ -1618,6 +1651,12 @@ std::tuple<matec_id, attack_vector_id, sub_bodypart_str_id> Character::pick_tech
     for( const matec_id &tec_id : all ) {
         add_msg_debug( debugmode::DF_MELEE, "Evaluating technique %s", tec_id->name );
 
+        // Manually activated techniques are selected through the active
+        // technique menu and must never be chosen by an ordinary attack.
+        if( tec_id->manual_activation ) {
+            continue;
+        }
+
         if( find( blacklist.begin(), blacklist.end(), tec_id ) != blacklist.end() ) {
             add_msg_debug( debugmode::DF_MELEE, "Technique is on the blacklist, discarded" );
             continue;
@@ -1637,11 +1676,96 @@ std::tuple<matec_id, attack_vector_id, sub_bodypart_str_id> Character::pick_tech
     }
 
     return random_entry( possible, std::make_tuple( tec_none, attack_vector_id::NULL_ID(),
-            sub_bodypart_str_id::NULL_ID() ) );
+                         sub_bodypart_str_id::NULL_ID() ) );
 }
+
+std::vector<matec_id> Character::active_techniques() const
+{
+    std::vector<matec_id> available;
+    std::set<matec_id> seen;
+    std::vector<matec_id> candidates = martial_arts_data->get_all_techniques( used_weapon(), *this );
+    const item_location wielded = get_wielded_item();
+    if( wielded && wielded->has_technique( tec_mounted_charge ) ) {
+        candidates.push_back( tec_mounted_charge );
+    }
+    for( const matec_id &id : candidates ) {
+        if( !id.is_valid() || !id->can_activate() || !id->is_valid_character( *this ) ||
+            !id->activation_allowed( *this, "menu" ) || !seen.insert( id ).second ) {
+            continue;
+        }
+        if( id == tec_mounted_charge ) {
+            // Mounted charge is an explicit weapon action; use the actual
+            // wielded item even when the selected style suppresses weapon use.
+            if( !wielded || !wielded->type->mounted_charge ||
+                !wielded->type->mounted_charge->valid() ) {
+                continue;
+            }
+        }
+        available.push_back( id );
+    }
+    return available;
+}
+
+int Character::active_technique_range( const matec_id &technique ) const
+{
+    if( !technique.is_valid() || !technique->can_activate() ) {
+        return 0;
+    }
+    if( technique->reach_ok || technique->reach_tec ) {
+        const item_location weapon = used_weapon();
+        return weapon ? weapon->current_reach_range( *this ).first : 1;
+    }
+    return 1;
+}
+
+bool Character::use_active_technique( Creature &target, const matec_id &technique )
+{
+    if( !technique.is_valid() || technique == tec_mounted_charge ||
+        !technique->can_activate() || &target == this || target.is_dead_state() ||
+        has_flag( json_flag_CANNOT_ATTACK ) ||
+        ( is_mounted() && mounted_creature && mounted_creature->has_flag( mon_flag_RIDEABLE_MECH ) ) ||
+        pos_bub().z() != target.pos_bub().z() ) {
+        return false;
+    }
+    const std::vector<matec_id> granted = active_techniques();
+    if( std::find( granted.begin(), granted.end(), technique ) == granted.end() ) {
+        return false;
+    }
+    const item_location weapon = used_weapon();
+    const int distance = rl_dist( pos_bub(), target.pos_bub() );
+    if( distance < 1 || distance > active_technique_range( technique ) ||
+        ( distance == 1 && !is_adjacent( &target, false ) ) ||
+        ( technique->reach_tec && ( !weapon || weapon->current_reach_range( *this ).first <= 1 ) ) ) {
+        return false;
+    }
+
+    // Keep reach attacks from passing through walls or intervening creatures.
+    // Spears retain their normal ability to stab through thin obstacles.
+    map &here = get_map();
+    std::vector<tripoint_bub_ms> path = line_to( pos_bub(), target.pos_bub() );
+    path.pop_back();
+    for( const tripoint_bub_ms &point : path ) {
+        if( get_creature_tracker().creature_at( point, true ) ||
+            ( here.impassable( point ) && !( weapon && weapon->has_flag( flag_SPEAR ) &&
+                                             here.has_flag( ter_furn_flag::TFLAG_THIN_OBSTACLE, point ) ) ) ) {
+            return false;
+        }
+    }
+
+    restore_on_out_of_scope restore_reach( reach_attacking );
+    reach_attacking = technique->reach_tec || distance > 1;
+    const std::optional<std::tuple<matec_id, attack_vector_id, sub_bodypart_str_id>> selected =
+                evaluate_technique( technique, target, weapon, false, false, false, true );
+    if( !selected || ( distance > 1 && !std::get<1>( *selected )->weapon ) ) {
+        return false;
+    }
+    return melee_attack( target, false, technique, true, -1, selected );
+}
+
 std::optional<std::tuple<matec_id, attack_vector_id, sub_bodypart_str_id>>
-Character::evaluate_technique( const matec_id &tec_id, Creature const &t, const item_location &weap,
-                               bool crit, bool dodge_counter, bool block_counter ) const
+        Character::evaluate_technique( const matec_id &tec_id, Creature const &t, const item_location &weap,
+                                       bool crit, bool dodge_counter, bool block_counter,
+                                       bool manual_activation ) const
 {
     // this could be more robust but for now it should work fine
     bool is_loaded = weap && weap->is_magazine_full();
@@ -1716,7 +1840,7 @@ Character::evaluate_technique( const matec_id &tec_id, Creature const &t, const 
 
     // if critical then select only from critical tecs
     // but allow the technique if its crit ok
-    if( !tec_id->crit_ok && ( crit != tec_id->crit_tec ) ) {
+    if( !manual_activation && !tec_id->crit_ok && ( crit != tec_id->crit_tec ) ) {
         add_msg_debug( debugmode::DF_MELEE, "Attack is%s critical, attack discarded", crit ? "" : "n't" );
         return std::nullopt;
     }
@@ -1750,7 +1874,8 @@ Character::evaluate_technique( const matec_id &tec_id, Creature const &t, const 
     }
 
     // If we have negative weighting then roll to see if it's valid this time
-    if( tec_id->weighting < 0 && !one_in( std::abs( tec_id->weighting ) ) ) {
+    if( !manual_activation && tec_id->weighting < 0 &&
+        !one_in( std::abs( tec_id->weighting ) ) ) {
         add_msg_debug( debugmode::DF_MELEE,
                        "Negative technique weighting failed weight roll, attack discarded" );
         return std::nullopt;
@@ -2329,7 +2454,7 @@ bool Character::block_hit( Creature *source, bodypart_id &bp_hit, damage_instanc
             if( source != nullptr && !source->is_hallucination() ) {
                 for( damage_unit &du : dam.damage_units ) {
                     shield->damage_armor_durability( du, du, bp_hit, calculate_by_enchantment( 1,
-                            enchant_vals::mod::EQUIPMENT_DAMAGE_CHANCE ),
+                                                     enchant_vals::mod::EQUIPMENT_DAMAGE_CHANCE ),
                                                      this );
                 }
             }

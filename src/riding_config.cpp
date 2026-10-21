@@ -31,6 +31,16 @@ void load_riding_config( const JsonObject &jo, const std::string & )
     config.move_practice = jo.get_int( "move_practice", config.move_practice );
     config.melee_practice = jo.get_int( "melee_practice", config.melee_practice );
     config.ranged_practice = jo.get_int( "ranged_practice", config.ranged_practice );
+    config.mount_refusal_distance = jo.get_int( "mount_refusal_distance",
+                                    config.mount_refusal_distance );
+    config.mount_refusal_base_chance = jo.get_float( "mount_refusal_base_chance",
+                                       config.mount_refusal_base_chance );
+    config.tamed_mount_fear_multiplier = jo.get_float( "tamed_mount_fear_multiplier",
+                                         config.tamed_mount_fear_multiplier );
+    config.animal_walk_speed_multiplier = jo.get_float( "animal_walk_speed_multiplier",
+                                          config.animal_walk_speed_multiplier );
+    config.animal_trot_speed_multiplier = jo.get_float( "animal_trot_speed_multiplier",
+                                          config.animal_trot_speed_multiplier );
     config.spook_skill_reduction = jo.get_float( "spook_skill_reduction",
         config.spook_skill_reduction );
     config.balance_skill_reduction = jo.get_float( "balance_skill_reduction",
@@ -72,7 +82,12 @@ void load_riding_config( const JsonObject &jo, const std::string & )
     config.mounted_piercing_proficiency = proficiency_id( jo.get_string(
             "mounted_piercing_proficiency", config.mounted_piercing_proficiency.str() ) );
 
-    if( config.move_practice_chance < 1 || config.minimum_move_cost_multiplier <= 0.0 ||
+    if( config.move_practice_chance < 1 || config.mount_refusal_distance < 1 ||
+        config.mount_refusal_base_chance < 0.0 || config.mount_refusal_base_chance > 100.0 ||
+        config.tamed_mount_fear_multiplier < 0.0 || config.tamed_mount_fear_multiplier > 1.0 ||
+        config.animal_walk_speed_multiplier <= 0.0 || config.animal_trot_speed_multiplier <= 0.0 ||
+        config.spook_skill_reduction < 0.0 ||
+        config.spook_skill_reduction > 0.1 || config.minimum_move_cost_multiplier <= 0.0 ||
         config.minimum_move_cost_multiplier > 1.0 || config.proficiency_practice_seconds < 0 ||
         config.melee_fall_base_chance < 0.0 || config.melee_fall_damage_scale < 0.0 ) {
         jo.throw_error( "invalid riding configuration: chances, durations, and movement bounds must be positive" );
