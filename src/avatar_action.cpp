@@ -2,7 +2,10 @@
 
 #include <coordinates.h>
 #include <input_enums.h>
+#include <item_uid.h>
+#include <monster_uid.h>
 #include <player_activity.h>
+#include <translation.h>
 #include <algorithm>
 #include <climits>
 #include <cstdlib>
@@ -213,7 +216,7 @@ static bool confirm_non_hostile_melee_attack( avatar &you, const monster &critte
                                    .context( "CANCEL_ACTIVITY_OR_IGNORE_QUERY" )
                                    .message( force_uc && !is_keycode_mode_supported() ?
                                              pgettext( "non_hostile_melee_query",
-                                                     "<color_light_red>Really attack the non-hostile %s? (Case Sensitive)</color>" ) :
+                                                     "<color_light_red>Really attack the non-hostile %s?  (Case Sensitive)</color>" ) :
                                              pgettext( "non_hostile_melee_query",
                                                      "<color_light_red>Really attack the non-hostile %s?</color>" ),
                                              critter.name() )

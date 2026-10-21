@@ -1,14 +1,27 @@
-#include "cata_catch.h"
-
+#include <bodypart.h>
+#include <coordinates.h>
+#include <flexbuffer_json.h>
+#include <item_location.h>
+#include <item_uid.h>
+#include <monster_uid.h>
+#include <player_activity.h>
+#include <point.h>
+#include <stdint.h>
 #include <algorithm>
+#include <initializer_list>
+#include <optional>
 #include <sstream>
+#include <string>
+#include <vector>
 
 #include "activity_actor_definitions.h"
 #include "avatar.h"
 #include "avatar_action.h"
 #include "calendar.h"
+#include "cata_catch.h"
 #include "damage.h"
 #include "flag.h"
+#include "flexbuffer_json.h"
 #include "item.h"
 #include "itype.h"
 #include "json.h"
@@ -17,8 +30,8 @@
 #include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
-#include "monster.h"
 #include "martialarts.h"
+#include "monster.h"
 #include "mounted_charge.h"
 #include "npc.h"
 #include "player_helpers.h"
@@ -26,6 +39,19 @@
 
 namespace
 {
+
+static const damage_type_id damage_bash( "bash" );
+static const damage_type_id damage_cut( "cut" );
+static const damage_type_id damage_stab( "stab" );
+static const efftype_id effect_pet( "pet" );
+static const itype_id itype_mc_cavalry_sabre( "mc_cavalry_sabre" );
+static const itype_id itype_mounted_lance( "mounted_lance" );
+static const itype_id itype_mounted_saber( "mounted_saber" );
+static const skill_id skill_cutting( "cutting" );
+static const skill_id skill_melee( "melee" );
+static const skill_id skill_stabbing( "stabbing" );
+static const ter_str_id ter_t_floor( "t_floor" );
+static const ter_str_id ter_t_wall( "t_wall" );
 
 monster &setup_mounted_weapon( avatar &player, const itype_id &weapon_type )
 {
@@ -50,7 +76,7 @@ monster &setup_mounted_weapon( avatar &player, const itype_id &weapon_type )
 
 monster &setup_mounted_lance( avatar &player )
 {
-    return setup_mounted_weapon( player, itype_id( "mounted_lance" ) );
+    return setup_mounted_weapon( player, itype_mounted_lance );
 }
 
 void start_mounted_charge( avatar &player, monster &horse )
@@ -100,7 +126,7 @@ TEST_CASE( "mounted_charge_profile_has_bounded_momentum", "[mounted][charge]" )
 
 TEST_CASE( "mounted_lance_loads_an_explicit_charge_profile", "[mounted][charge][json]" )
 {
-    const item lance( itype_id( "mounted_lance" ) );
+    const item lance( itype_mounted_lance );
     REQUIRE( lance.type != nullptr );
     REQUIRE( lance.type->mounted_charge.has_value() );
     CHECK( lance.type->mounted_charge->max_steps == 15 );
@@ -113,7 +139,7 @@ TEST_CASE( "mounted_lance_loads_an_explicit_charge_profile", "[mounted][charge][
 
 TEST_CASE( "mounted_saber_loads_a_short_cut_profile", "[mounted][charge][json]" )
 {
-    const item saber( itype_id( "mounted_saber" ) );
+    const item saber( itype_mounted_saber );
     REQUIRE( saber.type != nullptr );
     REQUIRE( saber.type->mounted_charge.has_value() );
     CHECK( saber.type->mounted_charge->max_steps == 15 );
@@ -127,7 +153,7 @@ TEST_CASE( "mounted_charge_is_available_only_as_a_usable_weapon_technique",
            "[mounted][charge][active_technique]" )
 {
     avatar &player = get_avatar();
-    setup_mounted_weapon( player, itype_id( "mounted_saber" ) );
+    setup_mounted_weapon( player, itype_mounted_saber );
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
     REQUIRE( tec_mounted_charge.is_valid() );
     CHECK( tec_mounted_charge->lua_platform_mod == "ccb" );
@@ -140,10 +166,10 @@ TEST_CASE( "mounted_charge_is_available_only_as_a_usable_weapon_technique",
     CHECK_FALSE( avatar_action::mounted_charge_available( player ) );
     player.set_moves( 1000 );
 
-    player.set_wielded_item( item( itype_id( "mc_cavalry_sabre" ) ) );
+    player.set_wielded_item( item( itype_mc_cavalry_sabre ) );
     CHECK_FALSE( avatar_action::mounted_charge_available( player ) );
 
-    player.set_wielded_item( item( itype_id( "mounted_lance" ) ) );
+    player.set_wielded_item( item( itype_mounted_lance ) );
     CHECK( avatar_action::mounted_charge_available( player ) );
     player.forced_dismount();
     CHECK_FALSE( avatar_action::mounted_charge_available( player ) );
@@ -152,7 +178,7 @@ TEST_CASE( "mounted_charge_is_available_only_as_a_usable_weapon_technique",
 TEST_CASE( "mounted_saber_charge_scales_cut_damage_only", "[mounted][charge][damage]" )
 {
     avatar &player = get_avatar();
-    setup_mounted_weapon( player, itype_id( "mounted_saber" ) );
+    setup_mounted_weapon( player, itype_mounted_saber );
     const item &saber = *player.get_wielded_item();
     REQUIRE( saber.type->mounted_charge.has_value() );
 
@@ -163,21 +189,21 @@ TEST_CASE( "mounted_saber_charge_scales_cut_damage_only", "[mounted][charge][dam
         return result;
     };
     const damage_instance ordinary = roll();
-    REQUIRE( ordinary.type_damage( damage_type_id( "cut" ) ) > 0.0f );
-    player.set_mounted_charge_damage_multiplier( damage_type_id( "cut" ),
+    REQUIRE( ordinary.type_damage( damage_cut ) > 0.0f );
+    player.set_mounted_charge_damage_multiplier( damage_cut,
             mounted_charge_multiplier( *saber.type->mounted_charge, 1, 300 ) );
     const damage_instance charged = roll();
     player.clear_mounted_charge_stab_multiplier();
     const damage_instance restored = roll();
 
-    CHECK( charged.type_damage( damage_type_id( "cut" ) ) ==
-           Approx( ordinary.type_damage( damage_type_id( "cut" ) ) * 1.12f ) );
-    CHECK( charged.type_damage( damage_type_id( "bash" ) ) ==
-           Approx( ordinary.type_damage( damage_type_id( "bash" ) ) ) );
-    CHECK( charged.type_damage( damage_type_id( "stab" ) ) ==
-           Approx( ordinary.type_damage( damage_type_id( "stab" ) ) ) );
-    CHECK( restored.type_damage( damage_type_id( "cut" ) ) ==
-           Approx( ordinary.type_damage( damage_type_id( "cut" ) ) ) );
+    CHECK( charged.type_damage( damage_cut ) ==
+           Approx( ordinary.type_damage( damage_cut ) * 1.12f ) );
+    CHECK( charged.type_damage( damage_bash ) ==
+           Approx( ordinary.type_damage( damage_bash ) ) );
+    CHECK( charged.type_damage( damage_stab ) ==
+           Approx( ordinary.type_damage( damage_stab ) ) );
+    CHECK( restored.type_damage( damage_cut ) ==
+           Approx( ordinary.type_damage( damage_cut ) ) );
     player.forced_dismount();
 }
 
@@ -185,7 +211,7 @@ TEST_CASE( "mounted_charge_is_provided_by_the_weapon_technique_list",
            "[mounted][charge][martial_arts]" )
 {
     avatar &player = get_avatar();
-    setup_mounted_weapon( player, itype_id( "mounted_saber" ) );
+    setup_mounted_weapon( player, itype_mounted_saber );
 
     const item_location weapon = player.get_wielded_item();
     REQUIRE( weapon );
@@ -204,13 +230,13 @@ TEST_CASE( "mounted_charge_is_provided_by_the_weapon_technique_list",
 TEST_CASE( "mounted_charge_stops_at_heavy_monster", "[mounted][charge][activity]" )
 {
     avatar &player = get_avatar();
-    monster &horse = setup_mounted_weapon( player, itype_id( "mounted_saber" ) );
-    player.set_skill_level( skill_id( "melee" ), 10 );
-    player.set_skill_level( skill_id( "cutting" ), 10 );
+    monster &horse = setup_mounted_weapon( player, itype_mounted_saber );
+    player.set_skill_level( skill_melee, 10 );
+    player.set_skill_level( skill_cutting, 10 );
     map &here = get_map();
     const tripoint_bub_ms start = player.pos_bub();
-    here.ter_set( start + tripoint::east, ter_id( "t_floor" ) );
-    here.ter_set( start + tripoint( 2, 0, 0 ), ter_id( "t_floor" ) );
+    here.ter_set( start + tripoint::east, ter_t_floor.id() );
+    here.ter_set( start + tripoint( 2, 0, 0 ), ter_t_floor.id() );
     monster &target = spawn_test_monster( "mon_zombie_hulk", start + tripoint( 2, 0, 0 ) );
     const int hp_before = target.get_hp();
 
@@ -233,15 +259,15 @@ TEST_CASE( "mounted_charge_knocks_light_survivor_aside_and_continues",
     avatar &player = get_avatar();
     monster &horse = setup_mounted_lance( player );
     player.set_dex_base( 30 );
-    player.set_skill_level( skill_id( "melee" ), 10 );
-    player.set_skill_level( skill_id( "stabbing" ), 10 );
+    player.set_skill_level( skill_melee, 10 );
+    player.set_skill_level( skill_stabbing, 10 );
     map &here = get_map();
     const tripoint_bub_ms start = player.pos_bub();
     for( int x = 1; x <= 4; ++x ) {
-        here.ter_set( start + tripoint( x, 0, 0 ), ter_id( "t_floor" ) );
+        here.ter_set( start + tripoint( x, 0, 0 ), ter_t_floor.id() );
     }
-    here.ter_set( start + tripoint( 2, 1, 0 ), ter_id( "t_floor" ) );
-    here.ter_set( start + tripoint( 2, -1, 0 ), ter_id( "t_floor" ) );
+    here.ter_set( start + tripoint( 2, 1, 0 ), ter_t_floor.id() );
+    here.ter_set( start + tripoint( 2, -1, 0 ), ter_t_floor.id() );
     monster &target = spawn_test_monster( "mon_zombie", start + tripoint( 2, 0, 0 ) );
     target.set_hp( 500 );
 
@@ -267,8 +293,8 @@ TEST_CASE( "mounted_charge_does_not_fling_heavy_corpse", "[mounted][charge][acti
     avatar &player = get_avatar();
     monster &horse = setup_mounted_lance( player );
     player.set_dex_base( 30 );
-    player.set_skill_level( skill_id( "melee" ), 10 );
-    player.set_skill_level( skill_id( "stabbing" ), 10 );
+    player.set_skill_level( skill_melee, 10 );
+    player.set_skill_level( skill_stabbing, 10 );
     map &here = get_map();
     const tripoint_bub_ms start = player.pos_bub();
     monster &target = spawn_test_monster( "mon_moose", start + tripoint::east );
@@ -295,15 +321,15 @@ TEST_CASE( "mounted_charge_fling_light_corpse_and_hits_next_monster",
     avatar &player = get_avatar();
     monster &horse = setup_mounted_lance( player );
     player.set_dex_base( 30 );
-    player.set_skill_level( skill_id( "melee" ), 10 );
-    player.set_skill_level( skill_id( "stabbing" ), 10 );
+    player.set_skill_level( skill_melee, 10 );
+    player.set_skill_level( skill_stabbing, 10 );
     map &here = get_map();
     const tripoint_bub_ms start = player.pos_bub();
     for( int x = 1; x <= 4; ++x ) {
-        here.ter_set( start + tripoint( x, 0, 0 ), ter_id( "t_floor" ) );
+        here.ter_set( start + tripoint( x, 0, 0 ), ter_t_floor.id() );
     }
-    here.ter_set( start + tripoint( 2, 1, 0 ), ter_id( "t_floor" ) );
-    here.ter_set( start + tripoint( 2, -1, 0 ), ter_id( "t_floor" ) );
+    here.ter_set( start + tripoint( 2, 1, 0 ), ter_t_floor.id() );
+    here.ter_set( start + tripoint( 2, -1, 0 ), ter_t_floor.id() );
     monster &first = spawn_test_monster( "mon_zombie", start + tripoint( 2, 0, 0 ) );
     first.set_hp( 1 );
     monster &second = spawn_test_monster( "mon_zombie_hulk", start + tripoint( 3, 0, 0 ) );
@@ -316,7 +342,9 @@ TEST_CASE( "mounted_charge_fling_light_corpse_and_hits_next_monster",
     REQUIRE( first.is_dead() );
     CHECK( player.pos_bub() == start + tripoint( 2, 0, 0 ) );
     bool corpse_aside = false;
-    for( const int dy : { -1, 1 } ) {
+    for( const int dy : {
+             -1, 1
+             } ) {
         for( const item &ground_item : here.i_at( start + tripoint( 2, dy, 0 ) ) ) {
             corpse_aside |= ground_item.is_corpse() && ground_item.get_corpse_mon() == first.type;
         }
@@ -335,8 +363,8 @@ TEST_CASE( "mounted_charge_moves_one_tile_and_stops_at_wall", "[mounted][charge]
     monster &horse = setup_mounted_lance( player );
     map &here = get_map();
     const tripoint_bub_ms start = player.pos_bub();
-    here.ter_set( start + tripoint::east, ter_id( "t_floor" ) );
-    here.ter_set( start + tripoint( 2, 0, 0 ), ter_id( "t_wall" ) );
+    here.ter_set( start + tripoint::east, ter_t_floor.id() );
+    here.ter_set( start + tripoint( 2, 0, 0 ), ter_t_wall.id() );
 
     start_mounted_charge( player, horse );
     REQUIRE( player.activity );
@@ -359,7 +387,7 @@ TEST_CASE( "mounted_charge_reaches_selected_endpoint", "[mounted][charge][activi
     const tripoint_bub_ms start = player.pos_bub();
     const tripoint_bub_ms endpoint = start + tripoint( 15, 0, 0 );
     for( const tripoint_bub_ms &point : line_to( start, endpoint ) ) {
-        here.ter_set( point, ter_id( "t_floor" ) );
+        here.ter_set( point, ter_t_floor.id() );
     }
     const tripoint_abs_ms endpoint_abs = here.get_abs( endpoint );
 
@@ -385,13 +413,12 @@ TEST_CASE( "mounted_charge_attacks_friendly_creature", "[mounted][charge][activi
     avatar &player = get_avatar();
     monster &horse = setup_mounted_lance( player );
     player.set_dex_base( 30 );
-    player.set_skill_level( skill_id( "melee" ), 10 );
-    player.set_skill_level( skill_id( "stabbing" ), 10 );
-    map &here = get_map();
+    player.set_skill_level( skill_melee, 10 );
+    player.set_skill_level( skill_stabbing, 10 );
     const tripoint_bub_ms start = player.pos_bub();
     monster &pet = spawn_test_monster( "mon_dog", start + tripoint::east );
     pet.friendly = 1;
-    pet.add_effect( efftype_id( "pet" ), 1_turns, true );
+    pet.add_effect( effect_pet, 1_turns, true );
     const int hp_before = pet.get_hp();
 
     start_mounted_charge( player, horse );
@@ -409,8 +436,8 @@ TEST_CASE( "mounted_charge_attacks_non_hostile_npc", "[mounted][charge][activity
 {
     avatar &player = get_avatar();
     monster &horse = setup_mounted_lance( player );
-    player.set_skill_level( skill_id( "melee" ), 10 );
-    player.set_skill_level( skill_id( "stabbing" ), 10 );
+    player.set_skill_level( skill_melee, 10 );
+    player.set_skill_level( skill_stabbing, 10 );
     const tripoint_bub_ms start = player.pos_bub();
     npc &target = spawn_npc( ( start + tripoint::east ).xy(), "test_talker" );
     REQUIRE_FALSE( target.is_enemy() );
@@ -461,7 +488,7 @@ TEST_CASE( "mounted_charge_activity_serializes_route_identity", "[mounted][charg
     CHECK( completed_steps == 0 );
     CHECK( mount_uid == horse.uid().get_value() );
     CHECK( weapon_uid == player.get_wielded_item()->uid().get_value() );
-    CHECK( item_type == itype_id( "mounted_lance" ) );
+    CHECK( item_type == itype_mounted_lance );
     player.cancel_activity();
     player.forced_dismount();
 }

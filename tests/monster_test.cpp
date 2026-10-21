@@ -91,7 +91,7 @@ static const move_mode_id move_mode_walk( "walk" );
 
 static const oter_str_id oter_field( "field" );
 
-static const skill_id skill_athletics( "swimming" );
+static const skill_id skill_swimming( "swimming" );
 
 static const ter_str_id ter_t_fence( "t_fence" );
 static const ter_str_id ter_t_grass( "t_grass" );
@@ -121,7 +121,7 @@ TEST_CASE( "creature_tracker_find_monster_by_uid", "[monster][creature_tracker]"
 {
     creature_tracker tracker;
     const auto live_monster = make_shared_fast<monster>( mon_test_zombie,
-        tripoint_bub_ms( 0, 0, 0 ) );
+                              tripoint_bub_ms( 0, 0, 0 ) );
     REQUIRE( tracker.add( live_monster ) );
     REQUIRE( live_monster->uid().is_valid() );
     const int64_t live_uid = live_monster->uid().get_value();
@@ -134,7 +134,7 @@ TEST_CASE( "creature_tracker_find_monster_by_uid", "[monster][creature_tracker]"
     CHECK( tracker.find_by_uid( live_uid ) == nullptr );
 
     const auto dead_monster = make_shared_fast<monster>( mon_test_zombie,
-        tripoint_bub_ms( 1, 0, 0 ) );
+                              tripoint_bub_ms( 1, 0, 0 ) );
     REQUIRE( tracker.add( dead_monster ) );
     REQUIRE( dead_monster->uid().is_valid() );
     const int64_t dead_uid = dead_monster->uid().get_value();
@@ -192,9 +192,9 @@ struct track {
 std::ostream &operator<<( std::ostream &os, track const &value )
 {
     os << value.participant <<
-    " l:" << value.location <<
-    " d:" << value.distance <<
-    " m:" << value.moves;
+       " l:" << value.location <<
+       " d:" << value.distance <<
+       " m:" << value.moves;
     return os;
 }
 
@@ -293,7 +293,7 @@ static void check_shamble_speed( const std::string &monster_type,
     // Scale the scaling factor based on the ratio of diagonal to cardinal steps.
     const float slope = get_normalized_angle( point::zero, destination.xy().raw() );
     const float diagonal_multiplier = 1.0 + ( get_option<bool>( "CIRCLEDIST" ) ?
-        ( slope * 0.41 ) : 0.0 );
+                                      ( slope * 0.41 ) : 0.0 );
     INFO( monster_type << " " << destination );
     // Wandering makes things nondeterministic, so look at the distribution rather than a target number.
     move_statistics move_stats;
@@ -339,7 +339,7 @@ static void test_moves_to_squares( const std::string &monster_type, const bool w
                 // Scale the scaling factor based on the ratio of diagonal to cardinal steps.
                 const float slope = get_normalized_angle( {50, 50}, {x, y} );
                 const float diagonal_multiplier = 1.0 + ( get_option<bool>( "CIRCLEDIST" ) ?
-                    ( slope * 0.41 ) : 0.0 );
+                                                  ( slope * 0.41 ) : 0.0 );
                 turns_at_angle[angle * 100].new_type();
                 turns_at_slope[slope].new_type();
                 for( int i = 0; i < 5; ++i ) {
@@ -379,7 +379,7 @@ static void test_moves_to_squares( const std::string &monster_type, const bool w
     if( write_data ) {
         std::ofstream data;
         data.open( std::filesystem::u8path( "slope_test_data_" + std::string( (
-                    trigdist ? "trig_" : "square_" ) ) +
+                                                trigdist ? "trig_" : "square_" ) ) +
                                             monster_type ) );
         for( const auto &stat_pair : turns_at_angle ) {
             data << stat_pair.first << " " << stat_pair.second.avg() << "\n";
@@ -879,7 +879,7 @@ TEST_CASE( "fitted_horseshoe_set_requires_four_horseshoes", "[monster][pet_equip
     const requirement_data::alter_item_comp_vector &component_groups =
         horseshoe_set_recipe->simple_requirements().get_components();
     const bool requires_four_horseshoes = std::any_of(
-            component_groups.begin(), component_groups.end(), []( const std::vector<item_comp> &group ) {
+    component_groups.begin(), component_groups.end(), []( const std::vector<item_comp> &group ) {
         return std::any_of( group.begin(), group.end(), []( const item_comp & component ) {
             return component.type == itype_id( "horseshoe" ) && component.count == 4;
         } );
@@ -897,12 +897,12 @@ TEST_CASE( "mech_mounting_does_not_require_animal_riding", "[monster][mount][rid
                                         player.pos_bub() + tripoint::east );
     mech.friendly = -1;
     REQUIRE_FALSE( mech.has_flag( mon_flag_PET_MOUNTABLE ) );
-    player.set_skill_level( skill_athletics, 0 );
+    player.set_skill_level( skill_swimming, 0 );
 
     REQUIRE( player.try_mount_creature( mech ) );
     CHECK( player.is_mounted() );
     CHECK( player.mounted_creature.get() == &mech );
-    CHECK( player.get_skill_level( skill_athletics ) == 0 );
+    CHECK( player.get_skill_level( skill_swimming ) == 0 );
     player.forced_dismount();
 }
 
@@ -911,7 +911,7 @@ TEST_CASE( "unrestorable_pet_equipment_survives_loading", "[monster][pet_equipme
     monster original( mtype_id( "mon_horse" ) );
     item bag( itype_saddlebag );
     REQUIRE( bag.put_in( item( itype_rock ), pocket_type::CONTAINER ).success() );
-    original.inv.push_back( item( itype_rope_30 ) );
+    original.inv.emplace_back( itype_rope_30 );
     pet_slot_id slot( "saddlebag" );
     SECTION( "removed_slot" ) {
         slot = pet_slot_id( "removed_pet_slot" );
@@ -990,7 +990,7 @@ TEST_CASE( "athletics_reduces_mounted_movement_cost", "[monster][mount][riding]"
     horse.friendly = -1;
     player.mount_creature( horse );
 
-    player.set_skill_level( skill_athletics, 0 );
+    player.set_skill_level( skill_swimming, 0 );
     player.set_movement_mode( move_mode_walk );
     CHECK( player.mount_speed() == Approx( 200.0 ).epsilon( 0.01 ) );
     const double walk_kmh = 3.6 * player.mount_speed() / player.run_cost( 100, false );
@@ -1002,7 +1002,7 @@ TEST_CASE( "athletics_reduces_mounted_movement_cost", "[monster][mount][riding]"
     CHECK( trot_kmh > 15.0 );
     CHECK( trot_kmh < 23.0 );
     const int untrained_cost = player.run_cost( 100, false );
-    player.set_skill_level( skill_athletics, 10 );
+    player.set_skill_level( skill_swimming, 10 );
     const int expert_cost = player.run_cost( 100, false );
 
     CHECK( expert_cost < untrained_cost );
@@ -1023,7 +1023,7 @@ TEST_CASE( "athletics_and_bridle_reduce_mount_spook_chance",
     monster &threat = spawn_test_monster( "mon_zombie_hulk",
                                           player.pos_bub() + tripoint::east );
 
-    player.set_skill_level( skill_athletics, 0 );
+    player.set_skill_level( skill_swimming, 0 );
     const double untrained_chance = player.mount_spook_chance( threat );
     const double tamed_refusal_chance = player.mount_move_refusal_chance( threat );
     REQUIRE( untrained_chance > 1.0 );
@@ -1040,13 +1040,13 @@ TEST_CASE( "athletics_and_bridle_reduce_mount_spook_chance",
     horse.friendly = -1;
 
     REQUIRE( horse.equip_pet_equipment( pet_slot_id( "bridle" ),
-                                       item( itype_id( "horse_bridle" ) ) ) );
+                                        item( itype_id( "horse_bridle" ) ) ) );
     const double bridled_chance = player.mount_spook_chance( threat );
     const double bridled_refusal_chance = player.mount_move_refusal_chance( threat );
     CHECK( bridled_chance < untrained_chance );
     CHECK( bridled_refusal_chance < tamed_refusal_chance );
 
-    player.set_skill_level( skill_athletics, 10 );
+    player.set_skill_level( skill_swimming, 10 );
     const double skilled_bridled_chance = player.mount_spook_chance( threat );
     const double skilled_refusal_chance = player.mount_move_refusal_chance( threat );
     CHECK( skilled_bridled_chance < bridled_chance );
@@ -1065,12 +1065,12 @@ TEST_CASE( "horseshoes_reduce_mounted_movement_cost", "[monster][mount][pet_equi
     avatar &player = get_avatar();
     monster &horse = spawn_test_monster( "mon_horse", player.pos_bub() + tripoint::east );
     horse.friendly = -1;
-    player.set_skill_level( skill_athletics, 0 );
+    player.set_skill_level( skill_swimming, 0 );
     player.mount_creature( horse );
     const int bare_cost = player.run_cost( 100, false );
 
     REQUIRE( horse.equip_pet_equipment( pet_slot_id( "horseshoes" ),
-                                       item( itype_id( "fitted_horseshoes" ) ) ) );
+                                        item( itype_id( "fitted_horseshoes" ) ) ) );
     const int shod_cost = player.run_cost( 100, false );
     CHECK( shod_cost < bare_cost );
 
@@ -1392,7 +1392,7 @@ TEST_CASE( "monster_can_navigate_from_overmap_to_reality_bubble_following_sound"
     horde_entity *test_mon_initial = nullptr;
     capture_debugmsg_during( [&]() {
         test_mon_initial = &overmap_buffer.spawn_monster( entity_spawn_location,
-            mon_test_zombie );
+                           mon_test_zombie );
     } );
     // Assert monster is not wandering
     REQUIRE( test_mon_initial->tracking_intensity == 0 );
@@ -1739,7 +1739,7 @@ TEST_CASE( "obstacles_placed_on_map_are_present_in_overmap", "[map][hordes]" )
     tripoint_bub_ms obstacle_origin{ 30, 30, 0 };
     int obstacle_radius = 10;
     tripoint_abs_ms obstacle_eastern_border = here.get_abs( obstacle_origin + point::east *
-        obstacle_radius );
+            obstacle_radius );
     std::set<tripoint_abs_omt> edited_omts;
     std::set<tripoint_abs_ms> obstacle_locations;
     std::set<tripoint_abs_ms> passable_locations;
@@ -1803,7 +1803,7 @@ TEST_CASE( "dormant_zombie_places_corpse_and_trap", "[monster][map]" )
     monster dormant_monster( pseudo_dormant_mon_zombie_fat );
     REQUIRE( dormant_monster.can_move_to( spawn_point ) );
     monster *const placed_monster = g->place_critter_at( make_shared_fast<monster>( dormant_monster ),
-        spawn_point );
+                                    spawn_point );
     REQUIRE( placed_monster != nullptr );
     REQUIRE( placed_monster->pos_bub() == spawn_point );
     REQUIRE( placed_monster->type->id == dormant_monster.type->id );

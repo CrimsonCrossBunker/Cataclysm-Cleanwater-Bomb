@@ -1,11 +1,10 @@
-#include <algorithm>
 #include <item_location.h>
+#include <algorithm>
 #include <memory>
 #include <optional>
 #include <set>
 #include <sstream>
 #include <string>
-#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -13,7 +12,6 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_catch.h"
-#include "character.h"
 #include "character_martial_arts.h"
 #include "coordinates.h"
 #include "creature.h"
@@ -22,8 +20,8 @@
 // IWYU pragma: no_include <flexbuffer_json.h>
 #include "flexbuffer_json.h"
 #include "item.h"
-#include "json_loader.h"
 #include "json.h"
+#include "json_loader.h"
 #include "magic_enchantment.h"
 #include "map.h"
 #include "map_helpers.h"
@@ -57,7 +55,7 @@ static const json_character_flag json_flag_PSEUDOPOD_GRASP( "PSEUDOPOD_GRASP" );
 
 static const matec_id test_tech_condition_knockback( "test_tech_condition_knockback" );
 static const matec_id test_active_strike( "test_active_strike" );
-static const matec_id rapid_strike( "RAPID" );
+static const matec_id RAPID( "RAPID" );
 static const matec_id test_tech_condition_stun( "test_tech_condition_stun" );
 static const matec_id test_tech_condition_sweep( "test_tech_condition_sweep" );
 static const matec_id test_technique( "test_technique" );
@@ -95,11 +93,11 @@ TEST_CASE( "active_techniques_include_current_style_and_weapon_attacks",
 
     dude.set_wielded_item( item( itype_id( "sword_metal_fencing" ) ) );
     const std::vector<matec_id> below_requirement = dude.active_techniques();
-    CHECK( std::find( below_requirement.begin(), below_requirement.end(), rapid_strike ) ==
+    CHECK( std::find( below_requirement.begin(), below_requirement.end(), RAPID ) ==
            below_requirement.end() );
     dude.set_skill_level( skill_id( "melee" ), 2 );
     const std::vector<matec_id> weapon_techniques = dude.active_techniques();
-    CHECK( std::find( weapon_techniques.begin(), weapon_techniques.end(), rapid_strike ) !=
+    CHECK( std::find( weapon_techniques.begin(), weapon_techniques.end(), RAPID ) !=
            weapon_techniques.end() );
     dude.set_skill_level( skill_id( "melee" ), 3 );
     const std::vector<matec_id> critical_techniques = dude.active_techniques();

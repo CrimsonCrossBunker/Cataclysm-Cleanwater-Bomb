@@ -19,7 +19,7 @@
 #include "type_id.h"
 
 static const matec_id tech_base_headbutt( "tech_base_headbutt" );
-static const matec_id tech_rapid( "RAPID" );
+static const matec_id RAPID( "RAPID" );
 
 TEST_CASE( "lua_platform_technique_short_description_matches_native_string_mutator",
            "[lua][platform][martial_arts][semantic]" )
@@ -55,8 +55,8 @@ TEST_CASE( "lua_platform_technique_short_description_matches_native_string_mutat
     CHECK( snapshot["name"].get<std::string>() == tech_base_headbutt->name.translated() );
     CHECK( snapshot["manual_activation"].get<bool>() );
 
-    REQUIRE( tech_rapid.is_valid() );
-    call = get( cata::lua_platform::script_game_id( "martial_art_technique", tech_rapid.str() ) );
+    REQUIRE( RAPID.is_valid() );
+    call = get( cata::lua_platform::script_game_id( "martial_art_technique", RAPID.str() ) );
     REQUIRE( call.valid() );
     snapshot = call;
     CHECK( snapshot["manual_activation"].get<bool>() );

@@ -78,6 +78,12 @@ extern "C" {
 namespace cata::lua_platform
 {
 
+static const json_character_flag json_flag_CANNOT_ATTACK( "CANNOT_ATTACK" );
+static const json_character_flag json_flag_CANNOT_MOVE( "CANNOT_MOVE" );
+static const json_character_flag json_flag_PHASE_MOVEMENT( "PHASE_MOVEMENT" );
+static const trait_id trait_SHELL2( "SHELL2" );
+static const trait_id trait_SHELL3( "SHELL3" );
+
 namespace detail
 {
 
@@ -2322,12 +2328,6 @@ std::optional<bool> invoke_technique_condition_handler(
         return std::nullopt;
     }
 
-    static const json_character_flag cannot_attack( "CANNOT_ATTACK" );
-    static const json_character_flag cannot_move( "CANNOT_MOVE" );
-    static const json_character_flag phase_movement( "PHASE_MOVEMENT" );
-    static const trait_id shell2( "SHELL2" );
-    static const trait_id shell3( "SHELL3" );
-
     const avatar *const player = character.as_avatar();
     const item_location weapon = character.used_weapon();
     std::string mount_kind = "none";
@@ -2356,11 +2356,11 @@ std::optional<bool> invoke_technique_condition_handler(
     payload["controlling_vehicle"] = character.controlling_vehicle;
     payload["crouching"] = character.is_crouching();
     payload["prone"] = character.is_prone();
-    payload["in_shell"] = character.has_active_mutation( shell2 ) ||
-                          character.has_active_mutation( shell3 );
-    payload["phase_movement"] = character.has_flag( phase_movement );
-    payload["can_attack"] = !character.has_flag( cannot_attack );
-    payload["can_move"] = !character.has_flag( cannot_move );
+    payload["in_shell"] = character.has_active_mutation( trait_SHELL2 ) ||
+                          character.has_active_mutation( trait_SHELL3 );
+    payload["phase_movement"] = character.has_flag( json_flag_PHASE_MOVEMENT );
+    payload["can_attack"] = !character.has_flag( json_flag_CANNOT_ATTACK );
+    payload["can_move"] = !character.has_flag( json_flag_CANNOT_MOVE );
 
     sol::protected_function callback = handler->second.callback;
     callback_scope scope( *owner );

@@ -1,5 +1,6 @@
 #include "melee.h"
 
+#include <mounted_charge.h>
 #include <algorithm>
 #include <array>
 #include <climits>
@@ -163,7 +164,7 @@ static const material_id material_steel( "steel" );
 static const move_mode_id move_mode_prone( "prone" );
 
 static const skill_id skill_melee( "melee" );
-static const skill_id skill_athletics( "swimming" );
+static const skill_id skill_swimming( "swimming" );
 static const skill_id skill_spellcraft( "spellcraft" );
 static const skill_id skill_unarmed( "unarmed" );
 
@@ -449,7 +450,7 @@ static void practice_mounted_melee( Character &character, const item &weapon )
     }
 
     const riding_config &config = get_riding_config();
-    character.practice( skill_athletics, config.melee_practice );
+    character.practice( skill_swimming, config.melee_practice );
     const time_duration base_practice = time_duration::from_seconds(
                                             config.proficiency_practice_seconds );
     character.practice_proficiency( config.mounted_combat_proficiency, base_practice );
@@ -507,7 +508,7 @@ float Character::hit_roll() const
         const riding_config &config = get_riding_config();
         const double penalty = std::max( 0.0,
                                          config.mounted_melee_hit_penalty -
-                                         get_skill_level( skill_athletics ) * config.melee_hit_skill_reduction );
+                                         get_skill_level( skill_swimming ) * config.melee_hit_skill_reduction );
         const double proficiency_bonus = learned_mounted_damage_fraction( *this, cur_weap ) *
                                          config.mounted_melee_proficiency_hit_bonus;
         hit = static_cast<float>( ( hit - penalty + proficiency_bonus ) *
