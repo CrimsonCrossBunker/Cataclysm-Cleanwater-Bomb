@@ -1,6 +1,7 @@
 #if defined(TILES)
 
 #include <array>
+#include <cstddef>
 #include <cstdlib>
 #include <initializer_list>
 #include <memory>
@@ -13,23 +14,31 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "cata_shader.h"
 #include "cata_tiles.h"
 #include "coordinates.h"
 #include "creature.h"
 #include "cursesdef.h"
 #include "game.h"
+#include "level_cache.h"
+#include "lightmap.h"
 #include "map.h"
 #include "map_helpers_tests.h"
 #include "options_helpers.h"
+#include "output.h"
 #include "path_info.h"
 #include "player_helpers.h"
 #include "point.h"
 #include "sdl_renderer_recovery.h"
+#include "sdl_wrappers.h"
 #include "sdltiles.h"
 #include "smooth_lighting.h"
 #include "type_id.h"
 #include "weighted_list.h"
+
+static const furn_str_id furn_f_chair( "f_chair" );
+static const trap_str_id tr_beartrap( "tr_beartrap" );
 
 static const mtype_id mon_zombie( "mon_zombie" );
 
@@ -77,7 +86,8 @@ std::vector<tripoint_bub_ms> around( const tripoint_bub_ms &center )
 struct policy_fixture {
     explicit policy_fixture( const std::vector<std::pair<std::string, tile_type>> &tiles =
     plain_tiles( {
-        ter_t_grass.str(), ter_t_wall.str(), mon_zombie.str(), "lighting_hidden"
+        ter_t_grass.str(), ter_t_wall.str(), furn_f_chair.str(), tr_beartrap.str(),
+        mon_zombie.str(), "lighting_hidden"
     } ) ) : available_( fx_.available() ) {
         if( !available_ ) {
             return;
@@ -88,7 +98,7 @@ struct policy_fixture {
         set_time_to_day();
         refresh_caches();
         const std::shared_ptr<const tileset> ts = renderer_recovery_test_support::install_tiles_bundle(
-                "policy_ts", "color_pixel_darken", 1, 1, atlas_bake_plan{}, true, tiles );
+                    "policy_ts", "color_pixel_darken", 1, 1, atlas_bake_plan{}, true, tiles );
         REQUIRE( ts );
         tiles_ = renderer_recovery_test_support::make_test_tiles( ts );
         renderer_recovery_test_support::log_draw_light( *tiles_, &log_ );
@@ -108,10 +118,13 @@ struct policy_fixture {
         here.invalidate_visibility_cache();
         here.update_visibility_cache( 0 );
     }
-    void draw() {
+    void draw( int view_size = view_tiles ) {
+        restore_on_out_of_scope restore_x( POSX );
+        restore_on_out_of_scope restore_y( POSY );
+        POSX = POSY = view_size / 2;
         log_.clear();
         tiles_->set_draw_cache_dirty();
-        renderer_recovery_test_support::draw_test_map( *tiles_, player_pos, view_tiles, view_tiles );
+        renderer_recovery_test_support::draw_test_map( *tiles_, player_pos, view_size, view_size );
     }
     bool drew( const std::string &id, const draw_light light ) const {
         for( const drawn_sprite_record &e : log_ ) {
@@ -153,6 +166,22 @@ TEST_CASE( "map_sprites_take_scene_light_and_overlays_fixed_light", "[smooth_lig
             CHECK( fx.drew( ter_t_wall.str(), draw_light::fixed ) );
         }
     }
+    WHEN( "tiles around avatar show furniture override" ) {
+        for( const tripoint_bub_ms &p : around( player_pos ) ) {
+            fx.tiles_->init_draw_furniture_override( p, furn_f_chair.id() );
+        }
+        fx.draw();
+        fx.tiles_->void_furniture_override();
+        CHECK( fx.drew( furn_f_chair.str(), draw_light::fixed ) );
+    }
+    WHEN( "tiles around avatar show trap override" ) {
+        for( const tripoint_bub_ms &p : around( player_pos ) ) {
+            fx.tiles_->init_draw_trap_override( p, tr_beartrap.id() );
+        }
+        fx.draw();
+        fx.tiles_->void_trap_override();
+        CHECK( fx.drew( tr_beartrap.str(), draw_light::fixed ) );
+    }
     WHEN( "tiles around avatar show monster override" ) {
         for( const tripoint_bub_ms &p : around( player_pos ) ) {
             fx.tiles_->init_draw_monster_override( p, mon_zombie, 1, false, Creature::Attitude::HOSTILE );
@@ -185,7 +214,7 @@ TEST_CASE( "failed_shader_unbind_stops_the_minimap_before_it_paints",
         return;
     }
     REQUIRE( renderer_recovery_test_support::install_test_font( PATH_INFO::fontdir() + "unifont.ttf",
-            8, 16, 16, false ) );
+             8, 16, 16, false ) );
     const catacurses::window w = catacurses::newwin( 4, 8, point::zero );
     int paints = 0;
     WHEN( "minimap window is drawn" ) {
@@ -208,7 +237,7 @@ TEST_CASE( "failed_shader_unbind_stops_the_minimap_before_it_paints",
 
 // grass, and a wall drawn through subtiles that take `subtile_anchor`
 static std::vector<std::pair<std::string, tile_type>> wall_tiles(
-    const std::optional<smooth_lighting::light_anchor> &subtile_anchor )
+            const std::optional<smooth_lighting::light_anchor> &subtile_anchor )
 {
     std::vector<std::pair<std::string, tile_type>> tiles = plain_tiles( { ter_t_grass.str() } );
     tile_type wall = atlas_sprite_tile();
@@ -228,7 +257,7 @@ static std::vector<std::pair<std::string, tile_type>> wall_tiles(
 }
 
 static std::vector<std::optional<smooth_lighting::light_anchor>> wall_subtile_anchors(
-    const light_log &log )
+            const light_log &log )
 {
     std::vector<std::optional<smooth_lighting::light_anchor>> anchors;
     for( const drawn_sprite_record &e : log ) {
@@ -261,7 +290,7 @@ TEST_CASE( "connected_walls_keep_their_anchor_through_subtiles", "[smooth_lighti
         draw_walls( fx );
         THEN( "its subtiles take the base anchor of walls" ) {
             const std::vector<std::optional<smooth_lighting::light_anchor>> anchors =
-                wall_subtile_anchors( fx.log_ );
+                        wall_subtile_anchors( fx.log_ );
             REQUIRE_FALSE( anchors.empty() );
             for( const std::optional<smooth_lighting::light_anchor> &a : anchors ) {
                 CHECK( a == smooth_lighting::light_anchor::base );
@@ -277,7 +306,7 @@ TEST_CASE( "connected_walls_keep_their_anchor_through_subtiles", "[smooth_lighti
         draw_walls( fx );
         THEN( "tileset's anchor wins" ) {
             const std::vector<std::optional<smooth_lighting::light_anchor>> anchors =
-                wall_subtile_anchors( fx.log_ );
+                        wall_subtile_anchors( fx.log_ );
             REQUIRE_FALSE( anchors.empty() );
             for( const std::optional<smooth_lighting::light_anchor> &a : anchors ) {
                 CHECK( a == smooth_lighting::light_anchor::ground );
@@ -426,7 +455,7 @@ TEST_CASE( "lit_probe_cases_reach_each_visual_input", "[smooth_lighting]" )
         const probe_case &c = probe_case_named( all, "translucent sprite" );
         THEN( "it differs from the same sprite opaque" ) {
             CHECK_FALSE( matches( expected( c ), expected( probe_case_named( all,
-                    "colored sprite, half light" ) ) ) );
+                                  "colored sprite, half light" ) ) ) );
         }
     }
     GIVEN( "corner of a full size level between red levels" ) {
@@ -473,6 +502,56 @@ TEST_CASE( "smooth_lighting_frames_on_the_software_renderer", "[smooth_lighting]
             CHECK( fx.tiles_->effective_lighting() == smooth_lighting::lighting_status::classic_by_option );
         }
     }
+}
+
+TEST_CASE( "colored_lighting_option_changes_pixels_without_changing_world_light",
+           "[smooth_lighting][tiles][colored_lighting]" )
+{
+    const std::string workers = GENERATE( std::string( "0" ), std::string( "2" ) );
+    const std::string mode = GENERATE( std::string( "classic" ), std::string( "smooth" ),
+                                       std::string( "smooth_filtered" ) );
+    CAPTURE( workers, mode );
+    override_option preparation( "RENDER_PREPARATION_WORKERS", workers );
+    override_option lighting( "LIGHTING_MODE", mode );
+    policy_fixture fx;
+    REQUIRE( fx.available_ );
+    map &here = get_map();
+    level_cache &cache = here.access_cache( 0 );
+    // Keep actual brightness and visibility, replacing only the color of the light.
+    cache.has_colored_lights = true;
+    for( int x = 0; x < MAPSIZE_X; ++x ) {
+        for( int y = 0; y < MAPSIZE_Y; ++y ) {
+            cache.light_color_cache[x][y] = { 100.0f, 0.0f, 0.0f };
+        }
+    }
+    const auto brightness = cache.lm[player_pos.x()][player_pos.y()].max();
+    const auto visibility = cache.visibility_cache[player_pos.x()][player_pos.y()];
+    const auto draw_pixel = [&]( const std::string & enabled ) {
+        override_option colored( "COLORED_LIGHTING", enabled );
+        display_buffer_draw_scope target;
+        SetRenderDrawColor( get_sdl_renderer(), 0, 0, 0, 255 );
+        RenderClear( get_sdl_renderer() );
+        // Include more than the worker threshold's 16384 viewport slots.
+        fx.draw( MAPSIZE_X + 1 );
+        std::size_t prepared_tiles = 0;
+        for( const auto &row : here.draw_points_cache.tiles[0] ) {
+            prepared_tiles += row.size();
+        }
+        REQUIRE( prepared_tiles >= 16384 );
+        const SDL_Rect probe = { 32, 32, 1, 1 };
+        Uint32 pixel = 0;
+        REQUIRE( RenderReadPixels( get_sdl_renderer(), &probe,
+                                   SDL_PIXELFORMAT_ARGB8888, &pixel, 4 ) );
+        CHECK( cache.lm[player_pos.x()][player_pos.y()].max() == brightness );
+        CHECK( cache.visibility_cache[player_pos.x()][player_pos.y()] == visibility );
+        return pixel;
+    };
+    const Uint32 plain = draw_pixel( "false" );
+    const Uint32 colored = draw_pixel( "true" );
+    // The magenta atlas sprite loses blue under red illumination.
+    CHECK( ( plain & 0xFF ) > 0 );
+    CHECK( ( colored & 0xFF ) < ( plain & 0xFF ) );
+    CHECK( draw_pixel( "false" ) == plain );
 }
 
 #endif // TILES

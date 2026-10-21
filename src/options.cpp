@@ -187,11 +187,11 @@ class options_imgui_page : public cataimgui::window
             const float detail_width_max = std::max(
                                                1.0F,
                                                std::min( profile.width_wide,
-                                                   content_width -
-                                                   profile.width_compact -
-                                                   profile.item_spacing_x ) );
+                                                       content_width -
+                                                       profile.width_compact -
+                                                       profile.item_spacing_x ) );
             const float detail_width_min = std::min( profile.width_normal,
-                detail_width_max );
+                                           detail_width_max );
             const float detail_width = std::clamp(
                                            window_size.x * 0.31F,
                                            detail_width_min, detail_width_max );
@@ -1672,7 +1672,7 @@ void options_manager::search_resource(
         // Get the resource list from the search path.
         std::map<std::string, std::string> resources;
         std::vector<id_and_option> resource_names = build_resource_list( resources, resource_name,
-            search_path, resource_filename );
+                search_path, resource_filename );
 
         // Add any new resources from this path to the result containers.
         // First, add to the resource mapping.
@@ -1701,7 +1701,7 @@ void options_manager::search_resource(
         // Get the resource list from the search path.
         std::map<std::string, cata_path> resources;
         std::vector<id_and_option> resource_names = build_resource_list( resources, resource_name,
-            search_path, resource_filename );
+                search_path, resource_filename );
 
         // Add any new resources from this path to the result containers.
         // First, add to the resource mapping.
@@ -3172,6 +3172,10 @@ void options_manager::add_options_graphics()
              true, COPT_CURSES_HIDE
            );
 
+        add( "COLORED_LIGHTING", page_id, to_translation( "Colored lighting" ),
+             to_translation( "Tint map tiles with the color of light sources.  If disabled, lights still illuminate the same area, but do not recolor it.  Applies to Classic, Smooth and Smooth filtered lighting." ),
+             true, COPT_CURSES_HIDE );
+
         add( "LIGHTING_MODE", page_id, to_translation( "Lighting" ),
         to_translation( "How the map shows light levels.  Classic: lit or shadowed tiles.  Smooth: more shades of light per tile.  Smooth filtered: shades blend across tiles.  The smooth modes need the GPU renderer.  Without it the map uses Classic." ), {
             { "classic", to_translation( "Classic" ) },
@@ -3513,7 +3517,7 @@ void options_manager::add_options_world_default()
     add_empty_line();
 
     add_option_group( "world_default", Group( "game_world_opts", to_translation( "Game world options" ),
-            to_translation( "Options regarding game world.  These are also configurable via sliders on the basic creation screen." ) ),
+                      to_translation( "Options regarding game world.  These are also configurable via sliders on the basic creation screen." ) ),
     [&]( const std::string & page_id ) {
         add( "CITY_SIZE", page_id, to_translation( "Size of cities" ),
              to_translation( "A number determining how large cities are.  A higher number means larger cities.  0 disables cities, roads and any scenario requiring a city start." ),
@@ -3549,8 +3553,8 @@ void options_manager::add_options_world_default()
     add_empty_line();
 
     add_option_group( "world_default", Group( "character_progression_opts",
-            to_translation( "Character progression options" ),
-            to_translation( "Options regarding character skill progression." ) ),
+                      to_translation( "Character progression options" ),
+                      to_translation( "Options regarding character skill progression." ) ),
     [&]( const std::string & page_id ) {
         add( "SKILL_TRAINING_SPEED", page_id, to_translation( "Skill training speed" ),
              to_translation( "Scales experience gained from practicing skills and reading books.  0.5 is half as fast as default, 2.0 is twice as fast, 0.0 disables skill training except for NPC training." ),
@@ -3561,8 +3565,8 @@ void options_manager::add_options_world_default()
     add_empty_line();
 
     add_option_group( "world_default", Group( "monster_props_opts",
-            to_translation( "Monster properties options" ),
-            to_translation( "Options regarding monster properties." ) ),
+                      to_translation( "Monster properties options" ),
+                      to_translation( "Options regarding monster properties." ) ),
     [&]( const std::string & page_id ) {
         add( "MONSTER_SPEED", page_id, to_translation( "Monster speed" ),
              to_translation( "Determines the movement rate of monsters.  A higher value increases monster speed and a lower reduces it.  Requires world reset." ),
@@ -3588,7 +3592,7 @@ void options_manager::add_options_world_default()
     add_empty_line();
 
     add_option_group( "world_default", Group( "spawn_time_opts", to_translation( "World time options" ),
-            to_translation( "Options regarding the passage of time in the world." ) ),
+                      to_translation( "Options regarding the passage of time in the world." ) ),
     [&]( const std::string & page_id ) {
         add( "SEASON_LENGTH", page_id, to_translation( "Season length" ),
              to_translation( "Season length, in days.  Warning: Very little other than the duration of seasons scales with this value, so adjusting it may cause nonsensical results." ),
@@ -3617,7 +3621,7 @@ void options_manager::add_options_world_default()
     add_empty_line();
 
     add_option_group( "world_default", Group( "crop_opts", to_translation( "Crop options" ),
-            to_translation( "Options regarding crop growth, harvest yield and water consumption." ) ),
+                      to_translation( "Options regarding crop growth, harvest yield and water consumption." ) ),
     [&]( const std::string & page_id ) {
         add( "CROP_GROWTH_SPEED", page_id, to_translation( "Crop growth speed" ),
              to_translation( "Multiplier for crop growth speed.  Higher values make crops grow faster." ),
@@ -3646,7 +3650,7 @@ void options_manager::add_options_world_default()
     add_empty_line();
 
     add_option_group( "world_default", Group( "misc_worlddef_opts", to_translation( "Misc options" ),
-            to_translation( "Miscellaneous options." ) ),
+                      to_translation( "Miscellaneous options." ) ),
     [&]( const std::string & page_id ) {
 
         add( "MAX_ITEM_IN_SQUARE", page_id,
@@ -4300,8 +4304,8 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
     // temporary alias so the code below does not need to be changed
     options_container &OPTIONS = options;
     options_container &ACTIVE_WORLD_OPTIONS = world_options.has_value() ?
-        *world_options.value() :
-        OPTIONS;
+            *world_options.value() :
+            OPTIONS;
 
     options_container OPTIONS_OLD = OPTIONS;
     options_container WOPTIONS_OLD = ACTIVE_WORLD_OPTIONS;
@@ -4416,8 +4420,8 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
         draw_borders_internal( w_options_header, vert_lines );
 
         options_manager::options_container &cOPTIONS = ( ingame || world_options_only ) &&
-            iCurrentPage == iWorldOptPage ?
-            ACTIVE_WORLD_OPTIONS : OPTIONS;
+                iCurrentPage == iWorldOptPage ?
+                ACTIVE_WORLD_OPTIONS : OPTIONS;
 
         const Page &page = pages_[iCurrentPage];
         const std::vector<PageItem> &page_items = page.items_;
@@ -4537,7 +4541,7 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
                             name_value.second.col, name_value.second.s );
 
             opt_line_map.emplace( visible_items[i], inclusive_rectangle<point>( point( name_col, line_pos ),
-                    point( value_col + value_width - 1, line_pos ) ) );
+                                  point( value_col + value_width - 1, line_pos ) ) );
         }
 
         scrollbar()
@@ -4568,7 +4572,7 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
                 tab_x++;
                 int tab_w = utf8_width( pages_[i].name_.translated(), true );
                 opt_tab_map.emplace( i, inclusive_rectangle<point>( point( 7 + tab_x, 0 ),
-                        point( 6 + tab_x + tab_w, 0 ) ) );
+                                     point( 6 + tab_x + tab_w, 0 ) ) );
                 tab_x += tab_w + 2;
             }
         }
@@ -4718,8 +4722,8 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
         }
 
         options_manager::options_container &cOPTIONS = ( ingame || world_options_only ) &&
-            iCurrentPage == iWorldOptPage ?
-            ACTIVE_WORLD_OPTIONS : OPTIONS;
+                iCurrentPage == iWorldOptPage ?
+                ACTIVE_WORLD_OPTIONS : OPTIONS;
 
         if( world_options_only && ( action == "NEXT_TAB" || action == "PREV_TAB" || action == "QUIT" ) ) {
             return action;
@@ -4749,8 +4753,8 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
 #if defined(__ANDROID__)
             if( options_ui && current_opt.getType() == "string_input" ) {
                 const std::optional<std::string> value = android_native_ui::text_input(
-                        current_opt.getMenuText(), current_opt.getValue(),
-                        current_opt.getMaxLength() );
+                            current_opt.getMenuText(), current_opt.getValue(),
+                            current_opt.getMaxLength() );
                 if( value ) {
                     current_opt.setValue( *value );
                 }
@@ -5086,7 +5090,7 @@ void options_manager::deserialize( const JsonArray &ja )
             continue; // option was removed so we just don't do anything here.
         }
         const std::string value = migrateOptionValue( joOptions.get_string( "name" ),
-            joOptions.get_string( "value" ) );
+                                  joOptions.get_string( "value" ) );
 
         add_retry( name, value );
         options[ name ].setValue( value );
