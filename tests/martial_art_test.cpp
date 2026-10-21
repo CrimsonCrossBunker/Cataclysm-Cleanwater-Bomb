@@ -46,14 +46,27 @@ static const efftype_id effect_stunned( "stunned" );
 static const enchantment_id enchantment_ENCH_TEST_BIRD_PARTS( "ENCH_TEST_BIRD_PARTS" );
 
 static const itype_id itype_club_wooden( "club_wooden" );
+static const itype_id itype_spear_steel( "spear_steel" );
 static const itype_id itype_sword_crude( "sword_crude" );
+static const itype_id itype_sword_metal_fencing( "sword_metal_fencing" );
 static const itype_id itype_test_eoc_armor_suit( "test_eoc_armor_suit" );
 static const itype_id itype_test_weapon1( "test_weapon1" );
 static const itype_id itype_test_weapon2( "test_weapon2" );
 
 static const json_character_flag json_flag_PSEUDOPOD_GRASP( "PSEUDOPOD_GRASP" );
 
+static const mabuff_id ma_buff_buff_niten_ondodge( "buff_niten_ondodge" );
+
+static const matec_id PRECISE( "PRECISE" );
 static const matec_id RAPID( "RAPID" );
+static const matec_id WBLOCK_1( "WBLOCK_1" );
+static const matec_id WIDE( "WIDE" );
+static const matec_id niten_timing_attack( "niten_timing_attack" );
+static const matec_id tec_bojutsu_frontstrike( "tec_bojutsu_frontstrike" );
+static const matec_id tec_boxing_cross( "tec_boxing_cross" );
+static const matec_id tec_break( "tec_break" );
+static const matec_id tec_feint( "tec_feint" );
+static const matec_id tec_sojutsu_jab( "tec_sojutsu_jab" );
 static const matec_id test_active_strike( "test_active_strike" );
 static const matec_id test_tech_condition_knockback( "test_tech_condition_knockback" );
 static const matec_id test_tech_condition_stun( "test_tech_condition_stun" );
@@ -61,9 +74,13 @@ static const matec_id test_tech_condition_sweep( "test_tech_condition_sweep" );
 static const matec_id test_technique( "test_technique" );
 static const matec_id test_vector_tech_1( "test_vector_tech_1" );
 static const matec_id test_vector_tech_2( "test_vector_tech_2" );
+static const matype_id style_boxing( "style_boxing" );
+static const matype_id style_none( "style_none" );
 static const matype_id test_style_ma1( "test_style_ma1" );
 
 static const mtype_id mon_zombie( "mon_zombie" );
+
+static const skill_id skill_melee( "melee" );
 
 static const species_id species_SLIME( "SLIME" );
 static const species_id species_ZOMBIE( "ZOMBIE" );
@@ -91,24 +108,24 @@ TEST_CASE( "active_techniques_include_current_style_and_weapon_attacks",
     CHECK( std::find( without_style.begin(), without_style.end(), test_active_strike ) ==
            without_style.end() );
 
-    dude.set_wielded_item( item( itype_id( "sword_metal_fencing" ) ) );
+    dude.set_wielded_item( item( itype_sword_metal_fencing ) );
     const std::vector<matec_id> below_requirement = dude.active_techniques();
     CHECK( std::find( below_requirement.begin(), below_requirement.end(), RAPID ) ==
            below_requirement.end() );
-    dude.set_skill_level( skill_id( "melee" ), 2 );
+    dude.set_skill_level( skill_melee, 2 );
     const std::vector<matec_id> weapon_techniques = dude.active_techniques();
     CHECK( std::find( weapon_techniques.begin(), weapon_techniques.end(), RAPID ) !=
            weapon_techniques.end() );
-    dude.set_skill_level( skill_id( "melee" ), 3 );
+    dude.set_skill_level( skill_melee, 3 );
     const std::vector<matec_id> critical_techniques = dude.active_techniques();
-    const matec_id precise( "PRECISE" );
+    const matec_id precise( PRECISE );
     REQUIRE_FALSE( precise->manual_activation );
     CHECK( std::find( critical_techniques.begin(), critical_techniques.end(), precise ) !=
            critical_techniques.end() );
 
     dude.remove_weapon();
-    const matype_id boxing( "style_boxing" );
-    const matec_id cross( "tec_boxing_cross" );
+    const matype_id boxing( style_boxing );
+    const matec_id cross( tec_boxing_cross );
     dude.martial_arts_data->add_martialart( boxing );
     dude.martial_arts_data->set_style( boxing );
     REQUIRE_FALSE( cross->manual_activation );
@@ -128,10 +145,10 @@ TEST_CASE( "active_techniques_exclude_counters_and_passive_abilities",
     standard_npc dude( "TestCharacter", dude_pos, {}, 0, 8, 8, 8, 8 );
     clear_character( dude, true );
     dude.set_all_skills( 10 );
-    item weapon( itype_id( "sword_metal_fencing" ) );
+    item weapon( itype_sword_metal_fencing );
     const std::vector<matec_id> excluded = {
-        matec_id( "tec_bojutsu_frontstrike" ), matec_id( "WBLOCK_1" ),
-        matec_id( "tec_feint" ), matec_id( "tec_break" )
+        tec_bojutsu_frontstrike, WBLOCK_1,
+        tec_feint, tec_break
     };
     for( const matec_id &id : excluded ) {
         weapon.add_technique( id );
@@ -159,8 +176,8 @@ TEST_CASE( "active_techniques_preserve_target_conditions_and_attack_costs",
     avatar &dude = get_avatar();
     dude.setpos( get_map(), dude_pos );
     dude.set_all_skills( 5 );
-    dude.set_wielded_item( item( itype_id( "sword_metal_fencing" ) ) );
-    const matec_id precise( "PRECISE" );
+    dude.set_wielded_item( item( itype_sword_metal_fencing ) );
+    const matec_id precise( PRECISE );
     monster &target = spawn_test_monster( "mon_feral_human_pipe", dude_pos + tripoint::east );
     dude.set_moves( 1000 );
     const int stamina_before = dude.get_stamina();
@@ -187,15 +204,15 @@ TEST_CASE( "active_techniques_preserve_buffs_and_area_requirements",
     avatar &dude = get_avatar();
     dude.setpos( get_map(), dude_pos );
     dude.set_all_skills( 5 );
-    item weapon( itype_id( "sword_metal_fencing" ) );
-    const matec_id timing( "niten_timing_attack" );
-    const matec_id wide( "WIDE" );
+    item weapon( itype_sword_metal_fencing );
+    const matec_id timing( niten_timing_attack );
+    const matec_id wide( WIDE );
     weapon.add_technique( timing );
     weapon.add_technique( wide );
     dude.set_wielded_item( weapon );
     const std::vector<matec_id> before_buff = dude.active_techniques();
     CHECK( std::find( before_buff.begin(), before_buff.end(), timing ) == before_buff.end() );
-    mabuff_id( "buff_niten_ondodge" )->apply_buff( dude );
+    ma_buff_buff_niten_ondodge->apply_buff( dude );
     const std::vector<matec_id> after_buff = dude.active_techniques();
     CHECK( std::find( after_buff.begin(), after_buff.end(), timing ) != after_buff.end() );
 
@@ -217,8 +234,8 @@ TEST_CASE( "active_reach_techniques_validate_range_and_obstructions",
     map &here = get_map();
     dude.setpos( here, dude_pos );
     dude.set_all_skills( 5 );
-    item spear( itype_id( "spear_steel" ) );
-    const matec_id jab( "tec_sojutsu_jab" );
+    item spear( itype_spear_steel );
+    const matec_id jab( tec_sojutsu_jab );
     spear.add_technique( jab );
     dude.set_wielded_item( spear );
     monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint_rel_ms( 2, 0, 0 ) );
@@ -567,7 +584,7 @@ TEST_CASE( "automatic_martial_style_weapon_preferences", "[martial_arts]" )
     standard_npc dude( "TestCharacter", dude_pos, {}, 0, 8, 8, 8, 8 );
     clear_character( dude, true );
     character_martial_arts &arts = *dude.martial_arts_data;
-    const matype_id none( "style_none" );
+    const matype_id none( style_none );
     arts.add_martialart( test_style_ma1 );
     dude.set_wielded_item( item( itype_test_weapon1 ) );
     REQUIRE( test_style_ma1->weapon_valid( dude.get_wielded_item() ) );

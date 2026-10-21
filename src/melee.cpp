@@ -603,7 +603,7 @@ void Character::set_mounted_charge_damage_multiplier( const damage_type_id &dama
 
 void Character::set_mounted_charge_stab_multiplier( const float multiplier )
 {
-    set_mounted_charge_damage_multiplier( damage_type_id( "stab" ), multiplier );
+    set_mounted_charge_damage_multiplier( damage_stab, multiplier );
 }
 
 void Character::clear_mounted_charge_stab_multiplier()
