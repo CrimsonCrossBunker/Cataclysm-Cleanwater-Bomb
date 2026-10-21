@@ -81,13 +81,13 @@ static const itype_id itype_rock( "rock" );
 static const itype_id itype_rope_30( "rope_30" );
 static const itype_id itype_saddlebag( "saddlebag" );
 
+static const move_mode_id move_mode_run( "run" );
+static const move_mode_id move_mode_walk( "walk" );
+
 static const mtype_id mon_dog_zombie_brute( "mon_dog_zombie_brute" );
 static const mtype_id mon_mech_recon( "mon_mech_recon" );
 static const mtype_id mon_test_zombie( "mon_test_zombie" );
 static const mtype_id pseudo_dormant_mon_zombie_fat( "pseudo_dormant_mon_zombie_fat" );
-
-static const move_mode_id move_mode_run( "run" );
-static const move_mode_id move_mode_walk( "walk" );
 
 static const oter_str_id oter_field( "field" );
 

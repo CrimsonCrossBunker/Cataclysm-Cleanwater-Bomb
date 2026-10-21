@@ -1,13 +1,12 @@
 #include <bodypart.h>
 #include <coordinates.h>
-#include <flexbuffer_json.h>
 #include <item_location.h>
 #include <item_uid.h>
 #include <monster_uid.h>
 #include <player_activity.h>
 #include <point.h>
-#include <stdint.h>
 #include <algorithm>
+#include <cstdint>
 #include <initializer_list>
 #include <optional>
 #include <sstream>
@@ -37,9 +36,6 @@
 #include "player_helpers.h"
 #include "type_id.h"
 
-namespace
-{
-
 static const damage_type_id damage_bash( "bash" );
 static const damage_type_id damage_cut( "cut" );
 static const damage_type_id damage_stab( "stab" );
@@ -52,6 +48,9 @@ static const skill_id skill_melee( "melee" );
 static const skill_id skill_stabbing( "stabbing" );
 static const ter_str_id ter_t_floor( "t_floor" );
 static const ter_str_id ter_t_wall( "t_wall" );
+
+namespace
+{
 
 monster &setup_mounted_weapon( avatar &player, const itype_id &weapon_type )
 {
@@ -475,8 +474,8 @@ TEST_CASE( "mounted_charge_activity_serializes_route_identity", "[mounted][charg
     actor_data.allow_omitted_members();
     tripoint_abs_ms destination;
     int completed_steps = -1;
-    int64_t mount_uid = 0;
-    int64_t weapon_uid = 0;
+    std::int64_t mount_uid = 0;
+    std::int64_t weapon_uid = 0;
     itype_id item_type;
     actor_data.read( "destination", destination );
     actor_data.read( "completed_steps", completed_steps );

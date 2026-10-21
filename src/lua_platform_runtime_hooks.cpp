@@ -75,14 +75,14 @@ extern "C" {
 #include <variant>
 #include "lua_platform_sol.h"
 
-namespace cata::lua_platform
-{
-
 static const json_character_flag json_flag_CANNOT_ATTACK( "CANNOT_ATTACK" );
 static const json_character_flag json_flag_CANNOT_MOVE( "CANNOT_MOVE" );
 static const json_character_flag json_flag_PHASE_MOVEMENT( "PHASE_MOVEMENT" );
 static const trait_id trait_SHELL2( "SHELL2" );
 static const trait_id trait_SHELL3( "SHELL3" );
+
+namespace cata::lua_platform
+{
 
 namespace detail
 {

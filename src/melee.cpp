@@ -164,8 +164,8 @@ static const material_id material_steel( "steel" );
 static const move_mode_id move_mode_prone( "prone" );
 
 static const skill_id skill_melee( "melee" );
-static const skill_id skill_swimming( "swimming" );
 static const skill_id skill_spellcraft( "spellcraft" );
+static const skill_id skill_swimming( "swimming" );
 static const skill_id skill_unarmed( "unarmed" );
 
 static const trait_id trait_ARM_TENTACLES( "ARM_TENTACLES" );

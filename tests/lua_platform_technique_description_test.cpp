@@ -18,8 +18,8 @@
 #include "translation.h"
 #include "type_id.h"
 
-static const matec_id tech_base_headbutt( "tech_base_headbutt" );
 static const matec_id RAPID( "RAPID" );
+static const matec_id tech_base_headbutt( "tech_base_headbutt" );
 
 TEST_CASE( "lua_platform_technique_short_description_matches_native_string_mutator",
            "[lua][platform][martial_arts][semantic]" )
