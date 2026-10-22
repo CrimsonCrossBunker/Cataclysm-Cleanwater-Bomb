@@ -593,6 +593,8 @@ class monster : public Creature
         double pet_equipment_melee_hit_multiplier() const;
         double pet_equipment_melee_damage_multiplier() const;
         double pet_equipment_fear_multiplier() const;
+        double pet_equipment_spook_multiplier() const;
+        double pet_equipment_mounted_move_cost_multiplier() const;
 
         units::mass get_carried_weight() const;
         units::volume get_carried_volume() const;

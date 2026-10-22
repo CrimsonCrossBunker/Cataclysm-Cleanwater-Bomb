@@ -1,5 +1,6 @@
 #include "pet_inventory_ui.h"
 
+#include <type_id.h>
 #include <algorithm>
 #include <cstddef>
 #include <functional>
@@ -23,6 +24,7 @@
 #include "item.h"
 #include "item_location.h"
 #include "item_pocket.h"
+#include "itype.h"
 #include "monster.h"
 #include "mtype.h"
 #include "output.h"
@@ -30,9 +32,9 @@
 #include "pimpl.h"
 #include "pocket_type.h"
 #include "point.h"
+#include "requirements.h"
 #include "ret_val.h"
 #include "string_formatter.h"
-#include "string_id.h"
 #include "translation.h"
 #include "translations.h"
 #include "ui_manager.h"
@@ -43,6 +45,19 @@
 
 namespace pet_inventory_ui
 {
+std::optional<std::pair<quality_id, int>> missing_install_quality( const Character &who,
+                                       const item &equipment )
+{
+    if( equipment.type->pet_equipment ) {
+        for( const auto &[quality, level] : equipment.type->pet_equipment->install_qualities ) {
+            if( !who.has_quality( quality, level ) ) {
+                return std::make_pair( quality, level );
+            }
+        }
+    }
+    return std::nullopt;
+}
+
 namespace
 {
 
@@ -480,7 +495,8 @@ void show_equipment( monster &pet )
     avatar &player = get_avatar();
     std::set<pet_slot_id> eligible_slots;
     for( const pet_slot &slot : get_all_pet_slots() ) {
-        if( !slot.mount_only || pet.has_flag( mon_flag_PET_MOUNTABLE ) ) {
+        if( ( !slot.mount_only || pet.has_flag( mon_flag_PET_MOUNTABLE ) ) &&
+            ( slot.bodytypes.empty() || slot.bodytypes.count( pet.type->bodytype ) != 0 ) ) {
             eligible_slots.insert( slot.id );
         }
     }
@@ -523,11 +539,11 @@ void show_equipment( monster &pet )
 
     const auto selected_slot = [&]() -> std::optional<pet_slot_id> {
         if( slots.empty() )
-    {
-        return std::nullopt;
-    }
-    slot_cursor.selected = std::clamp( slot_cursor.selected, 0,
-                                       static_cast<int>( slots.size() ) - 1 );
+        {
+            return std::nullopt;
+        }
+        slot_cursor.selected = std::clamp( slot_cursor.selected, 0,
+                                           static_cast<int>( slots.size() ) - 1 );
         return slots[slot_cursor.selected];
     };
 
@@ -587,6 +603,11 @@ void show_equipment( monster &pet )
         }
         if( selected->weight() > pet.weight_capacity() - pet.get_carried_weight() ) {
             popup( _( "That equipment is too heavy for the animal." ) );
+            return false;
+        }
+        if( const auto missing = missing_install_quality( player, *selected ) ) {
+            popup( _( "Installing this equipment requires %s quality level %d." ),
+                   missing->first.obj().name, missing->second );
             return false;
         }
         if( !pet.equip_pet_equipment( slot_id, *selected ) ) {
@@ -816,7 +837,7 @@ void show_transfer( monster &pet )
             player_rows.push_back( {
                 entry->display_name(),
                 string_format( _( "%1$d g  %2$s %3$s" ), units::to_gram( entry->weight() ),
-                format_volume( entry->volume() ), volume_units_abbr() ),
+                               format_volume( entry->volume() ), volume_units_abbr() ),
                 c_white
             } );
         }
@@ -833,7 +854,7 @@ void show_transfer( monster &pet )
             pet_rows.push_back( {
                 string_format( _( "%1$s: %2$s" ), location, entry.display_name() ),
                 string_format( _( "%1$s / %2$d g" ), format_volume( entry.volume() ),
-                units::to_gram( entry.weight() ) ),
+                               units::to_gram( entry.weight() ) ),
                 c_white
             } );
         }

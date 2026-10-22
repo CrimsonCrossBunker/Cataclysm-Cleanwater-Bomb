@@ -178,11 +178,6 @@
     "replace": "gambeson"
   },
   {
-    "id": "ksg_aux_shotgun",
-    "type": "MIGRATION",
-    "replace": "m26_mass"
-  },
-  {
     "id": "miner_hat",
     "type": "MIGRATION",
     "replace": "hat_hard",

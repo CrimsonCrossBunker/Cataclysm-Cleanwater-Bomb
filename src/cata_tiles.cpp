@@ -604,12 +604,12 @@ static std::map<tripoint_bub_ms, int> display_npc_attack_potential()
     return effectiveness_map;
 }
 
-// CATA_DISABLE_TINT_OVERLAY turns only the colored-light tint overlay off;
-// memory comparison can hold everything else in the draw equal. Read once.
+// The environment override remains available for controlled comparisons.
+// Read the user option each frame so toggling it does not require a restart.
 static bool tint_overlay_disabled()
 {
     static const bool disabled = std::getenv( "CATA_DISABLE_TINT_OVERLAY" ) != nullptr;
-    return disabled;
+    return disabled || !get_option<bool>( "COLORED_LIGHTING" );
 }
 
 // NOLINTNEXTLINE(readability-function-size)
@@ -1397,6 +1397,8 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         bool draw_aborted = false;
         const cata_shader::variant_pass *const tint_vp = get_shared_variant_pass();
         const bool shader_tint = tint_vp && tint_vp->tint_available();
+        const bool tint_overlay = !tint_overlay_disabled() && !smooth_lighting_active &&
+                                  ( shader_tint || !is_isometric() );
         on_out_of_scope clear_tint_state( [this]() {
             m_cur_tint = nullptr;
             m_zlev_tint_bound = false;
@@ -1487,7 +1489,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                 for( int z = cur_zlevel; z <= center.z(); ++z ) {
                     const auto &range = is_isometric() ? z_any_tile_range[center.z() - z] : top_any_tile_range;
                     const level_cache &level = here.access_cache( z );
-                    const bool colored = level.has_colored_lights && !is_isometric();
+                    const bool colored = level.has_colored_lights && tint_overlay;
                     for( int row = range.p_min.y; row < range.p_max.y; ++row ) {
                         for( const tile_render_info &tile : here.draw_points_cache.tiles[z][row] ) {
                             inputs.push_back( capture_preparation( tile, level, colored ) );
@@ -1511,8 +1513,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
             const level_cache &zlev_cache = here.access_cache( cur_zlevel );
             // Shader tint also supports iso views; software retains the bounded
             // ortho silhouette path.
-            const bool zlev_has_color = zlev_cache.has_colored_lights && ( shader_tint || !iso ) &&
-                                        !tint_overlay_disabled() && !smooth_lighting_active;
+            const bool zlev_has_color = zlev_cache.has_colored_lights && tint_overlay;
             m_zlev_tint_bound = shader_tint && zlev_has_color;
             lit_ground_dy = divide_round_down( -( cur_zlevel - center.z() ) * zlevel_height * tile_width,
                                                tileset_ptr->get_tile_width() );
@@ -4748,7 +4749,7 @@ bool cata_tiles::draw_critter_at( const tripoint_bub_ms &p, lit_level ll, int &h
     }
     const creature_render_view &view = *captured;
     restore_on_out_of_scope<draw_light> restore_light( m_draw_light );
-    if( view.overridden ) {
+    if( view.overridden || view.special ) {
         m_draw_light = draw_light::fixed;
     }
     if( view.special ) {

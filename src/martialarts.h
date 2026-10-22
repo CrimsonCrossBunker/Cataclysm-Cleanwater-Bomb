@@ -34,6 +34,8 @@ class items_content_transaction;
 } // namespace cata::lua_platform
 
 const matec_id tec_none( "tec_none" );
+/** Special weapon-provided active technique handled by the mounted charge action. */
+const matec_id tec_mounted_charge( "MOUNTED_CHARGE" );
 
 class weapon_category
 {
@@ -199,6 +201,12 @@ class ma_technique
         // given a Character's state, does this bonus apply to him?
         bool is_valid_character( const Character &u ) const;
 
+        /** Offensive techniques with an attack vector can be selected directly. */
+        bool can_activate() const;
+
+        /** Evaluate the Lua-authored activation policy for this technique, if present. */
+        bool activation_allowed( const Character &character, std::string_view phase ) const;
+
         std::set<std::string> flags;
 
         // message to be displayed when Character or npc uses the technique
@@ -212,6 +220,7 @@ class ma_technique
         bool crit_ok = false;
         bool reach_tec = false; // only possible to use during a reach attack
         bool reach_ok = false; // possible to use during a reach attack
+        bool manual_activation = false; // restrict this technique to manual activation
 
         ma_requirements reqs;
 
@@ -255,6 +264,7 @@ class ma_technique
 
         // Lua-first post-application callback owned by the defining mod.
         std::string lua_platform_mod;
+        std::string lua_platform_condition_handler;
         std::string lua_platform_apply_handler;
 
         float damage_bonus( const Character &u, const damage_type_id &type ) const;

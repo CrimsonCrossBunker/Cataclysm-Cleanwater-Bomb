@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:0759d974704cfe10d108b43ad957264c3a4a7a0c45bd66b3b0ccd87c2da6a038",
+    "source_fingerprint": "sha256:e037b2b3994076ffb8c5acdf167ddc3e32aa3cdffda380ceece15ca7bfe31b31",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -29,8 +29,8 @@
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6818,
-    "top_level_objects": 95269,
+    "tracked_json_files": 6819,
+    "top_level_objects": 95291,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -113,7 +113,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 15178,
+        "occurrences": 15191,
         "examples": [
           {
             "path": "data/json/artifact/artifact_item_types.json",
@@ -339,7 +339,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 1111,
+        "occurrences": 1103,
         "examples": [
           {
             "path": "data/json/items/comestibles/irradiated_fruit_migration.json",
@@ -1071,7 +1071,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 207,
+        "occurrences": 208,
         "examples": [
           {
             "path": "data/json/obsoletion_and_migration_0.J/player_activities.json",
@@ -1189,7 +1189,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 121,
+        "occurrences": 122,
         "examples": [
           {
             "path": "data/json/ammo_effects.json",
@@ -4558,7 +4558,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 7809,
+        "occurrences": 7812,
         "examples": [
           {
             "path": "data/json/deconstruction.json",
@@ -4676,7 +4676,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 925,
+        "occurrences": 927,
         "examples": [
           {
             "path": "data/json/flags.json",
@@ -6851,7 +6851,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 5,
+        "occurrences": 7,
         "examples": [
           {
             "path": "data/json/pet_slots/pet_slots.json",
@@ -7485,7 +7485,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 8208,
+        "occurrences": 8214,
         "examples": [
           {
             "path": "data/json/items/armor/jewelry.json",
@@ -9633,7 +9633,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 350,
+        "occurrences": 352,
         "examples": [
           {
             "path": "data/json/martialarts_fictional.json",

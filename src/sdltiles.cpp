@@ -87,6 +87,7 @@
     #include "sound_backend.h"
 #endif
 #include "sdlsound.h"
+#include "sling.h"
 #include "string_formatter.h"
 #include "uistate.h"
 #include "ui_manager.h"
@@ -6573,7 +6574,7 @@ static void CheckMessages()
                     // Only prioritize fire weapon options if we're wielding a ranged weapon.
                     item_location wielded = player_character.get_wielded_item();
                     if( wielded ) {
-                        if( wielded->is_gun() || wielded->has_flag( flag_REACH_ATTACK ) ) {
+                        if( wielded->is_gun() || is_sling_launcher( *wielded ) || wielded->has_flag( flag_REACH_ATTACK ) ) {
                             actions.insert( ACTION_FIRE );
                         }
                     }

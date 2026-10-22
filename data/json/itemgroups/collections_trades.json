@@ -107,6 +107,19 @@
     ]
   },
   {
+    "id": "horse_stable_riding_gear",
+    "type": "item_group",
+    "items": [
+      [ "horse_tack", 35 ],
+      [ "book_horse_tack", 20 ],
+      [ "saddlebag", 30 ],
+      [ "horse_bridle", 35 ],
+      [ "horse_stirrups", 20 ],
+      [ "fitted_horseshoes", 25 ],
+      [ "horseshoe", 20 ]
+    ]
+  },
+  {
     "id": "farrier_tools",
     "type": "item_group",
     "//": "Set of mostly fluff farrier tools.",

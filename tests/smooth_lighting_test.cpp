@@ -179,7 +179,7 @@ TEST_CASE( "light_source_seen_from_beyond_unimpaired_range_shows_no_detail",
     REQUIRE( ll == lit_level::BRIGHT_ONLY );
     const float apparent = map::apparent_light_helper( ch, far ).apparent_light;
     CHECK_FALSE( smooth_lighting::classify_light_cell( ll, apparent,
-            here.get_visibility_variables_cache().vision_threshold ).detail );
+                 here.get_visibility_variables_cache().vision_threshold ).detail );
 }
 
 TEST_CASE( "clairvoyance_shows_full_light_like_classic_tiles", "[smooth_lighting][vision]" )
@@ -195,7 +195,7 @@ TEST_CASE( "clairvoyance_shows_full_light_like_classic_tiles", "[smooth_lighting
     const lit_level ll = ch.visibility_cache[behind_wall.x()][behind_wall.y()];
     REQUIRE( ll == lit_level::BRIGHT );
     const smooth_lighting::light_cell cell = smooth_lighting::classify_light_cell( ll, 0.0f,
-        here.get_visibility_variables_cache().vision_threshold );
+            here.get_visibility_variables_cache().vision_threshold );
     CHECK( cell.detail );
     CHECK( cell.light == 1.0f );
 }
@@ -272,18 +272,18 @@ TEST_CASE( "standing_threshold_is_an_eighth_of_a_tile_in_tileset_pixels",
     const smooth_lighting::tile_geometry ortho{ 32, 32, false };
     const smooth_lighting::tile_geometry iso{ 32, 32, true };
     CHECK_FALSE( smooth_lighting::sprite_stands( footprint( { 32, 36 }, point::zero, { 32, 36 }, -4 ),
-            ortho ) );
+                 ortho ) );
     CHECK( smooth_lighting::sprite_stands( footprint( { 32, 37 }, point::zero, { 32, 37 }, -5 ),
                                            ortho ) );
     // iso ground line is the diamond's top corner, 32 - 16
     CHECK_FALSE( smooth_lighting::sprite_stands( footprint( { 32, 32 }, { 0, 12 }, { 32, 32 }, 0 ),
-            iso ) );
+                 iso ) );
     CHECK( smooth_lighting::sprite_stands( footprint( { 32, 32 }, { 0, 11 }, { 32, 32 }, 0 ),
                                            iso ) );
     GIVEN( "a fully transparent sprite" ) {
         THEN( "it doesn't stand" ) {
             CHECK_FALSE( smooth_lighting::sprite_stands( footprint( { 32, 64 }, point::zero, point::zero, -32 ),
-                    ortho ) );
+                         ortho ) );
         }
     }
 }
@@ -501,7 +501,7 @@ TEST_CASE( "light_texel_keeps_light_apart_from_hue", "[smooth_lighting]" )
     }
     WHEN( "out of sight cell is a barrier" ) {
         const smooth_lighting::lightmap_texel wall = smooth_lighting::encode_light_texel(
-                smooth_lighting::light_cell(), { 1.0f, 1.0f, 1.0f }, true );
+                    smooth_lighting::light_cell(), { 1.0f, 1.0f, 1.0f }, true );
         THEN( "it has the barrier flag and no light" ) {
             CHECK( wall.r == 0 );
             CHECK( wall.a == smooth_lighting::texel_barrier );
@@ -594,6 +594,43 @@ static uint32_t reach_at( const point &p )
     return smooth_lighting::texel_reach( layer[smooth_lighting::reach_index( p )] );
 }
 
+TEST_CASE( "disabling_light_color_preserves_smooth_brightness_visibility_and_reach",
+           "[smooth_lighting][colored_lighting]" )
+{
+    build_lit_ground();
+    settle_caches( 0 );
+    map &here = get_map();
+    level_cache &cache = here.access_cache( 0 );
+    const point at( 60, 60 );
+    cache.light_color_cache[at.x][at.y] = { 100.0f, 0.0f, 0.0f };
+    smooth_lighting::lightmap_fill_settings settings;
+    settings.area = half_open_rectangle<point>( point( 50, 50 ), point( 71, 71 ) );
+    settings.vision_threshold = here.get_visibility_variables_cache().vision_threshold;
+    settings.masks = GENERATE( false, true );
+    settings.tint = true;
+    std::vector<smooth_lighting::lightmap_texel> colored;
+    REQUIRE( smooth_lighting::encode_lightmap_layer( here, 0, settings, colored ) );
+    settings.tint = false;
+    std::vector<smooth_lighting::lightmap_texel> neutral;
+    REQUIRE( smooth_lighting::encode_lightmap_layer( here, 0, settings, neutral ) );
+    REQUIRE( neutral.size() == colored.size() );
+    const size_t index = smooth_lighting::light_index( at );
+    CHECK_FALSE( neutral[index] == colored[index] );
+    CHECK( neutral[index] == smooth_lighting::encode_light_texel(
+               smooth_lighting::classify_light_cell( cache.visibility_cache[at.x][at.y],
+                       map::apparent_light_helper( cache, tripoint_bub_ms( at.x, at.y, 0 ) ).apparent_light,
+                       settings.vision_threshold ), { 1.0f, 1.0f, 1.0f }, false ) );
+    for( int x = settings.area.p_min.x; x < settings.area.p_max.x; ++x ) {
+        for( int y = settings.area.p_min.y; y < settings.area.p_max.y; ++y ) {
+            const size_t light = smooth_lighting::light_index( point( x, y ) );
+            CHECK( neutral[light].r == colored[light].r );
+            CHECK( neutral[light].a == colored[light].a );
+            const size_t reach = smooth_lighting::reach_index( point( x, y ) );
+            CHECK( neutral[reach] == colored[reach] );
+        }
+    }
+}
+
 TEST_CASE( "light_filter_reach_stops_at_barriers", "[smooth_lighting][vision]" )
 {
     scoped_weather_override weather( WEATHER_CLEAR );
@@ -654,7 +691,7 @@ TEST_CASE( "per_tile_fill_builds_no_reach_masks", "[smooth_lighting][vision]" )
     for( int y = 0; y < MAPSIZE_Y; ++y ) {
         for( int x = 0; x < MAPSIZE_X; ++x ) {
             if( !( layer[smooth_lighting::reach_index( point( x,
-                y ) )] == smooth_lighting::lightmap_texel() ) ) {
+                                                       y ) )] == smooth_lighting::lightmap_texel() ) ) {
                 CAPTURE( x, y );
                 FAIL( "per tile fill wrote a reach mask" );
             }
@@ -690,7 +727,7 @@ static test_lightmap build_test_lightmap( const std::vector<std::string> &rows,
             const std::array<float, 3> hue = hot ? std::array<float, 3> { 1.0f, 0.2f, 0.2f } :
                                              std::array<float, 3> { 1.0f, 1.0f, 1.0f };
             m.texels[( top + y ) * width + x] = smooth_lighting::encode_light_texel( cell, hue,
-                c == '#' || c == 'X' );
+                                                c == '#' || c == 'X' );
         }
     }
     const smooth_lighting::barrier_grid grid{ m.texels.data() + static_cast<size_t>( top ) *width,
@@ -722,11 +759,11 @@ TEST_CASE( "filtered_light_is_continuous_across_floor_cells_near_a_wall", "[smoo
         "oooooooo",
     }, 0.2f, 1.0f );
     const uint32_t mask_a = smooth_lighting::texel_reach( m.texels[( test_rows + 3 ) * 2 * test_columns
-        +
-        test_columns + 1] );
+                                              +
+                                              test_columns + 1] );
     const uint32_t mask_b = smooth_lighting::texel_reach( m.texels[( test_rows + 3 ) * 2 * test_columns
-        +
-        test_columns + 2] );
+                                              +
+                                              test_columns + 2] );
     REQUIRE( ( mask_a & smooth_lighting::reach_bit( point( 0, -2 ) ) ) == 0 );
     REQUIRE( ( mask_b & smooth_lighting::reach_bit( point( -1, -2 ) ) ) != 0 );
     const smooth_lighting::sample_params filtered{ false, false };
@@ -771,7 +808,7 @@ TEST_CASE( "filtered_light_never_reads_outside_its_level", "[smooth_lighting]" )
              } ) {
             CAPTURE( cell, d );
             const smooth_lighting::lit_sample s = smooth_lighting::reference_sample( m.view, filtered,
-                ground_at( cell, cell.x + d, cell.y + d ) );
+                                                  ground_at( cell, cell.x + d, cell.y + d ) );
             CHECK( s.light == Approx( 0.2f ).margin( 0.01 ) );
             for( const float h : s.hue ) {
                 CHECK( h == Approx( 1.0f ).margin( 0.01 ) );
@@ -794,7 +831,7 @@ TEST_CASE( "seen_pixels_always_carry_admitted_light", "[smooth_lighting]" )
                      0.01f, 0.5f, 0.99f
                  } ) {
                 const smooth_lighting::lit_sample s = smooth_lighting::reference_sample( m.view, filtered,
-                    ground_at( point( cx, cy ), cx + d, cy + d ) );
+                                                      ground_at( point( cx, cy ), cx + d, cy + d ) );
                 CAPTURE( cx, cy, d, s.visible, s.weight );
                 if( s.visible > 0.0f ) {
                     CHECK( s.weight > 0.0f );
@@ -814,7 +851,7 @@ TEST_CASE( "floor_pixels_ignore_the_wall_beside_them", "[smooth_lighting]" )
     REQUIRE_FALSE( lit_wall.texels[test_rows * width + 2] == lit_wall.texels[test_rows * width + 1] );
     const smooth_lighting::sample_params filtered{ false, false };
     const smooth_lighting::lit_sample s = smooth_lighting::reference_sample( lit_wall.view, filtered,
-        ground_at( point::east, 1.98f, 0.5f ) );
+                                          ground_at( point::east, 1.98f, 0.5f ) );
     CHECK( s.light == Approx( 0.3f ).margin( 0.01 ) );
     for( const float h : s.hue ) {
         CHECK( h == Approx( 1.0f ).margin( 0.01 ) );
@@ -830,7 +867,7 @@ TEST_CASE( "filtered_light_does_not_cross_a_blocked_diagonal", "[smooth_lighting
         "#T",
     }, 0.2f, 1.0f );
     const uint32_t mask_a = smooth_lighting::texel_reach( m.texels[test_rows * 2 * test_columns +
-        test_columns] );
+                                      test_columns] );
     REQUIRE( ( mask_a & smooth_lighting::reach_bit( point::south_east ) ) == 0 );
     const smooth_lighting::sample_params filtered{ false, false };
     for( const float d : {
@@ -838,7 +875,7 @@ TEST_CASE( "filtered_light_does_not_cross_a_blocked_diagonal", "[smooth_lighting
          } ) {
         CAPTURE( d );
         const smooth_lighting::lit_sample s = smooth_lighting::reference_sample( m.view, filtered,
-            ground_at( point::zero, d, d ) );
+                                              ground_at( point::zero, d, d ) );
         CHECK( s.light == Approx( 0.2f ).margin( 1e-4 ) );
         for( const float h : s.hue ) {
             CHECK( h == Approx( 1.0f ).margin( 1e-4 ) );
@@ -862,7 +899,7 @@ TEST_CASE( "colored_light_fades_in_without_a_jump_as_its_weight_grows", "[smooth
     for( int i = 0; i < 900; ++i ) {
         const float x = 1.5f + 0.005f * static_cast<float>( i );
         const smooth_lighting::lit_sample s = smooth_lighting::reference_sample( m.view, filtered,
-            ground_at( point( static_cast<int>( x ), 1 ), x, 1.5f ) );
+                                              ground_at( point( static_cast<int>( x ), 1 ), x, 1.5f ) );
         const std::array<float, 4> got = { s.light, s.hue[0], s.hue[1], s.hue[2] };
         if( !first ) {
             for( int k = 0; k < 4; ++k ) {
@@ -947,7 +984,7 @@ TEST_CASE( "reach_masks_are_built_only_round_seen_cells", "[smooth_lighting][vis
     REQUIRE( smooth_lighting::encode_lightmap_layer( here, 0, settings, layer ) );
     // nothing's seen far outside the walled room
     CHECK( layer[smooth_lighting::reach_index( point( 45,
-            45 ) )] == smooth_lighting::lightmap_texel() );
+                                               45 ) )] == smooth_lighting::lightmap_texel() );
     // avatar's own cell is seen
     CHECK_FALSE( layer[smooth_lighting::reach_index( center.xy().raw() )] ==
                  smooth_lighting::lightmap_texel() );
@@ -1073,7 +1110,7 @@ TEST_CASE( "colored_light_mixing_stays_on_screen", "[smooth_lighting][light_colo
     GIVEN( "white pixel under full red light" ) {
         s.hue = { 1.0f, 0.0f, 0.0f };
         const std::array<float, 3> got = smooth_lighting::reference_lit_rgb( look, { 1.0f, 1.0f, 1.0f },
-            s );
+                                         s );
         CAPTURE( got[0], got[1], got[2] );
         THEN( "red stays at full, others drop, none past what the screen shows" ) {
             CHECK( got[0] == Approx( 1.0f ) );

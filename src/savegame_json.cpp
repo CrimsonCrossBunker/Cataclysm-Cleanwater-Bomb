@@ -27,6 +27,7 @@
 #include <sstream>
 #include <stack>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
@@ -110,7 +111,6 @@
 #include "recipe_dictionary.h"
 #include "relic.h"
 #include "requirements.h"
-#include "riding_config.h"
 #include "ret_val.h"
 #include "rng.h"
 #include "scenario.h"
@@ -172,6 +172,8 @@ static const itype_id itype_internal_battery_compartment( "internal_battery_comp
 static const itype_id itype_internal_ethanol_tank( "internal_ethanol_tank" );
 static const itype_id itype_internal_gasoline_tank( "internal_gasoline_tank" );
 static const itype_id itype_internal_oil_tank( "internal_oil_tank" );
+static const itype_id itype_ksg( "ksg" );
+static const itype_id itype_ksg_aux_shotgun( "ksg_aux_shotgun" );
 static const itype_id itype_laptop( "laptop" );
 static const itype_id itype_medium_battery_cell( "medium_battery_cell" );
 static const itype_id itype_memory_card( "memory_card" );
@@ -191,7 +193,7 @@ static const mtype_id mon_breather( "mon_breather" );
 
 static const skill_id skill_chemistry( "chemistry" );
 static const skill_id skill_riding( "riding" );
-static const skill_id skill_survival( "survival" );
+static const skill_id skill_swimming( "swimming" );
 
 static const ter_str_id ter_t_ash( "t_ash" );
 static const ter_str_id ter_t_dirt( "t_dirt" );
@@ -290,7 +292,7 @@ static void split_loaded_stackable_container_contents( std::list<item> &items )
 static void split_loaded_stackable_container_contents( std::vector<item> &items )
 {
     const size_t split_count = static_cast<size_t>( std::count_if(
-            items.begin(), items.end(), stackable_container_contents_need_split ) );
+                                   items.begin(), items.end(), stackable_container_contents_need_split ) );
     if( split_count == 0 ) {
         return;
     }
@@ -798,7 +800,7 @@ void Character::load( const JsonObject &data )
             temp_selected_style = style_none;
         }
         *martial_arts_data = character_martial_arts( temp_styles, temp_selected_style,
-            temp_keep_hands_free );
+                             temp_keep_hands_free );
     } else {
         data.read( "martial_arts_data", martial_arts_data );
     }
@@ -1163,13 +1165,13 @@ void Character::load( const JsonObject &data )
         }
     }
 
-    if( !skill_data.has_member( "riding" ) ) {
-        const riding_config &config = get_riding_config();
-        const int converted_level = std::min(
-                                        config.legacy_survival_conversion_cap,
-                                        static_cast<int>( std::ceil( get_skill_level( skill_survival ) *
-                                            config.legacy_survival_conversion_ratio ) ) );
-        set_skill_level( skill_riding, converted_level );
+    if( skill_data.has_member( "riding" ) ) {
+        if( get_skill_level( skill_riding ) > get_skill_level( skill_swimming ) ) {
+            set_skill_level( skill_swimming, get_skill_level( skill_riding ) );
+        }
+        if( get_knowledge_level( skill_riding ) > get_knowledge_level( skill_swimming ) ) {
+            set_knowledge_level( skill_swimming, get_knowledge_level( skill_riding ) );
+        }
     }
 
     on_stat_change( "thirst", thirst );
@@ -3132,7 +3134,7 @@ static bool bindings_fit_recipe( const recipe &making, int step_index,
             // step's allocation order, so the step's own tool groups come first and the
             // recipe-root ones after them.
             const std::vector<std::vector<tool_comp>> &root_tools =
-                making.root_requirements().get_tools();
+                    making.root_requirements().get_tools();
             int tool_group = b.group_index - static_cast<int>( quals.size() );
             if( tool_group < 0 ) {
                 return false;
@@ -3173,7 +3175,7 @@ static bool step_tool_allocs_fit_recipe(
     }
     const int batch_mult = std::max( batch, 1 );
     const std::vector<std::vector<tool_comp>> &root_groups =
-        making.root_requirements().get_tools();
+            making.root_requirements().get_tools();
     int64_t total_time = 0;
     for( const recipe_step &step : making.steps() ) {
         total_time += std::max<int64_t>( step.time, 0 );
@@ -3185,7 +3187,7 @@ static bool step_tool_allocs_fit_recipe(
     for( size_t s = 0; s < allocs.size(); ++s ) {
         const recipe_step &step = making.steps()[s];
         const std::vector<std::vector<tool_comp>> &step_groups =
-            step.requirements.get_tools();
+                step.requirements.get_tools();
         const bool step_timed = total_time > 0 && step.time > 0;
         std::vector<const step_tool_alloc *> owned;
         std::vector<const step_tool_alloc *> root;
@@ -3289,7 +3291,7 @@ void item::craft_data::deserialize( const JsonObject &obj )
         if( stepless_ok ) {
             const int batch_mult = std::max( batch_size, 1 );
             const std::vector<std::vector<tool_comp>> &tool_groups =
-                making->simple_requirements().get_tools();
+                    making->simple_requirements().get_tools();
             // An empty list means no implicit-step row; treat it as a zero-length
             // row so the bijection below rejects it when the recipe has tools.
             const std::vector<step_tool_alloc> empty_row;
@@ -3923,6 +3925,24 @@ void item::deserialize( const JsonObject &data )
         contents = item_contents( type->pockets );
     }
 
+    // Restore the separate second tube in saves from the combined-magazine KSG.
+    // Do this after reading saved mods so an existing tube is never duplicated.
+    if( typeId() == itype_ksg && !gunmod_find( itype_ksg_aux_shotgun ) ) {
+        put_in( item( itype_ksg_aux_shotgun, birthday() ), pocket_type::MOD );
+        item *second_tube = gunmod_find( itype_ksg_aux_shotgun );
+        if( second_tube && ammo_remaining() > 0 &&
+            ammo_remaining() > ammo_capacity( first_ammo().ammo_type() ) ) {
+            // Preserve rounds loaded into the former 14-round combined magazine.
+            const int excess = ammo_remaining() - ammo_capacity( first_ammo().ammo_type() );
+            const int transfer = std::min( excess, second_tube->remaining_ammo_capacity() );
+            item rounds = first_ammo();
+            rounds.charges = transfer;
+            if( transfer > 0 && second_tube->put_in( rounds, pocket_type::MAGAZINE ).success() ) {
+                first_ammo().charges -= transfer;
+            }
+        }
+    }
+
     std::set<itype_id> migrated_edevice_itypes = { itype_camera, itype_camera_pro,
                                                    itype_laptop, itype_eink_tablet_pc, itype_smart_phone, itype_memory_card, itype_usb_drive
                                                  };
@@ -3989,8 +4009,8 @@ void vehicle_part::deserialize( const JsonObject &data )
                                          ? migration->variant.value()
                                          : migration->part_id_new->variant_default;
         DebugLog( D_WARNING, D_MAIN ) << "vehicle_part::deserialize migrating " <<
-                                         "vpid '" << pid.str() << "' to '" << migration->part_id_new.str() << "' "
-                                         "variant '" << variant << "' to '" << new_variant << "'";
+                                      "vpid '" << pid.str() << "' to '" << migration->part_id_new.str() << "' "
+                                      "variant '" << variant << "' to '" << new_variant << "'";
         pid = migration->part_id_new;
         variant = new_variant;
     }
@@ -5420,7 +5440,7 @@ void basecamp::deserialize( const JsonObject &data )
     platform_expansions_.clear();
     platform_retired_expansion_generations_.clear();
     const auto read_platform_resource_changes = [](
-            JsonObject & source, const char *member,
+                JsonObject & source, const char *member,
     std::vector<basecamp_platform_resource_change> &changes ) {
         if( !source.has_array( member ) ) {
             return false;
@@ -5641,7 +5661,7 @@ void basecamp::deserialize( const JsonObject &data )
             std::set<std::uint64_t> expansion_ids;
             std::set<point_rel_omt> expansion_directions;
             std::set<tripoint_abs_omt> expansion_positions;
-            const auto valid_expansion_name = []( const std::string & value ) {
+            const auto valid_expansion_name = []( const std::string_view value ) {
                 return !value.empty() && value.size() <= 64 &&
                 std::all_of( value.begin(), value.end(), []( const unsigned char ch ) {
                     return ch >= 0x20U && ch != 0x7fU;
@@ -5782,12 +5802,9 @@ void basecamp::deserialize( const JsonObject &data )
                     } else if( task.kind == basecamp_platform_recipe_work_kind ) {
                         task.parameters = std::string(
                                               basecamp_platform_recipe_work_parameter_schema );
-                    } else if( task.kind == basecamp_platform_upgrade_work_kind ) {
-                        // v1/v2 never had a safe upgrade descriptor.  Do not
-                        // invent a parameter schema; the item-bearing path
-                        // below quarantines the record for explicit recovery.
-                        valid = false;
                     } else {
+                        // v1/v2 never had a safe upgrade descriptor, and
+                        // unknown kinds cannot be assigned one either.
                         valid = false;
                     }
                 }
@@ -6139,8 +6156,8 @@ void basecamp::deserialize( const JsonObject &data )
                                 }
                                 () &&
                                 restored.uid().get_value() == entry.stable_uid &&
-                                        ( restored.count_by_charges() ? restored.charges : 1 ) ==
-                                        entry.charges;
+                                ( restored.count_by_charges() ? restored.charges : 1 ) ==
+                                entry.charges;
                                 if( !valid ) {
                                     break;
                                 }
@@ -6392,14 +6409,14 @@ void stats_tracker::deserialize( const JsonObject &jo )
                 // we don't know when they took over, so just use current time point
                 if( u.getID() != gs_data["avatar_id"].get<cata_variant_type::character_id>() ) {
                     get_event_bus().send( cata::event::make<event_type::game_avatar_new>( false, false,
-                            u.getID(), u.name, u.custom_profession ) );
+                                          u.getID(), u.name, u.custom_profession ) );
                 }
             } else {
                 // last ditch effort for really old saves that don't even have event_type::game_start
                 // treat current avatar as the starting avatar; abuse is_new_game=false to flag such cases
                 std::swap( calendar::turn, calendar::start_of_game );
                 get_event_bus().send( cata::event::make<event_type::game_avatar_new>( false, false,
-                        u.getID(), u.name, u.custom_profession ) );
+                                      u.getID(), u.name, u.custom_profession ) );
                 std::swap( calendar::turn, calendar::start_of_game );
             }
         }
@@ -6532,7 +6549,7 @@ void cata::lua_platform::detail::erase_platform_savegame_migration(
 }
 
 std::vector<std::pair<std::string, std::string>>
-cata::lua_platform::detail::terrain_migration_snapshot()
+        cata::lua_platform::detail::terrain_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( ter_migrations.size() );
@@ -6544,7 +6561,7 @@ cata::lua_platform::detail::terrain_migration_snapshot()
 }
 
 std::vector<std::pair<std::string, std::string>>
-cata::lua_platform::detail::furniture_migration_snapshot()
+        cata::lua_platform::detail::furniture_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( furn_migrations.size() );
@@ -6556,7 +6573,7 @@ cata::lua_platform::detail::furniture_migration_snapshot()
 }
 
 std::vector<std::pair<std::string, std::string>>
-cata::lua_platform::detail::trap_migration_snapshot()
+        cata::lua_platform::detail::trap_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( tr_migrations.size() );
@@ -6981,7 +6998,8 @@ void submap::load( const JsonValue &jv, const std::string &member_name, int vers
         JsonArray growth_json = jv;
         while( growth_json.has_more() ) {
             JsonArray entry = growth_json.next_array();
-            const point_sm_ms p( entry.next_int(), entry.next_int() );
+            const int growth_x = entry.next_int();
+            const point_sm_ms p( growth_x, entry.next_int() );
             terrain_growth_state state;
             state.fertilized_at = time_point( entry.next_int() );
             terrain_growth[p] = state;
@@ -6990,9 +7008,8 @@ void submap::load( const JsonValue &jv, const std::string &member_name, int vers
         JsonArray liquids_json = jv;
         while( liquids_json.has_more() ) {
             JsonArray entry = liquids_json.next_array();
-            const int x = entry.next_int();
-            const int y = entry.next_int();
-            const point_sm_ms p( x, y );
+            const int liquid_x = entry.next_int();
+            const point_sm_ms p( liquid_x, entry.next_int() );
             const int charges = entry.next_int();
             if( charges > 0 ) {
                 finite_liquids[p] = charges;
@@ -7243,7 +7260,7 @@ void submap::load( const JsonValue &jv, const std::string &member_name, int vers
                 point_sm_ms loc;
                 computers_json.next_value().read( loc );
                 auto new_comp_it = computers.emplace( loc, computer( "BUGGED_COMPUTER", -100,
-                    tripoint_abs_ms::invalid ) ).first;
+                                                      tripoint_abs_ms::invalid ) ).first;
                 computers_json.next_value().read( new_comp_it->second );
             }
         }

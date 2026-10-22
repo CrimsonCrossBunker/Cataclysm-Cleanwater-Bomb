@@ -352,6 +352,21 @@ void invoke_technique_application_handler(
     int repeat_index, int repeat_count, double total_damage,
     std::string_view weapon_id );
 
+/** Evaluate a Lua-authored active-technique availability policy. */
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+std::optional<bool> invoke_technique_condition_handler(
+    std::string_view technique_id, std::string_view mod_id,
+    std::string_view handler_id, const Character &character,
+    std::string_view phase );
+#else
+inline std::optional<bool> invoke_technique_condition_handler(
+    std::string_view, std::string_view, std::string_view,
+    const Character &, std::string_view )
+{
+    return std::nullopt;
+}
+#endif
+
 /** Dispatch a Lua-first post-consumption item handler. */
 void invoke_item_consumption_handler( std::string_view item_id,
                                       std::string_view mod_id,
