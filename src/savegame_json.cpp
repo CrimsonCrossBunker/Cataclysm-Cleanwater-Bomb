@@ -172,6 +172,8 @@ static const itype_id itype_internal_battery_compartment( "internal_battery_comp
 static const itype_id itype_internal_ethanol_tank( "internal_ethanol_tank" );
 static const itype_id itype_internal_gasoline_tank( "internal_gasoline_tank" );
 static const itype_id itype_internal_oil_tank( "internal_oil_tank" );
+static const itype_id itype_ksg( "ksg" );
+static const itype_id itype_ksg_aux_shotgun( "ksg_aux_shotgun" );
 static const itype_id itype_laptop( "laptop" );
 static const itype_id itype_medium_battery_cell( "medium_battery_cell" );
 static const itype_id itype_memory_card( "memory_card" );
@@ -3921,6 +3923,24 @@ void item::deserialize( const JsonObject &data )
         // contents may not be empty if other migration happened in item::io
     } else if( contents.empty() ) { // empty contents was not serialized, recreate pockets from the type
         contents = item_contents( type->pockets );
+    }
+
+    // Restore the separate second tube in saves from the combined-magazine KSG.
+    // Do this after reading saved mods so an existing tube is never duplicated.
+    if( typeId() == itype_ksg && !gunmod_find( itype_ksg_aux_shotgun ) ) {
+        put_in( item( itype_ksg_aux_shotgun, birthday() ), pocket_type::MOD );
+        item *second_tube = gunmod_find( itype_ksg_aux_shotgun );
+        if( second_tube && ammo_remaining() > 0 &&
+            ammo_remaining() > ammo_capacity( first_ammo().ammo_type() ) ) {
+            // Preserve rounds loaded into the former 14-round combined magazine.
+            const int excess = ammo_remaining() - ammo_capacity( first_ammo().ammo_type() );
+            const int transfer = std::min( excess, second_tube->remaining_ammo_capacity() );
+            item rounds = first_ammo();
+            rounds.charges = transfer;
+            if( transfer > 0 && second_tube->put_in( rounds, pocket_type::MAGAZINE ).success() ) {
+                first_ammo().charges -= transfer;
+            }
+        }
     }
 
     std::set<itype_id> migrated_edevice_itypes = { itype_camera, itype_camera_pro,
