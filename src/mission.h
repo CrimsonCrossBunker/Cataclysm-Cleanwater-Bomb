@@ -329,8 +329,9 @@ class mission
         // Persistent Platform generic-reward claim state.  Core dialogue
         // reward UI retains its existing sequencing and does not use this.
         bool generic_reward_claimed_ = false;
-        // Platform tokens bind to this instance generation in addition to uid.
-        std::size_t identity_generation_ = 0;
+        // Platform tokens bind to this runtime-only generation in addition to uid.
+        // Loading a mission issues a fresh generation to invalidate stale tokens.
+        std::size_t identity_generation_ = 0; // NOLINT(cata-serialize)
     public:
 
         std::string name() const;

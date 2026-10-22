@@ -4,7 +4,7 @@
     "copy-from": "underbarrel_base",
     "type": "ITEM",
     "subtypes": [ "GUN", "GUNMOD" ],
-    "name": { "str": "KSG second magazine" },
+    "name": { "str": "KSG shotgun second magazine" },
     "description": "The integrated second tube magazine of the Kel-Tec KSG, which holds 7 shots.  It's irremovable.",
     "weight": "1550 g",
     "volume": "1750 ml",

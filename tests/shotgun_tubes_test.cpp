@@ -1,20 +1,23 @@
+#include <vector>
+#include <functional>
 #include <sstream>
 #include <string>
 
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "coordinates.h"
+#include "flexbuffer_json.h"
+#include "gun_mode.h"
 #include "flag.h"
 #include "item.h"
 #include "item_location.h"
-#include "itype.h"
 #include "json.h"
 #include "json_loader.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_selector.h"
 #include "player_helpers.h"
-#include "pocket_type.h"
 #include "point.h"
 #include "type_id.h"
 

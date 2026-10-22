@@ -27,6 +27,7 @@
 #include <sstream>
 #include <stack>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
@@ -5661,7 +5662,7 @@ void basecamp::deserialize( const JsonObject &data )
             std::set<std::uint64_t> expansion_ids;
             std::set<point_rel_omt> expansion_directions;
             std::set<tripoint_abs_omt> expansion_positions;
-            const auto valid_expansion_name = []( const std::string & value ) {
+            const auto valid_expansion_name = []( const std::string_view value ) {
                 return !value.empty() && value.size() <= 64 &&
                 std::all_of( value.begin(), value.end(), []( const unsigned char ch ) {
                     return ch >= 0x20U && ch != 0x7fU;
@@ -5802,12 +5803,9 @@ void basecamp::deserialize( const JsonObject &data )
                     } else if( task.kind == basecamp_platform_recipe_work_kind ) {
                         task.parameters = std::string(
                                               basecamp_platform_recipe_work_parameter_schema );
-                    } else if( task.kind == basecamp_platform_upgrade_work_kind ) {
-                        // v1/v2 never had a safe upgrade descriptor.  Do not
-                        // invent a parameter schema; the item-bearing path
-                        // below quarantines the record for explicit recovery.
-                        valid = false;
                     } else {
+                        // Unknown kinds and v1/v2 upgrades have no safe descriptor.
+                        // Quarantine these records for explicit recovery.
                         valid = false;
                     }
                 }
@@ -7001,7 +6999,7 @@ void submap::load( const JsonValue &jv, const std::string &member_name, int vers
         JsonArray growth_json = jv;
         while( growth_json.has_more() ) {
             JsonArray entry = growth_json.next_array();
-            const point_sm_ms p( entry.next_int(), entry.next_int() );
+            const point_sm_ms p{ entry.next_int(), entry.next_int() };
             terrain_growth_state state;
             state.fertilized_at = time_point( entry.next_int() );
             terrain_growth[p] = state;
@@ -7010,9 +7008,7 @@ void submap::load( const JsonValue &jv, const std::string &member_name, int vers
         JsonArray liquids_json = jv;
         while( liquids_json.has_more() ) {
             JsonArray entry = liquids_json.next_array();
-            const int x = entry.next_int();
-            const int y = entry.next_int();
-            const point_sm_ms p( x, y );
+            const point_sm_ms p{ entry.next_int(), entry.next_int() };
             const int charges = entry.next_int();
             if( charges > 0 ) {
                 finite_liquids[p] = charges;
