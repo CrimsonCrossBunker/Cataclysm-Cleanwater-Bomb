@@ -37,6 +37,7 @@
 #include "messages.h"
 #include "mission.h"
 #include "monster.h"
+#include "move_mode.h"
 #include "npc.h"
 #include "player_activity.h"
 #include "profession.h"
@@ -73,6 +74,12 @@ extern "C" {
 #include <unordered_map>
 #include <variant>
 #include "lua_platform_sol.h"
+
+static const json_character_flag json_flag_CANNOT_ATTACK( "CANNOT_ATTACK" );
+static const json_character_flag json_flag_CANNOT_MOVE( "CANNOT_MOVE" );
+static const json_character_flag json_flag_PHASE_MOVEMENT( "PHASE_MOVEMENT" );
+static const trait_id trait_SHELL2( "SHELL2" );
+static const trait_id trait_SHELL3( "SHELL3" );
 
 namespace cata::lua_platform
 {
@@ -2303,6 +2310,72 @@ void invoke_technique_application_handler(
     if( !result.valid() ) {
         report_callback_error( *owner, handler_id, result );
     }
+}
+
+std::optional<bool> invoke_technique_condition_handler(
+    const std::string_view technique_id, const std::string_view mod_id,
+    const std::string_view handler_id, const Character &character,
+    const std::string_view phase )
+{
+    const std::shared_ptr<runtime> owner = detail::find_active_runtime( mod_id );
+    if( !owner || !owner->world_is_ready ) {
+        return std::nullopt;
+    }
+    const auto handler = owner->handlers.find( std::string( handler_id ) );
+    if( handler == owner->handlers.end() || owner->callback_depth >= 16 ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first technique condition unavailable for '"
+                                    << mod_id << ':' << handler_id << "'";
+        return std::nullopt;
+    }
+
+    const avatar *const player = character.as_avatar();
+    const item_location weapon = character.used_weapon();
+    std::string mount_kind = "none";
+    if( character.get_steed_type() == steed_type::ANIMAL ) {
+        mount_kind = "animal";
+    } else if( character.get_steed_type() == steed_type::MECH ) {
+        mount_kind = "mech";
+    }
+
+    sol::table payload = owner->lua->create_table();
+    payload["technique_id"] = std::string( technique_id );
+    payload["phase"] = std::string( phase );
+    payload["character"] = platform_creature_handle( *owner, character );
+    payload["weapon_id"] = weapon ? weapon->typeId().str() : std::string();
+    payload["moves"] = character.get_moves();
+    payload["mounted"] = character.is_mounted();
+    payload["mount_kind"] = std::move( mount_kind );
+    payload["activity_active"] = !character.activity.is_null();
+    payload["activity_id"] = character.activity.is_null() ? std::string() :
+                             character.activity.id().str();
+    payload["grabbed"] = player != nullptr &&
+                         player->get_grab_type() != object_type::NONE;
+    payload["auto_moving"] = character.is_auto_moving();
+    payload["hauling"] = character.is_hauling();
+    payload["in_vehicle"] = character.in_vehicle;
+    payload["controlling_vehicle"] = character.controlling_vehicle;
+    payload["crouching"] = character.is_crouching();
+    payload["prone"] = character.is_prone();
+    payload["in_shell"] = character.has_active_mutation( trait_SHELL2 ) ||
+                          character.has_active_mutation( trait_SHELL3 );
+    payload["phase_movement"] = character.has_flag( json_flag_PHASE_MOVEMENT );
+    payload["can_attack"] = !character.has_flag( json_flag_CANNOT_ATTACK );
+    payload["can_move"] = !character.has_flag( json_flag_CANNOT_MOVE );
+
+    sol::protected_function callback = handler->second.callback;
+    callback_scope scope( *owner );
+    const sol::protected_function_result result = callback( payload );
+    if( !result.valid() ) {
+        report_callback_error( *owner, handler_id, result );
+        return std::nullopt;
+    }
+    if( result.return_count() != 1 || result.get_type() != sol::type::boolean ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first technique condition '"
+                                    << mod_id << ':' << handler_id
+                                    << "' must return exactly one boolean";
+        return std::nullopt;
+    }
+    return result.get<bool>();
 }
 
 void invoke_item_consumption_handler(

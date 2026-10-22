@@ -2,7 +2,10 @@
 
 #include <coordinates.h>
 #include <input_enums.h>
+#include <item_uid.h>
+#include <monster_uid.h>
 #include <player_activity.h>
+#include <translation.h>
 #include <algorithm>
 #include <climits>
 #include <cstdlib>
@@ -46,9 +49,11 @@
 #include "map_iterator.h"
 #include "map_scale_constants.h"
 #include "mapdata.h"
+#include "martialarts.h"
 #include "math_defines.h"
 #include "messages.h"
 #include "monster.h"
+#include "mounted_charge.h"
 #include "move_mode.h"
 #include "mtype.h"
 #include "npc.h"
@@ -211,9 +216,9 @@ static bool confirm_non_hostile_melee_attack( avatar &you, const monster &critte
                                    .context( "CANCEL_ACTIVITY_OR_IGNORE_QUERY" )
                                    .message( force_uc && !is_keycode_mode_supported() ?
                                              pgettext( "non_hostile_melee_query",
-                                                 "<color_light_red>Really attack the non-hostile %s? (Case Sensitive)</color>" ) :
+                                                     "<color_light_red>Really attack the non-hostile %s?  (Case Sensitive)</color>" ) :
                                              pgettext( "non_hostile_melee_query",
-                                                 "<color_light_red>Really attack the non-hostile %s?</color>" ),
+                                                     "<color_light_red>Really attack the non-hostile %s?</color>" ),
                                              critter.name() )
                                    .option( "YES", allow_key )
                                    .option( "NO", allow_key )
@@ -660,7 +665,7 @@ bool avatar_action::move( avatar &you, map &m, const tripoint_rel_ms &d )
         return true;
     }
     if( g->phasing_move_enchant( dest_loc, you.calculate_by_enchantment( 0,
-            enchant_vals::mod::PHASE_DISTANCE ) ) ) {
+                                 enchant_vals::mod::PHASE_DISTANCE ) ) ) {
         return true;
     }
     if( g->phasing_move( dest_loc ) ) {
@@ -835,7 +840,7 @@ void avatar_action::autoattack( avatar &you, map &m )
     }
     const item_location weapon = you.get_wielded_item();
     int reach = weapon ? weapon->reach_range( you ).first : std::max( 1,
-        static_cast<int>( you.calculate_by_enchantment( 1, enchant_vals::mod::MELEE_RANGE_MODIFIER ) ) );
+                static_cast<int>( you.calculate_by_enchantment( 1, enchant_vals::mod::MELEE_RANGE_MODIFIER ) ) );
     std::vector<Creature *> critters = you.get_targetable_creatures( reach, true );
     critters.erase( std::remove_if( critters.begin(), critters.end(), [&you,
     reach]( const Creature * c ) {
@@ -875,6 +880,132 @@ void avatar_action::autoattack( avatar &you, map &m )
     } else {
         you.reach_attack( best.pos_bub() );
     }
+}
+
+void avatar_action::active_technique( avatar &you, map &m )
+{
+    if( you.is_mounted() && you.mounted_creature &&
+        you.mounted_creature->has_flag( mon_flag_RIDEABLE_MECH ) ) {
+        add_msg( m_info, _( "You cannot use an active technique while piloting a mech." ) );
+        return;
+    }
+    const std::vector<matec_id> available = you.active_techniques();
+    if( available.empty() ) {
+        add_msg( m_info,
+                 _( "You have no active techniques available with your current style and weapon." ) );
+        return;
+    }
+
+    uilist menu;
+    menu.title = _( "Use which active technique?" );
+    menu.input_category = "ACTIVE_TECHNIQUE_MENU";
+    menu.desc_enabled = true;
+    menu.hilight_disabled = true;
+    for( size_t i = 0; i < available.size(); ++i ) {
+        const bool enabled = available[i] != tec_mounted_charge || mounted_charge_available( you );
+        menu.addentry_desc( i, enabled, MENU_AUTOASSIGN, available[i]->name.translated(),
+                            available[i]->get_description() );
+    }
+    menu.query( true, 50, true );
+    if( menu.ret < 0 ) {
+        return;
+    }
+    if( static_cast<size_t>( menu.ret ) >= available.size() ) {
+        return;
+    }
+    const matec_id technique = available[menu.ret];
+    if( technique == tec_mounted_charge ) {
+        mounted_charge( you );
+        return;
+    }
+
+    const auto eligible_target = [&you, &m]( const tripoint_bub_ms & p ) {
+        Creature *const target = get_creature_tracker().creature_at( p, true );
+        if( !target || !you.sees( m, *target ) ) {
+            return false;
+        }
+        if( const npc *const np = target->as_npc() ) {
+            return np->is_enemy();
+        }
+        return target->attitude_to( you ) == Creature::Attitude::HOSTILE;
+    };
+    bool has_target = false;
+    for( const tripoint_bub_ms &p : m.points_in_radius( you.pos_bub( m ), 1 ) ) {
+        if( eligible_target( p ) ) {
+            has_target = true;
+            break;
+        }
+    }
+    if( !has_target && you.active_technique_range( technique ) <= 1 ) {
+        add_msg( m_info, _( "No hostile creature is adjacent." ) );
+        return;
+    }
+    std::optional<tripoint_bub_ms> target_pos;
+    if( you.active_technique_range( technique ) > 1 ) {
+        const target_handler::trajectory trajectory = target_handler::mode_select_only(
+                    you, you.active_technique_range( technique ) );
+        if( !trajectory.empty() ) {
+            target_pos = trajectory.back();
+        }
+    } else {
+        target_pos = choose_adjacent_highlight(
+                         m, _( "Use the technique on whom?" ), _( "No hostile creature is adjacent." ),
+                         eligible_target, false, false );
+    }
+    if( !target_pos || !eligible_target( *target_pos ) ) {
+        return;
+    }
+
+    Creature *const target = get_creature_tracker().creature_at( *target_pos, true );
+    if( !target ) {
+        return;
+    }
+    if( !you.try_break_relax_gas( _( "Your willpower asserts itself, and so do you!" ),
+                                  _( "You're too pacified to strike anything." ) ) ) {
+        return;
+    }
+    if( !you.use_active_technique( *target, technique ) ) {
+        add_msg( m_info, _( "You cannot use that technique on this target right now." ) );
+        return;
+    }
+    if( npc *const np = target->as_npc() ) {
+        np->make_angry();
+    }
+}
+
+bool avatar_action::mounted_charge_available( const avatar &you )
+{
+    const item_location weapon = you.get_wielded_item();
+    if( !weapon || !weapon->has_technique( tec_mounted_charge ) ||
+        !weapon->type->mounted_charge || !weapon->type->mounted_charge->valid() ||
+        !you.mounted_creature ) {
+        return false;
+    }
+    return tec_mounted_charge->activation_allowed( you, "start" );
+}
+
+void avatar_action::mounted_charge( avatar &you )
+{
+    if( !mounted_charge_available( you ) ) {
+        add_msg( m_info, _( "You cannot begin a mounted charge right now." ) );
+        return;
+    }
+    const item_location weapon = you.get_wielded_item();
+    const target_handler::trajectory trajectory =
+        target_handler::mode_select_only( you, weapon->type->mounted_charge->max_steps );
+    if( trajectory.empty() ) {
+        return;
+    }
+
+    map &here = get_map();
+    const tripoint_bub_ms destination = trajectory.back();
+    if( destination == you.pos_bub( here ) || destination.z() != you.pos_bub( here ).z() ) {
+        return;
+    }
+
+    you.assign_activity( mounted_charge_activity_actor( here.get_abs( destination ),
+                         you.mounted_creature->uid().get_value(), weapon->uid().get_value(), you.pos_abs(),
+                         weapon->typeId() ) );
 }
 
 // TODO: Move data/functions related to targeting out of game class
@@ -1219,7 +1350,7 @@ void avatar_action::plthrow( avatar &you, item_location loc,
     item_location weapon = in_mech ? loc : ( keep_wielded ? wielded_item : you.get_wielded_item() );
     item &relevant = keep_wielded ? thrown : *weapon;
     target_handler::trajectory trajectory = target_handler::mode_throw( you, relevant,
-        blind_throw_from_pos.has_value() );
+                                            blind_throw_from_pos.has_value() );
 
     // If we previously shifted our position, put ourselves back now that we've picked our target.
     if( blind_throw_from_pos ) {

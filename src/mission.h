@@ -330,6 +330,8 @@ class mission
         // reward UI retains its existing sequencing and does not use this.
         bool generic_reward_claimed_ = false;
         // Platform tokens bind to this instance generation in addition to uid.
+        // This process-local token generation must be reissued, not deserialized.
+        // NOLINTNEXTLINE(cata-serialize)
         std::size_t identity_generation_ = 0;
     public:
 

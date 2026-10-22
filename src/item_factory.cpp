@@ -1,4 +1,5 @@
 #include <iuse.h>
+#include <mounted_charge.h>
 #include <type_id.h>
 #include <algorithm>
 #include <array>
@@ -230,7 +231,7 @@ static void migrate_mag_from_pockets( itype &def )
 }
 
 static std::optional<std::reference_wrapper<const itype>> find_template_list_const(
-    const itype_id &it_id )
+            const itype_id &it_id )
 
 {
     generic_factory<itype> &factory = item_controller->get_generic_factory();
@@ -530,7 +531,7 @@ void Item_factory::finalize_pre( itype &obj )
         int mat_total = 0;
 
         auto add_spi = [&is_not_boring, &specific_heat_solid, &specific_heat_liquid, &latent_heat,
-        &mat_total]( const material_id & m, int portion ) {
+                        &mat_total]( const material_id & m, int portion ) {
             specific_heat_solid += m->specific_heat_solid() * portion;
             specific_heat_liquid += m->specific_heat_liquid() * portion;
             latent_heat += m->latent_heat() * portion;
@@ -1349,7 +1350,7 @@ void Item_factory::finalize_post_armor( itype &obj )
                 mat.cover = 100;
             } else {
                 mat.cover = std::round( static_cast<float>( mat.cover ) / ( static_cast<float>
-                    ( it.coverage ) / 100.0f ) );
+                                        ( it.coverage ) / 100.0f ) );
             }
         }
     }
@@ -1836,7 +1837,7 @@ void Item_factory::finalize_item_blacklist()
             for( std::pair<itype_id, std::string> &spawn_pair : vis.item_ids ) {
                 itype_id &type_to_spawn = spawn_pair.first;
                 std::map<itype_id, std::vector<migration>>::iterator replacement =
-                    migrations.find( type_to_spawn );
+                        migrations.find( type_to_spawn );
                 if( replacement == migrations.end() ) {
                     continue;
                 }
@@ -2721,6 +2722,15 @@ void Item_factory::check_definitions() const
             if( !q.first.is_valid() ) {
                 msg += string_format( "item %s has unknown quality %s\n", type->id.c_str(),
                                       q.first.c_str() );
+            }
+        }
+        if( type->pet_equipment ) {
+            for( const auto &requirement : type->pet_equipment->install_qualities ) {
+                const quality_id &quality = requirement.first;
+                if( !quality.is_valid() ) {
+                    msg += string_format( "item %s requires unknown pet installation quality %s\n",
+                                          type->id.c_str(), quality.c_str() );
+                }
             }
         }
         if( type->default_container && !type->default_container->is_null() ) {
@@ -3754,10 +3764,41 @@ void islot_pet_equipment::deserialize( const JsonObject &jo )
 {
     mandatory( jo, was_loaded, "pet_slots", slots );
     optional( jo, was_loaded, "pet_passive_effects", passive_effects );
+    if( jo.has_member( "pet_install_qualities" ) ) {
+        install_qualities.clear();
+        JsonArray requirements = jo.get_array( "pet_install_qualities" );
+        while( requirements.has_more() ) {
+            JsonArray requirement = requirements.next_array();
+            if( requirement.size() != 2 ) {
+                requirement.throw_error( "expected [quality ID, level]" );
+            }
+            const quality_id quality( requirement.get_string( 0 ) );
+            const int level = requirement.get_int( 1 );
+            if( level < 1 || quality.str().empty() ) {
+                requirement.throw_error( "expected a quality ID and positive level" );
+            }
+            install_qualities.emplace_back( quality, level );
+        }
+    }
     optional( jo, was_loaded, "pet_mount_threshold_delta", mount_threshold_delta, 0 );
     optional( jo, was_loaded, "pet_melee_hit_multiplier", melee_hit_multiplier, 1.0 );
     optional( jo, was_loaded, "pet_melee_damage_multiplier", melee_damage_multiplier, 1.0 );
     optional( jo, was_loaded, "pet_fear_multiplier", fear_multiplier, 1.0 );
+    optional( jo, was_loaded, "pet_spook_multiplier", spook_multiplier,
+              numeric_bound_reader<double> { 0.1, 2.0 }, 1.0 );
+    optional( jo, was_loaded, "pet_mounted_move_cost_multiplier", mounted_move_cost_multiplier,
+              numeric_bound_reader<double> { 0.5, 2.0 }, 1.0 );
+}
+
+void mounted_charge_profile::deserialize( const JsonObject &jo )
+{
+    optional( jo, false, "max_steps", max_steps,
+              numeric_bound_reader<int> { 1 } );
+    optional( jo, false, "damage_type", damage_type );
+    optional( jo, false, "multiplier_per_step", multiplier_per_step,
+              numeric_bound_reader<float> { 0.0f, 0.5f } );
+    optional( jo, false, "max_multiplier", max_multiplier,
+              numeric_bound_reader<float> { 1.0f, 2.0f } );
 }
 
 void islot_tool::deserialize( const JsonObject &jo )
@@ -3838,7 +3879,7 @@ class vitamins_reader : public generic_typed_reader<vitamins_reader>
 {
     public:
         std::pair<vitamin_id, std::variant<int, vitamin_units::mass>> get_next(
-            const JsonValue &val ) const {
+        const JsonValue &val ) const {
             if( val.test_array() ) {
                 JsonArray arr = val.get_array();
                 if( arr.size() == 2 ) {
@@ -4670,6 +4711,15 @@ void itype::load( const JsonObject &jo, std::string_view src )
     optional( jo, true, "weapon_category", weapon_category, auto_flags_reader<weapon_category_id> {} );
 
     optional( jo, was_loaded, "melee_damage", melee );
+    if( jo.has_object( "mounted_charge" ) ) {
+        if( !mounted_charge ) {
+            mounted_charge.emplace();
+        }
+        mounted_charge->deserialize( jo.get_object( "mounted_charge" ) );
+    } else if( jo.has_member( "mounted_charge" ) ) {
+        // A null member explicitly removes an inherited charge profile.
+        mounted_charge.reset();
+    }
     optional( jo, was_loaded, "thrown_damage", thrown_damage );
     optional( jo, was_loaded, "throw_damage_multiplier", throw_damage_multiplier, 1.0f );
     optional( jo, was_loaded, "throw_range_multiplier", throw_range_multiplier, 1.0f );
@@ -5567,7 +5617,7 @@ Item_factory::get_armor_containers( units::volume min_volume ) const
     // Iterator in volumes coresponds to iterator in armor_containers.
     // Binary find the first holster that has enough volume.
     return { armor_containers.begin() + static_cast<size_t>( lower_bound(
-                volumes.begin(), volumes.end(), min_volume ) - volumes.begin() ),
+                 volumes.begin(), volumes.end(), min_volume ) - volumes.begin() ),
              armor_containers.end()};
 }
 

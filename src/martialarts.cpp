@@ -339,6 +339,7 @@ void ma_technique::load( const JsonObject &jo, std::string_view src )
     optional( jo, was_loaded, "wall_adjacent", wall_adjacent, false );
     optional( jo, was_loaded, "reach_tec", reach_tec, false );
     optional( jo, was_loaded, "reach_ok", reach_ok, false );
+    optional( jo, was_loaded, "manual_activation", manual_activation, false );
 
     optional( jo, was_loaded, "needs_ammo", needs_ammo, false );
 
@@ -379,6 +380,10 @@ void ma_technique::load( const JsonObject &jo, std::string_view src )
     optional( jo, was_loaded, "attack_vectors", attack_vectors );
     reqs.load( jo, src );
     bonuses.load( jo );
+
+    if( manual_activation && !can_activate() ) {
+        jo.throw_error( "manual_activation requires an offensive technique with an attack vector and no counterattack trigger" );
+    }
 }
 
 void ma_technique::verify_ma_techniques()
@@ -1026,6 +1031,23 @@ ma_technique::ma_technique()
 bool ma_technique::is_valid_character( const Character &u ) const
 {
     return reqs.is_valid_character( u );
+}
+
+bool ma_technique::can_activate() const
+{
+    return !dummy && !defensive && !dodge_counter && !block_counter &&
+           !miss_recovery && !grab_break && !attack_vectors.empty();
+}
+
+bool ma_technique::activation_allowed( const Character &character,
+                                       const std::string_view phase ) const
+{
+    if( lua_platform_condition_handler.empty() ) {
+        return true;
+    }
+    return cata::lua_platform::invoke_technique_condition_handler(
+               id.str(), lua_platform_mod, lua_platform_condition_handler,
+               character, phase ).value_or( false );
 }
 
 ma_buff::ma_buff()
@@ -2177,6 +2199,10 @@ std::string ma_technique::get_description() const
     }
 
     dump += string_format( _( "<bold>Type:</bold> %s" ), type ) + "\n";
+
+    if( can_activate() ) {
+        dump += _( "* Can be selected as an active technique" ) + std::string( "\n" );
+    }
 
     std::string temp = bonuses.get_description();
     if( !temp.empty() ) {

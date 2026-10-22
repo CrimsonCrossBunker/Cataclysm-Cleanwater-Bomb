@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:0759d974704cfe10d108b43ad957264c3a4a7a0c45bd66b3b0ccd87c2da6a038",
+    "source_fingerprint": "sha256:4e885b4b2165aaad8c42b9e5fc8518e7d8118e182b1b7ac0e2de13b00b01acd5",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -29,8 +29,8 @@
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6818,
-    "top_level_objects": 95269,
+    "tracked_json_files": 6819,
+    "top_level_objects": 95284,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -113,7 +113,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 15178,
+        "occurrences": 15183,
         "examples": [
           {
             "path": "data/json/artifact/artifact_item_types.json",
@@ -1071,7 +1071,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 207,
+        "occurrences": 208,
         "examples": [
           {
             "path": "data/json/obsoletion_and_migration_0.J/player_activities.json",
@@ -4558,7 +4558,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 7809,
+        "occurrences": 7810,
         "examples": [
           {
             "path": "data/json/deconstruction.json",
@@ -6851,7 +6851,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 5,
+        "occurrences": 7,
         "examples": [
           {
             "path": "data/json/pet_slots/pet_slots.json",
@@ -7485,7 +7485,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 8208,
+        "occurrences": 8212,
         "examples": [
           {
             "path": "data/json/items/armor/jewelry.json",
@@ -9633,7 +9633,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 350,
+        "occurrences": 352,
         "examples": [
           {
             "path": "data/json/martialarts_fictional.json",

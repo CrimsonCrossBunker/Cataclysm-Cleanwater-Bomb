@@ -24,6 +24,14 @@
     "can_resume": false
   },
   {
+    "id": "ACT_MOUNTED_CHARGE",
+    "type": "activity_type",
+    "activity_level": "LIGHT_EXERCISE",
+    "verb": "charging",
+    "based_on": "neither",
+    "can_resume": false
+  },
+  {
     "id": "ACT_READ",
     "type": "activity_type",
     "activity_level": "NO_EXERCISE",

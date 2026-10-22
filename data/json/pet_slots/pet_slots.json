@@ -27,6 +27,22 @@
   },
   {
     "type": "pet_slot",
+    "id": "bridle",
+    "name": { "str": "bridle" },
+    "description": "Holds a separate head restraint for controlling a mount.",
+    "mount_only": true,
+    "bodytypes": [ "horse" ]
+  },
+  {
+    "type": "pet_slot",
+    "id": "horseshoes",
+    "name": { "str": "horseshoes" },
+    "description": "Holds a fitted set of shoes on a horse's hooves.",
+    "mount_only": true,
+    "bodytypes": [ "horse" ]
+  },
+  {
+    "type": "pet_slot",
     "id": "armor",
     "name": { "str": "armor" },
     "description": "Holds fitted armor for the creature.",

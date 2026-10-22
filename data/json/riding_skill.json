@@ -3,7 +3,8 @@
     "type": "skill",
     "id": "riding",
     "name": { "str": "riding" },
-    "description": "Your ability to mount, control, and fight from living mounts.  Higher levels improve mounting reliability, balance, speed, and weapon handling while mounted.",
+    "description": "Legacy riding skill retained for old saves.  Riding now uses athletics.",
+    "obsolete": true,
     "display_category": "display_interaction",
     "sort_rank": 27500,
     "level_descriptions_theory": [
@@ -24,13 +25,13 @@
   {
     "type": "proficiency_category",
     "id": "prof_riding",
-    "name": "Mounted Combat",
-    "description": "Proficiencies for controlling a mount and attacking while riding."
+    "name": "Mounted Combat (legacy)",
+    "description": "Legacy category retained for compatibility.  Mounted proficiencies are now in Athletics."
   },
   {
     "type": "proficiency",
     "id": "prof_mounted_combat",
-    "category": "prof_riding",
+    "category": "prof_athletics",
     "name": { "str": "mounted combat" },
     "description": "You can keep an effective fighting posture while controlling a living mount.",
     "can_learn": true,
@@ -39,7 +40,7 @@
   {
     "type": "proficiency",
     "id": "prof_mounted_archery",
-    "category": "prof_riding",
+    "category": "prof_athletics",
     "name": { "str": "mounted shooting" },
     "description": "You compensate for a mount's movement while aiming and firing ranged weapons.",
     "can_learn": true,
@@ -49,7 +50,7 @@
   {
     "type": "proficiency",
     "id": "prof_mounted_piercing",
-    "category": "prof_riding",
+    "category": "prof_athletics",
     "name": { "str": "mounted thrusting" },
     "description": "You align thrusting attacks with the motion and reach of your mount.",
     "can_learn": true,
@@ -59,7 +60,7 @@
   {
     "type": "proficiency",
     "id": "prof_mounted_cutting",
-    "category": "prof_riding",
+    "category": "prof_athletics",
     "name": { "str": "mounted slashing" },
     "description": "You deliver controlled cutting attacks without losing your seat.",
     "can_learn": true,
@@ -69,7 +70,7 @@
   {
     "type": "proficiency",
     "id": "prof_mounted_bashing",
-    "category": "prof_riding",
+    "category": "prof_athletics",
     "name": { "str": "mounted striking" },
     "description": "You use the mount's momentum to deliver balanced blunt strikes.",
     "can_learn": true,

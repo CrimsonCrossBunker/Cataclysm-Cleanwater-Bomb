@@ -3787,7 +3787,7 @@
     "subcategory": "CSC_WEAPON_CUTTING",
     "name": "cavalry sabers",
     "description": "Recipes for making cavalry sabers.",
-    "nested_category_data": [ "lc_cavalry_sabre", "mc_cavalry_sabre", "hc_cavalry_sabre", "ch_cavalry_sabre", "qt_cavalry_sabre" ]
+    "nested_category_data": [ "lc_cavalry_sabre", "mc_cavalry_sabre", "hc_cavalry_sabre", "ch_cavalry_sabre", "qt_cavalry_sabre", "mounted_saber" ]
   },
   {
     "id": "nested_cutlass",
@@ -5897,7 +5897,7 @@
     "subcategory": "CSC_*_NESTED",
     "name": "steel spears",
     "description": "Recipes related to constructing steel spears from various materials.",
-    "nested_category_data": [ "spear_steel", "lc_spear_steel", "hc_spear_steel", "ch_spear_steel", "qt_spear_steel" ]
+    "nested_category_data": [ "spear_steel", "lc_spear_steel", "hc_spear_steel", "ch_spear_steel", "qt_spear_steel", "mounted_lance" ]
   },
   {
     "id": "nested_pikes",

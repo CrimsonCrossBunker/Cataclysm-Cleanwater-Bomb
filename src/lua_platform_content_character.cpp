@@ -709,6 +709,7 @@ struct technique_definition_data {
     authored_text npc_message;
     bool crit_tec = false;
     bool crit_ok = false;
+    bool manual_activation = false;
     bool wall_adjacent = false;
     bool reach_tec = false;
     bool reach_ok = false;
@@ -737,6 +738,7 @@ struct technique_definition_data {
     bool melee_allowed = false;
     bool strictly_unarmed = false;
     std::vector<std::pair<std::string, std::int64_t>> min_skills;
+    std::string condition_handler;
     std::string apply_handler;
     bool registered = false;
 };
@@ -1806,6 +1808,15 @@ struct technique_definition_handle {
             throw std::runtime_error( "technique application handler id cannot be empty" );
         }
         definition->apply_handler = handler_id;
+        return *this;
+    }
+
+    technique_definition_handle &active_when( const std::string &handler_id ) {
+        require_building_handle( token, *definition, "technique" );
+        if( handler_id.empty() ) {
+            throw std::runtime_error( "technique condition handler id cannot be empty" );
+        }
+        definition->condition_handler = handler_id;
         return *this;
     }
 
@@ -3022,6 +3033,7 @@ void character_content_transaction::impl::install_technique( sol::table &content
                                       options.get<sol::object>( "npc_message" ), "", "technique NPC message" );
         definition->crit_tec = options.get_or( "crit_tec", false );
         definition->crit_ok = options.get_or( "crit_ok", false );
+        definition->manual_activation = options.get_or( "manual_activation", false );
         definition->wall_adjacent = options.get_or( "wall_adjacent", false );
         definition->reach_tec = options.get_or( "reach_tec", false );
         definition->reach_ok = options.get_or( "reach_ok", false );
@@ -3047,6 +3059,9 @@ void character_content_transaction::impl::install_technique( sol::table &content
         definition->unarmed_allowed = options.get_or( "unarmed_allowed", false );
         definition->melee_allowed = options.get_or( "melee_allowed", false );
         definition->strictly_unarmed = options.get_or( "strictly_unarmed", false );
+        definition->condition_handler = options.get_or(
+                                            "active_when",
+                                            options.get_or( "condition_handler", std::string() ) );
         definition->apply_handler = options.get_or(
                                         "on_apply",
                                         options.get_or( "apply_handler", std::string() ) );
@@ -3305,6 +3320,7 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
         "flag", &technique_definition_handle::flag,
         "attack_vector", &technique_definition_handle::attack_vector,
         "requires_skill", &technique_definition_handle::requires_skill,
+        "active_when", &technique_definition_handle::active_when,
         "on_apply", &technique_definition_handle::on_apply );
     ccb.new_usertype<martial_art_definition_handle>(
         "MartialArtDefinition", sol::no_constructor,
@@ -5004,6 +5020,13 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "technique '" + definition.id +
                                           "' has invalid ranges or a duplicate registration" );
             }
+            if( definition.manual_activation && ( definition.defensive || definition.dummy ||
+                                                  definition.dodge_counter || definition.block_counter ||
+                                                  definition.miss_recovery || definition.grab_break ||
+                                                  definition.attack_vectors.empty() ) ) {
+                throw std::runtime_error( "technique '" + definition.id +
+                                          "' cannot be activated manually" );
+            }
             for( const std::string &vector : definition.attack_vectors ) {
                 if( vector.empty() ||
                     ( check_engine_state && !index_defines( index.defines_attack_vector, vector ) &&
@@ -5027,6 +5050,12 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "technique '" + definition.id +
                                           "' references missing application handler '" +
                                           definition.apply_handler + "'" );
+            }
+            if( !definition.condition_handler.empty() &&
+                owner_runtime.handlers.count( definition.condition_handler ) == 0 ) {
+                throw std::runtime_error( "technique '" + definition.id +
+                                          "' references missing condition handler '" +
+                                          definition.condition_handler + "'" );
             }
             validate_operation( entry.operation, matec_id( definition.id ).is_valid(),
                                 definition.id, "technique" );
@@ -5384,7 +5413,7 @@ void character_content_transaction::rollback_phase(
             for( auto it = pimpl_->technique_undo.rbegin();
                  it != pimpl_->technique_undo.rend(); ++it ) {
                 if( it->second ) {
-                    detail::ma_technique_registry().insert( *it->second );
+                    detail::ma_technique_registry().restore( *it->second );
                 } else {
                     detail::ma_technique_registry().erase( it->first );
                 }
@@ -6511,6 +6540,7 @@ void character_content_transaction::impl::apply_technique()
         }
         native.crit_tec = source.crit_tec;
         native.crit_ok = source.crit_ok;
+        native.manual_activation = source.manual_activation;
         native.wall_adjacent = source.wall_adjacent;
         native.reach_tec = source.reach_tec;
         native.reach_ok = source.reach_ok;
@@ -6545,9 +6575,14 @@ void character_content_transaction::impl::apply_technique()
                                                 static_cast<int>( level ) );
         }
         native.lua_platform_mod = this->owner;
+        native.lua_platform_condition_handler = source.condition_handler;
         native.lua_platform_apply_handler = source.apply_handler;
         native.was_loaded = true;
-        detail::ma_technique_registry().insert( native );
+        if( entry.operation == definition_operation::replace ) {
+            detail::ma_technique_registry().restore( native );
+        } else {
+            detail::ma_technique_registry().insert( native );
+        }
     }
     if( !this->techniques.empty() ) {
         detail::ma_technique_registry().finalize();
@@ -6767,6 +6802,7 @@ void character_content_transaction::append_fingerprint(
                 hash_part( state, value.npc_message );
                 hash_part( state, value.crit_tec ? "crit_tec" : "not_crit_tec" );
                 hash_part( state, value.crit_ok ? "crit_ok" : "not_crit_ok" );
+                hash_part( state, value.manual_activation ? "manual_activation" : "automatic_only" );
                 hash_part( state, value.wall_adjacent ? "wall_adjacent" : "not_wall_adjacent" );
                 hash_part( state, value.reach_tec ? "reach_tec" : "not_reach_tec" );
                 hash_part( state, value.reach_ok ? "reach_ok" : "not_reach_ok" );
@@ -6802,6 +6838,7 @@ void character_content_transaction::append_fingerprint(
                     hash_part( state, skill );
                     hash_part( state, std::to_string( level ) );
                 }
+                hash_part( state, value.condition_handler );
                 hash_part( state, value.apply_handler );
             }
             break;

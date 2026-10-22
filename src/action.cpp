@@ -243,6 +243,8 @@ std::string action_ident( action_id act )
             return "wield";
         case ACTION_PICK_STYLE:
             return "pick_style";
+        case ACTION_ACTIVE_TECHNIQUE:
+            return "active_technique";
         case ACTION_RELOAD_ITEM:
             return "reload_item";
         case ACTION_RELOAD_WEAPON:
@@ -623,8 +625,8 @@ std::optional<input_event> hotkey_for_action( const action_id action,
         const int maximum_modifier_count, const bool restrict_to_printable )
 {
     const std::vector<input_event> keys = keys_bound_to( action,
-        maximum_modifier_count,
-        restrict_to_printable );
+                                          maximum_modifier_count,
+                                          restrict_to_printable );
     if( keys.empty() ) {
         return std::nullopt;
     } else {
@@ -1136,6 +1138,7 @@ action_id handle_action_menu( map &here )
             REGISTER_ACTION( ACTION_THROW_WIELDED );
             REGISTER_ACTION( ACTION_FIRE_BURST );
             REGISTER_ACTION( ACTION_PICK_STYLE );
+            REGISTER_ACTION( ACTION_ACTIVE_TECHNIQUE );
             REGISTER_ACTION( ACTION_TOGGLE_AUTO_TRAVEL_MODE );
             REGISTER_ACTION( ACTION_TOGGLE_SAFEMODE );
             REGISTER_ACTION( ACTION_TOGGLE_AUTOSAFE );
@@ -1353,11 +1356,11 @@ std::optional<tripoint_bub_ms> choose_adjacent( const tripoint_bub_ms &pos,
             const input_context &ctxt, const std::string &action )> &action_cb )
 {
     const std::optional<tripoint_rel_ms> dir = choose_direction(
-            message, allow_vertical, /*allow_mouse=*/true, timeout,
+                message, allow_vertical, /*allow_mouse=*/true, timeout,
     [&]( const input_context & ctxt, const std::string & action ) {
         if( action == "SELECT" ) {
             const std::optional<tripoint_bub_ms> mouse_pos = ctxt.get_coordinates(
-                    g->w_terrain, g->ter_view_p.raw().xy(), true );
+                        g->w_terrain, g->ter_view_p.raw().xy(), true );
             if( mouse_pos ) {
                 const tripoint_rel_ms vec = *mouse_pos - pos;
                 if( vec.x() >= -1 && vec.x() <= 1
@@ -1389,7 +1392,7 @@ std::optional<tripoint_bub_ms> choose_adjacent_highlight( map &here, const std::
         const bool allow_vertical, const bool allow_autoselect )
 {
     const std::function<bool( const tripoint_bub_ms & )> f = [&action,
-        &here]( const tripoint_bub_ms & p ) {
+    &here]( const tripoint_bub_ms & p ) {
         return can_interact_at( action, here, p );
     };
     return choose_adjacent_highlight( here, message, failure_message, f, allow_vertical,
