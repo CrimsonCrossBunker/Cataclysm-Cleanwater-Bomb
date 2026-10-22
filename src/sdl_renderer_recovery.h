@@ -15,6 +15,10 @@
 #include "cata_tiles.h"
 
 class Font;
+namespace cataimgui
+{
+class client;
+} // namespace cataimgui
 namespace catacurses
 {
 class window;
@@ -486,6 +490,12 @@ struct renderer_recovery_test_support {
         atlas_replay_quarantine &quarantine );
     // Whether the most recently armed phase fault has fired since arming.
     static bool phase_fault_fired();
+
+    static std::unique_ptr<cataimgui::client> make_imgui_client();
+
+    // Reconcile a cold-start window with the real initial-target path, without
+    // relying on a resize notification being observed during renderer creation.
+    static bool setup_initial_display_buffer( const std::optional<point> &requested_pixel_size );
 
     // Set the scaling factor and resize the hidden fixture window, then notify
     // the coordinator. The deferred resize applies on the next drain.
