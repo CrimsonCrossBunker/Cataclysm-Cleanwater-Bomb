@@ -20,7 +20,8 @@ class SDL3BuildContractTest(unittest.TestCase):
                               timeout=45, **kwargs)
 
     def test_macos_setup_keeps_host_library_resolution_unchanged(self):
-        action = (ROOT / ".github/actions/setup-sdl3-stack-macos/action.yml").read_text()
+        action_path = ROOT / ".github/actions/setup-sdl3-stack-macos/action.yml"
+        action = action_path.read_text()
         configure = action.split("- name: Configure SDL3 environment\n", 1)[1]
         script = textwrap.dedent(configure.split("run: |\n", 1)[1])
         with tempfile.TemporaryDirectory(prefix="ccb-macos-env-") as directory:
@@ -34,8 +35,10 @@ class SDL3BuildContractTest(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stdout)
             exported = dict(line.split("=", 1)
                             for line in env_file.read_text().splitlines())
-            self.assertEqual(exported["PKG_CONFIG_PATH"],
-                             f"{prefix}/lib/pkgconfig:/opt/local/lib/pkgconfig")
+            self.assertEqual(
+                exported["PKG_CONFIG_PATH"],
+                f"{prefix}/lib/pkgconfig:/opt/local/lib/pkgconfig",
+            )
             self.assertEqual(exported["DYLIBBUNDLER_SEARCH_PATHS"],
                              f"{prefix}/lib /opt/local/lib")
             # Job-wide loader overrides also affect Homebrew git/gh and
