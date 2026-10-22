@@ -1,3 +1,5 @@
+#include <initializer_list>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -17,7 +19,10 @@
 #include "item_repair.h"
 #include "itype.h"
 #include "iuse_actor.h"
-#include "json.h"
+#include "flexbuffer_json.h"
+#include "iuse.h"
+#include "point.h"
+#include "value_ptr.h"
 #include "json_loader.h"
 #include "map.h"
 #include "map_helpers.h"
@@ -31,17 +36,17 @@
 
 static const activity_id ACT_MEND_ITEM( "ACT_MEND_ITEM" );
 static const activity_id ACT_REPAIR_ITEM( "ACT_REPAIR_ITEM" );
+static const fault_fix_id fault_fix_mend_blade_grind( "mend_blade_grind" );
+static const fault_fix_id
+fault_fix_mend_fault_fail_to_feed_manual_feed( "mend_fault_fail_to_feed_manual_feed" );
+static const fault_fix_id fault_fix_mend_spearhead_grind( "mend_spearhead_grind" );
+static const fault_fix_id fault_fix_mend_spearhead_straighten( "mend_spearhead_straighten" );
 static const fault_id fault_blade_cracked( "fault_blade_cracked" );
 static const fault_id fault_blade_rolled_edge( "fault_blade_rolled_edge" );
 static const fault_id fault_fail_to_feed( "fault_fail_to_feed" );
 static const fault_id fault_spearhead_bent_socket( "fault_spearhead_bent_socket" );
 static const fault_id fault_spearhead_chipping( "fault_spearhead_chipping" );
 static const fault_id fault_spearhead_warped( "fault_spearhead_warped" );
-static const fault_fix_id fault_fix_mend_blade_grind( "mend_blade_grind" );
-static const fault_fix_id
-fault_fix_mend_fault_fail_to_feed_manual_feed( "mend_fault_fail_to_feed_manual_feed" );
-static const fault_fix_id fault_fix_mend_spearhead_grind( "mend_spearhead_grind" );
-static const fault_fix_id fault_fix_mend_spearhead_straighten( "mend_spearhead_straighten" );
 static const itype_id itype_glock_19( "glock_19" );
 static const itype_id itype_integrated_welder( "integrated_welder" );
 static const itype_id itype_knife_combat( "knife_combat" );
@@ -149,7 +154,7 @@ TEST_CASE( "item_repair_tools_preserve_tool_and_material_requirements",
     }
     SECTION( "behind_a_wall" ) {
         supply_repair_materials( you );
-        const tripoint_bub_ms pos = you.pos_bub() + point( 1, 0 );
+        const tripoint_bub_ms pos = you.pos_bub() + point::east;
         get_map().ter_set( pos, ter_t_wall );
         get_map().add_item_or_charges( pos, tool );
         discoverable = false;
