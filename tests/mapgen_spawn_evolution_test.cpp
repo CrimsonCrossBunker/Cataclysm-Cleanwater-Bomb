@@ -1,4 +1,6 @@
+#include <list>
 #include <optional>
+#include <string>
 
 #include "calendar.h"
 #include "cata_catch.h"
