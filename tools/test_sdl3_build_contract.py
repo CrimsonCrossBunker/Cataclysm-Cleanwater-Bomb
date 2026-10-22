@@ -20,8 +20,8 @@ class SDL3BuildContractTest(unittest.TestCase):
                               timeout=45, **kwargs)
 
     def test_macos_setup_keeps_host_library_resolution_unchanged(self):
-        action_path = ROOT / ".github/actions/setup-sdl3-stack-macos/action.yml"
-        action = action_path.read_text()
+        path = ROOT / ".github/actions/setup-sdl3-stack-macos/action.yml"
+        action = path.read_text()
         configure = action.split("- name: Configure SDL3 environment\n", 1)[1]
         script = textwrap.dedent(configure.split("run: |\n", 1)[1])
         with tempfile.TemporaryDirectory(prefix="ccb-macos-env-") as directory:
