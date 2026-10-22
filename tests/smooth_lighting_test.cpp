@@ -614,7 +614,7 @@ TEST_CASE( "disabling_light_color_preserves_smooth_brightness_visibility_and_rea
     std::vector<smooth_lighting::lightmap_texel> neutral;
     REQUIRE( smooth_lighting::encode_lightmap_layer( here, 0, settings, neutral ) );
     REQUIRE( neutral.size() == colored.size() );
-    const auto index = smooth_lighting::light_index( at );
+    const size_t index = smooth_lighting::light_index( at );
     CHECK_FALSE( neutral[index] == colored[index] );
     CHECK( neutral[index] == smooth_lighting::encode_light_texel(
                smooth_lighting::classify_light_cell( cache.visibility_cache[at.x][at.y],
@@ -622,10 +622,10 @@ TEST_CASE( "disabling_light_color_preserves_smooth_brightness_visibility_and_rea
                        settings.vision_threshold ), { 1.0f, 1.0f, 1.0f }, false ) );
     for( int x = settings.area.p_min.x; x < settings.area.p_max.x; ++x ) {
         for( int y = settings.area.p_min.y; y < settings.area.p_max.y; ++y ) {
-            const auto light = smooth_lighting::light_index( point( x, y ) );
+            const size_t light = smooth_lighting::light_index( point( x, y ) );
             CHECK( neutral[light].r == colored[light].r );
             CHECK( neutral[light].a == colored[light].a );
-            const auto reach = smooth_lighting::reach_index( point( x, y ) );
+            const size_t reach = smooth_lighting::reach_index( point( x, y ) );
             CHECK( neutral[reach] == colored[reach] );
         }
     }

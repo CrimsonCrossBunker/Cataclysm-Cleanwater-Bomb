@@ -38,12 +38,13 @@
 #include "weighted_list.h"
 
 static const furn_str_id furn_f_chair( "f_chair" );
-static const trap_str_id tr_beartrap( "tr_beartrap" );
 
 static const mtype_id mon_zombie( "mon_zombie" );
 
 static const ter_str_id ter_t_grass( "t_grass" );
 static const ter_str_id ter_t_wall( "t_wall" );
+
+static const trap_str_id tr_beartrap( "tr_beartrap" );
 
 namespace
 {
@@ -164,6 +165,29 @@ TEST_CASE( "map_sprites_take_scene_light_and_overlays_fixed_light", "[smooth_lig
         fx.tiles_->void_terrain_override();
         THEN( "override keeps its look whatever the light" ) {
             CHECK( fx.drew( ter_t_wall.str(), draw_light::fixed ) );
+            CHECK( fx.drew( ter_t_grass.str(), draw_light::scene ) );
+        }
+    }
+    WHEN( "tiles around avatar show furniture override" ) {
+        for( const tripoint_bub_ms &p : around( player_pos ) ) {
+            fx.tiles_->init_draw_furniture_override( p, furn_id( "f_chair" ) );
+        }
+        fx.draw();
+        fx.tiles_->void_furniture_override();
+        THEN( "only the preview ignores scene light" ) {
+            CHECK( fx.drew( "f_chair", draw_light::fixed ) );
+            CHECK( fx.drew( ter_t_grass.str(), draw_light::scene ) );
+        }
+    }
+    WHEN( "tiles around avatar show trap override" ) {
+        for( const tripoint_bub_ms &p : around( player_pos ) ) {
+            fx.tiles_->init_draw_trap_override( p, trap_id( "tr_beartrap" ) );
+        }
+        fx.draw();
+        fx.tiles_->void_trap_override();
+        THEN( "only the preview ignores scene light" ) {
+            CHECK( fx.drew( "tr_beartrap", draw_light::fixed ) );
+            CHECK( fx.drew( ter_t_grass.str(), draw_light::scene ) );
         }
     }
     WHEN( "tiles around avatar show furniture override" ) {
@@ -190,6 +214,7 @@ TEST_CASE( "map_sprites_take_scene_light_and_overlays_fixed_light", "[smooth_lig
         fx.tiles_->void_monster_override();
         THEN( "override keeps its look whatever the light" ) {
             CHECK( fx.drew( mon_zombie.str(), draw_light::fixed ) );
+            CHECK( fx.drew( ter_t_grass.str(), draw_light::scene ) );
         }
     }
     WHEN( "night on unexplored ground hides the tiles round the avatar" ) {
@@ -524,7 +549,7 @@ TEST_CASE( "colored_lighting_option_changes_pixels_without_changing_world_light"
             cache.light_color_cache[x][y] = { 100.0f, 0.0f, 0.0f };
         }
     }
-    const auto brightness = cache.lm[player_pos.x()][player_pos.y()].max();
+    const float brightness = cache.lm[player_pos.x()][player_pos.y()].max();
     const auto visibility = cache.visibility_cache[player_pos.x()][player_pos.y()];
     const auto draw_pixel = [&]( const std::string & enabled ) {
         override_option colored( "COLORED_LIGHTING", enabled );
@@ -534,7 +559,7 @@ TEST_CASE( "colored_lighting_option_changes_pixels_without_changing_world_light"
         // Include more than the worker threshold's 16384 viewport slots.
         fx.draw( MAPSIZE_X + 1 );
         std::size_t prepared_tiles = 0;
-        for( const auto &row : here.draw_points_cache.tiles[0] ) {
+        for( const draw_points_cache_t::row_vec &row : here.draw_points_cache.tiles[0] ) {
             prepared_tiles += row.size();
         }
         REQUIRE( prepared_tiles >= 16384 );
