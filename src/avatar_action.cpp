@@ -212,9 +212,9 @@ static bool confirm_non_hostile_melee_attack( avatar &you, const monster &critte
                                    .context( "CANCEL_ACTIVITY_OR_IGNORE_QUERY" )
                                    .message( force_uc && !is_keycode_mode_supported() ?
                                              pgettext( "non_hostile_melee_query",
-                                                 "<color_light_red>Really attack the non-hostile %s? (Case Sensitive)</color>" ) :
+                                                     "<color_light_red>Really attack the non-hostile %s?  (Case Sensitive)</color>" ) :
                                              pgettext( "non_hostile_melee_query",
-                                                 "<color_light_red>Really attack the non-hostile %s?</color>" ),
+                                                     "<color_light_red>Really attack the non-hostile %s?</color>" ),
                                              critter.name() )
                                    .option( "YES", allow_key )
                                    .option( "NO", allow_key )
@@ -661,7 +661,7 @@ bool avatar_action::move( avatar &you, map &m, const tripoint_rel_ms &d )
         return true;
     }
     if( g->phasing_move_enchant( dest_loc, you.calculate_by_enchantment( 0,
-            enchant_vals::mod::PHASE_DISTANCE ) ) ) {
+                                 enchant_vals::mod::PHASE_DISTANCE ) ) ) {
         return true;
     }
     if( g->phasing_move( dest_loc ) ) {
@@ -836,7 +836,7 @@ void avatar_action::autoattack( avatar &you, map &m )
     }
     const item_location weapon = you.get_wielded_item();
     int reach = weapon ? weapon->reach_range( you ).first : std::max( 1,
-        static_cast<int>( you.calculate_by_enchantment( 1, enchant_vals::mod::MELEE_RANGE_MODIFIER ) ) );
+                static_cast<int>( you.calculate_by_enchantment( 1, enchant_vals::mod::MELEE_RANGE_MODIFIER ) ) );
     std::vector<Creature *> critters = you.get_targetable_creatures( reach, true );
     critters.erase( std::remove_if( critters.begin(), critters.end(), [&you,
     reach]( const Creature * c ) {
@@ -1225,7 +1225,7 @@ void avatar_action::plthrow( avatar &you, item_location loc,
     item_location weapon = in_mech ? loc : ( keep_wielded ? wielded_item : you.get_wielded_item() );
     item &relevant = keep_wielded ? thrown : *weapon;
     target_handler::trajectory trajectory = target_handler::mode_throw( you, relevant,
-        blind_throw_from_pos.has_value() );
+                                            blind_throw_from_pos.has_value() );
 
     // If we previously shifted our position, put ourselves back now that we've picked our target.
     if( blind_throw_from_pos ) {

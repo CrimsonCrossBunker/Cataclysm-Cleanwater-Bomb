@@ -3,6 +3,7 @@
 #define CATA_SRC_SLING_H
 
 #include <optional>
+#include <vector>
 
 #include "coordinates.h"
 #include "ret_val.h"
@@ -23,5 +24,11 @@ std::optional<dealt_projectile_attack> launch_sling( avatar &who, item_location 
         const std::optional<tripoint_bub_ms> &target );
 
 void aim_sling( avatar &who );
+
+namespace target_handler
+{
+/** Direct sling launch with its full action cost. */
+std::vector<tripoint_bub_ms> mode_sling( avatar &you, item &ammo, int moves );
+} // namespace target_handler
 
 #endif // CATA_SRC_SLING_H

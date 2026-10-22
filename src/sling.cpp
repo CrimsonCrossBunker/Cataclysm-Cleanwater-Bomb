@@ -2,6 +2,11 @@
 
 #include <algorithm>
 #include <cmath>
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include "avatar.h"
@@ -22,7 +27,6 @@
 #include "itype.h"
 #include "iuse.h"
 #include "iuse_actor.h"
-#include "line.h"
 #include "lua_platform_hooks.h"
 #include "map.h"
 #include "messages.h"
@@ -33,6 +37,13 @@
 #include "ranged.h"
 #include "translations.h"
 #include "type_id.h"
+#include "coordinates.h"
+#include "creature.h"
+#include "enums.h"
+#include "item_transformation.h"
+#include "point.h"
+#include "ret_val.h"
+#include "units.h"
 #include "weakpoint.h"
 
 static const ammo_effect_str_id ammo_effect_ACT_ON_RANGED_HIT( "ACT_ON_RANGED_HIT" );
@@ -43,8 +54,8 @@ static const ammo_effect_str_id ammo_effect_NO_OVERSHOOT( "NO_OVERSHOOT" );
 static const ammo_effect_str_id ammo_effect_STOP_ON_CONTACT( "STOP_ON_CONTACT" );
 static const ammo_effect_str_id ammo_effect_WIDE( "WIDE" );
 static const damage_type_id damage_bash( "bash" );
-static const flag_id flag_SLING_AMMO( "SLING_AMMO" );
-static const flag_id flag_SLING_LAUNCHER( "SLING_LAUNCHER" );
+static const flag_id json_flag_SLING_AMMO( "SLING_AMMO" );
+static const flag_id json_flag_SLING_LAUNCHER( "SLING_LAUNCHER" );
 static const json_character_flag json_flag_CANNOT_MOVE( "CANNOT_MOVE" );
 static const skill_id skill_throw( "throw" );
 
@@ -68,13 +79,13 @@ item single_round( const item &ammo )
 
 bool is_sling_launcher( const item &weapon )
 {
-    return weapon.has_flag( flag_SLING_LAUNCHER );
+    return weapon.has_flag( json_flag_SLING_LAUNCHER );
 }
 
 bool is_sling_ammunition( const item &ammo )
 {
     const iuse_transform *activation = sling_activation( ammo );
-    return ammo.has_flag( flag_SLING_AMMO ) && !ammo.active && ammo.count() > 0 &&
+    return ammo.has_flag( json_flag_SLING_AMMO ) && !ammo.active && ammo.count() > 0 &&
            activation && !activation->set_timer && !activation->transform.target.is_empty() &&
            activation->transform.target_group.is_empty() && activation->transform.container.is_empty();
 }
@@ -137,7 +148,7 @@ std::optional<dealt_projectile_attack> launch_sling( avatar &who, item_location 
     const int moves = sling_launch_moves( who, ammo );
     const int stamina = who.get_standard_stamina_cost( &round );
     const int dispersion = who.throwing_dispersion( round,
-        get_creature_tracker().creature_at( *target ), false );
+                           get_creature_tracker().creature_at( *target ), false );
     projectile proj = who.thrown_item_projectile( round );
     proj.impact = damage_instance( damage_bash, who.thrown_item_total_damage_raw( round ) );
     proj.range = rl_dist( who.pos_bub(), *target );
@@ -246,7 +257,7 @@ void aim_sling( avatar &who )
     } );
     if( multiple_types ) {
         ammo = game_menus::inv::titled_filter_menu( is_sling_ammunition, who,
-            _( "Select sling ammunition" ) );
+                _( "Select sling ammunition" ) );
     }
     if( !ammo ) {
         return;
@@ -259,7 +270,7 @@ void aim_sling( avatar &who )
     item round = single_round( *ammo );
     g->temp_exit_fullscreen();
     const target_handler::trajectory trajectory = target_handler::mode_sling( who, round,
-        sling_launch_moves( who, ammo ) );
+            sling_launch_moves( who, ammo ) );
     launch_sling( who, ammo, trajectory.empty() ? std::nullopt :
                   std::make_optional( trajectory.back() ) );
     g->reenter_fullscreen();

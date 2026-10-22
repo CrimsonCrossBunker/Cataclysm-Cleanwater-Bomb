@@ -1,10 +1,12 @@
+#include <set>
+#include <optional>
+#include <list>
 #include <string>
 
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
 #include "explosion.h"
-#include "game.h"
 #include "item.h"
 #include "item_location.h"
 #include "itype.h"
@@ -18,6 +20,10 @@
 #include "pocket_type.h"
 #include "projectile.h"
 #include "sling.h"
+#include "coordinates.h"
+#include "item_transformation.h"
+#include "point.h"
+#include "ret_val.h"
 #include "type_id.h"
 
 static const ammo_effect_str_id ammo_effect_STOP_ON_CONTACT( "STOP_ON_CONTACT" );
@@ -109,7 +115,7 @@ TEST_CASE( "sling_launch_uses_one_round_and_retains_fuse", "[ranged][sling]" )
     CHECK( drop.countdown_point == calendar::turn + 5_seconds );
     CHECK( attack->proj.proj_effects.count( ammo_effect_STOP_ON_CONTACT ) == 1 );
     // No gun-ammo immediate explosion: the live item must be on the ground.
-    auto stack = get_map().i_at( attack->end_point );
+    map_stack stack = get_map().i_at( attack->end_point );
     REQUIRE( stack.size() == 1 );
     item &landed = *stack.begin();
     CHECK( landed.typeId() == itype_grenade_act );
@@ -123,7 +129,7 @@ TEST_CASE( "sling_stops_at_front_creature_or_wall", "[ranged][sling]" )
 {
     item_location ammo = prepare_sling();
     avatar &you = get_avatar();
-    const tripoint_bub_ms front = you.pos_bub() + tripoint( 1, 0, 0 );
+    const tripoint_bub_ms front = you.pos_bub() + tripoint::east;
     const tripoint_bub_ms back = you.pos_bub() + tripoint( 4, 0, 0 );
     SECTION( "front_creature" ) {
         monster &mon = spawn_test_monster( "mon_zombie", front );
@@ -192,7 +198,7 @@ TEST_CASE( "sling_ignition_requirements_and_hand_activation", "[ranged][sling]" 
         REQUIRE( activation->use( &you, held, &get_map(), you.pos_bub() ) );
         CHECK( held.typeId() == activation->transform.target );
         CHECK( held.active );
-        const auto thrown = you.throw_item( you.pos_bub() + tripoint( 4, 0, 0 ), held );
+        const dealt_projectile_attack thrown = you.throw_item( you.pos_bub() + tripoint( 4, 0, 0 ), held );
         CHECK( thrown.proj.proj_effects.count( ammo_effect_STOP_ON_CONTACT ) == 0 );
     }
 }

@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <initializer_list>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "cata_catch.h"
@@ -624,6 +625,75 @@ TEST_CASE( "renderer_coordinator_resize_failure_persists_retry", "[tiles][render
     CHECK( renderer_coordinator.is_render_allowed() );
 }
 
+TEST_CASE( "renderer_startup_reconciles_an_unobserved_fullscreen_resize",
+           "[tiles][renderer_recovery][sdl3][startup]" )
+{
+    software_render_fixture fx;
+    REQUIRE( fx.available() );
+    renderer_recovery_test_support::set_scaling_and_resize_window( 1, 1440, 900 );
+
+    point expected_buffer{ 1440, 896 };
+    SECTION( "window and drawable pixels match" ) {
+    }
+    SECTION( "the window uses 2x pixel density" ) {
+        renderer_recovery_test_support::override_drawable_pixels( 2880, 1800 );
+        expected_buffer = point{ 2880, 1800 };
+    }
+    // A cold-start configure happened before event-watch registration. No
+    // resize notification remains, and the cached layout still has 8x8 cells.
+    renderer_recovery_test_support::reset_coordinator();
+    REQUIRE( renderer_recovery_test_support::setup_initial_display_buffer( std::nullopt ) );
+    renderer_coordinator.finish_bootstrap();
+    CHECK( renderer_coordinator.is_render_allowed() );
+
+    point buffer;
+    renderer_recovery_test_support::current_display_buffer_dims( buffer.x, buffer.y );
+    CHECK( buffer == expected_buffer );
+
+    point logical;
+    point font;
+    point minimum;
+    int scale = 0;
+    renderer_recovery_test_support::current_window_metrics(
+        logical.x, logical.y, font.x, font.y, scale, minimum.x, minimum.y );
+    CHECK( logical == point( 1440, 900 ) );
+    CHECK( font == point( 8, 8 ) );
+    CHECK( scale == 1 );
+}
+
+TEST_CASE( "hidpi_pointer_coordinates_reach_the_last_drawable_text_and_map_cell",
+           "[tiles][renderer_recovery][sdl3][input]" )
+{
+    software_render_fixture fx;
+    REQUIRE( fx.available() );
+    const point map_center( 100, 200 );
+    for( const int scale : {
+             1, 2, 4
+         } ) {
+        renderer_recovery_test_support::set_scaling_and_resize_window( scale, 1440, 900 );
+        renderer_recovery_test_support::override_drawable_pixels( 2880, 1800 );
+        renderer_coordinator.drain_pending();
+        REQUIRE( renderer_coordinator.is_render_allowed() );
+
+        point buffer;
+        renderer_recovery_test_support::current_display_buffer_dims( buffer.x, buffer.y );
+        const point cells = buffer / 8;
+        const point last = cells - point::south_east;
+        const catacurses::window capture = catacurses::newwin( cells.y, cells.x, point::zero );
+        // 8 pixel fixture glyphs stay 8 drawable pixels before the requested
+        // game scale. Window input coordinates use the monitor's 2x density.
+        const point pointer = ( last * 8 + point( 4, 4 ) ) * scale / 2;
+        const std::optional<point> text =
+            renderer_recovery_test_support::text_cell_at_window_point( pointer, capture );
+        REQUIRE( text );
+        CHECK( *text == last );
+        const std::optional<point> map =
+            renderer_recovery_test_support::map_cell_at_window_point( pointer, capture, map_center );
+        REQUIRE( map );
+        CHECK( *map == map_center + last - cells / 2 );
+    }
+}
+
 TEST_CASE( "renderer_coordinator_deferred_scaled_resize_rebuilds_buffer",
            "[tiles][renderer_recovery]" )
 {
@@ -754,7 +824,7 @@ TEST_CASE( "scaled_pointer_coordinates_cover_the_complete_text_and_map_windows",
     }
 }
 
-TEST_CASE( "renderer_coordinator_resize_without_buffer_change_keeps_generation",
+TEST_CASE( "renderer_coordinator_dpi_resize_preserves_font_pixels",
            "[tiles][renderer_recovery]" )
 {
     software_render_fixture fx;
@@ -762,6 +832,8 @@ TEST_CASE( "renderer_coordinator_resize_without_buffer_change_keeps_generation",
         WARN( "dummy SDL video backend unavailable; skipping" );
         return;
     }
+    renderer_recovery_test_support::set_scaling_and_resize_window( 1, 1440, 960 );
+    renderer_coordinator.drain_pending();
     const uint64_t res0 = renderer_coordinator.resource_generation();
     int buf_w0 = 0;
     int buf_h0 = 0;
@@ -770,23 +842,22 @@ TEST_CASE( "renderer_coordinator_resize_without_buffer_change_keeps_generation",
     int draw_h0 = 0;
     renderer_recovery_test_support::current_drawable_dims( draw_w0, draw_h0 );
 
-    // DPI-only change: logical window untouched (buffer dims unchanged) but
-    // backing pixels grow. The fast path follows the new drawable pixels and
-    // re-arms presentation without recreating the buffer or bumping the generation.
+    // More backing pixels provide more terminal cells at the same configured
+    // glyph size. They must not magnify the previous buffer a second time.
     renderer_recovery_test_support::set_needupdate( false );
     renderer_recovery_test_support::override_drawable_pixels( draw_w0 * 2, draw_h0 * 2 );
     REQUIRE_FALSE( renderer_coordinator.is_render_allowed() );
 
     renderer_coordinator.drain_pending();
     CHECK( renderer_coordinator.is_render_allowed() );
-    CHECK( renderer_coordinator.resource_generation() == res0 );
+    CHECK( renderer_coordinator.resource_generation() == res0 + 1 );
 
-    // Buffer dims unchanged (no recreate on the fast path).
+    // Rebuild the buffer to preserve the configured glyph size in physical pixels.
     int buf_w1 = 0;
     int buf_h1 = 0;
     renderer_recovery_test_support::current_display_buffer_dims( buf_w1, buf_h1 );
-    CHECK( buf_w1 == buf_w0 );
-    CHECK( buf_h1 == buf_h0 );
+    CHECK( buf_w1 == buf_w0 * 2 );
+    CHECK( buf_h1 == buf_h0 * 2 );
 
     // The drawable track followed the new backing pixels.
     int draw_w1 = 0;
@@ -795,7 +866,28 @@ TEST_CASE( "renderer_coordinator_resize_without_buffer_change_keeps_generation",
     CHECK( draw_w1 == draw_w0 * 2 );
     CHECK( draw_h1 == draw_h0 * 2 );
 
-    // Presentation re-armed even though no renderer-owned resource changed.
+    // Presentation is re-armed after the buffer rebuild.
+    CHECK( renderer_recovery_test_support::needupdate_armed() );
+}
+
+TEST_CASE( "renderer_coordinator_subcell_resize_keeps_buffer_generation",
+           "[tiles][renderer_recovery]" )
+{
+    software_render_fixture fx;
+    REQUIRE( fx.available() );
+    renderer_recovery_test_support::set_scaling_and_resize_window( 1, 1440, 960 );
+    renderer_coordinator.drain_pending();
+    const uint64_t generation = renderer_coordinator.resource_generation();
+    point before;
+    renderer_recovery_test_support::current_display_buffer_dims( before.x, before.y );
+    renderer_recovery_test_support::set_needupdate( false );
+    renderer_recovery_test_support::override_drawable_pixels( 1441, 961 );
+    renderer_coordinator.drain_pending();
+    CHECK( renderer_coordinator.is_render_allowed() );
+    CHECK( renderer_coordinator.resource_generation() == generation );
+    point after;
+    renderer_recovery_test_support::current_display_buffer_dims( after.x, after.y );
+    CHECK( after == before );
     CHECK( renderer_recovery_test_support::needupdate_armed() );
 }
 
