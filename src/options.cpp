@@ -3453,8 +3453,8 @@ void options_manager::add_options_performance()
 #if defined(TILES)
     add( "RENDER_PREPARATION_WORKERS", "performance",
          to_translation( "Render preparation workers" ),
-         to_translation( "Prepare tile layers and lighting on dedicated workers. "
-                         "0 keeps serial preparation. Requires a restart." ),
+         to_translation( "Prepare tile layers and lighting on dedicated workers.  "
+                         "0 keeps serial preparation.  Requires a restart." ),
          0, 4, 0
        );
 #endif
@@ -3468,16 +3468,16 @@ void options_manager::add_options_performance()
 #endif
     add( "VISION_PREPARATION_WORKERS", "performance",
          to_translation( "Visibility calculation workers" ),
-         to_translation( "Use workers for expensive visibility updates. "
-                         "Small updates and multiplayer stay serial. "
-                         "0 disables workers. Requires a restart." ),
+         to_translation( "Use workers for expensive visibility updates.  "
+                         "Small updates and multiplayer stay serial.  "
+                         "0 disables workers.  Requires a restart." ),
          0, 4, vision_workers_default );
 
     add( "AI_REACHABILITY_WORKERS", "performance",
          to_translation( "Monster reachability preparation workers" ),
-         to_translation( "Prepare expensive monster reachability geometry from captured values. "
+         to_translation( "Prepare expensive monster reachability geometry from captured values.  "
                          "0 keeps the original path; 1 prepares on the main thread; "
-                         "2 to 4 use dedicated workers. Multiplayer stays on the original path. "
+                         "2 to 4 use dedicated workers.  Multiplayer stays on the original path.  "
                          "Requires a restart." ),
          0, 4, 0 );
 

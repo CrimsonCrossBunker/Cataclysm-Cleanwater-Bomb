@@ -1,4 +1,6 @@
+#include <functional>
 #include <string>
+#include <vector>
 
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
@@ -7,7 +9,9 @@
 #include "omdata.h"
 #include "options.h"
 #include "options_helpers.h"
+#include "overmap.h"
 #include "overmapbuffer.h"
+#include "point.h"
 #include "type_id.h"
 
 static const oter_str_id oter_test_forest_very_thick( "test_forest_very_thick" );
