@@ -24,16 +24,19 @@ struct tile_layer_view {
     int rotation;
     lit_level light;
     bool night_vision;
+    // Explicit previews keep their light when the scene lightmap is applied.
+    bool fixed_light;
 
     template<typename Id, typename Subcategory>
     tile_layer_view( Id &&id, TILE_CATEGORY category, Subcategory &&subcategory,
                      const tripoint_bub_ms &position, int subtile, int rotation,
-                     lit_level light, bool night_vision, const tripoint_abs_ms &absolute_position ) :
+                     lit_level light, bool night_vision, const tripoint_abs_ms &absolute_position,
+                     bool fixed_light = false ) :
         id( std::forward<Id>( id ) ), category( category ),
         subcategory( std::forward<Subcategory>( subcategory ) ),
         position( position ), absolute_position( absolute_position ), subtile( subtile ),
         rotation( rotation ), light( light ),
-        night_vision( night_vision ) {}
+        night_vision( night_vision ), fixed_light( fixed_light ) {}
 
     // Reuse owned string capacity for immediate owner capture. Values remain
     // independent of the world; callers retain a copy if they need an older view.
@@ -41,7 +44,7 @@ struct tile_layer_view {
     void assign( Id &&new_id, TILE_CATEGORY new_category, Subcategory &&new_subcategory,
                  const tripoint_bub_ms &new_position, int new_subtile, int new_rotation,
                  lit_level new_light, bool new_night_vision,
-                 const tripoint_abs_ms &new_absolute_position ) {
+                 const tripoint_abs_ms &new_absolute_position, bool new_fixed_light = false ) {
         id = std::forward<Id>( new_id );
         category = new_category;
         subcategory = std::forward<Subcategory>( new_subcategory );
@@ -51,6 +54,7 @@ struct tile_layer_view {
         rotation = new_rotation;
         light = new_light;
         night_vision = new_night_vision;
+        fixed_light = new_fixed_light;
     }
 };
 
