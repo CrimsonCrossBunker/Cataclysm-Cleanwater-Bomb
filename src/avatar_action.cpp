@@ -66,6 +66,7 @@
 #include "ranged.h"
 #include "ret_val.h"
 #include "rng.h"
+#include "sling.h"
 #include "sounds.h"
 #include "translations.h"
 #include "type_id.h"
@@ -1053,6 +1054,11 @@ void avatar_action::fire_wielded_weapon( avatar &you )
     const item_location weapon = you.get_wielded_item();
 
     if( !weapon ) {
+        return;
+    }
+
+    if( is_sling_launcher( *weapon ) ) {
+        aim_sling( you );
         return;
     }
 

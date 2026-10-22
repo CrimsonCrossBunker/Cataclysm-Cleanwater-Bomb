@@ -40,6 +40,7 @@ trajectory mode_fire( avatar &you, aim_activity_actor &activity );
 /** Throwing item */
 trajectory mode_throw( avatar &you, item &relevant, bool blind_throwing );
 
+
 /** Reach attacking */
 trajectory mode_reach( avatar &you, item_location weapon );
 

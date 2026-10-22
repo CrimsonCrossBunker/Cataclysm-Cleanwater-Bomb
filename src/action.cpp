@@ -44,6 +44,7 @@
 #include "point.h"
 #include "popup.h"
 #include "ret_val.h"
+#include "sling.h"
 #include "translations.h"
 #include "type_id.h"
 #include "ui_manager.h"
@@ -932,7 +933,8 @@ action_id handle_action_menu( map &here )
         }
         const item_location weapon = player_character.get_wielded_item();
         // Only prioritize fire weapon options if we're wielding a ranged weapon.
-        if( weapon && ( weapon->is_gun() || weapon->has_flag( flag_REACH_ATTACK ) ) ) {
+        if( weapon && ( weapon->is_gun() || is_sling_launcher( *weapon ) ||
+                        weapon->has_flag( flag_REACH_ATTACK ) ) ) {
             action_weightings[ACTION_FIRE] = 350;
         }
     }

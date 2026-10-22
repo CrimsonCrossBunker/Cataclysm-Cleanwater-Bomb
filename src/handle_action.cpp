@@ -100,6 +100,7 @@
     #include "sdl_gamepad.h"
 #endif
 #include "sleep.h"
+#include "sling.h"
 #include "sounds.h"
 #include "string_formatter.h"
 #include "timed_event.h"
@@ -1989,6 +1990,10 @@ static void fire()
     }
     if( you.has_flag( json_flag_HANDS_CANNOT_USE_FIREARMS ) && weapon && weapon->is_firearm() ) {
         add_msg( m_bad, _( "Your hands aren't suited for using firearms!" ) );
+        return;
+    }
+    if( weapon && is_sling_launcher( *weapon ) ) {
+        avatar_action::fire_wielded_weapon( you );
         return;
     }
     // try firing gun
