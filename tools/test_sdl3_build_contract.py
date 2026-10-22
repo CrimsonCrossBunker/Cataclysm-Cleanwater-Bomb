@@ -6,6 +6,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+import textwrap
 import unittest
 
 
@@ -17,6 +18,30 @@ class SDL3BuildContractTest(unittest.TestCase):
         return subprocess.run(command, cwd=ROOT, text=True,
                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                               timeout=45, **kwargs)
+
+    def test_macos_setup_keeps_host_library_resolution_unchanged(self):
+        action = (ROOT / ".github/actions/setup-sdl3-stack-macos/action.yml").read_text()
+        configure = action.split("- name: Configure SDL3 environment\n", 1)[1]
+        script = textwrap.dedent(configure.split("run: |\n", 1)[1])
+        with tempfile.TemporaryDirectory(prefix="ccb-macos-env-") as directory:
+            prefix = Path(directory) / "SDL3 prefix"
+            env_file = Path(directory) / "github-env"
+            result = self.run_command(
+                ["bash", "-eu", "-c", script],
+                env=dict(os.environ, SDL3_PREFIX=str(prefix),
+                         GITHUB_ENV=str(env_file)),
+            )
+            self.assertEqual(result.returncode, 0, result.stdout)
+            exported = dict(line.split("=", 1)
+                            for line in env_file.read_text().splitlines())
+            self.assertEqual(exported["PKG_CONFIG_PATH"],
+                             f"{prefix}/lib/pkgconfig:/opt/local/lib/pkgconfig")
+            self.assertEqual(exported["DYLIBBUNDLER_SEARCH_PATHS"],
+                             f"{prefix}/lib /opt/local/lib")
+            # Job-wide loader overrides also affect Homebrew git/gh and
+            # checkout cleanup, even though SDL3 binaries have their own rpath.
+            self.assertFalse(any(key.startswith("DYLD_") for key in exported),
+                             exported)
 
     @unittest.skipUnless(shutil.which("cmake"), "CMake is unavailable")
     def test_cmake_rejects_removed_backend_before_toolchain_discovery(self):
