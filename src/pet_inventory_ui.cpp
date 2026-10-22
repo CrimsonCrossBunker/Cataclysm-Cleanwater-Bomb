@@ -495,7 +495,8 @@ void show_equipment( monster &pet )
     avatar &player = get_avatar();
     std::set<pet_slot_id> eligible_slots;
     for( const pet_slot &slot : get_all_pet_slots() ) {
-        if( !slot.mount_only || pet.has_flag( mon_flag_PET_MOUNTABLE ) ) {
+        if( ( !slot.mount_only || pet.has_flag( mon_flag_PET_MOUNTABLE ) ) &&
+            ( slot.bodytypes.empty() || slot.bodytypes.count( pet.type->bodytype ) != 0 ) ) {
             eligible_slots.insert( slot.id );
         }
     }

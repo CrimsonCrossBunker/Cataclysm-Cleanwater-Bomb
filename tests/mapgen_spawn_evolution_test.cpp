@@ -8,6 +8,8 @@
 #include "map_helpers.h"
 #include "map_scale_constants.h"
 #include "monster.h"
+#include "mtype.h"
+#include "point.h"
 #include "rng.h"
 #include "type_id.h"
 
