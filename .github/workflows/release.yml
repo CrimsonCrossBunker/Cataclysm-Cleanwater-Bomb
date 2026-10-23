@@ -184,9 +184,13 @@ jobs:
         persist-credentials: false
 
     - name: install glslang
+      timeout-minutes: 10
+      shell: bash
       run: |
-          sudo apt-get update
-          sudo apt-get install -y glslang-tools
+          apt_options=(-o Acquire::Retries=3 -o Acquire::http::Timeout=30
+                       -o Acquire::https::Timeout=30)
+          sudo apt-get "${apt_options[@]}" update --error-on=any
+          sudo apt-get "${apt_options[@]}" install -y glslang-tools
 
     - name: setup SDL3 (for shadercross link)
       id: sdl
@@ -480,9 +484,13 @@ jobs:
           key: vcpkg-installed-sdl3-${{ hashFiles('msvc-full-features/vcpkg.json', '.github/vcpkg_triplets/x64-windows-static.cmake') }}-f6672d8e480ccdecddfad3fd1b838ba369ffe6cd
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux' && matrix.android == 'none'
+        timeout-minutes: 10
+        shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install libncursesw5-dev libpulse-dev ccache gettext parallel
+          apt_options=(-o Acquire::Retries=3 -o Acquire::http::Timeout=30
+                       -o Acquire::https::Timeout=30)
+          sudo apt-get "${apt_options[@]}" update --error-on=any
+          sudo apt-get "${apt_options[@]}" install -y libncursesw5-dev libpulse-dev ccache gettext parallel
       - name: Setup SDL3 stack (Linux)
         if: runner.os == 'Linux' && matrix.android == 'none' && matrix.tiles == 1
         uses: ./.github/actions/setup-sdl3-stack
@@ -578,9 +586,13 @@ jobs:
           distribution: 'temurin'   
       - name: Setup Build and Dependencies (android)
         if: runner.os == 'Linux' && matrix.android != 'none'
+        timeout-minutes: 10
+        shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install gettext ccache
+          apt_options=(-o Acquire::Retries=3 -o Acquire::http::Timeout=30
+                       -o Acquire::https::Timeout=30)
+          sudo apt-get "${apt_options[@]}" update --error-on=any
+          sudo apt-get "${apt_options[@]}" install -y gettext ccache
       - name: Build CDDA (android)
         if: runner.os == 'Linux' && matrix.android != 'none'
         working-directory: ./android
