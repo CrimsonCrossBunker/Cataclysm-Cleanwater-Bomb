@@ -79,7 +79,7 @@ TEST_CASE( "removed_ammo_pockets_migrate_saved_items_without_debug_errors",
     REQUIRE_FALSE( loaded.has_pocket_type( removed_type ) );
 
     const std::string saved = saved_item_with_legacy_pocket( itype_mask_bunker, removed_type,
-        contained );
+                              contained );
     CHECK( capture_debugmsg_during( [&]() {
         loaded.deserialize( json_loader::from_string( saved ).get_object() );
     } ).empty() );
@@ -128,7 +128,7 @@ TEST_CASE( "removed_integral_battery_loads_into_replacement_magazine", "[item][p
     item loaded( itype_rm13_armor );
     REQUIRE_FALSE( loaded.has_pocket_type( pocket_type::MAGAZINE ) );
     const std::string saved = saved_item_with_legacy_pocket( itype_rm13_armor, pocket_type::MAGAZINE,
-        charge );
+                              charge );
     CHECK( capture_debugmsg_during( [&]() {
         loaded.deserialize( json_loader::from_string( saved ).get_object() );
     } ).empty() );
@@ -168,8 +168,8 @@ TEST_CASE( "existing_filter_pocket_keeps_saved_filter_installed", "[item][pocket
     filter.ammo_set( filter.ammo_default(), 37 );
     item loaded( itype_mask_hsurvivor );
     const std::string saved = saved_item_with_legacy_pocket( itype_mask_hsurvivor,
-        pocket_type::MAGAZINE_WELL,
-        filter );
+                              pocket_type::MAGAZINE_WELL,
+                              filter );
     CHECK( capture_debugmsg_during( [&]() {
         loaded.deserialize( json_loader::from_string( saved ).get_object() );
     } ).empty() );
