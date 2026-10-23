@@ -825,9 +825,62 @@ void item_contents::combine( item_contents &&read_input, const bool convert,
         ++pocket_index;
     }
 
+    const auto migrate_integral_ammo = [this, restack_charges]( item & ammo ) {
+        for( item_pocket &well : contents ) {
+            if( !well.is_type( pocket_type::MAGAZINE_WELL ) ) {
+                continue;
+            }
+            if( !well.empty() ) {
+                // A failed containment check leaves ammo intact for the next well.
+                // NOLINTNEXTLINE(bugprone-use-after-move)
+                if( well.front().get_contents().insert_item( std::move( ammo ), pocket_type::MAGAZINE,
+                        false, false, restack_charges ).success() ) {
+                    return true;
+                }
+                continue;
+            }
+            const itype_id magazine_type = well.magazine_default();
+            if( magazine_type.is_null() ) {
+                continue;
+            }
+            item magazine( magazine_type );
+            magazine.ammo_unset();
+            // Check the loaded magazine fits before moving any saved contents.
+            const ret_val<item *> staged = magazine.get_contents().insert_item( ammo,
+                pocket_type::MAGAZINE );
+            if( !staged.success() || !well.can_contain( magazine ).success() ) {
+                continue;
+            }
+            *staged.value() = std::move( ammo );
+            if( well.insert_item( std::move( magazine ) ).success() ) {
+                return true;
+            }
+            // A failed insertion leaves the staged magazine intact.
+            ammo = std::move( *staged.value() );
+        }
+        return false;
+    };
+
     for( item_pocket *pocket : mismatched_pockets ) {
         const pocket_type mismatched_type = convert ? pocket->get_pocket_data()->type :
                                             pocket->saved_type();
+        // Item definitions can remove integral magazines or magazine wells between
+        // saves (for example, gas masks converted to SCBA).  Preserve their old
+        // contents for overflow instead of treating the missing slot as an error.
+        if( !convert && ( mismatched_type == pocket_type::MAGAZINE ||
+                          mismatched_type == pocket_type::MAGAZINE_WELL ) &&
+            !has_pocket_type( mismatched_type ) ) {
+            for( item &it : pocket->edit_contents() ) {
+                // Integral battery charge cannot be dropped as an item.  If the
+                // item now uses detachable magazines, retain it in a fitting one.
+                if( mismatched_type == pocket_type::MAGAZINE && migrate_integral_ammo( it ) ) {
+                    continue;
+                }
+                uninserted_items.push_back( std::move( it ) );
+            }
+            pocket->clear_items();
+            continue;
+        }
         for( item &it : pocket->edit_contents() ) {
             const ret_val<item *> inserted = insert_item( std::move( it ), mismatched_type,
                 ignore_contents, false, restack_charges );
