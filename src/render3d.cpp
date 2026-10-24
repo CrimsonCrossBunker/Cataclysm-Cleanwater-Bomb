@@ -123,6 +123,9 @@ constexpr float VEH_PROX_HIDE_DIST = 5.0f;
 // 12 of 32 rows, measured on the UC art) and the gray cowl / hood edge
 // (bottom 20) — the band stands vertical, the cowl lies flat (TP-22)
 constexpr float VEH_WSH_GLASS_FRAC = 12.0f / 32.0f;
+// wing mirror flat decal height (TP-26): door beltline, where the stalk
+// meets the panel
+constexpr float VEH_MIRROR_Z = 0.80f;
 
 // the whole rendered z range must be inside map memory's prepared region; the
 // prepare call below anchors that region's z window at 0 (see draw_terrain_window)
@@ -2830,6 +2833,32 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                 return false;
                             };
                             const bool roof_covered = row_has_roof( mount );
+                            // row width scan (TP-25): columns in this mount
+                            // row holding any real part. The side-line
+                            // tightening below only applies to rows at least
+                            // 3 tiles wide — a 1-wide bike has no "inward"
+                            // to tighten into, and a 2-wide row's two cells
+                            // are both flank cells (tightening both would
+                            // hollow the whole row)
+                            const auto row_width = [&]( const point_rel_ms & m ) -> int {
+                                int w = 0;
+                                for( int row_dy = -10; row_dy <= 10; ++row_dy ) {
+                                    if( !veh.parts_at_relative( m + point_rel_ms( 0, row_dy ),
+                                                                true, false ).empty() ) {
+                                        ++w;
+                                    }
+                                }
+                                return w;
+                            };
+                            const bool wide_enough = row_width( mount ) >= 3;
+                            // wing mirrors (TP-26): VISION+PROTRUSION is
+                            // wing_mirror alone in the whole parts data.
+                            // Protrusions mounted OUTSIDE the hull — no voxel
+                            // box, the sprite lies flat facing up against the
+                            // side panel instead
+                            const bool is_mirror = vd.id.is_valid() &&
+                                                   vd.id->has_flag( "VISION" ) &&
+                                                   vd.id->has_flag( "PROTRUSION" );
                             // this tile's body box top (TP-18 height tiers)
                             const float box_top = roof_covered ? VEH_ROOF_Z
                                                   : VEH_BODY_BASE +
@@ -2992,14 +3021,27 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
 
                             // skin: the flat 2D composite on the ground — bg
                             // first (the broken subtile carries the oriented
-                            // base sprites there), fg second, 2D's order
+                            // base sprites there), fg second, 2D's order.
+                            // TP-27: the skin is the car's NEAR-field
+                            // appearance only — it draws exactly when the
+                            // shell is hidden (near_hide, TP-20); past
+                            // VEH_PROX_HIDE_DIST the 3D shell alone carries
+                            // the car and the 2D floor sprites hide. vdrew
+                            // (the gate every block below shares) only means
+                            // "this tile has drawable art" and is decoupled
+                            // from actually pushing the skin — otherwise the
+                            // whole car would vanish at distance
                             bool vdrew = false; // 2D's ret: highlight/carried furniture gate
-                            if( vl.bg_tex && count < MAX_DRAW_INSTANCES ) {
-                                push_skin( vl.bg, 0 );
+                            if( vl.bg_tex ) {
+                                if( near_hide && count < MAX_DRAW_INSTANCES ) {
+                                    push_skin( vl.bg, 0 );
+                                }
                                 vdrew = true;
                             }
-                            if( vl.fg_tex && count < MAX_DRAW_INSTANCES ) {
-                                push_skin( vl.fg, vl.fg_rot4 );
+                            if( vl.fg_tex ) {
+                                if( near_hide && count < MAX_DRAW_INSTANCES ) {
+                                    push_skin( vl.fg, vl.fg_rot4 );
+                                }
                                 vdrew = true;
                             }
                             if( !vl.fg_tex && !vl.bg_tex ) {
@@ -3015,12 +3057,14 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                                               90_degrees * vrota, vd.is_broken );
                                     sprite_info vspr;
                                     if( glyph_sprite( vsym, vspr ) ) {
-                                        const ImVec4 vc = vpid->color;
-                                        push_decal( vspr.atlas, static_cast<float>( dx ),
-                                                    static_cast<float>( dy ), wz + VEH_DECAL_Z,
-                                                    1.0f, 1.0f, vspr,
-                                                    vc.x * tone.shade, vc.y * tone.shade,
-                                                    vc.z * tone.shade, 0 );
+                                        if( near_hide && count < MAX_DRAW_INSTANCES ) {
+                                            const ImVec4 vc = vpid->color;
+                                            push_decal( vspr.atlas, static_cast<float>( dx ),
+                                                        static_cast<float>( dy ), wz + VEH_DECAL_Z,
+                                                        1.0f, 1.0f, vspr,
+                                                        vc.x * tone.shade, vc.y * tone.shade,
+                                                        vc.z * tone.shade, 0 );
+                                        }
                                         vdrew = true;
                                     }
                                 }
@@ -3039,6 +3083,18 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                     }
                                     const bool is_left = dm.y < 0;
                                     const point d = rot_mount( dm, vrota );
+                                    // TP-25: on rows at least 3 tiles wide the
+                                    // side line tightens one tile inward — the
+                                    // panel stands on the flank tile's INNER
+                                    // edge against the cabin box's outer face
+                                    // (passing -d moves the plane; proud -1
+                                    // keeps the 5mm standoff pointing OUT of
+                                    // that face) — closing the blank strip of
+                                    // flank-tile box tops between the voxel
+                                    // body and the panels. Narrow rows keep
+                                    // the outer edge (nothing to tighten into)
+                                    const point pd = wide_enough ? point( -d.x, -d.y ) : d;
+                                    const float pproud = wide_enough ? -1.0f : 1.0f;
                                     const float sgn = d.x != 0
                                                       ? ( front_dir.y > 0 ? 1.0f : -1.0f )
                                                       : ( front_dir.x > 0 ? 1.0f : -1.0f );
@@ -3049,16 +3105,27 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                                              is_left ? 3 : 1, false, pl,
                                                              vd.variant.id );
                                     if( pl.bg_tex ) {
-                                        push_panel( pl.bg, d, swap_u, wz + VEH_PANEL_BASE_Z,
-                                                    pl.bg.px_h / 32.0f * VEH_PANEL_ZSCALE, true );
+                                        push_panel( pl.bg, pd, swap_u, wz + VEH_PANEL_BASE_Z,
+                                                    pl.bg.px_h / 32.0f * VEH_PANEL_ZSCALE, true,
+                                                    pproud );
                                     }
                                     if( pl.fg_tex ) {
-                                        push_panel( pl.fg, d, swap_u, wz + VEH_PANEL_BASE_Z,
-                                                    pl.fg.px_h / 32.0f * VEH_PANEL_ZSCALE, true );
+                                        push_panel( pl.fg, pd, swap_u, wz + VEH_PANEL_BASE_Z,
+                                                    pl.fg.px_h / 32.0f * VEH_PANEL_ZSCALE, true,
+                                                    pproud );
                                     }
                                     got_side_panel = true;
                                 }
                             }
+                            // TP-25: a tightened flank tile (panel moved to
+                            // its inner edge) gets NO voxel box — the box
+                            // would bury the moved panel; the strip reads as
+                            // the under-car gap instead (ground skin near,
+                            // terrain past the proximity radius). Corner tiles
+                            // tighten the same way; their hood/rear art is
+                            // not drawn at all (TP-28 — stacking it on the
+                            // middle column doubled that column's own art)
+                            const bool flank_tightened = got_side_panel && wide_enough;
                             // the front face (TP-13, relaid flat in TP-19): the
                             // hood cover no longer stands at the front edge —
                             // it lies ON TOP of the hood row's body box,
@@ -3077,7 +3144,13 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             const point front_axis = front_dir.x != 0 ? point( 0, 1 )
                                                                      : point( 1, 0 );
                             const bool front_swap = front_axis != left_dir;
-                            if( vdrew && has_elevation && !near_hide &&
+                            // TP-28: a tightened corner tile draws NO hood
+                            // art — its decal shifted onto the middle column
+                            // (TP-25) doubled that column's own cover even
+                            // when cropped to the light strip, so the corner
+                            // cover art is simply omitted (user decision);
+                            // the cover's width is the middle columns' own
+                            if( vdrew && has_elevation && !near_hide && !flank_tightened &&
                                 exterior( point( 1, 0 ) ) ) {
                                 // hood cover: front-exterior tile, laid flat on
                                 // the body box top
@@ -3229,8 +3302,14 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             // facing away from the 2D camera) on the rear edge
                             // plane, at full side-panel height (tailgates and
                             // rear boards reach the roof line). Rear corner tiles
-                            // also carry a side panel — the two form the corner
-                            if( vdrew && has_elevation && !near_hide &&
+                            // also carry a side panel — the two form the corner.
+                            // TP-28: a TIGHTENED rear corner tile draws no
+                            // fascia at all — shifted onto the middle column
+                            // (TP-25) it doubled that column's own panel even
+                            // when cropped to the light strip, so the corner
+                            // art is simply omitted (user decision); the rear
+                            // face's width is the middle columns' own
+                            if( vdrew && has_elevation && !near_hide && !flank_tightened &&
                                 exterior( point( -1, 0 ) ) ) {
                                 sprite_lookup_3d rl;
                                 lookup_sprite_layers_3d( tiles, "vp_" + vd.id.str(),
@@ -3268,7 +3347,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                                    exterior( point( -1, 0 ) );
                             if( vdrew && !near_hide && !roof_covered &&
                                 !got_side_panel && !is_windshield &&
-                                !hood_tile && !rear_tile ) {
+                                !hood_tile && !rear_tile && !is_mirror ) {
                                 if( vl.bg_tex ) {
                                     push_decal( vl.bg.atlas, static_cast<float>( dx ),
                                                 static_cast<float>( dy ),
@@ -3281,6 +3360,41 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                                 static_cast<float>( dy ),
                                                 wz + box_top + 0.005f,
                                                 1.0f, 1.0f, crop_spill( vl.fg, vl.offset ),
+                                                tone.shade, tone.shade, tone.shade,
+                                                vl.fg_rot4 );
+                                }
+                            }
+                            // wing mirror (TP-26): a protrusion mounted
+                            // OUTSIDE the hull. No voxel box (excluded
+                            // below); the sprite lies flat FACING UP at
+                            // beltline height on the body tile just inboard
+                            // (the tile whose side panel the mirror is glued
+                            // to): its inner edge touches the panel, the art
+                            // reaches outboard like the real mirror on its
+                            // stalk. Falls back to the mirror's own tile if
+                            // no inboard body tile exists
+                            if( is_mirror && vdrew && !near_hide ) {
+                                point minv( 0, 0 );
+                                for( const point dm : { point( 0, -1 ), point( 0, 1 ),
+                                                        point( -1, 0 ), point( 1, 0 ) } ) {
+                                    if( !veh.parts_at_relative( mount + point_rel_ms( dm.x, dm.y ),
+                                                                true, false ).empty() ) {
+                                        minv = rot_mount( dm, vrota );
+                                        break;
+                                    }
+                                }
+                                const float mdx = static_cast<float>( dx + minv.x );
+                                const float mdy = static_cast<float>( dy + minv.y );
+                                if( vl.bg_tex && count < MAX_DRAW_INSTANCES ) {
+                                    push_decal( vl.bg.atlas, mdx, mdy,
+                                                wz + VEH_MIRROR_Z + 0.005f,
+                                                1.0f, 1.0f, vl.bg,
+                                                tone.shade, tone.shade, tone.shade, 0 );
+                                }
+                                if( vl.fg_tex && count < MAX_DRAW_INSTANCES ) {
+                                    push_decal( vl.fg.atlas, mdx, mdy,
+                                                wz + VEH_MIRROR_Z + 0.005f,
+                                                1.0f, 1.0f, vl.fg,
                                                 tone.shade, tone.shade, tone.shade,
                                                 vl.fg_rot4 );
                                 }
@@ -3307,8 +3421,14 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             // camera->player soft mask list: the body carves
                             // open around a passenger like a building roof.
                             // Near the player the box hides with the rest of
-                            // the shell (near_hide above).
-                            if( !near_hide && count < MAX_DRAW_INSTANCES ) {
+                            // the shell (near_hide above). Two tiles never
+                            // get a box: a tightened flank tile (TP-25 — the
+                            // panel moved to its inner edge, a box here would
+                            // bury it; the gap reads as the under-car space)
+                            // and a wing mirror tile (TP-26 — a protrusion on
+                            // a stalk, its flat art is drawn above instead).
+                            if( !near_hide && !flank_tightened && !is_mirror &&
+                                count < MAX_DRAW_INSTANCES ) {
                                 sprite_info rspr; // untextured -> white fallback x color
                                 std::vector<float> &v = bucket_for( MODE_BOX, nullptr );
                                 push_instance( v, static_cast<float>( dx ),
@@ -3329,14 +3449,27 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             // into a floating fragment per tile — the police
                             // light bar's red/blue halves mount on adjacent
                             // tiles and must touch like 2D, slight spill offset
-                            // included). The ground skin above stays too, so a
-                            // torn-open roof still shows something on the floor
+                            // included). Near the player the ground skin also
+                            // stays (TP-27), so a torn-open roof still shows
+                            // something on the floor there.
+                            // TP-29: the sheet spill points world NORTH — for an
+                            // E/W-facing car that's LATERAL, and the E/W frames
+                            // draw the equipment standing up INTO the spill rows
+                            // (the light bar's art reaches half a tile out).
+                            // With the flank boxes gone (TP-25) that half tile
+                            // hangs in the air off the tightened roof edge.
+                            // Drop the spill for E/W-facing cars: the quad top
+                            // starts at the tile's north edge and the art lands
+                            // centered on the tile. N/S frames keep their art
+                            // inside the tile already, so they keep the 2D
+                            // footprint unchanged
                             static const vpart_location_id on_roof_loc( "on_roof" );
                             if( roof_covered && vdrew && !near_hide &&
                                 vd.id->location == on_roof_loc ) {
+                                const float eq_oy = ( vrota & 1 ) ? 0.0f : oy;
                                 if( vl.bg_tex && count < MAX_DRAW_INSTANCES ) {
                                     push_decal( vl.bg.atlas, static_cast<float>( dx ) + ox,
-                                                static_cast<float>( dy ) + oy,
+                                                static_cast<float>( dy ) + eq_oy,
                                                 wz + VEH_ROOF_Z + 0.005f,
                                                 vl.bg.px_w / 32.0f, vl.bg.px_h / 32.0f,
                                                 vl.bg,
@@ -3344,7 +3477,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                 }
                                 if( vl.fg_tex && count < MAX_DRAW_INSTANCES ) {
                                     push_decal( vl.fg.atlas, static_cast<float>( dx ) + ox,
-                                                static_cast<float>( dy ) + oy,
+                                                static_cast<float>( dy ) + eq_oy,
                                                 wz + VEH_ROOF_Z + 0.005f,
                                                 vl.fg.px_w / 32.0f, vl.fg.px_h / 32.0f,
                                                 vl.fg,
