@@ -45,12 +45,12 @@ struct gpu_fixture {
     }
 
     std::array<int, 3> draw( cata_shader::variant_pass &pass,
-                             const cata_shader::variant_kind variant ) {
+                             const cata_shader::variant_kind variant ) const {
         REQUIRE( pass.flush() );
         REQUIRE( SDL_SetRenderTarget( renderer.get(), target.get() ) );
         REQUIRE( SDL_SetRenderDrawColor( renderer.get(), 0, 0, 0, 255 ) );
         REQUIRE( SDL_RenderClear( renderer.get() ) );
-        const auto result = pass.try_begin( variant );
+        const cata_shader::variant_pass::begin_result result = pass.try_begin( variant );
         CHECK( result == cata_shader::variant_pass::begin_result::bound );
         // Consecutive sprites must retain their shader, as they do in a batch.
         CHECK( pass.try_begin( variant ) == result );
