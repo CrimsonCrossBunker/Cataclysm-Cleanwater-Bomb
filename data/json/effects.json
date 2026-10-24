@@ -5923,12 +5923,7 @@
     "rating": "bad",
     "max_duration": 120,
     "immune_flags": [ "INHALED_TOXIN_IMMUNE" ],
-    "base_mods": {
-      "per_mod": [ -1 ],
-      "cough_chance": [ 3 ],
-      "vomit_chance": [ 15 ],
-      "vomit_tick": [ 10 ]
-    }
+    "base_mods": { "per_mod": [ -1 ], "cough_chance": [ 3 ], "vomit_chance": [ 15 ], "vomit_tick": [ 10 ] }
   },
   {
     "type": "effect_type",
