@@ -3120,10 +3120,13 @@ static std::optional<texture_draw_data> make_texture_draw_data_3d( const texture
 
 bool cata_tiles::resolve_sprite_layers_3d( const std::string &id, TILE_CATEGORY category,
         const tripoint_bub_ms &p, int subtile, int rota, bool force_rota,
-        sprite_layers_3d &out )
+        sprite_layers_3d &out, const std::string &variant )
 {
     out = sprite_layers_3d{};
-    std::optional<tile_lookup_res> res = find_tile_looks_like( id, category, "" );
+    // the variant joins the FIRST lookup (vehicle parts: vp_frame_wood ->
+    // vp_frame, progressive tail-stripping inside find_tile_looks_like); the
+    // multitile subtile re-resolution below drops it, as 2D does
+    std::optional<tile_lookup_res> res = find_tile_looks_like( id, category, variant );
     if( !res ) {
         return false;
     }

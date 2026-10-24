@@ -784,12 +784,16 @@ class cata_tiles
         // 3D-only: resolves the fg/bg sprites with exactly the selection logic
         // 2D's draw_from_id_string_internal + draw_sprite_at use for a tile:
         // looks_like/season resolution, multitile subtile re-resolution on the
-        // RESOLVED id, the `rotates` gate, the shared variant seed, and the
-        // single-sprite rotation vs multi-sprite variant-index rule. The 2D
-        // draw path never calls this, so 2D rendering is unaffected.
+        // RESOLVED id (variant dropped there, as 2D does), the `rotates` gate,
+        // the shared variant seed, and the single-sprite rotation vs
+        // multi-sprite variant-index rule. variant is the draw-time variant
+        // (vehicle part variants, e.g. "wood" -> vp_frame_wood with the
+        // progressive tail-stripping find_tile_looks_like does). The 2D draw
+        // path never calls this, so 2D rendering is unaffected.
         bool resolve_sprite_layers_3d( const std::string &id, TILE_CATEGORY category,
                                        const tripoint_bub_ms &p, int subtile, int rota,
-                                       bool force_rota, sprite_layers_3d &out );
+                                       bool force_rota, sprite_layers_3d &out,
+                                       const std::string &variant = "" );
 
         // 3D-only: the paper-doll overlay lookup 2D's draw_entity_with_overlays
         // performs through find_overlay_looks_like (gender prefix, `_var_`

@@ -10,6 +10,7 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <map>
 #include <string>
 #include <string_view>
@@ -51,6 +52,9 @@
 #include "shadowcasting.h"
 #include "smooth_lighting.h"
 #include "submap.h"
+#include "units_utility.h"
+#include "vehicle.h"
+#include "veh_type.h"
 #include "weather.h"
 #include "weather_type.h"
 
@@ -96,6 +100,29 @@ constexpr float FIELD_DECAL_Z = 0.001f;
 constexpr float FIELD_DECAL_STAGGER = 0.0003f;
 constexpr float FIELD_RISER_HEIGHT = 1.4f;
 constexpr float FIELD_RISER_OFFSET = 0.008f;
+// vehicle parts draw as flat ground decals, above the field decals (2D draws
+// vparts after fields/items); they use MODE_FLATQUAD_DECAL (no depth write) so
+// co-tile and overlapping decals order by painter's algorithm, never z-fight.
+// The one exception to flatness: sprites carrying elevation art (a northward
+// spill) also stand upright as a side panel on the vehicle's LEFT flank
+// (TP-12 reduced scope — everything else stays flat on the ground).
+constexpr float VEH_DECAL_Z = 0.004f;
+constexpr float VEH_PANEL_BASE_Z = 0.02f;   // side panel bottom edge
+constexpr float VEH_PANEL_ZSCALE = 0.9f;    // panel height per tile of sprite height
+constexpr float VEH_WSH_BASE_Z = 0.55f;     // windshield panel bottom edge (roofless fallback)
+constexpr float VEH_WSH_H = 0.8f;           // windshield panel height (roofless fallback)
+constexpr float VEH_ROOF_Z = 1.35f;         // roof cover: level with the side panel tops
+constexpr float VEH_BODY_BASE = 0.35f;      // unroofed tile body height (chassis deck)
+constexpr float VEH_BODY_PER_SPILL = 0.9f;  // body rise per tile of sprite spill
+// near a vehicle (any of its part tiles on the player's z closer than this)
+// the WHOLE vehicle's shell (panels, voxel boxes, roof equipment) hides,
+// leaving only the flat 2D decals — working on the car and seeing into cargo
+// stays unobstructed, and a long car never loses just its near half
+constexpr float VEH_PROX_HIDE_DIST = 5.0f;
+// the windshield sprite's footprint splits into the black glass band (top
+// 12 of 32 rows, measured on the UC art) and the gray cowl / hood edge
+// (bottom 20) — the band stands vertical, the cowl lies flat (TP-22)
+constexpr float VEH_WSH_GLASS_FRAC = 12.0f / 32.0f;
 
 // the whole rendered z range must be inside map memory's prepared region; the
 // prepare call below anchors that region's z window at 0 (see draw_terrain_window)
@@ -109,7 +136,17 @@ enum draw_mode : int {
     MODE_BILLBOARD = 2, // yaw-only camera-facing quad (creatures, items)
     MODE_BILLBOARD_SNAP = 3, // billboard snapped to the nearest cardinal axis (furniture)
     MODE_LINEQUAD = 4,  // flat vertical quad on a fixed axis (fences); pad = run direction
-    MODE_FLATQUAD = 5   // flat horizontal quad (floor overlays, cutout floor tiles)
+    MODE_FLATQUAD = 5,   // flat horizontal quad (floor overlays, cutout floor tiles)
+    // flat horizontal decal drawn with depth WRITE off (vehicle parts): coplanar
+    // decals never z-fight — painter's order (gather order = 2D's row order)
+    // decides overlaps, exactly like 2D's back-to-front blits. The depth TEST
+    // stays on so walls etc. still occlude decals. Shader-side this is mode 5.
+    MODE_FLATQUAD_DECAL = 6,
+    // axis-aligned vertical quad (fence geometry) drawn with depth WRITE off
+    // (vehicle side panels): corner sprites span two tiles, so neighbouring
+    // panels share a plane and must resolve by painter's order. Shader-side
+    // this is mode 4.
+    MODE_LINEQUAD_DECAL = 7
 };
 
 struct mat4 {
@@ -359,6 +396,9 @@ SDL_GPUShader *load_shader( SDL_GPUDevice *device, const std::string &basename,
 struct context {
     SDL_GPUDevice *device = nullptr; // owned by the SDL_Renderer
     SDL_GPUGraphicsPipeline *pipeline = nullptr;
+    // same pipeline with depth write OFF for MODE_FLATQUAD_DECAL (vehicle
+    // decals): coplanar decals resolve by painter's order instead of z-fighting
+    SDL_GPUGraphicsPipeline *pipeline_decal = nullptr;
     SDL_GPUGraphicsPipeline *sky_pipeline = nullptr; // fullscreen sky pass (no VBs, no depth)
     SDL_GPUBuffer *cube_vb = nullptr;
     SDL_GPUBuffer *xquad_vb = nullptr;
@@ -500,6 +540,10 @@ void context::teardown()
     if( pipeline ) {
         SDL_ReleaseGPUGraphicsPipeline( device, pipeline );
         pipeline = nullptr;
+    }
+    if( pipeline_decal ) {
+        SDL_ReleaseGPUGraphicsPipeline( device, pipeline_decal );
+        pipeline_decal = nullptr;
     }
     if( sky_pipeline ) {
         SDL_ReleaseGPUGraphicsPipeline( device, sky_pipeline );
@@ -735,9 +779,15 @@ bool probe( SDL_Renderer *renderer )
     pi.target_info.has_depth_stencil_target = true;
 
     g_ctx.pipeline = SDL_CreateGPUGraphicsPipeline( device, &pi );
+    // the decal pipeline shares shaders/vertex layout and differs only in
+    // depth write: decals never write depth, so coplanar decals (a vehicle's
+    // oversized part sprites spilling onto the neighbour tile) resolve by
+    // draw order — painter's algorithm, exactly what 2D does
+    pi.depth_stencil_state.enable_depth_write = false;
+    g_ctx.pipeline_decal = SDL_CreateGPUGraphicsPipeline( device, &pi );
     SDL_ReleaseGPUShader( device, vs );
     SDL_ReleaseGPUShader( device, fs );
-    if( !g_ctx.pipeline ) {
+    if( !g_ctx.pipeline || !g_ctx.pipeline_decal ) {
         DebugLog( D_ERROR, DC_ALL ) << "render3d: pipeline creation failed: " << SDL_GetError();
         write_status( "unavailable: pipeline creation failed: " + std::string( SDL_GetError() ) );
         g_ctx.teardown();
@@ -1229,14 +1279,15 @@ struct sprite_lookup_3d {
 bool lookup_sprite_layers_3d( cata_tiles *tiles, const std::string &id,
                               const TILE_CATEGORY cat, const tripoint_bub_ms &p,
                               const int subtile, const int rota, const bool force_rota,
-                              sprite_lookup_3d &out )
+                              sprite_lookup_3d &out, const std::string &variant = "" )
 {
     out = sprite_lookup_3d{};
     if( !tiles ) {
         return false;
     }
     sprite_layers_3d layers;
-    tiles->resolve_sprite_layers_3d( id, cat, p, subtile, rota, force_rota, layers );
+    tiles->resolve_sprite_layers_3d( id, cat, p, subtile, rota, force_rota, layers,
+                                     variant );
     out.multitile = layers.multitile;
     out.fg_count = layers.fg_count;
     out.fg_index = layers.fg_index;
@@ -1276,6 +1327,22 @@ struct instance_bucket {
     int mode = MODE_BOX;
     SDL_Texture *atlas = nullptr; // null -> untextured (hash color)
     std::vector<float> data;      // INSTANCE_STRIDE/4 floats per instance
+};
+
+// one decal instance in a single painter-ordered stream (push order = the
+// gather's row order = 2D's north->south, west->east row order). Unlike the
+// buckets, the stream keeps cross-atlas ordering, so overlapping vehicle
+// sprites from different tilesheets resolve exactly like 2D's back-to-front
+// blits; draw_terrain_window splits it into one segment per run of
+// consecutive same-(mode, atlas) instances
+struct decal_instance {
+    int mode = MODE_FLATQUAD_DECAL;
+    SDL_Texture *atlas = nullptr;
+    float f[INSTANCE_STRIDE / sizeof( float )] = {};
+    // vehicle side panels only: painter key for the camera-relative far->near
+    // sort of the panel sub-stream (dot of the center-relative position with
+    // the camera's ground forward); unused (0) for the skin decal stream
+    float sort_key = 0.0f;
 };
 
 void push_instance( std::vector<float> &out, const float dx, const float dy,
@@ -1372,10 +1439,14 @@ bool nv_tint_active()
 }
 
 int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
-                      std::vector<instance_bucket> &buckets )
+                      std::vector<instance_bucket> &buckets,
+                      std::vector<decal_instance> &decals,
+                      std::vector<decal_instance> &panels )
 {
     map &here = get_map();
     buckets.clear();
+    decals.clear();
+    panels.clear();
     std::map<std::pair<int, SDL_Texture *>, size_t> bucket_index;
     auto bucket_for = [&]( const int mode, SDL_Texture * atlas ) -> std::vector<float> & {
         const auto key = std::make_pair( mode, atlas );
@@ -1389,6 +1460,10 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     };
     // total instances pushed (all kinds), capped at the buffer capacity
     int count = 0;
+    // per-vehicle whole-shell hide verdict (TP-20): approaching ANY tile of a
+    // vehicle hides the whole vehicle's shell; many tiles of the same vehicle
+    // re-ask the same question every frame, so cache it per gather
+    std::unordered_map<const vehicle *, bool> veh_shell_hidden;
     // camera forward on the ground plane, to stack the item highlight behind the item
     const float fwd_x = std::cos( g_yaw );
     const float fwd_y = std::sin( g_yaw );
@@ -2662,6 +2737,655 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                         ++count;
                     }
                 }
+
+                // vehicles (TP-11 + TP-12 reduced): the display part is exactly
+                // 2D's pick (get_display_of_tile: z_order stacking, hidden/fake
+                // parts and the passenger roof rule all live inside it) and the
+                // sprite resolves with 2D's rules (variant chop, open_/broken
+                // subtile, rotation frames / single-sprite quarter turns). The
+                // whole sprite — footprint and spill from its pixel size and
+                // sheet offset, exactly like 2D draws it — lies flat on the
+                // ground as a decal. The single 3D addition: sprites carrying
+                // elevation art (a northward spill: UC's 32x48 doors/seats spill
+                // half a tile, 32x64 a full one, 64x64 corners one tile north +
+                // half west) also stand upright as a side panel on the vehicle's
+                // LEFT exterior flank — the sprite IS the side elevation (wheel
+                // arches, windows baked in). Everything goes into the decal
+                // stream (no depth write, painter order = 2D's row order), so
+                // coplanar overlaps resolve exactly like 2D and never z-fight.
+                if( !roof_unseen && count < MAX_DRAW_INSTANCES ) {
+                    const optional_vpart_position ovp = here.veh_at( p );
+                    if( ovp ) {
+                        const vehicle &veh = ovp->vehicle();
+                        const point_rel_ms mount = ovp->mount_pos();
+                        // the identical call 2D makes: part stacking, hidden
+                        // parts, fake parts and the passenger roof rule all
+                        // live inside it
+                        const vpart_display vd = veh.get_display_of_tile( mount );
+                        if( !vd.id.is_null() ) {
+                            const int vsub = vd.is_open ? open_ : vd.is_broken ? broken : 0;
+                            const int vrota = angle_to_dir4( veh.face.dir() - 270_degrees );
+                            sprite_lookup_3d vl;
+                            lookup_sprite_layers_3d( tiles, "vp_" + vd.id.str(),
+                                                     TILE_CATEGORY::VEHICLE_PART, p, vsub, vrota,
+                                                     false, vl, vd.variant.id );
+                            // the decal's footprint/offset come from the sprite's
+                            // pixel size and sheet offset (32 px = one tile), so
+                            // oversized part sprites spill over their tile exactly
+                            // like 2D draws them
+                            const float ox = vl.offset.x / 32.0f;
+                            const float oy = vl.offset.y / 32.0f;
+                            // the sprite carries side-elevation art iff it
+                            // spills north of its tile
+                            const bool has_elevation = vl.offset.y < 0;
+                            // body height signal (TP-18): the northward spill
+                            // in tiles — 32x32 frame/bed 0, 32x48 door/hood 0.5,
+                            // 32x64 tall body 1.0
+                            const float spill = std::max( 0.0f,
+                                -static_cast<float>( vl.offset.y ) ) / 32.0f;
+                            // near the player the WHOLE vehicle's shell
+                            // (panels, voxel body, roof gear) hides and only
+                            // the flat 2D skin stays, so working on the car /
+                            // seeing into cargo is unobstructed (TP-20: the
+                            // verdict is per-vehicle — closest part tile to the
+                            // player — not per-tile, so a long car never loses
+                            // just its front half)
+                            bool near_hide;
+                            const auto hidden_it = veh_shell_hidden.find( &veh );
+                            if( hidden_it != veh_shell_hidden.end() ) {
+                                near_hide = hidden_it->second;
+                            } else {
+                                near_hide = false;
+                                for( int pi = 0;
+                                     pi < veh.part_count() && !near_hide; ++pi ) {
+                                    if( veh.part( pi ).removed ) {
+                                        continue;
+                                    }
+                                    const tripoint_bub_ms pp = veh.bub_part_pos( here, pi );
+                                    if( pp.z() == upos.z() &&
+                                        std::hypot( static_cast<float>( pp.x() - upos.x() ),
+                                                    static_cast<float>( pp.y() - upos.y() ) )
+                                        < VEH_PROX_HIDE_DIST ) {
+                                        near_hide = true;
+                                    }
+                                }
+                                veh_shell_hidden[&veh] = near_hide;
+                            }
+                            // row roof scan (TP-17 row coverage rule, hoisted so
+                            // the panels can use it too): any ROOF part anywhere
+                            // in the mount row covers every vehicle tile in the
+                            // row; removed parts don't count
+                            const auto row_has_roof = [&]( const point_rel_ms & m ) -> bool {
+                                for( int row_dy = -10; row_dy <= 10; ++row_dy )
+                                {
+                                    for( const int rpi :
+                                         veh.parts_at_relative( m + point_rel_ms( 0, row_dy ),
+                                                                true, false ) ) {
+                                        const vehicle_part &rp = veh.part( rpi );
+                                        if( !rp.removed && rp.info().has_flag( VPFLAG_ROOF ) ) {
+                                            return true;
+                                        }
+                                    }
+                                }
+                                return false;
+                            };
+                            const bool roof_covered = row_has_roof( mount );
+                            // this tile's body box top (TP-18 height tiers)
+                            const float box_top = roof_covered ? VEH_ROOF_Z
+                                                  : VEH_BODY_BASE +
+                                                    VEH_BODY_PER_SPILL * spill;
+                            // mount-space delta -> map delta for the car's
+                            // facing. vrota is 2D's frame index,
+                            // angle_to_dir4(face.dir()-270°) — the dir4 labels
+                            // name the ANGLE, not the facing; unrolled the frame
+                            // index maps to facing N,E,S,W as 0,1,2,3 (a car
+                            // facing east has vrota 1)
+                            const auto rot_mount = []( const point & dm, const int k ) -> point {
+                                switch( k & 3 ) {
+                                    case 0: return point( dm.y, -dm.x );   // facing N
+                                    case 1: return dm;                     // facing E
+                                    case 2: return point( -dm.y, dm.x );   // facing S
+                                    default: return point( -dm.x, -dm.y ); // facing W
+                                }
+                            };
+                            const point front_dir = rot_mount( point( 1, 0 ), vrota );
+                            const point rear_dir = rot_mount( point( -1, 0 ), vrota );
+                            // a flank is exterior when no real part sits on that
+                            // side (fake parts project out of turned wheels and
+                            // must not punch holes in the hull)
+                            const auto exterior = [&]( const point & dm ) -> bool {
+                                return veh.parts_at_relative( mount + point_rel_ms( dm.x, dm.y ),
+                                                              true, false ).empty();
+                            };
+                            const auto push_decal = [&]( SDL_Texture * datlas, const float ddx,
+                                                         const float ddy, const float dz,
+                                                         const float sx, const float sy,
+                                                         const sprite_info & dspr, const float dr, const float dg,
+                                                         const float db, const int drot4 ) {
+                                decal_instance di;
+                                di.atlas = datlas;
+                                std::vector<float> tmp;
+                                tmp.reserve( INSTANCE_STRIDE / sizeof( float ) );
+                                push_instance( tmp, ddx, ddy, dz, sx, sy, 1.0f, dspr, dr, dg, db,
+                                               false, drot4, false, -1.0f, ghost, tone.sat );
+                                std::copy_n( tmp.begin(), INSTANCE_STRIDE / sizeof( float ),
+                                             di.f );
+                                decals.push_back( di );
+                                ++count;
+                            };
+                            const auto push_skin = [&]( const sprite_info & vspr, const int rot4 ) {
+                                push_decal( vspr.atlas, static_cast<float>( dx ) + ox,
+                                            static_cast<float>( dy ) + oy, wz + VEH_DECAL_Z,
+                                            vspr.px_w / 32.0f, vspr.px_h / 32.0f, vspr,
+                                            tone.shade, tone.shade, tone.shade, rot4 );
+                            };
+                            // upright panel on a tile's edge plane whose outward
+                            // normal is the world delta d. swap_u mirrors the
+                            // sprite left-right; anchor_front anchors the span
+                            // at the car's front (side panels run along the
+                            // front-rear axis and corner sprites spill toward
+                            // the front), otherwise the span is centered on the
+                            // tile (front face panels run along the left-right
+                            // axis). proud scales the 5mm offset along d that
+                            // keeps the panel off the voxel body box face
+                            // sharing this plane (the box writes depth, the
+                            // panel (decal) does not, so a coplanar panel would
+                            // lose the strict-LESS tie and vanish); -1 stands
+                            // the panel off the OPPOSITE side — used by glass
+                            // laid back onto the cabin box face. Panels go into
+                            // the panels sub-stream (camera-sorted at
+                            // assembly): the nearer panel always overdraws the
+                            // farther one, whose mirrored backface then reads
+                            // as the interior view.
+                            // these vehicle sprites are 32x48 with a fully
+                            // TRANSPARENT north spill zone (the (0,-16) sheet
+                            // offset rows): the art exactly fills the 32x32
+                            // footprint. Squashing the whole sprite into a
+                            // footprint-sized quad wastes 1/3 of it on
+                            // discarded pixels (the hood read as a short
+                            // strip, the glass as a sliver) — crop the spill
+                            // rows off the v range so the art fills the quad
+                            const auto crop_spill = []( const sprite_info & s,
+                                                        const point & soff ) {
+                                sprite_info c = s;
+                                if( s.px_h > 0 && soff.y < 0 ) {
+                                    c.v0 += ( s.v1 - s.v0 ) *
+                                            ( static_cast<float>( -soff.y ) /
+                                              static_cast<float>( s.px_h ) );
+                                }
+                                return c;
+                            };
+                                // windshield footprint split (TP-22): the upright
+                            // panel takes only the glass band (top of the
+                            // footprint) — the gray cowl below it is flat
+                            // gray153, invisible against the box top, so the
+                            // cover surface comes from the hood decal instead
+                            // (TP-23)
+                            const auto glass_band = [&crop_spill]( const sprite_info & s,
+                                                                   const point & soff ) {
+                                sprite_info c = crop_spill( s, soff );
+                                c.v1 = c.v0 + ( c.v1 - c.v0 ) * VEH_WSH_GLASS_FRAC;
+                                return c;
+                            };
+                            const auto push_panel = [&]( const sprite_info & pspr, const point & d,
+                                                         const bool swap_u, const float base_z,
+                                                         const float ph, const bool anchor_front,
+                                                         const float proud = 1.0f ) {
+                                if( count >= MAX_DRAW_INSTANCES ) {
+                                    return;
+                                }
+                                const float plen = pspr.px_w / 32.0f;
+                                sprite_info uspr = pspr;
+                                if( swap_u ) {
+                                    std::swap( uspr.u0, uspr.u1 );
+                                }
+                                float pcx, pcy;
+                                bool run_ns;
+                                if( d.x != 0 ) {
+                                    // plane x = edge, runs N-S
+                                    run_ns = true;
+                                    pcx = static_cast<float>( dx ) + ( d.x > 0 ? 1.0f : 0.0f );
+                                    if( anchor_front ) {
+                                        const float sgn = front_dir.y > 0 ? 1.0f : -1.0f;
+                                        const float fedge = static_cast<float>( dy ) +
+                                                            ( sgn > 0.0f ? 1.0f : 0.0f );
+                                        pcy = fedge - sgn * ox - sgn * plen * 0.5f;
+                                    } else {
+                                        pcy = static_cast<float>( dy ) +
+                                              ( swap_u ? 1.0f - ox - plen * 0.5f
+                                                       : ox + plen * 0.5f );
+                                    }
+                                } else {
+                                    // plane y = edge, runs E-W
+                                    run_ns = false;
+                                    pcy = static_cast<float>( dy ) + ( d.y > 0 ? 1.0f : 0.0f );
+                                    if( anchor_front ) {
+                                        const float sgn = front_dir.x > 0 ? 1.0f : -1.0f;
+                                        const float fedge = static_cast<float>( dx ) +
+                                                            ( sgn > 0.0f ? 1.0f : 0.0f );
+                                        pcx = fedge - sgn * ox - sgn * plen * 0.5f;
+                                    } else {
+                                        pcx = static_cast<float>( dx ) +
+                                              ( swap_u ? 1.0f - ox - plen * 0.5f
+                                                       : ox + plen * 0.5f );
+                                    }
+                                }
+                                // stand proud of the voxel body box face
+                                // sharing this plane (see above)
+                                pcx += d.x * 0.005f * proud;
+                                pcy += d.y * 0.005f * proud;
+                                decal_instance di;
+                                di.mode = MODE_LINEQUAD_DECAL;
+                                di.atlas = uspr.atlas;
+                                std::vector<float> tmp;
+                                tmp.reserve( INSTANCE_STRIDE / sizeof( float ) );
+                                push_instance( tmp, pcx, pcy, base_z, plen, ph, 1.0f, uspr,
+                                               tone.shade, tone.shade, tone.shade,
+                                               false, 0, false, run_ns ? 1.0f : 0.0f,
+                                               ghost, tone.sat );
+                                std::copy_n( tmp.begin(), INSTANCE_STRIDE / sizeof( float ),
+                                             di.f );
+                                di.sort_key = pcx * fwd_x + pcy * fwd_y;
+                                panels.push_back( di );
+                                ++count;
+                            };
+
+                            // skin: the flat 2D composite on the ground — bg
+                            // first (the broken subtile carries the oriented
+                            // base sprites there), fg second, 2D's order
+                            bool vdrew = false; // 2D's ret: highlight/carried furniture gate
+                            if( vl.bg_tex && count < MAX_DRAW_INSTANCES ) {
+                                push_skin( vl.bg, 0 );
+                                vdrew = true;
+                            }
+                            if( vl.fg_tex && count < MAX_DRAW_INSTANCES ) {
+                                push_skin( vl.fg, vl.fg_rot4 );
+                                vdrew = true;
+                            }
+                            if( !vl.fg_tex && !vl.bg_tex ) {
+                                // no sprite: the ASCII fallback
+                                // draw_from_id_string_internal uses — the variant's
+                                // direction-aware symbol in the part's color
+                                const vpart_id &vpid = vd.id;
+                                if( vpid.is_valid() &&
+                                    vpid->variants.count( vd.variant.id ) ) {
+                                    const vpart_variant &vv = vpid->variants.at( vd.variant.id );
+                                    const char32_t vsym = vd.is_open ? U'\''
+                                                          : vv.get_symbol_curses(
+                                                              90_degrees * vrota, vd.is_broken );
+                                    sprite_info vspr;
+                                    if( glyph_sprite( vsym, vspr ) ) {
+                                        const ImVec4 vc = vpid->color;
+                                        push_decal( vspr.atlas, static_cast<float>( dx ),
+                                                    static_cast<float>( dy ), wz + VEH_DECAL_Z,
+                                                    1.0f, 1.0f, vspr,
+                                                    vc.x * tone.shade, vc.y * tone.shade,
+                                                    vc.z * tone.shade, 0 );
+                                        vdrew = true;
+                                    }
+                                }
+                            }
+                            // side panels on both exterior flanks (mount left
+                            // (0,-1) and right (0,+1)), each resolved with its
+                            // fixed frame (left: vrota 3, right: vrota 1 — the
+                            // facings whose flank art is the full side
+                            // elevation); the broken subtile's two layers
+                            // become two panels in 2D order
+                            bool got_side_panel = false;
+                            if( vdrew && has_elevation && !near_hide ) {
+                                for( const point dm : { point( 0, -1 ), point( 0, 1 ) } ) {
+                                    if( !exterior( dm ) ) {
+                                        continue;
+                                    }
+                                    const bool is_left = dm.y < 0;
+                                    const point d = rot_mount( dm, vrota );
+                                    const float sgn = d.x != 0
+                                                      ? ( front_dir.y > 0 ? 1.0f : -1.0f )
+                                                      : ( front_dir.x > 0 ? 1.0f : -1.0f );
+                                    const bool swap_u = is_left == ( sgn > 0.0f );
+                                    sprite_lookup_3d pl;
+                                    lookup_sprite_layers_3d( tiles, "vp_" + vd.id.str(),
+                                                             TILE_CATEGORY::VEHICLE_PART, p, vsub,
+                                                             is_left ? 3 : 1, false, pl,
+                                                             vd.variant.id );
+                                    if( pl.bg_tex ) {
+                                        push_panel( pl.bg, d, swap_u, wz + VEH_PANEL_BASE_Z,
+                                                    pl.bg.px_h / 32.0f * VEH_PANEL_ZSCALE, true );
+                                    }
+                                    if( pl.fg_tex ) {
+                                        push_panel( pl.fg, d, swap_u, wz + VEH_PANEL_BASE_Z,
+                                                    pl.fg.px_h / 32.0f * VEH_PANEL_ZSCALE, true );
+                                    }
+                                    got_side_panel = true;
+                                }
+                            }
+                            // the front face (TP-13, relaid flat in TP-19): the
+                            // hood cover no longer stands at the front edge —
+                            // it lies ON TOP of the hood row's body box,
+                            // exactly covering the 1x1 top face; the box's gray
+                            // front face is the fascia. The sprite still
+                            // resolves with the fixed vrota=2 frame (the car
+                            // faces the 2D camera there, so the art is the
+                            // front view with the grille band at the image's
+                            // bottom); flat-decal rot4 turns that bottom edge
+                            // toward the real front (rot4 k puts the image
+                            // bottom to S,W,N,E for k=0,1,2,3 — facings
+                            // N,E,S,W = vrota 0,1,2,3 need k = (vrota+2)&3;
+                            // fg additionally carries the lookup's own
+                            // quarter-turn, like the skin does)
+                            const point left_dir = rot_mount( point( 0, -1 ), vrota );
+                            const point front_axis = front_dir.x != 0 ? point( 0, 1 )
+                                                                     : point( 1, 0 );
+                            const bool front_swap = front_axis != left_dir;
+                            if( vdrew && has_elevation && !near_hide &&
+                                exterior( point( 1, 0 ) ) ) {
+                                // hood cover: front-exterior tile, laid flat on
+                                // the body box top
+                                sprite_lookup_3d ql;
+                                lookup_sprite_layers_3d( tiles, "vp_" + vd.id.str(),
+                                                         TILE_CATEGORY::VEHICLE_PART, p, vsub,
+                                                         2, false, ql, vd.variant.id );
+                                const int hood_rot4 = ( vrota + 2 ) & 3;
+                                // TP-23: windshield#cover sprites are glass +
+                                // front cover in one tile — in 2D the cover
+                                // visually spans the hood row AND the
+                                // windshield row behind it. The windshield
+                                // sprite's cowl half is flat gray153 (=
+                                // the box top color, invisible laid flat), so
+                                // when an unroofed windshield row sits right
+                                // behind, stretch this decal over BOTH rows'
+                                // box tops (same 0.80 height: UC windshield
+                                // sprites are 32x48 spill tiles like the
+                                // hood's): the grille stays at the front edge
+                                // and the diagonal streaks cross onto the
+                                // windshield row — one continuous two-row
+                                // cover, like 2D. Roofed windshield rows
+                                // (fire truck: windshield+roof on one tile,
+                                // box top 1.35) and non-windshield neighbors
+                                // keep the 1x1 footprint.
+                                const point_rel_ms behind_mount = mount +
+                                                                  point_rel_ms( -1, 0 );
+                                const vpart_display vd_behind =
+                                    veh.get_display_of_tile( behind_mount );
+                                const bool hood_two_rows =
+                                    vd_behind.id.is_valid() &&
+                                    vd_behind.id->has_flag( VPFLAG_WINDOW ) &&
+                                    !vd_behind.id->has_flag( VPFLAG_OPENABLE ) &&
+                                    !vd_behind.id->has_flag( "DOOR" ) &&
+                                    !row_has_roof( behind_mount );
+                                float hdx = dx, hdy = dy, hsx = 1.0f, hsy = 1.0f;
+                                if( hood_two_rows ) {
+                                    hdx += rear_dir.x < 0 ? -1.0f : 0.0f;
+                                    hdy += rear_dir.y < 0 ? -1.0f : 0.0f;
+                                    hsx += std::abs( rear_dir.x );
+                                    hsy += std::abs( rear_dir.y );
+                                }
+                                if( ql.bg_tex ) {
+                                    push_decal( ql.bg.atlas, hdx, hdy,
+                                                wz + box_top + 0.005f,
+                                                hsx, hsy, crop_spill( ql.bg, ql.offset ),
+                                                tone.shade, tone.shade, tone.shade,
+                                                hood_rot4 );
+                                }
+                                if( ql.fg_tex ) {
+                                    push_decal( ql.fg.atlas, hdx, hdy,
+                                                wz + box_top + 0.005f,
+                                                hsx, hsy, crop_spill( ql.fg, ql.offset ),
+                                                tone.shade, tone.shade, tone.shade,
+                                                ( ql.fg_rot4 + hood_rot4 ) & 3 );
+                                }
+                            }
+                            // windshield panel: glass parts that got no side panel
+                            // (the A-pillar corner pieces live on the flanks and
+                            // are covered by the side panels). TP-19: when the
+                            // cabin row behind/ahead is roofed, the glass lies
+                            // back onto the cabin body box's EXPOSED vertical
+                            // face — the stretch between this tile's box top and
+                            // the roof line — flush against it (proud -1 keeps
+                            // it off the box face it covers); the old position
+                            // (own tile's edge toward the nearer end, 0.55-1.35)
+                            // dangled a tile away from the cabin and its lower
+                            // band sank into the neighbor box. Roofless cars
+                            // (no cabin wall to stick to) keep the old
+                            // placement. Front/rear split: the glass nearer the
+                            // rear (sedans' rear windshield) uses the
+                            // rear-facing frame and sticks to the cabin box's
+                            // rear face
+                            const point right_dir = rot_mount( point( 0, 1 ), vrota );
+                            const point rear_axis = rear_dir.x != 0 ? point( 0, 1 )
+                                                                    : point( 1, 0 );
+                            const bool rear_swap = rear_axis != right_dir;
+                            const bool is_windshield = vd.id.is_valid() &&
+                                                       vd.id->has_flag( VPFLAG_WINDOW ) &&
+                                                       !vd.id->has_flag( VPFLAG_OPENABLE ) &&
+                                                       !vd.id->has_flag( "DOOR" );
+                            if( vdrew && is_windshield && !got_side_panel &&
+                                !near_hide ) {
+                                int dist_front = 0;
+                                for( point_rel_ms m = mount + point_rel_ms( 1, 0 );
+                                     dist_front < 40 &&
+                                     !veh.parts_at_relative( m, true, false ).empty();
+                                     m += point_rel_ms( 1, 0 ) ) {
+                                    ++dist_front;
+                                }
+                                int dist_rear = 0;
+                                for( point_rel_ms m = mount + point_rel_ms( -1, 0 );
+                                     dist_rear < 40 &&
+                                     !veh.parts_at_relative( m, true, false ).empty();
+                                     m += point_rel_ms( -1, 0 ) ) {
+                                    ++dist_rear;
+                                }
+                                const bool rear_glass = dist_rear < dist_front;
+                                sprite_lookup_3d ql;
+                                lookup_sprite_layers_3d( tiles, "vp_" + vd.id.str(),
+                                                         TILE_CATEGORY::VEHICLE_PART, p, vsub,
+                                                         rear_glass ? 0 : 2, false, ql,
+                                                         vd.variant.id );
+                                // the cabin sits on the far side from the
+                                // nearer end: behind the front glass, ahead of
+                                // the rear glass
+                                const bool cabin_roofed = row_has_roof( mount +
+                                    ( rear_glass ? point_rel_ms( 1, 0 )
+                                                 : point_rel_ms( -1, 0 ) ) );
+                                const bool flush_cabin = cabin_roofed && !roof_covered;
+                                const point glass_dir = flush_cabin
+                                                        ? ( rear_glass ? front_dir : rear_dir )
+                                                        : ( rear_glass ? rear_dir : front_dir );
+                                const bool glass_swap = rear_glass ? rear_swap : front_swap;
+                                const float glass_z = flush_cabin ? wz + box_top
+                                                      : wz + VEH_WSH_BASE_Z;
+                                const float glass_h = flush_cabin
+                                                      ? VEH_ROOF_Z - box_top
+                                                      : VEH_WSH_H;
+                                const float glass_proud = flush_cabin ? -1.0f : 1.0f;
+                                // TP-21/22 sprite split: crop the empty spill
+                                // rows everywhere; flush panels take only the
+                                // black glass band (stretched over the exposed
+                                // cabin face — TP-19's exact-fit intent);
+                                // roofless panels keep the whole footprint.
+                                // The gray cowl half is NOT laid flat here:
+                                // it is gray153-on-gray153 against the box
+                                // top (invisible) — the cover surface comes
+                                // from the hood decal stretched over both
+                                // rows (TP-23)
+                                if( ql.bg_tex ) {
+                                    push_panel( flush_cabin
+                                                ? glass_band( ql.bg, ql.offset )
+                                                : crop_spill( ql.bg, ql.offset ),
+                                                glass_dir, glass_swap,
+                                                glass_z, glass_h, false, glass_proud );
+                                }
+                                if( ql.fg_tex ) {
+                                    push_panel( flush_cabin
+                                                ? glass_band( ql.fg, ql.offset )
+                                                : crop_spill( ql.fg, ql.offset ),
+                                                glass_dir, glass_swap,
+                                                glass_z, glass_h, false, glass_proud );
+                                }
+                            }
+                            // rear fascia (TP-14): the mirror of the front face —
+                            // rear-exterior tiles with elevation art stand their
+                            // rear-facing frame (vrota=0, drawn for the car
+                            // facing away from the 2D camera) on the rear edge
+                            // plane, at full side-panel height (tailgates and
+                            // rear boards reach the roof line). Rear corner tiles
+                            // also carry a side panel — the two form the corner
+                            if( vdrew && has_elevation && !near_hide &&
+                                exterior( point( -1, 0 ) ) ) {
+                                sprite_lookup_3d rl;
+                                lookup_sprite_layers_3d( tiles, "vp_" + vd.id.str(),
+                                                         TILE_CATEGORY::VEHICLE_PART, p, vsub,
+                                                         0, false, rl, vd.variant.id );
+                                if( rl.bg_tex ) {
+                                    push_panel( rl.bg, rear_dir, rear_swap,
+                                                wz + VEH_PANEL_BASE_Z,
+                                                rl.bg.px_h / 32.0f * VEH_PANEL_ZSCALE,
+                                                false );
+                                }
+                                if( rl.fg_tex ) {
+                                    push_panel( rl.fg, rear_dir, rear_swap,
+                                                wz + VEH_PANEL_BASE_Z,
+                                                rl.fg.px_h / 32.0f * VEH_PANEL_ZSCALE,
+                                                false );
+                                }
+                            }
+                            // box-top art (TP-24): a body tile that is none of
+                            // the four paneled roles (side panel / rear fascia /
+                            // hood cover / windshield) and has no roof shows
+                            // its 2D sprite on the voxel box top — pickup beds,
+                            // roadster seats, bike frames... The sprite is the
+                            // skin's own lookup (real facing frame, open/broken
+                            // variants match 2D), cropped to the footprint and
+                            // laid 1x1 on the box top, same rule as the hood
+                            // decal. Role tests reuse the paneled blocks'
+                            // conditions (a front/rear-exterior tile WITHOUT
+                            // elevation art stands no panel — a bike head tube,
+                            // a pickup bed's tail row — and falls through to
+                            // here, which is exactly the intent).
+                            const bool hood_tile = has_elevation &&
+                                                   exterior( point( 1, 0 ) );
+                            const bool rear_tile = has_elevation &&
+                                                   exterior( point( -1, 0 ) );
+                            if( vdrew && !near_hide && !roof_covered &&
+                                !got_side_panel && !is_windshield &&
+                                !hood_tile && !rear_tile ) {
+                                if( vl.bg_tex ) {
+                                    push_decal( vl.bg.atlas, static_cast<float>( dx ),
+                                                static_cast<float>( dy ),
+                                                wz + box_top + 0.005f,
+                                                1.0f, 1.0f, crop_spill( vl.bg, vl.offset ),
+                                                tone.shade, tone.shade, tone.shade, 0 );
+                                }
+                                if( vl.fg_tex ) {
+                                    push_decal( vl.fg.atlas, static_cast<float>( dx ),
+                                                static_cast<float>( dy ),
+                                                wz + box_top + 0.005f,
+                                                1.0f, 1.0f, crop_spill( vl.fg, vl.offset ),
+                                                tone.shade, tone.shade, tone.shade,
+                                                vl.fg_rot4 );
+                                }
+                            }
+                            // voxel body (TP-17 + TP-18): every vehicle tile
+                            // with a display part gets a solid box, so the
+                            // whole car has a body — not just the roofed cabin.
+                            // Height by part kind (roof_covered / box_top
+                            // computed above): roofed rows reach the roof line;
+                            // unroofed tiles rise with the sprite's northward
+                            // spill (the part's height): 32x32 frame/bed a low
+                            // chassis deck, 32x48 door/hood mid-height, 32x64
+                            // tall body high. The box top faces form the
+                            // roof/deck, the side faces are the body at the
+                            // outline. Adjacent boxes' shared faces are exactly
+                            // coplanar with identical corners, so the
+                            // strict-LESS loser is stable — no shimmer; the
+                            // panel stream stands 5mm proud of these faces. No
+                            // roof art exists (vp_roof is a placeholder solid;
+                            // part colors are ASCII colors), so the box is
+                            // untextured flat gray x tile light — 0.6 = the
+                            // gray153 the body part sprites themselves use
+                            // (TP-21). BOX is in the
+                            // camera->player soft mask list: the body carves
+                            // open around a passenger like a building roof.
+                            // Near the player the box hides with the rest of
+                            // the shell (near_hide above).
+                            if( !near_hide && count < MAX_DRAW_INSTANCES ) {
+                                sprite_info rspr; // untextured -> white fallback x color
+                                std::vector<float> &v = bucket_for( MODE_BOX, nullptr );
+                                push_instance( v, static_cast<float>( dx ),
+                                               static_cast<float>( dy ), wz + VEH_PANEL_BASE_Z,
+                                               1.0f, 1.0f, box_top - VEH_PANEL_BASE_Z, rspr,
+                                               0.6f * tone.shade, 0.6f * tone.shade,
+                                               0.6f * tone.shade,
+                                               false, 0, false, -1.0f, ghost, tone.sat );
+                                ++count;
+                            }
+                            // roof-mounted equipment (TP-16): police lights,
+                            // solar panels, floodlights, turrets... live at
+                            // location on_roof and are the tile's display part
+                            // (z_order 9; hidden from passengers inside, exactly
+                            // like 2D). Draw their sprite ON the roof cover with
+                            // the SAME footprint+sheet offset as the ground skin
+                            // (TP-21: TP-17's centered 1x1 squash shrank the art
+                            // into a floating fragment per tile — the police
+                            // light bar's red/blue halves mount on adjacent
+                            // tiles and must touch like 2D, slight spill offset
+                            // included). The ground skin above stays too, so a
+                            // torn-open roof still shows something on the floor
+                            static const vpart_location_id on_roof_loc( "on_roof" );
+                            if( roof_covered && vdrew && !near_hide &&
+                                vd.id->location == on_roof_loc ) {
+                                if( vl.bg_tex && count < MAX_DRAW_INSTANCES ) {
+                                    push_decal( vl.bg.atlas, static_cast<float>( dx ) + ox,
+                                                static_cast<float>( dy ) + oy,
+                                                wz + VEH_ROOF_Z + 0.005f,
+                                                vl.bg.px_w / 32.0f, vl.bg.px_h / 32.0f,
+                                                vl.bg,
+                                                tone.shade, tone.shade, tone.shade, 0 );
+                                }
+                                if( vl.fg_tex && count < MAX_DRAW_INSTANCES ) {
+                                    push_decal( vl.fg.atlas, static_cast<float>( dx ) + ox,
+                                                static_cast<float>( dy ) + oy,
+                                                wz + VEH_ROOF_Z + 0.005f,
+                                                vl.fg.px_w / 32.0f, vl.fg.px_h / 32.0f,
+                                                vl.fg,
+                                                tone.shade, tone.shade, tone.shade,
+                                                vl.fg_rot4 );
+                                }
+                            }
+                            if( vdrew && vd.has_cargo && count < MAX_DRAW_INSTANCES ) {
+                                // cargo contents marker, the same highlight_item
+                                // tile 2D draws over cargo-carrying part tiles
+                                sprite_info hspr;
+                                if( lookup_sprite( tiles, "highlight_item", TILE_CATEGORY::NONE,
+                                                   p, hspr ) ) {
+                                    push_decal( hspr.atlas, static_cast<float>( dx ),
+                                                static_cast<float>( dy ), wz + VEH_DECAL_Z,
+                                                1.0f, 1.0f, hspr,
+                                                tone.shade, tone.shade, tone.shade, 0 );
+                                }
+                            }
+                            if( vdrew && !vd.carried_furn.empty() && count < MAX_DRAW_INSTANCES ) {
+                                // furniture tied down on the part (bike racks...):
+                                // 2D draws it after the vpart with subtile 0 / rota 0
+                                sprite_lookup_3d fl;
+                                lookup_sprite_layers_3d( tiles, vd.carried_furn,
+                                                         TILE_CATEGORY::FURNITURE, p, 0, 0,
+                                                         false, fl );
+                                if( fl.fg_tex ) {
+                                    const float fox = fl.offset.x / 32.0f;
+                                    const float foy = fl.offset.y / 32.0f;
+                                    const float fsx = fl.fg.px_w / 32.0f;
+                                    const float fsy = fl.fg.px_h / 32.0f;
+                                    push_decal( fl.fg.atlas, static_cast<float>( dx ) + fox,
+                                                static_cast<float>( dy ) + foy, wz + VEH_DECAL_Z,
+                                                fsx, fsy, fl.fg,
+                                                tone.shade, tone.shade, tone.shade,
+                                                fl.fg_rot4 );
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -3072,7 +3796,9 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
     // top-down: anchor the scene to the view center (ter_view_p follows the
     // player; look-around mode pans it for free)
     std::vector<instance_bucket> buckets;
-    const int count = gather_instances( tiles, center, buckets );
+    std::vector<decal_instance> decals;
+    std::vector<decal_instance> panels;
+    const int count = gather_instances( tiles, center, buckets, decals, panels );
     g_game_cursors.clear();
     static bool gather_logged = false;
     if( !gather_logged ) {
@@ -3102,6 +3828,47 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
                                           static_cast<int>( inst.size() / ( INSTANCE_STRIDE / sizeof( float ) ) ),
                                           static_cast<int>( b.data.size() / ( INSTANCE_STRIDE / sizeof( float ) ) ) } );
         inst.insert( inst.end(), b.data.begin(), b.data.end() );
+    }
+    // decals draw after every bucket segment, as one segment per run of
+    // consecutive same-(mode, atlas) instances — the stream's push order is the
+    // gather's row order, so cross-atlas overlaps resolve in exactly 2D's
+    // painter order (rows north->south, west->east)
+    constexpr size_t stride_floats = INSTANCE_STRIDE / sizeof( float );
+    for( size_t i = 0; i < decals.size(); ) {
+        size_t j = i + 1;
+        while( j < decals.size() && decals[j].atlas == decals[i].atlas &&
+               decals[j].mode == decals[i].mode ) {
+            ++j;
+        }
+        segments.push_back( draw_segment{ decals[i].mode, decals[i].atlas,
+                                          static_cast<int>( inst.size() / stride_floats ),
+                                          static_cast<int>( j - i ) } );
+        for( size_t k = i; k < j; ++k ) {
+            inst.insert( inst.end(), decals[k].f, decals[k].f + stride_floats );
+        }
+        i = j;
+    }
+    // vehicle side panels come after the skins, sorted far->near along the
+    // camera's ground forward (the stream's painter order is camera-relative
+    // here, not row order): the nearer flank's panel always overdraws the
+    // farther one's, whose mirrored backface then reads as the interior view
+    std::stable_sort( panels.begin(), panels.end(),
+                      []( const decal_instance & a, const decal_instance & b ) {
+        return a.sort_key > b.sort_key;
+    } );
+    for( size_t i = 0; i < panels.size(); ) {
+        size_t j = i + 1;
+        while( j < panels.size() && panels[j].atlas == panels[i].atlas &&
+               panels[j].mode == panels[i].mode ) {
+            ++j;
+        }
+        segments.push_back( draw_segment{ panels[i].mode, panels[i].atlas,
+                                          static_cast<int>( inst.size() / stride_floats ),
+                                          static_cast<int>( j - i ) } );
+        for( size_t k = i; k < j; ++k ) {
+            inst.insert( inst.end(), panels[k].f, panels[k].f + stride_floats );
+        }
+        i = j;
     }
 
     // top-down orbit camera: the scene is rebuilt relative to the view center
@@ -3317,17 +4084,28 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
     SDL_GPUBufferBinding inst_bind{};
     inst_bind.buffer = g_ctx.instance_vb;
     inst_bind.offset = 0;
+    SDL_GPUGraphicsPipeline *bound_pipeline = g_ctx.pipeline;
     for( const draw_segment &seg : segments ) {
+        // decals draw with the depth-write-off pipeline: painter's order
+        // (instance order = 2D's row order) resolves decal-vs-decal overlaps,
+        // so coplanar vehicle part sprites can never z-fight
+        const bool decal_seg = seg.mode == MODE_FLATQUAD_DECAL ||
+                               seg.mode == MODE_LINEQUAD_DECAL;
+        SDL_GPUGraphicsPipeline *want = decal_seg ? g_ctx.pipeline_decal : g_ctx.pipeline;
+        if( want != bound_pipeline ) {
+            SDL_BindGPUGraphicsPipeline( pass, want );
+            bound_pipeline = want;
+        }
         SDL_GPUBufferBinding geom_bind{};
         int verts_per_instance = 36;
         if( seg.mode == MODE_XQUAD ) {
             geom_bind.buffer = g_ctx.xquad_vb;
             verts_per_instance = 12;
-        } else if( seg.mode == MODE_FLATQUAD ) {
+        } else if( seg.mode == MODE_FLATQUAD || seg.mode == MODE_FLATQUAD_DECAL ) {
             geom_bind.buffer = g_ctx.flatquad_vb;
             verts_per_instance = 6;
         } else if( seg.mode == MODE_BILLBOARD || seg.mode == MODE_BILLBOARD_SNAP ||
-                   seg.mode == MODE_LINEQUAD ) {
+                   seg.mode == MODE_LINEQUAD || seg.mode == MODE_LINEQUAD_DECAL ) {
             geom_bind.buffer = g_ctx.quad_vb;
             verts_per_instance = 6;
         } else {
@@ -3340,13 +4118,19 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
         sampler_bind.texture = atlas_gpu ? atlas_gpu : g_ctx.fallback_tex;
         sampler_bind.sampler = g_ctx.sampler;
         SDL_BindGPUFragmentSamplers( pass, 0, &sampler_bind, 1 );
-        uniforms.params = { static_cast<float>( seg.mode ), 0.0f, 0.0f, 0.0f };
+        // decal modes share their geometry path with the plain modes
+        // (6 -> flatquad 5, 7 -> fence linequad 4); the shader never sees them
+        const int shader_mode = seg.mode == MODE_FLATQUAD_DECAL ? MODE_FLATQUAD :
+                                seg.mode == MODE_LINEQUAD_DECAL ? MODE_LINEQUAD : seg.mode;
+        uniforms.params = { static_cast<float>( shader_mode ), 0.0f, 0.0f, 0.0f };
         SDL_PushGPUVertexUniformData( cmd, 0, &uniforms, sizeof( uniforms ) );
         // the camera->player occlusion mask covers terrain geometry (boxes),
-        // fence quads (incl. low thin obstacles like downspouts) and the flat
-        // floor quads (roof corner cutouts above the player)
+        // fence quads (incl. low thin obstacles like downspouts), vehicle side
+        // panels (the mask cuts a soft hole so the rider stays visible) and the
+        // flat floor quads (roof corner cutouts above the player)
         frag_ub.mask_params[3] = ( seg.mode == MODE_BOX || seg.mode == MODE_LINEQUAD ||
-                                   seg.mode == MODE_FLATQUAD )
+                                   seg.mode == MODE_FLATQUAD ||
+                                   seg.mode == MODE_LINEQUAD_DECAL )
                                  ? 1.0f : 0.0f;
         SDL_PushGPUFragmentUniformData( cmd, 0, &frag_ub, sizeof( frag_ub ) );
         SDL_DrawGPUPrimitives( pass, verts_per_instance, seg.num_instances, 0, seg.first_instance );
