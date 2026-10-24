@@ -5924,9 +5924,7 @@
     "max_duration": 120,
     "immune_flags": [ "INHALED_TOXIN_IMMUNE" ],
     "base_mods": {
-      "str_mod": [ -1 ],
-      "dex_mod": [ -1 ],
-      "speed_mod": [ -10 ],
+      "per_mod": [ -1 ],
       "cough_chance": [ 3 ],
       "vomit_chance": [ 15 ],
       "vomit_tick": [ 10 ]
