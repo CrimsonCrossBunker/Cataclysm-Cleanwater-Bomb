@@ -9,6 +9,11 @@
         "text": "ATOMIC DEREGULATION!  President Toffer announced to a mixed crowd today that he had signed an executive order to deregulate public use of radioactive compounds, allowing more widespread use of low-grade radioactive compounds in home appliances.  \"Plutonium is the greenest energy we have,\" he told an assembled press.  \"It's time we got over our fear and moved into the light.\""
       },
       {
+        "id": "many_years_old_news_3",
+        "name": "FACIAL RECOGNITION ROLLS OUT",
+        "text": "FACIAL RECOGNITION ROLLS OUT.  Commissioner McConnaugh of the NYPD announced at a press conference today that a new wave of facial recognition drones would be employed by police services.  \"These new guys, we're calling them 'eyebots', they can move where stationary cameras can't, and can identify known troublemakers.  They lead to a much lower rate of false alarms, and a much higher rate of successful convictions without an increase in wrongful arrest.  I know there have been concerns, but overall these little guys make us all safer, not just from criminals but from human error as well.\""
+      },
+      {
         "id": "many_years_old_news_9",
         "name": "EDITORIAL: LET ME BUY MY DANG PLUTONIUM",
         "text": "EDITORIAL: LET ME BUY MY DANG PLUTONIUM.  President Toffer made a bold and unpopular move last month with nuclear regulation changes.  I, for one, couldn't be more excited.  By now, we know very well what the risks of radioactive materials are, and can take the measures to protect ourselves.  Our citizens deserve the right to make the informed choice to purchase atomic powered tools should they wish, and in this era of fossil fuel and global warming concerns, what could be more appropriate than powering a home with a radioisotope thermal generator?"
@@ -17,6 +22,52 @@
         "id": "many_years_old_news_16",
         "name": "EDISON AUTOMOTIVES UNVEILS NEW SOLAR CAR",
         "text": "EDISON AUTOMOTIVES UNVEILS NEW SOLAR CAR.  \"These miracles of technology wouldn't be possible without the deregulations pioneered by President Toffer,\" said billionaire tech mogul Elton Moosek about his company's newest innovation.  \"Access to radioactive compounds and military-grade fuel cells has made this possible.  At this rate, we'll be flying solar sail spacecraft within my lifetime.\""
+      }
+    ]
+  },
+  {
+    "type": "snippet",
+    "category": "years_old_news",
+    "text": [
+      {
+        "id": "years_old_news_4",
+        "name": "EYEBOTS SEE WIDESPREAD USE",
+        "text": "EYEBOTS SEE WIDESPREAD USE.  A recent survey of police departments in the Eastern US found that over 85% of police stations, even in small towns, now contain at least one flight of facial recognition drones.  \"They're awesome,\" Sheriff Mark Louis told a reporter from his office in Pontstown, Vermont.  \"We've got a flight of four eyebots on a solar dock on the roof.  They take hardly any maintenance, they respond to any suspicious business downtown, and they don't hurt anyone.  If it's just a minor scuffle they grab some photos and help keep things from escalating.  If it's a bigger deal, or if it's someone they know is trouble, they call us in right away.  They save us a lot of false alarms: if we get an eyebot call-in we know it's a big deal.\""
+      },
+      {
+        "id": "years_old_news_5",
+        "name": "COMPACT BIONIC MODULES PASS PHASE 3 CLINICAL TRIALS",
+        "text": "COMPACT BIONIC MODULES PASS PHASE 3 CLINICAL TRIALS.  Uncanny, a former toy company now rebranded into a biomedical and military parts manufacturer, has unveiled its groundbreaking line of implantable medical devices, called \"compact bionic modules\", or CBMs.  \"The cost is still high, and we're aware of that,\" said spokesperson Danny Veil, \"but we believe the product is worth it.\"  Although a joint-assist servo CBM, for use in people with partial or complete motor nerve damage, currently costs between ten and fifteen thousand dollars, that doesn't include the cost of installation, rehabilitation, and power and recharging modules.  All told, the average medical CBM will put you - or your high end insurance - out by upwards of anywhere from one to three hundred thousand dollars."
+      },
+      {
+        "id": "years_old_news_6",
+        "name": "MEET THE SOLDIER OF THE FUTURE",
+        "text": "MEET THE SOLDIER OF THE FUTURE.  [Photograph: Colonel Andrea Sylver poses in her powered combat exoskeleton.]  The new wave of military exoskeleton, or 'power armor', has been unveiled to the public after extensive testing on battlefields in Afghanistan and in police actions in South America and Indonesia.  \"These suits are like being a real-life super hero,\" Colonel Sylver announced to a gathered press.  \"I'm immune to all but the heaviest weapons, but just as mobile and light as any infantry soldier.  With an attached hauling rig, I can carry as much as a civilian cargo exoskeleton.  I'm basically a bulletproof forklift in a human-sized package.\"  We attempted to inquire about rumors of bionic-enhanced supersoldiers deploying alongside the new power armor, but Colonel Sylver declined to answer those questions."
+      },
+      {
+        "id": "years_old_news_7",
+        "name": "EDITORIAL: BIONICS REDUCE YOUR HUMANITY",
+        "text": "EDITORIAL: BIONICS REDUCE YOUR HUMANITY.  As these so-called 'bionics' spread in popularity, I can only wonder what it means to have part of your body voluntarily removed and replaced with bioplastic.  It's one thing to have an amputation for medical reasons; it's quite another to voluntarily remove healthy tissue so that you can carry your cigarette lighter in the tip of your finger.  I worry that the youth of today won't understand anymore what it means to feel the touch of a loved one with your own skin, instead of artificial sensory input from a lab-made plastic device."
+      },
+      {
+        "id": "years_old_news_8",
+        "name": "EDITORIAL: EYEBOTS ARE GOOD FOR US",
+        "text": "EDITORIAL: EYEBOTS ARE GOOD FOR US.  The controversy around increasing eyebot use by police forces has everyone worried, and I was on board for a long time.  Facial recognition databases under government control are something we should be worried about!  Then, my daughter was accosted on her way home from dance class.  Long before any police officer could have arrived, an eyebot had snagged video of her attackers and reported them to Central.  That, alone, probably saved her life: just knowing they'd been tagged sent the criminals packing before any real damage was done, and the information allowed us to press charges on a crime that would have gone unreported before.  All safety must come at a cost, and I'll gladly pay my privacy if it's the cost to keep my family safe."
+      },
+      {
+        "id": "years_old_news_9",
+        "name": "EDITORIAL: EYEBOTS REPRESENT A CONCERNING TREND",
+        "text": "EDITORIAL: EYEBOTS REPRESENT A CONCERNING TREND.  There it is, as it always is: the endless buzz of eyebots cruising the streets, hunting for wrongdoing.  I've written many an article on these things, and read many more.  I've spoken to experts.  When we get to the bottom of it, there's a key disturbing truth to these ubiquitous robots… No one knows how they work.  The artificial intelligence used in the little drones is more than just facial recognition, it's also threat processing and decision making, and at its very heart is a new-wave deep learning AI that is, essentially, a wild card.  Without knowing how these things learn and make decisions, I don't think we can trust them in public, let alone handling our safety.  That's not even considering the dangers of letting them have access to our faces and criminal records."
+      },
+      {
+        "id": "0e_old_years_old_news_11",
+        "name": "CHOP SHOP CRACKDOWN",
+        "text": "CHOP SHOP CRACKDOWN.  [Photograph: Captain Soula Anagnos poses with seized contraband bionics.]  Boston PD has seized over ten million dollars in illegally obtained bionic modules in a co-ordinated crackdown on more than ten illegal installation suites.  \"These people are criminals,\" said Captain Anagnos in a press conference.  \"Don't believe what the internet is saying: they're not Robin Hoods.  They're stealing these devices from people who need them, and they're installing them unethically, often causing severe damage in their 'patients'.\"\n\nWe spoke online to Dr. Jose García, known for his medical blog \"The Artificial Truth\", about the seizure.  \"The party line doesn't make sense on this,\" Dr. García writes.  \"If these are illegally obtained bionics, why are they weapons?  And not military weapons either.  Finger blades, sharpened teeth?  They aren't making these in dirty basements, these are coming out of factories.  I see these here in Mexico, used by gangs.  There is a market, and the manufacturers of CBMs are cashing in.\"  Representatives from Uncanny, the largest manufacturer of CBMs in North America, could not be reached for comment."
+      },
+      {
+        "id": "0e_old_years_old_news_12",
+        "name": "CHINESE SUPER SOLDIERS",
+        "text": "CHINESE SUPER SOLDIERS.  At a global press conference, the People's Republic of China unveiled their new bionic-powered supersoldiers.  These soldiers are equipped with an analogous compact module technology, known as 'XFS' in press release documents, believed to be similar to CBM technology favored by NATO forces.  \"We're not concerned by these announcements,\" DARPA spokesperson Linda Iridani told our reporters.  \"We've been keeping an eye on Chinese developments in bionics for some time, and XFS technology is many years behind our own military-grade CBMs.\""
       }
     ]
   }
