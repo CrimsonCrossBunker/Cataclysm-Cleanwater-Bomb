@@ -1800,7 +1800,7 @@ void effect_migration::load( const JsonObject &jo )
     effect_migration migration;
     mandatory( jo, false, "from", migration.id_old );
     optional( jo, false, "to", migration.id_new );
-    effect_migrations.emplace( migration.id_old, migration );
+    effect_migrations[ migration.id_old ] = migration;
 }
 
 void cata::lua_platform::detail::insert_platform_effect_migration(
@@ -1811,7 +1811,7 @@ void cata::lua_platform::detail::insert_platform_effect_migration(
     migration.id_new = value.to_id.empty() ?
                        std::nullopt :
                        std::optional<efftype_id>( efftype_id( value.to_id ) );
-    effect_migrations.emplace( migration.id_old, migration );
+    effect_migrations[ migration.id_old ] = migration;
 }
 
 void cata::lua_platform::detail::erase_platform_effect_migration(
