@@ -70,6 +70,7 @@
 #include "mod_manager.h"
 #include "mp_client_conn.h"
 #include "mp_gamestate.h"
+#include "mp_magic.h"
 #include "options.h"
 #include "output.h"
 #include "overmapbuffer.h"
@@ -375,6 +376,7 @@ bool game::load( const std::string &world )
 
 bool game::load( const save_t &name )
 {
+    cata_mp::mp_magic_reset( true );
     map &here = get_map();
 
     const cata_path worldpath = PATH_INFO::world_base_save_path();
@@ -416,7 +418,7 @@ bool game::load( const save_t &name )
                     if( world_generator->active_world->has_compression_enabled() ) {
                         std::optional<zzip> z = zzip::load( ( save_file_path + zzip_suffix ).get_unrelative_path() );
                         abort = !z.has_value() ||
-                                  !read_from_zzip_optional( z.value(), save_file_path.get_unrelative_path().filename(),
+                        !read_from_zzip_optional( z.value(), save_file_path.get_unrelative_path().filename(),
                         [this]( std::string_view sv ) {
                             unserialize( std::string{ sv } );
                         } );
@@ -502,7 +504,7 @@ bool game::load( const save_t &name )
                         // The vehicle stores the IDs of the boarded players, so update it, too.
                         if( u.in_vehicle ) {
                             if( const std::optional<vpart_reference> vp = here.veh_at(
-                                    u.pos_bub() ).part_with_feature( "BOARDABLE", true ) ) {
+                                        u.pos_bub() ).part_with_feature( "BOARDABLE", true ) ) {
                                 vp->part().passenger_id = u.getID();
                             }
                         }
@@ -933,7 +935,7 @@ void game::write_memorial_file( std::string sLastWords )
 {
     const std::string &memorial_dir = PATH_INFO::memorialdir();
     const std::string &memorial_active_world_dir = memorial_dir +
-        world_generator->active_world->world_name + "/";
+            world_generator->active_world->world_name + "/";
 
     //Check if both dirs exist. Nested assure_dir_exist fails if the first dir of the nested dir does not exist.
     if( !assure_dir_exist( memorial_dir ) ) {
@@ -944,7 +946,7 @@ void game::write_memorial_file( std::string sLastWords )
 
     if( !assure_dir_exist( memorial_active_world_dir ) ) {
         dbg( D_ERROR ) <<
-        "game:write_memorial_file: Unable to make active world directory in memorial directory.";
+                       "game:write_memorial_file: Unable to make active world directory in memorial directory.";
         debugmsg( "Could not make '%s' directory", memorial_active_world_dir );
         return;
     }
@@ -1032,7 +1034,7 @@ void game::quicksave( bool automatic )
     restore_on_out_of_scope restore_quicksaving( quicksave_in_progress );
     quicksave_in_progress = true;
     const bool finishing_dimension_rollback = !automatic &&
-        save_snapshot::dimension_rollback_exists( world_generator->active_world->folder_path() );
+            save_snapshot::dimension_rollback_exists( world_generator->active_world->folder_path() );
     //Don't autosave if the player hasn't done anything since the last autosave/quicksave,
     if( !moves_since_last_save && !dimension_checkpoint_pending &&
         !world_generator->active_world->world_saves.empty() && !finishing_dimension_rollback ) {
