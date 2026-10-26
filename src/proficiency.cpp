@@ -694,7 +694,7 @@ void proficiency_migration::load( const JsonObject &jo )
     proficiency_migration migration;
     mandatory( jo, false, "from", migration.id_old );
     optional( jo, false, "to", migration.id_new );
-    prof_migrations.emplace( migration.id_old, migration );
+    prof_migrations[ migration.id_old ] = migration;
 }
 
 void cata::lua_platform::detail::insert_platform_proficiency_migration(
@@ -705,7 +705,7 @@ void cata::lua_platform::detail::insert_platform_proficiency_migration(
     migration.id_new = value.to_id.empty() ?
                        std::nullopt :
                        std::optional<proficiency_id>( proficiency_id( value.to_id ) );
-    prof_migrations.emplace( migration.id_old, migration );
+    prof_migrations[ migration.id_old ] = migration;
 }
 
 void cata::lua_platform::detail::erase_platform_proficiency_migration(
