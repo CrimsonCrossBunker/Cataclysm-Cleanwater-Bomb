@@ -1469,8 +1469,8 @@ void overmap::load_oter_id_camp_migration( const JsonObject &jo )
     jsobj.read( "name", name );
     jsobj.read( "overmap_terrain", oter );
     jsobj.read( "faction", owner );
-    camp_migration_map.emplace( oter,
-                                std::pair<translation, faction_id>( translation::to_translation( name ), owner ) );
+    camp_migration_map[ oter ] =
+                                std::pair<translation, faction_id>( translation::to_translation( name ), owner );
 }
 
 void overmap::reset_oter_id_camp_migrations()
