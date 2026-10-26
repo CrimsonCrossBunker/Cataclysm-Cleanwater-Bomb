@@ -1064,7 +1064,7 @@ void mutation_branch::load_trait_migration( const JsonObject &jo )
                         ", but did not specify how to migrate!" );
     }
 
-    trait_migrations.emplace( target, replacement );
+    trait_migrations[ target ] = replacement;
 }
 
 const trait_replacement &mutation_branch::trait_migration( const trait_id &tid )
