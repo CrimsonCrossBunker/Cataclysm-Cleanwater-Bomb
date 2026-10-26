@@ -196,6 +196,10 @@
     "info": "Your vehicle needs at least one set of steerable wheels to turn."
   },
   {
+    "id": "TRACKED",
+    "type": "json_flag"
+  },
+  {
     "id": "TURRET",
     "type": "json_flag",
     "info": "This weapon is mounted in a turret.  It can be fired from the vehicle controls.",
