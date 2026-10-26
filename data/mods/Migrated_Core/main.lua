@@ -6714,6 +6714,15 @@ local definition = content.JsonFlag {
 content.replace(definition)
 end
 do
+content.replace(definition)
+end
+do
+local definition = content.JsonFlag {
+    id = "TRACKED",
+    inherit = true,
+    craft_inherit = false,
+    taste_modifier = 0,
+}
 local definition = content.JsonFlag {
     id = "TRACKED",
     inherit = true,
