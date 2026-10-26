@@ -137,6 +137,7 @@ static const std::unordered_map<std::string, vpart_bitflags> vpart_bitflag_map =
     { "BALLOON", VPFLAG_BALLOON },
     { "PROPELLER", VPFLAG_PROPELLER },
     { "LADDER", VPFLAG_LADDER },
+    { "TRAP_PROOF", VPFLAG_TRAP_PROOF },
     { "FLOATS", VPFLAG_FLOATS },
 
     { "NO_LEAK", VPFLAG_NO_LEAK },
