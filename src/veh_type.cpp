@@ -137,6 +137,7 @@ static const std::unordered_map<std::string, vpart_bitflags> vpart_bitflag_map =
     { "BALLOON", VPFLAG_BALLOON },
     { "PROPELLER", VPFLAG_PROPELLER },
     { "LADDER", VPFLAG_LADDER },
+    { "TRAP_PROOF", VPFLAG_TRAP_PROOF },
     { "FLOATS", VPFLAG_FLOATS },
 
     { "NO_LEAK", VPFLAG_NO_LEAK },
@@ -1901,7 +1902,7 @@ void cata::lua_platform::detail::erase_platform_vpart_migration(
 }
 
 std::vector<std::pair<std::string, std::string>>
-cata::lua_platform::detail::vehicle_part_migration_snapshot()
+        cata::lua_platform::detail::vehicle_part_migration_snapshot()
 {
     std::vector<std::pair<std::string, std::string>> result;
     result.reserve( vpart_migrations.size() );

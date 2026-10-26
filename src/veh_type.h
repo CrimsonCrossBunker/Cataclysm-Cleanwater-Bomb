@@ -140,6 +140,7 @@ enum vpart_bitflags : int {
     VPFLAG_BALLOON,
     VPFLAG_PROPELLER,
     VPFLAG_LADDER,
+    VPFLAG_TRAP_PROOF,
 
     NUM_VPFLAGS
 };

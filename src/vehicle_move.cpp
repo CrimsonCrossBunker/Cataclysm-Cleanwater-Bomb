@@ -1421,6 +1421,9 @@ void vehicle::damage_wheel_on_item( vehicle_part *vp_wheel, const item &it,
     if( !it.has_flag( json_flag_PUNCTURE_VEHICLE_WHEELS ) ) {
         return;
     }
+    if( part_with_feature( index_of_part( vp_wheel ), VPFLAG_TRAP_PROOF, true ) >= 0 ) {
+        return;
+    }
 
     const double chance_to_damage = wheel_damage_chance_vs_item( it, *vp_wheel );
 
@@ -1435,6 +1438,9 @@ void vehicle::handle_trap( map *here, const tripoint_bub_ms &p, vehicle_part &vp
 {
     if( !vp_wheel.info().has_flag( VPFLAG_WHEEL ) ) {
         debugmsg( "vehicle::handle_trap called on non-WHEEL part" );
+        return;
+    }
+    if( part_with_feature( index_of_part( &vp_wheel ), VPFLAG_TRAP_PROOF, true ) >= 0 ) {
         return;
     }
     const trap &tr = here->tr_at( p );
