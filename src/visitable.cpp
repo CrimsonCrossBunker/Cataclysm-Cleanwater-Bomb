@@ -797,6 +797,7 @@ std::list<item> inventory::remove_items_with( const
 std::list<item> temp_crafting_inventory::remove_items_with( const
         std::function<bool( const item &e )> &filter, int count )
 {
+    invalidate_query_cache();
     std::list<item> res;
 
     if( count <= 0 ) {
@@ -1141,11 +1142,11 @@ static int apply_external_pools_legacy( const M &main,
     // bio_ups: USE_UPS tools also drain active bio_ups bionic energy.
     if( any_ups && qty < limit && get_player_character().has_active_bionic( bio_ups ) ) {
         qty = sum_no_wrap( qty, static_cast<int>( units::to_kilojoule(
-                get_player_character().get_power_level() ) ) );
+                               get_player_character().get_power_level() ) ) );
     }
     if( any_bionic ) {
         qty = sum_no_wrap( qty, static_cast<int>( units::to_kilojoule(
-                get_player_character().get_power_level() ) ) );
+                               get_player_character().get_power_level() ) ) );
     }
     if( qty < limit && any_ups ) {
         const int used_ups = main.charges_of( itype_UPS, limit - qty );
@@ -1172,12 +1173,12 @@ static int apply_external_pools_multimag( const M &main,
     int external = 0;
     if( any_bionic ) {
         external = sum_no_wrap( external, static_cast<int>( units::to_kilojoule(
-                get_player_character().get_power_level() ) ) );
+                                    get_player_character().get_power_level() ) ) );
     }
     if( any_ups ) {
         if( get_player_character().has_active_bionic( bio_ups ) ) {
             external = sum_no_wrap( external, static_cast<int>( units::to_kilojoule(
-                    get_player_character().get_power_level() ) ) );
+                                        get_player_character().get_power_level() ) ) );
         }
         external = sum_no_wrap( external, main.charges_of( itype_UPS, INT_MAX ) );
     }
@@ -1301,6 +1302,36 @@ int read_only_visitable::charges_of( const itype_id &what, int limit,
     return charges_of_internal( *this, *this, what, limit, filter, visitor, in_tools );
 }
 
+namespace
+{
+// The index already follows the appropriate traversal.  Visiting a candidate
+// must not recursively count its children a second time.
+struct crafting_index_view {
+    const std::vector<item *> &items;
+    void visit_items( const std::function<VisitResponse( item *, item * )> &func ) const {
+        for( item *node : items ) {
+            if( func( node, nullptr ) == VisitResponse::ABORT ) {
+                break;
+            }
+        }
+    }
+};
+} // namespace
+
+int temp_crafting_inventory::charges_of( const itype_id &what, int limit,
+        const std::function<bool( const item & )> &filter,
+        const std::function<void( int )> &visitor, bool in_tools ) const
+{
+    // Ammo-type queries can match tools of other types; keep their full traversal.
+    if( !in_tools ) {
+        if( const std::vector<item *> *matches = cached_items( what, true ) ) {
+            return charges_of_internal( crafting_index_view{ *matches }, *this, what,
+                                        limit, filter, visitor, false );
+        }
+    }
+    return read_only_visitable::charges_of( what, limit, filter, visitor, in_tools );
+}
+
 /** @relates visitable */
 int inventory::charges_of( const itype_id &what, int limit,
                            const std::function<bool( const item & )> &filter,
@@ -1362,6 +1393,18 @@ int read_only_visitable::amount_of( const itype_id &what, bool pseudo, int limit
                                     const std::function<bool( const item & )> &filter ) const
 {
     return amount_of_internal( *this, what, pseudo, limit, filter );
+}
+
+int temp_crafting_inventory::amount_of( const itype_id &what, bool pseudo, int limit,
+                                        const std::function<bool( const item & )> &filter ) const
+{
+    // A zero limit makes the generic visitor stop even at an unrelated first item.
+    if( what != itype_any && limit != 0 ) {
+        if( const std::vector<item *> *matches = cached_items( what ) ) {
+            return amount_of_internal( crafting_index_view{ *matches }, what, pseudo, limit, filter );
+        }
+    }
+    return read_only_visitable::amount_of( what, pseudo, limit, filter );
 }
 
 /** @relates visitable */

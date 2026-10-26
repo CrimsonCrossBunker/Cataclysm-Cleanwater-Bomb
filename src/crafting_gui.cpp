@@ -536,8 +536,12 @@ class crafting_ui_impl : public cataimgui::window
         std::map<const recipe *, availability> *availability_cache;
         std::unique_ptr<recipe_result_info_cache> result_info;
         std::unique_ptr<scoped_provider_quality_cache> quality_cache;
+        std::unique_ptr<scoped_crafting_inventory_cache> inventory_cache;
         void reset_quality_cache() {
             quality_cache.reset();
+            inventory_cache.reset();
+            inventory_cache = std::make_unique<scoped_crafting_inventory_cache>(
+                                  inventory_override ? *inventory_override : crafter->crafting_inventory() );
             quality_cache = std::make_unique<scoped_provider_quality_cache>(
                                 inventory_override ? *inventory_override : crafter->crafting_inventory() );
         }
@@ -749,7 +753,7 @@ void crafting_ui_impl::draw_controls()
         // Section 3: main content table (recipe list + info panels)
         float list_width = 28.f * char_w;
         float item_info_width = is_wide ? std::min( 40.f * char_w,
-            ( window_width - full_screen_width ) ) : 0.f;
+                                ( window_width - full_screen_width ) ) : 0.f;
 
         int num_columns = is_wide ? 3 : 2;
         ImGuiTableFlags main_flags = debug_layout
@@ -926,7 +930,7 @@ void crafting_ui_impl::draw_recipe_list()
     }
 
     if( ImGui::BeginChild( "##RECIPES", ImVec2( avail_width,
-            ImGui::GetContentRegionAvail().y ),
+                           ImGui::GetContentRegionAvail().y ),
                            ImGuiChildFlags_FrameStyle, ImGuiWindowFlags_NoNav ) ) {
         ImGuiListClipper clipper;
         clipper.Begin( static_cast<int>( current.size() ) );
@@ -1087,7 +1091,7 @@ void crafting_ui_impl::draw_recipe_info_panel()
                 std::string source_text;
                 if( !crafter->knows_recipe( &recp ) ) {
                     const temp_crafting_inventory &src_inv = avail.inv_override
-                        ? *avail.inv_override : crafter->crafting_inventory();
+                            ? *avail.inv_override : crafter->crafting_inventory();
                     const std::set<itype_id> books = crafter->get_books_for_recipe( src_inv, &recp );
                     if( !books.empty() ) {
                         auto it = books.begin();
@@ -1180,7 +1184,7 @@ void crafting_ui_impl::draw_recipe_info_panel()
 
                 // Lowercase activity name
                 std::string activity_lc = lowercase_first_letter( display::activity_level_str(
-                        recp.exertion_level() ) );
+                                              recp.exertion_level() ) );
 
                 const std::string chance_str = string_format( "~%.0f%%", success );
                 const std::string time_str = approx_craft_time( expected_turns );
@@ -1368,7 +1372,7 @@ void crafting_ui_impl::draw_recipe_info_panel()
             ImGui::Separator();
 
             const temp_crafting_inventory &crafting_inv = avail.inv_override
-                ? *avail.inv_override : crafter->crafting_inventory();
+                    ? *avail.inv_override : crafter->crafting_inventory();
 
             // Single step recipes
             if( recp.has_steps() && ( recp.steps().size() <= 1 ) ) {
@@ -1553,7 +1557,7 @@ void crafting_ui_impl::draw_recipe_info_panel()
                     continue;
                 }
                 const availability &child_avail = cached_availability( *availability_cache, *crafter,
-                    child, camp_crafting, inventory_override );
+                                                  child, camp_crafting, inventory_override );
                 nc_color col = child_avail.color();
                 std::string child_name = child.result_name( true );
                 ImGui::TextColored( cataimgui::imvec4_from_color( c_white ), "  \u2022 " );
@@ -1948,7 +1952,7 @@ void crafting_ui_impl::draw_components( const recipe &rec,
     auto found = component_cache.find( key );
     if( found == component_cache.end() ) {
         found = component_cache.emplace( key, build_component_display( rec, *crafter,
-            crafting_inv, batch_size ) ).first;
+                                         crafting_inv, batch_size ) ).first;
     }
     const crafting_component_groups &comp_groups = found->second;
     if( comp_groups.empty() ) {
@@ -2408,8 +2412,8 @@ void crafting_ui_impl::recalculate_recipes()
             picking.insert( picking.end(), filtered_recipes.begin(), filtered_recipes.end() );
         } else {
             const std::pair<std::vector<const recipe *>, bool> result = recipes_from_cat(
-                    *available_recipes,
-                    crafting_category_id( tab.cur() ), subtab.cur() );
+                        *available_recipes,
+                        crafting_category_id( tab.cur() ), subtab.cur() );
             picking = result.first;
             skip_hidden = result.second;
             show_hidden = result.second;
@@ -2744,11 +2748,11 @@ void crafting_ui_impl::process_action( const std::string &action_in,
         recalc_unread = highlight_unread;
 
         int info_width = std::min( static_cast<int>( ImGui::GetMainViewport()->Size.x /
-            ImGui::CalcTextSize( "X" ).x ), 80 );
+                                   ImGui::CalcTextSize( "X" ).x ), 80 );
         int info_height = static_cast<int>( ImGui::GetMainViewport()->Size.y /
                                             ImGui::GetTextLineHeightWithSpacing() );
         item_info_data data = result_info->get_result_data( current[line], 1,
-            line_item_info_popup, info_width );
+                              line_item_info_popup, info_width );
         data.handle_scrolling = true;
         data.arrow_scrolling = true;
         iteminfo_window info_window( data,
