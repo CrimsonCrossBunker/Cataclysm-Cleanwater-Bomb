@@ -6452,13 +6452,13 @@ void ter_furn_migrations::load( const JsonObject &jo )
         mandatory( jo, false, "from_ter", from_ter );
         mandatory( jo, false, "to_ter", to_ter );
         optional( jo, false, "to_furn", to_furn, furn_str_id::NULL_ID() );
-        ter_migrations.insert( std::make_pair( from_ter, std::make_pair( to_ter, to_furn ) ) );
+        ter_migrations[ from_ter ] = std::make_pair( to_ter, to_furn );
     } else {
         furn_str_id from_furn;
         mandatory( jo, false, "from_furn", from_furn );
         optional( jo, false, "to_ter", to_ter, ter_str_id::NULL_ID() );
         mandatory( jo, false, "to_furn", to_furn );
-        furn_migrations.insert( std::make_pair( from_furn, std::make_pair( to_ter, to_furn ) ) );
+        furn_migrations[ from_furn ] = std::make_pair( to_ter, to_furn );
     }
 }
 
@@ -6497,7 +6497,7 @@ void trap_migrations::load( const JsonObject &jo )
     trap_str_id to_trap;
     mandatory( jo, false, "from_trap", from_trap );
     mandatory( jo, false, "to_trap", to_trap );
-    tr_migrations.insert( std::make_pair( from_trap, to_trap ) );
+    tr_migrations[ from_trap ] = to_trap;
 }
 
 
@@ -6615,7 +6615,7 @@ void field_type_migrations::load( const JsonObject &jo )
     field_type_str_id to_field;
     mandatory( jo, false, "from_field", from_field );
     mandatory( jo, false, "to_field", to_field );
-    field_migrations.insert( std::make_pair( from_field, to_field ) );
+    field_migrations[ from_field ] = to_field;
 }
 
 void field_type_migrations::reset()
