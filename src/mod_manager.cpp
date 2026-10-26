@@ -228,11 +228,11 @@ void mod_migrations::load( const JsonObject &jo )
     const mod_id old_id( jo.get_string( "id" ) );
     if( jo.has_string( "new_id" ) ) {
         const mod_id new_id( jo.get_string( "new_id" ) );
-        migrated_mods.insert( std::make_pair( old_id, new_id ) );
+        migrated_mods[ old_id ] = new_id;
     } else {
         translation removal_reason;
         jo.read( "removal_reason", removal_reason );
-        removed_mods.insert( std::make_pair( old_id, removal_reason ) );
+        removed_mods[ old_id ] = removal_reason;
     }
 }
 
