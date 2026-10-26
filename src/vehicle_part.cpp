@@ -577,7 +577,8 @@ bool vehicle_part::fill_with( item &liquid, int qty )
         return false;
     }
 
-    const int transferred = base.fill_with( liquid, qty );
+    const int transferred = base.fill_with( liquid, qty, false, false, false,
+                                            /*into_bottom=*/false, /*allow_nested=*/false );
     liquid.charges -= transferred;
     return transferred > 0;
 }
@@ -819,7 +820,7 @@ bool vehicle::can_enable( map &here, const vehicle_part &pt, bool alert ) const
 
     // FIXME/HACK: Always checks buckwheat seeds!
     ret_val<void>can_plant = warm_enough_to_plant( get_player_character().pos_bub(),
-        itype_seed_buckwheat );
+                             itype_seed_buckwheat );
     if( pt.info().has_flag( "PLANTER" ) && !can_plant.success() ) {
         if( alert ) {
             add_msg( m_bad, can_plant.c_str() );

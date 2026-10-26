@@ -11,6 +11,8 @@
 #include <vector>
 
 #include "cached_options.h"
+#include "activity_actor_definitions.h"
+#include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
 #include "character.h"
@@ -19,10 +21,13 @@
 #include "inventory_ui.h"
 #include "item.h"
 #include "item_location.h"
+#include "item_pocket.h"
 #include "itype.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
+#include "map_selector.h"
+#include "messages.h"
 #include "player_activity.h"
 #include "player_helpers.h"
 #include "point.h"
@@ -32,6 +37,7 @@
 #include "units.h"
 #include "value_ptr.h"
 #include "veh_type.h"
+#include "veh_interact.h"
 #include "veh_utils.h"
 #include "vehicle.h"
 #include "vpart_position.h"
@@ -58,6 +64,8 @@ static const itype_id itype_test_multimag_well_fluid( "test_multimag_well_fluid"
 static const itype_id itype_water_clean( "water_clean" );
 static const itype_id itype_water_faucet( "water_faucet" );
 static const itype_id itype_water_purifier( "water_purifier" );
+static const itype_id
+itype_test_watertight_open_sealed_container_1L( "test_watertight_open_sealed_container_1L" );
 
 static const recipe_id recipe_oatmeal_cooked( "oatmeal_cooked" );
 
@@ -370,7 +378,7 @@ TEST_CASE( "vehicle_prepare_tool_multimag", "[vehicle][multimag]" )
         REQUIRE( veh->battery_left( here ) == 0 );
 
         const bool ok = vehicle::use_vehicle_tool( *veh, &here, test_origin,
-            itype_test_multimag_vehicle_combo, /*no_invoke=*/true );
+                        itype_test_multimag_vehicle_combo, /*no_invoke=*/true );
         CHECK_FALSE( ok );
     }
 
@@ -582,6 +590,73 @@ TEST_CASE( "vehicle_tank_respects_requested_liquid_amount", "[vehicle][liquid]" 
     CHECK_FALSE( tank.fill_with( gasoline, 0 ) );
     CHECK( tank.ammo_remaining() == 15 );
     CHECK( gasoline.charges == 85 );
+}
+
+TEST_CASE( "vehicle_refill_activity_rechecks_transfer_at_completion",
+           "[vehicle][liquid][activity]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    clear_vehicles();
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms pos = you.pos_bub() + tripoint::east;
+    vehicle *veh = here.add_vehicle( vehicle_prototype_none, pos, 0_degrees, 0,
+                                     veh_spawn_status::UNDAMAGED );
+    REQUIRE( veh != nullptr );
+    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_frame ) >= 0 );
+    const int index = veh->install_part( here, point_rel_ms::zero, vpart_tank_test );
+    REQUIRE( index >= 0 );
+    veh->refresh();
+    here.add_vehicle_to_cache( veh );
+    vehicle_part &tank = veh->part( index );
+    item gasoline( itype_gasoline );
+    gasoline.charges = 100;
+    item container( itype_test_watertight_open_sealed_container_1L );
+    REQUIRE( container.fill_with( gasoline, 100 ) == 100 );
+    REQUIRE( container.get_container_pockets().front()->seal() );
+    const tripoint_bub_ms source_pos = you.pos_bub();
+    item_location source( map_cursor( source_pos ),
+                          &here.add_item_or_charges( source_pos, container ) );
+    REQUIRE( tank.can_reload( source->only_item() ) );
+    vehicle_activity_actor actor( VEHICLE_REFILL, 1_seconds, veh, here.get_abs( pos ),
+                                  tripoint_rel_ms::zero, index, vpart_tank_test, source );
+    bool should_transfer = false;
+    bool should_empty_source = false;
+    SECTION( "normal_refill" ) {
+        should_transfer = true;
+        should_empty_source = true;
+    }
+    SECTION( "partial_refill" ) {
+        tank.ammo_set( itype_gasoline, tank.ammo_capacity( gasoline.ammo_type() ) - 10 );
+        should_transfer = true;
+    }
+    SECTION( "tank_filled_during_activity" ) {
+        tank.ammo_set( itype_gasoline, tank.ammo_capacity( gasoline.ammo_type() ) );
+    }
+    SECTION( "fuel_froze_during_activity" ) {
+        source->only_item().set_item_temperature( units::from_celsius( -80 ) );
+        REQUIRE( source->only_item().is_frozen_liquid() );
+    }
+    const int before = tank.ammo_remaining();
+    Messages::clear_messages();
+    player_activity activity( actor );
+    // Complete directly to avoid reopening the interactive vehicle screen.
+    actor.complete_vehicle( activity, you );
+    const int transferred = tank.ammo_remaining() - before;
+    CHECK( transferred == ( should_transfer ? ( should_empty_source ? 100 : 10 ) : 0 ) );
+    if( should_empty_source ) {
+        CHECK( source->empty() );
+    } else {
+        CHECK( source->only_item().charges + transferred == 100 );
+    }
+    if( !should_transfer ) {
+        CHECK( source->get_container_pockets().front()->sealed() );
+        const auto messages = Messages::recent_messages( 10 );
+        REQUIRE( messages.size() == 1 );
+        CHECK( messages.front().second == "You can no longer refill this tank from that container." );
+    }
+    here.destroy_vehicle( veh );
 }
 
 TEST_CASE( "check_capacity_fueltype_handling", "[vehicle]" )

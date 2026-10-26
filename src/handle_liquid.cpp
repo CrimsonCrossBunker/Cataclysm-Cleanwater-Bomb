@@ -227,7 +227,8 @@ void handle_npc_liquid( item liquid, Character &who )
             break;
         }
         const int amount = std::min( liquid.charges, capacities[best_idx] );
-        liquid.charges -= container_locs[best_idx]->fill_with( liquid, amount );
+        liquid.charges -= container_locs[best_idx]->fill_with( liquid, amount, false, false, false,
+                          /*into_bottom=*/false, /*allow_nested=*/false );
         capacities[best_idx] = 0;
     }
     who.invalidate_weight_carried_cache();
