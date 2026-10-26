@@ -1437,6 +1437,9 @@ void vehicle::handle_trap( map *here, const tripoint_bub_ms &p, vehicle_part &vp
         debugmsg( "vehicle::handle_trap called on non-WHEEL part" );
         return;
     }
+    if( part_with_feature( vp_wheel.part_index(), VPFLAG_TRAP_PROOF, true ) >= 0 ) {
+        return;
+    }
     const trap &tr = here->tr_at( p );
 
     if( tr.is_null() ) {
