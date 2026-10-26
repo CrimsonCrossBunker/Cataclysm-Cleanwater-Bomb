@@ -3964,7 +3964,7 @@ void spell_migration::load( const JsonObject &jo )
     spell_migration migration;
     mandatory( jo, false, "from", migration.id_old );
     optional( jo, false, "to", migration.id_new );
-    spell_migrations.emplace( migration.id_old, migration );
+    spell_migrations[ migration.id_old ] = migration;
 }
 
 void spell_migration::reset()
