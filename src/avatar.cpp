@@ -294,6 +294,12 @@ bool avatar::has_memory_at( const tripoint_abs_ms &p ) const
     return !mt.get_ter_id().empty() || !mt.get_dec_id().empty();
 }
 
+bool avatar::has_map_memory_in_region( const tripoint_abs_ms &p1,
+                                       const tripoint_abs_ms &p2 ) const
+{
+    return should_show_map_memory() && player_map_memory->has_memory_in_region( p1, p2 );
+}
+
 void avatar::memorize_terrain( const tripoint_abs_ms &p, std::string_view id,
                                int subtile, int rotation )
 {

@@ -1,8 +1,9 @@
-// Sky pass: procedural sky rendered behind the world (the world pass loads
-// over this). Reconstructs the view ray from NDC and the camera basis, then
-// paints a daylight-driven gradient, the sun disc (real azimuth/altitude from
-// the game calendar), and fbm clouds drifting with the wind. Below the
-// horizon: a dark void so the world edge never reads as sky.
+// Sky pass: procedural sky rendered behind the world (drawn after the world at
+// far depth, so only uncovered pixels run this shader). Reconstructs the view
+// ray from NDC and the camera basis, then paints a daylight-driven gradient,
+// the sun disc (real azimuth/altitude from the game calendar), and fbm clouds
+// drifting with the wind. Below the horizon: a dark void so the world edge
+// never reads as sky.
 // SDL GPU fragment uniform buffers live in set 3.
 
 #version 450

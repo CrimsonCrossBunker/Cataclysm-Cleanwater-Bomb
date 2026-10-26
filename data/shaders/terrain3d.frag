@@ -35,8 +35,15 @@ layout(location = 0) out vec4 out_color;
 void main()
 {
     int flags = int( v_flags + 0.5 );
-    float hash = fract( sin( dot( gl_FragCoord.xy,
-                                  vec2( 12.9898, 78.233 ) ) ) * 43758.5453 );
+    const bool mask_candidate = mask_params.w > 0.5 &&
+                                v_world.z > mask_params.z + 0.15;
+    // Most fragments do not use screen-door transparency. Avoid evaluating a
+    // sine hash unless this fragment can actually enter a dithered branch.
+    float hash = 0.0;
+    if( mask_candidate || ( flags & ( 32 | 128 ) ) != 0 ) {
+        hash = fract( sin( dot( gl_FragCoord.xy,
+                                vec2( 12.9898, 78.233 ) ) ) * 43758.5453 );
+    }
 
     // camera->player occlusion mask: hide geometry near the eye-to-player
     // segment so walls and roofs never block the player. the cross-section is
@@ -44,7 +51,7 @@ void main()
     // softened with a screen-door dither instead of alpha blending (no sorting
     // needed). only fragments above the player's own floor are masked, so the
     // ground the player stands on stays put
-    if( mask_params.w > 0.5 && v_world.z > mask_params.z + 0.15 ) {
+    if( mask_candidate ) {
         vec3 pa = v_world - eye_pos.xyz;
         vec3 ba = player_pos.xyz - eye_pos.xyz;
         float t_raw = dot( pa, ba ) / max( dot( ba, ba ), 1e-6 );

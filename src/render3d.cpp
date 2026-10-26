@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bitset>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
@@ -11,7 +12,8 @@
 #include <filesystem>
 #include <fstream>
 #include <limits>
-#include <map>
+#include <memory>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -35,6 +37,7 @@
 #include "field.h"
 #include "field_type.h"
 #include "font_loader.h"
+#include "game.h"
 #include "game_constants.h"
 #include "item.h"
 #include "level_cache.h"
@@ -237,6 +240,76 @@ mat4 mat4_lookat( const vec3 &eye, const vec3 &target, const vec3 &up )
     return m;
 }
 
+struct view_frustum {
+    // a*x + b*y + c*z + d >= 0 is inside. SDL GPU depth is in [0,1].
+    std::array<std::array<float, 4>, 6> planes{};
+};
+
+view_frustum make_view_frustum( const mat4 &m )
+{
+    view_frustum out;
+    const auto row = [&m]( const int r ) {
+        return std::array<float, 4>{ m.c[r], m.c[4 + r], m.c[8 + r], m.c[12 + r] };
+    };
+    const auto add = []( const std::array<float, 4> &a, const std::array<float, 4> &b,
+    const float sign ) {
+        return std::array<float, 4>{ a[0] + sign * b[0], a[1] + sign * b[1],
+                                     a[2] + sign * b[2], a[3] + sign * b[3] };
+    };
+    const std::array<float, 4> x = row( 0 );
+    const std::array<float, 4> y = row( 1 );
+    const std::array<float, 4> z = row( 2 );
+    const std::array<float, 4> w = row( 3 );
+    out.planes = {{ add( w, x, 1.0f ), add( w, x, -1.0f ),
+                    add( w, y, 1.0f ), add( w, y, -1.0f ),
+                    z, add( w, z, -1.0f )
+                 }};
+    for( std::array<float, 4> &p : out.planes ) {
+        const float len = std::sqrt( p[0] * p[0] + p[1] * p[1] + p[2] * p[2] );
+        if( len > 1e-8f ) {
+            for( float &v : p ) {
+                v /= len;
+            }
+        }
+    }
+    return out;
+}
+
+bool aabb_in_frustum( const view_frustum &f, const vec3 &min, const vec3 &max )
+{
+    for( const std::array<float, 4> &p : f.planes ) {
+        // The positive vertex gives an AABB its best chance to be inside this
+        // plane. If even that vertex is outside, the whole box is outside.
+        const vec3 v{ p[0] >= 0.0f ? max.x : min.x,
+                      p[1] >= 0.0f ? max.y : min.y,
+                      p[2] >= 0.0f ? max.z : min.z };
+        if( p[0] * v.x + p[1] * v.y + p[2] * v.z + p[3] < 0.0f ) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// Generous bounds for every object a tile can emit: the largest current
+// creature billboard is 9m wide, and vehicle/sheet art can spill across tiles.
+// Conservative culling is preferable here to clipping an edge-case sprite.
+constexpr float CULL_XY_MARGIN = 5.0f;
+constexpr float CULL_Z_BELOW = 4.0f;
+constexpr float CULL_Z_ABOVE = 5.0f;
+
+bool bounds_in_frustum( const view_frustum &f, const float x0, const float y0,
+                        const float x1, const float y1, const float wz )
+{
+    return aabb_in_frustum( f, { x0 - CULL_XY_MARGIN, y0 - CULL_XY_MARGIN, wz - CULL_Z_BELOW },
+    { x1 + CULL_XY_MARGIN, y1 + CULL_XY_MARGIN, wz + CULL_Z_ABOVE } );
+}
+
+bool tile_in_frustum( const view_frustum &f, const int dx, const int dy, const float wz )
+{
+    return bounds_in_frustum( f, static_cast<float>( dx ), static_cast<float>( dy ),
+                              static_cast<float>( dx + 1 ), static_cast<float>( dy + 1 ), wz );
+}
+
 // Unit cube, corner at origin, spanning [0,1]^3; 36 verts, pos(3f) + normal(3f).
 const std::array<float, 36 * 6> &cube_vertices()
 {
@@ -396,23 +469,45 @@ SDL_GPUShader *load_shader( SDL_GPUDevice *device, const std::string &basename,
     return nullptr;
 }
 
+constexpr size_t FRAME_SLOT_COUNT = 2;
+
+enum class frame_slot_state {
+    empty,
+    recording,
+    in_flight,
+    ready
+};
+
+struct frame_slot {
+    SDL_GPUTexture *color_tex = nullptr;
+    SDL_GPUTexture *depth_tex = nullptr;
+    SDL_Texture *color_tex_sdl = nullptr;
+    SDL_GPUBuffer *instance_vb = nullptr;
+    SDL_GPUTransferBuffer *instance_tb = nullptr;
+    size_t instance_tb_size = 0;
+    std::unordered_map<SDL_Texture *, std::shared_ptr<SDL_Texture>> texture_owners;
+    SDL_GPUFence *fence = nullptr;
+    frame_slot_state state = frame_slot_state::empty;
+    uint64_t serial = 0;
+};
+
 struct context {
     SDL_GPUDevice *device = nullptr; // owned by the SDL_Renderer
     SDL_GPUGraphicsPipeline *pipeline = nullptr;
     // same pipeline with depth write OFF for MODE_FLATQUAD_DECAL (vehicle
     // decals): coplanar decals resolve by painter's order instead of z-fighting
     SDL_GPUGraphicsPipeline *pipeline_decal = nullptr;
-    SDL_GPUGraphicsPipeline *sky_pipeline = nullptr; // fullscreen sky pass (no VBs, no depth)
+    SDL_GPUGraphicsPipeline *sky_pipeline = nullptr; // far-depth background pass after the world
     SDL_GPUBuffer *cube_vb = nullptr;
     SDL_GPUBuffer *xquad_vb = nullptr;
     SDL_GPUBuffer *quad_vb = nullptr;
     SDL_GPUBuffer *flatquad_vb = nullptr;
-    SDL_GPUBuffer *instance_vb = nullptr;
     SDL_GPUSampler *sampler = nullptr;
     SDL_GPUTexture *fallback_tex = nullptr; // 1x1 white, bound when a batch has no atlas
-    SDL_GPUTexture *color_tex = nullptr; // wrapped by color_tex_sdl, do not release directly
-    SDL_GPUTexture *depth_tex = nullptr;
-    SDL_Texture *color_tex_sdl = nullptr; // renderer-side wrapper of color_tex
+    std::array<frame_slot, FRAME_SLOT_COUNT> slots;
+    int latest_ready = -1;
+    uint64_t latest_ready_serial = 0;
+    uint64_t next_serial = 1;
     // ASCII glyph atlas for sprite-less items (the curses-style fallback):
     // printable chars 32..126 in a 16-column grid, white on transparent
     SDL_Texture *glyph_tex = nullptr;
@@ -427,6 +522,7 @@ struct context {
 };
 
 context g_ctx;
+frame_slot *g_recording_slot = nullptr;
 bool g_available = false;
 SDL_Renderer *g_probed_renderer = nullptr;
 
@@ -489,130 +585,363 @@ void write_status( const std::string &msg )
     out << msg << "\n";
 }
 
-void context::teardown()
+bool profiling_enabled()
 {
-    if( !device ) {
+    static const bool enabled = std::getenv( "CATA_RENDER3D_PROFILE" ) != nullptr;
+    return enabled;
+}
+
+Uint64 profile_ticks( const bool enabled )
+{
+    return enabled ? SDL_GetPerformanceCounter() : 0;
+}
+
+double profile_ms( const Uint64 begin, const Uint64 end )
+{
+    return static_cast<double>( end - begin ) * 1000.0 /
+           static_cast<double>( SDL_GetPerformanceFrequency() );
+}
+
+struct frame_profile {
+    uint64_t main_tiles = 0;
+    uint64_t coarse_tiles = 0;
+    uint64_t frustum_tiles = 0;
+    uint64_t skipped_submaps = 0;
+    uint64_t skipped_levels = 0;
+    uint64_t creature_positions = 0;
+    uint64_t skipped_submissions = 0;
+    uint64_t sprite_cache_hits = 0;
+    uint64_t orientation_cache_hits = 0;
+    uint64_t instances = 0;
+    uint64_t segments = 0;
+    uint64_t upload_bytes = 0;
+    double memory_ms = 0.0;
+    double gather_ms = 0.0;
+    double assembly_ms = 0.0;
+    double upload_ms = 0.0;
+    double record_ms = 0.0;
+    double wait_ms = 0.0;
+    double composite_ms = 0.0;
+    double total_ms = 0.0;
+
+    void add( const frame_profile &other )
+    {
+        main_tiles += other.main_tiles;
+        coarse_tiles += other.coarse_tiles;
+        frustum_tiles += other.frustum_tiles;
+        skipped_submaps += other.skipped_submaps;
+        skipped_levels += other.skipped_levels;
+        creature_positions += other.creature_positions;
+        skipped_submissions += other.skipped_submissions;
+        sprite_cache_hits += other.sprite_cache_hits;
+        orientation_cache_hits += other.orientation_cache_hits;
+        instances += other.instances;
+        segments += other.segments;
+        upload_bytes += other.upload_bytes;
+        memory_ms += other.memory_ms;
+        gather_ms += other.gather_ms;
+        assembly_ms += other.assembly_ms;
+        upload_ms += other.upload_ms;
+        record_ms += other.record_ms;
+        wait_ms += other.wait_ms;
+        composite_ms += other.composite_ms;
+        total_ms += other.total_ms;
+    }
+};
+
+frame_profile g_profile;
+
+void publish_profile( const frame_profile &frame )
+{
+    if( !profiling_enabled() ) {
         return;
     }
-    if( color_tex_sdl ) {
-        // Destroying the wrapper does not own the wrapped GPU texture (the
-        // renderer only wraps it), so release the GPU texture ourselves.
-        SDL_DestroyTexture( color_tex_sdl );
-        color_tex_sdl = nullptr;
+    static frame_profile total;
+    static int frames = 0;
+    total.add( frame );
+    ++frames;
+    if( frames < 120 ) {
+        return;
     }
-    if( glyph_tex ) {
-        SDL_DestroyTexture( glyph_tex );
-        glyph_tex = nullptr;
+    const int sample_count = frames;
+    const auto avg = [sample_count]( const auto value ) {
+        return static_cast<double>( value ) / sample_count;
+    };
+    std::ostringstream out;
+    out.precision( 3 );
+    out << std::fixed
+        << "profile 120f: total=" << avg( total.total_ms )
+        << "ms memory=" << avg( total.memory_ms )
+        << " gather=" << avg( total.gather_ms )
+        << " assembly=" << avg( total.assembly_ms )
+        << " upload=" << avg( total.upload_ms )
+        << " record=" << avg( total.record_ms )
+        << " wait=" << avg( total.wait_ms )
+        << " composite=" << avg( total.composite_ms )
+        << " | tiles=" << avg( total.main_tiles )
+        << " coarse_skip=" << avg( total.coarse_tiles )
+        << " frustum_skip=" << avg( total.frustum_tiles )
+        << " skipped_sm=" << avg( total.skipped_submaps )
+        << " skipped_z=" << avg( total.skipped_levels )
+        << " creatures=" << avg( total.creature_positions )
+        << " skipped_submit=" << avg( total.skipped_submissions )
+        << " sprite_hits=" << avg( total.sprite_cache_hits )
+        << " orientation_hits=" << avg( total.orientation_cache_hits )
+        << " instances=" << avg( total.instances )
+        << " segments=" << avg( total.segments )
+        << " upload_KiB=" << avg( total.upload_bytes ) / 1024.0;
+    write_status( out.str() );
+    total = frame_profile{};
+    frames = 0;
+}
+
+void reset_frame_tracking()
+{
+    for( frame_slot &slot : g_ctx.slots ) {
+        slot.state = frame_slot_state::empty;
+        slot.serial = 0;
     }
-    if( color_tex ) {
-        SDL_ReleaseGPUTexture( device, color_tex );
-        color_tex = nullptr;
+    g_ctx.latest_ready = -1;
+    g_ctx.latest_ready_serial = 0;
+    g_ctx.next_serial = 1;
+}
+
+void poll_frame_slots()
+{
+    for( int i = 0; i < static_cast<int>( g_ctx.slots.size() ); ++i ) {
+        frame_slot &slot = g_ctx.slots[i];
+        if( slot.state != frame_slot_state::in_flight || !slot.fence ) {
+            continue;
+        }
+        if( !SDL_QueryGPUFence( g_ctx.device, slot.fence ) ) {
+            continue;
+        }
+        SDL_ReleaseGPUFence( g_ctx.device, slot.fence );
+        slot.fence = nullptr;
+        slot.texture_owners.clear();
+        slot.state = frame_slot_state::ready;
+        if( slot.serial >= g_ctx.latest_ready_serial ) {
+            g_ctx.latest_ready = i;
+            g_ctx.latest_ready_serial = slot.serial;
+        }
     }
-    if( fallback_tex ) {
-        SDL_ReleaseGPUTexture( device, fallback_tex );
-        fallback_tex = nullptr;
+}
+
+int begin_frame_slot()
+{
+    // Prefer a never-used/already-discarded slot, then an older completed one.
+    // The newest completed slot stays intact for this frame's composite.
+    for( int pass = 0; pass < 2; ++pass ) {
+        for( int i = 0; i < static_cast<int>( g_ctx.slots.size() ); ++i ) {
+            if( i == g_ctx.latest_ready ) {
+                continue;
+            }
+            frame_slot &slot = g_ctx.slots[i];
+            const bool available = pass == 0 ? slot.state == frame_slot_state::empty
+                                   : slot.state == frame_slot_state::ready;
+            if( available ) {
+                slot.state = frame_slot_state::recording;
+                slot.serial = g_ctx.next_serial++;
+                return i;
+            }
+        }
     }
-    if( sampler ) {
-        SDL_ReleaseGPUSampler( device, sampler );
-        sampler = nullptr;
+    return -1;
+}
+
+bool wait_for_frame_slot( const int index )
+{
+    if( index < 0 ) {
+        return false;
     }
-    if( depth_tex ) {
-        SDL_ReleaseGPUTexture( device, depth_tex );
-        depth_tex = nullptr;
+    frame_slot &slot = g_ctx.slots[index];
+    if( slot.state != frame_slot_state::in_flight || !slot.fence ) {
+        return slot.state == frame_slot_state::ready;
     }
-    if( cube_vb ) {
-        SDL_ReleaseGPUBuffer( device, cube_vb );
-        cube_vb = nullptr;
+    if( !SDL_WaitForGPUFences( g_ctx.device, true, &slot.fence, 1 ) ) {
+        return false;
     }
-    if( xquad_vb ) {
-        SDL_ReleaseGPUBuffer( device, xquad_vb );
-        xquad_vb = nullptr;
+    poll_frame_slots();
+    return slot.state == frame_slot_state::ready;
+}
+
+void drain_frame_slots()
+{
+    if( g_ctx.device && !SDL_WaitForGPUIdle( g_ctx.device ) ) {
+        write_status( "GPU idle wait failed during frame-slot drain: " +
+                      std::string( SDL_GetError() ) );
     }
-    if( quad_vb ) {
-        SDL_ReleaseGPUBuffer( device, quad_vb );
-        quad_vb = nullptr;
+    for( frame_slot &slot : g_ctx.slots ) {
+        slot.texture_owners.clear();
+        if( slot.fence ) {
+            SDL_ReleaseGPUFence( g_ctx.device, slot.fence );
+            slot.fence = nullptr;
+        }
     }
-    if( flatquad_vb ) {
-        SDL_ReleaseGPUBuffer( device, flatquad_vb );
-        flatquad_vb = nullptr;
+    g_recording_slot = nullptr;
+    reset_frame_tracking();
+}
+
+bool composite_latest_frame( SDL_Renderer *renderer, const SDL_FRect &dest )
+{
+    if( g_ctx.latest_ready < 0 ) {
+        return false;
     }
-    if( instance_vb ) {
-        SDL_ReleaseGPUBuffer( device, instance_vb );
-        instance_vb = nullptr;
+    frame_slot &slot = g_ctx.slots[g_ctx.latest_ready];
+    if( slot.state != frame_slot_state::ready || !slot.color_tex_sdl ) {
+        return false;
     }
-    if( pipeline ) {
-        SDL_ReleaseGPUGraphicsPipeline( device, pipeline );
-        pipeline = nullptr;
+    return SDL_RenderTexture( renderer, slot.color_tex_sdl, nullptr, &dest );
+}
+
+void context::teardown()
+{
+    if( device ) {
+        drain_frame_slots();
+        for( frame_slot &slot : slots ) {
+            if( slot.color_tex_sdl ) {
+                // The wrapper does not own the wrapped GPU texture.
+                SDL_DestroyTexture( slot.color_tex_sdl );
+                slot.color_tex_sdl = nullptr;
+            }
+            if( slot.color_tex ) {
+                SDL_ReleaseGPUTexture( device, slot.color_tex );
+                slot.color_tex = nullptr;
+            }
+            if( slot.depth_tex ) {
+                SDL_ReleaseGPUTexture( device, slot.depth_tex );
+                slot.depth_tex = nullptr;
+            }
+            if( slot.instance_tb ) {
+                SDL_ReleaseGPUTransferBuffer( device, slot.instance_tb );
+                slot.instance_tb = nullptr;
+                slot.instance_tb_size = 0;
+            }
+            if( slot.instance_vb ) {
+                SDL_ReleaseGPUBuffer( device, slot.instance_vb );
+                slot.instance_vb = nullptr;
+            }
+        }
+        if( glyph_tex ) {
+            SDL_DestroyTexture( glyph_tex );
+            glyph_tex = nullptr;
+        }
+        if( fallback_tex ) {
+            SDL_ReleaseGPUTexture( device, fallback_tex );
+            fallback_tex = nullptr;
+        }
+        if( sampler ) {
+            SDL_ReleaseGPUSampler( device, sampler );
+            sampler = nullptr;
+        }
+        if( cube_vb ) {
+            SDL_ReleaseGPUBuffer( device, cube_vb );
+            cube_vb = nullptr;
+        }
+        if( xquad_vb ) {
+            SDL_ReleaseGPUBuffer( device, xquad_vb );
+            xquad_vb = nullptr;
+        }
+        if( quad_vb ) {
+            SDL_ReleaseGPUBuffer( device, quad_vb );
+            quad_vb = nullptr;
+        }
+        if( flatquad_vb ) {
+            SDL_ReleaseGPUBuffer( device, flatquad_vb );
+            flatquad_vb = nullptr;
+        }
+        if( pipeline ) {
+            SDL_ReleaseGPUGraphicsPipeline( device, pipeline );
+            pipeline = nullptr;
+        }
+        if( pipeline_decal ) {
+            SDL_ReleaseGPUGraphicsPipeline( device, pipeline_decal );
+            pipeline_decal = nullptr;
+        }
+        if( sky_pipeline ) {
+            SDL_ReleaseGPUGraphicsPipeline( device, sky_pipeline );
+            sky_pipeline = nullptr;
+        }
+    } else {
+        reset_frame_tracking();
     }
-    if( pipeline_decal ) {
-        SDL_ReleaseGPUGraphicsPipeline( device, pipeline_decal );
-        pipeline_decal = nullptr;
-    }
-    if( sky_pipeline ) {
-        SDL_ReleaseGPUGraphicsPipeline( device, sky_pipeline );
-        sky_pipeline = nullptr;
-    }
+    tex_w = 0;
+    tex_h = 0;
     device = nullptr;
 }
 
 bool ensure_targets( SDL_Renderer *renderer, const int w, const int h )
 {
-    if( g_ctx.color_tex && g_ctx.tex_w == w && g_ctx.tex_h == h ) {
+    bool ready = g_ctx.tex_w == w && g_ctx.tex_h == h;
+    if( ready ) {
+        for( const frame_slot &slot : g_ctx.slots ) {
+            ready = ready && slot.color_tex && slot.depth_tex && slot.color_tex_sdl;
+        }
+    }
+    if( ready ) {
         return true;
     }
-    if( g_ctx.color_tex_sdl ) {
-        SDL_DestroyTexture( g_ctx.color_tex_sdl );
-        g_ctx.color_tex_sdl = nullptr;
-    }
-    if( g_ctx.color_tex ) {
-        SDL_ReleaseGPUTexture( g_ctx.device, g_ctx.color_tex );
-        g_ctx.color_tex = nullptr;
-    }
-    if( g_ctx.depth_tex ) {
-        SDL_ReleaseGPUTexture( g_ctx.device, g_ctx.depth_tex );
-        g_ctx.depth_tex = nullptr;
+
+    // Resizing is rare and must not destroy a texture the renderer still reads.
+    SDL_FlushRenderer( renderer );
+    drain_frame_slots();
+    for( frame_slot &slot : g_ctx.slots ) {
+        if( slot.color_tex_sdl ) {
+            SDL_DestroyTexture( slot.color_tex_sdl );
+            slot.color_tex_sdl = nullptr;
+        }
+        if( slot.color_tex ) {
+            SDL_ReleaseGPUTexture( g_ctx.device, slot.color_tex );
+            slot.color_tex = nullptr;
+        }
+        if( slot.depth_tex ) {
+            SDL_ReleaseGPUTexture( g_ctx.device, slot.depth_tex );
+            slot.depth_tex = nullptr;
+        }
     }
 
-    SDL_GPUTextureCreateInfo ci{};
-    ci.type = SDL_GPU_TEXTURETYPE_2D;
-    ci.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
-    ci.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER;
-    ci.width = static_cast<Uint32>( w );
-    ci.height = static_cast<Uint32>( h );
-    ci.layer_count_or_depth = 1;
-    ci.num_levels = 1;
-    ci.sample_count = SDL_GPU_SAMPLECOUNT_1;
-    g_ctx.color_tex = SDL_CreateGPUTexture( g_ctx.device, &ci );
-    if( !g_ctx.color_tex ) {
-        write_status( "ensure_targets failed: color target: " + std::string( SDL_GetError() ) );
-        DebugLog( D_ERROR, DC_ALL ) << "render3d: color target creation failed: " << SDL_GetError();
-        return false;
-    }
+    for( frame_slot &slot : g_ctx.slots ) {
+        SDL_GPUTextureCreateInfo ci{};
+        ci.type = SDL_GPU_TEXTURETYPE_2D;
+        ci.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
+        ci.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER;
+        ci.width = static_cast<Uint32>( w );
+        ci.height = static_cast<Uint32>( h );
+        ci.layer_count_or_depth = 1;
+        ci.num_levels = 1;
+        ci.sample_count = SDL_GPU_SAMPLECOUNT_1;
+        slot.color_tex = SDL_CreateGPUTexture( g_ctx.device, &ci );
+        if( !slot.color_tex ) {
+            write_status( "ensure_targets failed: color target: " + std::string( SDL_GetError() ) );
+            DebugLog( D_ERROR, DC_ALL ) << "render3d: color target creation failed: " << SDL_GetError();
+            return false;
+        }
 
-    ci.format = SDL_GPU_TEXTUREFORMAT_D32_FLOAT;
-    ci.usage = SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET;
-    g_ctx.depth_tex = SDL_CreateGPUTexture( g_ctx.device, &ci );
-    if( !g_ctx.depth_tex ) {
-        write_status( "ensure_targets failed: depth target: " + std::string( SDL_GetError() ) );
-        DebugLog( D_ERROR, DC_ALL ) << "render3d: depth target creation failed: " << SDL_GetError();
-        return false;
-    }
+        ci.format = SDL_GPU_TEXTUREFORMAT_D32_FLOAT;
+        ci.usage = SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET;
+        slot.depth_tex = SDL_CreateGPUTexture( g_ctx.device, &ci );
+        if( !slot.depth_tex ) {
+            write_status( "ensure_targets failed: depth target: " + std::string( SDL_GetError() ) );
+            DebugLog( D_ERROR, DC_ALL ) << "render3d: depth target creation failed: " << SDL_GetError();
+            return false;
+        }
 
-    SDL_PropertiesID props = SDL_CreateProperties();
-    SDL_SetPointerProperty( props, SDL_PROP_TEXTURE_CREATE_GPU_TEXTURE_POINTER, g_ctx.color_tex );
-    SDL_SetNumberProperty( props, SDL_PROP_TEXTURE_CREATE_FORMAT_NUMBER, SDL_PIXELFORMAT_ABGR8888 );
-    SDL_SetNumberProperty( props, SDL_PROP_TEXTURE_CREATE_WIDTH_NUMBER, w );
-    SDL_SetNumberProperty( props, SDL_PROP_TEXTURE_CREATE_HEIGHT_NUMBER, h );
-    SDL_SetNumberProperty( props, SDL_PROP_TEXTURE_CREATE_ACCESS_NUMBER,
-                           SDL_TEXTUREACCESS_STATIC );
-    g_ctx.color_tex_sdl = SDL_CreateTextureWithProperties( renderer, props );
-    SDL_DestroyProperties( props );
-    if( !g_ctx.color_tex_sdl ) {
-        write_status( "ensure_targets failed: texture wrap: " + std::string( SDL_GetError() ) );
-        DebugLog( D_ERROR, DC_ALL ) << "render3d: wrapping GPU texture failed: " << SDL_GetError();
-        return false;
+        SDL_PropertiesID props = SDL_CreateProperties();
+        SDL_SetPointerProperty( props, SDL_PROP_TEXTURE_CREATE_GPU_TEXTURE_POINTER, slot.color_tex );
+        SDL_SetNumberProperty( props, SDL_PROP_TEXTURE_CREATE_FORMAT_NUMBER, SDL_PIXELFORMAT_ABGR8888 );
+        SDL_SetNumberProperty( props, SDL_PROP_TEXTURE_CREATE_WIDTH_NUMBER, w );
+        SDL_SetNumberProperty( props, SDL_PROP_TEXTURE_CREATE_HEIGHT_NUMBER, h );
+        SDL_SetNumberProperty( props, SDL_PROP_TEXTURE_CREATE_ACCESS_NUMBER,
+                               SDL_TEXTUREACCESS_STATIC );
+        slot.color_tex_sdl = SDL_CreateTextureWithProperties( renderer, props );
+        SDL_DestroyProperties( props );
+        if( !slot.color_tex_sdl ) {
+            write_status( "ensure_targets failed: texture wrap: " + std::string( SDL_GetError() ) );
+            DebugLog( D_ERROR, DC_ALL ) << "render3d: wrapping GPU texture failed: " << SDL_GetError();
+            return false;
+        }
+        SDL_SetTextureScaleMode( slot.color_tex_sdl, SDL_SCALEMODE_LINEAR );
     }
-    SDL_SetTextureScaleMode( g_ctx.color_tex_sdl, SDL_SCALEMODE_LINEAR );
 
     g_ctx.tex_w = w;
     g_ctx.tex_h = h;
@@ -797,8 +1126,8 @@ bool probe( SDL_Renderer *renderer )
         return false;
     }
 
-    // sky pass pipeline: a fullscreen triangle (no vertex buffers, no depth),
-    // drawn before the world pass so the sky shows wherever no geometry covers.
+    // sky pass pipeline: a fullscreen triangle at far depth, drawn after the
+    // world pass so only uncovered pixels evaluate the procedural sky.
     // optional — if the shaders are missing the world pass just clears to a
     // plain sky color like before
     SDL_GPUShader *sky_vs = load_shader( device, "sky.vert", SDL_GPU_SHADERSTAGE_VERTEX, 0 );
@@ -810,11 +1139,17 @@ bool probe( SDL_Renderer *renderer )
         spi.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
         spi.rasterizer_state.fill_mode = SDL_GPU_FILLMODE_FILL;
         spi.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_NONE;
+        // sky.vert writes depth 1. After the world pass, LESS_OR_EQUAL leaves
+        // only pixels whose depth is still the clear value (also 1).
+        spi.depth_stencil_state.enable_depth_test = true;
+        spi.depth_stencil_state.enable_depth_write = false;
+        spi.depth_stencil_state.compare_op = SDL_GPU_COMPAREOP_LESS_OR_EQUAL;
         spi.target_info.num_color_targets = 1;
         SDL_GPUColorTargetDescription scolor_desc{};
         scolor_desc.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
         spi.target_info.color_target_descriptions = &scolor_desc;
-        spi.target_info.has_depth_stencil_target = false;
+        spi.target_info.depth_stencil_format = SDL_GPU_TEXTUREFORMAT_D32_FLOAT;
+        spi.target_info.has_depth_stencil_target = true;
         g_ctx.sky_pipeline = SDL_CreateGPUGraphicsPipeline( device, &spi );
         if( !g_ctx.sky_pipeline ) {
             write_status( "sky pipeline creation failed: " + std::string( SDL_GetError() ) );
@@ -840,11 +1175,17 @@ bool probe( SDL_Renderer *renderer )
     bi.size = flatquad_vertices().size() * sizeof( float );
     g_ctx.flatquad_vb = SDL_CreateGPUBuffer( device, &bi );
     // slack past MAX_DRAW_INSTANCES: the cap is checked per tile, and one tile
-    // (a fence corner with furniture + items) can push several past it
+    // (a fence corner with furniture + items) can push several past it. Each
+    // slot owns its instance VB so a pending frame never shares it with a new one.
     bi.size = ( MAX_DRAW_INSTANCES + 64 ) * INSTANCE_STRIDE;
-    g_ctx.instance_vb = SDL_CreateGPUBuffer( device, &bi );
-    if( !g_ctx.cube_vb || !g_ctx.xquad_vb || !g_ctx.quad_vb || !g_ctx.flatquad_vb ||
-        !g_ctx.instance_vb ) {
+    for( frame_slot &slot : g_ctx.slots ) {
+        slot.instance_vb = SDL_CreateGPUBuffer( device, &bi );
+    }
+    bool buffers_ok = g_ctx.cube_vb && g_ctx.xquad_vb && g_ctx.quad_vb && g_ctx.flatquad_vb;
+    for( const frame_slot &slot : g_ctx.slots ) {
+        buffers_ok = buffers_ok && slot.instance_vb;
+    }
+    if( !buffers_ok ) {
         DebugLog( D_ERROR, DC_ALL ) << "render3d: buffer creation failed: " << SDL_GetError();
         write_status( "unavailable: buffer creation failed" );
         g_ctx.teardown();
@@ -1236,28 +1577,32 @@ uint8_t memory_conn_mask( const int subtile, const int rotation )
     }
 }
 
-// map-memory sprite lookups repeat heavily (floors, walls, roads); cache the
-// single-variant ones for the frame. multi-variant tiles keep their per-tile
-// variant seed, so they resolve every time and stay varied.
-struct memory_lookup_key {
+// Sprite resolution repeats heavily for floors, walls, roads and remembered
+// terrain. Single-variant results are position-independent and can survive
+// across frames; multi-variant results still resolve per tile below.
+struct sprite_lookup_key {
     std::string_view id;
+    std::string_view variant;
     int category = 0;
     int subtile = 0;
     int rota = 0;
     int force = 0;
-    bool operator==( const memory_lookup_key &o ) const {
+    int season = 0;
+    bool operator==( const sprite_lookup_key &o ) const {
         return category == o.category && subtile == o.subtile && rota == o.rota &&
-               force == o.force && id == o.id;
+               force == o.force && season == o.season && id == o.id && variant == o.variant;
     }
 };
 
-struct memory_lookup_hash {
-    size_t operator()( const memory_lookup_key &k ) const {
+struct sprite_lookup_hash {
+    size_t operator()( const sprite_lookup_key &k ) const {
         size_t h = std::hash<std::string_view>{}( k.id );
+        h ^= std::hash<std::string_view>{}( k.variant ) + 0x9e3779b9u + ( h << 6 ) + ( h >> 2 );
         h = h * 1000003u + static_cast<size_t>( k.category );
         h = h * 1000003u + static_cast<size_t>( k.subtile );
         h = h * 1000003u + static_cast<size_t>( k.rota );
         h = h * 1000003u + static_cast<size_t>( k.force );
+        h = h * 1000003u + static_cast<size_t>( k.season );
         return h;
     }
 };
@@ -1279,6 +1624,49 @@ struct sprite_lookup_3d {
     std::string resolved_id;
 };
 
+struct cached_sprite_lookup_3d {
+    // The unordered_map's string_view keys point here. A shared_ptr keeps this
+    // entry (and therefore those strings) at a stable address across rehashes.
+    std::string id;
+    std::string variant;
+    sprite_lookup_3d value;
+    std::shared_ptr<SDL_Texture> fg_owner;
+    std::shared_ptr<SDL_Texture> bg_owner;
+};
+
+using sprite_lookup_cache = std::unordered_map<sprite_lookup_key,
+      std::shared_ptr<cached_sprite_lookup_3d>, sprite_lookup_hash>;
+
+sprite_lookup_cache &sprite_cache()
+{
+    static sprite_lookup_cache cache;
+    return cache;
+}
+
+std::shared_ptr<const tileset> &sprite_cache_tileset()
+{
+    static std::shared_ptr<const tileset> cached;
+    return cached;
+}
+
+void clear_sprite_lookup_cache()
+{
+    sprite_cache().clear();
+    sprite_cache_tileset().reset();
+}
+
+void retain_frame_texture( const std::shared_ptr<SDL_Texture> &texture )
+{
+    if( !g_recording_slot || !texture ) {
+        return;
+    }
+    SDL_Texture *const raw = texture.get();
+    auto &owners = g_recording_slot->texture_owners;
+    if( owners.find( raw ) == owners.end() ) {
+        owners.emplace( raw, texture );
+    }
+}
+
 bool lookup_sprite_layers_3d( cata_tiles *tiles, const std::string &id,
                               const TILE_CATEGORY cat, const tripoint_bub_ms &p,
                               const int subtile, const int rota, const bool force_rota,
@@ -1288,9 +1676,30 @@ bool lookup_sprite_layers_3d( cata_tiles *tiles, const std::string &id,
     if( !tiles ) {
         return false;
     }
+
+    const std::shared_ptr<const tileset> &current_tileset = tiles->get_tileset_3d();
+    if( sprite_cache_tileset() != current_tileset ) {
+        clear_sprite_lookup_cache();
+        sprite_cache_tileset() = current_tileset;
+    }
+    sprite_lookup_key key{ id, variant, static_cast<int>( cat ), subtile, rota,
+                           force_rota ? 1 : 0,
+                           static_cast<int>( season_of_year( calendar::turn ) ) };
+    sprite_lookup_cache &cache = sprite_cache();
+    if( const auto it = cache.find( key ); it != cache.end() ) {
+        const cached_sprite_lookup_3d &cached = *it->second;
+        out = cached.value;
+        retain_frame_texture( cached.fg_owner );
+        retain_frame_texture( cached.bg_owner );
+        ++g_profile.sprite_cache_hits;
+        return out.fg_tex;
+    }
+
     sprite_layers_3d layers;
     tiles->resolve_sprite_layers_3d( id, cat, p, subtile, rota, force_rota, layers,
                                      variant );
+    retain_frame_texture( layers.fg_owner );
+    retain_frame_texture( layers.bg_owner );
     out.multitile = layers.multitile;
     out.fg_count = layers.fg_count;
     out.fg_index = layers.fg_index;
@@ -1306,6 +1715,22 @@ bool lookup_sprite_layers_3d( cata_tiles *tiles, const std::string &id,
     }
     if( layers.bg ) {
         out.bg_tex = fill_sprite_info( *layers.bg, out.bg );
+    }
+    if( ( layers.fg_found || layers.bg_found ) && layers.fg_variant_count <= 1 &&
+        layers.bg_variant_count <= 1 ) {
+        constexpr size_t max_entries = 65536;
+        if( cache.size() >= max_entries ) {
+            cache.clear();
+        }
+        auto cached = std::make_shared<cached_sprite_lookup_3d>();
+        cached->id = id;
+        cached->variant = variant;
+        cached->value = out;
+        cached->fg_owner = layers.fg_owner;
+        cached->bg_owner = layers.bg_owner;
+        const sprite_lookup_key stored_key{ cached->id, cached->variant, key.category,
+                                            key.subtile, key.rota, key.force, key.season };
+        cache.emplace( stored_key, std::move( cached ) );
     }
     return out.fg_tex;
 }
@@ -1332,6 +1757,26 @@ struct instance_bucket {
     std::vector<float> data;      // INSTANCE_STRIDE/4 floats per instance
 };
 
+struct bucket_key {
+    int mode;
+    SDL_Texture *atlas;
+    bool operator==( const bucket_key &other ) const
+    {
+        return mode == other.mode && atlas == other.atlas;
+    }
+};
+
+struct bucket_key_hash {
+    size_t operator()( const bucket_key &key ) const
+    {
+        size_t h = std::hash<SDL_Texture *> {}( key.atlas );
+        h ^= std::hash<int> {}( key.mode ) + 0x9e3779b9u + ( h << 6 ) + ( h >> 2 );
+        return h;
+    }
+};
+
+using bucket_index_map = std::unordered_map<bucket_key, size_t, bucket_key_hash>;
+
 // one decal instance in a single painter-ordered stream (push order = the
 // gather's row order = 2D's north->south, west->east row order). Unlike the
 // buckets, the stream keeps cross-atlas ordering, so overlapping vehicle
@@ -1348,7 +1793,18 @@ struct decal_instance {
     float sort_key = 0.0f;
 };
 
-void push_instance( std::vector<float> &out, const float dx, const float dy,
+struct instance_sink {
+    float *data;
+    instance_sink( float *data ) : data( data ) {}
+    instance_sink( std::vector<float> &out )
+    {
+        const size_t offset = out.size();
+        out.resize( offset + INSTANCE_STRIDE / sizeof( float ) );
+        data = out.data() + offset;
+    }
+};
+
+void push_instance( instance_sink out, const float dx, const float dy,
                     const float z, const float sx, const float sy, const float sz,
                     const sprite_info &spr, const float r, const float g, const float b,
                     const bool no_discard = false, const int rota4 = 0,
@@ -1356,22 +1812,22 @@ void push_instance( std::vector<float> &out, const float dx, const float dy,
                     const bool ghost = false, const float saturation = 1.0f,
                     const bool memory = false, const bool soft_alpha = false )
 {
-    out.push_back( dx );
-    out.push_back( dy );
-    out.push_back( z );
-    out.push_back( sx );
-    out.push_back( sy );
-    out.push_back( sz );
-    out.push_back( spr.u0 );
-    out.push_back( spr.v0 );
-    out.push_back( spr.u1 );
-    out.push_back( spr.v1 );
-    out.push_back( r );
-    out.push_back( g );
-    out.push_back( b );
+    out.data[0] = dx;
+    out.data[1] = dy;
+    out.data[2] = z;
+    out.data[3] = sx;
+    out.data[4] = sy;
+    out.data[5] = sz;
+    out.data[6] = spr.u0;
+    out.data[7] = spr.v0;
+    out.data[8] = spr.u1;
+    out.data[9] = spr.v1;
+    out.data[10] = r;
+    out.data[11] = g;
+    out.data[12] = b;
     // color alpha carries the tile light's saturation (1 = full color,
     // 0 = grayscale), matching 2D's lit shader low-light drain
-    out.push_back( saturation );
+    out.data[13] = saturation;
     // bit0: textured, bit1: no alpha cutout (ground layer),
     // bit2-3: top-face uv quarter turns, bit4: side faces sample the
     // horizontal strip at pad (the sprite's opaque bottom edge),
@@ -1381,12 +1837,12 @@ void push_instance( std::vector<float> &out, const float dx, const float dy,
     // bit7: soft alpha — dithered translucency proportional to the sampled
     // alpha, for field sprites whose semi-transparent pixels 2D would blend
     // pad: side-strip v, or the run direction for MODE_LINEQUAD (0 = E-W)
-    out.push_back( ( spr.atlas ? 1.0f : 0.0f ) + ( no_discard ? 2.0f : 0.0f ) +
+    out.data[14] = ( spr.atlas ? 1.0f : 0.0f ) + ( no_discard ? 2.0f : 0.0f ) +
                    static_cast<float>( ( rota4 & 3 ) << 2 ) + ( side_strip ? 16.0f : 0.0f ) +
                    ( ghost ? 32.0f : 0.0f ) + ( memory ? 64.0f : 0.0f ) +
-                   ( soft_alpha ? 128.0f : 0.0f ) );
-    out.push_back( pad_value >= 0.0f ? pad_value
-                   : ( side_strip ? spr.v1 - 0.02f * ( spr.v1 - spr.v0 ) : 0.0f ) );
+                   ( soft_alpha ? 128.0f : 0.0f );
+    out.data[15] = pad_value >= 0.0f ? pad_value
+                   : ( side_strip ? spr.v1 - 0.02f * ( spr.v1 - spr.v0 ) : 0.0f );
 }
 
 float creature_size_scale( const creature_size size )
@@ -1441,38 +1897,254 @@ bool nv_tint_active()
            get_option<bool>( "NV_GREEN_TOGGLE" );
 }
 
+enum region_cell_state : uint8_t {
+    REGION_OUTSIDE = 0,
+    REGION_ACTIVE,
+    REGION_COARSE_SKIP,
+    REGION_FRUSTUM_SKIP
+};
+
+struct region_cull_mask {
+    std::array<uint8_t, MAPSIZE *MAPSIZE> state{};
+    bool any_submaps = false;
+    bool any_active = false;
+    int skipped_submaps = 0;
+};
+
+region_cull_mask build_region_cull_mask( map &here, const avatar &you,
+        const tripoint_bub_ms &center, const int zlev, const int lowest_vis_z,
+        const visibility_variables &vis_vars, const view_frustum &frustum )
+{
+    region_cull_mask result;
+    const int cz = center.z();
+    const int dz = zlev - cz;
+    const float wz = dz * LEVEL_HEIGHT;
+    const int radius = dz == 0 ? VIEW_RADIUS : REGION_RADIUS;
+    const int min_x = std::max( 0, center.x() - radius );
+    const int max_x = std::min( MAPSIZE_X - 1, center.x() + radius );
+    const int min_y = std::max( 0, center.y() - radius );
+    const int max_y = std::min( MAPSIZE_Y - 1, center.y() + radius );
+    if( min_x > max_x || min_y > max_y ) {
+        return result;
+    }
+    const level_cache &cache = here.get_cache_ref( zlev );
+    const bool stale_lower = dz < 0 && zlev < lowest_vis_z;
+    const auto clear_light = []( const lit_level ll ) {
+        return ll == lit_level::LOW || ll == lit_level::LIT || ll == lit_level::BRIGHT;
+    };
+
+    for( int smy = min_y / SEEY; smy <= max_y / SEEY; ++smy ) {
+        for( int smx = min_x / SEEX; smx <= max_x / SEEX; ++smx ) {
+            result.any_submaps = true;
+            const int x0 = std::max( min_x, smx * SEEX );
+            const int x1 = std::min( max_x, smx * SEEX + SEEX - 1 );
+            const int y0 = std::max( min_y, smy * SEEY );
+            const int y1 = std::min( max_y, smy * SEEY + SEEY - 1 );
+            uint8_t &state = result.state[smx + smy * MAPSIZE];
+            if( !bounds_in_frustum( frustum, static_cast<float>( x0 - center.x() ),
+                                    static_cast<float>( y0 - center.y() ),
+                                    static_cast<float>( x1 + 1 - center.x() ),
+                                    static_cast<float>( y1 + 1 - center.y() ), wz ) ) {
+                state = REGION_FRUSTUM_SKIP;
+                ++result.skipped_submaps;
+                continue;
+            }
+            // The view level draws fog for invisible tiles without memory, so
+            // only camera culling is valid there. Other levels emit nothing for
+            // an invisible tile without memory and can use the coarse rules.
+            if( dz == 0 ) {
+                state = REGION_ACTIVE;
+                result.any_active = true;
+                continue;
+            }
+
+            bool potentially_visible = false;
+            if( !stale_lower ) {
+                if( dz > 0 && ( vis_vars.u_clairvoyance > 0 || vis_vars.clairvoyance_field ) ) {
+                    potentially_visible = true;
+                } else {
+                    for( int y = y0; y <= y1 && !potentially_visible; ++y ) {
+                        for( int x = x0; x <= x1; ++x ) {
+                            if( dz > 0 ) {
+                                potentially_visible = cache.seen_cache[x][y] > 0.0f ||
+                                                      cache.camera_cache[x][y] > 0.0f;
+                            } else {
+                                potentially_visible = clear_light( cache.visibility_cache[x][y] );
+                            }
+                            if( potentially_visible ) {
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            bool uniform_open_air = false;
+            if( potentially_visible ) {
+                const tripoint_bub_ms first( x0, y0, zlev );
+                const submap *sm = here.maptile_at( first ).wrapped_submap();
+                if( sm && sm->is_uniform() ) {
+                    const ter_id t = sm->get_ter( point_sm_ms::zero );
+                    uniform_open_air = t && t->has_flag( ter_furn_flag::TFLAG_NO_FLOOR );
+                }
+            }
+
+            if( !potentially_visible || uniform_open_air ) {
+                const tripoint_bub_ms first( x0, y0, zlev );
+                const tripoint_bub_ms last( x1, y1, zlev );
+                if( !you.has_map_memory_in_region( here.get_abs( first ), here.get_abs( last ) ) ) {
+                    state = REGION_COARSE_SKIP;
+                    ++result.skipped_submaps;
+                    continue;
+                }
+            }
+            state = REGION_ACTIVE;
+            result.any_active = true;
+        }
+    }
+    return result;
+}
+
+// Terrain orientation is mostly camera-independent, but known connections also
+// consult visibility, transparency and map memory. Validate all of those inputs
+// and clear the cache whenever the 3D memory sweep writes new remembered tiles.
+struct orientation_cache_key {
+    tripoint_abs_ms pos;
+    int query = 0;
+    bool operator==( const orientation_cache_key &other ) const {
+        return pos == other.pos && query == other.query;
+    }
+};
+
+struct orientation_cache_hash {
+    size_t operator()( const orientation_cache_key &key ) const {
+        size_t h = std::hash<int>{}( key.pos.x() );
+        h = h * 1000003u + static_cast<size_t>( key.pos.y() );
+        h = h * 1000003u + static_cast<size_t>( key.pos.z() );
+        h = h * 1000003u + static_cast<size_t>( key.query );
+        return h;
+    }
+};
+
+struct orientation_cache_entry {
+    uint64_t visibility_generation = 0;
+    bool memory_visible = false;
+    int rota = 0;
+    int subtile = 0;
+    uint8_t connections = 0;
+};
+
+using orientation_cache_map =
+    std::unordered_map<orientation_cache_key, orientation_cache_entry, orientation_cache_hash>;
+
+orientation_cache_map &orientation_cache()
+{
+    static orientation_cache_map cache;
+    return cache;
+}
+
+void clear_orientation_cache()
+{
+    orientation_cache().clear();
+}
+
+template<typename Compute>
+const orientation_cache_entry &cached_orientation( map &here, const avatar &you,
+        const tripoint_bub_ms &p, const int query, Compute &&compute )
+{
+    const orientation_cache_key key{ here.get_abs( p ), query };
+    const level_cache &level = here.get_cache_ref( p.z() );
+    const bool memory_visible = you.should_show_map_memory();
+    orientation_cache_map &cache = orientation_cache();
+    auto it = cache.find( key );
+    // CCB does not have the source branch's geometry/sight revisions. The
+    // whole cache is cleared by the turn/position/memory/visibility sweep
+    // below; this per-level generation also catches asynchronous visibility
+    // rebuilds between sweeps.
+    if( it != cache.end() &&
+        it->second.visibility_generation == level.visibility_generation &&
+        it->second.memory_visible == memory_visible ) {
+        ++g_profile.orientation_cache_hits;
+        return it->second;
+    }
+    if( it == cache.end() ) {
+        constexpr size_t max_entries = 65536;
+        if( cache.size() >= max_entries ) {
+            cache.clear();
+        }
+        it = cache.emplace( key, orientation_cache_entry{} ).first;
+    }
+    it->second = orientation_cache_entry{};
+    it->second.visibility_generation = level.visibility_generation;
+    it->second.memory_visible = memory_visible;
+    compute( it->second );
+    return it->second;
+}
+
+void terrain_rota_subtile_cached( cata_tiles *tiles, map &here, const avatar &you,
+                                  const tripoint_bub_ms &p, int &rota, int &subtile )
+{
+    const orientation_cache_entry &entry = cached_orientation( here, you, p, 0,
+    [&]( orientation_cache_entry & out ) {
+        tiles->get_terrain_rota_subtile( p, out.rota, out.subtile );
+    } );
+    rota = entry.rota;
+    subtile = entry.subtile;
+}
+
+uint8_t terrain_connections_cached( map &here, const avatar &you,
+                                    const tripoint_bub_ms &p,
+                                    const std::bitset<NUM_TERCONN> &connect_groups )
+{
+    return cached_orientation( here, you, p, 1, [&]( orientation_cache_entry & out ) {
+        out.connections = here.get_known_connections( p, connect_groups, {} );
+    } ).connections;
+}
+
 int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
-                      std::vector<instance_bucket> &buckets,
+                      std::vector<instance_bucket> &buckets, size_t &bucket_count,
                       std::vector<decal_instance> &decals,
-                      std::vector<decal_instance> &panels )
+                      std::vector<decal_instance> &panels,
+                      const view_frustum &frustum )
 {
     map &here = get_map();
-    buckets.clear();
+    bucket_count = 0;
     decals.clear();
     panels.clear();
-    std::map<std::pair<int, SDL_Texture *>, size_t> bucket_index;
+    static bucket_index_map bucket_index;
+    bucket_index.clear();
     auto bucket_for = [&]( const int mode, SDL_Texture * atlas ) -> std::vector<float> & {
-        const auto key = std::make_pair( mode, atlas );
+        const bucket_key key{ mode, atlas };
         const auto it = bucket_index.find( key );
         if( it != bucket_index.end() ) {
             return buckets[it->second].data;
         }
-        bucket_index[key] = buckets.size();
-        buckets.push_back( instance_bucket{ mode, atlas, {} } );
-        return buckets.back().data;
+        const size_t index = bucket_count++;
+        bucket_index[key] = index;
+        if( index < buckets.size() ) {
+            instance_bucket &bucket = buckets[index];
+            bucket.mode = mode;
+            bucket.atlas = atlas;
+            bucket.data.clear();
+        } else {
+            buckets.push_back( instance_bucket{ mode, atlas, {} } );
+        }
+        return buckets[index].data;
     };
     // total instances pushed (all kinds), capped at the buffer capacity
     int count = 0;
     // per-vehicle whole-shell hide verdict (TP-20): approaching ANY tile of a
     // vehicle hides the whole vehicle's shell; many tiles of the same vehicle
     // re-ask the same question every frame, so cache it per gather
-    std::unordered_map<const vehicle *, bool> veh_shell_hidden;
+    static std::unordered_map<const vehicle *, bool> veh_shell_hidden;
+    veh_shell_hidden.clear();
     // camera forward on the ground plane, to stack the item highlight behind the item
     const float fwd_x = std::cos( g_yaw );
     const float fwd_y = std::sin( g_yaw );
 
     const int cz = center.z();
-    const tripoint_bub_ms upos = get_avatar().pos_bub();
+    avatar &you = get_avatar();
+    const tripoint_bub_ms upos = you.pos_bub();
     const level_cache &center_cache = here.get_cache_ref( cz );
     // update_visibility_cache refreshes exactly [lowest_vision_level, center.z];
     // visibility caches outside that range are stale (same formula as
@@ -1564,7 +2236,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         for( int dy = -REGION_RADIUS; dy <= REGION_RADIUS; ++dy ) {
             for( int dx = -REGION_RADIUS; dx <= REGION_RADIUS; ++dx ) {
                 const tripoint_bub_ms p = center + tripoint( dx, dy, 0 );
-                if( !here.inbounds( p ) ) {
+                if( !here.inbounds( p ) || !tile_in_frustum( frustum, dx, dy, 0.0f ) ) {
                     continue;
                 }
                 const int rx = dx - pdx;
@@ -1584,23 +2256,13 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     // of them instead of the fog slab, exactly where 2D draws its memory
     // overlay. Only memorized data is read here: the live map may have changed
     // since the tile was last seen, and drawing that would leak it.
-    std::unordered_map<memory_lookup_key, sprite_lookup_3d, memory_lookup_hash> mem_cache;
+    // lookup_sprite_layers_3d supplies the cross-frame single-variant cache;
+    // multi-variant remembered tiles still resolve with their position seed.
     const auto memory_lookup = [&]( const std::string & id, const TILE_CATEGORY cat,
     const tripoint_bub_ms &p, const int subtile,
     const int rota, const bool force ) -> sprite_lookup_3d {
-        const memory_lookup_key key{ id, static_cast<int>( cat ), subtile, rota, force ? 1 : 0 };
-        const auto it = mem_cache.find( key );
-        if( it != mem_cache.end() )
-        {
-            return it->second;
-        }
         sprite_lookup_3d l;
         lookup_sprite_layers_3d( tiles, id, cat, p, subtile, rota, force, l );
-        // multi-variant sprites pick by a position seed, so caching them would
-        // make whole remembered regions identical; resolve those per tile
-        if( l.fg_count <= 1 && l.bg_count <= 1 ) {
-            mem_cache.emplace( key, l );
-        }
         return l;
     };
     const auto push_fog_slab = [&]( const int dx, const int dy, const float wz ) {
@@ -1997,6 +2659,13 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         const int dz = zlev - cz;
         const float wz = dz * LEVEL_HEIGHT;
         const level_cache &cache = here.get_cache_ref( zlev );
+        const region_cull_mask cull_mask = build_region_cull_mask( here, you, center, zlev,
+                                             lowest_vis_z, vis_vars, frustum );
+        g_profile.skipped_submaps += cull_mask.skipped_submaps;
+        if( cull_mask.any_submaps && !cull_mask.any_active ) {
+            ++g_profile.skipped_levels;
+            continue;
+        }
 
         for( int dy = -VIEW_RADIUS; dy <= VIEW_RADIUS; ++dy ) {
             for( int dx = -VIEW_RADIUS; dx <= VIEW_RADIUS; ++dx ) {
@@ -2013,6 +2682,20 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 if( !here.inbounds( p ) ) {
                     continue;
                 }
+                const uint8_t cull_state = cull_mask.state[p.x() / SEEX + p.y() / SEEY * MAPSIZE];
+                if( cull_state == REGION_FRUSTUM_SKIP ) {
+                    ++g_profile.frustum_tiles;
+                    continue;
+                }
+                if( cull_state == REGION_COARSE_SKIP ) {
+                    ++g_profile.coarse_tiles;
+                    continue;
+                }
+                if( !tile_in_frustum( frustum, dx, dy, wz ) ) {
+                    ++g_profile.frustum_tiles;
+                    continue;
+                }
+                ++g_profile.main_tiles;
                 // per-tile lit level, the same one 2D draws from: fresh
                 // visibility_cache for the view level and below within the
                 // refreshed range; upper levels have no fresh cache
@@ -2062,14 +2745,17 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 // clairvoyance but not by direct line of sight draws only its
                 // floor + walls (the building outline), no furniture/items
                 const bool roof_unseen = dz > 0 && !seen;
-                const ter_id t = here.ter( p );
+                const maptile mt = here.maptile_at( p );
+                const ter_id t = mt.get_ter();
+                const furn_id f = mt.get_furn();
                 if( t == t_null ) {
                     continue;
                 }
                 // open air / holes: nothing stands here on this level (water is
                 // NO_FLOOR_WATER, not NO_FLOOR, and still draws). furniture can
                 // bridge a gap, so its tile is not open air
-                if( t->has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) && !here.has_furn( p ) ) {
+                if( t->has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) &&
+                    f == furn_str_id::NULL_ID() ) {
                     continue;
                 }
                 // the whole tile shares one light tone, from the same light
@@ -2091,7 +2777,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 // wall-line connections orient door/window panels and fence slabs
                 // (bit order S=1, E=2, W=4, N=8)
                 const uint8_t wall_conn = ( is_panel || is_fence )
-                                          ? here.get_known_connections( p, t->connect_to_groups, {} ) : 0;
+                                          ? terrain_connections_cached( here, you, p, t->connect_to_groups ) : 0;
                 const bool ew_line = ( wall_conn & 0x06 ) != 0; // true: the line runs E-W
 
                 // terrain sprite: one faithful call mirrors 2D's selection for
@@ -2107,7 +2793,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 const bool shaped = plain_floor;
                 int rota = 0, subtile = 0;
                 if( tiles && shaped ) {
-                    tiles->get_terrain_rota_subtile( p, rota, subtile );
+                    terrain_rota_subtile_cached( tiles, here, you, p, rota, subtile );
                 } else if( is_wall || is_fence || is_panel ) {
                     subtile = SUBTILE_EDGE;
                 }
@@ -2480,7 +3166,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 // gas/plasma effects (smoke, fire, gas) become camera-facing
                 // billboards, matching what their sprites depict.
                 {
-                    const field &fld_here = here.field_at( p );
+                    const field &fld_here = mt.get_field();
                     if( fld_here.field_count() > 0 ) {
                         // the neighbour must carry the same field type AND be
                         // visible by the same rule as the tile itself (2D drops
@@ -2637,8 +3323,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                     }
                 }
 
-                if( !roof_unseen && here.has_furn( p ) && count < MAX_DRAW_INSTANCES ) {
-                    const furn_id f = here.furn( p );
+                if( !roof_unseen && f != furn_str_id::NULL_ID() && count < MAX_DRAW_INSTANCES ) {
                     sprite_lookup_3d fl;
                     lookup_sprite_layers_3d( tiles, f->id.str(), TILE_CATEGORY::FURNITURE, p,
                                              -1, 0, true, fl );
@@ -2681,7 +3366,6 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 }
 
                 if( !roof_unseen && count < MAX_DRAW_INSTANCES ) {
-                    const maptile mt = here.maptile_at( p );
                     if( mt.get_item_count() > 0 ) {
                         const item &itm = mt.get_uppermost_item();
                         sprite_info ispr;
@@ -2893,12 +3577,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                                          const float db, const int drot4 ) {
                                 decal_instance di;
                                 di.atlas = datlas;
-                                std::vector<float> tmp;
-                                tmp.reserve( INSTANCE_STRIDE / sizeof( float ) );
-                                push_instance( tmp, ddx, ddy, dz, sx, sy, 1.0f, dspr, dr, dg, db,
+                                push_instance( di.f, ddx, ddy, dz, sx, sy, 1.0f, dspr, dr, dg, db,
                                                false, drot4, false, -1.0f, ghost, tone.sat );
-                                std::copy_n( tmp.begin(), INSTANCE_STRIDE / sizeof( float ),
-                                             di.f );
                                 decals.push_back( di );
                                 ++count;
                             };
@@ -3006,14 +3686,10 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                 decal_instance di;
                                 di.mode = MODE_LINEQUAD_DECAL;
                                 di.atlas = uspr.atlas;
-                                std::vector<float> tmp;
-                                tmp.reserve( INSTANCE_STRIDE / sizeof( float ) );
-                                push_instance( tmp, pcx, pcy, base_z, plen, ph, 1.0f, uspr,
+                                push_instance( di.f, pcx, pcy, base_z, plen, ph, 1.0f, uspr,
                                                tone.shade, tone.shade, tone.shade,
                                                false, 0, false, run_ns ? 1.0f : 0.0f,
                                                ghost, tone.sat );
-                                std::copy_n( tmp.begin(), INSTANCE_STRIDE / sizeof( float ),
-                                             di.f );
                                 di.sort_key = pcx * fwd_x + pcy * fwd_y;
                                 panels.push_back( di );
                                 ++count;
@@ -3639,58 +4315,81 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         }
     };
 
-    // creatures live in the tracker, not the map; add them per tile position
+    // Creatures live in the tracker, not the map. Visit their actual occupied
+    // positions instead of scanning every tile (and every active NPC per empty
+    // tile). Sort back into the old z/y/x order, and still ask creature_at for
+    // the displayed occupant so riding and hallucination rules stay unchanged.
+    if( count >= MAX_DRAW_INSTANCES ) {
+        return count;
+    }
     creature_tracker &tracker = get_creature_tracker();
-    for( int zlev = zmin; zlev <= zmax; ++zlev ) {
-        const int dz = zlev - cz;
-        const float wz = dz * LEVEL_HEIGHT;
-        const level_cache &cache = here.get_cache_ref( zlev );
-        for( int dy = -VIEW_RADIUS; dy <= VIEW_RADIUS; ++dy ) {
-            for( int dx = -VIEW_RADIUS; dx <= VIEW_RADIUS; ++dx ) {
-                if( count >= MAX_DRAW_INSTANCES ) {
-                    return count;
-                }
-                if( dz != 0 &&
-                    ( std::abs( dx ) > REGION_RADIUS || std::abs( dy ) > REGION_RADIUS ) ) {
-                    continue;
-                }
-                const tripoint_bub_ms p = center + tripoint( dx, dy, dz );
-                if( !here.inbounds( p ) ) {
-                    continue;
-                }
-                if( dz < 0 && zlev < lowest_vis_z ) {
-                    continue;
-                }
-                // levels above an indoor column near the player show nothing
-                // but the translucent roof slab
-                if( dz > 0 &&
-                    dollhouse[( dy + REGION_RADIUS ) * REGION_SIZE + ( dx + REGION_RADIUS )] ) {
-                    continue;
-                }
-                const Creature *critter = tracker.creature_at( p );
-                if( !critter ) {
-                    continue;
-                }
-                // the same test 2D's draw_critter_at uses: light, line of
-                // sight, distance, invisibility and ALWAYS_VISIBLE are all
-                // handled there; the avatar itself is always visible
-                if( !get_avatar().sees( here, *critter ) ) {
-                    continue;
-                }
-                // the creature takes its tile's light tone, exactly like 2D's
-                // critter sprites do through the lit shader. a creature 2D draws
-                // on an otherwise invisible tile (ALWAYS_VISIBLE, special
-                // vision) uses fixed lighting there, so keep it full color.
-                const lit_level cll = dz > 0 ? upper_lit_at( cache, p )
-                                      : cache.visibility_cache[p.x()][p.y()];
-                const bool cll_clear = cll == lit_level::LOW || cll == lit_level::LIT ||
-                                       cll == lit_level::BRIGHT;
-                const tile_tone tone = cll_clear ? tone_for( cache, p, cll )
-                                       : tile_tone{ 1.0f, nv_tint ? 0.0f : 1.0f };
-                push_entity( *critter, p, static_cast<float>( dx ), static_cast<float>( dy ), wz,
-                             tone );
-            }
+    static std::unordered_set<tripoint_bub_ms> occupied;
+    occupied.clear();
+    for( const Creature &candidate : g->all_creatures() ) {
+        const tripoint_bub_ms p = candidate.pos_bub();
+        const int dz = p.z() - cz;
+        const int dx = p.x() - center.x();
+        const int dy = p.y() - center.y();
+        if( p.z() < zmin || p.z() > zmax || std::abs( dx ) > VIEW_RADIUS ||
+            std::abs( dy ) > VIEW_RADIUS || !here.inbounds( p ) ) {
+            continue;
         }
+        if( dz != 0 && ( std::abs( dx ) > REGION_RADIUS || std::abs( dy ) > REGION_RADIUS ) ) {
+            continue;
+        }
+        if( dz < 0 && p.z() < lowest_vis_z ) {
+            continue;
+        }
+        if( dz > 0 && dollhouse[( dy + REGION_RADIUS ) * REGION_SIZE + ( dx + REGION_RADIUS )] ) {
+            continue;
+        }
+        if( !tile_in_frustum( frustum, dx, dy, dz * LEVEL_HEIGHT ) ) {
+            continue;
+        }
+        occupied.insert( p );
+    }
+    static std::vector<tripoint_bub_ms> creature_positions;
+    creature_positions.assign( occupied.begin(), occupied.end() );
+    std::sort( creature_positions.begin(), creature_positions.end(),
+    []( const tripoint_bub_ms & a, const tripoint_bub_ms & b ) {
+        if( a.z() != b.z() ) {
+            return a.z() < b.z();
+        }
+        if( a.y() != b.y() ) {
+            return a.y() < b.y();
+        }
+        return a.x() < b.x();
+    } );
+    g_profile.creature_positions += creature_positions.size();
+    for( const tripoint_bub_ms &p : creature_positions ) {
+        if( count >= MAX_DRAW_INSTANCES ) {
+            return count;
+        }
+        const int dz = p.z() - cz;
+        const float wz = dz * LEVEL_HEIGHT;
+        const level_cache &cache = here.get_cache_ref( p.z() );
+        const Creature *critter = tracker.creature_at( p );
+        if( !critter ) {
+            continue;
+        }
+        // the same test 2D's draw_critter_at uses: light, line of
+        // sight, distance, invisibility and ALWAYS_VISIBLE are all
+        // handled there; the avatar itself is always visible
+        if( !you.sees( here, *critter ) ) {
+            continue;
+        }
+        // the creature takes its tile's light tone, exactly like 2D's
+        // critter sprites do through the lit shader. a creature 2D draws
+        // on an otherwise invisible tile (ALWAYS_VISIBLE, special
+        // vision) uses fixed lighting there, so keep it full color.
+        const lit_level cll = dz > 0 ? upper_lit_at( cache, p )
+                              : cache.visibility_cache[p.x()][p.y()];
+        const bool cll_clear = cll == lit_level::LOW || cll == lit_level::LIT ||
+                               cll == lit_level::BRIGHT;
+        const tile_tone tone = cll_clear ? tone_for( cache, p, cll )
+                               : tile_tone{ 1.0f, nv_tint ? 0.0f : 1.0f };
+        push_entity( *critter, p, static_cast<float>( p.x() - center.x() ),
+                     static_cast<float>( p.y() - center.y() ), wz, tone );
     }
 
     // hover preselection box + game-driven cursors (targeting, construction...):
@@ -3842,6 +4541,8 @@ void sync_mouse_capture( SDL_Renderer *renderer, const bool want )
 void on_renderer_created( SDL_Renderer *renderer )
 {
     g_ctx.teardown();
+    clear_sprite_lookup_cache();
+    clear_orientation_cache();
     g_probed_renderer = renderer;
     if( renderer ) {
         probe( renderer );
@@ -3851,6 +4552,8 @@ void on_renderer_created( SDL_Renderer *renderer )
 void on_renderer_destroyed()
 {
     g_ctx.teardown();
+    clear_sprite_lookup_cache();
+    clear_orientation_cache();
     g_probed_renderer = nullptr;
     g_available = false;
     g_mouse_captured = false;
@@ -3894,6 +4597,10 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
         g_available = false;
         return;
     }
+    const bool profile = profiling_enabled();
+    g_profile = frame_profile{};
+    const Uint64 total_begin = profile_ticks( profile );
+    const Uint64 memory_begin = profile_ticks( profile );
 
     // map memory: remembered terrain is drawn for tiles the player cannot see
     // right now. Render3D bypasses cata_tiles::draw, which normally prepares
@@ -3915,45 +4622,131 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
         const level_cache &mem_level = here.get_cache_ref( upos.z() );
         static tripoint_bub_ms last_sweep_pos = tripoint_bub_ms( -1, -1, -1 );
         static time_point last_sweep_turn = calendar::turn_zero;
-        static uint64_t last_sight_revision = 0;
+        static uint64_t last_visibility_generation = 0;
         if( mem_level.map_memory_sweep_pending || upos != last_sweep_pos ||
             calendar::turn != last_sweep_turn ||
-            mem_level.sight_revision != last_sight_revision ) {
+            mem_level.visibility_generation != last_visibility_generation ) {
+            clear_orientation_cache();
             tiles->memorize_map_memory( center );
             last_sweep_pos = upos;
             last_sweep_turn = calendar::turn;
-            last_sight_revision = mem_level.sight_revision;
+            last_visibility_generation = mem_level.visibility_generation;
         }
+    }
+
+    if( profile ) {
+        g_profile.memory_ms = profile_ms( memory_begin, profile_ticks( true ) );
+    }
+
+    // The camera is needed by the gather as well as the draw. Building it here
+    // lets invisible/offscreen tiles avoid map and sprite work entirely.
+    const vec3 target{ 0.5f, 0.5f, 1.0f };
+    const vec3 dir{
+        std::cos( g_pitch ) * std::cos( g_yaw ),
+        std::cos( g_pitch ) * std::sin( g_yaw ),
+        std::sin( g_pitch )
+    };
+    const vec3 eye{ target.x - dir.x * g_cam_dist,
+                    target.y - dir.y * g_cam_dist,
+                    target.z - dir.z * g_cam_dist };
+    const mat4 view = mat4_lookat( eye, target, { 0.0f, 0.0f, 1.0f } );
+    const mat4 proj = mat4_perspective( 40.0f * 3.14159265f / 180.0f,
+                                        static_cast<float>( w ) / static_cast<float>( h ),
+                                        0.05f, 300.0f );
+    const mat4 mvp = mat4_mul( proj, view );
+    const view_frustum frustum = make_view_frustum( mvp );
+
+    // cache the camera for screen_to_tile + the hover preselection box
+    {
+        g_dest = dest;
+        g_eye = eye;
+        // physical screen-right in the left-handed map frame: up x forward
+        const vec3 rgt = vec3_normalize( vec3_cross( { 0.0f, 0.0f, 1.0f }, dir ) );
+        g_basis_r = rgt;
+        g_basis_u = vec3_cross( dir, rgt );
+        g_basis_f = dir;
+        g_aspect = static_cast<float>( w ) / static_cast<float>( h );
+        g_center = center;
+        g_cam_valid = true;
     }
 
     // top-down: anchor the scene to the view center (ter_view_p follows the
     // player; look-around mode pans it for free)
-    std::vector<instance_bucket> buckets;
-    std::vector<decal_instance> decals;
-    std::vector<decal_instance> panels;
-    const int count = gather_instances( tiles, center, buckets, decals, panels );
+    g_recording_slot = nullptr;
+    poll_frame_slots();
+    const int slot_index = begin_frame_slot();
+    if( slot_index < 0 ) {
+        // Both slots are still needed. Do not gather or queue unbounded work;
+        // show the newest completed image and try again next frame.
+        ++g_profile.skipped_submissions;
+        g_game_cursors.clear();
+        if( g_ctx.latest_ready < 0 || !g_mouse_captured ) {
+            // On a final/non-captured presentation, wait for the NEWEST
+            // in-flight submission, not merely the first slot in the array.
+            int wait_index = -1;
+            for( int i = 0; i < static_cast<int>( g_ctx.slots.size() ); ++i ) {
+                if( g_ctx.slots[i].state == frame_slot_state::in_flight &&
+                    ( wait_index < 0 || g_ctx.slots[i].serial > g_ctx.slots[wait_index].serial ) ) {
+                    wait_index = i;
+                }
+            }
+            if( wait_index >= 0 ) {
+                const Uint64 wait_begin = profile_ticks( profile );
+                wait_for_frame_slot( wait_index );
+                if( profile ) {
+                    g_profile.wait_ms += profile_ms( wait_begin, profile_ticks( true ) );
+                }
+            }
+        }
+        const Uint64 composite_begin = profile_ticks( profile );
+        composite_latest_frame( renderer, dest );
+        if( profile ) {
+            const Uint64 frame_end = profile_ticks( true );
+            g_profile.composite_ms = profile_ms( composite_begin, frame_end );
+            g_profile.total_ms = profile_ms( total_begin, frame_end );
+        }
+        publish_profile( g_profile );
+        return;
+    }
+    frame_slot &slot = g_ctx.slots[slot_index];
+    slot.texture_owners.clear();
+    g_recording_slot = &slot;
+
+    // Main-thread frame workspace: clear logical contents but retain capacity.
+    static std::vector<instance_bucket> buckets;
+    static std::vector<decal_instance> decals;
+    static std::vector<decal_instance> panels;
+    size_t bucket_count = 0;
+    const Uint64 gather_begin = profile_ticks( profile );
+    const int count = gather_instances( tiles, center, buckets, bucket_count, decals, panels,
+                                        frustum );
+    if( profile ) {
+        g_profile.gather_ms = profile_ms( gather_begin, profile_ticks( true ) );
+    }
     g_game_cursors.clear();
     static bool gather_logged = false;
     if( !gather_logged ) {
         gather_logged = true;
         write_status( "first gather: instances=" + std::to_string( count ) +
-                      " buckets=" + std::to_string( buckets.size() ) );
+                      " buckets=" + std::to_string( bucket_count ) );
     }
-    if( count == 0 ) {
-        return;
-    }
+    g_profile.instances = count;
 
     // flatten the buckets into one contiguous instance upload; record segments
+    const Uint64 assembly_begin = profile_ticks( profile );
     struct draw_segment {
         int mode;
         SDL_Texture *atlas;
         int first_instance;
         int num_instances;
     };
-    std::vector<draw_segment> segments;
-    std::vector<float> inst;
+    static std::vector<draw_segment> segments;
+    static std::vector<float> inst;
+    segments.clear();
+    inst.clear();
     inst.reserve( count * INSTANCE_STRIDE / sizeof( float ) );
-    for( const instance_bucket &b : buckets ) {
+    for( size_t bucket_index = 0; bucket_index < bucket_count; ++bucket_index ) {
+        const instance_bucket &b = buckets[bucket_index];
         if( b.data.empty() ) {
             continue;
         }
@@ -4004,37 +4797,11 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
         i = j;
     }
 
-    // top-down orbit camera: the scene is rebuilt relative to the view center
-    // every frame, so the target is constant; the camera sits behind and above
-    // it along the yaw/pitch direction
-    const vec3 target{ 0.5f, 0.5f, 1.0f };
-    const vec3 dir{
-        std::cos( g_pitch ) * std::cos( g_yaw ),
-        std::cos( g_pitch ) * std::sin( g_yaw ),
-        std::sin( g_pitch )
-    };
-    const vec3 eye{ target.x - dir.x * g_cam_dist,
-                    target.y - dir.y * g_cam_dist,
-                    target.z - dir.z * g_cam_dist };
-    const mat4 view = mat4_lookat( eye, target, { 0.0f, 0.0f, 1.0f } );
-    const mat4 proj = mat4_perspective( 40.0f * 3.14159265f / 180.0f,
-                                        static_cast<float>( w ) / static_cast<float>( h ),
-                                        0.05f, 300.0f );
-
-    // cache the camera for screen_to_tile + the hover preselection box
-    {
-        g_dest = dest;
-        g_eye = eye;
-        // physical screen-right in the left-handed map frame: up x forward
-        const vec3 rgt = vec3_normalize( vec3_cross( { 0.0f, 0.0f, 1.0f }, dir ) );
-        g_basis_r = rgt;
-        g_basis_u = vec3_cross( dir, rgt );
-        g_basis_f = dir;
-        g_aspect = static_cast<float>( w ) / static_cast<float>( h );
-        g_center = center;
-        g_cam_valid = true;
+    if( profile ) {
+        g_profile.assembly_ms = profile_ms( assembly_begin, profile_ticks( true ) );
     }
-    const mat4 mvp = mat4_mul( proj, view );
+    g_profile.segments = segments.size();
+    g_profile.upload_bytes = inst.size() * sizeof( float );
 
     // daylight + sun position from the game calendar. azimuth is measured FROM
     // the south, positive toward the west (calendar.cpp); scene coords are
@@ -4149,10 +4916,12 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
     const SDL_FColor sky{ 0.02f + 0.35f * daylight, 0.02f + 0.45f * daylight,
                           0.05f + 0.65f * daylight, 1.0f };
 
-    // drain pending 2D batches before touching the device ourselves
+    // Drain pending 2D batches before touching the device ourselves. This also
+    // submits any earlier composite before a completed slot is reused.
     SDL_FlushRenderer( renderer );
 
     SDL_GPUDevice *device = g_ctx.device;
+    const Uint64 record_begin = profile_ticks( profile );
     SDL_GPUCommandBuffer *cmd = SDL_AcquireGPUCommandBuffer( device );
     if( !cmd ) {
         static bool acquire_logged = false;
@@ -4161,61 +4930,96 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
             write_status( "acquire command buffer failed: " + std::string( SDL_GetError() ) );
         }
         DebugLog( D_ERROR, DC_ALL ) << "render3d: acquire command buffer failed: " << SDL_GetError();
+        slot.state = frame_slot_state::empty;
+        slot.texture_owners.clear();
+        g_recording_slot = nullptr;
+        composite_latest_frame( renderer, dest );
+        if( profile ) {
+            g_profile.total_ms = profile_ms( total_begin, profile_ticks( true ) );
+        }
+        publish_profile( g_profile );
         return;
     }
 
-    // upload instance data
-    SDL_GPUTransferBufferCreateInfo ti{};
-    ti.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
-    ti.size = inst.size() * sizeof( float );
-    SDL_GPUTransferBuffer *tb = SDL_CreateGPUTransferBuffer( device, &ti );
-    if( tb ) {
-        void *mapped = SDL_MapGPUTransferBuffer( device, tb, false );
-        std::memcpy( mapped, inst.data(), inst.size() * sizeof( float ) );
-        SDL_UnmapGPUTransferBuffer( device, tb );
-        SDL_GPUCopyPass *copy = SDL_BeginGPUCopyPass( cmd );
-        SDL_GPUTransferBufferLocation src{};
-        src.transfer_buffer = tb;
-        src.offset = 0;
-        SDL_GPUBufferRegion dst{};
-        dst.buffer = g_ctx.instance_vb;
-        dst.offset = 0;
-        dst.size = inst.size() * sizeof( float );
-        SDL_UploadToGPUBuffer( copy, &src, &dst, false );
-        SDL_EndGPUCopyPass( copy );
+    // upload instance data. A fully culled scene still renders the sky/clear,
+    // but must not create a zero-sized transfer buffer or upload.
+    const Uint64 upload_begin = profile_ticks( profile );
+    SDL_GPUTransferBuffer *tb = nullptr;
+    bool upload_ok = true;
+    if( !inst.empty() ) {
+        const size_t bytes = inst.size() * sizeof( float );
+        if( bytes > slot.instance_tb_size ) {
+            // begin_frame_slot only reuses a slot whose previous submission
+            // completed, so growing its upload buffer cannot race that upload.
+            if( slot.instance_tb ) {
+                SDL_ReleaseGPUTransferBuffer( device, slot.instance_tb );
+                slot.instance_tb = nullptr;
+                slot.instance_tb_size = 0;
+            }
+            size_t new_size = 64 * 1024;
+            while( new_size < bytes ) {
+                new_size *= 2;
+            }
+            SDL_GPUTransferBufferCreateInfo ti{};
+            ti.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+            ti.size = static_cast<Uint32>( new_size );
+            slot.instance_tb = SDL_CreateGPUTransferBuffer( device, &ti );
+            if( slot.instance_tb ) {
+                slot.instance_tb_size = new_size;
+            }
+        }
+        tb = slot.instance_tb;
+        if( tb ) {
+            void *mapped = SDL_MapGPUTransferBuffer( device, tb, false );
+            if( mapped ) {
+                std::memcpy( mapped, inst.data(), inst.size() * sizeof( float ) );
+                SDL_UnmapGPUTransferBuffer( device, tb );
+                SDL_GPUCopyPass *copy = SDL_BeginGPUCopyPass( cmd );
+                SDL_GPUTransferBufferLocation src{};
+                src.transfer_buffer = tb;
+                src.offset = 0;
+                SDL_GPUBufferRegion dst{};
+                dst.buffer = slot.instance_vb;
+                dst.offset = 0;
+                dst.size = inst.size() * sizeof( float );
+                SDL_UploadToGPUBuffer( copy, &src, &dst, false );
+                SDL_EndGPUCopyPass( copy );
+            } else {
+                upload_ok = false;
+            }
+        } else {
+            upload_ok = false;
+        }
+    }
+    if( profile ) {
+        g_profile.upload_ms = profile_ms( upload_begin, profile_ticks( true ) );
+    }
+    if( !upload_ok ) {
+        // Never draw stale instance data from this slot's previous submission.
+        segments.clear();
+        static bool upload_failure_logged = false;
+        if( !upload_failure_logged ) {
+            upload_failure_logged = true;
+            write_status( "instance upload failed; world geometry skipped for this frame" );
+        }
     }
 
-    // pass 1: the sky — a fullscreen triangle clearing the color target and
-    // painting gradient/sun/clouds wherever the world won't cover
-    if( g_ctx.sky_pipeline ) {
-        SDL_GPUColorTargetInfo sky_target{};
-        sky_target.texture = g_ctx.color_tex;
-        sky_target.load_op = SDL_GPU_LOADOP_CLEAR;
-        sky_target.store_op = SDL_GPU_STOREOP_STORE;
-        sky_target.clear_color = sky;
-        SDL_GPURenderPass *sky_pass = SDL_BeginGPURenderPass( cmd, &sky_target, 1, nullptr );
-        SDL_BindGPUGraphicsPipeline( sky_pass, g_ctx.sky_pipeline );
-        SDL_PushGPUFragmentUniformData( cmd, 0, &sky_ub, sizeof( sky_ub ) );
-        SDL_DrawGPUPrimitives( sky_pass, 3, 1, 0, 0 );
-        SDL_EndGPURenderPass( sky_pass );
-    }
-
-    // pass 2: the world — loads over the sky when the sky pass ran
+    // pass 1: the world clears color/depth and writes all scene geometry.
     SDL_GPUColorTargetInfo color_target{};
-    color_target.texture = g_ctx.color_tex;
-    color_target.load_op = g_ctx.sky_pipeline ? SDL_GPU_LOADOP_LOAD : SDL_GPU_LOADOP_CLEAR;
+    color_target.texture = slot.color_tex;
+    color_target.load_op = SDL_GPU_LOADOP_CLEAR;
     color_target.store_op = SDL_GPU_STOREOP_STORE;
     color_target.clear_color = sky;
     SDL_GPUDepthStencilTargetInfo depth_target{};
-    depth_target.texture = g_ctx.depth_tex;
+    depth_target.texture = slot.depth_tex;
     depth_target.load_op = SDL_GPU_LOADOP_CLEAR;
-    depth_target.store_op = SDL_GPU_STOREOP_DONT_CARE;
+    depth_target.store_op = g_ctx.sky_pipeline ? SDL_GPU_STOREOP_STORE : SDL_GPU_STOREOP_DONT_CARE;
     depth_target.clear_depth = 1.0f;
 
     SDL_GPURenderPass *pass = SDL_BeginGPURenderPass( cmd, &color_target, 1, &depth_target );
     SDL_BindGPUGraphicsPipeline( pass, g_ctx.pipeline );
     SDL_GPUBufferBinding inst_bind{};
-    inst_bind.buffer = g_ctx.instance_vb;
+    inst_bind.buffer = slot.instance_vb;
     inst_bind.offset = 0;
     SDL_GPUGraphicsPipeline *bound_pipeline = g_ctx.pipeline;
     for( const draw_segment &seg : segments ) {
@@ -4270,10 +5074,28 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
     }
     SDL_EndGPURenderPass( pass );
 
-    SDL_GPUFence *fence = SDL_SubmitGPUCommandBufferAndAcquireFence( cmd );
-    if( tb ) {
-        SDL_ReleaseGPUTransferBuffer( device, tb );
+    // pass 2: sky only where the world left depth at 1. The color and depth
+    // contents are loaded, and the far-depth sky shader never writes depth.
+    if( g_ctx.sky_pipeline ) {
+        SDL_GPUColorTargetInfo sky_target{};
+        sky_target.texture = slot.color_tex;
+        sky_target.load_op = SDL_GPU_LOADOP_LOAD;
+        sky_target.store_op = SDL_GPU_STOREOP_STORE;
+        SDL_GPUDepthStencilTargetInfo sky_depth{};
+        sky_depth.texture = slot.depth_tex;
+        sky_depth.load_op = SDL_GPU_LOADOP_LOAD;
+        sky_depth.store_op = SDL_GPU_STOREOP_DONT_CARE;
+        SDL_GPURenderPass *sky_pass = SDL_BeginGPURenderPass( cmd, &sky_target, 1, &sky_depth );
+        SDL_BindGPUGraphicsPipeline( sky_pass, g_ctx.sky_pipeline );
+        SDL_PushGPUFragmentUniformData( cmd, 0, &sky_ub, sizeof( sky_ub ) );
+        SDL_DrawGPUPrimitives( sky_pass, 3, 1, 0, 0 );
+        SDL_EndGPURenderPass( sky_pass );
     }
+
+    if( profile ) {
+        g_profile.record_ms = profile_ms( record_begin, profile_ticks( true ) );
+    }
+    SDL_GPUFence *fence = SDL_SubmitGPUCommandBufferAndAcquireFence( cmd );
     if( !fence ) {
         static bool submit_logged = false;
         if( !submit_logged ) {
@@ -4281,16 +5103,43 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
             write_status( "submit failed: " + std::string( SDL_GetError() ) );
         }
         DebugLog( D_ERROR, DC_ALL ) << "render3d: submit failed: " << SDL_GetError();
+        slot.state = frame_slot_state::empty;
+        slot.texture_owners.clear();
+        g_recording_slot = nullptr;
+        composite_latest_frame( renderer, dest );
+        if( profile ) {
+            g_profile.total_ms = profile_ms( total_begin, profile_ticks( true ) );
+        }
+        publish_profile( g_profile );
         return;
     }
-    // P0: synchronous; the renderer must not sample color_tex before we finish.
-    SDL_WaitForGPUFences( device, true, &fence, 1 );
-    SDL_ReleaseGPUFence( device, fence );
+    slot.fence = fence;
+    slot.state = frame_slot_state::in_flight;
+    g_recording_slot = nullptr;
 
-    SDL_RenderTexture( renderer, g_ctx.color_tex_sdl, nullptr, &dest );
+    // Camera drags stay asynchronous. A non-captured frame (notably the middle
+    // button release) is a final presentation: wait for its own submission so
+    // the view cannot stop one completed frame behind the requested angle.
+    poll_frame_slots();
+    if( g_ctx.latest_ready < 0 || !g_mouse_captured ) {
+        const Uint64 wait_begin = profile_ticks( profile );
+        wait_for_frame_slot( slot_index );
+        if( profile ) {
+            g_profile.wait_ms += profile_ms( wait_begin, profile_ticks( true ) );
+        }
+    }
+
+    const Uint64 composite_begin = profile_ticks( profile );
+    const bool composited = composite_latest_frame( renderer, dest );
+    if( profile ) {
+        const Uint64 frame_end = profile_ticks( true );
+        g_profile.composite_ms = profile_ms( composite_begin, frame_end );
+        g_profile.total_ms = profile_ms( total_begin, frame_end );
+    }
+    publish_profile( g_profile );
 
     static bool first_draw_logged = false;
-    if( !first_draw_logged ) {
+    if( !first_draw_logged && composited ) {
         first_draw_logged = true;
         write_status( "drawing: first frame composited, instances=" + std::to_string( count ) );
     }

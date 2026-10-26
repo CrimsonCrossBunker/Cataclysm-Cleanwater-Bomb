@@ -166,6 +166,8 @@ class avatar : public Character
         void prepare_map_memory_region( const tripoint_abs_ms &p1, const tripoint_abs_ms &p2 );
         const memorized_tile &get_memorized_tile( const tripoint_abs_ms &p ) const;
         bool has_memory_at( const tripoint_abs_ms &p ) const;
+        bool has_map_memory_in_region( const tripoint_abs_ms &p1,
+                                       const tripoint_abs_ms &p2 ) const;
         void memorize_terrain( const tripoint_abs_ms &p, std::string_view id,
                                int subtile, int rotation );
         void memorize_decoration( const tripoint_abs_ms &p, std::string_view id,

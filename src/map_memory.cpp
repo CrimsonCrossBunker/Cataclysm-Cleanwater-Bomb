@@ -225,6 +225,28 @@ const memorized_tile &map_memory::get_tile( const tripoint_abs_ms &pos ) const
     return sm.get_tile( p.loc );
 }
 
+bool map_memory::has_memory_in_region( const tripoint_abs_ms &p1,
+                                       const tripoint_abs_ms &p2 ) const
+{
+    cata_assert( p1.z() == p2.z() );
+    cata_assert( p1.x() <= p2.x() && p1.y() <= p2.y() );
+    if( !is_valid() ) {
+        return false;
+    }
+    const coord_pair first( p1 );
+    const coord_pair last( p2 );
+    for( int z = first.sm.z(); z <= last.sm.z(); ++z ) {
+        for( int y = first.sm.y(); y <= last.sm.y(); ++y ) {
+            for( int x = first.sm.x(); x <= last.sm.x(); ++x ) {
+                if( !get_submap( tripoint_abs_sm( x, y, z ) ).is_empty() ) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
 void map_memory::set_tile_terrain( const tripoint_abs_ms &pos, std::string_view id,
                                    int subtile, int rotation )
 {

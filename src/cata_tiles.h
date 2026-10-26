@@ -705,12 +705,20 @@ struct sprite_layers_3d {
     int fg_index = -1;
     int bg_count = 0;
     int bg_index = -1;
+    // Weighted-list sizes decide whether a position seed is used. They are not
+    // the picked list sizes above (several weighted rows can each hold one id).
+    int fg_variant_count = 0;
+    int bg_variant_count = 0;
     int rot4 = 0;             // clockwise quarter turns applied to a single fg sprite
     // the resolved tile's sheet sprite offset in sprite pixels (tile_type::offset);
     // 2D places a sprite at tile origin + this, the 3D paper doll uses it to
     // align overlay layers with the base body canvas
     point offset = point::zero;
     const std::string *resolved_id = nullptr; // tileset key actually used
+    // 3D frame slots retain these until the GPU fence completes. The 2D draw
+    // path does not use sprite_layers_3d or these ownership links.
+    std::shared_ptr<SDL_Texture> fg_owner;
+    std::shared_ptr<SDL_Texture> bg_owner;
 };
 /** type used for color blocks overlays.
  * first: The SDL blend mode used for the color.
@@ -762,6 +770,11 @@ class cata_tiles
          * escape the current UI frame.
          */
         const texture *ui_sprite( const std::string &id ) const;
+        // 3D-only cache identity. Holding the shared_ptr also prevents address
+        // reuse from making a reloaded tileset look like the previous one.
+        const std::shared_ptr<const tileset> &get_tileset_3d() const {
+            return tileset_ptr;
+        }
 
         /** Draw to screen */
         void draw( const point &dest, const tripoint_bub_ms &center, int width, int height,

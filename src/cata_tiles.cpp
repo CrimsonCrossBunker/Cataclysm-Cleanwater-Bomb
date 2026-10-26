@@ -3096,17 +3096,22 @@ void cata_tiles::set_disable_occlusion( const bool val )
     disable_occlusion = val;
 }
 
-static std::optional<texture_draw_data> make_texture_draw_data_3d( const texture *tile )
+static std::optional<texture_draw_data> make_texture_draw_data_3d( const texture *tile,
+        std::shared_ptr<SDL_Texture> *owner )
 {
     if( !tile ) {
         return std::nullopt;
     }
     std::shared_ptr<SDL_Texture> texture_ptr = tile->get_texture_ptr();
+    SDL_Texture *const raw = texture_ptr.get();
+    if( owner ) {
+        *owner = std::move( texture_ptr );
+    }
     SDL_Rect rect = tile->get_srcrect();
 
     int buf_w = 0;
     int buf_h = 0;
-    SDL_PropertiesID props = SDL_GetTextureProperties( texture_ptr.get() );
+    SDL_PropertiesID props = SDL_GetTextureProperties( raw );
     if( props ) {
         buf_w = static_cast<int>( SDL_GetNumberProperty( props, SDL_PROP_TEXTURE_WIDTH_NUMBER, 0 ) );
         buf_h = static_cast<int>( SDL_GetNumberProperty( props, SDL_PROP_TEXTURE_HEIGHT_NUMBER, 0 ) );
@@ -3115,7 +3120,7 @@ static std::optional<texture_draw_data> make_texture_draw_data_3d( const texture
     std::pair<float, float> uv0{ rect.x / static_cast<float>( buf_w ), rect.y / static_cast<float>( buf_h ) };
     std::pair<float, float> uv1{ ( rect.x + rect.w ) / static_cast<float>( buf_w ), ( rect.y + rect.h ) / static_cast<float>( buf_h ) };
 
-    return texture_draw_data{ texture_ptr.get(), rect, uv0, uv1, tile->get_opaque_rect() };
+    return texture_draw_data{ raw, rect, uv0, uv1, tile->get_opaque_rect() };
 }
 
 bool cata_tiles::resolve_sprite_layers_3d( const std::string &id, TILE_CATEGORY category,
@@ -3147,6 +3152,8 @@ bool cata_tiles::resolve_sprite_layers_3d( const std::string &id, TILE_CATEGORY 
     }
     const tile_type &ttype = res->tile();
     out.multitile = was_multitile;
+    out.fg_variant_count = static_cast<int>( ttype.fg.size() );
+    out.bg_variant_count = static_cast<int>( ttype.bg.size() );
     out.offset = ttype.offset;
     out.resolved_id = &res->id();
     // draw_from_id_string_internal zeroes rota on non-rotating tiles so plain
@@ -3184,7 +3191,8 @@ bool cata_tiles::resolve_sprite_layers_3d( const std::string &id, TILE_CATEGORY 
                 // multiple orientation variants: pick by rota % size, no rotation
                 out.fg_index = use_rota % static_cast<int>( fg->size() );
             }
-            out.fg = make_texture_draw_data_3d( tileset_ptr->get_tile( ( *fg )[out.fg_index] ) );
+            out.fg = make_texture_draw_data_3d( tileset_ptr->get_tile( ( *fg )[out.fg_index] ),
+                                                &out.fg_owner );
             out.fg_found = out.fg.has_value();
         }
     }
@@ -3193,7 +3201,8 @@ bool cata_tiles::resolve_sprite_layers_3d( const std::string &id, TILE_CATEGORY 
         if( !bg->empty() ) {
             // a bg without manual rotations is never rotated (draw_sprite_at)
             out.bg_index = bg->size() == 1 ? 0 : use_rota % static_cast<int>( bg->size() );
-            out.bg = make_texture_draw_data_3d( tileset_ptr->get_tile( ( *bg )[out.bg_index] ) );
+            out.bg = make_texture_draw_data_3d( tileset_ptr->get_tile( ( *bg )[out.bg_index] ),
+                                                &out.bg_owner );
             out.bg_found = out.bg.has_value();
         }
     }

@@ -150,6 +150,9 @@ static bool last_input_has_explicit_mouse_pos = false;
 #if defined(__ANDROID__)
     static hover_mouse_input_state android_hover_mouse_input;
 #endif
+// Camera motion can arrive much faster than frames. Mark the main UI dirty
+// immediately, but coalesce redraws to the normal presentation interval.
+static bool render3d_camera_redraw_pending = false;
 palette_array windowsPalette;
 
 static Font_Ptr font;
@@ -4633,6 +4636,9 @@ void cata_cursesport::curses_drawwindow( const catacurses::window &w )
                 static_cast<float>( TERRAIN_WINDOW_TERM_HEIGHT * font->height )
             };
             render3d::draw_terrain_window( renderer.get(), dest3d, g->ter_view_p, tilecontext.get() );
+            // Any full terrain draw satisfies a pending camera request, even if
+            // another UI path happened to redraw before the camera interval.
+            render3d_camera_redraw_pending = false;
             if( !render3d::available() ) {
                 // 3D backend unavailable (software renderer, missing shaders,
                 // probe failure): fall back to 2D tiles for this frame
@@ -6549,6 +6555,24 @@ static bool pop_extra_button_input( input_event &event )
     return true;
 }
 #endif
+static void request_render3d_camera_redraw()
+{
+    render3d_camera_redraw_pending = true;
+    needupdate = true;
+    if( g ) {
+        g->invalidate_main_ui_adaptor();
+    }
+}
+
+static void redraw_render3d_camera_if_due()
+{
+    if( !render3d_camera_redraw_pending ||
+        GetTicks() - lastupdate < interval ) {
+        return;
+    }
+    render3d_camera_redraw_pending = false;
+    ui_manager::redraw_invalidated();
+}
 
 //Check for any window messages (keypress, paint, mousemove, etc)
 static void CheckMessages()
@@ -6977,7 +7001,13 @@ static void CheckMessages()
 #else
                 case CATA_WINDOWEVENT_FOCUS_LOST:
                     window_focus = false;
-                    render3d::sync_mouse_capture( renderer.get(), false );
+                    if( get_option<bool>( "RENDER3D_EXPERIMENTAL" ) &&
+                        render3d::mouse_captured() ) {
+                        render3d::sync_mouse_capture( renderer.get(), false );
+                        request_render3d_camera_redraw();
+                    } else {
+                        render3d::sync_mouse_capture( renderer.get(), false );
+                    }
                     if( IsTextInputActive( ::window.get() ) ) {
                         text_input_active_when_regaining_focus = true;
                         // Stop text input to not interfere with other programs
@@ -7223,6 +7253,7 @@ static void CheckMessages()
                         // middle-drag orbit: relative motion steers the 3D
                         // camera; do not feed the game's mouseover pipeline
                         render3d::note_mouse_look( ev.motion.xrel, ev.motion.yrel );
+                        request_render3d_camera_redraw();
                         break;
                     }
                     if( get_option<std::string>( "HIDE_CURSOR" ) == "show" ||
@@ -7259,6 +7290,7 @@ static void CheckMessages()
                             if( get_option<bool>( "RENDER3D_EXPERIMENTAL" ) ) {
                                 // middle-drag orbits the 3D camera; not a game action
                                 render3d::sync_mouse_capture( renderer.get(), true );
+                                request_render3d_camera_redraw();
                             }
                             break;
                         case SDL_BUTTON_X1:
@@ -7287,6 +7319,7 @@ static void CheckMessages()
                         case SDL_BUTTON_MIDDLE:
                             if( get_option<bool>( "RENDER3D_EXPERIMENTAL" ) ) {
                                 render3d::sync_mouse_capture( renderer.get(), false );
+                                request_render3d_camera_redraw();
                             }
                             break;
                         case SDL_BUTTON_X1:
@@ -7308,6 +7341,7 @@ static void CheckMessages()
                     if( get_option<bool>( "RENDER3D_EXPERIMENTAL" ) ) {
                         // 3D camera zoom; do not feed the game's scroll pipeline
                         render3d::note_mouse_wheel( static_cast<float>( ev.wheel.y ) );
+                        request_render3d_camera_redraw();
                         break;
                     }
                     if( ev.wheel.y > 0 ) {
@@ -7765,6 +7799,7 @@ static void CheckMessages()
     }
 
 #endif
+    redraw_render3d_camera_if_due();
     if( needupdate ) {
         try_sdl_update();
     }
