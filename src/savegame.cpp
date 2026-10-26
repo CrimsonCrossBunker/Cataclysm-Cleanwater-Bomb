@@ -1990,14 +1990,14 @@ void global_variables::load_migrations( const JsonObject &jo, std::string_view )
     const std::string to = jo.has_string( "to" )
                            ? jo.get_string( "to" )
                            : "NULL_VALUE";
-    get_globals().migrations.emplace( from, to );
+    get_globals().migrations[ from ] = to;
 }
 
 void cata::lua_platform::detail::insert_platform_var_migration(
     const platform_migration_data &value )
 {
-    get_globals().migrations.emplace(
-        value.from_id, value.to_id.empty() ? "NULL_VALUE" : value.to_id );
+    get_globals().migrations[ value.from_id ] =
+        value.to_id.empty() ? "NULL_VALUE" : value.to_id;
 }
 
 void cata::lua_platform::detail::erase_platform_var_migration(
