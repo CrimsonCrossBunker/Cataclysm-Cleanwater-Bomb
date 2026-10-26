@@ -6724,6 +6724,16 @@ content.replace(definition)
 end
 do
 local definition = content.JsonFlag {
+    id = "TRAP_PROOF",
+    info = "This wheel <info>hovers</info> and will <good>not set off traps</good> such as deep pits or landmines.",
+    inherit = true,
+    craft_inherit = false,
+    taste_modifier = 0,
+}
+content.replace(definition)
+end
+do
+local definition = content.JsonFlag {
     id = "TURRET",
     info = "This weapon is mounted in a turret.  It can be fired from the vehicle controls.",
     requires_flag = "TURRET_MOUNT",
