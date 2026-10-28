@@ -43,13 +43,7 @@
       "UNRESTRICTED"
     ],
     "max_worn": 1,
-    "armor": [
-      {
-        "encumbrance": 0,
-        "coverage": 100,
-        "covers_all": true
-      }
-    ]
+    "armor": [ { "encumbrance": 0, "coverage": 100, "covers_all": true } ]
   },
   {
     "id": "iso_blackfire_blast",

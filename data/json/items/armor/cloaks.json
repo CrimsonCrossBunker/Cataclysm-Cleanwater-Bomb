@@ -84,13 +84,7 @@
       "ALLOWS_WINGS"
     ],
     "max_worn": 1,
-    "armor": [
-      {
-        "encumbrance": 0,
-        "coverage": 100,
-        "covers_all": true
-      }
-    ]
+    "armor": [ { "encumbrance": 0, "coverage": 100, "covers_all": true } ]
   },
   {
     "id": "debug_energy_shield",
@@ -107,13 +101,7 @@
     "max_energy_shield_hp": 4,
     "flags": [ "AURA", "ENERGY_SHIELD", "OVERSIZE", "TRADER_AVOID", "NO_TAKEOFF", "NONCONDUCTIVE", "ALLOWS_NATURAL_ATTACKS" ],
     "max_worn": 1,
-    "armor": [
-      {
-        "encumbrance": 0,
-        "coverage": 100,
-        "covers_all": true
-      }
-    ]
+    "armor": [ { "encumbrance": 0, "coverage": 100, "covers_all": true } ]
   },
   {
     "id": "national_flag",

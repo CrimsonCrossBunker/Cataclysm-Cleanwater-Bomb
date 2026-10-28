@@ -2450,14 +2450,7 @@
     "warmth": 0,
     "environmental_protection": 16,
     "flags": [ "INTEGRATED", "ALLOWS_NATURAL_ATTACKS", "UNBREAKABLE", "PERSONAL", "ALLOWS_TALONS", "RAD_PROOF", "WATERPROOF" ],
-    "armor": [
-      {
-        "covers_all": true,
-        "coverage": 100,
-        "encumbrance": 0,
-        "breathability": "GOOD"
-      }
-    ]
+    "armor": [ { "covers_all": true, "coverage": 100, "encumbrance": 0, "breathability": "GOOD" } ]
   },
   {
     "id": "internal_bio_purifier",
