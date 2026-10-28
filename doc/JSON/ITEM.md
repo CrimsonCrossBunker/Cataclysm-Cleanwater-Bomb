@@ -482,7 +482,7 @@ Body parts to keep uncovered when `covers_all` is `true`. See the bodypart_ids d
 (array of strings)
 Sub body parts to keep uncovered. See the sub_bodypart_ids defined in body_parts.json for valid values.
 - When `covers_all` is `true`, it is excluded from the full sub coverage together with `covers_except`.
-- When `covers_all` is `false` (armor uses explicit `covers`), it widens the explicitly listed sub coverage to the whole covered body parts minus these exclusions: a listed sub body part that belongs to a covered main body part leaves all the other sub body parts of that main body part covered.
+- When `covers_all` is `false` (armor uses explicit `covers`), for each main body part listed in `covers`, all of its sub body parts are covered except those listed here. Sub body parts whose main body part is not in `covers` have no effect.
 
 ##### Part Materials
 (array of objects)
