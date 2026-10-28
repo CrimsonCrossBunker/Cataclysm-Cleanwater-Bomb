@@ -1001,10 +1001,7 @@ void Item_factory::finalize_post( itype &obj )
 
 void Item_factory::finalize_post_armor( itype &obj )
 {
-    // Expand covers_all portions into explicit body part coverage before the
-    // per-limb consolidation below.  covers_all covers every registered body
-    // part minus covers_except; sub coverage is expanded to the covered body
-    // parts minus sub_coverage_except.
+    // Expand covers_all portions into explicit coverage before consolidation.
     for( armor_portion_data &data : obj.armor->sub_data ) {
         if( data.covers_all ) {
             data.covers = body_part_set();
@@ -1021,8 +1018,7 @@ void Item_factory::finalize_post_armor( itype &obj )
                 }
             }
         } else if( !data.sub_coverage_except.empty() && data.covers.has_value() ) {
-            // With explicit covers, sub_coverage_except widens the listed sub
-            // coverage to the whole covered body parts minus the exclusions.
+            // Widens sub coverage to covered body parts minus exclusions.
             for( const bodypart_str_id &bp : data.covers.value() ) {
                 for( const sub_bodypart_str_id &sbp : bp->sub_parts ) {
                     if( !data.sub_coverage_except.count( sbp ) ) {
@@ -1071,8 +1067,7 @@ void Item_factory::finalize_post_armor( itype &obj )
         data.covers->unify_set( similar_bp );
     }
 
-    // covers_except is a hard blacklist: drop any excluded body part that the
-    // similar-body-part expansion may have pulled back in.
+    // Re-apply covers_except blacklist after similar-body-part expansion.
     for( armor_portion_data &data : obj.armor->sub_data ) {
         if( data.covers_all && data.covers.has_value() ) {
             for( const bodypart_str_id &bp : data.covers_except ) {
