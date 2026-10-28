@@ -457,6 +457,16 @@ struct armor_portion_data {
 
     std::set<sub_bodypart_str_id> sub_coverage;
 
+    // If true this portion covers every body part; mutually exclusive with
+    // covers and specifically_covers.
+    bool covers_all = false;
+    // Body parts to exclude when covers_all is set.  Only valid with covers_all.
+    body_part_set covers_except;
+    // Sub body parts to exclude.  With covers_all true it is excluded from the
+    // full sub coverage; otherwise it widens the explicitly listed sub_coverage
+    // to the whole covered body parts minus these exclusions.
+    std::set<sub_bodypart_str_id> sub_coverage_except;
+
     // What layer does it cover if any
     std::set<layer_level> layers;
 
