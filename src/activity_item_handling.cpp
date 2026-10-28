@@ -745,7 +745,7 @@ static bool vehicle_activity( Character &you, const tripoint_bub_ms &src_loc, in
         time_to_take = vpi.removal_time( you );
     }
     you.assign_activity( vehicle_activity_actor( type, time_to_take, veh, here.get_abs( src_loc ),
-            tripoint_rel_ms::zero, veh->index_of_part( &vp ), vpi.id ) );
+                         tripoint_rel_ms::zero, veh->index_of_part( &vp ), vpi.id ) );
     // so , NPCs can remove the last part on a position, then there is no vehicle there anymore,
     // for someone else who stored that position at the start of their activity.
     // so we may need to go looking a bit further afield to find it , at activities end.
@@ -777,7 +777,7 @@ static void move_item( Character &you, item &it, const int quantity, const tripo
             it.set_var( "activity_var", you.name );
         }
         const std::vector<item_location> moved = put_into_vehicle_or_drop_ret_locs(
-                you, item_drop_reason::deliberate, { it }, &here, dest );
+                    you, item_drop_reason::deliberate, { it }, &here, dest );
         if( activity_to_restore == ACT_FETCH_REQUIRED ) {
             for( const item_location &loc : moved ) {
                 activity_handlers::reserve_activity_item( you, loc );
@@ -990,7 +990,7 @@ bool sort_skip_item( Character &you, const item *it,
 
     const faction_id fac_id = _fac_id( you );
     const zone_type_id zt_id = mgr.get_near_zone_type_for_item( *it, you.pos_abs(),
-        MAX_VIEW_DISTANCE, fac_id, base_spoil_multiplier );
+                               MAX_VIEW_DISTANCE, fac_id, base_spoil_multiplier );
     // Skip items already at their destination regardless of whether the zone
     // is bound to terrain or vehicle cargo. Delivery tries cargo first, so
     // items often land in vehicle storage even at terrain-bound zones (e.g.,
@@ -1015,7 +1015,7 @@ unload_sort_options set_unload_options( Character &you, const tripoint_abs_ms &s
     unload_sort_options zone_sort_options;
 
     std::vector<zone_data const *> const zones = mgr.get_zones_at( src, zone_type_UNLOAD_ALL,
-        _fac_id( you ) );
+            _fac_id( you ) );
 
     // set rules from all zones in stack
     for( zone_data const *zone : zones ) {
@@ -1235,7 +1235,7 @@ bool has_items_to_sort( Character &you, const tripoint_abs_ms &src,
             }
         }
         const zone_type_id dest_zone_type_id = mgr.get_near_zone_type_for_item( *it, abspos,
-            MAX_VIEW_DISTANCE, fac_id, spoil_multiplier );
+                                               MAX_VIEW_DISTANCE, fac_id, spoil_multiplier );
 
         if( dest_zone_type_id == zone_type_id::NULL_ID() ) {
             continue;
@@ -1764,7 +1764,7 @@ static std::vector<tripoint_bub_ms> route_best_workbench(
                     best_bench_multi_a = wb->multiplier;
                 }
             } else if( const std::optional<vpart_reference> vp = here.veh_at(
-                    adj ).part_with_feature( "WORKBENCH", true ) ) {
+                           adj ).part_with_feature( "WORKBENCH", true ) ) {
                 if( const std::optional<vpslot_workbench> &wb_info = vp->part().info().workbench_info ) {
                     if( wb_info->multiplier > best_bench_multi_a ) {
                         best_bench_multi_a = wb_info->multiplier;
@@ -1783,7 +1783,7 @@ static std::vector<tripoint_bub_ms> route_best_workbench(
                     best_bench_multi_b = wb->multiplier;
                 }
             } else if( const std::optional<vpart_reference> vp = here.veh_at(
-                    adj ).part_with_feature( "WORKBENCH", true ) ) {
+                           adj ).part_with_feature( "WORKBENCH", true ) ) {
                 if( const std::optional<vpslot_workbench> &wb_info = vp->part().info().workbench_info ) {
                     if( wb_info->multiplier > best_bench_multi_b ) {
                         best_bench_multi_b = wb_info->multiplier;
@@ -1844,38 +1844,41 @@ ID _get_id( construction_id const &idx )
     return idx->post_terrain.empty() ? ID() : ID( idx->post_terrain );
 }
 
-using checked_cache_t = std::vector<construction_id>;
-construction const *_find_prereq( tripoint_bub_ms const &loc, construction_id const &idx,
-                                  construction_id const &top_idx,
-                                  std::optional<construction_id> const &part_con_idx, checked_cache_t &checked_cache )
+construction const *_find_prereq( tripoint_bub_ms const &loc, construction_id const &target,
+                                  std::optional<construction_id> const &part_con_idx )
 {
-    construction const *con = nullptr;
-    std::vector<const construction *> cons = constructions_by_filter( [&idx, &top_idx](
-    construction const & it ) {
-        furn_id const f = top_idx->post_is_furniture ? _get_id<furn_id>( top_idx ) : furn_id();
-        ter_id const t = top_idx->post_is_furniture ? ter_id() : _get_id<ter_id>( top_idx );
-        return it.group != idx->group && !it.post_terrain.empty() &&
-               ( idx->pre_terrain.find( it.post_terrain ) != idx->pre_terrain.end() )  &&
-               // don't get stuck building and deconstructing the top level post_terrain
-               ( it.pre_terrain.find( top_idx->post_terrain ) == it.pre_terrain.end() )  &&
-               ( it.pre_flags.empty() || !has_pre_flags( it, f, t ) );
-    } );
-
-    for( construction const *gcon : cons ) {
-        if( std::find( checked_cache.begin(), checked_cache.end(), gcon->id ) !=
-            checked_cache.end() ) {
+    // Search all variants breadth-first. A depth-first walk can choose to build
+    // a coffin and grave before noticing that the required pit can be dug here.
+    using search_node = std::pair<construction_id, construction_id>;
+    std::deque<search_node> pending;
+    std::set<search_node> checked;
+    for( const construction *variant : constructions_by_group( target->group ) ) {
+        pending.emplace_back( variant->id, variant->id );
+    }
+    while( !pending.empty() ) {
+        const construction_id idx = pending.front().first;
+        const construction_id top_idx = pending.front().second;
+        pending.pop_front();
+        if( !checked.emplace( idx, top_idx ).second ) {
             continue;
         }
-        checked_cache.emplace_back( gcon->id );
-        if( _can_construct( loc, idx, *gcon, part_con_idx ) ) {
-            return gcon;
-        }
-        // try to find a prerequisite of this prerequisite
-        if( !gcon->pre_terrain.empty() || !gcon->pre_flags.empty() ) {
-            con = _find_prereq( loc, gcon->id, top_idx, part_con_idx, checked_cache );
-        }
-        if( con != nullptr ) {
-            return con;
+        const std::vector<const construction *> cons = constructions_by_filter( [&idx, &top_idx](
+        construction const & it ) {
+            furn_id const f = top_idx->post_is_furniture ? _get_id<furn_id>( top_idx ) : furn_id();
+            ter_id const t = top_idx->post_is_furniture ? ter_id() : _get_id<ter_id>( top_idx );
+            return it.group != idx->group && !it.post_terrain.empty() &&
+                   ( idx->pre_terrain.find( it.post_terrain ) != idx->pre_terrain.end() ) &&
+                   // Do not undo the result of the requested construction.
+                   ( it.pre_terrain.find( top_idx->post_terrain ) == it.pre_terrain.end() ) &&
+                   ( it.pre_flags.empty() || !has_pre_flags( it, f, t ) );
+        } );
+        for( const construction *candidate : cons ) {
+            if( _can_construct( loc, idx, *candidate, part_con_idx ) ) {
+                return candidate;
+            }
+            if( !candidate->pre_terrain.empty() || !candidate->pre_flags.empty() ) {
+                pending.emplace_back( candidate->id, top_idx );
+            }
         }
     }
     return nullptr;
@@ -1912,14 +1915,7 @@ static activity_reason_info find_base_construction(
             return it.group == idx->group;
         } );
         if( !idx->strict && con == nullptr ) {
-            // try to build a pre-requisite from a different group, recursively
-            checked_cache_t checked_cache;
-            for( construction const *vcon : constructions_by_group( idx->group ) ) {
-                con = _find_prereq( loc, vcon->id, vcon->id, part_con_idx, checked_cache );
-                if( con != nullptr ) {
-                    break;
-                }
-            }
+            con = _find_prereq( loc, idx, part_con_idx );
         }
         cc = con != nullptr;
     }
@@ -1974,7 +1970,7 @@ bool are_requirements_nearby(
                id == ACT_MULTIPLE_MOP;
     };
     const bool check_weight = check_weight_if( activity_to_restore ) || ( !you.backlog.empty() &&
-        check_weight_if( you.backlog.front().id() ) );
+                              check_weight_if( you.backlog.front().id() ) );
 
     if( check_weight ) {
         volume_allowed = you.free_space();
@@ -2043,7 +2039,7 @@ bool are_requirements_nearby(
         int radius = pickup_range - 1;
         for( const tripoint_bub_ms &elem : here.points_in_radius( src_loc, radius, radius ) ) {
             const std::optional<vpart_reference> &vp = here.veh_at( elem ).part_with_unreserved_tool( here,
-                itype_welder );
+                    itype_welder );
 
             if( vp ) {
                 const int veh_battery = vp->vehicle().fuel_left( here, itype_battery );
@@ -2124,7 +2120,7 @@ activity_reason_info multi_vehicle_deconstruct_activity_actor::multi_activity_ca
     vehicle *veh = veh_pointer_or_null( here.veh_at( src_loc ) );
 
     activity_reason_info common_vehicle_work = vehicle_work_can_do( act, you, src_loc,
-        already_working_indexes, veh );
+            already_working_indexes, veh );
     if( !common_vehicle_work.can_do ) {
         return common_vehicle_work;
     }
@@ -2196,7 +2192,7 @@ activity_reason_info multi_vehicle_repair_activity_actor::multi_activity_can_do(
     vehicle *veh = veh_pointer_or_null( here.veh_at( src_loc ) );
 
     activity_reason_info common_vehicle_work = vehicle_work_can_do( act, you, src_loc,
-        already_working_indexes, veh );
+            already_working_indexes, veh );
     if( !common_vehicle_work.can_do ) {
         return common_vehicle_work;
     }
@@ -2594,7 +2590,7 @@ activity_reason_info multi_craft_activity_actor::multi_activity_can_do( Characte
             const temp_crafting_inventory &inv = you.crafting_inventory( src_loc, pickup_range, false );
             const recipe &r = to_craft->get_making();
             std::vector<std::vector<item_comp>> item_comp_vector =
-                to_craft->get_continue_reqs().get_components();
+                                                 to_craft->get_continue_reqs().get_components();
             std::vector<std::vector<quality_requirement>> quality_comp_vector;
             std::vector<std::vector<tool_comp>> tool_comp_vector;
             if( r.has_steps() ) {
@@ -2646,7 +2642,7 @@ activity_reason_info multi_disassemble_activity_actor::multi_activity_can_do( Ch
         if( i.is_disassemblable() ) {
             // Are the requirements fulfilled?
             const recipe &r = recipe_dictionary::get_uncraft( ( i.typeId() == itype_disassembly ) ?
-                i.components.only_item().typeId() : i.typeId() );
+                              i.components.only_item().typeId() : i.typeId() );
             req = r.disassembly_requirements();
             if( !std::all_of( req.get_qualities().begin(),
             req.get_qualities().end(), [&inv, &you]( const std::vector<quality_requirement> &cur ) {
@@ -2811,7 +2807,7 @@ requirement_id synthesize_requirements(
 {
 
     requirement_data reqs_data = requirement_data( tool_comp_vector, quality_comp_vector,
-        requirement_comp_vector );
+                                 requirement_comp_vector );
 
     return hash_and_cache_requirement_data( reqs_data );
 }
@@ -2857,8 +2853,8 @@ requirement_id remove_met_requirements( requirement_id base_req_id, Character &y
     }
 
     requirement_data reduced_reqs = requirement_data( reduced_tool_reqs_vector,
-        reduced_quality_reqs_vector,
-        component_reqs_vector );
+                                    reduced_quality_reqs_vector,
+                                    component_reqs_vector );
     return hash_and_cache_requirement_data( reduced_reqs );
 }
 
@@ -3049,8 +3045,8 @@ void add_basecamp_storage_to_loot_zone_list(
 } //namespace multi_activity_actor
 
 std::vector<std::tuple<tripoint_bub_ms, itype_id, int>>
-fetch_required_activity_actor::requirements_map( Character &you,
-        const int distance )
+        fetch_required_activity_actor::requirements_map( Character &you,
+                const int distance )
 {
     std::vector<std::tuple<tripoint_bub_ms, itype_id, int>> requirement_map;
     if( !fetch_activity_valid( you ) ) {
@@ -3206,7 +3202,7 @@ fetch_required_activity_actor::requirements_map( Character &you,
                 if( item_quantity >= quantity_required ) {
                     // it's just this spot that can fulfil the requirement on its own
                     final_map.emplace_back( pos_here, item_here, std::min<int>( quantity_here,
-                            quantity_required ) );
+                                            quantity_required ) );
                     if( quantity_here >= quantity_required ) {
                         line_found = true;
                         break;
@@ -3264,7 +3260,7 @@ fetch_required_activity_actor::requirements_map( Character &you,
                 if( item_quantity >= quantity_required ) {
                     // it's just this spot that can fulfil the requirement on its own
                     final_map.emplace_back( pos_here, item_here, std::min<int>( quantity_here,
-                            quantity_required ) );
+                                            quantity_required ) );
                     if( quantity_here >= quantity_required ) {
                         line_found = true;
                         break;
@@ -3388,7 +3384,7 @@ bool fetch_required_activity_actor::fetch_activity(
         return false;
     }
     const std::vector<std::tuple<tripoint_bub_ms, itype_id, int>> mental_item_map =
-        requirements_map( you, distance );
+                requirements_map( you, distance );
     int pickup_count = 1;
     map_stack items_there = here.i_at( src_loc );
     const units::volume volume_allowed = you.free_space();
@@ -3740,7 +3736,7 @@ std::unordered_set<tripoint_abs_ms> generic_locations( Character &you, const act
     std::unordered_set<tripoint_abs_ms> src_set;
 
     zone_type_id zone_type = multi_activity_actor::get_zone_for_act( tripoint_bub_ms::zero, mgr, act_id,
-        _fac_id( you ) );
+                             _fac_id( you ) );
     src_set = mgr.get_near( zone_type, you.pos_abs(), MAX_VIEW_DISTANCE, nullptr, _fac_id( you ) );
 
     // prune the set to remove tiles that are never gonna work out.
@@ -3755,7 +3751,7 @@ std::unordered_set<tripoint_abs_ms> no_same_tile_locations( Character &you,
         const activity_id &act_id )
 {
     std::unordered_set<tripoint_abs_ms> src_set = multi_activity_actor::generic_locations( you,
-        act_id );
+            act_id );
     multi_activity_actor::prune_same_tile_locations( you, src_set );
 
     return src_set;
@@ -3772,7 +3768,7 @@ multi_build_construction_activity_actor::multi_activity_locations(
 
     // multiple construction will form a list of targets based on blueprint zones and unfinished constructions
     std::unordered_set<tripoint_abs_ms> src_set = multi_activity_actor::generic_locations( you,
-        act_id );
+            act_id );
     for( const tripoint_bub_ms &elem : here.points_in_radius( you.pos_bub(), MAX_VIEW_DISTANCE ) ) {
         partial_con *pc = here.partial_con_at( elem );
         if( pc ) {
@@ -3813,7 +3809,7 @@ std::unordered_set<tripoint_abs_ms> multi_study_activity_actor::multi_activity_l
     std::unordered_set<tripoint_abs_ms> src_set;
 
     std::unordered_set<tripoint_abs_ms> all_zone_tiles = mgr.get_near( zone_type_STUDY_ZONE, abspos,
-        MAX_VIEW_DISTANCE, nullptr, _fac_id( you ) );
+            MAX_VIEW_DISTANCE, nullptr, _fac_id( you ) );
     for( const tripoint_abs_ms &zone_pos : all_zone_tiles ) {
         if( find_study_book( zone_pos, you ) ) {
             src_set.insert( zone_pos );
@@ -3847,7 +3843,7 @@ std::unordered_set<tripoint_abs_ms> multi_fish_activity_actor::multi_activity_lo
     const activity_id act_id = get_type();
     map &here = get_map();
     std::unordered_set<tripoint_abs_ms> src_set = multi_activity_actor::generic_locations( you,
-        act_id );
+            act_id );
 
     for( auto src_set_iter = src_set.begin(); src_set_iter != src_set.end(); ) {
         const tripoint_bub_ms set_pt = here.get_bub( *src_set_iter );
@@ -3867,7 +3863,7 @@ std::unordered_set<tripoint_abs_ms> multi_mop_activity_actor::multi_activity_loc
     const activity_id act_id = get_type();
     map &here = get_map();
     std::unordered_set<tripoint_abs_ms> src_set = multi_activity_actor::generic_locations( you,
-        act_id );
+            act_id );
     for( auto src_set_iter = src_set.begin(); src_set_iter != src_set.end(); ) {
         const tripoint_bub_ms set_pt = here.get_bub( *src_set_iter );
         if( !here.mopsafe_field_at( set_pt ) ) {
@@ -3913,7 +3909,7 @@ bool multi_farm_activity_actor::multi_activity_do( Character &you,
             const itype_id seed =
                 dynamic_cast<const plot_options &>( zone.get_options() ).get_seed();
             std::vector<item_location> seed_inv = you.cache_get_items_with( "is_seed", itype_id( seed ), {},
-                &item::is_seed );
+                                                  &item::is_seed );
             seed_inv.erase( std::remove_if( seed_inv.begin(), seed_inv.end(),
             []( const item_location & loc ) {
                 return !loc || !craft_reservation::usable_by_automation( *loc );
@@ -4028,7 +4024,7 @@ bool multi_build_construction_activity_actor::multi_activity_do( Character &you,
     const zone_manager &mgr = zone_manager::get_manager();
     const zone_data *zone =
         mgr.get_zone_at( src, multi_activity_actor::get_zone_for_act( src_loc, mgr,
-            ACT_MULTIPLE_CONSTRUCTION, _fac_id( you ) ),
+                         ACT_MULTIPLE_CONSTRUCTION, _fac_id( you ) ),
                          _fac_id( you ) );
 
     if( reason == do_activity_reason::CAN_DO_CONSTRUCTION ) {
@@ -4070,7 +4066,7 @@ bool multi_fish_activity_actor::multi_activity_do( Character &you,
         you.activity = player_activity();
         item_location best_rod_loc( you, &you.best_unreserved_item_with_quality( qual_FISHING_ROD ) );
         you.assign_activity( fish_activity_actor( best_rod_loc,
-                g->get_fishable_locations_abs( MAX_VIEW_DISTANCE, src_loc ), 5_hours ) );
+                             g->get_fishable_locations_abs( MAX_VIEW_DISTANCE, src_loc ), 5_hours ) );
         return false;
     }
     return true;
@@ -4185,7 +4181,7 @@ bool multi_disassemble_activity_actor::multi_activity_do( Character &you,
                     int const qty = std::max( 1, elem.typeId() == itype_disassembly ? elem.get_making_batch_size() :
                                               elem.charges );
                     player_activity act = player_activity( disassemble_activity_actor( r.time_to_craft_moves( you, {},
-                        recipe_time_flag::ignore_proficiencies ) * qty ) );
+                                                           recipe_time_flag::ignore_proficiencies ) * qty ) );
                     act.targets.emplace_back( map_cursor( src_loc ), &elem );
                     act.placement = here.get_abs( src_loc );
                     act.position = qty;
@@ -4611,7 +4607,7 @@ int get_auto_consume_moves( Character &you, const bool food )
     if( best_comestible ) {
         //The moves it takes you to walk there and back.
         int consume_moves = 2 * you.run_cost( 100, false ) * std::max( rl_dist( you.pos_abs(),
-            best_comestible.pos_abs() ), 1 );
+                            best_comestible.pos_abs() ), 1 );
         consume_moves += to_moves<int>( you.get_consume_time( *best_comestible ) );
 
         you.consume( best_comestible );
