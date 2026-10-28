@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:3fd290ac7aeaa7d87dbb7b76c7da13a856f904431dcdbf82b42368bc2556aa9f",
+    "source_fingerprint": "sha256:3988c8e679084d47210dbce9a2b6685f673992f3a7312630c7ee1ad9db1436d2",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -29,8 +29,8 @@
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6819,
-    "top_level_objects": 95291,
+    "tracked_json_files": 6820,
+    "top_level_objects": 95295,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -4356,7 +4356,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 3208
+            "line": 3210
           }
         ],
         "confidence": "lexical_only"
@@ -4676,7 +4676,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 927,
+        "occurrences": 929,
         "examples": [
           {
             "path": "data/json/flags.json",
@@ -5307,7 +5307,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4484
+            "line": 4486
           }
         ],
         "confidence": "lexical_only"
@@ -5597,7 +5597,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 2645
+            "line": 2647
           }
         ],
         "confidence": "lexical_only"
@@ -6231,7 +6231,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4685
+            "line": 4687
           }
         ],
         "confidence": "lexical_only"
@@ -6408,7 +6408,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4448
+            "line": 4450
           }
         ],
         "confidence": "lexical_only"
@@ -8733,7 +8733,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 2236
+            "line": 2238
           }
         ],
         "confidence": "lexical_only"
@@ -9117,7 +9117,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 923,
+        "occurrences": 925,
         "examples": [
           {
             "path": "data/core/tips.json",
@@ -9367,7 +9367,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 2603
+            "line": 2605
           }
         ],
         "confidence": "lexical_only"
@@ -9480,7 +9480,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4327
+            "line": 4329
           }
         ],
         "confidence": "lexical_only"
@@ -10468,7 +10468,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 3064
+            "line": 3066
           }
         ],
         "confidence": "lexical_only"
@@ -10640,7 +10640,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 3013
+            "line": 3015
           }
         ],
         "confidence": "lexical_only"
@@ -10758,7 +10758,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 3065
+            "line": 3067
           }
         ],
         "confidence": "lexical_only"
@@ -10817,7 +10817,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 3059
+            "line": 3061
           }
         ],
         "confidence": "lexical_only"
@@ -10935,7 +10935,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 3099
+            "line": 3101
           }
         ],
         "confidence": "lexical_only"
@@ -11112,7 +11112,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4644
+            "line": 4646
           }
         ],
         "confidence": "lexical_only"

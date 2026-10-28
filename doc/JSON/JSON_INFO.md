@@ -2193,6 +2193,7 @@ The array of hobbies (listed as professions) is whitelisted to all characters.  
 | `check_deconstruction` | The furniture (or tile, if no furniture) in the target tile must have a "deconstruct" entry
 | `check_up_OK`          | Tile is below the maximum possible elevation (can build up here)
 | `check_down_OK`        | Tile is above the lowest possible elevation (can dig down here)
+| `check_dig_pit`        | The level below exists and is either open terrain or natural underground terrain with a passable excavation result
 | `check_no_trap`        | There is no trap object in this tile
 | `check_ramp_low`       | Both this and the next level above can be built up one additional Z level
 | `check_ramp_high`      | There is a complete downramp on the next higher level, and both this and next level above can be built up one additional Z level
@@ -2210,6 +2211,7 @@ The array of hobbies (listed as professions) is whitelisted to all characters.  
 | `done_dig_grave`       | Finish digging up a grave and find what's inside of it
 | `done_dig_grave_nospawn`| Finish digging up a grave and retrieve a coffin (which is not an option above)
 | `done_dig_stair`       | Finish diggins stairs downwards (with handling of what's beneath and how to get up)
+| `done_dig_pit`         | Excavate the natural terrain below an opened pit, preserving existing rooms, shafts and liquids; restore the pit if the lower terrain can no longer be excavated
 | `done_mine_downstair`  | Same as the previous one, but mining rather than digging
 | `done_mine_upstair`    | Finish mining stairs from below
 | `done_wood_stairs`     | Finish building stairs from below

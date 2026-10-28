@@ -218,7 +218,9 @@
     "on_display": true,
     "qualities": [ { "id": "DIG", "level": 2 } ],
     "pre_terrain": "t_pit",
+    "pre_special": "check_dig_pit",
     "post_terrain": "t_open_air",
+    "post_special": "done_dig_pit",
     "byproducts": [ { "group": "digging_soil_loam_50L", "count": 5 } ],
     "activity_level": "EXTRA_EXERCISE",
     "do_turn_special": "do_turn_shovel"
