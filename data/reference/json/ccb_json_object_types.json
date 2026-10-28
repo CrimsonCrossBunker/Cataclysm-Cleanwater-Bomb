@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:3fd290ac7aeaa7d87dbb7b76c7da13a856f904431dcdbf82b42368bc2556aa9f",
+    "source_fingerprint": "sha256:ee50f32677331c03bb4fa15a5475240f35a47a53867e78739ee0860e7493e3df",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -29,8 +29,8 @@
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6819,
-    "top_level_objects": 95291,
+    "tracked_json_files": 6820,
+    "top_level_objects": 95295,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -4676,7 +4676,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 927,
+        "occurrences": 929,
         "examples": [
           {
             "path": "data/json/flags.json",
@@ -9117,7 +9117,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 923,
+        "occurrences": 925,
         "examples": [
           {
             "path": "data/core/tips.json",

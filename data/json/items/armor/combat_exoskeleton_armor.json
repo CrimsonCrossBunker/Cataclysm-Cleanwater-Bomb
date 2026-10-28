@@ -544,7 +544,7 @@
           { "type": "plastic_pad", "thickness": 2 },
           { "type": "kevlar_layered", "thickness": 4.4 },
           { "type": "qt_steel_chain", "thickness": 1.2 },
-          { "type": "qt_steel", "thickness": 4.8, "covered_by_mat": 95 }
+          { "type": "qt_steel", "thickness": 6, "covered_by_mat": 95 }
         ]
       },
       {
@@ -588,7 +588,7 @@
           { "type": "plastic_pad", "thickness": 2 },
           { "type": "kevlar_layered", "thickness": 4.4 },
           { "type": "qt_steel_chain", "thickness": 1.2 },
-          { "type": "qt_steel", "thickness": 4.8, "covered_by_mat": 95 }
+          { "type": "qt_steel", "thickness": 6, "covered_by_mat": 95 }
         ]
       }
     ]
@@ -614,7 +614,7 @@
           { "type": "plastic_pad", "thickness": 2 },
           { "type": "kevlar_layered", "thickness": 4.4 },
           { "type": "qt_steel_chain", "thickness": 1.2 },
-          { "type": "qt_steel", "thickness": 4.8, "covered_by_mat": 95 }
+          { "type": "qt_steel", "thickness": 6, "covered_by_mat": 95 }
         ]
       },
       {
@@ -628,7 +628,7 @@
           { "type": "plastic_pad", "thickness": 2 },
           { "type": "kevlar_layered", "thickness": 4.4 },
           { "type": "qt_steel_chain", "thickness": 1.2 },
-          { "type": "qt_steel", "thickness": 4.8, "covered_by_mat": 95 }
+          { "type": "qt_steel", "thickness": 6, "covered_by_mat": 95 }
         ]
       },
       {
@@ -667,7 +667,7 @@
           { "type": "plastic_pad", "thickness": 2 },
           { "type": "kevlar_layered", "thickness": 4.4 },
           { "type": "qt_steel_chain", "thickness": 1.2 },
-          { "type": "qt_steel", "thickness": 4.8, "covered_by_mat": 95 }
+          { "type": "qt_steel", "thickness": 6, "covered_by_mat": 95 }
         ]
       },
       {
@@ -690,7 +690,7 @@
           { "type": "plastic_pad", "thickness": 2 },
           { "type": "kevlar_layered", "thickness": 4.4 },
           { "type": "qt_steel_chain", "thickness": 1.2 },
-          { "type": "qt_steel", "thickness": 4.8, "covered_by_mat": 95 }
+          { "type": "qt_steel", "thickness": 6, "covered_by_mat": 95 }
         ]
       }
     ]
@@ -716,7 +716,7 @@
           { "type": "plastic_pad", "thickness": 2 },
           { "type": "kevlar_layered", "thickness": 4.4 },
           { "type": "qt_steel_chain", "thickness": 1.2 },
-          { "type": "qt_steel", "thickness": 2.8, "covered_by_mat": 95 }
+          { "type": "qt_steel", "thickness": 4, "covered_by_mat": 95 }
         ]
       },
       {
@@ -760,7 +760,7 @@
           { "type": "plastic_pad", "thickness": 2 },
           { "type": "kevlar_layered", "thickness": 4.4 },
           { "type": "qt_steel_chain", "thickness": 1.2 },
-          { "type": "qt_steel", "thickness": 2.8, "covered_by_mat": 95 }
+          { "type": "qt_steel", "thickness": 4, "covered_by_mat": 95 }
         ]
       }
     ]
@@ -786,7 +786,7 @@
           { "type": "plastic_pad", "thickness": 2 },
           { "type": "kevlar_layered", "thickness": 4.4 },
           { "type": "qt_steel_chain", "thickness": 1.2 },
-          { "type": "qt_steel", "thickness": 2.8, "covered_by_mat": 95 }
+          { "type": "qt_steel", "thickness": 4, "covered_by_mat": 95 }
         ]
       },
       {
@@ -800,7 +800,7 @@
           { "type": "plastic_pad", "thickness": 2 },
           { "type": "kevlar_layered", "thickness": 4.4 },
           { "type": "qt_steel_chain", "thickness": 1.2 },
-          { "type": "qt_steel", "thickness": 2.8, "covered_by_mat": 95 }
+          { "type": "qt_steel", "thickness": 4, "covered_by_mat": 95 }
         ]
       },
       {
@@ -839,7 +839,7 @@
           { "type": "plastic_pad", "thickness": 2 },
           { "type": "kevlar_layered", "thickness": 4.4 },
           { "type": "qt_steel_chain", "thickness": 1.2 },
-          { "type": "qt_steel", "thickness": 2.8, "covered_by_mat": 95 }
+          { "type": "qt_steel", "thickness": 4, "covered_by_mat": 95 }
         ]
       },
       {
@@ -862,7 +862,7 @@
           { "type": "plastic_pad", "thickness": 2 },
           { "type": "kevlar_layered", "thickness": 4.4 },
           { "type": "qt_steel_chain", "thickness": 1.2 },
-          { "type": "qt_steel", "thickness": 2.8, "covered_by_mat": 95 }
+          { "type": "qt_steel", "thickness": 4, "covered_by_mat": 95 }
         ]
       }
     ]
@@ -888,7 +888,7 @@
           { "type": "plastic_pad", "thickness": 2 },
           { "type": "kevlar_layered", "thickness": 4.4 },
           { "type": "qt_steel_chain", "thickness": 1.2 },
-          { "type": "qt_steel", "thickness": 0.8, "covered_by_mat": 95 }
+          { "type": "qt_steel", "thickness": 2, "covered_by_mat": 95 }
         ]
       },
       {
@@ -932,7 +932,7 @@
           { "type": "plastic_pad", "thickness": 2 },
           { "type": "kevlar_layered", "thickness": 4.4 },
           { "type": "qt_steel_chain", "thickness": 1.2 },
-          { "type": "qt_steel", "thickness": 0.8, "covered_by_mat": 95 }
+          { "type": "qt_steel", "thickness": 2, "covered_by_mat": 95 }
         ]
       }
     ]
@@ -958,7 +958,7 @@
           { "type": "plastic_pad", "thickness": 2 },
           { "type": "kevlar_layered", "thickness": 4.4 },
           { "type": "qt_steel_chain", "thickness": 1.2 },
-          { "type": "qt_steel", "thickness": 0.8, "covered_by_mat": 95 }
+          { "type": "qt_steel", "thickness": 2, "covered_by_mat": 95 }
         ]
       },
       {
@@ -972,7 +972,7 @@
           { "type": "plastic_pad", "thickness": 2 },
           { "type": "kevlar_layered", "thickness": 4.4 },
           { "type": "qt_steel_chain", "thickness": 1.2 },
-          { "type": "qt_steel", "thickness": 0.8, "covered_by_mat": 95 }
+          { "type": "qt_steel", "thickness": 2, "covered_by_mat": 95 }
         ]
       },
       {
@@ -1011,7 +1011,7 @@
           { "type": "plastic_pad", "thickness": 2 },
           { "type": "kevlar_layered", "thickness": 4.4 },
           { "type": "qt_steel_chain", "thickness": 1.2 },
-          { "type": "qt_steel", "thickness": 0.8, "covered_by_mat": 95 }
+          { "type": "qt_steel", "thickness": 2, "covered_by_mat": 95 }
         ]
       },
       {
@@ -1034,7 +1034,7 @@
           { "type": "plastic_pad", "thickness": 2 },
           { "type": "kevlar_layered", "thickness": 4.4 },
           { "type": "qt_steel_chain", "thickness": 1.2 },
-          { "type": "qt_steel", "thickness": 0.8, "covered_by_mat": 95 }
+          { "type": "qt_steel", "thickness": 2, "covered_by_mat": 95 }
         ]
       }
     ]
