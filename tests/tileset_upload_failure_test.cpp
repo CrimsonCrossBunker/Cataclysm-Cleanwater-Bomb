@@ -23,7 +23,7 @@ TEST_CASE( "failed_atlas_allocation_keeps_the_previous_tileset",
     TILESETS[id] = cata_path( cata_path::root_path::base, "tests/data/render-boundary/ortho" );
     const auto &renderer = get_sdl_renderer();
     tileset_cache cache;
-    const auto load = [&]( bool force, const atlas_upload_poll & poll = {} ) {
+    const auto load = [&]( bool force, const atlas_upload_poll &poll = {} ) {
         return cache.load_tileset( id, renderer, false, force, false, false,
                                    "color_pixel_darken", 1, 1, poll );
     };
@@ -43,7 +43,7 @@ TEST_CASE( "failed_atlas_allocation_keeps_the_previous_tileset",
 
     const SDL_PropertiesID properties = SDL_GetRendererProperties( renderer.get() );
     const Sint64 original_limit = SDL_GetNumberProperty( properties,
-        SDL_PROP_RENDERER_MAX_TEXTURE_SIZE_NUMBER, 0 );
+                                  SDL_PROP_RENDERER_MAX_TEXTURE_SIZE_NUMBER, 0 );
     on_out_of_scope restore_limit( [&]() {
         SDL_SetNumberProperty( properties, SDL_PROP_RENDERER_MAX_TEXTURE_SIZE_NUMBER, original_limit );
     } );
