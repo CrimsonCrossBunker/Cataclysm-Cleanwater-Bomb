@@ -260,3 +260,6 @@ VERSION.txt
 *.replay
 build-tracy/
 tests/objwin/tiles/pch/tests-pch.hpp.gch
+
+# local 3D scratch/workdir (logs, screenshots, plan notes) - not for the repo
+/render3d/
