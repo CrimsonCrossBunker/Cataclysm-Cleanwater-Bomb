@@ -88,38 +88,7 @@
       {
         "encumbrance": 0,
         "coverage": 100,
-        "covers": [
-          "leg_l",
-          "leg_r",
-          "torso",
-          "arm_l",
-          "arm_r",
-          "hand_l",
-          "hand_r",
-          "head",
-          "foot_l",
-          "foot_r",
-          "mouth",
-          "eyes",
-          "tail",
-          "arm_wing_bat_l",
-          "arm_wing_bat_r",
-          "arm_wing_bird_l",
-          "arm_wing_bird_r",
-          "wing_l",
-          "wing_r",
-          "gastropod_foot",
-          "beak",
-          "muzzle",
-          "hoof_r",
-          "hoof_l",
-          "avian_talon_l",
-          "avian_talon_r",
-          "animal_paw_l",
-          "animal_paw_r",
-          "animal_paw_rabbit_l",
-          "animal_paw_rabbit_r"
-        ]
+        "covers_all": true
       }
     ]
   },
