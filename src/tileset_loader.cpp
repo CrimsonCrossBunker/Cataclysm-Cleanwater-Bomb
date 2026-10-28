@@ -210,6 +210,9 @@ void atlas_replay_quarantine::abandon_pre_lost_renderer()
 std::shared_ptr<SDL_Texture> tileset_cache::loader::make_gated_atlas_texture(
     SDL_Texture_Ptr tex, atlas_replay_quarantine::gate abandon_gate )
 {
+    // Allocation can fail on the renderer even for a valid atlas.  Reject the
+    // candidate before publishing null handles, including in release builds.
+    throwErrorIf( !tex, "Failed to create tileset atlas texture" );
     return make_gated_texture( tex.release(), std::move( abandon_gate ) );
 }
 
@@ -295,7 +298,7 @@ void tileset_cache::loader::create_textures_from_tile_atlas( const SDL_Surface_P
         }
         std::vector<texture> *tile_values = std::get<0>( entry );
         color_pixel_function_pointer color_pixel_function = get_color_pixel_function( std::get<1>
-            ( entry ) );
+                ( entry ) );
         if( !color_pixel_function ) {
             copy_surface_to_texture( scan_surf, offset, *tile_values, opaque_bounds, abandon_gate );
         } else {
@@ -696,7 +699,7 @@ void tileset_cache::loader::parse_native_mappings(
         }
     }
     dbg( D_INFO ) << "Tile Width: " << ts.tile_width << " Tile Height: " << ts.tile_height <<
-                     " Tile Definitions: " << ts.tile_ids.size();
+                  " Tile Definitions: " << ts.tile_ids.size();
 }
 
 void tileset_cache::loader::parse_native_atlases(
@@ -1127,7 +1130,7 @@ void tileset_cache::loader::parse_mappings( const JsonObject &config )
         }
     }
     dbg( D_INFO ) << "Tile Width: " << ts.tile_width << " Tile Height: " << ts.tile_height <<
-                     " Tile Definitions: " << ts.tile_ids.size();
+                  " Tile Definitions: " << ts.tile_ids.size();
 }
 
 /**
@@ -1314,12 +1317,12 @@ atlas_upload_interrupt tileset_cache::loader::upload_atlases( tileset &ts,
         const SDL_Surface_Ptr surface = create_surface_32( ts.tile_width, ts.tile_height );
         cata_assert( surface );
         throwErrorIf( FillRect( surface, nullptr, MapRGBA( surface, 0, 0, 127,
-                highlight_alpha ) ) != 0, "SDL_FillRect failed" );
+                                highlight_alpha ) ) != 0, "SDL_FillRect failed" );
         const int idx = *highlight_idx;
         cata_assert( idx >= 0 && idx < static_cast<int>( cand_normal.size() ) );
         cand_normal[idx] = texture(
                                make_gated_atlas_texture( CreateTextureFromSurface( renderer, surface ),
-                                   abandon_gate ),
+                                       abandon_gate ),
                                SDL_Rect{ 0, 0, ts.tile_width, ts.tile_height } );
     }
 
