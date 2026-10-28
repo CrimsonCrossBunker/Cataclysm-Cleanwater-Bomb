@@ -210,6 +210,9 @@ void atlas_replay_quarantine::abandon_pre_lost_renderer()
 std::shared_ptr<SDL_Texture> tileset_cache::loader::make_gated_atlas_texture(
     SDL_Texture_Ptr tex, atlas_replay_quarantine::gate abandon_gate )
 {
+    // Allocation can fail on the renderer even for a valid atlas.  Reject the
+    // candidate before publishing null handles, including in release builds.
+    throwErrorIf( !tex, "Failed to create tileset atlas texture" );
     return make_gated_texture( tex.release(), std::move( abandon_gate ) );
 }
 
