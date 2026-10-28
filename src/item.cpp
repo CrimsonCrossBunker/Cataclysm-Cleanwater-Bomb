@@ -609,6 +609,16 @@ bool item::combine( const item &rhs )
     if( !can_combine( rhs ) ) {
         return false;
     }
+    if( made_of_from_type( phase_id::LIQUID ) ) {
+        // A liquid batch without ownership can mix with an owned batch.
+        // Keep the available record regardless of which batch was in the tank first.
+        if( owner.is_null() ) {
+            owner = rhs.owner;
+        }
+        if( old_owner.is_null() ) {
+            old_owner = rhs.old_owner;
+        }
+    }
     if( has_temperature() ) {
         if( goes_bad() ) {
             //use maximum rot between the two
@@ -884,10 +894,14 @@ bool _stacks_components( item const &lhs, item const &rhs, bool check_components
 stacking_info item::stacks_with( const item &rhs, bool check_components, bool combine_liquid,
                                  bool check_cat, int depth, int maxdepth, bool precise ) const
 {
-    // A merged stack retains only one ownership record.  Keep distinct owners
-    // and theft histories separate, including when comparing container contents.
+    // A mixed liquid can retain the sole non-null ownership record. Conflicting
+    // records and ordinary item stacks still need identical ownership.
     if( owner != rhs.owner || old_owner != rhs.old_owner ) {
-        return {};
+        if( !combine_liquid || type != rhs.type || !made_of_from_type( phase_id::LIQUID ) ||
+            ( !owner.is_null() && !rhs.owner.is_null() && owner != rhs.owner ) ||
+            ( !old_owner.is_null() && !rhs.old_owner.is_null() && old_owner != rhs.old_owner ) ) {
+            return {};
+        }
     }
     if( count_by_charges() && ( !container_type_pockets_empty() ||
                                 !rhs.container_type_pockets_empty() ) ) {

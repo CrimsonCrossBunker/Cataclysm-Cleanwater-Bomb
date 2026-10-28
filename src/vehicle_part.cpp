@@ -502,6 +502,11 @@ bool vehicle_part::can_reload( const item &obj ) const
         if( is_tank() && ( obj.made_of( phase_id::SOLID ) || obj.made_of( phase_id::PNULL ) ) ) {
             return false;
         }
+        // Fuel type and free volume do not ensure that the two batches can mix.
+        if( is_tank() && obj.made_of( phase_id::LIQUID ) &&
+            base.get_remaining_capacity_for_liquid( obj, true ) <= 0 ) {
+            return false;
+        }
         // forbid putting liquids, gasses, and plasma in things that aren't tanks
         if( !obj.made_of( phase_id::SOLID ) && !is_tank() ) {
             return false;

@@ -45,6 +45,7 @@ static const ammotype ammo_water( "water" );
 static const damage_type_id damage_bash( "bash" );
 
 static const itype_id itype_backpack( "backpack" );
+static const itype_id itype_diesel( "diesel" );
 static const itype_id itype_fridge_test( "fridge_test" );
 static const itype_id itype_gasoline( "gasoline" );
 static const itype_id itype_metal_tank_test( "metal_tank_test" );
@@ -582,6 +583,53 @@ TEST_CASE( "vehicle_tank_respects_requested_liquid_amount", "[vehicle][liquid]" 
     CHECK_FALSE( tank.fill_with( gasoline, 0 ) );
     CHECK( tank.ammo_remaining() == 15 );
     CHECK( gasoline.charges == 85 );
+}
+
+TEST_CASE( "vehicle_tanks_combine_same_fuel_with_partial_ownership", "[vehicle][liquid][ownership]" )
+{
+    const faction_id followers( "your_followers" );
+    const faction_id merchants( "free_merchants" );
+    for( const itype_id &fuel_type : { itype_gasoline, itype_diesel } ) {
+        CAPTURE( fuel_type.str() );
+        for( const bool source_owned : { false, true } ) {
+            CAPTURE( source_owned );
+            vehicle_part source( vpart_tank_test, item( itype_metal_tank_test ) );
+            vehicle_part target( vpart_tank_test, item( itype_metal_tank_test ) );
+            REQUIRE( source.ammo_set( fuel_type, 20 ) == 20 );
+            REQUIRE( target.ammo_set( fuel_type, 10 ) == 10 );
+            item source_tank( source.get_base() );
+            item target_tank( target.get_base() );
+            item &owned = source_owned ? source_tank.legacy_front() : target_tank.legacy_front();
+            owned.set_owner( followers );
+            owned.set_old_owner( merchants );
+            source.set_base( std::move( source_tank ) );
+            target.set_base( std::move( target_tank ) );
+
+            item incoming( source.get_base().only_item() );
+            REQUIRE( target.can_reload( incoming ) );
+            REQUIRE( target.fill_with( incoming ) );
+            CHECK( incoming.charges == 0 );
+            CHECK( target.ammo_remaining() == 30 );
+            REQUIRE( target.get_base().all_items_top().size() == 1 );
+            CHECK( target.get_base().legacy_front().get_owner() == followers );
+            CHECK( target.get_base().legacy_front().get_old_owner() == merchants );
+        }
+    }
+}
+
+TEST_CASE( "vehicle_tank_rejects_conflicting_fuel_ownership", "[vehicle][liquid][ownership]" )
+{
+    vehicle_part tank( vpart_tank_test, item( itype_metal_tank_test ) );
+    item first( itype_gasoline, calendar::turn_zero, 10 );
+    item incoming( itype_gasoline, calendar::turn_zero, 20 );
+    first.set_owner( faction_id( "your_followers" ) );
+    incoming.set_owner( faction_id( "free_merchants" ) );
+    REQUIRE( tank.fill_with( first ) );
+
+    CHECK_FALSE( tank.can_reload( incoming ) );
+    CHECK_FALSE( tank.fill_with( incoming ) );
+    CHECK( tank.ammo_remaining() == 10 );
+    CHECK( incoming.charges == 20 );
 }
 
 TEST_CASE( "check_capacity_fueltype_handling", "[vehicle]" )
