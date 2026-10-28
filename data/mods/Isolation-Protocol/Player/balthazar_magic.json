@@ -47,7 +47,7 @@
       {
         "encumbrance": 0,
         "coverage": 100,
-        "covers": [ "leg_l", "leg_r", "torso", "arm_l", "arm_r", "hand_l", "hand_r", "head", "foot_l", "foot_r", "mouth", "eyes" ]
+        "covers_all": true
       }
     ]
   },
