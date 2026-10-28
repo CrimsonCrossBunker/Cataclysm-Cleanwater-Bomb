@@ -663,7 +663,8 @@
   },
   {
     "id": "USE_TANKS",
-    "type": "json_flag"
+    "type": "json_flag",
+    "//": "Turrets draw liquid ammunition from vehicle tanks. Reactors may use compatible liquid from tanks on the same vehicle after their internal fuel runs out."
   },
   {
     "id": "VARIABLE_SIZE",
