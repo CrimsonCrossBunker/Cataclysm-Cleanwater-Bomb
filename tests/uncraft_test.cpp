@@ -89,6 +89,35 @@ static std::map<itype_id, int> repeat_uncraft( Character &they, const itype_id &
     return yield_items;
 }
 
+TEST_CASE( "combat_exoskeleton_mk2_disassembly_preserves_its_model",
+           "[uncraft][exoskeleton]" )
+{
+    Character &they = setup_uncraft_character();
+    const itype_id mk2( "combat_exoskeleton_medium" );
+    recipe dis = recipe_dictionary::get_uncraft( mk2 );
+    // Test the actual recovered items without a random skill recovery failure.
+    dis.difficulty = 0;
+    const std::map<itype_id, int> recovered = repeat_uncraft( they, mk2, dis );
+    const std::map<itype_id, int> expected = {
+        { itype_id( "combat_exoskeleton_medium_salvaged" ), 1 },
+        { itype_id( "power_supply" ), 6 },
+        { itype_id( "element" ), 2 },
+        { itype_id( "cable" ), 4 },
+        { itype_id( "circuit" ), 6 },
+        { itype_id( "transponder" ), 1 }
+    };
+    CHECK( recovered.size() == expected.size() );
+    CHECK( recovered.count( itype_id( "combat_exoskeleton_light_salvaged" ) ) == 0 );
+    for( const auto &component : expected ) {
+        CAPTURE( component.first.str() );
+        const auto found = recovered.find( component.first );
+        CHECK( found != recovered.end() );
+        if( found != recovered.end() ) {
+            CHECK( found->second == component.second );
+        }
+    }
+}
+
 TEST_CASE( "flare_disassembly_preserves_incendiary_portions_and_bulk_volume",
            "[uncraft][items][stacking]" )
 {
