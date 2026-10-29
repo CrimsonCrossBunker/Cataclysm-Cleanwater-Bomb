@@ -371,7 +371,7 @@ TEST_CASE( "vehicle_prepare_tool_multimag", "[vehicle][multimag]" )
         REQUIRE( veh->battery_left( here ) == 0 );
 
         const bool ok = vehicle::use_vehicle_tool( *veh, &here, test_origin,
-            itype_test_multimag_vehicle_combo, /*no_invoke=*/true );
+                        itype_test_multimag_vehicle_combo, /*no_invoke=*/true );
         CHECK_FALSE( ok );
     }
 
@@ -585,13 +585,18 @@ TEST_CASE( "vehicle_tank_respects_requested_liquid_amount", "[vehicle][liquid]" 
     CHECK( gasoline.charges == 85 );
 }
 
-TEST_CASE( "vehicle_tanks_combine_same_fuel_with_partial_ownership", "[vehicle][liquid][ownership]" )
+TEST_CASE( "vehicle_tanks_combine_same_fuel_with_partial_ownership",
+           "[vehicle][liquid][ownership]" )
 {
     const faction_id followers( "your_followers" );
     const faction_id merchants( "free_merchants" );
-    for( const itype_id &fuel_type : { itype_gasoline, itype_diesel } ) {
+    for( const itype_id &fuel_type : {
+             itype_gasoline, itype_diesel
+         } ) {
         CAPTURE( fuel_type.str() );
-        for( const bool source_owned : { false, true } ) {
+        for( const bool source_owned : {
+                 false, true
+             } ) {
             CAPTURE( source_owned );
             vehicle_part source( vpart_tank_test, item( itype_metal_tank_test ) );
             vehicle_part target( vpart_tank_test, item( itype_metal_tank_test ) );

@@ -1946,8 +1946,8 @@ std::string item::display_name( unsigned int quantity, bool color_faults,
                     }
                     amt = string_format( " (%s%s)",
                                          colorize( string_format( "%s/%s",
-                                             type->item_measure_prefix( amount ),
-                                             type->item_measure_prefix( max_amount ) ),
+                                                   type->item_measure_prefix( amount ),
+                                                   type->item_measure_prefix( max_amount ) ),
                                                    charges_color ),
                                          ammotext );
                 } else  {
@@ -1979,7 +1979,7 @@ std::string item::display_name( unsigned int quantity, bool color_faults,
                 cable_color = c_red;
             }
             cable = string_format( " (%s)", colorize( string_format( _( "%d/%d cable%s" ),
-                link_max_len - link_len, link_max_len, extensions ), cable_color ) );
+                                   link_max_len - link_len, link_max_len, extensions ), cable_color ) );
         }
     }
 
@@ -2180,7 +2180,7 @@ units::mass item::weight( bool include_contents, bool integral ) const
             const units::volume b = type->gun->barrel_volume;
             const units::mass max_barrel_weight = units::from_gram( to_milliliter( b ) );
             const units::mass barrel_weight = units::from_gram( b.value() * type->weight.value() /
-                type->volume.value() );
+                                              type->volume.value() );
             ret -= std::min( max_barrel_weight, barrel_weight );
         }
 
@@ -2405,7 +2405,7 @@ units::volume item::volume( bool integral, bool ignore_contents, int charges_in_
 
     if( count_by_charges() || made_of( phase_id::LIQUID ) ) {
         units::quantity<int64_t, units::volume_in_milliliter_tag> num = ret * static_cast<int64_t>
-            ( charges_in_vol );
+                ( charges_in_vol );
         if( type->stack_size <= 0 ) {
             if( type->charges_default() <= 0 ) {
                 debugmsg( "Item type %s has invalid default charges %d", typeId().str(), type->charges_default() );
@@ -2791,8 +2791,8 @@ bool item::ready_to_revive( map &here, const tripoint_bub_ms &pos ) const
     // Arbitrary limit allowing you to take breaks to eat, instruct companions, etc., but not long enough to
     // easily be abused to keep corpses from rising as a strategy.
     bool butchery_block = calendar::turn - ( calendar::start_of_cataclysm +
-        time_duration::from_turns<double>(
-            get_var( butcher_progress_time_var(), 0.0 ) ) ) < 30_minutes;
+                          time_duration::from_turns<double>(
+                              get_var( butcher_progress_time_var(), 0.0 ) ) ) < 30_minutes;
     if( age_in_hours > 6 && !butchery_block && ( rez_factor <= 0 || one_in( rez_factor ) ) ) {
         // If we're a special revival zombie, wait to get up until the player is nearby.
         const bool isReviveSpecial = has_flag( flag_REVIVE_SPECIAL );
@@ -3645,7 +3645,7 @@ std::set<recipe_id> item::get_saved_recipes() const
         }
         if( !rid.is_valid() ) {
             DebugLog( D_WARNING, D_GAME ) << type->get_id().str() <<
-            " contained invalid recipe id '" << rid.str() << "'";
+                                          " contained invalid recipe id '" << rid.str() << "'";
             continue;
         }
         result.emplace( rid );
@@ -3686,7 +3686,7 @@ void item::generate_recipes()
     }
 }
 std::vector<std::pair<const recipe *, int>> item::get_available_recipes(
-    const Character &u ) const
+            const Character &u ) const
 {
     std::vector<std::pair<const recipe *, int>> recipe_entries;
     if( is_book() ) {
@@ -4016,7 +4016,7 @@ void item::set_item_specific_energy( const units::specific_energy &new_specific_
     if( float_new_specific_energy > completely_liquid_specific_energy ) {
         // Item is liquid
         new_item_temperature = freezing_temperature + ( float_new_specific_energy -
-            completely_liquid_specific_energy ) /
+                               completely_liquid_specific_energy ) /
                                specific_heat_liquid;
         freeze_percentage = 0.0f;
     } else if( float_new_specific_energy < completely_frozen_specific_energy ) {
@@ -4064,7 +4064,7 @@ void item::set_item_temperature( units::temperature new_temperature )
     const float latent_heat = get_latent_heat(); // J/g
 
     units::specific_energy new_specific_energy = get_specific_energy_from_temperature(
-            new_temperature );
+                new_temperature );
     float freeze_percentage = 0.0f;
 
     temperature = new_temperature;
@@ -4365,18 +4365,18 @@ void item::calc_temp( const units::temperature &temp, const float insulation,
     // specific_energy = item thermal energy (J/g). Stored in the item
     // temperature = item temperature (K). Stored in the item
     const float conductivity_term = 0.0076 * std::pow( to_milliliter( volume() ) /
-        ( is_stackable() ? charges : 1 ),
-        2.0 / 3.0 ) / insulation;
+                                    ( is_stackable() ? charges : 1 ),
+                                    2.0 / 3.0 ) / insulation;
     const float specific_heat_liquid = get_specific_heat_liquid();
     const float specific_heat_solid = get_specific_heat_solid();
     const float latent_heat = get_latent_heat();
     const float freezing_temperature = units::to_kelvin( get_freeze_point() );
     // Energy that the item would have if it was completely solid at freezing temperature
     const units::specific_energy completely_frozen_specific_energy = units::from_joule_per_gram(
-            specific_heat_solid * freezing_temperature );
+                specific_heat_solid * freezing_temperature );
     // Energy that the item would have if it was completely liquid at freezing temperature
     const units::specific_energy completely_liquid_specific_energy = completely_frozen_specific_energy +
-        units::from_joule_per_gram( latent_heat );
+            units::from_joule_per_gram( latent_heat );
 
     float new_specific_energy;
     float new_item_temperature;
@@ -4417,7 +4417,7 @@ void item::calc_temp( const units::temperature &temp, const float insulation,
         // Was liquid.
         new_item_temperature = ( - temperature_difference
                                  * std::exp( - to_turns<int>( time_delta ) * conductivity_term / ( mass *
-                                     specific_heat_liquid ) )
+                                             specific_heat_liquid ) )
                                  + env_temperature );
         new_specific_energy = ( new_item_temperature - freezing_temperature ) * specific_heat_liquid +
                               units::to_joule_per_gram( completely_liquid_specific_energy );
@@ -4455,7 +4455,7 @@ void item::calc_temp( const units::temperature &temp, const float insulation,
                          units::to_joule_per_gram( completely_liquid_specific_energy - specific_energy );
             new_item_temperature = ( ( freezing_temperature - env_temperature )
                                      * std::exp( - extra_time * conductivity_term / ( mass *
-                                         specific_heat_liquid ) )
+                                                 specific_heat_liquid ) )
                                      + env_temperature );
             new_specific_energy = ( new_item_temperature - freezing_temperature ) * specific_heat_liquid +
                                   units::to_joule_per_gram( completely_liquid_specific_energy );
@@ -4468,7 +4468,7 @@ void item::calc_temp( const units::temperature &temp, const float insulation,
                          units::to_joule_per_gram( completely_frozen_specific_energy - specific_energy );
             new_item_temperature = ( ( freezing_temperature - env_temperature )
                                      * std::exp( - extra_time * conductivity_term / ( mass *
-                                         specific_heat_solid ) )
+                                                 specific_heat_solid ) )
                                      + env_temperature );
             new_specific_energy = new_item_temperature * specific_heat_solid;
         }
@@ -5356,7 +5356,7 @@ std::vector<item_comp> item::get_uncraft_components() const
     if( components.empty() ) {
         //If item wasn't crafted with specific components use default recipe
         std::vector<std::vector<item_comp>> recipe = recipe_dictionary::get_uncraft(
-                typeId() ).disassembly_requirements().get_components();
+                                             typeId() ).disassembly_requirements().get_components();
         for( std::vector<item_comp> &component : recipe ) {
             ret.push_back( component.front() );
         }
@@ -5727,7 +5727,7 @@ const cata::value_ptr<islot_comestible> &item::get_comestible() const
 int item::get_recursive_disassemble_moves( const Character &guy ) const
 {
     int moves = recipe_dictionary::get_uncraft( type->get_id() ).time_to_craft_moves( guy,
-        {}, recipe_time_flag::ignore_proficiencies );
+                {}, recipe_time_flag::ignore_proficiencies );
     std::vector<item_comp> to_be_disassembled = get_uncraft_components();
     while( !to_be_disassembled.empty() ) {
         item_comp current_comp = to_be_disassembled.back();

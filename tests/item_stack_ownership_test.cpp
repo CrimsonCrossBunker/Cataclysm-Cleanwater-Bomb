@@ -48,9 +48,13 @@ TEST_CASE( "mixing_fuel_keeps_available_ownership", "[item][liquid][ownership]" 
 {
     const faction_id followers( "your_followers" );
     const faction_id merchants( "free_merchants" );
-    for( const itype_id &fuel_type : { itype_gasoline, itype_diesel } ) {
+    for( const itype_id &fuel_type : {
+             itype_gasoline, itype_diesel
+         } ) {
         CAPTURE( fuel_type.str() );
-        for( const bool owned_first : { false, true } ) {
+        for( const bool owned_first : {
+                 false, true
+             } ) {
             CAPTURE( owned_first );
             item first( fuel_type, calendar::turn_zero, 10 );
             item second( fuel_type, calendar::turn_zero, 20 );
