@@ -213,6 +213,15 @@ void DefaultRemovePartHandler::removed( map *here, vehicle &veh, const int part 
 
     here->dirty_vehicle_list.insert( &veh );
     here->clear_vehicle_point_from_cache( &veh, part_pos );
+    if( vp.has_fake && vp.fake_part_at >= 0 && vp.fake_part_at < veh.part_count() ) {
+        const tripoint_bub_ms fake_pos = veh.bub_part_pos( *here, vp.fake_part_at );
+        here->clear_vehicle_point_from_cache( &veh, fake_pos );
+        if( here->inbounds( fake_pos ) ) {
+            here->memory_cache_dec_set_dirty( fake_pos, true );
+        }
+        player_character.memorize_clear_decoration(
+            here->get_abs( fake_pos ), "vp_" + vp.info().id.str() );
+    }
     here->add_vehicle_to_cache( &veh );
     here->memory_cache_dec_set_dirty( part_pos, true );
     player_character.memorize_clear_decoration(

@@ -1187,12 +1187,14 @@ veh_collision vehicle::part_collision( map &here, int part, const tripoint_abs_m
                 dam = std::max( 0, dam - armor );
                 critter->apply_damage( driver, bodypart_id( "torso" ), dam );
                 if( !critter->has_flag( json_flag_CANNOT_TAKE_DAMAGE ) ) {
+                    const effect_source source = driver != nullptr ? effect_source( driver ) :
+                                                 effect_source::empty();
                     if( vpi.has_flag( "SHARP" ) ) {
-                        critter->add_effect( effect_source( driver ), effect_bleed, 1_minutes * rng( 1, dam ),
+                        critter->add_effect( source, effect_bleed, 1_minutes * rng( 1, dam ),
                                              critter->get_random_body_part_of_type( bp_type::torso ) );
                     } else if( dam > 18 && rng( 1, 20 ) > 15 ) {
                         //low chance of lighter bleed even with non sharp objects.
-                        critter->add_effect( effect_source( driver ), effect_bleed, 1_minutes,
+                        critter->add_effect( source, effect_bleed, 1_minutes,
                                              critter->get_random_body_part_of_type( bp_type::torso ) );
                     }
                 }
@@ -2581,7 +2583,7 @@ units::angle map::shake_vehicle( vehicle &veh, const int velocity_before,
                                                "the power of the impact!" ),
                                             _( "<npcname> is hurled from the %s's seat by "
                                                "the power of the impact!" ), veh.name );
-                unboard_vehicle( part_pos );
+                unboard_vehicle( vpart_reference( veh, ps ), psg );
             } else {
                 add_msg_if_player_sees( part_pos, m_bad,
                                         _( "The %s is hurled from %s's by the power of the impact!" ),

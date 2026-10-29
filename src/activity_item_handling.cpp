@@ -342,10 +342,12 @@ static std::vector<item_location> try_to_put_into_vehicle( Character &c, item_dr
             //~ %1$s is item name, %2$s is vehicle name, %3$s is vehicle part name
             add_msg( m_mixed, _( "Unable to fit %1$s in the %2$s's %3$s." ), it.tname(), veh.name, part_name );
             // Retain item in inventory if overflow not too large/heavy or wield if possible otherwise drop on the ground
-            if( c.can_pickVolume( it ) && c.can_pickWeight( it, false ) ) {
+            if( reason != item_drop_reason::deliberate &&
+                c.can_pickVolume( it ) && c.can_pickWeight( it, false ) ) {
                 result.push_back( c.i_add( it ) );
                 craft_relocated( result.back() );
-            } else if( !c.has_wield_conflicts( it ) && c.can_wield( it ).success() ) {
+            } else if( reason != item_drop_reason::deliberate &&
+                       !c.has_wield_conflicts( it ) && c.can_wield( it ).success() ) {
                 c.wield( it );
                 result.emplace_back( c.get_wielded_item() );
                 craft_relocated( result.back() );
