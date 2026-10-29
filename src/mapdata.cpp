@@ -35,6 +35,7 @@
 #include "iteminfo_query.h"
 #include "lua_platform_content.h"
 #include "mod_manager.h"
+#include "options.h"
 #include "output.h"
 #include "rng.h"
 #include "skill.h"
@@ -476,7 +477,7 @@ void map_common_bash_info::load( const JsonObject &jo, const bool was_loaded,
 
     if( jo.has_member( "items" ) ) {
         drop_group = item_group::load_item_group( jo.get_member( "items" ), "collection",
-            "map_bash_info for " + context );
+                     "map_bash_info for " + context );
     } else if( !was_loaded ) {
         drop_group = Item_spawn_data_EMPTY_GROUP;
     }
@@ -543,7 +544,7 @@ void map_common_deconstruct_info::load( const JsonObject &jo, const bool was_loa
     optional( jo, was_loaded, "deconstruct_above", deconstruct_above, false );
     if( jo.has_member( "items" ) ) {
         drop_group = item_group::load_item_group( jo.get_member( "items" ), "collection",
-            "map_deconstruct_info for " + context );
+                     "map_deconstruct_info for " + context );
     } else if( !was_loaded ) {
         drop_group = Item_spawn_data_EMPTY_GROUP;
     }
@@ -930,7 +931,7 @@ std::vector<std::string> ter_t::extended_description() const
 {
     std::vector<std::string> ret;
 
-    if( debug_mode ) {
+    if( get_option<bool>( "SHOW_OVERMAP_MOD_SOURCE" ) ) {
         ret.emplace_back( get_origin( src ) );
         ret.emplace_back( "--" );
     }
@@ -960,7 +961,7 @@ std::vector<std::string> furn_t::extended_description() const
 {
     std::vector<std::string> ret;
 
-    if( debug_mode ) {
+    if( get_option<bool>( "SHOW_OVERMAP_MOD_SOURCE" ) ) {
         ret.emplace_back( get_origin( src ) );
         ret.emplace_back( "--" );
     }
@@ -1332,7 +1333,7 @@ void map_data_common_t::load( const JsonObject &jo, const std::string &src )
             auto season_strings = harvest_jo.get_tags( "seasons" );
             std::set<season_type> seasons;
             std::transform( season_strings.begin(), season_strings.end(), std::inserter( seasons,
-                    seasons.begin() ), io::string_to_enum<season_type> );
+                            seasons.begin() ), io::string_to_enum<season_type> );
 
             harvest_id hl;
             harvest_jo.read( "id", hl );
