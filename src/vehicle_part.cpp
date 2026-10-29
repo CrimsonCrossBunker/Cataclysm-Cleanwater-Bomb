@@ -338,11 +338,15 @@ itype_id vehicle_part::ammo_current() const
 int vehicle_part::ammo_capacity( const ammotype &ammo ) const
 {
     if( is_tank() ) {
-        const itype *ammo_type = item::find_type( ammo->default_ammotype() );
-        const int max_charges_volume = ammo_type->charges_per_volume( base.get_volume_capacity() );
-        const int max_charges_weight = ammo_type->weight == 0_gram ? INT_MAX :
-                                       static_cast<int>( base.get_total_weight_capacity() / ammo_type->weight );
-        return std::min( max_charges_volume, max_charges_weight );
+        if( !base.empty() && base.legacy_front().ammo_type() == ammo ) {
+            return item_capacity( base.legacy_front().typeId() );
+        }
+        if( ammo.is_null() || !ammo.is_valid() ) {
+            return 0;
+        }
+        const itype_id &default_ammo = ammo->default_ammotype();
+        return !default_ammo.is_null() && default_ammo.is_valid() ?
+               item_capacity( default_ammo ) : 0;
     }
 
     if( is_fuel_store( false ) || is_turret() ) {
@@ -355,7 +359,7 @@ int vehicle_part::ammo_capacity( const ammotype &ammo ) const
 int vehicle_part::item_capacity( const itype_id &stuffing_id ) const
 {
     const itype *stuffing = item::find_type( stuffing_id );
-    if( stuffing->ammo ) {
+    if( stuffing->ammo && !is_tank() ) {
         return ammo_capacity( stuffing->ammo->type );
     }
 
@@ -502,11 +506,6 @@ bool vehicle_part::can_reload( const item &obj ) const
         if( is_tank() && ( obj.made_of( phase_id::SOLID ) || obj.made_of( phase_id::PNULL ) ) ) {
             return false;
         }
-        // Fuel type and free volume do not ensure that the two batches can mix.
-        if( is_tank() && obj.made_of( phase_id::LIQUID ) &&
-            base.get_remaining_capacity_for_liquid( obj, true ) <= 0 ) {
-            return false;
-        }
         // forbid putting liquids, gasses, and plasma in things that aren't tanks
         if( !obj.made_of( phase_id::SOLID ) && !is_tank() ) {
             return false;
@@ -530,6 +529,13 @@ bool vehicle_part::can_reload( const item &obj ) const
 
     if( is_reactor() ) {
         return true;
+    }
+
+    if( is_tank() ) {
+        if( !obj.is_null() && obj.made_of( phase_id::LIQUID ) ) {
+            return base.get_remaining_capacity_for_liquid( obj, true ) > 0;
+        }
+        return ammo_current().is_null() || ammo_remaining() < item_capacity( ammo_current() );
     }
 
     if( ammo_current().is_null() ) {
@@ -571,7 +577,9 @@ bool vehicle_part::fill_with( item &liquid, int qty )
     }
 
     int charges_max = 0;
-    if( cata::value_ptr<islot_ammo> a_val = item::find_type( ammo_current() )->ammo ) {
+    if( is_tank() ) {
+        charges_max = base.get_remaining_capacity_for_liquid( liquid, true );
+    } else if( cata::value_ptr<islot_ammo> a_val = item::find_type( ammo_current() )->ammo ) {
         charges_max = ammo_capacity( a_val->type ) - ammo_remaining( );
     } else {
         // Nothing in tank

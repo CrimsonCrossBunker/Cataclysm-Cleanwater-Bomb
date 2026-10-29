@@ -2505,7 +2505,9 @@ int item_pocket::charges_per_remaining_volume( const item &it ) const
     units::volume non_it_volume = volume_capacity();
     int contained_charges = 0;
     for( const item &contained : contents ) {
-        if( contained.typeId() == it.typeId() && contained.stacks_with( it ) ) {
+        if( contained.typeId() == it.typeId() &&
+            ( contained.stacks_with( it ) ||
+              ( it.made_of( phase_id::LIQUID ) && contained.can_combine( it ) ) ) ) {
             contained_charges += contained.charges;
         } else {
             non_it_volume -= contained.volume();
@@ -2525,7 +2527,9 @@ int item_pocket::charges_per_remaining_weight( const item &it ) const
     units::mass non_it_weight = weight_capacity();
     int contained_charges = 0;
     for( const item &contained : contents ) {
-        if( contained.typeId() == it.typeId() && contained.stacks_with( it ) ) {
+        if( contained.typeId() == it.typeId() &&
+            ( contained.stacks_with( it ) ||
+              ( it.made_of( phase_id::LIQUID ) && contained.can_combine( it ) ) ) ) {
             contained_charges += contained.charges;
         } else {
             non_it_weight -= contained.weight();

@@ -4296,7 +4296,7 @@ bool Character::pour_into( item_location &container, item &liquid, bool ignore_s
             break;
     }
 
-    if( max_remaining_capacity == 0 ) {
+    if( amount <= 0 ) {
         add_msg_if_player( _( "The %1$s can't expand to fit any more %2$s." ), container->tname(),
                            liquid.tname() );
         return false;
@@ -4307,11 +4307,16 @@ bool Character::pour_into( item_location &container, item &liquid, bool ignore_s
         amount = std::min( amount, liquid.charges );
     }
 
+    const int transferred = container->fill_with( liquid, amount, false, false, ignore_settings );
+    if( transferred <= 0 ) {
+        return false;
+    }
+
     if( !silent ) {
         add_msg_if_player( _( "You pour %1$s into the %2$s." ), liquid.tname(), container->tname() );
     }
 
-    liquid.charges -= container->fill_with( liquid, amount, false, false, ignore_settings );
+    liquid.charges -= transferred;
     inv->unsort();
 
     if( liquid.charges > 0 && !silent ) {
