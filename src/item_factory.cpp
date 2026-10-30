@@ -2624,6 +2624,9 @@ void Item_factory::check_definitions() const
             if( std::find( type->armor->all_layers.begin(), type->armor->all_layers.end(),
                            layer_level::BELTED ) == type->armor->all_layers.end() ) {
                 for( const armor_portion_data &portion : type->armor->sub_data ) {
+                    if( portion.covers_all ) {
+                        continue;
+                    }
                     for( const sub_bodypart_str_id &sbp : portion.sub_coverage ) {
                         if( sbp->secondary ) {
                             msg += string_format( "Secondary hanging locations should only be used on the BELTED layer: %s\n",
