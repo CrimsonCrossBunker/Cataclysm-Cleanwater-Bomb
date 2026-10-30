@@ -1,14 +1,20 @@
+#include <cstdint>
 #include <functional>
 #include <list>
+#include <sstream>
 #include <string>
 
 #include "cata_catch.h"
 #include "coordinates.h"
 #include "debug.h"
+#include "flexbuffer_json.h"
 #include "item.h"
 #include "item_contents.h"
 #include "item_location.h"
+#include "item_uid.h"
 #include "itype.h"
+#include "json.h"
+#include "json_loader.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_selector.h"
@@ -18,15 +24,160 @@
 #include "type_id.h"
 #include "units.h"
 
+static const faction_id faction_your_followers( "your_followers" );
+
+static const itype_id itype_battery( "battery" );
 static const itype_id itype_crowbar_pocket_test( "crowbar_pocket_test" );
+static const itype_id itype_gasfilter_med( "gasfilter_med" );
 static const itype_id itype_hammer_pocket_test( "hammer_pocket_test" );
 static const itype_id itype_jar_glass_sealed( "jar_glass_sealed" );
 static const itype_id itype_log( "log" );
+static const itype_id itype_mask_bunker( "mask_bunker" );
+static const itype_id itype_mask_hsurvivor( "mask_hsurvivor" );
 static const itype_id itype_pickle( "pickle" );
 static const itype_id itype_purse( "purse" );
+static const itype_id itype_rm13_armor( "rm13_armor" );
+static const itype_id itype_rm13_battery( "rm13_battery" );
 static const itype_id itype_test_tool_belt( "test_tool_belt" );
 static const itype_id itype_tongs_pocket_test( "tongs_pocket_test" );
 static const itype_id itype_wrench_pocket_test( "wrench_pocket_test" );
+
+static std::string saved_item_with_legacy_pocket( const itype_id &type,
+        const pocket_type saved_type, const item &contained )
+{
+    std::ostringstream saved;
+    JsonOut out( saved );
+    out.start_object();
+    out.member( "typeid", type.str() );
+    out.member( "contents" );
+    out.start_object();
+    out.member( "contents" );
+    out.start_array();
+    out.start_object();
+    out.member( "pocket_type", static_cast<int>( saved_type ) );
+    out.member( "contents" );
+    out.start_array();
+    contained.serialize( out );
+    out.end_array();
+    out.end_object();
+    out.end_array();
+    out.end_object();
+    out.end_object();
+    return saved.str();
+}
+
+TEST_CASE( "removed_ammo_pockets_migrate_saved_items_without_debug_errors",
+           "[item][pocket][savegame]" )
+{
+    item contained( itype_gasfilter_med );
+    contained.ammo_set( contained.ammo_default(), 37 );
+    const pocket_type removed_type = pocket_type::MAGAZINE_WELL;
+    contained.set_owner( faction_your_followers );
+    contained.set_var( "legacy_pocket_test", "preserved" );
+    const int64_t original_uid = contained.uid().get_value();
+    item loaded( itype_mask_bunker );
+    REQUIRE_FALSE( loaded.has_pocket_type( removed_type ) );
+
+    const std::string saved = saved_item_with_legacy_pocket( itype_mask_bunker, removed_type,
+                              contained );
+    CHECK( capture_debugmsg_during( [&]() {
+        loaded.deserialize( json_loader::from_string( saved ).get_object() );
+    } ).empty() );
+    REQUIRE( loaded.all_items_top( pocket_type::MIGRATION ).size() == 1 );
+
+    // A second save/load before overflow must not lose or duplicate the contents.
+    std::ostringstream roundtrip;
+    JsonOut out( roundtrip );
+    loaded.serialize( out );
+    item reloaded;
+    CHECK( capture_debugmsg_during( [&]() {
+        reloaded.deserialize( json_loader::from_string( roundtrip.str() ).get_object() );
+    } ).empty() );
+    const std::list<item *> migrated = reloaded.all_items_top( pocket_type::MIGRATION );
+    REQUIRE( migrated.size() == 1 );
+    CHECK( migrated.front()->typeId() == contained.typeId() );
+    CHECK( migrated.front()->uid().get_value() == original_uid );
+    CHECK( migrated.front()->charges == contained.charges );
+    CHECK( migrated.front()->ammo_remaining() == contained.ammo_remaining() );
+    CHECK( migrated.front()->get_owner() == contained.get_owner() );
+    CHECK( migrated.front()->get_var( "legacy_pocket_test" ) == "preserved" );
+
+    clear_map_without_vision();
+    map &here = get_map();
+    const tripoint_bub_ms origin{ 60, 60, 0 };
+    here.i_clear( origin );
+    reloaded.overflow( here, origin );
+    CHECK( reloaded.all_items_top( pocket_type::MIGRATION ).empty() );
+    REQUIRE( here.i_at( origin ).size() == 1 );
+    CHECK( here.i_at( origin ).begin()->typeId() == contained.typeId() );
+    CHECK( here.i_at( origin ).begin()->ammo_remaining() == contained.ammo_remaining() );
+    CHECK( here.i_at( origin ).begin()->get_owner() == contained.get_owner() );
+    CHECK( here.i_at( origin ).begin()->get_var( "legacy_pocket_test" ) == "preserved" );
+    reloaded.overflow( here, origin );
+    CHECK( here.i_at( origin ).size() == 1 );
+}
+
+TEST_CASE( "removed_integral_battery_loads_into_replacement_magazine", "[item][pocket][savegame]" )
+{
+    item charge( itype_battery );
+    const int saved_charges = GENERATE( 731, 5000 );
+    charge.charges = saved_charges;
+    charge.set_owner( faction_your_followers );
+    charge.set_var( "legacy_pocket_test", "preserved" );
+    const int64_t original_uid = charge.uid().get_value();
+    item loaded( itype_rm13_armor );
+    REQUIRE_FALSE( loaded.has_pocket_type( pocket_type::MAGAZINE ) );
+    const std::string saved = saved_item_with_legacy_pocket( itype_rm13_armor, pocket_type::MAGAZINE,
+                              charge );
+    CHECK( capture_debugmsg_during( [&]() {
+        loaded.deserialize( json_loader::from_string( saved ).get_object() );
+    } ).empty() );
+    REQUIRE( loaded.magazine_current() != nullptr );
+    CHECK( loaded.magazine_current()->typeId() == itype_rm13_battery );
+    CHECK( loaded.magazine_current()->ammo_remaining() == saved_charges );
+    CHECK( loaded.magazine_current()->first_ammo().uid().get_value() == original_uid );
+    CHECK( loaded.magazine_current()->first_ammo().get_owner() == charge.get_owner() );
+    CHECK( loaded.magazine_current()->first_ammo().get_var( "legacy_pocket_test" ) == "preserved" );
+    CHECK( loaded.all_items_top( pocket_type::MIGRATION ).empty() );
+
+    std::ostringstream roundtrip;
+    JsonOut out( roundtrip );
+    loaded.serialize( out );
+    item reloaded;
+    CHECK( capture_debugmsg_during( [&]() {
+        reloaded.deserialize( json_loader::from_string( roundtrip.str() ).get_object() );
+    } ).empty() );
+    REQUIRE( reloaded.all_items_top( pocket_type::MAGAZINE_WELL ).size() == 1 );
+    REQUIRE( reloaded.magazine_current() != nullptr );
+    CHECK( reloaded.magazine_current()->ammo_remaining() == saved_charges );
+    CHECK( reloaded.magazine_current()->first_ammo().uid().get_value() == original_uid );
+
+    clear_map_without_vision();
+    map &here = get_map();
+    const tripoint_bub_ms origin{ 60, 60, 0 };
+    here.i_clear( origin );
+    reloaded.overflow( here, origin );
+    CHECK( here.i_at( origin ).empty() );
+    REQUIRE( reloaded.magazine_current() != nullptr );
+    CHECK( reloaded.magazine_current()->ammo_remaining() == saved_charges );
+}
+
+TEST_CASE( "existing_filter_pocket_keeps_saved_filter_installed", "[item][pocket][savegame]" )
+{
+    item filter( itype_gasfilter_med );
+    filter.ammo_set( filter.ammo_default(), 37 );
+    item loaded( itype_mask_hsurvivor );
+    const std::string saved = saved_item_with_legacy_pocket( itype_mask_hsurvivor,
+                              pocket_type::MAGAZINE_WELL,
+                              filter );
+    CHECK( capture_debugmsg_during( [&]() {
+        loaded.deserialize( json_loader::from_string( saved ).get_object() );
+    } ).empty() );
+    REQUIRE( loaded.magazine_current() != nullptr );
+    CHECK( loaded.magazine_current()->uid() == filter.uid() );
+    CHECK( loaded.magazine_current()->ammo_remaining() == 37 );
+    CHECK( loaded.all_items_top( pocket_type::MIGRATION ).empty() );
+}
 
 TEST_CASE( "item_contents" )
 {
