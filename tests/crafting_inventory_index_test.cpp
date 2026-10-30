@@ -1,7 +1,10 @@
+#include <cata_utility.h>
 #include <array>
 #include <climits>
 #include <cstddef>
 #include <functional>
+#include <initializer_list>
+#include <list>
 #include <vector>
 
 #include "avatar.h"
@@ -15,7 +18,6 @@
 #include "ret_val.h"
 #include "temp_crafting_inventory.h"
 #include "type_id.h"
-#include "visitable.h"
 
 static const flag_id json_flag_ITEM_BROKEN( "ITEM_BROKEN" );
 static const flag_id json_flag_PSEUDO( "PSEUDO" );

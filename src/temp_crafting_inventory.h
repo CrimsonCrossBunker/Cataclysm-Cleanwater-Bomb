@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_TEMP_CRAFTING_INVENTORY_H
 #define CATA_SRC_TEMP_CRAFTING_INVENTORY_H
 
+#include <cata_utility.h>
 // IWYU pragma: no_include <memory>  // IWYU being silly
 #include <climits>
 #include <cstddef>
@@ -23,7 +24,6 @@ class Character;
 class map;
 class map_cursor;
 class vehicle_cursor;
-class scoped_crafting_inventory_cache;
 
 /**
  * A transient add-only list of item references and temporary pseudo-items, that implements `read_only_visitable`
