@@ -521,19 +521,20 @@ void inventory::restack( Character &p )
 
 int count_charges_in_list( const itype *type, const map_stack &items )
 {
+    int charges = 0;
     for( const item &candidate : items ) {
         if( candidate.type == type ) {
-            return candidate.charges;
+            charges += std::max( candidate.charges, 0 );
         }
     }
-    return 0;
+    return charges;
 }
 
 /**
-* Finds the number of charges of the first item that matches ammotype.
+* Counts all stacks of the first nonempty item type that matches ammotype.
 *
 * @param ammotype   Search target.
-* @param items      Stack of items. Search stops at first match.
+* @param items      Stack of items. Different item types are not mixed.
 * @param [out] item_type Matching type.
 *
 * @return           Number of charges.
@@ -542,9 +543,9 @@ int count_charges_in_list( const ammotype *ammotype, const map_stack &items,
                            itype_id &item_type )
 {
     for( const item &candidate : items ) {
-        if( candidate.is_ammo() && candidate.type->ammo->type == *ammotype ) {
+        if( candidate.charges > 0 && candidate.is_ammo() && candidate.type->ammo->type == *ammotype ) {
             item_type = candidate.typeId();
-            return candidate.charges;
+            return count_charges_in_list( candidate.type, items );
         }
     }
     return 0;
