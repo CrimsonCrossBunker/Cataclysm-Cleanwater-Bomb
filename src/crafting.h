@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "calendar.h"
+#include "coordinates.h"
 #include "item_wakeup.h"
 
 class Character;
@@ -41,6 +42,11 @@ void drop_or_handle( const item &newit, Character &p );
 // as Character::craft() and Character::long_craft().
 bool crafting_allowed( const Character &p, const recipe &rec );
 
+// Check the in-progress craft's destination before consuming components or
+// tool charges.  Uses the same workbench selection as actual placement.
+bool can_place_craft( const Character &ch, const item &craft,
+                      std::optional<tripoint_bub_ms> target, bool always_start_on_ground );
+
 // Per-choice data for the timer sub-menu when the modal is shown on an
 // in-flight unattended step.  All offsets are step-start anchored
 // (`alarm_at = passive_started_at + offset`), so the resulting
@@ -70,9 +76,9 @@ inflight_alarm_choices compute_inflight_alarm_choices(
 // the remaining runtime so resume timers do not anchor to a stale step
 // start.
 std::optional<std::vector<attention_plan>> show_craft_planning_modal(
-    const recipe &rec, const Character &crafter, int batch, int from_step,
-    const std::vector<attention_plan> &existing,
-    const item *current_craft = nullptr );
+        const recipe &rec, const Character &crafter, int batch, int from_step,
+        const std::vector<attention_plan> &existing,
+        const item *current_craft = nullptr );
 
 // Interrupts the avatar's current activity with a craft_step_complete
 // distraction when the avatar can read time; falls back to a vague flavor
