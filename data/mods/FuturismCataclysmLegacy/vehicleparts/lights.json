@@ -1,6 +1,6 @@
 [
   {
-    "id": "atomic_lamp",
+    "id": "fcl_atomic_lamp",
     "type": "vehicle_part",
     "name": { "str": "atomic lamp" },
     "item": "fcl_atomic_lamp",
@@ -21,7 +21,7 @@
     "variants": [ { "symbols": "*", "symbols_broken": "*" } ]
   },
   {
-    "id": "atomic_light",
+    "id": "fcl_atomic_light",
     "copy-from": "atomic_lamp",
     "type": "vehicle_part",
     "name": { "str": "atomic nightlight" },
