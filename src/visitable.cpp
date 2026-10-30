@@ -4,12 +4,14 @@
 #include <algorithm>
 #include <climits>
 #include <cstdint>
+#include <functional>
 #include <limits>
 #include <map>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include "bionics.h"
 #include "bodypart.h"
