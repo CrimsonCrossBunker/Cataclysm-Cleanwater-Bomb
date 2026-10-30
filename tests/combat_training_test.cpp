@@ -1,3 +1,5 @@
+#include <string>
+
 #include "avatar.h"
 #include "cata_catch.h"
 #include "combat_training.h"

@@ -1,3 +1,5 @@
+#include <enums.h>
+#include <string>
 #include <utility>
 
 #include "avatar.h"
