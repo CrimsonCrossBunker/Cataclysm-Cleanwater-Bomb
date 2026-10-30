@@ -167,7 +167,7 @@ TEST_CASE( "crafting_index_invalidates_owned_mutations_and_does_not_follow_copie
             CHECK( inv.charges_of( itype_nail ) == 15 );
         }
         CHECK( inv.charges_of( itype_nail ) == 15 );
-        temp_crafting_inventory copy( inv );
+        counting_crafting_inventory copy( inv );
         copy.add_item_copy( item( itype_nail, calendar::turn, 3 ) );
         CHECK( copy.charges_of( itype_nail ) == 18 );
         CHECK( inv.charges_of( itype_nail ) == 15 );
