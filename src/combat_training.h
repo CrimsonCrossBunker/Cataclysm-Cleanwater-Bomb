@@ -2,12 +2,11 @@
 #ifndef CATA_SRC_COMBAT_TRAINING_H
 #define CATA_SRC_COMBAT_TRAINING_H
 
-#include <algorithm>
-
-// Easier opponents still teach something; each excess level reduces the rate.
+// Match practice()'s cap: the cap level can still train, but higher levels cannot.
+// A reduced nonzero rate would let arbitrarily weak opponents train every level.
 inline double combat_training_multiplier( double skill_level, double training_level )
 {
-    return 1.0 / ( 1.0 + std::max( 0.0, skill_level - training_level ) );
+    return skill_level <= training_level ? 1.0 : 0.0;
 }
 
 #endif // CATA_SRC_COMBAT_TRAINING_H
