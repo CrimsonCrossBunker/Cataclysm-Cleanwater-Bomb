@@ -866,7 +866,7 @@
     "parent": "torso_bionic_basic",
     "secondary": true,
     "side": "both",
-    "similar_bodypart": "waist",
+    "similar_bodypart": "torso_waist",
     "name": "bionic waist",
     "opposite": "sub_limb_debug",
     "locations_under": [ "leg_bionic_basic_hip_r", "leg_bionic_basic_hip_l" ]
