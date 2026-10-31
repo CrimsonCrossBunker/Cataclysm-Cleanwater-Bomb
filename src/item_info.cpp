@@ -1,5 +1,6 @@
 #include "item.h" // IWYU pragma: associated
 
+#include <temp_crafting_inventory.h>
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -130,8 +131,6 @@ static const skill_id skill_survival( "survival" );
 static const vitamin_id vitamin_human_flesh_vitamin( "human_flesh_vitamin" );
 
 static const std::string flag_NO_DISPLAY( "NO_DISPLAY" );
-
-class temp_crafting_inventory;
 
 // sorts with localized_compare, and enumerates entries, if more than \p max entries
 // the rest are abbreviated into " and %d more"
