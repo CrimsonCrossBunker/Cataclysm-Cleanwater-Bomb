@@ -3312,7 +3312,7 @@ void item::repair_info( std::vector<iteminfo> &info, const iteminfo_query *parts
 
         const std::string repairs_with = enumerate_as_string( type->repairs_with,
         []( const material_id & e ) {
-            return string_format( "<info>%s</info>", e->repaired_with()->nname( 1 ) );
+            return string_format( "<info>%s</info>", e->repair_display_name() );
         } );
         if( !repairs_with.empty() ) {
             info.emplace_back( "DESCRIPTION", string_format( _( "<bold>With</bold> %s." ), repairs_with ) );
