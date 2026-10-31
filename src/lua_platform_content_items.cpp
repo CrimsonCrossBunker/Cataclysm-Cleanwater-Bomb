@@ -4804,8 +4804,8 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     if( !source.salvaged_into.empty() ) {
                         native._salvaged_into = itype_id( source.salvaged_into );
                     }
-                    native._repaired_with = source.repaired_with.empty() ? itype_id::NULL_ID() :
-                                            itype_id( source.repaired_with );
+                    native._repaired_with = { source.repaired_with.empty() ? itype_id::NULL_ID() :
+                                              itype_id( source.repaired_with ) };
                     native._chip_resist = static_cast<int>( source.chip_resistance );
                     native._density = static_cast<float>( source.density );
                     native._breathability = static_cast<breathability_rating>( source.breathability );
