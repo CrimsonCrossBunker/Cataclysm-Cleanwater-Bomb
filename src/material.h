@@ -87,7 +87,8 @@ class material_type
     private:
         translation _name;
         std::optional<itype_id> _salvaged_into; // this material turns into this item when salvaged
-        itype_id _repaired_with = itype_id( "null" ); // this material can be repaired with this item
+        std::set<itype_id> _repaired_with = { itype_id( "null" ) }; // this material can be repaired with any of these items
+        std::optional<translation> _repaired_with_name; // optional display name that overrides the automatic enumeration
         resistances _resistances; // negative integers means susceptibility
         std::vector<damage_type_id> _res_was_loaded;  // for checking mandatory resistances
         int _chip_resist = 0;                         // Resistance to physical damage of the item itself
@@ -142,7 +143,8 @@ class material_type
          * into leather patches).
          */
         std::optional<itype_id> salvaged_into() const;
-        itype_id repaired_with() const;
+        const std::set<itype_id> &repaired_with() const;
+        std::string repair_display_name() const;
         float resist( const damage_type_id &dmg_type ) const;
         // whether this material has an explicitly defined resistance for the specified damage type
         bool has_dedicated_resist( const damage_type_id &dmg_type ) const;

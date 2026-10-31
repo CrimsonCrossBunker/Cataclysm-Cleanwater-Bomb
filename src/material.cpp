@@ -16,6 +16,7 @@
 #include "generic_factory.h"
 #include "item.h"
 #include "lua_platform_content.h"
+#include "output.h"
 
 static const damage_type_id damage_heat( "heat" );
 
@@ -138,7 +139,8 @@ void material_type::load( const JsonObject &jsobj, std::string_view )
     optional( jsobj, was_loaded, "breathability", _breathability, breathability_rating::IMPERMEABLE );
 
     optional( jsobj, was_loaded, "salvaged_into", _salvaged_into );
-    optional( jsobj, was_loaded, "repaired_with", _repaired_with, itype_id::NULL_ID() );
+    optional( jsobj, was_loaded, "repaired_with", _repaired_with, auto_flags_reader<itype_id> {} );
+    optional( jsobj, was_loaded, "repaired_with_name", _repaired_with_name );
     optional( jsobj, was_loaded, "rotting", _rotting, false );
     optional( jsobj, was_loaded, "soft", _soft, false );
     optional( jsobj, was_loaded, "uncomfortable", _uncomfortable, false );
@@ -180,8 +182,10 @@ void material_type::check() const
     if( _salvaged_into && ( !item::type_is_defined( *_salvaged_into ) || _salvaged_into->is_null() ) ) {
         debugmsg( "invalid \"salvaged_into\" %s for %s.", _salvaged_into->c_str(), id.c_str() );
     }
-    if( !item::type_is_defined( _repaired_with ) ) {
-        debugmsg( "invalid \"repaired_with\" %s for %s.", _repaired_with.c_str(), id.c_str() );
+    for( const itype_id &rep : _repaired_with ) {
+        if( !rep.is_null() && !item::type_is_defined( rep ) ) {
+            debugmsg( "invalid \"repaired_with\" %s for %s.", rep.c_str(), id.c_str() );
+        }
     }
 
     if( _wind_resist && ( *_wind_resist > 100 || *_wind_resist < 0 ) ) {
@@ -224,9 +228,20 @@ std::optional<itype_id> material_type::salvaged_into() const
     return _salvaged_into;
 }
 
-itype_id material_type::repaired_with() const
+const std::set<itype_id> &material_type::repaired_with() const
 {
     return _repaired_with;
+}
+
+std::string material_type::repair_display_name() const
+{
+    if( _repaired_with_name ) {
+        return _repaired_with_name->translated();
+    }
+    return enumerate_as_string( _repaired_with.begin(), _repaired_with.end(),
+    []( const itype_id & e ) {
+        return e->nname( 1 );
+    }, enumeration_conjunction::or_ );
 }
 
 float material_type::resist( const damage_type_id &dmg_type ) const
