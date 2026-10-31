@@ -1,3 +1,5 @@
+#include <functional>
+#include <list>
 #include <string>
 
 #include "avatar.h"
@@ -7,18 +9,19 @@
 #include "debug.h"
 #include "item.h"
 #include "item_location.h"
-#include "item_pocket.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "map_selector.h"
 #include "player_helpers.h"
 #include "pocket_type.h"
+#include "point.h"
 #include "ret_val.h"
 #include "type_id.h"
 #include "units.h"
 #include "vehicle.h"
 
-static const faction_id faction_followers( "your_followers" );
-static const faction_id faction_merchants( "free_merchants" );
+static const faction_id faction_free_merchants( "free_merchants" );
+static const faction_id faction_your_followers( "your_followers" );
 static const itype_id itype_metal_tank_test( "metal_tank_test" );
 static const itype_id itype_test_liquid_1ml( "test_liquid_1ml" );
 static const itype_id itype_test_solid_1ml( "test_solid_1ml" );
@@ -66,8 +69,8 @@ TEST_CASE( "ordinary_container_pour_preserves_partial_ownership_and_charges",
     stored.charges = capacity - 1;
     incoming.charges = 3;
     item &owned = source_owned ? incoming : stored;
-    owned.set_owner( faction_followers );
-    owned.set_old_owner( faction_merchants );
+    owned.set_owner( faction_your_followers );
+    owned.set_old_owner( faction_free_merchants );
     REQUIRE( target.fill_with( stored, stored.charges ) == stored.charges );
     item source( itype_metal_tank_test );
     REQUIRE( source.fill_with( incoming, incoming.charges ) == incoming.charges );
@@ -83,8 +86,8 @@ TEST_CASE( "ordinary_container_pour_preserves_partial_ownership_and_charges",
     CHECK( destination->legacy_front().charges == capacity );
     CHECK( remaining.charges == 2 );
     CHECK( destination->legacy_front().charges + remaining.charges == stored.charges + 3 );
-    CHECK( destination->legacy_front().get_owner() == faction_followers );
-    CHECK( destination->legacy_front().get_old_owner() == faction_merchants );
+    CHECK( destination->legacy_front().get_owner() == faction_your_followers );
+    CHECK( destination->legacy_front().get_old_owner() == faction_free_merchants );
     CHECK( remaining.get_owner() == original_owner );
     CHECK( remaining.get_old_owner() == original_old_owner );
     CHECK_FALSE( you.pour_into( destination, remaining, true, true ) );
@@ -135,8 +138,8 @@ TEST_CASE( "container_stacking_does_not_discard_liquid_ownership",
     item first( itype_metal_tank_test );
     item second( itype_metal_tank_test );
     REQUIRE( first.fill_with( liquid, 10 ) == 10 );
-    liquid.set_owner( faction_followers );
-    liquid.set_old_owner( faction_merchants );
+    liquid.set_owner( faction_your_followers );
+    liquid.set_old_owner( faction_free_merchants );
     REQUIRE( second.fill_with( liquid, 10 ) == 10 );
     CHECK_FALSE( first.stacks_with( second ) );
     CHECK_FALSE( second.stacks_with( first ) );

@@ -14,7 +14,7 @@ from unittest import mock
 from check_docs_impact import (
     documentation_field_warnings,
     impacts,
-    inventory_fingerprint_only_change,
+    inventory_metadata_only_change,
     JSON_EOC_INVENTORIES,
     load_rules,
     main,
@@ -204,7 +204,7 @@ entries:
         )
 
 
-class InventoryFingerprintImpactTest(unittest.TestCase):
+class InventoryMetadataImpactTest(unittest.TestCase):
     def setUp(self) -> None:
         self.path = "data/reference/json/ccb_eoc_effects.json"
         self.before = {
@@ -226,7 +226,7 @@ class InventoryFingerprintImpactTest(unittest.TestCase):
         with mock.patch(
             "check_docs_impact.subprocess.run", side_effect=results
         ):
-            return inventory_fingerprint_only_change(
+            return inventory_metadata_only_change(
                 path or self.path, "base", "head"
             )
 
@@ -235,7 +235,7 @@ class InventoryFingerprintImpactTest(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertTrue(self.compare(self.after, path))
         with mock.patch("check_docs_impact.subprocess.run") as git:
-            self.assertFalse(inventory_fingerprint_only_change(
+            self.assertFalse(inventory_metadata_only_change(
                 "src/condition.cpp", "base", "head"
             ))
             git.assert_not_called()
@@ -252,6 +252,52 @@ class InventoryFingerprintImpactTest(unittest.TestCase):
         self.after["source"]["project"] = "Changed source contract"
         self.assertFalse(self.compare(self.after))
 
+    def test_corpus_counter_refreshes_are_exempt(self) -> None:
+        self.before["summary"].update({
+            "tracked_json_files": 10,
+            "top_level_objects": 40,
+        })
+        self.before["entries"][0]["instance_evidence"] = {
+            "occurrences": 2,
+            "examples": [{"path": "data/json/example.json"}],
+        }
+        for field in ("tracked_json_files", "top_level_objects", "occurrences"):
+            after = copy.deepcopy(self.before)
+            target = (
+                after["entries"][0]["instance_evidence"]
+                if field == "occurrences" else after["summary"]
+            )
+            target[field] += 1
+            with self.subTest(field=field):
+                self.assertTrue(self.compare(after))
+
+    def test_counter_refresh_does_not_hide_contract_or_evidence_changes(self) -> None:
+        self.before["summary"]["top_level_objects"] = 40
+        self.before["entries"][0]["instance_evidence"] = {
+            "occurrences": 2,
+            "examples": [{"path": "data/json/example.json"}],
+        }
+        for field, value in (
+            ("shape", "object"),
+            ("instance_evidence", {"occurrences": 3, "examples": []}),
+        ):
+            after = copy.deepcopy(self.before)
+            after["summary"]["top_level_objects"] += 1
+            after["entries"][0][field] = value
+            with self.subTest(field=field):
+                self.assertFalse(self.compare(after))
+
+    def test_counter_schema_changes_are_not_exempt(self) -> None:
+        self.before["summary"]["top_level_objects"] = 40
+        for value in (None, -1, True, "41", 41.0):
+            after = copy.deepcopy(self.before)
+            after["summary"]["top_level_objects"] = value
+            with self.subTest(value=value):
+                self.assertFalse(self.compare(after))
+        after = copy.deepcopy(self.before)
+        del after["summary"]["top_level_objects"]
+        self.assertFalse(self.compare(after))
+
     def test_missing_or_invalid_fingerprint_is_not_exempt(self) -> None:
         for value in (None, "invalid", 42):
             after = copy.deepcopy(self.after)
@@ -266,14 +312,14 @@ class InventoryFingerprintImpactTest(unittest.TestCase):
             "check_docs_impact.subprocess.run",
             side_effect=subprocess.CalledProcessError(128, ["git", "show"]),
         ):
-            self.assertFalse(inventory_fingerprint_only_change(
+            self.assertFalse(inventory_metadata_only_change(
                 self.path, "base", "head"
             ))
         with mock.patch(
             "check_docs_impact.subprocess.run",
             return_value=subprocess.CompletedProcess([], 0, stdout="invalid"),
         ):
-            self.assertFalse(inventory_fingerprint_only_change(
+            self.assertFalse(inventory_metadata_only_change(
                 self.path, "base", "head"
             ))
 
@@ -288,7 +334,7 @@ class InventoryFingerprintImpactTest(unittest.TestCase):
             mock.patch("sys.argv", argv),
             mock.patch("check_docs_impact.changed_files", return_value=files),
             mock.patch(
-                "check_docs_impact.inventory_fingerprint_only_change",
+                "check_docs_impact.inventory_metadata_only_change",
                 side_effect=lambda path, base, head: path == self.path,
             ),
             mock.patch.dict(os.environ, {

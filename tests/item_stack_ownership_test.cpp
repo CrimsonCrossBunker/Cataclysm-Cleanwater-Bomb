@@ -1,10 +1,13 @@
+#include <initializer_list>
+#include <string>
+
 #include "cata_catch.h"
 #include "calendar.h"
 #include "item.h"
 #include "type_id.h"
 
-static const itype_id itype_gasoline( "gasoline" );
 static const itype_id itype_diesel( "diesel" );
+static const itype_id itype_gasoline( "gasoline" );
 
 TEST_CASE( "stacking_preserves_ownership", "[item][stacking][ownership]" )
 {

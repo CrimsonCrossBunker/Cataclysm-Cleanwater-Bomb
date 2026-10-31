@@ -1,6 +1,8 @@
 #include <cstddef>
 #include <iostream>
-#include <string>
+#include <list>
+#include <memory>
+#include <vector>
 
 #include "calendar.h"
 #include "cata_catch.h"
@@ -11,25 +13,25 @@
 #include "type_id.h"
 #include "vehicle.h"
 
-static const faction_id faction_followers( "your_followers" );
-static const faction_id faction_merchants( "free_merchants" );
+static const faction_id faction_free_merchants( "free_merchants" );
+static const faction_id faction_your_followers( "your_followers" );
 static const itype_id itype_metal_tank_test( "metal_tank_test" );
 static const vpart_id vpart_tank_test( "tank_test" );
 
 static void assign_liquid_ownership( item &liquid, int record )
 {
     if( record != 1 ) {
-        liquid.set_owner( faction_followers );
+        liquid.set_owner( faction_your_followers );
     }
     if( record != 0 ) {
-        liquid.set_old_owner( faction_merchants );
+        liquid.set_old_owner( faction_free_merchants );
     }
 }
 
 static void check_liquid_ownership( const item &liquid, int record )
 {
-    CHECK( liquid.get_owner() == ( record != 1 ? faction_followers : faction_id::NULL_ID() ) );
-    CHECK( liquid.get_old_owner() == ( record != 0 ? faction_merchants : faction_id::NULL_ID() ) );
+    CHECK( liquid.get_owner() == ( record != 1 ? faction_your_followers : faction_id::NULL_ID() ) );
+    CHECK( liquid.get_old_owner() == ( record != 0 ? faction_free_merchants : faction_id::NULL_ID() ) );
 }
 
 TEST_CASE( "all_liquid_types_combine_with_partial_ownership",
@@ -78,11 +80,11 @@ TEST_CASE( "all_liquid_types_reject_conflicting_ownership", "[item][liquid][owne
         item first( type, calendar::turn_zero, 1 );
         item second( first );
         if( conflict_history ) {
-            first.set_old_owner( faction_followers );
-            second.set_old_owner( faction_merchants );
+            first.set_old_owner( faction_your_followers );
+            second.set_old_owner( faction_free_merchants );
         } else {
-            first.set_owner( faction_followers );
-            second.set_owner( faction_merchants );
+            first.set_owner( faction_your_followers );
+            second.set_owner( faction_free_merchants );
         }
 
         CHECK_FALSE( first.can_combine( second ) );
