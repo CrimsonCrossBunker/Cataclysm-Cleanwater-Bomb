@@ -9,11 +9,13 @@
 #include "debug.h"
 #include "effect.h"
 #include "effect_source.h"
+#include "enums.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
 #include "monster.h"
 #include "player_helpers.h"
+#include "point.h"
 #include "type_id.h"
 #include "units.h"
 #include "veh_type.h"
@@ -35,7 +37,7 @@ TEST_CASE( "vehicle_collision_bleeding_handles_missing_driver",
     map &here = get_map();
     const tripoint_bub_ms vehicle_position( 60, 60, 0 );
     vehicle *veh = here.add_vehicle( vehicle_prototype_car, vehicle_position, 0_degrees, 0,
-                                    veh_spawn_status::UNDAMAGED );
+                                     veh_spawn_status::UNDAMAGED );
     REQUIRE( veh != nullptr );
     const point_rel_ms mount = veh->part( 0 ).mount;
     const int sharp_part = veh->install_part( here, mount, vpart_plating_spiked );
@@ -64,7 +66,7 @@ TEST_CASE( "vehicle_collision_bleeding_handles_missing_driver",
     veh_collision collision;
     const std::string diagnostics = capture_debugmsg_during( [&]() {
         collision = veh->part_collision( here, sharp_part, here.get_abs( target_position ),
-                                        false, false );
+                                         false, false );
     } );
 
     CHECK( diagnostics.empty() );
@@ -90,7 +92,7 @@ TEST_CASE( "vehicle_collision_ejects_boarded_and_unboarded_characters",
     avatar &you = get_avatar();
     const tripoint_bub_ms vehicle_position( 60, 60, 0 );
     vehicle *veh = here.add_vehicle( vehicle_prototype_bicycle, vehicle_position, 0_degrees,
-                                    0, veh_spawn_status::UNDAMAGED );
+                                     0, veh_spawn_status::UNDAMAGED );
     REQUIRE( veh != nullptr );
     const auto seats = veh->get_avail_parts( "BOARDABLE" );
     REQUIRE( seats.begin() != seats.end() );

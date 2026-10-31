@@ -1,15 +1,20 @@
+#include <functional>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include "avatar.h"
 #include "cata_catch.h"
+#include "coordinates.h"
 #include "debug.h"
+#include "flexbuffer_json.h"
 #include "item.h"
 #include "item_location.h"
 #include "json.h"
 #include "json_loader.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "map_selector.h"
 #include "player_helpers.h"
 #include "type_id.h"
 #include "uistate.h"

@@ -1546,7 +1546,7 @@ void vehicle::selfdrive( map &here, const int trn, const int acceleration )
             const int thr_amount = std::abs( velocity ) < 2000 ? 400 : 500;
             cruise_thrust( here, -acceleration * thr_amount );
         } else {
-            thrust( here,  -acceleration );
+            thrust( here, -acceleration );
         }
     }
     // TODO: Actually check if we're on land on water (or disable water-skidding)

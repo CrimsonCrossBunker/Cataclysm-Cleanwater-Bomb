@@ -1,6 +1,8 @@
 #include <cstddef>
+#include <functional>
 #include <list>
 #include <optional>
+#include <string>
 #include <vector>
 
 #include "activity_handlers.h"
@@ -9,14 +11,15 @@
 #include "cata_catch.h"
 #include "character_attire.h"
 #include "coordinates.h"
+#include "enums.h"
 #include "item.h"
 #include "item_location.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "player_helpers.h"
+#include "point.h"
 #include "type_id.h"
 #include "units.h"
-#include "veh_type.h"
 #include "vehicle.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
@@ -33,7 +36,7 @@ TEST_CASE( "deliberate_vehicle_drop_does_not_return_items_to_character",
     avatar &you = get_avatar();
     map &here = get_map();
     vehicle *veh = here.add_vehicle( vehicle_prototype_car, tripoint_bub_ms( 60, 60, 0 ),
-                                    0_degrees, 0, veh_spawn_status::UNDAMAGED );
+                                     0_degrees, 0, veh_spawn_status::UNDAMAGED );
     REQUIRE( veh != nullptr );
 
     int cargo_index = -1;
@@ -100,7 +103,7 @@ TEST_CASE( "deliberate_vehicle_drop_does_not_return_items_to_character",
         original.remove_item();
     }
     CHECK_FALSE( you.is_armed() );
-    CHECK_FALSE( you.has_item_with( []( const item &candidate ) {
+    CHECK_FALSE( you.has_item_with( []( const item & candidate ) {
         return candidate.typeId() == itype_jeans;
     } ) );
     CHECK( cargo.size() == original_cargo_size + ( full_cargo ? 0 : 1 ) );

@@ -1,13 +1,18 @@
+#include <cstddef>
+#include <functional>
+#include <optional>
 #include <string>
 #include <vector>
 
 #include "cata_catch.h"
 #include "coordinates.h"
 #include "debug.h"
+#include "enums.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
 #include "player_helpers.h"
+#include "point.h"
 #include "type_id.h"
 #include "units.h"
 #include "veh_type.h"
@@ -26,7 +31,7 @@ TEST_CASE( "removing_vehicle_part_clears_its_fake_from_map_cache",
     build_test_map( ter_id( "t_pavement" ) );
     map &here = get_map();
     vehicle *veh = here.add_vehicle( vehicle_prototype_test_van, tripoint_bub_ms( 60, 60, 0 ),
-                                    45_degrees, 0, veh_spawn_status::UNDAMAGED );
+                                     45_degrees, 0, veh_spawn_status::UNDAMAGED );
     REQUIRE( veh != nullptr );
 
     int fake_index = -1;
@@ -44,7 +49,7 @@ TEST_CASE( "removing_vehicle_part_clears_its_fake_from_map_cache",
     const point_rel_ms fake_mount = veh->part( fake_index ).mount;
     const std::string real_type = veh->part( real_index ).info().id.str();
     REQUIRE( here.veh_at( fake_position ) );
-    REQUIRE( here.veh_at( fake_position )->part_index() == fake_index );
+    REQUIRE( here.veh_at( fake_position )->part_index() == static_cast<size_t>( fake_index ) );
 
     veh->remove_part( veh->part( real_index ) );
     REQUIRE( veh->part( fake_index ).removed );
