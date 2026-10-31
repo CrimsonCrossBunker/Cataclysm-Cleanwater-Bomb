@@ -22,7 +22,7 @@
   },
   {
     "id": "fcl_atomic_light",
-    "copy-from": "atomic_lamp",
+    "copy-from": "fcl_atomic_lamp",
     "type": "vehicle_part",
     "name": { "str": "atomic nightlight" },
     "item": "fcl_atomic_light",
