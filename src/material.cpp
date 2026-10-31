@@ -15,6 +15,7 @@
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "item.h"
+#include "itype.h"
 #include "lua_platform_content.h"
 #include "output.h"
 
