@@ -2239,7 +2239,15 @@
     "latent_heat": 273,
     "conductive": true,
     "chip_resist": 20,
-    "repaired_with": "steel_chunk",
+    "repaired_with": [
+      "steel_chunk",
+      "lc_steel_chunk",
+      "mc_steel_chunk",
+      "hc_steel_chunk",
+      "ch_steel_chunk",
+      "qt_steel_chunk"
+    ],
+    "repaired_with_name": { "str": "any steel chunk" },
     "dmg_adj": [ "marked", { "ctxt": "adjective", "str": "dented" }, "smashed", "shattered" ],
     "bash_dmg_verb": { "ctxt": "verb", "str": "dented" },
     "cut_dmg_verb": "scratched",
