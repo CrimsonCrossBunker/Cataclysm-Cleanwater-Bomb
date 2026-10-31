@@ -3322,13 +3322,10 @@ std::set<itype_id> repair_item_actor::get_valid_repair_materials( const item &fi
     std::set<itype_id> valid_entries;
     for( const auto &mat : materials ) {
         if( fix.can_repair_with( mat ) ) {
-            const itype_id &component_id = mat.obj().repaired_with();
+            const std::set<itype_id> &components = mat.obj().repaired_with();
             // Certain (different!) materials are repaired with the same components (steel, iron, hard steel use scrap metal).
-            // This checks avoids adding the same component twice, which is annoying to the user.
-            if( valid_entries.find( component_id ) != valid_entries.end() ) {
-                continue;
-            }
-            valid_entries.insert( component_id );
+            // The set deduplicates the components so a repeated id is added only once.
+            valid_entries.insert( components.begin(), components.end() );
         }
     }
     return valid_entries;
@@ -3347,7 +3344,7 @@ bool repair_item_actor::handle_components( Character &pl, const item &fix,
             for( const auto &mat_name : materials ) {
                 const material_type &mat = mat_name.obj();
                 pl.add_msg_if_player( m_info, _( "%s (repaired using %s)" ), mat.name(),
-                                      item::nname( mat.repaired_with(), 2 ) );
+                                      mat.repair_display_name() );
             }
         }
 
@@ -3493,8 +3490,7 @@ bool repair_item_actor::can_repair_target( Character &pl, const item &fix, bool 
     }
 
     if( any_of( materials.begin(), materials.end(), [&fix]( const material_id & mat ) {
-    return mat.obj()
-               .repaired_with() == fix.typeId();
+    return mat.obj().repaired_with().count( fix.typeId() ) > 0;
     } ) ) {
         if( print_msg ) {
             pl.add_msg_if_player( m_info, _( "This can be used to repair other items, not itself." ) );
