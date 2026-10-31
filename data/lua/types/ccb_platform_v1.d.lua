@@ -4551,7 +4551,8 @@ function DamageTypeDefinition:on_damage(handler_id) end
 ---@field id string Stable material id.
 ---@field name? string|LocalizedText Display name; defaults to id. Plural text is rejected.
 ---@field salvaged_into? string Item id produced by salvage.
----@field repaired_with? string Repair item id.
+---@field repaired_with? string|string[] One repair item id or a dense array of repair item ids; repair accepts any one of them.
+---@field repaired_with_name? string|LocalizedText Display name that overrides the automatic enumeration of the repaired_with items.
 ---@field bash_damage_verb? string|LocalizedText Bash damage verb; plural text is rejected.
 ---@field cut_damage_verb? string|LocalizedText Cut damage verb; plural text is rejected.
 ---@field chip_resistance? integer Non-negative native resistance.

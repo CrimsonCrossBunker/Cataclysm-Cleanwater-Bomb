@@ -480,7 +480,8 @@ struct material_definition_data {
     std::string id;
     authored_text name;
     std::string salvaged_into;
-    std::string repaired_with;
+    std::vector<std::string> repaired_with;
+    authored_text repaired_with_name;
     authored_text bash_damage_verb = { "damages", std::nullopt };
     authored_text cut_damage_verb = { "damages", std::nullopt };
     std::vector<authored_text> damage_adjectives = {
@@ -2572,7 +2573,18 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         definition->name = read_text_option( options, "name",
         { definition->id, std::nullopt }, "material name" );
         definition->salvaged_into = options.get_or( "salvaged_into", std::string() );
-        definition->repaired_with = options.get_or( "repaired_with", std::string() );
+        if( const sol::object rw = options["repaired_with"] ) {
+            if( rw.is<sol::table>() ) {
+                const std::size_t count = require_dense_array( rw.as<sol::table>(), "repaired_with", 1, 128 );
+                for( std::size_t index = 1; index <= count; ++index ) {
+                    definition->repaired_with.push_back( rw.as<sol::table>().raw_get<std::string>( index ) );
+                }
+            } else {
+                definition->repaired_with.push_back( rw.as<std::string>() );
+            }
+        }
+        definition->repaired_with_name = read_text_option( options, "repaired_with_name", {},
+                                         "material repair display name" );
         definition->bash_damage_verb = read_text_option( options, "bash_damage_verb",
                                        definition->bash_damage_verb,
                                        "material bash damage verb" );
@@ -3548,9 +3560,15 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 return id.empty() || declared_item_ids.count( id ) != 0 ||
                        item::type_is_defined( itype_id( id ) );
             };
-            if( !known_item( definition.salvaged_into ) || !known_item( definition.repaired_with ) ) {
+            if( !known_item( definition.salvaged_into ) ) {
                 throw std::runtime_error( "material '" + definition.id +
-                                          "' references an unknown repair or salvage item" );
+                                          "' references an unknown salvage item" );
+            }
+            for( const std::string &rep : definition.repaired_with ) {
+                if( !known_item( rep ) ) {
+                    throw std::runtime_error( "material '" + definition.id +
+                                              "' references an unknown repair item '" + rep + "'" );
+                }
             }
             for( const auto &[product, efficiency] : definition.burn_products ) {
                 if( !known_item( product ) || !finite_native_float( efficiency ) ) {
@@ -4804,8 +4822,13 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     if( !source.salvaged_into.empty() ) {
                         native._salvaged_into = itype_id( source.salvaged_into );
                     }
-                    native._repaired_with = source.repaired_with.empty() ? itype_id::NULL_ID() :
-                                            itype_id( source.repaired_with );
+                    native._repaired_with = { itype_id::NULL_ID() };
+                    for( const std::string &rep : source.repaired_with ) {
+                        native._repaired_with.insert( itype_id( rep ) );
+                    }
+                    if( !source.repaired_with_name.empty() ) {
+                        native._repaired_with_name = source.repaired_with_name.native();
+                    }
                     native._chip_resist = static_cast<int>( source.chip_resistance );
                     native._density = static_cast<float>( source.density );
                     native._breathability = static_cast<breathability_rating>( source.breathability );
@@ -6329,7 +6352,10 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, v.id );
                 hash_part( state, v.name );
                 hash_part( state, v.salvaged_into );
-                hash_part( state, v.repaired_with );
+                for( const std::string &rep : v.repaired_with ) {
+                    hash_part( state, rep );
+                }
+                hash_part( state, v.repaired_with_name );
                 hash_part( state, v.bash_damage_verb );
                 hash_part( state, v.cut_damage_verb );
                 hash_part( state, std::to_string( v.chip_resistance ) );
