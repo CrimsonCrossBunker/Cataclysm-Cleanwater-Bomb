@@ -141,6 +141,33 @@ def inventory_metadata_only_change(
                 if not isinstance(evidence, dict):
                     return False
                 counters.append((evidence, "occurrences"))
+                if "documentation" not in entry:
+                    continue
+                documentation = entry["documentation"]
+                if not isinstance(documentation, dict):
+                    return False
+                references = documentation.get("evidence", [])
+                if not isinstance(references, list):
+                    return False
+                for reference in references:
+                    if not isinstance(reference, dict):
+                        return False
+                    if set(reference) != {"path", "line"}:
+                        return False
+                    reference_path = reference["path"]
+                    if not isinstance(reference_path, str) or not re.fullmatch(
+                        r"doc/JSON/(?:[\w.-]+/)*[\w.-]+\.md", reference_path
+                    ):
+                        return False
+                    if any(
+                        part in {".", ".."}
+                        for part in reference_path.split("/")
+                    ):
+                        return False
+                    line = reference["line"]
+                    if type(line) is not int or line < 1:
+                        return False
+                    reference.update(path="doc/JSON/reference.md", line=1)
             for container, field in counters:
                 if field not in container:
                     continue

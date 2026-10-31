@@ -457,6 +457,10 @@ struct armor_portion_data {
 
     std::set<sub_bodypart_str_id> sub_coverage;
 
+    bool covers_all = false;
+    body_part_set covers_except;
+    std::set<sub_bodypart_str_id> sub_coverage_except;
+
     // What layer does it cover if any
     std::set<layer_level> layers;
 

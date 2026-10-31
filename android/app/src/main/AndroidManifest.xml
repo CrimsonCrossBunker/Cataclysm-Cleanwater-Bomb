@@ -56,13 +56,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- Keep SDL and the loaded world alive across configuration changes, including
+             changes applied while backgrounded. onConfigurationChanged refreshes the display. -->
         <activity android:name="CataclysmDDA"
                   android:label="@string/app_name"
                   android:theme="@style/GameTheme"
                   android:launchMode="singleInstance"
+                  android:alwaysRetainTaskState="true"
                   android:keepScreenOn="true"
                   android:screenOrientation="userLandscape"
-                  android:configChanges="keyboardHidden|keyboard|orientation|screenSize|navigation"
+                  android:configChanges="layoutDirection|locale|grammaticalGender|fontScale|fontWeightAdjustment|orientation|uiMode|screenLayout|screenSize|smallestScreenSize|density|keyboard|keyboardHidden|navigation"
                   >
         </activity>
     </application>

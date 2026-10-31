@@ -24,6 +24,7 @@
 #include "input_context.h"
 #include "input_enums.h"
 #include "item.h"
+#include "item_location.h"
 #include "map.h"
 #include "memory_fast.h"
 #include "point.h"
@@ -104,6 +105,10 @@ vehicle_part *most_repairable_part( vehicle &veh, Character &who )
 
 bool repair_part( map &here, vehicle &veh, vehicle_part &pt, Character &who )
 {
+    // A queued repair can outlive the damage it was meant to fix.
+    if( !pt.is_broken() && !pt.is_repairable() ) {
+        return false;
+    }
     const vpart_info &vp = pt.info();
 
     const requirement_data reqs = pt.is_broken()
@@ -111,7 +116,7 @@ bool repair_part( map &here, vehicle &veh, vehicle_part &pt, Character &who )
                                   : vp.repair_requirements() * pt.get_base().repairable_levels();
 
     const temp_crafting_inventory &inv = who.crafting_inventory( who.pos_bub(), pickup_range,
-        !who.is_npc() );
+                                         !who.is_npc() );
     temp_crafting_inventory map_inv;
     // allow NPCs to use welding rigs they can't see ( on the other side of a vehicle )
     // as they have the handicap of not being able to use the veh interaction menu
@@ -165,6 +170,13 @@ bool repair_part( map &here, vehicle &veh, vehicle_part &pt, Character &who )
         who.add_msg_if_player( m_good, _( "You replace the %1$s's %2$s. (was %3$s)" ),
                                veh.name, partname, startdurability );
     } else {
+        // Damage faults such as a bent handle contribute to degradation().
+        // Remove them before restoring HP, or every repair leaves the same damage
+        // behind.  Dedicated engine faults and permanent wear are not repaired here.
+        item &part_item = *veh.part_base( veh.index_of_part( &pt ) );
+        while( part_item.has_fault_of_type( "mechanical_damage" ) ) {
+            part_item.remove_single_fault_of_type( "mechanical_damage" );
+        }
         veh.set_hp( pt, pt.info().durability, true );
         who.add_msg_if_player( m_good, _( "You repair the %1$s's %2$s. (was %3$s)" ),
                                veh.name, partname, startdurability );

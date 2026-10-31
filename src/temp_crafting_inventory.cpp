@@ -8,6 +8,7 @@
 #include <optional>
 #include <set>
 #include <utility>
+#include <vector>
 
 #include "calendar.h"
 #include "character.h"
@@ -35,11 +36,78 @@
 
 class vehicle;
 
+static const flag_id json_flag_IS_UPS( "IS_UPS" );
 static const flag_id json_flag_PSEUDO( "PSEUDO" );
+
+static const itype_id itype_UPS( "UPS" );
 
 static const itype_id itype_brick_oven_pseudo( "brick_oven_pseudo" );
 static const itype_id itype_butchery_tree_pseudo( "butchery_tree_pseudo" );
 static const itype_id itype_fire( "fire" );
+
+thread_local scoped_crafting_inventory_cache *scoped_crafting_inventory_cache::active = nullptr;
+
+scoped_crafting_inventory_cache::scoped_crafting_inventory_cache(
+    const temp_crafting_inventory &source ) : source( source ), previous( active )
+{
+    active = this;
+}
+
+scoped_crafting_inventory_cache::~scoped_crafting_inventory_cache()
+{
+    active = previous;
+}
+
+void temp_crafting_inventory::invalidate_query_cache() const
+{
+    for( auto *scope = scoped_crafting_inventory_cache::active; scope; scope = scope->previous ) {
+        if( &scope->source == this ) {
+            scope->amounts.reset();
+            scope->charges.reset();
+        }
+    }
+}
+
+const std::vector<item *> *temp_crafting_inventory::cached_items( const itype_id &id,
+        bool charges ) const
+{
+    for( auto *scope = scoped_crafting_inventory_cache::active; scope; scope = scope->previous ) {
+        if( &scope->source != this ) {
+            continue;
+        }
+        std::optional<scoped_crafting_inventory_cache::item_index> &index =
+            charges ? scope->charges : scope->amounts;
+        if( !index ) {
+            index.emplace();
+            visit_items( [&]( item * node, item * ) {
+                ( *index )[node->typeId()].push_back( node );
+                if( charges && node->typeId() != itype_UPS && node->has_flag( json_flag_IS_UPS ) ) {
+                    ( *index )[itype_UPS].push_back( node );
+                }
+                // Match scan_tool_charges: do not count ammo underneath a non-container tool.
+                return !charges || node->is_container() ? VisitResponse::NEXT : VisitResponse::SKIP;
+            } );
+        }
+        const auto found = index->find( id );
+        static const std::vector<item *> empty;
+        return found == index->end() ? &empty : &found->second;
+    }
+    return nullptr;
+}
+
+void temp_crafting_inventory::visit_type( const itype_id &id,
+        const std::function<VisitResponse( item *, item * )> &func ) const
+{
+    if( const std::vector<item *> *matches = cached_items( id ) ) {
+        for( item *node : *matches ) {
+            if( func( node, nullptr ) == VisitResponse::ABORT ) {
+                break;
+            }
+        }
+    } else {
+        visit_items( func );
+    }
+}
 
 temp_crafting_inventory::temp_crafting_inventory( const temp_crafting_inventory &v )
 {
@@ -73,6 +141,7 @@ size_t temp_crafting_inventory::size() const
 
 void temp_crafting_inventory::clear()
 {
+    invalidate_query_cache();
     items.clear();
     items_loc.clear();
     item_copies.clear();
@@ -83,16 +152,19 @@ void temp_crafting_inventory::clear()
 
 void temp_crafting_inventory::add_item_ref( item &item )
 {
+    invalidate_query_cache();
     items.insert( &item );
 }
 
 void temp_crafting_inventory::add_item_loc( const item_location &loc )
 {
+    invalidate_query_cache();
     items_loc.insert( loc );
 }
 
 item &temp_crafting_inventory::add_item_copy( const item &item )
 {
+    invalidate_query_cache();
     const auto iter = temp_owned_items.insert( item );
     item_copies.insert( &( *iter ) );
     return *iter;
@@ -180,7 +252,7 @@ void temp_crafting_inventory::add_all_ref( const vehicle_cursor &cur )
 int temp_crafting_inventory::count_item( const itype_id &item_type ) const
 {
     int num = 0;
-    visit_items(
+    visit_type( item_type,
     [&]( item * node, item * ) {
         if( node->typeId() == item_type ) {
             num += node->count();
@@ -216,7 +288,7 @@ void temp_crafting_inventory::form_from_map( map *here, const tripoint_bub_ms &o
     // If we need a clear path we care about the reachability of points
     if( clear_path ) {
         const std::vector<tripoint_bub_ms> &reachable_pts = here->reachable_item_points( origin, range, 1,
-            100 );
+                100 );
         form_from_map( *here, reachable_pts, pl );
     } else {
         std::vector<tripoint_bub_ms> reachable_pts;
@@ -387,7 +459,7 @@ bool temp_crafting_inventory::must_use_hallu_poison( const itype_id &id, int to_
 {
     const int total = count_item( id );
     int bad = 0;
-    visit_items(
+    visit_type( id,
     [&]( item * node, item * ) {
         const item &it = *node;
         if( it.typeId() == id && ( it.has_flag( flag_HIDDEN_POISON ) ||
@@ -400,7 +472,7 @@ bool temp_crafting_inventory::must_use_hallu_poison( const itype_id &id, int to_
         }
         return VisitResponse::NEXT;
     }
-    );
+              );
     return total - bad < to_use;
 }
 

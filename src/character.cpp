@@ -5078,23 +5078,29 @@ int Character::get_shout_volume() const
 {
     int base = 10;
     int shout_multiplier = 2;
+    int shout_multiplier_latter = 1;
+    int str = get_str();
 
     base = enchantment_cache->modify_value( enchant_vals::mod::SHOUT_NOISE, base );
     shout_multiplier = enchantment_cache->modify_value( enchant_vals::mod::SHOUT_NOISE_STR_MULT,
                        shout_multiplier );
+    shout_multiplier_latter = enchantment_cache->modify_value( enchant_vals::mod::SHOUT_NOISE_STR_MULT,
+                              shout_multiplier_latter );
 
     // You can't shout without your face
     if( has_trait( trait_PROF_FOODP ) && !( is_wearing( itype_foodperson_mask ) ||
                                             is_wearing( itype_foodperson_mask_on ) ) ) {
         base = 0;
         shout_multiplier = 0;
+        shout_multiplier_latter = 0;
     }
 
     // Masks and such dampen the sound
     // Balanced around whisper for wearing bondage mask
     // and noise ~= 10 (door smashing) for wearing dust mask for character with strength = 8
     /** @EFFECT_STR increases shouting volume */
-    int noise = ( base + get_str() * shout_multiplier ) * get_limb_score( limb_score_breathing );
+    int noise = ( base + str > 8 ? 8 * shout_multiplier + ( str - 8 ) * shout_multiplier_latter : str *
+                  shout_multiplier ) * get_limb_score( limb_score_breathing );
 
     // Minimum noise volume possible after all reductions.
     // Volume 1 can't be heard even by player
