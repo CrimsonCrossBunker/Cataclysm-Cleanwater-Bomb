@@ -2584,7 +2584,7 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
             }
         }
         definition->repaired_with_name = read_text_option( options, "repaired_with_name", {},
-                                        "material repair display name" );
+                                         "material repair display name" );
         definition->bash_damage_verb = read_text_option( options, "bash_damage_verb",
                                        definition->bash_damage_verb,
                                        "material bash damage verb" );
