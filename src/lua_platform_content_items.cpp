@@ -4822,7 +4822,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     if( !source.salvaged_into.empty() ) {
                         native._salvaged_into = itype_id( source.salvaged_into );
                     }
-                    native._repaired_with = { itype_id( "null" ) };
+                    native._repaired_with = { itype_id::NULL_ID() };
                     for( const std::string &rep : source.repaired_with ) {
                         native._repaired_with.insert( itype_id( rep ) );
                     }
