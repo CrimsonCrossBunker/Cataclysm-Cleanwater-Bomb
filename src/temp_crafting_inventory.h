@@ -2,12 +2,14 @@
 #ifndef CATA_SRC_TEMP_CRAFTING_INVENTORY_H
 #define CATA_SRC_TEMP_CRAFTING_INVENTORY_H
 
+#include <cata_utility.h>
 // IWYU pragma: no_include <memory>  // IWYU being silly
 #include <climits>
 #include <cstddef>
 #include <functional>
 #include <list>
 #include <map>
+#include <optional>
 #include <unordered_set>
 #include <vector>
 
@@ -68,6 +70,12 @@ class temp_crafting_inventory : public read_only_visitable
         VisitResponse visit_items( const std::function<VisitResponse( item *, item * )> &func ) const
         override;
 
+        int amount_of( const itype_id &what, bool pseudo = true, int limit = INT_MAX,
+                       const std::function<bool( const item & )> &filter = return_true<item> ) const override;
+        int charges_of( const itype_id &what, int limit = INT_MAX,
+                        const std::function<bool( const item & )> &filter = return_true<item>,
+                        const std::function<void( int )> &visitor = nullptr, bool in_tools = false ) const override;
+
         // these functions are identical to inventory
         int count_item( const itype_id &item_type ) const;
 
@@ -91,6 +99,12 @@ class temp_crafting_inventory : public read_only_visitable
         void update_liq_container_count( const itype_id &id, int count );
         void replace_liq_container_count( const std::map<itype_id, int> &newmap, bool use_max = false );
     private:
+        friend class scoped_crafting_inventory_cache;
+        const std::vector<item *> *cached_items( const itype_id &id, bool charges = false ) const;
+        void invalidate_query_cache() const;
+        void visit_type( const itype_id &id,
+                         const std::function<VisitResponse( item *, item * )> &func ) const;
+
         // list of all items in this container that don't know their parent
         cata::colony<item *> items;
         // list of all items in this crafting inventory that know their parent
@@ -104,6 +118,27 @@ class temp_crafting_inventory : public read_only_visitable
         std::map<itype_id, int> max_empty_liq_cont;
 
         std::map<itype_id, item *> pseudo_items;
+};
+
+/** Candidate index for one paused, read-only crafting menu.  Borrowed items and
+ * their contents must not change during the scope.  Query results, filters and
+ * external power are deliberately evaluated live.  Copies do not inherit it.
+ */
+class scoped_crafting_inventory_cache
+{
+    public:
+        explicit scoped_crafting_inventory_cache( const temp_crafting_inventory &source );
+        ~scoped_crafting_inventory_cache();
+        scoped_crafting_inventory_cache( const scoped_crafting_inventory_cache & ) = delete;
+        scoped_crafting_inventory_cache &operator=( const scoped_crafting_inventory_cache & ) = delete;
+    private:
+        friend class temp_crafting_inventory;
+        using item_index = std::map<itype_id, std::vector<item *>>;
+        static thread_local scoped_crafting_inventory_cache *active;
+        const temp_crafting_inventory &source;
+        scoped_crafting_inventory_cache *previous;
+        std::optional<item_index> amounts;
+        std::optional<item_index> charges;
 };
 
 #endif // CATA_SRC_TEMP_CRAFTING_INVENTORY_H

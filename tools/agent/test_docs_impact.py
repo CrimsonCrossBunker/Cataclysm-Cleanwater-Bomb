@@ -261,7 +261,9 @@ class InventoryMetadataImpactTest(unittest.TestCase):
             "occurrences": 2,
             "examples": [{"path": "data/json/example.json"}],
         }
-        for field in ("tracked_json_files", "top_level_objects", "occurrences"):
+        for field in (
+            "tracked_json_files", "top_level_objects", "occurrences"
+        ):
             after = copy.deepcopy(self.before)
             target = (
                 after["entries"][0]["instance_evidence"]
@@ -271,7 +273,7 @@ class InventoryMetadataImpactTest(unittest.TestCase):
             with self.subTest(field=field):
                 self.assertTrue(self.compare(after))
 
-    def test_counter_refresh_does_not_hide_contract_or_evidence_changes(self) -> None:
+    def test_counter_refresh_preserves_contract_checks(self) -> None:
         self.before["summary"]["top_level_objects"] = 40
         self.before["entries"][0]["instance_evidence"] = {
             "occurrences": 2,
@@ -286,6 +288,41 @@ class InventoryMetadataImpactTest(unittest.TestCase):
             after["entries"][0][field] = value
             with self.subTest(field=field):
                 self.assertFalse(self.compare(after))
+
+    def test_documentation_reference_moves_are_exempt(self) -> None:
+        self.before["entries"][0]["documentation"] = {
+            "status": "lexically_mentioned",
+            "evidence": [{"path": "doc/JSON/JSON_INFO.md", "line": 505}],
+            "confidence": "lexical_only",
+        }
+        after = copy.deepcopy(self.before)
+        after["entries"][0]["documentation"]["evidence"][0] = {
+            "path": "doc/JSON/ITEM.md", "line": 475,
+        }
+        self.assertTrue(self.compare(after))
+        after["entries"][0]["documentation"]["status"] = "none"
+        self.assertFalse(self.compare(after))
+
+    def test_reference_schema_changes_are_not_exempt(self) -> None:
+        self.before["entries"][0]["documentation"] = {
+            "evidence": [{"path": "doc/JSON/ITEM.md", "line": 95}],
+        }
+        for reference in (
+            {"path": "src/item.cpp", "line": 95},
+            {"path": "doc/JSON/../ITEM.md", "line": 95},
+            {"path": "doc/JSON/ITEM.md", "line": 0},
+            {"path": "doc/JSON/ITEM.md", "line": True},
+            {"path": "doc/JSON/ITEM.md", "line": "95"},
+            {"path": "doc/JSON/ITEM.md"},
+            {"path": "doc/JSON/ITEM.md", "line": 95, "extra": True},
+        ):
+            after = copy.deepcopy(self.before)
+            after["entries"][0]["documentation"]["evidence"] = [reference]
+            with self.subTest(reference=reference):
+                self.assertFalse(self.compare(after))
+        after = copy.deepcopy(self.before)
+        after["entries"][0]["documentation"]["evidence"] = []
+        self.assertFalse(self.compare(after))
 
     def test_counter_schema_changes_are_not_exempt(self) -> None:
         self.before["summary"]["top_level_objects"] = 40

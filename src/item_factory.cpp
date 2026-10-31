@@ -1001,6 +1001,34 @@ void Item_factory::finalize_post( itype &obj )
 
 void Item_factory::finalize_post_armor( itype &obj )
 {
+    // Expand covers_all portions into explicit coverage before consolidation.
+    for( armor_portion_data &data : obj.armor->sub_data ) {
+        if( data.covers_all ) {
+            data.covers = body_part_set();
+            for( const body_part_type &bp : body_part_type::get_all() ) {
+                if( !data.covers_except.test( bp.id ) ) {
+                    data.covers->set( bp.id );
+                }
+            }
+            for( const bodypart_str_id &bp : data.covers.value() ) {
+                for( const sub_bodypart_str_id &sbp : bp->sub_parts ) {
+                    if( !data.sub_coverage_except.count( sbp ) ) {
+                        data.sub_coverage.insert( sbp );
+                    }
+                }
+            }
+        } else if( !data.sub_coverage_except.empty() && data.covers.has_value() ) {
+            // Widens sub coverage to covered body parts minus exclusions.
+            for( const bodypart_str_id &bp : data.covers.value() ) {
+                for( const sub_bodypart_str_id &sbp : bp->sub_parts ) {
+                    if( !data.sub_coverage_except.count( sbp ) ) {
+                        data.sub_coverage.insert( sbp );
+                    }
+                }
+            }
+        }
+    }
+
     // Collect all explicitly-covered BPs across all armor portions
     body_part_set all_explicit_covers;
     for( const armor_portion_data &data : obj.armor->sub_data ) {
@@ -1037,6 +1065,15 @@ void Item_factory::finalize_post_armor( itype &obj )
             }
         }
         data.covers->unify_set( similar_bp );
+    }
+
+    // Re-apply covers_except blacklist after similar-body-part expansion.
+    for( armor_portion_data &data : obj.armor->sub_data ) {
+        if( data.covers_all && data.covers.has_value() ) {
+            for( const bodypart_str_id &bp : data.covers_except ) {
+                data.covers->reset( bp );
+            }
+        }
     }
 
     // Add sublimb coverage when missing explicit definition
@@ -2587,6 +2624,9 @@ void Item_factory::check_definitions() const
             if( std::find( type->armor->all_layers.begin(), type->armor->all_layers.end(),
                            layer_level::BELTED ) == type->armor->all_layers.end() ) {
                 for( const armor_portion_data &portion : type->armor->sub_data ) {
+                    if( portion.covers_all ) {
+                        continue;
+                    }
                     for( const sub_bodypart_str_id &sbp : portion.sub_coverage ) {
                         if( sbp->secondary ) {
                             msg += string_format( "Secondary hanging locations should only be used on the BELTED layer: %s\n",
@@ -3591,9 +3631,24 @@ void part_material::deserialize( const JsonObject &jo )
 
 void armor_portion_data::deserialize( const JsonObject &jo )
 {
-    if( !assign_coverage_from_json( jo, "covers", covers ) ) {
-        jo.throw_error( string_format( "need to specify covered limbs for each body part" ) );
+    optional( jo, false, "covers_all", covers_all, false );
+    if( covers_all ) {
+        if( jo.has_member( "covers" ) ) {
+            jo.throw_error( "covers_all cannot be combined with covers" );
+        }
+        if( jo.has_member( "specifically_covers" ) ) {
+            jo.throw_error( "covers_all cannot be combined with specifically_covers" );
+        }
+        assign_coverage_from_json( jo, "covers_except", covers_except );
+    } else {
+        if( jo.has_member( "covers_except" ) ) {
+            jo.throw_error( "covers_except requires covers_all to be true" );
+        }
+        if( !assign_coverage_from_json( jo, "covers", covers ) ) {
+            jo.throw_error( string_format( "need to specify covered limbs for each body part" ) );
+        }
     }
+    optional( jo, false, "specifically_covers_except", sub_coverage_except );
     optional( jo, false, "coverage", coverage, 0 );
 
     // load a breathability override
