@@ -1067,19 +1067,19 @@ static void eff_fun_sleep( Character &u, effect &it )
         it.mod_intensity( 1 );
     }
 
-    int current_fatigue = u.get_fatigue();
+    int current_sleepiness = u.get_sleepiness();
     const bool anesthetized = u.has_effect( effect_narcosis );
 
-    if( anesthetized && u.get_fatigue() <= 25 ) {
+    if( anesthetized && u.get_sleepiness() <= 25 ) {
         u.set_sleepiness( 25 ); //Prevent us from waking up naturally while under anesthesia
     }
 
-    if( u.get_fatigue() < -25 && it.get_duration() > 3_minutes &&
+    if( u.get_sleepiness() < -25 && it.get_duration() > 3_minutes &&
         !anesthetized ) {
         it.set_duration( 1_turns * dice( 3, 10 ) );
     }
 
-    if( u.get_fatigue() <= 0 && u.get_fatigue() > -20 && !anesthetized ) {
+    if( u.get_sleepiness() <= 0 && u.get_sleepiness() > -20 && !anesthetized ) {
         u.mod_sleepiness( -25 );
         if( u.get_sleep_deprivation() < SLEEP_DEPRIVATION_HARMLESS ) {
             u.add_msg_if_player( m_good, _( "You feel well rested." ) );
@@ -1174,7 +1174,7 @@ static void eff_fun_sleep( Character &u, effect &it )
                             u.mod_stored_kcal( -87 );
                             u.mod_thirst( 10 );
                             u.mod_sleepiness( 5 );
-                            current_fatigue += 5;
+                            current_sleepiness += 5;
                         }
                     }
                 }
@@ -1182,15 +1182,15 @@ static void eff_fun_sleep( Character &u, effect &it )
         }
 
         // Slightly wonky once_every() time so this isn't obviously every ten minutes.
-        if( calendar::once_every( 465_seconds ) && current_fatigue < fatigue_levels::MASSIVE_SLEEPINESS &&
+        if( calendar::once_every( 465_seconds ) && current_sleepiness < sleepiness_levels::MASSIVE_SLEEPINESS &&
             !u.is_blind() && !u.has_active_mutation( trait_CHLOROMORPH ) &&
             !u.has_bionic( bio_sleep_shutdown ) ) {
             // People who can see while sleeping are acclimated to the light.
             if( !u.has_flag( json_flag_SEESLEEP ) ) {
                 if( u.has_trait( trait_HEAVYSLEEPER2 ) && !u.has_trait( trait_HIBERNATE ) ) {
                     // So you can too sleep through noon
-                    if( ( tirednessVal * 1.25 ) < here.ambient_light_at( u.pos_bub() ) && ( current_fatigue < 10 ||
-                            one_in( current_fatigue / 2 ) ) ) {
+                    if( ( tirednessVal * 1.25 ) < here.ambient_light_at( u.pos_bub() ) && ( current_sleepiness < 10 ||
+                            one_in( current_sleepiness / 2 ) ) ) {
                         u.add_msg_if_player( _( "It's too bright to sleep." ) );
                         // Set ourselves up for removal
                         it.set_duration( 0_turns );
@@ -1198,15 +1198,15 @@ static void eff_fun_sleep( Character &u, effect &it )
                     }
                     // Ursine hibernators would likely do so indoors.  Plants, though, might be in the sun.
                 } else if( u.has_trait( trait_HIBERNATE ) ) {
-                    if( ( tirednessVal * 5 ) < here.ambient_light_at( u.pos_bub() ) && ( current_fatigue < 10 ||
-                            one_in( current_fatigue / 2 ) ) ) {
+                    if( ( tirednessVal * 5 ) < here.ambient_light_at( u.pos_bub() ) && ( current_sleepiness < 10 ||
+                            one_in( current_sleepiness / 2 ) ) ) {
                         u.add_msg_if_player( _( "It's too bright to sleep." ) );
                         // Set ourselves up for removal
                         it.set_duration( 0_turns );
                         woke_up = true;
                     }
-                } else if( tirednessVal < here.ambient_light_at( u.pos_bub() ) && ( current_fatigue < 10 ||
-                        one_in( current_fatigue / 2 ) ) ) {
+                } else if( tirednessVal < here.ambient_light_at( u.pos_bub() ) && ( current_sleepiness < 10 ||
+                        one_in( current_sleepiness / 2 ) ) ) {
                     u.add_msg_if_player( _( "It's too bright to sleep." ) );
                     // Set ourselves up for removal
                     it.set_duration( 0_turns );
@@ -1229,7 +1229,7 @@ static void eff_fun_sleep( Character &u, effect &it )
             // Cold or heat may wake you up.
             // Player will sleep through cold or heat if sleepy enough
             const units::temperature_delta sleepiness_modifier =
-                units::from_celsius_delta( current_fatigue / 1000.0 );
+                units::from_celsius_delta( current_sleepiness / 1000.0 );
             for( const bodypart_id &bp : u.get_all_body_parts() ) {
                 const units::temperature curr_temp = u.get_part_temp_cur( bp );
                 if( curr_temp < BODYTEMP_VERY_COLD - sleepiness_modifier ) {
@@ -1259,7 +1259,7 @@ static void eff_fun_sleep( Character &u, effect &it )
                 }
             }
             if( !woke_up ) {
-                if( u.get_thirst() > 240 && current_fatigue < fatigue_levels::MASSIVE_SLEEPINESS &&
+                if( u.get_thirst() > 240 && current_sleepiness < sleepiness_levels::MASSIVE_SLEEPINESS &&
                     u.get_effect_int( effect_hypovolemia ) < 3 ) {
                     u.add_msg_if_player( m_bad, _( "You can't sleep, you are in desperate need of water!" ) );
                     it.set_duration( 0_turns );
