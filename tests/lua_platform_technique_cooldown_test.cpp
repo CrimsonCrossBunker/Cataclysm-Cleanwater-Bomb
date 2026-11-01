@@ -11,6 +11,7 @@
 #include "cata_scope_helpers.h"
 #include "character_id.h"
 #include "character_martial_arts.h"
+#include "debug.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
 #include "lua_platform_runtime.h"
@@ -35,6 +36,7 @@ TEST_CASE( "lua_platform_technique_cooldown_validates_results_and_preserves_nati
     owner->world_is_ready = true;
     const on_out_of_scope cleanup( [&previous]() {
         platform::set_active_runtimes( previous );
+        debug_reset_error_observed();
     } );
     avatar character;
     character.normalize();
@@ -65,6 +67,7 @@ TEST_CASE( "lua_platform_technique_cooldown_validates_results_and_preserves_nati
         const std::vector<time_duration> expected = { 4_seconds, 1_seconds, 0_seconds, 1_days };
         CHECK( technique.activation_cooldown( character ) ==
                ( index < expected.size() ? expected[index] : 8_seconds ) );
+        CHECK( owner->callback_depth == 0 );
     }
     owner->world_is_ready = false;
     CHECK( technique.activation_cooldown( character ) == 8_seconds );
