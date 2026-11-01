@@ -209,7 +209,7 @@ namespace cata::lua_platform
 {
 class content_transaction;
 class character_content_transaction;
-}
+} // namespace cata::lua_platform
 
 struct widget_clause {
     private:

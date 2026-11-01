@@ -21,6 +21,8 @@
 #include "pimpl.h"
 #include "type_id.h"
 
+static const matec_id test_active_cooldown_strike( "test_active_cooldown_strike" );
+
 TEST_CASE( "lua_platform_technique_cooldown_validates_results_and_preserves_native_fallback",
            "[lua][platform][active_technique][cooldown]" )
 {
@@ -42,7 +44,7 @@ TEST_CASE( "lua_platform_technique_cooldown_validates_results_and_preserves_nati
     character.normalize();
     character.setID( character_id( 9012 ), true );
     ma_technique technique;
-    technique.id = matec_id( "test_active_cooldown_strike" );
+    technique.id = test_active_cooldown_strike;
     technique.cooldown = 8_seconds;
     technique.lua_platform_mod = "cooldown-test";
     technique.lua_platform_cooldown_handler = "unavailable";
@@ -90,7 +92,7 @@ TEST_CASE( "lua_platform_technique_state_is_a_detached_read_only_cooldown_snapsh
     avatar character;
     character.normalize();
     character.setID( character_id( 9014 ), true );
-    const matec_id technique( "test_active_cooldown_strike" );
+    const matec_id &technique = test_active_cooldown_strike;
     character.martial_arts_data->start_technique_cooldown( technique, 8_seconds );
     const platform::game_handle handle = platform::game_handle::from_creature(
             character, { "avatar", character.getID().get_value(), 0, 0, 0, {} },

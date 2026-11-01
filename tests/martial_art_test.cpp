@@ -68,6 +68,7 @@ static const matec_id tec_boxing_cross( "tec_boxing_cross" );
 static const matec_id tec_break( "tec_break" );
 static const matec_id tec_feint( "tec_feint" );
 static const matec_id tec_sojutsu_jab( "tec_sojutsu_jab" );
+static const matec_id test_active_cooldown_strike( "test_active_cooldown_strike" );
 static const matec_id test_active_strike( "test_active_strike" );
 static const matec_id test_tech_condition_knockback( "test_tech_condition_knockback" );
 static const matec_id test_tech_condition_stun( "test_tech_condition_stun" );
@@ -77,6 +78,7 @@ static const matec_id test_vector_tech_1( "test_vector_tech_1" );
 static const matec_id test_vector_tech_2( "test_vector_tech_2" );
 static const matype_id style_boxing( "style_boxing" );
 static const matype_id style_none( "style_none" );
+static const matype_id test_style_cooldown( "test_style_cooldown" );
 static const matype_id test_style_ma1( "test_style_ma1" );
 
 static const mtype_id mon_zombie( "mon_zombie" );
@@ -97,7 +99,7 @@ TEST_CASE( "active_technique_cooldowns_follow_calendar_and_survive_style_changes
     restore_on_out_of_scope restore_time( calendar::turn );
     calendar::turn = calendar::turn_zero + 1_hours;
     character_martial_arts arts;
-    const matec_id technique( "test_active_cooldown_strike" );
+    const matec_id &technique = test_active_cooldown_strike;
     REQUIRE( technique.is_valid() );
     CHECK( arts.technique_cooldown_remaining( technique ) == 0_turns );
     arts.start_technique_cooldown( technique, 8_seconds );
@@ -133,8 +135,8 @@ TEST_CASE( "active_technique_cooldowns_commit_on_misses_but_not_rejected_attacks
     avatar &dude = get_avatar();
     dude.setpos( get_map(), dude_pos );
     dude.set_wielded_item( item( itype_test_weapon1 ) );
-    const matype_id style( "test_style_cooldown" );
-    const matec_id technique( "test_active_cooldown_strike" );
+    const matype_id &style = test_style_cooldown;
+    const matec_id &technique = test_active_cooldown_strike;
     dude.martial_arts_data->add_martialart( style );
     dude.martial_arts_data->set_style( style );
     monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
@@ -172,7 +174,7 @@ TEST_CASE( "active_technique_cooldown_definitions_validate_durations",
     const auto load = []( const std::string & duration ) {
         ma_technique technique;
         technique.load( json_loader::from_string(
-                            "{\"name\":\"Cooldown test\",\"cooldown\":\"" + duration + "\"}" ).get_object(), "test" );
+                            R"({"name":"Cooldown test","cooldown":")" + duration + R"("})" ).get_object(), "test" );
         return technique.cooldown;
     };
     CHECK( load( "0 s" ) == 0_turns );

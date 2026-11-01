@@ -60,26 +60,6 @@
     #include "cursesport.h"
 #endif
 
-TEST_CASE( "active_technique_cooldown_widget_reads_native_remaining_time",
-           "[widget][active_technique][cooldown]" )
-{
-    restore_on_out_of_scope restore_time( calendar::turn );
-    clear_avatar();
-    avatar &player = get_avatar();
-    const matype_id style( "test_style_cooldown" );
-    const matec_id technique( "test_active_cooldown_strike" );
-    player.martial_arts_data->add_martialart( style );
-    player.martial_arts_data->set_style( style );
-    player.set_wielded_item( item( itype_id( "test_weapon1" ) ) );
-    widget cooldowns = widget_id( "technique_cooldowns" ).obj();
-    CHECK( player.active_technique_cooldowns_text().empty() );
-    player.martial_arts_data->start_technique_cooldown( technique, 8_seconds );
-    CHECK( cooldowns.layout( player ).find( technique->name.translated() ) != std::string::npos );
-    CHECK( cooldowns.layout( player ).find( to_string( 8_seconds ) ) != std::string::npos );
-    calendar::turn += 8_seconds;
-    CHECK( player.active_technique_cooldowns_text().empty() );
-}
-
 static const efftype_id effect_bandaged( "bandaged" );
 static const efftype_id effect_bite( "bite" );
 static const efftype_id effect_bleed( "bleed" );
@@ -106,7 +86,11 @@ static const itype_id itype_sneakers( "sneakers" );
 static const itype_id itype_swim_fins( "swim_fins" );
 static const itype_id itype_test_hazmat_suit( "test_hazmat_suit" );
 static const itype_id itype_test_socks( "test_socks" );
+static const itype_id itype_test_weapon1( "test_weapon1" );
 static const itype_id itype_test_zentai( "test_zentai" );
+
+static const matec_id test_active_cooldown_strike( "test_active_cooldown_strike" );
+static const matype_id test_style_cooldown( "test_style_cooldown" );
 
 static const morale_type morale_food_good( "morale_food_good" );
 static const morale_type morale_killed_innocent( "morale_killed_innocent" );
@@ -131,6 +115,7 @@ static const weather_type_id weather_snowing( "snowing" );
 static const weather_type_id weather_sunny( "sunny" );
 
 // test widgets defined in data/json/sidebar.json and data/mods/TEST_DATA/widgets.json
+static const widget_id widget_technique_cooldowns( "technique_cooldowns" );
 static const widget_id widget_test_2_column_layout( "test_2_column_layout" );
 static const widget_id widget_test_3_column_layout( "test_3_column_layout" );
 static const widget_id widget_test_4_column_layout( "test_4_column_layout" );
@@ -248,6 +233,25 @@ static std::vector<std::string> scrape_win_at(
     return lines;
 }
 #endif
+
+TEST_CASE( "active_technique_cooldown_widget_reads_native_remaining_time",
+           "[widget][active_technique][cooldown]" )
+{
+    restore_on_out_of_scope restore_time( calendar::turn );
+    clear_avatar();
+    avatar &player = get_avatar();
+    player.martial_arts_data->add_martialart( test_style_cooldown );
+    player.martial_arts_data->set_style( test_style_cooldown );
+    player.set_wielded_item( item( itype_test_weapon1 ) );
+    widget cooldowns = widget_technique_cooldowns.obj();
+    CHECK( player.active_technique_cooldowns_text().empty() );
+    player.martial_arts_data->start_technique_cooldown( test_active_cooldown_strike, 8_seconds );
+    CHECK( cooldowns.layout( player ).find( test_active_cooldown_strike->name.translated() ) !=
+           std::string::npos );
+    CHECK( cooldowns.layout( player ).find( to_string( 8_seconds ) ) != std::string::npos );
+    calendar::turn += 8_seconds;
+    CHECK( player.active_technique_cooldowns_text().empty() );
+}
 
 TEST_CASE( "widget_value_strings", "[widget][value][string]" )
 {
