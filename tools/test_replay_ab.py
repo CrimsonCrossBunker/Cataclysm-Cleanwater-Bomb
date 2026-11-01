@@ -10,6 +10,45 @@ import unittest
 import replay_ab
 
 
+def native_summary(**changes):
+    result = {
+        "schema_version": 1, "status": "complete", "seed": 123,
+        "events_total": 1, "events_remaining": 0, "input_failed": False,
+        "game_started": True, "quit_saved": True, "completed_turn_calls": 2,
+        "turn_start": 100, "turn_end": 101,
+        "initial_position": [1, 2, 0], "final_position": [1, 2, 0],
+        "initial_monsters": 759, "final_monsters": 759,
+        "turn_wall_ns": [1000, 2000], "completion_wall_ns": 500,
+    }
+    return {**result, **changes}
+
+
+class NativeCompletionTest(unittest.TestCase):
+    def test_report_requires_observed_complete_run(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "result.json"
+            replay = {"seed": 123, "recorded_events": 1}
+            path.write_text(json.dumps(native_summary()))
+            self.assertEqual(replay_ab.read_native_completion(path, replay, 2),
+                             native_summary())
+            bad = [
+                {"status": "incomplete"}, {"schema_version": True},
+                {"seed": 124}, {"events_remaining": 1}, {"events_total": 2},
+                {"input_failed": True}, {"game_started": False},
+                {"quit_saved": False}, {"completed_turn_calls": 1},
+                {"turn_wall_ns": [1000]}, {"turn_wall_ns": [-1, 2000]},
+                {"turn_wall_ns": [True, 2000]}, {"completion_wall_ns": -1},
+                {"turn_end": 99}, {"turn_start": 100.0},
+                {"initial_position": [0, 0]}, {"final_position": [0, 0, True]},
+                {"initial_monsters": False}, {"final_monsters": -1},
+            ]
+            for change in bad:
+                with self.subTest(change=change):
+                    path.write_text(json.dumps(native_summary(**change)))
+                    with self.assertRaises(ValueError):
+                        replay_ab.read_native_completion(path, replay, 2)
+
+
 class SaveComparisonTest(unittest.TestCase):
     def test_equal_stat_does_not_hide_different_bytes(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -160,6 +199,40 @@ class ReplayProcessTest(unittest.TestCase):
         )
         self.assertTrue(Path(report["work_directory"]).is_dir())
 
+    def native_executable(self, name, summary):
+        return self.executable(
+            name, "import json\nplayer.write_bytes(b'turn=010')\n"
+            "out = Path(sys.argv[sys.argv.index('--replay-report') + 1])\n"
+            f"out.write_text(json.dumps({summary!r}))",
+        )
+
+    def test_native_completion_is_required_when_requested(self):
+        code, report = self.execute(["--expected-turns", "2"])
+        self.assertEqual(code, 2)
+        self.assertTrue(report["errors"])
+        self.binary = self.native_executable("native", native_summary())
+        code, report = self.execute(["--expected-turns", "2"])
+        self.assertEqual(code, 0)
+        self.assertEqual(
+            report["runs"][0]["native_completion"], native_summary())
+
+    def test_different_native_positions_fail_even_with_equal_save_bytes(self):
+        self.binary = self.native_executable("native", native_summary())
+        candidate = self.native_executable(
+            "candidate", native_summary(final_position=[2, 2, 0]))
+        code, report = self.execute([
+            "--expected-turns", "2", "--candidate-bin", str(candidate),
+        ])
+        self.assertEqual(code, 1)
+        self.assertIn("native differs: final_position", report["differences"])
+
+    def test_incomplete_native_run_cannot_pass_with_matching_saves(self):
+        self.binary = self.native_executable(
+            "native", native_summary(quit_saved=False))
+        code, report = self.execute(["--expected-turns", "2"])
+        self.assertEqual(code, 2)
+        self.assertIn("native quit_saved", report["errors"][0])
+
     def test_successful_exit_without_progress_cannot_pass(self):
         self.binary = self.executable("noop", "pass")
         code, report = self.execute()
@@ -242,7 +315,8 @@ class ReplayProcessTest(unittest.TestCase):
         self.assert_invalid([])
 
     def test_directory_overrides_are_rejected_before_launch(self):
-        for option in ["--userdir", "--configdir", "--world", "--replay-play"]:
+        for option in ["--userdir", "--configdir", "--world", "--replay-play",
+                       "--replay-report"]:
             with self.subTest(option=option):
                 self.assert_invalid(["--", option, "other"])
 

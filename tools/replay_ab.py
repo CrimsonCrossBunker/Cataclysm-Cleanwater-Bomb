@@ -14,7 +14,9 @@ from the executable. For example:
 Exit 0 means matching, changed saves; 1 means differing saves;
 2 means invalid/inconclusive runs. Missing, empty or unchanged saves fail.
 Every unsuccessful run retains its files and logs.
-This checks save bytes, not completed turns, visual parity or performance gain.
+Add --expected-turns N to require the native --replay-report protocol and N
+completed do_turn calls (calendar advancement is reported separately). Without
+it, this only checks save bytes. Neither mode proves visual parity or speedup.
 Process elapsed times include startup and saving and are only diagnostics.
 """
 
@@ -124,6 +126,45 @@ def replay_metadata(path: Path) -> dict:
     }
 
 
+def read_native_completion(path: Path, replay: dict, turns: int) -> dict:
+    """Require explicit completion; an OS exit status alone is insufficient."""
+    if path.stat().st_size > 65536 + 64 * turns:
+        raise ValueError("native completion report is unexpectedly large")
+    result = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(result, dict):
+        raise ValueError("native completion report must be an object")
+    required = {
+        "schema_version": 1, "status": "complete", "seed": replay["seed"],
+        "events_total": replay["recorded_events"], "events_remaining": 0,
+        "input_failed": False, "game_started": True, "quit_saved": True,
+        "completed_turn_calls": turns,
+    }
+    for key, value in required.items():
+        actual = result.get(key)
+        if type(actual) is not type(value) or actual != value:
+            raise ValueError(
+                f"native {key}: expected {value!r}, got {actual!r}")
+    timings = result.get("turn_wall_ns")
+    if (not isinstance(timings, list) or len(timings) != turns or
+            any(type(value) is not int or value < 0 for value in timings)):
+        raise ValueError("invalid native turn timings")
+    for key in ("turn_start", "turn_end", "completion_wall_ns"):
+        if type(result.get(key)) is not int:
+            raise ValueError(f"invalid native {key}")
+    if (result["completion_wall_ns"] < 0 or
+            result["turn_end"] < result["turn_start"]):
+        raise ValueError("invalid native time range")
+    for key in ("initial_monsters", "final_monsters"):
+        if type(result.get(key)) is not int or result[key] < 0:
+            raise ValueError(f"invalid native {key}")
+    for key in ("initial_position", "final_position"):
+        value = result.get(key)
+        if (not isinstance(value, list) or len(value) != 3 or
+                any(type(coordinate) is not int for coordinate in value)):
+            raise ValueError(f"invalid native {key}")
+    return result
+
+
 def run_once(
     binary: Path,
     replay: Path,
@@ -134,6 +175,7 @@ def run_once(
     *,
     timeout: float = 300,
     runtime_dir: Path | None = None,
+    completion_path: Path | None = None,
 ) -> dict:
     """Copy a fixture and run a process, retaining bounded-memory file logs."""
     copy_started = time.perf_counter()
@@ -148,6 +190,8 @@ def run_once(
     ]
     if world:
         cmd += ["--world", world]
+    if completion_path is not None:
+        cmd += ["--replay-report", str(completion_path)]
     cmd += extra_args
     stdout_path = run_userdir.parent / (run_userdir.name + ".stdout.log")
     stderr_path = run_userdir.parent / (run_userdir.name + ".stderr.log")
@@ -196,6 +240,10 @@ def parser() -> argparse.ArgumentParser:
     ap.add_argument("--userdir-template", required=True, type=Path)
     ap.add_argument("--world", default="")
     ap.add_argument(
+        "--expected-turns", type=int,
+        help="require native completion and this many completed do_turn calls",
+    )
+    ap.add_argument(
         "--runtime-dir", type=Path, help="working directory containing assets"
     )
     ap.add_argument(
@@ -221,6 +269,8 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     if not math.isfinite(args.timeout) or args.timeout <= 0:
         ap.error("--timeout must be finite and positive")
+    if args.expected_turns is not None and args.expected_turns < 0:
+        ap.error("--expected-turns must be nonnegative")
     binaries = [args.bin.resolve(), (args.candidate_bin or args.bin).resolve()]
     for binary in binaries:
         if not binary.is_file():
@@ -243,6 +293,7 @@ def main(argv: list[str] | None = None) -> int:
         "--world",
         "--replay-play",
         "--replay-record",
+        "--replay-report",
     }
     if any(arg.split("=", 1)[0] in protected_options for arg in args.extra):
         ap.error(
@@ -290,6 +341,12 @@ def main(argv: list[str] | None = None) -> int:
         "runs": [],
         "errors": [],
     }
+    if args.expected_turns is not None:
+        report["expected_turns"] = args.expected_turns
+        report["validated_scope"] = (
+            "native completion, observed turn calls and matching changed save "
+            "bytes; not visual, full semantic or performance acceptance"
+        )
     exit_code = 2
     try:
         for label, binary in zip(("A", "B"), binaries):
@@ -303,6 +360,8 @@ def main(argv: list[str] | None = None) -> int:
                 args.extra,
                 timeout=args.timeout,
                 runtime_dir=args.runtime_dir,
+                completion_path=(work / f"{label}.completion.json"
+                                 if args.expected_turns is not None else None),
             )
             report["runs"].append({"label": label, **record})
         for run in report["runs"]:
@@ -323,6 +382,12 @@ def main(argv: list[str] | None = None) -> int:
         ):
             report["errors"].append("executable changed during comparison")
         if not report["errors"]:
+            if args.expected_turns is not None:
+                for run in report["runs"]:
+                    run["native_completion"] = read_native_completion(
+                        work / f"{run['label']}.completion.json",
+                        replay_info, args.expected_turns,
+                    )
             saves = [
                 tree_manifest(work / label / "save") for label in ("A", "B")
             ]
@@ -341,6 +406,14 @@ def main(argv: list[str] | None = None) -> int:
                     )
             if not report["errors"]:
                 report["differences"] = diff_manifests(*saves)
+                if args.expected_turns is not None:
+                    a, b = [r["native_completion"] for r in report["runs"]]
+                    for key in ("turn_start", "turn_end", "initial_position",
+                                "final_position", "initial_monsters",
+                                "final_monsters"):
+                        if a[key] != b[key]:
+                            report["differences"].append(
+                                f"native differs: {key}")
                 exit_code = 1 if report["differences"] else 0
                 report["status"] = (
                     "save_mismatch" if exit_code else "save_match"
