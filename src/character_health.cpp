@@ -1581,8 +1581,7 @@ void Character::update_needs( int rate_multiplier )
                         recovered = static_cast<int>( recovered * 0.5f );
                     }
                 }
-                // REDUCE FATIGUE
-                // Fatigue is just sleepiness. It isn't sleep deprivation or sleep hygiene.
+                // REDUCE SLEEPINESS
                 // A full night's sleep should always leave it at or close to 0, because even if
                 // you slept badly, you can't just immediately knock out for 8 more hours when you wake up.
                 float sleepiness_multiplier = 1.0f;
@@ -1592,19 +1591,20 @@ void Character::update_needs( int rate_multiplier )
                 if( comfort >= comfort_data::COMFORT_VERY_COMFORTABLE ) {
                     rest_modifier *= 3;
                     if( one_in( 8 ) ) {
-                        sleepiness_multiplier += 1.0f;
+                        sleepiness_multiplier += 0.75f;
                     }
                 } else if( comfort >= comfort_data::COMFORT_COMFORTABLE ) {
                     rest_modifier *= 2.5;
                     if( one_in( 16 ) ) {
-                        sleepiness_multiplier += 1.0f;
+                        sleepiness_multiplier += 0.75f;
                     }
                 } else if( comfort >= comfort_data::COMFORT_SLIGHTLY_COMFORTABLE ) {
                     rest_modifier *= 2;
                     if( one_in( 32 ) ) {
-                        sleepiness_multiplier += 1.0f;
+                        sleepiness_multiplier += 0.75f;
                     }
                 }
+                sleepiness_multiplier += comfort * 0.05f;
                 int current_sleepiness = get_sleepiness();
                 if( current_sleepiness >= sleepiness_levels::TIRED ) {
                     if( current_sleepiness >= sleepiness_levels::EXHAUSTED ) {
