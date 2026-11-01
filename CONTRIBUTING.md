@@ -64,6 +64,15 @@ human** who:
 真实的 Responsible human，负责理解修改、审查最终差异、确认测试、许可证和
 外部来源，并回答审阅问题。
 
+Those duties belong to the named human, not to the tool that produced the
+diff. An agent does not carry responsibility for a wrong implementation, a bug
+that reaches players, or a conflict with the repository's core policy; the
+person who submits the pull request does. If you are not experienced with
+agent-assisted work, read the full diff before review and write the pull
+request yourself. / 上述职责属于被指定的人，不属于产生 diff 的工具。实现错误、
+进入游戏的缺陷、与仓库核心策略冲突，这些后果由提交 PR 的人承担，智能体不承担。
+若不熟悉智能体协作流程，请先读完整 diff，再自己撰写 PR。
+
 ## Prepare a development environment
 
 CCB supports several toolchains. Use the instructions matching your target:
