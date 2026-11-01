@@ -2,13 +2,18 @@
   {
     "type": "item_group",
     "id": "NC_FREE_MERCH_GUARD_wield_phase1",
-    "//": "Initially the free mechant guards indoors stick to melee weapons, as most of these folks aren't trained to use guns.",
+    "//": "Initially the ref center guards indoors stick to melee weapons, as most of these folks aren't trained to use guns.",
     "subtype": "distribution",
     "entries": [
       { "item": "spear_knife_proper", "prob": 40 },
       { "item": "spear_pipe", "prob": 40 },
       { "item": "spear_homemade_halfpike", "prob": 20 },
-      { "item": "makeshift_glaive", "prob": 20 }
+      { "item": "makeshift_glaive", "prob": 20 },
+      { "item": "machete", "prob": 10 },
+      { "item": "knife_meat_cleaver", "prob": 10 },
+      { "item": "hatchet", "prob": 10 },
+      { "item": "bat", "prob": 10 },
+      { "item": "pipe", "prob": 10 }
     ]
   },
   {
