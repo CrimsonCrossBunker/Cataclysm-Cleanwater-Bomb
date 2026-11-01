@@ -255,7 +255,7 @@ void craft_command::execute( bool only_cache_comps )
     std::vector<attention_plan> plans;
     if( rec->has_attention_steps() && crafter->is_avatar() ) {
         std::optional<std::vector<attention_plan>> chosen =
-            show_craft_planning_modal( *rec, *crafter, batch_size, /*from_step=*/0, {} );
+                show_craft_planning_modal( *rec, *crafter, batch_size, /*from_step=*/0, {} );
         if( !chosen ) {
             return;
         }
@@ -360,7 +360,7 @@ bool craft_command::continue_prompt_liquids( const std::function<bool( const ite
                             // "Simulate" consuming items and put them back
                             // not very efficient but should be rare enough not to matter
                             std::list<item> tmp = m.use_amount_square( p, it.comp.type, real_count,
-                                i == 0 ? map_empty_filter : map_filter );
+                                                  i == 0 ? map_empty_filter : map_filter );
                             bool cont_not_empty = false;
                             std::string iname;
                             for( item &tmp_i : tmp ) {
@@ -386,7 +386,7 @@ bool craft_command::continue_prompt_liquids( const std::function<bool( const ite
                 // "Simulate" consuming items and put them back
                 // not very efficient but should be rare enough not to matter
                 std::list<item> tmp = crafter->use_amount( it.comp.type, real_count,
-                    i == 0 ? empty_filter : filter );
+                                      i == 0 ? empty_filter : filter );
                 real_count -= tmp.size();
                 bool cont_not_empty = false;
                 std::string iname;
@@ -442,7 +442,7 @@ static std::list<item> sane_consume_items( const comp_selection<item_comp> &it, 
                 for( const tripoint_bub_ms &p : m.points_in_radius( loc, radius ) ) {
                     if( rl_dist( loc, p ) >= radius ) {
                         std::list<item> tmp = m.use_amount_square( p, it.comp.type, real_count,
-                            i == 0 ? map_empty_filter : map_filter );
+                                              i == 0 ? map_empty_filter : map_filter );
                         ret.insert( ret.end(), tmp.begin(), tmp.end() );
                     }
                 }
@@ -450,7 +450,7 @@ static std::list<item> sane_consume_items( const comp_selection<item_comp> &it, 
         }
         if( it.use_from & usage_from::player && real_count > 0 ) {
             std::list<item> tmp = crafter->use_amount( it.comp.type, real_count,
-                i == 0 ? empty_filter : filter );
+                                  i == 0 ? empty_filter : filter );
             real_count -= tmp.size();
             ret.insert( ret.end(), tmp.begin(), tmp.end() );
         }
@@ -498,8 +498,8 @@ static bool should_add_crafting_faults( Character *who, const recipe *rec )
     return false;
 }
 std::vector<std::vector<step_tool_alloc>> select_step_tool_allocs(
-    Character &crafter, const recipe &rec, int batch, temp_crafting_inventory &map_inv,
-    bool &cancelled, int reselect_step )
+        Character &crafter, const recipe &rec, int batch, temp_crafting_inventory &map_inv,
+        bool &cancelled, int reselect_step )
 {
     cancelled = false;
     const std::vector<recipe_step> &steps = rec.steps();
@@ -661,7 +661,7 @@ item craft_command::create_in_progress_craft()
     }
 
     std::optional<item_components> preview_used = crafter->preview_crafting_components(
-            item_selections, batch_size, filter );
+                item_selections, batch_size, filter );
     if( !preview_used ) {
         debugmsg( "Aborting crafting: couldn't preview selected components" );
         return item();
@@ -670,6 +670,12 @@ item craft_command::create_in_progress_craft()
     // The preview uses copies of the selected components and follows the same
     // inheritance path as the craft that will be created below.
     item preview( rec, batch_size, *preview_used, std::vector<item_comp> {}, false );
+    if( !can_place_craft( *crafter, preview, loc, always_start_on_ground() ) ) {
+        crafter->add_msg_if_player( _( "There is not enough room to place the in-progress craft. "
+                                       "Try a smaller batch or clear space nearby. "
+                                       "No components or tool charges have been consumed." ) );
+        return item();
+    }
     const time_duration expected_duration = time_duration::from_moves(
             crafter->expected_time_to_craft( *rec, batch_size ) );
     const double predicted_rot = preview.get_relative_rot_after(
@@ -678,13 +684,13 @@ item craft_command::create_in_progress_craft()
     if( preview.goes_bad() && crafter->is_avatar() &&
         rec->get_rot_inherit() != rot_inherit_mode::FRESH ) {
         const time_duration predicted_remaining = preview.get_shelf_life() -
-            preview.get_shelf_life() * predicted_rot;
+                preview.get_shelf_life() * predicted_rot;
         if( predicted_rot >= 1.0 || predicted_remaining <= 3_hours ) {
             const char *warning = predicted_rot >= 1.0
                                   ? _( "The selected ingredients may be rotten before this craft "
-                 "finishes.\nStart crafting anyway?" )
+                                       "finishes.\nStart crafting anyway?" )
                                   : _( "The finished item may only have one to three hour or less of shelf life "
-                 "left.\nStart crafting anyway?" );
+                                       "left.\nStart crafting anyway?" );
             if( !crafter->query_yn( warning ) ) {
                 return item();
             }
@@ -751,7 +757,7 @@ skill_id craft_command::get_skill_id()
 }
 
 std::vector<comp_selection<item_comp>> craft_command::check_item_components_missing(
-    const read_only_visitable &map_inv ) const
+                                        const read_only_visitable &map_inv ) const
 {
     std::vector<comp_selection<item_comp>> missing;
 
@@ -816,7 +822,7 @@ std::vector<comp_selection<item_comp>> craft_command::check_item_components_miss
 }
 
 std::vector<comp_selection<tool_comp>> craft_command::check_tool_components_missing(
-    const read_only_visitable &map_inv ) const
+                                        const read_only_visitable &map_inv ) const
 {
     std::vector<comp_selection<tool_comp>> missing;
 

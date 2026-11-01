@@ -940,15 +940,11 @@ static item_location set_item_map_or_vehicle( const Character &p, const tripoint
     }
 }
 
-static item_location place_craft_or_disassembly(
-    Character &ch, item &craft, std::optional<tripoint_bub_ms> target,
-    bool always_start_on_ground = false )
+static std::optional<tripoint_bub_ms> craft_placement_target(
+    const Character &ch, std::optional<tripoint_bub_ms> target, bool always_start_on_ground )
 {
-    item_location craft_in_world;
-
     if( always_start_on_ground ) {
-        craft_in_world = set_item_map_or_vehicle( ch, ch.pos_bub(), craft );
-        return craft_in_world;
+        return ch.pos_bub();
     }
 
     // Check if we are standing next to a workbench. If so, just use that.
@@ -976,6 +972,56 @@ static item_location place_craft_or_disassembly(
             }
         }
     }
+
+    return target;
+}
+
+bool can_place_craft( const Character &ch, const item &craft,
+                      std::optional<tripoint_bub_ms> target, bool always_start_on_ground )
+{
+    target = craft_placement_target( ch, target, always_start_on_ground );
+    // With empty hands the placement path wields the craft without a menu.
+    // Otherwise require a ground/cargo destination before the placement menu
+    // offers to put the craft down.
+    if( !target && ch.has_two_arms_lifting() && !ch.has_wield_conflicts( craft ) &&
+        ch.can_wield( craft ).success() ) {
+        return true;
+    }
+
+    map &here = get_map();
+    const tripoint_bub_ms pos = target.value_or( ch.pos_bub() );
+    if( const std::optional<vpart_reference> vp = here.veh_at( pos ).cargo() ) {
+        if( !vp->part().is_broken() && !vp->part().get_base().is_gun() &&
+            vp->vehicle().get_items( vp->part() ).amount_can_fit( craft ) > 0 ) {
+            return true;
+        }
+    }
+    // Match set_item_map's overflow radius and normal solid-item placement
+    // rules.  Checking before consumption is deliberately conservative: the
+    // selected components may free more space when they are removed.
+    for( const tripoint_bub_ms &tile : closest_points_first( pos, 2 ) ) {
+        if( here.inbounds( tile ) &&
+            !here.has_flag( ter_furn_flag::TFLAG_DESTROY_ITEM, tile ) &&
+            !here.has_flag( ter_furn_flag::TFLAG_NOITEM, tile ) &&
+            here.i_at( tile ).amount_can_fit( craft ) > 0 ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static item_location place_craft_or_disassembly(
+    Character &ch, item &craft, std::optional<tripoint_bub_ms> target,
+    bool always_start_on_ground = false )
+{
+    item_location craft_in_world;
+
+    if( always_start_on_ground ) {
+        craft_in_world = set_item_map_or_vehicle( ch, ch.pos_bub(), craft );
+        return craft_in_world;
+    }
+
+    target = craft_placement_target( ch, target, false );
 
     auto craft_wield = [&craft_in_world, &ch, &craft]() {
         if( std::optional<item_location> it_loc = wield_craft( ch, craft ) ) {
