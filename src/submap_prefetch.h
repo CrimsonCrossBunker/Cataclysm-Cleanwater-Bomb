@@ -5,13 +5,18 @@
 #include <atomic>
 #include <condition_variable>
 #include <filesystem>
+#include <functional>
 #include <map>
 #include <mutex>
 #include <optional>
-#include <set>
+#include <memory>
+#include <cstddef>
+#include <cstdint>
+#include <utility>
 #include <string>
 #include <thread>
 
+#include "compute_budget.h"
 #include "coordinates.h"
 #include "point.h"
 
@@ -24,8 +29,8 @@
 // mapbuffer::unserialize_submaps), the only thread-safe place to build submaps.
 //
 // Reads are served nearest-the-player first (priority), and buffered results are
-// bounded by physical locality (evict_beyond) rather than a fixed count, so a
-// large prefetch distance no longer drowns the surface quads we cross next.
+// bounded by both locality and explicit count/byte admission. Requests, take,
+// pause and clear belong to the owner; the worker only publishes owned bytes.
 class submap_prefetcher
 {
     public:
@@ -41,25 +46,39 @@ class submap_prefetcher
             bool compressed = false;
         };
 
+        struct data {
+            std::shared_ptr<const char[]> bytes;
+            std::size_t size = 0;
+        };
+        struct status {
+            std::size_t queued;
+            std::size_t pending;
+            std::size_t ready;
+            std::size_t budget_bytes;
+            std::size_t publication_failures;
+        };
+
         submap_prefetcher();
+        // The budget must outlive the prefetcher AND every handed-off buffer.
+        // The default shares 32 MiB across all prefetch owners and ZSTD contexts.
+        explicit submap_prefetcher( byte_budget &budget, std::size_t max_entries );
+        status inspect() const;
         ~submap_prefetcher();
 
         // Enqueue a quad for background reading. `priority` is the quad's distance
         // (in submaps) from the player; the worker always serves the smallest
         // priority first, so the edges we are about to cross are read before the
         // far frontier. Deduplicated against queued / in-flight / completed work.
-        void request( const request_t &req, int priority );
+        bool request( const request_t &req, int priority );
 
-        // If the quad's bytes are ready, move them out and return them; the entry
+        // If the quad's bytes are ready, transfer immutable ownership; the entry
         // is removed. nullopt if not ready / not requested / read failed.
-        std::optional<std::string> take( const tripoint_abs_omt &om );
+        std::optional<data> take( const tripoint_abs_omt &om );
 
         // Drop every queued/completed/in-flight quad whose horizontal (Chebyshev)
-        // distance from `center` exceeds `max_dist` submaps. Called on each shift
-        // so buffered bytes stay bounded by physical locality around the player
-        // instead of by a fixed count: turning or doubling back frees the stale
-        // frontier automatically, and a large prefetch distance never starves the
-        // near edges by piling up far quads.
+        // distance from `center` exceeds `max_dist` OMTs. Called on each shift
+        // to release the stale frontier when turning or doubling back. Count and
+        // byte admission additionally bound large prefetch distances.
         void evict_beyond( const tripoint_abs_omt &center, int max_dist );
 
         // Drop all work. Call before world teardown/save so the main thread never
@@ -69,13 +88,30 @@ class submap_prefetcher
         // Pause/resume the worker around main-thread writes to the same zzip
         // archives (mapbuffer::save). pause() blocks until the worker has parked
         // and released every cached archive handle, so the save path is the sole
-        // writer. Reentrant via a counter; resume when it returns to zero. Use the
+        // writer. Buffered bytes are invalidated before writes can begin.
+        // Reentrant via a counter; resume when it returns to zero. Use the
         // scoped guard below rather than calling these directly.
         void pause();
         void resume();
 
     private:
         void worker_loop();
+        void assert_owner() const;
+        bool make_room( int priority );
+        struct queued_request {
+            request_t request;
+            std::uint64_t ticket;
+        };
+        struct ready_data {
+            data result;
+            int priority;
+        };
+        using queue_type = std::multimap<int, queued_request, std::less<int>,
+              compute_allocator<std::pair<const int, queued_request>>>;
+        using pending_type = std::map<tripoint_abs_omt, std::uint64_t, std::less<tripoint_abs_omt>,
+              compute_allocator<std::pair<const tripoint_abs_omt, std::uint64_t>>>;
+        using ready_type = std::map<tripoint_abs_omt, ready_data, std::less<tripoint_abs_omt>,
+              compute_allocator<std::pair<const tripoint_abs_omt, ready_data>>>;
 
         // Stop and join the worker thread (idempotent). Leaves the prefetcher in a
         // state where the next request() lazily restarts it. Called from clear() so
@@ -89,14 +125,19 @@ class submap_prefetcher
         // horizontal ring; the z column for one OMT is read as a unit anyway).
         static int quad_dist( const tripoint_abs_omt &a, const tripoint_abs_omt &center );
 
+        const std::thread::id owner_thread_;
+        byte_budget &budget_;
+        const std::size_t max_entries_;
+        std::uint64_t next_ticket_ = 0;
+        std::size_t publication_failures_ = 0;
         std::thread worker_;
-        std::mutex mutex_;
+        mutable std::mutex mutex_;
         std::condition_variable cv_;
         // Priority queue: key = distance-from-player, smallest served first.
-        std::multimap<int, request_t> queue_;
+        queue_type queue_;
         // OMTs that are queued or actively being read (dedup + eviction tracking).
-        std::set<tripoint_abs_omt> pending_;
-        std::map<tripoint_abs_omt, std::string> completed_;
+        pending_type pending_;
+        ready_type completed_;
         std::atomic<bool> running_{ false };
         bool started_ = false;
         // Number of active pause() holders; worker parks before each new read

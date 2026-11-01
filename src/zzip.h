@@ -15,6 +15,7 @@
 #include "flexbuffer_json.h"
 
 class mmap_file;
+class byte_budget;
 struct std_fs_path_hash;
 /**
  * A 'zstandard zip'. A basic implementation of an archive consisting of independently decompressable entries.
@@ -96,7 +97,10 @@ class zzip
          * context. Returns the ZSTD_DCtx as a void* (keeps zstd out of this header).
          * Pass the same dictionary path the archive was created with. destroy frees it.
          */
-        static void *create_private_dctx( std::filesystem::path const &dictionary );
+        // Optional budget includes all ZSTD allocations (context/dictionary/
+        // scratch); it must outlive the context. Returns nullptr on failure.
+        static void *create_private_dctx( std::filesystem::path const &dictionary,
+                                          byte_budget *budget = nullptr );
         static void destroy_private_dctx( void *dctx );
 
         /**
