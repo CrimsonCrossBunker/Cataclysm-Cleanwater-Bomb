@@ -5938,10 +5938,7 @@ void Character::fall_asleep()
         // In practice, the sleepiness from filling the tank from (no msg) to Time For Bed
         // will last about 8 days.
     } else {
-        time_duration sleep_duration = 10_hours;  // default max sleep time
-        if( has_effect( effect_melatonin ) ) {
-            sleep_duration = 12_hours;  // Artificial sleep hormone boost allows you to sleep longer
-        }
+        time_duration sleep_duration = 12_hours;  // default max sleep time
         fall_asleep( sleep_duration );
     }
 }
