@@ -163,6 +163,13 @@ Android, tools, and documentation:
 ## Pull requests and documentation impact / PR 与文档影响
 
 - Every PR names a Responsible human.  AI-tool disclosure is not required.
+- When a task involves preparing, reviewing, or submitting a pull request, tell
+  the human once that they are its Responsible human and that the
+  responsibility stays with them.  Say that the agent carries none of it.  If
+  they are not experienced with agent-assisted work, recommend reading the full
+  diff themselves and writing the pull request in their own words. / 任务涉及
+  准备、审查或提交 PR 时，向对话的人类说明一次：责任人是他，责任由他承担，
+  智能体不承担；若他不熟悉智能体协作，建议亲自读完整 diff 并自己撰写 PR。
 - Complete the Documentation impact, Related CCB-Docs PR, Affected
   documentation IDs, and Generated reference impact fields.
 - Documentation-impact enforcement is staged in `ai/docs-impact.yml`; do not
