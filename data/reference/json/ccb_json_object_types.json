@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:88037295d5c0e4a0fa7478dd505b86de317e1edba74e895fdf27403a13f2657b",
+    "source_fingerprint": "sha256:904b5215d30f1d6015a710b62265b73c761516ea68f5add1bda140a8e6fc7a0f",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -4356,7 +4356,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 3208
+            "line": 3226
           }
         ],
         "confidence": "lexical_only"
@@ -5307,7 +5307,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4484
+            "line": 4502
           }
         ],
         "confidence": "lexical_only"
@@ -5597,7 +5597,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 2645
+            "line": 2663
           }
         ],
         "confidence": "lexical_only"
@@ -6231,7 +6231,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4685
+            "line": 4703
           }
         ],
         "confidence": "lexical_only"
@@ -6408,7 +6408,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4448
+            "line": 4466
           }
         ],
         "confidence": "lexical_only"
@@ -7214,7 +7214,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 2135
+            "line": 2153
           }
         ],
         "confidence": "lexical_only"
@@ -7273,7 +7273,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 1966
+            "line": 1984
           }
         ],
         "confidence": "lexical_only"
@@ -8733,7 +8733,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 2236
+            "line": 2254
           }
         ],
         "confidence": "lexical_only"
@@ -9367,7 +9367,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 2603
+            "line": 2621
           }
         ],
         "confidence": "lexical_only"
@@ -9480,7 +9480,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4327
+            "line": 4345
           }
         ],
         "confidence": "lexical_only"
@@ -10468,7 +10468,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 3064
+            "line": 3082
           }
         ],
         "confidence": "lexical_only"
@@ -10640,7 +10640,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 3013
+            "line": 3031
           }
         ],
         "confidence": "lexical_only"
@@ -10758,7 +10758,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 3065
+            "line": 3083
           }
         ],
         "confidence": "lexical_only"
@@ -10817,7 +10817,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 3059
+            "line": 3077
           }
         ],
         "confidence": "lexical_only"
@@ -10935,7 +10935,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 3099
+            "line": 3117
           }
         ],
         "confidence": "lexical_only"
@@ -11112,7 +11112,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4644
+            "line": 4662
           }
         ],
         "confidence": "lexical_only"
