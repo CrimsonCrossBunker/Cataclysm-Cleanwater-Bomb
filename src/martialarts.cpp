@@ -42,6 +42,7 @@
 #include "lua_platform_content.h"
 #include "lua_platform_runtime.h"
 #include "messages.h"
+#include "mounted_charge.h"
 #include "output.h"
 #include "pimpl.h"
 #include "skill.h"
@@ -1048,6 +1049,19 @@ bool ma_technique::activation_allowed( const Character &character,
     return cata::lua_platform::invoke_technique_condition_handler(
                id.str(), lua_platform_mod, lua_platform_condition_handler,
                character, phase ).value_or( false );
+}
+
+float ma_technique::charge_damage_multiplier( const Character &character,
+        const mounted_charge_profile &profile, const int completed_steps ) const
+{
+    const double speed = character.mount_speed();
+    const float fallback = mounted_charge_multiplier( profile, completed_steps, speed );
+    if( lua_platform_charge_damage_handler.empty() || completed_steps <= 0 || speed <= 0.0 ) {
+        return fallback;
+    }
+    return static_cast<float>( cata::lua_platform::invoke_mounted_charge_damage_handler(
+                                   id.str(), lua_platform_mod, lua_platform_charge_damage_handler,
+                                   character, profile, completed_steps, speed ).value_or( fallback ) );
 }
 
 ma_buff::ma_buff()

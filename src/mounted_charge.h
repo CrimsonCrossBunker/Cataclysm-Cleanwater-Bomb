@@ -26,21 +26,20 @@ struct mounted_charge_profile {
 };
 
 inline float mounted_charge_multiplier( const mounted_charge_profile &profile,
-                                        int completed_steps, int mount_speed )
+                                        int completed_steps, double mount_speed )
 {
-    if( completed_steps <= 0 ) {
+    if( completed_steps <= 0 || mount_speed <= 0.0 ) {
         return 1.0f;
     }
 
-    const float speed_factor = std::clamp( static_cast<float>( mount_speed ) / 200.0f,
-                                           0.5f, 1.5f );
+    const float speed_factor = static_cast<float>( mount_speed / 300.0 );
     return std::min( profile.max_multiplier,
                      1.0f + profile.multiplier_per_step *
-                     std::min( 5.0f, completed_steps * speed_factor ) );
+                     std::min( 5, completed_steps ) * speed_factor );
 }
 
 inline float mounted_charge_stab_multiplier( const mounted_charge_profile &profile,
-        int completed_steps, int mount_speed )
+        int completed_steps, double mount_speed )
 {
     return profile.damage_type == "stab" ?
            mounted_charge_multiplier( profile, completed_steps, mount_speed ) : 1.0f;
