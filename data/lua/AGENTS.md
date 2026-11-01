@@ -17,5 +17,5 @@ registrations, LuaLS declarations, and relevant tests define current behavior;
 - Keep templates and examples runnable; Mods need neither a `lua/` subdirectory
   nor an author-maintained JSON manifest.
 
-CCB-Docs explains the contract. If it conflicts with source or declarations,
-update the page instead of changing runtime behavior to match prose.
+CCB-Docs explains the contract. When a page conflicts with source or
+declarations, fix the page and leave runtime behavior unchanged.
