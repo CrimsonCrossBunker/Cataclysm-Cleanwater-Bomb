@@ -76,23 +76,23 @@ endif ()
 
 add_definitions(-DCMAKE)
 
-# Retrieve version from git into GIT_VERSION and creates VERSION.txt
+# Generate a usable version header for Git checkouts and source archives.
 execute_process(COMMAND ${CMAKE_COMMAND}
-    -DGIT_BINARY=${GIT_BINARY}
+    "-DGIT_BINARY=${GIT_BINARY}"
     -P ${CMAKE_SOURCE_DIR}/src/version.cmake
+    RESULT_VARIABLE VERSION_RESULT
     ERROR_VARIABLE GIT_VERSION
     ERROR_STRIP_TRAILING_WHITESPACE
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 )
 
-if (GIT_VERSION)
-    message(STATUS "${PROJECT_NAME} build version is: ${GIT_VERSION}")
-    add_definitions(-DGIT_VERSION)
-else()
-    message(WARNING "Git binary not found. Build version will be set to NULL. Install Git package
-    or use -DGIT_BINARY to set path to git binary.")
-    set(VERSION "NULL")
+if (NOT VERSION_RESULT EQUAL 0)
+    message(FATAL_ERROR "Version header generation failed: ${GIT_VERSION}")
 endif ()
+message(STATUS "${PROJECT_NAME} build version is: ${GIT_VERSION}")
+# CMake always generates version.h, even without Git. Do not change every
+# target's compile flags when the checkout changes between clean and dirty.
+add_definitions(-DGIT_VERSION)
 
 #OS Check Placeholders. Will be used for BINDIST
 if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
