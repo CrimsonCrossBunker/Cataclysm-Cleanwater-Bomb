@@ -25,6 +25,7 @@
 #include "input.h"
 #include "json.h"
 #include "json_loader.h"
+#include "json_loader_buffer.h"
 #include "map.h"
 #include "output.h"
 #include "overmapbuffer.h"
@@ -471,11 +472,11 @@ submap *mapbuffer::unserialize_submaps( const tripoint_abs_sm &p )
         // this quad's bytes off the main thread. Parsing (deserialize) still happens
         // here on the main thread, because it builds submap/string_id state that is
         // not safe to touch from the worker.
-        std::optional<std::string> prefetched = g_submap_prefetcher.take( om_addr );
+        auto prefetched = g_submap_prefetcher.take( om_addr );
         if( prefetched )
         {
             try {
-                JsonValue jsin = json_loader::from_string( std::move( *prefetched ) );
+                JsonValue jsin = json_from_owned_buffer( std::move( prefetched->bytes ) );
                 deserialize( jsin );
                 return true;
             } catch( std::exception &err ) {
