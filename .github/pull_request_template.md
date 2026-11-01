@@ -32,7 +32,11 @@ https://github.com/CrimsonCrossBunker/Cataclysm-Cleanwater-Bomb/blob/master/data
 @username
 
 <!-- 每个 PR 必须指定一名真实的人类责任人。AI 工具或模型无需披露，但责任人
-必须理解修改、审查最终 diff、确认测试与许可证/外部来源，并回答审阅问题。 -->
+必须理解修改、审查最终 diff、确认测试与许可证/外部来源，并回答审阅问题。
+
+这些职责属于你，不属于生成 diff 的工具。实现错误、进入游戏的缺陷、与仓库
+核心策略冲突，后果由提交 PR 的人承担。若不熟悉智能体协作流程，请先读完整
+diff，再自己撰写本 PR 描述。 -->
 
 #### Purpose of change
 <!-- #### 变更目的 -->
