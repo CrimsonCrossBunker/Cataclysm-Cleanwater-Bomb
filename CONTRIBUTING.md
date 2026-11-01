@@ -229,7 +229,7 @@ workflow or narrow local check and record assets that were not exercised.
 
 CCB selectively ports from Cataclysm-DDA, Cataclysm: Bright Nights, and other
 compatible sources; it does not automatically adopt their policy or runtime
-semantics. A port must record:
+semantics. A port declares the following in its pull request description:
 
 - source repository, PR, and exact commit range;
 - original authors and license;
@@ -237,8 +237,11 @@ semantics. A port must record:
 - save, data-ID, mod, and platform compatibility impact;
 - tests run against current CCB `master`.
 
-Preserve source commits when practical. Do not silently replace a CCB-specific
-behaviour with upstream behaviour.
+Attribute ported code to its original authors on the commits that carry it,
+using the Git author parameter or a `Co-authored-by` trailer. Commit local
+compatibility work, fixes, and branch-specific extensions under your own
+identity. Preserve source commits when practical. Do not silently replace a
+CCB-specific behaviour with upstream behaviour.
 
 ## Testing and validation
 
