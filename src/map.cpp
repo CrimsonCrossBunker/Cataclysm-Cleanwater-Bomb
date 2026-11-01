@@ -8023,31 +8023,41 @@ static void use_charges_from_furn( const furn_t &f, const itype_id &type, int &q
         const bool using_ammotype = f.has_flag( ter_furn_flag::TFLAG_AMMOTYPE_RELOAD );
         map_stack stack = m->i_at( p );
         for( const itype *ammo_itype : f.crafting_ammo_item_types() ) {
-            itype_id ammo = ammo_itype->get_id();
-            auto iter = std::find_if( stack.begin(), stack.end(),
-            [ammo, using_ammotype]( const item & i ) {
-                if( using_ammotype && i.type->ammo && ammo->ammo ) {
-                    return i.type->ammo->type == ammo->ammo->type;
-                } else {
-                    return i.typeId() == ammo;
+            for( auto iter = stack.begin(); iter != stack.end() && quantity > 0; ) {
+                const bool matches = using_ammotype && iter->type->ammo && ammo_itype->ammo ?
+                                     iter->type->ammo->type == ammo_itype->ammo->type :
+                                     iter->type == ammo_itype;
+                if( !matches ) {
+                    ++iter;
+                    continue;
                 }
-            } );
-            if( iter != stack.end() ) {
                 // pseudo tools are per-call and have no uid, so an item filter can
                 // never reject them.  guard on the tile they come from instead.
                 if( get_craft_reservations().provider_tile_reserved( m->get_abs( p ) ) ) {
                     return;
                 }
                 item furn_item( itt, calendar::turn_zero );
-                furn_item.ammo_set( ammo, iter->charges );
+                furn_item.ammo_set( iter->typeId(), std::max( iter->charges, 0 ) );
 
                 if( !filter( furn_item ) ) {
                     return;
                 }
-                if( furn_item.use_charges( type, quantity, ret, p, return_true<item>, nullptr, in_tools ) ) {
-                    stack.erase( iter );
-                } else {
-                    iter->charges = furn_item.ammo_remaining( );
+                // Old saves can contain a depleted fuel item. It must not hide later stacks.
+                if( iter->charges <= 0 ) {
+                    iter = stack.erase( iter );
+                    continue;
+                }
+                const int loaded = furn_item.ammo_remaining();
+                furn_item.use_charges( type, quantity, ret, p, return_true<item>, nullptr, in_tools );
+                const int consumed = loaded - furn_item.ammo_remaining();
+                // The return value of use_charges refers to destroying the pseudo-tool,
+                // not its fuel. Debit only actual consumption: ammo_set can cap a legacy
+                // overfilled stack at the tool's capacity, and must not discard the excess.
+                iter->charges -= consumed;
+                if( iter->charges == 0 ) {
+                    iter = stack.erase( iter );
+                } else if( consumed == 0 ) {
+                    ++iter;
                 }
             }
         }
