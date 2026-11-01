@@ -1153,7 +1153,7 @@ static void eff_fun_sleep( Character &u, effect &it )
 
     bool woke_up = false;
     int tirednessVal =
-        rng( 5, 200 ) + rng( 0, std::abs( u.get_fatigue() * 2 * 5 ) );
+        rng( 5, 200 ) + rng( 0, std::abs( u.get_sleepiness() * 2 * 5 ) );
 
     if( !anesthetized ) {
         // Use 1 hour here because that divides cleanly into 2, 3, and 6 hours for the inner once_in check.
