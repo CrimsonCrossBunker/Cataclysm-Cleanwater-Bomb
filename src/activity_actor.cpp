@@ -12517,14 +12517,21 @@ void vehicle_activity_actor::complete_vehicle( player_activity &act, Character &
 
             item_location &src = refill_location;
             vehicle_part &vp = veh.part( vp_ind );
-            if( vp.is_tank() && src->is_container() && !src->empty() ) {
+            if( vp.is_tank() ) {
+                // The source and tank may have changed while the activity was running.
+                if( !src->is_container() || src->num_item_stacks() != 1 ) {
+                    you.add_msg_if_player( m_info, _( "You can no longer refill this tank from that container." ) );
+                    break;
+                }
                 item_location contained( src, &src->only_item() );
-                contained->charges -= vp.base.fill_with( *contained, contained->charges );
+                if( !vp.fill_with( *contained ) ) {
+                    you.add_msg_if_player( m_info, _( "You can no longer refill this tank from that container." ) );
+                    break;
+                }
 
                 contents_change_handler handler;
                 handler.unseal_pocket_containing( contained );
 
-                // if code goes here, we can assume "vp" has already refilled with "contained" something.
                 int remaining_ammo_capacity = vp.ammo_capacity( contained->ammo_type() ) - vp.ammo_remaining(
                                               );
 
@@ -16781,8 +16788,7 @@ void mounted_charge_activity_actor::do_turn( player_activity &act, Character &wh
         }
 
         who.set_mounted_charge_damage_multiplier( damage_type_id( profile.damage_type ),
-                mounted_charge_multiplier( profile, completed_steps,
-                                           who.mounted_creature->get_speed() ) );
+                tec_mounted_charge->charge_damage_multiplier( who, profile, completed_steps ) );
         who.melee_attack( *target, false );
         who.clear_mounted_charge_stab_multiplier();
         if( npc *const person = target->as_npc() ) {

@@ -2,17 +2,30 @@ from __future__ import annotations
 
 import sys
 import unittest
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
+from unittest.mock import MagicMock, patch
 
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools" / "agent"))
 
 from benchmark_context_pack import benchmark  # noqa: E402
-from build_context_pack import build_pack  # noqa: E402
+from build_context_pack import build_pack, nearest_agents  # noqa: E402
 
 
 class ContextPackTests(unittest.TestCase):
+    def test_windows_agent_paths_are_portable_and_deduplicated(self) -> None:
+        root = MagicMock()
+        root.__truediv__.return_value.is_file.return_value = True
+        with patch("build_context_pack.Path", PureWindowsPath), patch(
+            "build_context_pack.ROOT", root
+        ):
+            paths = nearest_agents(
+                ["src/npctalk.cpp"], [{"instructions": "src/AGENTS.md"}]
+            )
+        self.assertEqual(paths, ["AGENTS.md", "src/AGENTS.md"])
+        root.__truediv__.assert_called_once_with("src/AGENTS.md")
+
     def test_lua_route_contains_contract_and_validation(self) -> None:
         pack = build_pack(
             "Change Lua-first Platform services",
