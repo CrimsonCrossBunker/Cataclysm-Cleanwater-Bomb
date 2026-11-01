@@ -1846,38 +1846,41 @@ ID _get_id( construction_id const &idx )
     return idx->post_terrain.empty() ? ID() : ID( idx->post_terrain );
 }
 
-using checked_cache_t = std::vector<construction_id>;
-construction const *_find_prereq( tripoint_bub_ms const &loc, construction_id const &idx,
-                                  construction_id const &top_idx,
-                                  std::optional<construction_id> const &part_con_idx, checked_cache_t &checked_cache )
+construction const *_find_prereq( tripoint_bub_ms const &loc, construction_id const &target,
+                                  std::optional<construction_id> const &part_con_idx )
 {
-    construction const *con = nullptr;
-    std::vector<const construction *> cons = constructions_by_filter( [&idx, &top_idx](
-    construction const & it ) {
-        furn_id const f = top_idx->post_is_furniture ? _get_id<furn_id>( top_idx ) : furn_id();
-        ter_id const t = top_idx->post_is_furniture ? ter_id() : _get_id<ter_id>( top_idx );
-        return it.group != idx->group && !it.post_terrain.empty() &&
-               ( idx->pre_terrain.find( it.post_terrain ) != idx->pre_terrain.end() )  &&
-               // don't get stuck building and deconstructing the top level post_terrain
-               ( it.pre_terrain.find( top_idx->post_terrain ) == it.pre_terrain.end() )  &&
-               ( it.pre_flags.empty() || !has_pre_flags( it, f, t ) );
-    } );
-
-    for( construction const *gcon : cons ) {
-        if( std::find( checked_cache.begin(), checked_cache.end(), gcon->id ) !=
-            checked_cache.end() ) {
+    // Search all variants breadth-first. A depth-first walk can choose to build
+    // a coffin and grave before noticing that the required pit can be dug here.
+    using search_node = std::pair<construction_id, construction_id>;
+    std::deque<search_node> pending;
+    std::set<search_node> checked;
+    for( const construction *variant : constructions_by_group( target->group ) ) {
+        pending.emplace_back( variant->id, variant->id );
+    }
+    while( !pending.empty() ) {
+        const construction_id idx = pending.front().first;
+        const construction_id top_idx = pending.front().second;
+        pending.pop_front();
+        if( !checked.emplace( idx, top_idx ).second ) {
             continue;
         }
-        checked_cache.emplace_back( gcon->id );
-        if( _can_construct( loc, idx, *gcon, part_con_idx ) ) {
-            return gcon;
-        }
-        // try to find a prerequisite of this prerequisite
-        if( !gcon->pre_terrain.empty() || !gcon->pre_flags.empty() ) {
-            con = _find_prereq( loc, gcon->id, top_idx, part_con_idx, checked_cache );
-        }
-        if( con != nullptr ) {
-            return con;
+        const std::vector<const construction *> cons = constructions_by_filter( [&idx, &top_idx](
+        construction const & it ) {
+            furn_id const f = top_idx->post_is_furniture ? _get_id<furn_id>( top_idx ) : furn_id();
+            ter_id const t = top_idx->post_is_furniture ? ter_id() : _get_id<ter_id>( top_idx );
+            return it.group != idx->group && !it.post_terrain.empty() &&
+                   ( idx->pre_terrain.find( it.post_terrain ) != idx->pre_terrain.end() ) &&
+                   // Do not undo the result of the requested construction.
+                   ( it.pre_terrain.find( top_idx->post_terrain ) == it.pre_terrain.end() ) &&
+                   ( it.pre_flags.empty() || !has_pre_flags( it, f, t ) );
+        } );
+        for( const construction *candidate : cons ) {
+            if( _can_construct( loc, idx, *candidate, part_con_idx ) ) {
+                return candidate;
+            }
+            if( !candidate->pre_terrain.empty() || !candidate->pre_flags.empty() ) {
+                pending.emplace_back( candidate->id, top_idx );
+            }
         }
     }
     return nullptr;
@@ -1914,14 +1917,7 @@ static activity_reason_info find_base_construction(
             return it.group == idx->group;
         } );
         if( !idx->strict && con == nullptr ) {
-            // try to build a pre-requisite from a different group, recursively
-            checked_cache_t checked_cache;
-            for( construction const *vcon : constructions_by_group( idx->group ) ) {
-                con = _find_prereq( loc, vcon->id, vcon->id, part_con_idx, checked_cache );
-                if( con != nullptr ) {
-                    break;
-                }
-            }
+            con = _find_prereq( loc, idx, part_con_idx );
         }
         cc = con != nullptr;
     }
