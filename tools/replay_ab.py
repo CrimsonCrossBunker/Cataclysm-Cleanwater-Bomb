@@ -1,152 +1,372 @@
 #!/usr/bin/env python3
-"""Deterministic replay A/B harness (sim/render decoupling plan, phase 0.5).
+"""Compare isolated native replay runs using file contents, not timestamps.
 
-Runs the headless Cataclysm binary twice over the SAME recorded input log and
-the SAME starting world, then diffs the two resulting save trees. If the build
-is deterministic, the two saves are byte-identical and this exits 0. Any diff
-pinpoints exactly which save file (and thus which subsystem) drifted -- that is
-the empirical signal we use to decide what, if anything, needs a determinism
-fix, instead of trusting a theoretical audit.
+Legacy --bin runs the same executable twice. Add --candidate-bin to compare two
+builds using the same recording and starting user directory. Both SDL3 and
+headless binaries can replay inputs; use --runtime-dir when assets are separate
+from the executable. For example:
 
-This does NOT try to fix non-determinism. It only measures it.
+  python tools/replay_ab.py --bin /build/base/cataclysm-tiles \
+      --candidate-bin /build/new/cataclysm-tiles --runtime-dir /checkout \
+      --replay /fixtures/carrier.replay --userdir-template /fixtures/user \
+      --world Carrier --report /results/comparison.json
 
-Typical use:
-  1. Record a session interactively (tiles build):
-       cataclysm-tiles --replay-record run.replay --world TestWorld
-  2. A/B the recording headlessly:
-       python tools/replay_ab.py \
-           --bin build/cataclysm-headless.exe \
-           --replay run.replay \
-           --userdir-template saves/TestWorld_userdir
-
-The --userdir-template is a prepared user directory (containing the save to
-load) that is copied fresh for each of the two runs so they start identical.
+Exit 0 means matching, changed saves; 1 means differing saves;
+2 means invalid/inconclusive runs. Missing, empty or unchanged saves fail.
+Every unsuccessful run retains its files and logs.
+This checks save bytes, not completed turns, visual parity or performance gain.
+Process elapsed times include startup and saving and are only diagnostics.
 """
 
 import argparse
-import filecmp
+import hashlib
+import json
+import math
+from pathlib import Path
 import shutil
 import subprocess
-import sys
 import tempfile
-from pathlib import Path
+import time
 
 
-def run_once(binary: Path, replay: Path, userdir_src: Path, run_userdir: Path,
-             world: str, extra_args: list[str]) -> int:
-    """Copy the template userdir, run one headless replay into it."""
+def sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def tree_manifest(root: Path) -> dict:
+    """Read regular files, retain empty directories and reject links.
+
+    Fixtures must be owned copies: following links during copy could read live
+    saves or build caches. Do not descend into the protected local build cache.
+    """
+    if any(part.startswith("obj-lua") for part in root.parts):
+        raise ValueError("protected build cache cannot be a fixture")
+    if not root.is_dir() or root.is_symlink():
+        raise ValueError(f"not a regular directory: {root}")
+    result = {}
+    pending = [root]
+    while pending:
+        directory = pending.pop()
+        for path in sorted(directory.iterdir()):
+            if path.name.startswith("obj-lua"):
+                raise ValueError(f"protected build cache in fixture: {path}")
+            relative = path.relative_to(root).as_posix()
+            if path.is_symlink():
+                raise ValueError(f"symlink in fixture/save tree: {path}")
+            if path.is_dir():
+                result[relative] = {"type": "directory"}
+                pending.append(path)
+            elif path.is_file():
+                result[relative] = {
+                    "type": "file",
+                    "size": path.stat().st_size,
+                    "sha256": sha256(path),
+                }
+            else:
+                raise ValueError(f"not a regular file/directory: {path}")
+    return dict(sorted(result.items()))
+
+
+def manifest_digest(manifest: dict) -> str:
+    encoded = json.dumps(
+        manifest, sort_keys=True, separators=(",", ":")
+    ).encode()
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def diff_manifests(a: dict, b: dict) -> list[str]:
+    result = []
+    for name in sorted(a.keys() | b.keys()):
+        if name not in b:
+            result.append(f"only in A: {name}")
+        elif name not in a:
+            result.append(f"only in B: {name}")
+        elif a[name] != b[name]:
+            result.append(f"differs:   {name}")
+    return result
+
+
+def diff_trees(a: Path, b: Path) -> list[str]:
+    return diff_manifests(tree_manifest(a), tree_manifest(b))
+
+
+def player_saves(manifest: dict) -> dict:
+    return {
+        name: value
+        for name, value in manifest.items()
+        if name.endswith((".sav", ".sav.zzip")) and value["type"] == "file"
+    }
+
+
+def replay_metadata(path: Path) -> dict:
+    """Record the header and event count; native code parses events."""
+    with path.open(encoding="utf-8") as stream:
+        if stream.readline().strip() != "CATA_REPLAY 1":
+            raise ValueError("replay must have a CATA_REPLAY 1 header")
+        seed_line = stream.readline().split()
+        if len(seed_line) != 2 or seed_line[0] != "SEED":
+            raise ValueError("replay must have a SEED header")
+        seed = int(seed_line[1])
+        if not 0 <= seed <= 0xFFFFFFFF:
+            raise ValueError("replay seed must fit an unsigned 32-bit integer")
+        events = sum(line.startswith("EV ") for line in stream)
+    if not events:
+        raise ValueError("replay has no input events")
+    return {
+        "path": str(path),
+        "sha256": sha256(path),
+        "seed": seed,
+        "recorded_events": events,
+    }
+
+
+def run_once(
+    binary: Path,
+    replay: Path,
+    userdir_src: Path,
+    run_userdir: Path,
+    world: str,
+    extra_args: list[str],
+    *,
+    timeout: float = 300,
+    runtime_dir: Path | None = None,
+) -> dict:
+    """Copy a fixture and run a process, retaining bounded-memory file logs."""
+    copy_started = time.perf_counter()
     shutil.copytree(userdir_src, run_userdir)
+    copy_seconds = time.perf_counter() - copy_started
     cmd = [
         str(binary),
-        "--replay-play", str(replay),
-        "--userdir", str(run_userdir) + "/",
+        "--replay-play",
+        str(replay),
+        "--userdir",
+        str(run_userdir) + "/",
     ]
     if world:
         cmd += ["--world", world]
     cmd += extra_args
-    print(f"  $ {' '.join(cmd)}")
+    stdout_path = run_userdir.parent / (run_userdir.name + ".stdout.log")
+    stderr_path = run_userdir.parent / (run_userdir.name + ".stderr.log")
+    record = {
+        "command": cmd,
+        "cwd": str(runtime_dir or binary.parent),
+        "copy_seconds": copy_seconds,
+        "returncode": None,
+        "timed_out": False,
+        "stdout": str(stdout_path),
+        "stderr": str(stderr_path),
+    }
+    with stdout_path.open("wb") as stdout, stderr_path.open("wb") as stderr:
+        started = time.perf_counter()
+        try:
+            proc = subprocess.run(
+                cmd,
+                cwd=runtime_dir or binary.parent,
+                stdout=stdout,
+                stderr=stderr,
+                timeout=timeout,
+            )
+            record["returncode"] = proc.returncode
+        except subprocess.TimeoutExpired:
+            record["timed_out"] = True
+        except OSError as error:
+            record["error"] = str(error)
+        record["process_wall_seconds"] = time.perf_counter() - started
+    return record
+
+
+def parser() -> argparse.ArgumentParser:
+    ap = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    ap.add_argument(
+        "--bin", required=True, type=Path, help="baseline executable"
+    )
+    ap.add_argument(
+        "--candidate-bin",
+        type=Path,
+        help="candidate executable (default: repeat --bin)",
+    )
+    ap.add_argument("--replay", required=True, type=Path)
+    ap.add_argument("--userdir-template", required=True, type=Path)
+    ap.add_argument("--world", default="")
+    ap.add_argument(
+        "--runtime-dir", type=Path, help="working directory containing assets"
+    )
+    ap.add_argument(
+        "--work-root", type=Path, help="existing parent for temporary runs"
+    )
+    ap.add_argument(
+        "--report",
+        type=Path,
+        help="persistent JSON report outside the fixture",
+    )
+    ap.add_argument(
+        "--timeout", type=float, default=300, help="seconds per process"
+    )
+    ap.add_argument(
+        "--keep", action="store_true", help="also retain successful runs"
+    )
+    ap.add_argument("extra", nargs="*", help="shared game arguments after --")
+    return ap
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = parser()
+    args = ap.parse_args(argv)
+    if not math.isfinite(args.timeout) or args.timeout <= 0:
+        ap.error("--timeout must be finite and positive")
+    binaries = [args.bin.resolve(), (args.candidate_bin or args.bin).resolve()]
+    for binary in binaries:
+        if not binary.is_file():
+            ap.error(f"binary not found: {binary}")
+    replay = args.replay.resolve()
+    template = args.userdir_template.resolve()
+    for name in ("runtime_dir", "work_root"):
+        value = getattr(args, name)
+        if value is not None:
+            value = value.resolve()
+            if not value.is_dir():
+                ap.error(f"not a directory: {value}")
+            setattr(args, name, value)
+    if args.work_root is not None and args.work_root.is_relative_to(template):
+        ap.error("--work-root must be outside the fixture")
+    protected_options = {
+        "--userdir",
+        "--configdir",
+        "--savedir",
+        "--world",
+        "--replay-play",
+        "--replay-record",
+    }
+    if any(arg.split("=", 1)[0] in protected_options for arg in args.extra):
+        ap.error(
+            "extra arguments must not override replay, world "
+            "or isolated directories"
+        )
+    report_path = args.report.resolve() if args.report else None
+    if report_path and (
+        report_path.is_relative_to(template) or
+        report_path in binaries + [replay]
+    ):
+        ap.error("--report must not overwrite inputs or be inside the fixture")
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, cwd=str(binary.parent),
-                              timeout=300)
-    except subprocess.TimeoutExpired:
-        sys.stderr.write(f"[A/B] TIMEOUT: binary did not exit within 300 s\n")
-        return -1
-    if proc.returncode != 0:
-        sys.stderr.write(proc.stdout)
-        sys.stderr.write(proc.stderr)
-    return proc.returncode
+        replay_info = replay_metadata(replay)
+        fixture = tree_manifest(template)
+        initial_saves = tree_manifest(template / "save")
+        players = player_saves(initial_saves)
+        if not players or any(
+            value["size"] == 0 for value in players.values()
+        ):
+            raise ValueError(
+                "fixture needs nonempty player .sav/.sav.zzip files "
+                "under save/"
+            )
+        binary_hashes = {str(path): sha256(path) for path in set(binaries)}
+    except (OSError, ValueError) as error:
+        ap.error(str(error))
 
-
-def diff_trees(a: Path, b: Path) -> list[str]:
-    """Return a list of human-readable difference descriptions between two save dirs."""
-    diffs: list[str] = []
-
-    def walk(cmp_obj: filecmp.dircmp, rel: str) -> None:
-        for name in cmp_obj.left_only:
-            diffs.append(f"only in A: {rel}{name}")
-        for name in cmp_obj.right_only:
-            diffs.append(f"only in B: {rel}{name}")
-        for name in cmp_obj.diff_files:
-            diffs.append(f"differs:   {rel}{name}")
-        for name in cmp_obj.funny_files:
-            diffs.append(f"unreadable: {rel}{name}")
-        for sub_name, sub in cmp_obj.subdirs.items():
-            walk(sub, f"{rel}{sub_name}/")
-
-    # shallow=True (default): uses os.stat before content comparison.
-    # For compressed binary saves, size differs whenever content differs, so
-    # this is correct in practice and avoids reading large files unnecessarily.
-    walk(filecmp.dircmp(a, b), "")
-    return diffs
-
-
-def find_save_dir(userdir: Path) -> Path:
-    save = userdir / "save"
-    return save if save.is_dir() else userdir
-
-
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--bin", required=True, type=Path,
-                    help="path to the headless cataclysm binary")
-    ap.add_argument("--replay", required=True, type=Path,
-                    help="recorded .replay input log")
-    ap.add_argument("--userdir-template", required=True, type=Path,
-                    help="prepared user directory (with the save to load) copied per run")
-    ap.add_argument("--world", default="",
-                    help="world name to auto-load on startup")
-    ap.add_argument("--keep", action="store_true",
-                    help="keep the two run directories for inspection")
-    ap.add_argument("extra", nargs="*",
-                    help="extra args passed through to the binary")
-    args = ap.parse_args()
-
-    if not args.bin.exists():
-        ap.error(f"binary not found: {args.bin}")
-    if not args.replay.exists():
-        ap.error(f"replay log not found: {args.replay}")
-    if not args.userdir_template.is_dir():
-        ap.error(f"userdir template not found: {args.userdir_template}")
-
-    # Resolve to absolute paths: each run executes with the binary's own dir as
-    # cwd (so it finds data/, gfx/ etc.), which would break relative paths.
-    args.bin = args.bin.resolve()
-    args.replay = args.replay.resolve()
-    args.userdir_template = args.userdir_template.resolve()
-
-    work = Path(tempfile.mkdtemp(prefix="replay_ab_"))
-    run_a = work / "A"
-    run_b = work / "B"
+    work = Path(tempfile.mkdtemp(prefix="replay_ab_", dir=args.work_root))
+    report = {
+        "schema_version": 1,
+        "status": "invalid",
+        "work_directory": str(work),
+        "validated_scope": (
+            "changed save bytes only; "
+            "not turn, visual or performance acceptance"
+        ),
+        "timing_scope": (
+            "process wall time includes startup and saving; "
+            "not a speedup estimate"
+        ),
+        "binary_sha256": binary_hashes,
+        "replay": replay_info,
+        "fixture_sha256": manifest_digest(fixture),
+        "runs": [],
+        "errors": [],
+    }
+    exit_code = 2
     try:
-        print("[A/B] run A")
-        rc_a = run_once(args.bin, args.replay, args.userdir_template, run_a,
-                        args.world, args.extra)
-        print("[A/B] run B")
-        rc_b = run_once(args.bin, args.replay, args.userdir_template, run_b,
-                        args.world, args.extra)
-
-        if rc_a != 0 or rc_b != 0:
-            print(f"[A/B] FAIL: a run exited non-zero (A={rc_a}, B={rc_b})")
-            return 2
-
-        diffs = diff_trees(find_save_dir(run_a), find_save_dir(run_b))
-        if not diffs:
-            print("[A/B] PASS: save trees are byte-identical. Build is deterministic "
-                  "for this recording.")
-            return 0
-
-        print(f"[A/B] DRIFT: {len(diffs)} difference(s) -- these name the "
-              f"non-deterministic subsystem(s):")
-        for d in diffs:
-            print(f"    {d}")
-        print(f"[A/B] run dirs kept at {work} for inspection.")
-        args.keep = True
-        return 1
+        for label, binary in zip(("A", "B"), binaries):
+            print(f"[A/B] run {label}: {binary}")
+            record = run_once(
+                binary,
+                replay,
+                template,
+                work / label,
+                args.world,
+                args.extra,
+                timeout=args.timeout,
+                runtime_dir=args.runtime_dir,
+            )
+            report["runs"].append({"label": label, **record})
+        for run in report["runs"]:
+            if run["returncode"] != 0:
+                report["errors"].append(
+                    f"run {run['label']} failed or timed out"
+                )
+        if (
+            tree_manifest(template) != fixture or
+            sha256(replay) != replay_info["sha256"]
+        ):
+            report["errors"].append(
+                "fixture or replay changed during comparison"
+            )
+        if any(
+            sha256(Path(path)) != digest
+            for path, digest in binary_hashes.items()
+        ):
+            report["errors"].append("executable changed during comparison")
+        if not report["errors"]:
+            saves = [
+                tree_manifest(work / label / "save") for label in ("A", "B")
+            ]
+            for run, manifest in zip(report["runs"], saves):
+                run["save_sha256"] = manifest_digest(manifest)
+                current_players = player_saves(manifest)
+                if not current_players or any(
+                    v["size"] == 0 for v in current_players.values()
+                ):
+                    report["errors"].append(
+                        f"run {run['label']} has missing/empty player saves"
+                    )
+                elif current_players == player_saves(initial_saves):
+                    report["errors"].append(
+                        f"run {run['label']} left player saves unchanged"
+                    )
+            if not report["errors"]:
+                report["differences"] = diff_manifests(*saves)
+                exit_code = 1 if report["differences"] else 0
+                report["status"] = (
+                    "save_mismatch" if exit_code else "save_match"
+                )
+    except (OSError, ValueError) as error:
+        report["errors"].append(str(error))
     finally:
-        if not args.keep:
-            shutil.rmtree(work, ignore_errors=True)
+        retain = args.keep or exit_code != 0
+        report["work_retained"] = retain
+        (work / "report.json").write_text(json.dumps(report, indent=2) + "\n")
+        if report_path:
+            report_path.parent.mkdir(parents=True, exist_ok=True)
+            report_path.write_text(json.dumps(report, indent=2) + "\n")
+        if not retain:
+            shutil.rmtree(work)
+    print(
+        f"[A/B] {report['status']}: "
+        f"{len(report.get('differences', []))} differing paths; "
+        f"{len(report['errors'])} errors"
+    )
+    for error in report["errors"]:
+        print(f"  {error}")
+    if report["work_retained"]:
+        print(f"[A/B] retained logs, saves and report: {work}")
+    return exit_code
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())

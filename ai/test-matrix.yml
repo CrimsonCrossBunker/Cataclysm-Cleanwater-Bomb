@@ -35,6 +35,11 @@ entries:
     command: make python-check
     workdir: .
     cost: fast
+  - id: replay-comparison
+    paths: [tools/replay_ab.py, tools/test_replay_ab.py]
+    command: python3 tools/test_replay_ab.py
+    workdir: .
+    cost: fast
   - id: cpp-format
     paths: [src/, tests/, tools/]
     command: make astyle-check
