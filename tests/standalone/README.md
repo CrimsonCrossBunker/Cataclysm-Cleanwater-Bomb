@@ -77,6 +77,15 @@ establishes visual parity, complete semantic equivalence or a speedup.
 Startup/save wall times and replay turn timings are diagnostic measurements;
 hotspot attribution still uses the engine's `CATA_PROFILE_*` instrumentation.
 
+To check that the recording overrides the launch seed, add
+`--invocation-seeds first second` to the command above. Use a recording with
+`SEED 0` as well as a nonzero seed; zero is a valid replay seed, even though
+normal gameplay's RNG helper treats zero as “leave the current engine alone”.
+The comparison still requires exact save bytes and native completion. The Python
+tests exercise the wrapper, so this RNG regression also requires actual games.
+Old zero-seed recordings did not reliably pin their original RNG and cannot
+recover that missing initial state retroactively.
+
 ## Bounded compute resources
 
 The same standalone build also tests the production executor and retained-byte
