@@ -560,5 +560,14 @@
         "material": [ { "type": "rubber", "thickness": 6 } ]
       }
     ]
+  },
+  {
+    "id": "combat_exoskeleton_medium_salvaged",
+    "copy-from": "combat_exoskeleton_light_salvaged",
+    "type": "ITEM",
+    "subtypes": [ "ARMOR" ],
+    "name": { "str": "salvaged combat exoskeleton mk2", "str_pl": "salvaged combat exoskeletons mk2" },
+    "description": "This was a second-generation combat exoskeleton, but its environmental suit is severely damaged and its mechanical components no longer function.  A variety of webbing, magnets, and clips allows the attachment of special armor plating onto the frame.",
+    "looks_like": "combat_exoskeleton_light_salvaged"
   }
 ]
