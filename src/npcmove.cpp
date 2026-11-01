@@ -4761,13 +4761,16 @@ bool npc::find_corpse_to_pulp()
 {
     map &here = get_map();
 
-    Character &player_character = get_player_character();
+    if( is_hallucination() ) {
+        return false;
+    }
+
     if( is_player_ally() ) {
         if( !rules.has_flag( ally_rule::allow_pulp ) ||
-            player_character.in_vehicle || is_hallucination() ) {
+            get_player_character().in_vehicle ) {
             return false;
         }
-        if( rl_dist( pos_bub(), player_character.pos_bub() ) >= mem_combat.engagement_distance ) {
+        if( rl_dist( pos_bub(), get_player_character().pos_bub() ) >= mem_combat.engagement_distance ) {
             // don't start to pulp corpses if you're already far from the player.
             return false;
         }
@@ -4818,7 +4821,7 @@ bool npc::find_corpse_to_pulp()
 
     if( corpse == nullptr ) {
         // If we're following the player, don't wander off to pulp corpses
-        const tripoint_bub_ms around = is_walking_with() ? player_character.pos_bub( here ) : pos_bub(
+        const tripoint_bub_ms around = is_walking_with() ? get_player_character().pos_bub( here ) : pos_bub(
                                            here );
         for( const item_location &location : here.get_active_items_in_radius( around, range,
                 special_item_type::corpse ) ) {
