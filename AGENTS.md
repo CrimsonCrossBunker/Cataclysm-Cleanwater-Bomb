@@ -122,18 +122,16 @@ Android, tools, and documentation:
   windows.  Split a large file only at a real responsibility boundary, not
   merely to make it easier for an agent to read. / 先用 `rg` 定位定义、调用、
   注册和测试，再读取及修改小窗口；只有存在真实职责边界时才拆分大文件。
-- **One coherent batch / 单一完整批次:** This rule groups work; it does not
-  govern commits or how changes are staged.  One batch stays inside a single
-  subsystem or domain and carries its implementation, declarations, contracts,
-  and test source to completion there; unrelated work waits for another batch.
-  Each batch starts from one authoritative lifecycle or registration point plus
-  one representative caller or data shape.  Read it together with *Defer
-  non-evidence churn* below: synchronization and refreshes wait until the batch
-  closes. / 本规则约束工作分组，与提交和暂存行为无关。
-  一批工作只在一个子系统或领域内，把实现、声明、契约与测试源码做完，无关工作
-  留到下一批；每批从唯一的权威生命周期或注册点，加一个代表性调用或数据形状
-  开始。应与下面「推迟无验证价值的工作」合起来理解：同步与刷新在本批结束后进行，
-  不打断本批。
+- **One coherent batch / 单一完整批次:** This rule covers how work is
+  grouped.  Each batch stays inside one subsystem or domain and carries its
+  implementation, declarations, contracts, and test source together, without
+  coupling unrelated work into the batch.  Start each batch from a single
+  authoritative lifecycle or registration point plus one representative caller
+  or data shape.  The rule has no direct bearing on Git operations such as
+  committing or staging. / 每批工作只在一个子系统或领域内，并同步实现、声明/契约
+  和测试源码，不在批次内耦合无关工作；每批从单个权威生命周期或注册点及一个
+  代表性调用或数据形状开始工作。本规则约束工作分组，与提交和暂存等 git 操作无
+  直接关系。
 - **Checkpoint, do not reconstruct / 记录断点，不重建历史:** For unfinished
   multi-turn work, keep a compact local checkpoint containing the current
   batch, closed work, changed files, last checks, unresolved risk, and next
@@ -157,8 +155,10 @@ Android, tools, and documentation:
   修复根因后返回同一验收门；不得重启之前的宽扫描或用完整套件探测问题。
 - **Defer non-evidence churn / 推迟无验证价值的工作:** Keep unrelated history
   rewriting, PR description changes, generated progress prose, and repeated
-  unchanged statistics outside the implementation loop. / 实现循环中不做无关历史
-  重写、PR 描述修改、进度文案生成或重复统计未变化的数据。
+  unchanged statistics outside the implementation loop.  Run synchronization
+  and refreshes once the batch's implementation is finished, so they do not
+  interrupt normal work. / 实现循环中不做无关历史重写、PR 描述修改、进度文案生成
+  或重复统计未变化的数据。同步与刷新在批次实现结束后进行，不打断正常操作。
 
 ## Pull requests and documentation impact / PR 与文档影响
 
