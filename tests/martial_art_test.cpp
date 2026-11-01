@@ -146,8 +146,13 @@ TEST_CASE( "active_technique_cooldowns_commit_on_misses_but_not_rejected_attacks
     CHECK( dude.martial_arts_data->technique_cooldown_remaining( technique ) == 0_turns );
 
     dude.set_hit_bonus( -1000 );
+    REQUIRE( dude.active_technique_availability( technique ).success() );
+    REQUIRE( dude.evaluate_technique( technique, target, dude.used_weapon(), false, false,
+                                      false, true ) );
+    melee::clear_stats();
     const int hp_before = target.get_hp();
     REQUIRE( dude.use_active_technique( target, technique ) );
+    CHECK( melee::get_stats().attack_count == 1 );
     CHECK( target.get_hp() == hp_before );
     CHECK( dude.get_moves() < 1000 );
     CHECK( dude.martial_arts_data->technique_cooldown_remaining( technique ) == 8_seconds );

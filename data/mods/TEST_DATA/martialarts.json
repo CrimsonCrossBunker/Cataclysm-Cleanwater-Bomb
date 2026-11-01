@@ -4,6 +4,7 @@
     "id": "test_active_cooldown_strike",
     "copy-from": "test_active_strike",
     "name": "Test Cooldown Strike",
+    "melee_allowed": true,
     "cooldown": "8 s"
   },
   {
