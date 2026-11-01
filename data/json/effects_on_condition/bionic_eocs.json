@@ -106,30 +106,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "bio_noise_quiet_burn",
-    "condition": {
-      "and": [ { "or": [ { "u_has_bionics": "bio_ethanol" }, { "u_has_bionics": "bio_lampoil" } ] }, { "one_in_chance": 120 } ]
-    },
-    "effect": [
-      { "u_make_sound": "Hiss!!!", "volume": 6, "type": "movement" },
-      {
-        "run_eocs": [
-          {
-            "id": "bio_noise_quiet_burn_hearing",
-            "condition": { "not": "u_is_deaf" },
-            "effect": [ { "u_message": "You hear and feel a bubbling inside your body.", "type": "bad" } ]
-          },
-          {
-            "id": "bio_noise_quiet_burn_deaf",
-            "condition": "u_is_deaf",
-            "effect": [ { "u_message": "You feel a bubbling inside your body.", "type": "bad" } ]
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "bio_noise_digestive",
     "condition": { "and": [ { "u_has_bionics": "bio_metabolics" }, { "one_in_chance": 1800 } ] },
     "effect": [
