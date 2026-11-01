@@ -68,11 +68,11 @@ Those duties belong to the named real person, not to the tool that produced
 the diff. An agent cannot bear the consequences of a wrong implementation, a
 bug that reaches players, or a conflict with the repository's core policy; the
 person who submits the pull request bears them. If you are not familiar with
-agent-assisted workflows, read the full diff, then write the pull request
-yourself and decide whether to push. / 上述职责属于被指定的真实人类，不属于产生
-diff 的工具。实现错误、进入游戏的缺陷、与仓库核心策略冲突等可能的情况，后果皆
-由提交 PR 的人承担，智能体无承担能力。若不熟悉智能体协作流程，请先读完整 diff，
-再自行撰写 PR 并决策推送。
+agent-assisted workflows, read or understand the full diff, then write the
+pull request yourself and decide whether to push. / 上述职责属于被指定的真实人类，
+不属于产生 diff 的工具。实现错误、进入游戏的缺陷、与仓库核心策略冲突等可能的情况，
+后果皆由提交 PR 的人承担，智能体无承担能力。若不熟悉智能体协作流程，请先阅读或
+理解完整 diff，再自行撰写 PR 并决策推送。
 
 ## Prepare a development environment
 
