@@ -21,7 +21,7 @@ TEST_CASE( "failed_atlas_allocation_keeps_the_previous_tileset",
     restore_on_out_of_scope restore_tilesets( TILESETS );
     const std::string id = "allocation_failure_ortho";
     TILESETS[id] = cata_path( cata_path::root_path::base, "tests/data/render-boundary/ortho" );
-    const auto &renderer = get_sdl_renderer();
+    const SDL_Renderer_Ptr &renderer = get_sdl_renderer();
     tileset_cache cache;
     const auto load = [&]( bool force, const atlas_upload_poll &poll = {} ) {
         return cache.load_tileset( id, renderer, false, force, false, false,

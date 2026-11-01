@@ -31,12 +31,12 @@
 #include "units.h"
 
 // *INDENT-OFF*
+static const itype_id itype_gasoline( "gasoline" );
+static const itype_id itype_small_squeeze_tube( "small_squeeze_tube" );
 static const itype_id itype_test_liquid_1ml( "test_liquid_1ml" );
 static const itype_id itype_test_watertight_open_sealed_container_250ml( "test_watertight_open_sealed_container_250ml" );
-static const itype_id itype_gasoline( "gasoline" );
-static const itype_id itype_water_clean( "water_clean" );
-static const itype_id itype_small_squeeze_tube( "small_squeeze_tube" );
 static const itype_id itype_test_watertight_open_sealed_multipocket_container_2x250ml( "test_watertight_open_sealed_multipocket_container_2x250ml" );
+static const itype_id itype_water_clean( "water_clean" );
 // *INDENT-ON*
 
 TEST_CASE( "temporary_liquid_drinks_apply_each_serving", "[liquid][handler]" )
@@ -50,7 +50,7 @@ TEST_CASE( "temporary_liquid_drinks_apply_each_serving", "[liquid][handler]" )
     for( int remaining = 2; remaining >= 0; --remaining ) {
         liquid_dest_opt target;
         target.dest_opt = LD_CONSUME;
-        const auto before = you.stomach.get_water();
+        const units::volume before = you.stomach.get_water();
         const int moves = you.get_moves();
         REQUIRE( liquid_handler::handle_liquid( water, target, nullptr, 0 ) );
         CHECK( water.charges == remaining );

@@ -46,15 +46,11 @@
 #include "vpart_range.h"
 
 static const activity_id ACT_CRAFT( "ACT_CRAFT" );
-
 static const ammotype ammo_test_liquid( "test_liquid" );
 static const ammotype ammo_water( "water" );
-
 static const damage_type_id damage_bash( "bash" );
-
 static const faction_id faction_free_merchants( "free_merchants" );
 static const faction_id faction_your_followers( "your_followers" );
-
 static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_diesel( "diesel" );
 static const itype_id itype_fridge_test( "fridge_test" );
@@ -67,23 +63,19 @@ static const itype_id itype_test_multimag_two_battery( "test_multimag_two_batter
 static const itype_id itype_test_multimag_two_fluid( "test_multimag_two_fluid" );
 static const itype_id itype_test_multimag_vehicle_combo( "test_multimag_vehicle_combo" );
 static const itype_id itype_test_multimag_well_fluid( "test_multimag_well_fluid" );
+static const itype_id
+itype_test_watertight_open_sealed_container_1L( "test_watertight_open_sealed_container_1L" );
 static const itype_id itype_water_clean( "water_clean" );
 static const itype_id itype_water_faucet( "water_faucet" );
 static const itype_id itype_water_purifier( "water_purifier" );
-static const itype_id
-itype_test_watertight_open_sealed_container_1L( "test_watertight_open_sealed_container_1L" );
-
 static const recipe_id recipe_oatmeal_cooked( "oatmeal_cooked" );
-
 static const trait_id trait_DEBUG_CNF( "DEBUG_CNF" );
-
 static const vpart_id vpart_ap_fridge_test( "ap_fridge_test" );
 static const vpart_id vpart_frame( "frame" );
 static const vpart_id vpart_halfboard( "halfboard" );
 static const vpart_id vpart_small_storage_battery( "small_storage_battery" );
 static const vpart_id vpart_tank_test( "tank_test" );
 static const vpart_id vpart_water_faucet( "water_faucet" );
-
 static const vproto_id vehicle_prototype_none( "none" );
 static const vproto_id vehicle_prototype_test_rv( "test_rv" );
 

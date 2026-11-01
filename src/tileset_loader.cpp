@@ -679,7 +679,9 @@ void tileset_cache::loader::parse_native_mappings(
                 for( const mod_tileset_tile_definition &subentry :
                      entry.additional_tiles ) {
                     for( const std::string &subtile_id : subentry.ids ) {
-                        const std::string id_with_parent = id + "_" + subtile_id;
+                        std::string id_with_parent = id;
+                        id_with_parent += "_";
+                        id_with_parent += subtile_id;
                         tile_type &subtile = load_native_tile(
                                                  subentry, id_with_parent );
                         subtile.offset = sprite_offset;
@@ -997,7 +999,7 @@ void tileset_cache::loader::load_native_ascii_set(
 }
 
 void tileset_cache::loader::load_ascii_set( const int in_image_offset,
-        const int FG )
+        const int foreground )
 {
     if( in_image_offset >= size ) {
         throw std::runtime_error( "Lua-first tileset ASCII offset is outside its atlas" );
@@ -1010,7 +1012,7 @@ void tileset_cache::loader::load_ascii_set( const int in_image_offset,
             // Out of range is ignored for now.
             continue;
         }
-        const std::string id = get_ascii_tile_id( ascii_char, FG, -1 );
+        const std::string id = get_ascii_tile_id( ascii_char, foreground, -1 );
         tile_type curr_tile;
         curr_tile.offset = sprite_offset;
         curr_tile.offset_retracted = sprite_offset_retracted;

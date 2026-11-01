@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -28,6 +29,7 @@ static const efftype_id effect_bleed( "bleed" );
 static const faction_id faction_your_followers( "your_followers" );
 static const furn_str_id furn_f_chair( "f_chair" );
 static const itype_id itype_rock( "rock" );
+static const mod_id MOD_INFORMATION_dda( "dda" );
 static const mtype_id mon_zombie( "mon_zombie" );
 static const ter_str_id ter_t_grass( "t_grass" );
 static const vproto_id vehicle_prototype_car( "car" );
@@ -84,7 +86,7 @@ TEST_CASE( "mod_source_display_follows_option_without_debug_mode", "[mod_source]
 
     SECTION( "effect_description" ) {
         const effect bleeding( &effect_bleed.obj() );
-        const std::vector<std::pair<efftype_id, mod_id>> source = { { effect_bleed, mod_id( "dda" ) } };
+        const std::vector<std::pair<efftype_id, mod_id>> source = { { effect_bleed, MOD_INFORMATION_dda } };
         CHECK( bleeding.disp_mod_source_info() == ( enabled ? get_origin( source ) : "" ) );
     }
 

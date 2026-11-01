@@ -1,5 +1,6 @@
 #include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "calendar.h"
@@ -18,21 +19,31 @@
 #include "type_id.h"
 #include "units.h"
 
+static const itype_id itype_cable( "cable" );
+static const itype_id itype_circuit( "circuit" );
+static const itype_id
+itype_combat_exoskeleton_light_salvaged( "combat_exoskeleton_light_salvaged" );
+static const itype_id itype_combat_exoskeleton_medium( "combat_exoskeleton_medium" );
+static const itype_id
+itype_combat_exoskeleton_medium_salvaged( "combat_exoskeleton_medium_salvaged" );
+static const itype_id itype_cotton_patchwork( "cotton_patchwork" );
+static const itype_id itype_debug_backpack( "debug_backpack" );
+static const itype_id itype_element( "element" );
+static const itype_id itype_handflare( "handflare" );
+static const itype_id itype_incendiary( "incendiary" );
+static const itype_id itype_power_supply( "power_supply" );
+static const itype_id itype_string_6( "string_6" );
+static const itype_id itype_test_knotted_string_ball( "test_knotted_string_ball" );
+static const itype_id itype_test_multitool( "test_multitool" );
+static const itype_id itype_test_rag_bundle( "test_rag_bundle" );
+static const itype_id itype_transponder( "transponder" );
+
 // Tests for disassembling items from an "uncraft" recipe.
 //
 // Covers the Character::complete_disassemble function, including:
 //
 // - Uncraft recipe "difficulty" affects component recovery success using character skill
 // - Damage to the original item reduces the chance of successful component recovery
-
-static const itype_id itype_cotton_patchwork( "cotton_patchwork" );
-static const itype_id itype_debug_backpack( "debug_backpack" );
-static const itype_id itype_handflare( "handflare" );
-static const itype_id itype_incendiary( "incendiary" );
-static const itype_id itype_string_6( "string_6" );
-static const itype_id itype_test_knotted_string_ball( "test_knotted_string_ball" );
-static const itype_id itype_test_multitool( "test_multitool" );
-static const itype_id itype_test_rag_bundle( "test_rag_bundle" );
 
 static time_point midday = calendar::turn_zero + 12_hours;
 
@@ -93,21 +104,21 @@ TEST_CASE( "combat_exoskeleton_mk2_disassembly_preserves_its_model",
            "[uncraft][exoskeleton]" )
 {
     Character &they = setup_uncraft_character();
-    const itype_id mk2( "combat_exoskeleton_medium" );
-    recipe dis = recipe_dictionary::get_uncraft( mk2 );
+    recipe dis = recipe_dictionary::get_uncraft( itype_combat_exoskeleton_medium );
     // Test the actual recovered items without a random skill recovery failure.
     dis.difficulty = 0;
-    const std::map<itype_id, int> recovered = repeat_uncraft( they, mk2, dis );
+    const std::map<itype_id, int> recovered = repeat_uncraft( they, itype_combat_exoskeleton_medium,
+            dis );
     const std::map<itype_id, int> expected = {
-        { itype_id( "combat_exoskeleton_medium_salvaged" ), 1 },
-        { itype_id( "power_supply" ), 6 },
-        { itype_id( "element" ), 2 },
-        { itype_id( "cable" ), 4 },
-        { itype_id( "circuit" ), 6 },
-        { itype_id( "transponder" ), 1 }
+        { itype_combat_exoskeleton_medium_salvaged, 1 },
+        { itype_power_supply, 6 },
+        { itype_element, 2 },
+        { itype_cable, 4 },
+        { itype_circuit, 6 },
+        { itype_transponder, 1 }
     };
     CHECK( recovered.size() == expected.size() );
-    CHECK( recovered.count( itype_id( "combat_exoskeleton_light_salvaged" ) ) == 0 );
+    CHECK( recovered.count( itype_combat_exoskeleton_light_salvaged ) == 0 );
     for( const auto &component : expected ) {
         CAPTURE( component.first.str() );
         const auto found = recovered.find( component.first );

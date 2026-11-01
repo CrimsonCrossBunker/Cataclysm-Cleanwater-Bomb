@@ -1,6 +1,8 @@
 #include <functional>
 #include <list>
+#include <map>
 #include <optional>
+#include <string>
 #include <vector>
 
 #include "calendar.h"
@@ -14,7 +16,6 @@
 #include "map.h"
 #include "map_helpers.h"
 #include "map_scale_constants.h"
-#include "mapdata.h"
 #include "player_helpers.h"
 #include "pocket_type.h"
 #include "point.h"
@@ -28,8 +29,8 @@ static const itype_id itype_bottle_plastic( "bottle_plastic" );
 static const itype_id itype_water( "water" );
 static const itype_id itype_water_clean( "water_clean" );
 static const recipe_id recipe_glue_weak_from_bones( "glue_weak_from_bones" );
-static const ter_str_id ter_pond_water_sh( "t_pond_water_sh" );
-static const ter_str_id ter_wooden_well( "t_wooden_well" );
+static const ter_str_id ter_t_pond_water_sh( "t_pond_water_sh" );
+static const ter_str_id ter_t_wooden_well( "t_wooden_well" );
 
 namespace
 {
@@ -59,8 +60,8 @@ TEST_CASE( "crafting_previews_finite_water_without_consuming_it",
     const tripoint_bub_ms pond( SEEX * MAPSIZE / 2, SEEY * MAPSIZE / 2, 0 );
     const tripoint_bub_ms adjacent = pond + tripoint::east;
     crafter.setpos( here, pond + tripoint::west );
-    here.ter_set( pond, ter_pond_water_sh );
-    here.ter_set( adjacent, ter_pond_water_sh );
+    here.ter_set( pond, ter_t_pond_water_sh );
+    here.ter_set( adjacent, ter_t_pond_water_sh );
     const tripoint_abs_ms source_pos = here.get_abs( pond );
     const auto water_left = [&]() {
         const item source = finite_water::finite_liquid_from( source_pos );
@@ -133,7 +134,7 @@ TEST_CASE( "crafting_previews_finite_water_without_consuming_it",
     }
     SECTION( "separate_bodies_can_supply_one_selection" ) {
         const tripoint_bub_ms other = crafter.pos_bub() + tripoint::north * 2;
-        here.ter_set( other, ter_pond_water_sh );
+        here.ter_set( other, ter_t_pond_water_sh );
         REQUIRE( finite_water::withdraw_finite_liquid( here.get_abs( other ), 396 ) == 396 );
         const auto preview = crafter.preview_crafting_components( { water }, 5, filter );
         REQUIRE( preview.has_value() );
@@ -156,7 +157,7 @@ TEST_CASE( "crafting_previews_finite_water_without_consuming_it",
     }
     SECTION( "an_infinite_well_still_takes_priority" ) {
         const tripoint_bub_ms well = crafter.pos_bub() + tripoint::west;
-        here.ter_set( well, ter_wooden_well );
+        here.ter_set( well, ter_t_wooden_well );
         REQUIRE( here.liquid_from( well ).charges == item::INFINITE_CHARGES );
         const auto preview = crafter.preview_crafting_components( { water }, 100, filter );
         REQUIRE( preview.has_value() );

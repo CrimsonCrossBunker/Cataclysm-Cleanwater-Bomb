@@ -1,10 +1,9 @@
 #include <optional>
+#include <string>
 #include <vector>
 
 #include "avatar.h"
-#include "calendar.h"
 #include "cata_catch.h"
-#include "character.h"
 #include "coordinates.h"
 #include "craft_command.h"
 #include "crafting.h"
@@ -12,15 +11,15 @@
 #include "item_components.h"
 #include "map.h"
 #include "map_helpers.h"
-#include "map_helpers_tests.h"
 #include "map_iterator.h"
 #include "player_helpers.h"
 #include "point.h"
-#include "recipe.h"
 #include "requirements.h"
 #include "type_id.h"
 #include "units.h"
 #include "vehicle.h"
+
+class recipe;
 
 static const furn_str_id furn_f_sample_freezer( "f_sample_freezer" );
 static const furn_str_id furn_f_workbench( "f_workbench" );

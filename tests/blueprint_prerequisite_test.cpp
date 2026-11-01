@@ -16,6 +16,8 @@
 #include "point.h"
 #include "type_id.h"
 
+static const zone_type_id zone_type_CONSTRUCTION_BLUEPRINT( "CONSTRUCTION_BLUEPRINT" );
+
 TEST_CASE( "blueprints_dig_directly_instead_of_creating_graves", "[blueprint_prerequisite]" )
 {
     clear_avatar();
@@ -29,7 +31,7 @@ TEST_CASE( "blueprints_dig_directly_instead_of_creating_graves", "[blueprint_pre
     const std::string ground = GENERATE( "t_dirt", "t_sand", "t_grave_new" );
     here.ter_set( pos, ter_id( ground ) );
     auto options = make_shared_fast<blueprint_options>( "", build.group, build.id );
-    zone_manager::get_manager().add( "digging blueprint", zone_type_id( "CONSTRUCTION_BLUEPRINT" ),
+    zone_manager::get_manager().add( "digging blueprint", zone_type_CONSTRUCTION_BLUEPRINT,
                                      you.get_faction()->id, false, true,
                                      here.get_abs( pos ), here.get_abs( pos ), options );
     multi_build_construction_activity_actor actor;

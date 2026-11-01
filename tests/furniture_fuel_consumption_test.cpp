@@ -1,11 +1,12 @@
 #include <functional>
-#include <list>
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "coordinates.h"
 #include "craft_reservation.h"
 #include "iexamine.h"
 #include "inventory.h"
@@ -13,17 +14,17 @@
 #include "itype.h"
 #include "map.h"
 #include "map_helpers.h"
-#include "mapdata.h"
 #include "point.h"
 #include "temp_crafting_inventory.h"
 #include "type_id.h"
+#include "value_ptr.h"
 
+static const furn_str_id furn_f_forge_rock( "f_forge_rock" );
+static const furn_str_id furn_f_metal_smoking_rack( "f_metal_smoking_rack" );
+static const furn_str_id furn_f_smoking_rack( "f_smoking_rack" );
 static const itype_id itype_carbon_electrode( "carbon_electrode" );
 static const itype_id itype_charcoal( "charcoal" );
 static const itype_id itype_fake_char_smoker( "fake_char_smoker" );
-static const furn_str_id furn_f_forge_rock( "f_forge_rock" );
-static const furn_str_id furn_f_smoking_rack( "f_smoking_rack" );
-static const furn_str_id furn_f_metal_smoking_rack( "f_metal_smoking_rack" );
 
 static int consume_furniture_fuel( map &here, const tripoint_bub_ms &pos,
                                    const itype_id &type, int quantity, bool in_tools = false )

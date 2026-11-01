@@ -4,7 +4,7 @@
   "inventory_kind": "eoc_effects",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:904b5215d30f1d6015a710b62265b73c761516ea68f5add1bda140a8e6fc7a0f",
+    "source_fingerprint": "sha256:cea1d3a68a0fb44ded3deba790e6246e1b7588426afe067f708e6835b745ee8d",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -16694,7 +16694,7 @@
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_eocs.json",
-            "pointer": "/23/effect/open_dialogue"
+            "pointer": "/22/effect/open_dialogue"
           }
         ],
         "confidence": "lexical_only",
@@ -18250,7 +18250,7 @@
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_eocs.json",
-            "pointer": "/14/effect/0/run_eoc_selector"
+            "pointer": "/13/effect/0/run_eoc_selector"
           }
         ],
         "confidence": "lexical_only",
@@ -18341,7 +18341,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 5576,
+        "occurrences": 5575,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -22490,7 +22490,7 @@
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_eocs.json",
-            "pointer": "/35/effect/0/then/1/u_add_trait"
+            "pointer": "/34/effect/0/then/1/u_add_trait"
           }
         ],
         "confidence": "lexical_only",
@@ -26116,7 +26116,7 @@
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_eocs.json",
-            "pointer": "/24/effect/0/u_lose_trait"
+            "pointer": "/23/effect/0/u_lose_trait"
           }
         ],
         "confidence": "lexical_only",
@@ -26389,7 +26389,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 25,
+        "occurrences": 24,
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_active_eocs.json",
@@ -26780,7 +26780,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 3320,
+        "occurrences": 3318,
         "examples": [
           {
             "path": "data/json/debug/quick_setup_eoc.json",
@@ -27805,7 +27805,7 @@
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_eocs.json",
-            "pointer": "/19/effect/0/u_remove_item_with"
+            "pointer": "/18/effect/0/u_remove_item_with"
           }
         ],
         "confidence": "lexical_only",
@@ -29491,7 +29491,7 @@
         "examples": [
           {
             "path": "data/json/effects_on_condition/bionic_eocs.json",
-            "pointer": "/15/effect/0/u_spawn_item"
+            "pointer": "/14/effect/0/u_spawn_item"
           }
         ],
         "confidence": "lexical_only",

@@ -6,7 +6,8 @@
 #include "construction.h"
 #include "coordinates.h"
 #include "creature_tracker.h"
-#include "game_constants.h"
+#include "map_iterator.h"
+#include "map_scale_constants.h"
 #include "item.h"
 #include "map.h"
 #include "map_helpers.h"
@@ -18,6 +19,7 @@
 #include "type_id.h"
 
 static const construction_str_id construction_constr_open_air( "constr_open_air" );
+static const itype_id itype_rock( "rock" );
 static const ter_str_id ter_t_open_air( "t_open_air" );
 static const ter_str_id ter_t_pit( "t_pit" );
 static const ter_str_id ter_t_rock( "t_rock" );
@@ -62,12 +64,12 @@ TEST_CASE( "excavated_pits_have_a_floor_for_falling_items_and_monsters",
     CHECK( here.ter( below + tripoint::east ) == ter_t_rock );
 
     SECTION( "items remain on the accessible pit floor" ) {
-        here.add_item_or_charges( pit, item( itype_id( "rock" ) ) );
+        here.add_item_or_charges( pit, item( itype_rock ) );
         REQUIRE( here.i_at( pit ).size() == 1 );
         here.process_falling();
         CHECK( here.i_at( pit ).empty() );
         REQUIRE( here.i_at( below ).size() == 1 );
-        CHECK( here.i_at( below ).only_item().typeId() == itype_id( "rock" ) );
+        CHECK( here.i_at( below ).only_item().typeId() == itype_rock );
     }
     SECTION( "monsters land in the excavated space" ) {
         monster &zombie = spawn_test_monster( "mon_zombie", pit );

@@ -2,6 +2,7 @@
 
 #include "cata_catch.h"
 #include "coordinates.h"
+#include "enums.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "player_helpers.h"
@@ -10,6 +11,13 @@
 #include "units.h"
 #include "veh_type.h"
 #include "vehicle.h"
+
+static const itype_id itype_battery( "battery" );
+static const itype_id itype_gasoline( "gasoline" );
+static const vpart_id vpart_frame( "frame" );
+static const vpart_id vpart_small_storage_battery( "small_storage_battery" );
+static const vpart_id vpart_tank( "tank" );
+static const vproto_id vehicle_prototype_none( "none" );
 
 namespace
 {
@@ -26,24 +34,24 @@ generator_rig make_generator_rig( const std::string &id )
     clear_map_without_vision();
     clear_vehicles();
     map &here = get_map();
-    vehicle *veh = here.add_vehicle( vproto_id( "none" ), tripoint_bub_ms( 60, 60, 0 ),
+    vehicle *veh = here.add_vehicle( vehicle_prototype_none, tripoint_bub_ms( 60, 60, 0 ),
                                      0_degrees, 0, veh_spawn_status::UNDAMAGED );
     REQUIRE( veh != nullptr );
     if( !vpart_id( id )->has_flag( "APPLIANCE" ) ) {
-        REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
+        REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_frame ) >= 0 );
     }
     const int generator = veh->install_part( here, point_rel_ms::zero, vpart_id( id ) );
     REQUIRE( generator >= 0 );
-    REQUIRE( veh->install_part( here, point_rel_ms( 0, 1 ), vpart_id( "frame" ) ) >= 0 );
+    REQUIRE( veh->install_part( here, point_rel_ms( 0, 1 ), vpart_frame ) >= 0 );
     const int battery = veh->install_part( here, point_rel_ms( 0, 1 ),
-                                           vpart_id( "small_storage_battery" ) );
+                                           vpart_small_storage_battery );
     REQUIRE( battery >= 0 );
-    REQUIRE( veh->install_part( here, point_rel_ms( 1, 0 ), vpart_id( "frame" ) ) >= 0 );
-    const int tank = veh->install_part( here, point_rel_ms( 1, 0 ), vpart_id( "tank" ) );
+    REQUIRE( veh->install_part( here, point_rel_ms( 1, 0 ), vpart_frame ) >= 0 );
+    const int tank = veh->install_part( here, point_rel_ms( 1, 0 ), vpart_tank );
     REQUIRE( tank >= 0 );
     veh->refresh();
     here.add_vehicle_to_cache( veh );
-    veh->part( battery ).ammo_set( itype_id( "battery" ), 0 );
+    veh->part( battery ).ammo_set( itype_battery, 0 );
     veh->part( generator ).enabled = true;
     return { veh, generator, tank, battery };
 }
@@ -80,9 +88,9 @@ TEST_CASE( "mounted_generator_retains_internal_fuel_and_respects_unavailable_tan
            "[vehicle][mounted_generator]" )
 {
     const generator_rig rig = make_generator_rig( "veh_portable_generator" );
-    REQUIRE( rig.veh->part( rig.tank ).ammo_set( itype_id( "gasoline" ), 1000 ) == 1000 );
+    REQUIRE( rig.veh->part( rig.tank ).ammo_set( itype_gasoline, 1000 ) == 1000 );
     SECTION( "internal_fuel_first_then_vehicle_tank" ) {
-        REQUIRE( rig.veh->part( rig.generator ).ammo_set( itype_id( "gasoline" ), 1000 ) == 1000 );
+        REQUIRE( rig.veh->part( rig.generator ).ammo_set( itype_gasoline, 1000 ) == 1000 );
         run_generator( *rig.veh );
         CHECK( rig.veh->part( rig.battery ).ammo_remaining() > 0 );
         CHECK( rig.veh->part( rig.generator ).ammo_remaining() < 1000 );
@@ -117,12 +125,12 @@ TEST_CASE( "mounted_generator_retains_internal_fuel_and_respects_unavailable_tan
 TEST_CASE( "appliance_generator_still_uses_its_own_fuel", "[vehicle][mounted_generator]" )
 {
     const generator_rig rig = make_generator_rig( "ap_portable_generator" );
-    REQUIRE( rig.veh->part( rig.tank ).ammo_set( itype_id( "gasoline" ), 1000 ) == 1000 );
+    REQUIRE( rig.veh->part( rig.tank ).ammo_set( itype_gasoline, 1000 ) == 1000 );
     CHECK( rig.veh->active_reactor_epower( get_map() ) == 0_W );
     run_generator( *rig.veh );
     CHECK( rig.veh->part( rig.battery ).ammo_remaining() == 0 );
     CHECK( rig.veh->part( rig.tank ).ammo_remaining() == 1000 );
-    REQUIRE( rig.veh->part( rig.generator ).ammo_set( itype_id( "gasoline" ), 1000 ) == 1000 );
+    REQUIRE( rig.veh->part( rig.generator ).ammo_set( itype_gasoline, 1000 ) == 1000 );
     rig.veh->part( rig.generator ).enabled = true;
     run_generator( *rig.veh );
     CHECK( rig.veh->part( rig.battery ).ammo_remaining() > 0 );

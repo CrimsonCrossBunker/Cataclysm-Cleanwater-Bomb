@@ -671,8 +671,8 @@ item craft_command::create_in_progress_craft()
     // inheritance path as the craft that will be created below.
     item preview( rec, batch_size, *preview_used, std::vector<item_comp> {}, false );
     if( !can_place_craft( *crafter, preview, loc, always_start_on_ground() ) ) {
-        crafter->add_msg_if_player( _( "There is not enough room to place the in-progress craft. "
-                                       "Try a smaller batch or clear space nearby. "
+        crafter->add_msg_if_player( _( "There is not enough room to place the in-progress craft.  "
+                                       "Try a smaller batch or clear space nearby.  "
                                        "No components or tool charges have been consumed." ) );
         return item();
     }
