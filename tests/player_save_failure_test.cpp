@@ -3,6 +3,7 @@
 #include <functional>
 #include <initializer_list>
 #include <memory>
+#include <optional>
 #include <string>
 #include <system_error>
 

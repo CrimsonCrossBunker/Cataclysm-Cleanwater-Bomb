@@ -3,6 +3,7 @@
 #include <string>
 
 #include "cata_catch.h"
+#include "flexbuffer_json.h"
 #include "json.h"
 #include "json_loader.h"
 #include "recipe.h"
