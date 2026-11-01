@@ -3458,8 +3458,9 @@ void options_manager::add_options_performance()
 #if defined(TILES)
     add( "RENDER_PREPARATION_WORKERS", "performance",
          to_translation( "Render preparation workers" ),
-         to_translation( "Prepare tile layers and lighting on dedicated workers.  "
-                         "0 keeps serial preparation.  Requires a restart." ),
+         to_translation( "Prepare large map views using the shared worker pool.  "
+                         "Small views stay serial.  0 keeps all preparation serial.  "
+                         "Requires a restart." ),
          0, 4, 0
        );
 #endif
@@ -3473,36 +3474,34 @@ void options_manager::add_options_performance()
 #endif
     add( "VISION_PREPARATION_WORKERS", "performance",
          to_translation( "Visibility calculation workers" ),
-         to_translation( "Use workers for expensive visibility updates.  "
+         to_translation( "Use the shared worker pool for expensive visibility updates.  "
                          "Small updates and multiplayer stay serial.  "
                          "0 disables workers.  Requires a restart." ),
          0, 4, vision_workers_default );
 
     add( "AI_REACHABILITY_WORKERS", "performance",
          to_translation( "Monster reachability preparation workers" ),
-         to_translation( "Prepare expensive monster reachability geometry from captured values.  "
-                         "0 keeps the original path; 1 prepares on the main thread; "
-                         "2 to 4 use dedicated workers.  Multiplayer stays on the original path.  "
+         to_translation( "Prepare reachability checks for monsters.  "
+                         "0 calculates on demand; 1 prepares on the main thread; "
+                         "2 to 4 allow parallel preparation using the shared worker pool.  "
+                         "Multiplayer keeps on-demand calculation.  "
                          "Requires a restart." ),
          0, 4, 0 );
 
     add( "MULTITHREADING_ENABLED", "performance",
-         to_translation( "Enable multithreading (highly unstable)" ),
-         to_translation( "Enable the persistent worker thread pool for parallelizing "
-                         "game-logic work (cache rebuilds, monster AI, etc.).  "
-                         "Highly unstable: most subsystems are not yet wired to the pool, "
-                         "and multiplayer mode may cause data races.  "
-                         "Requires a restart after changing." ),
+         to_translation( "Legacy multithreading" ),
+         to_translation( "Enable legacy parallel work and the custom shared pool size.  "
+                         "AI, visibility and render preparation have separate options and "
+                         "can use workers even when this is off.  Requires a restart." ),
          false
        );
 
     add( "THREAD_POOL_WORKERS", "performance",
-         to_translation( "Thread pool workers" ),
-         to_translation( "Number of worker threads in the pool when multithreading is enabled.  "
-                         "0 = auto (hardware_concurrency - 1, leaving one core for the main / "
-                         "SDL thread).  Lower this if the game stutters from worker contention "
-                         "or you want to reserve cores for other programs.  Requires a restart "
-                         "after changing." ),
+         to_translation( "Shared worker pool size" ),
+         to_translation( "Number of shared compute workers when legacy multithreading is enabled.  "
+                         "When it is off, independently enabled preparations share up to 4 workers.  "
+                         "0 = auto (one fewer than the available hardware threads).  "
+                         "Lower this to reserve capacity for other programs.  Requires a restart." ),
          0, 64, 0
        );
 }
