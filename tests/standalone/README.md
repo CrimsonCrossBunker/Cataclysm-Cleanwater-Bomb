@@ -62,11 +62,18 @@ python3 tools/replay_ab.py --bin /build/base/cataclysm-tiles \
 ```
 
 `--expected-turns` counts completed `game::do_turn()` calls, not keys or calendar
-seconds. The native report also records calendar advancement and positions.
+seconds. Native report v2 also records calendar advancement and the absolute
+player position after each completed call, excluding the final save call. This
+distinguishes a real out-and-back route from waiting or hitting an obstacle even
+when both end at the starting position. Recording happens outside the measured
+`do_turn` interval; whole-process measurements still include that reporting cost.
 An exhausted log inside a menu, missing report, failed save, or unexpected
 number of completed calls fails acceptance. Failed runs retain their logs and
 save copies. Success requires changed player saves and matching full save bytes;
-it does not establish visual parity, complete semantic equivalence or a speedup.
+v2 comparisons additionally require identical trajectories. The reader still
+accepts v1 reports as evidence without intermediate positions, but comparisons
+reject mixed versions instead of silently dropping the trace. Neither version
+establishes visual parity, complete semantic equivalence or a speedup.
 Startup/save wall times and replay turn timings are diagnostic measurements;
 hotspot attribution still uses the engine's `CATA_PROFILE_*` instrumentation.
 

@@ -128,13 +128,16 @@ def replay_metadata(path: Path) -> dict:
 
 def read_native_completion(path: Path, replay: dict, turns: int) -> dict:
     """Require explicit completion; an OS exit status alone is insufficient."""
-    if path.stat().st_size > 65536 + 64 * turns:
+    if path.stat().st_size > 65536 + 256 * turns:
         raise ValueError("native completion report is unexpectedly large")
     result = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(result, dict):
         raise ValueError("native completion report must be an object")
+    version = result.get("schema_version")
+    if type(version) is not int or version not in (1, 2):
+        raise ValueError(f"unsupported native schema_version: {version!r}")
     required = {
-        "schema_version": 1, "status": "complete", "seed": replay["seed"],
+        "status": "complete", "seed": replay["seed"],
         "events_total": replay["recorded_events"], "events_remaining": 0,
         "input_failed": False, "game_started": True, "quit_saved": True,
         "completed_turn_calls": turns,
@@ -162,6 +165,17 @@ def read_native_completion(path: Path, replay: dict, turns: int) -> dict:
         if (not isinstance(value, list) or len(value) != 3 or
                 any(type(coordinate) is not int for coordinate in value)):
             raise ValueError(f"invalid native {key}")
+    if version == 2:
+        positions = result.get("turn_positions")
+        if (not isinstance(positions, list) or len(positions) != turns or
+                any(not isinstance(point, list) or len(point) != 3 or
+                    any(type(value) is not int for value in point)
+                    for point in positions)):
+            raise ValueError("invalid native turn_positions")
+        if positions and positions[-1] != result["final_position"]:
+            raise ValueError("native trajectory does not reach final_position")
+    elif "turn_positions" in result:
+        raise ValueError("native v1 report cannot declare a trajectory")
     return result
 
 
@@ -408,10 +422,11 @@ def main(argv: list[str] | None = None) -> int:
                 report["differences"] = diff_manifests(*saves)
                 if args.expected_turns is not None:
                     a, b = [r["native_completion"] for r in report["runs"]]
-                    for key in ("turn_start", "turn_end", "initial_position",
+                    for key in ("schema_version", "turn_positions",
+                                "turn_start", "turn_end", "initial_position",
                                 "final_position", "initial_monsters",
                                 "final_monsters"):
-                        if a[key] != b[key]:
+                        if a.get(key) != b.get(key):
                             report["differences"].append(
                                 f"native differs: {key}")
                 exit_code = 1 if report["differences"] else 0
