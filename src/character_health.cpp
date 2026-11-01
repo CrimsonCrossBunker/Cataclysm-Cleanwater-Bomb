@@ -1571,10 +1571,10 @@ void Character::update_needs( int rate_multiplier )
     } else if( asleep ) {
         if( rates.recovery > 0.0f ) {
             int recovered = roll_remainder( rates.recovery * rate_multiplier );
-            if( get_fatigue() - recovered < 10 ) {
+            if( get_sleepiness() - recovered < 10 ) {
                 // Should be wake up, but that could prevent some retroactive regeneration
                 sleep.set_duration( 1_turns );
-                mod_fatigue( -25 );
+                mod_sleepiness( -25 );
             } else {
                 if( has_effect( effect_disrupted_sleep ) ) {
                     if( recovered > 0 ) {
@@ -1582,44 +1582,45 @@ void Character::update_needs( int rate_multiplier )
                     }
                 }
                 // REDUCE FATIGUE
-                // Fatigue is just sleepiness. It isn't sleep deprivation or sleep hygeine.
+                // Fatigue is just sleepiness. It isn't sleep deprivation or sleep hygiene.
                 // A full night's sleep should always leave it at or close to 0, because even if
                 // you slept badly, you can't just immediately knock out for 8 more hours when you wake up.
-                float fatigue_multiplier = 1.f;
+                float sleepiness_multiplier = 1.f;
                 // rest_modifier is for sleep deprivation.
                 float rest_modifier = 1.f;
                 const int comfort = get_comfort_at( pos_bub() ).comfort;
-                if( comfort >= comfort::VERY_COMFORTABLE ) {
+                if( comfort >= comfort_data::COMFORT_VERY_COMFORTABLE ) {
                     rest_modifier *= 3;
                     if( one_in( 8 ) ) {
-                        fatigue_multiplier += 1.f;
+                        sleepiness_multiplier += 1.f;
                     }
-                } else if( comfort >= comfort::COMFORTABLE ) {
+                } else if( comfort >= comfort_data::COMFORT_COMFORTABLE ) {
                     rest_modifier *= 2.5;
                     if( one_in( 16 ) ) {
-                        fatigue_multiplier += 1.f;
+                        sleepiness_multiplier += 1.f;
                     }
-                } else if( comfort >= comfort::SLIGHTLY_COMFORTABLE ) {
+                } else if( comfort >= comfort_data::COMFORT_SLIGHTLY_COMFORTABLE ) {
                     rest_modifier *= 2;
                     if( one_in( 32 ) ) {
-                        fatigue_multiplier += 1.f;
+                        sleepiness_multiplier += 1.f;
                     }
                 }
-                int current_fatigue = get_fatigue();
-                if( current_fatigue >= fatigue_levels::TIRED ) {
-                    if( current_fatigue >= fatigue_levels::EXHAUSTED ) {
-                        fatigue_multiplier += 8.f;
-                    } else if( current_fatigue >= fatigue_levels::DEAD_TIRED ) {
-                        fatigue_multiplier += 4.f;
+                int current_sleepiness = get_sleepiness();
+                if( current_sleepiness >= sleepiness_levels::TIRED ) {
+                    if( current_sleepiness >= sleepiness_levels::EXHAUSTED ) {
+                        sleepiness_multiplier += 8.f;
+                    } else if( current_sleepiness >= sleepiness_levels::DEAD_TIRED ) {
+                        sleepiness_multiplier += 4.f;
                     } else {
-                        fatigue_multiplier += 1.f;
+                        sleepiness_multiplier += 1.f;
                     }
                 }
-                int fatigue_recovered = static_cast<int>( std::round( recovered * fatigue_multiplier ) );
-                mod_fatigue( -fatigue_recovered );
+                int sleepiness_recovered =
+                    static_cast<int>( std::round( recovered * sleepiness_multiplier ) );
+                mod_sleepiness( -sleepiness_recovered );
 
                 // REDUCE SLEEP DEPRIVATION
-                // Sleep deprivation represents our sleep hygeine. This is more heavily affected by sleep
+                // Sleep deprivation represents our sleep hygiene. This is more heavily affected by sleep
                 // conditions, and we should not expect it to be nearly zero after a full night's sleep
                 // if we did not sleep well or we are not sleeping consistently.
 
@@ -1633,9 +1634,9 @@ void Character::update_needs( int rate_multiplier )
 
                 // If we're just tired, we'll get a decent boost to our sleep quality.
                 // The opposite is true for very tired characters.
-                if( get_fatigue() < fatigue_levels::DEAD_TIRED ) {
+                if( get_sleepiness() < sleepiness_levels::DEAD_TIRED ) {
                     rest_modifier += 2;
-                } else if( get_fatigue() >= fatigue_levels::EXHAUSTED ) {
+                } else if( get_sleepiness() >= sleepiness_levels::EXHAUSTED ) {
                     rest_modifier = ( rest_modifier > 2 ) ? rest_modifier - 2 : 1;
                 }
 
