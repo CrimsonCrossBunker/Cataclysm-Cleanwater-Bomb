@@ -12,7 +12,7 @@
     },
     {
       "errors": [],
-      "estimated_tokens": 2651,
+      "estimated_tokens": 2998,
       "id": "cpp-bug",
       "passed": true,
       "selected_routes": [
@@ -21,7 +21,7 @@
     },
     {
       "errors": [],
-      "estimated_tokens": 2857,
+      "estimated_tokens": 2670,
       "id": "json-content",
       "passed": true,
       "selected_routes": [
@@ -39,7 +39,7 @@
     },
     {
       "errors": [],
-      "estimated_tokens": 3278,
+      "estimated_tokens": 3304,
       "id": "lua-api",
       "passed": true,
       "selected_routes": [
@@ -57,7 +57,7 @@
     },
     {
       "errors": [],
-      "estimated_tokens": 2911,
+      "estimated_tokens": 3018,
       "id": "save-compatibility",
       "passed": true,
       "selected_routes": [
