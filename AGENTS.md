@@ -167,10 +167,10 @@ Android, tools, and documentation:
   you are working with that the pull request's Responsible human is a real
   person and that the agent carries no responsibility for it.  If they are not
   experienced with agent-assisted work, recommend reading and understanding the
-  full diff, then writing the pull request and deciding whether to push. /
-  任务涉及准备或提交 PR 时，需要向对话人说明：PR 实际责任人是真实人类，智能体
-  不承担任何责任；若其不熟悉智能体协作，建议在阅读或理解完整 diff 后亲自撰写 PR
-  与决策推送。
+  full diff, and writing the pull request and deciding whether to push once
+  that review passes. / 任务涉及准备或提交 PR 时，需要向对话人说明：PR 实际责任人
+  是真实人类，智能体不承担任何责任；若其不熟悉智能体协作，建议在阅读或理解完整
+  diff，审查通过后亲自撰写 PR 与决策推送。
 - Complete the Documentation impact, Related CCB-Docs PR, Affected
   documentation IDs, and Generated reference impact fields.
 - Documentation-impact enforcement is staged in `ai/docs-impact.yml`; do not
