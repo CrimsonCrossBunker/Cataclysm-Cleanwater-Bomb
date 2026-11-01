@@ -1,13 +1,8 @@
 #include "thread_pool.h"
 
-#include <chrono>
 #include <functional>
-#include <string>
 #include <thread>
 
-#include "crash.h"
-#include "options.h"
-#include "rng.h"
 
 static thread_local bool tl_is_worker_thread = false;
 
@@ -16,7 +11,9 @@ bool is_pool_worker_thread()
     return tl_is_worker_thread;
 }
 
-cata_thread_pool::cata_thread_pool( unsigned int num_workers )
+cata_thread_pool::cata_thread_pool( unsigned int num_workers, std::size_t queue_limit,
+                                    void ( *worker_init )() ) :
+    queue_limit_( queue_limit ), worker_init_( worker_init )
 {
     workers_.reserve( num_workers );
     try {
@@ -55,20 +52,9 @@ cata_thread_pool::~cata_thread_pool()
 void cata_thread_pool::worker_loop()
 {
     tl_is_worker_thread = true;
-    // Windows installs signal handlers per-thread for hardware exception signals
-    // (SIGSEGV, SIGFPE, SIGILL).  Re-run the crash handler setup so that crashes
-    // on worker threads are caught and logged the same way as main-thread crashes.
-    // On POSIX the signal disposition is process-wide, so this is a no-op.
-    init_crash_handlers();
-
-    // Seed this worker's thread-local RNG so compute_plan() calls do not
-    // race on the main thread's global engine (P-5).
-    // Mix thread ID with current time for a unique-ish seed per worker.
-    const unsigned int seed =
-        static_cast<unsigned int>( std::hash<std::thread::id> {}( std::this_thread::get_id() ) ) ^
-        static_cast<unsigned int>(
-            std::chrono::high_resolution_clock::now().time_since_epoch().count() );
-    rng_set_worker_seed( seed );
+    if( worker_init_ ) {
+        worker_init_();
+    }
 
     while( true ) {
         std::function<void()> task;
@@ -89,36 +75,17 @@ void cata_thread_pool::worker_loop()
 
 void cata_thread_pool::submit( std::function<void()> task )
 {
-    {
-        std::scoped_lock lock( mutex_ );
-        queue_.push_back( std::move( task ) );
-    }
-    cv_.notify_one();
-}
-
-cata_thread_pool &get_thread_pool()
-{
-    // Worker count is read once at first call (the static pool is constructed
-    // only once).  Changes to THREAD_POOL_WORKERS or MULTITHREADING_ENABLED
-    // require a restart.
-    static cata_thread_pool pool( []() -> unsigned int {
-        // Respect the "disable multi-threading" setting.  This is read via
-        // get_option<bool>() directly (not the cached parallel_enabled global)
-        // because cache_to_globals() has not yet run at pool-init time.
-        if( !has_option( "MULTITHREADING_ENABLED" ) ||
-        !get_option<bool>( "MULTITHREADING_ENABLED" ) )
-    {
-        return 0u;
-    }
-    const int workers_opt = has_option( "THREAD_POOL_WORKERS" ) ?
-    get_option<int>( "THREAD_POOL_WORKERS" ) : 0;
-    if( workers_opt > 0 )
-    {
-        return static_cast<unsigned int>( workers_opt );
+    // Nested dispatch is synchronous: a worker must never wait for another
+    // task in a saturated pool. Saturation also applies backpressure on owners
+    // without retaining an unbounded number of captured values in the queue.
+    if( num_workers() != 0 && !is_pool_worker_thread() ) {
+        std::unique_lock<std::mutex> lock( mutex_ );
+        if( queue_.size() < queue_limit_ ) {
+            queue_.push_back( std::move( task ) );
+            lock.unlock();
+            cv_.notify_one();
+            return;
         }
-        // 0 = auto: hardware_concurrency()-1, leaving one core for the main/SDL thread.
-        const unsigned int hc = std::thread::hardware_concurrency();
-        return hc > 1u ? hc - 1u : 0u;
-    }() );
-    return pool;
+    }
+    task();
 }

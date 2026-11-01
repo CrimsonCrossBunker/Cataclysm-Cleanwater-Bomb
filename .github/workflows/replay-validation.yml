@@ -40,9 +40,9 @@ jobs:
           cmake -S tests/standalone -B out/replay-protocol
           -DCMAKE_BUILD_TYPE=Debug
           -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer"
-      - name: Build the protocol target without the full game
-        run: cmake --build out/replay-protocol --target input_replay_test --parallel 2
-      - name: Validate parser, lifecycle and exhaustion behavior
+      - name: Build focused production targets without the full game
+        run: cmake --build out/replay-protocol --parallel 2
+      - name: Validate replay and compute resource boundaries
         env:
           ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
           UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1

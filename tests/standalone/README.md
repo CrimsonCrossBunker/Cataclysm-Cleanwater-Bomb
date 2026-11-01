@@ -42,7 +42,7 @@ inside a nested input loop. Checks remain enabled in Release builds.
 
 ```sh
 cmake -S tests/standalone -B out/replay-protocol -DCMAKE_BUILD_TYPE=Release
-cmake --build out/replay-protocol --target input_replay_test --parallel 2
+cmake --build out/replay-protocol --parallel 2
 ctest --test-dir out/replay-protocol --output-on-failure
 python3 tools/test_replay_ab.py
 ```
@@ -69,6 +69,32 @@ save copies. Success requires changed player saves and matching full save bytes;
 it does not establish visual parity, complete semantic equivalence or a speedup.
 Startup/save wall times and replay turn timings are diagnostic measurements;
 hotspot attribution still uses the engine's `CATA_PROFILE_*` instrumentation.
+
+## Bounded compute resources
+
+The same standalone build also tests the production executor and retained-byte
+allocator, without loading game data. It covers saturated queues, synchronous
+nested dispatch, range exceptions, draining at teardown, allocation overflow,
+failed construction, retained capacity and concurrent reservations. Only the
+game-options facade is bound to a fixed test executor. Game worker initialization
+(crash handlers and legacy thread-local RNG) is in `src/thread_pool_game.cpp` and
+is covered by full-engine tests, not the standalone target.
+
+AI, vision and tile preparation share one executor, retaining their per-domain
+admission and worker-count limits. With the legacy generic switch disabled the
+shared executor has four workers; when enabled its existing worker setting sets
+the common capacity. The queue holds at most 64 pending tasks; a full queue and
+nested submissions execute synchronously without holding the queue lock.
+
+These domains share a 64 MiB allocation budget for retained snapshots, outputs
+and their dynamic buffers. Old and replacement allocations count together during
+growth. Exhaustion uses the owner's existing serial fallback. This is not a cap
+on authoritative world data, GPU textures or prefetch I/O. Prefetch needs its own
+bounded-byte integration before overall resource acceptance. Pool shutdown and
+per-domain barriers must complete before captured data is destroyed. On Unix,
+`ai_reachability_fault_test` also injects failures into lazy pool creation,
+snapshot/output allocation and partial task submission, then checks recovery
+against the serial kernel with an executor that outlives each frame.
 
 ## Focused tests with the complete engine
 
