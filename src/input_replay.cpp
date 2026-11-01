@@ -5,10 +5,15 @@
 #include <locale>
 #include <memory>
 #include <queue>
+#include <set>
 #include <sstream>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "cached_options.h"
+#include "input_enums.h"
+#include "point.h"
 
 // Replay log format (line-based, intentionally human-diffable):
 //
