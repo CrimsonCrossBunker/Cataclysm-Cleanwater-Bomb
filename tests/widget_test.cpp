@@ -63,6 +63,7 @@
 static const efftype_id effect_bandaged( "bandaged" );
 static const efftype_id effect_bite( "bite" );
 static const efftype_id effect_bleed( "bleed" );
+static const efftype_id effect_deaf( "deaf" );
 static const efftype_id effect_disinfected( "disinfected" );
 static const efftype_id effect_hunger_blank( "hunger_blank" );
 static const efftype_id effect_hunger_engorged( "hunger_engorged" );
@@ -3104,7 +3105,7 @@ TEST_CASE( "sound_widget_reports_deafness_and_recovers", "[widget][sound]" )
 {
     clear_avatar();
     avatar &ava = get_avatar();
-    widget sound = widget_id( "sound_num" ).obj();
+    widget sound = widget_sound_num.obj();
     ava.volume = 6;
     REQUIRE_FALSE( ava.is_deaf() );
     const std::string hearing = sound.show( ava, 20 );
@@ -3114,7 +3115,7 @@ TEST_CASE( "sound_widget_reports_deafness_and_recovers", "[widget][sound]" )
         ava.wear_item( item( itype_ear_plugs ), false );
     }
     SECTION( "temporary_deafness" ) {
-        ava.add_effect( efftype_id( "deaf" ), 1_minutes, false, 3 );
+        ava.add_effect( effect_deaf, 1_minutes, false, 3 );
     }
 
     REQUIRE( ava.is_deaf() );
