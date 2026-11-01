@@ -3129,7 +3129,8 @@ std::vector<std::string> optional_vpart_position::extended_description() const
     }
 
     vehicle &v = value().vehicle();
-    if( debug_mode ) {
+    if( get_option<bool>( "SHOW_OVERMAP_MOD_SOURCE" ) && v.type.is_valid() &&
+        !v.type->src.empty() ) {
         ret.emplace_back( get_origin( v.type->src ) );
         ret.emplace_back( "--" );
     }

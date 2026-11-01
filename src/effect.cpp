@@ -26,6 +26,7 @@
 #include "messages.h"
 #include "mod_manager.h"
 #include "mod_tracker.h"
+#include "options.h"
 #include "output.h"
 #include "rng.h"
 #include "string_formatter.h"
@@ -1087,7 +1088,7 @@ std::string effect::disp_short_desc( bool reduced ) const
 }
 std::string effect::disp_mod_source_info() const
 {
-    if( !debug_mode ) {
+    if( !get_option<bool>( "SHOW_OVERMAP_MOD_SOURCE" ) ) {
         return {};
     }
 
