@@ -69,3 +69,28 @@ save copies. Success requires changed player saves and matching full save bytes;
 it does not establish visual parity, complete semantic equivalence or a speedup.
 Startup/save wall times and replay turn timings are diagnostic measurements;
 hotspot attribution still uses the engine's `CATA_PROFILE_*` instrumentation.
+
+## Focused tests with the complete engine
+
+When a regression needs game data or world state, select its test translation
+units in an existing compatible CMake build instead of compiling every test:
+
+```sh
+cmake -S . -B out/game -DTESTS=ON -DBUILD_TESTING=ON \
+  -DCATA_TEST_SUITE=focused \
+  '-DCATA_TEST_FILES=recipe_serialization_test.cpp'
+cmake --build out/game --target cata_test-tiles --parallel 2
+./out/game/tests/cata_test-tiles '[recipe][save]' --rng-seed 20261101 \
+  --warn NoTests --user-dir=/tmp/ccb-recipe-test
+```
+
+Keep the existing compiler, SDL, Lua, optimization and profiling settings.
+This reuses the complete engine objects and includes the normal native test
+runner/support sources. It is not a stubbed engine or the standalone protocol
+test above. Separate multiple filenames with semicolons; absolute paths,
+subdirectories and missing files are rejected. The Catch filter limits execution,
+while `CATA_TEST_FILES` limits compilation. Both limits must cover the change.
+
+The default `CATA_TEST_SUITE=all` and the existing `lua` suite are unchanged.
+Switch back to `all` before claiming full-suite coverage. A focused suite does
+not register the broad hosted test batches.
