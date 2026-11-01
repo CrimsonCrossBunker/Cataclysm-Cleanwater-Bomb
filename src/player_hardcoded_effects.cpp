@@ -1067,16 +1067,19 @@ static void eff_fun_sleep( Character &u, effect &it )
         it.mod_intensity( 1 );
     }
 
-    if( u.has_effect( effect_narcosis ) && u.get_sleepiness() <= 25 ) {
+    int current_fatigue = u.get_fatigue();
+    const bool anesthetized = u.has_effect( effect_narcosis );
+
+    if( anesthetized && u.get_fatigue() <= 25 ) {
         u.set_sleepiness( 25 ); //Prevent us from waking up naturally while under anesthesia
     }
 
-    if( u.get_sleepiness() < -25 && it.get_duration() > 3_minutes &&
-        !u.has_effect( effect_narcosis ) ) {
+    if( u.get_fatigue() < -25 && it.get_duration() > 3_minutes &&
+        !anesthetized ) {
         it.set_duration( 1_turns * dice( 3, 10 ) );
     }
 
-    if( u.get_sleepiness() <= 0 && u.get_sleepiness() > -20 && !u.has_effect( effect_narcosis ) ) {
+    if( u.get_fatigue() <= 0 && u.get_fatigue() > -20 && !anesthetized ) {
         u.mod_sleepiness( -25 );
         if( u.get_sleep_deprivation() < SLEEP_DEPRIVATION_HARMLESS ) {
             u.add_msg_if_player( m_good, _( "You feel well rested." ) );
