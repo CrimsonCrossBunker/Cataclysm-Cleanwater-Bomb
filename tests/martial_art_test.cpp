@@ -12,6 +12,7 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "character_martial_arts.h"
 #include "coordinates.h"
 #include "creature.h"
@@ -89,6 +90,113 @@ static const trait_id trait_ARM_TENTACLES( "ARM_TENTACLES" );
 static const trait_id trait_DEBUG_TAIL( "DEBUG_TAIL" );
 
 static constexpr tripoint_bub_ms dude_pos( HALF_MAPSIZE_X, HALF_MAPSIZE_Y, 0 );
+
+TEST_CASE( "active_technique_cooldowns_follow_calendar_and_survive_style_changes_and_saves",
+           "[martial_arts][active_technique][cooldown][save]" )
+{
+    restore_on_out_of_scope restore_time( calendar::turn );
+    calendar::turn = calendar::turn_zero + 1_hours;
+    character_martial_arts arts;
+    const matec_id technique( "test_active_cooldown_strike" );
+    REQUIRE( technique.is_valid() );
+    CHECK( arts.technique_cooldown_remaining( technique ) == 0_turns );
+    arts.start_technique_cooldown( technique, 8_seconds );
+    CHECK( arts.technique_cooldown_remaining( technique ) == 8_seconds );
+    arts.reset_style();
+    arts.clear_styles();
+    arts.start_technique_cooldown( technique, 0_turns );
+    arts.start_technique_cooldown( technique, 1_seconds );
+    CHECK( arts.technique_cooldown_remaining( technique ) == 8_seconds );
+
+    calendar::turn += 3_seconds;
+    CHECK( arts.technique_cooldown_remaining( technique ) == 5_seconds );
+    std::ostringstream output;
+    JsonOut writer( output );
+    arts.serialize( writer );
+    character_martial_arts restored;
+    restored.deserialize( json_loader::from_string( output.str() ).get_object() );
+    CHECK( restored.technique_cooldown_remaining( technique ) == 5_seconds );
+    calendar::turn += 5_seconds;
+    CHECK( restored.technique_cooldown_remaining( technique ) == 0_turns );
+    calendar::turn += 1_days;
+    CHECK( restored.technique_cooldown_remaining( technique ) == 0_turns );
+    restored.deserialize( json_loader::from_string( "{}" ).get_object() );
+    CHECK( restored.technique_cooldown_remaining( technique ) == 0_turns );
+}
+
+TEST_CASE( "active_technique_cooldowns_commit_on_misses_but_not_rejected_attacks",
+           "[martial_arts][active_technique][cooldown]" )
+{
+    restore_on_out_of_scope restore_time( calendar::turn );
+    clear_avatar();
+    clear_map();
+    avatar &dude = get_avatar();
+    dude.setpos( get_map(), dude_pos );
+    dude.set_wielded_item( item( itype_test_weapon1 ) );
+    const matype_id style( "test_style_cooldown" );
+    const matec_id technique( "test_active_cooldown_strike" );
+    dude.martial_arts_data->add_martialart( style );
+    dude.martial_arts_data->set_style( style );
+    monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+    dude.set_moves( 1000 );
+    CHECK_FALSE( dude.use_active_technique( dude, technique ) );
+    CHECK( dude.get_moves() == 1000 );
+    CHECK( dude.martial_arts_data->technique_cooldown_remaining( technique ) == 0_turns );
+
+    dude.set_hit_bonus( -1000 );
+    const int hp_before = target.get_hp();
+    REQUIRE( dude.use_active_technique( target, technique ) );
+    CHECK( target.get_hp() == hp_before );
+    CHECK( dude.get_moves() < 1000 );
+    CHECK( dude.martial_arts_data->technique_cooldown_remaining( technique ) == 8_seconds );
+    CHECK_FALSE( dude.active_technique_availability( technique ).success() );
+    const std::vector<matec_id> visible = dude.active_techniques( true );
+    CHECK( std::find( visible.begin(), visible.end(), technique ) != visible.end() );
+    const std::vector<matec_id> usable = dude.active_techniques();
+    CHECK( std::find( usable.begin(), usable.end(), technique ) == usable.end() );
+    const int moves_after = dude.get_moves();
+    CHECK_FALSE( dude.use_active_technique( target, technique ) );
+    CHECK( dude.get_moves() == moves_after );
+    dude.remove_weapon();
+    dude.set_wielded_item( item( itype_test_weapon1 ) );
+    CHECK( dude.martial_arts_data->technique_cooldown_remaining( technique ) == 8_seconds );
+    calendar::turn += 8_seconds;
+    CHECK( dude.active_technique_availability( technique ).success() );
+    REQUIRE( dude.use_active_technique( target, technique ) );
+    CHECK( dude.martial_arts_data->technique_cooldown_remaining( technique ) == 8_seconds );
+}
+
+TEST_CASE( "active_technique_cooldown_definitions_validate_durations",
+           "[martial_arts][active_technique][cooldown][json]" )
+{
+    const auto load = []( const std::string & duration ) {
+        ma_technique technique;
+        technique.load( json_loader::from_string(
+                            "{\"name\":\"Cooldown test\",\"cooldown\":\"" + duration + "\"}" ).get_object(), "test" );
+        return technique.cooldown;
+    };
+    CHECK( load( "0 s" ) == 0_turns );
+    CHECK( load( "8 s" ) == 8_seconds );
+    CHECK( load( "1 d" ) == 1_days );
+    CHECK_THROWS( load( "-1 s" ) );
+    CHECK_THROWS( load( "2 d" ) );
+}
+
+TEST_CASE( "active_technique_cooldowns_do_not_disable_automatic_techniques",
+           "[martial_arts][active_technique][cooldown]" )
+{
+    clear_avatar();
+    clear_map();
+    avatar &dude = get_avatar();
+    dude.setpos( get_map(), dude_pos );
+    dude.set_all_skills( 5 );
+    dude.set_wielded_item( item( itype_sword_metal_fencing ) );
+    const matec_id technique( RAPID );
+    monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+    dude.martial_arts_data->start_technique_cooldown( technique, 8_seconds );
+    CHECK_FALSE( dude.active_technique_availability( technique ).success() );
+    CHECK( dude.evaluate_technique( technique, target, dude.used_weapon(), false, false, false ) );
+}
 
 TEST_CASE( "active_techniques_include_current_style_and_weapon_attacks",
            "[martial_arts][active_technique]" )

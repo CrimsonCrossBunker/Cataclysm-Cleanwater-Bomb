@@ -354,11 +354,19 @@ void invoke_technique_application_handler(
 
 /** Evaluate a Lua-authored active-technique availability policy. */
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+std::optional<double> invoke_technique_cooldown_handler(
+    std::string_view technique_id, std::string_view mod_id,
+    std::string_view handler_id, const Character &character, double base_cooldown_seconds );
 std::optional<bool> invoke_technique_condition_handler(
     std::string_view technique_id, std::string_view mod_id,
     std::string_view handler_id, const Character &character,
     std::string_view phase );
 #else
+inline std::optional<double> invoke_technique_cooldown_handler(
+    std::string_view, std::string_view, std::string_view, const Character &, double )
+{
+    return std::nullopt;
+}
 inline std::optional<bool> invoke_technique_condition_handler(
     std::string_view, std::string_view, std::string_view,
     const Character &, std::string_view )

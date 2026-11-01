@@ -7,6 +7,7 @@
 #include <translation.h>
 #include <type_id.h>
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 #include <iterator>
 #include <map>
@@ -340,6 +341,10 @@ void ma_technique::load( const JsonObject &jo, std::string_view src )
     optional( jo, was_loaded, "reach_tec", reach_tec, false );
     optional( jo, was_loaded, "reach_ok", reach_ok, false );
     optional( jo, was_loaded, "manual_activation", manual_activation, false );
+    optional( jo, was_loaded, "cooldown", cooldown, 0_turns );
+    if( cooldown < 0_turns || cooldown > 1_days ) {
+        jo.throw_error( "cooldown must be between zero and one day" );
+    }
 
     optional( jo, was_loaded, "needs_ammo", needs_ammo, false );
 
@@ -1048,6 +1053,19 @@ bool ma_technique::activation_allowed( const Character &character,
     return cata::lua_platform::invoke_technique_condition_handler(
                id.str(), lua_platform_mod, lua_platform_condition_handler,
                character, phase ).value_or( false );
+}
+
+time_duration ma_technique::activation_cooldown( const Character &character ) const
+{
+    if( lua_platform_cooldown_handler.empty() ) {
+        return cooldown;
+    }
+    const std::optional<double> seconds =
+        cata::lua_platform::invoke_technique_cooldown_handler(
+            id.str(), lua_platform_mod, lua_platform_cooldown_handler, character,
+            to_seconds<double>( cooldown ) );
+    return seconds ? time_duration::from_seconds( static_cast<int>( std::ceil( *seconds ) ) ) :
+           cooldown;
 }
 
 ma_buff::ma_buff()
@@ -2202,6 +2220,12 @@ std::string ma_technique::get_description() const
 
     if( can_activate() ) {
         dump += _( "* Can be selected as an active technique" ) + std::string( "\n" );
+        if( cooldown > 0_turns || !lua_platform_cooldown_handler.empty() ) {
+            dump += string_format( _( "* Base active cooldown: %s" ), to_string( cooldown ) ) + "\n";
+        }
+        if( !lua_platform_cooldown_handler.empty() ) {
+            dump += _( "* Cooldown is adjusted when the technique is used" ) + std::string( "\n" );
+        }
     }
 
     std::string temp = bonuses.get_description();

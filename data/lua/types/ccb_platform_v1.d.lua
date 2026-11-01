@@ -2767,6 +2767,8 @@ function AttackVectorDefinition:forbids_flag(flag_id) end
 ---@field strictly_unarmed? boolean Ignore force-unarmed styles.
 ---@field manual_activation? boolean Restrict activation to the active technique menu. All offensive non-counter techniques are selectable by default.
 ---@field active_when? string Named Lua handler that decides whether the technique is available.
+---@field cooldown_seconds? number Base manual-activation cooldown, 0..86400 game seconds; defaults to zero and rounds up to whole seconds.
+---@field cooldown_duration? string Named handler receiving CcbTechniqueCooldownPayload; called only for an attempted execution, never to draw UI. Invalid results fall back to the base cooldown.
 
 ---@class CcbTechniqueConditionPayload
 ---@field technique_id string Stable native technique id.
@@ -2808,6 +2810,10 @@ function TechniqueDefinition:requires_skill(skill_id, level) end
 ---@param handler_id string Named Lua handler that receives a CcbTechniqueConditionPayload and returns one boolean.
 ---@return TechniqueDefinition self
 function TechniqueDefinition:active_when(handler_id) end
+
+---@param handler_id string
+---@return TechniqueDefinition
+function TechniqueDefinition:cooldown_duration(handler_id) end
 ---@param handler_id string
 ---@return TechniqueDefinition self
 function TechniqueDefinition:on_apply(handler_id) end
@@ -11936,6 +11942,8 @@ function CcbPlatformRecipesApi.forget_category(character, category, subcategory)
 ---@field truncated boolean
 
 ---@class CcbTechniqueDefinitionSnapshot
+---@field cooldown_seconds number Base manual-activation cooldown in game seconds.
+---@field dynamic_cooldown boolean Whether a cooldown-duration handler is attached.
 ---@field id GameId GameId<martial_art_technique>.
 ---@field name string Localized technique name.
 ---@field description string Complete native rule description.
@@ -11982,6 +11990,26 @@ function CcbMartialArtsApi.current(character) end
 
 ---@class CcbPlatformMartialArtsApi: CcbMartialArtsApi
 local CcbPlatformMartialArtsApi = {}
+
+---@class CcbTechniqueCooldownPayload
+---The handler returns exactly one finite number in 0..86400 game seconds, rounded up. Missing, erroring, or invalid handlers use the base cooldown. Duration handlers should be side-effect-free.
+---@field technique_id string
+---@field character GameHandle Typed character handle.
+---@field weapon_id string Empty when unarmed.
+---@field base_cooldown_seconds number
+
+---@class CcbTechniqueState
+---@field id GameId GameId<martial_art_technique>.
+---@field available boolean Whether native and Lua activation requirements permit starting now; target checks are separate.
+---@field reason string Localized unavailability reason, empty when available.
+---@field base_cooldown_seconds number
+---@field remaining_seconds number Read-only remaining cooldown, derived from native calendar time.
+
+---Read detached character-specific availability without invoking a cooldown-duration handler.
+---@param character GameHandle
+---@param id GameId GameId<martial_art_technique>.
+---@return CcbResult result `value` is CcbTechniqueState.
+function CcbPlatformMartialArtsApi.technique_state(character, id) end
 
 ---Read a detached native technique definition, including short and complete descriptions.
 ---@param id GameId GameId<martial_art_technique>.

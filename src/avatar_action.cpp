@@ -890,7 +890,7 @@ void avatar_action::active_technique( avatar &you, map &m )
         add_msg( m_info, _( "You cannot use an active technique while piloting a mech." ) );
         return;
     }
-    const std::vector<matec_id> available = you.active_techniques();
+    const std::vector<matec_id> available = you.active_techniques( true );
     if( available.empty() ) {
         add_msg( m_info,
                  _( "You have no active techniques available with your current style and weapon." ) );
@@ -903,9 +903,14 @@ void avatar_action::active_technique( avatar &you, map &m )
     menu.desc_enabled = true;
     menu.hilight_disabled = true;
     for( size_t i = 0; i < available.size(); ++i ) {
-        const bool enabled = available[i] != tec_mounted_charge || mounted_charge_available( you );
-        menu.addentry_desc( i, enabled, MENU_AUTOASSIGN, available[i]->name.translated(),
-                            available[i]->get_description() );
+        const matec_id technique = available[i];
+        const ret_val<void> status = you.active_technique_availability( technique );
+        const std::string state = status.success() ? _( "Ready" ) : status.str();
+        const std::string description = technique->get_description() + "\n" +
+                                        string_format( _( "Base cooldown: %s" ), to_string( technique->cooldown ) ) +
+                                        "\n" + state;
+        menu.addentry_desc( i, status.success(), MENU_AUTOASSIGN,
+                            technique->name.translated() + "  [" + state + "]", description );
     }
     menu.query( true, 50, true );
     if( menu.ret < 0 ) {
@@ -979,7 +984,8 @@ bool avatar_action::mounted_charge_available( const avatar &you )
     const item_location weapon = you.get_wielded_item();
     if( !weapon || !weapon->has_technique( tec_mounted_charge ) ||
         !weapon->type->mounted_charge || !weapon->type->mounted_charge->valid() ||
-        !you.mounted_creature ) {
+        !you.mounted_creature ||
+        !you.active_technique_availability( tec_mounted_charge ).success() ) {
         return false;
     }
     return tec_mounted_charge->activation_allowed( you, "start" );

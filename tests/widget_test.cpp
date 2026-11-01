@@ -21,6 +21,7 @@
 #include "catacharset.h"
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
+#include "character_martial_arts.h"
 #include "character_attire.h"
 #include "color.h"
 #include "coordinates.h"
@@ -58,6 +59,26 @@
     #include "cursesdef.h"
     #include "cursesport.h"
 #endif
+
+TEST_CASE( "active_technique_cooldown_widget_reads_native_remaining_time",
+           "[widget][active_technique][cooldown]" )
+{
+    restore_on_out_of_scope restore_time( calendar::turn );
+    clear_avatar();
+    avatar &player = get_avatar();
+    const matype_id style( "test_style_cooldown" );
+    const matec_id technique( "test_active_cooldown_strike" );
+    player.martial_arts_data->add_martialart( style );
+    player.martial_arts_data->set_style( style );
+    player.set_wielded_item( item( itype_id( "test_weapon1" ) ) );
+    widget cooldowns = widget_id( "technique_cooldowns" ).obj();
+    CHECK( player.active_technique_cooldowns_text().empty() );
+    player.martial_arts_data->start_technique_cooldown( technique, 8_seconds );
+    CHECK( cooldowns.layout( player ).find( technique->name.translated() ) != std::string::npos );
+    CHECK( cooldowns.layout( player ).find( to_string( 8_seconds ) ) != std::string::npos );
+    calendar::turn += 8_seconds;
+    CHECK( player.active_technique_cooldowns_text().empty() );
+}
 
 static const efftype_id effect_bandaged( "bandaged" );
 static const efftype_id effect_bite( "bite" );

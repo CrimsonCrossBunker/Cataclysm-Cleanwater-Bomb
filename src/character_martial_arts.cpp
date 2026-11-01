@@ -233,6 +233,17 @@ void character_martial_arts::serialize( JsonOut &json ) const
     json.member( "style_selected", style_selected );
     json.member( "auto_style", auto_style );
     json.member( "preferred_weapon_styles", preferred_weapon_styles );
+    json.member( "technique_cooldowns" );
+    json.start_array();
+    for( const auto &entry : technique_cooldowns ) {
+        if( entry.second > calendar::turn ) {
+            json.start_object();
+            json.member( "technique", entry.first );
+            json.member( "ready_at", entry.second );
+            json.end_object();
+        }
+    }
+    json.end_array();
     json.end_object();
 }
 
@@ -245,4 +256,36 @@ void character_martial_arts::deserialize( const JsonObject &data )
     preferred_weapon_styles.clear();
     data.read( "auto_style", auto_style );
     data.read( "preferred_weapon_styles", preferred_weapon_styles );
+    technique_cooldowns.clear();
+    for( const JsonObject entry : data.get_array( "technique_cooldowns" ) ) {
+        matec_id technique;
+        time_point ready_at = calendar::turn_zero;
+        entry.read( "technique", technique );
+        entry.read( "ready_at", ready_at );
+        if( technique.is_valid() && ready_at > calendar::turn ) {
+            technique_cooldowns.emplace( technique, ready_at );
+        }
+    }
+}
+
+time_duration character_martial_arts::technique_cooldown_remaining(
+    const matec_id &technique ) const
+{
+    const auto found = technique_cooldowns.find( technique );
+    return found == technique_cooldowns.end() ? 0_turns :
+           std::max( 0_turns, found->second - calendar::turn );
+}
+
+void character_martial_arts::start_technique_cooldown(
+    const matec_id &technique, const time_duration duration )
+{
+    if( duration > 0_turns ) {
+        const time_point ready_at = calendar::turn + std::min( duration, 1_days );
+        const auto found = technique_cooldowns.find( technique );
+        if( found == technique_cooldowns.end() ) {
+            technique_cooldowns.emplace( technique, ready_at );
+        } else {
+            found->second = std::max( found->second, ready_at );
+        }
+    }
 }

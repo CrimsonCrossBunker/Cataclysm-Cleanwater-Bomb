@@ -18,6 +18,8 @@
 #include "avatar_action.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
+#include "character_martial_arts.h"
 #include "damage.h"
 #include "flag.h"
 #include "flexbuffer_json.h"
@@ -90,6 +92,53 @@ void start_mounted_charge( avatar &player, monster &horse )
 }
 
 } // namespace
+
+TEST_CASE( "mounted_charge_cooldown_commits_once_and_does_not_cancel_its_activity",
+           "[mounted][charge][active_technique][cooldown]" )
+{
+    restore_on_out_of_scope restore_time( calendar::turn );
+    avatar &player = get_avatar();
+    monster &horse = setup_mounted_lance( player );
+    start_mounted_charge( player, horse );
+    CHECK( player.martial_arts_data->technique_cooldown_remaining( tec_mounted_charge ) == 0_turns );
+    player.activity.do_turn( player );
+    const time_duration cooldown = player.martial_arts_data->technique_cooldown_remaining(
+                                       tec_mounted_charge );
+    REQUIRE( cooldown == tec_mounted_charge->cooldown );
+    REQUIRE( cooldown > 0_turns );
+    REQUIRE_FALSE( player.activity.is_null() );
+    calendar::turn += 1_seconds;
+    player.set_moves( 10000 );
+    player.activity.do_turn( player );
+    CHECK_FALSE( player.activity.is_null() );
+    CHECK( player.martial_arts_data->technique_cooldown_remaining( tec_mounted_charge ) ==
+           cooldown - 1_seconds );
+    std::ostringstream output;
+    JsonOut writer( output );
+    player.activity.serialize( writer );
+    JsonObject activity = json_loader::from_string( output.str() ).get_object();
+    activity.allow_omitted_members();
+    JsonObject actor = activity.get_object( "actor" );
+    actor.allow_omitted_members();
+    JsonObject actor_data = actor.get_object( "actor_data" );
+    actor_data.allow_omitted_members();
+    CHECK( actor_data.get_bool( "cooldown_started" ) );
+    player.activity.deserialize( json_loader::from_string( output.str() ).get_object() );
+    player.set_moves( 10000 );
+    player.activity.do_turn( player );
+    CHECK_FALSE( player.activity.is_null() );
+    CHECK( player.martial_arts_data->technique_cooldown_remaining( tec_mounted_charge ) ==
+           cooldown - 1_seconds );
+    player.cancel_activity();
+    start_mounted_charge( player, horse );
+    CHECK( player.activity.is_null() );
+    calendar::turn += cooldown;
+    start_mounted_charge( player, horse );
+    CHECK_FALSE( player.activity.is_null() );
+    player.cancel_activity();
+    CHECK( player.martial_arts_data->technique_cooldown_remaining( tec_mounted_charge ) == 0_turns );
+    player.forced_dismount();
+}
 
 TEST_CASE( "mounted_charge_profile_has_bounded_momentum", "[mounted][charge]" )
 {

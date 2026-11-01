@@ -207,6 +207,10 @@ class ma_technique
         /** Evaluate the Lua-authored activation policy for this technique, if present. */
         bool activation_allowed( const Character &character, std::string_view phase ) const;
 
+        time_duration activation_cooldown( const Character &character ) const;
+        time_duration cooldown = 0_turns;
+        std::string lua_platform_cooldown_handler;
+
         std::set<std::string> flags;
 
         // message to be displayed when Character or npc uses the technique
