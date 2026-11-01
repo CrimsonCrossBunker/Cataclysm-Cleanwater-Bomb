@@ -1828,7 +1828,7 @@ struct technique_definition_handle {
         }
         definition->charge_damage_handler = handler_id;
         return *this;
-    }
+    }
 
     std::string id() const {
         require_readable_handle( token, *definition, "technique" );

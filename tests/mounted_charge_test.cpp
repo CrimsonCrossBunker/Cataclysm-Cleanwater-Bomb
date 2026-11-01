@@ -109,7 +109,7 @@ TEST_CASE( "mounted_charge_profile_has_bounded_momentum", "[mounted][charge]" )
     CHECK( mounted_charge_multiplier( profile, 15, 200 ) == Approx( 1.0f + 1.0f / 3 ) );
     CHECK( mounted_charge_multiplier( profile, 15, 0 ) == 1.0f );
     CHECK( mounted_charge_multiplier( profile, 15, -100 ) == 1.0f );
-    CHECK( mounted_charge_multiplier( profile, 15, 10000 ) == Approx( 1.50f ) );
+    CHECK( mounted_charge_multiplier( profile, 15, 10000 ) == Approx( 1.50f ) );
 
     profile.max_multiplier = 2.1f;
     CHECK_FALSE( profile.valid() );
@@ -174,7 +174,7 @@ TEST_CASE( "mounted_charge_damage_tracks_mount_speed_and_gait_after_full_runup",
     fallback_technique.lua_platform_charge_damage_handler = "missing";
     CHECK( fallback_technique.charge_damage_multiplier( player, profile, 15 ) ==
            Approx( mounted_charge_multiplier( profile, 15, player.mount_speed() ) ) );
-}
+}
 
 TEST_CASE( "mounted_saber_loads_a_short_cut_profile", "[mounted][charge][json]" )
 {
