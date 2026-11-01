@@ -254,6 +254,10 @@ def parser() -> argparse.ArgumentParser:
     ap.add_argument("--userdir-template", required=True, type=Path)
     ap.add_argument("--world", default="")
     ap.add_argument(
+        "--invocation-seeds", nargs=2, metavar=("A", "B"),
+        help="CLI seed strings for A/B; the recording must override both",
+    )
+    ap.add_argument(
         "--expected-turns", type=int,
         help="require native completion and this many completed do_turn calls",
     )
@@ -314,6 +318,10 @@ def main(argv: list[str] | None = None) -> int:
             "extra arguments must not override replay, world "
             "or isolated directories"
         )
+    if args.invocation_seeds and any(
+        arg.split("=", 1)[0] == "--seed" for arg in args.extra
+    ):
+        ap.error("--invocation-seeds cannot be combined with extra --seed")
     report_path = args.report.resolve() if args.report else None
     if report_path and (
         report_path.is_relative_to(template) or
@@ -365,13 +373,16 @@ def main(argv: list[str] | None = None) -> int:
     try:
         for label, binary in zip(("A", "B"), binaries):
             print(f"[A/B] run {label}: {binary}")
+            extra_args = list(args.extra)
+            if args.invocation_seeds:
+                extra_args += ["--seed", args.invocation_seeds[0 if label == "A" else 1]]
             record = run_once(
                 binary,
                 replay,
                 template,
                 work / label,
                 args.world,
-                args.extra,
+                extra_args,
                 timeout=args.timeout,
                 runtime_dir=args.runtime_dir,
                 completion_path=(work / f"{label}.completion.json"

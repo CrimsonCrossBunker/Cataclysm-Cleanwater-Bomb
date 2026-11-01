@@ -1382,6 +1382,11 @@ int main( int argc, const char *argv[] )
 
     set_language_from_options();
     rng_set_engine_seed( cli.seed );
+    if( !cli.replay_record.empty() && cli.seed == 0 ) {
+        // Recording must pin zero too; normal gameplay keeps its no-op convention.
+        // NOLINTNEXTLINE(cata-determinism)
+        rng_get_engine().seed( 0 );
+    }
 
     // Deterministic input replay harness (phase 0.5). Record captures the active
     // seed into the log; replay re-applies the recorded seed so the run is
@@ -1416,7 +1421,9 @@ int main( int argc, const char *argv[] )
             std::cerr << replay_error << '\n';
             close_game( EXIT_FAILURE );
         }
-        rng_set_engine_seed( input_replay::recorded_seed() );
+        // A recorded zero is a seed, not a request to keep the invocation's RNG.
+        // NOLINTNEXTLINE(cata-determinism)
+        rng_get_engine().seed( input_replay::recorded_seed() );
     }
 
     game_ui::init_ui();
