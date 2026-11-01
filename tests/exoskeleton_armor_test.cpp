@@ -20,7 +20,7 @@ TEST_CASE( "exoskeleton_reinforcement_preserves_plate_protection",
 
     bool improved_protection = false;
     for( const sub_bodypart_id &bp : covered ) {
-        for( const std::string &damage : {
+        for( const char *damage : {
                  "bash", "cut", "bullet"
              } ) {
             // Compare the same impact on the same body part, including plate gaps.

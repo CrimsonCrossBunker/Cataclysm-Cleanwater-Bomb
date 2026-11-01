@@ -31,7 +31,18 @@
 #include "units.h"
 
 // *INDENT-OFF*
+static const itype_id itype_avgas( "avgas" );
+static const itype_id itype_biodiesel( "biodiesel" );
+static const itype_id itype_crude_lamp_oil( "crude_lamp_oil" );
+static const itype_id itype_crude_oil( "crude_oil" );
+static const itype_id itype_diesel( "diesel" );
+static const itype_id itype_flamethrower_fuel( "flamethrower_fuel" );
 static const itype_id itype_gasoline( "gasoline" );
+static const itype_id itype_gelled_gasoline( "gelled_gasoline" );
+static const itype_id itype_jp8( "jp8" );
+static const itype_id itype_lamp_oil( "lamp_oil" );
+static const itype_id itype_motor_oil( "motor_oil" );
+static const itype_id itype_napalm( "napalm" );
 static const itype_id itype_small_squeeze_tube( "small_squeeze_tube" );
 static const itype_id itype_test_liquid_1ml( "test_liquid_1ml" );
 static const itype_id itype_test_watertight_open_sealed_container_250ml( "test_watertight_open_sealed_container_250ml" );
@@ -277,14 +288,14 @@ TEST_CASE( "saved_frozen_fuel_recovers_its_liquid_phase", "[liquid][save]" )
 TEST_CASE( "hydrocarbon_fuels_remain_liquid_in_cold_weather", "[liquid][temperature]" )
 {
     for( const std::pair<itype_id, int> &fuel : {
-    std::pair<itype_id, int> { itype_id( "diesel" ), -20 },
-    { itype_id( "jp8" ), -47 }, { itype_id( "avgas" ), -58 },
-    { itype_id( "biodiesel" ), -10 }, { itype_id( "gasoline" ), -60 },
-    { itype_id( "lamp_oil" ), -47 }, { itype_id( "crude_lamp_oil" ), -40 },
-    { itype_id( "motor_oil" ), -30 }, { itype_id( "crude_oil" ), -40 },
-    { itype_id( "napalm" ), -40 }, { itype_id( "gelled_gasoline" ), -60 },
-    { itype_id( "flamethrower_fuel" ), -60 }
-         } ) {
+    std::pair<itype_id, int> { itype_diesel, -20 },
+{ itype_jp8, -47 }, { itype_avgas, -58 },
+{ itype_biodiesel, -10 }, { itype_gasoline, -60 },
+{ itype_lamp_oil, -47 }, { itype_crude_lamp_oil, -40 },
+{ itype_motor_oil, -30 }, { itype_crude_oil, -40 },
+{ itype_napalm, -40 }, { itype_gelled_gasoline, -60 },
+{ itype_flamethrower_fuel, -60 }
+     } ) {
         CAPTURE( fuel.first.str() );
         item liquid( fuel.first );
         liquid.set_item_temperature( units::from_celsius( fuel.second + 10 ) );

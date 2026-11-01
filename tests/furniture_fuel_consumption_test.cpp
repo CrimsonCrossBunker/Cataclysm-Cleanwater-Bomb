@@ -22,9 +22,11 @@
 static const furn_str_id furn_f_forge_rock( "f_forge_rock" );
 static const furn_str_id furn_f_metal_smoking_rack( "f_metal_smoking_rack" );
 static const furn_str_id furn_f_smoking_rack( "f_smoking_rack" );
+static const furn_str_id furn_f_smoking_rack_active( "f_smoking_rack_active" );
 static const itype_id itype_carbon_electrode( "carbon_electrode" );
 static const itype_id itype_charcoal( "charcoal" );
 static const itype_id itype_fake_char_smoker( "fake_char_smoker" );
+static const itype_id itype_meat( "meat" );
 
 static int consume_furniture_fuel( map &here, const tripoint_bub_ms &pos,
                                    const itype_id &type, int quantity, bool in_tools = false )
@@ -152,12 +154,12 @@ TEST_CASE( "lighting_smoking_rack_consumes_split_charcoal", "[crafting][smoking]
     const tripoint_bub_ms pos( 60, 60, 0 );
     here.furn_set( pos, furn_f_smoking_rack );
     // One piece of meat needs the minimum 1200 charges, spread across two stacks.
-    here.add_item( pos, item( itype_id( "meat" ), calendar::turn, 1 ) );
+    here.add_item( pos, item( itype_meat, calendar::turn, 1 ) );
     here.add_item( pos, item( itype_charcoal, calendar::turn_zero, 0 ) );
     here.add_item( pos, item( itype_charcoal, calendar::turn_zero, 800 ) );
     here.add_item( pos, item( itype_charcoal, calendar::turn_zero, 800 ) );
     REQUIRE( iexamine::smoker_fire( get_avatar(), pos ) );
-    CHECK( here.furn( pos ) == furn_str_id( "f_smoking_rack_active" ) );
+    CHECK( here.furn( pos ) == furn_f_smoking_rack_active );
     int charcoal_stacks = 0;
     for( const item &it : here.i_at( pos ) ) {
         if( it.typeId() == itype_charcoal ) {
