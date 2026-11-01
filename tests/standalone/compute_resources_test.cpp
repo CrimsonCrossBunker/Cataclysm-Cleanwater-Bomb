@@ -12,10 +12,18 @@
 #include "compute_budget.h"
 #include "thread_pool.h"
 
+namespace
+{
+std::atomic<unsigned> worker_facade_calls{ 0 };
+} // namespace
+
 // Bind only the game-options facade. The executor and range implementations
 // under test are the production sources; no game data or engine mocks load.
 cata_thread_pool &get_thread_pool()
 {
+    if( is_pool_worker_thread() ) {
+        worker_facade_calls.fetch_add( 1 );
+    }
     static cata_thread_pool pool( 1, 1 );
     return pool;
 }
@@ -145,6 +153,39 @@ void range_lifetimes()
     check( completed.load() == 1047, "nested range preserves every iteration" );
 }
 
+void nested_ranges_do_not_read_game_options()
+{
+    // Start on an independently created worker before the game facade has ever
+    // been used. A nested range must not lazily initialize game configuration.
+    cata_thread_pool independent( 1 );
+    const unsigned before = worker_facade_calls.load();
+    auto nested = independent.submit_returning( []() {
+        const auto worker = std::this_thread::get_id();
+        std::vector<int> visited;
+        parallel_for( 2, 6, [&]( int i ) {
+            parallel_for_chunked( -3, 2, 2, [&]( int j ) {
+                if( std::this_thread::get_id() != worker ) {
+                    throw std::runtime_error( "nested range changed threads" );
+                }
+                visited.push_back( i * 10 + j );
+            } );
+        } );
+        return visited;
+    } );
+    check( nested.wait_for( std::chrono::seconds( 2 ) ) == std::future_status::ready,
+           "nested ranges complete on an independent worker" );
+    const std::vector<int> actual = nested.get();
+    check( worker_facade_calls.load() == before,
+           "nested ranges must not access the owner game-options facade" );
+    std::vector<int> expected;
+    for( int i = 2; i < 6; ++i ) {
+        for( int j = -3; j < 2; ++j ) {
+            expected.push_back( i * 10 + j );
+        }
+    }
+    check( actual == expected, "nested ranges preserve serial visit order" );
+}
+
 struct failing_value {
     failing_value() {
         throw std::runtime_error( "construct" );
@@ -225,6 +266,7 @@ void concurrent_memory()
 
 int main()
 {
+    nested_ranges_do_not_read_game_options();
     queue_and_nested_dispatch();
     serial_and_teardown();
     range_lifetimes();
