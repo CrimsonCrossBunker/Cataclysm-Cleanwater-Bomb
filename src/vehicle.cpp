@@ -5931,13 +5931,37 @@ units::power vehicle::net_battery_charge_rate( map &here, bool include_reactors 
                    active_reactor_epower( here ) : 0_W );
 }
 
+// Preserve the reactor's internal fuel supply, then fall back to compatible
+// liquid tanks on this vehicle. Electrical connections do not carry fuel.
+static int reactor_fuel_source( const vehicle &veh, const int reactor )
+{
+    const vehicle_part &generator = veh.part( reactor );
+    if( generator.ammo_remaining() > 0 || !generator.info().has_flag( "USE_TANKS" ) ) {
+        return reactor;
+    }
+    for( const int tank : veh.fuel_containers ) {
+        const vehicle_part &source = veh.part( tank );
+        if( source.is_available() && !source.is_reactor() && source.contains_liquid() &&
+            source.ammo_remaining() > 0 ) {
+            // Reuse the generator's own fuel restrictions, including diesel
+            // substitutes. Test a single charge, not the tank's entire contents.
+            const item fuel( source.ammo_current(), calendar::turn, 1 );
+            if( generator.get_base().can_contain( fuel ).success() ) {
+                return tank;
+            }
+        }
+    }
+    return reactor;
+}
+
 units::power vehicle::active_reactor_epower( map &here ) const
 {
     units::power reactors_flow = 0_W;
     for( const int p : reactors ) {
         const vehicle_part &vp = parts[p];
         if( vp.enabled && vp.is_available() &&
-            ( vp.info().has_flag( flag_PERPETUAL.str() ) || vp.ammo_remaining( ) ) ) {
+            ( vp.info().has_flag( flag_PERPETUAL.str() ) ||
+              parts[reactor_fuel_source( *this, p )].ammo_remaining() > 0 ) ) {
             reactors_flow += part_epower( vp );
         }
     }
@@ -6035,24 +6059,26 @@ void vehicle::power_parts( map &here )
                 reactor_online = true;
                 // the amount of energy the reactor generates each turn
                 const int gen_energy_bat = power_to_energy_bat( part_epower( vp ), 1_turns );
+                vehicle_part &fuel_source = parts[reactor_fuel_source( *this, p )];
                 if( vp.is_unavailable() ) {
                     continue;
                 } else if( vp.info().has_flag( flag_PERPETUAL.str() ) ) {
                     reactor_working = true;
                     delta_energy_bat += std::min( storage_deficit_bat, gen_energy_bat );
-                } else if( vp.ammo_remaining( ) > 0 ) {
+                } else if( fuel_source.ammo_remaining() > 0 ) {
                     // Efficiency: one unit of fuel is this many units of battery
                     // Note: One battery is 1 kJ
                     const int efficiency = units::to_watt( vp.info().power );
-                    const int avail_fuel = vp.ammo_remaining( ) * efficiency;
-                    const int elem_energy_bat = std::min( gen_energy_bat, avail_fuel );
+                    const int64_t avail_fuel = static_cast<int64_t>( fuel_source.ammo_remaining() ) * efficiency;
+                    const int elem_energy_bat = std::min<int64_t>( gen_energy_bat, avail_fuel );
                     // Cap output at what we can achieve and utilize
                     const int reactors_output_bat = std::min( elem_energy_bat, storage_deficit_bat );
                     // Fuel consumed in actual units of the resource
                     int fuel_consumed = reactors_output_bat / efficiency;
                     // Remainder has a chance of resulting in more fuel consumption
                     fuel_consumed += x_in_y( reactors_output_bat % efficiency, efficiency ) ? 1 : 0;
-                    vp.ammo_consume( fuel_consumed, &here, bub_part_pos( here, vp ) );
+                    fuel_source.ammo_consume( fuel_consumed, &here, bub_part_pos( here, fuel_source ) );
+                    invalidate_mass();
                     reactor_working = true;
                     delta_energy_bat += reactors_output_bat;
                 }
