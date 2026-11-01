@@ -4256,6 +4256,9 @@ bool Character::sees_with_specials( const Creature &critter ) const
 bool Character::pour_into( item_location &container, item &liquid, bool ignore_settings,
                            bool silent )
 {
+    if( !liquid.made_of( phase_id::LIQUID ) || liquid.charges <= 0 ) {
+        return false;
+    }
     rem_cap_return err = rem_cap_return::SUCCESS;
     int max_remaining_capacity = container->get_remaining_capacity_for_liquid( liquid, *this, &err );
     // amount of liquid that can be inserted
@@ -4307,7 +4310,9 @@ bool Character::pour_into( item_location &container, item &liquid, bool ignore_s
         amount = std::min( amount, liquid.charges );
     }
 
-    const int transferred = container->fill_with( liquid, amount, false, false, ignore_settings );
+    // Capacity and refill permission were checked for this container, not its contents.
+    const int transferred = container->fill_with( liquid, amount, false, false, ignore_settings,
+                            /*into_bottom=*/false, /*allow_nested=*/false );
     if( transferred <= 0 ) {
         return false;
     }

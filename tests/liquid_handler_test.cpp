@@ -1,4 +1,7 @@
+#include <list>
+#include <string>
 #include <utility>
+#include <vector>
 
 #include "enums.h"
 #include "flexbuffer_json.h"
@@ -14,9 +17,11 @@
 #include "handle_liquid.h"
 #include "item.h"
 #include "item_location.h"
+#include "item_pocket.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_selector.h"
+#include "messages.h"
 #include "player_helpers.h"
 #include "pocket_type.h"
 #include "point.h"
@@ -30,6 +35,8 @@ static const itype_id itype_test_liquid_1ml( "test_liquid_1ml" );
 static const itype_id itype_test_watertight_open_sealed_container_250ml( "test_watertight_open_sealed_container_250ml" );
 static const itype_id itype_gasoline( "gasoline" );
 static const itype_id itype_water_clean( "water_clean" );
+static const itype_id itype_small_squeeze_tube( "small_squeeze_tube" );
+static const itype_id itype_test_watertight_open_sealed_multipocket_container_2x250ml( "test_watertight_open_sealed_multipocket_container_2x250ml" );
 // *INDENT-ON*
 
 TEST_CASE( "temporary_liquid_drinks_apply_each_serving", "[liquid][handler]" )
@@ -131,6 +138,82 @@ TEST_CASE( "no_reload_container_rejects_poured_liquid", "[liquid][handler]" )
     CHECK( target_loc->empty() );
 }
 
+TEST_CASE( "pouring_only_fills_the_selected_container", "[liquid][handler]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms pos = you.pos_bub() + tripoint::east;
+    item outer( itype_test_watertight_open_sealed_multipocket_container_2x250ml );
+    item inner( itype_small_squeeze_tube );
+    REQUIRE( inner.has_flag( flag_NO_RELOAD ) );
+    // The nested tube would win automatic pocket selection, despite NO_RELOAD.
+    inner.get_container_pockets().front()->settings.set_priority( 100 );
+    REQUIRE( outer.put_in( inner, pocket_type::CONTAINER ).success() );
+    item_location target( map_cursor( pos ), &here.add_item_or_charges( pos, outer ) );
+    item *nested = &target->only_item();
+    item liquid( itype_gasoline );
+    liquid.charges = 10;
+    REQUIRE( target->get_remaining_capacity_for_liquid( liquid, you ) > 0 );
+
+    REQUIRE( you.pour_into( target, liquid, true, true ) );
+    CHECK( liquid.charges == 0 );
+    CHECK( nested->empty() );
+    int directly_poured = 0;
+    for( const item *content : target->all_items_top() ) {
+        if( content->typeId() == itype_gasoline ) {
+            directly_poured += content->charges;
+        }
+    }
+    CHECK( directly_poured == 10 );
+}
+
+TEST_CASE( "pouring_requires_actual_liquid_transfer", "[liquid][handler]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms pos = you.pos_bub() + tripoint::east;
+    item container( itype_test_watertight_open_sealed_container_250ml );
+    item gasoline( itype_gasoline );
+    gasoline.charges = 100;
+    REQUIRE( container.fill_with( gasoline, 1 ) == 1 );
+    item_location target( map_cursor( pos ), &here.add_item_or_charges( pos, container ) );
+
+    SECTION( "sealed_pocket_has_capacity_but_cannot_receive_liquid" ) {
+        REQUIRE( target->get_container_pockets().front()->seal() );
+    }
+    SECTION( "pocket_settings_reject_liquid" ) {
+        target->get_container_pockets().front()->settings.blacklist_item( itype_gasoline );
+    }
+    REQUIRE( target->get_remaining_capacity_for_liquid( gasoline, you ) > 0 );
+    Messages::clear_messages();
+    CHECK_FALSE( you.pour_into( target, gasoline, false, false ) );
+    CHECK( gasoline.charges == 100 );
+    CHECK( target->only_item().charges == 1 );
+    CHECK( Messages::size() == 0 );
+}
+
+TEST_CASE( "frozen_fuel_cannot_be_poured_directly", "[liquid][handler]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    avatar &you = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms pos = you.pos_bub() + tripoint::east;
+    item_location target( map_cursor( pos ), &here.add_item_or_charges( pos,
+                          item( itype_test_watertight_open_sealed_container_250ml ) ) );
+    item gasoline( itype_gasoline );
+    gasoline.charges = 100;
+    gasoline.set_item_temperature( units::from_celsius( -80 ) );
+    REQUIRE( gasoline.is_frozen_liquid() );
+    CHECK_FALSE( you.pour_into( target, gasoline, false, false ) );
+    CHECK( gasoline.charges == 100 );
+    CHECK( target->empty() );
+}
+
 TEST_CASE( "cold_gasoline_can_be_split_between_containers", "[liquid][handler]" )
 {
     clear_avatar();
@@ -195,13 +278,13 @@ TEST_CASE( "hydrocarbon_fuels_remain_liquid_in_cold_weather", "[liquid][temperat
 {
     for( const std::pair<itype_id, int> &fuel : {
     std::pair<itype_id, int> { itype_id( "diesel" ), -20 },
-{ itype_id( "jp8" ), -47 }, { itype_id( "avgas" ), -58 },
+    { itype_id( "jp8" ), -47 }, { itype_id( "avgas" ), -58 },
     { itype_id( "biodiesel" ), -10 }, { itype_id( "gasoline" ), -60 },
     { itype_id( "lamp_oil" ), -47 }, { itype_id( "crude_lamp_oil" ), -40 },
     { itype_id( "motor_oil" ), -30 }, { itype_id( "crude_oil" ), -40 },
     { itype_id( "napalm" ), -40 }, { itype_id( "gelled_gasoline" ), -60 },
     { itype_id( "flamethrower_fuel" ), -60 }
-       } ) {
+         } ) {
         CAPTURE( fuel.first.str() );
         item liquid( fuel.first );
         liquid.set_item_temperature( units::from_celsius( fuel.second + 10 ) );

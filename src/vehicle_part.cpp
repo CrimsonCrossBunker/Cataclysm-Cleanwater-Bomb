@@ -590,7 +590,8 @@ bool vehicle_part::fill_with( item &liquid, int qty )
         return false;
     }
 
-    const int transferred = base.fill_with( liquid, qty );
+    const int transferred = base.fill_with( liquid, qty, false, false, false,
+                                            /*into_bottom=*/false, /*allow_nested=*/false );
     liquid.charges -= transferred;
     return transferred > 0;
 }
