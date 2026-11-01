@@ -128,8 +128,8 @@ Android, tools, and documentation:
   and test source to completion there; unrelated work waits for another batch.
   Each batch starts from one authoritative lifecycle or registration point plus
   one representative caller or data shape.  Read it together with *Defer
-  non-evidence churn* below: synchronization and refreshes follow the closed
-  batch instead of interrupting it. / 本规则约束工作分组，与提交和暂存行为无关。
+  non-evidence churn* below: synchronization and refreshes wait until the batch
+  closes. / 本规则约束工作分组，与提交和暂存行为无关。
   一批工作只在一个子系统或领域内，把实现、声明、契约与测试源码做完，无关工作
   留到下一批；每批从唯一的权威生命周期或注册点，加一个代表性调用或数据形状
   开始。应与下面「推迟无验证价值的工作」合起来理解：同步与刷新在本批结束后进行，
@@ -147,8 +147,8 @@ Android, tools, and documentation:
   编辑循环只运行廉价语法、格式和聚焦测试，把编译、完整数据加载、宽测试和生成文件
   刷新留到相应验收门。
 - **Bounded output / 有界输出:** Limit search and command output.  Report
-  counts, exit status, elapsed time, and the relevant error excerpt instead of
-  pasting full reports, generated files, or build logs into task context. /
+  counts, exit status, elapsed time, and the relevant error excerpt.  Leave
+  full reports, generated files, and build logs out of task context. /
   限制搜索和命令输出，只记录计数、退出状态、耗时及相关错误片段，不把完整报告、
   生成文件或构建日志放入任务上下文。
 - **One failure loop / 单次失败闭环:** On failure, collect one focused
